@@ -142,7 +142,7 @@ pour la matrice complète des skills consommés.
 > 🚧 **À venir** — Le mécanisme de **hooks** (`SessionStart`,
 > `PreToolUse`, `SubagentStart/Stop`, `PostToolUse`) qui *gardiennent*
 > mécaniquement les invariants n'est pas encore implémenté. Voir
-> [roadmap §8](./roadmap.md#hooks).
+> [roadmap §7](./roadmap.md#hooks).
 
 ---
 
@@ -153,7 +153,8 @@ pour la matrice complète des skills consommés.
 | Agent `software-engineer` | `plugins/agents/software-engineer.agent.md` | ✅ |
 | Skill `outside-in-tdd` (avec références + assets) | `plugins/skills/outside-in-tdd/` | ✅ |
 | Skill `red-synthesize-green` | `plugins/skills/red-synthesize-green/` | ✅ |
+| Skill `clean-architecture-testing` | `plugins/skills/clean-architecture-testing/` | ✅ |
 | Skill méta `create-custom-agent` | `.agents/skills/create-custom-agent/` | ✅ |
 | Agent `software-engineer-reviewer` | — | 🚧 [roadmap](./roadmap.md#reviewer) |
-| Skills `quality-framework`, `clean-architecture-testing`, `test-refactoring-catalog`, `mutation-testing` | — | 🚧 [roadmap](./roadmap.md) |
-| Hooks de gardiennage | — | 🚧 [roadmap §8](./roadmap.md#hooks) |
+| Skills `quality-framework`, `test-refactoring-catalog`, `mutation-testing` | — | 🚧 [roadmap](./roadmap.md) |
+| Hooks de gardiennage | — | 🚧 [roadmap §7](./roadmap.md#hooks) |

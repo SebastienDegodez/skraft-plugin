@@ -76,7 +76,7 @@ Iron Rule of Tests, walking skeleton, post-GREEN wiring verification.
 |---|---|---|
 | [`red-synthesize-green`](./red-synthesize-green.md) | Mécanique RED → validation → SYNTHESIZE-GREEN | ✅ |
 | `mutation-testing` | À exécuter après GREEN, avant commit | 🚧 [À venir](../roadmap.md#mutation-testing) |
-| `clean-architecture-testing` | Niveau de test & politique de doubles | 🚧 [À venir](../roadmap.md#clean-architecture-testing) |
+| [`clean-architecture-testing`](./clean-architecture-testing.md) | Niveau de test & politique de doubles | ✅ |
 | `quality-framework` | Checklist de quality gates | 🚧 [À venir](../roadmap.md#quality-framework) |
 | `test-refactoring-catalog` | Refactorings de tests sûrs | 🚧 [À venir](../roadmap.md#test-refactoring-catalog) |
 

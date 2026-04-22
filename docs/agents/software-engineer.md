@@ -3,10 +3,13 @@
 **Statut :** ✅ Implémenté
 **Source :** [`plugins/agents/software-engineer.agent.md`](../../plugins/agents/software-engineer.agent.md)
 
-> Pour la vue d'ensemble du **duo Engineer + Reviewer** (workflow,
-> handoff, hooks), voir le document transverse
-> [`agent-software-engineer-and-reviewer.md`](../agent-software-engineer-and-reviewer.md).
-> Cette fiche-ci est **focalisée sur l'agent existant**.
+> Cette fiche est la **référence canonique** pour l'agent
+> `software-engineer` et l'état de ses skills.
+>
+> Le document transverse
+> [`agent-software-engineer-and-reviewer.md`](../agent-software-engineer-and-reviewer.md)
+> reste un résumé de contexte (duo Engineer/Reviewer), sans dupliquer
+> les détails de cette fiche.
 
 ---
 
@@ -45,7 +48,7 @@ en cas de blocage, il rend un JSON structuré (`status: blocked`).
 
 | Skill | Déclencheur | Statut |
 |---|---|---|
-| `clean-architecture-testing` | Choix de niveau de test, boundaries, doubles | 🚧 [À venir](../roadmap.md#clean-architecture-testing) |
+| `clean-architecture-testing` | Choix de niveau de test, boundaries, doubles | ✅ [voir](../skills/clean-architecture-testing.md) |
 | `test-refactoring-catalog` | Refacto de test (helpers, renommage) | 🚧 [À venir](../roadmap.md#test-refactoring-catalog) |
 | `mutation-testing` | Entrée en phase COMMIT & VERIFY | 🚧 [À venir](../roadmap.md#mutation-testing) |
 
@@ -104,7 +107,7 @@ Checklist imprimée par l'agent en fin de phase :
 > 🚧 **À venir** — La vérification automatique de cette checklist par le
 > **Reviewer** et son **gardiennage** par les hooks ne sont pas encore
 > implémentés. Voir [roadmap](../roadmap.md#reviewer) et
-> [roadmap §8](../roadmap.md#hooks).
+> [roadmap §7](../roadmap.md#hooks).
 
 ---
 
