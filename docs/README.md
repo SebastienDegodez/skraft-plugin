@@ -22,6 +22,7 @@ Bienvenue dans la documentation du plugin **skraft**.
 - **Skills** :
   - [`outside-in-tdd`](./skills/outside-in-tdd.md)
   - [`red-synthesize-green`](./skills/red-synthesize-green.md)
+  - [`clean-architecture-testing`](./skills/clean-architecture-testing.md)
   - [`create-custom-agent`](./skills/create-custom-agent.md)
 
 ---
@@ -33,10 +34,10 @@ Bienvenue dans la documentation du plugin **skraft**.
 | `software-engineer` | agent | [`plugins/agents/software-engineer.agent.md`](../plugins/agents/software-engineer.agent.md) | ✅ Implémenté |
 | `outside-in-tdd` | skill | [`plugins/skills/outside-in-tdd/`](../plugins/skills/outside-in-tdd/) | ✅ Implémenté |
 | `red-synthesize-green` | skill | [`plugins/skills/red-synthesize-green/`](../plugins/skills/red-synthesize-green/) | ✅ Implémenté |
+| `clean-architecture-testing` | skill | [`plugins/skills/clean-architecture-testing/`](../plugins/skills/clean-architecture-testing/) | ✅ Implémenté |
 | `create-custom-agent` | skill (méta) | [`.agents/skills/create-custom-agent/`](../.agents/skills/create-custom-agent/) | ✅ Implémenté |
 | `software-engineer-reviewer` | agent | — | 🚧 [À venir](./roadmap.md#reviewer) |
 | `quality-framework` | skill | — | 🚧 [À venir](./roadmap.md#quality-framework) |
-| `clean-architecture-testing` | skill | — | 🚧 [À venir](./roadmap.md#clean-architecture-testing) |
 | `test-refactoring-catalog` | skill | — | 🚧 [À venir](./roadmap.md#test-refactoring-catalog) |
 | `mutation-testing` | skill | — | 🚧 [À venir](./roadmap.md#mutation-testing) |
 | Hooks de gardiennage | infra | — | 🚧 [À venir](./roadmap.md#hooks) |

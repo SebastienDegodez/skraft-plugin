@@ -109,8 +109,17 @@ Reject tests showing these deadly patterns:
 - **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile).
 
 ### 3. SYNTHESIZE-GREEN
-- Write minimal production code to pass the test. 
-- Apply Object Calisthenics (no `else`, 1 level indentation, wrap primitives).
+- Write minimal production code to pass the test.
+- Apply **Object Calisthenics in full** (all 9 rules, not a subset):
+  1. Only **one level of indentation** per method.
+  2. Do **not use the `else` keyword** — prefer early return / guard clauses.
+  3. **Wrap all primitives and strings** in value objects — never expose a raw primitive or string as a Domain field.
+  4. **First-class collections** — any class wrapping a collection must contain no other instance variable; expose behaviour methods, not the raw list.
+  5. **One dot per line** (Law of Demeter) — never chain property/method accesses across more than one object.
+  6. **Don't abbreviate** — use the full business term, not a shortened form.
+  7. **Keep all entities small** — small class, small package.
+  8. **Aim for no more than two instance variables per class** — it's a target, not a hard limit: 3 or 4 are acceptable. Use the rule to *challenge* each extra field and look for a logical grouping value object before giving up.
+  9. **No getters / setters / properties** on Domain types — tell, don't ask. Domain state stays private; expose behaviour methods only. Structural equality is a behaviour, not a getter.
 - **Gate**: Entire test suite must run green. Do NOT refactor during Green.
 
 ### 4. COMMIT & VERIFY
@@ -124,6 +133,7 @@ Before concluding, verify and output this valid markdown checklist visually in t
 - [ ] Build and static analysis pass
 - [ ] 100% Mutation score on business logic proven
 - [ ] No mocks used inside Domain/Application core
+- [ ] Object Calisthenics — 9 rules verified on Domain (no getters, instance vars challenged toward ≤2, first-class collections, wrapped primitives, no `else`, 1-level indent, 1 dot/line, no abbreviations, small entities)
 - [ ] Code committed using conventional commits
 
 ## Execution Journal Output

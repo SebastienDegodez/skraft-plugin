@@ -16,10 +16,9 @@ repo. Toute fiche qui contient un badge `🚧 À venir` ou `📝 Partiel`
 |---|---|---|---|
 | `software-engineer-reviewer` | agent | [`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) | 🚧 À venir |
 | `quality-framework` | skill | [`agents/software-engineer.md`](./agents/software-engineer.md) — chargement mandatory | 🚧 À venir |
-| `clean-architecture-testing` | skill | `software-engineer.agent.md` — chargement trigger-based | 🚧 À venir |
 | `test-refactoring-catalog` | skill | `software-engineer.agent.md` — trigger-based | 🚧 À venir |
 | `mutation-testing` | skill | `software-engineer.agent.md` — trigger-based (phase COMMIT) | 🚧 À venir |
-| Hooks de gardiennage | infra | [`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) §6 | 🚧 À venir |
+| Hooks de gardiennage | infra | [`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) | 🚧 À venir |
 
 ---
 
@@ -32,12 +31,12 @@ livrable (code + tests + journal) sans pouvoir modifier le code, rend un
 verdict JSON structuré (`approved` / `changes_requested` / `rejected`).
 
 **Spécification de référence :**
-[`agent-software-engineer-and-reviewer.md` §5](./agent-software-engineer-and-reviewer.md#5-lagent-software-engineer-reviewer-à-implémenter).
+[`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md).
 
 **Dépendances bloquantes pour son implémentation :**
 
 - skill `quality-framework` (cf. §3 ci-dessous) ;
-- skill `clean-architecture-testing` (cf. §4) ;
+- skill [`clean-architecture-testing`](./skills/clean-architecture-testing.md) (déjà implémenté) ;
 - skill spécifique `test-theater-detection` (à créer, voir §7).
 
 ---
@@ -56,21 +55,7 @@ log `[SKILL MISSING] quality-framework` et continue.
 
 ---
 
-## 4. Skill `clean-architecture-testing` <a id="clean-architecture-testing"></a>
-
-**Type :** skill (`plugins/skills/clean-architecture-testing/SKILL.md`
-— à créer).
-
-**Rôle attendu :** guider la décision du **niveau de test**, du
-**placement des boundaries**, et de la **politique de doubles** (zéro
-mock dans Domain/Application, intégration réelle pour les adapters).
-
-**Déclencheurs prévus** : entrée dans une décision de boundary, choix
-acceptance vs unit, doute sur l'usage d'un test double.
-
----
-
-## 5. Skill `test-refactoring-catalog` <a id="test-refactoring-catalog"></a>
+## 4. Skill `test-refactoring-catalog` <a id="test-refactoring-catalog"></a>
 
 **Type :** skill (`plugins/skills/test-refactoring-catalog/SKILL.md`
 — à créer).
@@ -84,7 +69,7 @@ COMMIT & VERIFY (jamais pendant SYNTHESIZE-GREEN).
 
 ---
 
-## 6. Skill `mutation-testing` <a id="mutation-testing"></a>
+## 5. Skill `mutation-testing` <a id="mutation-testing"></a>
 
 **Type :** skill (`plugins/skills/mutation-testing/SKILL.md` — à créer).
 
@@ -95,10 +80,10 @@ qui ne tue aucun mutant doit être supprimé » et les seuils par couche
 
 ---
 
-## 7. Skills supplémentaires pour le Reviewer <a id="reviewer-skills"></a>
+## 6. Skills supplémentaires pour le Reviewer <a id="reviewer-skills"></a>
 
 Pressentis dans
-[`agent-software-engineer-and-reviewer.md` §5.9](./agent-software-engineer-and-reviewer.md#59-skills-pressentis-à-créer-lors-de-limplémentation) :
+[`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) :
 
 - `test-theater-detection` — catalogue d'anti-patterns avec exemples
   (tautologies, mock-dominated, fixture theater, etc.) ;
@@ -109,13 +94,13 @@ Pressentis dans
 
 ---
 
-## 8. Hooks de gardiennage <a id="hooks"></a>
+## 7. Hooks de gardiennage <a id="hooks"></a>
 
 **Type :** infrastructure (chemin à définir).
 
 **Rôle attendu :** rendre les invariants du duo Engineer/Reviewer
 **mécaniquement infranchissables**. Décrits dans
-[`agent-software-engineer-and-reviewer.md` §6](./agent-software-engineer-and-reviewer.md#6-rôle-des-hooks-autour-du-duo).
+[`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md).
 
 | Hook | Invariant à garder |
 |---|---|
@@ -131,14 +116,10 @@ Aucun hook n'est implémenté à ce jour.
 
 ---
 
-## 9. Variantes futures (non engageant)
+## 8. Variantes futures (non engageant)
 
 Ces éléments ne sont pas encore référencés dans la doc mais sont des
 extensions plausibles, listées ici pour mémoire :
 
-- `functional-software-engineer` — variante fonctionnelle (Hickey /
-  Wlaschin) du `software-engineer`.
 - `acceptance-designer` — agent producteur de tests d'acceptation
   Given-When-Then (mentionné comme acteur amont dans la doc du duo).
-- Profil de rigueur `thorough` — double passe de revue, mentionné dans
-  la doc du duo mais non encore opérationnel.
