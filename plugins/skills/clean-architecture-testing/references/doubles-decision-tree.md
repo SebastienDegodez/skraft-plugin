@@ -18,7 +18,7 @@ digraph doubles {
     "Subject under test" -> "HTTP endpoint" [label="wiring"];
 
     "Domain object\n(aggregate, VO, policy)" -> "No doubles — real objects";
-    "Application handler / use case" -> "FakeItEasy on output ports\n(or hand-written in-memory fake)";
+    "Application handler / use case" -> "FakeItEasy on output gateways\n(or hand-written in-memory fake)";
     "Gateway adapter\n(Repository, ReadService, MessageHandler)" -> "Real I/O via Testcontainers / Microcks";
     "HTTP endpoint" -> "WebApplicationFactory + real stack\n+ Microcks for externals";
 }
@@ -31,8 +31,8 @@ digraph doubles {
 | Condition | Choose |
 |---|---|
 | Single test, simple stub (one call, one return) | FakeItEasy |
-| >3 tests need the port to behave as a store (add / find / update) | Hand-written in-memory fake |
-| Test asserts "was the port called with X?" | FakeItEasy (verification built-in) |
+| >3 tests need the gateway to behave as a store (add / find / update) | Hand-written in-memory fake |
+| Test asserts "was the gateway called with X?" | FakeItEasy (verification built-in) |
 | Test asserts state ("after N commands, repository contains Y") | In-memory fake (then `repo.GetAll()` in assertion) |
 
 ### "In-memory fake vs Testcontainers"
@@ -59,7 +59,7 @@ If a `WebApplicationFactory` test is used to verify a business rule, it is mispl
 |---|---|
 | Real HTTP / gRPC API we do not own | Microcks (contract comes from their OpenAPI / proto / AsyncAPI) |
 | gRPC / HTTP API we own but lives in another service | Microcks (share the contract) |
-| Internal port whose implementation we are testing | Neither — this is Application-level; use FakeItEasy |
+| Internal gateway whose implementation we are testing | Neither — this is Application-level; use FakeItEasy |
 | Kafka / RabbitMQ topic exchange | Microcks async (contract testing on messages) |
 
 ### "Should I add a Domain test?"

@@ -34,7 +34,7 @@ A test asserting `new PolicyNumber("abc").value == "abc"` is noise. It tests the
 
 | Test project | Targets | Contains |
 |---|---|---|
-| `<Context>.UnitTest` | Domain + Application | Domain unit tests (rare, extracted rules) + Application acceptance tests (mocks on output ports, in-memory fakes) |
+| `<Context>.UnitTest` | Domain + Application | Domain unit tests (rare, extracted rules) + Application acceptance tests (mocks on output gateways, in-memory fakes) |
 | `<Context>.IntegrationTest` | Infrastructure + API + Architecture | Infrastructure integration tests (real containers), API end-to-end tests (in-process app host), architecture tests |
 
 **Rationale:**
@@ -71,7 +71,7 @@ One pair per bounded context. Shared helpers (fakes, builders) live in a separat
 |---|---|---|---|---|---|
 | **SharedKernel** | None | — | — | — | Never (interfaces + base classes, no logic) |
 | **Domain** | Pure unit (rare) | Policy / Domain Service / Specification | None (real objects) | <10 ms | Only for extracted complex rules |
-| **Application** | Acceptance (sociable) | Command / Query handler or UseCase | Mocks on output ports, hand-written in-memory fakes for stateful reuse | <100 ms | **Default** — one per Gherkin scenario |
+| **Application** | Acceptance (sociable) | Command / Query handler or UseCase | Mocks on output gateways, hand-written in-memory fakes for stateful reuse | <100 ms | **Default** — one per Gherkin scenario |
 | **Infrastructure** | Integration | Gateway adapter (repository, read service, message handler) | Real I/O via containers (DB, broker); external APIs via contract mock server | 1-5 s | One per adapter contract |
 | **API** | End-to-end | HTTP endpoint via in-process app host | Real internal stack; contract mock server for downstream externals | 1-5 s | Walking skeleton + one happy path per endpoint |
 | **Architecture** | Static analysis | Assembly / module scan | None | <1 s | One rule per constraint, CI gate |
@@ -81,7 +81,7 @@ One pair per bounded context. Shared helpers (fakes, builders) live in a separat
 | Role | Use for | Never for |
 |---|---|---|
 | **Real domain object** | Always, at every layer that touches Domain | — |
-| **Mock / stub on output port** | Output ports at Application level (repositories, dispatchers, external service interfaces) | Domain objects, Application handlers |
+| **Mock / stub on output gateway** | Output gateways at Application level (repository, dispatcher, external service interfaces) (repositories, dispatchers, external service interfaces) | Domain objects, Application handlers |
 | **Hand-written in-memory fake** | Reusable across many Application tests, stateful scenarios | One-off single-test cases |
 | **Real container** (DB, broker) | Infrastructure adapter tests exclusively | Application or Domain tests |
 | **Contract mock server** (for external APIs / brokers) | Infrastructure adapter tests against externals; API E2E with downstream externals | Internal domain logic, Application handlers |
@@ -160,7 +160,7 @@ digraph which_layer {
     "HTTP endpoint wiring" [shape=box];
     "Complex reusable rule\n(many edge cases)" [shape=box];
     "Layer boundary rule" [shape=box];
-    "Application acceptance test\n(mocks on output ports)" [shape=box, style=filled];
+    "Application acceptance test\n(mocks on output gateways)" [shape=box, style=filled];
     "Infrastructure integration test\n(real container / contract mock)" [shape=box, style=filled];
     "API end-to-end test\n(in-process app host)" [shape=box, style=filled];
     "Domain unit test\n(pure)" [shape=box, style=filled];
@@ -171,7 +171,7 @@ digraph which_layer {
     "What is the change?" -> "HTTP endpoint wiring";
     "What is the change?" -> "Complex reusable rule\n(many edge cases)";
     "What is the change?" -> "Layer boundary rule";
-    "Use case orchestration\n(load/save/publish)" -> "Application acceptance test\n(mocks on output ports)";
+    "Use case orchestration\n(load/save/publish)" -> "Application acceptance test\n(mocks on output gateways)";
     "Gateway adapter\n(DB, HTTP, broker)" -> "Infrastructure integration test\n(real container / contract mock)";
     "HTTP endpoint wiring" -> "API end-to-end test\n(in-process app host)";
     "Complex reusable rule\n(many edge cases)" -> "Domain unit test\n(pure)";
@@ -186,7 +186,7 @@ Extended tree with tie-breakers: [doubles-decision-tree.md](references/doubles-d
 | Anti-pattern | Fix |
 |---|---|
 | Testing `new ValueObject(x).value == x` | Delete. Covered by usage in Application test. |
-| Mocking a domain object | Use the real aggregate. Mock only output ports. |
+| Mocking a domain object | Use the real aggregate. Mock only output gateways. |
 | Real container in an Application-level test | Move to Infrastructure layer or use an in-memory fake. |
 | Shared global container across test classes | One container per test class, isolated lifecycle. |
 | In-process app host used to test a handler | Switch to an Application-level test with mocks. |
