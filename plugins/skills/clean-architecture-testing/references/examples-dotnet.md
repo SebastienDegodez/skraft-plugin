@@ -32,7 +32,7 @@ public sealed class EligibilityPolicyTests
 
 ## Application — Acceptance Test (default layer)
 
-Sociable test: real domain objects, mocks only on output ports.
+Sociable test: real domain objects, mocks only on output gateways.
 
 ```csharp
 public sealed class PlaceOrderCommandHandlerTests
