@@ -14,48 +14,13 @@ repo. Toute fiche qui contient un badge `🚧 À venir` ou `📝 Partiel`
 
 | Élément | Type | Référencé dans | Statut |
 |---|---|---|---|
-| `software-engineer-reviewer` | agent | [`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) | 🚧 À venir |
-| `quality-framework` | skill | [`agents/software-engineer.md`](./agents/software-engineer.md) — chargement mandatory | 🚧 À venir |
 | `test-refactoring-catalog` | skill | `software-engineer.agent.md` — trigger-based | 🚧 À venir |
 | `mutation-testing` | skill | `software-engineer.agent.md` — trigger-based (phase COMMIT) | 🚧 À venir |
 | Hooks de gardiennage | infra | [`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) | 🚧 À venir |
 
 ---
 
-## 2. Agent `software-engineer-reviewer` <a id="reviewer"></a>
-
-**Type :** agent (`plugins/agents/software-engineer-reviewer.agent.md` — à créer).
-
-**Rôle attendu :** pair adversarial du `software-engineer`. Audite le
-livrable (code + tests + journal) sans pouvoir modifier le code, rend un
-verdict JSON structuré (`approved` / `changes_requested` / `rejected`).
-
-**Spécification de référence :**
-[`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md).
-
-**Dépendances bloquantes pour son implémentation :**
-
-- skill `quality-framework` (cf. §3 ci-dessous) ;
-- skill [`clean-architecture-testing`](./skills/clean-architecture-testing.md) (déjà implémenté) ;
-- skill spécifique `test-theater-detection` (à créer, voir §7).
-
----
-
-## 3. Skill `quality-framework` <a id="quality-framework"></a>
-
-**Type :** skill (`plugins/skills/quality-framework/SKILL.md` — à créer).
-
-**Rôle attendu :** définir les critères qualité globaux partagés entre
-l'Engineer et le Reviewer (quality gates, format de checklist, seuils
-par couche).
-
-**Référencé comme `mandatory at startup`** dans
-`plugins/agents/software-engineer.agent.md`. Aujourd'hui, l'Engineer
-log `[SKILL MISSING] quality-framework` et continue.
-
----
-
-## 4. Skill `test-refactoring-catalog` <a id="test-refactoring-catalog"></a>
+## 2. Skill `test-refactoring-catalog` <a id="test-refactoring-catalog"></a>
 
 **Type :** skill (`plugins/skills/test-refactoring-catalog/SKILL.md`
 — à créer).
@@ -69,7 +34,7 @@ COMMIT & VERIFY (jamais pendant SYNTHESIZE-GREEN).
 
 ---
 
-## 5. Skill `mutation-testing` <a id="mutation-testing"></a>
+## 3. Skill `mutation-testing` <a id="mutation-testing"></a>
 
 **Type :** skill (`plugins/skills/mutation-testing/SKILL.md` — à créer).
 
@@ -80,21 +45,21 @@ qui ne tue aucun mutant doit être supprimé » et les seuils par couche
 
 ---
 
-## 6. Skills supplémentaires pour le Reviewer <a id="reviewer-skills"></a>
+## 4. Skills supplémentaires pour le Reviewer <a id="reviewer-skills"></a>
 
-Pressentis dans
-[`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) :
+Les capacités initialement pressenties comme skills séparés sont
+désormais intégrées dans les lenses du Reviewer :
 
-- `test-theater-detection` — catalogue d'anti-patterns avec exemples
-  (tautologies, mock-dominated, fixture theater, etc.) ;
-- `architecture-dependency-audit` — analyse statique du sens des
-  dépendances Clean Architecture ;
-- `mutation-evidence-review` — lecture critique des rapports de
-  mutation testing produits par l'Engineer.
+- `test-theater-detection` → couvert par `test-integrity-lens`
+- `architecture-dependency-audit` → couvert par `architecture-boundaries-lens`
+- `mutation-evidence-review` → couvert par `quality-gates-lens`
+
+Voir [`docs/agents/software-engineer-reviewer.md`](./agents/software-engineer-reviewer.md)
+pour le détail des lenses.
 
 ---
 
-## 7. Hooks de gardiennage <a id="hooks"></a>
+## 5. Hooks de gardiennage <a id="hooks"></a>
 
 **Type :** infrastructure (chemin à définir).
 
@@ -116,7 +81,7 @@ Aucun hook n'est implémenté à ce jour.
 
 ---
 
-## 8. Variantes futures (non engageant)
+## 6. Variantes futures (non engageant)
 
 Ces éléments ne sont pas encore référencés dans la doc mais sont des
 extensions plausibles, listées ici pour mémoire :

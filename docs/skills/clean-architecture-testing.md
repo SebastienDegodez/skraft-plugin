@@ -57,7 +57,7 @@ test** et la **politique de doubles**(mock, fake, stub, test double maison, etc.
 |---|---|---|
 | [`outside-in-tdd`](./outside-in-tdd.md) | Possède le cycle PREPARE → RED → SYNTHESIZE-GREEN → COMMIT & VERIFY. | ✅ |
 | [`red-synthesize-green`](./red-synthesize-green.md) | Exécute la mécanique RED / SYNTHESIZE-GREEN. | ✅ |
-| `quality-framework` | Fournit les quality gates globaux partagés. | 🚧 [À venir](../roadmap.md#quality-framework) |
+| [`craft-discipline`](./craft-discipline.md) | Checkpoints d'auto-discipline de l'engineer. | ✅ [voir](./craft-discipline.md) |
 
 ---
 
