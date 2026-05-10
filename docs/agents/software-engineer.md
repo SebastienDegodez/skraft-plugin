@@ -27,7 +27,7 @@ Minimum de tests pour un maximum de confiance.
   implémenter.
 - Délégation par un orchestrateur après validation des phases SDLC
   amont (architecture, plateforme, spécification exécutable).
-- Re-exécution après rejet du Reviewer (🚧 *quand le Reviewer existera*).
+- Re-exécution après rejet du Reviewer (voir [software-engineer-reviewer](./software-engineer-reviewer.md)).
 
 L'agent tourne en **mode sub-agent** : aucune question à l'utilisateur ;
 en cas de blocage, il rend un JSON structuré (`status: blocked`).
@@ -42,7 +42,7 @@ en cas de blocage, il rend un JSON structuré (`status: blocked`).
 |---|---|---|
 | `outside-in-tdd` | ✅ | [voir](../skills/outside-in-tdd.md) |
 | `red-synthesize-green` | ✅ | [voir](../skills/red-synthesize-green.md) |
-| `quality-framework` | 🚧 [À venir](../roadmap.md#quality-framework) | — |
+| `craft-discipline` | ✅ | [voir](../skills/craft-discipline.md) |
 
 ### Trigger-based
 
@@ -104,10 +104,10 @@ Checklist imprimée par l'agent en fin de phase :
 - [ ] Aucun mock utilisé dans Domain/Application
 - [ ] Code committé en conventional commits
 
-> 🚧 **À venir** — La vérification automatique de cette checklist par le
-> **Reviewer** et son **gardiennage** par les hooks ne sont pas encore
-> implémentés. Voir [roadmap](../roadmap.md#reviewer) et
-> [roadmap §7](../roadmap.md#hooks).
+> Le **Reviewer** est implémenté : voir
+> [software-engineer-reviewer](./software-engineer-reviewer.md).
+> 🚧 Le **gardiennage** par les hooks n'est pas encore implémenté.
+> Voir [roadmap §5](../roadmap.md#hooks).
 
 ---
 
