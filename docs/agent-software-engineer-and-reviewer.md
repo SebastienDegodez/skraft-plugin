@@ -1,17 +1,13 @@
 # Les agents `software-engineer` et `software-engineer-reviewer`
 
-**Statut :** 📝 Partiel
+**Statut :** ✅ Complet
 
 Ce document est une **vue de contexte** du duo Engineer/Reviewer.
 La description détaillée de l'agent implémenté et de ses skills est
 centralisée dans :
 
 - [`docs/agents/software-engineer.md`](./agents/software-engineer.md)
-
-Le Reviewer n'est pas encore implémenté ; son backlog reste centralisé
-dans :
-
-- [`docs/roadmap.md`](./roadmap.md#reviewer)
+- [`docs/agents/software-engineer-reviewer.md`](./agents/software-engineer-reviewer.md)
 
 ---
 
@@ -20,7 +16,7 @@ dans :
 | Composant | Statut | Référence |
 |---|---|---|
 | `software-engineer` | ✅ Implémenté | [`docs/agents/software-engineer.md`](./agents/software-engineer.md) |
-| `software-engineer-reviewer` | 🚧 À venir | [`docs/roadmap.md#reviewer`](./roadmap.md#reviewer) |
+| `software-engineer-reviewer` | ✅ Implémenté | [`docs/agents/software-engineer-reviewer.md`](./agents/software-engineer-reviewer.md) |
 | Hooks de gardiennage | 🚧 À venir | [`docs/roadmap.md#hooks`](./roadmap.md#hooks) |
 
 ---
@@ -31,7 +27,7 @@ dans :
 flowchart LR
     O[Orchestrateur] -->|dispatch implémentation| ENG[software-engineer]
     ENG -->|produit| CODE[Code + tests]
-    CODE -->|revue future| REV[software-engineer-reviewer]
+    CODE -->|revue| REV[software-engineer-reviewer]
     REV -->|verdict| O
 ```
 
@@ -40,10 +36,12 @@ flowchart LR
 ## Références canoniques
 
 - Agent implémenté : [`docs/agents/software-engineer.md`](./agents/software-engineer.md)
+- Agent Reviewer : [`docs/agents/software-engineer-reviewer.md`](./agents/software-engineer-reviewer.md)
 - Skills implémentés :
   - [`docs/skills/outside-in-tdd.md`](./skills/outside-in-tdd.md)
   - [`docs/skills/red-synthesize-green.md`](./skills/red-synthesize-green.md)
   - [`docs/skills/clean-architecture-testing.md`](./skills/clean-architecture-testing.md)
+  - [`docs/skills/craft-discipline.md`](./skills/craft-discipline.md)
 - Backlog non implémenté : [`docs/roadmap.md`](./roadmap.md)
 
 ---
