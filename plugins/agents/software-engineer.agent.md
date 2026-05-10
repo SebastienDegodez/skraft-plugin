@@ -8,7 +8,7 @@ metadata:
     - outside-in-tdd
     - red-synthesize-green
     - clean-architecture-testing
-    - quality-framework
+    - craft-discipline
     - test-refactoring-catalog
     - mutation-testing
   model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + Iron Rule + Mutation score). Low-tier models (Haiku, Flash, mini) are NOT supported."
@@ -39,7 +39,7 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 ### Always load at startup (before PREPARE)
 - [outside-in-tdd](../skills/outside-in-tdd/SKILL.md)
 - [red-synthesize-green](../skills/red-synthesize-green/SKILL.md)
-- [quality-framework](../skills/quality-framework/SKILL.md)
+- [craft-discipline](../skills/craft-discipline/SKILL.md)
 
 ### Load on demand (trigger-based)
 | Skill | Load when... |
