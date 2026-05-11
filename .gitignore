@@ -1,3 +1,5 @@
 
 # APM dependencies
 apm_modules/
+.DS_Store
+plugins/.DS_Store
