@@ -1,7 +1,7 @@
-# Agent `craft-orchestrator`
+# Agent `skraft-orchestrator`
 
 **Statut :** ✅ Implémenté
-**Source :** [`plugins/agents/craft-orchestrator.agent.md`](../../plugins/agents/craft-orchestrator.agent.md)
+**Source :** [`plugins/agents/skraft-orchestrator.agent.md`](../../plugins/agents/skraft-orchestrator.agent.md)
 
 ---
 
