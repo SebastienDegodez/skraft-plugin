@@ -1,11 +1,11 @@
-# Les agents `craft-orchestrator`, `software-engineer` et `software-engineer-reviewer`
+# Les agents `skraft-orchestrator`, `software-engineer` et `software-engineer-reviewer`
 
 **Statut :** ✅ Complet
 
 Ce document est une **vue de contexte** du trio Orchestrator/Engineer/Reviewer.
 La description détaillée de chaque agent est centralisée dans :
 
-- [`docs/agents/craft-orchestrator.md`](./agents/craft-orchestrator.md)
+- [`docs/agents/skraft-orchestrator.md`](./agents/skraft-orchestrator.md)
 - [`docs/agents/software-engineer.md`](./agents/software-engineer.md)
 - [`docs/agents/software-engineer-reviewer.md`](./agents/software-engineer-reviewer.md)
 
@@ -15,7 +15,7 @@ La description détaillée de chaque agent est centralisée dans :
 
 | Composant | Statut | Référence |
 |---|---|---|
-| `craft-orchestrator` | ✅ Implémenté | [`docs/agents/craft-orchestrator.md`](./agents/craft-orchestrator.md) |
+| `skraft-orchestrator` | ✅ Implémenté | [`docs/agents/skraft-orchestrator.md`](./agents/skraft-orchestrator.md) |
 | `software-engineer` | ✅ Implémenté (subagent interne) | [`docs/agents/software-engineer.md`](./agents/software-engineer.md) |
 | `software-engineer-reviewer` | ✅ Implémenté (subagent interne) | [`docs/agents/software-engineer-reviewer.md`](./agents/software-engineer-reviewer.md) |
 | Hooks de gardiennage | 🚧 À venir | [`docs/roadmap.md#hooks`](./roadmap.md#hooks) |
@@ -26,7 +26,7 @@ La description détaillée de chaque agent est centralisée dans :
 
 ```mermaid
 flowchart LR
-    U[Utilisateur] -->|"@craft-orchestrator plan.md"| O[craft-orchestrator]
+    U[Utilisateur] -->|"@skraft-orchestrator plan.md"| O[skraft-orchestrator]
     O -->|dispatch step| ENG[software-engineer]
     ENG -->|code + tests + journal| REV[software-engineer-reviewer]
     REV -->|verdict JSON| O
@@ -37,13 +37,13 @@ flowchart LR
 
 **Règle d'accès :** Les agents `software-engineer` et `software-engineer-reviewer`
 sont des sous-agents internes. Ils ne sont JAMAIS déclenchés directement par
-l'utilisateur. Seul `craft-orchestrator` les dispatche.
+l'utilisateur. Seul `skraft-orchestrator` les dispatche.
 
 ---
 
 ## Références canoniques
 
-- Orchestrateur : [`docs/agents/craft-orchestrator.md`](./agents/craft-orchestrator.md)
+- Orchestrateur : [`docs/agents/skraft-orchestrator.md`](./agents/skraft-orchestrator.md)
 - Agent Engineer : [`docs/agents/software-engineer.md`](./agents/software-engineer.md)
 - Agent Reviewer : [`docs/agents/software-engineer-reviewer.md`](./agents/software-engineer-reviewer.md)
 - Skills implémentés :
