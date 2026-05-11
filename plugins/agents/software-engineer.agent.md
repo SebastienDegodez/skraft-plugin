@@ -1,9 +1,10 @@
 ---
 name: software-engineer
-description: Use when delivering a user story through Outside-In TDD and Clean Architecture. Activate as a subagent after acceptance criteria exist. Covers the full PREPARE → RED → SYNTHESIZE-GREEN → COMMIT cycle with Object Calisthenics, mutation testing gates, and strict test integrity.
+description: "[Internal subagent — dispatched by craft-orchestrator only] Delivers code via Outside-In TDD and Clean Architecture. Full PREPARE → RED → SYNTHESIZE-GREEN → COMMIT cycle with Object Calisthenics, mutation testing gates, and strict test integrity."
 model: inherit
 tools: execute/testFailure, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runInTerminal, read/readFile, agent, edit/createDirectory, edit/createFile, edit/editFiles, search/codebase
 metadata:
+  dispatched_by: craft-orchestrator
   skills:
     - outside-in-tdd
     - red-synthesize-green
