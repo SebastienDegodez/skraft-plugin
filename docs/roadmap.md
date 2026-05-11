@@ -14,52 +14,11 @@ repo. Toute fiche qui contient un badge `🚧 À venir` ou `📝 Partiel`
 
 | Élément | Type | Référencé dans | Statut |
 |---|---|---|---|
-| `test-refactoring-catalog` | skill | `software-engineer.agent.md` — trigger-based | 🚧 À venir |
-| `mutation-testing` | skill | `software-engineer.agent.md` — trigger-based (phase COMMIT) | 🚧 À venir |
 | Hooks de gardiennage | infra | [`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) | 🚧 À venir |
 
 ---
 
-## 2. Skill `test-refactoring-catalog` <a id="test-refactoring-catalog"></a>
-
-**Type :** skill (`plugins/skills/test-refactoring-catalog/SKILL.md`
-— à créer).
-
-**Rôle attendu :** catalogue de refactorings de tests (extraction de
-helpers, renommage, dédoublonnage, paramétrisation `[Theory]`/
-`[InlineData]`).
-
-**Déclencheur prévu** : refacto d'un test pendant la phase
-COMMIT & VERIFY (jamais pendant SYNTHESIZE-GREEN).
-
----
-
-## 3. Skill `mutation-testing` <a id="mutation-testing"></a>
-
-**Type :** skill (`plugins/skills/mutation-testing/SKILL.md` — à créer).
-
-**Rôle attendu :** procédure d'exécution et d'interprétation du
-mutation testing en phase COMMIT & VERIFY. Définit la règle « tout test
-qui ne tue aucun mutant doit être supprimé » et les seuils par couche
-(0 % de survivants pour Domain/Application, ≤ 10 % pour API/Infra).
-
----
-
-## 4. Skills supplémentaires pour le Reviewer <a id="reviewer-skills"></a>
-
-Les capacités initialement pressenties comme skills séparés sont
-désormais intégrées dans les lenses du Reviewer :
-
-- `test-theater-detection` → couvert par `test-integrity-lens`
-- `architecture-dependency-audit` → couvert par `architecture-boundaries-lens`
-- `mutation-evidence-review` → couvert par `quality-gates-lens`
-
-Voir [`docs/agents/software-engineer-reviewer.md`](./agents/software-engineer-reviewer.md)
-pour le détail des lenses.
-
----
-
-## 5. Hooks de gardiennage <a id="hooks"></a>
+## 2. Hooks de gardiennage <a id="hooks"></a>
 
 **Type :** infrastructure (chemin à définir).
 
