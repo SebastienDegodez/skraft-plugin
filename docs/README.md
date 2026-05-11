@@ -16,8 +16,9 @@ Bienvenue dans la documentation du plugin **skraft**.
 - [Architecture du plugin](./architecture.md)
 - [Roadmap (éléments à venir)](./roadmap.md)
 - **Vue transverse** :
-  [Le duo `software-engineer` / `software-engineer-reviewer`](./agent-software-engineer-and-reviewer.md)
+  [Le trio `skraft-orchestrator` / `software-engineer` / `software-engineer-reviewer`](./agent-software-engineer-and-reviewer.md)
 - **Agents** :
+  - [`skraft-orchestrator`](./agents/skraft-orchestrator.md)
   - [`software-engineer`](./agents/software-engineer.md)
 - **Skills** :
   - [`outside-in-tdd`](./skills/outside-in-tdd.md)
@@ -31,15 +32,16 @@ Bienvenue dans la documentation du plugin **skraft**.
 
 | Élément | Type | Source | Statut |
 |---|---|---|---|
+| `skraft-orchestrator` | agent | [`plugins/agents/skraft-orchestrator.agent.md`](../plugins/agents/skraft-orchestrator.agent.md) | ✅ Implémenté |
 | `software-engineer` | agent | [`plugins/agents/software-engineer.agent.md`](../plugins/agents/software-engineer.agent.md) | ✅ Implémenté |
 | `outside-in-tdd` | skill | [`plugins/skills/outside-in-tdd/`](../plugins/skills/outside-in-tdd/) | ✅ Implémenté |
 | `red-synthesize-green` | skill | [`plugins/skills/red-synthesize-green/`](../plugins/skills/red-synthesize-green/) | ✅ Implémenté |
 | `clean-architecture-testing` | skill | [`plugins/skills/clean-architecture-testing/`](../plugins/skills/clean-architecture-testing/) | ✅ Implémenté |
 | `create-custom-agent` | skill (méta) | [`.agents/skills/create-custom-agent/`](../.agents/skills/create-custom-agent/) | ✅ Implémenté |
-| `software-engineer-reviewer` | agent | — | 🚧 [À venir](./roadmap.md#reviewer) |
-| `quality-framework` | skill | — | 🚧 [À venir](./roadmap.md#quality-framework) |
-| `test-refactoring-catalog` | skill | — | 🚧 [À venir](./roadmap.md#test-refactoring-catalog) |
-| `mutation-testing` | skill | — | 🚧 [À venir](./roadmap.md#mutation-testing) |
+| `software-engineer-reviewer` | agent | [`plugins/agents/software-engineer-reviewer.agent.md`](../plugins/agents/software-engineer-reviewer.agent.md) | ✅ Implémenté |
+| `craft-discipline` | skill | [`plugins/skills/craft-discipline/`](../plugins/skills/craft-discipline/) | ✅ Implémenté |
+| `mutation-testing` | skill | [`plugins/skills/mutation-testing/`](../plugins/skills/mutation-testing/) | ✅ Implémenté |
+| `test-refactoring-catalog` | skill | [`plugins/skills/test-refactoring-catalog/`](../plugins/skills/test-refactoring-catalog/) | ✅ Implémenté |
 | Hooks de gardiennage | infra | — | 🚧 [À venir](./roadmap.md#hooks) |
 
 ---
