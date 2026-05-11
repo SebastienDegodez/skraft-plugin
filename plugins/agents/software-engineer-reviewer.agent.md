@@ -1,9 +1,10 @@
 ---
 name: software-engineer-reviewer
-description: "Adversarial peer reviewer (Genesis A7): spawns 4 independent lenses, synthesizes a weighted verdict. Read-only — never modifies code."
+description: "[Internal subagent — dispatched by craft-orchestrator only] Adversarial peer reviewer (Genesis A7): spawns 4 independent lenses, synthesizes a weighted verdict. Read-only — never modifies code."
 model: inherit
 tools: read/readFile, search/codebase, agent
 metadata:
+  dispatched_by: craft-orchestrator
   genesis_patterns:
     - A7 ADVERSARIAL REVIEW
     - B1 FAN-OUT + SYNTHESIZER
