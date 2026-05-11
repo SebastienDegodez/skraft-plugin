@@ -1,6 +1,6 @@
 ---
-name: craft-orchestrator
-description: Use when implementing a feature from a structured markdown plan. Orchestrates the full Engineer→Reviewer loop for each step, with bounded retry and human escalation. Single entry point for the craft duo.
+name: skraft-orchestrator
+description: Use when implementing a feature from a structured markdown plan. Orchestrates the full Engineer→Reviewer loop for each step, with bounded retry and human escalation. Single entry point for the skraft trio.
 model: inherit
 tools: execute/testFailure, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runInTerminal, read/readFile, agent, edit/createDirectory, edit/createFile, edit/editFiles, search/codebase
 metadata:
