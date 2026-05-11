@@ -64,14 +64,24 @@ Test names, variables, and assertions use business vocabulary
 
 ### C8 — 100% mutation score on business logic
 
+**S7 DETERMINISTIC TOOL BRIDGE — execute via terminal, not prose.**
+
+1. Run Stryker via `runInTerminal`:
 ```bash
-dotnet stryker
+dotnet stryker \
+  --project <Domain-or-Application.csproj> \
+  -tp <UnitTests.csproj> \
+  --since:main \
+  --break-at 100 \
+  -r json -r cleartext
 ```
+2. Parse output — extract survivors.
+3. For real survivors → write boundary test → re-run scoped.
+4. For equivalent mutants → document in code comment.
 
-Zero surviving mutants in Domain and Application.
-Equivalent mutants documented if accepted.
+Zero surviving mutants in Domain and Application (equivalent mutants documented if accepted).
 
-Load the `mutation-testing` skill if available.
+Load the [`mutation-testing`](../mutation-testing/SKILL.md) skill for full workflow.
 
 ### C9 — Conventional commit format
 
@@ -84,6 +94,12 @@ Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 Verify the 9 rules (see [references/object-calisthenics.md](references/object-calisthenics.md)).
 Applicable to Domain code only.
 
+### C11 — Parametrize Variations
+
+Multiple input variants for the same behavior MUST be a single parameterized test
+(`[Theory]/[InlineData]` in .NET, `@ParameterizedTest` in Java, `pytest.mark.parametrize` in Python),
+not duplicated test methods. One test method per behavior, one row per case.
+
 ## When to Execute
 
 | TDD Phase | Applicable Checkpoints |
@@ -91,7 +107,7 @@ Applicable to Domain code only.
 | PREPARE | None |
 | RED | None |
 | SYNTHESIZE-GREEN | C3 only (build) |
-| COMMIT & VERIFY | **All (C1-C10)** |
+| COMMIT & VERIFY | **All (C1-C11)** |
 
 ## On Failure
 
