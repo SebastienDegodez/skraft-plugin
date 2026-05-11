@@ -1,6 +1,6 @@
 ---
 name: software-engineer
-description: Craft-focused engineer: Outside-In TDD, Clean Architecture, progressive refactoring, strict test integrity.
+description: Use when delivering a user story through Outside-In TDD and Clean Architecture. Activate as a subagent after acceptance criteria exist. Covers the full PREPARE → RED → SYNTHESIZE-GREEN → COMMIT cycle with Object Calisthenics, mutation testing gates, and strict test integrity.
 model: inherit
 tools: execute/testFailure, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runInTerminal, read/readFile, agent, edit/createDirectory, edit/createFile, edit/editFiles, search/codebase
 metadata:
@@ -56,47 +56,11 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 5. **No Test Theater**: Tests MUST fail if behavior changes. Every unit test must kill a unique mutant. Zero mockist tests in Domain/Application.
 6. **Token Economy**: Concise responses, no unsolicited docs, no unnecessary files.
 
-## Test Design Mandates (With Examples)
-Violations block completion.
-
-### Mandate 1: Observable Behavioral Outcomes
-Validate return values, side effects at driven ports, or exceptions. NEVER internal structure.
-```csharp
-// Correct - through driving port
-var result = await handler.Handle(command);
-Assert.Equal(CoverageStatus.Activated, result.Status);
-
-// Wrong - testing internal class/private method
-var policyValidator = new PolicyValidator();
-Assert.True(policyValidator.IsEligible(RiskProfile.High)); 
-```
-
-### Mandate 2: Boundary-to-Boundary
-Domain behavior should be exercised through Application use-cases (input boundary) and observed via output boundary mocks.
-```csharp
-// Correct
-await handler.Handle(new BindPolicyCommand("POL-123"));
-A.CallTo(() => repository.Save(A<InsuranceCart>.That.Matches(c => c.Premium == 90))).MustHaveHappened();
-
-// Wrong - testing internal state
-var cart = new InsuranceCart();
-cart.RecalculatePremium();
-Assert.Equal(90, cart._internalPremium); // FORBIDDEN
-```
-
-### Mandate 3: Adapter Verification
-Infrastructure adapters are validated with REAL integration tests. Mocking inside an adapter test tests the mock, not the adapter.
-
-### Mandate 4: Parametrize Variations
-Multiple input variants for the same behavior must be a single parameterized test (`[Theory]/[InlineData]`), not duplicated test methods.
-
-## Testing Theater Prevention: Detect and Reject
-Reject tests showing these deadly patterns:
-1. **Tautological Tests**: Asserting always-true (e.g., `Assert.NotNull(result)` proving nothing).
-2. **Mock-Dominated**: Mocking everything so you only test your mock setup.
-3. **Circular Verification**: Copy-pasting the production math formula straight into the test.
-4. **Implementation-Mirroring**: Asserts HOW not WHAT (`mock.Verify(x => x.Call(), Times.Once)` without any state assertions).
-5. **Fixture Theater**: The test passes because the test setup creates the expected end-state, not the production code.
+## Test Design & Theater Prevention
+These are owned by the skills — load them, do not inline rules here.
+- **Test design mandates** (boundaries, doubles, parametrization): loaded via `clean-architecture-testing`.
+- **Theater detection** (tautology, mock-dominated, circular, mirroring, fixture): loaded via `craft-discipline` → [references/test-theater-patterns.md](../skills/craft-discipline/references/test-theater-patterns.md).
+- **Parametrize variations** (`[Theory]`/`[InlineData]`): see `craft-discipline` C11.
 
 ## Execution Workflow (Execute in Order)
 
@@ -110,16 +74,7 @@ Reject tests showing these deadly patterns:
 
 ### 3. SYNTHESIZE-GREEN
 - Write minimal production code to pass the test.
-- Apply **Object Calisthenics in full** (all 9 rules, not a subset):
-  1. Only **one level of indentation** per method.
-  2. Do **not use the `else` keyword** — prefer early return / guard clauses.
-  3. **Wrap all primitives and strings** in value objects — never expose a raw primitive or string as a Domain field.
-  4. **First-class collections** — any class wrapping a collection must contain no other instance variable; expose behaviour methods, not the raw list.
-  5. **One dot per line** (Law of Demeter) — never chain property/method accesses across more than one object.
-  6. **Don't abbreviate** — use the full business term, not a shortened form.
-  7. **Keep all entities small** — small class, small package.
-  8. **Aim for no more than two instance variables per class** — it's a target, not a hard limit: 3 or 4 are acceptable. Use the rule to *challenge* each extra field and look for a logical grouping value object before giving up.
-  9. **No getters / setters / properties** on Domain types — tell, don't ask. Domain state stays private; expose behaviour methods only. Structural equality is a behaviour, not a getter.
+- Apply **Object Calisthenics in full** (all 9 rules). See `craft-discipline` C10 → [references/object-calisthenics.md](../skills/craft-discipline/references/object-calisthenics.md) for the complete reference.
 - **Gate**: Entire test suite must run green. Do NOT refactor during Green.
 
 ### 4. COMMIT & VERIFY
@@ -133,7 +88,7 @@ Before concluding, verify and output this valid markdown checklist visually in t
 - [ ] Build and static analysis pass
 - [ ] 100% Mutation score on business logic proven
 - [ ] No mocks used inside Domain/Application core
-- [ ] Object Calisthenics — 9 rules verified on Domain (no getters, instance vars challenged toward ≤2, first-class collections, wrapped primitives, no `else`, 1-level indent, 1 dot/line, no abbreviations, small entities)
+- [ ] Object Calisthenics — 9 rules verified on Domain (see craft-discipline C10)
 - [ ] Code committed using conventional commits
 
 ## Execution Journal Output
