@@ -76,6 +76,7 @@ sequenceDiagram
     participant AD as architecture-decisions (skill)
 
     SA->>SA: Load stories + AC + existing codebase structure
+    SA->>SA: Reuse analysis — scan existing code for reusable components
     SA->>AP: Event Modeling — identify commands, events, read models
     Note over SA,AP: DDD strategic: bounded contexts, context map
     SA->>SA: Draw event model (timeline mermaid)
@@ -159,7 +160,8 @@ synthesis:
 - **DDD Strategic** : bounded contexts, context mapping (upstream/downstream, conformist, ACL, shared kernel, partnership), subdomains (core, supporting, generic), ubiquitous language.
 - **DDD Tactical** : aggregates (invariants, consistency boundaries), entities, value objects, domain events, repositories, domain services, factories, specifications.
 - **Clean Architecture** : couches, règle de dépendance, boundaries, use cases.
-- **CQRS** : quand appliquer, séparation commands/queries, event sourcing (quand pertinent), projection de read models.
+- **CQRS** : quand appliquer, séparation commands/queries, projection de read models.
+- **Event Sourcing** : heuristique de décision ("Does knowing the history provide business value?"), quand utiliser (audit trail, temporal queries, multiple views, complex DDD, event-driven integration) vs quand ne pas utiliser (simple CRUD, no audit, no history value). Aggregate event lifecycle (receive command → validate → emit events → apply → persist). Event store (append-only, versioned, immutable facts in past tense). Projections & read models (disposable, eventually consistent, purpose-specific, rebuildable). Snapshots (every N events for performance). Sagas / process managers (cross-aggregate coordination, react to events, issue commands, maintain process state). Upcasting (event versioning — transform old event schemas during loading, weak schema first, explicit upcaster chains). Conflict resolution (retry default, merge domain-specific, reject critical ops). Eventual consistency mitigation (read-your-own-writes, optimistic UI, causal consistency). Outbox pattern (atomic event store + message broker update). Reservation pattern (uniqueness constraints in ES).
 - **Composition** : comment les patterns se combinent (Event Modeling → DDD → Clean Arch → CQRS).
 - **Decision matrix** : quel pattern pour quel type de problème.
 
@@ -171,6 +173,7 @@ synthesis:
 - `references/pattern-catalog.md` — fiches Clean Architecture, CQRS, hexagonal.
 - `references/pattern-selection-matrix.md` — matrice de décision.
 - `references/anti-patterns.md` — erreurs architecturales communes.
+- `references/event-sourcing.md` — guide complet Event Sourcing : heuristique de décision, aggregate lifecycle, projections, snapshots, sagas, upcasting, conflict resolution, outbox pattern.
 
 ---
 

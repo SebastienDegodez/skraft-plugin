@@ -122,6 +122,7 @@ sequenceDiagram
 | **invest-lens** | Les stories respectent INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable). | G1: each INVEST criterion checked, G2: stories decomposable |
 | **ac-quality-lens** | Les AC sont complets, non ambigus, testables. Draft Given/When/Then syntaxiquement correct. | G3: AC completeness, G4: no ambiguity |
 | **planning-coherence-lens** | Le milestone est cohérent. Les estimations sont réalistes. Pas de dépendances circulaires. | G5: milestone fit, G6: dependency graph acyclic |
+| **dor-compliance-lens** | Chaque story satisfait les 8 items de la Definition of Ready. Détection des 8 antipatterns. | G7: DoR 8-item hard gate, G8: zero critical antipatterns |
 
 ### Verdict
 
@@ -132,6 +133,7 @@ lenses:
   invest: {status, findings: [...]}
   ac-quality: {status, findings: [...]}
   planning-coherence: {status, findings: [...]}
+  dor-compliance: {status, findings: [...]}
 synthesis:
   blocking_findings: [...]
   recommendations: [...]
@@ -157,12 +159,32 @@ synthesis:
 - **Acceptance criteria** : format Given/When/Then, quand utiliser des tables, quand lister.
 - **Estimation** : T-shirt sizing ou story points, conventions.
 - **Edge cases** : comment les capturer dans les AC sans surcharger la story.
+- **Definition of Ready (DoR)** : gate bloquante à 8 items. Une story ne quitte DISCUSS que si TOUS les items sont satisfaits :
+  1. **Problem statement** : problème utilisateur concret articulé (pas "implement X").
+  2. **Persona** : persona spécifique nommée (pas "user" générique).
+  3. **3+ domain examples** : au moins 3 exemples concrets du domaine métier.
+  4. **UAT scenarios** : scénarios de test d'acceptation utilisateur (Given/When/Then draft).
+  5. **AC derived from UAT** : chaque AC est dérivé d'un scénario UAT (traçabilité).
+  6. **Right-sized** : story réalisable en 1-3 jours (pas de saga multi-sprint).
+  7. **Technical notes** : contraintes techniques identifiées (intégrations, migrations, performances).
+  8. **Dependencies** : dépendances inter-stories explicitées et résolues.
+- **8 antipatterns à détecter** :
+  - *Implement-X* (🚨 critical) : story formulant une solution au lieu d'un problème.
+  - *Generic Data* (⚠️ high) : absence d'exemples concrets du domaine.
+  - *Technical AC* (⚠️ high) : AC formulant des détails d'implémentation.
+  - *Giant Stories* (🚨 critical) : story non décomposable en 1-3 jours.
+  - *No Examples* (🚨 critical) : zéro exemple concret dans la story.
+  - *Tests After Code* (⚠️ high) : AC qui supposent une implémentation existante.
+  - *Vague Persona* (⚠️ high) : persona indéfinie ("the user", "someone").
+  - *Missing Dependencies* (⚠️ high) : dépendances implicites non documentées.
 
 ### Références à inclure
 
 - `references/story-template.md` — template vierge.
 - `references/splitting-patterns.md` — techniques de découpage.
 - `references/invest-checklist.md` — grille INVEST.
+- `references/dor-checklist.md` — gate à 8 items Definition of Ready.
+- `references/antipatterns.md` — 8 antipatterns de story avec exemples et corrections.
 
 ---
 
@@ -201,16 +223,20 @@ synthesis:
 
 ### Contenu attendu
 
-- **Gates** : G1-G6 (voir table des lenses).
+- **Gates** : G1-G8 (voir table des lenses).
 - **INVEST scoring** : rubrique par critère.
 - **AC quality rules** : ambiguïté, complétude, testabilité.
+- **DoR validation** : 8-item hard gate comme condition bloquante pour le verdict. Si un item DoR manque, verdict = `changes_requested` minimum.
+- **Antipattern detection** : 8 antipatterns avec sévérité (critical = auto-reject, high = changes_requested).
 - **Planning red flags** : stories trop larges, estimations irréalistes, milestones surchargés.
 - **Verdict derivation** : combinaison des 3 lenses.
 
 ### Références à inclure
 
-- `references/gate-definitions.md` — G1-G6.
+- `references/gate-definitions.md` — G1-G8.
 - `references/invest-scoring.md` — grille détaillée.
+- `references/dor-scoring.md` — rubrique DoR par item.
+- `references/antipattern-severity.md` — table sévérité × verdict impact.
 - `references/verdict-rubric.md` — table de décision.
 
 ---
