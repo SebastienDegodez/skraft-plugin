@@ -149,10 +149,10 @@ synthesis:
 
 ### Intent + scope
 
-**Capacité** : Catalogue complet de patterns architecturaux couvrant Event Modeling, DDD (strategic + tactical), Clean Architecture, CQRS, et hexagonal, avec guidelines de sélection et d'application.
+**Capacité** : Catalogue complet de patterns architecturaux couvrant Event Modeling, DDD (strategic + tactical), Clean Architecture, et CQRS, avec guidelines de sélection et d'application.
 
 **Dispatch description** :
-> Use when selecting architecture patterns for a new feature, performing Event Modeling, defining bounded contexts, choosing DDD tactical patterns, evaluating pattern fitness, or understanding how patterns compose. Covers Event Modeling methodology, DDD strategic design (bounded contexts, context mapping, subdomains), DDD tactical patterns (aggregates, entities, value objects, domain events, repositories, domain services), Clean Architecture, CQRS, hexagonal ports & adapters.
+> Use when selecting architecture patterns for a new feature, performing Event Modeling, defining bounded contexts, choosing DDD tactical patterns, evaluating pattern fitness, or understanding how patterns compose. Covers Event Modeling methodology, DDD strategic design (bounded contexts, context mapping, subdomains), DDD tactical patterns (aggregates, entities, value objects, domain events, repositories, domain services), Clean Architecture (layers, dependency rule, use case boundaries), and CQRS.
 
 ### Contenu attendu
 
@@ -170,7 +170,7 @@ synthesis:
 - `references/event-modeling.md` — méthodologie Event Modeling complète avec exemples.
 - `references/ddd-strategic.md` — bounded contexts, context mapping patterns.
 - `references/ddd-tactical.md` — aggregates, value objects, domain events, repositories.
-- `references/pattern-catalog.md` — fiches Clean Architecture, CQRS, hexagonal.
+- `references/pattern-catalog.md` — fiches Clean Architecture, CQRS.
 - `references/pattern-selection-matrix.md` — matrice de décision.
 - `references/anti-patterns.md` — erreurs architecturales communes.
 - `references/event-sourcing.md` — guide complet Event Sourcing : heuristique de décision, aggregate lifecycle, projections, snapshots, sagas, upcasting, conflict resolution, outbox pattern.
@@ -266,7 +266,7 @@ L'artefact clé du handoff DESIGN→DISTILL :
 - `CheckEligibilityCommand` : Command DTO (input)
 - `EligibilityChecked` : Domain event
 - `EligibilityResult` : Read model DTO (output)
-- `IEligibilityRepository` : Driven port
+- `IEligibilityRepository` : Application interface (Infrastructure boundary)
 ```
 
 L'`acceptance-designer` consomme ce package pour aligner les scénarios Gherkin avec les bounded contexts, aggregates, et domain events.
