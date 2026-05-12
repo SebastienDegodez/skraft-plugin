@@ -75,6 +75,9 @@ sequenceDiagram
     participant TDM as test-design-mandates (skill)
 
     AD->>AD: Load stories + AC + design artefacts
+    AD->>AD: Prior phase reading — checklist reconciliation
+    Note over AD: MUST read ALL prior artefacts before writing scenarios
+    Note over AD: Reconciliation gate: block on contradictions
     AD->>BDD: Apply BDD methodology
     Note over AD,BDD: Translate AC → Given/When/Then
     AD->>AD: Write .feature files
@@ -122,6 +125,8 @@ sequenceDiagram
 | **coverage-lens** | Chaque AC a au minimum un scénario. Pas de scénario orphelin sans AC. | G1: bijection AC↔scénario, G2: edge cases couverts |
 | **business-alignment-lens** | Le langage Gherkin reflète le vocabulaire métier. Les scénarios sont compréhensibles par un non-technique. | G3: termes du lexique métier, G4: pas de jargon technique dans Given/When/Then |
 | **testability-lens** | Les scénarios sont implémentables. Le test plan est cohérent avec l'outside-in order. L'impl plan est séquençable. | G5: pas d'ambiguïté dans les steps, G6: impl plan couvre tous les scénarios |
+| **port-to-port-lens** | Chaque AC nomme son driving port. Les scénarios respectent le principe port-to-port. Walking skeleton coverage. | G7: port-to-port compliance, G8: walking skeleton coverage |
+| **port-to-port-lens** | Chaque AC nomme son driving port. Les scénarios respectent le principe port-to-port. Walking skeleton coverage. | G7: port-to-port compliance, G8: walking skeleton coverage |
 
 ### Verdict
 
@@ -134,6 +139,7 @@ lenses:
   coverage: {status, findings: [...]}
   business-alignment: {status, findings: [...]}
   testability: {status, findings: [...]}
+  port-to-port: {status, findings: [...]}
 synthesis:
   blocking_findings: [...]
   recommendations: [...]
@@ -184,11 +190,19 @@ synthesis:
 - **Prioritisation** : happy path d'abord, edge cases ensuite, error cases enfin.
 - **Orthogonalité** : un test = un comportement, pas de redondance inter-couches.
 - **Boundary testing** : quand tester aux frontières vs au cœur.
+- **Mandate 1 — Hexagonal Boundary Enforcement** : chaque AC nomme le driving port (point d'entrée). Tous les tests entrent par le driving port, assertés au driven port. Jamais de test sur un composant interne. Prévient les défauts TBU (Tested But Unwired).
+- **Mandate 2 — Business Language Abstraction** : 3 couches d'abstraction — Gherkin = pur langage métier (zéro technique), step methods = délégation domaine, business services = implémentation technique. Aucun terme technique ne remonte au niveau Gherkin.
+- **Mandate 3 — User Journey Completeness** : les tests valident des parcours utilisateur complets, pas des opérations isolées. Structure : setup → action → observable outcome.
+- **Mandate 4 — Pure Function Extraction Before Fixtures** : extraire les fonctions pures en premier, paramétriser uniquement la couche adapter. Minimise les fixtures complexes.
+- **Walking Skeleton Strategy** : 4 stratégies (A=full InMemory, B=real local + fake costly, C=real local, D=configurable). Arbre de décision selon le type de feature. 2-5 walking skeletons par feature, 15-20 scénarios focusés.
 
 ### Références à inclure
 
 - `references/coverage-matrix-template.md` — template vierge.
 - `references/layer-assignment-rules.md` — règles par couche.
+- `references/port-to-port-principle.md` — driving port enforcement, TBU prevention, 3 couches d'abstraction.
+- `references/test-design-mandates.md` — 4 mandates (hexagonal boundary, business language, user journey, pure function extraction).
+- `references/walking-skeleton-strategy.md` — 4 stratégies (A/B/C/D), arbre de décision, exemples.
 
 ---
 
