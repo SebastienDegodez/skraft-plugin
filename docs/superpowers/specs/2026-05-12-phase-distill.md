@@ -125,8 +125,7 @@ sequenceDiagram
 | **coverage-lens** | Chaque AC a au minimum un scénario. Pas de scénario orphelin sans AC. | G1: bijection AC↔scénario, G2: edge cases couverts |
 | **business-alignment-lens** | Le langage Gherkin reflète le vocabulaire métier. Les scénarios sont compréhensibles par un non-technique. | G3: termes du lexique métier, G4: pas de jargon technique dans Given/When/Then |
 | **testability-lens** | Les scénarios sont implémentables. Le test plan est cohérent avec l'outside-in order. L'impl plan est séquençable. | G5: pas d'ambiguïté dans les steps, G6: impl plan couvre tous les scénarios |
-| **port-to-port-lens** | Chaque AC nomme son driving port. Les scénarios respectent le principe port-to-port. Walking skeleton coverage. | G7: port-to-port compliance, G8: walking skeleton coverage |
-| **port-to-port-lens** | Chaque AC nomme son driving port. Les scénarios respectent le principe port-to-port. Walking skeleton coverage. | G7: port-to-port compliance, G8: walking skeleton coverage |
+| **boundary-enforcement-lens** | Chaque AC nomme son use case boundary. Les scénarios respectent le principe boundary-to-boundary. Walking skeleton coverage. | G7: layer boundary compliance, G8: walking skeleton coverage |
 
 ### Verdict
 
@@ -139,7 +138,7 @@ lenses:
   coverage: {status, findings: [...]}
   business-alignment: {status, findings: [...]}
   testability: {status, findings: [...]}
-  port-to-port: {status, findings: [...]}
+  boundary-enforcement: {status, findings: [...]}
 synthesis:
   blocking_findings: [...]
   recommendations: [...]
@@ -190,7 +189,7 @@ synthesis:
 - **Prioritisation** : happy path d'abord, edge cases ensuite, error cases enfin.
 - **Orthogonalité** : un test = un comportement, pas de redondance inter-couches.
 - **Boundary testing** : quand tester aux frontières vs au cœur.
-- **Mandate 1 — Hexagonal Boundary Enforcement** : chaque AC nomme le driving port (point d'entrée). Tous les tests entrent par le driving port, assertés au driven port. Jamais de test sur un composant interne. Prévient les défauts TBU (Tested But Unwired).
+- **Mandate 1 — Layer Boundary Enforcement** : chaque AC nomme le use case boundary (point d'entrée Application layer). Tous les tests entrent par le use case, assertions via les application interfaces (repositories, gateways). Jamais de test sur un composant interne. Prévient les défauts TBU (Tested But Unwired).
 - **Mandate 2 — Business Language Abstraction** : 3 couches d'abstraction — Gherkin = pur langage métier (zéro technique), step methods = délégation domaine, business services = implémentation technique. Aucun terme technique ne remonte au niveau Gherkin.
 - **Mandate 3 — User Journey Completeness** : les tests valident des parcours utilisateur complets, pas des opérations isolées. Structure : setup → action → observable outcome.
 - **Mandate 4 — Pure Function Extraction Before Fixtures** : extraire les fonctions pures en premier, paramétriser uniquement la couche adapter. Minimise les fixtures complexes.
@@ -200,8 +199,8 @@ synthesis:
 
 - `references/coverage-matrix-template.md` — template vierge.
 - `references/layer-assignment-rules.md` — règles par couche.
-- `references/port-to-port-principle.md` — driving port enforcement, TBU prevention, 3 couches d'abstraction.
-- `references/test-design-mandates.md` — 4 mandates (hexagonal boundary, business language, user journey, pure function extraction).
+- `references/boundary-enforcement-principle.md` — use case boundary enforcement, TBU prevention, 3 couches d'abstraction.
+- `references/test-design-mandates.md` — 4 mandates (layer boundary, business language, user journey, pure function extraction).
 - `references/walking-skeleton-strategy.md` — 4 stratégies (A/B/C/D), arbre de décision, exemples.
 
 ---
@@ -217,7 +216,7 @@ synthesis:
 
 ### Contenu attendu
 
-- **Gates** : définition formelle de G1-G6 (voir table des lenses).
+- **Gates** : définition formelle de G1-G8 (voir table des lenses).
 - **Scoring** : rubrique de notation par gate (pass/fail avec seuils).
 - **Verdict derivation** : comment les findings des 3 lenses se combinent en verdict final.
 - **Dissent handling** : quand une lens minoritaire peut bloquer le verdict.
@@ -225,7 +224,7 @@ synthesis:
 
 ### Références à inclure
 
-- `references/gate-definitions.md` — G1-G6 détaillées.
+- `references/gate-definitions.md` — G1-G8 détaillées.
 - `references/verdict-rubric.md` — table de décision.
 
 ---
