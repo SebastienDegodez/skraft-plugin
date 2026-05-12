@@ -188,7 +188,7 @@ La même logique de retry s'applique à toutes les phases.
 **Artefacts produits :**
 - ADR-001: CQRS with Event Sourcing
 - Component diagram: eligibility-bounded-context
-- Contrats d'interface: 3 driving ports, 2 driven ports
+- Contrats d'interface: 3 use case boundaries, 2 application interfaces
 
 **Prochaine phase :** DISTILL
 ```
