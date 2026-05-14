@@ -1,27 +1,27 @@
 ---
 name: playwright-evidence
 description: >
-  Use when capturing E2E test evidence (screenshots, videos, traces), uploading
-  evidence to GitHub issue comments, or configuring Playwright in CI pipelines
-  for the DELIVER phase and orchestrator feedback loop.
+  Use when capturing E2E test evidence (screenshots, videos, traces) and storing
+  them in .skraft/sdlc/evidence/ for agents to consume. Covers Playwright setup,
+  on-failure capture, trace collection, and evidence manifest generation.
 ---
 
 # Playwright Evidence Skill
 
 ## Overview
 
-Evidence flows from test execution through capture to GitHub for traceability:
+This skill captures evidence and stores it in `.skraft/sdlc/evidence/`. Agents read the
+evidence manifest and decide what to publish (GitHub comment, CI artifact, etc.).
 
 ```
-E2E Test Run  →  Capture Evidence  →  Upload to GitHub
-Playwright       screenshots           issue comment
-(on failure)     videos                with attachments
-                 traces
-                 test report
+E2E Test Run  →  Capture Evidence  →  Write Manifest  →  Agent publishes
+Playwright       screenshots           .skraft/sdlc/      (orchestrator
+(on failure)     videos                evidence/          or other agent)
+                 traces                manifest.md
+                 report
 ```
 
-The orchestrator triggers evidence upload after each DELIVER phase run. Evidence links
-back to the originating GitHub issue so reviewers see pass/fail proof inline.
+**Scope of this skill:** capture, name, store, and list evidence. Publishing is the agent's responsibility.
 
 ## Playwright Setup (TypeScript)
 
@@ -51,7 +51,7 @@ test.afterEach(async ({ page }, testInfo) => {
 });
 ```
 
-Naming convention: `{test-title}-{timestamp}.png`. Output dir: `evidence/screenshots/`.
+Naming convention: `{test-title}-{timestamp}.png`. Output dir: `.skraft/sdlc/evidence/screenshots/`.
 Using `testInfo.attachments` makes the screenshot appear inline in the HTML report.
 Reference `references/screenshot-and-video.md` for all `page.screenshot()` options and
 on-failure hook patterns.
@@ -68,7 +68,8 @@ use: {
 
 CLI override: `npx playwright test --video=retain-on-failure`
 
-Playwright writes the video file to `test-results/{test-name}/video.webm` automatically.
+Playwright writes the video file to `.skraft/sdlc/evidence/videos/{test-name}/video.webm`.
+Set `outputDir: '.skraft/sdlc/evidence'` in `playwright.config.ts` to keep all artifacts co-located.
 No manual context management required — the test runner handles lifecycle.
 Reference `references/screenshot-and-video.md` for all video config options.
 
@@ -89,7 +90,7 @@ For manual control within a test:
 ```typescript
 await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
 // ... test steps ...
-await context.tracing.stop({ path: 'evidence/traces/trace.zip' });
+await context.tracing.stop({ path: '.skraft/sdlc/evidence/traces/trace.zip' });
 ```
 
 View a trace locally: `npx playwright show-trace evidence/traces/trace.zip`
@@ -103,8 +104,8 @@ Configure multi-reporter output in `playwright.config.ts`:
 
 ```typescript
 reporter: [
-  ['html', { outputFolder: 'evidence/reports' }],
-  ['junit', { outputFile: 'evidence/reports/results.xml' }],
+  ['html', { outputFolder: '.skraft/sdlc/evidence/reports' }],
+  ['junit', { outputFile: '.skraft/sdlc/evidence/reports/results.xml' }],
 ],
 ```
 
@@ -118,25 +119,28 @@ npx playwright show-report
 
 The HTML report is uploaded as a CI artifact. The JUnit XML is consumed by CI status checks.
 
-## GitHub Evidence Upload
+## Evidence Manifest
 
-After DELIVER phase tests complete, post evidence to the originating GitHub issue:
+After the test run, write `.skraft/sdlc/evidence/manifest.md` so agents know what was captured:
 
-```bash
-gh issue comment "$ISSUE_NUMBER" \
-  --body-file evidence/comment-body.md \
-  --repo "$GITHUB_REPOSITORY"
+```markdown
+# Evidence Manifest
+
+## Run
+- timestamp: 2026-05-15T10:30:00Z
+- status: failed (2 failures, 8 passed)
+- duration: 45s
+
+## Files
+| Type | Path | Test |
+|---|---|---|
+| screenshot | .skraft/sdlc/evidence/screenshots/underage-driver-rejected-1715770200000.png | underage driver should be rejected |
+| trace | .skraft/sdlc/evidence/traces/policy-flow-1715770200000.zip | full policy flow |
+| report | .skraft/sdlc/evidence/reports/index.html | — |
+| junit | .skraft/sdlc/evidence/reports/results.xml | — |
 ```
 
-Compose `comment-body.md` with:
-- Test run summary (pass/fail count, duration)
-- Embedded screenshot if ≤500 KB (base64 inline image)
-- Link to CI artifact for videos, traces, and HTML report
-- Collapsible `<details>` block for full test output
-
-For images >1 MB use the GitHub REST API to upload as an asset and link. Token requires
-`repo` scope. Reference `references/evidence-upload-github.md` for REST API details,
-body formatting, and rate limit guidance.
+The orchestrator reads this manifest to decide what to surface in GitHub comments or CI artifacts.
 
 ## CI Configuration
 
@@ -146,9 +150,9 @@ Structure the GitHub Actions job:
 2. `npm ci`
 3. `npx playwright install --with-deps chromium` (cache `~/.cache/ms-playwright`)
 4. `npx playwright test --reporter=html,junit`
-5. `actions/upload-artifact@v4` — upload `playwright-report/` and `evidence/` on failure
-6. Post issue comment with evidence links using `gh` CLI
+5. `actions/upload-artifact@v4` — upload `.skraft/sdlc/evidence/` on failure
 
+Agents that consume the manifest handle publishing (GitHub comment, PR annotation, etc.).
 Reference `references/ci-configuration.md` for the full workflow YAML.
 
 ## Evidence Retention Policy
@@ -156,10 +160,7 @@ Reference `references/ci-configuration.md` for the full workflow YAML.
 Add to `.gitignore`:
 
 ```
-evidence/screenshots/
-evidence/videos/
-evidence/traces/
-evidence/reports/
+.skraft/sdlc/evidence/
 playwright-report/
 test-results/
 ```
@@ -173,7 +174,6 @@ avoid accumulating passing-run artifacts.
 - `references/playwright-ts-setup.md` — npm install, CLI, `playwright.config.ts`, parallel settings
 - `references/screenshot-and-video.md` — `page.screenshot()` options, video recording, on-failure hooks
 - `references/trace-viewer.md` — tracing config, `context.tracing` API, trace viewer CLI
-- `references/evidence-upload-github.md` — GitHub REST API, `gh` CLI, body formatting, token scopes
 - `references/ci-configuration.md` — full GitHub Actions workflow YAML, caching, secrets
 
 ## Examples
@@ -181,4 +181,4 @@ avoid accumulating passing-run artifacts.
 - `examples/01-basic-screenshot.md` — `afterEach` on-failure screenshot with eligibility test
 - `examples/02-video-on-failure.md` — `retain-on-failure` video config, accessing video path
 - `examples/03-trace-upload.md` — manual trace capture with all options, stop and save
-- `examples/04-github-comment-evidence.md` — post-test evidence upload script for orchestrator
+- `examples/04-evidence-manifest.md` — writing the manifest after a test run
