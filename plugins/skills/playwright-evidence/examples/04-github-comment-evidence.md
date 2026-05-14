@@ -7,10 +7,16 @@ Domain: MonAssurance auto-insurance — orchestrator posts E2E evidence to GitHu
 After DELIVER phase tests complete, the orchestrator (or CI job) calls the upload script
 to post evidence to the originating GitHub issue. The script:
 
-1. Finds the latest screenshot from `evidence/screenshots/`
+1. Finds the latest screenshot from `playwright-report/` or `evidence/screenshots/` (depending on config)
 2. Reads `evidence/reports/results.xml` (JUnit) to extract pass/fail counts
 3. Composes a markdown comment body
 4. Posts via `gh issue comment`
+
+For native GitHub Actions annotations (inline PR comments), use:
+
+```bash
+npx playwright test --reporter=github,html,junit
+```
 
 ---
 
@@ -315,7 +321,7 @@ The comment posted to the issue looks like:
 
 ### ❌ Failing Test
 
-`MonAssurance.IntegrationTests.Tests.EligibilityCheckTests.Submit_ValidDriver_ShouldShowEligibleResult`
+`valid Quebec driver aged 30 should be eligible` — `tests/e2e/eligibility-check.spec.ts:18`
 
 ### Screenshot
 

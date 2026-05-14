@@ -1,166 +1,75 @@
-# Example 01 — Basic Screenshot on Failure (NUnit)
+# Example 01 — Basic Screenshot on Failure (TypeScript)
 
 Domain: MonAssurance auto-insurance eligibility check page.
 
-## Test Class
+## Test File
 
-```csharp
-// tests/MonAssurance.IntegrationTests/Tests/EligibilityCheckTests.cs
-using Microsoft.Playwright;
-using Microsoft.Playwright.NUnit;
-using NUnit.Framework;
-using NUnit.Framework.Interfaces;
+```typescript
+// tests/e2e/eligibility-check.spec.ts
+import { test, expect } from '@playwright/test';
 
-namespace MonAssurance.IntegrationTests.Tests;
+// On-failure screenshot hook — runs after every test in this file
+test.afterEach(async ({ page }, testInfo) => {
+  if (testInfo.status !== testInfo.expectedStatus) {
+    const screenshot = await page.screenshot({ fullPage: true });
+    await testInfo.attach('screenshot', { body: screenshot, contentType: 'image/png' });
+  }
+});
 
-/// <summary>
-/// E2E tests for the eligibility check feature.
-/// Captures a screenshot on failure and attaches it to the NUnit test result.
-/// </summary>
-[TestFixture]
-[Parallelizable(ParallelScope.Self)]
-public class EligibilityCheckTests : PageTest
-{
-    private const string EligibilityPath = "/eligibility/check";
+test('valid Quebec driver aged 30 should be eligible', async ({ page }) => {
+  await page.goto('/eligibility/check');
 
-    // Override base class options to set baseURL from environment
-    public override BrowserNewContextOptions ContextOptions() => new()
-    {
-        BaseURL       = Environment.GetEnvironmentVariable("APP_BASE_URL") ?? "http://localhost:5000",
-        ViewportSize  = new() { Width = 1280, Height = 720 },
-        Locale        = "fr-CA",
-        TimezoneId    = "America/Montreal"
-    };
+  await page.getByTestId('driver-age').fill('30');
+  await page.getByTestId('province').selectOption('QC');
+  await page.getByTestId('years-licensed').fill('10');
+  await page.getByTestId('accident-count').selectOption('0');
+  await page.getByTestId('submit-eligibility').click();
 
-    // ── Tests ──────────────────────────────────────────────────────────────
+  await expect(page.getByTestId('eligibility-result')).toHaveText('Éligible');
+});
 
-    [Test]
-    [Description("A valid Quebec driver aged 30 with no accidents should be eligible")]
-    public async Task Submit_ValidDriver_ShouldShowEligibleResult()
-    {
-        // Arrange
-        await Page.GotoAsync(EligibilityPath);
-        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+test('driver with 3 accidents should be rejected', async ({ page }) => {
+  await page.goto('/eligibility/check');
 
-        // Act — fill driver form
-        await Page.FillAsync("[data-testid='driver-age']", "30");
-        await Page.SelectOptionAsync("[data-testid='province']", "QC");
-        await Page.FillAsync("[data-testid='years-licensed']", "10");
-        await Page.SelectOptionAsync("[data-testid='accident-count']", "0");
-        await Page.ClickAsync("[data-testid='submit-eligibility']");
+  await page.getByTestId('driver-age').fill('22');
+  await page.getByTestId('province').selectOption('QC');
+  await page.getByTestId('years-licensed').fill('2');
+  await page.getByTestId('accident-count').selectOption('3');
+  await page.getByTestId('submit-eligibility').click();
 
-        // Assert
-        await Expect(Page.Locator("[data-testid='eligibility-result']"))
-            .ToHaveTextAsync("Éligible", new() { Timeout = 5000 });
-
-        await Expect(Page.Locator("[data-testid='eligibility-status']"))
-            .ToHaveAttributeAsync("data-status", "eligible");
-    }
-
-    [Test]
-    [Description("A driver with 3 accidents in the last 3 years should be rejected")]
-    public async Task Submit_HighRiskDriver_ShouldShowRejectedResult()
-    {
-        await Page.GotoAsync(EligibilityPath);
-        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-
-        await Page.FillAsync("[data-testid='driver-age']", "22");
-        await Page.SelectOptionAsync("[data-testid='province']", "QC");
-        await Page.FillAsync("[data-testid='years-licensed']", "2");
-        await Page.SelectOptionAsync("[data-testid='accident-count']", "3");
-        await Page.ClickAsync("[data-testid='submit-eligibility']");
-
-        await Expect(Page.Locator("[data-testid='eligibility-result']"))
-            .ToHaveTextAsync("Non éligible", new() { Timeout = 5000 });
-    }
-
-    // ── Evidence Capture ───────────────────────────────────────────────────
-
-    [TearDown]
-    public async Task CaptureScreenshotOnFailure()
-    {
-        // Only capture evidence on test failure — skip on pass to save storage
-        if (TestContext.CurrentContext.Result.Outcome.Status != TestStatus.Failed)
-            return;
-
-        var screenshotDir = Path.Combine("evidence", "screenshots");
-        Directory.CreateDirectory(screenshotDir);
-
-        // Naming: {test-name}-{utc-timestamp}.png
-        var safeName  = TestContext.CurrentContext.Test.FullName
-            .Replace(' ', '_').Replace('(', '-').Replace(')', '-');
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        var fileName  = $"{safeName}-{timestamp}.png";
-        var path      = Path.Combine(screenshotDir, fileName);
-
-        // Full-page screenshot captures content below the fold
-        await Page.ScreenshotAsync(new()
-        {
-            Path       = path,
-            FullPage   = true,
-            Type       = ScreenshotType.Png,
-            Animations = ScreenshotAnimations.Disabled  // freeze CSS to avoid blurry frames
-        });
-
-        // Attach to NUnit result — visible in the test report and as CI artifact
-        TestContext.AddTestAttachment(path, $"Failure screenshot — {TestContext.CurrentContext.Test.Name}");
-
-        TestContext.WriteLine($"Screenshot saved: {path}");
-    }
-}
+  await expect(page.getByTestId('eligibility-result')).toHaveText('Non éligible');
+  await expect(page.getByTestId('rejection-reason')).toBeVisible();
+});
 ```
 
-## Page Object (Optional — Recommended for Maintainability)
+## CLI Commands
 
-```csharp
-// tests/MonAssurance.IntegrationTests/PageObjects/EligibilityCheckPage.cs
-using Microsoft.Playwright;
-
-namespace MonAssurance.IntegrationTests.PageObjects;
-
-/// <summary>Wraps the eligibility check page for readable test code.</summary>
-public class EligibilityCheckPage(IPage page)
-{
-    private readonly IPage _page = page;
-
-    public async Task NavigateAsync() =>
-        await _page.GotoAsync("/eligibility/check");
-
-    public async Task FillDriverFormAsync(int age, string province, int yearsLicensed, int accidentCount)
-    {
-        await _page.FillAsync("[data-testid='driver-age']", age.ToString());
-        await _page.SelectOptionAsync("[data-testid='province']", province);
-        await _page.FillAsync("[data-testid='years-licensed']", yearsLicensed.ToString());
-        await _page.SelectOptionAsync("[data-testid='accident-count']", accidentCount.ToString());
-    }
-
-    public async Task SubmitAsync() =>
-        await _page.ClickAsync("[data-testid='submit-eligibility']");
-
-    public ILocator EligibilityResult  => _page.Locator("[data-testid='eligibility-result']");
-    public ILocator EligibilityStatus  => _page.Locator("[data-testid='eligibility-status']");
-}
-```
-
-## Running the Test
+Run the test file:
 
 ```bash
-# Run all eligibility tests
-dotnet test tests/MonAssurance.IntegrationTests/ \
-  --filter "FullyQualifiedName~EligibilityCheckTests"
-
-# Run with evidence output visible
-dotnet test tests/MonAssurance.IntegrationTests/ \
-  --filter "FullyQualifiedName~EligibilityCheckTests" \
-  --logger "console;verbosity=detailed"
+npx playwright test eligibility-check.spec.ts
 ```
 
-## Evidence Output
+Debug interactively (opens Playwright Inspector):
 
-On failure, the test writes:
+```bash
+npx playwright test --debug eligibility-check.spec.ts
+```
 
+Run headed (visible browser):
+
+```bash
+npx playwright test --headed eligibility-check.spec.ts
 ```
-evidence/
-└── screenshots/
-    └── MonAssurance.IntegrationTests.Tests.EligibilityCheckTests.Submit_ValidDriver_ShouldShowEligibleResult-20240514120000.png
+
+Open the HTML report after run:
+
+```bash
+npx playwright show-report
 ```
+
+## Notes
+
+- `testInfo.attach()` embeds the screenshot inline in the HTML report — no file path needed.
+- `page.getByTestId()` uses the `data-testid` attribute by default (configurable in `playwright.config.ts` via `testIdAttribute`).
+- `test.afterEach` is scoped to the file; move to a shared `fixtures.ts` to apply across all spec files.
