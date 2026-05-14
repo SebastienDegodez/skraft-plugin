@@ -1,57 +1,85 @@
 # Trace Viewer Reference
 
-## `StartTracingAsync` Options
+## Config: `playwright.config.ts`
 
-```csharp
-await context.Tracing.StartAsync(new TracingStartOptions
-{
-    Screenshots = true,    // capture screenshot at every action
-    Snapshots   = true,    // capture DOM snapshot at every action (enables timeline scrubbing)
-    Sources     = true,    // embed test source files in the trace (shows which line ran)
-    Title       = $"{TestContext.CurrentContext.Test.FullName} — {DateTime.UtcNow:u}"
+```typescript
+use: {
+  trace: 'retain-on-failure',  // recommended for CI
+}
+```
+
+| Value | Behaviour |
+|---|---|
+| `'retain-on-failure'` | Capture trace for all tests, discard on pass, keep on failure |
+| `'on'` | Always capture trace |
+| `'on-first-retry'` | Capture only on first retry |
+| `'off'` | No tracing (default) |
+
+CLI: `npx playwright test --trace=on` — overrides config for all tests in the run.
+
+## Manual Tracing API
+
+### `context.tracing.start()` Options
+
+```typescript
+await context.tracing.start({
+  screenshots: true,   // capture screenshot at every action
+  snapshots:   true,   // full DOM snapshot per action (enables timeline scrubbing and "Pick locator")
+  sources:     true,   // embed test source files in the trace (shows which line ran)
+  title:       `${testInfo.title} — ${new Date().toISOString()}`,
 });
 ```
 
 | Option | Effect | Overhead |
 |---|---|---|
-| `Screenshots = true` | Thumbnail per action in timeline | Low |
-| `Snapshots = true` | Full DOM + styles per action | Medium — enables "Pick locator" and timeline inspection |
-| `Sources = true` | Embeds `.cs` source files | Low — invaluable for CI debugging |
-| `Title` | Label shown in Trace Viewer header | None |
+| `screenshots: true` | Thumbnail per action in timeline | Low |
+| `snapshots: true` | Full DOM + styles per action | Medium — required for timeline inspection |
+| `sources: true` | Embeds `.ts` source files | Low — invaluable for CI debugging |
+| `title` | Label shown in Trace Viewer header | None |
 
-## `StopTracingAsync` Options
+### `context.tracing.stop()` Options
 
-```csharp
-await context.Tracing.StopAsync(new TracingStopOptions
-{
-    Path = Path.Combine("evidence", "traces",
-        $"{testName}-{DateTime.UtcNow:yyyyMMddHHmmss}.zip")
+```typescript
+await context.tracing.stop({
+  path: `evidence/traces/trace-${Date.now()}.zip`,
 });
 ```
 
-`Path` is required if you want to save the trace. Omit to discard (e.g., on passing tests).
+Omit `path` to discard (for passing tests):
 
-### Stop Without Saving (Passing Tests)
-
-```csharp
-if (TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Passed)
-    await context.Tracing.StopAsync(new());  // discard
-else
-    await context.Tracing.StopAsync(new() { Path = tracePath });
+```typescript
+await context.tracing.stop();  // discards trace data
 ```
 
-## Chunked Tracing (Long Tests)
+### On-Failure Pattern in `test.afterEach`
 
-For long-running tests, use chunks to avoid memory pressure:
+```typescript
+test.afterEach(async ({ context }, testInfo) => {
+  if (testInfo.status !== testInfo.expectedStatus) {
+    const tracePath = `evidence/traces/${testInfo.title.replace(/\s+/g, '-')}-${Date.now()}.zip`;
+    await context.tracing.stop({ path: tracePath });
+    await testInfo.attach('trace', { path: tracePath, contentType: 'application/zip' });
+  } else {
+    await context.tracing.stop();  // discard on pass
+  }
+});
+```
 
-```csharp
-await context.Tracing.StartChunkAsync(new() { Title = "Step: navigate to eligibility" });
-// ... actions ...
-await context.Tracing.StopChunkAsync(new() { Path = "evidence/traces/step1.zip" });
+### Full Test Wrapper Pattern
 
-await context.Tracing.StartChunkAsync(new() { Title = "Step: submit form" });
-// ... actions ...
-await context.Tracing.StopChunkAsync(new() { Path = "evidence/traces/step2.zip" });
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('full policy flow with trace', async ({ page, context }) => {
+  await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+  try {
+    await page.goto('/eligibility/check');
+    // ... test steps ...
+    await expect(page.getByTestId('policy-number')).toBeVisible();
+  } finally {
+    await context.tracing.stop({ path: `evidence/traces/policy-flow-${Date.now()}.zip` });
+  }
+});
 ```
 
 ## Trace File Structure
@@ -60,14 +88,14 @@ A `.zip` trace file contains:
 
 ```
 trace.zip
-├── trace.trace          # binary action log (protobuf)
+├── trace.trace          # binary action log
 ├── trace.network        # network requests/responses
 ├── resources/
 │   ├── *.jpeg           # screenshot thumbnails
 │   ├── *.png            # DOM snapshots (rendered)
 │   └── *.dat            # raw DOM snapshots
-└── src/                 # embedded source files (when Sources=true)
-    └── Tests/EligibilityCheckTests.cs
+└── src/                 # embedded source files (when sources: true)
+    └── tests/e2e/eligibility-check.spec.ts
 ```
 
 ## What the Trace Captures
@@ -75,29 +103,34 @@ trace.zip
 | Category | Details Captured |
 |---|---|
 | Actions | Click, fill, navigate, wait — with before/after DOM snapshots |
-| Assertions | `Expect(locator).ToBeVisible()` outcomes |
+| Assertions | `expect(locator).toBeVisible()` outcomes |
 | Network | Request URL, method, status, headers, request/response body |
 | Console | `console.log`, `console.error`, `console.warn` from the page |
-| Source | Line of `.cs` test code that triggered each action |
-| Screenshots | Thumbnail per action (with `Screenshots = true`) |
+| Source | Line of `.ts` test code that triggered each action |
+| Screenshots | Thumbnail per action (with `screenshots: true`) |
 
 ## Opening a Trace
 
-### Local (npx)
+### Local CLI
 
 ```bash
-npx playwright show-trace evidence/traces/test-name-20240514T120000.zip
-```
-
-### Local (dotnet tool)
-
-```bash
-pwsh bin/Debug/net10.0/playwright.ps1 show-trace evidence/traces/test-name.zip
+npx playwright show-trace evidence/traces/trace.zip
 ```
 
 ### Online Viewer
 
 Upload `.zip` to [trace.playwright.dev](https://trace.playwright.dev) — no install required.
+
+## `testInfo.attachments` for Report Integration
+
+```typescript
+await testInfo.attach('trace', {
+  path:        'evidence/traces/trace.zip',
+  contentType: 'application/zip',
+});
+```
+
+Attaching makes the trace file accessible directly from the HTML report.
 Suitable for sharing traces with team members without Playwright installed.
 
 ## Traces vs Screenshots — When to Use Which
@@ -122,40 +155,4 @@ Add to `.gitignore`:
 
 ```
 evidence/traces/
-```
-
-## NUnit Integration Pattern
-
-```csharp
-[SetUp]
-public async Task StartTracing()
-{
-    await Context.Tracing.StartAsync(new()
-    {
-        Screenshots = true,
-        Snapshots   = true,
-        Sources     = true,
-        Title       = TestContext.CurrentContext.Test.FullName
-    });
-}
-
-[TearDown]
-public async Task StopTracing()
-{
-    var failed  = TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Failed;
-    var dirPath = Path.Combine("evidence", "traces");
-    Directory.CreateDirectory(dirPath);
-
-    if (failed)
-    {
-        var tracePath = Path.Combine(dirPath,
-            $"{TestContext.CurrentContext.Test.FullName.Replace('/', '_')}-{DateTime.UtcNow:yyyyMMddHHmmss}.zip");
-        await Context.Tracing.StopAsync(new() { Path = tracePath });
-        TestContext.AddTestAttachment(tracePath, "Playwright trace");
-    }
-    else
-    {
-        await Context.Tracing.StopAsync(new());  // discard
-    }
-}
 ```

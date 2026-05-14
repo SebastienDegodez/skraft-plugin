@@ -60,7 +60,7 @@ gh issue comment "$ISSUE_NUMBER" \
 
 ### Failing Test
 
-`MonAssurance.IntegrationTests.EligibilityCheckTests.Submit_ValidDriver_ShouldShowEligibleResult`
+`valid Quebec driver aged 30 should be eligible` — `tests/e2e/eligibility-check.spec.ts:18`
 
 ### Screenshot
 
@@ -70,9 +70,11 @@ gh issue comment "$ISSUE_NUMBER" \
 <summary>Full Test Output</summary>
 
 ```
-Expected: eligible
-Actual:   rejected
-  at EligibilityCheckTests.Submit_ValidDriver_ShouldShowEligibleResult line 42
+Error: expect(locator).toHaveText(expected)
+
+Expected string: "Éligible"
+Received string: "Non éligible"
+  at tests/e2e/eligibility-check.spec.ts:29
 ```
 
 </details>
@@ -83,6 +85,8 @@ Actual:   rejected
 - [Trace File](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)
 - [Video Recording](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)
 ````
+
+> Evidence paths: Playwright outputs to `playwright-report/` by default. Custom paths (e.g. `evidence/`) are set via `outputFolder` in `playwright.config.ts` reporter config.
 
 ### Compose Body in Bash
 
@@ -124,6 +128,14 @@ cat >> evidence/comment-body.md << EOF
 ### Artifacts
 - [Test Evidence](${REPORT_URL})
 EOF
+```
+
+## GitHub Actions Native Annotations
+
+Use the `github` reporter for inline PR annotations (no script needed):
+
+```bash
+npx playwright test --reporter=github,html,junit
 ```
 
 ## Large File Upload (>1MB) via GitHub API

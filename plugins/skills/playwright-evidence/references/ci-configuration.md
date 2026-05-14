@@ -21,9 +21,9 @@ permissions:
   contents: read
 
 env:
-  DOTNET_VERSION: '10.0.x'
   PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
-  APP_BASE_URL: http://localhost:5000
+  PLAYWRIGHT_JUNIT_OUTPUT_NAME: evidence/reports/results.xml
+  CI: true
 
 jobs:
   e2e-evidence:
@@ -36,18 +36,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── .NET Setup ────────────────────────────────────────────────────────
-      - name: Setup .NET ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+      # ── Node.js Setup ─────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          node-version: '20'
+          cache: 'npm'
 
-      # ── Restore & Build ───────────────────────────────────────────────────
-      - name: Restore dependencies
-        run: dotnet restore MonAssurance.sln
-
-      - name: Build
-        run: dotnet build MonAssurance.sln --no-restore --configuration Release
+      # ── Install dependencies ───────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
 
       # ── Playwright Browser Cache ───────────────────────────────────────────
       - name: Cache Playwright browsers
@@ -55,50 +53,31 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('**/MonAssurance.IntegrationTests.csproj') }}
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             playwright-chromium-${{ runner.os }}-
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: |
-          pwsh tests/MonAssurance.IntegrationTests/bin/Release/net10.0/playwright.ps1 \
-            install --with-deps chromium
-
-      # ── Start Application Under Test ──────────────────────────────────────
-      - name: Start MonAssurance API
-        run: |
-          dotnet run --project src/MonAssurance.Api/MonAssurance.Api.csproj \
-            --configuration Release &
-          npx wait-on http://localhost:5000/health --timeout 30000
+        run: npx playwright install --with-deps chromium
 
       # ── Run E2E Tests ─────────────────────────────────────────────────────
       - name: Run Playwright tests
         id: playwright-tests
         continue-on-error: true          # allow evidence upload even on failure
         env:
-          APP_BASE_URL: ${{ env.APP_BASE_URL }}
-          GITHUB_ISSUE_NUMBER: ${{ github.event.inputs.issue_number || github.event.issue.number }}
-        run: |
-          dotnet test tests/MonAssurance.IntegrationTests/ \
-            --configuration Release \
-            --no-build \
-            --logger "html;LogFileName=../../evidence/reports/report.html" \
-            --logger "junit;LogFileName=../../evidence/reports/results.xml" \
-            --results-directory evidence/reports \
-            -- NUnit.DefaultTestNamePattern="{m}"
+          ISSUE_NUMBER: ${{ github.event.inputs.issue_number || github.event.issue.number }}
+        run: npx playwright test --reporter=html,junit
 
       # ── Upload Artifacts ───────────────────────────────────────────────────
       - name: Upload evidence artifacts
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-evidence-${{ github.run_id }}
+          name: playwright-evidence-${{ github.run_id }}
           path: |
-            evidence/screenshots/
-            evidence/videos/
-            evidence/traces/
-            evidence/reports/
+            playwright-report/
+            evidence/
           retention-days: 7
           if-no-files-found: ignore
 
@@ -139,75 +118,43 @@ env:
 
 ## Browser Cache Configuration
 
-Cache key uses the test project file hash to invalidate when Playwright version changes:
+Cache key uses `package-lock.json` hash to invalidate when `@playwright/test` version changes:
 
 ```yaml
-key: playwright-chromium-${{ runner.os }}-${{ hashFiles('**/MonAssurance.IntegrationTests.csproj') }}
+key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 ```
 
 After cache restore, always verify browsers are present:
 
 ```yaml
 - name: Verify or install Playwright browsers
-  run: |
-    if ! pwsh tests/.../playwright.ps1 show-browsers 2>/dev/null | grep -q chromium; then
-      pwsh tests/.../playwright.ps1 install --with-deps chromium
-    fi
+  run: npx playwright install chromium --with-deps 2>/dev/null || true
 ```
 
 ## Test Retry for Flaky Tests
 
-Configure retries at two levels:
+Configure retries in `playwright.config.ts`:
 
-**`playwright.config.json`** (built-in retry):
-
-```json
-{
-  "retries": 2
-}
+```typescript
+retries: process.env.CI ? 2 : 0,
 ```
 
-**`dotnet test` level** (re-run failed tests):
+Or via CLI: `npx playwright test --retries=2`
+
+## GitHub Actions Native Annotations
+
+Add `github` reporter alongside others to get inline PR annotations:
 
 ```bash
-dotnet test ... -- NUnit.NumberOfTestWorkers=4 NUnit.TestRetryCount=2
+npx playwright test --reporter=github,html,junit
 ```
 
-## `post-evidence-comment.sh` Script
+Set in `playwright.config.ts`:
 
-```bash
-#!/usr/bin/env bash
-# scripts/post-evidence-comment.sh
-set -euo pipefail
-
-SCREENSHOT_PATH=$(find evidence/screenshots -name "*.png" -newer /tmp/test-start 2>/dev/null | head -1)
-ARTIFACT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-RESULT_ICON="✅"
-[ "${TEST_OUTCOME}" = "failure" ] && RESULT_ICON="❌"
-
-mkdir -p evidence
-
-cat > evidence/comment-body.md << EOF
-## 🎭 E2E Evidence — DELIVER Phase ${RESULT_ICON}
-
-**Run:** [${GITHUB_RUN_ID}](${ARTIFACT_URL}) | **Result:** ${TEST_OUTCOME^^}
-**Timestamp:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
-EOF
-
-if [ -f "${SCREENSHOT_PATH}" ]; then
-  SIZE=$(wc -c < "${SCREENSHOT_PATH}")
-  if [ "${SIZE}" -lt 512000 ]; then
-    B64=$(base64 < "${SCREENSHOT_PATH}" | tr -d '\n')
-    echo "### Screenshot" >> evidence/comment-body.md
-    echo "![test screenshot](data:image/png;base64,${B64})" >> evidence/comment-body.md
-  fi
-fi
-
-cat >> evidence/comment-body.md << EOF
-
-### Artifacts
-- [Screenshots, videos, traces, HTML report](${ARTIFACT_URL})
-EOF
+```typescript
+reporter: process.env.CI
+  ? [['github'], ['html', { outputFolder: 'playwright-report' }], ['junit', { outputFile: 'evidence/reports/results.xml' }]]
+  : [['html']],
 ```
 
 ## Conditional Upload (`if: failure()` vs `if: always()`)
@@ -228,4 +175,6 @@ GITHUB_SERVER_URL      # https://github.com
 GITHUB_REF_NAME        # branch or tag name
 GITHUB_HEAD_REF        # PR source branch
 GITHUB_TOKEN           # auto-injected, scope set by permissions block
+CI                     # set to 'true' — enables Playwright CI mode
+PLAYWRIGHT_JUNIT_OUTPUT_NAME  # path for JUnit XML output
 ```
