@@ -17,17 +17,16 @@ on:
         type: string
 
 permissions:
-  issues: write                # post evidence comment
   contents: read
 
 env:
   PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
-  PLAYWRIGHT_JUNIT_OUTPUT_NAME: evidence/reports/results.xml
+  PLAYWRIGHT_JUNIT_OUTPUT_NAME: .skraft/sdlc/evidence/reports/results.xml
   CI: true
 
 jobs:
   e2e-evidence:
-    name: E2E Tests + Evidence Upload
+    name: E2E Tests + Evidence Capture
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -64,9 +63,7 @@ jobs:
       # ── Run E2E Tests ─────────────────────────────────────────────────────
       - name: Run Playwright tests
         id: playwright-tests
-        continue-on-error: true          # allow evidence upload even on failure
-        env:
-          ISSUE_NUMBER: ${{ github.event.inputs.issue_number || github.event.issue.number }}
+        continue-on-error: true          # allow manifest write even on failure
         run: npx playwright test --reporter=html,junit
 
       # ── Upload Artifacts ───────────────────────────────────────────────────
@@ -106,15 +103,10 @@ jobs:
 
 | Secret | Required | Purpose |
 |---|---|---|
-| `GITHUB_TOKEN` | Yes (auto-injected) | Post issue comments, upload artifacts |
-| `EVIDENCE_UPLOAD_TOKEN` | Optional | Use when `GITHUB_TOKEN` lacks `issues: write` |
+| `GITHUB_TOKEN` | Yes (auto-injected) | Upload CI artifacts |
 
-To use a PAT instead of `GITHUB_TOKEN`:
-
-```yaml
-env:
-  GH_TOKEN: ${{ secrets.EVIDENCE_UPLOAD_TOKEN }}
-```
+Publishing evidence to GitHub (comments, PR annotations) is handled by the consuming
+agent, not by this workflow.
 
 ## Browser Cache Configuration
 
@@ -153,7 +145,7 @@ Set in `playwright.config.ts`:
 
 ```typescript
 reporter: process.env.CI
-  ? [['github'], ['html', { outputFolder: 'playwright-report' }], ['junit', { outputFile: 'evidence/reports/results.xml' }]]
+  ? [['github'], ['html', { outputFolder: '.skraft/sdlc/evidence/reports' }], ['junit', { outputFile: '.skraft/sdlc/evidence/reports/results.xml' }]]
   : [['html']],
 ```
 
