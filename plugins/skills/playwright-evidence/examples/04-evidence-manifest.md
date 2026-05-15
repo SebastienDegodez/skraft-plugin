@@ -2,8 +2,9 @@
 
 Domain: MonAssurance auto-insurance eligibility check.
 
-After the test run, write `.skraft/sdlc/evidence/manifest.md` so agents know what
-was captured. The orchestrator reads this file to decide what to surface.
+After the test run, write `.skraft/sdlc/deliver/{story}/evidence/manifest.md` so agents know what
+was captured. The story key aligns with all other SDLC artefacts:
+`discuss/ac-draft-{story}.md`, `design/diagrams-{story}.md`, `distill/impl-plan-{story}.md`.
 
 ## Global reporter hook
 
@@ -26,6 +27,7 @@ export default class EvidenceManifestReporter implements Reporter {
   private start = Date.now();
   private passed = 0;
   private failed = 0;
+  private storyId = process.env.SKRAFT_STORY_ID ?? 'unknown-story';
 
   onTestEnd(test: TestCase, result: TestResult) {
     if (result.status === 'passed') {
@@ -46,7 +48,7 @@ export default class EvidenceManifestReporter implements Reporter {
   }
 
   onEnd(result: FullResult) {
-    const dir = '.skraft/sdlc/evidence';
+    const dir = `.skraft/sdlc/deliver/${this.storyId}/evidence`;
     mkdirSync(dir, { recursive: true });
 
     const rows = this.entries
@@ -61,6 +63,7 @@ export default class EvidenceManifestReporter implements Reporter {
     const manifest = `# Evidence Manifest
 
 ## Run
+- story: ${this.storyId}
 - timestamp: ${new Date().toISOString()}
 - status: ${status}
 - duration: ${duration}s
@@ -73,8 +76,8 @@ ${rows || '| — | — | no evidence captured |'}
 ## Reports
 | Type | Path |
 |---|---|
-| html | .skraft/sdlc/evidence/reports/index.html |
-| junit | .skraft/sdlc/evidence/reports/results.xml |
+| html | ${dir}/reports/index.html |
+| junit | ${dir}/reports/results.xml |
 `;
 
     writeFileSync(join(dir, 'manifest.md'), manifest);
@@ -88,11 +91,11 @@ Register in `playwright.config.ts`:
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  outputDir: '.skraft/sdlc/evidence',
+  outputDir: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence`,
   reporter: [
     ['./reporters/evidence-manifest-reporter.ts'],
-    ['html', { outputFolder: '.skraft/sdlc/evidence/reports', open: 'never' }],
-    ['junit', { outputFile: '.skraft/sdlc/evidence/reports/results.xml' }],
+    ['html', { outputFolder: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports`, open: 'never' }],
+    ['junit', { outputFile: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }],
   ],
   use: {
     screenshot: 'only-on-failure',
@@ -105,8 +108,8 @@ export default defineConfig({
 ## CLI
 
 ```bash
-npx playwright test
-# manifest written to .skraft/sdlc/evidence/manifest.md automatically
+SKRAFT_STORY_ID=42-add-eligibility-check npx playwright test
+# manifest written to .skraft/sdlc/deliver/42-add-eligibility-check/evidence/manifest.md
 ```
 
 ## Resulting manifest
@@ -115,6 +118,7 @@ npx playwright test
 # Evidence Manifest
 
 ## Run
+- story: 42-add-eligibility-check
 - timestamp: 2026-05-15T10:30:00Z
 - status: failed (1 failures, 9 passed)
 - duration: 38s
@@ -122,15 +126,14 @@ npx playwright test
 ## Files
 | Type | Path | Test |
 |---|---|---|
-| screenshot | .skraft/sdlc/evidence/eligibility-check-underage-1715770200000.png | underage driver should be rejected |
-| trace | .skraft/sdlc/evidence/eligibility-check-underage-1715770200000.zip | underage driver should be rejected |
+| screenshot | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/eligibility-check-underage-1715770200000.png | underage driver should be rejected |
+| trace | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/eligibility-check-underage-1715770200000.zip | underage driver should be rejected |
 
 ## Reports
 | Type | Path |
 |---|---|
-| html | .skraft/sdlc/evidence/reports/index.html |
-| junit | .skraft/sdlc/evidence/reports/results.xml |
+| html | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/reports/index.html |
+| junit | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/reports/results.xml |
 ```
 
-The orchestrator reads `.skraft/sdlc/evidence/manifest.md` and decides what to publish
-(GitHub comment, PR annotation, CI artifact link, etc.).
+The orchestrator resolves the manifest by reading `state.md` → active story → `.skraft/sdlc/deliver/{story}/evidence/manifest.md`.

@@ -2,24 +2,30 @@
 name: playwright-evidence
 description: >
   Use when capturing E2E test evidence (screenshots, videos, traces) and storing
-  them in .skraft/sdlc/evidence/ for agents to consume. Covers Playwright setup,
-  on-failure capture, trace collection, and evidence manifest generation.
+  them in .skraft/sdlc/deliver/{story}/evidence/ for agents to consume. Covers
+  Playwright setup, on-failure capture, trace collection, and evidence manifest
+  generation.
 ---
 
 # Playwright Evidence Skill
 
 ## Overview
 
-This skill captures evidence and stores it in `.skraft/sdlc/evidence/`. Agents read the
-evidence manifest and decide what to publish (GitHub comment, CI artifact, etc.).
+This skill captures evidence and stores it under `.skraft/sdlc/deliver/{story}/evidence/`,
+keeping the story key consistent with all other SDLC phase artefacts. Agents read the
+manifest and decide what to publish.
 
 ```
-E2E Test Run  →  Capture Evidence  →  Write Manifest  →  Agent publishes
-Playwright       screenshots           .skraft/sdlc/      (orchestrator
-(on failure)     videos                evidence/          or other agent)
-                 traces                manifest.md
-                 report
+E2E Test Run  →  Capture Evidence  →  Write Manifest       →  Agent publishes
+Playwright       screenshots           .skraft/sdlc/           (orchestrator
+(on failure)     videos                deliver/{story}/        or other agent)
+                 traces                evidence/
+                 report                manifest.md
 ```
+
+`{story}` is the story slug passed as `SKRAFT_STORY_ID` env var (e.g. `42-add-eligibility-check`).
+All other phases follow the same convention: `discuss/ac-draft-{story}.md`, `design/diagrams-{story}.md`,
+`distill/impl-plan-{story}.md` — evidence is no exception.
 
 **Scope of this skill:** capture, name, store, and list evidence. Publishing is the agent's responsibility.
 
@@ -51,7 +57,8 @@ test.afterEach(async ({ page }, testInfo) => {
 });
 ```
 
-Naming convention: `{test-title}-{timestamp}.png`. Output dir: `.skraft/sdlc/evidence/screenshots/`.
+Naming convention: `{test-title}-{timestamp}.png`. Output dir: `.skraft/sdlc/deliver/{story}/evidence/screenshots/`.
+`{story}` comes from the `SKRAFT_STORY_ID` environment variable.
 Using `testInfo.attachments` makes the screenshot appear inline in the HTML report.
 Reference `references/screenshot-and-video.md` for all `page.screenshot()` options and
 on-failure hook patterns.
@@ -68,8 +75,8 @@ use: {
 
 CLI override: `npx playwright test --video=retain-on-failure`
 
-Playwright writes the video file to `.skraft/sdlc/evidence/videos/{test-name}/video.webm`.
-Set `outputDir: '.skraft/sdlc/evidence'` in `playwright.config.ts` to keep all artifacts co-located.
+Set `outputDir` in `playwright.config.ts` to `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence`
+so Playwright writes all test-results (videos, traces) under the story-keyed path.
 No manual context management required — the test runner handles lifecycle.
 Reference `references/screenshot-and-video.md` for all video config options.
 
@@ -90,7 +97,7 @@ For manual control within a test:
 ```typescript
 await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
 // ... test steps ...
-await context.tracing.stop({ path: '.skraft/sdlc/evidence/traces/trace.zip' });
+await context.tracing.stop({ path: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/traces/trace.zip` });
 ```
 
 View a trace locally: `npx playwright show-trace evidence/traces/trace.zip`
@@ -104,9 +111,10 @@ Configure multi-reporter output in `playwright.config.ts`:
 
 ```typescript
 reporter: [
-  ['html', { outputFolder: '.skraft/sdlc/evidence/reports' }],
-  ['junit', { outputFile: '.skraft/sdlc/evidence/reports/results.xml' }],
+  ['html', { outputFolder: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports` }],
+  ['junit', { outputFile: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }],
 ],
+// SKRAFT_STORY_ID must be set before running: e.g. SKRAFT_STORY_ID=42-add-eligibility-check npx playwright test
 ```
 
 CLI equivalents:
@@ -121,7 +129,8 @@ The HTML report is uploaded as a CI artifact. The JUnit XML is consumed by CI st
 
 ## Evidence Manifest
 
-After the test run, write `.skraft/sdlc/evidence/manifest.md` so agents know what was captured:
+After the test run, write `.skraft/sdlc/deliver/{story}/evidence/manifest.md` so agents know what was captured.
+The story key makes the manifest unambiguous when multiple stories run in sequence:
 
 ```markdown
 # Evidence Manifest
@@ -134,13 +143,14 @@ After the test run, write `.skraft/sdlc/evidence/manifest.md` so agents know wha
 ## Files
 | Type | Path | Test |
 |---|---|---|
-| screenshot | .skraft/sdlc/evidence/screenshots/underage-driver-rejected-1715770200000.png | underage driver should be rejected |
-| trace | .skraft/sdlc/evidence/traces/policy-flow-1715770200000.zip | full policy flow |
-| report | .skraft/sdlc/evidence/reports/index.html | — |
-| junit | .skraft/sdlc/evidence/reports/results.xml | — |
+| screenshot | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/screenshots/underage-driver-rejected-1715770200000.png | underage driver should be rejected |
+| trace | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/traces/policy-flow-1715770200000.zip | full policy flow |
+| report | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/reports/index.html | — |
+| junit | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/reports/results.xml | — |
 ```
 
-The orchestrator reads this manifest to decide what to surface in GitHub comments or CI artifacts.
+The orchestrator reads this manifest by looking up the active story from `state.md` and resolving
+`.skraft/sdlc/deliver/{story}/evidence/manifest.md`.
 
 ## CI Configuration
 
@@ -160,7 +170,7 @@ Reference `references/ci-configuration.md` for the full workflow YAML.
 Add to `.gitignore`:
 
 ```
-.skraft/sdlc/evidence/
+.skraft/sdlc/deliver/
 playwright-report/
 test-results/
 ```

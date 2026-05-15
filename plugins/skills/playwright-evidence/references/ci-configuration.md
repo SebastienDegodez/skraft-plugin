@@ -12,7 +12,11 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: GitHub issue number for evidence upload
+        description: GitHub issue number
+        required: true
+        type: string
+      story_id:
+        description: Story slug matching other SDLC artefacts (e.g. 42-add-eligibility-check)
         required: true
         type: string
 
@@ -21,7 +25,8 @@ permissions:
 
 env:
   PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
-  PLAYWRIGHT_JUNIT_OUTPUT_NAME: .skraft/sdlc/evidence/reports/results.xml
+  PLAYWRIGHT_JUNIT_OUTPUT_NAME: .skraft/sdlc/deliver/${{ inputs.story_id }}/evidence/reports/results.xml
+  SKRAFT_STORY_ID: ${{ inputs.story_id }}
   CI: true
 
 jobs:
@@ -145,7 +150,7 @@ Set in `playwright.config.ts`:
 
 ```typescript
 reporter: process.env.CI
-  ? [['github'], ['html', { outputFolder: '.skraft/sdlc/evidence/reports' }], ['junit', { outputFile: '.skraft/sdlc/evidence/reports/results.xml' }]]
+  ? [['github'], ['html', { outputFolder: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports` }], ['junit', { outputFile: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }]]
   : [['html']],
 ```
 
