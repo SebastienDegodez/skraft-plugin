@@ -153,7 +153,6 @@ Both files must include:
 - Query string(s) executed
 - Total issues found / triaged
 - Timestamp
-- The `working_branch` value (provided by the workflow context)
 
 ---
 
