@@ -45,8 +45,8 @@ Load before starting:
 
 ### Phase 1: RECEIVE
 
-1. Load `.skraft/sdlc/discover/triage-*.md` (most recent, available via branch checkout) — read fully before proceeding
-2. Load `.skraft/sdlc/discover/sprint-proposal.md` — read fully before proceeding
+1. Load `triage-{date}.md` — read fully before proceeding
+2. Load `sprint-proposal.md` — read fully before proceeding
 3. Confirm artefact pair is from the same discovery run (matching date/query)
 4. If either artefact is missing:
 
