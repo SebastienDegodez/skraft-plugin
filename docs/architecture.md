@@ -19,28 +19,56 @@ skraft-plugin/
 │   ├── conventions.md
 │   ├── roadmap.md
 │   ├── architecture.md
-│   ├── agent-software-engineer-and-reviewer.md
+│   ├── agents/software-engineer-and-reviewer.md
 │   ├── agents/
-│   │   └── software-engineer.md
+│   │   ├── skraft-orchestrator.md
+│   │   ├── software-engineer.md
+│   │   └── software-engineer-reviewer.md
 │   └── skills/
+│       ├── clean-architecture-testing.md
+│       ├── craft-discipline.md
+│       ├── create-custom-agent.md
 │       ├── outside-in-tdd.md
-│       ├── red-synthesize-green.md
-│       └── create-custom-agent.md
+│       └── red-synthesize-green.md
 ├── plugins/                               ← composants distribués par le plugin
 │   ├── agents/
-│   │   └── software-engineer.agent.md
+│   │   ├── skraft-orchestrator.agent.md
+│   │   ├── backlog-discoverer.agent.md
+│   │   ├── backlog-discoverer-reviewer.agent.md
+│   │   ├── backlog-planner.agent.md
+│   │   ├── backlog-planner-reviewer.agent.md
+│   │   ├── solution-architect.agent.md
+│   │   ├── solution-architect-reviewer.agent.md
+│   │   ├── acceptance-designer.agent.md
+│   │   ├── acceptance-designer-reviewer.agent.md
+│   │   ├── software-engineer.agent.md
+│   │   ├── software-engineer-reviewer.agent.md
+│   │   └── reviewer-lenses/
+│   │       ├── quality-gates-lens.agent.md
+│   │       ├── architecture-boundaries-lens.agent.md
+│   │       ├── test-integrity-lens.agent.md
+│   │       └── cold-reader-lens.agent.md
 │   └── skills/
+│       ├── acceptance-review-criteria/
+│       ├── architecture-decisions/
+│       ├── architecture-patterns/
+│       ├── architecture-review-criteria/
+│       ├── bdd-methodology/
+│       ├── clean-architecture-testing/
+│       ├── contract-testing/
+│       ├── craft-discipline/
+│       ├── discovery-review-criteria/
+│       ├── github-search-protocol/
+│       ├── issue-refinement/
+│       ├── issue-triage/
+│       ├── mutation-testing/
 │       ├── outside-in-tdd/
-│       │   ├── SKILL.md
-│       │   ├── assets/
-│       │   │   ├── CommandHandlerTestTemplate.cs
-│       │   │   └── QueryHandlerTestTemplate.cs
-│       │   └── references/
-│       │       ├── cqrs-patterns.md
-│       │       ├── test-examples.md
-│       │       └── testing-strategy.md
-│       └── red-synthesize-green/
-│           └── SKILL.md
+│       ├── planning-review-criteria/
+│       ├── playwright-evidence/
+│       ├── red-synthesize-green/
+│       ├── sprint-planning/
+│       ├── test-design-mandates/
+│       └── test-refactoring-catalog/
 └── .agents/                               ← skills méta liés à l'authoring d'agents
     └── skills/
         └── create-custom-agent/
@@ -142,7 +170,7 @@ pour la matrice complète des skills consommés.
 > 🚧 **À venir** — Le mécanisme de **hooks** (`SessionStart`,
 > `PreToolUse`, `SubagentStart/Stop`, `PostToolUse`) qui *gardiennent*
 > mécaniquement les invariants n'est pas encore implémenté. Voir
-> [roadmap §7](./roadmap.md#hooks).
+> [roadmap §2](./roadmap.md#hooks).
 
 ---
 
@@ -150,11 +178,9 @@ pour la matrice complète des skills consommés.
 
 | Composant | Présence physique | Statut |
 |---|---|---|
-| Agent `software-engineer` | `plugins/agents/software-engineer.agent.md` | ✅ |
-| Skill `outside-in-tdd` (avec références + assets) | `plugins/skills/outside-in-tdd/` | ✅ |
-| Skill `red-synthesize-green` | `plugins/skills/red-synthesize-green/` | ✅ |
-| Skill `clean-architecture-testing` | `plugins/skills/clean-architecture-testing/` | ✅ |
+| Orchestrateur `skraft-orchestrator` | `plugins/agents/skraft-orchestrator.agent.md` | ✅ |
+| Agents SDLC (10 sous-agents) | `plugins/agents/*.agent.md` | ✅ |
+| Reviewer lenses (4) | `plugins/agents/reviewer-lenses/*.agent.md` | ✅ |
+| Skills opérationnels | `plugins/skills/*/SKILL.md` | ✅ |
 | Skill méta `create-custom-agent` | `.agents/skills/create-custom-agent/` | ✅ |
-| Agent `software-engineer-reviewer` | — | 🚧 [roadmap](./roadmap.md#reviewer) |
-| Skills `quality-framework`, `test-refactoring-catalog`, `mutation-testing` | — | 🚧 [roadmap](./roadmap.md) |
-| Hooks de gardiennage | — | 🚧 [roadmap §7](./roadmap.md#hooks) |
+| Hooks de gardiennage | — | 🚧 [roadmap §2](./roadmap.md#hooks) |
