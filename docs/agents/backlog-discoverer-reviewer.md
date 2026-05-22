@@ -31,6 +31,17 @@ flowchart LR
 - Cohérence de priorisation (P0/P1, capacité sprint)
 - Détection de doublons
 
+## Gates (G1-G6)
+
+- **G1 (HIGH)** : couverture explicite des 2 modes de découverte (sélection/skip justifiés).
+- **G2 (BLOCKER)** : aucun P0/P1 ouvert manquant dans le triage.
+- **G3 (HIGH)** : priorisation cohérente (justification P0, pas d'inversion de priorité).
+- **G4 (HIGH)** : proposition de sprint compatible capacité (hors override P0) et sans issue XL.
+- **G5 (HIGH)** : aucun doublon exact/proche (>80%) non détecté.
+- **G6 (MEDIUM)** : les paires liées (40-80%) sont signalées avec recommandation.
+
+Voir les critères détaillés dans la skill : [`discovery-review-criteria`](../../plugins/skills/discovery-review-criteria/SKILL.md).
+
 ## Entrées / sorties
 
 - Entrées principales :

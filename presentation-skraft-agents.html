@@ -544,6 +544,28 @@
         next: "Orchestrateur boucle ou avance"
       },
       {
+        phase: "DISCOVER GATES",
+        title: "Gates du backlog-discoverer-reviewer",
+        subtitle: "Vue explicite des controles DISCOVER portes par le reviewer.",
+        role: [
+          "Gates issues de discovery-review-criteria",
+          "Focus: completude, priorisation, deduplication",
+          "BLOCKER sur couverture P0/P1"
+        ],
+        trigger: "Juste apres l'introduction du backlog-discoverer-reviewer",
+        does: "Montre les gates G1 a G6 avec severite",
+        output: "Perimetre de controle complet DISCOVER",
+        next: "Phase DISCUSS",
+        gates: [
+          ["G1", "Couverture explicite des 2 modes de decouverte (selection/skip justifies).", "high"],
+          ["G2", "Aucun P0/P1 ouvert ne manque dans le triage.", "blocker"],
+          ["G3", "Priorisation coherente: justification P0 et pas d'inversion.", "high"],
+          ["G4", "Sprint compatible capacite (hors override P0) et sans issue XL.", "high"],
+          ["G5", "Aucun doublon exact/proche (>80%) non detecte.", "high"],
+          ["G6", "Les paires liees (40-80%) sont signalees avec recommandation.", "medium"]
+        ]
+      },
+      {
         phase: "DISCUSS",
         title: "Agent backlog-planner",
         subtitle: "Transforme les issues en stories prêtes pour DESIGN.",
@@ -570,6 +592,30 @@
         does: "Evalue gates G1-G8",
         output: "Verdict structure avec findings",
         next: "Orchestrateur boucle ou avance"
+      },
+      {
+        phase: "DISCUSS GATES",
+        title: "Gates du backlog-planner-reviewer",
+        subtitle: "Vue explicite des controles DISCUSS portes par le reviewer.",
+        role: [
+          "Gates issues de planning-review-criteria",
+          "Focus: INVEST, AC, coherence planning, DoR",
+          "BLOCKER sur ambiguite, cycles et DoR critique"
+        ],
+        trigger: "Juste apres l'introduction du backlog-planner-reviewer",
+        does: "Montre les gates G1 a G8 avec severite",
+        output: "Perimetre de controle complet DISCUSS",
+        next: "Phase DESIGN",
+        gates: [
+          ["G1", "Conformite INVEST complete pour chaque story.", "high"],
+          ["G2", "Stories independantes et dependances coherentes.", "high"],
+          ["G3", "AC completes, en langage metier, sans prescription technique.", "high"],
+          ["G4", "AC non ambigues: une seule interpretation metier.", "blocker"],
+          ["G5", "Cohherence du scope avec milestone et sprint.", "high"],
+          ["G6", "Aucun cycle dans le DAG de dependances.", "blocker"],
+          ["G7", "Conformite DoR complete (8/8) pour chaque story.", "blocker"],
+          ["G8", "Absence d'antipatterns critiques et majeurs.", "blocker"]
+        ]
       },
       {
         phase: "DESIGN",
@@ -645,12 +691,37 @@
         role: [
           "Coverage lens",
           "Business alignment lens",
+          "Testability lens",
           "Boundary enforcement lens"
         ],
         trigger: "Reception des artefacts DISTILL",
         does: "Applique gates G1-G8",
         output: "Verdict sur scenarios et plan",
         next: "Orchestrateur boucle ou avance"
+      },
+      {
+        phase: "DISTILL GATES",
+        title: "Gates du acceptance-designer-reviewer",
+        subtitle: "Vue explicite des controles DISTILL portes par le reviewer.",
+        role: [
+          "Gates issues de acceptance-review-criteria",
+          "Focus: couverture AC, langage metier, testabilite, boundaries",
+          "BLOCKER sur bijection, jargon technique et boundaries"
+        ],
+        trigger: "Juste apres l'introduction du acceptance-designer-reviewer",
+        does: "Montre les gates G1 a G8 avec severite",
+        output: "Perimetre de controle complet DISTILL",
+        next: "Phase DELIVER",
+        gates: [
+          ["G1", "Bijection AC <-> scenarios: aucun element orphelin.", "blocker"],
+          ["G2", "Representation explicite des edge cases metier.", "high"],
+          ["G3", "Vocabulaire strictement metier dans les scenarios.", "high"],
+          ["G4", "Aucun jargon technique dans Given/When/Then.", "blocker"],
+          ["G5", "Etapes non ambigues, implementables sans clarification.", "high"],
+          ["G6", "Bijection scenarios <-> impl-plan complete.", "high"],
+          ["G7", "Entree via boundary use case Application.", "blocker"],
+          ["G8", "Walking skeleton explicite sur les flux majeurs.", "high"]
+        ]
       },
       {
         phase: "DELIVER",
