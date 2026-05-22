@@ -104,7 +104,7 @@ The mandatory human validation checkpoint is the **orchestrator's responsibility
 
 ## Integration
 
-**REQUIRED BACKGROUND:** `superpowers-whetstone:outside-in-tdd` — defines the two test streams (Application + Domain) that this cycle drives.
+**REQUIRED BACKGROUND:** `outside-in-tdd` — defines the two test streams (Application + Domain) that this cycle drives.
 
 ## Quality Gate Ownership
 
@@ -116,10 +116,10 @@ This skill owns the strict TDD quality gate for business logic layers:
 
 If one of these conditions is not met, work is not complete.
 
-**Behavior-first workflow:** When used with `superpowers-whetstone:outside-in-tdd`:
-1. `superpowers-whetstone:gherkin-gate` defines WHAT (observable behavior)
+**Behavior-first workflow:** When used with `outside-in-tdd`:
+1. `gherkin-gate` defines WHAT (observable behavior)
 2. Acceptance tests map scenarios to executable tests (RED phase)
 3. This skill enforces the RED → validation → SYNTHESIZE GREEN cycle
-4. `superpowers-whetstone:mutation-testing` validates test quality after GREEN (before merge)
+4. `mutation-testing` validates test quality after GREEN (before merge)
 
 Pair with domain-specific testing skills for patterns and examples.
