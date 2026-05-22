@@ -372,7 +372,7 @@ plugins/
 |---------|-------------|
 | `plugins/agents/software-engineer.agent.md` | Remplacer `quality-framework` → `craft-discipline` dans la liste des skills |
 | `docs/roadmap.md` | Retirer reviewer + quality-framework des « à venir », ajouter liens vers les nouvelles fiches |
-| `docs/agent-software-engineer-and-reviewer.md` | Mettre à jour le statut reviewer : ✅ Implémenté |
+| `docs/agents/software-engineer-and-reviewer.md` | Mettre à jour le statut reviewer : ✅ Implémenté |
 | `docs/agents/software-engineer.md` | Remplacer `quality-framework` → `craft-discipline` |
 
 ### Nouvelle documentation

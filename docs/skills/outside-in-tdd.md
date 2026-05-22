@@ -75,10 +75,9 @@ Iron Rule of Tests, walking skeleton, post-GREEN wiring verification.
 | Skill | Rôle dans l'intégration | Statut |
 |---|---|---|
 | [`red-synthesize-green`](./red-synthesize-green.md) | Mécanique RED → validation → SYNTHESIZE-GREEN | ✅ |
-| `mutation-testing` | À exécuter après GREEN, avant commit | 🚧 [À venir](../roadmap.md#mutation-testing) |
+| `mutation-testing` | À exécuter après GREEN, avant commit | ✅ (source: `plugins/skills/mutation-testing/SKILL.md`) |
 | [`clean-architecture-testing`](./clean-architecture-testing.md) | Niveau de test & politique de doubles | ✅ |
-| `quality-framework` | Checklist de quality gates | 🚧 [À venir](../roadmap.md#quality-framework) |
-| `test-refactoring-catalog` | Refactorings de tests sûrs | 🚧 [À venir](../roadmap.md#test-refactoring-catalog) |
+| `test-refactoring-catalog` | Refactorings de tests sûrs | ✅ (source: `plugins/skills/test-refactoring-catalog/SKILL.md`) |
 
 ---
 

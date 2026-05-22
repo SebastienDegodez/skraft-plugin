@@ -14,7 +14,7 @@ repo. Toute fiche qui contient un badge `🚧 À venir` ou `📝 Partiel`
 
 | Élément | Type | Référencé dans | Statut |
 |---|---|---|---|
-| Hooks de gardiennage | infra | [`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md) | 🚧 À venir |
+| Hooks de gardiennage | infra | [`agents/software-engineer-and-reviewer.md`](./agents/software-engineer-and-reviewer.md) | 🚧 À venir |
 
 ---
 
@@ -24,7 +24,7 @@ repo. Toute fiche qui contient un badge `🚧 À venir` ou `📝 Partiel`
 
 **Rôle attendu :** rendre les invariants du duo Engineer/Reviewer
 **mécaniquement infranchissables**. Décrits dans
-[`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md).
+[`agents/software-engineer-and-reviewer.md`](./agents/software-engineer-and-reviewer.md).
 
 | Hook | Invariant à garder |
 |---|---|
@@ -40,10 +40,13 @@ Aucun hook n'est implémenté à ce jour.
 
 ---
 
-## 6. Variantes futures (non engageant)
+## 3. Variantes futures (non engageant)
 
 Ces éléments ne sont pas encore référencés dans la doc mais sont des
 extensions plausibles, listées ici pour mémoire :
 
-- `acceptance-designer` — agent producteur de tests d'acceptation
-  Given-When-Then (mentionné comme acteur amont dans la doc du duo).
+- Formalisation d'un dossier `hooks/` dans le repo (fichiers, conventions
+  de nommage, et stratégie de tests).
+- Couverture documentaire dédiée pour les 8 agents de phase amont
+  (`backlog-*`, `solution-architect*`, `acceptance-designer*`) si un
+  niveau de détail équivalent au trio orchestration/delivery est requis.

@@ -1,29 +1,24 @@
 # skraft-plugin
 
-Plugin **skraft** : agents et skills pour piloter du développement
-discipliné (Outside-In TDD, Clean Architecture, Object Calisthenics,
-mutation testing).
+Plugin **skraft** : pipeline SDLC agentique (DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER) avec agents spécialisés, reviewers dédiés et skills de discipline d'implémentation.
 
 ## Documentation
 
 Toute la documentation vit dans [`docs/`](./docs/).
 
-- 📑 [Index de documentation](./docs/README.md) — sommaire + tableau d'état global
+- 📑 [Index de documentation](./docs/README.md) — sommaire + état global agents/skills
 - 🏗️ [Architecture du plugin](./docs/architecture.md)
-- 🛣️ [Roadmap (éléments à venir)](./docs/roadmap.md)
-- 🤝 [Vue transverse : trio `skraft-orchestrator` / `software-engineer` / `software-engineer-reviewer`](./docs/agent-software-engineer-and-reviewer.md)
+- 🛣️ [Roadmap (reste à implémenter)](./docs/roadmap.md)
+- 🤝 [Vue transverse Engineer/Reviewer](./docs/agents/software-engineer-and-reviewer.md)
 - 🎨 [Conventions de documentation](./docs/conventions.md)
 
 ## État actuel — synthèse
 
 | Composant | Statut |
 |---|---|
-| Agent `skraft-orchestrator` | ✅ Implémenté |
-| Agent `software-engineer` | ✅ Implémenté |
-| Agent `software-engineer-reviewer` | ✅ Implémenté |
-| Skills `outside-in-tdd`, `red-synthesize-green` | ✅ Implémentés |
-| Skill `craft-discipline` | ✅ Implémenté |
-| Skill `mutation-testing` | ✅ Implémenté |
-| Skill `test-refactoring-catalog` | ✅ Implémenté |
-| Skill méta `create-custom-agent` | ✅ Implémenté |
+| Pipeline SDLC orchestrée par `skraft-orchestrator` | ✅ Implémentée |
+| Agents spécialisés de phase (`backlog-*`, `solution-architect*`, `acceptance-designer*`, `software-engineer*`) | ✅ Implémentés |
+| Reviewer lenses (`quality-gates`, `architecture-boundaries`, `test-integrity`, `cold-reader`) | ✅ Implémentés |
+| Skills opérationnels (`plugins/skills/*`) | ✅ Implémentés |
+| Skill méta `create-custom-agent` (`.agents/skills/`) | ✅ Implémenté |
 | Hooks de gardiennage | 🚧 [À venir](./docs/roadmap.md#hooks) |
