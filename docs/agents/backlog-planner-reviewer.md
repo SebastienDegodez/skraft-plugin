@@ -32,6 +32,19 @@ flowchart LR
 - Cohérence planning (scope, DAG de dépendances)
 - Conformité DoR + antipatterns
 
+## Gates (G1-G8)
+
+- **G1 (HIGH)** : conformité INVEST complète pour chaque story.
+- **G2 (HIGH)** : stories indépendantes et graphe de dépendances cohérent.
+- **G3 (HIGH)** : AC complètes (format métier, sans prescription d'implémentation).
+- **G4 (BLOCKER)** : AC non ambiguës (une seule interprétation métier possible).
+- **G5 (HIGH)** : cohérence du scope avec le milestone/sprint.
+- **G6 (BLOCKER)** : absence de cycle dans le DAG de dépendances.
+- **G7 (BLOCKER)** : conformité DoR (8/8 items) pour chaque story.
+- **G8 (BLOCKER/HIGH)** : absence d'antipatterns critiques (BLOCKER) et majeurs (HIGH).
+
+Voir les critères détaillés dans la skill : [`planning-review-criteria`](../../plugins/skills/planning-review-criteria/SKILL.md).
+
 ## Entrées / sorties
 
 - Entrées principales :

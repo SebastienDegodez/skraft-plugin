@@ -32,6 +32,19 @@ flowchart LR
 - Testability (implémentabilité et séquencement)
 - Boundary enforcement (entrée via use case Application)
 
+## Gates (G1-G8)
+
+- **G1 (BLOCKER)** : bijection AC ↔ scénarios (pas d'AC orpheline, pas de scénario orphelin).
+- **G2 (HIGH)** : représentation des edge cases et cas limites métier.
+- **G3 (HIGH)** : vocabulaire strictement métier dans les scénarios.
+- **G4 (BLOCKER)** : absence totale de jargon technique dans Given/When/Then.
+- **G5 (HIGH)** : étapes non ambiguës et implémentables sans clarification.
+- **G6 (HIGH)** : complétude du plan d'implémentation (bijection scénarios ↔ impl-plan).
+- **G7 (BLOCKER)** : conformité des boundaries (entrée par use case Application).
+- **G8 (HIGH)** : couverture walking skeleton explicite pour les flux majeurs.
+
+Voir les critères détaillés dans la skill : [`acceptance-review-criteria`](../../plugins/skills/acceptance-review-criteria/SKILL.md).
+
 ## Entrées / sorties
 
 - Entrées principales :
