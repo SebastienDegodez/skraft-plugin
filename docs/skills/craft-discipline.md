@@ -56,4 +56,4 @@ It audits artifacts independently.
 | [`outside-in-tdd`](./outside-in-tdd.md) | Owns the 4-phase cycle including COMMIT & VERIFY | ✅ |
 | [`red-synthesize-green`](./red-synthesize-green.md) | RED / SYNTHESIZE-GREEN mechanics | ✅ |
 | [`clean-architecture-testing`](./clean-architecture-testing.md) | Test level and doubles policy | ✅ |
-| [`mutation-testing`](./mutation-testing.md) | Mutation testing execution at COMMIT phase | 🚧 [Planned](../roadmap.md#mutation-testing) |
+| `mutation-testing` | Mutation testing execution at COMMIT phase | ✅ (source: `plugins/skills/mutation-testing/SKILL.md`) |

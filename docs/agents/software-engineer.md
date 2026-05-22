@@ -7,7 +7,7 @@
 > `software-engineer` et l'état de ses skills.
 >
 > Le document transverse
-> [`agent-software-engineer-and-reviewer.md`](../agent-software-engineer-and-reviewer.md)
+> [`software-engineer-and-reviewer.md`](./software-engineer-and-reviewer.md)
 > reste un résumé de contexte (duo Engineer/Reviewer), sans dupliquer
 > les détails de cette fiche.
 
@@ -32,6 +32,16 @@ Minimum de tests pour un maximum de confiance.
 L'agent tourne en **mode sub-agent** : aucune question à l'utilisateur ;
 en cas de blocage, il rend un JSON structuré (`status: blocked`).
 
+## Schéma de déclenchement
+
+```mermaid
+flowchart LR
+  O[skraft-orchestrator] -->|phase DELIVER| E[software-engineer]
+  E -->|code + tests + journal| R[software-engineer-reviewer]
+  R -->|verdict| O
+  O -->|changes_requested| E
+```
+
 ---
 
 ## Skills chargés
@@ -49,8 +59,8 @@ en cas de blocage, il rend un JSON structuré (`status: blocked`).
 | Skill | Déclencheur | Statut |
 |---|---|---|
 | `clean-architecture-testing` | Choix de niveau de test, boundaries, doubles | ✅ [voir](../skills/clean-architecture-testing.md) |
-| `test-refactoring-catalog` | Refacto de test (helpers, renommage) | 🚧 [À venir](../roadmap.md#test-refactoring-catalog) |
-| `mutation-testing` | Entrée en phase COMMIT & VERIFY | 🚧 [À venir](../roadmap.md#mutation-testing) |
+| `test-refactoring-catalog` | Refacto de test (helpers, renommage) | ✅ (source: `plugins/skills/test-refactoring-catalog/SKILL.md`) |
+| `mutation-testing` | Entrée en phase COMMIT & VERIFY | ✅ (source: `plugins/skills/mutation-testing/SKILL.md`) |
 
 > En l'état actuel : un skill manquant fait simplement l'objet d'un log
 > `[SKILL MISSING] <name>`, l'agent continue sans bloquer.
@@ -107,7 +117,7 @@ Checklist imprimée par l'agent en fin de phase :
 > Le **Reviewer** est implémenté : voir
 > [software-engineer-reviewer](./software-engineer-reviewer.md).
 > 🚧 Le **gardiennage** par les hooks n'est pas encore implémenté.
-> Voir [roadmap §5](../roadmap.md#hooks).
+> Voir [roadmap §2](../roadmap.md#hooks).
 
 ---
 
@@ -133,8 +143,8 @@ leurs capacités.
 
 ## Voir aussi
 
-- Document transverse : [`agent-software-engineer-and-reviewer.md`](../agent-software-engineer-and-reviewer.md)
+- Document transverse : [`software-engineer-and-reviewer.md`](./software-engineer-and-reviewer.md)
 - Source : [`plugins/agents/software-engineer.agent.md`](../../plugins/agents/software-engineer.agent.md)
 - Skill principal : [`outside-in-tdd`](../skills/outside-in-tdd.md)
 - Skill cycle TDD AI-optimisé : [`red-synthesize-green`](../skills/red-synthesize-green.md)
-- Roadmap : [Reviewer & skills à venir](../roadmap.md)
+- Roadmap : [backlog restant](../roadmap.md)

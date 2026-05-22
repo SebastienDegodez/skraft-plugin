@@ -43,6 +43,5 @@ Pour l'anatomie générale d'un fichier d'agent (et la distinction
 
 ## Consommé par
 
-- Mainteneur du plugin lors de l'**ajout d'un nouvel agent** (par
-  exemple : implémentation future de
-  [`software-engineer-reviewer`](../roadmap.md#reviewer)).
+- Mainteneur du plugin lors de l'**ajout d'un nouvel agent** ou de la
+  maintenance des agents existants dans `plugins/agents/`.

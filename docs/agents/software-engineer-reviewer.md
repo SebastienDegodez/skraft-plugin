@@ -14,6 +14,16 @@ Audit the `software-engineer`'s artifacts (code, tests, TDD journal,
 checklist) adversarially, without modifying code. Render a structured
 JSON verdict (`approved` / `changes_requested` / `rejected`).
 
+## Schéma de déclenchement
+
+```mermaid
+flowchart LR
+    E[software-engineer] -->|artefacts DELIVER| R[software-engineer-reviewer]
+    R -->|fan-out 4 lenses| L[quality / architecture / integrity / cold-reader]
+    L -->|defects| R
+    R -->|verdict JSON| O[skraft-orchestrator]
+```
+
 ---
 
 ## Architecture — Genesis A7
@@ -81,6 +91,6 @@ Severity matrix:
 
 ## See Also
 
-- Cross-cutting view: [`agent-software-engineer-and-reviewer.md`](../agent-software-engineer-and-reviewer.md)
+- Cross-cutting view: [`software-engineer-and-reviewer.md`](./software-engineer-and-reviewer.md)
 - Engineer agent: [`docs/agents/software-engineer.md`](./software-engineer.md)
 - Craft discipline skill: [`docs/skills/craft-discipline.md`](../skills/craft-discipline.md)

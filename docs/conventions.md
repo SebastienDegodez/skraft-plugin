@@ -137,7 +137,7 @@ Pas de format imposé, mais :
 | Conventions | `docs/conventions.md` | — |
 | Fiche agent | `docs/agents/<nom>.md` | `docs/agents/software-engineer.md` |
 | Fiche skill | `docs/skills/<nom>.md` | `docs/skills/outside-in-tdd.md` |
-| Document transverse | `docs/<sujet>.md` | `docs/agent-software-engineer-and-reviewer.md` |
+| Document transverse | `docs/agents/<sujet>.md` | `docs/agents/software-engineer-and-reviewer.md` |
 
 ---
 
@@ -145,7 +145,7 @@ Pas de format imposé, mais :
 
 Une fiche peut décrire un duo / workflow où une partie est implémentée
 et l'autre non (cas typique :
-[`agent-software-engineer-and-reviewer.md`](./agent-software-engineer-and-reviewer.md)).
+[`agents/software-engineer-and-reviewer.md`](./agents/software-engineer-and-reviewer.md)).
 
 Dans ce cas :
 
