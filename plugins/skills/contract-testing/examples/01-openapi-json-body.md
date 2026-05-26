@@ -12,7 +12,7 @@
 ## 1. OpenAPI Contract
 
 ```yaml
-# .skraft/sdlc/design/contracts/eligibility-check-api.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.yaml
 openapi: 3.1.0
 info:
   title: Eligibility Check API
@@ -79,7 +79,7 @@ components:
 ## 2. Microcks Examples
 
 ```yaml
-# .skraft/sdlc/distill/contracts/eligibility-check-api.apiexamples.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apiexamples.yaml
 apiVersion: mocks.microcks.io/v1alpha1
 kind: APIExamples
 metadata:
@@ -143,7 +143,7 @@ spec:
 ## 3. Microcks Metadata (JSON_BODY Dispatcher)
 
 ```yaml
-# .skraft/sdlc/distill/contracts/eligibility-check-api.apimetadata.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apimetadata.yaml
 apiVersion: mocks.microcks.io/v1alpha1
 kind: APIMetadata
 metadata:

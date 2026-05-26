@@ -7,7 +7,7 @@
 ## AsyncAPI Contract
 
 ```yaml
-# .skraft/sdlc/design/contracts/monassurance-events-api.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/monassurance-events-api.yaml
 asyncapi: 2.6.0
 info:
   title: MonAssurance Events API
@@ -105,7 +105,7 @@ components:
 ## Microcks Examples
 
 ```yaml
-# .skraft/sdlc/distill/contracts/monassurance-events-api.apiexamples.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/monassurance-events-api.apiexamples.yaml
 apiVersion: mocks.microcks.io/v1alpha1
 kind: APIExamples
 metadata:

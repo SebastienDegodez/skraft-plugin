@@ -256,9 +256,9 @@ public class EligibilityEventProducerTests : IAsyncLifetime
 
 | Artifact | Path |
 |---|---|
-| AsyncAPI contract | `.skraft/sdlc/design/contracts/{name}-events.yaml` |
-| Microcks examples | `.skraft/sdlc/distill/contracts/{name}-events.apiexamples.yaml` |
-| Microcks metadata | `.skraft/sdlc/distill/contracts/{name}-events.apimetadata.yaml` |
+| AsyncAPI contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.yaml` |
+| Microcks examples | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.apiexamples.yaml` |
+| Microcks metadata | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.apimetadata.yaml` |
 
 ---
 

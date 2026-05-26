@@ -83,7 +83,7 @@ lenses:
     findings:
       - gate: G5
         severity: HIGH
-        artefact: .skraft/sdlc/design/diagrams-eligibility.md
+        artefact: .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-eligibility.md
         description: "EligibilityAggregate contains a direct reference to PolicyAggregate (not an ID). The diagram shows 'EligibilityAggregate → PolicyAggregate root entity' inside the EligibilityContext boundary. This is a cross-aggregate invariant violation: EligibilityAggregate must reference PolicyId only."
   fitness:
     status: pass
@@ -112,8 +112,8 @@ lenses:
       - gate: G2
         severity: BLOCKER
         artefact:
-          - .skraft/sdlc/design/adr-001-cqrs-eligibility.md
-          - .skraft/sdlc/design/adr-005-unified-model-eligibility.md
+          - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-001-cqrs-eligibility.md
+          - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-005-unified-model-eligibility.md
         description: "ADR-001 (status: Accepted) prescribes CQRS for the eligibility check — separate command and query models. ADR-005 (status: Accepted) prescribes a single unified model for eligibility, stating that the read and write shapes are identical and CQRS is not needed. Both ADRs are status Accepted and apply to the same scope (EligibilityContext). This is a direct contradiction. The architecture cannot be implemented consistently until this is resolved."
   architecture-compliance:
     status: pass
@@ -123,7 +123,7 @@ lenses:
     findings:
       - gate: G7
         severity: HIGH
-        artefact: .skraft/sdlc/design/event-model-eligibility.md
+        artefact: .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-eligibility.md
         description: "Story US-03 (Driver renews eligibility before expiry) is listed in stories-milestone-1.md. No RenewEligibility command or EligibilityRenewed event appears in any event model or contract."
 synthesis:
   blocking_findings:

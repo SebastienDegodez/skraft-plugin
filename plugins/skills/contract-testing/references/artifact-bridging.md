@@ -4,10 +4,10 @@
 
 | Phase | Artifact type | File path | Naming rule |
 |---|---|---|---|
-| DESIGN | OpenAPI 3.1 contract | `.skraft/sdlc/design/contracts/{name}.yaml` | kebab-case, resource-centric |
-| DESIGN | AsyncAPI 2.6.0 contract | `.skraft/sdlc/design/contracts/{name}-events.yaml` | kebab-case, `-events` suffix |
-| DISTILL | Microcks examples | `.skraft/sdlc/distill/contracts/{name}.apiexamples.yaml` | same stem as DESIGN contract |
-| DISTILL | Microcks metadata | `.skraft/sdlc/distill/contracts/{name}.apimetadata.yaml` | same stem as DESIGN contract |
+| DESIGN | OpenAPI 3.1 contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.yaml` | kebab-case, resource-centric |
+| DESIGN | AsyncAPI 2.6.0 contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.yaml` | kebab-case, `-events` suffix |
+| DISTILL | Microcks examples | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.apiexamples.yaml` | same stem as DESIGN contract |
+| DISTILL | Microcks metadata | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.apimetadata.yaml` | same stem as DESIGN contract |
 | DELIVER | Test imports | Copied to `tests/{Project}/contracts/` via `.csproj` content items | mirrors DISTILL structure |
 
 **Stem rule:** the filename stem (without extension) is identical across all three phases.
@@ -85,9 +85,9 @@ new MicrocksBuilder()
 
 When the orchestrator transitions from DESIGN → DISTILL, it:
 
-1. Reads all `.yaml` files under `.skraft/sdlc/design/contracts/`.
-2. For each contract, creates a skeleton `.apiexamples.yaml` in `.skraft/sdlc/distill/contracts/`.
-3. Creates a skeleton `.apimetadata.yaml` in `.skraft/sdlc/distill/contracts/`.
+1. Reads all `.yaml` files under `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
+2. For each contract, creates a skeleton `.apiexamples.yaml` in `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
+3. Creates a skeleton `.apimetadata.yaml` in `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
 4. Populates examples from OpenAPI `operationId` entries (one example per response code per operation).
 5. Selects default dispatcher (`JSON_BODY` for POST with body, none for GET/DELETE).
 
@@ -106,7 +106,7 @@ A version bump is required on any breaking change to a contract. Execute atomica
 ### Step 1 — Update the OpenAPI/AsyncAPI contract
 
 ```yaml
-# In .skraft/sdlc/design/contracts/eligibility-check-api.yaml
+# In .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.yaml
 info:
   version: 2.0.0   # ← bumped from 1.0.0
 ```
@@ -114,11 +114,11 @@ info:
 ### Step 2 — Update both DISTILL artifacts
 
 ```yaml
-# In .skraft/sdlc/distill/contracts/eligibility-check-api.apiexamples.yaml
+# In .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apiexamples.yaml
 metadata:
   name: "Eligibility Check API - 2.0.0"   # ← must match exactly
 
-# In .skraft/sdlc/distill/contracts/eligibility-check-api.apimetadata.yaml
+# In .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apimetadata.yaml
 metadata:
   name: "Eligibility Check API - 2.0.0"   # ← must match exactly
 ```

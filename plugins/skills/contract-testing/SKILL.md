@@ -20,9 +20,9 @@ contracts/{api}.yaml        .apiexamples.yaml                MicrocksContainer
 ```
 
 **Artifact path convention:**
-- DESIGN  → `.skraft/sdlc/design/contracts/{api-name}.yaml`
-- DISTILL → `.skraft/sdlc/distill/contracts/{api-name}.apiexamples.yaml`
-            `.skraft/sdlc/distill/contracts/{api-name}.apimetadata.yaml`
+- DESIGN  → `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{api-name}.yaml`
+- DISTILL → `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{api-name}.apiexamples.yaml`
+            `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{api-name}.apimetadata.yaml`
 - DELIVER → Testcontainers test class imports both DISTILL artifacts
 
 **Core principle:** the contract is the source of truth. Implementation is verified against it, not the other way around.
@@ -31,7 +31,7 @@ contracts/{api}.yaml        .apiexamples.yaml                MicrocksContainer
 
 ## 1. Authoring API Contracts (DESIGN phase)
 
-Write OpenAPI 3.1 contracts in YAML. Store at `.skraft/sdlc/design/contracts/{api-name}.yaml`.
+Write OpenAPI 3.1 contracts in YAML. Store at `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{api-name}.yaml`.
 
 **Required top-level structure:**
 ```yaml
@@ -277,7 +277,7 @@ Assert.True(result.Success, string.Join("\n", result.Failures));
 
 ## 5. AsyncAPI Contracts (Kafka / RabbitMQ)
 
-Write AsyncAPI 2.6.0 contracts. Store at `.skraft/sdlc/design/contracts/{event-name}-events.yaml`.
+Write AsyncAPI 2.6.0 contracts. Store at `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{event-name}-events.yaml`.
 
 **Required structure:**
 ```yaml
@@ -333,10 +333,10 @@ Artifacts flow from DESIGN → DISTILL → DELIVER following this convention:
 
 | Phase | Artifact | Path |
 |---|---|---|
-| DESIGN | OpenAPI contract | `.skraft/sdlc/design/contracts/{name}.yaml` |
-| DESIGN | AsyncAPI contract | `.skraft/sdlc/design/contracts/{name}-events.yaml` |
-| DISTILL | Microcks examples | `.skraft/sdlc/distill/contracts/{name}.apiexamples.yaml` |
-| DISTILL | Microcks metadata | `.skraft/sdlc/distill/contracts/{name}.apimetadata.yaml` |
+| DESIGN | OpenAPI contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.yaml` |
+| DESIGN | AsyncAPI contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.yaml` |
+| DISTILL | Microcks examples | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.apiexamples.yaml` |
+| DISTILL | Microcks metadata | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.apimetadata.yaml` |
 | DELIVER | Test imports | Via `MicrocksBuilder.WithMainArtifact(path)` referencing DISTILL artifacts |
 
 **Import order for MicrocksBuilder:** always load the OpenAPI/AsyncAPI contract first (schema), then the `.apiexamples.yaml` (examples), then the `.apimetadata.yaml` (dispatcher config).
