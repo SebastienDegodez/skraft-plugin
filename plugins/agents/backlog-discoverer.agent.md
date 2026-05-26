@@ -21,8 +21,11 @@ metadata:
       - GitHub milestones
       - git log (for artifact-driven mode)
   outputs:
-    - .skraft/sdlc/discover/triage-{YYYY-MM-DD}.md
-    - .skraft/sdlc/discover/sprint-proposal.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/triage-{YYYY-MM-DD}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/sprint-proposal.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Backlog-Discoverer Agent
@@ -143,10 +146,12 @@ For each issue in the raw list:
 
 ### Phase 6: PERSIST
 
-Write two files to `.skraft/sdlc/discover/`:
+Write both files under the DISCOVER subdirectory defined in `#file:plugins/instructions/skraft-artifacts.instructions.md` — i.e. `.copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/`:
 
 1. **`triage-{YYYY-MM-DD}.md`** — full triage report (discovery mode, raw counts, triage table, duplicates, sprint proposal)
-2. **`sprint-proposal.md`** — standalone sprint proposal (latest run overwrites previous)
+2. **`sprint-proposal.md`** — standalone sprint proposal (latest run overwrites previous within the same dated subfolder)
+
+Markdown files under `.copilot-tracking/` must begin with `<!-- markdownlint-disable-file -->` per the artifacts instruction.
 
 Both files must include:
 - Discovery mode used

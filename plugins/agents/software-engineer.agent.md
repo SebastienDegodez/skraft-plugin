@@ -6,6 +6,7 @@ user-invocable: false
 tools: execute/testFailure, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runInTerminal, read/readFile, agent, edit/createDirectory, edit/createFile, edit/editFiles, search/codebase
 metadata:
   dispatched_by: skraft-orchestrator
+  phase: DELIVER
   skills:
     - outside-in-tdd
     - red-synthesize-green
@@ -13,6 +14,20 @@ metadata:
     - craft-discipline
     - test-refactoring-catalog
     - mutation-testing
+  inputs:
+    required:
+      - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
+    context:
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-{n}-{slug}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/state.json (depthTier + difficulty)
+  outputs:
+    - Source code commits (conventional commits)
+    - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
   model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + Iron Rule + Mutation score). Low-tier models (Haiku, Flash, mini) are NOT supported."
 ---
 
@@ -81,8 +96,9 @@ These are owned by the skills — load them, do not inline rules here.
 
 ### 4. COMMIT & VERIFY
 - Run static checks, formatting, and Mutation Testing.
-- **Gate**: 100% Mutation score on business logic. If a test kills no mutants, DELETE IT.
+- **Gate**: Mutation score threshold depends on `state.json::userPreferences.depthTier` (basic≅80%, standard≅90%, comprehensive=100% on business logic). If a test kills no mutants, DELETE IT.
 - Commit using conventional commits (`feat(<domain>): <behavior>`).
+- Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
 
 ## Quality Gates Checklist
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:

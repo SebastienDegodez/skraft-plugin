@@ -16,16 +16,19 @@ metadata:
     - architecture-decisions
   inputs:
     required:
-      - .skraft/sdlc/discuss/stories-{milestone}.md
-      - .skraft/sdlc/discuss/ac-draft-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
     context:
       - existing codebase architecture files
   outputs:
-    - .skraft/sdlc/design/event-model-{story}.md
-    - .skraft/sdlc/design/adr-{n}-{slug}.md
-    - .skraft/sdlc/design/diagrams-{story}.md
-    - .skraft/sdlc/design/contracts-{story}.md
-    - .skraft/sdlc/design/context-map.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-{n}-{slug}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-{story}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Solution-Architect Agent
@@ -67,14 +70,14 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 ### Phase 1: RECEIVE
 
 Load all required inputs from DISCUSS:
-1. Read `.skraft/sdlc/discuss/stories-{milestone}.md`
-2. Read all `.skraft/sdlc/discuss/ac-draft-{story}.md` files
+1. Read `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md`
+2. Read all `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md` files
 3. List stories, their acceptance criteria, and the domain language used
 
 ### Phase 2: PRIOR PHASE READING GATE
 
 Before any design work, verify:
-- `.skraft/sdlc/discuss/` contains at least one `stories-*.md` file → if not, halt
+- `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/` contains at least one `stories-*.md` file → if not, halt
 - At least one `ac-draft-*.md` file exists per story → if missing, halt
 
 Report any gap as a structured blocker JSON (see above). Do not proceed until resolved.
@@ -203,12 +206,13 @@ Produce `contracts-{story}.md` with the full interface inventory.
 
 ### Phase 9: PERSIST
 
-Write all artefacts to `.skraft/sdlc/design/`:
-- `event-model-{story}.md` — event timeline per story
-- `adr-{NNN}-{slug}.md` — one file per ADR
-- `diagrams-{story}.md` — component diagram per story
-- `contracts-{story}.md` — interface contracts per story
-- `context-map.md` — full context map (created or updated)
+Write all artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Every markdown file must begin with `<!-- markdownlint-disable-file -->`.
+
+- `details/{date}/event-model-{story}.md` — event timeline per story
+- `adrs/adr-{NNN}-{slug}.md` — one file per ADR (append-only, sequential numbering across the whole project)
+- `details/{date}/diagrams-{story}.md` — component diagram per story
+- `details/{date}/contracts-{story}.md` — interface contracts per story
+- `details/{date}/context-map.md` — full context map (created or updated)
 
 After writing, print a summary table:
 

@@ -12,16 +12,19 @@ metadata:
     - test-design-mandates
   inputs:
     required:
-      - .skraft/sdlc/discuss/stories-{milestone}.md
-      - .skraft/sdlc/discuss/ac-draft-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
     recommended:
-      - .skraft/sdlc/design/contracts-{story}.md
-      - .skraft/sdlc/design/event-model-{story}.md
-      - .skraft/sdlc/design/adr-{n}-{slug}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-{n}-{slug}.md
   outputs:
-    - .skraft/sdlc/distill/{feature}.feature
-    - .skraft/sdlc/distill/test-plan-{story}.md
-    - .skraft/sdlc/distill/impl-plan-{story}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Acceptance-Designer Agent
@@ -87,7 +90,7 @@ For each acceptance criterion in `ac-draft-{story}.md`:
 ### 3. GHERKIN WRITING (via bdd-methodology skill)
 
 Apply the bdd-methodology skill fully. Per feature file:
-- Filename: `.skraft/sdlc/distill/{bounded-context}-{feature}.feature`
+- Filename: `.copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature`
 - One scenario per AC minimum
 - All language = business vocabulary (zero technical terms in Given/When/Then)
 - Scenario title: `{persona} {action} {outcome}`
@@ -126,7 +129,8 @@ Derive the outside-in order from the test plan. Each step must name:
 
 ### 6. PERSIST
 
-Write all artefacts to `.skraft/sdlc/distill/`:
-- `{feature}.feature` — Gherkin scenarios (one file per bounded context feature)
-- `test-plan-{story}.md` — coverage matrix with layer assignment
-- `impl-plan-{story}.md` — sequenced implementation plan (outside-in order)
+Write all artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Markdown files require the `<!-- markdownlint-disable-file -->` header.
+
+- `features/{feature}.feature` — Gherkin scenarios (one file per bounded context feature)
+- `details/{date}/test-plan-{story}.md` — coverage matrix with layer assignment
+- `details/{date}/impl-plan-{story}.md` — sequenced implementation plan (outside-in order)
