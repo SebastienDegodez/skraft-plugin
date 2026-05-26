@@ -85,7 +85,12 @@ Rendre SKRAFT **compatible HVE** en remplaçant uniquement l'agent RPI (Research
   "retryCount": {"DISCOVER": 0, "DISCUSS": 0, "DESIGN": 0, "DISTILL": 0, "DELIVER": 0},
   "referencesProcessed": ["..."],
   "nextActions": ["..."],
-  "userPreferences": {"autonomyTier": "full|partial|manual", "maxRetriesPerPhase": 2},
+  "userPreferences": {
+    "autonomyTier": "full|partial|manual",
+    "depthTier": "basic|standard|comprehensive|custom",
+    "maxRetriesPerPhase": 2
+  },
+  "depthTierOverrides": [],
   "neighborPlanners": {
     "securityPlanFile": "string | null",
     "raiPlanFile": "string | null",
