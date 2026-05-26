@@ -13,14 +13,20 @@ metadata:
     - S6 RULE BRIDGE
   skills:
     - acceptance-review-criteria
+    - adversarial-review-lenses
   inputs:
     required:
-      - .skraft/sdlc/distill/{feature}.feature
-      - .skraft/sdlc/distill/test-plan-{story}.md
-      - .skraft/sdlc/distill/impl-plan-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
     context:
-      - .skraft/sdlc/discuss/ac-draft-{story}.md
-      - .skraft/sdlc/design/contracts-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
+  outputs:
+    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Acceptance-Designer Reviewer
@@ -36,12 +42,12 @@ Load before starting:
 
 ### Phase 1: RECEIVE
 
-Collect artefacts:
-- **Feature files** — `.skraft/sdlc/distill/*.feature`
-- **Test plan** — `.skraft/sdlc/distill/test-plan-{story}.md`
-- **Implementation plan** — `.skraft/sdlc/distill/impl-plan-{story}.md`
-- **AC source** — `.skraft/sdlc/discuss/ac-draft-{story}.md` (bijection reference)
-- **Contracts** — `.skraft/sdlc/design/contracts-{story}.md` (boundary reference)
+Collect artefacts (READ-ONLY — the reviewer never writes outside `reviews/{date}/`):
+- **Feature files** — `.copilot-tracking/skraft-plans/{projectSlug}/features/*.feature`
+- **Test plan** — `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md`
+- **Implementation plan** — `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md`
+- **AC source** — `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md` (bijection reference)
+- **Contracts** — `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md` (boundary reference)
 
 If artefacts are missing, note them and proceed with available inputs.
 
@@ -101,17 +107,19 @@ Apply the severity matrix (from `acceptance-review-criteria` skill):
 
 | Condition | Verdict |
 |---|---|
-| ≥1 BLOCKER in any lens | `rejected` |
-| ≥1 HIGH, 0 BLOCKER | `changes_requested` |
-| MEDIUM only across all lenses | `changes_requested` |
-| LOW only or all pass | `approved` |
+| ≥1 BLOCKER in any lens | `REJECTED` |
+| ≥1 HIGH, 0 BLOCKER | `NEEDS_REWORK` |
+| MEDIUM only across all lenses | `NEEDS_REWORK` |
+| LOW only or all pass | `APPROVED` |
 
 **Dissent Rule:** If 3 lenses pass and 1 fails — explain explicitly why the minority finding is overridden OR upheld. Never silently override. Document in `dissent`.
 
 ### Verdict Output
 
+Persist the full verdict YAML inside a markdown wrapper (first line: `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`, then emit the same YAML to stdout.
+
 ```yaml
-verdict: approved | changes_requested | rejected
+verdict: APPROVED | NEEDS_REWORK | REJECTED
 confidence: high | medium | low
 lenses:
   coverage:

@@ -6,6 +6,22 @@ user-invocable: false
 tools: read/readFile, search/codebase, agent
 metadata:
   dispatched_by: skraft-orchestrator
+  phase: DELIVER-REVIEW
+  inputs:
+    required:
+      - Source code commits produced by software-engineer
+      - Test files referenced in the commits
+    context:
+      - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/state.json (depthTier + difficulty)
+  outputs:
+    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
+  skills:
+    - adversarial-review-lenses
   genesis_patterns:
     - A7 ADVERSARIAL REVIEW
     - B1 FAN-OUT + SYNTHESIZER
@@ -66,10 +82,10 @@ Apply the severity matrix:
 
 | Condition | Status |
 |-----------|--------|
-| ≥1 `blocker` in any lens | `rejected` |
-| ≥1 `high`, 0 `blocker` | `changes_requested` |
-| `medium` only, across all lenses | `changes_requested` |
-| `low` only or all pass | `approved` |
+| ≥1 `blocker` in any lens | `REJECTED` |
+| ≥1 `high`, 0 `blocker` | `NEEDS_REWORK` |
+| `medium` only, across all lenses | `NEEDS_REWORK` |
+| `low` only or all pass | `APPROVED` |
 
 **Dissent Rule:** If 3 lenses say `pass` and 1 says `fail`:
 1. Examine the failing lens's findings explicitly.
@@ -83,7 +99,7 @@ Emit EXACTLY this JSON:
 
 ```json
 {
-  "status": "approved | changes_requested | rejected",
+  "status": "APPROVED | NEEDS_REWORK | REJECTED",
   "lens_results": [
     {
       "lens": "quality-gates",
@@ -117,7 +133,7 @@ Emit EXACTLY this JSON:
 - Propose a fix (findings only — the engineer decides how to fix)
 - Soften a threshold
 - Approve without examining dissent
-- Downgrade a `blocker` finding to pass `approved`
+- Downgrade a `blocker` finding to pass `APPROVED`
 
 ## Subagent Mode
 

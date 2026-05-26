@@ -13,12 +13,18 @@ metadata:
     - S6 RULE BRIDGE
   skills:
     - discovery-review-criteria
+    - adversarial-review-lenses
   inputs:
     required:
-      - .skraft/sdlc/discover/triage-{date}.md
-      - .skraft/sdlc/discover/sprint-proposal.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
     context:
       - GitHub repository (to verify issue labels via MCP)
+  outputs:
+    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Backlog-Discoverer-Reviewer Agent
@@ -162,15 +168,15 @@ Execute each lens independently. Record findings per gate before moving to the n
 
 ### Phase 4: OUTPUT
 
-Emit the full verdict YAML followed by a human-readable summary.
+Persist the full verdict YAML (wrapped in a markdown file starting with `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`, then emit the same YAML followed by a human-readable summary.
 
 ```yaml
-verdict: approved | changes_requested | rejected
+verdict: APPROVED | NEEDS_REWORK | REJECTED
 confidence: high | medium | low
 reviewed_at: {ISO-8601 date}
 artefacts_reviewed:
-  - .skraft/sdlc/discover/triage-{date}.md
-  - .skraft/sdlc/discover/sprint-proposal.md
+  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
+  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
 lenses:
   completeness:
     status: pass | fail

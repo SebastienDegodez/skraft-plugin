@@ -13,15 +13,21 @@ metadata:
     - S6 RULE BRIDGE
   skills:
     - architecture-review-criteria
+    - adversarial-review-lenses
   inputs:
     required:
-      - .skraft/sdlc/design/adr-*.md
-      - .skraft/sdlc/design/diagrams-{story}.md
-      - .skraft/sdlc/design/contracts-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-*.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
     context:
-      - .skraft/sdlc/discuss/stories-{milestone}.md
-      - .skraft/sdlc/design/event-model-{story}.md
-      - .skraft/sdlc/design/context-map.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md
+  outputs:
+    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Solution-Architect-Reviewer Agent
@@ -47,11 +53,11 @@ Load before starting:
 
 ### Phase 1: RECEIVE
 
-Load all DESIGN artefacts:
-1. Load all `adr-*.md` files from `.skraft/sdlc/design/`
-2. Load all `diagrams-{story}.md` files
-3. Load all `contracts-{story}.md` files
-4. Load context: `stories-{milestone}.md`, `event-model-{story}.md`, `context-map.md`
+Load all DESIGN artefacts (READ-ONLY — the reviewer never writes outside `reviews/{date}/`):
+1. Load all `adr-*.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/adrs/`
+2. Load all `diagrams-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
+3. Load all `contracts-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
+4. Load context: `plans/{date}/stories-{milestone}.md`, `details/{date}/event-model-{story}.md`, `details/{date}/context-map.md`
 
 Produce an inventory before reviewing:
 
@@ -143,11 +149,11 @@ Aggregate all findings from the three lenses.
 **Severity matrix:**
 | Condition | Verdict |
 |---|---|
-| ≥1 BLOCKER finding | `rejected` |
-| ≥1 HIGH finding, 0 BLOCKER | `changes_requested` |
-| MEDIUM findings only | `changes_requested` |
-| LOW findings only | `approved` with notes |
-| Zero findings | `approved` |
+| ≥1 BLOCKER finding | `REJECTED` |
+| ≥1 HIGH finding, 0 BLOCKER | `NEEDS_REWORK` |
+| MEDIUM findings only | `NEEDS_REWORK` |
+| LOW findings only | `APPROVED` with notes |
+| Zero findings | `APPROVED` |
 
 **Dissent rule:** If 2 lenses pass and 1 fails — this is a partial failure. State explicitly: "Lenses {A} and {B} pass. Lens {C} fails on gate {Gn}." Never silently absorb a lens failure into an overall pass.
 
@@ -158,10 +164,12 @@ Aggregate all findings from the three lenses.
 
 ### Phase 4: OUTPUT
 
+Persist the full verdict YAML inside a markdown wrapper (first line: `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`, then emit the same YAML to stdout.
+
 Emit the verdict as a YAML block, followed by a findings narrative.
 
 ```yaml
-verdict: approved | changes_requested | rejected
+verdict: APPROVED | NEEDS_REWORK | REJECTED
 confidence: high | medium | low
 lenses:
   consistency:
@@ -169,21 +177,21 @@ lenses:
     findings:
       - gate: G1
         severity: HIGH
-        artefact: .skraft/sdlc/design/diagrams-eligibility.md
+        artefact: .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-eligibility.md
         description: "The EligibilityProjection read model in the diagram has no corresponding ADR justification."
   architecture-compliance:
     status: pass | fail
     findings:
       - gate: G3
         severity: BLOCKER
-        artefact: .skraft/sdlc/design/contracts-eligibility.md
+        artefact: .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-eligibility.md
         description: "IEligibilityRepository interface in Domain layer imports SqlClient from Infrastructure."
   fitness:
     status: pass | fail
     findings:
       - gate: G7
         severity: HIGH
-        artefact: .skraft/sdlc/design/event-model-eligibility.md
+        artefact: .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-eligibility.md
         description: "Story US-03 (Renew eligibility) has no command or event in the event model."
 synthesis:
   blocking_findings:
