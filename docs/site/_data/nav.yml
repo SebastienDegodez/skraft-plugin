@@ -1,0 +1,54 @@
+- path_fr: "/fr/"
+  path_en: "/en/"
+  title_fr: "Accueil"
+  title_en: "Home"
+
+- path_fr: "/fr/pour-decideurs"
+  path_en: "/en/for-executives"
+  title_fr: "Pour décideurs"
+  title_en: "For Executives"
+
+- path_fr: "/fr/pipeline/"
+  path_en: "/en/pipeline/"
+  title_fr: "Pipeline"
+  title_en: "Pipeline"
+
+- path_fr: "/fr/architecture"
+  path_en: "/en/architecture"
+  title_fr: "Architecture"
+  title_en: "Architecture"
+
+- path_fr: "/fr/concepts"
+  path_en: "/en/concepts"
+  title_fr: "Concepts"
+  title_en: "Concepts"
+
+- path_fr: "/fr/customisation"
+  path_en: "/en/customisation"
+  title_fr: "Customisation"
+  title_en: "Customisation"
+
+- path_fr: "/fr/reference/agents/"
+  path_en: "/en/reference/agents/"
+  title_fr: "Référence Agents"
+  title_en: "Reference Agents"
+
+- path_fr: "/fr/reference/skills/"
+  path_en: "/en/reference/skills/"
+  title_fr: "Référence Skills"
+  title_en: "Reference Skills"
+
+- path_fr: "/fr/getting-started"
+  path_en: "/en/getting-started"
+  title_fr: "Premiers pas"
+  title_en: "Getting Started"
+
+- path_fr: "/fr/citations"
+  path_en: "/en/citations"
+  title_fr: "Citations"
+  title_en: "Citations"
+
+- path_fr: "/fr/contributing"
+  path_en: "/en/contributing"
+  title_fr: "Contribuer"
+  title_en: "Contributing"
