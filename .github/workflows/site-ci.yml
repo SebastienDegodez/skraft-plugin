@@ -1,0 +1,39 @@
+name: Site CI
+
+on:
+  pull_request:
+    paths:
+      - 'docs/site/**'
+      - 'scripts/check-citations.mjs'
+      - 'tests/site/**'
+
+jobs:
+  lint-citations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Citation lint
+        run: node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
+
+  smoke-tests:
+    runs-on: ubuntu-latest
+    needs: lint-citations
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: docs/site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run smoke tests
+        run: npx playwright test
+        env:
+          CI: true
