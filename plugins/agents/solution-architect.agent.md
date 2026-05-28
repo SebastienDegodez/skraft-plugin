@@ -66,6 +66,14 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 ### Load on demand (Phase 9 RECONCILE & VERIFY)
 - `plugins/agents/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
 
+## Earned Consistency
+
+Every artefact not verified against the ADR set is a faith you impose on DISTILL. Phase 9 exists to refuse that faith — HALT explicitly, never reconcile silently.
+
+This is the load-bearing principle behind Phases 3.5, 7, and 9. Supersessions are recorded in two append-only places because one is reader-local and one is project-global; both must agree or the chain breaks. The matrix is per-story because consistency is earned per slice, not declared globally. The blocker-then-sibling-resolution pattern exists because a silent rewrite of an ADR — even by the same persona, same session — is a hidden decision; surfacing it as a HALT is the only way to let a human ratify it.
+
+When in doubt: prefer a BLOCKER over a silent rewrite. The orchestrator can always re-invoke; a corrupted ADR set cannot be retroactively detected.
+
 ## Boundaries (Non-Negotiable)
 
 1. **NEVER implement code** — produce architecture artefacts only.
