@@ -7,10 +7,10 @@ description: Use when reviewing DESIGN artefacts (event models, ADRs, component 
 
 ## Overview
 
-9 gates across 3 lenses, applied by the `solution-architect-reviewer` agent to DESIGN artefacts. Gates enforce DDD correctness, Clean Architecture compliance, and fitness for the stories in scope.
+13 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied by the `solution-architect-reviewer` agent to DESIGN artefacts. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, and the integrity of the human-escalation protocol.
 
 **Applied by:** `solution-architect-reviewer`
-**Applied to:** ADRs, event models, component diagrams, context maps, interface contracts
+**Applied to:** ADRs, event models, component diagrams, context maps, interface contracts, consistency matrices, supersession plans, supersession registry, blocker files
 **Prior phase required:** DESIGN artefacts from `solution-architect`
 
 ---
@@ -19,12 +19,14 @@ description: Use when reviewing DESIGN artefacts (event models, ADRs, component 
 
 ### Lens 1 — consistency-lens
 
-Evaluates: ADRs + diagrams + contracts
+Evaluates: ADRs + supersession registry + diagrams + contracts + consistency matrices + supersession plans + blockers
 
 | Gate | Definition | Pass condition | Severity |
 |---|---|---|---|
-| G1 | Every structural element in a diagram (aggregate, bounded context, pattern) has a traceable ADR justification. No element exists without an architectural rationale. | All structural elements in all diagrams reference at least one ADR. | HIGH |
-| G2 | No two ADRs contradict each other. If one ADR supersedes another, the superseded ADR is marked `Superseded by ADR-{NNN}`. | Zero contradicting decisions across all ADRs. Zero un-linked supersessions. | BLOCKER |
+| G1 | Every structural element in a diagram (aggregate, bounded context, pattern) has a traceable ADR justification. No element exists without an architectural rationale. | All structural elements in all diagrams reference at least one ADR. | BLOCKER |
+| G2 | No two ADRs contradict each other. If one supersedes another, the supersession is recorded BOTH (a) inside the new ADR's body as `**Supersedes:** ADR-{MMM}` AND (b) as a row in the append-only `adrs/supersessions.md` registry. The superseded ADR file itself is never edited. | Zero contradicting `Accepted` decisions; for every supersession link, both registry row and new-ADR body line exist. | BLOCKER |
+| G10 | A `consistency-matrix-{story}.md` exists for every story under design, and its `consistency-gate` line is `PASS`. The back-propagation journal explains every rewrite. | One matrix per story, all marked PASS, journals filled. | BLOCKER |
+| G12 | Every row in a `supersession-plan-{story}.md` is realised: (a) new ADR contains the `**Supersedes:**` body line, (b) registry row exists in `adrs/supersessions.md`, (c) no descriptive artefact still cites the superseded ADR as its source of truth. | All three conditions hold for every planned supersession. | BLOCKER |
 
 ### Lens 2 — architecture-compliance-lens
 
@@ -39,13 +41,26 @@ Evaluates: diagrams + contracts + event models
 
 ### Lens 3 — fitness-lens
 
-Evaluates: diagrams + contracts + stories
+Evaluates: diagrams + contracts + stories + ADRs
 
 | Gate | Definition | Pass condition | Severity |
 |---|---|---|---|
-| G7 | Every story from DISCUSS maps to at least one command, event, or read model in the event model. | All story IDs from stories-{milestone}.md appear in at least one event model slice. | HIGH |
-| G8 | Every command in contracts has at least one corresponding domain event. No dangling commands. | Zero commands without a corresponding domain event in contracts or diagrams. | HIGH |
+| G7 | Every story from DISCUSS maps to at least one trigger (Command or Query) in the event model. Pure-read stories use a Query; state-changing stories use a Command. | All story IDs from stories-{milestone}.md appear in at least one event model slice as a Command or Query. | HIGH |
+| G8 | Every **Command** has at least one corresponding domain event. Queries are exempt from this gate. No dangling commands. | Zero Commands without a corresponding domain event. Queries do not need events. | HIGH |
 | G9 | No aggregate, bounded context, Event Sourcing adoption, or Saga is introduced without a traceable story justification. | Zero unjustified architectural elements. Every element traces back to a story ID. | MEDIUM |
+| G11 | Every ADR adopting a complexity-adding pattern from `{CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL}` cites at least one admissible force in its Context AND has a `"do without the pattern"` row in `Alternatives Rejected`. `"Consistency with existing code"` alone is not admissible. | Admissible force present + `"do without"` alternative evaluated for every complexity-adding ADR. | HIGH |
+
+---
+
+### Cross-cutting — escalation gate
+
+Evaluates: every `decision-drift-*.md` file under `.copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/`
+
+| Gate | Definition | Pass condition | Severity |
+|---|---|---|---|
+| G13 | Every blocker file under `blockers/{date}/` has a sibling `-resolution.md` file containing the human's chosen answer. Open blockers (no sibling) mean the human owes an answer; the review is **not** the place to skip past that. | For every `decision-drift-{story}-{NNN}.md`, a sibling `decision-drift-{story}-{NNN}-resolution.md` exists. | BLOCKER (short-circuit) |
+
+**Behaviour:** If G13 fails, the reviewer returns `REJECTED` immediately and does NOT evaluate any other gate. The verdict's `synthesis.blocking_findings` lists the open blocker files; the orchestrator's next action must be human escalation, not retry.
 
 ---
 
@@ -64,6 +79,7 @@ Evaluates: diagrams + contracts + stories
 
 | Condition | Verdict |
 |---|---|
+| Any blocker file under `blockers/{date}/` has no sibling `-resolution.md` (G13) | `REJECTED` — escalation pending, human must answer |
 | ≥1 BLOCKER finding | `rejected` |
 | ≥1 HIGH finding, 0 BLOCKERs | `changes_requested` |
 | MEDIUM findings only, 0 HIGH, 0 BLOCKER | `changes_requested` |

@@ -10,6 +10,7 @@ The verdict rubric governs how the `solution-architect-reviewer` agent derives a
 
 | Condition | Verdict |
 |---|---|
+| Any blocker file under `blockers/{date}/` has no sibling `-resolution.md` (G13) | `REJECTED` — escalation pending, human must answer; lenses skipped |
 | ≥1 BLOCKER finding (any lens) | `rejected` |
 | ≥1 HIGH finding, 0 BLOCKERs | `changes_requested` |
 | MEDIUM findings only (0 HIGH, 0 BLOCKER) | `changes_requested` |
@@ -22,7 +23,7 @@ The verdict rubric governs how the `solution-architect-reviewer` agent derives a
 
 | Level | Condition |
 |---|---|
-| `high` | All required artefacts present (all ADRs, all diagrams, all contracts, context map). All 9 gates evaluated. No ambiguity in findings. |
+| `high` | All required artefacts present (all ADRs, supersession registry, all diagrams, all contracts, context map, all consistency matrices, blocker resolution files for any prior blockers). All 13 gates evaluated. No ambiguity in findings. |
 | `medium` | Some artefacts missing or partially complete. Gates were evaluated on available material. Verdict may change when missing artefacts are added. |
 | `low` | Critical artefacts missing (e.g., no contracts, no context map). Verdict is tentative. Review must be re-run when artefacts are complete. |
 
