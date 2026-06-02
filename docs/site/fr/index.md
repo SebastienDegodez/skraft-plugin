@@ -13,14 +13,16 @@ Bienvenue dans le Handbook SKRAFT. Ce guide est structuré pour vous faire compr
 
 ## 1. Origines : HVE, BRD et PRD
 
-Tout projet robuste nécessite une fondation solide. Dans l'écosystème SKRAFT, nous alignons la valeur métier, les exigences et le produit avant d'écrire la moindre ligne de code.
+Tout projet robuste nécessite une fondation solide. SKRAFT ne vit pas isolé : il s'intègre dans l'écosystème **HVE** de Microsoft et s'aligne sur les documents d'exigences métier (BRD) et produit (PRD).
 
-* **HVE (High-Value Engineering) :** C'est la boussole. L'HVE garantit que les efforts techniques sont toujours alignés avec la vision stratégique et apportent la plus grande valeur ajoutée pour l'entreprise.
-* **BRD (Business Requirements Document) :** Documente le **"Pourquoi"**. Quels sont les objectifs commerciaux, les problèmes à résoudre et les métriques de succès ?
-* **PRD (Product Requirements Document) :** Documente le **"Quoi"**. Il traduit le BRD en spécifications fonctionnelles, parcours utilisateurs (user journeys) et périmètre produit.
+* **HVE — Hypervelocity Engineering ([microsoft/hve-core](https://github.com/microsoft/hve-core)) :** C'est le substrat. HVE est une bibliothèque de prompts, d'agents spécialisés, d'instructions et de skills pour GitHub Copilot, bâtie autour de la méthodologie **RPI (Research → Plan → Implement)**. HVE fournit des conventions strictes et partagées : un fichier `state.json`, un protocole par tour, et une arborescence d'artefacts datés sous `.copilot-tracking/`.
+* **BRD (Business Requirements Document) :** Documente le **« Pourquoi »**. Quels sont les objectifs commerciaux, les problèmes à résoudre et les métriques de succès ? Dans HVE, le BRD est lui-même produit par un planner dédié.
+* **PRD (Product Requirements Document) :** Documente le **« Quoi »**. Il traduit le BRD en spécifications fonctionnelles, parcours utilisateurs (user journeys) et périmètre produit.
 
-**Comment ces concepts fonctionnent ensemble :**
-Le BRD donne la direction métier, le PRD la matérialise en produit, et la philosophie HVE s'assure que l'implémentation maximise le ROI et la maintenabilité. L'apport de l'un nourrit l'autre de manière incrémentale. Le pipeline SKRAFT automatise la transition de ces documents vers un code fonctionnel et testé.
+**Comment SKRAFT et HVE fonctionnent ensemble :**
+SKRAFT **remplace uniquement le planner RPI** de HVE par son pipeline SDLC complet (DISCOVER → DELIVER), tout en réutilisant **verbatim** les conventions HVE pour la persistance d'état (`state.json`) et les chemins d'artefacts. Les autres planners HVE (Security, BRD, Doc Ops, etc.) restent indépendants et coexistent en pairs, sans couplage.
+
+L'apport de chacun est complémentaire : **HVE** apporte le substrat partagé et l'interopérabilité entre agents ; **SKRAFT** apporte la rigueur d'un cycle SDLC complet, phase par phase, avec un reviewer indépendant à chaque étape. Le BRD et le PRD alimentent en amont la phase DISCOVER, que SKRAFT transforme ensuite en code fonctionnel et testé.
 
 ---
 
@@ -94,4 +96,4 @@ Cela garantit que les futures IA (et les humains) comprendront le *pourquoi* des
 
 **Prêt à aller plus loin ?**
 - Explorez le [fonctionnement détaillé du pipeline](/fr/pipeline/).
-- Découvrez nos [Concepts fondamentaux](/fr/concepts).
+- Parcourez le [glossaire complet des concepts](/fr/concepts) — tous les concepts SKRAFT, intégrés et expliqués.
