@@ -1,0 +1,167 @@
+- key: abelson-sicp-1985
+  authors: "Abelson, H. & Sussman, G. J."
+  year: 1985
+  title: "Structure and Interpretation of Computer Programs"
+  type: book
+
+- key: adzic-specification-2011
+  authors: "Adzic, G."
+  year: 2011
+  title: "Specification by Example"
+  type: book
+
+- key: bay-calisthenics-2008
+  authors: "Bay, J."
+  year: 2008
+  title: "Object Calisthenics"
+  type: chapter
+
+- key: beck-smalltalk-1996
+  authors: "Beck, K."
+  year: 1996
+  title: "Smalltalk Best Practice Patterns"
+  type: book
+
+- key: beck-tdd-2003
+  authors: "Beck, K."
+  year: 2003
+  title: "Test-Driven Development by Example"
+  type: book
+
+- key: beck-xp-2004
+  authors: "Beck, K."
+  year: 2004
+  title: "Extreme Programming Explained, 2nd ed."
+  type: book
+
+- key: cockburn-usecases-2001
+  authors: "Cockburn, A."
+  year: 2001
+  title: "Writing Effective Use Cases"
+  type: book
+
+- key: cockburn-hexagonal-2005
+  authors: "Cockburn, A."
+  year: 2005
+  title: "Hexagonal Architecture"
+  type: article
+
+- key: evans-ddd-2003
+  authors: "Evans, E."
+  year: 2003
+  title: "Domain-Driven Design"
+  type: book
+
+- key: fowler-peaa-2002
+  authors: "Fowler, M."
+  year: 2002
+  title: "Patterns of Enterprise Application Architecture"
+  type: book
+
+- key: fowler-cqrs-2011
+  authors: "Fowler, M."
+  year: 2011
+  title: "Bliki: CQRS"
+  type: article
+
+- key: fowler-refactoring-2018
+  authors: "Fowler, M."
+  year: 2018
+  title: "Refactoring, 2nd ed."
+  type: book
+
+- key: forsgren-accelerate-2018
+  authors: "Forsgren, N., Humble, J. & Kim, G."
+  year: 2018
+  title: "Accelerate"
+  type: book
+
+- key: freeman-goos-2009
+  authors: "Freeman, S. & Pryce, N."
+  year: 2009
+  title: "Growing Object-Oriented Software, Guided by Tests"
+  type: book
+
+- key: gamma-patterns-1994
+  authors: "Gamma, E., Helm, R., Johnson, R. & Vlissides, J."
+  year: 1994
+  title: "Design Patterns"
+  type: book
+
+- key: hohpe-eip-2003
+  authors: "Hohpe, G. & Woolf, B."
+  year: 2003
+  title: "Enterprise Integration Patterns"
+  type: book
+
+- key: hunt-pragmatic-2019
+  authors: "Hunt, A. & Thomas, D."
+  year: 2019
+  title: "The Pragmatic Programmer, 20th anniversary ed."
+  type: book
+
+- key: jia-mutation-2011
+  authors: "Jia, Y. & Harman, M."
+  year: 2011
+  title: "An Analysis and Survey of the Development of Mutation Testing"
+  type: journal
+
+- key: maclane-categories-1971
+  authors: "Mac Lane, S."
+  year: 1971
+  title: "Categories for the Working Mathematician"
+  type: book
+
+- key: martin-cleancode-2008
+  authors: "Martin, R. C."
+  year: 2008
+  title: "Clean Code"
+  type: book
+
+- key: martin-cleanarch-2017
+  authors: "Martin, R. C."
+  year: 2017
+  title: "Clean Architecture"
+  type: book
+
+- key: meszaros-xunit-2007
+  authors: "Meszaros, G."
+  year: 2007
+  title: "xUnit Test Patterns"
+  type: book
+
+- key: meyer-oosc-1997
+  authors: "Meyer, B."
+  year: 1997
+  title: "Object-Oriented Software Construction, 2nd ed."
+  type: book
+
+- key: newman-microservices-2021
+  authors: "Newman, S."
+  year: 2021
+  title: "Building Microservices, 2nd ed."
+  type: book
+
+- key: north-bdd-2006
+  authors: "North, D."
+  year: 2006
+  title: "Introducing BDD"
+  type: article
+
+- key: reinertsen-flow-2009
+  authors: "Reinertsen, D. G."
+  year: 2009
+  title: "The Principles of Product Development Flow"
+  type: book
+
+- key: vernon-iddd-2013
+  authors: "Vernon, V."
+  year: 2013
+  title: "Implementing Domain-Driven Design"
+  type: book
+
+- key: wiegers-peer-reviews-2002
+  authors: "Wiegers, K."
+  year: 2002
+  title: "Peer Reviews in Software"
+  type: book

@@ -1,0 +1,11 @@
+- key: beck-tdd-2003
+  authors: "Beck, K."
+  year: 2003
+  title: "Test-Driven Development by Example"
+  type: book
+
+- key: fowler-refactoring-2018
+  authors: "Fowler, M."
+  year: 2018
+  title: "Refactoring"
+  type: book

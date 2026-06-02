@@ -1,0 +1,50 @@
+/**
+ * Design Tokens — vendored from SebastienDegodez.github.io
+ * Source: https://github.com/SebastienDegodez/SebastienDegodez.github.io
+ * SHA: fc4d219f3f97781d66933ca819fce3d593fbc310
+ *
+ * DO NOT EDIT — re-vendor from portfolio when design evolves.
+ */
+
+:root {
+  /* PALETTE */
+  --color-light:     #eef6ff;
+  --color-dark:      #0f1722;
+  --color-primary:   #24b5ff;
+  --color-secondary: #7fd3ff;
+  --color-dimmed:    #b7c6d8;
+  --color-stripe:    rgba(127, 211, 255, 0.16);
+
+  /* Semantic aliases */
+  --color-background:        var(--color-dark);
+  --color-foreground:        var(--color-light);
+  --color-highlight:         var(--color-secondary);
+  --color-code-bg:           var(--color-dimmed);
+  --color-code-text:         var(--color-dark);
+  --color-pre-bg:            var(--color-foreground);
+  --color-link:              var(--color-secondary);
+  --color-heading-strong:    var(--color-secondary);
+  --color-muted:             var(--color-dimmed);
+
+  /* GLASS V2 */
+  --glass-bg:                rgba(17, 28, 40, 0.88);
+  --glass-bg-strong:         rgba(12, 22, 33, 0.94);
+  --glass-border:            rgba(127, 211, 255, 0.26);
+  --glass-border-strong:     rgba(127, 211, 255, 0.4);
+  --glass-highlight:         rgba(238, 246, 255, 0.12);
+  --glass-shadow:            0 18px 60px rgba(0, 0, 0, 0.42);
+  --glass-shadow-hover:      0 24px 70px rgba(0, 0, 0, 0.55);
+  --glass-blur:              14px;
+
+  --motion-fast:             160ms ease;
+  --motion-medium:           260ms ease;
+
+  /* TYPOGRAPHY */
+  --font-sans:  Lato, 'Avenir Next', Avenir, 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --font-mono:  'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, monospace;
+
+  /* LAYOUT */
+  --radius: 6px;
+  --radius-card: 10px;
+  --transition: 0.2s ease;
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: 'fr' }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ page.title }} — SKRAFT</title>
+  <link rel="preconnect" href="https://fonts.bunny.net" />
+  <link
+    href="https://fonts.bunny.net/css?family=Lato:400,700,900|Fira+Code:400,700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="{{ '/assets/css/design-tokens.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}" />
+</head>
+<body>
+
+  <!-- NAVIGATION -->
+  <nav class="site-nav" aria-label="Navigation">
+    <a class="site-nav__brand" href="{{ '/' | relative_url }}">SKRAFT</a>
+    {% for item in site.data.nav %}
+      {% if page.lang == 'en' %}
+        {% assign nav_path = item.path_en %}
+        {% assign nav_title = item.title_en %}
+      {% else %}
+        {% assign nav_path = item.path_fr %}
+        {% assign nav_title = item.title_fr %}
+      {% endif %}
+      <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>{{ nav_title }}</a>
+    {% endfor %}
+    <span class="site-nav__lang">
+      {% include lang-toggle.html %}
+    </span>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="content">
+    {{ content }}
+  </div>
+
+  <!-- MERMAID -->
+  {% include mermaid.html %}
+
+  <!-- FOOTER -->
+  <footer>
+    <p>
+      SKRAFT Documentation —
+      <a href="https://github.com/SebastienDegodez/skraft-plugin" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </footer>
+
+</body>
+</html>
