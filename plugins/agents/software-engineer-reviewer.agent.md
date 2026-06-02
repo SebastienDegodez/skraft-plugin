@@ -78,14 +78,17 @@ Gather all 4 lens JSON results. Validate each has the expected structure.
 
 ### Phase 4: SYNTHESIZE + VERDICT
 
-Apply the severity matrix:
+Apply the severity matrix in order — first matching row wins:
 
 | Condition | Status |
 |-----------|--------|
-| ≥1 `blocker` in any lens | `REJECTED` |
+| ≥1 `blocker` in any lens | `NEEDS_REWORK` |
+| ≥1 lens `verdict: inconclusive` (evidence unobtainable) | `NEEDS_REWORK` |
 | ≥1 `high`, 0 `blocker` | `NEEDS_REWORK` |
 | `medium` only, across all lenses | `NEEDS_REWORK` |
 | `low` only or all pass | `APPROVED` |
+
+**Inconclusive rule:** A lens that cannot execute its checks (infra failure, blocked network, missing SDK, broken environment) returns `verdict: inconclusive`. This is **never** equivalent to `pass`. The synthesizer collapses unverified work into `NEEDS_REWORK` so the orchestrator can re-run, escalate, or request human confirmation. Approval requires positive evidence, not absence of failure.
 
 **Dissent Rule:** If 3 lenses say `pass` and 1 says `fail`:
 1. Examine the failing lens's findings explicitly.
@@ -103,22 +106,22 @@ Emit EXACTLY this JSON:
   "lens_results": [
     {
       "lens": "quality-gates",
-      "verdict": "pass | fail",
+      "verdict": "pass | fail | inconclusive",
       "defects": []
     },
     {
       "lens": "architecture-boundaries",
-      "verdict": "pass | fail",
+      "verdict": "pass | fail | inconclusive",
       "defects": []
     },
     {
       "lens": "test-integrity",
-      "verdict": "pass | fail",
+      "verdict": "pass | fail | inconclusive",
       "defects": []
     },
     {
       "lens": "cold-reader",
-      "verdict": "pass | fail",
+      "verdict": "pass | fail | inconclusive",
       "defects": []
     }
   ],
@@ -127,6 +130,8 @@ Emit EXACTLY this JSON:
 }
 ```
 
+**Schema enforcement:** any lens returning a `severity` value outside `{blocker, high, medium, low}` or a `verdict` outside `{pass, fail, inconclusive}` is malformed. Reject the lens output and re-dispatch the lens once. If it still returns malformed output, treat that lens as `inconclusive`.
+
 ## What this agent NEVER does
 
 - Modify code or tests
@@ -134,6 +139,8 @@ Emit EXACTLY this JSON:
 - Soften a threshold
 - Approve without examining dissent
 - Downgrade a `blocker` finding to pass `APPROVED`
+- Treat `inconclusive` as `pass` (absence of failure ≠ evidence of success)
+- Accept fabricated severities (`warning`, `info`, `note`, …) outside the allowed enum
 
 ## Subagent Mode
 

@@ -73,13 +73,16 @@ cross-contamination. The cold-reader receives zero producer context.
 
 ## Verdict
 
-JSON format: `status`, `lens_results[]`, `dissent_analysis`, `summary`.
+JSON format: `status`, `lens_results[]`, `dissent_analysis`, `summary`. Chaque lens renvoie `verdict: pass | fail | inconclusive`.
 
-Severity matrix:
-- ≥1 blocker → `rejected`
+Matrice de sévérité (première ligne qui matche gagne) :
+- ≥1 blocker → `changes_requested`
+- ≥1 lens `inconclusive` (preuve inobtenable) → `changes_requested`
 - ≥1 high → `changes_requested`
 - medium only → `changes_requested`
-- low only → `approved`
+- low only / all pass → `approved`
+
+`inconclusive` n'est jamais équivalent à `pass` : l'approbation exige une preuve positive, pas l'absence d'échec.
 
 ---
 

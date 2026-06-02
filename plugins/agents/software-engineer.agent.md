@@ -14,6 +14,8 @@ metadata:
     - craft-discipline
     - test-refactoring-catalog
     - mutation-testing
+    - quality-gates-evidence-contract
+    - quality-gates-dotnet
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
@@ -25,6 +27,8 @@ metadata:
   outputs:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
     - plugins/instructions/skraft-state.instructions.md
@@ -64,6 +68,8 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 | [clean-architecture-testing](../skills/clean-architecture-testing/SKILL.md) | Deciding test level, boundary placement, or doubles policy |
 | [test-refactoring-catalog](../skills/test-refactoring-catalog/SKILL.md) | Refactoring a test (helpers, renaming, deduplication) |
 | [mutation-testing](../skills/mutation-testing/SKILL.md) | Entering phase 4 (COMMIT & VERIFY) |
+| [quality-gates-evidence-contract](../skills/quality-gates-evidence-contract/SKILL.md) | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
+| [quality-gates-dotnet](../skills/quality-gates-dotnet/SKILL.md) | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
 
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
@@ -82,12 +88,15 @@ These are owned by the skills — load them, do not inline rules here.
 ## Execution Workflow (Execute in Order)
 
 ### 1. PREPARE
-- Identify entry boundaries and expected outward effects from acceptance criteria.
-- Target exactly ONE active behavioral scenario.
+- Load the DISTILL artefacts: the `.feature`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Run the suite to confirm the acceptance test is RED on a business assertion.
+- Do NOT re-author the acceptance test or alter its input / expected values (Iron Rule of tests).
+- Identify entry boundaries and expected outward effects from the existing acceptance test + impl-plan.
+- Target exactly ONE active behavioral scenario (the first RED acceptance scenario, then the next).
 
-### 2. RED
-- Write ONE failing test for the next behavior slice.
-- **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile).
+### 2. RED (inner loop)
+- The OUTER acceptance test already exists (from DISTILL). Drive the INNER loop: write ONE failing unit test for the next behavior slice the acceptance test demands.
+- **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile). Never weaken or edit the acceptance test to make it pass.
+- **Edge cases not expressible in Gherkin** (defensive branch, exhaustive-enum fallback, combinatorial sweep of an already-decided rule — e.g. a `PolicyService`) are authored HERE via TDD, but ONLY when `test-design-mandates` Mandate 4 Gate (a) or (b) opens, and ONLY with values traceable to a decided AC. The domain class emerges from this RED — create nothing before the compile failure (`outside-in-tdd` Step 2). If the case is an UNDECIDED business decision, STOP and escalate to DISCUSS — never invent a verdict or value.
 
 ### 3. SYNTHESIZE-GREEN
 - Write minimal production code to pass the test.
@@ -99,6 +108,7 @@ These are owned by the skills — load them, do not inline rules here.
 - **Gate**: Mutation score threshold depends on `state.json::userPreferences.depthTier` (basic≅80%, standard≅90%, comprehensive=100% on business logic). If a test kills no mutants, DELETE IT.
 - Commit using conventional commits (`feat(<domain>): <behavior>`).
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
+- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for the schema and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per the v1 schema. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
 
 ## Quality Gates Checklist
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:
