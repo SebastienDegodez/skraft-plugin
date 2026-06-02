@@ -63,6 +63,9 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 - [architecture-patterns](../skills/architecture-patterns/SKILL.md)
 - [architecture-decisions](../skills/architecture-decisions/SKILL.md)
 
+### Load on demand (Phase 6 — language-specific layering)
+- `clean-architecture-<language>` (e.g. `clean-architecture-dotnet`) — OPTIONAL. Detect the project's primary language during Phase 3 REUSE ANALYSIS and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.
+
 ### Load on demand (Phase 9 RECONCILE & VERIFY)
 - `plugins/agents/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
 
@@ -187,7 +190,12 @@ For each bounded context:
 1. Define **Aggregates** — identify invariants, consistency boundary, root entity
 2. Define **Value Objects** — immutable, equality by value, self-validating
 3. Define **Domain Events** — past tense, raised by aggregate root, minimal payload
-4. Define **Repository interfaces** — one per aggregate, defined in Application layer
+4. Define **Repository interfaces** — one per aggregate. **Decide the layer deliberately by studying the case**, then record the choice and its rationale in the aggregate's ADR:
+   - **Domain** — the aggregate owns its persistence contract (DDD-purist; Domain stays the dependency centre). Prefer when the repository returns the aggregate and guards its invariants.
+   - **Application** — the use case declares the port it needs (ports-and-adapters / Clean Architecture). Prefer for CRUD entities without invariants or for read-oriented contracts.
+   - **NEVER Infrastructure** — the interface is a contract, not an implementation; Infrastructure only *implements* it. Placing the interface in Infrastructure violates the Dependency Rule and is the one invalid choice.
+
+   Apply the chosen layer consistently across ADR, diagrams, and contracts (Phase 9 enforces this). If a `clean-architecture-<language>` skill was loaded, conform the placement to its interface-placement guidance for the project's stack.
 
 Produce `diagrams-{story}.md` with a mermaid component diagram per bounded context.
 
@@ -213,14 +221,45 @@ graph TD
 
 *Loads architecture-decisions skill — see ADR Template and quality checklist.*
 
-Write one ADR per structural decision. Number sequentially from `ADR-001-` (zero-padded, unique across the whole project).
+Write one ADR per **structural commitment** the story set OR the existing codebase carries that is not yet covered by an existing Accepted ADR. Number sequentially from `ADR-001-` (zero-padded, unique across the whole project).
 
-**Mandatory ADR topics:**
-- CQRS decision (apply or not, with justification)
-- Aggregate boundary choices (one ADR per non-obvious boundary)
-- Event Sourcing decision (apply the heuristic: only if audit trail or temporal queries are needed)
-- Bounded context boundaries (one ADR per context split decision)
-- For every trigger introduced in Phase 4: ratify its **Command vs Query** classification (one ADR may ratify many triggers in one decision, but the classification table must be explicit)
+**ADRs are written for ADDITIONS and DEVIATIONS from the project baseline. The baseline itself is not an ADR.** A project's conventions — layer boundaries, CQS method-level separation, convention-based DI — are enforced by skills and architecture tests; re-stating them as ADRs is CONTEXT THRASH.
+
+**Silence = baseline default.** If no story or measurable force in this batch raised a pattern, write no ADR for it — neither `Accepted` nor `Rejected`. Spending an ADR slot on an unraised question is a non-decision artefact (G14).
+
+**`Rejected` ADRs are legitimate when a story raised the question and the team decided NOT to adopt the pattern.** They record the evaluation so the debate is not re-opened in six months without new evidence. The verdict lives in the `Status:` field, never in the filename: write `adr-NNN-event-sourcing.md` with `Status: Rejected`, never `adr-NNN-event-sourcing-rejected.md`. Filename suffixes `-rejected`, `-accepted`, `-deprecated`, `-superseded` are forbidden (G14).
+
+#### Step 7.0 — DETECT EXISTING STRUCTURAL COMMITMENTS (deterministic tool bridge)
+
+Before listing the ADRs to write, scan the existing codebase via `search/codebase` (grep) for structural commitments already in place. For each detected commitment, check `.copilot-tracking/skraft-plans/{projectSlug}/adrs/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory).
+
+Detection signatures (disjoint — each pattern is identified by its dispatch / structural marker, not by interfaces that may belong to the baseline):
+
+| Commitment | Grep signature | Notes |
+|---|---|---|
+| **CQRS + dispatch bus** | `ICommandBus\|IQueryBus\|CommandBus\|QueryBus` | The **bus** is the marker, not `ICommandHandler` / `IQueryHandler` alone — handler interfaces may be the materialisation of the project's CQS baseline. Bus present → ADR required. No bus, handlers injected directly → baseline CQS Application Service, no ADR. |
+| **Event Sourcing** | `IEventStore\|EventStream\|Apply\(.*Event` | |
+| **Saga / Process Manager** | `Saga\|ProcessManager\|ICorrelatedBy` | |
+| **Anti-Corruption Layer** | directory-level scan for adapters between two named contexts | Cross-check with context-map. |
+| **Bounded-context split/merge** | directory restructure since last ADR | Cross-check with context-map. |
+| **Aggregate crossing an existing boundary** | revue manuelle — pas de signature code fiable | |
+
+**Mandatory ADR triggers** (must produce one ADR each, whether detected by Step 7.0 or introduced by the story set):
+- CQRS + Bus adoption (dispatch pipeline beyond direct handler injection)
+- Event Sourcing adoption
+- Saga / process-manager adoption
+- Aggregate boundary that crosses an existing boundary
+- Bounded-context split or merge
+- Anti-Corruption Layer between two contexts
+- Cross-cutting strategy change (error handling, validation, transactional boundary)
+- For every trigger introduced in Phase 4: ratify its **Command vs Query** classification (one ADR may ratify many triggers in one decision, but the classification table must be explicit). This is a classification of an introduced trigger, not a re-statement of the CQS baseline.
+
+**Exclusions — NOT ADR triggers** (enforced elsewhere, ADR would be redundant):
+- CQS method-level separation — if it is the project baseline (e.g. enforced by a `clean-architecture-*` skill and by architecture tests), it is the assumed default state. A deviation from CQS would violate the skill's Iron Law, not produce an ADR.
+- Layer boundaries (Domain → Application → Infrastructure → API) — enforced by NetArchTest or equivalent.
+- Convention-based DI registration — covered by the skill.
+
+Rule of thumb: **if a constraint is enforced by a skill or by automated architecture tests, it is a convention, not an architectural decision.**
 
 **Supersession write-side (when Phase 3.5 produced a `supersession-plan-{story}.md`):**
 
@@ -248,12 +287,22 @@ Whenever an ADR ratifies one of `{CQRS, Event Sourcing, Saga, eventual consisten
    - Read/write asymmetry (very different shapes, scales, or freshness requirements)
    - Audit trail or temporal-query requirement traceable to a story
    - Cross-service transactional boundary that cannot be a single ACID transaction
-   - Contention hotspot demonstrably blocking throughput
+   - Contention hotspot under measured OR projected load with a **quantified threshold** (e.g., "≥ 100 req/s sustained")
    - Regulatory separation requirement
 2. The `Alternatives Rejected` table MUST include a row `"do without the pattern"` evaluated on technical merits.
-3. `"Consistency with existing code"` is **NOT** an admissible force on its own — it must be paired with at least one of the above.
+3. `"Consistency with existing code"` and speculative forces without a metric (`"might have many users"`, `"in case we scale"`) are **NOT** admissible — they must be paired with at least one of the above.
 
-If either check fails, do NOT ratify the pattern. Either remove it from the design or document the missing force as a BLOCKER for human review.
+If either check fails, do NOT ratify the pattern. The correct outcome is:
+- If a story raised the question → write the ADR with `Status: Rejected`, documenting that adoption is declined pending measured evidence.
+- If no story raised the question → write no ADR at all (silence = baseline).
+
+#### Step 7.5 — HUMAN-IN-THE-LOOP RATIFICATION (Proposed → Accepted | Rejected)
+
+Every story-triggered ADR is committed first with `Status: Proposed`, then a human ratifies it. The agent owns the drafting; the human owns the verdict.
+
+The ratification channel is provided by the execution context — the orchestrating workflow specifies it when running in the agentic pipeline; in standalone local runs, prompt the developer in-terminal. The agent's responsibility is to commit the `Proposed` revision and, after the human verdict, commit the status flip.
+
+Both the `Proposed` revision and the final `Accepted` / `Rejected` revision MUST land in git history. Do not skip the `Proposed` commit — the trail of "we paused for a human here" is part of the architectural record.
 
 **ADR quality gate before writing:**
 - Decision is a single, clear choice — not a process description
@@ -268,7 +317,7 @@ For each bounded context, define:
 1. **Commands** — name, fields, validation rules
 2. **Queries** — name, parameters, return shape
 3. **Domain Events** — name, payload fields, invariants
-4. **Application Interfaces** — repository and service signatures
+4. **Repository & service interfaces** — signatures, each tagged with the layer chosen in Phase 6 (Domain or Application — never Infrastructure)
 
 Produce `contracts-{story}.md` with the full interface inventory.
 

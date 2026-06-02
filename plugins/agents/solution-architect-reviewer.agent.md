@@ -51,7 +51,7 @@ Load before starting:
 2. **ADVERSARIAL** — assume every decision has a flaw until proven otherwise.
 3. **EVIDENCE-BASED** — every finding cites the exact artefact, section, and gate violated.
 4. **NO SILENT OVERRIDES** — if 2 lenses pass and 1 fails, the dissent is explicit in the output.
-5. **COMPLETENESS** — all 12 gates (G1–G12) must be evaluated, plus the cross-cutting escalation gate G13. Skipping a gate requires explicit justification.
+5. **COMPLETENESS** — all 15 gates (G1–G15) must be evaluated, plus the cross-cutting escalation gate G13. Skipping a gate requires explicit justification.
 
 ## Execution Workflow
 
@@ -98,18 +98,21 @@ Evaluate gates:
 
 | Gate | Definition | Severity |
 |---|---|---|
-| G1 | Every structural element in a diagram has a traceable ADR justification. No structural element lacks an ADR rationale. | **BLOCKER** |
+| G1 | Every structural commitment — visible in a diagram **OR** detected in the existing codebase by Phase 7.0 grep signatures — has a traceable `Accepted` ADR justification. Back-fill ADRs are required when production code already carries a structural pattern not yet covered by any ADR. | **BLOCKER** |
 | G2 | No two ADRs contradict each other. If one supersedes another, the supersession is recorded in BOTH places: (a) the new ADR carries `**Supersedes:** ADR-{MMM}` in its body, AND (b) `adrs/supersessions.md` contains a matching row. The superseded ADR's body is NOT edited (append-only). | BLOCKER |
 | G10 | A `consistency-matrix-{story}.md` exists for every story under design AND its `consistency-gate` line is `PASS`. The back-propagation journal explains every rewrite. | BLOCKER |
 | G12 | For every row in `supersession-plan-{story}.md`: (a) the new ADR exists with `**Supersedes:** ADR-{MMM}` in its body, (b) `adrs/supersessions.md` carries the matching registry row, (c) no descriptive artefact (event-model, diagrams, contracts) still cites the superseded ADR as its source of truth. | BLOCKER |
+| G14 | No `Accepted` ADR ratifies the **absence** or **rejection** of a pattern that was never adopted. Forbidden artefacts: filename matching `adr-NNN-{pattern}-rejected.md`; Decision section reading `We will not use {pattern}` / `We reject {pattern}` when the pattern is not present in the codebase. Rejected alternatives belong in an `Alternatives Rejected` table of an adoption ADR, not as standalone ADRs. | BLOCKER |
 
-**How to check G1:** For each aggregate, bounded context, pattern (CQRS, Event Sourcing, Saga) visible in diagrams — confirm an ADR exists that justifies its inclusion.
+**How to check G1:** Two passes. (a) For each aggregate, bounded context, pattern (CQRS+Bus, Event Sourcing, Saga, ACL) visible in diagrams — confirm an `Accepted` ADR exists that justifies its inclusion. (b) Re-run the Phase 7.0 grep signatures over the project source tree (`ICommandBus\|IQueryBus\|CommandBus\|QueryBus`, `IEventStore\|EventStream\|Apply\(.*Event`, `Saga\|ProcessManager\|ICorrelatedBy`). Every hit must trace to an `Accepted` ADR — either an ADR adopted in this DESIGN pass or a back-fill ADR. A grep hit with no matching ADR is a G1 BLOCKER (the persona missed Step 7.0).
 
 **How to check G2:** Cross-read all ADRs. Look for conflicting decisions on the same scope. For every `**Supersedes:**` body line in any ADR, confirm `adrs/supersessions.md` carries the matching row (and vice-versa). Either direction missing = G2 BLOCKER.
 
 **How to check G10:** For each story present in `stories-{milestone}.md`, confirm `consistency-matrix-{story}.md` exists with `consistency-gate: PASS`. If absent, the persona skipped its Phase 9 — finding is BLOCKER.
 
 **How to check G12:** For each row in `supersession-plan-{story}.md`: open the new ADR and confirm the `**Supersedes:**` body line; open `adrs/supersessions.md` and confirm the registry row. Then `grep` the descriptive artefacts (event-model, diagrams, contracts) for citations of the superseded ADR — any remaining citation as source-of-truth is a BLOCKER. (Historical references in narrative prose are fine; what is forbidden is descriptive artefacts pointing at the superseded ADR for current ratification.)
+
+**How to check G14:** Two passes. (a) `ls adrs/*.md` — any filename matching `*-rejected.md` is an immediate G14 BLOCKER. (b) For each `Accepted` ADR, read its Decision section: if the sentence starts with `We will not`, `We reject`, `We avoid`, or otherwise ratifies the *non-adoption* of a pattern, AND the persona's Phase 7.0 grep returns no hit for that pattern in the codebase, the ADR is documenting a non-decision — G14 BLOCKER. Rejected alternatives must move into an `Alternatives Rejected` table of an adoption ADR.
 
 ---
 
@@ -152,6 +155,7 @@ Evaluate gates:
 | G8 | Every **Command** has at least one corresponding domain event. Queries are exempt from this gate. No dangling commands. | HIGH |
 | G9 | No aggregate, bounded context, or Event Sourcing adoption is introduced without a traceable story justification (YAGNI). | MEDIUM |
 | G11 | For every ADR adopting a complexity-adding pattern from `{CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL}`: the Context section cites at least one admissible force, AND `Alternatives Rejected` contains a `"do without the pattern"` row evaluated on technical merits. `"Consistency with existing code"` alone is **not** admissible. | HIGH |
+| G15 | No `Accepted` ADR ratifies a constraint that is the project's enforced baseline. A constraint is **baseline** when it is enforced by a project skill (e.g. `clean-architecture-*`) OR by an automated architecture test (NetArchTest, ArchUnit, dependency-cruiser). Known baseline topics that must NOT appear as standalone ADRs: CQS at method level, Clean-Architecture layer boundaries, convention-based DI handler registration, repository pattern as such. ADRs about **additions on top of** those baselines (e.g. CQRS+Bus over CQS) remain valid. | HIGH |
 
 **How to check G7:** For each story ID in `stories-{milestone}.md`, verify at least one Command OR Query in `event-model-{story}.md` or `contracts-{story}.md` references that story.
 
@@ -160,6 +164,8 @@ Evaluate gates:
 **How to check G9:** List all aggregates, bounded contexts, and patterns. For each, verify a story explicitly requires it. Flag any element that exists "in anticipation of future needs."
 
 **How to check G11:** Open each ADR that ratifies a complexity-adding pattern. Confirm the Context cites a force from the admissible list (read/write asymmetry; audit trail; cross-service transactional boundary; contention hotspot; regulatory-driven separation). Confirm the `Alternatives Rejected` table includes `"do without the pattern"` with technical reasoning. Finding is HIGH if either is missing.
+
+**How to check G15:** For each `Accepted` ADR, read the Decision section title and first sentence. Match against the known-baseline list: `CQS`, `layer boundaries`, `repositories` (the pattern itself, not a specific repository contract), `convention-based DI`. If the ADR ratifies one of these as if it were a decision, AND a project skill or architecture test enforces it, the ADR is restating baseline — G15 HIGH. Cross-check by searching the project for an architecture-test file (`*Architecture*Tests*.cs`, `*ArchitectureTest*.java`, `.dependency-cruiser.*`); presence of an enforced rule on the same topic confirms the finding. ADRs about **additions on top of baseline** (e.g. `Introduce a CQRS Dispatch Bus`, `Add pipeline behaviors`) are valid — do not flag.
 
 ---
 
@@ -171,11 +177,13 @@ Aggregate all findings from the three lenses.
 | Condition | Verdict |
 |---|---|
 | Any blocker file under `blockers/` has no sibling `-resolution.md` (G13) | `REJECTED` — escalation pending, human must answer |
-| ≥1 BLOCKER finding | `REJECTED` |
+| ≥1 BLOCKER finding | `NEEDS_REWORK` |
 | ≥1 HIGH finding, 0 BLOCKER | `NEEDS_REWORK` |
 | MEDIUM findings only | `NEEDS_REWORK` |
 | LOW findings only | `APPROVED` with notes |
 | Zero findings | `APPROVED` |
+
+`REJECTED` is reserved for the G13 human-escalation gate (a `blockers/` file without a sibling `-resolution.md`). A BLOCKER finding is mechanically correctable by the solution-architect: it returns `NEEDS_REWORK` so the orchestrator re-dispatches with the findings attached (auto-retry, escalating to a human only after 3 failed attempts).
 
 **Dissent rule:** If 2 lenses pass and 1 fails — this is a partial failure. State explicitly: "Lenses {A} and {B} pass. Lens {C} fails on gate {Gn}." Never silently absorb a lens failure into an overall pass.
 
