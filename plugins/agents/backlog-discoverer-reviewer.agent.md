@@ -152,10 +152,12 @@ Execute each lens independently. Record findings per gate before moving to the n
 
 | Condition | Verdict |
 |---|---|
-| ≥1 BLOCKER gate fails | `rejected` |
+| ≥1 BLOCKER gate fails | `changes_requested` |
 | ≥1 HIGH gate fails, 0 BLOCKERs | `changes_requested` |
 | MEDIUM failures only | `changes_requested` |
 | All gates pass (or MEDIUM only with clear justification) | `approved` |
+
+A failing BLOCKER gate is mechanically correctable by the backlog-discoverer: it returns `changes_requested` so the orchestrator re-dispatches with the findings attached (auto-retry, escalating to a human only after 3 failed attempts).
 
 **Confidence levels:**
 - `high` — reviewer sampled GitHub directly to verify G2

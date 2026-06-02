@@ -159,11 +159,13 @@ After all four lenses, synthesise findings:
 
 | Condition | Verdict |
 |---|---|
-| ≥1 BLOCKER finding | `REJECTED` |
+| ≥1 BLOCKER finding | `NEEDS_REWORK` |
 | ≥1 HIGH finding, 0 BLOCKER | `NEEDS_REWORK` |
 | MEDIUM findings only | `NEEDS_REWORK` |
 | LOW findings only | `APPROVED` with recommendations |
 | No findings | `APPROVED` |
+
+A BLOCKER finding is mechanically correctable by the backlog-planner: it returns `NEEDS_REWORK` so the orchestrator re-dispatches with the findings attached (auto-retry, escalating to a human only after 3 failed attempts).
 
 3. Confidence:
    - `high`: All artefacts present, lenses fully applied
