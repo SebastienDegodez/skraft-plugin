@@ -1,3 +1,20 @@
-<div class="mermaid">{{ include.code }}</div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Convert markdown mermaid blocks into divs
+    var blocks = document.querySelectorAll("code.language-mermaid");
+    for (var i = 0; i < blocks.length; i++) {
+      var code = blocks[i];
+      var div = document.createElement("div");
+      div.className = "mermaid";
+      div.textContent = code.textContent;
+      var pre = code.parentNode;
+      if (pre.tagName === "PRE") {
+        pre.parentNode.replaceChild(div, pre);
+      } else {
+        code.parentNode.replaceChild(div, code);
+      }
+    }
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  });
+</script>
