@@ -118,7 +118,7 @@ All paths are rooted at `.copilot-tracking/skraft-plans/{projectSlug}/`. Convent
 | DISCOVER | `backlog-discoverer` | `backlog-discoverer-reviewer` | `research/{date}/triage-*.md`, `research/{date}/sprint-proposal.md` |
 | DISCUSS | `backlog-planner` | `backlog-planner-reviewer` | `plans/{date}/stories-*.md` |
 | DESIGN | `solution-architect` | `solution-architect-reviewer` | `adrs/adr-*.md`, `details/{date}/contracts-*.md` |
-| DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` | `features/*.feature`, `details/{date}/impl-plan-*.md` |
+| DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` | `features/*.feature`, `details/{date}/impl-plan-*.md`, `tests/**/{Feature}AcceptanceTests.cs` (RED) |
 | DELIVER | `software-engineer` | `software-engineer-reviewer` | Committed code + passing tests + `changes/{date}/change-log.md` |
 
 ## DELIVER phase — absorbed loop
