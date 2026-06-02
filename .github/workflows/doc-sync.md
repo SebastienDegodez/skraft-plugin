@@ -14,7 +14,6 @@ on:
   push:
     branches:
       - main
-      - feat/hve-compatibility
     paths:
       - 'plugins/**'
       - '.agents/**'
