@@ -1,3 +1,43 @@
 <div class="mermaid">{{ include.code }}</div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+  // Replace raw Mermaid runtime errors with actionable French guidance.
+  // When a diagram fails to parse, Mermaid 10 injects its raw error text
+  // (e.g. "Syntax error in text" followed by a "mermaid version 10.x.x"
+  // marker) directly into the .mermaid block. That output is unreadable for
+  // documentation readers, so we detect it and render a friendly message.
+  (function () {
+    var FRIENDLY_MESSAGE =
+      'Diagramme indisponible : la syntaxe Mermaid de ce schéma est invalide. ' +
+      'Vérifiez l’indentation et les flèches du bloc, puis rechargez la page. ' +
+      'Si le problème persiste, signalez-le sur le dépôt GitHub.';
+
+    function isMermaidError(text) {
+      if (!text) return false;
+      return /syntax error in text/i.test(text) && /mermaid version/i.test(text);
+    }
+
+    function replaceErrors() {
+      var blocks = document.querySelectorAll('.mermaid');
+      blocks.forEach(function (block) {
+        if (block.dataset.skraftError === 'handled') return;
+        if (isMermaidError(block.textContent)) {
+          block.dataset.skraftError = 'handled';
+          block.classList.add('mermaid-error');
+          block.setAttribute('role', 'alert');
+          block.textContent = FRIENDLY_MESSAGE;
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () {
+        window.setTimeout(replaceErrors, 0);
+      });
+    } else {
+      window.setTimeout(replaceErrors, 0);
+    }
+  })();
+</script>
