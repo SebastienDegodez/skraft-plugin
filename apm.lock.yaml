@@ -4,8 +4,10 @@ apm_version: 0.12.4
 dependencies:
 - repo_url: danielmeppiel/genesis
   host: github.com
-  resolved_commit: 16a5027d6cdc23c0fd9df21f65e21fa0f681d722
-  package_type: skill_bundle
+  resolved_commit: 7895e70362d2b87510b7e4765b05c4f42a12093c
+  virtual_path: skills/genesis
+  is_virtual: true
+  package_type: claude_skill
   deployed_files:
   - .agents/skills/genesis
-  content_hash: sha256:4f28e525c755aa538ed7aabd8e69cdd14c62c57b19cbfc37ddca5b0707f34730
+  content_hash: sha256:2fd036770146a1f0da12bed3dfc772a825a01fc9a22003cb58cb3f33a1247550

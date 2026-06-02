@@ -139,7 +139,14 @@ Pattern selection runs in tier order, ALWAYS:
 2. Pick a TIER 3 architectural pattern from
    `assets/architectural-patterns.md`. If the design's shape matches
    PANEL, PIPELINE, ORCHESTRATOR-SAGA, STAFFED PLAN, WAVE EXECUTION,
-   or EVENT-DRIVEN, name it and inherit its anti-patterns verbatim.
+   EVENT-DRIVEN, or RECONCILIATION LOOP, name it and inherit its
+   anti-patterns verbatim. RECONCILIATION LOOP is the right call
+   when the intent describes a queue of items each driven to
+   terminal state under non-determinism (trigger phrases: "queue
+   of items", "for each issue/PR/file", "drive to terminal state",
+   "until green", "drift correction", "reconcile", "sweep the
+   backlog"); it requires only sub-agent dispatch + persistent
+   state + completion signal from the substrate, no vendor sugar.
 3. Decompose into TIER 2 design patterns
    (`assets/design-patterns.md`) along the GoF axes. ATTENTION ANCHOR
    (B8) and PLAN MEMENTO (B4) are MANDATORY on any non-trivial work.

@@ -32,6 +32,7 @@ realize them in a specific harness.
    EXTERNAL CORPUS            BRIDGE                   ATTENTION ANCHOR (*)
     GROUNDING                                          GOAL STEWARD
                                                        HUMAN CHECKPOINT
+                                                       FOLD-BY-DEFAULT
 ```
 
 (*) ATTENTION ANCHOR has no classical analog. It is the LLM-physics-
@@ -755,6 +756,58 @@ rescue.
 
 ---
 
+## B11. FOLD-BY-DEFAULT
+
+CLASSICAL ANALOG: "Defaults Matter" / "Pit of Success" (Brad Abrams,
+.NET Framework Design Guidelines, 2004); the SRE error-budget
+posture of "burn the budget on prevention, not on deferring follow-
+ups" (Beyer et al., _Site Reliability Engineering_, O'Reilly 2016,
+ch. 3 on error budgets).
+
+WHEN: a loop or queue where each iteration surfaces follow-ups
+(recommended next actions, panel-suggested edits, deferred review
+comments, secondary findings). Without a default policy, follow-ups
+accumulate in an external backlog and the loop is judged "done"
+while real work remains.
+
+MECHANISM: declare the default disposition for follow-ups at the
+queue / loop boundary. The default is FOLD: re-enter the loop with
+the follow-up as a new item (or as an addition to the current
+item's todo). The exception is DEFER, taken only when the follow-
+up violates a named queue invariant (out-of-scope per the queue
+charter, requires authority the loop does not hold, irrecoverable
+side effect outside the loop's mandate). DEFER REQUIRES A
+DESTINATION (an external queue, a tracked issue) -- never a
+recommendation in prose.
+
+The pattern is the procedural counterpart to the cybernetic
+principle that a control loop's job is to drive the error to zero
+IN-LOOP, not to log the error for someone else.
+
+ANTI-PATTERNS:
+- DEFER-BY-DEFAULT -- the loop emits a "recommended follow-up"
+  section and ships. The follow-ups never re-enter; the backlog
+  grows; the next sweep starts further behind. The most common
+  failure mode of operator-shaped loops without a named policy.
+- INVARIANT-LESS FOLD -- folding every follow-up, including ones
+  that violate scope or authority. The loop grows unbounded; the
+  charter erodes; the operator who chartered the queue cannot
+  recognize what the loop is doing. Fold-by-default still requires
+  a named invariant that gates DEFER.
+- IMPLICIT DEFER -- a follow-up is "noted" in prose without a
+  destination. Equivalent to no follow-up at all.
+
+WHY THIS IS FIRST-CLASS. The default policy IS the control surface
+for an operator-shaped loop. Without it, the loop's authority over
+its own follow-ups is undeclared; every iteration re-litigates
+fold-vs-defer on individual judgement, which drifts. Pair with B4
+PLAN MEMENTO: the state table records each follow-up's disposition
+(folded / deferred / where). Pair with A11 RECONCILIATION LOOP:
+B11 is the queue-level policy that makes A11's queue drain rather
+than grow.
+
+---
+
 ## Selection heuristic
 
 When in doubt, prefer the pattern that minimizes context degradation
@@ -782,12 +835,17 @@ multi-round plan with risk of goal drift   -> add B9 GOAL STEWARD
 
 irrecoverable step / suspected drift       -> add B10 HUMAN CHECKPOINT
 
+loop or queue surfaces follow-ups          -> add B11 FOLD-BY-DEFAULT
+(declare fold-or-defer policy at boundary;    (default FOLD; DEFER only
+defer requires a destination, not prose)      on named invariant violation)
+
 facts depend on external corpus or live    -> add C6 EXTERNAL CORPUS
 state; or pretraining-cutoff sensitive        GROUNDING (lazy, bounded)
 ```
 
 B4, B5, and B8 are orthogonal to topology choice. B9 layers on top of
 any multi-thread plan; B10 layers on top of any irrecoverable boundary;
+B11 layers on top of any loop or queue that surfaces follow-ups;
 C6 layers on top of any work that touches external facts. Combine them
 with whichever creational / structural / behavioral patterns shape the
 work.

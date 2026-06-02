@@ -27,6 +27,7 @@ rediscovering its failure modes the hard way.
 | ALIGNMENT LOOP        | Iteration with stop-condition | A1 (or A2) + B4 + B9 + B10 + bounded loop  |
 | SUPERVISED EXECUTION  | Plan-Execute-Verify (controller) | B4 + S7 + S4 + (optional) B10            |
 | GOVERNED OUTER LOOP   | CI/CD + capability-bounded service account | A6 + strong-form A9 + sandbox + audit |
+| RECONCILIATION LOOP   | k8s Operator + SRE control loop | B1 per item + B4 state table + B11 + S4 stop-predicate + C2 + C4 + bounded retry |
 
 ---
 
@@ -406,6 +407,13 @@ ANTI-PATTERNS:
   Each round produces a different "improvement" with no stable
   target. The loop converges on noise, not goal.
 
+SEE ALSO: A11 RECONCILIATION LOOP. A8 is single-target convergence
+(one artifact, N rounds, one steward). A11 is queue-of-targets
+convergence (N items, per-item bounded loops, cross-item interlocks,
+fold-vs-defer policy). If the work names ONE artifact iterating
+toward a goal, stay on A8. If the work names a QUEUE of items each
+needing convergence under non-determinism, escalate to A11.
+
 ---
 
 ## A9. SUPERVISED EXECUTION (plan, deterministic execute, verify)
@@ -645,6 +653,173 @@ inside the inference harness directly.
 
 ---
 
+## A11. RECONCILIATION LOOP (queue convergence under non-determinism)
+
+CLASSICAL ANALOG: Kubernetes Operator pattern (CoreOS, Brandon
+Philips, "Introducing Operators", 2016) and the SRE control loop
+(Beyer / Jones / Petoff / Murphy, _Site Reliability Engineering_,
+O'Reilly 2016). Ancestral lineage: cybernetic feedback loop
+(Wiener, _Cybernetics_, MIT Press 1948); Shewhart PDCA cycle
+(1939). Form-analogue for the discipline-over-substrate framing:
+REST (Fielding, dissertation 2000) -- an architectural style
+applied over HTTP rather than a feature of HTTP.
+
+A11 is recognition of an ancient style, not invention. The agentic
+instance: drive a queue of items each toward a declared terminal
+state under non-determinism, level-triggered from a persisted state
+table, with per-item bounded loops and cross-item interlocks.
+
+DISCRIMINATOR vs A8 ALIGNMENT LOOP:
+- A8 = single-target convergence ("did THIS artifact reach the
+  goal?"). One producer thread, N rounds, one steward, one stop-
+  predicate.
+- A11 = queue-of-targets convergence ("drive N items each to
+  terminal state"). Per-item bounded loop, per-item stop-predicate
+  read from the system of record, cross-item interlocks (single-
+  writer PER ITEM, dedup), and a fold-vs-defer policy at the
+  queue level.
+- "Iterate on one PR description until reviewers GO" -- A8.
+- "For each of N issues, drive to merged PR; some need a Copilot-
+  review-address sub-loop; some hit CI red and re-enter" -- A11.
+- When both fit (a queue whose items are themselves goal-aligned
+  drafts), A11 wraps A8: the per-item sub-agent runs an A8 loop
+  on its item.
+
+COMPOSES:
+- B1 FAN-OUT + SYNTHESIZER per item (one sub-agent per queue
+  entry; fan-in to the state table).
+- B4 PLAN MEMENTO -- the ground-truth state table IS the queue
+  (item id, current state, next action, attempts, owner). Re-
+  derive from the table on every re-entry; never from in-context
+  recall.
+- B11 FOLD-BY-DEFAULT -- the queue-level policy that recommended
+  follow-ups land in this loop, not in a separate one, unless
+  they violate the queue invariant.
+- S4 VALIDATION DECORATOR -- the per-item stop-predicate is a
+  deterministic gate (CI green, review thread resolved, merge-
+  ready, schema-valid) read from the system of record, not LLM-
+  asserted.
+- C2 PERSONA PRELOAD -- each per-item sub-agent loads a focused
+  persona; cold context per item.
+- C4 DESCRIPTION DISPATCH -- per-item sub-agent boundaries are
+  declared at dispatch time so the runner can fan them out.
+- A bounded per-item attempt counter (typically 2-4) with B10
+  HUMAN CHECKPOINT escalation on exhaustion.
+
+WHEN:
+- The work is a queue (>= 2 items) of similar entries each in a
+  non-terminal state.
+- Each item needs convergence under non-determinism (CI flakes,
+  review feedback, race with concurrent edits, partial-failure
+  recovery).
+- A per-item stop-predicate exists and is readable from the system
+  of record (not from prose).
+- Cross-item interlocks matter: two sub-agents must not write to
+  the same item concurrently; deduplication is per-item.
+- The loop is level-triggered: each re-entry re-derives "what
+  needs doing" from current state, not from a fixed task list.
+
+```mermaid
+flowchart LR
+  Q[QUEUE plus state table B4 memento] --> R[runner]
+  R -->|spawn per item| W1[item 1 sub-agent C2 plus C4]
+  R -->|spawn per item| W2[item 2 sub-agent C2 plus C4]
+  R -->|spawn per item| WN[item N sub-agent C2 plus C4]
+  W1 --> SP1[stop predicate S4 gate]
+  W2 --> SP2[stop predicate S4 gate]
+  WN --> SPN[stop predicate S4 gate]
+  SP1 -->|terminal| UPD[update state table]
+  SP1 -->|non terminal within budget| W1
+  SP1 -->|non terminal budget exhausted| HC[B10 human checkpoint]
+  SP2 --> UPD
+  SPN --> UPD
+  UPD --> POL{fold or defer B11 policy}
+  POL -->|fold re-enter| Q
+  POL -->|defer file| OUT[external queue]
+  POL -->|all terminal| END[ship]
+```
+
+(Per-item edges from SP2 / SPN to budget exhaustion + re-entry
+omitted for clarity; same shape as item 1. The interlock IS the
+state table: a sub-agent acquires an item by flipping its `owner`
+field on spawn and releases it on terminal or escalation. Single-
+writer is per ITEM, not per queue -- per-queue serialization is
+the wrong grain and collapses the fan-out.)
+
+WORKED EXAMPLE: the `batch-bug-shepherd` skill in `microsoft/apm`
+(`.apm/skills/batch-bug-shepherd/SKILL.md`) -- the first concrete
+realization we built while developing this pattern, not external
+industry validation. It drives a batch of suspected bugs from raw
+issue list to mergeable PR queue: per-item triage sub-agent, in-
+flight PR sub-agent (which itself drives a review-address + CI-
+green sub-loop), no-PR sub-agent (TDD fix session), per-verdict
+completion sub-agent. A `plan.md` state table is the canonical
+ground truth; every re-entry reloads it. Runs in GitHub Copilot
+CLI -- a substrate that exposes neither `/goal` nor `/loop` --
+which is what makes the substrate-portability claim testable
+rather than aspirational.
+
+SUBSTRATE NOTE: A11 requires three baseline primitives from the
+harness, and nothing else:
+1. SUB-AGENT DISPATCH -- the runner can spawn a fresh-context
+   sub-agent per item.
+2. PERSISTENT STATE -- a write surface (file, table, issue body,
+   external store) that survives across sub-agent spawns and
+   across the runner's own re-entry.
+3. COMPLETION SIGNAL -- each sub-agent returns a structured
+   verdict the runner can read.
+Vendor sugar (Codex `/goal`, Claude Code `/loop` + `/goal`,
+Copilot CLI open issues #2129 and #3364) packages the re-entry
+contract as a slash command; the discipline does not depend on
+the sugar. We tested this by building the worked example above
+in Copilot CLI, which has neither. A substrate gap -- e.g. a
+streaming-only harness with no completion signal -- degrades the
+pattern but does not invalidate it; document the gap in the
+design's portability declaration.
+
+ANTI-PATTERNS:
+- LOOP WITHOUT STOP-PREDICATE -- the per-item loop terminates on
+  token exhaustion, not on a deterministic gate. Maps to ch19
+  anti-pattern #14 COST RUNAWAY. The stop-predicate is S4; if you
+  cannot name it, you do not have a loop, you have a leak.
+- DEFER-BY-DEFAULT -- recommended-follow-up becomes the dumping
+  ground; the queue grows faster than it drains. The fold-by-
+  default policy (B11) inverts this: the loop absorbs follow-ups
+  unless they violate the queue invariant. Maps to ch19 #10 NOT
+  FIXING PRIMITIVES.
+- DRIFT WITHOUT REASSERTION -- each iteration re-derives "what to
+  do" from in-context recall rather than from the persisted state
+  table. Edge-triggered intrusion into a level-triggered pattern;
+  the loop drifts. Maps to ch19 #17 PERSONA DRIFT.
+- MULTI-WRITER PER ITEM -- two sub-agents touch the same PR /
+  issue / comment without an interlock. Race condition plus
+  duplicate comments. The state-table `owner` field IS the
+  interlock; without it, single-writer is wishful thinking.
+- QUEUE-LEVEL INTERLOCK -- single-writer per queue (one runner
+  thread) is too coarse: it serializes work that should fan out.
+  Single-writer per item is the correct grain.
+- UNBOUNDED PER-ITEM RETRIES -- per-item attempts have no cap;
+  one pathological item burns the queue's budget. Cap retries
+  (typical 2-4) and escalate via B10 on exhaustion.
+- A8 MISCAST AS A11 -- forcing single-artifact iteration through
+  a queue runner. The runner is overhead; use A8 directly.
+- A11 MISCAST AS A8 -- collapsing N items into "one big artifact"
+  to reuse A8's steward. The cross-item interlock disappears; the
+  fold-vs-defer policy has no surface; per-item budgets collapse.
+
+SELECTION HEURISTIC: A11 is the right call when the user intent
+contains any of: "queue of items", "for each issue/PR/file",
+"drive to terminal state", "until green", "drift correction",
+"reconcile", "sweep the backlog". If the intent names ONE
+artifact iterating toward a goal, that is A8. If the intent names
+N items each needing per-item convergence with cross-item
+ordering, that is A11. When the work is also event-triggered
+with audit + capability-gating requirements, A10 GOVERNED OUTER
+LOOP is the wrapping pattern and A11 may live inside the gated
+session as the in-loop discipline.
+
+---
+
 ## How Tier-3 patterns compose with each other
 
 Tier-3 patterns are not mutually exclusive. The canonical senior-
@@ -669,6 +844,53 @@ in the tasks stage. A5 WAVE EXECUTION runs the implement stage when
 the DAG warrants it. B5 ACCEPTANCE OBSERVER (a Tier-2 behavioral
 pattern) closes the work. A1 PANEL plugs into any stage that needs
 deliberation rather than single-lens judgement.
+
+A second common composition combines a reconciliation loop with
+governance and per-item upgrades:
+
+```mermaid
+flowchart TB
+  EV[event trigger] --> GATE
+  GATE[A10 capability and sandbox gate] --> RUN
+  RUN[A11 runner reads state table B4] --> SPAWN
+  SPAWN[spawn per item sub-agent C2 plus C4] --> WORK
+  WORK[item work]
+  WORK --> A8[per item A8 ALIGNMENT LOOP if item is a draft]
+  WORK --> A1[per item A1 PANEL if multi lens decision]
+  A8 --> SP
+  A1 --> SP
+  WORK --> SP[S4 stop predicate from system of record]
+  SP -->|terminal| UPD[update state table]
+  SP -->|non terminal within budget| SPAWN
+  SP -->|budget exhausted| HC[B10 human checkpoint]
+  UPD --> POL{B11 fold or defer}
+  POL -->|fold| RUN
+  POL -->|defer| OUT[external queue]
+  POL -->|all terminal| DONE[queue closed]
+  DONE --> AUDIT[A10 audit surface]
+  HC --> AUDIT
+  OUT --> AUDIT
+```
+
+Three independent composition axes are visible here:
+
+- OUTER WRAP (A10): when the queue runner must be event-triggered
+  with audit + capability-gated execution, A10 GOVERNED OUTER LOOP
+  is the wrapping pattern. A11 lives inside the gated session as
+  the in-loop discipline. The production-deployment shape.
+- PER-ITEM DROP-IN (A8 or A1): when each queue item is itself a
+  creative draft, the per-item sub-agent runs A8 ALIGNMENT LOOP
+  rather than ad-hoc iteration. When a per-item decision needs
+  multi-lens judgement (architecture call, security trade-off),
+  the per-item sub-agent calls A1 PANEL. Per-item upgrades.
+- QUEUE POLICY (B11): the fold-vs-defer call lives at the queue
+  level, not per item. B11 FOLD-BY-DEFAULT is the policy primitive
+  that inverts the recommendation-as-backlog failure mode.
+
+These three axes compose independently. You can have A11 alone
+(interactive runner, manual re-entry, no per-item drafts), A10
+wrapping A11 alone (governed unattended queue, simple terminal
+state per item), or the full nesting above.
 
 ---
 
@@ -718,6 +940,15 @@ artifact is consequential and producer is biased by long context?
 
 work is creative, multi-round, with goal-drift risk?
   -> A8 ALIGNMENT LOOP (bound the rounds; steward + cold readers)
+  (if the work is a QUEUE of items each needing convergence, not
+   a single artifact iterating, that is A11 below, not A8)
+
+work names a queue of items each needing convergence under non-
+determinism; per-item bounded loop; cross-item interlocks (single-
+writer per item)?
+  -> A11 RECONCILIATION LOOP (fold-by-default; state table as
+     ground truth; substrate needs only sub-agent dispatch +
+     persistent state + completion signal)
 
 work names a consequential side effect or a fact that must be true
 (deploy, migrate, delete, post, compute, verify a system fact)?
