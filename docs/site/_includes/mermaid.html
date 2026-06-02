@@ -3,16 +3,27 @@
 <script>
   mermaid.initialize({ startOnLoad: true, theme: 'dark' });
 
-  // Replace raw Mermaid runtime errors with actionable French guidance.
+  // Replace raw Mermaid runtime errors with actionable, localized guidance.
   // When a diagram fails to parse, Mermaid 10 injects its raw error text
   // (e.g. "Syntax error in text" followed by a "mermaid version 10.x.x"
   // marker) directly into the .mermaid block. That output is unreadable for
   // documentation readers, so we detect it and render a friendly message.
   (function () {
-    var FRIENDLY_MESSAGE =
-      'Diagramme indisponible : la syntaxe Mermaid de ce schéma est invalide. ' +
-      'Vérifiez l’indentation et les flèches du bloc, puis rechargez la page. ' +
-      'Si le problème persiste, signalez-le sur le dépôt GitHub.';
+    var MESSAGES = {
+      fr:
+        'Diagramme indisponible : la syntaxe Mermaid de ce schéma est invalide. ' +
+        'Vérifiez l’indentation et les flèches du bloc, puis rechargez la page. ' +
+        'Si le problème persiste, signalez-le sur le dépôt GitHub.',
+      en:
+        'Diagram unavailable: the Mermaid syntax of this schema is invalid. ' +
+        'Check the block’s indentation and arrows, then reload the page. ' +
+        'If the problem persists, report it on the GitHub repository.'
+    };
+
+    function friendlyMessage() {
+      var lang = (document.documentElement.lang || 'fr').slice(0, 2).toLowerCase();
+      return MESSAGES[lang] || MESSAGES.fr;
+    }
 
     function isMermaidError(text) {
       if (!text) return false;
@@ -27,17 +38,27 @@
           block.dataset.skraftError = 'handled';
           block.classList.add('mermaid-error');
           block.setAttribute('role', 'alert');
-          block.textContent = FRIENDLY_MESSAGE;
+          block.textContent = friendlyMessage();
         }
       });
     }
 
+    function watchForErrors() {
+      replaceErrors();
+      // Mermaid renders asynchronously and may inject its error output after
+      // initial load; observe the DOM so late failures are still caught.
+      if (typeof MutationObserver === 'function') {
+        var observer = new MutationObserver(function () { replaceErrors(); });
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+        // Stop observing once Mermaid has settled to avoid leaking observers.
+        window.setTimeout(function () { observer.disconnect(); }, 5000);
+      }
+    }
+
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function () {
-        window.setTimeout(replaceErrors, 0);
-      });
+      document.addEventListener('DOMContentLoaded', watchForErrors);
     } else {
-      window.setTimeout(replaceErrors, 0);
+      watchForErrors();
     }
   })();
 </script>
