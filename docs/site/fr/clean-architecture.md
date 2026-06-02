@@ -7,7 +7,7 @@ persona: tech-lead
 
 # Clean Architecture
 
-La Clean Architecture, popularisée par Robert C. Martin (Uncle Bob), est au cœur de l'approche SKRAFT lors de la phase de DESIGN et DELIVER. Elle garantit que le cœur métier de l'application est indépendant des frameworks, des interfaces utilisateur, et des bases de données.
+La Clean Architecture, popularisée par Robert C. Martin (Uncle Bob), est au cœur de l'approche SKRAFT lors des phases DESIGN et DELIVER. Elle garantit que le cœur métier de l'application est indépendant des frameworks, des interfaces utilisateur, et des bases de données.
 
 ## Objectif
 
