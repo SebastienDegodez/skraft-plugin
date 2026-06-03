@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: en
 title: "DELIVER cycle: engineer + reviewer"
 persona: tech-lead

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: fr
 title: "acceptance-designer-reviewer"
 persona: tech-lead

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: fr
 title: "Pour les décideurs"
 persona: manager

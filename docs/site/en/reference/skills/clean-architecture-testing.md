@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: en
 title: "clean-architecture-testing"
 persona: tech-lead

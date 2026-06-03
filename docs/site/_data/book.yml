@@ -1,0 +1,259 @@
+# book.yml — CONTRAT DE STRUCTURE DU LIVRE SKRAFT (source de verite unique)
+#
+# Ce manifeste est le contrat lu par les deux workflows gh-aw :
+#   - skraft-docs-sync  : regenere les pages `type: derived` depuis `source`.
+#   - skraft-docs-gaps  : detecte les ecarts contrat <-> fichiers <-> sources
+#                         et propose des brouillons pour les pages `type: editorial`.
+#
+# Regles dures (verifiees par skraft-docs-gaps) :
+#   1. Toute page listee ici DOIT exister en FR (`fr`) ET en EN (`en`).
+#   2. Toute page `type: derived` DOIT citer source + annee (auteur, titre, annee).
+#   3. Toute page de la partie `catalogue` DOIT respecter le gabarit de page
+#      `catalogue_template` (blocs requis) — comprehensible sans maitrise du craft.
+#   4. Tout pattern / gate / lens / agent / skill present dans `sources` mais
+#      absent d'une page derivee declenche un ecart (gap).
+#
+# `type` : derived (regenere mecaniquement) | editorial (redige par un humain,
+#          l'agent propose seulement un brouillon).
+
+meta:
+  title_fr: "SKRAFT — le livre"
+  title_en: "SKRAFT — the book"
+  langs: [fr, en]
+
+  # Design : inspire du learning-path (sebastiendegodez) et du site principal.
+  #   - Theme liquid-glass (deja present dans assets/css/site.css : .glass-*).
+  #   - Mise en page "doc" : sidebar groupee par partie (comme les blocs
+  #     FONDATIONS / COMPOSITION du learning-path) + contenu max ~820px.
+  #   - Highlight vert (var(--color-highlight)), liens actifs a bordure gauche.
+  design:
+    layout: doc                 # sidebar (parties) + contenu
+    sidebar_grouped_by: parts   # chaque `part` = une section de sidebar (h3 majuscule)
+    theme: liquid-glass
+    content_max_width: 820px
+    # Artefacts qui materialisent ce design (opt-in : une page l'active via
+    # `layout: doc` dans son frontmatter ; la sidebar est lue depuis `parts`).
+    artifacts:
+      layout: "docs/site/_layouts/doc.html"
+      stylesheet: "docs/site/assets/css/doc.css"
+
+  # Admonitions colorees (style learning-path), rendues depuis des fences
+  # `:::type ... :::` ou des blockquotes. A utiliser pour signaler risques et notes.
+  admonitions: [note, info, tip, caution, warning, danger]
+
+  # GABARIT DE PAGE impose a CHAQUE page du catalogue (et recommande pour les
+  # pages pratique/decideurs). L'inspiration du learning-path porte sur le DESIGN
+  # (voir `design`), pas sur une notion de "module" : ce sont des pages de
+  # reference, pas des exercices. L'agent skraft-docs-gaps ECHOUE si une page de
+  # catalogue omet un bloc requis.
+  catalogue_template:
+    frontmatter:
+      required: [layout, lang, title, description]
+      optional: [persona, sidebar_position]
+    blocks:
+      - id: title
+        required: true
+        fr: "# Titre"
+        en: "# Title"
+      - id: intro-callout
+        required: true
+        fr: "Accroche en une phrase, sans jargon (blockquote)"
+        en: "One-sentence hook, no jargon (blockquote)"
+      - id: pourquoi
+        required: true
+        fr: "## Pourquoi — le probleme que ca resout"
+        en: "## Why — the problem it solves"
+      - id: concepts
+        required: true
+        fr: "## Concepts cles — comment ca marche (schema mermaid + tableaux)"
+        en: "## Key concepts — how it works (mermaid diagram + tables)"
+      - id: why-citation
+        required: true
+        fr: "## Pourquoi cette pratique — citation : auteur, *ouvrage*, annee"
+        en: "## Why this practice — citation: author, *work*, year"
+      - id: pieges
+        required: false
+        fr: "## Pieges & anti-patterns"
+        en: "## Pitfalls & anti-patterns"
+      - id: aller-plus-loin
+        required: false
+        fr: "## Pour aller plus loin (liens internes)"
+        en: "## Going further (internal links)"
+      - id: sources
+        required: true
+        fr: "## Sources — references (auteur, ouvrage, annee) depuis citations.yml"
+        en: "## Sources — references (author, work, year) from citations.yml"
+      - id: glossaire
+        required: true
+        fr: "Termes a connaitre definis en ligne (lien vers le glossaire)"
+        en: "Terms to know defined inline (link to the glossary)"
+
+  # Gabarit allege pour les pages purement editoriales (vision, contribuer).
+  editorial_template:
+    frontmatter:
+      required: [layout, lang, title, description]
+    blocks:
+      - id: title
+        fr: "# Titre"
+        en: "# Title"
+      - id: intro-callout
+        fr: "Accroche en une phrase (blockquote)"
+        en: "One-sentence hook (blockquote)"
+      - id: body
+        fr: "Sections narratives (Pourquoi -> Comment), jargon defini en ligne"
+        en: "Narrative sections (Why -> How), jargon defined inline"
+      - id: sources
+        fr: "## Sources (si des faits sont avances)"
+        en: "## Sources (if claims are made)"
+
+# Sources dérivables (plugin SKRAFT uniquement — HVE n'est PAS scanne ici).
+sources:
+  agents: "plugins/agents/*.agent.md"
+  lenses: "plugins/agents/reviewer-lenses/*.agent.md"
+  skills: "plugins/skills/*/SKILL.md"
+  gates: "plugins/skills/*-review-criteria/SKILL.md"
+  patterns: "plugins/skills/architecture-patterns/SKILL.md"
+  citations: "docs/site/_data/citations.yml"
+
+parts:
+  # ---------------------------------------------------------------- VISION
+  - id: vision
+    title_fr: "Vision"
+    title_en: "Vision"
+    intro_fr: "Le point d'entree commercial : ce que SKRAFT apporte, et ou il se place face a HVE."
+    intro_en: "The commercial entry point: what SKRAFT brings, and where it sits next to HVE."
+    pages:
+      - id: home
+        type: editorial
+        fr: "fr/index.md"
+        en: "en/index.md"
+        purpose_fr: "Page d'accueil vendeur : pitch, promesse, preuves, appels a l'action."
+        purpose_en: "Sales landing page: pitch, promise, proof, calls to action."
+      - id: hve-vs-skraft
+        type: editorial
+        fr: "fr/hve-vs-skraft.md"
+        en: "en/hve-vs-skraft.md"
+        purpose_fr: "Continuite HVE -> SKRAFT. SKRAFT remplace le workflow RPI par un pipeline SDLC complet (5 phases + reviewers + gates + lens)."
+        purpose_en: "HVE -> SKRAFT continuity. SKRAFT replaces the RPI workflow with a full SDLC pipeline (5 phases + reviewers + gates + lenses)."
+        requires_diagram: true
+
+  # ------------------------------------------------------------- DECIDEURS
+  - id: decideurs
+    title_fr: "Pour les decideurs"
+    title_en: "For decision-makers"
+    intro_fr: "L'accroche decideurs : enjeux, valeur, projection du temps de resolution et du TTM, controles preserves."
+    intro_en: "The decision-maker hook: stakes, value, resolution-time and TTM projection, preserved controls."
+    pages:
+      - id: roi-ttm
+        type: editorial
+        fr: "fr/pour-decideurs.md"
+        en: "en/for-executives.md"
+        purpose_fr: "Pourquoi la revue assistee AVANT la revue humaine reduit le TTM. Projection du temps de resolution d'une US. Arguments qualitatifs (jamais de metrique inventee)."
+        purpose_en: "Why AI-assisted review BEFORE human review reduces TTM. Projection of a user story resolution time. Qualitative arguments (never an invented metric)."
+      - id: traces
+        type: derived
+        fr: "fr/traces.md"
+        en: "en/traces.md"
+        source: "plugins/instructions/skraft-artifacts.instructions.md"
+        purpose_fr: "Les traces laissees par le pipeline : artefacts, state.json, PR, verdicts. Auditabilite."
+        purpose_en: "The traces left by the pipeline: artifacts, state.json, PRs, verdicts. Auditability."
+
+  # -------------------------------------------------------------- PRATIQUE
+  - id: pratique
+    title_fr: "La pratique"
+    title_en: "The practice"
+    intro_fr: "Les enjeux expliques pour tous, sans prerequis en software craftsmanship."
+    intro_en: "The stakes explained for everyone, no software-craftsmanship prerequisite."
+    pages:
+      - id: phases
+        type: derived
+        fr: "fr/pipeline/index.md"
+        en: "en/pipeline/index.md"
+        source: "plugins/agents/*.agent.md"
+        purpose_fr: "Les 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, un agent par phase, un reviewer independant."
+        purpose_en: "The 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, one agent per phase, one independent reviewer."
+      - id: pourquoi-review-avant-review
+        type: editorial
+        fr: "fr/pourquoi-review-avant-review.md"
+        en: "en/why-review-before-review.md"
+        purpose_fr: "Le coeur de l'argument : la revue adverse assistee filtre AVANT l'humain. Moins de rework, TTM reduit."
+        purpose_en: "The core argument: assisted adversarial review filters BEFORE the human. Less rework, lower TTM."
+      - id: glossaire
+        type: editorial
+        fr: "fr/glossaire.md"
+        en: "en/glossary.md"
+        purpose_fr: "Glossaire global : chaque terme du craft explique simplement (TDD, mutation, Object Calisthenics, gate, lens...)."
+        purpose_en: "Global glossary: every craft term explained plainly (TDD, mutation, Object Calisthenics, gate, lens...)."
+
+  # ------------------------------------------------------------- CATALOGUE
+  # TOUT y est. Chaque page DERIVED suit le gabarit de page (catalogue_template).
+  - id: catalogue
+    title_fr: "Le catalogue"
+    title_en: "The catalogue"
+    intro_fr: "Tout SKRAFT : patterns, gates, lens, agents, skills, citations. Chaque entree explique le POURQUOI avec sa reference (auteur, ouvrage, annee)."
+    intro_en: "All of SKRAFT: patterns, gates, lenses, agents, skills, citations. Each entry explains the WHY with its reference (author, work, year)."
+    enforce_catalogue_template: true
+    pages:
+      - id: patterns
+        type: derived
+        fr: "fr/catalogue/patterns.md"
+        en: "en/catalogue/patterns.md"
+        source: "plugins/skills/architecture-patterns/SKILL.md"
+        purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
+        purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
+      - id: gates
+        type: derived
+        fr: "fr/catalogue/gates.md"
+        en: "en/catalogue/gates.md"
+        source: "plugins/skills/*-review-criteria/SKILL.md"
+        purpose_fr: "Les gates de revue (Gxx) par phase : ce que chaque gate verifie et pourquoi."
+        purpose_en: "Review gates (Gxx) per phase: what each gate checks and why."
+      - id: lens
+        type: derived
+        fr: "fr/catalogue/lens.md"
+        en: "en/catalogue/lens.md"
+        source: "plugins/agents/reviewer-lenses/*.agent.md"
+        purpose_fr: "Les 4 lentilles de revue adverse : architecture-boundaries, cold-reader, quality-gates, test-integrity."
+        purpose_en: "The 4 adversarial review lenses: architecture-boundaries, cold-reader, quality-gates, test-integrity."
+      - id: agents
+        type: derived
+        fr: "fr/reference/agents/index.md"
+        en: "en/reference/agents/index.md"
+        source: "plugins/agents/*.agent.md"
+        purpose_fr: "Les agents du pipeline et leurs reviewers : role, phase, contribution aux pratiques."
+        purpose_en: "Pipeline agents and their reviewers: role, phase, contribution to practices."
+      - id: skills
+        type: derived
+        fr: "fr/reference/skills/index.md"
+        en: "en/reference/skills/index.md"
+        source: "plugins/skills/*/SKILL.md"
+        purpose_fr: "Les skills (pratiques outillees) : ce qu'elles font, quand les utiliser."
+        purpose_en: "Skills (tooled practices): what they do, when to use them."
+      - id: citations
+        type: derived
+        fr: "fr/citations.md"
+        en: "en/citations.md"
+        source: "docs/site/_data/citations.yml"
+        purpose_fr: "Bibliographie complete : chaque reference (auteur, ouvrage, annee) qui fonde une pratique."
+        purpose_en: "Full bibliography: each reference (author, work, year) grounding a practice."
+
+  # ------------------------------------------------------------- CONTRIBUER
+  - id: contribuer
+    title_fr: "Contribuer"
+    title_en: "Contribute"
+    intro_fr: "Comprendre genesis (l'origine des patterns) et les possibilites de customisation — avec le risque de reduire les controles."
+    intro_en: "Understand genesis (the origin of the patterns) and the customization options — with the risk of reducing controls."
+    pages:
+      - id: genesis
+        type: editorial
+        fr: "fr/contributing.md"
+        en: "en/contributing.md"
+        purpose_fr: "L'importance de genesis : pourquoi chaque pattern existe, comment en proposer un nouveau de maniere disciplinee."
+        purpose_en: "The importance of genesis: why each pattern exists, how to propose a new one with discipline."
+      - id: customisation
+        type: editorial
+        fr: "fr/customisation.md"
+        en: "en/customisation.md"
+        purpose_fr: "Ce que SKRAFT permet de customiser ET le RISQUE de reduire les controles (gates, lens, reviewers)."
+        purpose_en: "What SKRAFT lets you customize AND the RISK of reducing controls (gates, lenses, reviewers)."
+        requires_risk_section: true

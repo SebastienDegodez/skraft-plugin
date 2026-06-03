@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: fr
 title: "red-synthesize-green"
 persona: tech-lead

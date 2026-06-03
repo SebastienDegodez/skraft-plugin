@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: fr
 title: "solution-architect-reviewer"
 persona: tech-lead

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: en
 title: "The SKRAFT pipeline"
 persona: tech-lead

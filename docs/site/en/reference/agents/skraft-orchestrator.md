@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: en
 title: "skraft-orchestrator"
 persona: tech-lead

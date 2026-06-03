@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: en
 title: "create-custom-agent"
 persona: tech-lead

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: 'fr' }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ page.title }} — SKRAFT</title>
+  <link rel="preconnect" href="https://fonts.bunny.net" />
+  <link
+    href="https://fonts.bunny.net/css?family=Lato:400,700,900|Fira+Code:400,700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="{{ '/assets/css/design-tokens.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/assets/css/doc.css' | relative_url }}" />
+</head>
+<body>
+
+  <!-- NAVIGATION -->
+  <nav class="site-nav" aria-label="Navigation">
+    <a class="site-nav__brand" href="{{ '/' | relative_url }}">SKRAFT</a>
+    {% for item in site.data.nav %}
+      {% if page.lang == 'en' %}
+        {% assign nav_path = item.path_en %}
+        {% assign nav_title = item.title_en %}
+      {% else %}
+        {% assign nav_path = item.path_fr %}
+        {% assign nav_title = item.title_fr %}
+      {% endif %}
+      <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>{{ nav_title }}</a>
+    {% endfor %}
+    <span class="site-nav__lang">
+      {% include lang-toggle.html %}
+    </span>
+  </nav>
+
+  <!-- DOC LAYOUT : sidebar (parties du livre) + contenu -->
+  <div class="doc-layout">
+
+    <button class="doc-sidebar-toggle" aria-controls="doc-sidebar" aria-expanded="false">
+      {% if page.lang == 'en' %}Contents{% else %}Sommaire{% endif %}
+    </button>
+
+    <aside class="doc-sidebar glass-surface" id="doc-sidebar" aria-label="{% if page.lang == 'en' %}Book navigation{% else %}Navigation du livre{% endif %}">
+      {% for part in site.data.book.parts %}
+        {% if page.lang == 'en' %}
+          {% assign part_title = part.title_en %}
+        {% else %}
+          {% assign part_title = part.title_fr %}
+        {% endif %}
+        <h3 class="doc-sidebar__group">{{ part_title }}</h3>
+        <ul class="doc-sidebar__list">
+          {% for p in part.pages %}
+            {% if page.lang == 'en' %}
+              {% assign raw = p.en %}
+            {% else %}
+              {% assign raw = p.fr %}
+            {% endif %}
+            {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
+            {% assign label = p.id | replace: '-', ' ' | capitalize %}
+            <li>
+              <a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    </aside>
+
+    <main class="doc-content content">
+      {{ content }}
+    </main>
+
+  </div>
+
+  <!-- MERMAID -->
+  {% include mermaid.html %}
+
+  <!-- FOOTER -->
+  <footer>
+    <p>
+      SKRAFT Documentation —
+      <a href="https://github.com/SebastienDegodez/skraft-plugin" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      var toggle = document.querySelector('.doc-sidebar-toggle');
+      var sidebar = document.getElementById('doc-sidebar');
+      if (!toggle || !sidebar) return;
+      toggle.addEventListener('click', function () {
+        var open = sidebar.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    })();
+  </script>
+
+</body>
+</html>

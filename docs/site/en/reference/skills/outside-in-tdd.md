@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: en
 title: "outside-in-tdd"
 persona: tech-lead

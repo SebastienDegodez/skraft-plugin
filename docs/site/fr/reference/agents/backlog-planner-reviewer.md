@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: fr
 title: "backlog-planner-reviewer"
 persona: tech-lead
