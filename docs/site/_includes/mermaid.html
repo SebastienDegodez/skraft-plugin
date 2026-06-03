@@ -1,7 +1,23 @@
-<div class="mermaid">{{ include.code }}</div>
+{% if include.code %}<div class="mermaid">{{ include.code }}</div>{% endif %}
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>
-  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  document.addEventListener("DOMContentLoaded", function() {
+    // Convert standard Markdown ```mermaid code blocks into .mermaid divs.
+    var blocks = document.querySelectorAll("code.language-mermaid");
+    for (var i = 0; i < blocks.length; i++) {
+      var code = blocks[i];
+      var div = document.createElement("div");
+      div.className = "mermaid";
+      div.textContent = code.textContent;
+      var pre = code.parentNode;
+      if (pre.tagName === "PRE") {
+        pre.parentNode.replaceChild(div, pre);
+      } else {
+        code.parentNode.replaceChild(div, code);
+      }
+    }
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  });
 
   // Replace raw Mermaid runtime errors with actionable, localized guidance.
   // When a diagram fails to parse, Mermaid 10 injects its raw error text

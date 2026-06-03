@@ -9,7 +9,8 @@ persona: tech-lead
 
 SKRAFT orchestre cinq phases séquentielles. Chaque phase est exécutée par un agent spécialisé et validée par un reviewer indépendant. L'orchestrateur (`skraft-orchestrator`) séquence les transitions et applique les invariants.
 
-{% include mermaid.html code="graph LR
+```mermaid
+graph LR
     D[DISCOVER] --> DI[DISCUSS]
     DI --> DE[DESIGN]
     DE --> DIS[DISTILL]
@@ -18,7 +19,8 @@ SKRAFT orchestre cinq phases séquentielles. Chaque phase est exécutée par un 
     style DI fill:#1a3a2a,stroke:#4ed58a
     style DE fill:#1a3a2a,stroke:#4ed58a
     style DIS fill:#1a3a2a,stroke:#4ed58a
-    style DEL fill:#1a3a2a,stroke:#4ed58a" %}
+    style DEL fill:#1a3a2a,stroke:#4ed58a
+```
 
 ## Phases
 

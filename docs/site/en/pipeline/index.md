@@ -9,7 +9,8 @@ persona: tech-lead
 
 SKRAFT orchestrates five sequential phases. Each phase is executed by a specialised agent and validated by an independent reviewer. The orchestrator (`skraft-orchestrator`) sequences transitions and enforces invariants.
 
-{% include mermaid.html code="graph LR
+```mermaid
+graph LR
     D[DISCOVER] --> DI[DISCUSS]
     DI --> DE[DESIGN]
     DE --> DIS[DISTILL]
@@ -18,7 +19,8 @@ SKRAFT orchestrates five sequential phases. Each phase is executed by a speciali
     style DI fill:#1a3a2a,stroke:#4ed58a
     style DE fill:#1a3a2a,stroke:#4ed58a
     style DIS fill:#1a3a2a,stroke:#4ed58a
-    style DEL fill:#1a3a2a,stroke:#4ed58a" %}
+    style DEL fill:#1a3a2a,stroke:#4ed58a
+```
 
 ## Phases
 
