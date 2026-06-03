@@ -68,6 +68,23 @@ Exécutez un cycle complet du pipeline avec votre nouvel agent pour vérifier qu
 > « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
 > — Martin, R. C., *Clean Architecture*, 2017.
 
+## ⚠️ Risques de la customisation — ce que vous pourriez perdre
+
+> 🚧 GENERATED DRAFT — cette section doit être revue et complétée par un humain.
+
+Toute customisation **réduit potentiellement les contrôles** du pipeline. Avant de modifier quoi que ce soit, posez-vous la question : *quel contrôle suis-je en train d'affaiblir ?*
+
+| Customisation | Risque | Contrôle affaibli |
+|--------------|--------|-------------------|
+| Supprimer un reviewer | Plus de vérification indépendante | Séparation exécuteur/vérificateur |
+| Baisser le mutation score floor | Des tests insuffisants passent inaperçus | Efficacité réelle des tests |
+| Contourner un gate (Gxx) | Des artefacts incomplets avancent dans le pipeline | Qualité par phase |
+| Modifier `state.json` sans protocole | Perte de traçabilité, artefacts incohérents | Auditabilité du pipeline |
+| Désactiver une lentille adversariale | Un angle de revue disparaît (ex: architecture ou intégrité des tests) | Couverture de la revue adverse |
+| Mélanger commande et requête (CQS) | Un reviewer peut modifier l'état — le résultat n'est plus reproductible | Reproductibilité des revues |
+
+> **Règle de prudence** : avant toute customisation de niveau L2 ou L3, documenter dans un ADR (Architecture Decision Record) le contrôle que vous acceptez de réduire et pourquoi.
+
 ## Voir aussi
 
 - [Architecture](/fr/architecture) — Vue CQS du pipeline

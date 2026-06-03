@@ -68,6 +68,23 @@ Run a complete pipeline cycle with your new agent to verify that:
 > « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
 > — Martin, R. C., *Clean Architecture*, 2017.
 
+## ⚠️ Risks of customisation — what you may lose
+
+> 🚧 GENERATED DRAFT — this section must be reviewed and completed by a human.
+
+Every customisation **potentially reduces pipeline controls**. Before changing anything, ask yourself: *which control am I weakening?*
+
+| Customisation | Risk | Control weakened |
+|--------------|------|-----------------|
+| Remove a reviewer | No more independent verification | Executor/verifier separation |
+| Lower the mutation score floor | Insufficient tests go unnoticed | Actual test effectiveness |
+| Bypass a gate (Gxx) | Incomplete artifacts advance in the pipeline | Per-phase quality |
+| Modify `state.json` without a protocol | Loss of traceability, incoherent artifacts | Pipeline auditability |
+| Disable an adversarial lens | A review angle disappears (e.g. architecture or test integrity) | Adversarial review coverage |
+| Mix command and query (CQS) | A reviewer can modify state — results are no longer reproducible | Review reproducibility |
+
+> **Caution rule**: before any L2 or L3 customisation, document in an ADR (Architecture Decision Record) the control you accept to reduce and why.
+
 ## See also
 
 - [Architecture](/en/architecture) — CQS view of the pipeline
