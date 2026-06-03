@@ -13,7 +13,6 @@ description: |
 on:
   push:
     branches:
-      - main
       - feat/hve-compatibility
     paths:
       - 'plugins/**'
@@ -196,7 +195,7 @@ English.
 
 ## Usage
 
-- **Automatic**: on every agent/skill/instruction push to `main`, the workflow
+- **Automatic**: on every agent/skill/instruction push to `feat/hve-compatibility`, the workflow
   reconciles the documentation and opens a draft `docs:` PR.
 - **Manual**: trigger `workflow_dispatch` (Actions tab), optionally providing a
   `ref` to replay reconciliation on a specific commit.

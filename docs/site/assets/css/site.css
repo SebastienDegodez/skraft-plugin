@@ -306,3 +306,18 @@ footer a { color: var(--color-highlight); }
   .content { padding: 2rem 1rem 3rem; }
   .page-header { padding: 6rem 1rem 3rem; }
 }
+
+/* ============================================================
+   MERMAID ERROR FALLBACK
+   ============================================================ */
+.mermaid-error {
+  display: block;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--glass-border-strong);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 0.5rem;
+  background: var(--glass-bg);
+  color: var(--color-foreground);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
