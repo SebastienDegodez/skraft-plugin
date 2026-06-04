@@ -68,6 +68,41 @@ Exécutez un cycle complet du pipeline avec votre nouvel agent pour vérifier qu
 > « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
 > — Martin, R. C., *Clean Architecture*, 2017.
 
+## ⚠️ Risques de réduction des contrôles
+
+> 🚧 GENERATED DRAFT — section à compléter et valider par un humain.
+
+Certaines customisations réduisent les contrôles intégrés de SKRAFT. Ce n'est pas interdit, mais c'est risqué. Cette section identifie les principales zones de fragilisation.
+
+### Supprimer ou affaiblir un gate
+
+Chaque gate (G1–G5) protège une invariant précis. Supprimer un gate signifie que la phase suivante démarrera sans garantie que les critères de la phase précédente sont remplis.
+
+| Action | Risque | Ce qui disparaît |
+|--------|--------|-----------------|
+| Supprimer G1 (DISCOVER) | Stories mal définies en DISCUSS | Vérification du DoR (Definition of Ready) |
+| Supprimer G3 (DESIGN) | Architecture non validée avant les tests | Détection des violations de Clean Architecture |
+| Abaisser le mutation score floor | Tests de surface uniquement | Détection des tests qui ne testent pas vraiment |
+
+### Désactiver une lentille de revue
+
+Les 4 lentilles couvrent des angles complémentaires. Désactiver l'une d'elles crée un angle mort.
+
+| Lentille supprimée | Angle mort |
+|-------------------|------------|
+| `architecture-boundaries` | Les violations de frontières architecturales passent en PR humaine |
+| `test-integrity` | Les tests de façade (qui passent sans tester) ne sont pas détectés |
+| `quality-gates` | Les seuils de qualité (mutation, coverage) ne sont pas vérifiés |
+| `cold-reader` | La lisibilité du code n'est pas vérifiée : le prochain développeur sera perdu |
+
+### Passer un reviewer en mode écriture (violer CQS)
+
+Si un reviewer peut modifier des artefacts, il introduit un effet de bord dans la revue. Le verdict ne reflète plus l'état original — il reflète un état modifié par le reviewer lui-même. C'est une violation du principe CQS qui peut produire des résultats non reproductibles.
+
+> **Règle** : ne jamais donner à un reviewer le droit d'écrire dans les artefacts. Si vous souhaitez qu'un agent améliore automatiquement les artefacts, créez un agent *exécuteur* distinct, pas un reviewer.
+
+<!-- 🚧 À compléter : ajouter des exemples issus de retours d'expérience réels. -->
+
 ## Voir aussi
 
 - [Architecture](/fr/architecture) — Vue CQS du pipeline
