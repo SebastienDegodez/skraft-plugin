@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: fr
 title: "Clean Architecture — Détails"
 persona: tech-lead
