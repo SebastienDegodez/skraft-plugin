@@ -31,3 +31,8 @@ Sans décisions d'architecture explicites, chaque développeur invente sa propre
 - Diagramme de composants avec frontières de Bounded Context.
 - Event Model montrant le flux Command → Event → Read Model.
 - Contrats d'interface entre composants.
+
+## Les gates franchies ici
+
+Cette phase franchit les gates **G1–G15** (voir le [catalogue des gates](../catalogue/gates.html)).
+Chaque gate est vérifiée par le reviewer indépendant avant le passage à **DISTILL**.

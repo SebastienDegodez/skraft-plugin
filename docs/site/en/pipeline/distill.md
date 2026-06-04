@@ -31,3 +31,8 @@ Gherkin scenarios serve as a contract between business and code. The acceptance-
 - Coverage matrix linking each acceptance criterion to a scenario.
 - Implementation plan ordering tests by layer (Domain, Application, Infrastructure, API).
 - Identification of Test Doubles needed at each boundary.
+
+## Gates crossed here
+
+This phase crosses gates **G1–G8** (see the [gates catalogue](../catalogue/gates.html)).
+Each gate is checked by the independent reviewer before moving on to **DELIVER**.

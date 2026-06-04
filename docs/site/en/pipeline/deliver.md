@@ -31,3 +31,9 @@ Code is the only artefact that matters in production. The software-engineer appl
 - Passing acceptance tests linked to Gherkin scenarios.
 - Unit tests covering Domain invariants.
 - Mutation Score as empirical proof of test quality.
+
+## Gates crossed here
+
+This phase crosses the delivery gates — RED/GREEN test integrity, green build,
+mutation score at threshold (see the [gates catalogue](../catalogue/gates.html)).
+The independent reviewer issues its verdict before the **PR** is opened.

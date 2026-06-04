@@ -31,3 +31,8 @@ Without explicit architecture decisions, every developer invents their own struc
 - Component diagram with Bounded Context boundaries.
 - Event Model showing the Command → Event → Read Model flow.
 - Interface contracts between components.
+
+## Gates crossed here
+
+This phase crosses gates **G1–G15** (see the [gates catalogue](../catalogue/gates.html)).
+Each gate is checked by the independent reviewer before moving on to **DISTILL**.

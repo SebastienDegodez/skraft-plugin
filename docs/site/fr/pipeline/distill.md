@@ -31,3 +31,8 @@ Les scénarios Gherkin servent de contrat entre le métier et le code. L'accepta
 - Matrice de couverture liant chaque critère d'acceptation à un scénario.
 - Plan d'implémentation ordonnant les tests par couche (Domain, Application, Infrastructure, API).
 - Identification des Test Double nécessaires par frontière.
+
+## Les gates franchies ici
+
+Cette phase franchit les gates **G1–G8** (voir le [catalogue des gates](../catalogue/gates.html)).
+Chaque gate est vérifiée par le reviewer indépendant avant le passage à **DELIVER**.

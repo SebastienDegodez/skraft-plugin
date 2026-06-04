@@ -31,3 +31,8 @@ A poorly defined story produces code that solves the wrong problem. The backlog-
 - Acceptance criteria in structured natural language.
 - Refined effort estimation.
 - Dependency identification between stories.
+
+## Gates crossed here
+
+This phase crosses gates **G1–G8** (see the [gates catalogue](../catalogue/gates.html)).
+Each gate is checked by the independent reviewer before moving on to **DESIGN**.

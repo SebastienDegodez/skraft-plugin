@@ -31,3 +31,8 @@ Without systematic triage, teams work on whatever is loudest, not whatever is mo
 - Duplicate and related-issue detection.
 - Initial effort estimation.
 - Sprint proposal.
+
+## Gates crossed here
+
+This phase crosses gates **G1–G6** (see the [gates catalogue](../catalogue/gates.html)).
+Each gate is checked by the independent reviewer before moving on to **DISCUSS**.

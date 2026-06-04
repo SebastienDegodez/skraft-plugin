@@ -31,3 +31,8 @@ Sans triage systématique, les équipes travaillent sur ce qui fait le plus de b
 - Détection de doublons et d'issues liées.
 - Estimation d'effort initiale.
 - Proposition de sprint.
+
+## Les gates franchies ici
+
+Cette phase franchit les gates **G1–G6** (voir le [catalogue des gates](../catalogue/gates.html)).
+Chaque gate est vérifiée par le reviewer indépendant avant le passage à **DISCUSS**.

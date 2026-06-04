@@ -31,3 +31,8 @@ Une story mal définie produit du code qui résout le mauvais problème. Le back
 - Critères d'acceptation en langage naturel structuré.
 - Estimation d'effort affinée.
 - Identification des dépendances entre stories.
+
+## Les gates franchies ici
+
+Cette phase franchit les gates **G1–G8** (voir le [catalogue des gates](../catalogue/gates.html)).
+Chaque gate est vérifiée par le reviewer indépendant avant le passage à **DESIGN**.

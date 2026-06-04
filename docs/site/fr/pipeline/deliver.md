@@ -31,3 +31,9 @@ Le code est le seul artefact qui compte en production. Le software-engineer appl
 - Tests d'acceptation passants liés aux scénarios Gherkin.
 - Tests unitaires couvrant les invariants du Domain.
 - Mutation Score comme preuve empirique de la qualité des tests.
+
+## Les gates franchies ici
+
+Cette phase franchit les gates de livraison — tests RED/GREEN intègres, build vert,
+score de mutation au seuil (voir le [catalogue des gates](../catalogue/gates.html)).
+Le reviewer indépendant émet son verdict avant l'ouverture de la **PR**.
