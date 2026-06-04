@@ -2,6 +2,7 @@
 layout: doc
 lang: fr
 title: "Pour les décideurs"
+description: "Pourquoi la revue adverse assistée réduit le TTM. Arguments qualitatifs pour les décideurs : discipline imposable, métriques empiriques, vitesse sans dette cachée."
 persona: manager
 ---
 

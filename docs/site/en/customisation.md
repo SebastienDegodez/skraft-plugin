@@ -2,6 +2,7 @@
 layout: doc
 lang: en
 title: "Customisation"
+description: "What SKRAFT lets you customise and the risk of reducing controls: gates, lenses, reviewers. A guide to adapting the pipeline without breaking its guarantees."
 persona: tech-lead
 ---
 
@@ -98,8 +99,6 @@ The 4 lenses cover complementary angles. Disabling one of them creates a blind s
 ### Putting a reviewer in write mode (violating CQS)
 
 If a reviewer can modify artifacts, it introduces a side effect into the review. The verdict no longer reflects the original state — it reflects a state modified by the reviewer itself. This is a CQS violation that can produce non-reproducible results.
-
-> **Rule**: never give a reviewer write access to artifacts. If you want an agent to automatically improve artifacts, create a separate *executor* agent, not a reviewer.
 
 > **Rule**: never give a reviewer write access to artifacts. If you want an agent to automatically improve artifacts, create a separate *executor* agent, not a reviewer.
 

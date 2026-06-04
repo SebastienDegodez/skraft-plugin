@@ -2,6 +2,7 @@
 layout: doc
 lang: en
 title: "For executives"
+description: "Why AI-assisted adversarial review reduces TTM. Qualitative arguments for decision-makers: enforceable discipline, empirical metrics, speed without hidden debt."
 persona: manager
 ---
 
