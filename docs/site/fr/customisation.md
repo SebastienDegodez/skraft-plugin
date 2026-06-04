@@ -2,6 +2,7 @@
 layout: doc
 lang: fr
 title: "Customisation"
+description: "Ce que SKRAFT permet de personnaliser et le risque de réduire les contrôles : gates, lentilles, reviewers. Guide pour adapter le pipeline sans casser les garanties."
 persona: tech-lead
 ---
 
@@ -98,8 +99,6 @@ Les 4 lentilles couvrent des angles complémentaires. Désactiver l'une d'elles 
 ### Passer un reviewer en mode écriture (violer CQS)
 
 Si un reviewer peut modifier des artefacts, il introduit un effet de bord dans la revue. Le verdict ne reflète plus l'état original — il reflète un état modifié par le reviewer lui-même. C'est une violation du principe CQS qui peut produire des résultats non reproductibles.
-
-> **Règle** : ne jamais donner à un reviewer le droit d'écrire dans les artefacts. Si vous souhaitez qu'un agent améliore automatiquement les artefacts, créez un agent *exécuteur* distinct, pas un reviewer.
 
 > **Règle** : ne jamais donner à un reviewer le droit d'écrire dans les artefacts. Si vous souhaitez qu'un agent améliore automatiquement les artefacts, créez un agent *exécuteur* distinct, pas un reviewer.
 
