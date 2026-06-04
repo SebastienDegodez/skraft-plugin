@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: fr
 title: "SKRAFT — Le Handbook"
 persona: tech-lead

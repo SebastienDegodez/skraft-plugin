@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: doc
 lang: en
 title: "SKRAFT in 15 minutes"
 persona: tech-lead
