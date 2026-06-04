@@ -68,6 +68,41 @@ Run a complete pipeline cycle with your new agent to verify that:
 > « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
 > — Martin, R. C., *Clean Architecture*, 2017.
 
+## ⚠️ Risks of reducing controls
+
+> 🚧 GENERATED DRAFT — section to be completed and validated by a human.
+
+Some customisations reduce SKRAFT's built-in controls. This is not forbidden, but it is risky. This section identifies the main fragility zones.
+
+### Removing or weakening a gate
+
+Each gate (G1–G5) protects a specific invariant. Removing a gate means the next phase will start without guaranteeing that the previous phase's criteria are met.
+
+| Action | Risk | What disappears |
+|--------|------|-----------------|
+| Remove G1 (DISCOVER) | Poorly-defined stories reach DISCUSS | DoR (Definition of Ready) verification |
+| Remove G3 (DESIGN) | Architecture unvalidated before tests | Detection of Clean Architecture violations |
+| Lower the mutation score floor | Surface-only tests | Detection of tests that do not actually test |
+
+### Disabling a review lens
+
+The 4 lenses cover complementary angles. Disabling one of them creates a blind spot.
+
+| Disabled lens | Blind spot |
+|--------------|------------|
+| `architecture-boundaries` | Architecture boundary violations reach human PR |
+| `test-integrity` | Façade tests (that pass without testing) are not detected |
+| `quality-gates` | Quality thresholds (mutation, coverage) are not checked |
+| `cold-reader` | Code readability is not checked: the next developer will be lost |
+
+### Putting a reviewer in write mode (violating CQS)
+
+If a reviewer can modify artifacts, it introduces a side effect into the review. The verdict no longer reflects the original state — it reflects a state modified by the reviewer itself. This is a CQS violation that can produce non-reproducible results.
+
+> **Rule**: never give a reviewer write access to artifacts. If you want an agent to automatically improve artifacts, create a separate *executor* agent, not a reviewer.
+
+<!-- 🚧 To complete: add examples from real-world experience. -->
+
 ## See also
 
 - [Architecture](/en/architecture) — CQS view of the pipeline
