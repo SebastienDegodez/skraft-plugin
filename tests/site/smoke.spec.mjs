@@ -30,7 +30,7 @@ test.describe('SKRAFT docs site', () => {
 
   test('Language toggle works', async ({ page }) => {
     await page.goto(`${BASE}/fr/`);
-    await page.click('.lang-toggle a');
+    await page.click('.site-nav__lang a');
     await expect(page).toHaveURL(/\/en\//);
   });
 
@@ -40,16 +40,17 @@ test.describe('SKRAFT docs site', () => {
     await expect(mermaid.first()).toBeVisible();
   });
 
-  test('Navigation has expected links', async ({ page }) => {
+  test('Navigation is reduced to the 3 handbook doors', async ({ page }) => {
     await page.goto(`${BASE}/fr/`);
-    const navLinks = page.locator('.site-nav a');
-    await expect(navLinks).toHaveCount({ minimum: 5 });
+    // Top menu = brand + 3 doors + lang toggle (toggle lives in .site-nav__lang).
+    const doors = page.locator('.site-nav > a:not(.site-nav__brand)');
+    await expect(doors).toHaveCount(3);
   });
 
   test('Citations page renders entries', async ({ page }) => {
     await page.goto(`${BASE}/fr/citations`);
     const entries = page.locator('.citation-entry');
-    await expect(entries).toHaveCount({ minimum: 10 });
+    expect(await entries.count()).toBeGreaterThanOrEqual(10);
   });
 
   test('404 returns 404', async ({ page }) => {

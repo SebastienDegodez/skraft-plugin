@@ -3,3 +3,11 @@
 apm_modules/
 .DS_Store
 plugins/.DS_Store
+
+# Node / Playwright (dev-only site smoke tests)
+node_modules/
+package-lock.json
+test-results/
+playwright-report/
+docs/site/_site/
+docs/site/.jekyll-cache/

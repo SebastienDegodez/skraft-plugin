@@ -56,10 +56,11 @@
               {% assign raw = p.fr %}
             {% endif %}
             {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
+            {% assign fallback = p.id | replace: '-', ' ' | capitalize %}
             {% if page.lang == 'en' %}
-              {% assign label = p.label_en | default: p.id | replace: '-', ' ' | capitalize %}
+              {% assign label = p.label_en | default: fallback %}
             {% else %}
-              {% assign label = p.label_fr | default: p.id | replace: '-', ' ' | capitalize %}
+              {% assign label = p.label_fr | default: fallback %}
             {% endif %}
             <li>
               <a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a>
