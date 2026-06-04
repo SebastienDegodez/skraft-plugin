@@ -5,8 +5,6 @@ title: "HVE → SKRAFT: continuity and rupture"
 description: "How SKRAFT extends HVE by replacing the RPI workflow with a full SDLC pipeline: 5 phases, independent reviewers, gates, and lenses."
 ---
 
-> 🚧 GENERATED DRAFT — to be reviewed and completed by a human.
-
 # HVE → SKRAFT: continuity and rupture
 
 > SKRAFT does not replace HVE — it extends it. Where HVE instruments the conversation between a human and an AI, SKRAFT structures the entire lifecycle of a User Story, from discovery to delivery.
@@ -22,22 +20,29 @@ SKRAFT takes over when you want to:
 
 ## The SKRAFT pipeline in 5 phases
 
-<!--
-  🚧 To complete: insert here a Mermaid diagram showing the 5 phases
-  DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER, with the associated agents,
-  reviewers, and gates between each phase.
-
-  Skeleton example:
-  ```mermaid
-  flowchart LR
-    DISCOVER --> DISCUSS --> DESIGN --> DISTILL --> DELIVER
+```mermaid
+flowchart LR
+    subgraph DISCOVER["DISCOVER"]
+        BD[backlog-discoverer] -->|verdict| BDR[backlog-discoverer-reviewer]
+    end
+    subgraph DISCUSS["DISCUSS"]
+        BP[backlog-planner] -->|verdict| BPR[backlog-planner-reviewer]
+    end
+    subgraph DESIGN["DESIGN"]
+        SA[solution-architect] -->|verdict| SAR[solution-architect-reviewer]
+    end
+    subgraph DISTILL["DISTILL"]
+        AD[acceptance-designer] -->|verdict| ADR[acceptance-designer-reviewer]
+    end
+    subgraph DELIVER["DELIVER"]
+        SE[software-engineer] -->|verdict| SER[software-engineer-reviewer]
+    end
     DISCOVER -->|G1| DISCUSS
     DISCUSS  -->|G2| DESIGN
     DESIGN   -->|G3| DISTILL
     DISTILL  -->|G4| DELIVER
-  ```
-  Replace with the diagram validated by the team.
--->
+    DELIVER  -->|G5| PR[Human Pull Request]
+```
 
 | Phase | Executor agent | Independent reviewer | Exit gate |
 |-------|---------------|----------------------|-----------|
@@ -69,7 +74,8 @@ SKRAFT **inherits** the principles of HVE:
 
 ## Sources
 
-<!-- 🚧 To complete: add citations from citations.yml once references are validated. -->
+- Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
+- Martin, R. C., *Clean Architecture*, 2017.
 
 ## See also
 

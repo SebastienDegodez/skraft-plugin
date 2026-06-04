@@ -5,8 +5,6 @@ title: "HVE → SKRAFT : continuité et rupture"
 description: "Comment SKRAFT prolonge HVE en remplaçant le workflow RPI par un pipeline SDLC complet : 5 phases, reviewers indépendants, gates et lentilles."
 ---
 
-> 🚧 GENERATED DRAFT — to be reviewed and completed by a human.
-
 # HVE → SKRAFT : continuité et rupture
 
 > SKRAFT ne remplace pas HVE — il le prolonge. Là où HVE outille la conversation entre un humain et l'IA, SKRAFT structure l'ensemble du cycle de vie d'une User Story, de la découverte à la livraison.
@@ -22,22 +20,29 @@ SKRAFT prend le relais quand vous souhaitez :
 
 ## Le pipeline SKRAFT en 5 phases
 
-<!--
-  🚧 À compléter : insérer ici un diagramme Mermaid montrant les 5 phases
-  DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER, avec les agents et
-  reviewers associés, et les gates entre chaque phase.
-
-  Exemple de squelette :
-  ```mermaid
-  flowchart LR
-    DISCOVER --> DISCUSS --> DESIGN --> DISTILL --> DELIVER
+```mermaid
+flowchart LR
+    subgraph DISCOVER["DISCOVER"]
+        BD[backlog-discoverer] -->|verdict| BDR[backlog-discoverer-reviewer]
+    end
+    subgraph DISCUSS["DISCUSS"]
+        BP[backlog-planner] -->|verdict| BPR[backlog-planner-reviewer]
+    end
+    subgraph DESIGN["DESIGN"]
+        SA[solution-architect] -->|verdict| SAR[solution-architect-reviewer]
+    end
+    subgraph DISTILL["DISTILL"]
+        AD[acceptance-designer] -->|verdict| ADR[acceptance-designer-reviewer]
+    end
+    subgraph DELIVER["DELIVER"]
+        SE[software-engineer] -->|verdict| SER[software-engineer-reviewer]
+    end
     DISCOVER -->|G1| DISCUSS
     DISCUSS  -->|G2| DESIGN
     DESIGN   -->|G3| DISTILL
     DISTILL  -->|G4| DELIVER
-  ```
-  Remplacer par le diagramme validé par l'équipe.
--->
+    DELIVER  -->|G5| PR[Pull Request humaine]
+```
 
 | Phase | Agent exécuteur | Reviewer indépendant | Gate de sortie |
 |-------|----------------|----------------------|----------------|
@@ -69,7 +74,8 @@ SKRAFT **hérite** des principes de HVE :
 
 ## Sources
 
-<!-- 🚧 À compléter : ajouter les citations depuis citations.yml une fois les références validées. -->
+- Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
+- Martin, R. C., *Clean Architecture*, 2017.
 
 ## Voir aussi
 
