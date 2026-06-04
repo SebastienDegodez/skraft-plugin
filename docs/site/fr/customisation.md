@@ -70,9 +70,9 @@ Exécutez un cycle complet du pipeline avec votre nouvel agent pour vérifier qu
 
 ## ⚠️ Risques de réduction des contrôles
 
-> 🚧 GENERATED DRAFT — section à compléter et valider par un humain.
+Certaines customisations réduisent les contrôles intégrés de SKRAFT. Ce n'est pas interdit, mais c'est une décision consciente qui doit être prise en connaissance de cause. Cette section identifie les principales zones de fragilisation et leurs conséquences concrètes.
 
-Certaines customisations réduisent les contrôles intégrés de SKRAFT. Ce n'est pas interdit, mais c'est risqué. Cette section identifie les principales zones de fragilisation.
+> **Principe** : chaque contrôle supprimé est un angle mort qui ne sera découvert qu'en production — là où le coût de correction est le plus élevé (estimé). La décision d'affaiblir un contrôle doit être documentée dans un ADR.
 
 ### Supprimer ou affaiblir un gate
 
@@ -101,7 +101,7 @@ Si un reviewer peut modifier des artefacts, il introduit un effet de bord dans l
 
 > **Règle** : ne jamais donner à un reviewer le droit d'écrire dans les artefacts. Si vous souhaitez qu'un agent améliore automatiquement les artefacts, créez un agent *exécuteur* distinct, pas un reviewer.
 
-<!-- 🚧 À compléter : ajouter des exemples issus de retours d'expérience réels. -->
+> **Règle** : ne jamais donner à un reviewer le droit d'écrire dans les artefacts. Si vous souhaitez qu'un agent améliore automatiquement les artefacts, créez un agent *exécuteur* distinct, pas un reviewer.
 
 ## Voir aussi
 

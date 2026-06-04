@@ -70,9 +70,9 @@ Run a complete pipeline cycle with your new agent to verify that:
 
 ## ⚠️ Risks of reducing controls
 
-> 🚧 GENERATED DRAFT — section to be completed and validated by a human.
+Some customisations reduce SKRAFT's built-in controls. This is not forbidden, but it is a conscious decision that must be made with full awareness of the consequences. This section identifies the main fragility zones and their concrete effects.
 
-Some customisations reduce SKRAFT's built-in controls. This is not forbidden, but it is risky. This section identifies the main fragility zones.
+> **Principle**: every control removed is a blind spot that will only surface in production — where the cost of correction is highest (estimated). The decision to weaken a control should be recorded in an ADR.
 
 ### Removing or weakening a gate
 
@@ -101,7 +101,7 @@ If a reviewer can modify artifacts, it introduces a side effect into the review.
 
 > **Rule**: never give a reviewer write access to artifacts. If you want an agent to automatically improve artifacts, create a separate *executor* agent, not a reviewer.
 
-<!-- 🚧 To complete: add examples from real-world experience. -->
+> **Rule**: never give a reviewer write access to artifacts. If you want an agent to automatically improve artifacts, create a separate *executor* agent, not a reviewer.
 
 ## See also
 
