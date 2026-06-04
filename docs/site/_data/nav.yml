@@ -1,70 +1,27 @@
-# nav.yml — barre de navigation (rendue a plat par _layouts/default.html)
+# nav.yml — barre de navigation du haut (rendue a plat par les layouts)
 #
-# Ordre aligne sur la narration du livre (docs/site/_data/book.yml) :
-#   vision -> decideurs -> pratique -> catalogue -> contribuer.
+# Modele handbook (aligne sur learning-path-copilot) : on ne garde que les
+# PORTES d'entree. Tout le catalogue (agents, skills, gates, lens, patterns,
+# citations, contribuer, customisation) vit desormais dans la SIDEBAR gauche
+# pilotee par _data/book.yml + _layouts/doc.html — il ne remonte PAS ici.
 #
-# Seules les pages EXISTANTES figurent ici. Les pages declarees dans book.yml
-# mais pas encore creees (hve-vs-skraft, traces, glossaire, catalogue/*) seront
-# ajoutees par le workflow skraft-docs-sync quand elles existeront (il est
-# autorise a modifier ce fichier).
+# Ordre : handbook -> decideurs -> demarrer.
+# La marque "SKRAFT" et le toggle de langue sont rendus en dur par le layout.
 
-# --- Vision -------------------------------------------------------------
-- path_fr: "/fr/"
-  path_en: "/en/"
-  title_fr: "Accueil"
-  title_en: "Home"
+# --- Le handbook (entree dans le livre) ---------------------------------
+- path_fr: "/fr/pipeline/"
+  path_en: "/en/pipeline/"
+  title_fr: "Le handbook"
+  title_en: "The handbook"
 
-# --- Pour les decideurs -------------------------------------------------
+# --- Porte decideurs ----------------------------------------------------
 - path_fr: "/fr/for-executives"
   path_en: "/en/for-executives"
   title_fr: "Pour décideurs"
-  title_en: "For Executives"
+  title_en: "For executives"
 
-# --- La pratique --------------------------------------------------------
-- path_fr: "/fr/pipeline/"
-  path_en: "/en/pipeline/"
-  title_fr: "Pipeline"
-  title_en: "Pipeline"
-
-# --- Le catalogue -------------------------------------------------------
-- path_fr: "/fr/reference/agents/"
-  path_en: "/en/reference/agents/"
-  title_fr: "Référence Agents"
-  title_en: "Reference Agents"
-
-- path_fr: "/fr/reference/skills/"
-  path_en: "/en/reference/skills/"
-  title_fr: "Référence Skills"
-  title_en: "Reference Skills"
-
-- path_fr: "/fr/citations"
-  path_en: "/en/citations"
-  title_fr: "Citations"
-  title_en: "Citations"
-
-# --- Contribuer ---------------------------------------------------------
-- path_fr: "/fr/contributing"
-  path_en: "/en/contributing"
-  title_fr: "Contribuer"
-  title_en: "Contributing"
-
-- path_fr: "/fr/customisation"
-  path_en: "/en/customisation"
-  title_fr: "Customisation"
-  title_en: "Customisation"
-
-# --- Pages historiques (hors livre, conservees pour ne pas orpheliner) --
-- path_fr: "/fr/architecture"
-  path_en: "/en/architecture"
-  title_fr: "Architecture"
-  title_en: "Architecture"
-
-- path_fr: "/fr/concepts"
-  path_en: "/en/concepts"
-  title_fr: "Concepts"
-  title_en: "Concepts"
-
+# --- Porte praticien ----------------------------------------------------
 - path_fr: "/fr/getting-started"
   path_en: "/en/getting-started"
-  title_fr: "Premiers pas"
-  title_en: "Getting Started"
+  title_fr: "Démarrer"
+  title_en: "Get started"
