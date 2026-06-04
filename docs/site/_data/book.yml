@@ -3,7 +3,8 @@
 # Ce manifeste est le contrat lu par les deux workflows gh-aw :
 #   - skraft-docs-sync  : regenere les pages `type: derived` depuis `source`.
 #   - skraft-docs-gaps  : detecte les ecarts contrat <-> fichiers <-> sources
-#                         et propose des brouillons pour les pages `type: editorial`.
+#                         et GENERE des pages `type: editorial` COMPLETES
+#                         (plus de brouillons a completer a la main).
 #
 # Regles dures (verifiees par skraft-docs-gaps) :
 #   1. Toute page listee ici DOIT exister en FR (`fr`) ET en EN (`en`).
@@ -12,9 +13,14 @@
 #      `catalogue_template` (blocs requis) — comprehensible sans maitrise du craft.
 #   4. Tout pattern / gate / lens / agent / skill present dans `sources` mais
 #      absent d'une page derivee declenche un ecart (gap).
+#   5. La page FR et la page EN d'une meme entree PARTAGENT le meme basename
+#      (nom de fichier anglais) ; seul le prefixe de dossier `fr/` vs `en/`
+#      change. Ex. `fr/for-executives.md` <-> `en/for-executives.md`.
 #
-# `type` : derived (regenere mecaniquement) | editorial (redige par un humain,
-#          l'agent propose seulement un brouillon).
+# `type` : derived (regenere mecaniquement depuis `source`) | editorial (redige
+#          integralement par l'agent skraft-docs-gaps : page COMPLETE et lisible,
+#          sans trou ; un chiffre non sourcable depuis le code est formule
+#          qualitativement et suffixe `(estime)`, jamais invente ni laisse vide).
 
 meta:
   title_fr: "SKRAFT — le livre"
@@ -146,7 +152,7 @@ parts:
     pages:
       - id: roi-ttm
         type: editorial
-        fr: "fr/pour-decideurs.md"
+        fr: "fr/for-executives.md"
         en: "en/for-executives.md"
         purpose_fr: "Pourquoi la revue assistee AVANT la revue humaine reduit le TTM. Projection du temps de resolution d'une US. Arguments qualitatifs (jamais de metrique inventee)."
         purpose_en: "Why AI-assisted review BEFORE human review reduces TTM. Projection of a user story resolution time. Qualitative arguments (never an invented metric)."
@@ -174,13 +180,13 @@ parts:
         purpose_en: "The 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, one agent per phase, one independent reviewer."
       - id: pourquoi-review-avant-review
         type: editorial
-        fr: "fr/pourquoi-review-avant-review.md"
+        fr: "fr/why-review-before-review.md"
         en: "en/why-review-before-review.md"
         purpose_fr: "Le coeur de l'argument : la revue adverse assistee filtre AVANT l'humain. Moins de rework, TTM reduit."
         purpose_en: "The core argument: assisted adversarial review filters BEFORE the human. Less rework, lower TTM."
       - id: glossaire
         type: editorial
-        fr: "fr/glossaire.md"
+        fr: "fr/glossary.md"
         en: "en/glossary.md"
         purpose_fr: "Glossaire global : chaque terme du craft explique simplement (TDD, mutation, Object Calisthenics, gate, lens...)."
         purpose_en: "Global glossary: every craft term explained plainly (TDD, mutation, Object Calisthenics, gate, lens...)."

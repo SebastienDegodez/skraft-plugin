@@ -15,23 +15,27 @@ L'objectif principal est de réduire la charge cognitive et de s'assurer que l'i
 
 ## Les 4 Couches Principales
 
-1. **Entities (Enterprise Business Rules)**
-   Les entités encapsulent les règles métier de l'entreprise. Ce sont les objets métiers fondamentaux (par exemple, dans notre contexte SKRAFT, une `Story` ou un `Agent`).
-   
-2. **Use Cases (Application Business Rules)**
-   Les cas d'utilisation orchestrent le flux de données vers et depuis les entités. Ils implémentent la logique applicative spécifique (ex: `PlanStoryUseCase`).
-   
-3. **Interface Adapters**
-   Cette couche convertit les données du format le plus pratique pour les Use Cases vers le format le plus pratique pour les agents externes tels que le Web ou la base de données. On y trouve les Controllers, Presenters, et Gateways.
-   
-4. **Frameworks and Drivers**
-   La couche la plus externe, composée des frameworks web, bases de données, etc. C'est ici que vit le code technique.
+SKRAFT nomme ses couches **Domain → Application → Infrastructure → API**, du cœur métier vers le monde extérieur. C'est le vocabulaire utilisé par le skill `clean-architecture-testing` pour décider quoi tester et à quel niveau.
+
+1. **Domain**
+   Le cœur métier : entités, *value objects*, *domain events*, *policies* et *specifications*. Il encapsule les règles métier fondamentales (par exemple, dans notre contexte SKRAFT, une `Story` ou un `Agent`) et ne dépend d'**aucune** autre couche.
+
+2. **Application**
+   Orchestre les cas d'usage via des *command/query handlers* (ex : `PlaceOrderCommandHandler`). Cette couche pilote le Domain et exprime ses besoins externes sous forme de **ports de sortie** (interfaces de repository, de dispatcher, de service externe) sans connaître leur implémentation.
+
+3. **Infrastructure**
+   Les *adapters* concrets qui implémentent les ports de l'Application : repositories, brokers de messages, clients de services externes. C'est ici que vit l'I/O réel (base de données, réseau).
+
+4. **API**
+   Le point d'entrée externe : *endpoints* HTTP et composition de l'application (*app host*). Elle traduit les requêtes externes en commandes/requêtes Application.
+
+> Deux couches transverses complètent le tableau : un **SharedKernel** optionnel (interfaces et classes de base, sans logique) et une couche **Architecture** — des tests statiques qui vérifient, en gate CI, que la règle de dépendance n'est jamais violée.
 
 ## La Règle de Dépendance
 
 > **Le code source ne peut dépendre que de ce qui se trouve à l'intérieur.**
 
-Rien dans un cercle interne ne peut connaître quoi que ce soit d'un cercle externe. Par exemple, un Use Case ne doit jamais importer un objet du contrôleur web.
+Les dépendances pointent toujours vers le centre : `API → Application → Domain` et `Infrastructure → Application → Domain`. Aucune couche interne ne connaît une couche externe — par exemple, un *handler* Application ne doit jamais importer un *endpoint* API ni un repository concret de l'Infrastructure ; il ne dépend que du port qu'il déclare.
 
 ## Dans le cycle SKRAFT
 

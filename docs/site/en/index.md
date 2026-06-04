@@ -78,6 +78,8 @@ SKRAFT applies the CQS (Command-Query Separation) principle at the system level:
 > « The only way to go fast is to go well. »
 > — Martin, R. C., *Clean Architecture*, 2017.
 
+👉 **[Understand Clean Architecture in detail](/en/clean-architecture)**
+
 [See the pipeline architecture](/en/architecture)
 
 ## Object Calisthenics: why the discipline

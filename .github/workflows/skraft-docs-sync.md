@@ -83,11 +83,12 @@ that is not traceable to the diff or to the commits.
 ## Structure contract: `docs/site/_data/book.yml`
 
 `book.yml` is the **single source of truth**. You only regenerate pages whose
-`type: derived`. You IGNORE any `type: editorial` page (those are human-driven
-and handled by the `skraft-docs-gaps` workflow).
+`type: derived`. You IGNORE any `type: editorial` page (those are generated in
+full by the `skraft-docs-gaps` workflow).
 
 For each `type: derived` page, the `source` field names the source file(s) to
-read. The `fr` and `en` paths name the two mirrored pages to maintain.
+read. The `fr` and `en` paths name the two mirrored pages to maintain; they
+share the same English basename (only the `fr/` vs `en/` folder prefix differs).
 
 ## Activation guard
 
@@ -112,13 +113,14 @@ Failing to call `noop` when no update is needed will fail the workflow.
    consumes it (`source` field in `book.yml`).
 4. **Verify.** Read each mapped page and compare it to the shipped state. Keep
    only real, substantial gaps (not cosmetic ones).
-5. **Regenerate.** Update the FR page and the EN page in mirror. For pages in
-   the `catalogue` part, follow the `catalogue_template` from `book.yml` (required
-   blocks, including the author/work/year citation and the inline glossary link).
-   Use the liquid-glass `doc` layout conventions (`design` key): sidebar grouped
-   by part, admonitions for risks/notes. Keep each file's language: FR prose
-   under `fr/`, EN prose under `en/`; code, commands and identifiers stay in
-   English on both sides.
+5. **Regenerate.** Update the FR page and the EN page in mirror. The FR and EN
+   files share the same English basename (only `fr/` vs `en/` differs). For
+   pages in the `catalogue` part, follow the `catalogue_template` from `book.yml`
+   (required blocks, including the author/work/year citation and the inline
+   glossary link). Use the liquid-glass `doc` layout conventions (`design` key):
+   sidebar grouped by part, admonitions for risks/notes. Keep each file's
+   language: FR prose under `fr/`, EN prose under `en/`; code, commands and
+   identifiers stay in English on both sides.
 6. **Verify links and citations.** Every internal link must point to an existing
    page. Every citation on a derived page must reference an entry in
    `_data/citations.yml` (author, title, year).
@@ -132,9 +134,15 @@ Failing to call `noop` when no update is needed will fail the workflow.
   changes under `docs/site/{fr,en}/` (derived pages) and, if needed,
   `docs/site/_data/nav.yml`.
 - **Bilingual site always mirrored.** An `fr/` page and its `en/` counterpart
-  share the same heading structure. Never leave one side ahead.
+  share the same heading structure AND the same English basename. Never leave
+  one side ahead.
 - **Traceability required.** Each update cites the commit or source file that
   justifies it. No claim that is not traceable to the diff.
+- **Faithful to the source vocabulary.** A derived page mirrors the terminology
+  of the pattern/gate/lens/skill it documents. Reuse the source `SKILL.md`
+  canonical terms verbatim (e.g. Clean Architecture layers are **Domain /
+  Application / Infrastructure / API** per `clean-architecture-testing`); never
+  rename or paraphrase a concept into competing terminology.
 - **Verifiable pedagogy.** Every `catalogue` page follows the required blocks of
   the `catalogue_template`. A catalogue page without an author/work/year citation is
   invalid.
