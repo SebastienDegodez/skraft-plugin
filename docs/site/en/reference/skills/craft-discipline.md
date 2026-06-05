@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Self-assessment, not review** — This skill is a personal checkpoint; the reviewer verifies independently
 - **No shortcut** — Each checklist item is verified, not "globally OK"
-- See [Customisation](/en/customisation) for the full list
+- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -51,6 +51,6 @@ Self-discipline reduces noise in review cycles: the reviewer can focus on real p
 
 ## See also
 
-- [red-synthesize-green](/en/reference/skills/red-synthesize-green) — TDD cycle
-- [software-engineer](/en/reference/agents/software-engineer) — Agent that uses this skill
-- [software-engineer-reviewer](/en/reference/agents/software-engineer-reviewer) — The reviewer that verifies independently
+- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle
+- [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Agent that uses this skill
+- [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }}) — The reviewer that verifies independently

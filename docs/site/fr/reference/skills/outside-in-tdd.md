@@ -13,7 +13,7 @@ persona: tech-lead
 
 - Lors de l'implémentation de toute feature dans la phase DELIVER
 - Quand les tests doivent partir du comportement métier, pas des détails techniques
-- En combinaison avec le skill [red-synthesize-green](/fr/reference/skills/red-synthesize-green)
+- En combinaison avec le skill [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }})
 
 ## Contrat d'entrée
 
@@ -31,7 +31,7 @@ persona: tech-lead
 - **Acceptation d'abord** — Le premier test écrit est toujours un test d'acceptation
 - **Walking Skeleton** — La première implémentation traverse toutes les couches
 - **Double boucle** — Boucle externe (acceptation) guide la boucle interne (unitaire)
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -53,7 +53,7 @@ Cette approche empêche la sur-ingénierie : on n'écrit que le code nécessaire
 
 ## Voir aussi
 
-- [red-synthesize-green](/fr/reference/skills/red-synthesize-green) — Cycle RED → GREEN → REFACTOR
-- [clean-architecture-testing](/fr/reference/skills/clean-architecture-testing) — Tests par couche
-- [software-engineer](/fr/reference/agents/software-engineer) — Agent qui utilise ce skill
-- [Concepts fondamentaux — Walking Skeleton](/fr/concepts) — Principe sous-jacent
+- [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Cycle RED → GREEN → REFACTOR
+- [clean-architecture-testing]({{ "/fr/reference/skills/clean-architecture-testing" | relative_url }}) — Tests par couche
+- [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Agent qui utilise ce skill
+- [Concepts fondamentaux — Walking Skeleton]({{ "/fr/concepts" | relative_url }}) — Principe sous-jacent

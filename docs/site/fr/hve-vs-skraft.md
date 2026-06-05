@@ -79,6 +79,6 @@ SKRAFT **hérite** des principes de HVE :
 
 ## Voir aussi
 
-- [Le pipeline](/fr/pipeline/) — description détaillée des 5 phases
-- [Les gates](/fr/catalogue/gates) — ce que chaque gate vérifie
-- [Les lentilles](/fr/catalogue/lens) — les 4 lentilles de revue adverse
+- [Le pipeline]({{ "/fr/pipeline/" | relative_url }}) — description détaillée des 5 phases
+- [Les gates]({{ "/fr/catalogue/gates" | relative_url }}) — ce que chaque gate vérifie
+- [Les lentilles]({{ "/fr/catalogue/lens" | relative_url }}) — les 4 lentilles de revue adverse

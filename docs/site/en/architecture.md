@@ -62,4 +62,4 @@ Executors **write** artifacts but never emit verdicts on their own work. Reviewe
 
 The `state.json` file serves as the read model (CQRS): the orchestrator records phase progression and verdicts there, then consults it to decide the next action.
 
-See [Core concepts](/en/concepts) for the theory behind CQS and CQRS.
+See [Core concepts]({{ "/en/concepts" | relative_url }}) for the theory behind CQS and CQRS.

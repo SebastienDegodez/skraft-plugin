@@ -31,7 +31,7 @@ persona: tech-lead
 
 - **Un fichier = un agent** — Chaque agent est autonome dans un seul fichier
 - **Frontmatter valide** — Le YAML frontmatter suit le schéma VS Code
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -53,6 +53,6 @@ Un agent bien défini a une responsabilité claire, des entrées/sorties explici
 
 ## Voir aussi
 
-- [skraft-orchestrator](/fr/reference/agents/skraft-orchestrator) — Exemple d'agent orchestrateur
-- [Customisation](/fr/customisation) — Niveaux de customisation
-- [Architecture](/fr/architecture) — Vue d'ensemble du système d'agents
+- [skraft-orchestrator]({{ "/fr/reference/agents/skraft-orchestrator" | relative_url }}) — Exemple d'agent orchestrateur
+- [Customisation]({{ "/fr/customisation" | relative_url }}) — Niveaux de customisation
+- [Architecture]({{ "/fr/architecture" | relative_url }}) — Vue d'ensemble du système d'agents

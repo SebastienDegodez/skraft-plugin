@@ -70,6 +70,6 @@ The principle mirrors pre-trial proceedings in law: pre-screening eliminates gro
 
 ## See also
 
-- [For decision-makers](/en/for-executives) — TTM projection for executives
-- [Lenses](/en/catalogue/lens) — the 4 adversarial review lenses
-- [The pipeline](/en/pipeline/) — the 5 lifecycle phases
+- [For decision-makers]({{ "/en/for-executives" | relative_url }}) — TTM projection for executives
+- [Lenses]({{ "/en/catalogue/lens" | relative_url }}) — the 4 adversarial review lenses
+- [The pipeline]({{ "/en/pipeline/" | relative_url }}) — the 5 lifecycle phases

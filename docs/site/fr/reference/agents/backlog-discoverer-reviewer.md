@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Lecture seule (CQS)** — Ne modifie jamais les artefacts qu'il revoit
 - **Verdict structuré** — Approve ou reject, pas d'état intermédiaire
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -48,6 +48,6 @@ La séparation stricte entre exécuteur et reviewer empêche les conflits d'int�
 
 ## Voir aussi
 
-- [backlog-discoverer](/fr/reference/agents/backlog-discoverer) — Agent exécuteur associé
-- [Pipeline DISCOVER](/fr/pipeline/discover) — Description de la phase
-- [Concepts fondamentaux — CQS](/fr/concepts) — Principe sous-jacent
+- [backlog-discoverer]({{ "/fr/reference/agents/backlog-discoverer" | relative_url }}) — Agent exécuteur associé
+- [Pipeline DISCOVER]({{ "/fr/pipeline/discover" | relative_url }}) — Description de la phase
+- [Concepts fondamentaux — CQS]({{ "/fr/concepts" | relative_url }}) — Principe sous-jacent

@@ -62,4 +62,4 @@ Les exécuteurs **écrivent** des artefacts mais n'émettent jamais de verdict s
 
 Le fichier `state.json` sert de modèle de lecture (CQRS) : l'orchestrateur y enregistre la progression des phases et les verdicts, puis le consulte pour décider de la prochaine action.
 
-Voir [Concepts fondamentaux](/fr/concepts) pour la théorie derrière CQS et CQRS.
+Voir [Concepts fondamentaux]({{ "/fr/concepts" | relative_url }}) pour la théorie derrière CQS et CQRS.

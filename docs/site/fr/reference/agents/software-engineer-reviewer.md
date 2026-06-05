@@ -31,7 +31,7 @@ persona: tech-lead
 - **Lecture seule (CQS)** — Ne modifie jamais le code qu'il revoit
 - **4 lentilles adversariales** — Chaque lentille évalue indépendamment, le verdict est synthétisé
 - **Verdict structuré** — Approve ou reject, pas d'état intermédiaire
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -54,6 +54,6 @@ La multiplicité des lentilles réduit le risque de biais : un code peut passer 
 
 ## Voir aussi
 
-- [software-engineer](/fr/reference/agents/software-engineer) — Agent exécuteur associé
-- [software-engineer-and-reviewer](/fr/reference/agents/software-engineer-and-reviewer) — Cycle complet DELIVER
-- [Pipeline DELIVER](/fr/pipeline/deliver) — Description de la phase
+- [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Agent exécuteur associé
+- [software-engineer-and-reviewer]({{ "/fr/reference/agents/software-engineer-and-reviewer" | relative_url }}) — Cycle complet DELIVER
+- [Pipeline DELIVER]({{ "/fr/pipeline/deliver" | relative_url }}) — Description de la phase

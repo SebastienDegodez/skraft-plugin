@@ -11,7 +11,7 @@ persona: tech-lead
 
 ## When to use
 
-This page is not an agent to invoke — it documents the DELIVER loop combining the [software-engineer](/en/reference/agents/software-engineer) and the [software-engineer-reviewer](/en/reference/agents/software-engineer-reviewer).
+This page is not an agent to invoke — it documents the DELIVER loop combining the [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) and the [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }}).
 
 ## Entry contract
 
@@ -47,7 +47,7 @@ graph TB
 - **Tests before code** — The cycle starts with acceptance tests
 - **Bounded retry** — The number of engineer → reviewer cycles is limited
 - **CQS** — The engineer writes (command), the reviewer reads (query)
-- See [Customisation](/en/customisation) for the full list
+- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -69,8 +69,8 @@ Outside-In TDD starts with the acceptance test (the observable behaviour) and le
 
 ## See also
 
-- [software-engineer](/en/reference/agents/software-engineer) — Executor agent
-- [software-engineer-reviewer](/en/reference/agents/software-engineer-reviewer) — Reviewer agent
-- [Pipeline DELIVER](/en/pipeline/deliver) — Phase description
-- [outside-in-tdd](/en/reference/skills/outside-in-tdd) — TDD skill
-- [red-synthesize-green](/en/reference/skills/red-synthesize-green) — TDD cycle skill
+- [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Executor agent
+- [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }}) — Reviewer agent
+- [Pipeline DELIVER]({{ "/en/pipeline/deliver" | relative_url }}) — Phase description
+- [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — TDD skill
+- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle skill

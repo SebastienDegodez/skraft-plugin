@@ -11,7 +11,7 @@ persona: tech-lead
 
 ## Quand l'utiliser
 
-Cette page n'est pas un agent à invoquer — c'est la documentation de la boucle DELIVER qui combine le [software-engineer](/fr/reference/agents/software-engineer) et le [software-engineer-reviewer](/fr/reference/agents/software-engineer-reviewer).
+Cette page n'est pas un agent à invoquer — c'est la documentation de la boucle DELIVER qui combine le [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) et le [software-engineer-reviewer]({{ "/fr/reference/agents/software-engineer-reviewer" | relative_url }}).
 
 ## Contrat d'entrée
 
@@ -47,7 +47,7 @@ graph TB
 - **Tests avant code** — Le cycle commence par les tests d'acceptation
 - **Retry borné** — Le nombre de cycles engineer → reviewer est limité
 - **CQS** — L'engineer écrit (commande), le reviewer lit (query)
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -69,8 +69,8 @@ L'Outside-In TDD commence par le test d'acceptation (le comportement observable)
 
 ## Voir aussi
 
-- [software-engineer](/fr/reference/agents/software-engineer) — Agent exécuteur
-- [software-engineer-reviewer](/fr/reference/agents/software-engineer-reviewer) — Agent reviewer
-- [Pipeline DELIVER](/fr/pipeline/deliver) — Description de la phase
-- [outside-in-tdd](/fr/reference/skills/outside-in-tdd) — Skill TDD
-- [red-synthesize-green](/fr/reference/skills/red-synthesize-green) — Skill cycle TDD
+- [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Agent exécuteur
+- [software-engineer-reviewer]({{ "/fr/reference/agents/software-engineer-reviewer" | relative_url }}) — Agent reviewer
+- [Pipeline DELIVER]({{ "/fr/pipeline/deliver" | relative_url }}) — Description de la phase
+- [outside-in-tdd]({{ "/fr/reference/skills/outside-in-tdd" | relative_url }}) — Skill TDD
+- [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Skill cycle TDD

@@ -25,7 +25,7 @@ CQS separates operations that modify state (commands) from those that read it (q
 > « Asking a question should not change the answer. »
 > — Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997.
 
-See [Architecture](/en/architecture) for how CQS applies in the pipeline.
+See [Architecture]({{ "/en/architecture" | relative_url }}) for how CQS applies in the pipeline.
 
 ## CQRS — Command-Query Responsibility Segregation
 

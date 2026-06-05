@@ -31,7 +31,7 @@ persona: tech-lead
 - **Phase ordering** — DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER, never reversed
 - **CQS** — The orchestrator dispatches commands but never writes artifacts directly; it reads `state.json` to decide the next action
 - **Bounded retry** — Each executor → reviewer cycle has a maximum number of attempts
-- See [Customisation](/en/customisation) for the full list
+- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -49,10 +49,10 @@ The single entry point reflects the pragmatic principle of textual modularity. E
 
 - Number of retries per phase (L2)
 - Dispatch message vocabulary (L1)
-- Adding intermediate phases (L3, with caution — see [Customisation](/en/customisation))
+- Adding intermediate phases (L3, with caution — see [Customisation]({{ "/en/customisation" | relative_url }}))
 
 ## See also
 
-- [Architecture](/en/architecture) — CQS view of the pipeline
-- [Pipeline](/en/pipeline/) — Each phase description
-- [Core concepts](/en/concepts) — CQS, CQRS, Walking Skeleton
+- [Architecture]({{ "/en/architecture" | relative_url }}) — CQS view of the pipeline
+- [Pipeline]({{ "/en/pipeline/" | relative_url }}) — Each phase description
+- [Core concepts]({{ "/en/concepts" | relative_url }}) — CQS, CQRS, Walking Skeleton

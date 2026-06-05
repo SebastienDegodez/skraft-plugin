@@ -24,23 +24,23 @@ graph LR
 
 ## Phases
 
-### [DISCOVER](/en/pipeline/discover)
+### [DISCOVER]({{ "/en/pipeline/discover" | relative_url }})
 
 Triage and prioritise issues to produce an actionable triage report.
 
-### [DISCUSS](/en/pipeline/discuss)
+### [DISCUSS]({{ "/en/pipeline/discuss" | relative_url }})
 
 Refine stories against INVEST criteria and produce verifiable acceptance criteria.
 
-### [DESIGN](/en/pipeline/design)
+### [DESIGN]({{ "/en/pipeline/design" | relative_url }})
 
 Model architecture via Event Modeling, DDD, and Architecture Decision Records.
 
-### [DISTILL](/en/pipeline/distill)
+### [DISTILL]({{ "/en/pipeline/distill" | relative_url }})
 
 Translate architecture decisions into executable Gherkin scenarios and an implementation plan.
 
-### [DELIVER](/en/pipeline/deliver)
+### [DELIVER]({{ "/en/pipeline/deliver" | relative_url }})
 
 Implement code via Outside-In TDD with Mutation Score as a quality gate.
 

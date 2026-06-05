@@ -59,6 +59,6 @@ SKRAFT ne remplace pas le jugement humain. Il filtre le bruit pour que le review
 
 ## Voir aussi
 
-- [Pour les décideurs](/fr/pour-decideurs) — projection du TTM pour les décideurs
-- [Les lentilles](/fr/catalogue/lens) — les 4 lentilles de revue adverse
-- [Le pipeline](/fr/pipeline/) — les 5 phases du cycle de vie
+- [Pour les décideurs]({{ "/fr/pour-decideurs" | relative_url }}) — projection du TTM pour les décideurs
+- [Les lentilles]({{ "/fr/catalogue/lens" | relative_url }}) — les 4 lentilles de revue adverse
+- [Le pipeline]({{ "/fr/pipeline/" | relative_url }}) — les 5 phases du cycle de vie

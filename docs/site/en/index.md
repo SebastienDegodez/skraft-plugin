@@ -37,7 +37,7 @@ The five phases chain together to process exactly one Use Case per cycle — no 
 - **Skills involved** — difficulty routing and backlog triage.
 - **Expected outcome** — an actionable triage report that opens the cycle.
 
-[DISCOVER phase detail](/en/pipeline/discover)
+[DISCOVER phase detail]({{ "/en/pipeline/discover" | relative_url }})
 
 ### 2. DISCUSS
 
@@ -45,7 +45,7 @@ The five phases chain together to process exactly one Use Case per cycle — no 
 - **Skills involved** — issue refinement and acceptance-criteria authoring.
 - **Expected outcome** — ready stories with explicit acceptance criteria.
 
-[DISCUSS phase detail](/en/pipeline/discuss)
+[DISCUSS phase detail]({{ "/en/pipeline/discuss" | relative_url }})
 
 ### 3. DESIGN
 
@@ -53,7 +53,7 @@ The five phases chain together to process exactly one Use Case per cycle — no 
 - **Skills involved** — architecture patterns, architecture decisions (ADRs) and review criteria.
 - **Expected outcome** — an architecture model with traced decisions.
 
-[DESIGN phase detail](/en/pipeline/design)
+[DESIGN phase detail]({{ "/en/pipeline/design" | relative_url }})
 
 ### 4. DISTILL
 
@@ -61,7 +61,7 @@ The five phases chain together to process exactly one Use Case per cycle — no 
 - **Skills involved** — acceptance design and test-design mandates.
 - **Expected outcome** — executable acceptance scenarios.
 
-[DISTILL phase detail](/en/pipeline/distill)
+[DISTILL phase detail]({{ "/en/pipeline/distill" | relative_url }})
 
 ### 5. DELIVER
 
@@ -69,7 +69,7 @@ The five phases chain together to process exactly one Use Case per cycle — no 
 - **Skills involved** — outside-in TDD, craft discipline and clean-architecture testing, with Mutation Score as the quality gate.
 - **Expected outcome** — delivered code, covered and verified.
 
-[DELIVER phase detail](/en/pipeline/deliver)
+[DELIVER phase detail]({{ "/en/pipeline/deliver" | relative_url }})
 
 ## Clean Architecture positioning
 
@@ -78,26 +78,26 @@ SKRAFT applies the CQS (Command-Query Separation) principle at the system level:
 > « The only way to go fast is to go well. »
 > — Martin, R. C., *Clean Architecture*, 2017.
 
-👉 **[Understand Clean Architecture in detail](/en/clean-architecture)**
+👉 **[Understand Clean Architecture in detail]({{ "/en/clean-architecture" | relative_url }})**
 
-[See the pipeline architecture](/en/architecture)
+[See the pipeline architecture]({{ "/en/architecture" | relative_url }})
 
 ## Object Calisthenics: why the discipline
 
 In the DELIVER phase, the `software-engineer` applies craft discipline (including Object Calisthenics) to constrain the shape of the code: small units, strong encapsulation, explicit intent. The goal is not aesthetics but **verifiability**: disciplined code is simpler to review and to mutate.
 
-[See the core concepts](/en/concepts)
+[See the core concepts]({{ "/en/concepts" | relative_url }})
 
 ## Decision traceability (ADRs)
 
 Every significant architecture decision is recorded in an ADR (Architecture Decision Record) during the DESIGN phase. ADRs make choices **auditable**: a reviewer can recover the rationale behind a decision, and a new maintainer can understand the history without re-reading all the code.
 
-[See Architecture](/en/architecture) · [See Concepts](/en/concepts)
+[See Architecture]({{ "/en/architecture" | relative_url }}) · [See Concepts]({{ "/en/concepts" | relative_url }})
 
 ## Where to go next
 
-- **Executives** — Read [For executives](/en/for-executives) to understand the ROI.
-- **Developers** — Explore [the pipeline in detail](/en/pipeline/) phase by phase.
-- **Architecture** — Understand [the architecture](/en/architecture) and the [concepts](/en/concepts).
-- **Reference** — Browse the [agents reference](/en/reference/agents/) and the [skills reference](/en/reference/skills/).
-- **Ready to go** — Follow the [Getting Started](/en/getting-started) guide.
+- **Executives** — Read [For executives]({{ "/en/for-executives" | relative_url }}) to understand the ROI.
+- **Developers** — Explore [the pipeline in detail]({{ "/en/pipeline/" | relative_url }}) phase by phase.
+- **Architecture** — Understand [the architecture]({{ "/en/architecture" | relative_url }}) and the [concepts]({{ "/en/concepts" | relative_url }}).
+- **Reference** — Browse the [agents reference]({{ "/en/reference/agents/" | relative_url }}) and the [skills reference]({{ "/en/reference/skills/" | relative_url }}).
+- **Ready to go** — Follow the [Getting Started]({{ "/en/getting-started" | relative_url }}) guide.

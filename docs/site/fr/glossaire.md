@@ -19,11 +19,11 @@ description: "Chaque terme du craft expliqué simplement : TDD, mutation testing
 
 **ADR (Architecture Decision Record)**
 Un document court qui enregistre une décision d'architecture : le contexte, les options considérées, la décision retenue et les raisons. Sert de mémoire du projet.
-→ Voir [Patterns](/fr/catalogue/patterns)
+→ Voir [Patterns]({{ "/fr/catalogue/patterns" | relative_url }})
 
 **Agent**
 Dans SKRAFT, un programme IA spécialisé qui joue un rôle précis dans le pipeline (ex : `backlog-discoverer`, `solution-architect`). Un agent *exécuteur* produit des artefacts ; un agent *reviewer* émet des verdicts.
-→ Voir [Agents](/fr/reference/agents/)
+→ Voir [Agents]({{ "/fr/reference/agents/" | relative_url }})
 
 **Artefact**
 Tout fichier produit par le pipeline : stories raffinées, ADR, scénarios BDD, code, rapports de tests. Les artefacts constituent la trace auditable du travail.
@@ -40,7 +40,7 @@ Liste priorisée de fonctionnalités ou User Stories à développer. Le backlog 
 
 **Clean Architecture**
 Style d'architecture logicielle qui sépare les règles métier des détails techniques (bases de données, frameworks, interfaces). Proposé par Robert C. Martin.
-→ Voir [Patterns](/fr/catalogue/patterns)
+→ Voir [Patterns]({{ "/fr/catalogue/patterns" | relative_url }})
 
 **CQRS (Command Query Responsibility Segregation)**
 Principe qui sépare les opérations d'écriture (commandes) des opérations de lecture (requêtes) dans une application.
@@ -55,7 +55,7 @@ Approche du développement logiciel qui met l'accent sur la qualité, les bonnes
 
 **DDD (Domain-Driven Design)**
 Approche de conception centrée sur le domaine métier. Le code reflète le vocabulaire et les concepts du métier (*langage ubiquitaire*). Proposé par Eric Evans.
-→ Voir [Patterns](/fr/catalogue/patterns)
+→ Voir [Patterns]({{ "/fr/catalogue/patterns" | relative_url }})
 
 ## E
 
@@ -69,7 +69,7 @@ Patron d'architecture où l'état d'un système est reconstruit à partir d'une 
 
 **Gate (porte de qualité)**
 Point de contrôle entre deux phases du pipeline SKRAFT. Un gate définit des critères précis à remplir pour progresser. Si les critères ne sont pas atteints, la phase recommence.
-→ Voir [Gates](/fr/catalogue/gates)
+→ Voir [Gates]({{ "/fr/catalogue/gates" | relative_url }})
 
 **Gherkin**
 Langage structuré pour écrire des scénarios BDD : `Given` (contexte), `When` (action), `Then` (résultat attendu).
@@ -81,7 +81,7 @@ Vocabulaire partagé entre développeurs et experts métier, utilisé aussi bien
 
 **Lentille (reviewer lens)**
 Dans SKRAFT, un point de vue spécialisé appliqué lors de la revue adverse. Les 4 lentilles sont : `architecture-boundaries`, `cold-reader`, `quality-gates`, `test-integrity`.
-→ Voir [Lentilles](/fr/catalogue/lens)
+→ Voir [Lentilles]({{ "/fr/catalogue/lens" | relative_url }})
 
 ## M
 
@@ -95,17 +95,17 @@ Ensemble de 9 règles de conception appliquées au code orienté objet pour forc
 
 **Outside-In TDD**
 Variante du TDD où les tests commencent au niveau le plus externe (comportement observable) et descendent vers les détails internes. Aussi appelé "London School TDD".
-→ Voir [Skills](/fr/reference/skills/)
+→ Voir [Skills]({{ "/fr/reference/skills/" | relative_url }})
 
 ## P
 
 **Pattern (patron d'architecture)**
 Solution éprouvée à un problème récurrent. Les patterns SKRAFT (DDD, Clean Architecture, CQRS...) sont documentés avec leur référence d'origine.
-→ Voir [Patterns](/fr/catalogue/patterns)
+→ Voir [Patterns]({{ "/fr/catalogue/patterns" | relative_url }})
 
 **Pipeline**
 Enchaînement des 5 phases SKRAFT : DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER. Chaque phase a un agent, un reviewer et un gate.
-→ Voir [Le pipeline](/fr/pipeline/)
+→ Voir [Le pipeline]({{ "/fr/pipeline/" | relative_url }})
 
 ## R
 
@@ -119,7 +119,7 @@ Travail à refaire parce qu'il n'a pas passé la revue. SKRAFT vise à réduire 
 
 **Skill**
 Dans SKRAFT, une pratique outillée encapsulée dans un fichier `SKILL.md`. Une skill définit quoi faire, comment le faire et quelles références la justifient.
-→ Voir [Skills](/fr/reference/skills/)
+→ Voir [Skills]({{ "/fr/reference/skills/" | relative_url }})
 
 **State.json**
 Fichier de traçabilité produit par le pipeline SKRAFT. Il contient l'historique des phases, artefacts et verdicts pour une User Story.
@@ -131,7 +131,7 @@ Méthode où les tests sont écrits *avant* le code. Cycle : Red (test qui écho
 
 **TTM (Time-to-Market)**
 Délai entre la définition d'une fonctionnalité et sa disponibilité en production. Indicateur clé pour les décideurs.
-→ Voir [Pour les décideurs](/fr/pour-decideurs)
+→ Voir [Pour les décideurs]({{ "/fr/pour-decideurs" | relative_url }})
 
 ## U
 

@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Qualité INVEST** — Chaque story est Independent, Negotiable, Valuable, Estimable, Small, Testable
 - **Gate DoR** — 8 critères à valider avant de passer à DESIGN
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -49,6 +49,6 @@ Les critères INVEST garantissent que chaque story est testable et indépendante
 
 ## Voir aussi
 
-- [backlog-planner-reviewer](/fr/reference/agents/backlog-planner-reviewer) — Revue des artefacts DISCUSS
-- [Pipeline DISCUSS](/fr/pipeline/discuss) — Description de la phase
-- [solution-architect](/fr/reference/agents/solution-architect) — Phase suivante (DESIGN)
+- [backlog-planner-reviewer]({{ "/fr/reference/agents/backlog-planner-reviewer" | relative_url }}) — Revue des artefacts DISCUSS
+- [Pipeline DISCUSS]({{ "/fr/pipeline/discuss" | relative_url }}) — Description de la phase
+- [solution-architect]({{ "/fr/reference/agents/solution-architect" | relative_url }}) — Phase suivante (DESIGN)

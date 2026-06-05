@@ -33,7 +33,7 @@ persona: tech-lead
 - **Mutation score floor** — Le score de mutation doit dépasser le seuil minimum
 - **Outside-In TDD** — Tests d'acceptation → tests unitaires → implémentation
 - **Object Calisthenics** — Contraintes de design appliquées au code métier
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -60,8 +60,8 @@ Le mutation testing vérifie que les tests détectent réellement les défauts, 
 
 ## Voir aussi
 
-- [software-engineer-reviewer](/fr/reference/agents/software-engineer-reviewer) — Revue des artefacts DELIVER
-- [software-engineer-and-reviewer](/fr/reference/agents/software-engineer-and-reviewer) — Cycle complet DELIVER
-- [Pipeline DELIVER](/fr/pipeline/deliver) — Description de la phase
-- [outside-in-tdd](/fr/reference/skills/outside-in-tdd) — Skill TDD
-- [red-synthesize-green](/fr/reference/skills/red-synthesize-green) — Skill cycle TDD
+- [software-engineer-reviewer]({{ "/fr/reference/agents/software-engineer-reviewer" | relative_url }}) — Revue des artefacts DELIVER
+- [software-engineer-and-reviewer]({{ "/fr/reference/agents/software-engineer-and-reviewer" | relative_url }}) — Cycle complet DELIVER
+- [Pipeline DELIVER]({{ "/fr/pipeline/deliver" | relative_url }}) — Description de la phase
+- [outside-in-tdd]({{ "/fr/reference/skills/outside-in-tdd" | relative_url }}) — Skill TDD
+- [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Skill cycle TDD

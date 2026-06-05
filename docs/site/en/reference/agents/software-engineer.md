@@ -33,7 +33,7 @@ persona: tech-lead
 - **Mutation score floor** — Mutation score must exceed the minimum threshold
 - **Outside-In TDD** — Acceptance tests → unit tests → implementation
 - **Object Calisthenics** — Design constraints applied to business code
-- See [Customisation](/en/customisation) for the full list
+- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -60,8 +60,8 @@ Mutation testing verifies that tests actually detect defects, beyond simple line
 
 ## See also
 
-- [software-engineer-reviewer](/en/reference/agents/software-engineer-reviewer) — DELIVER artifact review
-- [software-engineer-and-reviewer](/en/reference/agents/software-engineer-and-reviewer) — Full DELIVER cycle
-- [Pipeline DELIVER](/en/pipeline/deliver) — Phase description
-- [outside-in-tdd](/en/reference/skills/outside-in-tdd) — TDD skill
-- [red-synthesize-green](/en/reference/skills/red-synthesize-green) — TDD cycle skill
+- [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }}) — DELIVER artifact review
+- [software-engineer-and-reviewer]({{ "/en/reference/agents/software-engineer-and-reviewer" | relative_url }}) — Full DELIVER cycle
+- [Pipeline DELIVER]({{ "/en/pipeline/deliver" | relative_url }}) — Phase description
+- [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — TDD skill
+- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle skill

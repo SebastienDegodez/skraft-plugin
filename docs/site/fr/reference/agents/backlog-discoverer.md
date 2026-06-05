@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Scope unitaire** — Traite une seule issue à la fois, jamais de batch
 - **Triage basé sur les preuves** — Chaque décision (label, priorité, effort) s'appuie sur des données observables
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -51,6 +51,6 @@ Le scope unitaire (une issue = un cycle) empêche le batching qui dilue l'attent
 
 ## Voir aussi
 
-- [backlog-discoverer-reviewer](/fr/reference/agents/backlog-discoverer-reviewer) — Revue des artefacts DISCOVER
-- [Pipeline DISCOVER](/fr/pipeline/discover) — Description de la phase
-- [backlog-planner](/fr/reference/agents/backlog-planner) — Phase suivante (DISCUSS)
+- [backlog-discoverer-reviewer]({{ "/fr/reference/agents/backlog-discoverer-reviewer" | relative_url }}) — Revue des artefacts DISCOVER
+- [Pipeline DISCOVER]({{ "/fr/pipeline/discover" | relative_url }}) — Description de la phase
+- [backlog-planner]({{ "/fr/reference/agents/backlog-planner" | relative_url }}) — Phase suivante (DISCUSS)

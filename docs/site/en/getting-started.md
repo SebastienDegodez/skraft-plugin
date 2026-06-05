@@ -50,4 +50,4 @@ Assign yourself a GitHub issue, then let the orchestrator guide you through the 
 
 Each phase is validated by a dedicated reviewer before moving to the next.
 
-→ See the [phase details](/en/pipeline/) for more information.
+→ See the [phase details]({{ "/en/pipeline/" | relative_url }}) for more information.

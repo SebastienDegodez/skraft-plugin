@@ -73,7 +73,7 @@ L'excellence technique n'est pas une option. SKRAFT enforce l'application de mé
 
 ### Clean Architecture
 Pour que nos agents puissent travailler efficacement et que le code reste pérenne, la logique métier doit être strictement isolée de l'infrastructure (frameworks, bases de données).
-👉 **[Comprendre la Clean Architecture dans le détail](/fr/clean-architecture)**
+👉 **[Comprendre la Clean Architecture dans le détail]({{ "/fr/clean-architecture" | relative_url }})**
 
 ### Object Calisthenics
 Les agents implémentent les règles des Object Calisthenics pour forcer un code orienté objet propre. Par exemple :
@@ -95,5 +95,5 @@ Cela garantit que les futures IA (et les humains) comprendront le *pourquoi* des
 ---
 
 **Prêt à aller plus loin ?**
-- Explorez le [fonctionnement détaillé du pipeline](/fr/pipeline/).
-- Parcourez le [glossaire complet des concepts](/fr/concepts) — tous les concepts SKRAFT, intégrés et expliqués.
+- Explorez le [fonctionnement détaillé du pipeline]({{ "/fr/pipeline/" | relative_url }}).
+- Parcourez le [glossaire complet des concepts]({{ "/fr/concepts" | relative_url }}) — tous les concepts SKRAFT, intégrés et expliqués.

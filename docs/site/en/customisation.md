@@ -43,7 +43,7 @@ You can add a step to an existing phase — for example, inserting a `security-r
 
 ### 1. Create the agent
 
-Create an `.agent.md` file for your new agent using the [create-custom-agent](/en/reference/skills/create-custom-agent) skill. Define clearly:
+Create an `.agent.md` file for your new agent using the [create-custom-agent]({{ "/en/reference/skills/create-custom-agent" | relative_url }}) skill. Define clearly:
 - Its role (executor or reviewer)
 - Its entry/exit contract
 - Its invariants
@@ -104,6 +104,6 @@ If a reviewer can modify artifacts, it introduces a side effect into the review.
 
 ## See also
 
-- [Architecture](/en/architecture) — CQS view of the pipeline
-- [Core concepts](/en/concepts) — CQS, CQRS, Walking Skeleton
-- [Pipeline](/en/pipeline/) — Each phase description
+- [Architecture]({{ "/en/architecture" | relative_url }}) — CQS view of the pipeline
+- [Core concepts]({{ "/en/concepts" | relative_url }}) — CQS, CQRS, Walking Skeleton
+- [Pipeline]({{ "/en/pipeline/" | relative_url }}) — Each phase description

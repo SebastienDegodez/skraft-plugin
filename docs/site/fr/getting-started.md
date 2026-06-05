@@ -50,4 +50,4 @@ Assignez-vous une issue GitHub, puis laissez l'orchestrateur vous guider à trav
 
 Chaque phase est validée par un reviewer dédié avant de passer à la suivante.
 
-→ Consultez le [détail des phases](/fr/pipeline/) pour approfondir.
+→ Consultez le [détail des phases]({{ "/fr/pipeline/" | relative_url }}) pour approfondir.

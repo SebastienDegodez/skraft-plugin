@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Read-only (CQS)** — Never modifies the artifacts it reviews
 - **Structured verdict** — Approve or reject, no intermediate state
-- See [Customisation](/en/customisation) for the full list
+- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -48,6 +48,6 @@ The review verifies that architectural boundaries (bounded contexts, layers) are
 
 ## See also
 
-- [solution-architect](/en/reference/agents/solution-architect) — Associated executor agent
-- [Pipeline DESIGN](/en/pipeline/design) — Phase description
-- [Core concepts — CQS](/en/concepts) — Underlying principle
+- [solution-architect]({{ "/en/reference/agents/solution-architect" | relative_url }}) — Associated executor agent
+- [Pipeline DESIGN]({{ "/en/pipeline/design" | relative_url }}) — Phase description
+- [Core concepts — CQS]({{ "/en/concepts" | relative_url }}) — Underlying principle

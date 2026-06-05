@@ -12,8 +12,8 @@ persona: tech-lead
 ## When to use
 
 - During the DELIVER phase, for each code increment
-- In combination with [outside-in-tdd](/en/reference/skills/outside-in-tdd) for the overall strategy
-- Before each [craft-discipline](/en/reference/skills/craft-discipline) checkpoint
+- In combination with [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) for the overall strategy
+- Before each [craft-discipline]({{ "/en/reference/skills/craft-discipline" | relative_url }}) checkpoint
 
 ## Entry contract
 
@@ -31,7 +31,7 @@ persona: tech-lead
 - **RED required** — Code is only written when a test fails
 - **Minimal GREEN** — The simplest implementation that makes the test pass
 - **REFACTOR without regression** — Refactoring breaks no existing test
-- See [Customisation](/en/customisation) for the full list
+- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -53,6 +53,6 @@ The RED phase is a diagnostic: if the test passes immediately, either the test i
 
 ## See also
 
-- [outside-in-tdd](/en/reference/skills/outside-in-tdd) — Overall TDD strategy
-- [craft-discipline](/en/reference/skills/craft-discipline) — Self-discipline checkpoints
-- [software-engineer](/en/reference/agents/software-engineer) — Agent that uses this skill
+- [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — Overall TDD strategy
+- [craft-discipline]({{ "/en/reference/skills/craft-discipline" | relative_url }}) — Self-discipline checkpoints
+- [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Agent that uses this skill

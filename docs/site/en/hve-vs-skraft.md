@@ -79,6 +79,6 @@ SKRAFT **inherits** the principles of HVE:
 
 ## See also
 
-- [The pipeline](/en/pipeline/) — detailed description of the 5 phases
-- [Gates](/en/catalogue/gates) — what each gate checks
-- [Lenses](/en/catalogue/lens) — the 4 adversarial review lenses
+- [The pipeline]({{ "/en/pipeline/" | relative_url }}) — detailed description of the 5 phases
+- [Gates]({{ "/en/catalogue/gates" | relative_url }}) — what each gate checks
+- [Lenses]({{ "/en/catalogue/lens" | relative_url }}) — the 4 adversarial review lenses

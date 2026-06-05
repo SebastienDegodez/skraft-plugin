@@ -43,7 +43,7 @@ Vous pouvez ajouter une étape à une phase existante — par exemple, insérer 
 
 ### 1. Créer l'agent
 
-Créez un fichier `.agent.md` pour votre nouvel agent en utilisant le skill [create-custom-agent](/fr/reference/skills/create-custom-agent). Définissez clairement :
+Créez un fichier `.agent.md` pour votre nouvel agent en utilisant le skill [create-custom-agent]({{ "/fr/reference/skills/create-custom-agent" | relative_url }}). Définissez clairement :
 - Son rôle (exécuteur ou reviewer)
 - Son contrat d'entrée/sortie
 - Ses invariants
@@ -104,6 +104,6 @@ Si un reviewer peut modifier des artefacts, il introduit un effet de bord dans l
 
 ## Voir aussi
 
-- [Architecture](/fr/architecture) — Vue CQS du pipeline
-- [Concepts fondamentaux](/fr/concepts) — CQS, CQRS, Walking Skeleton
-- [Pipeline](/fr/pipeline/) — Description de chaque phase
+- [Architecture]({{ "/fr/architecture" | relative_url }}) — Vue CQS du pipeline
+- [Concepts fondamentaux]({{ "/fr/concepts" | relative_url }}) — CQS, CQRS, Walking Skeleton
+- [Pipeline]({{ "/fr/pipeline/" | relative_url }}) — Description de chaque phase

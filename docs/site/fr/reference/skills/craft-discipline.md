@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Auto-évaluation, pas revue** — Ce skill est un checkpoint personnel, le reviewer vérifie indépendamment
 - **Pas de raccourci** — Chaque item de la checklist est vérifié, pas « globalement OK »
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -51,6 +51,6 @@ L'auto-discipline réduit le bruit dans les cycles de revue : le reviewer peut s
 
 ## Voir aussi
 
-- [red-synthesize-green](/fr/reference/skills/red-synthesize-green) — Cycle TDD
-- [software-engineer](/fr/reference/agents/software-engineer) — Agent qui utilise ce skill
-- [software-engineer-reviewer](/fr/reference/agents/software-engineer-reviewer) — Le reviewer qui vérifie indépendamment
+- [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Cycle TDD
+- [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Agent qui utilise ce skill
+- [software-engineer-reviewer]({{ "/fr/reference/agents/software-engineer-reviewer" | relative_url }}) — Le reviewer qui vérifie indépendamment

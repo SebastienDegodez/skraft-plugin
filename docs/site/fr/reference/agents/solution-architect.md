@@ -31,7 +31,7 @@ persona: tech-lead
 
 - **Clean Architecture** — Les dépendances pointent vers l'intérieur, jamais vers l'extérieur
 - **Un Use Case = un passage** — Chaque story est traitée comme un Use Case complet
-- Voir [Customisation](/fr/customisation) pour la liste complète
+- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -53,7 +53,7 @@ Les ADRs documentent les décisions et leurs conséquences, rendant l'architectu
 
 ## Voir aussi
 
-- [solution-architect-reviewer](/fr/reference/agents/solution-architect-reviewer) — Revue des artefacts DESIGN
-- [Pipeline DESIGN](/fr/pipeline/design) — Description de la phase
-- [acceptance-designer](/fr/reference/agents/acceptance-designer) — Phase suivante (DISTILL)
-- [Architecture](/fr/architecture) — Vue d'ensemble du pipeline
+- [solution-architect-reviewer]({{ "/fr/reference/agents/solution-architect-reviewer" | relative_url }}) — Revue des artefacts DESIGN
+- [Pipeline DESIGN]({{ "/fr/pipeline/design" | relative_url }}) — Description de la phase
+- [acceptance-designer]({{ "/fr/reference/agents/acceptance-designer" | relative_url }}) — Phase suivante (DISTILL)
+- [Architecture]({{ "/fr/architecture" | relative_url }}) — Vue d'ensemble du pipeline
