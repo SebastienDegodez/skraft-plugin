@@ -8,7 +8,7 @@ Reads page.lang for link localisation. Labels are language-neutral (DISCOVER…)
 <nav class="phase-ribbon" aria-label="{% if page.lang == 'en' %}Pipeline phases{% else %}Phases du pipeline{% endif %}">
   {%- for p in phases -%}
     {%- assign label = labels[forloop.index0] -%}
-    {%- assign href = '/' | append: page.lang | append: '/pipeline/' | append: p -%}
+    {%- assign href = '/' | append: page.lang | append: '/explanation/pipeline/' | append: p -%}
     {%- if p == include.current -%}
       <span class="phase-ribbon__step phase-ribbon__step--active" aria-current="step">{{ label }}</span>
     {%- else -%}

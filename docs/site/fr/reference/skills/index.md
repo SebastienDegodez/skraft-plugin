@@ -24,5 +24,5 @@ description: "Les skills SKRAFT : pratiques outillées, ce qu'elles font, quand 
 
 ## Voir aussi
 
-- [Les patterns d'architecture](../../catalogue/patterns.html)
-- [Le deep-dive Outside-In TDD](../../deep-dive/outside-in-tdd.html)
+- [Les patterns d'architecture]({{ "/fr/reference/patterns" | relative_url }})
+- [Le deep-dive Outside-In TDD]({{ "/fr/explanation/deep-dive/outside-in-tdd" | relative_url }})

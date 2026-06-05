@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Tests before code** — Acceptance scenarios exist before any implementation
 - **Business language** — Scenarios use domain vocabulary, not technical vocabulary
-- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -53,5 +53,5 @@ Writing tests before code forces thinking about expected behaviour rather than i
 ## See also
 
 - [acceptance-designer-reviewer]({{ "/en/reference/agents/acceptance-designer-reviewer" | relative_url }}) — DISTILL artifact review
-- [Pipeline DISTILL]({{ "/en/pipeline/distill" | relative_url }}) — Phase description
+- [Pipeline DISTILL]({{ "/en/explanation/pipeline/distill" | relative_url }}) — Phase description
 - [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Next phase (DELIVER)

@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Read-only (CQS)** — Never modifies the artifacts it reviews
 - **Structured verdict** — Approve or reject, no intermediate state
-- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -50,5 +50,5 @@ The review focuses on business coverage (are all cases covered?) and Gherkin qua
 ## See also
 
 - [acceptance-designer]({{ "/en/reference/agents/acceptance-designer" | relative_url }}) — Associated executor agent
-- [Pipeline DISTILL]({{ "/en/pipeline/distill" | relative_url }}) — Phase description
-- [Core concepts — CQS]({{ "/en/concepts" | relative_url }}) — Underlying principle
+- [Pipeline DISTILL]({{ "/en/explanation/pipeline/distill" | relative_url }}) — Phase description
+- [Core concepts — CQS]({{ "/en/explanation/concepts" | relative_url }}) — Underlying principle

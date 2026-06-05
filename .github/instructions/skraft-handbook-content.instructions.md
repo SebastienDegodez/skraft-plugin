@@ -21,8 +21,25 @@ Never mix modes on the same page.
 | **Explication / Explanation** | Understand *why* | discursive, cites sources | principles, why-review-before-review, deep-dives |
 | **Référence / Reference** | Look up facts | terse, tabular | agents, skills, gates, lenses, patterns |
 
-The sidebar (`_data/book.yml` `parts`) is grouped by these modes. A new page must
-declare which mode it belongs to before drafting.
+The sidebar (`_data/book.yml` `parts`) is grouped by these modes, and the **folder
+layout mirrors them** (per language):
+
+```
+fr/
+  index.md                 (home — router)
+  tutorials/               Learn   — getting-started, customisation, contributing
+  explanation/             Understand
+    pipeline/              the 5 phases + overview + team + fil-rouge (narrative)
+    deep-dive/             outside-in-tdd, walking-skeleton, review-before-review
+    architecture, concepts, clean-architecture, hve-core, hve-vs-skraft,
+    traces, for-executives, pourquoi-review-avant-review
+  reference/               Look up — agents/, skills/, gates, lens, patterns,
+                           citations, glossaire, changelog
+```
+
+A new page must declare which mode it belongs to and live in the matching folder.
+The Starbucks fil rouge is **narrative**, so it lives under `explanation/pipeline/`,
+not `tutorials/`.
 
 ## 2. The fil rouge is the artifact flow
 
@@ -60,16 +77,16 @@ Per-phase artifact the example produces:
 
 ## 4. Connectors required on every pipeline phase page
 
-Each `docs/site/{fr,en}/pipeline/{phase}.md` MUST include:
+Each `docs/site/{fr,en}/explanation/pipeline/{phase}.md` MUST include:
 
 1. A **"vous êtes ici" / "you are here" ribbon** at the top showing
    `DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER` with the current phase
-   highlighted.
+   highlighted (use `{% include phase-ribbon.html current="<phase>" %}`).
 2. A **"Ce qui entre / Ce qui sort"** ("What enters / What exits") block naming
    the upstream artifact consumed and the downstream artifact produced.
 3. The **Starbucks fil-rouge box** showing what the example looks like at this phase.
 4. The existing **"Les gates franchies ici" / "Gates crossed here"** block linking
-   to `../catalogue/gates.html`.
+   to the reference gates page (`{{ "/fr/reference/gates" | relative_url }}`).
 
 ## 5. FR/EN parity is mandatory
 
@@ -85,7 +102,7 @@ Each `docs/site/{fr,en}/pipeline/{phase}.md` MUST include:
 - Any factual claim in an Explanation page carries a citation in the format:
   `> « quote ≤25 words »` then `> — Author, *Title*, Year.` where author+year
   exist in `_data/citations.yml`. The Starbucks example is exempt (it is fiction).
-- Catalogue pages follow the `catalogue_template` block contract from `_data/book.yml`.
+- Catalogue/reference pages follow the `catalogue_template` block contract from `_data/book.yml`.
 
 ## 7. Validation before considering a page done
 

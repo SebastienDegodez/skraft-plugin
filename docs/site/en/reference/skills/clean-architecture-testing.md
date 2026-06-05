@@ -30,7 +30,7 @@ persona: tech-lead
 - **No duplicate testing** — Each behaviour is tested at a single layer
 - **Domain = pure unit tests** — No external dependencies in domain tests
 - **Infrastructure = integration tests** — Adapters are tested with real systems
-- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -54,4 +54,4 @@ Test doubles (stubs, mocks, fakes) are chosen based on the architectural boundar
 
 - [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — Outside-In TDD skill
 - [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Agent that uses this skill
-- [Architecture]({{ "/en/architecture" | relative_url }}) — CQS view of the pipeline
+- [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — CQS view of the pipeline

@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Single-issue scope** — Processes one issue at a time, never batched
 - **Evidence-based triage** — Every decision (label, priority, effort) is backed by observable data
-- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -52,5 +52,5 @@ Single-issue scope (one issue = one cycle) prevents the batching that dilutes at
 ## See also
 
 - [backlog-discoverer-reviewer]({{ "/en/reference/agents/backlog-discoverer-reviewer" | relative_url }}) — DISCOVER artifact review
-- [Pipeline DISCOVER]({{ "/en/pipeline/discover" | relative_url }}) — Phase description
+- [Pipeline DISCOVER]({{ "/en/explanation/pipeline/discover" | relative_url }}) — Phase description
 - [backlog-planner]({{ "/en/reference/agents/backlog-planner" | relative_url }}) — Next phase (DISCUSS)

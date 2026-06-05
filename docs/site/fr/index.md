@@ -19,9 +19,9 @@ indépendant — aucun agent ne valide son propre travail.
 La façon la plus rapide de comprendre SKRAFT, c'est de suivre **un seul exemple**
 de l'idée au code livré :
 
-➡️ **[Le fil rouge : une commande Starbucks de bout en bout]({{ "/fr/pipeline/fil-rouge" | relative_url }})**
+➡️ **[Le fil rouge : une commande Starbucks de bout en bout]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }})**
 
-Puis installez le plugin et lancez le pipeline : [Premiers pas]({{ "/fr/getting-started" | relative_url }}).
+Puis installez le plugin et lancez le pipeline : [Premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }}).
 
 ## Comment lire ce handbook
 
@@ -30,17 +30,17 @@ cherchez à faire :
 
 | Porte | Pour… | Commencez par |
 | --- | --- | --- |
-| **Apprendre** | suivre un parcours guidé | [Le fil rouge]({{ "/fr/pipeline/fil-rouge" | relative_url }}), [Premiers pas]({{ "/fr/getting-started" | relative_url }}) |
-| **Comprendre** | savoir *pourquoi* c'est construit ainsi | [Le pipeline]({{ "/fr/pipeline/" | relative_url }}), [La revue avant la revue]({{ "/fr/pourquoi-review-avant-review" | relative_url }}) |
-| **Consulter** | retrouver un fait précis | [Agents]({{ "/fr/reference/agents/" | relative_url }}), [Gates]({{ "/fr/catalogue/gates" | relative_url }}), [Patterns]({{ "/fr/catalogue/patterns" | relative_url }}) |
-| **Approfondir** | creuser une approche | [Outside-In TDD]({{ "/fr/deep-dive/outside-in-tdd" | relative_url }}), [Walking Skeleton]({{ "/fr/deep-dive/walking-skeleton" | relative_url }}) |
+| **Apprendre** | suivre un parcours guidé | [Le fil rouge]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }}), [Premiers pas]({{ "/fr/tutorials/getting-started" | relative_url }}) |
+| **Comprendre** | savoir *pourquoi* c'est construit ainsi | [Le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }}), [La revue avant la revue]({{ "/fr/explanation/pourquoi-review-avant-review" | relative_url }}) |
+| **Consulter** | retrouver un fait précis | [Agents]({{ "/fr/reference/agents/" | relative_url }}), [Gates]({{ "/fr/reference/gates" | relative_url }}), [Patterns]({{ "/fr/reference/patterns" | relative_url }}) |
+| **Approfondir** | creuser une approche | [Outside-In TDD]({{ "/fr/explanation/deep-dive/outside-in-tdd" | relative_url }}), [Walking Skeleton]({{ "/fr/explanation/deep-dive/walking-skeleton" | relative_url }}) |
 
 ## Où aller selon votre rôle
 
-- **Décideur** — pourquoi la revue assistée réduit le délai de livraison : [Pour décideurs]({{ "/fr/for-executives" | relative_url }}).
-- **Développeur** — le pipeline phase par phase et l'équipe d'agents : [Le pipeline]({{ "/fr/pipeline/" | relative_url }}), [L'équipe]({{ "/fr/pipeline/team" | relative_url }}).
-- **Architecte** — décisions et frontières : [Architecture]({{ "/fr/architecture" | relative_url }}), [Clean Architecture]({{ "/fr/clean-architecture" | relative_url }}).
-- **Vous venez de HVE ?** — la continuité (RPI, `state.json`, BRD/PRD en amont) : [HVE → SKRAFT]({{ "/fr/hve-vs-skraft" | relative_url }}).
+- **Décideur** — pourquoi la revue assistée réduit le délai de livraison : [Pour décideurs]({{ "/fr/explanation/for-executives" | relative_url }}).
+- **Développeur** — le pipeline phase par phase et l'équipe d'agents : [Le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }}), [L'équipe]({{ "/fr/explanation/pipeline/team" | relative_url }}).
+- **Architecte** — décisions et frontières : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}), [Clean Architecture]({{ "/fr/explanation/clean-architecture" | relative_url }}).
+- **Vous venez de HVE ?** — la continuité (RPI, `state.json`, BRD/PRD en amont) : [HVE → SKRAFT]({{ "/fr/explanation/hve-vs-skraft" | relative_url }}).
 
 ## Le pipeline en une image
 
@@ -60,4 +60,4 @@ graph LR
 ```
 
 Cinq phases, un agent et un reviewer par phase, sur le substrat partagé
-[HVE-Core]({{ "/fr/hve-core" | relative_url }}).
+[HVE-Core]({{ "/fr/explanation/hve-core" | relative_url }}).

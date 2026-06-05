@@ -31,7 +31,7 @@ persona: tech-lead
 - **Read-only (CQS)** — Never modifies the code it reviews
 - **4 adversarial lenses** — Each lens evaluates independently, the verdict is synthesised
 - **Structured verdict** — Approve or reject, no intermediate state
-- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -56,4 +56,4 @@ The multiplicity of lenses reduces bias risk: code may pass the architectural re
 
 - [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Associated executor agent
 - [software-engineer-and-reviewer]({{ "/en/reference/agents/software-engineer-and-reviewer" | relative_url }}) — Full DELIVER cycle
-- [Pipeline DELIVER]({{ "/en/pipeline/deliver" | relative_url }}) — Phase description
+- [Pipeline DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — Phase description

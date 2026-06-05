@@ -34,7 +34,7 @@ test.describe('SKRAFT docs site', () => {
   });
 
   test('Pipeline page renders Mermaid', async ({ page }) => {
-    await page.goto(`${BASE}/fr/pipeline/`);
+    await page.goto(`${BASE}/fr/explanation/pipeline/`);
     const mermaid = page.locator('div.mermaid, svg');
     await expect(mermaid.first()).toBeVisible();
   });
@@ -47,7 +47,7 @@ test.describe('SKRAFT docs site', () => {
   });
 
   test('Citations page renders entries', async ({ page }) => {
-    await page.goto(`${BASE}/fr/citations`);
+    await page.goto(`${BASE}/fr/reference/citations`);
     const entries = page.locator('.citation-entry');
     expect(await entries.count()).toBeGreaterThanOrEqual(10);
   });

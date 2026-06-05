@@ -31,7 +31,7 @@ persona: tech-lead
 - **Acceptance first** — The first test written is always an acceptance test
 - **Walking Skeleton** — The first implementation cuts through all layers
 - **Double loop** — Outer loop (acceptance) guides inner loop (unit)
-- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -56,4 +56,4 @@ This approach prevents over-engineering: only the code necessary to make the tes
 - [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — RED → GREEN → REFACTOR cycle
 - [clean-architecture-testing]({{ "/en/reference/skills/clean-architecture-testing" | relative_url }}) — Testing per layer
 - [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Agent that uses this skill
-- [Core concepts — Walking Skeleton]({{ "/en/concepts" | relative_url }}) — Underlying principle
+- [Core concepts — Walking Skeleton]({{ "/en/explanation/concepts" | relative_url }}) — Underlying principle

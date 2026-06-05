@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Tests avant code** — Les scénarios d'acceptation existent avant toute implémentation
 - **Langage métier** — Les scénarios utilisent le vocabulaire du domaine, pas le vocabulaire technique
-- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -53,5 +53,5 @@ Les scénarios BDD sont des spécifications exécutables. Ils capturent le compo
 ## Voir aussi
 
 - [acceptance-designer-reviewer]({{ "/fr/reference/agents/acceptance-designer-reviewer" | relative_url }}) — Revue des artefacts DISTILL
-- [Pipeline DISTILL]({{ "/fr/pipeline/distill" | relative_url }}) — Description de la phase
+- [Pipeline DISTILL]({{ "/fr/explanation/pipeline/distill" | relative_url }}) — Description de la phase
 - [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Phase suivante (DELIVER)

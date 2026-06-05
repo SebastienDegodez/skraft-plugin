@@ -31,7 +31,7 @@ persona: tech-lead
 
 - **Clean Architecture** — Dependencies point inward, never outward
 - **One Use Case = one pass** — Each story is treated as a complete Use Case
-- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -54,6 +54,6 @@ ADRs document decisions and their consequences, making architecture auditable an
 ## See also
 
 - [solution-architect-reviewer]({{ "/en/reference/agents/solution-architect-reviewer" | relative_url }}) — DESIGN artifact review
-- [Pipeline DESIGN]({{ "/en/pipeline/design" | relative_url }}) — Phase description
+- [Pipeline DESIGN]({{ "/en/explanation/pipeline/design" | relative_url }}) — Phase description
 - [acceptance-designer]({{ "/en/reference/agents/acceptance-designer" | relative_url }}) — Next phase (DISTILL)
-- [Architecture]({{ "/en/architecture" | relative_url }}) — Pipeline overview
+- [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — Pipeline overview

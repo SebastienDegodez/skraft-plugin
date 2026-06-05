@@ -25,6 +25,6 @@ passe à la phase suivante.
 
 ## Voir aussi
 
-- [Les gates franchies par phase](../../catalogue/gates.html)
-- [Les lentilles de revue adverse](../../catalogue/lens.html)
-- [Le pipeline, vue d'ensemble](../../pipeline/)
+- [Les gates franchies par phase]({{ "/fr/reference/gates" | relative_url }})
+- [Les lentilles de revue adverse]({{ "/fr/reference/lens" | relative_url }})
+- [Le pipeline, vue d'ensemble]({{ "/fr/pipeline" | relative_url }})

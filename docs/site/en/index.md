@@ -19,9 +19,9 @@ validates its own work.
 The fastest way to understand SKRAFT is to follow **one single example** from
 idea to delivered code:
 
-➡️ **[The running example: a Starbucks order end to end]({{ "/en/pipeline/fil-rouge" | relative_url }})**
+➡️ **[The running example: a Starbucks order end to end]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }})**
 
-Then install the plugin and run the pipeline: [Getting started]({{ "/en/getting-started" | relative_url }}).
+Then install the plugin and run the pipeline: [Getting started]({{ "/en/tutorials/getting-started" | relative_url }}).
 
 ## How to read this handbook
 
@@ -30,17 +30,17 @@ what you are trying to do:
 
 | Door | For… | Start with |
 | --- | --- | --- |
-| **Learn** | following a guided path | [The running example]({{ "/en/pipeline/fil-rouge" | relative_url }}), [Getting started]({{ "/en/getting-started" | relative_url }}) |
-| **Understand** | knowing *why* it is built this way | [The pipeline]({{ "/en/pipeline/" | relative_url }}), [Review before review]({{ "/en/why-review-before-review" | relative_url }}) |
-| **Look up** | finding a precise fact | [Agents]({{ "/en/reference/agents/" | relative_url }}), [Gates]({{ "/en/catalogue/gates" | relative_url }}), [Patterns]({{ "/en/catalogue/patterns" | relative_url }}) |
-| **Go deeper** | digging into an approach | [Outside-In TDD]({{ "/en/deep-dive/outside-in-tdd" | relative_url }}), [Walking Skeleton]({{ "/en/deep-dive/walking-skeleton" | relative_url }}) |
+| **Learn** | following a guided path | [The running example]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }}), [Getting started]({{ "/en/tutorials/getting-started" | relative_url }}) |
+| **Understand** | knowing *why* it is built this way | [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}), [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}) |
+| **Look up** | finding a precise fact | [Agents]({{ "/en/reference/agents/" | relative_url }}), [Gates]({{ "/en/reference/gates" | relative_url }}), [Patterns]({{ "/en/reference/patterns" | relative_url }}) |
+| **Go deeper** | digging into an approach | [Outside-In TDD]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }}), [Walking Skeleton]({{ "/en/explanation/deep-dive/walking-skeleton" | relative_url }}) |
 
 ## Where to go by role
 
-- **Executive** — why assisted review lowers time-to-delivery: [For executives]({{ "/en/for-executives" | relative_url }}).
-- **Developer** — the pipeline phase by phase and the agent team: [The pipeline]({{ "/en/pipeline/" | relative_url }}), [The team]({{ "/en/pipeline/team" | relative_url }}).
-- **Architect** — decisions and boundaries: [Architecture]({{ "/en/architecture" | relative_url }}), [Clean Architecture]({{ "/en/clean-architecture" | relative_url }}).
-- **Coming from HVE?** — the continuity (RPI, `state.json`, BRD/PRD upstream): [HVE → SKRAFT]({{ "/en/hve-vs-skraft" | relative_url }}).
+- **Executive** — why assisted review lowers time-to-delivery: [For executives]({{ "/en/explanation/for-executives" | relative_url }}).
+- **Developer** — the pipeline phase by phase and the agent team: [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}), [The team]({{ "/en/explanation/pipeline/team" | relative_url }}).
+- **Architect** — decisions and boundaries: [Architecture]({{ "/en/explanation/architecture" | relative_url }}), [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}).
+- **Coming from HVE?** — the continuity (RPI, `state.json`, BRD/PRD upstream): [HVE → SKRAFT]({{ "/en/explanation/hve-vs-skraft" | relative_url }}).
 
 ## The pipeline in one picture
 
@@ -60,4 +60,4 @@ graph LR
 ```
 
 Five phases, one agent and one reviewer per phase, on the shared
-[HVE-Core]({{ "/en/hve-core" | relative_url }}) substrate.
+[HVE-Core]({{ "/en/explanation/hve-core" | relative_url }}) substrate.

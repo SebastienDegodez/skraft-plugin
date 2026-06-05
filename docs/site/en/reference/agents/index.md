@@ -25,6 +25,6 @@ moves on to the next phase.
 
 ## See also
 
-- [Gates crossed per phase](../../catalogue/gates.html)
-- [The adversarial review lenses](../../catalogue/lens.html)
-- [The pipeline overview](../../pipeline/)
+- [Gates crossed per phase]({{ "/en/reference/gates" | relative_url }})
+- [The adversarial review lenses]({{ "/en/reference/lens" | relative_url }})
+- [The pipeline overview]({{ "/en/pipeline" | relative_url }})

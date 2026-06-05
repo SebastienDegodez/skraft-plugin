@@ -47,7 +47,7 @@ graph TB
 - **Tests avant code** — Le cycle commence par les tests d'acceptation
 - **Retry borné** — Le nombre de cycles engineer → reviewer est limité
 - **CQS** — L'engineer écrit (commande), le reviewer lit (query)
-- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -71,6 +71,6 @@ L'Outside-In TDD commence par le test d'acceptation (le comportement observable)
 
 - [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Agent exécuteur
 - [software-engineer-reviewer]({{ "/fr/reference/agents/software-engineer-reviewer" | relative_url }}) — Agent reviewer
-- [Pipeline DELIVER]({{ "/fr/pipeline/deliver" | relative_url }}) — Description de la phase
+- [Pipeline DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — Description de la phase
 - [outside-in-tdd]({{ "/fr/reference/skills/outside-in-tdd" | relative_url }}) — Skill TDD
 - [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Skill cycle TDD

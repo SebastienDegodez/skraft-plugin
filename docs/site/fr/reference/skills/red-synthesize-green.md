@@ -31,7 +31,7 @@ persona: tech-lead
 - **RED obligatoire** — On n'écrit du code que si un test échoue
 - **GREEN minimal** — L'implémentation la plus simple qui fait passer le test
 - **REFACTOR sans régression** — Le refactoring ne casse aucun test existant
-- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

@@ -24,5 +24,5 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 
 ## See also
 
-- [Architecture patterns](../../catalogue/patterns.html)
-- [The Outside-In TDD deep dive](../../deep-dive/outside-in-tdd.html)
+- [Architecture patterns]({{ "/en/reference/patterns" | relative_url }})
+- [The Outside-In TDD deep dive]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }})

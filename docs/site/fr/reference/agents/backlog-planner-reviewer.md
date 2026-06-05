@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Lecture seule (CQS)** — Ne modifie jamais les artefacts qu'il revoit
 - **Verdict structuré** — Approve ou reject, pas d'état intermédiaire
-- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -49,5 +49,5 @@ Cette séparation force le planner à produire des stories complètes dès le pr
 ## Voir aussi
 
 - [backlog-planner]({{ "/fr/reference/agents/backlog-planner" | relative_url }}) — Agent exécuteur associé
-- [Pipeline DISCUSS]({{ "/fr/pipeline/discuss" | relative_url }}) — Description de la phase
-- [Concepts fondamentaux — CQS]({{ "/fr/concepts" | relative_url }}) — Principe sous-jacent
+- [Pipeline DISCUSS]({{ "/fr/explanation/pipeline/discuss" | relative_url }}) — Description de la phase
+- [Concepts fondamentaux — CQS]({{ "/fr/explanation/concepts" | relative_url }}) — Principe sous-jacent

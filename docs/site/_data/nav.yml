@@ -9,19 +9,19 @@
 # La marque "SKRAFT" et le toggle de langue sont rendus en dur par le layout.
 
 # --- Le handbook (entree dans le livre) ---------------------------------
-- path_fr: "/fr/pipeline/"
-  path_en: "/en/pipeline/"
+- path_fr: "/fr/explanation/pipeline/"
+  path_en: "/en/explanation/pipeline/"
   title_fr: "Le handbook"
   title_en: "The handbook"
 
 # --- Porte decideurs ----------------------------------------------------
-- path_fr: "/fr/for-executives"
-  path_en: "/en/for-executives"
+- path_fr: "/fr/explanation/for-executives"
+  path_en: "/en/explanation/for-executives"
   title_fr: "Pour décideurs"
   title_en: "For executives"
 
 # --- Porte praticien ----------------------------------------------------
-- path_fr: "/fr/getting-started"
-  path_en: "/en/getting-started"
+- path_fr: "/fr/tutorials/getting-started"
+  path_en: "/en/tutorials/getting-started"
   title_fr: "Démarrer"
   title_en: "Get started"

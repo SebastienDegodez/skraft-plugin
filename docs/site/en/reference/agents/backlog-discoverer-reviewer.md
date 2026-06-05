@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Read-only (CQS)** — Never modifies the artifacts it reviews
 - **Structured verdict** — Approve or reject, no intermediate state
-- See [Customisation]({{ "/en/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -49,5 +49,5 @@ The strict separation between executor and reviewer prevents conflicts of intere
 ## See also
 
 - [backlog-discoverer]({{ "/en/reference/agents/backlog-discoverer" | relative_url }}) — Associated executor agent
-- [Pipeline DISCOVER]({{ "/en/pipeline/discover" | relative_url }}) — Phase description
-- [Core concepts — CQS]({{ "/en/concepts" | relative_url }}) — Underlying principle
+- [Pipeline DISCOVER]({{ "/en/explanation/pipeline/discover" | relative_url }}) — Phase description
+- [Core concepts — CQS]({{ "/en/explanation/concepts" | relative_url }}) — Underlying principle

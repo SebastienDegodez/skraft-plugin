@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Lecture seule (CQS)** — Ne modifie jamais les artefacts qu'il revoit
 - **Verdict structuré** — Approve ou reject, pas d'état intermédiaire
-- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -50,5 +50,5 @@ La revue porte sur la couverture métier (tous les cas sont-ils couverts ?) et l
 ## Voir aussi
 
 - [acceptance-designer]({{ "/fr/reference/agents/acceptance-designer" | relative_url }}) — Agent exécuteur associé
-- [Pipeline DISTILL]({{ "/fr/pipeline/distill" | relative_url }}) — Description de la phase
-- [Concepts fondamentaux — CQS]({{ "/fr/concepts" | relative_url }}) — Principe sous-jacent
+- [Pipeline DISTILL]({{ "/fr/explanation/pipeline/distill" | relative_url }}) — Description de la phase
+- [Concepts fondamentaux — CQS]({{ "/fr/explanation/concepts" | relative_url }}) — Principe sous-jacent

@@ -31,7 +31,7 @@ persona: tech-lead
 - **Ordre des phases** — DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER, jamais d'inversion
 - **CQS** — L'orchestrateur dispatche des commandes mais n'écrit jamais d'artefacts directement ; il lit `state.json` pour décider de la prochaine action
 - **Retry borné** — Chaque cycle exécuteur → reviewer a un nombre maximal de tentatives
-- Voir [Customisation]({{ "/fr/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 
@@ -49,10 +49,10 @@ Le choix d'un point d'entrée unique reflète le principe pragmatique de modular
 
 - Nombre de retries par phase (L2)
 - Vocabulaire des messages de dispatch (L1)
-- Ajout de phases intermédiaires (L3, avec précaution — voir [Customisation]({{ "/fr/customisation" | relative_url }}))
+- Ajout de phases intermédiaires (L3, avec précaution — voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}))
 
 ## Voir aussi
 
-- [Architecture]({{ "/fr/architecture" | relative_url }}) — Vue CQS du pipeline
-- [Pipeline]({{ "/fr/pipeline/" | relative_url }}) — Description de chaque phase
-- [Concepts fondamentaux]({{ "/fr/concepts" | relative_url }}) — CQS, CQRS, Walking Skeleton
+- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — Vue CQS du pipeline
+- [Pipeline]({{ "/fr/explanation/pipeline/" | relative_url }}) — Description de chaque phase
+- [Concepts fondamentaux]({{ "/fr/explanation/concepts" | relative_url }}) — CQS, CQRS, Walking Skeleton
