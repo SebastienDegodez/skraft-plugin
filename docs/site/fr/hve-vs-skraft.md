@@ -11,7 +11,7 @@ description: "Comment SKRAFT prolonge HVE en remplaçant le workflow RPI par un 
 
 ## Pourquoi ce passage ?
 
-HVE (High-Value Engineering) fournit un workflow RPI (*Refine → Plan → Implement*) efficace pour les développeurs travaillant en solo avec un assistant IA. Ce workflow suppose que la revue de qualité reste humaine et manuelle.
+HVE (Hypervelocity Engineering) fournit un workflow RPI (*Research → Plan → Implement*) efficace pour les développeurs travaillant en solo avec un assistant IA. Ce workflow suppose que la revue de qualité reste humaine et manuelle.
 
 SKRAFT prend le relais quand vous souhaitez :
 - **automatiser la revue adverse** avant qu'un humain intervienne,
@@ -21,38 +21,29 @@ SKRAFT prend le relais quand vous souhaitez :
 ## Le pipeline SKRAFT en 5 phases
 
 ```mermaid
-flowchart LR
-    subgraph DISCOVER["DISCOVER"]
-        BD[backlog-discoverer] -->|verdict| BDR[backlog-discoverer-reviewer]
-    end
-    subgraph DISCUSS["DISCUSS"]
-        BP[backlog-planner] -->|verdict| BPR[backlog-planner-reviewer]
-    end
-    subgraph DESIGN["DESIGN"]
-        SA[solution-architect] -->|verdict| SAR[solution-architect-reviewer]
-    end
-    subgraph DISTILL["DISTILL"]
-        AD[acceptance-designer] -->|verdict| ADR[acceptance-designer-reviewer]
-    end
-    subgraph DELIVER["DELIVER"]
-        SE[software-engineer] -->|verdict| SER[software-engineer-reviewer]
-    end
-    DISCOVER -->|G1| DISCUSS
-    DISCUSS  -->|G2| DESIGN
-    DESIGN   -->|G3| DISTILL
-    DISTILL  -->|G4| DELIVER
-    DELIVER  -->|G5| PR[Pull Request humaine]
+graph LR
+    D[DISCOVER] -->|rapport de triage| DI[DISCUSS]
+    DI -->|story INVEST| DE[DESIGN]
+    DE -->|ADR + modèle d'événements| DIS[DISTILL]
+    DIS -->|scénarios Gherkin| DEL[DELIVER]
+    DEL -->|code + évidence| PR[Pull Request]
+    style D fill:#1a3a2a,stroke:#4ed58a
+    style DI fill:#1a3a2a,stroke:#4ed58a
+    style DE fill:#1a3a2a,stroke:#4ed58a
+    style DIS fill:#1a3a2a,stroke:#4ed58a
+    style DEL fill:#1a3a2a,stroke:#4ed58a
+    style PR fill:#102016,stroke:#6f8478
 ```
 
-| Phase | Agent exécuteur | Reviewer indépendant | Gate de sortie |
-|-------|----------------|----------------------|----------------|
-| DISCOVER | `backlog-discoverer` | `backlog-discoverer-reviewer` | G1 |
-| DISCUSS | `backlog-planner` | `backlog-planner-reviewer` | G2 |
-| DESIGN | `solution-architect` | `solution-architect-reviewer` | G3 |
-| DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` | G4 |
-| DELIVER | `software-engineer` | `software-engineer-reviewer` | G5 |
+| Phase | Agent exécuteur | Reviewer indépendant | Gates franchies |
+|-------|----------------|----------------------|-----------------|
+| DISCOVER | `backlog-discoverer` | `backlog-discoverer-reviewer` | G1–G6 |
+| DISCUSS | `backlog-planner` | `backlog-planner-reviewer` | G1–G8 |
+| DESIGN | `solution-architect` | `solution-architect-reviewer` | G1–G15 |
+| DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` | G1–G8 |
+| DELIVER | `software-engineer` | `software-engineer-reviewer` | gates de livraison |
 
-> **Jargon** : un *gate* est un point de contrôle qui bloque la progression si la qualité n'est pas atteinte. Un *reviewer* est un agent en lecture seule qui émet un verdict sans modifier les artefacts (principe CQS).
+> **Jargon** : un *gate* est un point de contrôle qui bloque la progression si la qualité n'est pas atteinte. Un *reviewer* est un agent en lecture seule qui émet un verdict sans modifier les artefacts (principe CQS). Le [détail des 46 gates]({{ "/fr/catalogue/gates" | relative_url }}) est dans le catalogue.
 
 ## HVE vs SKRAFT : tableau comparatif
 
@@ -62,7 +53,7 @@ flowchart LR
 | Revue | Humaine et manuelle | Adverse assistée avant la revue humaine |
 | Traçabilité | Limitée | `state.json`, artefacts, verdicts horodatés |
 | Lentilles | Non | 4 lentilles adverses (architecture, cold-reader, quality-gates, test-integrity) |
-| Gates | Non | 5 gates (G1–G5) avec seuils configurables |
+| Gates | Non | 46 gates réparties par phase, seuils configurables |
 | Passage à l'échelle | Solo / pair | Équipe, backlog complet |
 
 ## Ce qui ne change pas
@@ -74,8 +65,8 @@ SKRAFT **hérite** des principes de HVE :
 
 ## Sources
 
-- Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
-- Martin, R. C., *Clean Architecture*, 2017.
+> « Peer reviews are the single most effective quality practice a software organization can employ. »
+> — Wiegers, K., *Peer Reviews in Software*, 2002.
 
 ## Voir aussi
 
