@@ -161,3 +161,37 @@
   text-transform: uppercase;
   color: var(--color-highlight);
 }
+
+/* ============================================================
+   Doc pager — previous / next (book order)
+   ============================================================ */
+.doc-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--glass-border);
+}
+.doc-pager__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 48%;
+  padding: 0.7rem 1rem;
+  text-decoration: none;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+}
+.doc-pager__link:hover { border-color: var(--color-highlight); }
+.doc-pager__next { text-align: right; margin-left: auto; }
+.doc-pager__dir {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #9fb4a8);
+}
+.doc-pager__title { color: var(--color-highlight); }
