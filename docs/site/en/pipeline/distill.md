@@ -7,14 +7,18 @@ persona: software-engineer
 
 # DISTILL
 
+{% include phase-ribbon.html current="distill" %}
+
 The DISTILL phase transforms architecture decisions into executable specifications.
 
-## Mechanics
+## What enters, what exits
 
 | | |
 |---|---|
-| **Entry trigger** | Architecture decisions (output of DESIGN) |
-| **Output artefact** | Gherkin scenarios + implementation plan |
+| **Comes from** | **DESIGN** — the ADR and the event model |
+| **What enters** | Architecture decisions to specify |
+| **What exits** | Gherkin scenarios + implementation plan |
+| **Goes to** | **DELIVER** — which implements them with TDD |
 | **Responsible agent** | `acceptance-designer` |
 | **Associated reviewer** | `acceptance-designer-reviewer` |
 
@@ -24,6 +28,12 @@ Gherkin scenarios serve as a contract between business and code. The acceptance-
 
 > « Specification by Example bridges the communication gap between business and technology. »
 > — Adzic, G., *Specification by Example*, 2011.
+
+<div class="fil-rouge" markdown="1">
+<span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
+
+The ADR and event model enter. DISTILL writes the **Gherkin scenario**: “Given a cart with a latte / When payment is approved / Then a receipt is issued and loyalty points are credited.” This scenario becomes the contract DELIVER must turn green.
+</div>
 
 ## What the agent produces
 

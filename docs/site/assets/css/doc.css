@@ -105,3 +105,59 @@
   }
   .doc-sidebar.is-open { display: block; }
 }
+
+/* ============================================================
+   Phase ribbon — "vous êtes ici" / "you are here"
+   ============================================================ */
+.phase-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin: 0 0 2rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.phase-ribbon__step {
+  text-decoration: none;
+  color: var(--color-text-muted, #9fb4a8);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.phase-ribbon__step:hover { color: var(--color-highlight); }
+.phase-ribbon__step--active {
+  color: #06120c;
+  background: var(--color-highlight);
+}
+.phase-ribbon__arrow {
+  color: var(--color-text-muted, #6f8478);
+  opacity: 0.7;
+}
+
+/* ============================================================
+   Fil rouge box — running Starbucks example (illustrative)
+   ============================================================ */
+.fil-rouge {
+  margin: 1.5rem 0;
+  padding: 1rem 1.2rem;
+  border-left: 3px solid var(--color-highlight);
+  background: color-mix(in srgb, var(--color-highlight) 8%, transparent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.fil-rouge > :first-child { margin-top: 0; }
+.fil-rouge > :last-child { margin-bottom: 0; }
+.fil-rouge__label {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-highlight);
+}

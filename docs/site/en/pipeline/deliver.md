@@ -7,14 +7,18 @@ persona: software-engineer
 
 # DELIVER
 
+{% include phase-ribbon.html current="deliver" %}
+
 The DELIVER phase implements working code, guided by tests, with empirically verified quality.
 
-## Mechanics
+## What enters, what exits
 
 | | |
 |---|---|
-| **Entry trigger** | BDD scenarios (output of DISTILL) |
-| **Output artefact** | Working code (Outside-In TDD, mutation tested) |
+| **Comes from** | **DISTILL** — the Gherkin scenarios + the plan |
+| **What enters** | Executable specifications to implement |
+| **What exits** | Tested code + quality evidence (mutation, RED→GREEN) |
+| **Goes to** | The **Pull Request** — human review then delivery |
 | **Responsible agent** | `software-engineer` |
 | **Associated reviewer** | `software-engineer-reviewer` |
 
@@ -24,6 +28,12 @@ Code is the only artefact that matters in production. The software-engineer appl
 
 > « We grow working software, guided by tests, from the outside in. »
 > — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
+
+<div class="fil-rouge" markdown="1">
+<span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
+
+The scenario enters. DELIVER implements the total calculation and loyalty crediting in **RED → GREEN** cycles, then a **mutation score** attests that the tests genuinely protect the loyalty rule. The code goes to a Pull Request.
+</div>
 
 ## What the agent produces
 

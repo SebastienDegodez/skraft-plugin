@@ -7,14 +7,18 @@ persona: software-engineer
 
 # DESIGN
 
+{% include phase-ribbon.html current="design" %}
+
 The DESIGN phase translates refined stories into explicit, traceable architecture decisions.
 
-## Mechanics
+## What enters, what exits
 
 | | |
 |---|---|
-| **Entry trigger** | Refined story (output of DISCUSS) |
-| **Output artefact** | ADR + component diagram + Event Model |
+| **Comes from** | **DISCUSS** — the INVEST story + its criteria |
+| **What enters** | Refined story to design |
+| **What exits** | ADR + component diagram + event model |
+| **Goes to** | **DISTILL** — which derives the executable scenarios |
 | **Responsible agent** | `solution-architect` |
 | **Associated reviewer** | `solution-architect-reviewer` |
 
@@ -24,6 +28,12 @@ Without explicit architecture decisions, every developer invents their own struc
 
 > « The model is the backbone of a language used by all team members to describe the system. »
 > — Evans, E., *Domain-Driven Design*, 2003.
+
+<div class="fil-rouge" markdown="1">
+<span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
+
+The ordering story enters. DESIGN produces an **ADR** “delegate payment to an external provider via an anti-corruption layer (ACL)” and an **event model** `PlaceOrder` → `OrderPaid` → `OrderReady`. This model feeds DISTILL.
+</div>
 
 ## What the agent produces
 
