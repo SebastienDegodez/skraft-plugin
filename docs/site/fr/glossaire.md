@@ -5,15 +5,9 @@ title: "Glossaire"
 description: "Chaque terme du craft expliqué simplement : TDD, mutation testing, Object Calisthenics, gate, lentille, et plus."
 ---
 
-> 🚧 GENERATED DRAFT — to be reviewed and completed by a human.
-
 # Glossaire
 
 > Un mot que vous ne comprenez pas ne devrait pas bloquer votre lecture. Ce glossaire explique chaque terme technique en langage courant, sans supposer de formation en software craftsmanship.
-
-<!-- 🚧 À compléter : vérifier et enrichir chaque définition avec des exemples concrets.
-     Ajouter les termes manquants identifiés lors de la rédaction des autres pages.
-     Relier chaque terme aux pages du catalogue qui l'utilisent. -->
 
 ## A
 
@@ -153,4 +147,12 @@ Première itération d'un projet qui traverse toutes les couches de l'architectu
 
 ## Sources
 
-<!-- 🚧 À compléter : ajouter les citations depuis citations.yml. -->
+Les termes de ce glossaire sont définis d'après leurs ouvrages de référence :
+
+- Evans, E. *Domain-Driven Design*, 2003 — DDD, Ubiquitous Language.
+- Martin, R. C. *Clean Architecture*, 2017 — Clean Architecture, CQS.
+- Beck, K. *Test-Driven Development by Example*, 2003 — TDD.
+- Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009 — Outside-In TDD, Walking Skeleton.
+- Wiegers, K. *Peer Reviews in Software*, 2002 — revue, gate.
+
+La bibliographie complète est sur la page [Citations]({{ "/fr/citations" | relative_url }}).

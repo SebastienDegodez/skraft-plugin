@@ -147,8 +147,12 @@ The first iteration of a project that cuts through all architecture layers end t
 
 ## Sources
 
-- Beck, K., *Test-Driven Development by Example*, 2003.
-- Evans, E., *Domain-Driven Design*, 2003.
-- Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
-- Martin, R. C., *Clean Architecture*, 2017.
-- Adzic, G., *Specification by Example*, 2011.
+The terms in this glossary are defined from their reference works:
+
+- Evans, E. *Domain-Driven Design*, 2003 — DDD, Ubiquitous Language.
+- Martin, R. C. *Clean Architecture*, 2017 — Clean Architecture, CQS.
+- Beck, K. *Test-Driven Development by Example*, 2003 — TDD.
+- Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009 — Outside-In TDD, Walking Skeleton.
+- Wiegers, K. *Peer Reviews in Software*, 2002 — review, gate.
+
+The full bibliography is on the [Citations]({{ "/en/citations" | relative_url }}) page.

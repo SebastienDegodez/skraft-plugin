@@ -61,12 +61,29 @@ Each lens is independent and covers a different angle:
 
 SKRAFT does not replace human judgment. It filters noise so the human reviewer can focus on what really matters: business relevance, non-obvious design choices, user experience.
 
-The principle mirrors pre-trial proceedings in law: pre-screening eliminates groundless arguments so the final decision-maker handles only substantive questions.
+## Why it works
+
+Two well-established software-engineering observations ground this approach.
+
+First, **the earlier a defect is found, the cheaper it is to fix**: a problem caught at review is far less costly than the same problem caught after merge. AI-assisted adversarial review shifts detection left, before the human even looks.
+
+> « Peer reviews are the single most effective quality practice a software organization can employ. »
+> — Wiegers, K., *Peer Reviews in Software*, 2002.
+
+Second, **speed and stability are not a trade-off**: the highest-performing teams ship often *and* break rarely, because they automate quality checks instead of deferring them to a late manual review.
+
+> « High performers understand that they don't have to trade speed for stability or vice versa. »
+> — Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
+
+SKRAFT materialises both principles: explicit gates, checked by an independent reviewer, that move defect detection upstream of human review.
 
 ## Sources
 
-- Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
-- Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
+> « Peer reviews are the single most effective quality practice a software organization can employ. »
+> — Wiegers, K., *Peer Reviews in Software*, 2002.
+
+> « High performers understand that they don't have to trade speed for stability or vice versa. »
+> — Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
 
 ## See also
 

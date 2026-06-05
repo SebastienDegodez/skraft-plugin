@@ -71,19 +71,17 @@ Exécutez un cycle complet du pipeline avec votre nouvel agent pour vérifier qu
 
 ## ⚠️ Risques de réduction des contrôles
 
-Certaines customisations réduisent les contrôles intégrés de SKRAFT. Ce n'est pas interdit, mais c'est une décision consciente qui doit être prise en connaissance de cause. Cette section identifie les principales zones de fragilisation et leurs conséquences concrètes.
-
 > **Principe** : chaque contrôle supprimé est un angle mort qui ne sera découvert qu'en production — là où le coût de correction est le plus élevé (estimé). La décision d'affaiblir un contrôle doit être documentée dans un ADR.
 
 ### Supprimer ou affaiblir un gate
 
-Chaque gate (G1–G5) protège une invariant précis. Supprimer un gate signifie que la phase suivante démarrera sans garantie que les critères de la phase précédente sont remplis.
+Chaque gate protège un invariant précis (voir le [détail des 46 gates]({{ "/fr/catalogue/gates" | relative_url }})). Supprimer un gate signifie que la phase suivante démarrera sans garantie que les critères de la phase précédente sont remplis.
 
 | Action | Risque | Ce qui disparaît |
 |--------|--------|-----------------|
-| Supprimer G1 (DISCOVER) | Stories mal définies en DISCUSS | Vérification du DoR (Definition of Ready) |
-| Supprimer G3 (DESIGN) | Architecture non validée avant les tests | Détection des violations de Clean Architecture |
-| Abaisser le mutation score floor | Tests de surface uniquement | Détection des tests qui ne testent pas vraiment |
+| Affaiblir le DoR en DISCUSS (G7) | Stories mal définies en DESIGN | Vérification du DoR (Definition of Ready) |
+| Supprimer la règle de dépendance en DESIGN (G3) | Architecture non validée avant les tests | Détection des violations de Clean Architecture |
+| Abaisser le seuil de mutation en DELIVER (G6) | Tests de surface uniquement | Détection des tests qui ne testent pas vraiment |
 
 ### Désactiver une lentille de revue
 

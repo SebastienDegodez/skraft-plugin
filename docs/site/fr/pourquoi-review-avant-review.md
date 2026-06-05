@@ -5,8 +5,6 @@ title: "Pourquoi une revue avant la revue ?"
 description: "L'argument central de SKRAFT : la revue adverse assistée filtre les défauts avant que l'humain intervienne, réduisant le rework et le Time-to-Market."
 ---
 
-> 🚧 GENERATED DRAFT — to be reviewed and completed by a human.
-
 # Pourquoi une revue avant la revue ?
 
 > Imaginez un juge qui doit trancher un litige : vous préférez que vos avocats aient échangé leurs arguments par écrit *avant* l'audience, plutôt que de découvrir les failles devant le tribunal. SKRAFT applique ce principe à la revue de code.
@@ -50,15 +48,32 @@ SKRAFT insère une **revue adverse assistée** *avant* que le code atteigne un h
 
 SKRAFT ne remplace pas le jugement humain. Il filtre le bruit pour que le reviewer humain se concentre sur ce qui compte vraiment : la pertinence métier, les choix de conception non évidents, l'expérience utilisateur.
 
-<!-- 🚧 À compléter : arguments qualitatifs supplémentaires à ajouter par un humain,
-     notamment sur des observations tirées de projets réels (sans inventer de métriques). -->
+## Pourquoi ça fonctionne
+
+Deux observations bien établies de l'ingénierie logicielle fondent cette approche.
+
+D'abord, **plus un défaut est détecté tôt, moins il coûte cher à corriger** : un problème trouvé à la revue est bien moins coûteux que le même problème trouvé après la fusion. La revue adverse assistée déplace la détection vers la gauche, avant même l'humain.
+
+> « Peer reviews are the single most effective quality practice a software organization can employ. »
+> — Wiegers, K., *Peer Reviews in Software*, 2002.
+
+Ensuite, **la vitesse et la stabilité ne s'opposent pas** : les équipes les plus performantes livrent souvent *et* cassent rarement, parce qu'elles automatisent les contrôles de qualité au lieu de les reporter sur une revue manuelle tardive.
+
+> « High performers understand that they don't have to trade speed for stability or vice versa. »
+> — Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
+
+SKRAFT matérialise ces deux principes : des gates explicites, vérifiées par un reviewer indépendant, qui déplacent la détection des défauts en amont de la revue humaine.
 
 ## Sources
 
-<!-- 🚧 À compléter : ajouter les citations depuis citations.yml. -->
+> « Peer reviews are the single most effective quality practice a software organization can employ. »
+> — Wiegers, K., *Peer Reviews in Software*, 2002.
+
+> « High performers understand that they don't have to trade speed for stability or vice versa. »
+> — Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
 
 ## Voir aussi
 
-- [Pour les décideurs]({{ "/fr/pour-decideurs" | relative_url }}) — projection du TTM pour les décideurs
+- [Pour les décideurs]({{ "/fr/for-executives" | relative_url }}) — projection du TTM pour les décideurs
 - [Les lentilles]({{ "/fr/catalogue/lens" | relative_url }}) — les 4 lentilles de revue adverse
 - [Le pipeline]({{ "/fr/pipeline/" | relative_url }}) — les 5 phases du cycle de vie

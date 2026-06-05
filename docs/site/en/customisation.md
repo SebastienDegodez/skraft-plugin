@@ -71,19 +71,17 @@ Run a complete pipeline cycle with your new agent to verify that:
 
 ## ⚠️ Risks of reducing controls
 
-Some customisations reduce SKRAFT's built-in controls. This is not forbidden, but it is a conscious decision that must be made with full awareness of the consequences. This section identifies the main fragility zones and their concrete effects.
-
 > **Principle**: every control removed is a blind spot that will only surface in production — where the cost of correction is highest (estimated). The decision to weaken a control should be recorded in an ADR.
 
 ### Removing or weakening a gate
 
-Each gate (G1–G5) protects a specific invariant. Removing a gate means the next phase will start without guaranteeing that the previous phase's criteria are met.
+Each gate protects a specific invariant (see the [detail of the 46 gates]({{ "/en/catalogue/gates" | relative_url }})). Removing a gate means the next phase will start without guaranteeing that the previous phase's criteria are met.
 
 | Action | Risk | What disappears |
 |--------|------|-----------------|
-| Remove G1 (DISCOVER) | Poorly-defined stories reach DISCUSS | DoR (Definition of Ready) verification |
-| Remove G3 (DESIGN) | Architecture unvalidated before tests | Detection of Clean Architecture violations |
-| Lower the mutation score floor | Surface-only tests | Detection of tests that do not actually test |
+| Weaken the DoR in DISCUSS (G7) | Poorly-defined stories reach DESIGN | DoR (Definition of Ready) verification |
+| Remove the dependency rule in DESIGN (G3) | Architecture unvalidated before tests | Detection of Clean Architecture violations |
+| Lower the mutation threshold in DELIVER (G6) | Surface-only tests | Detection of tests that do not actually test |
 
 ### Disabling a review lens
 
