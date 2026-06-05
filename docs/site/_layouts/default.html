@@ -9,28 +9,17 @@
     href="https://fonts.bunny.net/css?family=Lato:400,700,900|Fira+Code:400,700&display=swap"
     rel="stylesheet"
   />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+  />
   <link rel="stylesheet" href="{{ '/assets/css/design-tokens.css' | relative_url }}" />
   <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}" />
 </head>
 <body>
 
   <!-- NAVIGATION -->
-  <nav class="site-nav" aria-label="Navigation">
-    <a class="site-nav__brand" href="{{ '/' | relative_url }}">SKRAFT</a>
-    {% for item in site.data.nav %}
-      {% if page.lang == 'en' %}
-        {% assign nav_path = item.path_en %}
-        {% assign nav_title = item.title_en %}
-      {% else %}
-        {% assign nav_path = item.path_fr %}
-        {% assign nav_title = item.title_fr %}
-      {% endif %}
-      <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>{{ nav_title }}</a>
-    {% endfor %}
-    <span class="site-nav__lang">
-      {% include lang-toggle.html %}
-    </span>
-  </nav>
+  {% include site-nav.html %}
 
   <!-- CONTENT -->
   <div class="content">

@@ -5,9 +5,8 @@ const BASE = process.env.BASE_URL || 'http://localhost:4000/skraft-plugin';
 test.describe('SKRAFT handbook navigation', () => {
   test('top menu reduced to 3 doors', async ({ page }) => {
     await page.goto(`${BASE}/fr/explanation/pipeline/`);
-    // Brand + lang toggle are excluded: only the 3 handbook doors are direct
-    // <a> children of .site-nav that are not the brand.
-    const doors = page.locator('.site-nav > a:not(.site-nav__brand)');
+    // Brand and lang toggle are excluded: the 3 handbook doors live in .site-nav__links.
+    const doors = page.locator('.site-nav__links > a');
     await expect(doors).toHaveCount(3);
     await expect(doors.nth(0)).toContainText('handbook');
   });

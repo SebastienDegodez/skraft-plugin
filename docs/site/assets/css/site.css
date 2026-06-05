@@ -98,26 +98,51 @@ a:hover { opacity: 0.8; text-decoration: underline; }
   box-shadow: 0 8px 28px rgba(4, 12, 18, 0.28);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  flex-wrap: wrap;
 }
 .site-nav__brand {
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 1.05rem;
   font-weight: 900;
   letter-spacing: 1px;
-  color: var(--color-primary);
+  color: var(--color-foreground);
   margin-right: auto;
 }
-.site-nav__brand:hover { opacity: 1; text-decoration: none; }
+.site-nav__brand i { color: var(--color-highlight); }
+.site-nav__brand span { color: var(--color-highlight); }
+.site-nav__brand:hover { opacity: 0.85; text-decoration: none; }
+
+.site-nav__burger {
+  display: none;
+  background: none;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  color: var(--color-foreground);
+  font-size: 1rem;
+  padding: 0.35em 0.6em;
+  cursor: pointer;
+}
+
+.site-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
 .site-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   color: var(--color-dimmed);
-  padding: 0.25em 0.6em;
+  padding: 0.3em 0.7em;
   border-radius: var(--radius);
   transition: color var(--motion-fast), background var(--motion-fast);
   border: 1px solid transparent;
 }
+.site-nav a i { font-size: 0.85em; opacity: 0.9; }
 .site-nav a:hover,
 .site-nav a.active {
   color: var(--color-foreground);
@@ -300,9 +325,29 @@ footer a { color: var(--color-highlight); }
 /* ============================================================
    RESPONSIVE
    ============================================================ */
+@media (max-width: 760px) {
+  .site-nav { padding: 0.5rem 1rem; flex-wrap: wrap; }
+  .site-nav__burger { display: inline-flex; align-items: center; }
+  .site-nav__links {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
+    width: 100%;
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--glass-border);
+  }
+  .site-nav__links.is-open { display: flex; }
+  .site-nav__links a { font-size: 0.85rem; padding: 0.5em 0.7em; }
+  .site-nav__lang {
+    margin: 0.3rem 0 0;
+    padding: 0.5rem 0 0;
+    border-left: none;
+    border-top: 1px solid var(--glass-border);
+  }
+}
 @media (max-width: 600px) {
-  .site-nav { padding: 0.5rem 1rem; gap: 0.3rem; }
-  .site-nav a { font-size: 0.7rem; padding: 0.2em 0.4em; }
   .content { padding: 2rem 1rem 3rem; }
   .page-header { padding: 6rem 1rem 3rem; }
 }

@@ -1,0 +1,45 @@
+{%- comment -%}
+Shared top navigation (inspired by learning-path-copilot): branded logo with
+GitHub icon, responsive burger, icon-prefixed links, language toggle.
+{%- endcomment -%}
+<nav class="site-nav" aria-label="{% if page.lang == 'en' %}Main navigation{% else %}Navigation principale{% endif %}">
+  <a class="site-nav__brand" href="{{ '/' | relative_url }}">
+    <i class="fa-solid fa-cubes-stacked" aria-hidden="true"></i>
+    SK<span>RAFT</span>
+  </a>
+
+  <button class="site-nav__burger" id="navBurger" aria-label="{% if page.lang == 'en' %}Menu{% else %}Menu{% endif %}" aria-expanded="false" aria-controls="navLinks">
+    <i class="fa-solid fa-bars" aria-hidden="true"></i>
+  </button>
+
+  <div class="site-nav__links" id="navLinks">
+    {% for item in site.data.nav %}
+      {% if page.lang == 'en' %}
+        {% assign nav_path = item.path_en %}
+        {% assign nav_title = item.title_en %}
+      {% else %}
+        {% assign nav_path = item.path_fr %}
+        {% assign nav_title = item.title_fr %}
+      {% endif %}
+      <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>
+        {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ nav_title }}
+      </a>
+    {% endfor %}
+    <span class="site-nav__lang">
+      {% include lang-toggle.html %}
+    </span>
+  </div>
+</nav>
+
+<script>
+  (function () {
+    var b = document.getElementById('navBurger');
+    var l = document.getElementById('navLinks');
+    if (b && l) {
+      b.addEventListener('click', function () {
+        var open = l.classList.toggle('is-open');
+        b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+  })();
+</script>

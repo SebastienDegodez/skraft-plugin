@@ -47,8 +47,8 @@ test.describe('SKRAFT docs site', () => {
 
   test('Navigation is reduced to the 3 handbook doors', async ({ page }) => {
     await page.goto(`${BASE}/fr/`);
-    // Top menu = brand + 3 doors + lang toggle (toggle lives in .site-nav__lang).
-    const doors = page.locator('.site-nav > a:not(.site-nav__brand)');
+    // Top menu = 3 doors inside .site-nav__links (brand and lang toggle excluded).
+    const doors = page.locator('.site-nav__links > a');
     await expect(doors).toHaveCount(3);
   });
 

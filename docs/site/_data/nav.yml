@@ -13,15 +13,18 @@
   path_en: "/en/explanation/pipeline/"
   title_fr: "Le handbook"
   title_en: "The handbook"
+  icon: "fa-solid fa-book-open"
 
 # --- Porte decideurs ----------------------------------------------------
 - path_fr: "/fr/explanation/for-executives"
   path_en: "/en/explanation/for-executives"
   title_fr: "Pour décideurs"
   title_en: "For executives"
+  icon: "fa-solid fa-chart-line"
 
 # --- Porte praticien ----------------------------------------------------
 - path_fr: "/fr/tutorials/getting-started"
   path_en: "/en/tutorials/getting-started"
   title_fr: "Démarrer"
   title_en: "Get started"
+  icon: "fa-solid fa-rocket"
