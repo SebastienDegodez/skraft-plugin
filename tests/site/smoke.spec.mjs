@@ -8,19 +8,18 @@ test.describe('SKRAFT docs site', () => {
     await expect(page.locator('h1')).toContainText('SKRAFT');
   });
 
-  test('FR landing presents the phase-by-phase handbook', async ({ page }) => {
+  test('FR landing routes the reader (Diátaxis doors + pipeline)', async ({ page }) => {
     await page.goto(`${BASE}/fr/`);
     const body = page.locator('body');
-    // Guided flow with the long-form phase naming.
+    // Pipeline phases shown in the map.
     await expect(body).toContainText('DISCOVER');
     await expect(body).toContainText('DISCUSS');
     await expect(body).toContainText('DESIGN');
     await expect(body).toContainText('DISTILL');
     await expect(body).toContainText('DELIVER');
-    // Handbook context sections.
-    await expect(body).toContainText('Clean Architecture');
-    await expect(body).toContainText('Object Calisthenics');
-    await expect(body).toContainText('ADR');
+    // Diátaxis routing doors + running example entry point.
+    await expect(body).toContainText('Diátaxis');
+    await expect(body).toContainText('fil rouge');
   });
 
   test('EN landing loads', async ({ page }) => {

@@ -190,6 +190,14 @@ parts:
         en: "en/pipeline/fil-rouge.md"
         purpose_fr: "Tutoriel : une commande Starbucks suivie de l'idee au code a travers les 5 phases (exemple illustratif)."
         purpose_en: "Tutorial: a Starbucks order followed from idea to code across the 5 phases (illustrative example)."
+      - id: team
+        type: editorial
+        label_fr: "L'équipe (le relais)"
+        label_en: "The team (relay)"
+        fr: "fr/pipeline/team.md"
+        en: "en/pipeline/team.md"
+        purpose_fr: "Les 5 agents executeurs, leurs reviewers et l'orchestrateur : qui fait quoi et comment chacun passe le relais."
+        purpose_en: "The 5 executor agents, their reviewers and the orchestrator: who does what and how each hands off."
       - id: discover
         type: derived
         label_fr: "DISCOVER"
