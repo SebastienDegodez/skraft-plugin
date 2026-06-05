@@ -3,6 +3,12 @@ import { test, expect } from '@playwright/test';
 const BASE = process.env.BASE_URL || 'http://localhost:4000/skraft-plugin';
 
 test.describe('SKRAFT docs site', () => {
+  test('Root splash offers both languages', async ({ page }) => {
+    await page.goto(`${BASE}/`);
+    await expect(page.locator('.splash__door[lang="fr"]')).toHaveAttribute('href', /\/fr\/$/);
+    await expect(page.locator('.splash__door[lang="en"]')).toHaveAttribute('href', /\/en\/$/);
+  });
+
   test('FR landing loads', async ({ page }) => {
     await page.goto(`${BASE}/fr/`);
     await expect(page.locator('h1')).toContainText('SKRAFT');
