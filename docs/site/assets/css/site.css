@@ -387,6 +387,15 @@ footer a { color: var(--color-highlight); }
   max-width: 880px;
   text-align: center;
 }
+.splash__logo {
+  display: block;
+  width: min(540px, 82%);
+  height: auto;
+  margin: 0 auto 1.8rem;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 18px 48px rgba(4, 12, 18, 0.45);
+}
 .splash__eyebrow {
   font-family: var(--font-sans);
   font-size: 0.78rem;
