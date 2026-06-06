@@ -158,6 +158,50 @@ a:hover { opacity: 0.8; text-decoration: underline; }
   border-left: 1px solid var(--glass-border);
 }
 
+/* Dropdown (shared portfolio nav) */
+.nav-dropdown { position: relative; }
+.nav-dropdown__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--color-dimmed);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 0.3em 0.7em;
+  cursor: pointer;
+  transition: color var(--motion-fast), background var(--motion-fast);
+}
+.nav-dropdown__trigger:hover,
+.nav-dropdown.is-open .nav-dropdown__trigger {
+  color: var(--color-foreground);
+  background: rgba(139, 229, 177, 0.16);
+  border-color: rgba(139, 229, 177, 0.28);
+}
+.nav-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  min-width: 200px;
+  display: none;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 32px rgba(4, 12, 18, 0.4);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  z-index: 120;
+}
+.nav-dropdown.is-open .nav-dropdown__menu { display: flex; }
+.nav-dropdown__menu a { white-space: nowrap; }
+
 /* ============================================================
    PAGE HEADER
    ============================================================ */
@@ -340,6 +384,16 @@ footer a { color: var(--color-highlight); }
   }
   .site-nav__links.is-open { display: flex; }
   .site-nav__links a { font-size: 0.85rem; padding: 0.5em 0.7em; }
+  .nav-dropdown { width: 100%; }
+  .nav-dropdown__trigger { width: 100%; justify-content: space-between; font-size: 0.85rem; }
+  .nav-dropdown__menu {
+    position: static;
+    min-width: 0;
+    padding: 0.2rem 0 0 0.8rem;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
   .site-nav__lang {
     margin: 0.3rem 0 0;
     padding: 0.5rem 0 0;

@@ -14,16 +14,40 @@ GitHub icon, responsive burger, icon-prefixed links, language toggle.
 
   <div class="site-nav__links" id="navLinks">
     {% for item in site.data.nav %}
-      {% if page.lang == 'en' %}
-        {% assign nav_path = item.path_en %}
-        {% assign nav_title = item.title_en %}
+      {% if item.dropdown %}
+      <div class="nav-dropdown" data-dropdown>
+        <button class="nav-dropdown__trigger" type="button">
+          {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ item.label }}
+          <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="nav-dropdown__menu">
+          {% for sub in item.items %}
+          <a href="{{ sub.url | relative_url }}"{% if page.url == sub.url %} class="active" aria-current="page"{% endif %}>
+            {% if sub.icon %}<i class="{{ sub.icon }}" aria-hidden="true"></i> {% endif %}{{ sub.label }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
       {% else %}
-        {% assign nav_path = item.path_fr %}
-        {% assign nav_title = item.title_fr %}
+        {%- comment -%}
+        Two supported shapes: the bilingual handbook door (path_fr/title_fr) and
+        the shared portfolio entry fetched at deploy time (url/label).
+        {%- endcomment -%}
+        {% assign nav_path = item.url %}
+        {% assign nav_title = item.label %}
+        {% if item.path_fr %}
+          {% if page.lang == 'en' %}
+            {% assign nav_path = item.path_en %}
+            {% assign nav_title = item.title_en %}
+          {% else %}
+            {% assign nav_path = item.path_fr %}
+            {% assign nav_title = item.title_fr %}
+          {% endif %}
+        {% endif %}
+        <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>
+          {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ nav_title }}
+        </a>
       {% endif %}
-      <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>
-        {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ nav_title }}
-      </a>
     {% endfor %}
     <span class="site-nav__lang">
       {% include lang-toggle.html %}
@@ -41,5 +65,18 @@ GitHub icon, responsive burger, icon-prefixed links, language toggle.
         b.setAttribute('aria-expanded', open ? 'true' : 'false');
       });
     }
+    var dropdowns = document.querySelectorAll('[data-dropdown]');
+    dropdowns.forEach(function (dd) {
+      var trigger = dd.querySelector('.nav-dropdown__trigger');
+      if (!trigger) return;
+      trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        dropdowns.forEach(function (o) { if (o !== dd) o.classList.remove('is-open'); });
+        dd.classList.toggle('is-open');
+      });
+    });
+    document.addEventListener('click', function () {
+      dropdowns.forEach(function (d) { d.classList.remove('is-open'); });
+    });
   })();
 </script>

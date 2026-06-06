@@ -9,5 +9,6 @@ node_modules/
 package-lock.json
 test-results/
 playwright-report/
+/_site/
 docs/site/_site/
 docs/site/.jekyll-cache/
