@@ -26,18 +26,18 @@
   <!-- DOC LAYOUT : sidebar (parties du livre) + contenu -->
   <div class="doc-layout">
 
-    <button class="doc-sidebar-toggle" aria-controls="doc-sidebar" aria-expanded="false">
-      {% if page.lang == 'en' %}Contents{% else %}Sommaire{% endif %}
+    <button class="doc-sidebar-toggle" aria-controls="doc-sidebar" aria-expanded="false" aria-label="{% if page.lang == 'en' %}Contents{% else %}Sommaire{% endif %}">
+      <i class="fa-solid fa-list" aria-hidden="true"></i>
     </button>
 
-    <aside class="doc-sidebar glass-surface" id="doc-sidebar" aria-label="{% if page.lang == 'en' %}Book navigation{% else %}Navigation du livre{% endif %}">
+    <aside class="doc-sidebar" id="doc-sidebar" aria-label="{% if page.lang == 'en' %}Book navigation{% else %}Navigation du livre{% endif %}">
       {% for part in site.data.book.parts %}
         {% if page.lang == 'en' %}
           {% assign part_title = part.title_en %}
         {% else %}
           {% assign part_title = part.title_fr %}
         {% endif %}
-        <h3 class="doc-sidebar__group">{{ part_title }}</h3>
+        <h3 class="doc-sidebar__group">{% if part.icon %}<i class="{{ part.icon }}" aria-hidden="true"></i> {% endif %}{{ part_title }}</h3>
         <ul class="doc-sidebar__list">
           {% for p in part.pages %}
             {% if page.lang == 'en' %}

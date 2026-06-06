@@ -127,6 +127,7 @@ sources:
 parts:
   # ----------------------------------------------------------------- ACCUEIL
   - id: accueil
+    icon: "fa-solid fa-house"
     title_fr: "Accueil"
     title_en: "Home"
     intro_fr: "Le point d'entree du handbook : ce que SKRAFT apporte et par ou commencer."
@@ -143,6 +144,7 @@ parts:
 
   # --------------------------------------------------------------- TUTORIELS
   - id: tutorials
+    icon: "fa-solid fa-graduation-cap"
     title_fr: "Tutoriels — apprendre"
     title_en: "Tutorials — learn"
     intro_fr: "Des parcours guides ou vous executez : installer, lancer, customiser."
@@ -176,6 +178,7 @@ parts:
 
   # -------------------------------------------------------------- EXPLICATION
   - id: explanation
+    icon: "fa-solid fa-lightbulb"
     title_fr: "Explication — comprendre"
     title_en: "Explanation — understand"
     intro_fr: "Le pourquoi : le pipeline et ses 5 phases (gates exactes comprises), la narration fil rouge, l'architecture et les principes."
@@ -345,6 +348,7 @@ parts:
 
   # ---------------------------------------------------------------- REFERENCE
   - id: reference
+    icon: "fa-solid fa-book"
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
     intro_fr: "Tout le factuel : agents, skills, les 46 gates, lentilles, patterns, citations, glossaire, changelog."
