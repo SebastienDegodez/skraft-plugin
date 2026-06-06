@@ -24,12 +24,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch shared nav from central site
-        run: |
-          curl -sSf https://raw.githubusercontent.com/SebastienDegodez/SebastienDegodez.github.io/main/_data/nav.yml \
-            -o docs/site/_data/nav.yml \
-          || echo "Central nav fetch failed — keeping committed docs/site/_data/nav.yml"
-
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:

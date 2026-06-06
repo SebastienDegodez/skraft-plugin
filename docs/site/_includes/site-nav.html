@@ -22,8 +22,7 @@ GitHub icon, responsive burger, icon-prefixed links, language toggle.
         </button>
         <div class="nav-dropdown__menu">
           {% for sub in item.items %}
-          {%- comment -%} Portfolio links are root-absolute (e.g. /brag.html): resolve against the
-          domain root via site.url, NOT the /skraft-plugin baseurl. {%- endcomment -%}
+          {%- comment -%} Portfolio root-absolute links: resolve against the domain root. {%- endcomment -%}
           <a href="{{ sub.url | prepend: site.url }}">
             {% if sub.icon %}<i class="{{ sub.icon }}" aria-hidden="true"></i> {% endif %}{{ sub.label }}
           </a>
@@ -32,18 +31,19 @@ GitHub icon, responsive burger, icon-prefixed links, language toggle.
       </div>
       {% else %}
         {%- comment -%}
-        Two supported shapes: the bilingual handbook door (path_fr/title_fr,
-        baseurl-relative) and the shared portfolio entry fetched at deploy time
-        (url/label, root-absolute against the domain root via site.url).
+        Three supported shapes:
+        1. Bilingual handbook door  — url_fr/url_en + label_fr/label_en (baseurl-relative)
+        2. Portfolio flat link      — url + label (prepend site.url, domain-root-absolute)
+        3. Portfolio dropdown       — handled above
         {%- endcomment -%}
-        {% if item.path_fr %}
-          {% if page.lang == 'en' %}
-            {% assign nav_path = item.path_en %}
-            {% assign nav_title = item.title_en %}
-          {% else %}
-            {% assign nav_path = item.path_fr %}
-            {% assign nav_title = item.title_fr %}
-          {% endif %}
+        {% if item.url_fr %}
+          {%- if page.lang == 'en' -%}
+            {% assign nav_path = item.url_en %}
+            {% assign nav_title = item.label_en %}
+          {%- else -%}
+            {% assign nav_path = item.url_fr %}
+            {% assign nav_title = item.label_fr %}
+          {%- endif -%}
           <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>
             {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ nav_title }}
           </a>

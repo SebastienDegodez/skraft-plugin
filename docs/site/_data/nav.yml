@@ -1,30 +1,25 @@
-# nav.yml — barre de navigation du haut (rendue a plat par les layouts)
-#
-# Modele handbook (aligne sur learning-path-copilot) : on ne garde que les
-# PORTES d'entree. Tout le catalogue (agents, skills, gates, lens, patterns,
-# citations, contribuer, customisation) vit desormais dans la SIDEBAR gauche
-# pilotee par _data/book.yml + _layouts/doc.html — il ne remonte PAS ici.
-#
-# Ordre : handbook -> decideurs -> demarrer.
-# La marque "SKRAFT" et le toggle de langue sont rendus en dur par le layout.
+# nav.yml — barre de navigation du haut
+# Format unifié url/label/icon (compatible site-nav.html).
+# Portes bilingues rendues via item.url_fr / item.url_en + item.label_fr / item.label_en.
+# La marque SKRAFT et le toggle de langue sont rendus en dur par le layout.
 
-# --- Le handbook (entree dans le livre) ---------------------------------
-- path_fr: "/fr/explanation/pipeline/"
-  path_en: "/en/explanation/pipeline/"
-  title_fr: "Le handbook"
-  title_en: "The handbook"
+# --- Le handbook (entrée dans le livre) ---------------------------------
+- label_fr: "Le handbook"
+  label_en: "The handbook"
+  url_fr: "/fr/explanation/pipeline/"
+  url_en: "/en/explanation/pipeline/"
   icon: "fa-solid fa-book-open"
 
-# --- Porte decideurs ----------------------------------------------------
-- path_fr: "/fr/explanation/for-executives"
-  path_en: "/en/explanation/for-executives"
-  title_fr: "Pour décideurs"
-  title_en: "For executives"
+# --- Porte décideurs ----------------------------------------------------
+- label_fr: "Pour décideurs"
+  label_en: "For executives"
+  url_fr: "/fr/explanation/for-executives"
+  url_en: "/en/explanation/for-executives"
   icon: "fa-solid fa-chart-line"
 
 # --- Porte praticien ----------------------------------------------------
-- path_fr: "/fr/tutorials/getting-started"
-  path_en: "/en/tutorials/getting-started"
-  title_fr: "Démarrer"
-  title_en: "Get started"
+- label_fr: "Démarrer"
+  label_en: "Get started"
+  url_fr: "/fr/tutorials/getting-started"
+  url_en: "/en/tutorials/getting-started"
   icon: "fa-solid fa-rocket"
