@@ -22,7 +22,9 @@ GitHub icon, responsive burger, icon-prefixed links, language toggle.
         </button>
         <div class="nav-dropdown__menu">
           {% for sub in item.items %}
-          <a href="{{ sub.url | relative_url }}"{% if page.url == sub.url %} class="active" aria-current="page"{% endif %}>
+          {%- comment -%} Portfolio links are root-absolute (e.g. /brag.html): resolve against the
+          domain root via site.url, NOT the /skraft-plugin baseurl. {%- endcomment -%}
+          <a href="{{ sub.url | prepend: site.url }}">
             {% if sub.icon %}<i class="{{ sub.icon }}" aria-hidden="true"></i> {% endif %}{{ sub.label }}
           </a>
           {% endfor %}
@@ -30,11 +32,10 @@ GitHub icon, responsive burger, icon-prefixed links, language toggle.
       </div>
       {% else %}
         {%- comment -%}
-        Two supported shapes: the bilingual handbook door (path_fr/title_fr) and
-        the shared portfolio entry fetched at deploy time (url/label).
+        Two supported shapes: the bilingual handbook door (path_fr/title_fr,
+        baseurl-relative) and the shared portfolio entry fetched at deploy time
+        (url/label, root-absolute against the domain root via site.url).
         {%- endcomment -%}
-        {% assign nav_path = item.url %}
-        {% assign nav_title = item.label %}
         {% if item.path_fr %}
           {% if page.lang == 'en' %}
             {% assign nav_path = item.path_en %}
@@ -43,10 +44,14 @@ GitHub icon, responsive burger, icon-prefixed links, language toggle.
             {% assign nav_path = item.path_fr %}
             {% assign nav_title = item.title_fr %}
           {% endif %}
+          <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>
+            {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ nav_title }}
+          </a>
+        {% else %}
+          <a href="{{ item.url | prepend: site.url }}">
+            {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ item.label }}
+          </a>
         {% endif %}
-        <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>
-          {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ nav_title }}
-        </a>
       {% endif %}
     {% endfor %}
     <span class="site-nav__lang">
