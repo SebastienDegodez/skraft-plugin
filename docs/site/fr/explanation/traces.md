@@ -29,6 +29,10 @@ un sous-dossier dédié, horodaté au format `YYYY-MM-DD`.
 | DESIGN | Architecture Decision Records | `adrs/ADR-{NNN}-{slug}.md` |
 | DESIGN | Registre de supersession (append-only) | `adrs/supersessions.md` |
 | DESIGN | Contrats de composants | `details/{date}/{slug}-contracts.md` |
+| DESIGN | Matrice de cohérence (gate cross-artefact) | `details/{date}/consistency-matrix-{story}.md` |
+| DESIGN | Plan de supersession (quand des ADR sont supersédés) | `details/{date}/supersession-plan-{story}.md` |
+| DESIGN | Blocker d'escalade humaine | `blockers/{date}/decision-drift-{story}-{NNN}.md` |
+| DESIGN | Résolution du blocker par l'humain (fichier frère) | `blockers/{date}/decision-drift-{story}-{NNN}-resolution.md` |
 | DISTILL | Détails d'implémentation, plan de tests | `details/{date}/{slug}-details.md` |
 | DISTILL | Scénarios Gherkin exécutables | `features/{slug}.feature` |
 | DELIVER | Journal des changements | `changes/{date}/{slug}-changes.md` |

@@ -9,7 +9,7 @@ persona: software-engineer
 
 {% include phase-ribbon.html current="distill" %}
 
-La phase DISTILL transforme les décisions d'architecture en spécifications exécutables.
+La phase DISTILL transforme les décisions d'architecture en spécifications exécutables et crée le test d'acceptation externe qui pilote l'implémentation.
 
 ## Ce qui entre, ce qui sort
 
@@ -24,7 +24,7 @@ La phase DISTILL transforme les décisions d'architecture en spécifications ex�
 
 ## Pourquoi cette phase existe
 
-Les scénarios Gherkin servent de contrat entre le métier et le code. L'acceptance-designer écrit des scénarios Given-When-Then qui capturent le comportement attendu. Le reviewer vérifie que chaque critère d'acceptation est couvert et que les scénarios sont testables.
+Les scénarios Gherkin servent de contrat entre le métier et le code. L'acceptance-designer écrit des scénarios Given-When-Then qui capturent le comportement attendu, puis crée le test d'acceptation externe qui encode les valeurs exactes des critères d'acceptation et échoue RED sur une assertion métier. Le reviewer vérifie que chaque critère d'acceptation est couvert, que les scénarios sont testables, et que le test d'acceptation externe est un encodage RED fidèle du CA (et non un échec de compilation ou de configuration).
 
 > « Specification by Example bridges the communication gap between business and technology. »
 > — Adzic, G., *Specification by Example*, 2011.
@@ -41,6 +41,7 @@ L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherki
 - Matrice de couverture liant chaque critère d'acceptation à un scénario.
 - Plan d'implémentation ordonnant les tests par couche (Domain, Application, Infrastructure, API).
 - Identification des Test Double nécessaires par frontière.
+- **Test d'acceptation externe** (`tests/**/{Feature}AcceptanceTests.cs`) — test de couche Application qui copie les valeurs du CA verbatim depuis le scénario et échoue RED sur une assertion métier. C'est la boucle externe immuable que la phase DELIVER doit rendre GREEN.
 
 ## Les gates franchies ici
 

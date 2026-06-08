@@ -9,7 +9,7 @@ persona: software-engineer
 
 {% include phase-ribbon.html current="distill" %}
 
-The DISTILL phase transforms architecture decisions into executable specifications.
+The DISTILL phase transforms architecture decisions into executable specifications and authors the outer acceptance test that drives the implementation.
 
 ## What enters, what exits
 
@@ -24,7 +24,7 @@ The DISTILL phase transforms architecture decisions into executable specificatio
 
 ## Why this phase exists
 
-Gherkin scenarios serve as a contract between business and code. The acceptance-designer writes Given-When-Then scenarios that capture expected behaviour. The reviewer verifies that every acceptance criterion is covered and that scenarios are testable.
+Gherkin scenarios serve as a contract between business and code. The acceptance-designer writes Given-When-Then scenarios and then authors the outer acceptance test that encodes exact acceptance-criteria values and fails RED on a business assertion. The reviewer verifies that every acceptance criterion is covered, that scenarios are testable, and that the outer acceptance test is a faithful RED encoding of the AC (not a compile or setup failure).
 
 > « Specification by Example bridges the communication gap between business and technology. »
 > — Adzic, G., *Specification by Example*, 2011.
@@ -41,6 +41,7 @@ The ADR and event model enter. DISTILL writes the **Gherkin scenario**: “Given
 - Coverage matrix linking each acceptance criterion to a scenario.
 - Implementation plan ordering tests by layer (Domain, Application, Infrastructure, API).
 - Identification of Test Doubles needed at each boundary.
+- **Outer acceptance test code** (`tests/**/{Feature}AcceptanceTests.cs`) — Application-layer test that copies AC values verbatim from the scenario and fails RED on a business assertion. This is the immutable outer loop for the DELIVER phase.
 
 ## Gates crossed here
 

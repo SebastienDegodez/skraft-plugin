@@ -29,6 +29,10 @@ writes to a dedicated subdirectory, date-stamped in `YYYY-MM-DD` format.
 | DESIGN | Architecture Decision Records | `adrs/ADR-{NNN}-{slug}.md` |
 | DESIGN | Supersession registry (append-only) | `adrs/supersessions.md` |
 | DESIGN | Component contracts | `details/{date}/{slug}-contracts.md` |
+| DESIGN | Consistency matrix (cross-artefact gate) | `details/{date}/consistency-matrix-{story}.md` |
+| DESIGN | Supersession plan (when ADRs are superseded) | `details/{date}/supersession-plan-{story}.md` |
+| DESIGN | Human-escalation blocker | `blockers/{date}/decision-drift-{story}-{NNN}.md` |
+| DESIGN | Human resolution of a blocker (sibling) | `blockers/{date}/decision-drift-{story}-{NNN}-resolution.md` |
 | DISTILL | Implementation details, test plan | `details/{date}/{slug}-details.md` |
 | DISTILL | Executable Gherkin scenarios | `features/{slug}.feature` |
 | DELIVER | Change log | `changes/{date}/{slug}-changes.md` |

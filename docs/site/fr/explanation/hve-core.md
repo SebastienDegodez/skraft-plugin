@@ -35,7 +35,7 @@ L'état persiste en JSON à
     "depthTier": "comprehensive",
     "maxRetriesPerPhase": 2
   },
-  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null }
+  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null, "ssscPlanFile": null }
 }
 ```
 
