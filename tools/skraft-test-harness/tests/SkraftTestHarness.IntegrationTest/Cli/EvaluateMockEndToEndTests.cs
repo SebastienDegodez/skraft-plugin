@@ -37,7 +37,7 @@ public sealed class EvaluateMockEndToEndTests
     }
 
     [Test]
-    public async Task EvaluateWithoutMock_ShouldExitNonZeroInWalkingSkeleton()
+    public async Task EvaluateWithoutMock_WhenCopilotExecutableMissing_ShouldExitNonZeroWithError()
     {
         using var workspace = new TempWorkspace();
         workspace.WriteEvalYaml("""
@@ -51,9 +51,13 @@ public sealed class EvaluateMockEndToEndTests
         using var stdout = new StringWriter();
 
         var exitCode = await Program.Run(
-            ["evaluate", "--skill", "outside-in-tdd", "--tests-dir", workspace.Path],
+            [
+                "evaluate", "--skill", "outside-in-tdd", "--tests-dir", workspace.Path,
+                "--copilot-exe", "/nonexistent/skraft-no-copilot",
+            ],
             stdout);
 
         await Assert.That(exitCode).IsNotEqualTo(0);
+        await Assert.That(stdout.ToString()).Contains("evaluation failed");
     }
 }
