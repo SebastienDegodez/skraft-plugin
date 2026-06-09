@@ -22,3 +22,9 @@ scenarios:
     assertions:
       - output_matches: "(?i)(verbatim|exact|mismatch|diverg|does not match|doesn'?t match|changes_requested|fail)"
       - output_not_matches: "(?i)(close enough|that'?s fine|approve(d)?)"
+
+  - name: "Approves a maximum-age rule that matches the AC verbatim"
+    prompt: "The AC says reject drivers over 100. The acceptance test asserts age > 100. Does this pass review?"
+    assertions:
+      - output_matches: "(?i)(match|verbatim|exact|correct|approved?|pass)"
+      - output_not_matches: "(?i)(mismatch|diverg|wrong|changes_requested)"
