@@ -1,17 +1,19 @@
 # skraft-test-harness
 
-> Evaluate Copilot SDK agents and skills against declarative YAML scenarios.
+> Evaluate skraft agents and skills against declarative YAML scenarios, driving the **real GitHub Copilot CLI**.
 
 ## Overview
 
 `skraft-test-harness` loads scenario suites defined in `eval.yaml` files, runs the target agent twice per scenario — once without the skill (baseline) and once with the skill — then judges which response is better and emits structured reports. The harness is designed to detect regression (skill hurts quality) and overfitting (skill merely echoes assertion keywords) via the `OverfittingJudge`.
+
+In **real mode** (the default), the harness drives the actual `copilot` CLI non-interactively (`copilot -p … --output-format json`) through the `CopilotCliAgentRunner`, parses the JSONL transcript for the assistant output and the tools the agent invoked, and loads the skraft agent under test via `--plugin-dir`/`--agent`. In **mock mode** (`--mock`) the runner and judge are deterministic in-memory stubs, so the full pipeline can be exercised offline.
 
 ## Quick Start
 
 ### Prerequisites
 
 - .NET 10 SDK
-- `GITHUB_TOKEN` for live runs (optional — `--mock` works offline)
+- The [GitHub Copilot CLI](https://github.com/github/copilot-cli) (`copilot`) installed, authenticated, and on `PATH` — required for real runs (`--mock` works offline without it)
 
 ### Build
 
@@ -26,14 +28,19 @@ dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
   evaluate --skill <skill-id> --tests-dir tests/skraft-plugin/<agent-id> --mock
 ```
 
-### Run (live — requires GITHUB_TOKEN)
+### Run (real mode — requires the `copilot` CLI)
 
-> **Note:** Live agent integration is not yet wired. The CLI will reject a run without `--mock` and return exit code `2`. This section documents the intended interface.
+Real mode is the default. To evaluate a **workflow agent**, point the harness at the skraft plugin and the namespaced agent id:
 
 ```bash
 dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
-  evaluate --skill <skill-id> --tests-dir tests/skraft-plugin/<agent-id>
+  evaluate --skill software-engineer \
+  --tests-dir tests/skraft-plugin/software-engineer-agent \
+  --plugin-dir plugins --agent skraft:software-engineer \
+  --report-dir ./eval-reports
 ```
+
+The baseline run loads no skill (`--no-custom-instructions`); the with-skill run loads the plugin and custom agent. See [Testing the workflow agents](#testing-the-workflow-agents-real-mode) below.
 
 ### Consolidate reports
 
@@ -41,6 +48,41 @@ dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
 dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
   consolidate --results-dir <path-to-json-reports>
 ```
+
+---
+
+## Testing the workflow agents (real mode)
+
+The skraft SDLC workflow is a set of Copilot agents under `plugins/agents/*.agent.md` (e.g. `software-engineer`, `solution-architect`, `acceptance-designer`, `backlog-planner`). The harness regression-tests each one by replaying behavioural `eval.yaml` scenarios against the **real agent** and asserting on its output.
+
+### Plugin manifest
+
+For `copilot --plugin-dir plugins` to expose the agents, the `plugins/` directory must contain a Copilot plugin manifest at [`plugins/.claude-plugin/plugin.json`](../plugins/.claude-plugin/plugin.json). With it, every agent is registered under the `skraft:` namespace:
+
+```text
+skraft:software-engineer, skraft:solution-architect, skraft:acceptance-designer, …
+```
+
+Enumerate them with a throwaway bad agent id:
+
+```bash
+copilot -p hi --plugin-dir plugins --agent __list__ --output-format json --log-level error
+# → No such agent: __list__, available: skraft:software-engineer, skraft:solution-architect, …
+```
+
+### Run a suite against the real agent
+
+```bash
+dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
+  evaluate --skill solution-architect \
+  --tests-dir tests/skraft-plugin/solution-architect-agent \
+  --plugin-dir plugins --agent skraft:solution-architect \
+  --report-dir ./eval-reports
+# → SkillVerdict(skill=solution-architect, scenarios=3, winner: with-skill)
+```
+
+Validated suites live under `tests/skraft-plugin/<agent>-agent/eval.yaml`
+(`software-engineer-agent`, `solution-architect-agent`).
 
 ---
 
@@ -90,12 +132,17 @@ Loads an `eval.yaml`, runs each scenario through the agent pipeline, judges the 
 
 | Option | Required | Description |
 |---|---|---|
-| `--skill <id>` | ✅ | Identifier of the skill being evaluated (e.g. `outside-in-tdd`). Matches the skill's `name:` frontmatter. |
+| `--skill <id>` | ✅ | Identifier of the skill being evaluated (e.g. `software-engineer`). Used as the report label. |
 | `--tests-dir <path>` | ✅ | Directory containing `eval.yaml`. |
-| `--mock` | — | Replace the LLM agent and judge with deterministic in-memory stubs. Required until live mode is wired. |
+| `--mock` | — | Replace the agent and judge with deterministic in-memory stubs (offline, no `copilot` call). |
 | `--report-dir <path>` | — | Directory where the JSON `SkillVerdict` report is written. Omit to suppress file output. |
+| `--plugin-dir <path>` | — | Plugin directory loaded for the with-skill run (real mode). Use `plugins` to load the skraft agents. |
+| `--agent <id>` | — | Namespaced custom agent loaded for the with-skill run (real mode), e.g. `skraft:software-engineer`. |
+| `--model <id>` | — | Pin the model the Copilot CLI uses (real mode). |
+| `--working-dir <path>` | — | Working directory the Copilot CLI runs in (real mode). |
+| `--copilot-exe <path>` | — | Path or name of the `copilot` executable (real mode). Defaults to `copilot`. |
 
-**Exit codes:** `0` = success, `2` = invoked without `--mock` (live mode not yet available).
+**Exit codes:** `0` = success, `1` = evaluation failed (e.g. the `copilot` executable could not be started — the error is printed as `evaluation failed: <reason>`).
 
 ### consolidate
 
@@ -155,7 +202,7 @@ The harness follows Clean Architecture. Inner layers (Domain, Application) have 
 │    IWorkspaceProbe — check files in workspace       │
 │    IReporter     — emit SkillVerdict                │
 │    IVerdictLoader — load saved SkillVerdicts        │
-│    IClock        — current UTC time                 │
+│    (time is provided via System.TimeProvider)       │
 └───────────────────┬─────────────────────────────────┘
                     │ depends on
 ┌───────────────────▼─────────────────────────────────┐
@@ -170,12 +217,15 @@ The harness follows Clean Architecture. Inner layers (Domain, Application) have 
 ┌─────────────────────────────────────────────────────┐
 │  Infrastructure  (SkraftTestHarness.Infrastructure) │
 │  Adapters implementing gateway interfaces:          │
-│    CopilotSdkAgentRunner — real Copilot SDK         │
+│    CopilotCliAgentRunner — drives the real copilot  │
+│      CLI (copilot -p … --output-format json)        │
+│    CopilotCliTranscript — parses the JSONL stream   │
+│    ProcessCopilotCliInvoker — shells out to copilot │
+│    CopilotSdkAgentRunner — GitHub Models API runner │
 │    OverfittingJudge — keyword-overfitting heuristic │
 │    YamlEvalLoader — reads eval.yaml via YamlDotNet  │
 │    JsonReporter / MarkdownReporter / JUnitReporter  │
 │    JsonVerdictLoader — reads saved JSON reports     │
-│    SystemClock — wraps DateTimeOffset.UtcNow        │
 │    MockAgentRunner / MockJudge / MockReporter       │
 └─────────────────────────────────────────────────────┘
 ```
@@ -226,6 +276,18 @@ dotnet run --project tools/skraft-test-harness/tests/SkraftTestHarness.UnitTest 
 
 # Integration tests (architecture rules + CLI end-to-end + reporter I/O)
 dotnet run --project tools/skraft-test-harness/tests/SkraftTestHarness.IntegrationTest --no-build
+```
+
+### Live integration tests (opt-in)
+
+The integration suite includes live tests that drive the **real** `copilot`
+CLI (the `CopilotCliAgentRunner*LiveTests` and `EvaluateRealEndToEndTests`).
+They are skipped by default and only run when `SKRAFT_COPILOT_LIVE=1` is set
+(so CI never burns model quota), with `copilot` installed and authenticated:
+
+```bash
+SKRAFT_COPILOT_LIVE=1 \
+  dotnet run --project tools/skraft-test-harness/tests/SkraftTestHarness.IntegrationTest --no-build
 ```
 
 ### TDD Convention

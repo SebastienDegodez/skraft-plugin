@@ -11,6 +11,12 @@ on:
       - 'tools/skraft-test-harness/**'
       - 'tests/skraft-plugin/**'
       - '.github/workflows/skraft-test-harness.yml'
+  workflow_dispatch:
+    inputs:
+      run_live_evals:
+        description: 'Run the live workflow evals against the real Copilot CLI (consumes model quota)'
+        type: boolean
+        default: false
 
 jobs:
   test:
@@ -46,4 +52,63 @@ jobs:
         with:
           name: test-results-${{ matrix.dotnet }}
           path: tools/skraft-test-harness/**/*.xml
+          if-no-files-found: ignore
+
+  # Opt-in: drives the REAL copilot CLI against the workflow eval suites.
+  # Manual only (workflow_dispatch) so push/PR CI never consumes model quota.
+  # Requires a Copilot-enabled token exposed as the COPILOT_CLI_TOKEN secret.
+  live-evals:
+    name: Live workflow evals (real Copilot CLI)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live_evals }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install GitHub Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Build
+        working-directory: tools/skraft-test-harness
+        run: dotnet build -v quiet
+
+      - name: Run live integration tests
+        working-directory: tools/skraft-test-harness
+        env:
+          SKRAFT_COPILOT_LIVE: '1'
+          # The Copilot CLI reads its token from the environment; adjust the
+          # variable name if your CLI version expects a different one.
+          GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+          COPILOT_CLI_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+        run: dotnet run --project tests/SkraftTestHarness.IntegrationTest --no-build
+
+      - name: Run workflow eval suites
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+          COPILOT_CLI_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+        run: |
+          for agent in software-engineer solution-architect; do
+            dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
+              evaluate --skill "$agent" \
+              --tests-dir "tests/skraft-plugin/${agent}-agent" \
+              --plugin-dir plugins --agent "skraft:${agent}" \
+              --report-dir ./eval-reports
+          done
+
+      - name: Upload eval reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-eval-reports
+          path: eval-reports/**/*.json
           if-no-files-found: ignore
