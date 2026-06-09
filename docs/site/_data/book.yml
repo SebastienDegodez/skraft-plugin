@@ -114,8 +114,16 @@ meta:
 
 # Sources dérivables (plugin SKRAFT uniquement — HVE n'est PAS scanne ici).
 sources:
+  # Agents de phase, user-invocables (un par phase + leurs reviewers + l'orchestrateur).
+  # `*` ne descend PAS dans `workers/` : les subagents internes sont captes par `workers` ci-dessous.
   agents: "plugins/agents/*.agent.md"
+  # Les 4 lentilles de revue adverse CORE (utilisees par les reviewers de phase).
   lenses: "plugins/agents/reviewer-lenses/*.agent.md"
+  # Subagents internes (user-invocable: false) groupes par capacite sous workers/<capacite>/.
+  # Capte le bundle complet d'une capacite : les *-worker.agent.md ET leurs *-lens.agent.md
+  # conditionnels (mock-fidelity, contract-fidelity). Le glob `*/*` exige le segment <capacite>,
+  # donc il ignore d'eventuels doublons a plat (workers/*.agent.md) -> pas de double comptage.
+  workers: "plugins/agents/workers/*/*.agent.md"
   skills: "plugins/skills/*/SKILL.md"
   gates: "plugins/skills/*-review-criteria/SKILL.md"
   patterns: "plugins/skills/architecture-patterns/SKILL.md"
