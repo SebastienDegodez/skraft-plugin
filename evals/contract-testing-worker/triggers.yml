@@ -1,0 +1,89 @@
+# Trigger evals for contract-testing-worker
+# Source of truth: .specs/specs/2026-06-09-testing-workers-mocking-contract-design.md (Plan d'evals)
+# Total: 20 triggers (10 should / 10 should-not) = 60/40 train/val split
+# Ship gate: validation-split rate >= 0.5 on should_trigger AND < 0.5 on should_not.
+agent: contract-testing-worker
+
+should_trigger:
+  - id: T-S-01
+    split: train
+    prompt: "write a contract test for this API"
+    rationale: "Canonical provider-side contract test request."
+  - id: T-S-02
+    split: train
+    prompt: "verify our endpoint matches the OpenAPI contract"
+    rationale: "Provider conformance to the published contract."
+  - id: T-S-03
+    split: train
+    prompt: "add provider contract verification for the orders API"
+    rationale: "Provider-side verification."
+  - id: T-S-04
+    split: train
+    prompt: "check the ProblemDetails shape of our error responses against the spec"
+    rationale: "Asserting our response contract."
+  - id: T-S-05
+    split: train
+    prompt: "test our API with an in-memory host over real HTTP"
+    rationale: "Baseline in-process integration test of our provider."
+  - id: T-S-06
+    split: train
+    prompt: "verify the service conforms to the contract with Microcks TestEndpointAsync"
+    rationale: "Microcks opt-in provider verification."
+  - id: T-S-07
+    split: val
+    prompt: "add a test that replays the contract examples against our running service"
+    rationale: "Provider contract replay (Microcks opt-in)."
+  - id: T-S-08
+    split: val
+    prompt: "make sure our endpoint returns the status codes and headers the OpenAPI says"
+    rationale: "Provider response-contract assertion."
+  - id: T-S-09
+    split: val
+    prompt: "set up Microcks to call our service and validate the OpenAPI conformance"
+    rationale: "Provider-side Microcks verification (Microcks calls us)."
+  - id: T-S-10
+    split: val
+    prompt: "write an integration test for our API and add contract verification on top"
+    rationale: "Baseline + additive Microcks opt-in."
+
+should_not_trigger:
+  - id: T-N-01
+    split: train
+    prompt: "mock the downstream payment API the service calls"
+    rationale: "Consumer-side mocking — mock-integration-worker."
+  - id: T-N-02
+    split: train
+    prompt: "set up a Microcks mock for the dependency our service calls"
+    rationale: "Consumer-side mock of a downstream — the other worker."
+  - id: T-N-03
+    split: train
+    prompt: "write a unit test for this pricing rule"
+    rationale: "Unit test, not a provider contract test."
+  - id: T-N-04
+    split: train
+    prompt: "run the mutation suite on the domain layer"
+    rationale: "Mutation testing, not contract testing."
+  - id: T-N-05
+    split: train
+    prompt: "refactor the aggregate to a value object"
+    rationale: "Domain refactor."
+  - id: T-N-06
+    split: train
+    prompt: "stub the external shipping client with FakeItEasy"
+    rationale: "Consumer-side in-process double."
+  - id: T-N-07
+    split: val
+    prompt: "implement the eligibility decision in the application layer"
+    rationale: "Production code, not a contract test."
+  - id: T-N-08
+    split: val
+    prompt: "fake the inventory dependency so the test does not hit the network"
+    rationale: "Consumer-side mocking of a downstream."
+  - id: T-N-09
+    split: val
+    prompt: "triage the open issues and propose a sprint"
+    rationale: "Discovery, not delivery."
+  - id: T-N-10
+    split: val
+    prompt: "author the Gherkin scenarios for the orders feature"
+    rationale: "BDD authoring, not contract testing."
