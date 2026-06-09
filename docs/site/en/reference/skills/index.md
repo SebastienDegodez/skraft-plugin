@@ -22,6 +22,23 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 - **[Red-Synthesize-Green](red-synthesize-green.html)** — the disciplined TDD cycle:
   a failing test first, then the minimal implementation that makes it pass.
 
+### Mocking & contract testing
+
+These skills wire the tests in the DELIVER phase. No agent hardcodes a library: it
+resolves the strategy through a *roster*, which points to the per-stack adapter.
+Adding a stack = +1 adapter, zero edits to the agents.
+
+- **mocking-strategy-roster** — resolves the mocking strategy (Microcks by default,
+  overridable to an in-process library via `skraft.instructions.md`) and the stack.
+- **mocking-microcks-dotnet** — Microcks Testcontainers + `WebApplicationFactory`
+  wiring that points the system-under-test's typed HTTP client at the mock URL (.NET).
+- **mocking-inprocess-dotnet** — in-process double (priority FakeItEasy >
+  NSubstitute > Moq) injected into the DI in place of the Microcks container (.NET).
+- **contract-testing-roster** — resolves the stack and the Microcks opt-in for a
+  provider-side contract test; a baseline in-process integration test is always produced.
+- **contract-testing-dotnet** — baseline `WebApplicationFactory` + `HttpClient`
+  always produced; Microcks verification layer added as an opt-in (.NET).
+
 ## See also
 
 - [Architecture patterns]({{ "/en/reference/patterns" | relative_url }})

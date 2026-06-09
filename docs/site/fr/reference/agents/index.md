@@ -23,6 +23,19 @@ L'orchestrateur est l'**entrée unique** : il lit l'état, dispatche l'agent de 
 phase courante, déclenche le reviewer, applique le verdict (et les reprises), puis
 passe à la phase suivante.
 
+## Workers internes de test (phase DELIVER)
+
+En DELIVER, le `software-engineer` délègue le **câblage des tests** à des sous-agents
+internes (`user-invocable: false` — non invocables directement). Chaque worker produit
+uniquement le wiring de test ; le cycle TDD métier reste chez le `software-engineer`,
+qui vérifie le worker en TIER-1 (RED → GREEN). Une lentille de fidélité conditionnelle
+rejoint le panel de revue adverse quand la capacité est active.
+
+| Capacité | Worker | Lentille de fidélité |
+| --- | --- | --- |
+| Mocking (consommateur) | mock-integration-worker | mock-fidelity-lens |
+| Contrat (fournisseur) | contract-testing-worker | contract-fidelity-lens |
+
 ## Voir aussi
 
 - [Les gates franchies par phase]({{ "/fr/reference/gates" | relative_url }})

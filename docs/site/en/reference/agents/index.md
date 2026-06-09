@@ -23,6 +23,19 @@ The orchestrator is the **single entry point**: it reads the state, dispatches t
 current phase agent, triggers the reviewer, applies the verdict (and retries), then
 moves on to the next phase.
 
+## Internal test-wiring workers (DELIVER phase)
+
+In DELIVER, the `software-engineer` delegates **test wiring** to internal subagents
+(`user-invocable: false` — not directly invocable). Each worker emits test wiring
+only; the business TDD cycle stays with the `software-engineer`, who verifies the
+worker in TIER-1 (RED → GREEN). A conditional fidelity lens joins the adversarial
+review panel when the capability is active.
+
+| Capability | Worker | Fidelity lens |
+| --- | --- | --- |
+| Mocking (consumer) | mock-integration-worker | mock-fidelity-lens |
+| Contract (provider) | contract-testing-worker | contract-fidelity-lens |
+
 ## See also
 
 - [Gates crossed per phase]({{ "/en/reference/gates" | relative_url }})
