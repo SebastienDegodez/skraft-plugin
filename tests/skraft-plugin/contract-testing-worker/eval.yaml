@@ -1,0 +1,63 @@
+# Behavioural evals for the skraft:contract-testing-worker agent (DELIVER phase, internal).
+# Dispatched by software-engineer only (user-invocable: false).
+# Source of truth: .specs/plans/2026-06-09-testing-workers-mocking-contract.md (US-05 to US-07)
+# Run with the plugin loaded:
+#   evaluate --skill contract-testing-worker \
+#     --tests-dir tests/skraft-plugin/contract-testing-worker \
+#     --plugin-dir plugins --agent skraft:contract-testing-worker
+scenarios:
+  - name: "Always emits the WAF + HttpClient baseline — even with no opt-in"
+    prompt: "Write a contract test for the Eligibility API. No skraft.instructions.md is present."
+    assertions:
+      - output_matches: "(?i)(webapplicationfactory|iclassfixture|httpclient)"
+      - output_matches: "(?i)(baseline|status code|content.?type|problem.?details)"
+      - output_not_matches: "(?i)(microckscontainer|testendpointasync|verifyasync)"
+
+  - name: "Adds the Microcks layer on top of the baseline when opt-in is true"
+    prompt: "Write a contract test for the Eligibility API. testing.contract.microcks is true in skraft.instructions.md."
+    assertions:
+      - output_matches: "(?i)(testendpointasync|open_api_schema|microckscontainer)"
+      - output_matches: "(?i)(webapplicationfactory|baseline|assert\\.true.*testresult\\.success)"
+      - output_not_matches: "(?i)(verifyasync|replace.*baseline|only.*microcks)"
+
+  - name: "Opt-in via prompt beats the default false"
+    prompt: "Write a contract test for the Eligibility API and verify it with Microcks too."
+    assertions:
+      - output_matches: "(?i)(testendpointasync|microcks.*layer|opt.?in.*true|microcks.*true)"
+      - output_matches: "(?i)(webapplicationfactory|baseline)"
+      - output_not_matches: "(?i)(baseline only|no microcks|skipping microcks)"
+
+  - name: "Never replaces the baseline with the Microcks layer — additive only"
+    prompt: "We have testing.contract.microcks: true set. Can you skip the WAF baseline and just use the Microcks verification?"
+    assertions:
+      - output_matches: "(?i)(additive|always.*baseline|baseline.*always|on top|alongside)"
+      - output_matches: "(?i)(cannot skip|do not skip|don'?t skip|never replac)"
+      - output_not_matches: "(?i)(skip.*waf|replace.*baseline|baseline.*optional)"
+
+  - name: "Returns a structured result — never drives the business TDD cycle"
+    prompt: "Write the contract test for this API slice and then drive the implementation to GREEN."
+    assertions:
+      - output_matches: "(?i)(structured result|status.*ok|files\\[\\]|testCommand)"
+      - output_matches: "(?i)(do not|don'?t|not.*drive|lead.*owns|software-engineer.*tdd)"
+      - output_not_matches: "(?i)(i'?ll drive|here'?s the.*impl|let'?s make it green)"
+
+  - name: "Refuses to mock a downstream dependency — directs to mock-integration-worker"
+    prompt: "While writing the contract test, also mock the downstream Payment API the SUT calls."
+    assertions:
+      - output_matches: "(?i)(mock-?integration-?worker|different.*worker|other.*worker|consumer.?side.*worker)"
+      - output_matches: "(?i)(provider.?side|our.*own.*api|not.*downstream.*mock)"
+      - output_not_matches: "(?i)(here'?s the mock for the payment|i'?ll mock the downstream)"
+
+  - name: "Never commits — returns structured result and leaves commit to the lead"
+    prompt: "Once the contract test files are ready, commit them to the branch."
+    assertions:
+      - output_matches: "(?i)(do not commit|don'?t commit|lead.*commits|one-?writer|software-engineer.*commit)"
+      - output_matches: "(?i)(structured result|return.*result|files\\[\\])"
+      - output_not_matches: "(?i)(git commit|committed|i'?ve committed|pushed)"
+
+  - name: "Reads the opt-in flag from the config file by tool call — not from memory"
+    prompt: "Write a contract test. The repo has testing.contract.microcks: true in skraft.instructions.md."
+    assertions:
+      - output_matches: "(?i)(read.*file|tool call|skraft\\.instructions\\.md|testing\\.contract\\.microcks)"
+      - output_matches: "(?i)(source.*skraft\\.instructions|from.*file|instruction.*file)"
+      - output_not_matches: "(?i)(i recall|i assume|i remember|without reading)"
