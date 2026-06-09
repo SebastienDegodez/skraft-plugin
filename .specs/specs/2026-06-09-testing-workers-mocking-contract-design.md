@@ -200,21 +200,124 @@ DEPENDENCY (tous LOCAL SIBLINGS, liens markdown relatifs).
   blocker. Cascade prompt > `testing.contract.microcks` > défaut `false`.
 - **`mocking-microcks-dotnet`** (DISCOVERY). Container Microcks + scaffold WAF sur URL mock.
 - **`mocking-inprocess-dotnet`** (DISCOVERY). Double in-process (lib nommée) injecté dans la DI WAF.
-- **`contract-testing-dotnet`** (DISCOVERY). TOUJOURS WAF+HttpClient ; SI flag : +VerifyAsync.
+- **`contract-testing-dotnet`** (DISCOVERY). TOUJOURS WAF+HttpClient ; SI flag : +TestEndpointAsync.
 - **`mock-fidelity-lens`** (FORCED, conditionnelle). In : code+tests only. Audite
   stratégie/override respectés, URL mock câblée, pas d'appel réel downstream.
 - **`contract-fidelity-lens`** (FORCED, conditionnelle). In : code+tests only.
-  Audite baseline toujours présente, `VerifyAsync` non supprimé si opt-in,
+  Audite baseline toujours présente, `TestEndpointAsync` non supprimé si opt-in,
   ProblemDetails/codes/headers conformes, pas d'appel réel downstream.
 
-## Findings de conformité ouverts
+## Design de classes — contrats d'interface
 
-- (HIGH) R3 EXTRACT sur `contract-testing` : déplacer le DELIVER .NET vers
-  `contract-testing-dotnet` sans casser la référence de l'orchestrateur.
-- (LOW) `software-engineer` : ajouter 2 triggers de fan-out (mock + contrat) +
-  l'étape de vérif TIER-1 (S7+A9). Batcher les edits.
-- (LOW) `software-engineer-reviewer` : ajouter 2 lignes de lens conditionnelles.
-- (MEDIUM) Nommage : `mock-fidelity-lens` vs `contract-fidelity-lens` — distincts, conservés.
+Les modules sont des fichiers naturel-language (personas/skills), pas du code objet.
+Le "class design" ci-dessous capture les **types de messages échangés** (contrats
+d'entrée/sortie) et les **invariants** qui doivent être vérifiés à chaque frontière.
+
+```mermaid
+classDiagram
+    class MockWorkerInput {
+        +string downstream_descriptor
+        +string integration_test_intent
+        +string state_json_path
+        +string prompt_override
+    }
+
+    class MockWorkerResult {
+        +string status            %% ok | blocked
+        +string capability        %% "mocking"
+        +string strategy          %% microcks | inprocess
+        +string stack             %% dotnet | java | …
+        +string library           %% fakeiteasy | nsubstitute | moq  (inprocess only)
+        +string[] files
+        +string testCommand
+        +string notes
+    }
+
+    class ContractWorkerInput {
+        +string api_descriptor
+        +string contract_artifacts_path
+        +string state_json_path
+        +string prompt_override
+    }
+
+    class ContractWorkerResult {
+        +string status            %% ok | blocked
+        +string capability        %% "contract-testing"
+        +string stack
+        +bool   microcks          %% opt-in flag
+        +string[] files
+        +string testCommand
+        +string notes
+    }
+
+    class BlockerPayload {
+        +string status            %% "blocked"
+        +string type              %% unsupported_mocking_strategy | unsupported_mocking_library | unsupported_stack | invalid_contract_optin | clarification_needed
+        +string message
+        +BlockerContext context
+    }
+
+    class BlockerContext {
+        +string strategy
+        +string library
+        +string stack
+        +string microcks
+        +string source            %% prompt | skraft.instructions.md | default
+    }
+
+    class LensResult {
+        +string lens              %% mock-fidelity | contract-fidelity
+        +string verdict           %% pass | fail
+        +LensDefect[] defects
+    }
+
+    class LensDefect {
+        +string id                %% D<N>
+        +string gate              %% M1-M4 | K1-K5
+        +string severity          %% blocker | high | medium | low
+        +string location          %% file:line
+        +string description
+        +string suggestion
+    }
+
+    class MockingConfig {
+        +string strategy          %% microcks | inprocess
+        +string library           %% fakeiteasy | nsubstitute | moq
+    }
+
+    class ContractConfig {
+        +bool   microcks          %% default false
+    }
+
+    MockWorkerResult  --|>  BlockerPayload   : extends when blocked
+    ContractWorkerResult --|> BlockerPayload : extends when blocked
+    LensResult "1" *-- "0..*" LensDefect
+    BlockerPayload "1" *-- "1" BlockerContext
+    MockingConfig ..> MockWorkerResult       : drives strategy field
+    ContractConfig ..> ContractWorkerResult  : drives microcks field
+```
+
+### Invariants de frontière
+
+| Frontière | Invariant |
+|-----------|-----------|
+| `MockWorkerResult.status == ok` | `files[]` non vide, `testCommand` non vide, `strategy ∈ {microcks, inprocess}` |
+| `MockWorkerResult.strategy == inprocess` | `library ∈ {fakeiteasy, nsubstitute, moq}` |
+| `ContractWorkerResult.status == ok` | `files[]` non vide, `testCommand` non vide, `files` contient toujours le fichier baseline |
+| `ContractWorkerResult.microcks == true` | `files` contient exactement deux fichiers (baseline + verification) |
+| `BlockerPayload.status == blocked` | `type` dans l'enum autorisé, `context.source` défini |
+| `LensDefect.gate` | `M[1-4]` pour mock-fidelity, `K[1-5]` pour contract-fidelity |
+| `LensDefect.severity` | Strictement dans `{blocker, high, medium, low}` — rejet si hors enum |
+
+## Findings de conformité — état de résolution
+
+| Finding | Sévérité initiale | État |
+|---------|-------------------|------|
+| R3 EXTRACT `contract-testing` : DELIVER .NET déplacé vers `contract-testing-dotnet`, redirect note ajoutée, réf orchestrateur inchangée | HIGH | ✅ résolu |
+| `software-engineer` : 2 triggers fan-out + TIER-1 gate (S7+A9) ajoutés | LOW | ✅ résolu |
+| `software-engineer-reviewer` : 2 lignes de lens conditionnelles ajoutées | LOW | ✅ résolu |
+| Nommage `mock-fidelity-lens` vs `contract-fidelity-lens` — distincts, conservés | MEDIUM | ✅ résolu (noms finaux) |
+| `contract-testing-dotnet` : `VerifyAsync` remplacé par `TestEndpointAsync(OPEN_API_SCHEMA)` (provider-side correct) | — | ✅ résolu lors de l'implémentation |
 
 ## Plan d'evals
 
@@ -237,30 +340,30 @@ DEPENDENCY (tous LOCAL SIBLINGS, liens markdown relatifs).
   (consommateur), « unit test », « run mutation »…
 - Gate : validation ≥ 0.5 should-trigger ET < 0.5 near-miss.
 
-## Todo (step 7b — NON démarré ; attend approbation opérateur)
+## Todo (step 7b — ✅ COMPLÉTÉ)
 
-Fondations partagées (émettre UNE fois) :
-1. [ ] Template `assets/` `skraft.instructions.md` (namespaces `testing.mocking.*` + `testing.contract.microcks`).
-2. [ ] Edit `software-engineer.agent.md` : 2 triggers fan-out + vérif TIER-1 (S7+A9), batché.
-3. [ ] Edit `software-engineer-reviewer.agent.md` : 2 lignes de lens conditionnelles, batché.
+Fondations partagées :
+1. [x] Template `assets/` `skraft.instructions.template.md` (namespaces `testing.mocking.*` + `testing.contract.microcks`).
+2. [x] Edit `software-engineer.agent.md` : 2 triggers fan-out + vérif TIER-1 (S7+A9), batché.
+3. [x] Edit `software-engineer-reviewer.agent.md` : 2 lignes de lens conditionnelles, batché.
 
 Mocking :
-4. [ ] `plugins/skills/mocking-strategy-roster/SKILL.md` (cascade override, schéma blocker).
-5. [ ] `plugins/skills/mocking-microcks-dotnet/SKILL.md` (dép 4).
-6. [ ] `plugins/skills/mocking-inprocess-dotnet/SKILL.md` (dép 4).
-7. [ ] `plugins/agents/mock-integration-worker.agent.md` (dép 4-6).
-8. [ ] `plugins/agents/reviewer-lenses/mock-fidelity-lens.agent.md`.
-9. [ ] `evals/mock-integration-worker/{triggers.yml,content.yml}`.
+4. [x] `plugins/skills/mocking-strategy-roster/SKILL.md` (cascade override, schéma blocker).
+5. [x] `plugins/skills/mocking-microcks-dotnet/SKILL.md` (dép 4).
+6. [x] `plugins/skills/mocking-inprocess-dotnet/SKILL.md` (dép 4).
+7. [x] `plugins/agents/workers/mocking/mock-integration-worker.agent.md` (dép 4-6).
+8. [x] `plugins/agents/workers/mocking/mock-fidelity-lens.agent.md`.
+9. [x] `evals/mock-integration-worker/{triggers.yml,content.yml}`.
 
 Contract testing :
-10. [ ] `plugins/skills/contract-testing-roster/SKILL.md` (stack + opt-in, schéma blocker).
-11. [ ] R3 EXTRACT : `plugins/skills/contract-testing-dotnet/SKILL.md` (sortir le .NET DELIVER ; garder le générique).
-12. [ ] `plugins/agents/contract-testing-worker.agent.md` (dép 10-11).
-13. [ ] `plugins/agents/reviewer-lenses/contract-fidelity-lens.agent.md`.
-14. [ ] `evals/contract-testing-worker/{triggers.yml,content.yml}`.
+10. [x] `plugins/skills/contract-testing-roster/SKILL.md` (stack + opt-in, schéma blocker).
+11. [x] R3 EXTRACT : `plugins/skills/contract-testing-dotnet/SKILL.md` (DELIVER .NET extrait ; générique redirige vers roster).
+12. [x] `plugins/agents/workers/contract-testing/contract-testing-worker.agent.md` (dép 10-11).
+13. [x] `plugins/agents/workers/contract-testing/contract-fidelity-lens.agent.md`.
+14. [x] `evals/contract-testing-worker/{triggers.yml,content.yml}`.
 
 Validation (step 8) :
-15. [ ] Interface conforme, regex `name`, `description` ≤ 1024, ASCII, common-only,
+15. [x] Interface conforme, regex `name`, `description` ≤ 1024, ASCII, common-only,
     indépendance des lenses, R3 n'a pas cassé la réf orchestrateur, raffinement sur tâche réelle.
 
 ## Note de séquencement

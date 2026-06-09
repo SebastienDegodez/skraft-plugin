@@ -66,9 +66,9 @@ Write "None" if the story is fully independent.}
 ```markdown
 ## Story: STORY-03 — Driver Eligibility Check
 
-**As a** first-time driver applying for personal liability coverage,
-**I want** to receive an immediate eligibility decision after submitting my profile,
-**So that** I know whether my profile qualifies before spending time on document upload and payment.
+**As a** first-time driver who has just submitted their profile on the MonAssurance portal,
+**I want** to receive an immediate eligibility decision,
+**So that** I know whether I can proceed to document upload and payment before investing more time in the application.
 
 ### Domain Examples
 
@@ -116,7 +116,7 @@ M — 3 ACs, integration with one external service (first-time integration), 2 r
 
 ### DoR Checklist
 - [x] Problem statement articulates a user problem (not "implement X")
-- [x] Specific persona named with a role (first-time driver applying for personal liability coverage)
+- [x] Specific persona named with a role (first-time driver who has just submitted their profile on the MonAssurance portal)
 - [x] 3+ domain examples with real values (3 examples with age, accident count, licence type, expected outcome)
 - [x] UAT scenarios written in Given/When/Then (AC-01, AC-02, AC-03)
 - [x] Each AC traces back to a domain example
