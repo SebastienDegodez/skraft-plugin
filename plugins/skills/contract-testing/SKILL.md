@@ -169,6 +169,15 @@ return "DefaultExample"
 
 ## 3. Testcontainers Setup (DELIVER phase)
 
+> **DELIVER wiring is stack-specific — resolve it through an adapter.** This skill
+> owns the *generic, stack-agnostic* contract authoring (sections 1-2, 5-7) and
+> the Microcks sample formats. The concrete DELIVER recipe (baseline
+> `WebApplicationFactory` + `HttpClient`, plus the optional Microcks `VerifyAsync`
+> layer) is owned per stack by the `contract-testing-<stack>` adapter, resolved
+> via [contract-testing-roster](../contract-testing-roster/SKILL.md). For .NET see
+> [contract-testing-dotnet](../contract-testing-dotnet/SKILL.md). The .NET snippets
+> below remain as the canonical reference those adapters point back to.
+
 Use the `Microcks.Testcontainers` NuGet package.
 
 **NuGet packages:**
