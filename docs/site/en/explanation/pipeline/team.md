@@ -74,6 +74,7 @@ a positive verdict. It owns the `state.json` (see
 - **Receives:** the Gherkin scenarios.
 - **Hands off:** tested code + quality evidence, to the Pull Request.
 - **Checked by:** `software-engineer-reviewer` (delivery gates).
+- **Delegates internally:** test wiring to two subagents (`user-invocable: false`) — `mock-integration-worker` (mocking the downstream dependency) and `contract-testing-worker` (provider-side contract test). The software-engineer keeps the business TDD cycle and verifies each worker in TIER-1 (RED → GREEN). When a capability is active, its fidelity lens (`mock-fidelity-lens` / `contract-fidelity-lens`) joins the reviewer's panel.
 
 ## Why one reviewer per member
 

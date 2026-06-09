@@ -30,6 +30,21 @@ de « laisser passer » au nom des autres.
 Les 4 verdicts sont **pondérés** puis synthétisés (pattern Genesis A7) : un BLOCKER
 sur une seule lentille suffit à rejeter.
 
+### Lentilles de fidélité conditionnelles (DELIVER)
+
+Aux 4 lentilles CORE s'ajoutent, **uniquement quand la capacité correspondante est
+active**, deux lentilles de fidélité. Elles entrent dans le panel lorsque le
+`software-engineer` a délégué du câblage de test à un worker (voir le
+[fan-out DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }})).
+
+| Lentille | Activée quand | Ce qu'elle oppose |
+| --- | --- | --- |
+| **mock-fidelity-lens** | `mock-integration-worker` a câblé un mock. | Le mock reflète-t-il fidèlement le contrat du dépendant (statuts, en-têtes, formes d'erreur) plutôt qu'un double complaisant ? |
+| **contract-fidelity-lens** | `contract-testing-worker` a câblé un test de contrat. | Le test couvre-t-il réellement le contrat fournisseur (schéma, codes, ProblemDetails) sans le contourner ? |
+
+Elles suivent la même règle de synthèse : un BLOCKER sur une lentille conditionnelle
+rejette au même titre qu'une lentille CORE.
+
 ## Pourquoi cette pratique
 
 > « The combined attention of several reviewers finds defects a single reader misses. »

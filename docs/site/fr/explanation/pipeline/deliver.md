@@ -42,6 +42,22 @@ Le scénario entre. DELIVER implémente le calcul du total et l'attribution des 
 - Tests unitaires couvrant les invariants du Domain.
 - Mutation Score comme preuve empirique de la qualité des tests.
 
+## Le fan-out interne : câblage des tests
+
+Le `software-engineer` ne câble pas les tests d'intégration à la main : il **délègue**
+ce wiring à des sous-agents internes (`user-invocable: false`), un par capacité.
+
+| Capacité | Worker | Stratégie | Lentille de fidélité |
+| --- | --- | --- | --- |
+| Mocking (consommateur) | `mock-integration-worker` | Microcks par défaut, surchargeable in-process | `mock-fidelity-lens` |
+| Contrat (fournisseur) | `contract-testing-worker` | intégration in-process + Microcks en opt-in | `contract-fidelity-lens` |
+
+Chaque worker n'émet que du câblage de test — le cycle TDD métier reste chez le lead,
+qui vérifie le worker en **TIER-1** (le test échoue d'abord, puis passe). Quand une
+capacité est active, sa lentille de fidélité rejoint le panel adverse du
+`software-engineer-reviewer`. Le câblage concret est résolu par stack via un *roster*
+(voir les [skills]({{ "/fr/reference/skills/" | relative_url }})).
+
 ## Les gates franchies ici
 
 Cette phase franchit les gates de livraison — tests RED/GREEN intègres, build vert,

@@ -30,6 +30,21 @@ others.
 The 4 verdicts are **weighted** then synthesised (Genesis A7 pattern): a single BLOCKER
 on one lens is enough to reject.
 
+### Conditional fidelity lenses (DELIVER)
+
+On top of the 4 CORE lenses, two fidelity lenses join the panel **only when the
+matching capability is active**. They enter when the `software-engineer` has
+delegated test wiring to a worker (see the
+[DELIVER fan-out]({{ "/en/explanation/pipeline/deliver" | relative_url }})).
+
+| Lens | Activated when | What it opposes |
+| --- | --- | --- |
+| **mock-fidelity-lens** | `mock-integration-worker` wired a mock. | Does the mock faithfully reflect the downstream contract (statuses, headers, error shapes) rather than a complacent double? |
+| **contract-fidelity-lens** | `contract-testing-worker` wired a contract test. | Does the test actually cover the provider contract (schema, codes, ProblemDetails) without bypassing it? |
+
+They follow the same synthesis rule: a BLOCKER on a conditional lens rejects just like
+a CORE lens.
+
 ## Why this practice
 
 > « The combined attention of several reviewers finds defects a single reader misses. »

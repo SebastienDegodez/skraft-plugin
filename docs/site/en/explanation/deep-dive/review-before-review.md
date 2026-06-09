@@ -62,6 +62,17 @@ A single BLOCKER on one lens is enough to return the work (`CHANGES_REQUESTED`),
 bounded number of retries before human escalation. The verdict and its findings are
 traced — the human review sees *why* it passed.
 
+### Conditional lenses in DELIVER
+
+The panel is not fixed: on top of the 4 CORE lenses, **fidelity lenses** join when the
+`software-engineer` has delegated test wiring to a worker. If `mock-integration-worker`
+wired a mock, `mock-fidelity-lens` joins the panel; if `contract-testing-worker` wired
+a contract test, `contract-fidelity-lens` does. Each attacks the **fidelity** of the
+wiring (does the mock/contract truly reflect the dependency?) and honours the same
+BLOCKER rule. See the
+[DELIVER fan-out]({{ "/en/explanation/pipeline/deliver" | relative_url }}) and the
+[lenses reference]({{ "/en/reference/lens" | relative_url }}).
+
 ## Pitfalls & anti-patterns
 
 - **Reviewer = producer**: the review loses its independence and falsifying power.

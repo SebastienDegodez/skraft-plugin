@@ -64,6 +64,17 @@ Un seul BLOCKER sur une lentille suffit à renvoyer le travail (`CHANGES_REQUEST
 avec un nombre de reprises borné avant escalade humaine. Le verdict et ses findings
 sont tracés — la revue humaine voit *pourquoi* c'est passé.
 
+### Lentilles conditionnelles en DELIVER
+
+Le panel n'est pas fixe : aux 4 lentilles CORE s'ajoutent des **lentilles de
+fidélité** quand le `software-engineer` a délégué du câblage de test à un worker.
+Si `mock-integration-worker` a posé un mock, `mock-fidelity-lens` rejoint le panel ;
+si `contract-testing-worker` a posé un test de contrat, c'est `contract-fidelity-lens`.
+Chacune attaque la **fidélité** du câblage (le mock/contrat reflète-t-il vraiment le
+dépendant ?) et honore la même règle de BLOCKER. Voir le
+[fan-out DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) et la
+[référence des lentilles]({{ "/fr/reference/lens" | relative_url }}).
+
 ## Pièges & anti-patterns
 
 - **Reviewer = producteur** : la revue perd son indépendance et son pouvoir de

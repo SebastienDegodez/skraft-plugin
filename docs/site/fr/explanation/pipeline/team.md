@@ -74,6 +74,7 @@ transition qu'après un verdict positif. C'est lui qui tient le `state.json` (vo
 - **Reçoit :** les scénarios Gherkin.
 - **Passe le relais :** du code testé + l'évidence qualité, vers la Pull Request.
 - **Contrôlé par :** `software-engineer-reviewer` (gates de livraison).
+- **Délègue en interne :** le câblage des tests à deux sous-agents (`user-invocable: false`) — `mock-integration-worker` (mocking du dépendant) et `contract-testing-worker` (test de contrat fournisseur). Le software-engineer garde le cycle TDD métier et vérifie chaque worker en TIER-1 (RED → GREEN). Quand une capacité est active, sa lentille de fidélité (`mock-fidelity-lens` / `contract-fidelity-lens`) rejoint le panel du reviewer.
 
 ## Pourquoi un reviewer par membre
 

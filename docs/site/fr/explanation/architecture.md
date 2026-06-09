@@ -27,6 +27,15 @@ graph TB
     SA -->|writes| A3[ADRs + diagrams]
     AD -->|writes| A4[Gherkin scenarios]
     SE -->|writes| A5[tested code]
+
+    SE -.fan-out.-> MIW[mock-integration-worker]
+    SE -.fan-out.-> CTW[contract-testing-worker]
+    MIW -->|test wiring| A5
+    CTW -->|test wiring| A5
+    MIW -.si actif.-> MFL[mock-fidelity-lens]
+    CTW -.si actif.-> CFL[contract-fidelity-lens]
+    MFL -->|verdict| SER
+    CFL -->|verdict| SER
     
     A1 -.->|reads| BDR[backlog-discoverer-reviewer]
     A2 -.->|reads| BPR[backlog-planner-reviewer]
@@ -44,6 +53,10 @@ graph TB
     
     style O fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
     style S fill:#1a2a3a,stroke:#7fd3ff
+    style MIW fill:#243a2e,stroke:#4ed58a
+    style CTW fill:#243a2e,stroke:#4ed58a
+    style MFL fill:#3a2e1a,stroke:#d5a84e
+    style CFL fill:#3a2e1a,stroke:#d5a84e
 ```
 
 ## Légende
@@ -55,6 +68,19 @@ graph TB
 | **Trait pointillé** artefact → reviewer | Lecture seule (côté query de CQS) |
 | **Trait plein** reviewer → orchestrateur | Verdict (PASS / FAIL + motifs) |
 | **Trait pointillé** orchestrateur → state.json | Modèle de lecture CQRS |
+| **Trait pointillé** `software-engineer` → worker | Fan-out interne DELIVER (sous-agents `user-invocable: false`) |
+| **Trait pointillé** worker → lentille de fidélité | La lentille rejoint le panel quand la capacité est active |
+
+## Le fan-out interne de DELIVER
+
+En DELIVER, le `software-engineer` ne câble pas les tests à la main : il **délègue**
+le wiring à des sous-agents internes (`mock-integration-worker` pour le mocking du
+dépendant, `contract-testing-worker` pour le test de contrat fournisseur). Chaque
+worker n'émet que du câblage de test ; le cycle TDD métier reste chez le lead, qui
+vérifie le worker en TIER-1 (RED → GREEN). Quand une capacité est active, sa
+**lentille de fidélité** (`mock-fidelity-lens` / `contract-fidelity-lens`) rejoint le
+panel adverse du `software-engineer-reviewer`. Voir la
+[référence des agents]({{ "/fr/reference/agents/" | relative_url }}).
 
 ## Séparation stricte
 

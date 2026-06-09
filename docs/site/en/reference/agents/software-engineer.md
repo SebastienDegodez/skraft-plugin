@@ -33,6 +33,7 @@ persona: tech-lead
 - **Mutation score floor** — Mutation score must exceed the minimum threshold
 - **Outside-In TDD** — Acceptance tests → unit tests → implementation
 - **Object Calisthenics** — Design constraints applied to business code
+- **Test-wiring fan-out** — Delegates test wiring to the internal subagents `mock-integration-worker` and `contract-testing-worker` (`user-invocable: false`), verified in TIER-1 (RED → GREEN)
 - See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
 
 ## Why this shape
