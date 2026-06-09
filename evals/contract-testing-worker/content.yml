@@ -1,0 +1,54 @@
+# Content evals for contract-testing-worker
+# Source of truth: .specs/specs/2026-06-09-testing-workers-mocking-contract-design.md (Plan d'evals)
+# Each fixture must show a measurable delta between with_skill and without_skill.
+agent: contract-testing-worker
+
+fixtures:
+  - id: C-01-baseline-no-optin
+    name: "No opt-in — baseline in-process integration test only"
+    user_prompt: "Write a contract test for the Eligibility API."
+    seed_context:
+      stack: dotnet
+      skraft_instructions: "absent (no testing.contract.microcks)"
+    expected_output:
+      - "Resolves opt-in = false via the cascade (default)."
+      - "Loads contract-testing-dotnet, emits ONLY the baseline WebApplicationFactory + HttpClient test."
+      - "Asserts status code, content type, and ProblemDetails shape on an error path."
+      - "Returns a structured result (stack: dotnet, microcks: false, files, testCommand) — no commit."
+    forbidden:
+      - "Emitting a Microcks container when opt-in is false."
+      - "Driving the business RED->GREEN cycle."
+      - "Mocking a downstream dependency (that is the other worker)."
+    value_delta: "with_skill always emits the baseline and asserts the response contract; without_skill may skip the ProblemDetails assertion."
+
+  - id: C-02-optin-instruction-file
+    name: "Opt-in via instruction file — baseline + Microcks layer"
+    user_prompt: "Write a contract test for the Eligibility API."
+    seed_context:
+      stack: dotnet
+      skraft_instructions: "testing.contract.microcks: true"
+      contract_artifacts: "OpenAPI + .apiexamples present"
+    expected_output:
+      - "Reads testing.contract.microcks=true by tool call."
+      - "Emits the baseline test PLUS a MicrocksContainer.TestEndpointAsync(OPEN_API_SCHEMA) test."
+      - "Asserts testResult.Success (not suppressed)."
+      - "Seeds Microcks from the generic contract artifacts (contract-testing skill)."
+    forbidden:
+      - "Replacing the baseline with the Microcks layer instead of stacking it."
+      - "Using VerifyAsync (consumer-side) for provider verification."
+      - "Suppressing a failing TestResult."
+    value_delta: "with_skill stacks the additive Microcks layer and uses TestEndpointAsync; without_skill may use VerifyAsync or drop the baseline."
+
+  - id: C-03-prompt-optin
+    name: "Prompt opt-in beats default false"
+    user_prompt: "Write a contract test for the Eligibility API and verify it with Microcks too."
+    seed_context:
+      stack: dotnet
+      skraft_instructions: "absent"
+      contract_artifacts: "OpenAPI present"
+    expected_output:
+      - "Prompt opt-in wins: microcks = true."
+      - "Baseline test PLUS the Microcks TestEndpointAsync layer."
+    forbidden:
+      - "Emitting baseline only when the prompt explicitly asked for Microcks."
+    value_delta: "with_skill maps 'verify with Microcks too' to the additive layer; without_skill may emit baseline only."
