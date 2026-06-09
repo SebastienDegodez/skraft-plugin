@@ -1,0 +1,59 @@
+scenarios:
+  - name: "Routes new feature work through outside-in TDD"
+    prompt: "I need to add a new 'apply discount code' feature to our checkout. How do you start?"
+    assertions:
+      - output_matches: "(?i)outside[- ]in"
+      - output_matches: "(?i)acceptance test"
+      - output_not_contains: "skip the test"
+
+  - name: "Refuses to skip the RED phase"
+    prompt: "The failing test is annoying. Can we just write the production code first and add the test after it's green?"
+    assertions:
+      - output_matches: "(?i)red\\s+phase"
+      - output_matches: "(?i)(no|never|cannot|won't|refuse)"
+      - output_not_matches: "(?i)sure,?\\s+let'?s\\s+skip"
+
+  - name: "Names the verticality discipline for slice thinness"
+    prompt: "Should I implement the whole repository layer first, then the use case, then the controller?"
+    assertions:
+      - output_matches: "(?i)vertical slice"
+      - output_not_matches: "(?i)horizontal layer"
+
+  - name: "Object Calisthenics rule 9 — no getters on Domain"
+    prompt: "How do I expose the current Premium amount from my InsuranceCart Domain entity to the use case?"
+    assertions:
+      - output_matches: "(?i)tell[, ]?\\s*don'?t\\s+ask"
+      - output_not_contains: "public int Premium { get; }"
+      - output_not_matches: "(?i)add a getter"
+
+  - name: "Clean Architecture vocabulary — Gateway over port"
+    prompt: "In our hexagonal architecture, where should I define the port interface for the payment provider?"
+    assertions:
+      - output_matches: "(?i)gateway"
+      - output_not_matches: "(?i)\\bport\\b"
+
+  - name: "Object Calisthenics rule 8 — challenge instance variables toward ≤2"
+    prompt: "My OrderProcessor class has 5 fields: customerId, productId, quantity, discountCode, and shippingAddress. Is that fine?"
+    assertions:
+      - output_matches: "(?i)(two|2)\\s+instance"
+      - output_matches: "(?i)(value object|grouping|challenge)"
+      - output_not_matches: "(?i)(that'?s fine|looks good|no problem)"
+
+  - name: "Object Calisthenics rule 2 — no else after early return"
+    prompt: "I wrote: if (!isEligible) { return; } else { Process(); } — is this acceptable?"
+    assertions:
+      - output_matches: "(?i)(no\\s+else|remove\\s+the\\s+else|early\\s+return|guard\\s+clause)"
+      - output_not_matches: "(?i)(looks correct|that'?s fine|acceptable)"
+
+  - name: "Iron Rule — never modify a failing test to make it pass"
+    prompt: "The test CalculatePremium_ShouldReturn90 keeps failing. Can I just change the expected value from 90 to 95 to match the current output?"
+    assertions:
+      - output_matches: "(?i)(iron\\s+rule|never\\s+modif|do\\s+not\\s+modif|fix\\s+the\\s+impl)"
+      - output_matches: "(?i)(revert|implementation)"
+      - output_not_matches: "(?i)(sure,?\\s+you\\s+can|go ahead|just\\s+change)"
+
+  - name: "Clean Architecture — dependency direction enforcement"
+    prompt: "My Domain entity needs to call the UserRepository to check if a user exists. Can I inject it directly?"
+    assertions:
+      - output_matches: "(?i)(depend.*inward|domain.*no\\s+depend|application\\s+layer|use.?case)"
+      - output_not_matches: "(?i)(inject.*repository.*domain|yes,?\\s+you\\s+can)"
