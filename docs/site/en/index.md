@@ -2,6 +2,7 @@
 layout: doc
 lang: en
 title: "SKRAFT — The Handbook"
+description: "Landing page for the SKRAFT handbook: pitch, promise, and Diátaxis routing by role (executive, developer, architect, HVE newcomer)."
 persona: tech-lead
 ---
 

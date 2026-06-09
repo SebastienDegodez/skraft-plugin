@@ -2,6 +2,7 @@
 layout: doc
 lang: fr
 title: "Changelog"
+description: "L'historique des évolutions du handbook et du plugin SKRAFT : nouvelles pages, corrections, évolutions de l'architecture."
 ---
 
 # Changelog

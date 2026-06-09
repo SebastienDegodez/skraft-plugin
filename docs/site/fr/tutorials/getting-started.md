@@ -2,6 +2,7 @@
 layout: doc
 lang: fr
 title: "Démarrage rapide"
+description: "Installer le plugin SKRAFT et lancer le pipeline en quelques minutes : prérequis, installation, premier lancement."
 persona: software-engineer
 ---
 

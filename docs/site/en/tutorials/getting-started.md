@@ -2,6 +2,7 @@
 layout: doc
 lang: en
 title: "Getting Started"
+description: "Install the SKRAFT plugin and run the pipeline in minutes: prerequisites, installation, first run."
 persona: software-engineer
 ---
 

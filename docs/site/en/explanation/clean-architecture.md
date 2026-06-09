@@ -2,6 +2,7 @@
 layout: doc
 lang: en
 title: "Clean Architecture — Details"
+description: "The layers and boundaries guiding the DELIVER phase in SKRAFT: Domain, Application, Infrastructure, API, and the dependency rule."
 persona: tech-lead
 ---
 

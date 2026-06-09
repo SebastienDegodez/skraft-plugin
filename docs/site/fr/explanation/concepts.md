@@ -2,6 +2,7 @@
 layout: doc
 lang: fr
 title: "Concepts fondamentaux"
+description: "Les concepts transverses de SKRAFT : phase, agent, reviewer, gate, lentille, artefact — et les concepts propres à chaque phase du pipeline."
 persona: tech-lead
 ---
 

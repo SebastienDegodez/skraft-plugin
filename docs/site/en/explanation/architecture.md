@@ -2,6 +2,7 @@
 layout: doc
 lang: en
 title: "Architecture"
+description: "Architecture view of SKRAFT: how phases, executor agents, and reviewers assemble around the CQS principle and the orchestrator."
 persona: tech-lead
 ---
 

@@ -2,6 +2,7 @@
 layout: doc
 lang: fr
 title: "SKRAFT — Le Handbook"
+description: "Page d'accueil du handbook SKRAFT : pitch, promesse, et routage Diátaxis par rôle (décideur, développeur, architecte, nouveau venu de HVE)."
 persona: tech-lead
 ---
 
