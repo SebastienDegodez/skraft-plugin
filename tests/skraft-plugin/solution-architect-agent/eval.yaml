@@ -1,0 +1,26 @@
+# Behavioural evals for the skraft:solution-architect agent.
+# Run with the plugin loaded:
+#   evaluate --skill solution-architect \
+#     --tests-dir tests/skraft-plugin/solution-architect-agent \
+#     --plugin-dir plugins --agent skraft:solution-architect
+scenarios:
+  - name: "Places cross-aggregate rules in a Domain Service, not the aggregate"
+    prompt: "We're designing order checkout. The discount depends on the customer's loyalty tier and active promotions. Where should that discount rule live and how do you model it?"
+    assertions:
+      - output_matches: "(?i)domain service"
+      - output_matches: "(?i)value object"
+      - output_not_matches: "(?i)just put it in the controller"
+
+  - name: "Models behaviour with DDD tactical patterns and a domain event"
+    prompt: "How should I structure the checkout so that completing an order is explicit and other contexts can react to it?"
+    assertions:
+      - output_matches: "(?i)aggregate"
+      - output_matches: "(?i)domain event"
+      - output_not_matches: "(?i)anemic"
+
+  - name: "Specifies rather than implements, and records the decision as an ADR"
+    prompt: "Can you just write the C# implementation of the payment integration right now so we can ship today?"
+    assertions:
+      - output_matches: "(?i)(adr|architecture decision)"
+      - output_matches: "(?i)(specif|before.*code|do not implement|don'?t implement)"
+      - output_not_matches: "(?i)here'?s the full implementation"
