@@ -42,6 +42,23 @@ Le scénario entre. DELIVER implémente le calcul du total et l'attribution des 
 - Tests unitaires couvrant les invariants du Domain.
 - Mutation Score comme preuve empirique de la qualité des tests.
 
+## Workers d'infrastructure de tests (fan-out B1)
+
+Quand une tranche nécessite de l'**infrastructure de test** plutôt que de la logique métier,
+le `software-engineer` délègue à un worker interne, vérifie son résultat, puis intègre les
+fichiers émis dans son propre cycle TDD et commite. Le worker ne commite jamais.
+
+| Besoin | Worker dispatché | Ce que le worker émet |
+|--------|------------------|-----------------------|
+| Mocker une dépendance downstream appelée par le SUT (côté consommateur) | `mock-integration-worker` | câblage mock + scaffold d'integration-test |
+| Test de contrat provider pour l'API de CE service | `contract-testing-worker` | test baseline WAF+HttpClient (+ couche Microcks `TestEndpointAsync` en opt-in) |
+
+Le `software-engineer` exécute ensuite lui-même le cycle RED → GREEN sur les fichiers
+du worker (règle : un seul auteur de commits, `TIER-1 verify`).
+Le `software-engineer-reviewer` active des **lentilles conditionnelles** en miroir :
+`mock-fidelity-lens` si le diff touche un mock downstream,
+`contract-fidelity-lens` si le diff touche un contrat ou un test provider.
+
 ## Les gates franchies ici
 
 Cette phase franchit les gates de livraison — tests RED/GREEN intègres, build vert,

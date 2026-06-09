@@ -42,6 +42,24 @@ The scenario enters. DELIVER implements the total calculation and loyalty credit
 - Unit tests covering Domain invariants.
 - Mutation Score as empirical proof of test quality.
 
+## Test-wiring workers (fan-out B1)
+
+When a slice needs **test infrastructure** rather than business logic,
+the `software-engineer` dispatches to an internal worker, verifies the result,
+integrates the emitted files into its own TDD loop, and commits.
+The worker never commits.
+
+| Need | Worker dispatched | What the worker emits |
+|------|-------------------|-----------------------|
+| Mock a downstream dependency the SUT calls (consumer-side) | `mock-integration-worker` | mock wiring + integration-test scaffold |
+| Provider contract test for THIS service's API | `contract-testing-worker` | baseline WAF+HttpClient test (+ optional Microcks `TestEndpointAsync` layer) |
+
+The `software-engineer` then drives its own RED → GREEN on the worker's files
+(one-writer rule: `TIER-1 verify`).
+The `software-engineer-reviewer` activates **conditional lenses** in mirror:
+`mock-fidelity-lens` when the diff touches a downstream mock,
+`contract-fidelity-lens` when it touches a contract or a provider test scaffold.
+
 ## Gates crossed here
 
 This phase crosses the delivery gates — RED/GREEN test integrity, green build,

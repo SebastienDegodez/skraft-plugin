@@ -13,10 +13,28 @@ description: "Les skills SKRAFT : pratiques outillées, ce qu'elles font, quand 
 - **[Clean Architecture Testing](clean-architecture-testing.html)** — quoi tester à
   chaque couche (Domain, Application, Infrastructure, API), quel test double choisir
   à chaque frontière.
+- **[Contract Testing](contract-testing.html)** — développement API contract-first :
+  authoring OpenAPI/AsyncAPI, génération des exemples Microcks, vérification provider
+  via `TestEndpointAsync`. Couvre les phases DESIGN → DISTILL → DELIVER.
+- **[Contract Testing .NET](contract-testing-dotnet.html)** — adaptateur .NET pour les
+  tests de contrat provider : test baseline `WebApplicationFactory` + `HttpClient`
+  toujours émis ; couche Microcks `TestEndpointAsync` ajoutée en opt-in.
+- **[Contract Testing Roster](contract-testing-roster.html)** — routeur stack + opt-in
+  Microcks pour les tests de contrat provider ; pointe vers l'adaptateur
+  `contract-testing-<stack>` résolu.
 - **[Craft Discipline](craft-discipline.html)** — les points de contrôle que
   l'ingénieur applique à son propre travail avant de committer.
 - **[Create Custom Agent](create-custom-agent.html)** — comment construire un
   fichier d'agent (`.agent.md`) : outils, instructions, handoffs.
+- **[Mocking — In-process .NET](mocking-inprocess-dotnet.html)** — adaptateur .NET pour
+  le mocking en in-process (FakeItEasy / NSubstitute / Moq) : double enregistré
+  dans le DI du `WebApplicationFactory`, stratégie override `inprocess`.
+- **[Mocking — Microcks .NET](mocking-microcks-dotnet.html)** — adaptateur .NET pour le
+  mocking Microcks (stratégie par défaut) : `MicrocksContainerEnsemble` + câblage
+  du client HTTP du SUT vers le mock URL.
+- **[Mocking Strategy Roster](mocking-strategy-roster.html)** — résout la paire
+  `(stratégie × stack)` pour mocker une dépendance downstream ; cascade override
+  `prompt > skraft.instructions.md > microcks (défaut)`.
 - **[Outside-In TDD](outside-in-tdd.html)** — écrire les tests depuis le comportement
   observable, double boucle RED/GREEN, walking skeleton.
 - **[Red-Synthesize-Green](red-synthesize-green.html)** — le cycle TDD discipliné :
