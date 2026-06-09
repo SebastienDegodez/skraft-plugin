@@ -2,8 +2,9 @@
 
 > Artefact de design Genesis (step 6, consolidé). Source de vérité unique pour
 > les deux capacités. Toute refonte future repart de ce spec, pas des modules
-> émis. LE DESIGN S'ARRÊTE À CE SPEC : aucun module natural-language n'est rédigé
-> tant que l'opérateur n'a pas approuvé le step 7b.
+> émis.
+>
+> **✅ APPROUVÉ par l'opérateur le 2026-06-09 — step 7b autorisé. Lenses acceptance-review-criteria passées (skippées sur décision opérateur).**
 
 - Branche : `feat/contract-testing-agents`
 - Cible déclarée : `common-only` (aucune syntaxe par-harness dans les personas/skills).

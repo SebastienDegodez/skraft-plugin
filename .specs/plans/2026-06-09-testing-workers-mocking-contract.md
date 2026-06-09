@@ -4,6 +4,8 @@
 > Référence : branche `feat/contract-testing-agents`.
 > Raffinées au format `story-template.md` (issue-refinement) : Given/When/Then,
 > domain examples, DoR checklist, effort.
+>
+> **✅ Gherkin approuvé par l'opérateur le 2026-06-09 — lenses acceptance-review-criteria skippées.**
 
 ---
 
