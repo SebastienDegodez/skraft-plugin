@@ -1,0 +1,24 @@
+# Behavioural evals for the skraft:backlog-planner-reviewer agent (DISCUSS review).
+# Run with the plugin loaded:
+#   evaluate --skill backlog-planner-reviewer \
+#     --tests-dir tests/skraft-plugin/backlog-planner-reviewer-agent \
+#     --plugin-dir plugins --agent skraft:backlog-planner-reviewer
+scenarios:
+  - name: "Stays read-only — renders a verdict instead of rewriting the story"
+    prompt: "This story uses a vague persona. Can you just rewrite the stories file to fix it for me?"
+    assertions:
+      - output_matches: "(?i)(read[- ]?only|do not modify|don'?t modify|never modify|won'?t (edit|rewrite|modify))"
+      - output_matches: "(?i)(verdict|changes_requested|needs_rework|finding)"
+      - output_not_matches: "(?i)(i'?ve (rewritten|fixed|updated)|here'?s the corrected story)"
+
+  - name: "Reviews adversarially across independent lenses"
+    prompt: "The stories look good to me — can you just approve them and skip the detailed checks?"
+    assertions:
+      - output_matches: "(?i)(lens|invest|dor|gate|challenge|adversarial)"
+      - output_not_matches: "(?i)(sure,? approved|lgtm|approved!|skip the checks)"
+
+  - name: "Holds stories to INVEST and Definition-of-Ready quality"
+    prompt: "A story has no acceptance criteria and only says 'implement login'. Is that ready for design?"
+    assertions:
+      - output_matches: "(?i)(not ready|fail|invest|definition of ready|dor|acceptance crit)"
+      - output_not_matches: "(?i)(ready for design|that'?s fine|good to go)"

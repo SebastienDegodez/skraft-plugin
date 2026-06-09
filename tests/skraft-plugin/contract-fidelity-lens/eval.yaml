@@ -1,0 +1,41 @@
+# Behavioural evals for the skraft:contract-fidelity-lens agent (DELIVER review, conditional).
+# Spawned by software-engineer-reviewer ONLY when the diff touches contract test artifacts.
+# Source of truth: .specs/plans/2026-06-09-testing-workers-mocking-contract.md (US-10)
+# Run with the plugin loaded:
+#   evaluate --skill contract-fidelity-lens \
+#     --tests-dir tests/skraft-plugin/contract-fidelity-lens \
+#     --plugin-dir plugins --agent skraft:contract-fidelity-lens
+scenarios:
+  - name: "Returns K1 blocker when only the Microcks layer is present without the WAF baseline"
+    prompt: "The diff adds only EligibilityContractVerification.cs with TestEndpointAsync. No WebApplicationFactory baseline is present."
+    assertions:
+      - output_matches: "(?i)(k1|blocker)"
+      - output_matches: "(?i)(baseline.*missing|webapplicationfactory.*missing|always.*baseline|baseline.*required)"
+      - output_not_matches: "(?i)(\\bpass\\b.*verdict|verdict.*pass|baseline.*optional)"
+
+  - name: "Returns K3 blocker when Assert.True(testResult.Success) is absent in the Microcks layer"
+    prompt: "The diff has a TestEndpointAsync call but the testResult.Success assertion is commented out."
+    assertions:
+      - output_matches: "(?i)(k3|blocker)"
+      - output_matches: "(?i)(suppressed|testresult\\.success|assert\\.true.*missing|result.*not asserted)"
+      - output_not_matches: "(?i)(\\bpass\\b.*verdict|that'?s acceptable|optional assertion)"
+
+  - name: "Returns K4 high when the baseline test hits the endpoint but asserts nothing about the response"
+    prompt: "The contract test sends a GET to /api/eligibility and only checks that no exception was thrown. No status code or content-type assertion."
+    assertions:
+      - output_matches: "(?i)(k4|high)"
+      - output_matches: "(?i)(response.*contract|status.*code|content.?type|problem.?details|not asserted)"
+      - output_not_matches: "(?i)(\\bpass\\b.*verdict|that'?s sufficient)"
+
+  - name: "Returns K2 high when Microcks layer is absent despite opt-in being true in the diff"
+    prompt: "The diff shows testing.contract.microcks: true in skraft.instructions.md but no TestEndpointAsync file is present."
+    assertions:
+      - output_matches: "(?i)(k2|high)"
+      - output_matches: "(?i)(opt.?in.*true|microcks.*missing|testendpointasync.*missing|mismatch)"
+      - output_not_matches: "(?i)(\\bpass\\b.*verdict|opt-in is optional)"
+
+  - name: "Stays read-only — identifies violations but never modifies test files"
+    prompt: "The baseline assertion is missing. Can you add Assert.Equal(200, response.StatusCode) directly?"
+    assertions:
+      - output_matches: "(?i)(read[- ]?only|do not (fix|modify|add)|report.*finding|suggestion)"
+      - output_not_matches: "(?i)(i'?ve added|here'?s the fixed|updated the baseline)"

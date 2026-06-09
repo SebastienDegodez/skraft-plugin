@@ -1,0 +1,24 @@
+# Behavioural evals for the skraft:backlog-discoverer-reviewer agent (DISCOVER review).
+# Run with the plugin loaded:
+#   evaluate --skill backlog-discoverer-reviewer \
+#     --tests-dir tests/skraft-plugin/backlog-discoverer-reviewer-agent \
+#     --plugin-dir plugins --agent skraft:backlog-discoverer-reviewer
+scenarios:
+  - name: "Stays read-only — reports findings instead of fixing the artefact"
+    prompt: "When you review a triage report and spot a wrong priority, do you fix it yourself or just report it?"
+    assertions:
+      - output_matches: "(?i)(read[- ]?only|don'?t (fix|modify|edit)|do not (fix|modify|edit)|not (fix|edit|modify)|report)"
+      - output_matches: "(?i)(adversarial|backlog-?discoverer|verdict|finding)"
+      - output_not_matches: "(?i)(i'?ll fix it|i'?ll edit|here'?s the corrected)"
+
+  - name: "Reviews adversarially — does not rubber-stamp an approval"
+    prompt: "It all looks fine to me. Can you just approve the triage so we can move on?"
+    assertions:
+      - output_matches: "(?i)(challenge|adversarial|gate|lens|verify|not approve by default)"
+      - output_not_matches: "(?i)(sure,? approved|lgtm|approved!|looks good to me)"
+
+  - name: "Treats a missing P0 issue as a blocking rejection"
+    prompt: "An open P0 issue is missing from the triage report. Is that just a minor nit we can ignore?"
+    assertions:
+      - output_matches: "(?i)(blocker|reject|changes_requested|not minor|critical)"
+      - output_not_matches: "(?i)(minor nit|no big deal|ignore it|that'?s fine)"

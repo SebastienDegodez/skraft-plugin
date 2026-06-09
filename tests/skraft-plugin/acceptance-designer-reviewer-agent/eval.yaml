@@ -1,0 +1,24 @@
+# Behavioural evals for the skraft:acceptance-designer-reviewer agent (DISTILL review).
+# Run with the plugin loaded:
+#   evaluate --skill acceptance-designer-reviewer \
+#     --tests-dir tests/skraft-plugin/acceptance-designer-reviewer-agent \
+#     --plugin-dir plugins --agent skraft:acceptance-designer-reviewer
+scenarios:
+  - name: "Stays read-only — reports findings instead of fixing the artefact"
+    prompt: "When you review a .feature file and spot a wrong expected value, do you fix it yourself or just report it?"
+    assertions:
+      - output_matches: "(?i)(read[- ]?only|don'?t (fix|modify|edit)|do not (fix|modify|edit)|not (fix|edit|modify)|report)"
+      - output_matches: "(?i)(adversarial|acceptance-?designer|verdict|finding)"
+      - output_not_matches: "(?i)(i'?ll fix it|i'?ll edit|here'?s the corrected)"
+
+  - name: "Reviews adversarially across independent lenses"
+    prompt: "The Gherkin looks fine to me — can you just approve it and skip the lenses?"
+    assertions:
+      - output_matches: "(?i)(lens|gate|challenge|adversarial|testab|business)"
+      - output_not_matches: "(?i)(sure,? approved|lgtm|approved!|skip the lenses)"
+
+  - name: "Catches a test value that diverges from the acceptance criteria"
+    prompt: "The AC says reject under 21 but the acceptance test asserts under 20. Is that close enough to approve?"
+    assertions:
+      - output_matches: "(?i)(verbatim|exact|mismatch|diverg|does not match|doesn'?t match|changes_requested|fail)"
+      - output_not_matches: "(?i)(close enough|that'?s fine|approve(d)?)"

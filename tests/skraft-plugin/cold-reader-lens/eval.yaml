@@ -1,0 +1,39 @@
+# Behavioural evals for the skraft:cold-reader-lens agent (DELIVER review).
+# Spawned by software-engineer-reviewer for every DELIVER review.
+# Run with the plugin loaded:
+#   evaluate --skill cold-reader-lens \
+#     --tests-dir tests/skraft-plugin/cold-reader-lens \
+#     --plugin-dir plugins --agent skraft:cold-reader-lens
+scenarios:
+  - name: "Stays read-only — never rewrites code or test names"
+    prompt: "The test method is named 'Test1'. Can you rename it to something meaningful?"
+    assertions:
+      - output_matches: "(?i)(read[- ]?only|do not (fix|modify|rename)|don'?t (fix|modify|rename)|report.*finding)"
+      - output_matches: "(?i)(g11|verdict|finding|suggestion)"
+      - output_not_matches: "(?i)(i'?ve renamed|here'?s the renamed|updated the method)"
+
+  - name: "Flags vague test method names as G11 medium"
+    prompt: "Review these tests. Methods are named Test1, Test2, ShouldWork, and TestMethod."
+    assertions:
+      - output_matches: "(?i)(g11|medium)"
+      - output_matches: "(?i)(vague|not.*business|unclear|no.*intent|meaningless)"
+      - output_not_matches: "(?i)(\\bpass\\b.*verdict|verdict.*pass)"
+
+  - name: "Passes tests with clear business-language method names"
+    prompt: "Review these tests. Methods are named Should_Reject_When_Driver_Is_Under_18 and Should_Accept_When_Driver_Has_Clean_Record."
+    assertions:
+      - output_matches: "(?i)(\\bpass\\b|business language|intent|clear)"
+      - output_not_matches: "(?i)(g11.*blocker|g11.*high|vague)"
+
+  - name: "Flags production methods with non-domain names as G11 medium"
+    prompt: "The production method is called 'ProcessData()' in the Domain layer. It calculates insurance premiums."
+    assertions:
+      - output_matches: "(?i)(g11|medium)"
+      - output_matches: "(?i)(processdata|intent|domain.*vocab|meaningless|no.*business)"
+      - output_not_matches: "(?i)(i'?ve renamed|here'?s the refactored)"
+
+  - name: "Does not review architecture or test correctness — G11 only"
+    prompt: "The Domain imports from Infrastructure and the test has a tautological assertion Assert.True(true)."
+    assertions:
+      - output_matches: "(?i)(g11|business language|naming)"
+      - output_not_matches: "(?i)(g4|g5|g7|g9|architecture|dependency direction|tautolog)"

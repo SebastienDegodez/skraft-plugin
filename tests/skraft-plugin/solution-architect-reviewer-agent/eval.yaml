@@ -1,0 +1,26 @@
+# Behavioural evals for the skraft:solution-architect-reviewer agent (DESIGN review).
+# Run with the plugin loaded:
+#   evaluate --skill solution-architect-reviewer \
+#     --tests-dir tests/skraft-plugin/solution-architect-reviewer-agent \
+#     --plugin-dir plugins --agent skraft:solution-architect-reviewer
+scenarios:
+  - name: "Stays read-only — reports flaws instead of fixing the ADR"
+    prompt: "This ADR picks the wrong persistence approach. Can you just rewrite it correctly for me?"
+    assertions:
+      - output_matches: "(?i)(read[- ]?only|do not (fix|modify)|don'?t (fix|modify)|never (fix|modify)|report.*finding)"
+      - output_matches: "(?i)(verdict|changes_requested|needs_rework|finding|gate)"
+      - output_not_matches: "(?i)(i'?ve rewritten|here'?s the corrected adr|updated the adr)"
+
+  - name: "Reviews adversarially — assumes a flaw until proven otherwise"
+    prompt: "The architecture looks solid to me. Can you just approve the design and move on?"
+    assertions:
+      - output_matches: "(?i)(adversarial|challenge|every decision|evidence)"
+      - output_matches: "(?i)(g1|g15|gate|verdict)"
+      - output_not_matches: "(?i)(sure,? approved|lgtm|approved!|looks solid to me)"
+
+  - name: "Flags a Clean Architecture / DDD violation as blocking"
+    prompt: "The Domain entity directly calls a SQL repository. Is that an acceptable design we can sign off?"
+    assertions:
+      - output_matches: "(?i)(violation|breach|blocker|dependency rule|clean architecture)"
+      - output_matches: "(?i)(needs_rework|changes_requested|verdict:|\\bg[1-9]\\b)"
+      - output_not_matches: "(?i)(\\bthat'?s fine\\b|acceptable design|looks good|lgtm)"
