@@ -110,6 +110,20 @@ These are owned by the skills — load them, do not inline rules here.
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
 - **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for the schema and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per the v1 schema. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
 
+## Test-wiring workers (fan-out, B1)
+When a slice needs **test infrastructure** rather than business logic, fan out to an internal worker, then verify its output yourself. The worker returns a structured result; it never commits. YOU integrate the returned files into your TDD loop and commit.
+
+| Slice shape | Dispatch | Worker emits |
+|---|---|---|
+| Mock a downstream dependency the SUT calls (consumer-side) | [mock-integration-worker](workers/mocking/mock-integration-worker.agent.md) | mock wiring + integration-test scaffold |
+| Provider contract test for THIS service's API | [contract-testing-worker](workers/contract-testing/contract-testing-worker.agent.md) | baseline WAF+HttpClient test (+ optional Microcks `TestEndpointAsync`) |
+
+**TIER-1 verify (A9 SUPERVISED EXECUTION) — do NOT trust the worker's prose.**
+1. Take the `testCommand` from the worker's structured result. Resolve it via `resolving-stack-commands` if absent — never hardcode `dotnet test`.
+2. Run it through the terminal. Confirm the slice goes RED on a business assertion, then drive your own GREEN.
+3. If the worker returned a `blocked` payload, surface it — do not invent the wiring yourself.
+4. Only after your own RED→GREEN passes do you commit (one-writer rule: the worker never commits).
+
 ## Quality Gates Checklist
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:
 - [ ] Active acceptance and unit tests pass
