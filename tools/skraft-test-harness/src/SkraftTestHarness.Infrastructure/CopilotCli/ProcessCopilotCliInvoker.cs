@@ -54,6 +54,11 @@ public sealed class ProcessCopilotCliInvoker : ICopilotCliInvoker
         try
         {
             await process.WaitForExitAsync(cancellationToken);
+            // WaitForExitAsync returns as soon as the process exits but async
+            // OutputDataReceived handlers may still be draining buffered output.
+            // The synchronous overload waits until all redirected streams are
+            // fully consumed, preventing a race where stdout is read empty.
+            process.WaitForExit();
         }
         catch (OperationCanceledException)
         {
