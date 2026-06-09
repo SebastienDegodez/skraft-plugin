@@ -65,6 +65,15 @@ Each lens receives ONLY the inputs specified below — no more.
 | test-integrity | [test-integrity-lens](reviewer-lenses/test-integrity-lens.agent.md) | Tests + code |
 | cold-reader | [cold-reader-lens](reviewer-lenses/cold-reader-lens.agent.md) | Code + tests ONLY (NO journal, NO checklist) |
 
+**Conditional lenses (spawn ONLY when the diff matches).** These cover the
+test-wiring workers' output. Spawn in the same parallel fan-out when their trigger
+fires; otherwise omit them entirely.
+
+| Lens | Spawn when the diff touches... | Sub-agent | Input |
+|------|-------------------------------|-----------|-------|
+| mock-fidelity | a downstream mock / an integration test using one | [mock-fidelity-lens](workers/mocking/mock-fidelity-lens.agent.md) | Code + tests ONLY |
+| contract-fidelity | a contract / `VerifyAsync` / provider contract-test scaffold | [contract-fidelity-lens](workers/contract-testing/contract-fidelity-lens.agent.md) | Code + tests ONLY |
+
 **CRITICAL:** The cold-reader lens must receive ZERO producer context.
 Passing journal or checklist to cold-reader violates A7 and invalidates the review.
 
@@ -131,6 +140,12 @@ Emit EXACTLY this JSON:
 ```
 
 **Schema enforcement:** any lens returning a `severity` value outside `{blocker, high, medium, low}` or a `verdict` outside `{pass, fail, inconclusive}` is malformed. Reject the lens output and re-dispatch the lens once. If it still returns malformed output, treat that lens as `inconclusive`.
+
+**Conditional lenses in the verdict.** When a conditional lens (`mock-fidelity`,
+`contract-fidelity`) was spawned, APPEND its result to `lens_results` and feed it
+through the SAME severity matrix and dissent rule as the core lenses. When it was
+not spawned (trigger did not fire), omit it from `lens_results` entirely — its
+absence is not `inconclusive`.
 
 ## What this agent NEVER does
 
