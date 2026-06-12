@@ -7,6 +7,7 @@ using SkraftTestHarness.Infrastructure.CopilotCli;
 using SkraftTestHarness.Infrastructure.Judging;
 using SkraftTestHarness.Infrastructure.Mock;
 using SkraftTestHarness.Infrastructure.Reporting;
+using SkraftTestHarness.Infrastructure.Workspace;
 using SkraftTestHarness.Infrastructure.Yaml;
 
 namespace SkraftTestHarness.Cli.Commands;
@@ -99,7 +100,9 @@ public static class EvaluateCommand
                 ? ((IAgentRunner)new MockAgentRunner(), (IJudge)new MockJudge())
                 : BuildRealPipeline(parseResult, pluginDirOption, agentOption, modelOption, workingDirOption, copilotExeOption);
 
-            var handler = new EvaluateSkillHandler(agentRunner, judge, reporter);
+            var handler = mock
+                ? new EvaluateSkillHandler(agentRunner, judge, reporter)
+                : BuildWorkspaceAwareHandler(agentRunner, judge, reporter, parseResult, modelOption, workingDirOption, copilotExeOption);
             var skill = new SkillReference(skillId);
 
             SkillVerdict verdict;
@@ -141,5 +144,27 @@ public static class EvaluateCommand
 
         var invoker = new ProcessCopilotCliInvoker(parseResult.GetValue(copilotExeOption)!);
         return (new CopilotCliAgentRunner(invoker, options), new OverfittingJudge());
+    }
+
+    /// <summary>
+    /// Real mode: workspace assertions probe the run's working directory
+    /// and LLM-backed assertions are judged through the Copilot CLI.
+    /// </summary>
+    private static EvaluateSkillHandler BuildWorkspaceAwareHandler(
+        IAgentRunner agentRunner,
+        IJudge judge,
+        IReporter reporter,
+        System.CommandLine.ParseResult parseResult,
+        Option<string?> modelOption,
+        Option<string?> workingDirOption,
+        Option<string> copilotExeOption)
+    {
+        var workingDirectory = parseResult.GetValue(workingDirOption) ?? Directory.GetCurrentDirectory();
+        var probe = new FileSystemWorkspaceProbe(workingDirectory);
+        var assertionJudge = new CopilotCliAssertionJudge(
+            new ProcessCopilotCliInvoker(parseResult.GetValue(copilotExeOption)!),
+            probe,
+            parseResult.GetValue(modelOption));
+        return new EvaluateSkillHandler(agentRunner, judge, reporter, probe, assertionJudge);
     }
 }
