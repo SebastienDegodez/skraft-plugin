@@ -75,6 +75,10 @@ public static class EvaluateCommand
         {
             Description = "Comma-separated tags; only scenarios carrying ALL of them run (e.g. deliver,simulation).",
         };
+        var fixturesRootOption = new Option<string?>("--fixtures-root")
+        {
+            Description = "Root directory containing fixtures and checkpoints/ used by scenario workspace declarations. Default: ./fixtures.",
+        };
 
         command.Options.Add(skillOption);
         command.Options.Add(testsDirOption);
@@ -86,6 +90,7 @@ public static class EvaluateCommand
         command.Options.Add(workingDirOption);
         command.Options.Add(copilotExeOption);
         command.Options.Add(tagsOption);
+        command.Options.Add(fixturesRootOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -115,9 +120,17 @@ public static class EvaluateCommand
                 ? ((IAgentRunner)new MockAgentRunner(), (IJudge)new MockJudge())
                 : BuildRealPipeline(parseResult, pluginDirOption, agentOption, modelOption, workingDirOption, copilotExeOption);
 
+            var fixturesRoot = parseResult.GetValue(fixturesRootOption)
+                ?? Path.Combine(Directory.GetCurrentDirectory(), "fixtures");
+            using var scenarioWorkspaces = new FixtureScenarioWorkspaces(fixturesRoot);
+
             var handler = mock
-                ? new EvaluateSkillHandler(agentRunner, judge, reporter)
-                : BuildWorkspaceAwareHandler(agentRunner, judge, reporter, parseResult, modelOption, workingDirOption, copilotExeOption);
+                ? new EvaluateSkillHandler(
+                    agentRunner, judge, reporter,
+                    new FileSystemWorkspaceProbe(Directory.GetCurrentDirectory()),
+                    new MockAssertionJudge(),
+                    scenarioWorkspaces)
+                : BuildWorkspaceAwareHandler(agentRunner, judge, reporter, scenarioWorkspaces, parseResult, modelOption, workingDirOption, copilotExeOption);
             var skill = new SkillReference(skillId);
 
             SkillVerdict verdict;
@@ -169,6 +182,7 @@ public static class EvaluateCommand
         IAgentRunner agentRunner,
         IJudge judge,
         IReporter reporter,
+        IScenarioWorkspaces scenarioWorkspaces,
         System.CommandLine.ParseResult parseResult,
         Option<string?> modelOption,
         Option<string?> workingDirOption,
@@ -180,6 +194,6 @@ public static class EvaluateCommand
             new ProcessCopilotCliInvoker(parseResult.GetValue(copilotExeOption)!),
             probe,
             parseResult.GetValue(modelOption));
-        return new EvaluateSkillHandler(agentRunner, judge, reporter, probe, assertionJudge);
+        return new EvaluateSkillHandler(agentRunner, judge, reporter, probe, assertionJudge, scenarioWorkspaces);
     }
 }

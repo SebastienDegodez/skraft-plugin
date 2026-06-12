@@ -11,4 +11,12 @@ namespace SkraftTestHarness.Application.Gateways;
 public interface IAgentRunner
 {
     Task<AgentRunResult> RunAsync(Scenario scenario, RunMode mode, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Runs the agent inside a provisioned workspace clone. Default:
+    /// implementations that have no workspace notion run normally.
+    /// </summary>
+    Task<AgentRunResult> RunInWorkspaceAsync(
+        Scenario scenario, RunMode mode, string workspaceRoot, CancellationToken cancellationToken)
+        => RunAsync(scenario, mode, cancellationToken);
 }

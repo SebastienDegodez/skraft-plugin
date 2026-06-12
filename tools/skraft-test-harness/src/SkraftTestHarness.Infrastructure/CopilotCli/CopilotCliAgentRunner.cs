@@ -29,12 +29,21 @@ public sealed class CopilotCliAgentRunner : IAgentRunner
 
     public async Task<AgentRunResult> RunAsync(Scenario scenario, RunMode mode, CancellationToken cancellationToken)
     {
-        var invocation = BuildInvocation(scenario, mode);
+        var invocation = BuildInvocation(scenario, mode, _options.WorkingDirectory);
         var stdout = await _invoker.InvokeAsync(invocation, cancellationToken);
         return CopilotCliTranscript.Parse(stdout);
     }
 
-    private CopilotCliInvocation BuildInvocation(Scenario scenario, RunMode mode)
+    public async Task<AgentRunResult> RunInWorkspaceAsync(
+        Scenario scenario, RunMode mode, string workspaceRoot, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
+        var invocation = BuildInvocation(scenario, mode, workspaceRoot);
+        var stdout = await _invoker.InvokeAsync(invocation, cancellationToken);
+        return CopilotCliTranscript.Parse(stdout);
+    }
+
+    private CopilotCliInvocation BuildInvocation(Scenario scenario, RunMode mode, string? workingDirectory)
     {
         var args = new List<string>
         {
@@ -70,7 +79,7 @@ public sealed class CopilotCliAgentRunner : IAgentRunner
             }
         }
 
-        return new CopilotCliInvocation(args, _options.WorkingDirectory);
+        return new CopilotCliInvocation(args, workingDirectory);
     }
 
     private static string ExtractPrompt(Scenario scenario)

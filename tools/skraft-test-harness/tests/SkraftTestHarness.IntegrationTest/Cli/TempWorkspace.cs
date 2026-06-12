@@ -20,6 +20,14 @@ internal sealed class TempWorkspace : IDisposable
     public void WriteEvalYaml(string contents)
         => File.WriteAllText(System.IO.Path.Combine(Path, "eval.yaml"), contents);
 
+    /// <summary>Writes an arbitrary file (parent directories created), e.g. to fabricate fixtures/checkpoints.</summary>
+    public void WriteFile(string relativePath, string contents)
+    {
+        var full = System.IO.Path.Combine(Path, relativePath);
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
+        File.WriteAllText(full, contents);
+    }
+
     public void Dispose()
     {
         try
