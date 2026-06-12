@@ -67,22 +67,78 @@ public sealed class YamlEvalLoader : IScenarioLoader
         }
 
         var (key, value) = dto.Single();
-        if (string.IsNullOrEmpty(value))
-        {
-            throw new ArgumentException(
-                $"Scenario '{scenarioName}': assertion '{key}' must have a non-empty value.");
-        }
-
         return key switch
         {
-            "output_contains" => new OutputContains(new Needle(value)),
-            "output_not_contains" => new OutputNotContains(new Needle(value)),
-            "output_matches" => new OutputMatches(new RegexPattern(value)),
-            "output_not_matches" => new OutputNotMatches(new RegexPattern(value)),
-            // TODO: support "file_exists" — wire FileExists assertion via IWorkspaceProbe (follow-up slice).
+            "output_contains" => new OutputContains(new Needle(Scalar(scenarioName, key, value))),
+            "output_not_contains" => new OutputNotContains(new Needle(Scalar(scenarioName, key, value))),
+            "output_matches" => new OutputMatches(new RegexPattern(Scalar(scenarioName, key, value))),
+            "output_not_matches" => new OutputNotMatches(new RegexPattern(Scalar(scenarioName, key, value))),
+            "file_exists" => new FileExists(new FilePath(Scalar(scenarioName, key, value))),
+            "file_matches_glob" => new FileMatchesGlob(new GlobPattern(Scalar(scenarioName, key, value))),
+            "file_contains" => ToFileContains(scenarioName, value),
+            "file_judge" => ToFileJudge(scenarioName, value),
+            "output_judge" => ToOutputJudge(scenarioName, value),
             _ => throw new ArgumentException(
                 $"Scenario '{scenarioName}': unknown assertion kind '{key}'. "
-                + "Supported: output_contains, output_not_contains, output_matches, output_not_matches."),
+                + "Supported: output_contains, output_not_contains, output_matches, output_not_matches, "
+                + "file_exists, file_matches_glob, file_contains, file_judge, output_judge."),
         };
+    }
+
+    private static FileContains ToFileContains(string scenarioName, object value)
+    {
+        var fields = Mapping(scenarioName, "file_contains", value);
+        return new FileContains(
+            new GlobPattern(Field(scenarioName, "file_contains", fields, "glob")),
+            new Needle(Field(scenarioName, "file_contains", fields, "text")));
+    }
+
+    private static FileJudge ToFileJudge(string scenarioName, object value)
+    {
+        var fields = Mapping(scenarioName, "file_judge", value);
+        return new FileJudge(
+            new GlobPattern(Field(scenarioName, "file_judge", fields, "glob")),
+            new Criterion(Field(scenarioName, "file_judge", fields, "criterion")));
+    }
+
+    private static OutputJudge ToOutputJudge(string scenarioName, object value)
+    {
+        var fields = Mapping(scenarioName, "output_judge", value);
+        return new OutputJudge(
+            new Criterion(Field(scenarioName, "output_judge", fields, "criterion")));
+    }
+
+    private static string Scalar(string scenarioName, string key, object value)
+    {
+        if (value is string text && !string.IsNullOrEmpty(text))
+            return text;
+        throw new ArgumentException(
+            $"Scenario '{scenarioName}': assertion '{key}' must have a non-empty string value.");
+    }
+
+    private static IReadOnlyDictionary<string, string> Mapping(string scenarioName, string key, object value)
+    {
+        if (value is not IDictionary<object, object> raw)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': assertion '{key}' must be a mapping (e.g. {key}: {{ glob: ..., ... }}).");
+        }
+
+        var fields = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (k, v) in raw)
+        {
+            if (k is string name && v is string text)
+                fields[name] = text;
+        }
+        return fields;
+    }
+
+    private static string Field(
+        string scenarioName, string key, IReadOnlyDictionary<string, string> fields, string field)
+    {
+        if (fields.TryGetValue(field, out var value) && !string.IsNullOrEmpty(value))
+            return value;
+        throw new ArgumentException(
+            $"Scenario '{scenarioName}': assertion '{key}' is missing required field '{field}'.");
     }
 }
