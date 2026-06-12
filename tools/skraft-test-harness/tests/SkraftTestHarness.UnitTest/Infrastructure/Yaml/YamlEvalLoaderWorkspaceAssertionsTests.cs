@@ -153,6 +153,27 @@ public sealed class YamlEvalLoaderWorkspaceAssertionsTests
         await Assert.That(outcome.AreAllAssertionsPassing()).IsTrue();
     }
 
+    [Test]
+    public async Task ShouldMapTheWorkspaceDeclaration()
+    {
+        var scenario = await LoadSingleScenario("""
+            scenarios:
+              - name: "Design phase"
+                tags: [design, simulation]
+                workspace:
+                  fixture: clean-architecture-app
+                  checkpoint: after-discuss
+                prompt: "Run the DESIGN phase."
+                assertions:
+                  - file_matches_glob: "adrs/adr-*.md"
+            """);
+
+        var sources = new List<string>();
+        scenario.WithWorkspace((fixture, checkpoint) => sources.Add($"{fixture}|{checkpoint}"));
+
+        await Assert.That(sources).Contains("clean-architecture-app|after-discuss");
+    }
+
     private static async Task<Scenario> LoadSingleScenario(string yaml)
     {
         var dir = Directory.CreateTempSubdirectory("skraft-yaml-loader-test").FullName;

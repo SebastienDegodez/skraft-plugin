@@ -32,9 +32,20 @@ public sealed class Scenario
 
     public static Scenario Create(
         string name, string prompt, IReadOnlyList<string> tags, IReadOnlyList<Assertion> assertions)
+        => Create(name, prompt, tags, WorkspaceRequirement.None(), assertions);
+
+    public static Scenario Create(
+        string name,
+        string prompt,
+        IReadOnlyList<string> tags,
+        WorkspaceRequirement workspace,
+        IReadOnlyList<Assertion> assertions)
         => new(
-            new ScenarioSpecification(new ScenarioName(name), new Prompt(prompt), new Tags(tags)),
+            new ScenarioSpecification(new ScenarioName(name), new Prompt(prompt), new Tags(tags), workspace),
             new Assertions(assertions));
+
+    /// <summary>Invokes the callback only when the scenario declares a workspace.</summary>
+    public void WithWorkspace(Action<string, string?> use) => _specification.WithWorkspace(use);
 
     public bool MatchesTags(TagFilter filter)
     {

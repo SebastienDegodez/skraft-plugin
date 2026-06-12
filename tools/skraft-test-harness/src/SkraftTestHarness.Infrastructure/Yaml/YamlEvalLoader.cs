@@ -55,7 +55,19 @@ public sealed class YamlEvalLoader : IScenarioLoader
             .Select(a => ToAssertion(dto.Name!, a))
             .ToList();
 
-        return Scenario.Create(dto.Name!, dto.Prompt!, dto.Tags ?? [], assertions);
+        return Scenario.Create(dto.Name!, dto.Prompt!, dto.Tags ?? [], ToWorkspace(dto), assertions);
+    }
+
+    private static WorkspaceRequirement ToWorkspace(ScenarioDto dto)
+    {
+        if (dto.Workspace is null)
+            return WorkspaceRequirement.None();
+        if (string.IsNullOrWhiteSpace(dto.Workspace.Fixture))
+        {
+            throw new ArgumentException(
+                $"Scenario '{dto.Name}': 'workspace' requires a non-empty 'fixture'.");
+        }
+        return WorkspaceRequirement.FromFixture(dto.Workspace.Fixture, dto.Workspace.Checkpoint);
     }
 
     private static Assertion ToAssertion(string scenarioName, AssertionDto dto)
