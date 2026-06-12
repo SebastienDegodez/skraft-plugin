@@ -55,7 +55,7 @@ public sealed class YamlEvalLoader : IScenarioLoader
             .Select(a => ToAssertion(dto.Name!, a))
             .ToList();
 
-        return Scenario.Create(dto.Name!, dto.Prompt!, assertions);
+        return Scenario.Create(dto.Name!, dto.Prompt!, dto.Tags ?? [], assertions);
     }
 
     private static Assertion ToAssertion(string scenarioName, AssertionDto dto)

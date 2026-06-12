@@ -71,6 +71,10 @@ public static class EvaluateCommand
             Description = "Path or name of the copilot executable (real mode).",
             DefaultValueFactory = _ => "copilot",
         };
+        var tagsOption = new Option<string?>("--tags")
+        {
+            Description = "Comma-separated tags; only scenarios carrying ALL of them run (e.g. deliver,simulation).",
+        };
 
         command.Options.Add(skillOption);
         command.Options.Add(testsDirOption);
@@ -81,6 +85,7 @@ public static class EvaluateCommand
         command.Options.Add(modelOption);
         command.Options.Add(workingDirOption);
         command.Options.Add(copilotExeOption);
+        command.Options.Add(tagsOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -91,6 +96,16 @@ public static class EvaluateCommand
 
             IScenarioLoader loader = new YamlEvalLoader();
             var scenarios = await loader.LoadAsync(testsDir, cancellationToken);
+
+            try
+            {
+                scenarios = scenarios.SelectByTags(TagFilter.Parse(parseResult.GetValue(tagsOption)));
+            }
+            catch (ArgumentException ex)
+            {
+                await output.WriteLineAsync($"evaluation failed: {ex.Message} (requested tags: {parseResult.GetValue(tagsOption)})");
+                return 1;
+            }
 
             IReporter reporter = string.IsNullOrWhiteSpace(reportDir)
                 ? new MockReporter()

@@ -28,9 +28,19 @@ public sealed class Scenario
         => new(new ScenarioSpecification(new ScenarioName(name), new Prompt("reconstituted")), null!);
 
     public static Scenario Create(string name, string prompt, IReadOnlyList<Assertion> assertions)
+        => Create(name, prompt, tags: [], assertions);
+
+    public static Scenario Create(
+        string name, string prompt, IReadOnlyList<string> tags, IReadOnlyList<Assertion> assertions)
         => new(
-            new ScenarioSpecification(new ScenarioName(name), new Prompt(prompt)),
+            new ScenarioSpecification(new ScenarioName(name), new Prompt(prompt), new Tags(tags)),
             new Assertions(assertions));
+
+    public bool MatchesTags(TagFilter filter)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+        return _specification.IsAcceptedBy(filter);
+    }
 
     public ScenarioOutcome EvaluateAgainst(AgentRunResult runResult, WorkspaceView workspaceView)
         => new(runResult.Output(), _assertions.EvaluateAgainst(runResult, workspaceView));

@@ -21,6 +21,19 @@ public sealed class Scenarios
 
     public int Count() => _items.Count;
 
+    /// <summary>
+    /// Keeps only the scenarios accepted by the filter. Throws when the
+    /// selection is empty — running zero scenarios is never meaningful.
+    /// </summary>
+    public Scenarios SelectByTags(TagFilter filter)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+        var kept = _items.Where(s => s.MatchesTags(filter)).ToList();
+        if (kept.Count == 0)
+            throw new ArgumentException("No scenario matches the requested tags.", nameof(filter));
+        return new Scenarios(kept);
+    }
+
     public async Task<ScenarioVerdicts> EvaluateEachAsync(
         Func<Scenario, Task<ScenarioVerdict>> evaluator)
     {
