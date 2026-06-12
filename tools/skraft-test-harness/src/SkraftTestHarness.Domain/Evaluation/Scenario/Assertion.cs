@@ -12,10 +12,11 @@ public abstract class Assertion
 
     /// <summary>
     /// Tell-Don't-Ask hook letting workspace-aware assertions declare
-    /// the <see cref="FilePath"/>s they need probed before evaluation.
-    /// Default: nothing to probe. <see cref="FileExists"/> overrides.
+    /// the probes they need resolved before evaluation. Default: nothing
+    /// to probe. <see cref="FileExists"/>, <see cref="FileMatchesGlob"/>
+    /// and <see cref="FileContains"/> override.
     /// </summary>
-    internal virtual void CollectDeclaredFilePaths(List<FilePath> sink)
+    internal virtual void DeclareProbes(WorkspaceProbeRequests sink)
     {
     }
 }

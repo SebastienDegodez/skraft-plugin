@@ -29,11 +29,11 @@ public sealed class Assertions
         return new AssertionResults(results);
     }
 
-    internal IReadOnlyList<FilePath> CollectDeclaredFilePaths()
+    internal WorkspaceProbeRequests CollectProbeRequests()
     {
-        var sink = new List<FilePath>();
+        var sink = new WorkspaceProbeRequests();
         foreach (var assertion in _items)
-            assertion.CollectDeclaredFilePaths(sink);
+            assertion.DeclareProbes(sink);
         return sink;
     }
 }

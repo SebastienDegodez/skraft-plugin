@@ -38,8 +38,8 @@ public sealed class Scenario
     public ScenarioOutcome EvaluateAgainst(AgentRunResult runResult)
         => EvaluateAgainst(runResult, WorkspaceView.Empty());
 
-    public IReadOnlyList<FilePath> CollectDeclaredFilePaths()
-        => _assertions.CollectDeclaredFilePaths();
+    public WorkspaceProbeRequests CollectProbeRequests()
+        => _assertions.CollectProbeRequests();
 
     internal bool IsNamed(ScenarioName name) => _specification.IsNamed(name);
 
