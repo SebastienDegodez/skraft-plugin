@@ -114,6 +114,57 @@ Live end-to-end phase tests are opt-in via `SKRAFT_COPILOT_LIVE=1`
 [`skraft-test-harness.yml`](../../.github/workflows/skraft-test-harness.yml)
 (`workflow_dispatch`, never on push/PR).
 
+## The simulation fixture and the checkpoint chain
+
+The reference workspace and its per-phase checkpoints live under
+`tools/skraft-test-harness/fixtures/`:
+
+```
+fixtures/
+  clean-architecture-app/        # buildable net10 CA app (Domain/App/Infra/Api)
+  checkpoints/
+    after-discover/              # app + DISCOVER artefacts + APPROVED review
+    after-discuss/               # + DISCUSS story/plan + APPROVED review
+    after-design/                # + ADR-001 + contracts + APPROVED review
+    after-distill/               # + Gherkin + test plan + APPROVED review
+```
+
+Each checkpoint contains the cumulative `.copilot-tracking/skraft-plans/order-discount/`
+tree (the `state.json` and artefacts of every phase already done) so any phase
+is replayable in isolation: a live phase run seeds its workspace from the
+**previous** phase's checkpoint and is asserted on what it produces.
+
+`order-discount` is the coffee-shop fil rouge — the feature under construction
+is *promotion stacking*: combine an active store promotion with the loyalty-tier
+discount, capped so the combined rate never exceeds a guardrail.
+
+## Checkpoint conformance gate (`verify-checkpoint`)
+
+The committed checkpoints must keep matching the artefact format each phase is
+supposed to produce. The `verify-checkpoint` command evaluates **only the file
+assertions** of [`phase-conformance/eval.yaml`](phase-conformance/eval.yaml)
+against the committed checkpoints — no agent, no LLM, no quota — and is run on
+every push/PR (CI step *Verify phase checkpoints*, and the
+`PhaseConformanceEndToEndTests` integration test):
+
+```bash
+cd tools/skraft-test-harness
+
+# All phases
+dotnet run --project src/SkraftTestHarness.Cli -- verify-checkpoint \
+  --tests-dir ../../tests/skraft-plugin/phase-conformance \
+  --fixtures-root ./fixtures
+
+# One phase
+dotnet run --project src/SkraftTestHarness.Cli -- verify-checkpoint \
+  --tests-dir ../../tests/skraft-plugin/phase-conformance \
+  --fixtures-root ./fixtures --tags design
+```
+
+Scenarios are categorised with `tags:` (`discover`, `discuss`, `design`,
+`distill`, plus `conformance`, `simulation`); `--tags` runs only the scenarios
+carrying all the given tags, so a single phase can be verified in isolation.
+
 ## Where results go
 
 `--report-dir` emits one JSON `SkillVerdict` per run. The CI pipeline
