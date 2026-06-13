@@ -13,12 +13,14 @@ namespace SkraftTestHarness.IntegrationTest.Cli;
 public sealed class PhaseConformanceEndToEndTests
 {
     [Test]
-    public async Task EveryCommittedCheckpointIsConformant()
+    [Arguments("order-checkout")]
+    [Arguments("promotion-stacking")]
+    public async Task EveryCommittedCheckpointIsConformant(string piste)
     {
         var harnessRoot = LocateHarnessRoot();
         var fixturesRoot = Path.Combine(harnessRoot, "fixtures");
         var testsDir = Path.GetFullPath(
-            Path.Combine(harnessRoot, "..", "..", "tests", "skraft-plugin", "phase-conformance"));
+            Path.Combine(harnessRoot, "..", "..", "tests", "skraft-plugin", "phase-conformance", piste));
 
         using var stdout = new StringWriter();
 
@@ -36,7 +38,7 @@ public sealed class PhaseConformanceEndToEndTests
         var harnessRoot = LocateHarnessRoot();
         var fixturesRoot = Path.Combine(harnessRoot, "fixtures");
         var testsDir = Path.GetFullPath(
-            Path.Combine(harnessRoot, "..", "..", "tests", "skraft-plugin", "phase-conformance"));
+            Path.Combine(harnessRoot, "..", "..", "tests", "skraft-plugin", "phase-conformance", "order-checkout"));
 
         using var stdout = new StringWriter();
 
@@ -55,12 +57,12 @@ public sealed class PhaseConformanceEndToEndTests
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (Directory.Exists(Path.Combine(directory.FullName, "fixtures", "checkpoints", "after-discover")))
+            if (Directory.Exists(Path.Combine(directory.FullName, "fixtures", "checkpoints", "order-checkout")))
                 return directory.FullName;
             directory = directory.Parent;
         }
 
         throw new DirectoryNotFoundException(
-            "Could not locate the harness root (no 'fixtures/checkpoints/after-discover' above the test binary).");
+            "Could not locate the harness root (no 'fixtures/checkpoints/order-checkout' above the test binary).");
     }
 }

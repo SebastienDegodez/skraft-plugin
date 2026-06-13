@@ -11,7 +11,7 @@
 # LIVE (opt-in) :
 #   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
 #     --skill skraft-orchestrator \
-#     --tests-dir ../../tests/skraft-plugin/pipeline/04-DISTILL \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/promotion-stacking/04-DISTILL \
 #     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
 #     --fixtures-root ./fixtures
 scenarios:
@@ -19,7 +19,7 @@ scenarios:
     tags: [distill, pipeline, simulation, live]
     workspace:
       fixture: clean-architecture-app
-      checkpoint: after-design
+      checkpoint: promotion-stacking/after-design
     prompt: >
       Resume the SKRAFT pipeline from state.json. DISCOVER, DISCUSS and DESIGN
       are already APPROVED. Run ONLY the DISTILL phase: distil executable Gherkin

@@ -52,10 +52,12 @@ jobs:
       - name: Verify phase checkpoints
         working-directory: tools/skraft-test-harness
         run: |
-          dotnet run --project src/SkraftTestHarness.Cli --no-build -- \
-            verify-checkpoint \
-            --tests-dir ../../tests/skraft-plugin/phase-conformance \
-            --fixtures-root ./fixtures
+          for piste in order-checkout promotion-stacking; do
+            dotnet run --project src/SkraftTestHarness.Cli --no-build -- \
+              verify-checkpoint \
+              --tests-dir "../../tests/skraft-plugin/phase-conformance/${piste}" \
+              --fixtures-root ./fixtures
+          done
 
       - name: Upload JUnit reports
         if: always()
@@ -109,14 +111,19 @@ jobs:
           COPILOT_CLI_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
         run: |
           # The pipeline always launches from the orchestrator, one phase at a
-          # time, in order. Each suite verifies what the agent actually produced.
-          for phase in 01-DISCOVER 02-DISCUSS 03-DESIGN 04-DISTILL 05-DELIVER; do
-            dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
-              evaluate --skill skraft-orchestrator \
-              --tests-dir "tests/skraft-plugin/pipeline/${phase}" \
-              --plugin-dir plugins --agent skraft:skraft-orchestrator \
-              --fixtures-root tools/skraft-test-harness/fixtures \
-              --report-dir ./eval-reports
+          # time, in order, for each story (piste). Each suite verifies what the
+          # agent actually produced.
+          for piste in order-checkout promotion-stacking; do
+            for phase in 01-DISCOVER 02-DISCUSS 03-DESIGN 04-DISTILL 05-DELIVER; do
+              dir="tests/skraft-plugin/pipeline/${piste}/${phase}"
+              [ -d "$dir" ] || continue
+              dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
+                evaluate --skill skraft-orchestrator \
+                --tests-dir "$dir" \
+                --plugin-dir plugins --agent skraft:skraft-orchestrator \
+                --fixtures-root tools/skraft-test-harness/fixtures \
+                --report-dir ./eval-reports
+            done
           done
 
       - name: Upload eval reports

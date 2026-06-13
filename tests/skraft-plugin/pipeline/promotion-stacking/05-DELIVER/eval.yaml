@@ -1,0 +1,76 @@
+# Pipeline 5D — piste promotion-stacking — phase DELIVER (LIVE)
+#
+# DÉMARCHE : base squelette + checkpoint promotion-stacking/after-distill
+# (= checkout livré + état pipeline promo jusqu'à DISTILL). L'orchestrateur
+# implémente la feature ; on vérifie le code produit.
+#
+# POINT CLÉ (demande explicite) : comme l'issue impose Microcks pour DEUX usages,
+# les assertions VÉRIFIENT que Microcks a bien été mis en place conformément :
+#   - MOCK : l'API externe Promotions est mockée par Microcks dans les tests
+#            d'intégration (consumer-side) ;
+#   - CONTRACT TESTING : notre API checkout est vérifiée contre son contrat
+#            OpenAPI par un test Microcks provider (OPEN_API_SCHEMA).
+#
+# RÈGLE ABSOLUE : on n'archive jamais la production de l'agent (clone éphémère).
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/promotion-stacking/05-DELIVER \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DELIVER implémente la promo + Microcks mock (Promotions) ET contract test (checkout)"
+    tags: [deliver, pipeline, simulation, live, promotion-stacking, microcks]
+    workspace:
+      fixture: clean-architecture-app
+      checkpoint: promotion-stacking/after-distill
+    prompt: >
+      Resume the SKRAFT pipeline from state.json. DISCOVER..DISTILL are APPROVED
+      for issue #57 (stack the external Promotions API discount on the loyalty
+      discount, capped at 20%). Run ONLY the DELIVER phase: implement the feature
+      outside-in — a downstream Promotions client, the capped combination rule in
+      the Domain, the integration test mocking the Promotions API with Microcks,
+      and a Microcks provider contract test of the checkout API — keep all tests
+      green, and have the software-engineer-reviewer review it. Stop once the
+      DELIVER reviewer returns APPROVED and the pipeline state is DONE.
+    assertions:
+      # ── Feature produite ──────────────────────────────────────────────
+      # Un client downstream vers l'API Promotions a été créé.
+      - file_matches_glob: "src/**/*Promotion*.cs"
+      # La règle de combinaison plafonnée vit dans le Domain.
+      - file_contains:
+          glob: "src/OrderDiscount.Domain/**/*.cs"
+          text: "Promotion"
+      # ── Microcks MOCK (downstream Promotions, consumer-side) ──────────
+      # Le test d'intégration monte un mock Microcks de l'API Promotions.
+      - file_contains:
+          glob: "tests/**/*.cs"
+          text: "Microcks"
+      - file_contains:
+          glob: "tests/**/*.cs"
+          text: "GetRestMockEndpoint"
+      # ── Microcks CONTRACT TESTING (provider, notre API checkout) ──────
+      # Un test provider rejoue le contrat contre le service qui tourne.
+      - file_contains:
+          glob: "tests/**/*.cs"
+          text: "TestEndpointAsync"
+      - file_contains:
+          glob: "tests/**/*.cs"
+          text: "OPEN_API_SCHEMA"
+      # ── Pipeline ──────────────────────────────────────────────────────
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/changes/**/*-changes.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/deliver-*-review.md"
+          text: "APPROVED"
+      # ── Jugement métier : Microcks conforme aux DEUX usages ───────────
+      - file_judge:
+          glob: "tests/**/*.cs"
+          criterion: >
+            Microcks is set up for BOTH purposes, each conformant to its skill:
+            (1) MOCK — the external Promotions API is mocked with a Microcks
+            container seeded from its contract (consumer-side), and the SUT's
+            downstream client is pointed at the mock endpoint; (2) CONTRACT
+            TESTING — the checkout API is verified against its OpenAPI contract
+            with a Microcks provider test using TestEndpointAsync(OPEN_API_SCHEMA)
+            against the running service. Both are real (not stubbed away).

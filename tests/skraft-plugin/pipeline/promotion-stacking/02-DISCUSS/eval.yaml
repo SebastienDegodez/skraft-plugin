@@ -13,7 +13,7 @@
 # LIVE (opt-in) :
 #   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
 #     --skill skraft-orchestrator \
-#     --tests-dir ../../tests/skraft-plugin/pipeline/02-DISCUSS \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/promotion-stacking/02-DISCUSS \
 #     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
 #     --fixtures-root ./fixtures
 scenarios:
@@ -21,7 +21,7 @@ scenarios:
     tags: [discuss, pipeline, simulation, live]
     workspace:
       fixture: clean-architecture-app
-      checkpoint: after-discover
+      checkpoint: promotion-stacking/after-discover
     prompt: >
       Resume the SKRAFT pipeline from state.json. DISCOVER is already APPROVED.
       Run ONLY the DISCUSS phase: refine the promotion-stacking request into a

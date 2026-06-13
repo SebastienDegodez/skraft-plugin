@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>OrderDiscount.Api</RootNamespace>
+    <AssemblyName>OrderDiscount.Api</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OrderDiscount.Application\OrderDiscount.Application.csproj" />
+    <ProjectReference Include="..\OrderDiscount.Infrastructure\OrderDiscount.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

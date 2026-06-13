@@ -1,0 +1,59 @@
+# Pipeline 5D — piste promotion-stacking — phase DISCOVER (LIVE)
+#
+# DÉMARCHE : on part du checkout DÉJÀ LIVRÉ (checkpoint promotion-stacking/baseline
+# = code checkout overlayé sur le squelette) + le contrat de l'API externe
+# Promotions. L'issue (dans le prompt) impose d'aller chercher la promo active
+# auprès de cette API externe ET de plafonner la remise combinée → ce qui FORCE
+# l'usage de Microcks à la fois en MOCK (downstream Promotions) et en CONTRACT
+# TESTING (notre API checkout).
+#
+# RÈGLE ABSOLUE : on n'archive jamais la production de l'agent (clone éphémère).
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/promotion-stacking/01-DISCOVER \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DISCOVER triage l'issue promotion-stacking et obtient un review APPROVED"
+    tags: [discover, pipeline, simulation, live, promotion-stacking]
+    workspace:
+      # Le checkout existe déjà (baseline) ; DISCOVER démarre le pipeline promo.
+      fixture: clean-architecture-app
+      checkpoint: promotion-stacking/baseline
+    prompt: >
+      Start the SKRAFT pipeline for this GitHub issue, on an app where the order
+      checkout with a loyalty discount ALREADY exists:
+
+      ───────────────────────────────────────────────────────────
+      Issue #57 — Stack an active store promotion on the loyalty discount
+      Combine an active store promotion with the customer's loyalty-tier discount
+      at checkout. The active promotion is fetched from the EXTERNAL Promotions
+      API (GET /promotions/active, contract in contracts/promotions-api.yaml).
+      The combined discount rate is capped at 20%.
+      Constraints:
+        - Integration tests MUST mock the external Promotions API with Microcks
+          (seeded from its contract) — never call the real service.
+        - Our checkout API MUST be verified against its OpenAPI contract with a
+          Microcks provider contract test.
+      ───────────────────────────────────────────────────────────
+
+      Initialise the pipeline state and run ONLY the DISCOVER phase: triage this
+      issue and have the backlog-discoverer-reviewer review it. Stop as soon as
+      the DISCOVER reviewer returns APPROVED. Do not start DISCUSS.
+    assertions:
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/state.json"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/research/**/*-research.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/discover-*-review.md"
+          text: "APPROVED"
+      # Le checkout de base doit toujours être là (on n'a pas cassé l'existant).
+      - file_exists: "src/OrderDiscount.Domain/Order.cs"
+      - file_judge:
+          glob: ".copilot-tracking/skraft-plans/*/research/**/*-research.md"
+          criterion: >
+            The discovery artefact triages issue #57 — stacking a store promotion
+            (fetched from the external Promotions API) on the existing loyalty
+            discount, with a cap — and recognises the existing checkout as the
+            seam to extend.

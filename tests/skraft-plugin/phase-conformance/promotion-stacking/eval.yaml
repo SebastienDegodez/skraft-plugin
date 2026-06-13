@@ -1,76 +1,74 @@
-# Phase checkpoint conformance — consumed by `verify-checkpoint`.
+# Phase checkpoint conformance — piste promotion-stacking — consommé par `verify-checkpoint`.
 #
-# One scenario per 5D phase. Each points at the committed checkpoint produced
-# by that phase and asserts ONLY file artefacts (no agent, no LLM). This is the
-# deterministic CI gate that catches a checkpoint drifting from the artefact
-# format the next phase expects.
+# Un scénario par phase 5D. Chacun pointe vers le checkpoint A committé et
+# n'asserte QUE des artefacts fichier (no agent, no LLM). Vérifie aussi que le
+# code checkout de base (overlayé) est présent, et que les artefacts mentionnent
+# l'API Promotions externe + Microcks.
 #
 #   dotnet run --project src/SkraftTestHarness.Cli -- verify-checkpoint \
-#     --tests-dir ../../tests/skraft-plugin/phase-conformance \
+#     --tests-dir ../../tests/skraft-plugin/phase-conformance/promotion-stacking \
 #     --fixtures-root ./fixtures
-#
-# Filter to one phase with --tags (e.g. --tags design).
 scenarios:
-# FR: le checkpoint DISCOVER contient le triage + un review APPROVED
-# Le prompt est une simple instruction de triage, le test vérifie que le checkpoint contient les artefacts attendus.
-  - name: "DISCOVER checkpoint carries triage + an APPROVED review"
-    tags: [discover, conformance, simulation]
+  - name: "DISCOVER checkpoint carries triage + an APPROVED review + the existing checkout"
+    tags: [discover, conformance, promotion-stacking]
     workspace:
       fixture: clean-architecture-app
-      checkpoint: after-discover
-    prompt: "Triage issue #42 and propose a sprint path."
+      checkpoint: promotion-stacking/after-discover
+    prompt: "Triage issue #57 and propose a sprint path."
     assertions:
-      - file_exists: ".copilot-tracking/skraft-plans/order-discount/state.json"
-      - file_matches_glob: ".copilot-tracking/skraft-plans/order-discount/research/**/order-discount-research.md"
+      - file_exists: "src/OrderDiscount.Domain/Order.cs"
+      - file_exists: "contracts/promotions-api.yaml"
+      - file_exists: ".copilot-tracking/skraft-plans/promotion-stacking/state.json"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/promotion-stacking/research/**/promotion-stacking-research.md"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/order-discount/reviews/**/discover-order-discount-review.md"
+          glob: ".copilot-tracking/skraft-plans/promotion-stacking/reviews/**/discover-promotion-stacking-review.md"
           text: "Verdict: APPROVED"
 
-# FR: le checkpoint DISCUSS contient la story INVEST + un review APPROVED
-# Le prompt est une simple instruction de refinement, le test vérifie que le checkpoint contient les
   - name: "DISCUSS checkpoint carries a refined story + an APPROVED review"
-    tags: [discuss, conformance, simulation]
+    tags: [discuss, conformance, promotion-stacking]
     workspace:
       fixture: clean-architecture-app
-      checkpoint: after-discuss
-    prompt: "Refine the promotion-stacking story with acceptance criteria."
+      checkpoint: promotion-stacking/after-discuss
+    prompt: "Refine the promotion-stacking story."
     assertions:
-      - file_matches_glob: ".copilot-tracking/skraft-plans/order-discount/plans/**/order-discount-plan.instructions.md"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/promotion-stacking/plans/**/promotion-stacking-plan.instructions.md"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/order-discount/plans/**/order-discount-plan.instructions.md"
+          glob: ".copilot-tracking/skraft-plans/promotion-stacking/plans/**/promotion-stacking-plan.instructions.md"
           text: "Acceptance criteria"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/order-discount/reviews/**/discuss-order-discount-review.md"
+          glob: ".copilot-tracking/skraft-plans/promotion-stacking/reviews/**/discuss-promotion-stacking-review.md"
           text: "Verdict: APPROVED"
 
-  - name: "DESIGN checkpoint carries an ADR + contracts + an APPROVED review"
-    tags: [design, conformance, simulation]
+  - name: "DESIGN checkpoint carries an ADR + contracts (Microcks dual) + an APPROVED review"
+    tags: [design, conformance, promotion-stacking]
     workspace:
       fixture: clean-architecture-app
-      checkpoint: after-design
+      checkpoint: promotion-stacking/after-design
     prompt: "Model promotion stacking and record the decision."
     assertions:
-      - file_matches_glob: ".copilot-tracking/skraft-plans/order-discount/adrs/ADR-*-order-discount.md"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/promotion-stacking/adrs/ADR-*-promotion-stacking.md"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/order-discount/adrs/ADR-*-order-discount.md"
+          glob: ".copilot-tracking/skraft-plans/promotion-stacking/adrs/ADR-*-promotion-stacking.md"
           text: "**Status:** Accepted"
-      - file_matches_glob: ".copilot-tracking/skraft-plans/order-discount/details/**/order-discount-contracts.md"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/order-discount/reviews/**/design-order-discount-review.md"
+          glob: ".copilot-tracking/skraft-plans/promotion-stacking/details/**/promotion-stacking-contracts.md"
+          text: "OPEN_API_SCHEMA"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/promotion-stacking/reviews/**/design-promotion-stacking-review.md"
           text: "Verdict: APPROVED"
 
-  - name: "DISTILL checkpoint carries Gherkin + a test plan + an APPROVED review"
-    tags: [distill, conformance, simulation]
+  - name: "DISTILL checkpoint carries Gherkin (Microcks mock) + a test plan + an APPROVED review"
+    tags: [distill, conformance, promotion-stacking]
     workspace:
       fixture: clean-architecture-app
-      checkpoint: after-distill
+      checkpoint: promotion-stacking/after-distill
     prompt: "Distil executable scenarios and a test plan."
     assertions:
-      - file_matches_glob: ".copilot-tracking/skraft-plans/order-discount/features/order-discount.feature"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/promotion-stacking/features/promotion-stacking.feature"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/order-discount/features/order-discount.feature"
-          text: "clamped to the cap"
-      - file_matches_glob: ".copilot-tracking/skraft-plans/order-discount/details/**/order-discount-details.md"
+          glob: ".copilot-tracking/skraft-plans/promotion-stacking/features/promotion-stacking.feature"
+          text: "mocked with Microcks"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/promotion-stacking/details/**/promotion-stacking-details.md"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/order-discount/reviews/**/distill-order-discount-review.md"
+          glob: ".copilot-tracking/skraft-plans/promotion-stacking/reviews/**/distill-promotion-stacking-review.md"
           text: "Verdict: APPROVED"
