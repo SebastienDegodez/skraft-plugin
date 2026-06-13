@@ -32,6 +32,9 @@ public sealed class VerifyCheckpointEndToEndTests
     {
         using var workspace = new TempWorkspace();
         workspace.WriteFile(
+            "fixtures/clean-architecture-app/src/OrderDiscount.Domain/Order.cs",
+            "namespace OrderDiscount.Domain; public sealed class Order;");
+        workspace.WriteFile(
             "fixtures/checkpoints/after-design/.copilot-tracking/skraft-plans/order-discount/reviews/2026-06-12/design-review-1.md",
             "# Design Review\n\nVerdict: APPROVED\n");
         workspace.WriteEvalYaml(DesignSuite);
@@ -51,6 +54,9 @@ public sealed class VerifyCheckpointEndToEndTests
     public async Task ShouldExitNonZeroAndNameTheFailureWhenTheCheckpointDrifted()
     {
         using var workspace = new TempWorkspace();
+        workspace.WriteFile(
+            "fixtures/clean-architecture-app/src/OrderDiscount.Domain/Order.cs",
+            "namespace OrderDiscount.Domain; public sealed class Order;");
         workspace.WriteFile(
             "fixtures/checkpoints/after-design/.copilot-tracking/skraft-plans/order-discount/reviews/2026-06-12/design-review-1.md",
             "# Design Review\n\nVerdict: NEEDS_REWORK\n"); // drifted content

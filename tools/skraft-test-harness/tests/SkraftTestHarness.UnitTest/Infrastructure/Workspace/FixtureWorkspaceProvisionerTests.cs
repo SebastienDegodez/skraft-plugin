@@ -7,9 +7,36 @@ namespace SkraftTestHarness.UnitTest.Infrastructure.Workspace;
 /// RED: clones the declared fixture (or checkpoint) into an ephemeral
 /// directory per provision call, so baseline and with-skill runs never
 /// share a workspace and the committed fixture is never mutated.
+///
+/// Démarche vérifiée ici :
+///   - la fixture de base (Clean Architecture) est toujours clonée ;
+///   - un checkpoint est SUPERPOSÉ par-dessus (overlay), ses fichiers gagnent ;
+///   - chaque appel produit un clone distinct, supprimé au Dispose() ;
+///   - fixture ou checkpoint manquant ⇒ DirectoryNotFoundException.
 /// </summary>
 public sealed class FixtureWorkspaceProvisionerTests
 {
+    [Test]
+    public async Task ShouldNotCloneBuildOutputsSoTheTemplateStaysPristine()
+    {
+        using var fixtures = new TempFixtures();
+        // Code source légitime du template…
+        fixtures.Write("clean-architecture-app/src/Domain/Order.cs", "class Order {}");
+        // …et des sorties de build qui traînent sur le disque (bin/ et obj/).
+        fixtures.Write("clean-architecture-app/src/Domain/bin/Debug/Order.dll", "binary");
+        fixtures.Write("clean-architecture-app/src/Domain/obj/project.assets.json", "{}");
+
+        using var provisioner = new FixtureWorkspaceProvisioner(fixtures.Root);
+        var clone = provisioner.Provision(
+            WorkspaceRequirement.FromFixture("clean-architecture-app", checkpoint: null));
+
+        // Le clone garde le code source mais JAMAIS les sorties de build :
+        // le template de base reste propre quel que soit l'état local.
+        await Assert.That(File.Exists(Path.Combine(clone, "src/Domain/Order.cs"))).IsTrue();
+        await Assert.That(Directory.Exists(Path.Combine(clone, "src/Domain/bin"))).IsFalse();
+        await Assert.That(Directory.Exists(Path.Combine(clone, "src/Domain/obj"))).IsFalse();
+    }
+
     [Test]
     public async Task ShouldCloneTheFixtureIntoAFreshDirectory()
     {
@@ -26,16 +53,47 @@ public sealed class FixtureWorkspaceProvisionerTests
     }
 
     [Test]
-    public async Task ShouldCloneTheCheckpointWhenDeclared()
+    public async Task ShouldOverlayTheCheckpointOnTopOfTheFixture()
     {
         using var fixtures = new TempFixtures();
-        fixtures.Write("checkpoints/after-discover/state.json", """{"currentPhase":"DISCUSS"}""");
+        // Base Clean Architecture must always survive.
+        fixtures.Write("clean-architecture-app/src/Domain/Order.cs", "class Order {}");
+        fixtures.Write("checkpoints/after-discover/.copilot-tracking/state.json", """{"currentPhase":"DISCUSS"}""");
 
         using var provisioner = new FixtureWorkspaceProvisioner(fixtures.Root);
         var clone = provisioner.Provision(
             WorkspaceRequirement.FromFixture("clean-architecture-app", "after-discover"));
 
-        await Assert.That(File.Exists(Path.Combine(clone, "state.json"))).IsTrue();
+        // Both the CA base AND the checkpoint artefacts are present.
+        await Assert.That(File.Exists(Path.Combine(clone, "src/Domain/Order.cs"))).IsTrue();
+        await Assert.That(File.Exists(Path.Combine(clone, ".copilot-tracking/state.json"))).IsTrue();
+    }
+
+    [Test]
+    public async Task CheckpointFileShouldWinWhenItConflictsWithTheFixture()
+    {
+        using var fixtures = new TempFixtures();
+        fixtures.Write("clean-architecture-app/README.md", "base");
+        fixtures.Write("checkpoints/after-discover/README.md", "checkpoint");
+
+        using var provisioner = new FixtureWorkspaceProvisioner(fixtures.Root);
+        var clone = provisioner.Provision(
+            WorkspaceRequirement.FromFixture("clean-architecture-app", "after-discover"));
+
+        await Assert.That(File.ReadAllText(Path.Combine(clone, "README.md"))).IsEqualTo("checkpoint");
+    }
+
+    [Test]
+    public async Task ShouldThrowWhenTheCheckpointIsDeclaredButMissing()
+    {
+        using var fixtures = new TempFixtures();
+        fixtures.Write("clean-architecture-app/README.md", "base");
+
+        using var provisioner = new FixtureWorkspaceProvisioner(fixtures.Root);
+
+        await Assert.That(() => provisioner.Provision(
+                WorkspaceRequirement.FromFixture("clean-architecture-app", "after-nonexistent")))
+            .Throws<DirectoryNotFoundException>();
     }
 
     [Test]

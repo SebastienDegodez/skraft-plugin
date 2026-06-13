@@ -15,6 +15,10 @@ public sealed class EvaluateWorkspaceEndToEndTests
     public async Task ShouldResolveWorkspaceAssertionsAgainstTheProvisionedCheckpoint()
     {
         using var workspace = new TempWorkspace();
+        // The Clean Architecture base fixture must exist — the checkpoint overlays it.
+        workspace.WriteFile(
+            "fixtures/clean-architecture-app/src/OrderDiscount.Domain/Order.cs",
+            "namespace OrderDiscount.Domain; public sealed class Order;");
         workspace.WriteFile(
             "fixtures/checkpoints/after-design/.copilot-tracking/skraft-plans/order-discount/reviews/2026-06-12/design-review-1.md",
             "# Design Review\n\n**Verdict:** APPROVED\n");
@@ -52,6 +56,11 @@ public sealed class EvaluateWorkspaceEndToEndTests
     public async Task ShouldFailWhenTheDeclaredCheckpointDoesNotExist()
     {
         using var workspace = new TempWorkspace();
+        // Base fixture exists; only the checkpoint is missing, so the failure
+        // is unambiguously about the absent checkpoint.
+        workspace.WriteFile(
+            "fixtures/clean-architecture-app/src/OrderDiscount.Domain/Order.cs",
+            "namespace OrderDiscount.Domain; public sealed class Order;");
         workspace.WriteEvalYaml("""
             scenarios:
               - name: "Missing checkpoint"
