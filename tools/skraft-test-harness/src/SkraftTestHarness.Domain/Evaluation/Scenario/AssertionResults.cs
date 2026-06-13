@@ -16,4 +16,14 @@ public sealed class AssertionResults
     public bool AreAllPassing() => _items.All(r => r.IsPass());
 
     public int PassCount() => _items.Count(r => r.IsPass());
+
+    public int Count() => _items.Count;
+
+    /// <summary>Hands every failing assertion's description to the callback (Tell-Don't-Ask).</summary>
+    public void WithFailures(Action<string> use)
+    {
+        ArgumentNullException.ThrowIfNull(use);
+        foreach (var result in _items.Where(r => !r.IsPass()))
+            use(result.ToString());
+    }
 }

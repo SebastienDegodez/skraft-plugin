@@ -21,6 +21,14 @@ public sealed class Scenarios
 
     public int Count() => _items.Count;
 
+    /// <summary>Hands each scenario to the callback without evaluating it (verify-checkpoint path).</summary>
+    public void ForEach(Action<Scenario> use)
+    {
+        ArgumentNullException.ThrowIfNull(use);
+        foreach (var scenario in _items)
+            use(scenario);
+    }
+
     /// <summary>
     /// Keeps only the scenarios accepted by the filter. Throws when the
     /// selection is empty — running zero scenarios is never meaningful.

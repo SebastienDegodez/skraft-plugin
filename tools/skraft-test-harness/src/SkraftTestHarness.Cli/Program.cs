@@ -20,6 +20,7 @@ public static class Program
         root.Subcommands.Add(EvaluateCommand.Build(output));
         root.Subcommands.Add(ConsolidateCommand.Build(output));
         root.Subcommands.Add(RalphCommand.Build(output));
+        root.Subcommands.Add(VerifyCheckpointCommand.Build(output));
 
         var parseResult = root.Parse(args);
         return await parseResult.InvokeAsync();

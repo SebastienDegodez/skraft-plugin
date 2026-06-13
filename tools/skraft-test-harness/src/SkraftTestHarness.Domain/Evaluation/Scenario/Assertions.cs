@@ -36,4 +36,20 @@ public sealed class Assertions
             assertion.DeclareProbes(sink);
         return sink;
     }
+
+    /// <summary>
+    /// Evaluates only the workspace-checking assertions (file
+    /// presence/content) — used by <c>verify-checkpoint</c> where no
+    /// agent ran and output/judge assertions are meaningless.
+    /// </summary>
+    internal AssertionResults VerifyWorkspace(WorkspaceView workspaceView)
+    {
+        ArgumentNullException.ThrowIfNull(workspaceView);
+        var neutralRun = AgentRunResult.OutputOnly(new AgentOutput(string.Empty));
+        var results = _items
+            .Where(a => a.ChecksWorkspace)
+            .Select(a => a.Evaluate(neutralRun, workspaceView))
+            .ToList();
+        return new AssertionResults(results);
+    }
 }

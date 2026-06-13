@@ -29,6 +29,8 @@ public sealed class FileContains : Assertion
             new FailureReason($"no file matching '{_pattern}' contains '{_needle}'"));
     }
 
+    internal override bool ChecksWorkspace => true;
+
     internal override void DeclareProbes(WorkspaceProbeRequests sink)
     {
         ArgumentNullException.ThrowIfNull(sink);

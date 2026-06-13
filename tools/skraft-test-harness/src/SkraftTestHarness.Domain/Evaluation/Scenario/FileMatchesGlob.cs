@@ -24,6 +24,8 @@ public sealed class FileMatchesGlob : Assertion
         return new AssertionFailed(description, new FailureReason($"no file matches '{_pattern}'"));
     }
 
+    internal override bool ChecksWorkspace => true;
+
     internal override void DeclareProbes(WorkspaceProbeRequests sink)
     {
         ArgumentNullException.ThrowIfNull(sink);

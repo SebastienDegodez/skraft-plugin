@@ -25,6 +25,8 @@ public sealed class FileExists : Assertion
         return new AssertionFailed(description, new FailureReason($"file '{_path}' not found"));
     }
 
+    internal override bool ChecksWorkspace => true;
+
     internal override void DeclareProbes(WorkspaceProbeRequests sink)
     {
         ArgumentNullException.ThrowIfNull(sink);

@@ -47,6 +47,13 @@ public sealed class Scenario
     /// <summary>Invokes the callback only when the scenario declares a workspace.</summary>
     public void WithWorkspace(Action<string, string?> use) => _specification.WithWorkspace(use);
 
+    /// <summary>
+    /// Evaluates only the workspace-checking assertions against the
+    /// given view — the <c>verify-checkpoint</c> path (no agent run).
+    /// </summary>
+    public AssertionResults VerifyWorkspaceAssertions(WorkspaceView workspaceView)
+        => _assertions.VerifyWorkspace(workspaceView);
+
     public bool MatchesTags(TagFilter filter)
     {
         ArgumentNullException.ThrowIfNull(filter);
@@ -64,7 +71,7 @@ public sealed class Scenario
 
     internal bool IsNamed(ScenarioName name) => _specification.IsNamed(name);
 
-    internal void WithName(Action<string> use) => _specification.WithName(use);
+    public void WithName(Action<string> use) => _specification.WithName(use);
 
     public void WithPrompt(Action<string> use) => _specification.WithPrompt(use);
 }
