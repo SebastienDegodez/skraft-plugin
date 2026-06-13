@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: Order Discount Checkout API
+  version: 1.0.0
+  description: >
+    Checkout endpoint that applies the customer's loyalty-tier discount to an
+    order and returns the payable total. Used as the provider-side contract in
+    the SKRAFT Microcks contract-testing demo.
+paths:
+  /orders/{orderId}/checkout:
+    post:
+      operationId: checkout
+      summary: Apply the loyalty discount and return the payable total.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: Identifier of an existing order.
+          schema:
+            type: string
+            format: uuid
+          examples:
+            gold-checkout:
+              value: a1111111-1111-1111-1111-111111111111
+        - name: tier
+          in: query
+          required: true
+          description: Loyalty tier of the customer.
+          schema:
+            type: string
+            enum: [Green, Gold, Platinum]
+          examples:
+            gold-checkout:
+              value: Gold
+      responses:
+        '200':
+          description: The order's payable total after the tier discount.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResult'
+              examples:
+                gold-checkout:
+                  value:
+                    orderId: a1111111-1111-1111-1111-111111111111
+                    payableTotal: 95.0
+        '404':
+          description: No order exists for the supplied identifier.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+components:
+  schemas:
+    CheckoutResult:
+      type: object
+      required: [orderId, payableTotal]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        payableTotal:
+          type: number
+          format: double
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string

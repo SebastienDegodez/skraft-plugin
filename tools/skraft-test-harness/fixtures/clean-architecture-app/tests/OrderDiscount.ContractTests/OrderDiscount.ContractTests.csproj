@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microcks.Testcontainers" Version="0.3.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
+    <PackageReference Include="TUnit" Version="1.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\OrderDiscount.Api\OrderDiscount.Api.csproj" />
+    <ProjectReference Include="..\..\src\OrderDiscount.Domain\OrderDiscount.Domain.csproj" />
+    <ProjectReference Include="..\..\src\OrderDiscount.Infrastructure\OrderDiscount.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- Ship the OpenAPI contract next to the test binary so Microcks can import it. -->
+  <ItemGroup>
+    <None Include="..\..\contracts\order-discount.openapi.yaml"
+          Link="contracts\order-discount.openapi.yaml"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
