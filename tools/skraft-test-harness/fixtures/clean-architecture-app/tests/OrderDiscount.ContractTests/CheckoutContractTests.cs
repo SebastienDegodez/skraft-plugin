@@ -29,8 +29,15 @@ public sealed class CheckoutContractTests
 {
     private const string MicrocksImage = "quay.io/microcks/microcks-uber:1.14.0-native";
     private const string ServiceId = "Order Discount Checkout API:1.0.0";
-    private static readonly string ContractPath =
-        Path.Combine(AppContext.BaseDirectory, "contracts", "order-discount.openapi.yaml");
+
+    // Microcks contract = OpenAPI schema + APIExamples + APIMetadata (the three
+    // artifacts authored per the contract-testing skill), copied next to the binary.
+    private static readonly string[] ContractArtifacts =
+    [
+        Path.Combine(AppContext.BaseDirectory, "contracts", "order-discount-checkout-api.yaml"),
+        Path.Combine(AppContext.BaseDirectory, "contracts", "order-discount-checkout-api.apiexamples.yaml"),
+        Path.Combine(AppContext.BaseDirectory, "contracts", "order-discount-checkout-api.apimetadata.yaml"),
+    ];
 
     // ── Layer 1 — baseline (ALWAYS) ──────────────────────────────────────────
 
@@ -83,7 +90,7 @@ public sealed class CheckoutContractTests
 
         var microcks = new MicrocksBuilder()
             .WithImage(MicrocksImage)
-            .WithMainArtifacts(ContractPath)
+            .WithMainArtifacts(ContractArtifacts)
             .Build();
         await microcks.StartAsync();
 

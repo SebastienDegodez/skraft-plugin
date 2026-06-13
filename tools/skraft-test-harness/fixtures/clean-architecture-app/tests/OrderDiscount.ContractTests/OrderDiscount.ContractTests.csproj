@@ -19,11 +19,11 @@
     <ProjectReference Include="..\..\src\OrderDiscount.Infrastructure\OrderDiscount.Infrastructure.csproj" />
   </ItemGroup>
 
-  <!-- Ship the OpenAPI contract next to the test binary so Microcks can import it. -->
+  <!-- Copy the Microcks contract artifacts (schema + examples + metadata) to output. -->
   <ItemGroup>
-    <None Include="..\..\contracts\order-discount.openapi.yaml"
-          Link="contracts\order-discount.openapi.yaml"
-          CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\contracts\**\*"
+             Link="contracts\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

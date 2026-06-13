@@ -35,19 +35,31 @@ is an observable, reviewable change.
 ## Provider-side contract testing with Microcks
 
 `OrderDiscount.ContractTests` demonstrates the SKRAFT `contract-testing-dotnet`
-recipe against the checkout API, published as
-[`contracts/order-discount.openapi.yaml`](contracts/order-discount.openapi.yaml):
+`OrderDiscount.ContractTests` demonstrates the SKRAFT `contract-testing-dotnet`
+recipe against the checkout API. The contract follows the skill's three-artifact
+convention under [`contracts/`](contracts/):
+
+| Artifact | Role |
+|---|---|
+| `order-discount-checkout-api.yaml` | OpenAPI 3.1 schema (operations + schemas). |
+| `order-discount-checkout-api.apiexamples.yaml` | Microcks `APIExamples` (request/response samples). |
+| `order-discount-checkout-api.apimetadata.yaml` | Microcks `APIMetadata` (dispatcher routing). |
 
 - **Layer 1 — baseline (always runs).** `WebApplicationFactory<Program>` +
   `HttpClient` asserts the happy path (200) and the `application/problem+json`
   404 shape. No Docker required.
 - **Layer 2 — Microcks contract verification (opt-in).** Microcks replays every
-  example of the OpenAPI contract against the running service via
+  example of the contract against the running service via
   `TestEndpointAsync(OPEN_API_SCHEMA)` and validates each response. Because a
   `WebApplicationFactory` hosts in-memory (no reachable port), the test boots
   the SUT on a real Kestrel port through `CheckoutHost.Create()`, exposes it with
   `TestcontainersSettings.ExposeHostPortsAsync`, and points Microcks at
   `host.testcontainers.internal:{port}`.
+
+> Provider conformance uses `TestEndpointAsync(OPEN_API_SCHEMA)` (per the
+> `contract-testing-dotnet` adapter), not `VerifyAsync` — in
+> `Microcks.Testcontainers` 0.3.4 `VerifyAsync` returns a `bool` that checks mock
+> invocation counts, a consumer-side concern.
 
 Layer 2 needs Docker and is gated behind an environment variable so the baseline
 stays CI-friendly:

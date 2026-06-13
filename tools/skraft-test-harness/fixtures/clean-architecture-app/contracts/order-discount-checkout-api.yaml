@@ -1,11 +1,8 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Order Discount Checkout API
   version: 1.0.0
-  description: >
-    Checkout endpoint that applies the customer's loyalty-tier discount to an
-    order and returns the payable total. Used as the provider-side contract in
-    the SKRAFT Microcks contract-testing demo.
+  description: Applies the loyalty-tier discount to an order and returns the payable total.
 paths:
   /orders/{orderId}/checkout:
     post:
@@ -19,9 +16,6 @@ paths:
           schema:
             type: string
             format: uuid
-          examples:
-            gold-checkout:
-              value: a1111111-1111-1111-1111-111111111111
         - name: tier
           in: query
           required: true
@@ -29,27 +23,19 @@ paths:
           schema:
             type: string
             enum: [Green, Gold, Platinum]
-          examples:
-            gold-checkout:
-              value: Gold
       responses:
-        '200':
+        "200":
           description: The order's payable total after the tier discount.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CheckoutResult'
-              examples:
-                gold-checkout:
-                  value:
-                    orderId: a1111111-1111-1111-1111-111111111111
-                    payableTotal: 95.0
-        '404':
+                $ref: "#/components/schemas/CheckoutResult"
+        "404":
           description: No order exists for the supplied identifier.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: "#/components/schemas/ProblemDetails"
 components:
   schemas:
     CheckoutResult:
@@ -64,6 +50,7 @@ components:
           format: double
     ProblemDetails:
       type: object
+      required: [status, title]
       properties:
         type:
           type: string
