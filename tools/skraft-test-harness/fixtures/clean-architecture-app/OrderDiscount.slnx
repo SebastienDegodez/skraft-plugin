@@ -5,4 +5,8 @@
     <Project Path="src/OrderDiscount.Infrastructure/OrderDiscount.Infrastructure.csproj" />
     <Project Path="src/OrderDiscount.Api/OrderDiscount.Api.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OrderDiscount.UnitTests/OrderDiscount.UnitTests.csproj" />
+    <Project Path="tests/OrderDiscount.IntegrationTests/OrderDiscount.IntegrationTests.csproj" />
+  </Folder>
 </Solution>
