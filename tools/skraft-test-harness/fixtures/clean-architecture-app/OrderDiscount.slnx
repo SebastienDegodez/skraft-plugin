@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OrderDiscount.Domain/OrderDiscount.Domain.csproj" />
+    <Project Path="src/OrderDiscount.Application/OrderDiscount.Application.csproj" />
+    <Project Path="src/OrderDiscount.Infrastructure/OrderDiscount.Infrastructure.csproj" />
+    <Project Path="src/OrderDiscount.Api/OrderDiscount.Api.csproj" />
+  </Folder>
+</Solution>

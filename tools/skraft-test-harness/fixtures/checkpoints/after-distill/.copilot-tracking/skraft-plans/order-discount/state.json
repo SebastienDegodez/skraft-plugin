@@ -1,0 +1,41 @@
+{
+  "projectSlug": "order-discount",
+  "skraftPlanFile": ".copilot-tracking/skraft-plans/order-discount/plans/2026-06-12/order-discount-plan.instructions.md",
+  "currentPhase": "DELIVER",
+  "entryMode": "from-issue",
+  "issueNumber": 42,
+  "difficulty": "medium",
+  "phasesCompleted": ["DISCOVER", "DISCUSS", "DESIGN", "DISTILL"],
+  "phaseArtifacts": {
+    "DISCOVER": ["research/2026-06-12/order-discount-research.md"],
+    "DISCUSS": ["plans/2026-06-12/order-discount-plan.instructions.md"],
+    "DESIGN": [
+      "adrs/ADR-001-order-discount.md",
+      "details/2026-06-12/order-discount-contracts.md"
+    ],
+    "DISTILL": [
+      "details/2026-06-12/order-discount-details.md",
+      "features/order-discount.feature"
+    ],
+    "DELIVER": []
+  },
+  "reviewerVerdicts": {
+    "DISCOVER": "APPROVED",
+    "DISCUSS": "APPROVED",
+    "DESIGN": "APPROVED",
+    "DISTILL": "APPROVED",
+    "DELIVER": null
+  },
+  "reviewArtifacts": [
+    "reviews/2026-06-12/discover-order-discount-review.md",
+    "reviews/2026-06-12/discuss-order-discount-review.md",
+    "reviews/2026-06-12/design-order-discount-review.md",
+    "reviews/2026-06-12/distill-order-discount-review.md"
+  ],
+  "retryCount": { "DISCOVER": 0, "DISCUSS": 0, "DESIGN": 0, "DISTILL": 0, "DELIVER": 0 },
+  "referencesProcessed": [],
+  "nextActions": ["Dispatch software-engineer to implement promotion stacking outside-in with a mutation gate."],
+  "userPreferences": { "autonomyTier": "full", "depthTier": "comprehensive", "maxRetriesPerPhase": 2 },
+  "depthTierOverrides": [],
+  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null, "ssscPlanFile": null }
+}
