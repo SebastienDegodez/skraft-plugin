@@ -46,6 +46,17 @@ jobs:
         working-directory: tools/skraft-test-harness
         run: dotnet run --project tests/SkraftTestHarness.IntegrationTest --no-build
 
+      # Deterministic phase-checkpoint conformance gate (no agent, no LLM, no
+      # quota). Fails the build when a committed checkpoint drifts from the
+      # artefact format the next 5D phase expects.
+      - name: Verify phase checkpoints
+        working-directory: tools/skraft-test-harness
+        run: |
+          dotnet run --project src/SkraftTestHarness.Cli --no-build -- \
+            verify-checkpoint \
+            --tests-dir ../../tests/skraft-plugin/phase-conformance \
+            --fixtures-root ./fixtures
+
       - name: Upload JUnit reports
         if: always()
         uses: actions/upload-artifact@v4
