@@ -34,9 +34,9 @@ Real mode is the default. To evaluate a **workflow agent**, point the harness at
 
 ```bash
 dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
-  evaluate --skill software-engineer \
-  --tests-dir tests/skraft-plugin/software-engineer-agent \
-  --plugin-dir plugins --agent skraft:software-engineer \
+  evaluate --skill skraft-orchestrator \
+  --tests-dir tests/skraft-plugin/pipeline/01-DISCOVER \
+  --plugin-dir plugins --agent skraft:skraft-orchestrator \
   --report-dir ./eval-reports
 ```
 
@@ -74,15 +74,15 @@ copilot -p hi --plugin-dir plugins --agent __list__ --output-format json --log-l
 
 ```bash
 dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
-  evaluate --skill solution-architect \
-  --tests-dir tests/skraft-plugin/solution-architect-agent \
-  --plugin-dir plugins --agent skraft:solution-architect \
+  evaluate --skill skraft-orchestrator \
+  --tests-dir tests/skraft-plugin/pipeline/03-DESIGN \
+  --plugin-dir plugins --agent skraft:skraft-orchestrator \
   --report-dir ./eval-reports
-# → SkillVerdict(skill=solution-architect, scenarios=3, winner: with-skill)
+# → SkillVerdict(skill=skraft-orchestrator, scenarios=1, winner: with-skill)
 ```
 
-Validated suites live under `tests/skraft-plugin/<agent>-agent/eval.yaml`
-(`software-engineer-agent`, `solution-architect-agent`).
+Validated suites live under `tests/skraft-plugin/pipeline/<NN-PHASE>/eval.yaml`
+(`01-DISCOVER` … `05-DELIVER`).
 
 ---
 
@@ -120,7 +120,7 @@ scenarios:
 
 ### Real-world example
 
-See [`tests/skraft-plugin/software-engineer-agent/eval.yaml`](../tests/skraft-plugin/software-engineer-agent/eval.yaml) for a full suite covering outside-in TDD, Clean Architecture vocabulary, and Object Calisthenics.
+See [`tests/skraft-plugin/pipeline/05-DELIVER/eval.yaml`](../tests/skraft-plugin/pipeline/05-DELIVER/eval.yaml) for a full suite that drives the orchestrator through the DELIVER phase and asserts the produced feature code.
 
 ---
 

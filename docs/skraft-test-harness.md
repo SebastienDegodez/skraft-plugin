@@ -86,8 +86,8 @@ variations stochastiques du modèle).
 
 ```bash
 skraft-test-harness ralph \
-  --skill software-engineer \
-  --tests-dir tests/skraft-plugin/software-engineer-agent \
+  --skill skraft-orchestrator \
+  --tests-dir tests/skraft-plugin/pipeline/01-DISCOVER \
   --runs 5 \
   --threshold 0.4
 ```
@@ -103,7 +103,7 @@ plugins/
 
 tests/
   skraft-plugin/
-    software-engineer-agent/
+    pipeline/01-DISCOVER/
       eval.yaml                        ← scénarios d'évaluation
 
 tools/
@@ -135,13 +135,13 @@ déclaratives.
 1. Lire [`test-harness.md`](./test-harness.md) pour la référence
    technique complète (CLI, schema eval.yaml, commandes).
 2. Regarder un `eval.yaml` existant :
-   [`tests/skraft-plugin/software-engineer-agent/eval.yaml`](../tests/skraft-plugin/software-engineer-agent/eval.yaml).
+   [`tests/skraft-plugin/pipeline/01-DISCOVER/eval.yaml`](../tests/skraft-plugin/pipeline/01-DISCOVER/eval.yaml).
 3. Lancer une évaluation en mode mock :
    ```bash
    cd tools/skraft-test-harness
    dotnet run --project src/SkraftTestHarness.Cli -- \
-     evaluate --skill software-engineer \
-     --tests-dir ../../tests/skraft-plugin/software-engineer-agent \
+     evaluate --skill skraft-orchestrator \
+     --tests-dir ../../tests/skraft-plugin/pipeline/01-DISCOVER \
      --mock
    ```
 4. Ouvrir le dashboard :

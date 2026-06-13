@@ -102,17 +102,20 @@ jobs:
           COPILOT_CLI_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
         run: dotnet run --project tests/SkraftTestHarness.IntegrationTest --no-build
 
-      - name: Run workflow eval suites
+      - name: Run the 5D pipeline eval suites (functionality + conformance)
         working-directory: .
         env:
           GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
           COPILOT_CLI_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
         run: |
-          for agent in software-engineer solution-architect; do
+          # The pipeline always launches from the orchestrator, one phase at a
+          # time, in order. Each suite verifies what the agent actually produced.
+          for phase in 01-DISCOVER 02-DISCUSS 03-DESIGN 04-DISTILL 05-DELIVER; do
             dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
-              evaluate --skill "$agent" \
-              --tests-dir "tests/skraft-plugin/${agent}-agent" \
-              --plugin-dir plugins --agent "skraft:${agent}" \
+              evaluate --skill skraft-orchestrator \
+              --tests-dir "tests/skraft-plugin/pipeline/${phase}" \
+              --plugin-dir plugins --agent skraft:skraft-orchestrator \
+              --fixtures-root tools/skraft-test-harness/fixtures \
               --report-dir ./eval-reports
           done
 
