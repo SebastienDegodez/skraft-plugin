@@ -1,6 +1,6 @@
 # Example 03 — Complete xUnit Test Class with WebApplicationFactory
 
-**Pattern:** integration test for the MonAssurance eligibility HTTP endpoint using `WebApplicationFactory<Program>` with Microcks replacing the downstream eligibility gateway.
+**Pattern:** integration test for the MonAssurance eligibility HTTP endpoint using `WebApplicationFactory<Program>` with Microcks replacing the downstream eligibility gateway. This is a **consumer-side** test (the SUT calls OUT to the mocked downstream). Provider-side conformance of THIS service’s own API uses `TestEndpointAsync` on a real Kestrel port — see [contract-testing-dotnet](../../contract-testing-dotnet/SKILL.md).
 
 ---
 
@@ -33,8 +33,8 @@ tests/
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
-    <PackageReference Include="Microcks.Testcontainers" Version="0.1.0" />
-    <PackageReference Include="Testcontainers" Version="3.9.0" />
+    <!-- Brings DotNet.Testcontainers transitively. -->
+    <PackageReference Include="Microcks.Testcontainers" Version="0.3.4" />
     <PackageReference Include="xunit" Version="2.9.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
@@ -82,14 +82,14 @@ public sealed class EligibilityApiFactory : WebApplicationFactory<Program>, IAsy
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            // Schema must load first
-            .WithMainArtifact("contracts/eligibility-check-api.yaml")
-            // Examples define mock responses
-            .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-            // Metadata defines dispatcher routing
-            .WithMainArtifact("contracts/eligibility-check-api.apimetadata.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            // Schema first, then examples, then dispatcher metadata — one call.
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml",
+                "contracts/eligibility-check-api.apimetadata.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -103,12 +103,12 @@ public sealed class EligibilityApiFactory : WebApplicationFactory<Program>, IAsy
             if (descriptor is not null)
                 services.Remove(descriptor);
 
-            // Resolve mock URL only after container has started
-            var mockUrl = _microcks.GetRestMockUrl("Eligibility Check API", "1.0.0");
+            // Resolve the mock endpoint only after the container has started
+            Uri mockUrl = _microcks.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
 
-            // Re-register with Microcks mock URL
+            // Re-register the downstream client against the Microcks mock
             services.AddHttpClient<IEligibilityGateway, HttpEligibilityGateway>(client =>
-                client.BaseAddress = new Uri(mockUrl));
+                client.BaseAddress = mockUrl);
         });
     }
 
@@ -225,20 +225,20 @@ public sealed class EligibilityEndpointTests : IClassFixture<EligibilityApiFacto
     }
 
     // -------------------------------------------------------------------------
-    // Contract verification: assert our implementation matches the OpenAPI spec
+    // Consumer-side assertion: the downstream mock was actually exercised.
+    // VerifyAsync returns a bool (mock-invocation check) — it is NOT provider
+    // conformance. To verify THIS service against its own contract, boot it on a
+    // real Kestrel port and use TestEndpointAsync(OPEN_API_SCHEMA); see
+    // contract-testing-dotnet.
     // -------------------------------------------------------------------------
 
-    [Fact(DisplayName = "Eligibility Check API implementation satisfies OpenAPI contract")]
-    public async Task Implementation_satisfies_openapi_contract()
+    [Fact(DisplayName = "Downstream eligibility mock was invoked")]
+    public async Task Downstream_mock_was_invoked()
     {
-        // VerifyAsync drives all examples in .apiexamples.yaml against the
-        // running service via WebApplicationFactory and asserts responses match.
-        var result = await _factory.Microcks.VerifyAsync(
-            "Eligibility Check API",
-            "1.0.0",
-            timeout: TimeSpan.FromSeconds(15));
+        await _client.GetAsync("/eligibilities/DRV-001");
 
-        Assert.True(result.Success, string.Join("\n", result.Failures));
+        bool invoked = await _factory.Microcks.VerifyAsync("Eligibility Check API", "1.0.0");
+        Assert.True(invoked);
     }
 }
 

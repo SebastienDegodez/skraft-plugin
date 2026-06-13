@@ -70,14 +70,16 @@ Declare contracts as content files in the test `.csproj` to copy them to the out
 Reference them in `MicrocksBuilder` using relative paths from the output root:
 
 ```csharp
-new MicrocksBuilder()
-    .WithMainArtifact("contracts/eligibility-check-api.yaml")
-    .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-    .WithMainArtifact("contracts/eligibility-check-api.apimetadata.yaml")
-    .BuildAsync();
+var microcks = new MicrocksBuilder()
+    .WithMainArtifacts(
+        "contracts/eligibility-check-api.yaml",
+        "contracts/eligibility-check-api.apiexamples.yaml",
+        "contracts/eligibility-check-api.apimetadata.yaml")
+    .Build();
+await microcks.StartAsync();
 ```
 
-**Loading order is mandatory:** schema (`.yaml`) → examples (`.apiexamples.yaml`) → dispatcher (`.apimetadata.yaml`).
+**Loading order is mandatory:** schema (`.yaml`) → examples (`.apiexamples.yaml`) → dispatcher (`.apimetadata.yaml`), all in one `WithMainArtifacts` call.
 
 ---
 
@@ -123,18 +125,19 @@ metadata:
   name: "Eligibility Check API - 2.0.0"   # ← must match exactly
 ```
 
-### Step 3 — Update VerifyAsync calls in tests
+### Step 3 — Update the ServiceId in conformance tests
 
 ```csharp
 // In MonAssurance.IntegrationTests
-var result = await _microcks.VerifyAsync("Eligibility Check API", "2.0.0");
+var request = new TestRequest { ServiceId = "Eligibility Check API:2.0.0", /* ... */ };
 //                                                                  ↑ bumped
+var result = await _microcks.TestEndpointAsync(request);
 ```
 
-### Step 4 — Update GetRestMockUrl calls
+### Step 4 — Update GetRestMockEndpoint calls
 
 ```csharp
-var mockUrl = _microcks.GetRestMockUrl("Eligibility Check API", "2.0.0");
+Uri mockUrl = _microcks.GetRestMockEndpoint("Eligibility Check API", "2.0.0");
 ```
 
 ### Step 5 — Commit atomically
@@ -150,7 +153,7 @@ All four changes (design contract, examples, metadata, test code) must appear in
 | Stem matches across phases | `eligibility-check-api` in DESIGN, DISTILL, and DELIVER |
 | `metadata.name` = `{info.title} - {info.version}` | `"Eligibility Check API - 1.0.0"` |
 | REST mock URL name = `info.title` (URL-encoded) | `Eligibility+Check+API` in URL |
-| Version in `GetRestMockUrl` = `info.version` | `"1.0.0"` (string, not semver object) |
+| Version in `GetRestMockEndpoint` = `info.version` | `"1.0.0"` (string, not semver object) |
 | AsyncAPI stems get `-events` suffix | `monassurance-events-api` |
 
 ---

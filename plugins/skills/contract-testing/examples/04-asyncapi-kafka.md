@@ -178,10 +178,12 @@ public sealed class EligibilityEventConsumerTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/monassurance-events-api.yaml")
-            .WithMainArtifact("contracts/monassurance-events-api.apiexamples.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/monassurance-events-api.yaml",
+                "contracts/monassurance-events-api.apiexamples.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
     public async Task DisposeAsync() => await _microcks.DisposeAsync();
@@ -252,10 +254,12 @@ public sealed class EligibilityEventProducerTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/monassurance-events-api.yaml")
-            .WithMainArtifact("contracts/monassurance-events-api.apiexamples.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/monassurance-events-api.yaml",
+                "contracts/monassurance-events-api.apiexamples.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
     public async Task DisposeAsync() => await _microcks.DisposeAsync();
@@ -274,22 +278,27 @@ public sealed class EligibilityEventProducerTests : IAsyncLifetime
             new InMemoryDriverRepository(new Driver("DRV-001", age: 35)),
             publisher);
 
+        // Start the async conformance test BEFORE producing, so Microcks listens
+        // on the topic while the use case publishes. ASYNC_API_SCHEMA validates the
+        // captured message against the contract.
+        var testResultTask = _microcks.TestEndpointAsync(new TestRequest
+        {
+            ServiceId    = "MonAssurance Events API:1.0.0",
+            RunnerType   = TestRunnerType.ASYNC_API_SCHEMA,
+            TestEndpoint = "kafka://kafka:19092/eligibility.checked",
+            Timeout      = TimeSpan.FromSeconds(10),
+        });
+
         // Act
         await useCase.ExecuteAsync(new CheckEligibilityCommand(
             DriverId: "DRV-001",
             VehicleType: "CAR",
             PostalCode: "75001"));
 
-        // Allow Kafka message to propagate
-        await Task.Delay(500);
+        // Assert — await the conformance result captured during the act step.
+        var result = await testResultTask;
 
-        // Assert — VerifyAsync checks that published event matches contract examples
-        var result = await _microcks.VerifyAsync(
-            "MonAssurance Events API",
-            "1.0.0",
-            timeout: TimeSpan.FromSeconds(10));
-
-        Assert.True(result.Success, string.Join("\n", result.Failures));
+        Assert.True(result.Success);
     }
 }
 ```
@@ -333,7 +342,7 @@ public class KafkaEventPublisher(string bootstrapServers, string topic)
 
 ## Design Notes
 
-- **`GetKafkaMockTopic` vs `GetRestMockUrl`:** Kafka contracts use `GetKafkaMockTopic(apiName, version, channelName)`. The channel name matches the key under `channels:` in the AsyncAPI spec.
+- **`GetKafkaMockTopic` vs `GetRestMockEndpoint`:** Kafka contracts use `GetKafkaMockTopic(apiName, version, channelName)`. The channel name matches the key under `channels:` in the AsyncAPI spec.
 - **Consumer test:** validates the consumer's parsing and handling logic against Microcks-published examples. Does not test the producer.
 - **Producer test:** validates that the application produces events conforming to the contract. `VerifyAsync` compares the published message to the AsyncAPI examples.
 - **Unique GroupId per test:** avoids offset conflicts when tests run in parallel or are re-run without container restart.

@@ -1,6 +1,6 @@
 ---
 name: contract-testing-dotnet
-description: Use when the contract-testing-roster resolved a .NET stack for a provider-side contract test. Always provides the baseline WebApplicationFactory + HttpClient integration test recipe; when the Microcks opt-in is enabled, additionally provides the MicrocksContainer + VerifyAsync layer that verifies response codes, headers, and ProblemDetails shape against the contract. Emits test wiring only; the business TDD cycle stays with the software-engineer lead.
+description: Use when the contract-testing-roster resolved a .NET stack for a provider-side contract test. Always provides the baseline WebApplicationFactory + HttpClient integration test recipe; when the Microcks opt-in is enabled, additionally provides the MicrocksContainer + TestEndpointAsync(OPEN_API_SCHEMA) layer that replays the published contract against the running service and validates response codes, headers, and ProblemDetails shape. Emits test wiring only; the business TDD cycle stays with the software-engineer lead.
 ---
 
 # Contract Testing — .NET adapter (baseline + optional Microcks)
@@ -47,40 +47,82 @@ public class {Api}ContractTests : IClassFixture<WebApplicationFactory<Program>>
 
 ## Layer 2 — Microcks contract verification (ONLY when opt-in == true)
 
-Stack a Microcks contract test on top of the baseline. The provider-side approach
+Stack a Microcks contract test on top of the baseline. Provider-side conformance
 is `MicrocksContainer.TestEndpointAsync(TestRequest)` with the `OPEN_API_SCHEMA`
-runner: Microcks replays every contract example against your RUNNING service and
-validates each response. Seed the ensemble from the GENERIC contract artifacts
-authored by the `contract-testing` skill.
+runner: Microcks replays every example of the published contract against your
+RUNNING service and validates each response. Load the contract artifacts
+(`{api}.yaml` + `.apiexamples.yaml` + `.apimetadata.yaml`) authored per the
+generic `contract-testing` skill.
 
-NuGet: `Microcks.Testcontainers`, `Testcontainers`. The service must be reachable
-from the container via `host.testcontainers.internal` on the Kestrel port
-exposed with `TestcontainersSettings.ExposeHostPortsAsync(port)`.
+NuGet: `Microcks.Testcontainers` (it brings `DotNet.Testcontainers` transitively;
+do not also reference the unrelated `Testcontainers`/`TestContainers` packages).
+
+**Critical — a `WebApplicationFactory` cannot host Layer 2.** It serves the app
+in-memory and exposes no TCP port the Microcks container can reach. Boot the SUT
+on a real Kestrel port instead. Extract the app composition into a reusable
+factory (e.g. `CheckoutHost.Create()` returning a `WebApplication`) so `Program`
+and this test share the exact same wiring.
+
+Real Microcks 0.3.4 API: `new MicrocksBuilder()...Build()` returns the container,
+then `await container.StartAsync()`; `WithMainArtifacts(params string[])` loads
+the artifacts in one call; `TestEndpointAsync(request)` is an extension method.
 
 ```csharp
 [Fact]
 public async Task Service_satisfies_the_published_contract()
 {
-    // Microcks calls our running service with each example and validates responses.
-    var request = new TestRequest
+    // 1. Boot the SUT on a real port (WebApplicationFactory has none).
+    await using var app = CheckoutHost.Create();
+    app.Urls.Add("http://127.0.0.1:0");
+    await app.StartAsync();
+
+    var address = app.Services.GetRequiredService<IServer>()
+        .Features.Get<IServerAddressesFeature>()!.Addresses.First();
+    var port = int.Parse(address.Split(':').Last());
+
+    // 2. Expose that host port to the Microcks container network.
+    await TestcontainersSettings.ExposeHostPortsAsync([(ushort)port]);
+
+    // 3. Start Microcks seeded from the contract artifacts.
+    var microcks = new MicrocksBuilder()
+        .WithImage("quay.io/microcks/microcks-uber:1.14.0-native")
+        .WithMainArtifacts(
+            "contracts/{api}.yaml",
+            "contracts/{api}.apiexamples.yaml",
+            "contracts/{api}.apimetadata.yaml")
+        .Build();
+    await microcks.StartAsync();
+
+    try
     {
-        ServiceId = "{API Title}:1.0.0",          // matches info.title:version in the contract
-        RunnerType = TestRunnerType.OPEN_API_SCHEMA,
-        TestEndpoint = $"http://host.testcontainers.internal:{Port}/api",
-    };
+        // 4. Microcks replays every example against the running service.
+        var request = new TestRequest
+        {
+            ServiceId = "{API Title}:1.0.0",       // matches "info.title:info.version"
+            RunnerType = TestRunnerType.OPEN_API_SCHEMA,
+            TestEndpoint = $"http://host.testcontainers.internal:{port}",
+            Timeout = TimeSpan.FromSeconds(5),
+        };
 
-    var testResult = await MicrocksContainer.TestEndpointAsync(request);
+        var testResult = await microcks.TestEndpointAsync(request);
 
-    Assert.False(testResult.InProgress, "Test should not be in progress");
-    Assert.True(testResult.Success, "Service must conform to the contract");
+        Assert.True(testResult.Success, "Service must conform to the contract");
+    }
+    finally
+    {
+        await microcks.DisposeAsync();
+        await app.StopAsync();
+    }
 }
 ```
 
 `TestEndpointAsync` asserts that every response code, header, and body field
-(including `ProblemDetails` shape) matches the contract. Do NOT suppress a failing
-`TestResult` (`testResult.Success == false`). `MicrocksContainer` is obtained from
-the `MicrocksContainerEnsemble` set up in the test factory (see the
-mocking-microcks-dotnet recipe for the ensemble + `ExposeHostPortsAsync` wiring).
+(including the `ProblemDetails` shape) matches the contract. Do NOT suppress a
+failing `TestResult` (`testResult.Success == false`).
+
+> `VerifyAsync(name, version)` is a DIFFERENT method: in `Microcks.Testcontainers`
+> it returns a `bool` checking how many times a MOCK was invoked — a consumer-side
+> concern. It is NOT provider conformance. Use `TestEndpointAsync` here.
 
 ## Structured result back to the lead
 
@@ -108,6 +150,12 @@ For contract authoring, dispatcher rules, and sample formats, see the generic
 - ALWAYS emit Layer 1, regardless of the opt-in.
 - Add Layer 2 ONLY when `microcks: true`. Never replace the baseline with it.
 - Layer 2 is `TestEndpointAsync(TestRequest{ OPEN_API_SCHEMA })` against
-  `host.testcontainers.internal:{port}` — NOT `VerifyAsync` (that asserts a mock
-  was used, a consumer-side concern). Never suppress a failing `TestResult`.
+  `host.testcontainers.internal:{port}` — NOT `VerifyAsync` (that returns a `bool`
+  asserting a mock was invoked, a consumer-side concern). Never suppress a failing
+  `TestResult`.
+- Layer 2 needs a real Kestrel port: a `WebApplicationFactory` exposes none. Boot
+  the SUT via a shared host factory and read the port from `IServerAddressesFeature`.
+- Real API: `MicrocksBuilder...Build()` + `await StartAsync()`,
+  `WithMainArtifacts(params string[])`, `container.TestEndpointAsync(request)`.
+  There is no `BuildAsync`, no singular `WithMainArtifact`.
 - Use `resolving-stack-commands` for the test command — never hardcode `dotnet test`.

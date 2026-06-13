@@ -184,7 +184,7 @@ spec:
 
 These three files together enable:
 
-1. **Consumer test:** point `HttpClient.BaseAddress` at `GetRestMockUrl("Eligibility Check API", "1.0.0")`. The mock returns correct JSON for each driverId.
-2. **Provider verification:** `await _microcks.VerifyAsync("Eligibility Check API", "1.0.0")` drives all three examples against the real service and asserts responses match.
+1. **Consumer test:** point `HttpClient.BaseAddress` at `GetRestMockEndpoint("Eligibility Check API", "1.0.0")` (returns a `Uri`). The mock returns correct JSON for each driverId.
+2. **Provider verification:** `await _microcks.TestEndpointAsync(new TestRequest { ServiceId = "Eligibility Check API:1.0.0", RunnerType = TestRunnerType.OPEN_API_SCHEMA, TestEndpoint = $"http://host.testcontainers.internal:{port}" })` drives all three examples against the real service (running on a real Kestrel port) and asserts responses match.
 
 **Key invariant:** `metadata.name` in both DISTILL files must equal `"Eligibility Check API - 1.0.0"` — any mismatch silently breaks example loading.
