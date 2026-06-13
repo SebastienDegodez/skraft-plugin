@@ -17,7 +17,7 @@
 # LIVE (opt-in) :
 #   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
 #     --skill skraft-orchestrator \
-#     --tests-dir ../../tests/skraft-plugin/pipeline/05-DELIVER \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/order-checkout/05-DELIVER \
 #     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
 #     --fixtures-root ./fixtures
 scenarios:
@@ -25,7 +25,7 @@ scenarios:
     tags: [deliver, pipeline, simulation, live]
     workspace:
       fixture: clean-architecture-app
-      checkpoint: after-distill
+      checkpoint: order-checkout/after-distill
     prompt: >
       Resume the SKRAFT pipeline from state.json. DISCOVER, DISCUSS, DESIGN and
       DISTILL are already APPROVED for issue #42 (order checkout applying a

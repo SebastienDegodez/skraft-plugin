@@ -15,7 +15,7 @@
 # LIVE (opt-in) :
 #   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
 #     --skill skraft-orchestrator \
-#     --tests-dir ../../tests/skraft-plugin/pipeline/01-DISCOVER \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/order-checkout/01-DISCOVER \
 #     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
 #     --fixtures-root ./fixtures
 scenarios:

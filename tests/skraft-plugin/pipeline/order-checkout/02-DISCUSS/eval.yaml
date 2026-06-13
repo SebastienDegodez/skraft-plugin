@@ -1,0 +1,41 @@
+# Pipeline 5D — piste order-checkout — phase DISCUSS (LIVE)
+#
+# DÉMARCHE : base squelette + checkpoint order-checkout/after-discover.
+# L'orchestrateur exécute DISCUSS et PRODUIT la story affinée du checkout order.
+# On vérifie l'attendu (story + critères d'acceptation + review APPROVED).
+#
+# RÈGLE ABSOLUE : on n'archive jamais la production de l'agent (clone éphémère).
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/order-checkout/02-DISCUSS \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DISCUSS produit une story INVEST du checkout order et obtient un review APPROVED"
+    tags: [discuss, pipeline, simulation, live, order-checkout]
+    workspace:
+      fixture: clean-architecture-app
+      checkpoint: order-checkout/after-discover
+    prompt: >
+      Resume the SKRAFT pipeline from state.json. DISCOVER is already APPROVED for
+      issue #42 (order checkout applying a loyalty-tier discount). Run ONLY the
+      DISCUSS phase: refine the request into a user story with acceptance criteria
+      (Green 0%, Gold 5%, Platinum 10%, and a 404 for an unknown order), and have
+      the backlog-planner-reviewer review it. Stop as soon as the DISCUSS reviewer
+      returns APPROVED. Do not start DESIGN.
+    assertions:
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/plans/**/*-plan.instructions.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/plans/**/*-plan.instructions.md"
+          text: "Acceptance criteria"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/discuss-*-review.md"
+          text: "APPROVED"
+      - file_judge:
+          glob: ".copilot-tracking/skraft-plans/*/plans/**/*-plan.instructions.md"
+          criterion: >
+            The refined story follows the user-story format with testable
+            acceptance criteria covering the three loyalty tiers and the
+            unknown-order 404 case.

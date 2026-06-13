@@ -1,0 +1,38 @@
+# Pipeline 5D — piste order-checkout — phase DISTILL (LIVE)
+#
+# DÉMARCHE : base squelette + checkpoint order-checkout/after-design.
+# L'orchestrateur exécute DISTILL et PRODUIT des scénarios Gherkin + un plan de test.
+# On vérifie l'attendu (feature exécutable + plan + review APPROVED).
+#
+# RÈGLE ABSOLUE : on n'archive jamais la production de l'agent (clone éphémère).
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/order-checkout/04-DISTILL \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DISTILL produit du Gherkin + un plan de test pour le checkout et obtient un review APPROVED"
+    tags: [distill, pipeline, simulation, live, order-checkout]
+    workspace:
+      fixture: clean-architecture-app
+      checkpoint: order-checkout/after-design
+    prompt: >
+      Resume the SKRAFT pipeline from state.json. DISCOVER, DISCUSS and DESIGN are
+      already APPROVED for issue #42 (order checkout with a loyalty-tier discount).
+      Run ONLY the DISTILL phase: distil executable Gherkin scenarios and a test
+      plan for the checkout (one per loyalty tier plus the unknown-order 404), and
+      have the acceptance-designer-reviewer review it. Stop as soon as the DISTILL
+      reviewer returns APPROVED. Do not start DELIVER.
+    assertions:
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/features/*.feature"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/details/**/*-details.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/distill-*-review.md"
+          text: "APPROVED"
+      - file_judge:
+          glob: ".copilot-tracking/skraft-plans/*/features/*.feature"
+          criterion: >
+            The Gherkin scenarios are written in business language and cover each
+            loyalty tier (Green/Gold/Platinum) and the unknown-order 404 case.
