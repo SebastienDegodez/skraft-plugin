@@ -11,6 +11,8 @@
 #
 # Filter to one phase with --tags (e.g. --tags design).
 scenarios:
+# FR: le checkpoint DISCOVER contient le triage + un review APPROVED
+# Le prompt est une simple instruction de triage, le test vérifie que le checkpoint contient les artefacts attendus.
   - name: "DISCOVER checkpoint carries triage + an APPROVED review"
     tags: [discover, conformance, simulation]
     workspace:
@@ -24,6 +26,8 @@ scenarios:
           glob: ".copilot-tracking/skraft-plans/order-discount/reviews/**/discover-order-discount-review.md"
           text: "Verdict: APPROVED"
 
+# FR: le checkpoint DISCUSS contient la story INVEST + un review APPROVED
+# Le prompt est une simple instruction de refinement, le test vérifie que le checkpoint contient les
   - name: "DISCUSS checkpoint carries a refined story + an APPROVED review"
     tags: [discuss, conformance, simulation]
     workspace:

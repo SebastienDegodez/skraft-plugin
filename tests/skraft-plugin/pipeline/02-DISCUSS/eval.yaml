@@ -1,0 +1,44 @@
+# Pipeline 5D — phase DISCUSS (LIVE, l'agent produit réellement)
+#
+# DÉMARCHE :
+#   1. On part de la base `clean-architecture-app` + le checkpoint `after-discover`
+#      (overlay : la Clean Architecture est préservée, l'état DISCOVER est restauré).
+#   2. L'orchestrateur exécute la phase DISCUSS et PRODUIT la story affinée.
+#   3. On vérifie l'attendu (story + critères d'acceptation + review APPROVED).
+#
+# RÈGLE ABSOLUE : on n'archive JAMAIS sur le repo ce que l'agent produit.
+#   Run dans un clone éphémère ; le checkpoint committé n'est qu'une ENTRÉE
+#   (état des phases précédentes), jamais la sortie d'un run.
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/02-DISCUSS \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DISCUSS produit une story INVEST et obtient un review APPROVED"
+    tags: [discuss, pipeline, simulation, live]
+    workspace:
+      fixture: clean-architecture-app
+      checkpoint: after-discover
+    prompt: >
+      Resume the SKRAFT pipeline from state.json. DISCOVER is already APPROVED.
+      Run ONLY the DISCUSS phase: refine the promotion-stacking request into a
+      user story with acceptance criteria, and have the backlog-planner-reviewer
+      review it. Stop as soon as the DISCUSS reviewer returns APPROVED. Do not
+      start DESIGN.
+    assertions:
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/plans/**/*-plan.instructions.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/plans/**/*-plan.instructions.md"
+          text: "Acceptance criteria"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/discuss-*-review.md"
+          text: "APPROVED"
+      - file_judge:
+          glob: ".copilot-tracking/skraft-plans/*/plans/**/*-plan.instructions.md"
+          criterion: >
+            The refined story follows the user-story format with testable
+            acceptance criteria covering combining the promotion with the
+            loyalty discount and a cap guardrail.

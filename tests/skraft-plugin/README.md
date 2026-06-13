@@ -1,151 +1,132 @@
 # SKRAFT plugin evals — `tests/skraft-plugin`
 
-Behavioural evaluation suites for every SKRAFT agent, worker and review
-lens, executed by the [skraft-test-harness](../../tools/skraft-test-harness/)
-(`evaluate` command). One directory per component, each holding an
-`eval.yaml` scenario suite.
+Behavioural evaluation suites for the SKRAFT 5D pipeline, executed by the
+[skraft-test-harness](../../tools/skraft-test-harness/) (`evaluate` and
+`verify-checkpoint` commands).
 
-## Objective
+## Principle: functionality and conformance, never vocabulary
 
-Prove that **each agent actually does its job on a realistic simulation
-of a real application** — not that it can recite the right vocabulary.
+These suites test **what the agents produce on a real codebase**, not whether
+they can recite the right words. There are exactly two kinds of suite:
 
-Every evaluated run compares two executions of the same scenario:
-
-| Run | What it is |
-|---|---|
-| **Baseline** | The agent prompt with *no* SKRAFT plugin loaded (`--no-custom-instructions`). |
-| **With-skill** | The same prompt with the plugin + agent under test loaded (`--plugin-dir`, `--agent`). |
-
-A verdict is produced per scenario (assertions first; a hybrid judge —
-deterministic heuristics, then LLM-as-judge — breaks ties). The suite
-only has value if the with-skill run is **observably** better on a task
-that resembles real usage.
-
-## The simulation principle
-
-The reference simulation is a minimal but buildable **Clean Architecture
-.NET application** (`tools/skraft-test-harness/fixtures/clean-architecture-app/`):
-Domain / Application / Infrastructure / Api layers, one existing entity
-and use case. Scenarios run the agent **inside a clone of that
-workspace** (`--working-dir`) and assert what the agent *produced*, not
-just what it *said*:
-
-- `file_exists: "path"` — an exact file was created.
-- `file_matches_glob: "reviews/**/deliver-review-*.md"` — a dated/slugged
-  artefact exists (SKRAFT artefact paths contain `{projectSlug}` and dates).
-- `file_contains: { glob: "...", text: "Verdict: APPROVED" }` — a reviewer
-  verdict, state entry, or generated code contains the expected content.
-- `output_*` assertions — observable claims in the agent's final answer.
-
-The 5D pipeline (DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER) is
-evaluated **one phase at a time**. Each phase test seeds its workspace
-from a committed checkpoint (`fixtures/checkpoints/after-{previous-phase}/`)
-containing the `state.json` and artefacts of the phases already done, so
-each phase is replayable in isolation and the orchestrator resumes
-exactly where a real project would be. Reviewer verdicts written under
-`.copilot-tracking/skraft-plans/{slug}/reviews/` are part of the
-assertions: a phase only counts as done when its reviewer APPROVED it.
-
-## What makes a scenario *relevant*
-
-There are many tests. A scenario earns its place only if it passes all
-four checks:
-
-1. **Realistic input** — the prompt reproduces a situation the agent
-   meets in the pipeline (artefacts of the previous phase present in the
-   workspace, real file paths, real state). A bare opinion question is
-   not realistic input.
-2. **Observable outcome** — at least one assertion targets an artefact
-   (file created/modified, verdict written, state advanced) or a
-   decision with material consequences. Vocabulary-only assertions
-   (`output_matches: "(?i)outside[- ]in"`) are insufficient on their own.
-3. **Discriminating** — a competent baseline agent *without* the plugin
-   should plausibly fail it. If both runs pass, the scenario measures
-   nothing.
-4. **Not overfitted** — assertions check behaviour, not the exact
-   wording of the skill file. Keyword-stuffed answers must not pass
-   (the harness judge penalises overlap with skill text).
-
-When reviewing or adding scenarios, apply this checklist. Scenarios that
-fail it should be rewritten as simulation scenarios or deleted.
-
-> **Current state / migration**: the historical suites below are
-> prompt-only behavioural probes (advice-style Q&A). They remain useful
-> as fast smoke checks of each persona's doctrine, but they do not meet
-> the simulation bar above. They are being migrated to workspace-based
-> scenarios; new scenarios must follow the simulation principle from the
-> start.
-
-## Suite inventory
-
-| Suite | Component under test | Kind |
+| Kind | Directory | What it proves |
 |---|---|---|
-| `skraft-orchestrator-agent/` | 5D pipeline entry point, state protocol, phase gating | agent |
-| `backlog-discoverer-agent/` + `-reviewer-` | DISCOVER triage / its adversarial review | agent + reviewer |
-| `backlog-planner-agent/` + `-reviewer-` | DISCUSS stories / INVEST review | agent + reviewer |
-| `solution-architect-agent/` + `-reviewer-` | DESIGN ADRs, contracts / architecture review | agent + reviewer |
-| `acceptance-designer-agent/` + `-reviewer-` | DISTILL Gherkin, test plans / review | agent + reviewer |
-| `software-engineer-agent/` + `-reviewer-` | DELIVER outside-in TDD / adversarial verdict | agent + reviewer |
-| `contract-testing-worker/`, `mock-integration-worker/` | DELIVER sub-agents (contract tests, mock wiring) | worker |
-| `architecture-boundaries-lens/`, `cold-reader-lens/`, `contract-fidelity-lens/`, `mock-fidelity-lens/`, `quality-gates-lens/`, `test-integrity-lens/` | software-engineer-reviewer fan-out lenses | lens |
+| **Functionality** (LIVE) | [`pipeline/`](pipeline/) | The orchestrator runs a phase and **produces** the expected artefacts/code; we assert the result. |
+| **Conformance** (deterministic) | [`phase-conformance/`](phase-conformance/) | The committed seed checkpoints still match the artefact **format** a phase expects. No agent, no LLM. |
 
-## Running a suite
+There are no prompt-only "does the agent say the right thing" Q&A suites — those
+were vocabulary tests and have been removed.
+
+## The reference workspace: an empty Clean Architecture skeleton
+
+The fixture
+[`fixtures/clean-architecture-app/`](../../tools/skraft-test-harness/fixtures/clean-architecture-app/)
+is a buildable .NET Clean Architecture skeleton (`OrderDiscount.Domain /
+Application / Infrastructure / Api` + test projects) that **carries no feature
+yet**. The feature to build is described by a **GitHub issue passed in the
+prompt** (the *order* checkout-with-loyalty-discount issue). The agents must
+populate the skeleton; we verify what they produced.
+
+## The golden rule
+
+> **We never archive in the repo what the agents produce.**
+> Every run executes in an **ephemeral clone** of the fixture (a temp directory
+> deleted at the end). The committed skeleton is never mutated, and the agent's
+> output (code or `.copilot-tracking/` artefacts) is never committed.
+
+## How a phase eval works
+
+```
+  empty CA skeleton  ─┐
+  (committed fixture) │  cloned into an
+                      ├─►  ephemeral temp dir ─►  the ORCHESTRATOR runs the phase
+  issue in the prompt ┘                           ─►  the agent PRODUCES code/artefacts
+                                                  ─►  we assert the expected output
+                                                  ─►  the clone is deleted (nothing committed)
+```
+
+1. **Start from the skeleton (+ the prior phase's state).** The base is the
+   empty `clean-architecture-app`. From DISCUSS onward, the prior phases'
+   `.copilot-tracking` state is **overlaid** on top (the skeleton code is
+   preserved, `bin/`/`obj/` are excluded so the clone is pristine).
+2. **The orchestrator drives.** The pipeline always launches from
+   `skraft:skraft-orchestrator` — the single entry point. We evaluate one phase
+   at a time by telling it to run only that phase and stop once its reviewer
+   returns `APPROVED`.
+3. **The agent produces, we verify.** Assertions target the *new* artefacts the
+   phase must create (and, for DELIVER, the feature code in `src/`) plus the
+   reviewer's `APPROVED` verdict.
+
+### Assertion vocabulary
+
+- `file_matches_glob: "research/**/*-research.md"` — a produced artefact exists.
+- `file_contains: { glob: "...", text: "APPROVED" }` — a file contains expected content.
+- `file_judge: { glob: "...", criterion: "..." }` — an LLM checks a business
+  criterion on the produced files (e.g. "the discount rule lives in the Domain layer").
+- `output_*` — observable claims in the agent's final answer (supporting, never
+  the sole assertion).
+
+## The 5D pipeline suites — `pipeline/`
+
+One directory per phase, **order-prefixed** so the run order is explicit:
+
+| Suite | Phase | Starts from | Verifies the agent produced… |
+|---|---|---|---|
+| [`01-DISCOVER`](pipeline/01-DISCOVER/) | DISCOVER | skeleton only | triage of the order issue + `APPROVED` review |
+| [`02-DISCUSS`](pipeline/02-DISCUSS/) | DISCUSS | + `after-discover` | refined story w/ acceptance criteria + `APPROVED` |
+| [`03-DESIGN`](pipeline/03-DESIGN/) | DESIGN | + `after-discuss` | ADR + interface contracts + `APPROVED` |
+| [`04-DISTILL`](pipeline/04-DISTILL/) | DISTILL | + `after-design` | executable Gherkin + test plan + `APPROVED` |
+| [`05-DELIVER`](pipeline/05-DELIVER/) | DELIVER | + `after-distill` | **feature code in `src/`** + change log + `APPROVED` |
+
+Each scenario is tagged `[<phase>, pipeline, simulation, live]`. The suites are
+**LIVE** (consume Copilot quota) and opt-in — never on push/PR.
+
+Every scenario runs **twice** (baseline with `--no-custom-instructions` vs
+with-skill with the plugin + orchestrator); assertions decide first and a hybrid
+judge breaks ties. A scenario only has value if the with-skill run is observably
+better at building the requested feature.
+
+### Running one phase (LIVE)
 
 ```bash
 cd tools/skraft-test-harness
 
-# Deterministic smoke run (no LLM, CI-safe)
 dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
-  --skill software-engineer --tests-dir ../../tests/skraft-plugin/software-engineer-agent --mock
-
-# Real run against the Copilot CLI (consumes model quota)
-dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
-  --skill software-engineer \
-  --tests-dir ../../tests/skraft-plugin/software-engineer-agent \
-  --plugin-dir ../../plugins --agent skraft:software-engineer \
-  --working-dir <clone of fixtures/clean-architecture-app> \
-  --report-dir ./reports
+  --skill skraft-orchestrator \
+  --tests-dir ../../tests/skraft-plugin/pipeline/01-DISCOVER \
+  --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+  --fixtures-root ./fixtures
 ```
 
-Live end-to-end phase tests are opt-in via `SKRAFT_COPILOT_LIVE=1`
-(see `tests/SkraftTestHarness.IntegrationTest/Cli/`), and in CI via the
-`live-evals` job of
-[`skraft-test-harness.yml`](../../.github/workflows/skraft-test-harness.yml)
-(`workflow_dispatch`, never on push/PR).
+Run the suites in order (`01-DISCOVER` → `05-DELIVER`), checking each phase
+before moving to the next. The workspace is provisioned automatically from the
+declared `fixture` + `checkpoint`; nothing you run mutates the repo.
 
-## The simulation fixture and the checkpoint chain
-
-The reference workspace and its per-phase checkpoints live under
-`tools/skraft-test-harness/fixtures/`:
+## The fixtures — `tools/skraft-test-harness/fixtures/`
 
 ```
 fixtures/
-  clean-architecture-app/        # buildable net10 CA app (Domain/App/Infra/Api)
+  clean-architecture-app/   # empty net10 CA skeleton (code only, no feature, no .copilot-tracking)
   checkpoints/
-    after-discover/              # app + DISCOVER artefacts + APPROVED review
-    after-discuss/               # + DISCUSS story/plan + APPROVED review
-    after-design/                # + ADR-001 + contracts + APPROVED review
-    after-distill/               # + Gherkin + test plan + APPROVED review
+    after-discover/         # .copilot-tracking state after DISCOVER (seed input)
+    after-discuss/          # + DISCUSS story/plan
+    after-design/           # + ADR + contracts
+    after-distill/          # + Gherkin + test plan
 ```
 
-Each checkpoint contains the cumulative `.copilot-tracking/skraft-plans/order-discount/`
-tree (the `state.json` and artefacts of every phase already done) so any phase
-is replayable in isolation: a live phase run seeds its workspace from the
-**previous** phase's checkpoint and is asserted on what it produces.
+- `clean-architecture-app/` is the **base skeleton**. The provisioner always
+  clones it first and excludes `bin/`/`obj/` so the clone is pristine.
+- `checkpoints/after-*` are **hand-authored seed inputs** — the `.copilot-tracking`
+  state of the *previous* phases, overlaid on the skeleton so a phase can start
+  where the prior one left off. They are inputs, **never** the output of a run.
 
-`order-discount` is the coffee-shop fil rouge — the feature under construction
-is *promotion stacking*: combine an active store promotion with the loyalty-tier
-discount, capped so the combined rate never exceeds a guardrail.
+## Checkpoint conformance (`verify-checkpoint`)
 
-## Checkpoint conformance gate (`verify-checkpoint`)
-
-The committed checkpoints must keep matching the artefact format each phase is
-supposed to produce. The `verify-checkpoint` command evaluates **only the file
-assertions** of [`phase-conformance/eval.yaml`](phase-conformance/eval.yaml)
-against the committed checkpoints — no agent, no LLM, no quota — and is run on
-every push/PR (CI step *Verify phase checkpoints*, and the
-`PhaseConformanceEndToEndTests` integration test):
+The committed seed checkpoints must keep matching the artefact format each phase
+expects. `verify-checkpoint` evaluates **only the file assertions** of
+[`phase-conformance/eval.yaml`](phase-conformance/eval.yaml) against them — no
+agent, no LLM, no quota — on every push/PR (CI step *Verify phase checkpoints*
+and the `PhaseConformanceEndToEndTests` integration test).
 
 ```bash
 cd tools/skraft-test-harness
@@ -161,13 +142,20 @@ dotnet run --project src/SkraftTestHarness.Cli -- verify-checkpoint \
   --fixtures-root ./fixtures --tags design
 ```
 
-Scenarios are categorised with `tags:` (`discover`, `discuss`, `design`,
-`distill`, plus `conformance`, `simulation`); `--tags` runs only the scenarios
-carrying all the given tags, so a single phase can be verified in isolation.
+## Two distinct gates — do not confuse them
+
+| Gate | Runs the agent? | Cost | What it checks |
+|---|---|---|---|
+| `pipeline/**` | **Yes** (LIVE) | Copilot quota | the agent *produces* the expected feature/artefacts |
+| `phase-conformance/` + `verify-checkpoint` | No | free, deterministic | the committed seed checkpoints still match the artefact *format* |
+
+The live pipeline is wired in the `live-evals` job of
+[`skraft-test-harness.yml`](../../.github/workflows/skraft-test-harness.yml)
+(`workflow_dispatch`, never on push/PR); conformance runs on every push/PR.
 
 ## Where results go
 
-`--report-dir` emits one JSON `SkillVerdict` per run. The CI pipeline
-aggregates them into a benchmark history published **with the
-documentation site** (dashboard page, single page shared between FR and
-EN). Quality history first; cost/token metrics are planned next.
+`--report-dir` emits one JSON `SkillVerdict` per run. The CI pipeline aggregates
+them into a benchmark history published **with the documentation site**
+(dashboard page, single page shared between FR and EN). Quality history first;
+cost/token metrics are planned next.

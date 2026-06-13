@@ -1,0 +1,62 @@
+# Pipeline 5D — phase DELIVER (LIVE, l'agent produit réellement)
+#
+# DÉMARCHE (la plus importante pour ta demande) :
+#   1. Base `clean-architecture-app` + checkpoint `after-distill`.
+#   2. L'orchestrateur exécute DELIVER : l'agent ÉCRIT le code de la feature
+#      (promotion stacking) DANS src/ en outside-in TDD.
+#   3. On vérifie que :
+#        - la feature attendue a bien été produite dans le code (src/) ;
+#        - la Clean Architecture DE BASE est PRÉSERVÉE (la remise loyauté
+#          existante n'est pas cassée) ;
+#        - change-log + review DELIVER APPROVED + état DONE.
+#
+# RÈGLE ABSOLUE : on n'archive JAMAIS sur le repo ce que l'agent produit.
+#   Tout ce code feature est écrit dans le clone éphémère, vérifié, puis jeté.
+#   La fixture committée reste le template de base sans feature.
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/05-DELIVER \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DELIVER implémente le code order dans src/ en respectant la Clean Architecture"
+    tags: [deliver, pipeline, simulation, live]
+    workspace:
+      fixture: clean-architecture-app
+      checkpoint: after-distill
+    prompt: >
+      Resume the SKRAFT pipeline from state.json. DISCOVER, DISCUSS, DESIGN and
+      DISTILL are already APPROVED for issue #42 (order checkout applying a
+      loyalty-tier discount). Run ONLY the DELIVER phase: implement the feature
+      outside-in into the empty skeleton — the discount rule lives in the Domain
+      layer, the checkout endpoint returns the payable total, an unknown order id
+      returns 404 ProblemDetails — make the tests green, and have the
+      software-engineer-reviewer review it. Stop once the DELIVER reviewer
+      returns APPROVED and the pipeline state is DONE.
+    assertions:
+      # L'agent a bien PRODUIT du code dans la couche Domain…
+      - file_matches_glob: "src/OrderDiscount.Domain/**/*.cs"
+      # …qui porte la règle de remise loyauté (le cœur de l'issue)…
+      - file_contains:
+          glob: "src/OrderDiscount.Domain/**/*.cs"
+          text: "Discount"
+      # …et l'endpoint de checkout a été câblé dans l'API…
+      - file_contains:
+          glob: "src/OrderDiscount.Api/**/*.cs"
+          text: "checkout"
+      # …avec le change-log DELIVER…
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/changes/**/*-changes.md"
+      # …validé par le reviewer.
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/deliver-*-review.md"
+          text: "APPROVED"
+      # Jugement métier : le code produit respecte la Clean Architecture.
+      - file_judge:
+          glob: "src/OrderDiscount.Domain/**/*.cs"
+          criterion: >
+            The order checkout feature is implemented with the loyalty-tier
+            discount rule in the Domain layer (Green 0%, Gold 5%, Platinum 10%),
+            and no IO/controller/persistence logic leaked into the Domain.
+

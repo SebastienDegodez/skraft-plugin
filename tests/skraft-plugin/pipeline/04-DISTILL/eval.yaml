@@ -1,0 +1,40 @@
+# Pipeline 5D — phase DISTILL (LIVE, l'agent produit réellement)
+#
+# DÉMARCHE :
+#   1. Base `clean-architecture-app` + checkpoint `after-design`.
+#   2. L'orchestrateur exécute DISTILL et PRODUIT des scénarios Gherkin + un plan
+#      de test.
+#   3. On vérifie l'attendu (feature exécutable + plan + review APPROVED).
+#
+# RÈGLE ABSOLUE : on n'archive JAMAIS la production de l'agent (clone éphémère).
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/04-DISTILL \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DISTILL produit du Gherkin + un plan de test et obtient un review APPROVED"
+    tags: [distill, pipeline, simulation, live]
+    workspace:
+      fixture: clean-architecture-app
+      checkpoint: after-design
+    prompt: >
+      Resume the SKRAFT pipeline from state.json. DISCOVER, DISCUSS and DESIGN
+      are already APPROVED. Run ONLY the DISTILL phase: distil executable Gherkin
+      scenarios and a test plan for the promotion-stacking feature, and have the
+      acceptance-designer-reviewer review it. Stop as soon as the DISTILL
+      reviewer returns APPROVED. Do not start DELIVER.
+    assertions:
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/features/*.feature"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/details/**/*-details.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/distill-*-review.md"
+          text: "APPROVED"
+      - file_judge:
+          glob: ".copilot-tracking/skraft-plans/*/features/*.feature"
+          criterion: >
+            The Gherkin scenarios are written in business language and include
+            the discriminating case where the combined discount is clamped to
+            the cap, plus the no-promotion (no regression) case.

@@ -1,0 +1,42 @@
+# Pipeline 5D — phase DESIGN (LIVE, l'agent produit réellement)
+#
+# DÉMARCHE :
+#   1. Base `clean-architecture-app` + checkpoint `after-discuss`.
+#   2. L'orchestrateur exécute DESIGN et PRODUIT un ADR + des contrats.
+#   3. On vérifie l'attendu (ADR accepté + contrats + review APPROVED).
+#
+# RÈGLE ABSOLUE : on n'archive JAMAIS la production de l'agent (clone éphémère).
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/03-DESIGN \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DESIGN produit un ADR + des contrats et obtient un review APPROVED"
+    tags: [design, pipeline, simulation, live]
+    workspace:
+      fixture: clean-architecture-app
+      checkpoint: after-discuss
+    prompt: >
+      Resume the SKRAFT pipeline from state.json. DISCOVER and DISCUSS are
+      already APPROVED. Run ONLY the DESIGN phase: model the promotion-stacking
+      feature (keep the discount rule in the domain), record the decision as an
+      ADR, sketch the interface contracts, and have the solution-architect-reviewer
+      review it. Stop as soon as the DESIGN reviewer returns APPROVED. Do not
+      start DISTILL.
+    assertions:
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+          text: "Accepted"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/details/**/*-contracts.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/design-*-review.md"
+          text: "APPROVED"
+      - file_judge:
+          glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+          criterion: >
+            The ADR keeps the discount/combination rule inside the domain (not a
+            controller), justifies the decision, and addresses the discount cap.
