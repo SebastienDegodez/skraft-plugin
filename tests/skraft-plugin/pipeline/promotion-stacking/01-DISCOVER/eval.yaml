@@ -29,19 +29,14 @@ scenarios:
       ───────────────────────────────────────────────────────────
       Issue #57 — Stack an active store promotion on the loyalty discount
       Combine an active store promotion with the customer's loyalty-tier discount
-      at checkout. The active promotion is fetched from the EXTERNAL Promotions
-      API (GET /promotions/active, contract in contracts/promotions-api.yaml).
-      The combined discount rate is capped at 20%.
-      Constraints:
-        - Integration tests MUST mock the external Promotions API with Microcks
-          (seeded from its contract) — never call the real service.
-        - Our checkout API MUST be verified against its OpenAPI contract with a
-          Microcks provider contract test.
+      at checkout. The active promotion is provided by the external Promotions
+      service (GET /promotions/active, contract in contracts/promotions-api.yaml).
+      The combined discount must never exceed 20%.
+      The external Promotions service must be mocked with Microcks in tests, and
+      our checkout API must be contract-tested with Microcks.
       ───────────────────────────────────────────────────────────
 
-      Initialise the pipeline state and run ONLY the DISCOVER phase: triage this
-      issue and have the backlog-discoverer-reviewer review it. Stop as soon as
-      the DISCOVER reviewer returns APPROVED. Do not start DISCUSS.
+      Run ONLY the DISCOVER phase, then stop once its reviewer returns APPROVED.
     assertions:
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/state.json"
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/research/**/*-research.md"

@@ -31,16 +31,10 @@ scenarios:
       Issue #42 — Order checkout with loyalty discount
       As a customer, when I check out an order, the payable total must reflect a
       discount based on my loyalty tier: Green 0%, Gold 5%, Platinum 10%.
-      Acceptance:
-        - POST /orders/{id}/checkout?tier=Gold returns the payable total.
-        - The discount rule lives in the Domain layer (not the controller).
-        - An unknown order id returns 404 with ProblemDetails.
+      An unknown order returns a not-found error.
       ───────────────────────────────────────────────────────────
 
-      Initialise the pipeline state and run ONLY the DISCOVER phase: triage this
-      issue, produce the discovery artefact, and have the backlog-discoverer-reviewer
-      review it. Stop as soon as the DISCOVER reviewer returns APPROVED. Do not
-      start DISCUSS.
+      Run ONLY the DISCOVER phase, then stop once its reviewer returns APPROVED.
     assertions:
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/state.json"
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/research/**/*-research.md"

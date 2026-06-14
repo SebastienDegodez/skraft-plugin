@@ -19,12 +19,9 @@ scenarios:
       fixture: clean-architecture-app
       checkpoint: order-checkout/after-discover
     prompt: >
-      Resume the SKRAFT pipeline from state.json. DISCOVER is already APPROVED for
-      issue #42 (order checkout applying a loyalty-tier discount). Run ONLY the
-      DISCUSS phase: refine the request into a user story with acceptance criteria
-      (Green 0%, Gold 5%, Platinum 10%, and a 404 for an unknown order), and have
-      the backlog-planner-reviewer review it. Stop as soon as the DISCUSS reviewer
-      returns APPROVED. Do not start DESIGN.
+      Resume the SKRAFT pipeline from state.json (issue #42, order checkout with a
+      loyalty-tier discount). Run ONLY the DISCUSS phase, then stop once its
+      reviewer returns APPROVED.
     assertions:
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/plans/**/*-plan.instructions.md"
       - file_contains:

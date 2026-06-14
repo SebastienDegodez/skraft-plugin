@@ -21,11 +21,9 @@ scenarios:
       fixture: clean-architecture-app
       checkpoint: promotion-stacking/after-design
     prompt: >
-      Resume the SKRAFT pipeline from state.json. DISCOVER, DISCUSS and DESIGN
-      are already APPROVED. Run ONLY the DISTILL phase: distil executable Gherkin
-      scenarios and a test plan for the promotion-stacking feature, and have the
-      acceptance-designer-reviewer review it. Stop as soon as the DISTILL
-      reviewer returns APPROVED. Do not start DELIVER.
+      Resume the SKRAFT pipeline from state.json (issue #57, stacking the external
+      Promotions service discount on the loyalty discount, capped at 20%). Run
+      ONLY the DISTILL phase, then stop once its reviewer returns APPROVED.
     assertions:
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/features/*.feature"
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/details/**/*-details.md"

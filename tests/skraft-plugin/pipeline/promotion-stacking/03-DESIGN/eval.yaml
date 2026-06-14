@@ -20,12 +20,9 @@ scenarios:
       fixture: clean-architecture-app
       checkpoint: promotion-stacking/after-discuss
     prompt: >
-      Resume the SKRAFT pipeline from state.json. DISCOVER and DISCUSS are
-      already APPROVED. Run ONLY the DESIGN phase: model the promotion-stacking
-      feature (keep the discount rule in the domain), record the decision as an
-      ADR, sketch the interface contracts, and have the solution-architect-reviewer
-      review it. Stop as soon as the DESIGN reviewer returns APPROVED. Do not
-      start DISTILL.
+      Resume the SKRAFT pipeline from state.json (issue #57, stacking the external
+      Promotions service discount on the loyalty discount, capped at 20%). Run
+      ONLY the DESIGN phase, then stop once its reviewer returns APPROVED.
     assertions:
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
       - file_contains:

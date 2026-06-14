@@ -23,11 +23,9 @@ scenarios:
       fixture: clean-architecture-app
       checkpoint: promotion-stacking/after-discover
     prompt: >
-      Resume the SKRAFT pipeline from state.json. DISCOVER is already APPROVED.
-      Run ONLY the DISCUSS phase: refine the promotion-stacking request into a
-      user story with acceptance criteria, and have the backlog-planner-reviewer
-      review it. Stop as soon as the DISCUSS reviewer returns APPROVED. Do not
-      start DESIGN.
+      Resume the SKRAFT pipeline from state.json (issue #57, stacking the external
+      Promotions service discount on the loyalty discount, capped at 20%). Run
+      ONLY the DISCUSS phase, then stop once its reviewer returns APPROVED.
     assertions:
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/plans/**/*-plan.instructions.md"
       - file_contains:

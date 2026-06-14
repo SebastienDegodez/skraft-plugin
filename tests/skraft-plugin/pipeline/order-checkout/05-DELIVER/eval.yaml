@@ -27,14 +27,11 @@ scenarios:
       fixture: clean-architecture-app
       checkpoint: order-checkout/after-distill
     prompt: >
-      Resume the SKRAFT pipeline from state.json. DISCOVER, DISCUSS, DESIGN and
-      DISTILL are already APPROVED for issue #42 (order checkout applying a
-      loyalty-tier discount). Run ONLY the DELIVER phase: implement the feature
-      outside-in into the empty skeleton — the discount rule lives in the Domain
-      layer, the checkout endpoint returns the payable total, an unknown order id
-      returns 404 ProblemDetails — make the tests green, and have the
-      software-engineer-reviewer review it. Stop once the DELIVER reviewer
-      returns APPROVED and the pipeline state is DONE.
+      Resume the SKRAFT pipeline from state.json. DISCOVER..DISTILL are APPROVED
+      for issue #42 (order checkout applying a loyalty-tier discount: Green 0%,
+      Gold 5%, Platinum 10%; an unknown order returns a not-found error).
+      Run ONLY the DELIVER phase, then stop once its reviewer returns APPROVED and
+      the pipeline state is DONE.
     assertions:
       # L'agent a bien PRODUIT du code dans la couche Domain…
       - file_matches_glob: "src/OrderDiscount.Domain/**/*.cs"

@@ -27,13 +27,12 @@ scenarios:
       checkpoint: promotion-stacking/after-distill
     prompt: >
       Resume the SKRAFT pipeline from state.json. DISCOVER..DISTILL are APPROVED
-      for issue #57 (stack the external Promotions API discount on the loyalty
-      discount, capped at 20%). Run ONLY the DELIVER phase: implement the feature
-      outside-in — a downstream Promotions client, the capped combination rule in
-      the Domain, the integration test mocking the Promotions API with Microcks,
-      and a Microcks provider contract test of the checkout API — keep all tests
-      green, and have the software-engineer-reviewer review it. Stop once the
-      DELIVER reviewer returns APPROVED and the pipeline state is DONE.
+      for issue #57 (combine the active store promotion from the external
+      Promotions service with the loyalty discount at checkout; the combined
+      discount must never exceed 20%; the external Promotions service is mocked
+      with Microcks and the checkout API is contract-tested with Microcks).
+      Run ONLY the DELIVER phase, then stop once its reviewer returns APPROVED and
+      the pipeline state is DONE.
     assertions:
       # ── Feature produite ──────────────────────────────────────────────
       # Un client downstream vers l'API Promotions a été créé.
