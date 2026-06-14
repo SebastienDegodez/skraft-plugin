@@ -24,8 +24,15 @@ The fixture
 is a buildable .NET Clean Architecture skeleton (`OrderDiscount.Domain /
 Application / Infrastructure / Api` + test projects) that **carries no feature
 yet**. The feature to build is described by a **GitHub issue passed in the
-prompt** (the *order* checkout-with-loyalty-discount issue). The agents must
-populate the skeleton; we verify what they produced.
+prompt**. The agents must populate the skeleton; we verify what they produced.
+
+The prompts carry **only the business issue and which phase to run**. They do
+NOT spell out engineering obligations the agent must rediscover from its skills
+(outside-in TDD, layer placement, which artefacts to produce) — finding those is
+the whole point of the eval. The one exception is **Microcks**, which is *opt-in*
+(off by default in the contract-testing skills): a story that needs it states so
+explicitly at the business level ("mock the external service / contract-test our
+API"), without dictating the technical recipe.
 
 ## The golden rule
 
@@ -66,20 +73,42 @@ populate the skeleton; we verify what they produced.
 - `output_*` — observable claims in the agent's final answer (supporting, never
   the sole assertion).
 
-## The 5D pipeline suites — `pipeline/`
+## The two stories (pistes) — `pipeline/{piste}/`
 
-One directory per phase, **order-prefixed** so the run order is explicit:
+Each story is a full 5D pipeline. One directory per story, then one directory per
+phase, **order-prefixed** so the run order is explicit.
+
+### `order-checkout` (piste B) — build from scratch
+
+Starts from the **empty skeleton**. Issue #42: build the order checkout applying
+a loyalty-tier discount (Green 0% / Gold 5% / Platinum 10%; unknown order → 404).
 
 | Suite | Phase | Starts from | Verifies the agent produced… |
 |---|---|---|---|
-| [`01-DISCOVER`](pipeline/01-DISCOVER/) | DISCOVER | skeleton only | triage of the order issue + `APPROVED` review |
-| [`02-DISCUSS`](pipeline/02-DISCUSS/) | DISCUSS | + `after-discover` | refined story w/ acceptance criteria + `APPROVED` |
-| [`03-DESIGN`](pipeline/03-DESIGN/) | DESIGN | + `after-discuss` | ADR + interface contracts + `APPROVED` |
-| [`04-DISTILL`](pipeline/04-DISTILL/) | DISTILL | + `after-design` | executable Gherkin + test plan + `APPROVED` |
-| [`05-DELIVER`](pipeline/05-DELIVER/) | DELIVER | + `after-distill` | **feature code in `src/`** + change log + `APPROVED` |
+| [`01-DISCOVER`](pipeline/order-checkout/01-DISCOVER/) | DISCOVER | skeleton only | triage + `APPROVED` review |
+| [`02-DISCUSS`](pipeline/order-checkout/02-DISCUSS/) | DISCUSS | + `order-checkout/after-discover` | refined story + `APPROVED` |
+| [`03-DESIGN`](pipeline/order-checkout/03-DESIGN/) | DESIGN | + `order-checkout/after-discuss` | ADR + contracts + `APPROVED` |
+| [`04-DISTILL`](pipeline/order-checkout/04-DISTILL/) | DISTILL | + `order-checkout/after-design` | Gherkin + test plan + `APPROVED` |
+| [`05-DELIVER`](pipeline/order-checkout/05-DELIVER/) | DELIVER | + `order-checkout/after-distill` | **feature code in `src/`** + change log + `APPROVED` |
 
-Each scenario is tagged `[<phase>, pipeline, simulation, live]`. The suites are
-**LIVE** (consume Copilot quota) and opt-in — never on push/PR.
+### `promotion-stacking` (piste A) — extend an existing app, with Microcks
+
+Starts from a baseline where the **checkout already exists**. Issue #57: stack an
+active store promotion (provided by the **external Promotions service**) on the
+loyalty discount, capped at 20%. Because the feature has a downstream dependency,
+the issue opts into **Microcks** for both purposes — mocking the Promotions
+service and contract-testing the checkout API.
+
+| Suite | Phase | Starts from | Verifies the agent produced… |
+|---|---|---|---|
+| [`01-DISCOVER`](pipeline/promotion-stacking/01-DISCOVER/) | DISCOVER | `promotion-stacking/baseline` | triage + `APPROVED` |
+| [`02-DISCUSS`](pipeline/promotion-stacking/02-DISCUSS/) | DISCUSS | + `promotion-stacking/after-discover` | refined story + `APPROVED` |
+| [`03-DESIGN`](pipeline/promotion-stacking/03-DESIGN/) | DESIGN | + `promotion-stacking/after-discuss` | ADR + contracts + `APPROVED` |
+| [`04-DISTILL`](pipeline/promotion-stacking/04-DISTILL/) | DISTILL | + `promotion-stacking/after-design` | Gherkin + test plan + `APPROVED` |
+| [`05-DELIVER`](pipeline/promotion-stacking/05-DELIVER/) | DELIVER | + `promotion-stacking/after-distill` | feature code + **Microcks mock (Promotions) AND contract test (checkout)** + `APPROVED` |
+
+Each scenario is tagged `[<phase>, pipeline, simulation, live, <piste>]`. The
+suites are **LIVE** (consume Copilot quota) and opt-in — never on push/PR.
 
 Every scenario runs **twice** (baseline with `--no-custom-instructions` vs
 with-skill with the plugin + orchestrator); assertions decide first and a hybrid
@@ -93,12 +122,12 @@ cd tools/skraft-test-harness
 
 dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
   --skill skraft-orchestrator \
-  --tests-dir ../../tests/skraft-plugin/pipeline/01-DISCOVER \
+  --tests-dir ../../tests/skraft-plugin/pipeline/order-checkout/01-DISCOVER \
   --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
   --fixtures-root ./fixtures
 ```
 
-Run the suites in order (`01-DISCOVER` → `05-DELIVER`), checking each phase
+Run a story's suites in order (`01-DISCOVER` → `05-DELIVER`), checking each phase
 before moving to the next. The workspace is provisioned automatically from the
 declared `fixture` + `checkpoint`; nothing you run mutates the repo.
 
@@ -106,39 +135,43 @@ declared `fixture` + `checkpoint`; nothing you run mutates the repo.
 
 ```
 fixtures/
-  clean-architecture-app/   # empty net10 CA skeleton (code only, no feature, no .copilot-tracking)
+  clean-architecture-app/        # empty net10 CA skeleton (code only, no feature)
   checkpoints/
-    after-discover/         # .copilot-tracking state after DISCOVER (seed input)
-    after-discuss/          # + DISCUSS story/plan
-    after-design/           # + ADR + contracts
-    after-distill/          # + Gherkin + test plan
+    order-checkout/              # piste B seed inputs (.copilot-tracking only)
+      after-{discover,discuss,design,distill}/
+    promotion-stacking/          # piste A seed inputs
+      baseline/                  # the DELIVERED checkout code + external Promotions contract
+      after-{discover,discuss,design,distill}/   # baseline code + cumulative .copilot-tracking
 ```
 
 - `clean-architecture-app/` is the **base skeleton**. The provisioner always
   clones it first and excludes `bin/`/`obj/` so the clone is pristine.
-- `checkpoints/after-*` are **hand-authored seed inputs** — the `.copilot-tracking`
-  state of the *previous* phases, overlaid on the skeleton so a phase can start
+- `checkpoints/{piste}/after-*` are **hand-authored seed inputs** — the
+  `.copilot-tracking` state (and, for `promotion-stacking`, the existing checkout
+  code) of the *previous* phases, overlaid on the skeleton so a phase can start
   where the prior one left off. They are inputs, **never** the output of a run.
+- `promotion-stacking/baseline/` provides the already-delivered checkout as a
+  hand-authored fixture (recovered from history), so piste A can extend it.
 
 ## Checkpoint conformance (`verify-checkpoint`)
 
 The committed seed checkpoints must keep matching the artefact format each phase
 expects. `verify-checkpoint` evaluates **only the file assertions** of
-[`phase-conformance/eval.yaml`](phase-conformance/eval.yaml) against them — no
+[`phase-conformance/{piste}/eval.yaml`](phase-conformance/) against them — no
 agent, no LLM, no quota — on every push/PR (CI step *Verify phase checkpoints*
-and the `PhaseConformanceEndToEndTests` integration test).
+and the `PhaseConformanceEndToEndTests` integration test, parameterised per piste).
 
 ```bash
 cd tools/skraft-test-harness
 
-# All phases
+# All phases of a story
 dotnet run --project src/SkraftTestHarness.Cli -- verify-checkpoint \
-  --tests-dir ../../tests/skraft-plugin/phase-conformance \
+  --tests-dir ../../tests/skraft-plugin/phase-conformance/order-checkout \
   --fixtures-root ./fixtures
 
 # One phase
 dotnet run --project src/SkraftTestHarness.Cli -- verify-checkpoint \
-  --tests-dir ../../tests/skraft-plugin/phase-conformance \
+  --tests-dir ../../tests/skraft-plugin/phase-conformance/order-checkout \
   --fixtures-root ./fixtures --tags design
 ```
 
