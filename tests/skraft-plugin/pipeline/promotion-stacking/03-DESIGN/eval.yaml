@@ -18,6 +18,7 @@ scenarios:
     tags: [design, pipeline, simulation, live]
     workspace:
       fixture: clean-architecture-app
+      baseline: promotion-stacking/baseline
       checkpoint: promotion-stacking/after-discuss
     prompt: >
       Resume the SKRAFT pipeline from state.json (issue #57, stacking the external

@@ -24,6 +24,7 @@ scenarios:
     tags: [deliver, pipeline, simulation, live, promotion-stacking, microcks]
     workspace:
       fixture: clean-architecture-app
+      baseline: promotion-stacking/baseline
       checkpoint: promotion-stacking/after-distill
     prompt: >
       Resume the SKRAFT pipeline from state.json. DISCOVER..DISTILL are APPROVED

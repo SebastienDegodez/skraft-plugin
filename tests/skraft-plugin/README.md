@@ -140,18 +140,32 @@ fixtures/
     order-checkout/              # piste B seed inputs (.copilot-tracking only)
       after-{discover,discuss,design,distill}/
     promotion-stacking/          # piste A seed inputs
-      baseline/                  # the DELIVERED checkout code + external Promotions contract
-      after-{discover,discuss,design,distill}/   # baseline code + cumulative .copilot-tracking
+      baseline/                  # the DELIVERED checkout code (overlaid once, never per phase)
+      after-{discover,discuss,design,distill}/   # .copilot-tracking ONLY (no code)
 ```
 
-- `clean-architecture-app/` is the **base skeleton**. The provisioner always
-  clones it first and excludes `bin/`/`obj/` so the clone is pristine.
-- `checkpoints/{piste}/after-*` are **hand-authored seed inputs** — the
-  `.copilot-tracking` state (and, for `promotion-stacking`, the existing checkout
-  code) of the *previous* phases, overlaid on the skeleton so a phase can start
-  where the prior one left off. They are inputs, **never** the output of a run.
-- `promotion-stacking/baseline/` provides the already-delivered checkout as a
-  hand-authored fixture (recovered from history), so piste A can extend it.
+A workspace is provisioned as up to **three overlay layers**, later layers
+winning on conflict:
+
+1. `fixture` — the base skeleton (always; `bin/`/`obj/` excluded so the clone is pristine).
+2. `baseline` — *optional* CODE of a previously-delivered story this one extends
+   (e.g. `promotion-stacking/baseline`). Code lives **once** here; it is never
+   duplicated into the per-phase checkpoints.
+3. `checkpoint` — *optional* `.copilot-tracking` planning state of the prior phases.
+
+```yaml
+workspace:
+  fixture: clean-architecture-app
+  baseline: promotion-stacking/baseline          # code overlay (story A only)
+  checkpoint: promotion-stacking/after-discuss   # tracking overlay
+```
+
+- `checkpoints/{piste}/after-*` are **hand-authored seed inputs** — only the
+  `.copilot-tracking` state of the *previous* phases. They carry **no code**:
+  for piste A the code comes from the single `baseline/` layer. They are inputs,
+  **never** the output of a run.
+- Code is snapshotted **per story, not per phase** — only DELIVER produces code,
+  so a per-phase code copy would be pure duplication.
 
 ## Checkpoint conformance (`verify-checkpoint`)
 

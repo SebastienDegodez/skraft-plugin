@@ -13,6 +13,7 @@ scenarios:
     tags: [discover, conformance, promotion-stacking]
     workspace:
       fixture: clean-architecture-app
+      baseline: promotion-stacking/baseline
       checkpoint: promotion-stacking/after-discover
     prompt: "Triage issue #57 and propose a sprint path."
     assertions:
@@ -28,6 +29,7 @@ scenarios:
     tags: [discuss, conformance, promotion-stacking]
     workspace:
       fixture: clean-architecture-app
+      baseline: promotion-stacking/baseline
       checkpoint: promotion-stacking/after-discuss
     prompt: "Refine the promotion-stacking story."
     assertions:
@@ -43,6 +45,7 @@ scenarios:
     tags: [design, conformance, promotion-stacking]
     workspace:
       fixture: clean-architecture-app
+      baseline: promotion-stacking/baseline
       checkpoint: promotion-stacking/after-design
     prompt: "Model promotion stacking and record the decision."
     assertions:
@@ -61,6 +64,7 @@ scenarios:
     tags: [distill, conformance, promotion-stacking]
     workspace:
       fixture: clean-architecture-app
+      baseline: promotion-stacking/baseline
       checkpoint: promotion-stacking/after-distill
     prompt: "Distil executable scenarios and a test plan."
     assertions:

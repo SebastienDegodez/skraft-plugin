@@ -67,7 +67,8 @@ public sealed class YamlEvalLoader : IScenarioLoader
             throw new ArgumentException(
                 $"Scenario '{dto.Name}': 'workspace' requires a non-empty 'fixture'.");
         }
-        return WorkspaceRequirement.FromFixture(dto.Workspace.Fixture, dto.Workspace.Checkpoint);
+        return WorkspaceRequirement.FromFixture(
+            dto.Workspace.Fixture, dto.Workspace.Baseline, dto.Workspace.Checkpoint);
     }
 
     private static Assertion ToAssertion(string scenarioName, AssertionDto dto)

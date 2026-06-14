@@ -169,7 +169,7 @@ public sealed class YamlEvalLoaderWorkspaceAssertionsTests
             """);
 
         var sources = new List<string>();
-        scenario.WithWorkspace((fixture, checkpoint) => sources.Add($"{fixture}|{checkpoint}"));
+        scenario.WithWorkspace((fixture, baseline, checkpoint) => sources.Add($"{fixture}|{checkpoint}"));
 
         await Assert.That(sources).Contains("clean-architecture-app|after-discuss");
     }

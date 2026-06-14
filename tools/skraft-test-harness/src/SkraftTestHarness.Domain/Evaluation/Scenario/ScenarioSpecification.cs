@@ -36,7 +36,7 @@ public sealed class ScenarioSpecification
 
     internal void WithName(Action<string> use) => use(_name.ToString());
 
-    internal void WithWorkspace(Action<string, string?> use) => _workspace.WithSource(use);
+    internal void WithWorkspace(Action<string, string?, string?> use) => _workspace.WithSource(use);
 
     public void WithPrompt(Action<string> use) => use(_prompt.ToString());
 }

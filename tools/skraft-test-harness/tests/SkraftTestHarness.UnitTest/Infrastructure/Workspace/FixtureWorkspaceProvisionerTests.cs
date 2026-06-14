@@ -53,6 +53,44 @@ public sealed class FixtureWorkspaceProvisionerTests
     }
 
     [Test]
+    public async Task ShouldOverlayTheBaselineCodeThenTheCheckpointOnTopOfTheFixture()
+    {
+        using var fixtures = new TempFixtures();
+        // Couche 1 : squelette vide (fixture de base).
+        fixtures.Write("clean-architecture-app/src/Api/Program.cs", "// empty skeleton");
+        // Couche 2 : code livré d'une histoire précédente (baseline), une seule fois.
+        fixtures.Write("checkpoints/promotion-stacking/baseline/src/Domain/Order.cs", "class Order {}");
+        // Couche 3 : artefacts de planification de la phase (checkpoint), sans code dupliqué.
+        fixtures.Write("checkpoints/promotion-stacking/after-discover/.copilot-tracking/state.json", "{}");
+
+        using var provisioner = new FixtureWorkspaceProvisioner(fixtures.Root);
+        var clone = provisioner.Provision(
+            WorkspaceRequirement.FromFixture(
+                "clean-architecture-app",
+                baseline: "promotion-stacking/baseline",
+                checkpoint: "promotion-stacking/after-discover"));
+
+        // Les trois couches sont présentes : squelette + code baseline + tracking.
+        await Assert.That(File.Exists(Path.Combine(clone, "src/Api/Program.cs"))).IsTrue();
+        await Assert.That(File.Exists(Path.Combine(clone, "src/Domain/Order.cs"))).IsTrue();
+        await Assert.That(File.Exists(Path.Combine(clone, ".copilot-tracking/state.json"))).IsTrue();
+    }
+
+    [Test]
+    public async Task ShouldThrowWhenTheBaselineIsDeclaredButMissing()
+    {
+        using var fixtures = new TempFixtures();
+        fixtures.Write("clean-architecture-app/README.md", "base");
+
+        using var provisioner = new FixtureWorkspaceProvisioner(fixtures.Root);
+
+        await Assert.That(() => provisioner.Provision(
+                WorkspaceRequirement.FromFixture(
+                    "clean-architecture-app", baseline: "missing/baseline", checkpoint: null)))
+            .Throws<DirectoryNotFoundException>();
+    }
+
+    [Test]
     public async Task ShouldOverlayTheCheckpointOnTopOfTheFixture()
     {
         using var fixtures = new TempFixtures();

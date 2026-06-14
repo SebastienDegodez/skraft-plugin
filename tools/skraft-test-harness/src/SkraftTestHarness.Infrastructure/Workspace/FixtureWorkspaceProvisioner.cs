@@ -32,15 +32,21 @@ public sealed class FixtureWorkspaceProvisioner : IDisposable
     {
         ArgumentNullException.ThrowIfNull(requirement);
 
-        // DÉMARCHE — Le scénario déclare DEUX informations dans `workspace:` :
-        //   - `fixture`    : l'application de base (ex. clean-architecture-app)
-        //   - `checkpoint` : l'avancement du pipeline (ex. after-design), optionnel
-        // On récupère les deux depuis le Value Object du Domaine.
+        // DÉMARCHE — Le scénario déclare jusqu'à TROIS couches dans `workspace:` :
+        //   - `fixture`    : l'application de base (ex. clean-architecture-app), requise
+        //   - `baseline`   : le CODE livré d'une histoire précédente que celle-ci étend
+        //                    (ex. promotion-stacking/baseline), optionnel — committé UNE
+        //                    seule fois, jamais dupliqué par phase
+        //   - `checkpoint` : l'état de planification des phases passées (.copilot-tracking),
+        //                    optionnel
+        // On récupère les trois depuis le Value Object du Domaine.
         string? fixtureName = null;
+        string? baselineName = null;
         string? checkpointName = null;
-        requirement.WithSource((fixture, checkpoint) =>
+        requirement.WithSource((fixture, baseline, checkpoint) =>
         {
             fixtureName = fixture;
+            baselineName = baseline;
             checkpointName = checkpoint;
         });
 
@@ -62,13 +68,20 @@ public sealed class FixtureWorkspaceProvisioner : IDisposable
         // Couche 1 (base) — on copie d'abord toute la Clean Architecture.
         CopyDirectory(fixtureSource, clone);
 
-        // Couche 2 (overlay) — si un checkpoint est déclaré, on SUPERPOSE par
+        // Couche 2 (baseline) — si déclarée, on superpose le CODE livré d'une
+        // histoire précédente (committé une seule fois sous checkpoints/...).
+        if (baselineName is not null)
+        {
+            var baselineSource = Path.Combine(_fixturesRoot, "checkpoints", baselineName);
+            if (!Directory.Exists(baselineSource))
+                throw new DirectoryNotFoundException($"Workspace baseline '{baselineSource}' does not exist.");
+            CopyDirectory(baselineSource, clone, overwrite: true);
+        }
+
+        // Couche 3 (overlay) — si un checkpoint est déclaré, on SUPERPOSE par
         // dessus les artefacts cumulés des phases déjà jouées
         // (.copilot-tracking/skraft-plans/...). En cas de conflit de chemin, le
         // fichier du checkpoint l'emporte (overwrite: true).
-        // => Résultat : la Clean Architecture est PRÉSERVÉE + l'état du pipeline
-        //    est restauré, donc une phase démarre exactement là où la précédente
-        //    s'est arrêtée, tout en gardant le code à faire évoluer.
         if (checkpointName is not null)
         {
             var checkpointSource = Path.Combine(_fixturesRoot, "checkpoints", checkpointName);

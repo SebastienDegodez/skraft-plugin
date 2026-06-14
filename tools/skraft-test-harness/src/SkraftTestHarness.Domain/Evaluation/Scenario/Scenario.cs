@@ -44,8 +44,8 @@ public sealed class Scenario
             new ScenarioSpecification(new ScenarioName(name), new Prompt(prompt), new Tags(tags), workspace),
             new Assertions(assertions));
 
-    /// <summary>Invokes the callback only when the scenario declares a workspace.</summary>
-    public void WithWorkspace(Action<string, string?> use) => _specification.WithWorkspace(use);
+    /// <summary>Invokes the callback only when the scenario declares a workspace (fixture, baseline, checkpoint).</summary>
+    public void WithWorkspace(Action<string, string?, string?> use) => _specification.WithWorkspace(use);
 
     /// <summary>
     /// Evaluates only the workspace-checking assertions against the

@@ -15,7 +15,7 @@ public sealed class WorkspaceRequirementTests
         var scenario = Scenario.Create("A", "x", [new OutputContains(new Needle("x"))]);
 
         var sources = new List<string>();
-        scenario.WithWorkspace((fixture, checkpoint) => sources.Add($"{fixture}|{checkpoint}"));
+        scenario.WithWorkspace((fixture, baseline, checkpoint) => sources.Add($"{fixture}|{baseline}|{checkpoint}"));
 
         await Assert.That(sources).IsEmpty();
     }
@@ -30,9 +30,9 @@ public sealed class WorkspaceRequirementTests
             assertions: [new OutputContains(new Needle("x"))]);
 
         var sources = new List<string>();
-        scenario.WithWorkspace((fixture, checkpoint) => sources.Add($"{fixture}|{checkpoint ?? "-"}"));
+        scenario.WithWorkspace((fixture, baseline, checkpoint) => sources.Add($"{fixture}|{baseline ?? "-"}|{checkpoint ?? "-"}"));
 
-        await Assert.That(sources).Contains("clean-architecture-app|-");
+        await Assert.That(sources).Contains("clean-architecture-app|-|-");
     }
 
     [Test]
@@ -45,8 +45,24 @@ public sealed class WorkspaceRequirementTests
             assertions: [new OutputContains(new Needle("x"))]);
 
         var sources = new List<string>();
-        scenario.WithWorkspace((fixture, checkpoint) => sources.Add($"{fixture}|{checkpoint}"));
+        scenario.WithWorkspace((fixture, baseline, checkpoint) => sources.Add($"{fixture}|{baseline ?? "-"}|{checkpoint}"));
 
-        await Assert.That(sources).Contains("clean-architecture-app|after-discover");
+        await Assert.That(sources).Contains("clean-architecture-app|-|after-discover");
+    }
+
+    [Test]
+    public async Task ScenarioWithBaseline_ShouldExposeTheThreeLayers()
+    {
+        var scenario = Scenario.Create(
+            "A", "x",
+            tags: [],
+            workspace: WorkspaceRequirement.FromFixture(
+                "clean-architecture-app", baseline: "promotion-stacking/baseline", checkpoint: "promotion-stacking/after-discover"),
+            assertions: [new OutputContains(new Needle("x"))]);
+
+        var sources = new List<string>();
+        scenario.WithWorkspace((fixture, baseline, checkpoint) => sources.Add($"{fixture}|{baseline}|{checkpoint}"));
+
+        await Assert.That(sources).Contains("clean-architecture-app|promotion-stacking/baseline|promotion-stacking/after-discover");
     }
 }

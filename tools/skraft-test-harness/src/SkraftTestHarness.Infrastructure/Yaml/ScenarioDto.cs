@@ -14,5 +14,6 @@ internal sealed class ScenarioDto
 internal sealed class WorkspaceDto
 {
     public string? Fixture { get; set; }
+    public string? Baseline { get; set; }
     public string? Checkpoint { get; set; }
 }

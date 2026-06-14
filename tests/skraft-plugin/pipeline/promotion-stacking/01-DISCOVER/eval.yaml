@@ -21,7 +21,7 @@ scenarios:
     workspace:
       # Le checkout existe déjà (baseline) ; DISCOVER démarre le pipeline promo.
       fixture: clean-architecture-app
-      checkpoint: promotion-stacking/baseline
+      baseline: promotion-stacking/baseline
     prompt: >
       Start the SKRAFT pipeline for this GitHub issue, on an app where the order
       checkout with a loyalty discount ALREADY exists:

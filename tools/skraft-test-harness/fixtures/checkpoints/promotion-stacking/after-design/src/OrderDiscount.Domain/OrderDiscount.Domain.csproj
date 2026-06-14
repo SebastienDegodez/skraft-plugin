@@ -1,8 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <RootNamespace>OrderDiscount.Domain</RootNamespace>
-    <AssemblyName>OrderDiscount.Domain</AssemblyName>
-  </PropertyGroup>
-
-</Project>

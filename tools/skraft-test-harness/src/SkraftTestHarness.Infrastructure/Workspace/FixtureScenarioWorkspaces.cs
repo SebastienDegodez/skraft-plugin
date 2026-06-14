@@ -24,13 +24,13 @@ public sealed class FixtureScenarioWorkspaces : IScenarioWorkspaces, IDisposable
         ArgumentNullException.ThrowIfNull(scenario);
 
         var declared = false;
-        scenario.WithWorkspace((_, _) => declared = true);
+        scenario.WithWorkspace((_, _, _) => declared = true);
         if (!declared)
             return null;
 
         string? root = null;
-        scenario.WithWorkspace((fixture, checkpoint) =>
-            root = _provisioner.Provision(WorkspaceRequirement.FromFixture(fixture, checkpoint)));
+        scenario.WithWorkspace((fixture, baseline, checkpoint) =>
+            root = _provisioner.Provision(WorkspaceRequirement.FromFixture(fixture, baseline, checkpoint)));
 
         return new ProvisionedWorkspace(root!, new FileSystemWorkspaceProbe(root!));
     }
