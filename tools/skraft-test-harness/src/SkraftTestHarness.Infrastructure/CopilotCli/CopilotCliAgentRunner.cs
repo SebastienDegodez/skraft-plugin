@@ -69,7 +69,11 @@ public sealed class CopilotCliAgentRunner : IAgentRunner
             if (_options.PluginDirectory is { Length: > 0 } pluginDir)
             {
                 args.Add("--plugin-dir");
-                args.Add(pluginDir);
+                // Resolve to an absolute path against the harness CWD: the agent
+                // runs in the provisioned clone (a temp working directory), so a
+                // relative --plugin-dir would resolve there and the plugin would
+                // not be found (only globally-installed agents would be visible).
+                args.Add(Path.GetFullPath(pluginDir));
             }
 
             if (_options.AgentId is { Length: > 0 } agentId)
