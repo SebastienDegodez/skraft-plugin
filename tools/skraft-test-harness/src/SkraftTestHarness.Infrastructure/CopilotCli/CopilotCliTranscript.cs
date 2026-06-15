@@ -15,11 +15,18 @@ public static class CopilotCliTranscript
 {
     private const string AssistantMessageType = "assistant.message";
     private const string ToolExecutionStartType = "tool.execution_start";
+    private const string ToolsUpdatedType = "session.tools_updated";
+    private const string ResultType = "result";
 
     public static AgentRunResult Parse(string jsonl)
     {
         var output = new StringBuilder();
         var tools = new List<ToolName>();
+
+        string? model = null;
+        long outputTokens = 0;
+        bool sawOutputTokens = false;
+        long? premiumRequests = null;
 
         foreach (var line in EnumerateLines(jsonl))
         {
@@ -27,21 +34,49 @@ public static class CopilotCliTranscript
                 continue;
 
             var type = ReadString(root, "type");
-            if (type is null || !root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
+            if (type is null)
+                continue;
+
+            // The result event carries `usage` at its root, not under `data`.
+            if (type == ResultType)
+            {
+                if (root.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object)
+                    premiumRequests = ReadLong(usage, "premiumRequests") ?? premiumRequests;
+                continue;
+            }
+
+            if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
                 continue;
 
             switch (type)
             {
                 case AssistantMessageType:
                     AppendContent(output, data);
+                    model ??= ReadString(data, "model");
+                    if (ReadLong(data, "outputTokens") is { } tokens)
+                    {
+                        outputTokens += tokens;
+                        sawOutputTokens = true;
+                    }
                     break;
                 case ToolExecutionStartType:
                     AppendTool(tools, data);
                     break;
+                case ToolsUpdatedType:
+                    model ??= ReadString(data, "model");
+                    break;
             }
         }
 
-        return new AgentRunResult(new AgentOutput(output.ToString()), new ToolInvocations(tools));
+        var telemetry = new RunTelemetry(
+            model,
+            sawOutputTokens ? outputTokens : null,
+            premiumRequests);
+
+        return new AgentRunResult(
+            new AgentOutput(output.ToString()),
+            new ToolInvocations(tools),
+            telemetry);
     }
 
     private static IEnumerable<string> EnumerateLines(string jsonl)
@@ -83,5 +118,12 @@ public static class CopilotCliTranscript
     private static string? ReadString(JsonElement element, string property)
         => element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
+            : null;
+
+    private static long? ReadLong(JsonElement element, string property)
+        => element.TryGetProperty(property, out var value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt64(out var number)
+            ? number
             : null;
 }
