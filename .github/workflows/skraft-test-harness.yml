@@ -59,6 +59,22 @@ jobs:
               --fixtures-root ./fixtures
           done
 
+      # Deterministic gate-file validation (no agent, no LLM, no quota): every
+      # eval.skraft.yml parses and every assertion (craft_conformance,
+      # conditional, artifact_contract, …) constructs. Fails the build on a
+      # malformed gate file.
+      - name: Validate gate files
+        working-directory: tools/skraft-test-harness
+        run: |
+          while IFS= read -r gate; do
+            dir=$(dirname "$gate")
+            echo "::group::$dir"
+            dotnet run --project src/SkraftTestHarness.Cli --no-build -- \
+              run-gate --skill skraft-orchestrator \
+              --tests-dir "../../$dir" --validate-only
+            echo "::endgroup::"
+          done < <(cd ../.. && find tests/skraft-plugin -name eval.skraft.yml | sort)
+
       - name: Upload JUnit reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -125,6 +141,24 @@ jobs:
                 --report-dir ./eval-reports
             done
           done
+
+      - name: Run the absolute workflow gates (run-gate)
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+          COPILOT_CLI_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+        run: |
+          # Absolute PASS/FAIL gate per phase: the orchestrator runs the phase
+          # for real and we assert its gates (craft conformance, mutation,
+          # opt-in Microcks + propagation) hold. Every eval.skraft.yml found.
+          while IFS= read -r gate; do
+            dir=$(dirname "$gate")
+            dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
+              run-gate --skill skraft-orchestrator \
+              --tests-dir "$dir" \
+              --plugin-dir plugins --agent skraft:skraft-orchestrator \
+              --fixtures-root tools/skraft-test-harness/fixtures
+          done < <(find tests/skraft-plugin -name eval.skraft.yml | sort)
 
       - name: Upload eval reports
         if: always()

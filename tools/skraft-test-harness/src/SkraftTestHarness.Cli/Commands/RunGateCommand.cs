@@ -45,6 +45,10 @@ public static class RunGateCommand
         {
             Description = "Run with deterministic in-memory stubs (no LLM call).",
         };
+        var validateOnlyOption = new Option<bool>("--validate-only")
+        {
+            Description = "Load and construct the gate's assertions without running any agent (deterministic CI guard).",
+        };
         var pluginDirOption = new Option<string?>("--plugin-dir")
         {
             Description = "Plugin directory loaded for the run (real mode).",
@@ -74,6 +78,7 @@ public static class RunGateCommand
         command.Options.Add(skillOption);
         command.Options.Add(testsDirOption);
         command.Options.Add(mockOption);
+        command.Options.Add(validateOnlyOption);
         command.Options.Add(pluginDirOption);
         command.Options.Add(agentOption);
         command.Options.Add(modelOption);
@@ -98,6 +103,15 @@ public static class RunGateCommand
             {
                 await output.WriteLineAsync($"run-gate failed: {ex.Message}");
                 return 1;
+            }
+
+            // Deterministic, quota-free CI guard: the gate file parsed and every
+            // assertion was constructed. No agent runs.
+            if (parseResult.GetValue(validateOnlyOption))
+            {
+                await output.WriteLineAsync(
+                    $"gate file is valid ({scenarios.Count()} scenario(s)).");
+                return 0;
             }
 
             var fixturesRoot = parseResult.GetValue(fixturesRootOption)
