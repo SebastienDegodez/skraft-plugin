@@ -432,11 +432,3 @@ parts:
         en: "en/reference/changelog.md"
         purpose_fr: "L'historique des evolutions du handbook et du plugin."
         purpose_en: "The history of handbook and plugin changes."
-      - id: dashboard
-        type: editorial
-        label_fr: "Tableau de bord"
-        label_en: "Dashboard"
-        fr: "fr/reference/dashboard.md"
-        en: "en/reference/dashboard.md"
-        purpose_fr: "Le tableau de bord des tests : sante des gates et valeur des skills, avec le cout reel (AIC, tokens) par modele."
-        purpose_en: "The test dashboard: gate health and skill value, with the real cost (AIC, tokens) per model."
