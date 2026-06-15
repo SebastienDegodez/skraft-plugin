@@ -157,8 +157,26 @@ jobs:
               run-gate --skill skraft-orchestrator \
               --tests-dir "$dir" \
               --plugin-dir plugins --agent skraft:skraft-orchestrator \
-              --fixtures-root tools/skraft-test-harness/fixtures
+              --fixtures-root tools/skraft-test-harness/fixtures \
+              --report-dir eval-reports
           done < <(find tests/skraft-plugin -name eval.skraft.yml | sort)
+
+      - name: Build dashboard data
+        if: always()
+        working-directory: .
+        run: |
+          # Fold every eval/gate report into a single dashboard-data.json the
+          # handbook dashboard consumes. Generated here, never committed.
+          dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
+            dashboard --reports-dir eval-reports --out dashboard-data.json
+
+      - name: Upload dashboard data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-data
+          path: dashboard-data.json
+          if-no-files-found: ignore
 
       - name: Upload eval reports
         if: always()
