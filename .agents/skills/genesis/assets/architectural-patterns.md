@@ -28,6 +28,7 @@ rediscovering its failure modes the hard way.
 | SUPERVISED EXECUTION  | Plan-Execute-Verify (controller) | B4 + S7 + S4 + (optional) B10            |
 | GOVERNED OUTER LOOP   | CI/CD + capability-bounded service account | A6 + strong-form A9 + sandbox + audit |
 | RECONCILIATION LOOP   | k8s Operator + SRE control loop | B1 per item + B4 state table + B11 + S4 stop-predicate + C2 + C4 + bounded retry |
+| GRADIENT WORKFLOW     | Tiered Architecture; workshop model | B12 + B16 + B13 + (A2 or A3 or A1) + B4   |
 
 ---
 
@@ -74,6 +75,25 @@ ANTI-PATTERNS:
 - IMBALANCED PANEL -- N-1 lenses agree, 1 dissents, the synthesis
   follows the majority without examining the dissent. The dissenting
   lens is usually the highest-information signal.
+- UNDIFFERENTIATED LENS BINDING -- all N lenses bound to the SAME
+  role class (whether all-trivial / all-reviewer / all-planner)
+  without per-lens CAPABILITY PROFILE enumeration. May be the right
+  answer (e.g. 5 lenses genuinely doing checklist grading over a
+  finite diff window with no cross-file reasoning) or may be slap-
+  binding by analogy ("they're all lenses, so they get the same
+  model"). The architect MUST enumerate per lens BEFORE binding:
+  (a) does this lens need CROSS-FILE / MULTI-FILE REASONING? (b)
+  does this lens emit findings whose downstream consequences are
+  STAKES-WEIGHTED (e.g. security CVEs gated against, vs style
+  suggestions)? (c) does this lens require MULTI-STEP PROOF chains
+  (e.g. taint-flow analysis) rather than pattern matching? Lenses
+  with different CAPABILITY PROFILE answers SHOULD bind to
+  different role classes (e.g. style + correctness at TRIVIAL,
+  security + test-coverage at REVIEWER). If after the enumeration
+  the result IS uniform binding, the architect records the per-
+  lens justification in the handoff packet -- not just the bound
+  class. See B12 BULK IDENTICAL BINDING anti-pattern for the cure
+  template.
 
 ---
 
@@ -817,6 +837,140 @@ ordering, that is A11. When the work is also event-triggered
 with audit + capability-gating requirements, A10 GOVERNED OUTER
 LOOP is the wrapping pattern and A11 may live inside the gated
 session as the in-loop discipline.
+
+---
+
+## A12. GRADIENT WORKFLOW (cost-shape topology)
+
+CLASSICAL ANALOG: Tiered Architecture (Fowler, _Patterns of
+Enterprise Application Architecture_, Addison-Wesley 2002 --
+expensive computation at the top, cheaper presentation at the
+edges); the workshop model in industrial production (one master
+craftsman, several journeymen, many apprentices).
+
+A12 is the architectural shape that makes B12 MODEL ROUTER and
+B16 EFFORT GOVERNOR pay off at scale. Instead of running every
+stage of a workflow on the same role class, gradient workflow
+declares an explicit COST GRADIENT across stages: heavy at the
+front (planning, scoping), middle on the bulk (per-item
+execution), light at the back (verification, triage,
+reconciliation).
+
+COMPOSES:
+- B12 MODEL ROUTER for the per-stage role-class binding.
+- B16 EFFORT GOVERNOR for the per-stage effort declaration.
+- B13 CACHE-AWARE PREFIX so each stage's prefix is stable across
+  its repeated calls (especially the middle and back, which run
+  many times).
+- One Tier-3 backbone (typically A2 STAFFED PLAN, A3 PIPELINE,
+  or A1 PANEL). Gradient workflow is a COST OVERLAY on these,
+  not a replacement.
+- B4 PLAN MEMENTO between stages (state persists; each stage
+  reads from the table, does not assume context from the
+  previous stage).
+
+WHEN:
+- The work decomposes into stages with clearly different
+  capability requirements.
+- One or more stages will run MANY times (per-item fan-out,
+  per-stage loop). The cost-per-call delta between role classes
+  compounds.
+- The expensive role class is genuinely needed for ONE stage
+  (typically planning or final synthesis) but not the rest.
+
+CANONICAL SHAPE:
+
+```mermaid
+flowchart TB
+    Front[FRONT planner role<br/>plan or scope]
+    Mid1[MID implementer role<br/>per-item]
+    Mid2[MID implementer role<br/>per-item]
+    MidN[MID implementer role<br/>per-item]
+    Back[BACK reviewer role<br/>verify or triage]
+    Plan[(B4 PLAN MEMENTO<br/>state table)]
+
+    Front --> Plan
+    Plan --> Mid1
+    Plan --> Mid2
+    Plan --> MidN
+    Mid1 --> Plan
+    Mid2 --> Plan
+    MidN --> Plan
+    Plan --> Back
+
+    classDef heavy fill:#ffd6d6,stroke:#a02828
+    classDef mid fill:#fff4d6,stroke:#a07b00
+    classDef light fill:#d6f4dd,stroke:#2a8842
+    class Front heavy
+    class Mid1,Mid2,MidN mid
+    class Back light
+```
+
+The fan width (number of MID workers) determines the savings
+ratio. With 1 planner-call + N implementer-calls + 1 reviewer-
+call, switching the N from planner-class to implementer-class
+saves roughly (planner_rate - implementer_rate) * N output
+budget. Past N=4 the savings dominate the planner cost; below
+N=2 the saving is marginal and gradient workflow is overkill.
+
+DISCRIMINATOR vs A2 STAFFED PLAN: STAFFED PLAN names HOW THE
+WORK IS STAFFED (one planner thread, N worker threads with
+persistent plan). GRADIENT WORKFLOW names WHAT EACH STAFFED
+SLOT COSTS. They compose: a STAFFED PLAN that places a planner-
+class model on the planning thread and implementer-class on the
+worker threads IS a gradient workflow.
+
+DISCRIMINATOR vs A1 PANEL: PANEL names a multi-LENS structure
+(different personas). GRADIENT names a multi-COST structure
+(different role classes). A panel where every lens is implementer-
+class is not a gradient workflow. A panel where one synthesizer
+is planner-class and the lenses are implementer-class IS a
+gradient workflow.
+
+WHERE THE HEAVY ROLE BELONGS: the FRONT (planning, scoping) and
+the BACK SYNTHESIZER ON GENUINELY UNRESOLVED INPUT are the slots
+that justify planner-class. A back-stage synthesizer that
+ADJUDICATES AMONG PRE-EXISTING ANALYSES (downgrade a severity,
+deduplicate findings, reconcile a single severity disagreement,
+verify a flagged claim against the source) is REVIEWER-CLASS
+WORK, not planner -- the structured inputs and bounded decision
+space remove the planner-class capability requirement. Reserve
+planner-class for synthesizers that must GENERATE NEW ANALYSIS
+on top of disagreement (e.g. the lenses surface a contradiction
+the architect could not have anticipated; the synthesizer must
+re-design the problem boundary). On Copilot CLI, this typically
+means: the BACK SYNTHESIZER stays at session-default reviewer
+class (claude-sonnet-4.6) and only the orchestrator's S4 gate
+escalates to planner class on a NARROW pre-defined trigger
+(e.g. ALL lenses fail, or a BLOCKER-severity disagreement that
+the reviewer-class synthesizer explicitly cannot adjudicate).
+
+ANTI-PATTERNS:
+- FLAT WORKFLOW with a heavy class on every stage. Common when
+  the architect designs "for quality" and never re-examines
+  per-stage capability need. Apply R5 COST PRUNE.
+- INVERTED GRADIENT -- cheap class up front (planning), heavy
+  class on the bulk (execution). The plan misjudges effort and
+  the heavy class re-does the planner's work mid-execution.
+- BUDGET-DRIVEN PROMOTION -- promoting a back-stage role class
+  to implementer-class because "the cheap class missed an edge
+  case once". Add S4 VALIDATION DECORATOR instead; do not
+  flatten the gradient to mask a missing gate.
+- HEAVY ADJUDICATOR -- placing planner-class on the back
+  synthesizer when its work is downgrading severities,
+  deduplicating findings, or reconciling a single severity
+  disagreement among pre-existing analyses. Adjudication of
+  structured inputs is reviewer-class capability; planner-class
+  here is bind-up for STAKES without the stakes (advisory-only
+  output, no consequential side effect, no genuine planning).
+  Cure: leave the synthesizer at reviewer class; promote to
+  planner only when the S4 gate detects a HIGH-stakes pattern
+  (BLOCKER-severity disagreement among >=2 lenses, or a
+  contradictory CRITICAL claim that requires re-grounding).
+- GRADIENT WITHOUT CACHE DISCIPLINE -- the MID stage runs N
+  times but its prefix changes per item (no B13). Every call
+  pays full input rate; the gradient savings on output are
+  partly eaten by uncached input.
 
 ---
 

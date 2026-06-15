@@ -77,6 +77,34 @@ don't run the module-system tool? If yes, design respects the
 exportable shape from the start; if no, free to use authoring-time
 features.
 
+### 7. AUDIENCE BOUNDARY
+
+Every artifact a workflow produces has an audience. Two macro-classes:
+
+- INTERNAL: machine-only consumer. Spawn briefs, subagent receipts,
+  inter-lens artifacts, intermediate scratch, panel arbitrations,
+  cross-thread state files. The end user never reads these.
+- EXTERNAL: human-readable. PR descriptions, READMEs, commit
+  messages, generated docs, final synthesis, advisories.
+
+DESIGN QUESTION: for every artifact emitted in this design, name
+its audience explicitly. INTERNAL artifacts default to compressed
+form (caveman per B14b/B14c); EXTERNAL artifacts default to normal
+prose (B14 thrift only — preserve grammar).
+
+The boundary is the ARTIFACT'S AUDIENCE, not the agent's tier. A
+REVIEWER-tier agent may produce a caveman receipt (INTERNAL) AND a
+normal-prose advisory (EXTERNAL) within the same dispatch.
+
+Synthesizers sit at the boundary: they ingest INTERNAL receipts and
+emit EXTERNAL prose. The boundary lives at the synthesizer's output
+edge, not at the spawn edge.
+
+ANTI-PATTERN: AUDIENCE BLEED — caveman applied to an EXTERNAL
+artifact (user reads telegraphic prose) or normal verbose prose
+copied into an INTERNAL spawn brief (subagent ingests architect's
+rationale paragraphs unread).
+
 ---
 
 ## Composition modes (the step 3.5 decision)
@@ -125,6 +153,10 @@ no transitive surface, no governance overhead.
 - TOOL LEAK: the architect or skill body naming a specific
   manifest filename / CLI command instead of using these durable
   concepts.
+- AUDIENCE BLEED (per §7): an INTERNAL artifact emitted in normal
+  prose with no compression justification, OR an EXTERNAL artifact
+  compressed in caveman. Cure: name audience at every emission
+  site; default INTERNAL to caveman, EXTERNAL to normal prose.
 - BUNDLE LEAKAGE: non-runtime files colocated INSIDE the module's
   distribution boundary (eval scenarios, contributor scripts, dev
   notes, scratch fixtures). The symmetric counterpart of PHANTOM

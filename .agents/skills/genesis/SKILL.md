@@ -5,9 +5,12 @@ description: >-
   persona scoping file, scope-attached rule file, orchestrator workflow)
   or when refactoring an existing one. Activate whenever the task asks
   to design, restructure, or critique an agentic module across any
-  agent harness (Claude Code, Copilot, Cursor, OpenCode, Codex). This
-  skill drives an 8-step disciplined design process whose output is
-  mermaid diagrams + an interface sketch + a persisted plan that the
+  agent harness (Claude Code, Copilot, Cursor, OpenCode, Codex), or
+  when the task asks to make a workflow cost-effective, route model
+  calls by capability, design for cache discipline, prune token spend,
+  or pick a model class. This skill drives an 8-step disciplined
+  design process whose output is mermaid diagrams + an interface
+  sketch + a persisted plan (including a cost projection) that the
   calling thread (or a coder persona it loads) then turns into
   natural-language modules. Do not skip to natural-language drafting
   before the design artifacts exist.
@@ -50,7 +53,7 @@ emits the natural-language modules from the artifacts.
 ## Process
 
 ```
-   1 intent + scope
+   1 intent + scope (+ cost stance, optional cap)
         v
    2 component diagram   <-- load assets/mermaid-conventions.md
         v                    load assets/primitives.md
@@ -59,6 +62,11 @@ emits the natural-language modules from the artifacts.
         v                    load assets/refactor-patterns.md
    3 thread / sequence diagram
         v
+ 3.1 tradeoff check       <-- load assets/pattern-tradeoffs.md
+        v                    (only if two patterns fit one slot)
+ 3.2 cost check           <-- load assets/token-economics.md
+        v                    load assets/runtime-affordances/model-catalog.md
+        v                    (mandatory; mirrors 3.1)
  3.5 composition decision  <-- load assets/composition-substrate.md
         v                    (per-box: inline | sibling | external module)
    4 SoC pass against existing modules
@@ -66,7 +74,8 @@ emits the natural-language modules from the artifacts.
    5 classic + PROSE + LLM-physics compliance check
         v
    6 handoff packet (diagrams + interface sketch + declared targets
-                     + module composition table + todos)
+                     + module composition table + cost projection
+                     + todos)
         v             [PERSIST PACKET to plan store; truth #5]
         v                                      [DESIGN ENDS HERE]
    ----- caller / coder thread takes over -----
@@ -79,7 +88,7 @@ emits the natural-language modules from the artifacts.
         v                  RELOAD plan before each module / spawn
    8 validate against diagrams + lint (PROSE 5-axis, size budget,
      ASCII, coherent unit, portability honored, declared external
-     modules wired correctly)
+     modules wired correctly, cost projection honored)
 ```
 
 ### Step 1 - intent + scope
@@ -109,6 +118,13 @@ authority; verify against the live URL):
 - LENGTH CAP <= 1024 characters (canonical spec hard limit per
   `assets/primitives.md` MODULE ENTRYPOINT; silent rejection above
   this).
+
+Also read the operator's COST STANCE (`frugal` / `balanced` default
+/ `quality` / `unbounded`) and optional COST BUDGET CAP (dollars,
+tokens, or premium-requests for a typical run). Stance shapes which
+patterns get picked; cap is the only place genesis refuses on cost
+grounds (enforced at step 6). See `references/cost-economics-
+process.md` for declaration mechanics.
 
 ### Step 2 - component diagram (mermaid)
 
@@ -171,6 +187,26 @@ reviewers can reproduce the choice.
 
 Skip this step if step 3 produced an unambiguous pattern selection.
 
+### Step 3.2 - cost check (mandatory, mirrors 3.1)
+
+Load `assets/token-economics.md` and
+`assets/runtime-affordances/model-catalog.md`. For each module,
+pick: ROLE CLASS (cheapest meeting capability); PREFIX SHAPE
+(audit for cache invalidators, apply B13); OUTPUT VOLUME band
+(L in fan-out = R5 trigger); TOOL SURFACE (B15 or S7 if
+catalog > 20); WORKFLOW SHAPE (heterogeneous stages = A12).
+
+Apply the stance read at step 1. If two cost patterns fit the
+same slot, cite the cost-shape matrix row in
+`assets/pattern-tradeoffs.md` section 10. Full procedure in
+`references/cost-economics-process.md`. Skip step 3.2 ONLY when
+stance is `unbounded` AND operator declined cost recording.
+
+For every task() spawn planned, fill the PER-SPAWN DECLARATION
+TABLE (Audience/Tier/Brief mode/Receipt mode/Justification) per
+`references/audience-boundary.md`. Default INTERNAL = caveman
+per B14b/B14c.
+
 ### Step 3.5 - composition decision
 
 Load `assets/composition-substrate.md`. For EACH box in the
@@ -196,6 +232,10 @@ rationale:
 Then sketch a `flowchart LR` DEPENDENCY GRAPH showing this module
 plus its declared external modules and any transitive closure
 edges you can name. Mark each edge with the composition mode.
+
+For every artifact emitted, name audience per composition-substrate
+§7 AUDIENCE BOUNDARY. INTERNAL → caveman (B14b/B14c); EXTERNAL →
+normal prose; synthesizers decompress at the boundary.
 
 If any external module is declared, two things follow. (1) The
 handoff packet MUST list it under "external modules required" so
@@ -292,6 +332,10 @@ Produce a single artifact containing:
 - Any compliance findings still open (with severity).
 - A todo list (one entry per module to draft, plus validation),
   with dependencies between entries where they exist.
+- A PER-SPAWN DECLARATION TABLE, SPAWN_BRIEFS, RECEIPT_SCHEMAS, and
+  EXTERNAL_ARTIFACT_SPEC per `references/audience-boundary.md` template.
+- A HUMAN_RATIONALE section with full prose; flagged as NEVER
+  copied into any SPAWN_BRIEF.
 - An EVALS PLAN (canonical spec for MODULE ENTRYPOINT primitive
   evaluating-skills + optimizing-descriptions; see
   `assets/primitives.md`). At minimum:
@@ -303,6 +347,16 @@ Produce a single artifact containing:
   - ~20 TRIGGER EVALS for the dispatch description: 8-10 queries
     that should trigger plus 8-10 near-miss queries that should
     NOT, split 60/40 train/val. Validation split is the ship gate.
+- A COST PROJECTION (mandatory unless `unbounded` + opt-out).
+  Contains: per-module qualitative bands (role class, prefix /
+  output bands, turn / cache ratio); workflow-level quantitative
+  range (input / output tokens, dollar range per representative
+  run) sourced from the per-harness adapter pricing footnote;
+  three workload scenarios (S trivial / M known module / L
+  repo-wide); cited cost-shape matrix rows; declared stance; cap
+  check (halt if L scenario exceeds cap). Bands are the CONTRACT
+  (step 8 validates); ranges are the PREDICTION (operator reads).
+  Full template in `references/cost-economics-process.md`.
 
 PERSIST THE PACKET. Per truth #5 (plan before execution) and
 substrate concept 6 (PLAN PERSISTENCE), the handoff packet MUST
@@ -429,6 +483,17 @@ better than against prose description.
   - Trigger-eval validation split passes: rate >= 0.5 on
     should-trigger queries AND < 0.5 on near-miss should-not-
     trigger queries.
+- COST CHECKLIST (from step 6; human-applied, not a lint script):
+  each emitted module's role class matches projection bands; no
+  introduced cache invalidators; every cited cost pattern
+  materialized in some module; stance-mandated patterns present
+  (`frugal` -> B12 / B15 / B16; `quality` -> planner-class
+  promotions); cap still holds. Failures are HIGH severity but do
+  not block ship -- they surface so the operator can accept or
+  redesign. Full procedure in `references/cost-economics-process.md`.
+- AUDIENCE BOUNDARY: PER-SPAWN DECLARATION TABLE present; INTERNAL
+  rows use caveman brief or justified exception; SPAWN_BRIEFs
+  paired with RECEIPT_SCHEMAs; EXTERNAL specs declare NORMAL prose.
 - REAL-TASK REFINEMENT: after structural lint passes, run the
   skill on at least one real task, capture the trace, and revise
   from what actually happened (not what you expected). One-shot
@@ -449,6 +514,9 @@ in any one thread:
 See `assets/design-patterns.md` for the design-pattern catalogue (GoF
 axes) and `assets/architectural-patterns.md` for the architectural
 patterns (system-topology shapes).
+
+Load `references/audience-boundary.md` before drafting handoff
+packet step 6 if the design includes ≥1 task() spawn.
 
 ## Worked examples
 
@@ -479,6 +547,10 @@ apply to examples; do not load them eagerly.
   S7 + S4 + A9 verifier hardening, and explicitly rejects A8 /
   B5 / R1 with WHEN-clause grounding -- read this when stake
   pressure tempts you to add new orchestration layers.
+- `examples/06-cost-aware-panel.md` -- cost-shape reference: the
+  example 02 panel with A12 GRADIENT WORKFLOW + B12 MODEL ROUTER
+  + B13 CACHE-AWARE PREFIX + R5 COST PRUNE pass. Read when stance
+  is `frugal` or when fan-out width >= 4 at daily cadence.
 
 ## Outputs
 

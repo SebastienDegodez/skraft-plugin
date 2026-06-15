@@ -96,3 +96,48 @@ In Codex CLI: no first-class persistence tooling.
   portable and fast.
 - Streamlined CLI: `codex exec <prompt>` or `codex exec <file>` is
   minimal; no agent framework overhead.
+
+## 9. MODEL CATALOG & BILLING (cost-economics)
+
+Maps the abstract role classes in `../model-catalog.md` to concrete
+OpenAI SKUs available through Codex CLI and to OpenAI's pricing
+surface. The genesis architect designs in role classes; this adapter
+binds them at codegen time.
+
+Verified on: 2025-11-14. Always re-verify dollar figures against the
+live pricing page before quoting; they age out.
+
+### Role class -> concrete model (defaults)
+
+| Role class             | Default SKU                  | Alternative                       |
+|------------------------|------------------------------|-----------------------------------|
+| planner                | o3 / o3-pro / GPT-5 (high reasoning) | GPT-5 standard with explicit plan instruction |
+| implementer            | GPT-5 standard               | GPT-4.1                           |
+| reviewer               | GPT-5 standard / GPT-4.1     | GPT-5 mini for checklist work     |
+| trivial                | GPT-4o mini / GPT-5 mini     | (none)                            |
+| long-context-retriever | GPT-5 with extended context  | GPT-4.1 with long context         |
+
+### Billing surface
+
+Token pass-through. Per-Mtok rates (OpenAI public API, verified
+2025-11-14): consult https://openai.com/api/pricing for the live
+table. Reasoning models bill thinking tokens at output rate.
+
+### Cost-pattern bindings
+
+- B12 MODEL ROUTER: configure default model in Codex CLI config;
+  per-invocation override via `--model` flag. Cross-model context
+  does NOT share cache.
+- B13 CACHE-AWARE PREFIX: OpenAI caches prompts longer than 1024
+  tokens automatically. Cache reads bill at 50% of input rate (less
+  aggressive than Anthropic). Keep persona / skill body STABLE;
+  every edit invalidates.
+- B16 EFFORT GOVERNOR: declare `reasoning_effort` per invocation
+  (`minimal` / `low` / `medium` / `high`). Mid-session effort
+  change is a CACHE INVALIDATOR on reasoning models.
+
+### Stance binding
+
+Operator declares stance in the first prompt OR in `~/.codex/config`
+as `stance: <value>`. The genesis-architect persona reads it at
+step 1.
