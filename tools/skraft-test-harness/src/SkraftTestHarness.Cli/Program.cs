@@ -21,6 +21,7 @@ public static class Program
         root.Subcommands.Add(RunGateCommand.Build(output));
         root.Subcommands.Add(RunChainCommand.Build(output));
         root.Subcommands.Add(VerifyCheckpointCommand.Build(output));
+        root.Subcommands.Add(DashboardCommand.Build(output));
 
         var parseResult = root.Parse(args);
         return await parseResult.InvokeAsync();
