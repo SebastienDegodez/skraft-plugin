@@ -4,10 +4,9 @@ using SkraftTestHarness.Domain.Evaluation;
 namespace SkraftTestHarness.Infrastructure.Mock;
 
 /// <summary>
-/// Deterministic <see cref="IAgentRunner"/> adapter used by the
-/// <c>--mock</c> walking skeleton: produces canned outputs without any
-/// I/O or LLM call, so the whole pipeline can be exercised end-to-end
-/// in tests and on developer laptops.
+/// Deterministic <see cref="IAgentRunner"/> for <c>--mock</c> mode:
+/// produces canned outputs without any I/O or LLM call, so the whole
+/// pipeline can be exercised end-to-end in tests and on developer laptops.
 /// </summary>
 public sealed class MockAgentRunner : IAgentRunner
 {

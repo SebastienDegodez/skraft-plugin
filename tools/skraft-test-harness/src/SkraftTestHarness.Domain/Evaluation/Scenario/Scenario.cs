@@ -1,9 +1,9 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// Aggregate root of the Evaluation bounded context. Holds a
-/// <see cref="ScenarioSpecification"/> and its <see cref="Assertions"/>
-/// (exactly two instance variables — Object Calisthenics rule 8).
+/// Aggregate root of the Evaluation bounded context: a named, prompted
+/// case described by a <see cref="ScenarioSpecification"/> together with
+/// the <see cref="Assertions"/> that decide whether it passes.
 /// </summary>
 public sealed class Scenario
 {

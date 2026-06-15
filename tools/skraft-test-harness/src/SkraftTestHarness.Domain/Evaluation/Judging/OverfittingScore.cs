@@ -3,11 +3,9 @@ using System.Text.RegularExpressions;
 namespace SkraftTestHarness.Domain.Evaluation.Judging;
 
 /// <summary>
-/// Pure Domain VO that measures how much the with-skill answer
-/// echoes vocabulary from the baseline (word-overlap ratio).
-/// A high ratio suggests the answer is overfitted rather than
-/// genuinely better.
-/// Object Calisthenics: 1 instance field, no getters.
+/// Measures how much the with-skill answer echoes vocabulary from the
+/// baseline (word-overlap ratio). A high ratio suggests the answer is
+/// overfitted rather than genuinely better.
 /// </summary>
 public sealed class OverfittingScore
 {

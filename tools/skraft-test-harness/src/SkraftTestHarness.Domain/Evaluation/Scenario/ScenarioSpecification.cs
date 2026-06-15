@@ -1,9 +1,9 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// Declarative identity of a scenario — kept as a dedicated VO so that
-/// <see cref="Scenario"/> holds exactly two instance variables
-/// (Object Calisthenics rule 8).
+/// The declarative identity of a scenario: its name, prompt, tags and
+/// optional workspace requirement, grouped as one value so a
+/// <see cref="Scenario"/> can refer to it as a whole.
 /// </summary>
 public sealed class ScenarioSpecification
 {

@@ -1,8 +1,8 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// First-class collection of <see cref="EvaluationRun"/> — enforces the
-/// invariant "a verdict is built from at least one run".
+/// The runs a verdict is built from, enforcing the invariant that a
+/// verdict is built from at least one <see cref="EvaluationRun"/>.
 /// </summary>
 public sealed class EvaluationRuns
 {

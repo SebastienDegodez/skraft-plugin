@@ -19,7 +19,7 @@ public sealed class GateOutcome
 
     public bool IsPass() => _passed;
 
-    /// <summary>Hands the textual status (PASS/FAIL) to the callback (Tell-Don't-Ask).</summary>
+    /// <summary>Provides the PASS/FAIL status to the caller.</summary>
     public void WithStatus(Action<string> use)
     {
         ArgumentNullException.ThrowIfNull(use);

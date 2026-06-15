@@ -1,10 +1,9 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// First-class collection of <see cref="Scenario"/> — the scenarios
-/// that make up a skill's evaluation suite. Hides iteration: callers
-/// provide an async evaluator and receive the resulting
-/// <see cref="ScenarioVerdicts"/>.
+/// The scenarios that make up a skill's evaluation suite. Hides
+/// iteration: callers provide an async evaluator and receive the
+/// resulting <see cref="ScenarioVerdicts"/>.
 /// </summary>
 public sealed class Scenarios
 {
@@ -21,7 +20,7 @@ public sealed class Scenarios
 
     public int Count() => _items.Count;
 
-    /// <summary>Hands each scenario to the callback without evaluating it (verify-checkpoint path).</summary>
+    /// <summary>Provides each scenario to the caller without evaluating it (verify-checkpoint path).</summary>
     public void ForEach(Action<Scenario> use)
     {
         ArgumentNullException.ThrowIfNull(use);

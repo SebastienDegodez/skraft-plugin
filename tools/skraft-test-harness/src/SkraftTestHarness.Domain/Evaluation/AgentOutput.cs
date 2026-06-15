@@ -1,9 +1,7 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// Verbatim text produced by the agent during a scenario run. Exposes
-/// only behaviours (no getter on the wrapped text — Object Calisthenics
-/// rule 9).
+/// Verbatim text produced by the agent during a scenario run.
 /// </summary>
 public sealed class AgentOutput : IEquatable<AgentOutput>
 {

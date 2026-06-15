@@ -1,10 +1,8 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// First-class collection of <see cref="ScenarioVerdict"/>, one per
-/// scenario evaluated for the same skill. Hides iteration and exposes
-/// only probe/behaviour methods (Tell-Don't-Ask, Object Calisthenics
-/// rule 4 + rule 9).
+/// The per-scenario verdicts that make up a single skill verdict, one
+/// <see cref="ScenarioVerdict"/> per scenario evaluated for the skill.
 /// </summary>
 public sealed class ScenarioVerdicts
 {

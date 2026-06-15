@@ -1,12 +1,11 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// Mutable sink collecting the workspace probes declared by a
-/// scenario's assertions (Tell-Don't-Ask: each <see cref="Assertion"/>
-/// pushes what it needs). Application resolves the requests against
-/// the real filesystem and gets back an immutable
-/// <see cref="WorkspaceView"/> snapshot, so Domain evaluation stays
-/// IO-free.
+/// Collects the workspace probes a scenario's assertions need: each
+/// <see cref="Assertion"/> declares what it requires. Application
+/// resolves the requests against the real filesystem and gets back an
+/// immutable <see cref="WorkspaceView"/> snapshot, so Domain evaluation
+/// stays IO-free.
 /// </summary>
 public sealed class WorkspaceProbeRequests
 {

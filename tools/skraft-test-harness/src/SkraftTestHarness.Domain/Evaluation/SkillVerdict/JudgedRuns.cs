@@ -2,8 +2,8 @@ namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
 /// Bundles the runs of a skill evaluation with the pairwise judge
-/// decision that compared them. Keeps <see cref="SkillVerdict"/> below
-/// the two-instance-variable limit (Object Calisthenics rule 8).
+/// decision that compared them, so a <see cref="SkillVerdict"/> can
+/// reason about a scenario's runs and their outcome as one unit.
 /// </summary>
 public sealed class JudgedRuns
 {

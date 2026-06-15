@@ -1,9 +1,8 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// First-class collection of <see cref="ToolName"/> — the tools the
-/// agent invoked during a single run. Empty is allowed (some runs use
-/// no tools).
+/// The tools the agent invoked during a single run. Empty is allowed
+/// (some runs use no tools).
 /// </summary>
 public sealed class ToolInvocations
 {

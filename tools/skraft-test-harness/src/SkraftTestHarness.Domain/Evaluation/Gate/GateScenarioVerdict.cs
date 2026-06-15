@@ -2,8 +2,7 @@ namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
 /// Per-scenario entry of a <see cref="GateVerdict"/>: pairs a scenario
-/// with its absolute <see cref="GateOutcome"/>. Exposes behaviour only
-/// (Tell-Don't-Ask) — no getter on the wrapped outcome.
+/// with its absolute <see cref="GateOutcome"/>.
 /// </summary>
 public sealed class GateScenarioVerdict
 {
@@ -18,7 +17,7 @@ public sealed class GateScenarioVerdict
 
     internal bool IsPass() => _outcome.IsPass();
 
-    /// <summary>Hands the scenario name and its PASS/FAIL status to the callback.</summary>
+    /// <summary>Provides the scenario name and its PASS/FAIL status to the caller.</summary>
     internal void RenderTo(Action<string, string> onScenarioStatus)
         => _scenario.WithName(name => _outcome.WithStatus(status => onScenarioStatus(name, status)));
 }

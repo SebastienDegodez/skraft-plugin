@@ -1,9 +1,8 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// Full result of a single agent run: the produced output plus the
-/// tools invoked during the run. Carries exactly two instance
-/// variables (Object Calisthenics rule 8).
+/// The full result of a single agent run: the produced output together
+/// with the tools invoked during the run.
 /// </summary>
 public sealed class AgentRunResult
 {

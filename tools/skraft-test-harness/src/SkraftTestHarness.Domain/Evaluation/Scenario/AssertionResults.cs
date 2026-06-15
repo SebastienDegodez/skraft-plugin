@@ -1,8 +1,8 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// First-class collection of <see cref="AssertionResult"/> — owns the
-/// aggregated pass decision (Tell-Don't-Ask).
+/// The results of evaluating a scenario's assertions, owning the
+/// aggregated pass decision over its <see cref="AssertionResult"/> items.
 /// </summary>
 public sealed class AssertionResults
 {
@@ -19,7 +19,7 @@ public sealed class AssertionResults
 
     public int Count() => _items.Count;
 
-    /// <summary>Hands every failing assertion's description to the callback (Tell-Don't-Ask).</summary>
+    /// <summary>Provides every failing assertion's description to the caller.</summary>
     public void WithFailures(Action<string> use)
     {
         ArgumentNullException.ThrowIfNull(use);

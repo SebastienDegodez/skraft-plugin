@@ -8,7 +8,7 @@ namespace SkraftTestHarness.Infrastructure.Yaml;
 /// <summary>
 /// <see cref="IScenarioLoader"/> adapter that reads an
 /// <c>eval.yaml</c> file from a tests directory and maps it to the
-/// Domain <see cref="Scenarios"/> first-class collection. DTOs are
+/// Domain <see cref="Scenarios"/> collection. DTOs are
 /// confined to Infrastructure and never leak into Domain/Application.
 /// </summary>
 public sealed class YamlEvalLoader : IScenarioLoader

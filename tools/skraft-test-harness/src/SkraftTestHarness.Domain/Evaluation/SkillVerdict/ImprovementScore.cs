@@ -3,12 +3,10 @@ using System.Globalization;
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// Normalized improvement score in <c>[-1, +1]</c> produced by
-/// collapsing a <see cref="ScenarioVerdicts"/> into a single number.
-/// Value object — hides its wrapped <see cref="double"/> (no getter,
-/// Object Calisthenics rule 9). Use <see cref="IsApproximately"/> to
-/// probe the value with a tolerance; equality is structural on the
-/// stored <see cref="double"/>.
+/// The normalized improvement score of a skill in <c>[-1, +1]</c>,
+/// produced by collapsing a <see cref="ScenarioVerdicts"/> into a single
+/// number. Use <see cref="IsApproximately"/> to probe the value with a
+/// tolerance; equality is structural.
 /// </summary>
 public sealed class ImprovementScore : IEquatable<ImprovementScore>
 {

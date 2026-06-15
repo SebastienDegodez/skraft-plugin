@@ -4,10 +4,10 @@ using SkraftTestHarness.Domain.Evaluation;
 namespace SkraftTestHarness.Infrastructure.Mock;
 
 /// <summary>
-/// Deterministic <see cref="IJudge"/> adapter for the <c>--mock</c>
-/// walking skeleton: always declares the skill-enhanced run the
-/// winner with a canned reason. Lets the walking skeleton surface a
-/// green verdict without an LLM round-trip.
+/// Deterministic <see cref="IJudge"/> for <c>--mock</c> mode:
+/// always declares the skill-enhanced run the winner with a canned
+/// reason, so <c>--mock</c> mode surfaces a green verdict without an
+/// LLM round-trip.
 /// </summary>
 public sealed class MockJudge : IJudge
 {

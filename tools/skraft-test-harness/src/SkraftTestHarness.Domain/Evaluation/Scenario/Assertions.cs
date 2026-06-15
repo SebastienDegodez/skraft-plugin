@@ -1,10 +1,9 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// First-class collection of <see cref="Assertion"/> — enforces the
-/// scenario invariant (≥1 assertion) and owns the evaluation behaviour
-/// (Tell-Don't-Ask: <see cref="Scenario"/> delegates here instead of
-/// looping externally).
+/// The assertions a scenario declares — enforces the scenario invariant
+/// (≥1 assertion) and owns evaluating them, so <see cref="Scenario"/>
+/// delegates here instead of looping externally.
 /// </summary>
 public sealed class Assertions
 {

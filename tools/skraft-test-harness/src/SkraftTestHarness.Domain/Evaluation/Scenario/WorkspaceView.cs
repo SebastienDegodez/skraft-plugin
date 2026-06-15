@@ -5,7 +5,7 @@ namespace SkraftTestHarness.Domain.Evaluation;
 /// <see cref="WorkspaceProbeRequests"/> before evaluation so Domain
 /// assertions (<see cref="FileExists"/>, <see cref="FileMatchesGlob"/>,
 /// <see cref="FileContains"/>) can decide without reaching out to any
-/// gateway. Exposes behaviour only, no getter.
+/// gateway.
 /// </summary>
 public sealed class WorkspaceView
 {

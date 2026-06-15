@@ -9,9 +9,8 @@ namespace SkraftTestHarness.Infrastructure.Reporting;
 /// Real <see cref="IReporter"/> adapter: writes the
 /// <see cref="SkillVerdict"/> as a JUnit-compatible XML file named
 /// <c>&lt;skill-id&gt;-&lt;UTC ISO no colons&gt;.xml</c> into the
-/// configured <see cref="ReportTarget"/>. Uses the Tell-Don't-Ask
-/// <see cref="IVerdictRenderer"/> pushed by the Domain — no getters
-/// were added on Domain types.
+/// configured <see cref="ReportTarget"/>. Renders the verdict through
+/// the <see cref="IVerdictRenderer"/> the Domain provides.
 /// </summary>
 public sealed class JUnitReporter : IReporter
 {

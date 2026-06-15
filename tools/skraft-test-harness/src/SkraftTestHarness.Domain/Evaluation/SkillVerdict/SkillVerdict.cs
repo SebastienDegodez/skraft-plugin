@@ -4,9 +4,7 @@ namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
 /// Aggregate root for a skill evaluation across one or more scenarios.
-/// Holds the skill under evaluation and the collection of per-scenario
-/// verdicts (exactly two instance variables — Object Calisthenics
-/// rule 8).
+/// Holds the skill under evaluation and the per-scenario verdicts.
 /// </summary>
 public sealed class SkillVerdict
 {

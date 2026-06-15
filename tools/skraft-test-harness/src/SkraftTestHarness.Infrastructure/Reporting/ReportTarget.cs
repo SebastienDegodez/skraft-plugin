@@ -3,8 +3,8 @@ namespace SkraftTestHarness.Infrastructure.Reporting;
 /// <summary>
 /// Sink descriptor for the <see cref="JsonReporter"/>. Models a target
 /// directory as a small VO around the path string and exposes only
-/// behaviour (Tell-Don't-Ask, Object Calisthenics rule 9): it resolves
-/// concrete file paths and ensures the directory exists.
+/// behaviour: it resolves concrete file paths and ensures the directory
+/// exists.
 /// </summary>
 public sealed class ReportTarget
 {

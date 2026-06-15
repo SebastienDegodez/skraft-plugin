@@ -9,8 +9,7 @@ namespace SkraftTestHarness.Infrastructure.Reporting;
 /// <see cref="IVerdictLoader"/> adapter: scans a flat directory for
 /// <c>*.json</c> verdict files, deserializes each one and reconstitutes
 /// the Domain <see cref="SkillVerdict"/> via the internal
-/// <c>Reconstitute</c> factory — no public getters were added on Domain
-/// types (Tell-Don't-Ask, Object Calisthenics rule 9).
+/// <c>Reconstitute</c> factory.
 /// </summary>
 public sealed class JsonVerdictLoader : IVerdictLoader
 {

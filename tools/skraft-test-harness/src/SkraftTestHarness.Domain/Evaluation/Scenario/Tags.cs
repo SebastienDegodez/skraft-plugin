@@ -1,9 +1,8 @@
 namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
-/// First-class collection of the category tags a scenario declares
-/// (phase: discover…deliver; kind: smoke / simulation / judge; …).
-/// Matching is case-insensitive.
+/// The category tags a scenario declares (phase: discover…deliver;
+/// kind: smoke / simulation / judge; …). Matching is case-insensitive.
 /// </summary>
 public sealed class Tags
 {

@@ -1,10 +1,9 @@
 namespace SkraftTestHarness.Domain;
 
 /// <summary>
-/// Base class for single-string value objects. Guards non-empty,
-/// implements structural equality without exposing any property
-/// accessor (Object Calisthenics rule 9 — no getters).
-/// Derived classes read the wrapped string through <see cref="ToString"/>.
+/// Base class for single-string value objects. Guards against empty
+/// values and provides structural equality. Derived classes read the
+/// wrapped string through <see cref="ToString"/>.
 /// </summary>
 public abstract class StringValueObject : IEquatable<StringValueObject>
 {

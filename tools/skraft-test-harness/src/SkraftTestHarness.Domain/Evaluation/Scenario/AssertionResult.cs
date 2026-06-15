@@ -2,9 +2,8 @@ namespace SkraftTestHarness.Domain.Evaluation;
 
 /// <summary>
 /// Result of evaluating a single <see cref="Assertion"/> against an
-/// <see cref="AgentOutput"/>. Sealed hierarchy — concrete subtypes
-/// (<see cref="AssertionPassed"/>, <see cref="AssertionFailed"/>) each
-/// live in their own file.
+/// <see cref="AgentOutput"/> — either <see cref="AssertionPassed"/> or
+/// <see cref="AssertionFailed"/>.
 /// </summary>
 public abstract class AssertionResult
 {
