@@ -87,16 +87,18 @@ public sealed class DashboardDataBuilder
                 var model = ReadString(scenario, "model");
                 var outputTokens = ReadLong(scenario, "outputTokens");
                 var premiumRequests = ReadLong(scenario, "premiumRequests");
+                var agentsInvoked = ReadLong(scenario, "agentsInvoked");
+                var skillsInvoked = ReadLong(scenario, "skillsInvoked");
                 if (model is not null)
                     models.Add(model);
 
                 if (isGate)
                 {
-                    gates.Add(new GateRow(skill, name, ReadString(scenario, "status") ?? "UNKNOWN", model, outputTokens, premiumRequests));
+                    gates.Add(new GateRow(skill, name, ReadString(scenario, "status") ?? "UNKNOWN", model, outputTokens, premiumRequests, agentsInvoked, skillsInvoked));
                 }
                 else
                 {
-                    skillValue.Add(new SkillValueRow(skill, name, ReadString(scenario, "winner") ?? "Unknown", model, outputTokens, premiumRequests));
+                    skillValue.Add(new SkillValueRow(skill, name, ReadString(scenario, "winner") ?? "Unknown", model, outputTokens, premiumRequests, agentsInvoked, skillsInvoked));
                 }
             }
         }
@@ -120,8 +122,10 @@ public sealed class DashboardDataBuilder
         IReadOnlyList<SkillValueRow> SkillValue);
 
     private sealed record GateRow(
-        string Skill, string Scenario, string Status, string? Model, long? OutputTokens, long? PremiumRequests);
+        string Skill, string Scenario, string Status, string? Model, long? OutputTokens, long? PremiumRequests,
+        long? AgentsInvoked, long? SkillsInvoked);
 
     private sealed record SkillValueRow(
-        string Skill, string Scenario, string Winner, string? Model, long? OutputTokens, long? PremiumRequests);
+        string Skill, string Scenario, string Winner, string? Model, long? OutputTokens, long? PremiumRequests,
+        long? AgentsInvoked, long? SkillsInvoked);
 }

@@ -17,6 +17,7 @@ public static class CopilotCliTranscript
     private const string ToolExecutionStartType = "tool.execution_start";
     private const string ToolsUpdatedType = "session.tools_updated";
     private const string ResultType = "result";
+    private const string SubagentStartedType = "subagent.started";
 
     public static AgentRunResult Parse(string jsonl)
     {
@@ -27,6 +28,8 @@ public static class CopilotCliTranscript
         long outputTokens = 0;
         bool sawOutputTokens = false;
         long? premiumRequests = null;
+        long agentsInvoked = 0;
+        long skillsInvoked = 0;
 
         foreach (var line in EnumerateLines(jsonl))
         {
@@ -61,9 +64,18 @@ public static class CopilotCliTranscript
                     break;
                 case ToolExecutionStartType:
                     AppendTool(tools, data);
+                    // A skill invocation is a `skill` tool execution; count it.
+                    if (string.Equals(ReadString(data, "toolName"), "skill", StringComparison.Ordinal))
+                        skillsInvoked++;
                     break;
                 case ToolsUpdatedType:
                     model ??= ReadString(data, "model");
+                    break;
+                case SubagentStartedType:
+                    // Each dispatch of a subagent is one started event. The
+                    // catalogue events (skills_loaded / custom_agents_updated)
+                    // list what is AVAILABLE and are deliberately not counted.
+                    agentsInvoked++;
                     break;
             }
         }
@@ -71,7 +83,9 @@ public static class CopilotCliTranscript
         var telemetry = new RunTelemetry(
             model,
             sawOutputTokens ? outputTokens : null,
-            premiumRequests);
+            premiumRequests,
+            agentsInvoked,
+            skillsInvoked);
 
         return new AgentRunResult(
             new AgentOutput(output.ToString()),

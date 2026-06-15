@@ -41,6 +41,7 @@
       <table class="table">
         <thead><tr>
           <th>Skill</th><th>Scenario</th><th>Status</th><th>Model</th>
+          <th class="num">Agents</th><th class="num">Skills</th>
           <th class="num">AIC</th><th class="num">Output tok.</th><th class="num">Input tok.</th>
         </tr></thead>
         <tbody>
@@ -50,6 +51,8 @@
               <td>${esc(r.scenario)}</td>
               <td><span class="badge ${r.status === 'PASS' ? 'pass' : 'fail'}">${esc(r.status)}</span></td>
               <td>${r.model ? `<span class="badge model">${esc(r.model)}</span>` : '<span class="na">n/a</span>'}</td>
+              <td class="num">${num(r.agentsInvoked)}</td>
+              <td class="num">${num(r.skillsInvoked)}</td>
               <td class="num">${num(r.premiumRequests)}</td>
               <td class="num">${num(r.outputTokens)}</td>
               <td class="num"><span class="na">n/a</span></td>
@@ -73,6 +76,7 @@
       <table class="table">
         <thead><tr>
           <th>Skill</th><th>Scenario</th><th>Winner</th><th>Model</th>
+          <th class="num">Agents</th><th class="num">Skills</th>
           <th class="num">AIC</th><th class="num">Output tok.</th><th class="num">Input tok.</th>
         </tr></thead>
         <tbody>
@@ -82,6 +86,8 @@
               <td>${esc(r.scenario)}</td>
               <td><span class="badge ${r.winner === 'WithSkill' ? 'win' : 'model'}">${esc(r.winner)}</span></td>
               <td>${r.model ? `<span class="badge model">${esc(r.model)}</span>` : '<span class="na">n/a</span>'}</td>
+              <td class="num">${num(r.agentsInvoked)}</td>
+              <td class="num">${num(r.skillsInvoked)}</td>
               <td class="num">${num(r.premiumRequests)}</td>
               <td class="num">${num(r.outputTokens)}</td>
               <td class="num"><span class="na">n/a</span></td>

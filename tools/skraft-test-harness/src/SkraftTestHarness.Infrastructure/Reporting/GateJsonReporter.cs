@@ -39,10 +39,14 @@ public sealed class GateJsonReporter
             string? model = null;
             long? outputTokens = null;
             long? premiumRequests = null;
+            long? agentsInvoked = null;
+            long? skillsInvoked = null;
             telemetry.WithModel(m => model = m);
             telemetry.WithOutputTokens(o => outputTokens = o);
             telemetry.WithPremiumRequests(p => premiumRequests = p);
-            scenarios.Add(new ScenarioPayload(name, status, model, outputTokens, premiumRequests));
+            telemetry.WithAgentsInvoked(a => agentsInvoked = a);
+            telemetry.WithSkillsInvoked(s => skillsInvoked = s);
+            scenarios.Add(new ScenarioPayload(name, status, model, outputTokens, premiumRequests, agentsInvoked, skillsInvoked));
         });
 
         var payload = new GatePayload("gate", skillId, scenarios);
@@ -58,5 +62,6 @@ public sealed class GateJsonReporter
     private sealed record GatePayload(string Tab, string Skill, IReadOnlyList<ScenarioPayload> Scenarios);
 
     private sealed record ScenarioPayload(
-        string Name, string Status, string? Model, long? OutputTokens, long? PremiumRequests);
+        string Name, string Status, string? Model, long? OutputTokens, long? PremiumRequests,
+        long? AgentsInvoked, long? SkillsInvoked);
 }

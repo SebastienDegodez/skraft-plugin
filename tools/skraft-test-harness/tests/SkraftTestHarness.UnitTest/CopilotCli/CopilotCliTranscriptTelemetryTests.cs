@@ -41,6 +41,38 @@ public sealed class CopilotCliTranscriptTelemetryTests
     }
 
     [Test]
+    public async Task CountsSubagentsAndSkillsInvoked()
+    {
+        const string jsonl =
+            """
+            {"type":"session.skills_loaded","data":{"skills":[{"name":"a"},{"name":"b"}]}}
+            {"type":"session.custom_agents_updated","data":{"agents":[{"name":"skraft:x"},{"name":"skraft:y"}]}}
+            {"type":"tool.execution_start","data":{"toolName":"skill","arguments":{"skill":"using-superpowers"}}}
+            {"type":"tool.execution_start","data":{"toolName":"skill","arguments":{"skill":"using-superpowers"}}}
+            {"type":"subagent.started","data":{"agentName":"skraft:backlog-discoverer"}}
+            {"type":"subagent.started","data":{"agentName":"skraft:backlog-discoverer-reviewer"}}
+            {"type":"subagent.started","data":{"agentName":"explore"}}
+            {"type":"assistant.message","data":{"content":"done","outputTokens":3}}
+            {"type":"result","exitCode":0,"usage":{"premiumRequests":1}}
+            """;
+
+        var result = CopilotCliTranscript.Parse(jsonl);
+
+        long? agents = null;
+        long? skills = null;
+        result.WithTelemetry(t =>
+        {
+            t.WithAgentsInvoked(a => agents = a);
+            t.WithSkillsInvoked(s => skills = s);
+        });
+
+        // Three subagents actually dispatched (skills_loaded / custom_agents_updated
+        // are catalogues of what is AVAILABLE, not invoked, and are ignored).
+        await Assert.That(agents).IsEqualTo(3L);
+        await Assert.That(skills).IsEqualTo(2L);
+    }
+
+    [Test]
     public async Task DegradesToAbsentTelemetryWhenTheStreamHasNoUsage()
     {
         const string jsonl =

@@ -50,31 +50,42 @@ public sealed class JsonReporter : IReporter
     {
         private string _skill = string.Empty;
         private readonly List<ScenarioPayload> _scenarios = new();
-        private readonly Dictionary<string, (string? Model, long? OutputTokens, long? PremiumRequests)> _telemetry = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (string? Model, long? OutputTokens, long? PremiumRequests, long? AgentsInvoked, long? SkillsInvoked)> _telemetry = new(StringComparer.Ordinal);
 
         internal string Skill => _skill;
 
         public void OnSkill(string skillId) => _skill = skillId;
 
         public void OnScenarioVerdict(string scenarioName, string winner, string reason)
-            => _scenarios.Add(new ScenarioPayload(scenarioName, winner, reason, null, null, null));
+            => _scenarios.Add(new ScenarioPayload(scenarioName, winner, reason, null, null, null, null, null));
 
         public void OnScenarioTelemetry(string scenarioName, RunTelemetry telemetry)
         {
             string? model = null;
             long? outputTokens = null;
             long? premiumRequests = null;
+            long? agentsInvoked = null;
+            long? skillsInvoked = null;
             telemetry.WithModel(m => model = m);
             telemetry.WithOutputTokens(o => outputTokens = o);
             telemetry.WithPremiumRequests(p => premiumRequests = p);
-            _telemetry[scenarioName] = (model, outputTokens, premiumRequests);
+            telemetry.WithAgentsInvoked(a => agentsInvoked = a);
+            telemetry.WithSkillsInvoked(s => skillsInvoked = s);
+            _telemetry[scenarioName] = (model, outputTokens, premiumRequests, agentsInvoked, skillsInvoked);
         }
 
         internal SkillPayload ToPayload()
         {
             var scenarios = _scenarios
                 .Select(s => _telemetry.TryGetValue(s.Name, out var t)
-                    ? s with { Model = t.Model, OutputTokens = t.OutputTokens, PremiumRequests = t.PremiumRequests }
+                    ? s with
+                    {
+                        Model = t.Model,
+                        OutputTokens = t.OutputTokens,
+                        PremiumRequests = t.PremiumRequests,
+                        AgentsInvoked = t.AgentsInvoked,
+                        SkillsInvoked = t.SkillsInvoked,
+                    }
                     : s)
                 .ToList();
             return new SkillPayload(_skill, scenarios);
@@ -84,5 +95,6 @@ public sealed class JsonReporter : IReporter
     private sealed record SkillPayload(string Skill, IReadOnlyList<ScenarioPayload> Scenarios);
 
     private sealed record ScenarioPayload(
-        string Name, string Winner, string Reason, string? Model, long? OutputTokens, long? PremiumRequests);
+        string Name, string Winner, string Reason, string? Model, long? OutputTokens, long? PremiumRequests,
+        long? AgentsInvoked, long? SkillsInvoked);
 }
