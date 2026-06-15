@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OrderDiscount.Application</RootNamespace>
+    <AssemblyName>OrderDiscount.Application</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OrderDiscount.Domain\OrderDiscount.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

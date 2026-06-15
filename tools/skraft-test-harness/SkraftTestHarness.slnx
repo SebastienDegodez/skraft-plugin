@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SkraftTestHarness.Domain/SkraftTestHarness.Domain.csproj" />
+    <Project Path="src/SkraftTestHarness.Application/SkraftTestHarness.Application.csproj" />
+    <Project Path="src/SkraftTestHarness.Infrastructure/SkraftTestHarness.Infrastructure.csproj" />
+    <Project Path="src/SkraftTestHarness.Dashboard/SkraftTestHarness.Dashboard.csproj" />
+    <Project Path="src/SkraftTestHarness.Cli/SkraftTestHarness.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SkraftTestHarness.UnitTest/SkraftTestHarness.UnitTest.csproj" />
+    <Project Path="tests/SkraftTestHarness.IntegrationTest/SkraftTestHarness.IntegrationTest.csproj" />
+  </Folder>
+</Solution>

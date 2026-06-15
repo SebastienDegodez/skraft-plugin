@@ -1,0 +1,2 @@
+# Dashboard data is generated from harness runs (agent output) and must never be committed.
+dashboard-data.json

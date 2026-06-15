@@ -16,7 +16,7 @@ Contract-first API development spans three SDLC phases. Each phase produces spec
 DESIGN                      DISTILL                          DELIVER
 OpenAPI / AsyncAPI    →     Microcks samples           →     Testcontainers mocks
 contracts/{api}.yaml        .apiexamples.yaml                MicrocksContainer
-                            .apimetadata.yaml                + VerifyAsync()
+                            .apimetadata.yaml                + TestEndpointAsync()
 ```
 
 **Artifact path convention:**
@@ -178,15 +178,22 @@ return "DefaultExample"
 > [contract-testing-dotnet](../contract-testing-dotnet/SKILL.md). The .NET snippets
 > below remain as the canonical reference those adapters point back to.
 
-Use the `Microcks.Testcontainers` NuGet package.
+Use the `Microcks.Testcontainers` NuGet package (it brings `DotNet.Testcontainers`
+transitively — do not also reference the unrelated `Testcontainers`/`TestContainers`
+packages).
 
 **NuGet packages:**
 ```
 Microcks.Testcontainers
-Testcontainers
 ```
 
-**Single-service setup (IAsyncLifetime):**
+**Real 0.3.4 API (used by every snippet below):**
+- `new MicrocksBuilder()...Build()` returns the container; then `await container.StartAsync()`. There is no `BuildAsync()`.
+- `WithMainArtifacts(params string[])` loads the schema + examples + metadata in ONE call (schema first). There is no singular `WithMainArtifact`.
+- `container.GetRestMockEndpoint("API Title", "1.0.0")` returns a `Uri` (mock base URL). There is no `GetRestMockUrl`.
+- Provider conformance is `container.TestEndpointAsync(TestRequest{ OPEN_API_SCHEMA })` (§4). `VerifyAsync(name, version)` returns a `bool` checking mock-invocation counts — a consumer-side concern, not conformance.
+
+**Consumer-side mock setup (IAsyncLifetime) — mock a downstream dependency:**
 ```csharp
 public class EligibilityApiTests : IAsyncLifetime
 {
@@ -194,10 +201,13 @@ public class EligibilityApiTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/eligibility-check-api.yaml")
-            .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml",
+                "contracts/eligibility-check-api.apimetadata.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
     public async Task DisposeAsync() => await _microcks.DisposeAsync();
@@ -205,13 +215,13 @@ public class EligibilityApiTests : IAsyncLifetime
     [Fact]
     public async Task Should_return_eligible_driver()
     {
-        var mockUrl = _microcks.GetRestMockUrl("Eligibility Check API", "1.0.0");
-        // use mockUrl as base address in HttpClient
+        Uri mockUrl = _microcks.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
+        // use mockUrl as the base address of the SUT's downstream HttpClient
     }
 }
 ```
 
-**WebApplicationFactory integration:**
+**WebApplicationFactory integration (consumer-side — point the SUT's downstream client at the mock):**
 ```csharp
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -219,19 +229,22 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
         {
-            // Replace real HTTP client with Microcks mock URL
-            var mockUrl = _microcks.GetRestMockUrl("Eligibility Check API", "1.0.0");
+            // Point the SUT's DOWNSTREAM client at the Microcks mock endpoint.
+            Uri mockUrl = _microcks.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
             services.AddHttpClient<IEligibilityClient, EligibilityClient>(
-                c => c.BaseAddress = new Uri(mockUrl));
+                c => c.BaseAddress = mockUrl);
         });
     }
 
@@ -242,6 +255,11 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 }
 ```
+
+> A `WebApplicationFactory` works for consumer-side mocking (above) because the
+> SUT calls OUT to the mock. It does NOT work for provider conformance (§4): that
+> needs Microcks to call IN to the SUT on a real TCP port, which an in-memory test
+> server does not expose.
 
 **Collection fixture for shared Microcks instance (multiple test classes):**
 ```csharp
@@ -254,9 +272,12 @@ public class MicrocksFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        Container = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-            .BuildAsync();
+        Container = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml")
+            .Build();
+        await Container.StartAsync();
     }
 
     public async Task DisposeAsync() => await Container.DisposeAsync();
@@ -265,22 +286,40 @@ public class MicrocksFixture : IAsyncLifetime
 
 ---
 
-## 4. Contract Verification
+## 4. Contract Verification (provider-side conformance)
 
-Use `VerifyAsync()` to assert your implementation satisfies the contract.
+Use `TestEndpointAsync` with the `OPEN_API_SCHEMA` runner to assert your running
+implementation satisfies the contract. Microcks calls IN to your service, so the
+service must listen on a real TCP port (boot real Kestrel — a `WebApplicationFactory`
+exposes none). The concrete .NET wiring lives in
+[contract-testing-dotnet](../contract-testing-dotnet/SKILL.md).
 
 ```csharp
-var result = await _microcks.VerifyAsync("Eligibility Check API", "1.0.0");
-Assert.True(result.Success, string.Join("\n", result.Failures));
+var request = new TestRequest
+{
+    ServiceId = "Eligibility Check API:1.0.0",   // "info.title:info.version"
+    RunnerType = TestRunnerType.OPEN_API_SCHEMA,
+    TestEndpoint = $"http://host.testcontainers.internal:{port}",
+    Timeout = TimeSpan.FromSeconds(5),
+};
+
+TestResult result = await microcks.TestEndpointAsync(request);
+Assert.True(result.Success);   // do not suppress a failing TestResult
 ```
 
 **TestResult properties:**
-- `result.Success` → `bool` — true only when all contract operations pass.
-- `result.Failures` → `IList<string>` — descriptions of each failing assertion.
+- `result.Success` → `bool` — true only when every replayed example passed.
+- `result.TestCaseResults` → per-operation detail for diagnosing a failure.
 
-**What "verified" means:** every example in `.apiexamples.yaml` was replayed against your running service; all response codes, headers, and body fields matched.
+**What "verified" means:** every example in `.apiexamples.yaml` was replayed
+against your running service; all response codes, headers, and body fields matched.
 
-**CI gate rule:** call `VerifyAsync` in a dedicated test and fail the build if `result.Success == false`. Do not suppress failures.
+> Do NOT use `VerifyAsync(name, version)` for conformance — it returns a `bool`
+> that checks how many times a MOCK endpoint was invoked (a consumer-side
+> assertion), not whether the provider matches the contract.
+
+**CI gate rule:** call `TestEndpointAsync` in a dedicated test and fail the build
+if `result.Success == false`. Do not suppress failures.
 
 ---
 
@@ -346,30 +385,32 @@ Artifacts flow from DESIGN → DISTILL → DELIVER following this convention:
 | DESIGN | AsyncAPI contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.yaml` |
 | DISTILL | Microcks examples | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.apiexamples.yaml` |
 | DISTILL | Microcks metadata | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.apimetadata.yaml` |
-| DELIVER | Test imports | Via `MicrocksBuilder.WithMainArtifact(path)` referencing DISTILL artifacts |
+| DELIVER | Test imports | Via `MicrocksBuilder.WithMainArtifacts(...)` referencing DISTILL artifacts |
 
-**Import order for MicrocksBuilder:** always load the OpenAPI/AsyncAPI contract first (schema), then the `.apiexamples.yaml` (examples), then the `.apimetadata.yaml` (dispatcher config).
+**Import order for `WithMainArtifacts`:** pass the OpenAPI/AsyncAPI contract first (schema), then the `.apiexamples.yaml` (examples), then the `.apimetadata.yaml` (dispatcher config) — all in a single call.
 
 **Version bump protocol:**
 1. Update `info.version` in the contract YAML.
-2. Update `metadata.name` in both DISTILL artifacts to match.
-3. Update `VerifyAsync("Name", "version")` calls in tests.
+2. Update `metadata.name` in both DISTILL artifacts to match (`{info.title} - {info.version}`).
+3. Update the `ServiceId = "{title}:{version}"` in `TestEndpointAsync` calls.
 4. Commit all three changes atomically.
 
 ---
 
 ## 7. Multi-service Testing
 
-Use `MicrocksContainersEnsemble` when the service under test calls multiple downstream APIs.
+Use `MicrocksContainerEnsemble` when the service under test calls multiple downstream APIs.
 
 ```csharp
-var ensemble = await new MicrocksContainersEnsembleBuilder()
-    .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-    .WithMainArtifact("contracts/driver-profile-api.apiexamples.yaml")
-    .BuildAsync();
+var network = new NetworkBuilder().Build();
+var ensemble = new MicrocksContainerEnsemble(network, "quay.io/microcks/microcks-uber:1.14.0-native")
+    .WithMainArtifacts(
+        "contracts/eligibility-check-api.apiexamples.yaml",
+        "contracts/driver-profile-api.apiexamples.yaml");
+await ensemble.StartAsync();
 
-var eligibilityMockUrl = ensemble.GetRestMockUrl("Eligibility Check API", "1.0.0");
-var driverMockUrl = ensemble.GetRestMockUrl("Driver Profile API", "1.0.0");
+Uri eligibilityMockUrl = ensemble.MicrocksContainer.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
+Uri driverMockUrl = ensemble.MicrocksContainer.GetRestMockEndpoint("Driver Profile API", "1.0.0");
 ```
 
 **Docker Compose variant:** supply a `docker-compose.yaml` with dependent services and pass it to the ensemble builder for full integration environment startup.
@@ -381,7 +422,7 @@ var driverMockUrl = ensemble.GetRestMockUrl("Driver Profile API", "1.0.0");
 - [references/microcks-testcontainers-setup.md](references/microcks-testcontainers-setup.md) — Full .NET setup, MicrocksBuilder API, collection fixtures
 - [references/openapi-samples-authoring.md](references/openapi-samples-authoring.md) — `.apiexamples.yaml` full spec, all dispatcher types, templating
 - [references/asyncapi-contract-workflow.md](references/asyncapi-contract-workflow.md) — AsyncAPI 2.6.0 snippets, Kafka/RabbitMQ bindings, consumer/producer tests
-- [references/contract-verification.md](references/contract-verification.md) — `VerifyAsync()` patterns, TestResult, CI gate integration
+- [references/contract-verification.md](references/contract-verification.md) — `TestEndpointAsync()` patterns, `TestResult`, CI gate integration
 - [references/dispatchers-reference.md](references/dispatchers-reference.md) — JSON_BODY, JS, Groovy dispatcher full reference
 - [references/artifact-bridging.md](references/artifact-bridging.md) — Convention table, naming rules, version bump protocol
 

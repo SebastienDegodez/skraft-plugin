@@ -23,3 +23,10 @@
   url_fr: "/fr/tutorials/getting-started"
   url_en: "/en/tutorials/getting-started"
   icon: "fa-solid fa-rocket"
+
+# --- Tableau de bord des tests (app statique plein écran) ----------------
+- label_fr: "Tableau de bord"
+  label_en: "Dashboard"
+  url_fr: "/dashboard/"
+  url_en: "/dashboard/"
+  icon: "fa-solid fa-gauge-high"

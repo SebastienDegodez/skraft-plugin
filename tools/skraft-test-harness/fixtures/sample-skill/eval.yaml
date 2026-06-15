@@ -1,0 +1,11 @@
+scenarios:
+  - name: "Echo hi"
+    prompt: "Say hi."
+    assertions:
+      - output_contains: "hi"
+      - output_not_contains: "goodbye"
+
+  - name: "Echo greeting"
+    prompt: "Greet the user."
+    assertions:
+      - output_matches: "^.*hi.*$"

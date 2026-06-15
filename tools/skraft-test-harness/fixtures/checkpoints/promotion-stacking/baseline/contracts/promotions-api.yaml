@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info:
+  title: Promotions API
+  version: 1.0.0
+  description: >
+    External third-party service the checkout calls to fetch the currently
+    active store promotion. The promotion-stacking feature must MOCK this
+    downstream dependency with Microcks (seeded from this contract) in its
+    integration tests.
+paths:
+  /promotions/active:
+    get:
+      operationId: getActivePromotion
+      summary: Return the currently active store promotion (if any).
+      responses:
+        "200":
+          description: The active promotion.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Promotion"
+        "204":
+          description: No promotion is currently active.
+components:
+  schemas:
+    Promotion:
+      type: object
+      required: [code, rate, active]
+      properties:
+        code:
+          type: string
+        rate:
+          type: number
+          format: double
+          description: Promotion discount rate in [0,1].
+        active:
+          type: boolean
