@@ -52,7 +52,10 @@ public sealed class RunGateHandler
         var probe = provisioned?.Probe ?? _workspaceProbe;
         var view = await BuildWorkspaceView(scenario, result, probe, cancellationToken);
         var outcome = result.EvaluatedBy(scenario, view);
-        return new GateScenarioVerdict(scenario, GateOutcome.From(outcome));
+
+        RunTelemetry telemetry = RunTelemetry.None();
+        result.WithTelemetry(t => telemetry = t);
+        return new GateScenarioVerdict(scenario, GateOutcome.From(outcome), telemetry);
     }
 
     private Task<WorkspaceView> BuildWorkspaceView(

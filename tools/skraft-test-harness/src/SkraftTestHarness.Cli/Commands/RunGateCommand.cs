@@ -6,6 +6,7 @@ using SkraftTestHarness.Domain.Skills;
 using SkraftTestHarness.Infrastructure.CopilotCli;
 using SkraftTestHarness.Infrastructure.Judging;
 using SkraftTestHarness.Infrastructure.Mock;
+using SkraftTestHarness.Infrastructure.Reporting;
 using SkraftTestHarness.Infrastructure.Workspace;
 using SkraftTestHarness.Infrastructure.Yaml;
 
@@ -49,6 +50,10 @@ public static class RunGateCommand
         {
             Description = "Load and construct the gate's assertions without running any agent (deterministic CI guard).",
         };
+        var reportDirOption = new Option<string?>("--report-dir")
+        {
+            Description = "Directory where the JSON gate report (status + telemetry per scenario) is written.",
+        };
         var pluginDirOption = new Option<string?>("--plugin-dir")
         {
             Description = "Plugin directory loaded for the run (real mode).",
@@ -79,6 +84,7 @@ public static class RunGateCommand
         command.Options.Add(testsDirOption);
         command.Options.Add(mockOption);
         command.Options.Add(validateOnlyOption);
+        command.Options.Add(reportDirOption);
         command.Options.Add(pluginDirOption);
         command.Options.Add(agentOption);
         command.Options.Add(modelOption);
@@ -156,7 +162,14 @@ public static class RunGateCommand
                 return 1;
             }
 
-            verdict.RenderEach((name, status) => output.WriteLine($"  [{status}] {name}"));
+            verdict.RenderEach((name, status, _) => output.WriteLine($"  [{status}] {name}"));
+
+            var reportDir = parseResult.GetValue(reportDirOption);
+            if (!string.IsNullOrWhiteSpace(reportDir))
+            {
+                var reporter = new GateJsonReporter(ReportTarget.Directory(reportDir), TimeProvider.System);
+                await reporter.EmitAsync(skillId, verdict, cancellationToken);
+            }
 
             var overall = verdict.IsPass() ? "PASS" : "FAIL";
             await output.WriteLineAsync(

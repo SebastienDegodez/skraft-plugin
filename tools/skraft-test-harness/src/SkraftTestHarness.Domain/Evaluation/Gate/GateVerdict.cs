@@ -22,11 +22,11 @@ public sealed class GateVerdict
 
     public int Count() => _items.Count;
 
-    /// <summary>Provides each scenario's name and PASS/FAIL status to the caller.</summary>
-    public void RenderEach(Action<string, string> onScenarioStatus)
+    /// <summary>Provides each scenario's name, PASS/FAIL status and run telemetry to the caller.</summary>
+    public void RenderEach(Action<string, string, RunTelemetry> onScenario)
     {
-        ArgumentNullException.ThrowIfNull(onScenarioStatus);
+        ArgumentNullException.ThrowIfNull(onScenario);
         foreach (var item in _items)
-            item.RenderTo(onScenarioStatus);
+            item.RenderTo(onScenario);
     }
 }
