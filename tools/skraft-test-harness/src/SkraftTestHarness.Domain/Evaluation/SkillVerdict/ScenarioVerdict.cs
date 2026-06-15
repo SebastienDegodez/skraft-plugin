@@ -9,11 +9,18 @@ public sealed class ScenarioVerdict
 {
     private readonly Scenario _scenario;
     private readonly JudgedRuns _judgedRuns;
+    private readonly RunTelemetry _telemetry;
 
     public ScenarioVerdict(Scenario scenario, JudgedRuns judgedRuns)
+        : this(scenario, judgedRuns, RunTelemetry.None())
+    {
+    }
+
+    public ScenarioVerdict(Scenario scenario, JudgedRuns judgedRuns, RunTelemetry telemetry)
     {
         _scenario = scenario ?? throw new ArgumentNullException(nameof(scenario));
         _judgedRuns = judgedRuns ?? throw new ArgumentNullException(nameof(judgedRuns));
+        _telemetry = telemetry ?? throw new ArgumentNullException(nameof(telemetry));
     }
 
     internal bool IsFor(ScenarioName name) => _scenario.IsNamed(name);
@@ -31,6 +38,9 @@ public sealed class ScenarioVerdict
 
     internal void RenderTo(IVerdictRenderer renderer)
         => _scenario.WithName(name =>
+        {
             _judgedRuns.WithDecision((winner, reason) =>
-                renderer.OnScenarioVerdict(name, winner, reason)));
+                renderer.OnScenarioVerdict(name, winner, reason));
+            renderer.OnScenarioTelemetry(name, _telemetry);
+        });
 }

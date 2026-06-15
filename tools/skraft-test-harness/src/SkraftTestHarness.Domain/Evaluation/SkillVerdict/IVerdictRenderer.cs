@@ -11,4 +11,7 @@ public interface IVerdictRenderer
     void OnSkill(string skillId);
 
     void OnScenarioVerdict(string scenarioName, string winner, string reason);
+
+    /// <summary>Receives a scenario's run telemetry (model, output tokens, AIC). Default: ignored.</summary>
+    void OnScenarioTelemetry(string scenarioName, RunTelemetry telemetry) { }
 }

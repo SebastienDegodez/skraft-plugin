@@ -76,9 +76,14 @@ public sealed class EvaluateSkillHandler
         else
             decision = JudgeDecision.FromAssertions(assertionWinner);
 
+        // The cost attributed to the scenario is that of running WITH the skill.
+        RunTelemetry telemetry = RunTelemetry.None();
+        withSkillResult.WithTelemetry(t => telemetry = t);
+
         return new ScenarioVerdict(
             scenario,
-            new JudgedRuns(runs, decision));
+            new JudgedRuns(runs, decision),
+            telemetry);
     }
 
     /// <summary>
