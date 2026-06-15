@@ -16,4 +16,7 @@ public interface IWorkspaceProbe
     bool AnyMatches(GlobPattern pattern);
 
     bool AnyMatchContains(GlobPattern pattern, Needle needle);
+
+    /// <summary>Contents of every file matching the glob (capped), for regex / structured craft rules.</summary>
+    IReadOnlyList<string> MatchedContents(GlobPattern pattern);
 }

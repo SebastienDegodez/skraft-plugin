@@ -15,6 +15,7 @@ public sealed class WorkspaceProbeRequests
     private readonly List<(GlobPattern Pattern, Needle Needle)> _contents = [];
     private readonly List<(GlobPattern Pattern, Criterion Criterion)> _fileJudgements = [];
     private readonly List<Criterion> _outputJudgements = [];
+    private readonly List<GlobPattern> _matchedContents = [];
 
     public void DeclareFile(FilePath path)
         => _files.Add(path ?? throw new ArgumentNullException(nameof(path)));
@@ -38,6 +39,10 @@ public sealed class WorkspaceProbeRequests
 
     public void DeclareOutputJudgement(Criterion criterion)
         => _outputJudgements.Add(criterion ?? throw new ArgumentNullException(nameof(criterion)));
+
+    /// <summary>Declares that the contents of files matching the glob are needed (regex / structured rules).</summary>
+    public void DeclareMatchedContent(GlobPattern pattern)
+        => _matchedContents.Add(pattern ?? throw new ArgumentNullException(nameof(pattern)));
 
     /// <summary>
     /// Synchronous resolution: workspace probes only. Declared LLM
@@ -70,7 +75,8 @@ public sealed class WorkspaceProbeRequests
         Func<GlobPattern, bool> anyGlobMatches,
         Func<GlobPattern, Needle, bool> anyMatchContains,
         Func<GlobPattern, Criterion, Task<bool>> judgeFiles,
-        Func<Criterion, Task<bool>> judgeOutput)
+        Func<Criterion, Task<bool>> judgeOutput,
+        Func<GlobPattern, IReadOnlyList<string>>? readMatchedContents = null)
     {
         ArgumentNullException.ThrowIfNull(fileExists);
         ArgumentNullException.ThrowIfNull(anyGlobMatches);
@@ -91,7 +97,8 @@ public sealed class WorkspaceProbeRequests
             ResolveGlobs(anyGlobMatches),
             ResolveContents(anyMatchContains),
             fileJudgements,
-            outputJudgements);
+            outputJudgements,
+            ResolveMatchedContents(readMatchedContents));
     }
 
     private Dictionary<FilePath, bool> ResolveFiles(Func<FilePath, bool> fileExists)
@@ -116,6 +123,15 @@ public sealed class WorkspaceProbeRequests
         var contents = new Dictionary<(GlobPattern, Needle), bool>();
         foreach (var (pattern, needle) in _contents)
             contents[(pattern, needle)] = anyMatchContains(pattern, needle);
+        return contents;
+    }
+
+    private Dictionary<GlobPattern, IReadOnlyList<string>> ResolveMatchedContents(
+        Func<GlobPattern, IReadOnlyList<string>>? readMatchedContents)
+    {
+        var contents = new Dictionary<GlobPattern, IReadOnlyList<string>>();
+        foreach (var pattern in _matchedContents)
+            contents[pattern] = readMatchedContents?.Invoke(pattern) ?? [];
         return contents;
     }
 }

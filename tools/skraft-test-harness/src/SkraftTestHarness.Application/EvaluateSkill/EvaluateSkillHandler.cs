@@ -107,7 +107,8 @@ public sealed class EvaluateSkillHandler
             probe.AnyMatches,
             probe.AnyMatchContains,
             (pattern, criterion) => _assertionJudge.JudgeFilesAsync(pattern, criterion, cancellationToken),
-            criterion => _assertionJudge.JudgeOutputAsync(runResult.Output(), criterion, cancellationToken));
+            criterion => _assertionJudge.JudgeOutputAsync(runResult.Output(), criterion, cancellationToken),
+            probe.MatchedContents);
 
     /// <summary>No workspace available: every file probe resolves to absent.</summary>
     private sealed class NullWorkspaceProbe : IWorkspaceProbe
@@ -117,6 +118,8 @@ public sealed class EvaluateSkillHandler
         public bool AnyMatches(GlobPattern pattern) => false;
 
         public bool AnyMatchContains(GlobPattern pattern, Needle needle) => false;
+
+        public IReadOnlyList<string> MatchedContents(GlobPattern pattern) => [];
     }
 
     /// <summary>No judge available: every judgement resolves to failed (never a silent pass).</summary>

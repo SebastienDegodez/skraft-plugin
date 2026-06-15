@@ -62,5 +62,6 @@ public sealed class RunGateHandler
             probe.AnyMatches,
             probe.AnyMatchContains,
             (pattern, criterion) => _assertionJudge.JudgeFilesAsync(pattern, criterion, cancellationToken),
-            criterion => _assertionJudge.JudgeOutputAsync(runResult.Output(), criterion, cancellationToken));
+            criterion => _assertionJudge.JudgeOutputAsync(runResult.Output(), criterion, cancellationToken),
+            probe.MatchedContents);
 }

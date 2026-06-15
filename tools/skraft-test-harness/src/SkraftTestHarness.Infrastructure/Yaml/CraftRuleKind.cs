@@ -40,6 +40,19 @@ public sealed class CraftRuleKind
                 new GlobPattern(RuleField(scenarioName, id, rule, "glob")),
                 new Needle(RuleField(scenarioName, id, rule, "contains")))));
 
+    /// <summary>
+    /// <c>glob</c> + <c>matches</c>: some file matching the glob must have
+    /// content matching the regex. Backs e.g. "a gateway/repository
+    /// implementation lives in Infrastructure".
+    /// </summary>
+    public static CraftRuleKind MatchesRule() => new(
+        rule => rule.ContainsKey("glob") && rule.ContainsKey("matches"),
+        (scenarioName, id, rule) => new CraftRule(
+            id,
+            new FileContentMatches(
+                new GlobPattern(RuleField(scenarioName, id, rule, "glob")),
+                new RegexPattern(RuleField(scenarioName, id, rule, "matches")))));
+
     internal static string RuleField(
         string scenarioName, string id, IReadOnlyDictionary<string, object> rule, string field)
     {

@@ -54,6 +54,9 @@ public sealed class FileSystemWorkspaceProbe : IWorkspaceProbe, IMatchedFilesRea
         return files;
     }
 
+    public IReadOnlyList<string> MatchedContents(GlobPattern pattern)
+        => Match(pattern).Select(ReadCapped).ToList();
+
     private IReadOnlyList<string> Match(GlobPattern pattern)
     {
         ArgumentNullException.ThrowIfNull(pattern);

@@ -19,6 +19,7 @@ public sealed class CraftRuleCatalog
     public static CraftRuleCatalog Default() => new(new[]
     {
         CraftRuleKind.ContainsRule(),
+        CraftRuleKind.MatchesRule(),
     });
 
     public CraftRule Resolve(string scenarioName, IReadOnlyDictionary<string, object> rule)
@@ -36,6 +37,6 @@ public sealed class CraftRuleCatalog
 
         throw new ArgumentException(
             $"Scenario '{scenarioName}': craft rule '{id}' matches no known kind. "
-            + "Supported rule kinds: glob+contains.");
+            + "Supported rule kinds: glob+contains, glob+matches.");
     }
 }
