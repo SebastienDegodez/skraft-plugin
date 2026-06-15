@@ -69,7 +69,7 @@ public sealed class YamlEvalLoader : IScenarioLoader
             throw new ArgumentException($"Scenario '{dto.Name}' is missing 'prompt'.");
 
         var assertions = (dto.Assertions ?? [])
-            .Select(a => ToAssertion(dto.Name!, a))
+            .Select(a => ToAssertion(dto.Name!, dto.Prompt!, a))
             .ToList();
 
         return Scenario.Create(dto.Name!, dto.Prompt!, dto.Tags ?? [], ToWorkspace(dto), assertions);
@@ -88,7 +88,7 @@ public sealed class YamlEvalLoader : IScenarioLoader
             dto.Workspace.Fixture, dto.Workspace.Baseline, dto.Workspace.Checkpoint);
     }
 
-    private static Assertion ToAssertion(string scenarioName, AssertionDto dto)
+    private static Assertion ToAssertion(string scenarioName, string prompt, AssertionDto dto)
     {
         if (dto.Count != 1)
         {
@@ -110,10 +110,11 @@ public sealed class YamlEvalLoader : IScenarioLoader
             "output_judge" => ToOutputJudge(scenarioName, value),
             "artifact_contract" => ToArtifactContract(scenarioName, value),
             "craft_conformance" => ToCraftConformance(scenarioName, value),
+            "conditional" => ToConditional(scenarioName, prompt, value),
             _ => throw new ArgumentException(
                 $"Scenario '{scenarioName}': unknown assertion kind '{key}'. "
                 + "Supported: output_contains, output_not_contains, output_matches, output_not_matches, "
-                + "file_exists, file_matches_glob, file_contains, file_judge, output_judge, artifact_contract, craft_conformance."),
+                + "file_exists, file_matches_glob, file_contains, file_judge, output_judge, artifact_contract, craft_conformance, conditional."),
         };
     }
 
@@ -221,6 +222,51 @@ public sealed class YamlEvalLoader : IScenarioLoader
                 fields[name] = v;
         }
         return fields;
+    }
+
+    private static ConditionalAssertion ToConditional(string scenarioName, string prompt, object value)
+    {
+        if (value is not IDictionary<object, object> raw)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': assertion 'conditional' must be a mapping with 'when_prompt_contains' and 'then'.");
+        }
+
+        if (!raw.TryGetValue("when_prompt_contains", out var triggerValue)
+            || triggerValue is not string trigger || string.IsNullOrWhiteSpace(trigger))
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': assertion 'conditional' is missing required field 'when_prompt_contains'.");
+        }
+
+        if (!raw.TryGetValue("then", out var thenValue) || thenValue is not IList<object> then || then.Count == 0)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': assertion 'conditional' requires a non-empty 'then' list.");
+        }
+
+        var thenAssertions = then
+            .Select(item => ToAssertion(scenarioName, prompt, ToAssertionDto(scenarioName, item)))
+            .ToList();
+
+        return new ConditionalAssertion(prompt, new Needle(trigger), thenAssertions);
+    }
+
+    private static AssertionDto ToAssertionDto(string scenarioName, object item)
+    {
+        if (item is not IDictionary<object, object> raw)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': each 'conditional.then' entry must be a single-key assertion mapping.");
+        }
+
+        var dto = new AssertionDto();
+        foreach (var (k, v) in raw)
+        {
+            if (k is string name)
+                dto[name] = v;
+        }
+        return dto;
     }
 
     private static string Scalar(string scenarioName, string key, object value)
