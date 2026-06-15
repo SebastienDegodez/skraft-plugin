@@ -28,7 +28,7 @@ public sealed class ImprovementScore : IEquatable<ImprovementScore>
 
     /// <summary>
     /// Factory that derives an <see cref="ImprovementScore"/> from raw winner
-    /// counts produced by <see cref="WinnerTally.ComputeImprovementScore"/>.
+    /// counts (with-skill vs baseline over the scenario total).
     /// Returns zero when <paramref name="total"/> is zero.
     /// </summary>
     public static ImprovementScore For(int withSkill, int baseline, int total)
