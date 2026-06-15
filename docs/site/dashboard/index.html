@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKRAFT Test Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <h1>SKRAFT Test Dashboard</h1>
+  <p class="subtitle">
+    Generated from real harness runs — gate health, skill value, and the real cost (AIC,
+    output tokens) per model. Input tokens are not emitted by the Copilot CLI.
+  </p>
+
+  <div class="toolbar">
+    <label for="model-filter">Model</label>
+    <select id="model-filter"><option value="">All models</option></select>
+    <span id="generated-at" class="subtitle" style="margin-left:auto;margin-bottom:0;"></span>
+  </div>
+
+  <div class="tab-bar" id="tab-bar">
+    <div class="tab active" data-tab="gates">Gates</div>
+    <div class="tab" data-tab="skill-value">Skill value</div>
+  </div>
+
+  <div class="tab-content active" id="panel-gates"></div>
+  <div class="tab-content" id="panel-skill-value"></div>
+
+  <div class="footer">
+    <span id="status-line">Loading…</span>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
