@@ -13,17 +13,34 @@ namespace SkraftTestHarness.Infrastructure.Yaml;
 /// </summary>
 public sealed class YamlEvalLoader : IScenarioLoader
 {
-    private const string EvalFileName = "eval.yaml";
+    private const string DefaultEvalFileName = "eval.yaml";
+
+    private readonly string _evalFileName;
+
+    /// <summary>Targets <c>eval.yaml</c> (the comparative <c>evaluate</c> suite).</summary>
+    public YamlEvalLoader() : this(DefaultEvalFileName)
+    {
+    }
+
+    /// <summary>
+    /// Targets a specific eval filename — e.g. <c>eval.skraft.yml</c> for
+    /// the absolute gate suite, keeping it distinct from <c>eval.yaml</c>.
+    /// </summary>
+    public YamlEvalLoader(string evalFileName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(evalFileName);
+        _evalFileName = evalFileName;
+    }
 
     public async Task<Scenarios> LoadAsync(string testsDirectory, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(testsDirectory);
 
-        var path = Path.Combine(testsDirectory, EvalFileName);
+        var path = Path.Combine(testsDirectory, _evalFileName);
         if (!File.Exists(path))
         {
             throw new FileNotFoundException(
-                $"No {EvalFileName} found in tests directory '{testsDirectory}'.",
+                $"No {_evalFileName} found in tests directory '{testsDirectory}'.",
                 path);
         }
 
@@ -35,7 +52,7 @@ public sealed class YamlEvalLoader : IScenarioLoader
             .Build();
 
         var dto = deserializer.Deserialize<EvalYamlDto>(yaml)
-            ?? throw new InvalidDataException($"'{path}' is empty or not a valid eval.yaml document.");
+            ?? throw new InvalidDataException($"'{path}' is empty or not a valid eval document.");
 
         var scenarios = (dto.Scenarios ?? [])
             .Select(ToScenario)
