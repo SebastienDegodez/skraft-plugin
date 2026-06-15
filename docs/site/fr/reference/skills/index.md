@@ -34,6 +34,10 @@ l'adaptateur par stack. Ajouter un stack = +1 adaptateur, zéro modification des
   pointant le client HTTP typé du système sous test vers l'URL du mock (.NET).
 - **mocking-inprocess-dotnet** — double in-process (priorité FakeItEasy >
   NSubstitute > Moq) injecté dans la DI à la place du conteneur Microcks (.NET).
+- **contract-testing** — compétence canonique pour le développement API contract-first :
+  contrats OpenAPI/AsyncAPI en DESIGN, exemples Microcks en DISTILL, vérification du
+  contrat fournisseur via Testcontainers en DELIVER. Le câblage par stack est résolu
+  via le roster.
 - **contract-testing-roster** — résout le stack et l'opt-in Microcks pour un test de
   contrat côté fournisseur ; une baseline d'intégration in-process est toujours produite.
 - **contract-testing-dotnet** — baseline `WebApplicationFactory` + `HttpClient`

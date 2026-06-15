@@ -34,6 +34,10 @@ Adding a stack = +1 adapter, zero edits to the agents.
   wiring that points the system-under-test's typed HTTP client at the mock URL (.NET).
 - **mocking-inprocess-dotnet** — in-process double (priority FakeItEasy >
   NSubstitute > Moq) injected into the DI in place of the Microcks container (.NET).
+- **contract-testing** — canonical cross-phase skill for contract-first API
+  development: author OpenAPI/AsyncAPI contracts in DESIGN, generate Microcks
+  samples in DISTILL, verify the provider contract in DELIVER via Testcontainers.
+  The stack-specific wiring is resolved through the roster.
 - **contract-testing-roster** — resolves the stack and the Microcks opt-in for a
   provider-side contract test; a baseline in-process integration test is always produced.
 - **contract-testing-dotnet** — baseline `WebApplicationFactory` + `HttpClient`
