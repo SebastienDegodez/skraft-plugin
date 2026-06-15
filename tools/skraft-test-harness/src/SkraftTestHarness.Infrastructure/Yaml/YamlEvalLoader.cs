@@ -109,10 +109,11 @@ public sealed class YamlEvalLoader : IScenarioLoader
             "file_judge" => ToFileJudge(scenarioName, value),
             "output_judge" => ToOutputJudge(scenarioName, value),
             "artifact_contract" => ToArtifactContract(scenarioName, value),
+            "craft_conformance" => ToCraftConformance(scenarioName, value),
             _ => throw new ArgumentException(
                 $"Scenario '{scenarioName}': unknown assertion kind '{key}'. "
                 + "Supported: output_contains, output_not_contains, output_matches, output_not_matches, "
-                + "file_exists, file_matches_glob, file_contains, file_judge, output_judge, artifact_contract."),
+                + "file_exists, file_matches_glob, file_contains, file_judge, output_judge, artifact_contract, craft_conformance."),
         };
     }
 
@@ -184,6 +185,42 @@ public sealed class YamlEvalLoader : IScenarioLoader
         if (raw.TryGetValue("contains", out var containsValue) && containsValue is string contains && !string.IsNullOrEmpty(contains))
             return new FileContains(pattern, new Needle(contains));
         return new FileMatchesGlob(pattern);
+    }
+
+    private static CraftConformance ToCraftConformance(string scenarioName, object value)
+    {
+        if (value is not IDictionary<object, object> raw
+            || !raw.TryGetValue("rules", out var rulesValue)
+            || rulesValue is not IList<object> rules
+            || rules.Count == 0)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': assertion 'craft_conformance' requires a non-empty 'rules' list.");
+        }
+
+        var catalog = CraftRuleCatalog.Default();
+        var craftRules = rules
+            .Select(item => catalog.Resolve(scenarioName, NormalizeRule(scenarioName, item)))
+            .ToList();
+
+        return new CraftConformance(craftRules);
+    }
+
+    private static IReadOnlyDictionary<string, object> NormalizeRule(string scenarioName, object item)
+    {
+        if (item is not IDictionary<object, object> raw)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': each 'craft_conformance' rule must be a mapping (id + kind-specific keys).");
+        }
+
+        var fields = new Dictionary<string, object>(StringComparer.Ordinal);
+        foreach (var (k, v) in raw)
+        {
+            if (k is string name)
+                fields[name] = v;
+        }
+        return fields;
     }
 
     private static string Scalar(string scenarioName, string key, object value)
