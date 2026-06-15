@@ -18,6 +18,7 @@ public static class Program
     {
         var root = new RootCommand("skraft-test-harness — evaluate agents and skills.");
         root.Subcommands.Add(EvaluateCommand.Build(output));
+        root.Subcommands.Add(RunGateCommand.Build(output));
         root.Subcommands.Add(VerifyCheckpointCommand.Build(output));
 
         var parseResult = root.Parse(args);
