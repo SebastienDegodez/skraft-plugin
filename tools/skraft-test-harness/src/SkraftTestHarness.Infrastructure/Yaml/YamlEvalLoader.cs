@@ -108,10 +108,11 @@ public sealed class YamlEvalLoader : IScenarioLoader
             "file_contains" => ToFileContains(scenarioName, value),
             "file_judge" => ToFileJudge(scenarioName, value),
             "output_judge" => ToOutputJudge(scenarioName, value),
+            "artifact_contract" => ToArtifactContract(scenarioName, value),
             _ => throw new ArgumentException(
                 $"Scenario '{scenarioName}': unknown assertion kind '{key}'. "
                 + "Supported: output_contains, output_not_contains, output_matches, output_not_matches, "
-                + "file_exists, file_matches_glob, file_contains, file_judge, output_judge."),
+                + "file_exists, file_matches_glob, file_contains, file_judge, output_judge, artifact_contract."),
         };
     }
 
@@ -136,6 +137,53 @@ public sealed class YamlEvalLoader : IScenarioLoader
         var fields = Mapping(scenarioName, "output_judge", value);
         return new OutputJudge(
             new Criterion(Field(scenarioName, "output_judge", fields, "criterion")));
+    }
+
+    private static ArtifactContract ToArtifactContract(string scenarioName, object value)
+    {
+        if (value is not IDictionary<object, object> raw)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': assertion 'artifact_contract' must be a mapping with 'consumer' and 'requires'.");
+        }
+
+        if (!raw.TryGetValue("consumer", out var consumerValue) || consumerValue is not string consumer || string.IsNullOrWhiteSpace(consumer))
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': assertion 'artifact_contract' is missing required field 'consumer'.");
+        }
+
+        if (!raw.TryGetValue("requires", out var requiresValue) || requiresValue is not IList<object> requires || requires.Count == 0)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': assertion 'artifact_contract' requires a non-empty 'requires' list.");
+        }
+
+        var requirements = requires
+            .Select(item => ToArtifactRequirement(scenarioName, item))
+            .ToList();
+
+        return new ArtifactContract(new Consumer(consumer), requirements);
+    }
+
+    private static Assertion ToArtifactRequirement(string scenarioName, object item)
+    {
+        if (item is not IDictionary<object, object> raw)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': each 'artifact_contract' requirement must be a mapping with a 'glob' (and optional 'contains').");
+        }
+
+        if (!raw.TryGetValue("glob", out var globValue) || globValue is not string glob || string.IsNullOrWhiteSpace(glob))
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': an 'artifact_contract' requirement is missing required field 'glob'.");
+        }
+
+        var pattern = new GlobPattern(glob);
+        if (raw.TryGetValue("contains", out var containsValue) && containsValue is string contains && !string.IsNullOrEmpty(contains))
+            return new FileContains(pattern, new Needle(contains));
+        return new FileMatchesGlob(pattern);
     }
 
     private static string Scalar(string scenarioName, string key, object value)
