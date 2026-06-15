@@ -53,4 +53,21 @@ public sealed class Scenarios
         }
         return new ScenarioVerdicts(verdicts);
     }
+
+    /// <summary>
+    /// Gate path: hands each scenario to an async evaluator producing a
+    /// per-scenario <see cref="GateScenarioVerdict"/>, and collects them
+    /// into an absolute <see cref="GateVerdict"/>.
+    /// </summary>
+    public async Task<GateVerdict> EvaluateGateEachAsync(
+        Func<Scenario, Task<GateScenarioVerdict>> evaluator)
+    {
+        ArgumentNullException.ThrowIfNull(evaluator);
+        var verdicts = new List<GateScenarioVerdict>(_items.Count);
+        foreach (var scenario in _items)
+        {
+            verdicts.Add(await evaluator(scenario));
+        }
+        return new GateVerdict(verdicts);
+    }
 }
