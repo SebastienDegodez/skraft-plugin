@@ -53,6 +53,49 @@ public sealed class CraftRuleKind
                 new GlobPattern(RuleField(scenarioName, id, rule, "glob")),
                 new RegexPattern(RuleField(scenarioName, id, rule, "matches")))));
 
+    /// <summary>
+    /// <c>quality_gate</c>: a quality-gates evidence log (qg-*.json)
+    /// matching <c>evidence</c> attests <c>gate_id</c> with status
+    /// <c>pass</c>. Proves e.g. mutation testing actually ran and passed.
+    /// </summary>
+    public static CraftRuleKind QualityGateRule() => new(
+        rule => rule.ContainsKey("quality_gate"),
+        (scenarioName, id, rule) =>
+        {
+            var fields = NestedFields(scenarioName, id, rule["quality_gate"]);
+            return new CraftRule(
+                id,
+                new QualityGatePassed(
+                    new GlobPattern(NestedField(scenarioName, id, fields, "evidence")),
+                    new GateId(NestedField(scenarioName, id, fields, "gate_id"))));
+        });
+
+    private static IReadOnlyDictionary<string, string> NestedFields(string scenarioName, string id, object value)
+    {
+        if (value is not IDictionary<object, object> raw)
+        {
+            throw new ArgumentException(
+                $"Scenario '{scenarioName}': craft rule '{id}' field 'quality_gate' must be a mapping with 'evidence' and 'gate_id'.");
+        }
+
+        var fields = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (k, v) in raw)
+        {
+            if (k is string name && v is string text)
+                fields[name] = text;
+        }
+        return fields;
+    }
+
+    private static string NestedField(
+        string scenarioName, string id, IReadOnlyDictionary<string, string> fields, string field)
+    {
+        if (fields.TryGetValue(field, out var value) && !string.IsNullOrEmpty(value))
+            return value;
+        throw new ArgumentException(
+            $"Scenario '{scenarioName}': craft rule '{id}' is missing required field '{field}'.");
+    }
+
     internal static string RuleField(
         string scenarioName, string id, IReadOnlyDictionary<string, object> rule, string field)
     {
