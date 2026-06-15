@@ -1,6 +1,12 @@
 (function () {
   'use strict';
 
+  // The data source for the remote (published) dashboard data, declared on
+  // the loading <script> tag's data-source attribute. Captured synchronously
+  // while document.currentScript is still valid.
+  const remoteSource = (document.currentScript &&
+    document.currentScript.getAttribute('data-source')) || null;
+
   // Defence-in-depth HTML escaping for any interpolated string.
   function esc(value) {
     if (value == null) return '';
@@ -125,11 +131,26 @@
 
   async function init() {
     const statusLine = document.getElementById('status-line');
-    try {
-      const response = await fetch('dashboard-data.json');
-      if (!response.ok) throw new Error(response.statusText);
-      state.data = await response.json();
-    } catch (err) {
+    // Data is produced by harness runs and never committed to the repo. In
+    // production it is published to a dedicated data branch and fetched from
+    // its raw URL (remoteSource); a local dashboard-data.json next to this
+    // page is the dev fallback.
+    const sources = [remoteSource, 'dashboard-data.json'].filter(Boolean);
+
+    let loaded = false;
+    for (const url of sources) {
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) continue;
+        state.data = await response.json();
+        loaded = true;
+        break;
+      } catch (err) {
+        // try the next source
+      }
+    }
+
+    if (!loaded) {
       statusLine.textContent = 'No dashboard data found (run the harness `dashboard` command first).';
       return;
     }
