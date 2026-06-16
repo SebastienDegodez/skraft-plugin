@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Scope unitaire** — Traite une seule issue à la fois, jamais de batch
 - **Triage basé sur les preuves** — Chaque décision (label, priorité, effort) s'appuie sur des données observables
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

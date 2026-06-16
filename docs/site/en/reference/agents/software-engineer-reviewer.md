@@ -31,7 +31,7 @@ persona: tech-lead
 - **Read-only (CQS)** — Never modifies the code it reviews
 - **4 adversarial lenses** — Each lens evaluates independently, the verdict is synthesised
 - **Structured verdict** — Approve or reject, no intermediate state
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 

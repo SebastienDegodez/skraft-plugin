@@ -47,7 +47,7 @@ graph TB
 - **Tests avant code** — Le cycle commence par les tests d'acceptation
 - **Retry borné** — Le nombre de cycles engineer → reviewer est limité
 - **CQS** — L'engineer écrit (commande), le reviewer lit (query)
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

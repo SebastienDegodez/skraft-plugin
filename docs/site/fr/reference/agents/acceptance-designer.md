@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Tests avant code** — Les scénarios d'acceptation existent avant toute implémentation
 - **Langage métier** — Les scénarios utilisent le vocabulaire du domaine, pas le vocabulaire technique
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

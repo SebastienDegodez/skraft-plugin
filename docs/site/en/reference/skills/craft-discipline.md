@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Self-assessment, not review** — This skill is a personal checkpoint; the reviewer verifies independently
 - **No shortcut** — Each checklist item is verified, not "globally OK"
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 

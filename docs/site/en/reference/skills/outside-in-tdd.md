@@ -31,7 +31,7 @@ persona: tech-lead
 - **Acceptance first** — The first test written is always an acceptance test
 - **Walking Skeleton** — The first implementation cuts through all layers
 - **Double loop** — Outer loop (acceptance) guides inner loop (unit)
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 

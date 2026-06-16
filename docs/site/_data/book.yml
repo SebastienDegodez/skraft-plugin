@@ -9,13 +9,15 @@
 # Regles dures (verifiees par skraft-docs-gaps) :
 #   1. Toute page listee ici DOIT exister en FR (`fr`) ET en EN (`en`).
 #   2. Toute page `type: derived` DOIT citer source + annee (auteur, titre, annee).
-#   3. Toute page de la partie `catalogue` DOIT respecter le gabarit de page
-#      `catalogue_template` (blocs requis) — comprehensible sans maitrise du craft.
+#   3. Toute page de la partie `reference` DOIT respecter le gabarit de page
+#      `reference_template` (blocs requis) — comprehensible sans maitrise du craft.
 #   4. Tout pattern / gate / lens / agent / skill present dans `sources` mais
 #      absent d'une page derivee declenche un ecart (gap).
 #   5. La page FR et la page EN d'une meme entree PARTAGENT le meme basename
 #      (nom de fichier anglais) ; seul le prefixe de dossier `fr/` vs `en/`
-#      change. Ex. `fr/for-executives.md` <-> `en/for-executives.md`.
+#      change. Ex. `fr/for-executives.md` <-> `en/for-executives.md`. AUCUNE
+#      exception : le basename anglais s'applique aussi aux pages dont le titre
+#      est francais (ex. `fr/reference/glossary.md`, label "Glossaire").
 #
 # `type` : derived (regenere mecaniquement depuis `source`) | editorial (redige
 #          integralement par l'agent skraft-docs-gaps : page COMPLETE et lisible,
@@ -47,20 +49,12 @@ meta:
   # `:::type ... :::` ou des blockquotes. A utiliser pour signaler risques et notes.
   admonitions: [note, info, tip, caution, warning, danger]
 
-  # Paires FR/EN dont le basename DIFFERE volontairement (exception a la regle dure 5).
-  # scan-drift.mjs ne signale pas ces paires comme derive de basename.
-  basename_exceptions:
-    - fr: pourquoi-review-avant-review
-      en: why-review-before-review
-    - fr: glossaire
-      en: glossary
-
-  # GABARIT DE PAGE impose a CHAQUE page du catalogue (et recommande pour les
-  # pages pratique/decideurs). L'inspiration du learning-path porte sur le DESIGN
-  # (voir `design`), pas sur une notion de "module" : ce sont des pages de
+  # GABARIT DE PAGE impose a CHAQUE page de la partie `reference` (et recommande
+  # pour les pages how-to/explanation). L'inspiration du learning-path porte sur le
+  # DESIGN (voir `design`), pas sur une notion de "module" : ce sont des pages de
   # reference, pas des exercices. L'agent skraft-docs-gaps ECHOUE si une page de
-  # catalogue omet un bloc requis.
-  catalogue_template:
+  # reference omet un bloc requis.
+  reference_template:
     frontmatter:
       required: [layout, lang, title, description]
       optional: [persona, sidebar_position]
@@ -166,8 +160,8 @@ parts:
     sidebar_position: 1
     title_fr: "Tutoriels — apprendre"
     title_en: "Tutorials — learn"
-    intro_fr: "Des parcours guides ou vous executez : installer, lancer, customiser."
-    intro_en: "Guided paths where you do things: install, run, customize."
+    intro_fr: "Un parcours guide ou vous executez : installer le plugin et lancer le pipeline de bout en bout."
+    intro_en: "A guided path where you do things: install the plugin and run the pipeline end to end."
     pages:
       - id: getting-started
         type: editorial
@@ -177,12 +171,23 @@ parts:
         en: "en/tutorials/getting-started.md"
         purpose_fr: "Installer le plugin et lancer le pipeline en quelques minutes."
         purpose_en: "Install the plugin and run the pipeline in minutes."
+
+  # ----------------------------------------------------------- GUIDES PRATIQUES
+  - id: how-to
+    icon: "fa-solid fa-screwdriver-wrench"
+    diataxis_mode: how-to
+    sidebar_position: 2
+    title_fr: "Guides pratiques — faire"
+    title_en: "How-to guides — do"
+    intro_fr: "Resoudre une tache precise : adapter le pipeline, proposer un nouveau pattern de maniere disciplinee."
+    intro_en: "Solve a precise task: adapt the pipeline, propose a new pattern with discipline."
+    pages:
       - id: customisation
         type: editorial
         label_fr: "Customisation"
         label_en: "Customization"
-        fr: "fr/tutorials/customisation.md"
-        en: "en/tutorials/customisation.md"
+        fr: "fr/how-to/customisation.md"
+        en: "en/how-to/customisation.md"
         purpose_fr: "Ce que SKRAFT permet de customiser ET le RISQUE de reduire les controles (gates, lens, reviewers)."
         purpose_en: "What SKRAFT lets you customize AND the RISK of reducing controls (gates, lenses, reviewers)."
         requires_risk_section: true
@@ -190,8 +195,8 @@ parts:
         type: editorial
         label_fr: "Genesis & contribution"
         label_en: "Genesis & contributing"
-        fr: "fr/tutorials/contributing.md"
-        en: "en/tutorials/contributing.md"
+        fr: "fr/how-to/contributing.md"
+        en: "en/how-to/contributing.md"
         purpose_fr: "L'importance de genesis : pourquoi chaque pattern existe, comment en proposer un nouveau de maniere disciplinee."
         purpose_en: "The importance of genesis: why each pattern exists, how to propose a new one with discipline."
 
@@ -199,7 +204,7 @@ parts:
   - id: explanation
     icon: "fa-solid fa-lightbulb"
     diataxis_mode: explanation
-    sidebar_position: 2
+    sidebar_position: 3
     title_fr: "Explication — comprendre"
     title_en: "Explanation — understand"
     intro_fr: "Le pourquoi : le pipeline et ses 5 phases (gates exactes comprises), la narration fil rouge, l'architecture et les principes."
@@ -214,6 +219,14 @@ parts:
         source: "plugins/agents/*.agent.md"
         purpose_fr: "Les 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, un agent par phase, un reviewer independant."
         purpose_en: "The 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, one agent per phase, one independent reviewer."
+      - id: concepts
+        type: editorial
+        label_fr: "Concepts"
+        label_en: "Concepts"
+        fr: "fr/explanation/concepts.md"
+        en: "en/explanation/concepts.md"
+        purpose_fr: "Les concepts transverses : phase, agent, reviewer, gate, lens, artefact."
+        purpose_en: "Cross-cutting concepts: phase, agent, reviewer, gate, lens, artifact."
       - id: fil-rouge
         type: editorial
         label_fr: "Le fil rouge (narration)"
@@ -283,6 +296,24 @@ parts:
         en: "en/explanation/architecture.md"
         purpose_fr: "Vue d'architecture : comment les phases, agents et reviewers s'assemblent."
         purpose_en: "Architecture view: how phases, agents and reviewers assemble."
+      - id: zoom-mocking
+        type: derived
+        label_fr: "Zoom L3 : mocking (Microcks)"
+        label_en: "L3 zoom: mocking (Microcks)"
+        fr: "fr/explanation/deep-dive/mocking-microcks.md"
+        en: "en/explanation/deep-dive/mocking-microcks.md"
+        source: "plugins/agents/workers/mocking/*.agent.md"
+        purpose_fr: "Zoom sur le fan-out L3 de DELIVER : mock-integration-worker, roster de strategie (Microcks par defaut, in-process en surcharge) et mock-fidelity-lens."
+        purpose_en: "Zoom on the DELIVER L3 fan-out: mock-integration-worker, strategy roster (Microcks by default, in-process override) and mock-fidelity-lens."
+      - id: zoom-contract
+        type: derived
+        label_fr: "Zoom L3 : contract testing"
+        label_en: "L3 zoom: contract testing"
+        fr: "fr/explanation/deep-dive/contract-testing.md"
+        en: "en/explanation/deep-dive/contract-testing.md"
+        source: "plugins/agents/workers/contract-testing/*.agent.md"
+        purpose_fr: "Zoom sur le fan-out L3 de DELIVER : contract-testing-worker, roster (integration in-process + Microcks en opt-in) et contract-fidelity-lens."
+        purpose_en: "Zoom on the DELIVER L3 fan-out: contract-testing-worker, roster (in-process integration + Microcks opt-in) and contract-fidelity-lens."
       - id: hve-core
         type: derived
         label_fr: "Le substrat HVE-Core"
@@ -292,15 +323,6 @@ parts:
         source: "plugins/instructions/skraft-state.instructions.md"
         purpose_fr: "Le substrat HVE-Core : state.json, protocole 6-etapes par tour, articulation des phases."
         purpose_en: "The HVE-Core substrate: state.json, 6-step per-turn protocol, phase articulation."
-      - id: hve-vs-skraft
-        type: editorial
-        label_fr: "HVE → SKRAFT"
-        label_en: "HVE → SKRAFT"
-        fr: "fr/explanation/hve-vs-skraft.md"
-        en: "en/explanation/hve-vs-skraft.md"
-        purpose_fr: "Continuite HVE -> SKRAFT. SKRAFT remplace le workflow RPI par un pipeline SDLC complet."
-        purpose_en: "HVE -> SKRAFT continuity. SKRAFT replaces the RPI workflow with a full SDLC pipeline."
-        requires_diagram: true
       - id: traces
         type: derived
         label_fr: "Traces & auditabilité"
@@ -310,30 +332,15 @@ parts:
         source: "plugins/instructions/skraft-artifacts.instructions.md"
         purpose_fr: "Les traces laissees par le pipeline : artefacts dates, state.json, PR, verdicts. Auditabilite."
         purpose_en: "The traces left by the pipeline: dated artifacts, state.json, PRs, verdicts. Auditability."
-      - id: for-executives
+      - id: hve-vs-skraft
         type: editorial
-        label_fr: "Pour décideurs"
-        label_en: "For executives"
-        fr: "fr/explanation/for-executives.md"
-        en: "en/explanation/for-executives.md"
-        purpose_fr: "Pourquoi la revue assistee AVANT la revue humaine reduit le TTM. Arguments qualitatifs."
-        purpose_en: "Why AI-assisted review BEFORE human review reduces TTM. Qualitative arguments."
-      - id: pourquoi-review-avant-review
-        type: editorial
-        label_fr: "La revue avant la revue"
-        label_en: "Review before review"
-        fr: "fr/explanation/pourquoi-review-avant-review.md"
-        en: "en/explanation/why-review-before-review.md"
-        purpose_fr: "Le coeur de l'argument : la revue adverse assistee filtre AVANT l'humain. Moins de rework, TTM reduit."
-        purpose_en: "The core argument: assisted adversarial review filters BEFORE the human. Less rework, lower TTM."
-      - id: concepts
-        type: editorial
-        label_fr: "Concepts"
-        label_en: "Concepts"
-        fr: "fr/explanation/concepts.md"
-        en: "en/explanation/concepts.md"
-        purpose_fr: "Les concepts transverses : phase, agent, reviewer, gate, lens, artefact."
-        purpose_en: "Cross-cutting concepts: phase, agent, reviewer, gate, lens, artifact."
+        label_fr: "HVE → SKRAFT"
+        label_en: "HVE → SKRAFT"
+        fr: "fr/explanation/hve-vs-skraft.md"
+        en: "en/explanation/hve-vs-skraft.md"
+        purpose_fr: "Continuite HVE -> SKRAFT. SKRAFT remplace le workflow RPI par un pipeline SDLC complet."
+        purpose_en: "HVE -> SKRAFT continuity. SKRAFT replaces the RPI workflow with a full SDLC pipeline."
+        requires_diagram: true
       - id: clean-architecture
         type: editorial
         label_fr: "Clean Architecture"
@@ -358,6 +365,14 @@ parts:
         en: "en/explanation/deep-dive/walking-skeleton.md"
         purpose_fr: "Le squelette ambulant : la plus fine tranche end-to-end qui marche."
         purpose_en: "The walking skeleton: the thinnest end-to-end slice that works."
+      - id: pourquoi-review-avant-review
+        type: editorial
+        label_fr: "La revue avant la revue"
+        label_en: "Review before review"
+        fr: "fr/explanation/why-review-before-review.md"
+        en: "en/explanation/why-review-before-review.md"
+        purpose_fr: "Le coeur de l'argument : la revue adverse assistee filtre AVANT l'humain. Moins de rework, TTM reduit."
+        purpose_en: "The core argument: assisted adversarial review filters BEFORE the human. Less rework, lower TTM."
       - id: review-deep
         type: editorial
         label_fr: "Deep-dive : revue avant la revue"
@@ -366,12 +381,20 @@ parts:
         en: "en/explanation/deep-dive/review-before-review.md"
         purpose_fr: "Approfondissement : revue adverse a 4 lentilles, synthese ponderee, verdicts."
         purpose_en: "Deep dive: 4-lens adversarial review, weighted synthesis, verdicts."
+      - id: for-executives
+        type: editorial
+        label_fr: "Pour décideurs"
+        label_en: "For executives"
+        fr: "fr/explanation/for-executives.md"
+        en: "en/explanation/for-executives.md"
+        purpose_fr: "Pourquoi la revue assistee AVANT la revue humaine reduit le TTM. Arguments qualitatifs."
+        purpose_en: "Why AI-assisted review BEFORE human review reduces TTM. Qualitative arguments."
 
   # ---------------------------------------------------------------- REFERENCE
   - id: reference
     icon: "fa-solid fa-book"
     diataxis_mode: reference
-    sidebar_position: 3
+    sidebar_position: 4
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
     intro_fr: "Tout le factuel : agents, skills, les 46 gates, lentilles, patterns, citations, glossaire, changelog."
@@ -515,7 +538,7 @@ parts:
             label_fr: "Glossaire"
             label_en: "Glossary"
             sidebar_position: 2
-            fr: "fr/reference/glossaire.md"
+            fr: "fr/reference/glossary.md"
             en: "en/reference/glossary.md"
             purpose_fr: "Glossaire global : chaque terme du craft explique simplement."
             purpose_en: "Global glossary: every craft term explained plainly."

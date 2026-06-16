@@ -90,4 +90,4 @@ dépendant ?) et honore la même règle de BLOCKER. Voir le
 
 Pour aller plus loin : [Les lentilles de revue]({{ "/fr/reference/lens" | relative_url }}),
 [Les gates]({{ "/fr/reference/gates" | relative_url }}),
-[La revue avant la revue (principe)]({{ "/fr/explanation/pourquoi-review-avant-review" | relative_url }}).
+[La revue avant la revue (principe)]({{ "/fr/explanation/why-review-before-review" | relative_url }}).

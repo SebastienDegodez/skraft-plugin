@@ -59,4 +59,4 @@ Un seul défaut `blocker` suffit à rejeter le cycle.
 - [Lentilles de revue — vue d'ensemble]({{ "/fr/reference/lens" | relative_url }})
 - [architecture-boundaries-lens (EN)]({{ "/en/reference/lenses/architecture-boundaries-lens" | relative_url }})
 - [Gates par phase]({{ "/fr/reference/gates" | relative_url }})
-- [Glossaire]({{ "/fr/reference/glossaire" | relative_url }})
+- [Glossaire]({{ "/fr/reference/glossary" | relative_url }})

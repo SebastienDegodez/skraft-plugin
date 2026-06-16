@@ -66,4 +66,4 @@ Les patterns ne sont pas une fin : ils servent à garder le modèle du domaine a
 - Fowler, M. *Bliki: CQRS*, 2011.
 
 Termes à connaître : **bounded context**, **agrégat**, **value object**, **CQRS**,
-**Event Sourcing** — voir le [glossaire]({{ "/fr/reference/glossaire" | relative_url }}).
+**Event Sourcing** — voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).

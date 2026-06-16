@@ -62,7 +62,7 @@ the artifact paths — never another lens's findings.
 | `skraft-docs-diataxis-lens` | Is each page in exactly the Diátaxis mode of its section? |
 | `skraft-docs-parity-lens` | Do FR and EN mirror (basename, structure, equivalent content)? |
 | `skraft-docs-structure-lens` | Is the multi-level menu well-formed, ordered, link-clean? |
-| `skraft-docs-citation-fidelity-lens` | Are citations valid and the catalogue blocks complete? |
+| `skraft-docs-citation-fidelity-lens` | Are citations valid and the reference blocks complete? |
 
 ### Phase 3 — SYNTHESIZE
 Collect the four `pass | fail` verdicts and their defects. A `BLOCKER` defect

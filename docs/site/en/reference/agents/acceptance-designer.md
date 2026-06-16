@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Tests before code** — Acceptance scenarios exist before any implementation
 - **Business language** — Scenarios use domain vocabulary, not technical vocabulary
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 

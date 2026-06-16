@@ -30,7 +30,7 @@ persona: tech-lead
 - **No duplicate testing** — Each behaviour is tested at a single layer
 - **Domain = pure unit tests** — No external dependencies in domain tests
 - **Infrastructure = integration tests** — Adapters are tested with real systems
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 

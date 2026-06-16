@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Single-issue scope** — Processes one issue at a time, never batched
 - **Evidence-based triage** — Every decision (label, priority, effort) is backed by observable data
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 

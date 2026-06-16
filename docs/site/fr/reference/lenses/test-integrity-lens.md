@@ -69,4 +69,4 @@ Tout défaut émis par cette lentille est `blocker` — elle ne peut pas produir
 - [Lentilles de revue — vue d'ensemble]({{ "/fr/reference/lens" | relative_url }})
 - [test-integrity-lens (EN)]({{ "/en/reference/lenses/test-integrity-lens" | relative_url }})
 - [Gates par phase]({{ "/fr/reference/gates" | relative_url }})
-- [Glossaire]({{ "/fr/reference/glossaire" | relative_url }})
+- [Glossaire]({{ "/fr/reference/glossary" | relative_url }})

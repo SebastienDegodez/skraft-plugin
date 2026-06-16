@@ -90,4 +90,4 @@ adverse qui agit avant l'humain.
 - [Le fil rouge : une commande Starbucks de bout en bout]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }})
 - [La référence des agents]({{ "/fr/reference/agents/" | relative_url }})
 - [Le détail des gates]({{ "/fr/reference/gates" | relative_url }})
-- [La revue avant la revue]({{ "/fr/explanation/pourquoi-review-avant-review" | relative_url }})
+- [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }})

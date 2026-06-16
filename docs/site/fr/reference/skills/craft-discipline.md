@@ -29,7 +29,7 @@ persona: tech-lead
 
 - **Auto-évaluation, pas revue** — Ce skill est un checkpoint personnel, le reviewer vérifie indépendamment
 - **Pas de raccourci** — Chaque item de la checklist est vérifié, pas « globalement OK »
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

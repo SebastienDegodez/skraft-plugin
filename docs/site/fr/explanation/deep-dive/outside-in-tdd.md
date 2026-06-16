@@ -75,4 +75,4 @@ sur le comportement métier.
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.
 
 Pour aller plus loin : [Walking Skeleton](walking-skeleton.html),
-[la phase DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}), [le glossaire]({{ "/fr/reference/glossaire" | relative_url }}).
+[la phase DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}), [le glossaire]({{ "/fr/reference/glossary" | relative_url }}).

@@ -31,7 +31,7 @@ persona: tech-lead
 
 - **Clean Architecture** — Dependencies point inward, never outward
 - **One Use Case = one pass** — Each story is treated as a complete Use Case
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 

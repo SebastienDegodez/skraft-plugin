@@ -5,7 +5,7 @@ description: |
   contract docs/site/_data/book.yml, compares what SHOULD exist (the contract)
   against what exists (the files) and what is in the sources (the real
   patterns/gates/lenses). For every missing or empty `type: editorial` page, and
-  for every catalogue page that does not follow the pedagogical template, it
+  for every reference page that does not follow the pedagogical template, it
   WRITES the complete, readable page in FR and EN, then opens a PR ready for
   review. It never invents a sourced metric: any figure it cannot trace to the
   code is phrased qualitatively and suffixed `(estime)` / `(estimated)`, never
@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       part:
-        description: "Limit the analysis to one book part (vision|decideurs|pratique|catalogue|contribuer). Empty = all."
+        description: "Limit the analysis to one book part (accueil|tutorials|how-to|explanation|reference). Empty = all."
         required: false
         type: string
   skip-bots: ["dependabot[bot]", "github-actions[bot]"]
@@ -99,8 +99,8 @@ For each gap, write the complete page (or the missing blocks) in the PR.
 2. **Empty or near-empty editorial page.** Exists but has no real content. ->
    Same treatment: write the complete page, replacing the stub with finished
    content.
-3. **Incomplete catalogue template.** A page in the `catalogue` part does not
-   follow the required blocks of `catalogue_template` (notably the
+3. **Incomplete reference template.** A page in the `reference` part does not
+   follow the required blocks of `reference_template` (notably the
    author/work/year citation, the jargon-free intro callout, or the inline
    glossary link). -> Write the missing blocks in full so the page becomes
    compliant.

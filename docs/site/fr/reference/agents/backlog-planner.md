@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Qualité INVEST** — Chaque story est Independent, Negotiable, Valuable, Estimable, Small, Testable
 - **Gate DoR** — 8 critères à valider avant de passer à DESIGN
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

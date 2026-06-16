@@ -4,7 +4,7 @@ description: >-
   [Internal subagent — dispatched by skraft-docs-orchestrator only] Regenerates a
   `type: derived` handbook page from its plugin source (an agent, skill, lens,
   worker, gate, pattern or the citations data), in FR and EN mirrored. Copies the
-  source's canonical vocabulary VERBATIM, follows the catalogue_template block
+  source's canonical vocabulary VERBATIM, follows the reference_template block
   contract, and keeps the FR/EN basename identical. It writes only derived pages
   under docs/site/ — never editorial pages, never plugin sources, never invented
   facts.
@@ -17,7 +17,7 @@ metadata:
   inputs:
     required:
       - a drift item (JSON) for a derived page (missing/empty/parity), with fr, en, source
-      - docs/site/_data/book.yml (catalogue_template + the page entry)
+      - docs/site/_data/book.yml (reference_template + the page entry)
       - the source file(s) named by the item's `source`
     context:
       - docs/site/_data/citations.yml (for the why-citation block)
@@ -56,12 +56,12 @@ Entities / Use Cases / Interface Adapters.
 ## Procedure
 
 1. **Reload the contract.** Read the page entry in `book.yml` (its `fr`, `en`,
-   `source`, `sidebar_position`) and the `catalogue_template` block list.
+   `source`, `sidebar_position`) and the `reference_template` block list.
 2. **Read the source.** Open every file matched by `source`. Extract the role,
    the canonical terms, the gates/lenses/patterns it defines.
 3. **Write the FR page**, then the **EN page**, mirrored — same heading structure,
    same `sidebar_position`, **same English basename** (only the `fr/` vs `en/`
-   folder differs). Follow the `catalogue_template` required blocks:
+   folder differs). Follow the `reference_template` required blocks:
    frontmatter (`layout/lang/title/description` + `sidebar_position`),
    intro callout, Pourquoi / Why, Concepts (mermaid + tables), the
    author/work/year **citation** block, Sources, and the inline **glossary** link.
@@ -93,4 +93,4 @@ notes: <anything the reviewer should look at, e.g. an (estimated) figure>
 
 - Writing a page whose `type` is `editorial`.
 - Writing without reading the `source` file (no source → `status: blocked`).
-- Emitting a page that omits a `catalogue_template` required block.
+- Emitting a page that omits a `reference_template` required block.

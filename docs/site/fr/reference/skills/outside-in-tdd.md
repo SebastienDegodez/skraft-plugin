@@ -31,7 +31,7 @@ persona: tech-lead
 - **Acceptation d'abord** — Le premier test écrit est toujours un test d'acceptation
 - **Walking Skeleton** — La première implémentation traverse toutes les couches
 - **Double boucle** — Boucle externe (acceptation) guide la boucle interne (unitaire)
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

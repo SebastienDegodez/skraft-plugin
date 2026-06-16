@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **INVEST quality** — Each story is Independent, Negotiable, Valuable, Estimable, Small, Testable
 - **DoR gate** — 8 criteria to validate before moving to DESIGN
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 

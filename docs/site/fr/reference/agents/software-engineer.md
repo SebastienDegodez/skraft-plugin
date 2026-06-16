@@ -34,7 +34,7 @@ persona: tech-lead
 - **Outside-In TDD** — Tests d'acceptation → tests unitaires → implémentation
 - **Object Calisthenics** — Contraintes de design appliquées au code métier
 - **Fan-out du câblage de test** — Délègue le wiring des tests aux sous-agents internes `mock-integration-worker` et `contract-testing-worker` (`user-invocable: false`), vérifiés en TIER-1 (RED → GREEN)
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

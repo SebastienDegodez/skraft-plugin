@@ -30,7 +30,7 @@ persona: tech-lead
 
 - **Lecture seule (CQS)** — Ne modifie jamais les artefacts qu'il revoit
 - **Verdict structuré** — Approve ou reject, pas d'état intermédiaire
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

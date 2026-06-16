@@ -17,9 +17,9 @@ below (FR and EN). Do not stop at one page.
 
 | Layer | Page(s) | What to add |
 |-------|---------|-------------|
-| **Architecture** (Explanation) | `{fr,en}/explanation/architecture.md` | Extend the mermaid graph with the new node(s) + an arrow showing who dispatches/reads it; update the legend if a new arrow kind appears. |
+| **Architecture** (Explanation) | `{fr,en}/explanation/architecture.md` | Keep the graph at **L1 (orchestrator) + L2 (phase agents + reviewers)**. Add an L2 node + arrow only if a new phase agent/reviewer appears; update the legend if a new L1/L2 arrow kind appears. Do NOT add L3 fan-out nodes here — link them to their zoom page instead. |
 | **Pipeline narrative** (Explanation) | `{fr,en}/explanation/pipeline/{team,<phase>}.md` | In the owning agent's section, state who it delegates to and who reviews the result. |
-| **Deep-dive** (Explanation) | `{fr,en}/explanation/deep-dive/*` | If the change touches review/adversarial panels, describe when the new lens joins. |
+| **Deep-dive / L3 zoom** (Explanation) | `{fr,en}/explanation/deep-dive/*` | For an internal fan-out (worker), update the matching **L3 zoom page** (`mocking-microcks`, `contract-testing`) or add a new one; describe when a conditional lens joins the panel. |
 | **Reference** (Reference) | `{fr,en}/reference/{agents,skills,lens}/...` | Add the terse factual row/table entry (name, role, when active). |
 
 ## 2. Internal sub-agents are a fan-out, not a phase
@@ -29,6 +29,11 @@ are dispatched **inside** a phase agent — they are never a 6th pipeline phase.
 Show them as an internal fan-out under their owning agent (today: the
 `software-engineer` in DELIVER), and state that the lead keeps the business TDD
 cycle and verifies each worker in TIER-1 (RED → GREEN).
+
+The system-level `architecture.md` stays at **L1 + L2**; each worker fan-out gets a
+dedicated **L3 zoom page** under `explanation/deep-dive/` (e.g. `mocking-microcks`,
+`contract-testing`) so the top-level diagram stays readable. A new worker capability
+means a new zoom page (FR + EN), linked from `architecture.md` and from its phase page.
 
 ## 3. Conditional lenses join the panel only when active
 

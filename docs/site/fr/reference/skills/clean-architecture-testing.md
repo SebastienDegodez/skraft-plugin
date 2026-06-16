@@ -30,7 +30,7 @@ persona: tech-lead
 - **Pas de test en double** — Chaque comportement est testé à une seule couche
 - **Domain = tests unitaires purs** — Aucune dépendance externe dans les tests du domaine
 - **Infrastructure = tests d'intégration** — Les adapters sont testés avec les vrais systèmes
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

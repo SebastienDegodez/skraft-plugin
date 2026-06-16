@@ -77,4 +77,4 @@ relecteurs aux compétences complémentaires.
 - Wiegers, K. *Peer Reviews in Software*, 2002.
 
 Termes à connaître : **lentille (lens)**, **théâtre de test**, **règle d'or des
-tests**, **Object Calisthenics** — voir le [glossaire]({{ "/fr/reference/glossaire" | relative_url }}).
+tests**, **Object Calisthenics** — voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).

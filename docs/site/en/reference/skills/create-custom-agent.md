@@ -31,7 +31,7 @@ persona: tech-lead
 
 - **One file = one agent** — Each agent is self-contained in a single file
 - **Valid frontmatter** — YAML frontmatter follows the VS Code schema
-- See [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) for the full list
+- See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
 
 ## Why this shape
 
@@ -54,5 +54,5 @@ A well-defined agent has a clear responsibility, explicit inputs/outputs, and do
 ## See also
 
 - [skraft-orchestrator]({{ "/en/reference/agents/skraft-orchestrator" | relative_url }}) — Example orchestrator agent
-- [Customisation]({{ "/en/tutorials/customisation" | relative_url }}) — Customisation levels
+- [Customisation]({{ "/en/how-to/customisation" | relative_url }}) — Customisation levels
 - [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — Agent system overview

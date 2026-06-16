@@ -64,4 +64,4 @@ graph LR
 - [Lentilles de revue — vue d'ensemble]({{ "/fr/reference/lens" | relative_url }})
 - [quality-gates-lens (EN)]({{ "/en/reference/lenses/quality-gates-lens" | relative_url }})
 - [Gates par phase]({{ "/fr/reference/gates" | relative_url }})
-- [Glossaire]({{ "/fr/reference/glossaire" | relative_url }})
+- [Glossaire]({{ "/fr/reference/glossary" | relative_url }})

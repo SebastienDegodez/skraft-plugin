@@ -237,7 +237,7 @@ la phase n'est « finie » que lorsque ses gates sont franchies.
 ## Pour aller plus loin
 
 - [Les lentilles de revue adverse](lens.html)
-- [La revue avant la revue]({{ "/fr/explanation/pourquoi-review-avant-review" | relative_url }})
+- [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }})
 - [Le deep-dive review-before-review]({{ "/fr/explanation/deep-dive/review-before-review" | relative_url }})
 
 ## Sources
@@ -245,4 +245,4 @@ la phase n'est « finie » que lorsque ses gates sont franchies.
 - Wiegers, K. *Peer Reviews in Software*, 2002.
 
 Termes à connaître : **gate**, **reviewer**, **BLOCKER**, **INVEST**, **walking
-skeleton** — voir le [glossaire]({{ "/fr/reference/glossaire" | relative_url }}).
+skeleton** — voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).

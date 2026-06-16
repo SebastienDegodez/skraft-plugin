@@ -144,8 +144,8 @@ workflow orchestrates them — it never re-implements the diff in prose.
   canonical terms verbatim (e.g. Clean Architecture layers are **Domain /
   Application / Infrastructure / API** per `clean-architecture-testing`); never
   rename or paraphrase a concept into competing terminology.
-- **Verifiable pedagogy.** Every `catalogue` page follows the required blocks of
-  the `catalogue_template`. A catalogue page without an author/work/year citation is
+- **Verifiable pedagogy.** Every `reference` page follows the required blocks of
+  the `reference_template`. A reference page without an author/work/year citation is
   invalid.
 - **No reverse drift.** Never introduce any unverifiable information into the
   shipped source.

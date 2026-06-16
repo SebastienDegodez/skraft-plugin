@@ -60,4 +60,4 @@ La sévérité maximale de cette lentille est `medium` — elle ne peut pas éme
 - [Lentilles de revue — vue d'ensemble]({{ "/fr/reference/lens" | relative_url }})
 - [cold-reader-lens (EN)]({{ "/en/reference/lenses/cold-reader-lens" | relative_url }})
 - [Gates par phase]({{ "/fr/reference/gates" | relative_url }})
-- [Glossaire]({{ "/fr/reference/glossaire" | relative_url }})
+- [Glossaire]({{ "/fr/reference/glossary" | relative_url }})

@@ -31,7 +31,7 @@ persona: tech-lead
 - **Lecture seule (CQS)** — Ne modifie jamais le code qu'il revoit
 - **4 lentilles adversariales** — Chaque lentille évalue indépendamment, le verdict est synthétisé
 - **Verdict structuré** — Approve ou reject, pas d'état intermédiaire
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

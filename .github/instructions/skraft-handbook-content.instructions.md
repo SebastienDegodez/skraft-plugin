@@ -27,10 +27,12 @@ layout mirrors them** (per language):
 ```
 fr/
   index.md                 (home — router)
-  tutorials/               Learn   — getting-started, customisation, contributing
+  tutorials/               Learn   — getting-started
+  how-to/                  Do      — customisation, contributing (genesis)
   explanation/             Understand
     pipeline/              the 5 phases + overview + team + fil-rouge (narrative)
-    deep-dive/             outside-in-tdd, walking-skeleton, review-before-review
+    deep-dive/             outside-in-tdd, walking-skeleton, review-before-review,
+                           mocking-microcks, contract-testing (L3 zoom pages)
     architecture, concepts, clean-architecture, hve-core, hve-vs-skraft,
     traces, for-executives, pourquoi-review-avant-review
   reference/               Look up — agents/, skills/, gates, lens, patterns,
@@ -39,7 +41,8 @@ fr/
 
 A new page must declare which mode it belongs to and live in the matching folder.
 The Starbucks fil rouge is **narrative**, so it lives under `explanation/pipeline/`,
-not `tutorials/`.
+not `tutorials/`. Task-oriented pages (customise the pipeline, propose a pattern)
+are **how-to**, so they live under `how-to/`, not `tutorials/`.
 
 ## 2. The fil rouge is the artifact flow
 
@@ -102,7 +105,7 @@ Each `docs/site/{fr,en}/explanation/pipeline/{phase}.md` MUST include:
 - Any factual claim in an Explanation page carries a citation in the format:
   `> « quote ≤25 words »` then `> — Author, *Title*, Year.` where author+year
   exist in `_data/citations.yml`. The Starbucks example is exempt (it is fiction).
-- Catalogue/reference pages follow the `catalogue_template` block contract from `_data/book.yml`.
+- Catalogue/reference pages follow the `reference_template` block contract from `_data/book.yml`.
 
 ## 7. Validation before considering a page done
 

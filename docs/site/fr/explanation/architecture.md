@@ -12,7 +12,11 @@ SKRAFT applique le principe CQS (Command-Query Separation) au niveau système. L
 > « Asking a question should not change the answer. »
 > — Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997.
 
-## Vue d'ensemble
+## Vue d'ensemble (L1 + L2)
+
+Cette vue reste à deux niveaux : **L1** l'orchestrateur, et **L2** les cinq agents
+de phase et leurs reviewers indépendants. Le fan-out interne **L3** (câblage des
+tests dans DELIVER) a ses propres pages de zoom — voir *Zoomer plus loin* ci-dessous.
 
 ```mermaid
 graph TB
@@ -27,15 +31,6 @@ graph TB
     SA -->|writes| A3[ADRs + diagrams]
     AD -->|writes| A4[Gherkin scenarios]
     SE -->|writes| A5[tested code]
-
-    SE -.fan-out.-> MIW[mock-integration-worker]
-    SE -.fan-out.-> CTW[contract-testing-worker]
-    MIW -->|test wiring| A5
-    CTW -->|test wiring| A5
-    MIW -.si actif.-> MFL[mock-fidelity-lens]
-    CTW -.si actif.-> CFL[contract-fidelity-lens]
-    MFL -->|verdict| SER
-    CFL -->|verdict| SER
     
     A1 -.->|reads| BDR[backlog-discoverer-reviewer]
     A2 -.->|reads| BPR[backlog-planner-reviewer]
@@ -53,10 +48,6 @@ graph TB
     
     style O fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
     style S fill:#1a2a3a,stroke:#7fd3ff
-    style MIW fill:#243a2e,stroke:#4ed58a
-    style CTW fill:#243a2e,stroke:#4ed58a
-    style MFL fill:#3a2e1a,stroke:#d5a84e
-    style CFL fill:#3a2e1a,stroke:#d5a84e
 ```
 
 ## Légende
@@ -68,19 +59,24 @@ graph TB
 | **Trait pointillé** artefact → reviewer | Lecture seule (côté query de CQS) |
 | **Trait plein** reviewer → orchestrateur | Verdict (PASS / FAIL + motifs) |
 | **Trait pointillé** orchestrateur → state.json | Modèle de lecture CQRS |
-| **Trait pointillé** `software-engineer` → worker | Fan-out interne DELIVER (sous-agents `user-invocable: false`) |
-| **Trait pointillé** worker → lentille de fidélité | La lentille rejoint le panel quand la capacité est active |
 
-## Le fan-out interne de DELIVER
+## Zoomer plus loin — le fan-out interne de DELIVER (L3)
 
-En DELIVER, le `software-engineer` ne câble pas les tests à la main : il **délègue**
-le wiring à des sous-agents internes (`mock-integration-worker` pour le mocking du
-dépendant, `contract-testing-worker` pour le test de contrat fournisseur). Chaque
-worker n'émet que du câblage de test ; le cycle TDD métier reste chez le lead, qui
-vérifie le worker en TIER-1 (RED → GREEN). Quand une capacité est active, sa
-**lentille de fidélité** (`mock-fidelity-lens` / `contract-fidelity-lens`) rejoint le
-panel adverse du `software-engineer-reviewer`. Voir la
-[référence des agents]({{ "/fr/reference/agents/" | relative_url }}).
+Cette page s'arrête volontairement à L1 + L2. Dans DELIVER, le `software-engineer`
+(L2) ne câble pas les tests d'intégration à la main : il **dispatche des sous-agents
+internes** (L3, `user-invocable: false`) pour ce wiring. Le lead garde le cycle TDD
+métier et vérifie chaque worker en TIER-1 (RED → GREEN). Quand une capacité est
+active, sa **lentille de fidélité** rejoint le panel adverse du
+`software-engineer-reviewer`.
+
+Chaque fan-out L3 a sa propre page de zoom pour que ce schéma reste lisible :
+
+| Capacité L3 | Ce qu'elle câble | Page de zoom |
+| --- | --- | --- |
+| Mocking du dépendant aval | `mock-integration-worker` → roster de stratégie → Microcks (défaut) / in-process | [Zoom L3 : mocking (Microcks)]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }}) |
+| Test de contrat fournisseur | `contract-testing-worker` → roster → intégration in-process + Microcks (opt-in) | [Zoom L3 : contract testing]({{ "/fr/explanation/deep-dive/contract-testing" | relative_url }}) |
+
+Voir aussi la [référence des agents]({{ "/fr/reference/agents/" | relative_url }}).
 
 ## Séparation stricte
 

@@ -31,7 +31,7 @@ persona: tech-lead
 
 - **Clean Architecture** — Les dépendances pointent vers l'intérieur, jamais vers l'extérieur
 - **Un Use Case = un passage** — Chaque story est traitée comme un Use Case complet
-- Voir [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) pour la liste complète
+- Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
 
 ## Pourquoi cette forme
 

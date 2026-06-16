@@ -45,11 +45,11 @@ test.describe('SKRAFT docs site', () => {
     await expect(mermaid.first()).toBeVisible();
   });
 
-  test('Navigation is reduced to the 3 handbook doors', async ({ page }) => {
+  test('Navigation is reduced to the handbook doors', async ({ page }) => {
     await page.goto(`${BASE}/fr/`);
-    // Top menu = 3 doors inside .site-nav__links (brand and lang toggle excluded).
+    // Top menu doors inside .site-nav__links (brand and lang toggle excluded).
     const doors = page.locator('.site-nav__links > a');
-    await expect(doors).toHaveCount(3);
+    await expect(doors).toHaveCount(4);
   });
 
   test('Citations page renders entries', async ({ page }) => {

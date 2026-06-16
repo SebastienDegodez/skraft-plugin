@@ -3,11 +3,11 @@ import { test, expect } from '@playwright/test';
 const BASE = process.env.BASE_URL || 'http://localhost:4000/skraft-plugin';
 
 test.describe('SKRAFT handbook navigation', () => {
-  test('top menu reduced to 3 doors', async ({ page }) => {
+  test('top menu reduced to the handbook doors', async ({ page }) => {
     await page.goto(`${BASE}/fr/explanation/pipeline/`);
-    // Brand and lang toggle are excluded: the 3 handbook doors live in .site-nav__links.
+    // Brand and lang toggle are excluded: the handbook doors live in .site-nav__links.
     const doors = page.locator('.site-nav__links > a');
-    await expect(doors).toHaveCount(3);
+    await expect(doors).toHaveCount(4);
     await expect(doors.nth(0)).toContainText('handbook');
   });
 
