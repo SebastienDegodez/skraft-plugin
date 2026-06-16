@@ -15,3 +15,4 @@ docs/site/.jekyll-cache/
 
 # Docs-drift reconciler — ephemeral runtime ledger (never committed)
 .skraft-docs/
+.github/aw/logs/
