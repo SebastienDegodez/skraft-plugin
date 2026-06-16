@@ -2,6 +2,7 @@
 name: skraft-docs-citation-fidelity-lens
 description: "Reviewer lens: verifies every citation on a handbook page resolves to citations.yml (author, work, year), the catalogue_template required blocks are present on reference pages, and craft vocabulary matches the source skill verbatim. Backed by the deterministic check-citations.mjs tool."
 model: inherit
+user-invocable: false
 tools: read/readFile, search/codebase, execute/runInTerminal
 ---
 

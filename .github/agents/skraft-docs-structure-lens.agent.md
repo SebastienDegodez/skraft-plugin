@@ -2,6 +2,7 @@
 name: skraft-docs-structure-lens
 description: "Reviewer lens: verifies the handbook's multi-level menu is well-formed — Diátaxis mode per part, ordered sections and pages, individual reference items present, and no internal link pointing to a page that does not exist. Backed by the deterministic lint-nav.mjs tool."
 model: Claude Haiku 4.5 (copilot)
+user-invocable: false
 tools: read/readFile, execute/runInTerminal
 ---
 

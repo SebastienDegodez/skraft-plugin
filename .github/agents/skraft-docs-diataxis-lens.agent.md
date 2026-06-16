@@ -2,6 +2,7 @@
 name: skraft-docs-diataxis-lens
 description: "Reviewer lens: reads handbook pages with one question — is each page written in exactly the Diátaxis mode of the menu section it lives in (tutorial | how-to | explanation | reference), with no mode mixing?"
 model: Claude Haiku 4.5 (copilot)
+user-invocable: false
 tools: read/readFile, search/codebase
 ---
 

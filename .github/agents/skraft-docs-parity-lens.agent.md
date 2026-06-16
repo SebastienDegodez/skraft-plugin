@@ -2,6 +2,7 @@
 name: skraft-docs-parity-lens
 description: "Reviewer lens: reads a handbook page pair with one question — do the FR and EN versions mirror each other (same English basename, same heading structure, equivalent content, neither side ahead)?"
 model: inherit
+user-invocable: false
 tools: read/readFile, search/codebase
 ---
 
