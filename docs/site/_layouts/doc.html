@@ -38,25 +38,59 @@
           {% assign part_title = part.title_fr %}
         {% endif %}
         <h3 class="doc-sidebar__group">{% if part.icon %}<i class="{{ part.icon }}" aria-hidden="true"></i> {% endif %}{{ part_title }}</h3>
-        <ul class="doc-sidebar__list">
-          {% for p in part.pages %}
+
+        {% if part.sections %}
+          {% comment %} 3-level menu: part > section > pages (explicit + discovered per-item). {% endcomment %}
+          {% for section in part.sections %}
             {% if page.lang == 'en' %}
-              {% assign raw = p.en %}
+              {% assign section_title = section.title_en | default: section.id %}
+              {% assign folder = section.folder_en %}
             {% else %}
-              {% assign raw = p.fr %}
+              {% assign section_title = section.title_fr | default: section.id %}
+              {% assign folder = section.folder_fr %}
             {% endif %}
-            {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
-            {% assign fallback = p.id | replace: '-', ' ' | capitalize %}
-            {% if page.lang == 'en' %}
-              {% assign label = p.label_en | default: fallback %}
-            {% else %}
-              {% assign label = p.label_fr | default: fallback %}
-            {% endif %}
-            <li>
-              <a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a>
-            </li>
+            <h4 class="doc-sidebar__section">{{ section_title }}</h4>
+            <ul class="doc-sidebar__list doc-sidebar__sublist">
+              {% assign explicit = section.pages | sort: 'sidebar_position' %}
+              {% for p in explicit %}
+                {% if page.lang == 'en' %}{% assign raw = p.en %}{% else %}{% assign raw = p.fr %}{% endif %}
+                {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
+                {% assign fallback = p.id | replace: '-', ' ' | capitalize %}
+                {% if page.lang == 'en' %}{% assign label = p.label_en | default: fallback %}{% else %}{% assign label = p.label_fr | default: fallback %}{% endif %}
+                <li><a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a></li>
+              {% endfor %}
+              {% if folder %}
+                {% assign discovered = site.pages | where_exp: "pg", "pg.path contains folder" | sort: 'sidebar_position' %}
+                {% for pg in discovered %}
+                  {% unless pg.name == 'index.md' %}
+                    <li><a href="{{ pg.url | relative_url }}"{% if page.url == pg.url %} class="active" aria-current="page"{% endif %}>{{ pg.title | default: pg.name }}</a></li>
+                  {% endunless %}
+                {% endfor %}
+              {% endif %}
+            </ul>
           {% endfor %}
-        </ul>
+        {% else %}
+          {% comment %} 2-level menu: part > pages (flat). {% endcomment %}
+          <ul class="doc-sidebar__list">
+            {% for p in part.pages %}
+              {% if page.lang == 'en' %}
+                {% assign raw = p.en %}
+              {% else %}
+                {% assign raw = p.fr %}
+              {% endif %}
+              {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
+              {% assign fallback = p.id | replace: '-', ' ' | capitalize %}
+              {% if page.lang == 'en' %}
+                {% assign label = p.label_en | default: fallback %}
+              {% else %}
+                {% assign label = p.label_fr | default: fallback %}
+              {% endif %}
+              <li>
+                <a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
       {% endfor %}
     </aside>
 

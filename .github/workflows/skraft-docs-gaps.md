@@ -82,9 +82,10 @@ phrased qualitatively and suffixed `(estime)` / `(estimated)`.
 
 ## Activation guard
 
-You MUST call `noop` and stop immediately if **no gap** is detected after
-analysis. Message: `"Skipping: book complete, no editorial gap."`
-Failing to call `noop` when the book is complete will fail the workflow.
+The scanner decides activation deterministically (see Procedure step 2): `noop`
+when `scan-drift.mjs` reports no gap; otherwise reconcile the whole book. Failing
+to `noop` when the book is complete fails the workflow.
+
 
 ## Gap types to detect
 
@@ -113,27 +114,37 @@ For each gap, write the complete page (or the missing blocks) in the PR.
 
 ## Procedure
 
-1. **Read the contract.** Load `book.yml`: parts, pages, `type`, `source`,
-   `catalogue_template`, `editorial_template`, `design`, requirements
-   (`requires_*`). If `inputs.part` is provided, limit analysis to that part.
-2. **Inventory the files.** List the real pages under `docs/site/{fr,en}/`.
-3. **Inventory the sources.** List the real patterns/gates/lenses/agents/skills
-   via the `sources` globs.
-4. **Three-way diff.** Cross-check contract <-> files <-> sources to produce the
-   list of gaps (types 1 to 5 above).
-5. **Write.** For each gap, write the **complete** page (or the missing blocks)
-   in finished, readable prose, mirrored FR/EN with the same heading structure.
-   The FR page and the EN page share the same basename (English filename); only
-   the `fr/` vs `en/` folder prefix differs. Before describing any craft concept
-   (architecture layers, TDD cycle, gates, lenses, patterns...), open the
-   relevant `plugins/skills/*/SKILL.md` and reuse its **exact canonical
-   vocabulary** — never invent or paraphrase competing terminology. Example: the
-   Clean Architecture layers are **Domain / Application / Infrastructure / API**
-   (+ Architecture, SharedKernel) as defined in
-   `plugins/skills/clean-architecture-testing/SKILL.md`, not generic textbook
-   names.
-6. **Open the PR.** Emit a single `create-pull-request` bundling the pages and
-   the gap report. If no gap, call `noop`.
+Detection is a **deterministic tool**; repair is the **agent chain**. This weekly
+sweep orchestrates them across the WHOLE book — it never re-implements the
+three-way diff in prose.
+
+1. **Scan (deterministic).** Run the drift scanner and read its ledger:
+
+   ```bash
+   node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
+   ```
+
+   The ledger already encodes the three-way diff (contract vs files vs sources):
+   `missing-page`, `empty-page`, `parity-break`, `orphan-source`,
+   `missing-diataxis-mode`, `ordering-gap`, `basename-mismatch`.
+
+2. **Activation guard.** If `summary.total == 0`, or the only items are `low`
+   declared basename exceptions, call `noop` (`"Skipping: book complete, no
+   gap."`) and stop. Failing to `noop` when the book is complete fails the workflow.
+
+3. **Reconcile (full scope).** Run the `skraft-docs-orchestrator` agent (in
+   `.github/agents/`) over EVERY open item. It routes each to the right worker —
+   `skraft-docs-placement-architect` (taxonomy / ordering / orphan placement),
+   `skraft-docs-derived-writer` (derived pages), `skraft-docs-editorial-writer`
+   (complete editorial pages) — runs the deterministic stop-predicates, and gates
+   the result through the `skraft-docs-reviewer` panel. Editorial pages are
+   written COMPLETE (no holes); an untraceable figure is qualitative and suffixed
+   `(estimated)`.
+
+4. **Open the PR.** Emit a single `create-pull-request` bundling all repaired
+   pages plus any `book.yml` entries added for orphan sources. If the orchestrator
+   changed nothing, call `noop`.
+
 
 ## Constraints
 

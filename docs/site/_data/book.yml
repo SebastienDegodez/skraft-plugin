@@ -47,6 +47,14 @@ meta:
   # `:::type ... :::` ou des blockquotes. A utiliser pour signaler risques et notes.
   admonitions: [note, info, tip, caution, warning, danger]
 
+  # Paires FR/EN dont le basename DIFFERE volontairement (exception a la regle dure 5).
+  # scan-drift.mjs ne signale pas ces paires comme derive de basename.
+  basename_exceptions:
+    - fr: pourquoi-review-avant-review
+      en: why-review-before-review
+    - fr: glossaire
+      en: glossary
+
   # GABARIT DE PAGE impose a CHAQUE page du catalogue (et recommande pour les
   # pages pratique/decideurs). L'inspiration du learning-path porte sur le DESIGN
   # (voir `design`), pas sur une notion de "module" : ce sont des pages de
@@ -136,6 +144,7 @@ parts:
   # ----------------------------------------------------------------- ACCUEIL
   - id: accueil
     icon: "fa-solid fa-house"
+    sidebar_position: 0
     title_fr: "Accueil"
     title_en: "Home"
     intro_fr: "Le point d'entree du handbook : ce que SKRAFT apporte et par ou commencer."
@@ -153,6 +162,8 @@ parts:
   # --------------------------------------------------------------- TUTORIELS
   - id: tutorials
     icon: "fa-solid fa-graduation-cap"
+    diataxis_mode: tutorial
+    sidebar_position: 1
     title_fr: "Tutoriels — apprendre"
     title_en: "Tutorials — learn"
     intro_fr: "Des parcours guides ou vous executez : installer, lancer, customiser."
@@ -187,6 +198,8 @@ parts:
   # -------------------------------------------------------------- EXPLICATION
   - id: explanation
     icon: "fa-solid fa-lightbulb"
+    diataxis_mode: explanation
+    sidebar_position: 2
     title_fr: "Explication — comprendre"
     title_en: "Explanation — understand"
     intro_fr: "Le pourquoi : le pipeline et ses 5 phases (gates exactes comprises), la narration fil rouge, l'architecture et les principes."
@@ -357,78 +370,161 @@ parts:
   # ---------------------------------------------------------------- REFERENCE
   - id: reference
     icon: "fa-solid fa-book"
+    diataxis_mode: reference
+    sidebar_position: 3
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
     intro_fr: "Tout le factuel : agents, skills, les 46 gates, lentilles, patterns, citations, glossaire, changelog."
     intro_en: "All the facts: agents, skills, the 46 gates, lenses, patterns, citations, glossary, changelog."
-    pages:
+    # Menu a 3 niveaux : partie -> section -> page. Chaque section porte une
+    # `sidebar_position` (ordre) ; les sections `generate` materialisent UNE page
+    # par fichier source (un agent, un skill, un worker, une lentille) via le chain
+    # docs-reconcile. doc.html liste les pages explicites (`pages`) PUIS les pages
+    # individuelles trouvees dans `folder_{fr,en}` (triees par sidebar_position du
+    # frontmatter). scan-drift.mjs detecte les sources orphelines via `generate`.
+    sections:
       - id: agents
-        type: derived
-        label_fr: "Agents"
-        label_en: "Agents"
-        fr: "fr/reference/agents/index.md"
-        en: "en/reference/agents/index.md"
-        source: "plugins/agents/*.agent.md"
-        purpose_fr: "Les agents du pipeline et leurs reviewers : role, phase, contribution aux pratiques."
-        purpose_en: "Pipeline agents and their reviewers: role, phase, contribution to practices."
+        title_fr: "Agents"
+        title_en: "Agents"
+        sidebar_position: 1
+        folder_fr: "fr/reference/agents"
+        folder_en: "en/reference/agents"
+        generate:
+          from: agents
+          slug_from: basename
+          path_fr: "fr/reference/agents/{slug}.md"
+          path_en: "en/reference/agents/{slug}.md"
+          start_position: 2
+        pages:
+          - id: agents-index
+            type: derived
+            label_fr: "Vue d'ensemble"
+            label_en: "Overview"
+            sidebar_position: 1
+            fr: "fr/reference/agents/index.md"
+            en: "en/reference/agents/index.md"
+            source: "plugins/agents/*.agent.md"
+            purpose_fr: "Les agents du pipeline et leurs reviewers : role, phase, contribution aux pratiques."
+            purpose_en: "Pipeline agents and their reviewers: role, phase, contribution to practices."
       - id: skills
-        type: derived
-        label_fr: "Skills"
-        label_en: "Skills"
-        fr: "fr/reference/skills/index.md"
-        en: "en/reference/skills/index.md"
-        source: "plugins/skills/*/SKILL.md"
-        purpose_fr: "Les skills (pratiques outillees) : ce qu'elles font, quand les utiliser."
-        purpose_en: "Skills (tooled practices): what they do, when to use them."
+        title_fr: "Skills"
+        title_en: "Skills"
+        sidebar_position: 2
+        folder_fr: "fr/reference/skills"
+        folder_en: "en/reference/skills"
+        generate:
+          from: skills
+          slug_from: parent
+          path_fr: "fr/reference/skills/{slug}.md"
+          path_en: "en/reference/skills/{slug}.md"
+          start_position: 2
+        pages:
+          - id: skills-index
+            type: derived
+            label_fr: "Vue d'ensemble"
+            label_en: "Overview"
+            sidebar_position: 1
+            fr: "fr/reference/skills/index.md"
+            en: "en/reference/skills/index.md"
+            source: "plugins/skills/*/SKILL.md"
+            purpose_fr: "Les skills (pratiques outillees) : ce qu'elles font, quand les utiliser."
+            purpose_en: "Skills (tooled practices): what they do, when to use them."
+      - id: workers
+        title_fr: "Workers (sous-agents)"
+        title_en: "Workers (sub-agents)"
+        sidebar_position: 3
+        folder_fr: "fr/reference/workers"
+        folder_en: "en/reference/workers"
+        generate:
+          from: workers
+          slug_from: basename
+          path_fr: "fr/reference/workers/{slug}.md"
+          path_en: "en/reference/workers/{slug}.md"
+          start_position: 1
+        pages: []
+      - id: lenses
+        title_fr: "Lentilles de revue"
+        title_en: "Review lenses"
+        sidebar_position: 4
+        folder_fr: "fr/reference/lenses"
+        folder_en: "en/reference/lenses"
+        generate:
+          from: lenses
+          slug_from: basename
+          path_fr: "fr/reference/lenses/{slug}.md"
+          path_en: "en/reference/lenses/{slug}.md"
+          start_position: 2
+        pages:
+          - id: lens-index
+            type: derived
+            label_fr: "Vue d'ensemble"
+            label_en: "Overview"
+            sidebar_position: 1
+            fr: "fr/reference/lens.md"
+            en: "en/reference/lens.md"
+            source: "plugins/agents/reviewer-lenses/*.agent.md"
+            purpose_fr: "Les 4 lentilles de revue adverse : architecture-boundaries, cold-reader, quality-gates, test-integrity."
+            purpose_en: "The 4 adversarial review lenses: architecture-boundaries, cold-reader, quality-gates, test-integrity."
       - id: gates
-        type: derived
-        label_fr: "Gates"
-        label_en: "Gates"
-        fr: "fr/reference/gates.md"
-        en: "en/reference/gates.md"
-        source: "plugins/skills/*-review-criteria/SKILL.md"
-        purpose_fr: "Les gates de revue (Gxx) par phase : ce que chaque gate verifie et pourquoi."
-        purpose_en: "Review gates (Gxx) per phase: what each gate checks and why."
-      - id: lens
-        type: derived
-        label_fr: "Lentilles"
-        label_en: "Lenses"
-        fr: "fr/reference/lens.md"
-        en: "en/reference/lens.md"
-        source: "plugins/agents/reviewer-lenses/*.agent.md"
-        purpose_fr: "Les 4 lentilles de revue adverse : architecture-boundaries, cold-reader, quality-gates, test-integrity."
-        purpose_en: "The 4 adversarial review lenses: architecture-boundaries, cold-reader, quality-gates, test-integrity."
+        title_fr: "Gates"
+        title_en: "Gates"
+        sidebar_position: 5
+        pages:
+          - id: gates
+            type: derived
+            label_fr: "Gates"
+            label_en: "Gates"
+            sidebar_position: 1
+            fr: "fr/reference/gates.md"
+            en: "en/reference/gates.md"
+            source: "plugins/skills/*-review-criteria/SKILL.md"
+            purpose_fr: "Les gates de revue (Gxx) par phase : ce que chaque gate verifie et pourquoi."
+            purpose_en: "Review gates (Gxx) per phase: what each gate checks and why."
       - id: patterns
-        type: derived
-        label_fr: "Patterns"
-        label_en: "Patterns"
-        fr: "fr/reference/patterns.md"
-        en: "en/reference/patterns.md"
-        source: "plugins/skills/architecture-patterns/SKILL.md"
-        purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
-        purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
-      - id: citations
-        type: derived
-        label_fr: "Citations"
-        label_en: "Citations"
-        fr: "fr/reference/citations.md"
-        en: "en/reference/citations.md"
-        source: "docs/site/_data/citations.yml"
-        purpose_fr: "Bibliographie complete : chaque reference (auteur, ouvrage, annee) qui fonde une pratique."
-        purpose_en: "Full bibliography: each reference (author, work, year) grounding a practice."
-      - id: glossaire
-        type: editorial
-        label_fr: "Glossaire"
-        label_en: "Glossary"
-        fr: "fr/reference/glossaire.md"
-        en: "en/reference/glossary.md"
-        purpose_fr: "Glossaire global : chaque terme du craft explique simplement."
-        purpose_en: "Global glossary: every craft term explained plainly."
-      - id: changelog
-        type: editorial
-        label_fr: "Changelog"
-        label_en: "Changelog"
-        fr: "fr/reference/changelog.md"
-        en: "en/reference/changelog.md"
-        purpose_fr: "L'historique des evolutions du handbook et du plugin."
-        purpose_en: "The history of handbook and plugin changes."
+        title_fr: "Patterns"
+        title_en: "Patterns"
+        sidebar_position: 6
+        pages:
+          - id: patterns
+            type: derived
+            label_fr: "Patterns"
+            label_en: "Patterns"
+            sidebar_position: 1
+            fr: "fr/reference/patterns.md"
+            en: "en/reference/patterns.md"
+            source: "plugins/skills/architecture-patterns/SKILL.md"
+            purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
+            purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
+      - id: bibliography
+        title_fr: "Bibliographie & annexes"
+        title_en: "Bibliography & appendix"
+        sidebar_position: 7
+        pages:
+          - id: citations
+            type: derived
+            label_fr: "Citations"
+            label_en: "Citations"
+            sidebar_position: 1
+            fr: "fr/reference/citations.md"
+            en: "en/reference/citations.md"
+            source: "docs/site/_data/citations.yml"
+            purpose_fr: "Bibliographie complete : chaque reference (auteur, ouvrage, annee) qui fonde une pratique."
+            purpose_en: "Full bibliography: each reference (author, work, year) grounding a practice."
+          - id: glossaire
+            type: editorial
+            label_fr: "Glossaire"
+            label_en: "Glossary"
+            sidebar_position: 2
+            fr: "fr/reference/glossaire.md"
+            en: "en/reference/glossary.md"
+            purpose_fr: "Glossaire global : chaque terme du craft explique simplement."
+            purpose_en: "Global glossary: every craft term explained plainly."
+          - id: changelog
+            type: editorial
+            label_fr: "Changelog"
+            label_en: "Changelog"
+            sidebar_position: 3
+            fr: "fr/reference/changelog.md"
+            en: "en/reference/changelog.md"
+            purpose_fr: "L'historique des evolutions du handbook et du plugin."
+            purpose_en: "The history of handbook and plugin changes."

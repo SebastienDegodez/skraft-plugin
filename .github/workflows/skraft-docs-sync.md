@@ -92,40 +92,41 @@ share the same English basename (only the `fr/` vs `en/` folder prefix differs).
 
 ## Activation guard
 
-You MUST call `noop` and stop immediately if either condition is true:
+The scanner decides activation deterministically (see Procedure step 2). In short:
+`noop` when `scan-drift.mjs` reports no derived/orphan drift; otherwise reconcile.
+Failing to `noop` when nothing changed fails the workflow.
 
-1. The push contains only editorial or pure-documentation changes (no source
-   mapped to a derived page changed).
-   Message: `"Skipping: no derived source changed."`
-2. After analyzing the diff, no derived page has drifted.
-   Message: `"Skipping: derived pages already in sync."`
-
-Failing to call `noop` when no update is needed will fail the workflow.
 
 ## Procedure
 
-1. **Read the contract.** Load `docs/site/_data/book.yml`. Build the list of
-   `type: derived` pages with their `source`, `fr`, `en`.
-2. **Get the diff (deterministic).** Identify the source files added / removed /
-   modified since the previous commit using the git/GitHub tools. Never rely on
-   memory: read the real diff and the `plugins/` and `.agents/` tree.
-3. **Map the drift.** For each changed source, find the derived page that
-   consumes it (`source` field in `book.yml`).
-4. **Verify.** Read each mapped page and compare it to the shipped state. Keep
-   only real, substantial gaps (not cosmetic ones).
-5. **Regenerate.** Update the FR page and the EN page in mirror. The FR and EN
-   files share the same English basename (only `fr/` vs `en/` differs). For
-   pages in the `catalogue` part, follow the `catalogue_template` from `book.yml`
-   (required blocks, including the author/work/year citation and the inline
-   glossary link). Use the liquid-glass `doc` layout conventions (`design` key):
-   sidebar grouped by part, admonitions for risks/notes. Keep each file's
-   language: FR prose under `fr/`, EN prose under `en/`; code, commands and
-   identifiers stay in English on both sides.
-6. **Verify links and citations.** Every internal link must point to an existing
-   page. Every citation on a derived page must reference an entry in
-   `_data/citations.yml` (author, title, year).
-7. **Open the PR.** Emit a single `create-pull-request` bundling all updates. If
-   no substantial drift is found, call `noop`.
+Detection is a **deterministic tool**; repair is the **agent chain**. This
+workflow orchestrates them — it never re-implements the diff in prose.
+
+1. **Scan (deterministic).** Run the drift scanner and read its ledger:
+
+   ```bash
+   node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
+   ```
+
+2. **Activation guard.** If `summary.total == 0`, or the only items are
+   `low`-severity basename exceptions already declared in
+   `meta.basename_exceptions`, or no item has `pageType: derived` and none is an
+   `orphan-source`, call `noop` (`"Skipping: derived pages already in sync."`) and
+   stop. Failing to `noop` when nothing changed fails the workflow.
+
+3. **Reconcile (scope: derived).** Run the `skraft-docs-orchestrator` agent (in
+   `.github/agents/`), instructing it to process ONLY items whose
+   `pageType: derived` or whose `type: orphan-source`. It drives each item to a
+   terminal in-sync state through the `skraft-docs-placement-architect` and
+   `skraft-docs-derived-writer` workers, runs the deterministic stop-predicates
+   (`scan-drift`, `lint-nav`, `check-citations`), and gates the result through the
+   `skraft-docs-reviewer` panel. Editorial gaps are left to the weekly
+   `skraft-docs-gaps` sweep.
+
+4. **Open the PR.** Emit a single `create-pull-request` bundling the staged
+   `docs/site/{fr,en}/` changes (and any `book.yml` entry the placement-architect
+   added for an orphan source). If the orchestrator changed nothing, call `noop`.
+
 
 ## Constraints
 

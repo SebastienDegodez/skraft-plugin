@@ -12,3 +12,6 @@ playwright-report/
 /_site/
 docs/site/_site/
 docs/site/.jekyll-cache/
+
+# Docs-drift reconciler — ephemeral runtime ledger (never committed)
+.skraft-docs/
