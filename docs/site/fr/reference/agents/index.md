@@ -40,4 +40,4 @@ rejoint le panel de revue adverse quand la capacité est active.
 
 - [Les gates franchies par phase]({{ "/fr/reference/gates" | relative_url }})
 - [Les lentilles de revue adverse]({{ "/fr/reference/lens" | relative_url }})
-- [Le pipeline, vue d'ensemble]({{ "/fr/pipeline" | relative_url }})
+- [Le pipeline, vue d'ensemble]({{ "/fr/explanation/pipeline/" | relative_url }})

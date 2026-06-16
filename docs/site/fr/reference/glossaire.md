@@ -125,7 +125,7 @@ Méthode où les tests sont écrits *avant* le code. Cycle : Red (test qui écho
 
 **TTM (Time-to-Market)**
 Délai entre la définition d'une fonctionnalité et sa disponibilité en production. Indicateur clé pour les décideurs.
-→ Voir [Pour les décideurs]({{ "/fr/pour-decideurs" | relative_url }})
+→ Voir [Pour les décideurs]({{ "/fr/explanation/for-executives" | relative_url }})
 
 ## U
 

@@ -76,6 +76,6 @@ node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pag
 
 ## Voir aussi
 
-- [Customisation](/fr/customisation) — ce que vous pouvez adapter et les risques associés
-- [Le catalogue](/fr/catalogue/patterns) — tous les patterns avec leur référence
+- [Customisation]({{ "/fr/tutorials/customisation" | relative_url }}) — ce que vous pouvez adapter et les risques associés
+- [Les patterns]({{ "/fr/reference/patterns" | relative_url }}) — tous les patterns avec leur référence
 

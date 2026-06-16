@@ -40,4 +40,4 @@ review panel when the capability is active.
 
 - [Gates crossed per phase]({{ "/en/reference/gates" | relative_url }})
 - [The adversarial review lenses]({{ "/en/reference/lens" | relative_url }})
-- [The pipeline overview]({{ "/en/pipeline" | relative_url }})
+- [The pipeline overview]({{ "/en/explanation/pipeline/" | relative_url }})
