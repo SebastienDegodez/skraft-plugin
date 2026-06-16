@@ -60,6 +60,13 @@ relecteurs aux compétences complémentaires.
 - **Synthèse molle** : si la synthèse moyenne les verdicts au lieu de respecter les
   BLOCKER, une faille critique passe.
 
+## Pages de détail par lentille
+
+- **[architecture-boundaries-lens](lenses/architecture-boundaries-lens.html)** — direction des dépendances, Object Calisthenics, absence de mocks dans Domain/Application.
+- **[cold-reader-lens](lenses/cold-reader-lens.html)** — lecture sans contexte préalable, langage métier, clarté du nommage.
+- **[quality-gates-lens](lenses/quality-gates-lens.html)** — falsification du journal d'évidence contre l'arbre Git.
+- **[test-integrity-lens](lenses/test-integrity-lens.html)** — théâtre de test, règle d'or des tests, faux RED/GREEN.
+
 ## Pour aller plus loin
 
 - [Les gates franchies par phase](gates.html)

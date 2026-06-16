@@ -43,6 +43,41 @@ Adding a stack = +1 adapter, zero edits to the agents.
 - **contract-testing-dotnet** — baseline `WebApplicationFactory` + `HttpClient`
   always produced; Microcks verification layer added as an opt-in (.NET).
 
+### Backlog — DISCOVER & DISCUSS
+
+- **[github-search-protocol](github-search-protocol.html)** — build GitHub Search queries, paginate results, filter by labels/milestones/assignees.
+- **[issue-triage](issue-triage.html)** — assign labels, priority, effort estimates, detect duplicates, build a sprint proposal.
+- **[issue-refinement](issue-refinement.html)** — transform a raw issue into an INVEST user story with acceptance criteria, splitting patterns, DoR 8-items.
+- **[sprint-planning](sprint-planning.html)** — plan sprint content, prioritise stories, estimate capacity, analyse dependencies.
+
+### Architecture — DESIGN
+
+- **[architecture-decisions](architecture-decisions.html)** — document architecture decisions as ADRs, evaluate trade-offs, manage lifecycle.
+- **[architecture-patterns](architecture-patterns.html)** — Event Modeling, strategic & tactical DDD, Clean Architecture, CQRS, Event Sourcing.
+
+### Review criteria (Reviewers)
+
+- **[acceptance-review-criteria](acceptance-review-criteria.html)** — gates G1-G6 for DISTILL artefacts (Gherkin scenarios, test plans, implementation plans).
+- **[adversarial-review-lenses](adversarial-review-lenses.html)** — produce an adversarial verdict via 4 independent lenses and weighted synthesis (Genesis A7 pattern).
+- **[architecture-review-criteria](architecture-review-criteria.html)** — gates for DESIGN artefacts (event models, ADRs, diagrams, interface contracts).
+- **[discovery-review-criteria](discovery-review-criteria.html)** — gates G1-G6 for DISCOVER artefacts (triage reports, sprint proposals).
+- **[planning-review-criteria](planning-review-criteria.html)** — gates G1-G8 for DISCUSS artefacts (stories, acceptance criteria, sprint plans).
+
+### Tests & quality — DELIVER
+
+- **[bdd-methodology](bdd-methodology.html)** — write and structure BDD scenarios in Gherkin: Given/When/Then, Scenario Outline, Background, tag strategy.
+- **[mutation-testing](mutation-testing.html)** — kill surviving mutants, verify test quality via mutation score, analyse Stryker reports.
+- **[playwright-evidence](playwright-evidence.html)** — capture E2E evidence (screenshots, videos, traces) and store them in the SKRAFT tracking store.
+- **[quality-gates-dotnet](quality-gates-dotnet.html)** — `dotnet` / `stryker` commands and their mapping onto the evidence contract schema (.NET).
+- **[quality-gates-evidence-contract](quality-gates-evidence-contract.html)** — tech-agnostic structured evidence log schema attesting quality gates.
+- **[test-design-mandates](test-design-mandates.html)** — coverage matrices, Clean Architecture layer assignment, outside-in implementation order, Walking Skeleton.
+- **[test-refactoring-catalog](test-refactoring-catalog.html)** — refactor tests after GREEN: extract helpers, rename for business clarity, consolidate parametrised cases.
+
+### Stack resolution & routing
+
+- **[resolving-stack-commands](resolving-stack-commands.html)** — resolve the concrete command (build, test, mutation) from the detected stack; no agent hardcodes `dotnet test`.
+- **[skraft-difficulty-routing](skraft-difficulty-routing.html)** — evaluate the 3-axis routing (entry point, depth tier, difficulty tier) at DISCOVER exit.
+
 ## See also
 
 - [Architecture patterns]({{ "/en/reference/patterns" | relative_url }})

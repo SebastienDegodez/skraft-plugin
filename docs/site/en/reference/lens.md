@@ -60,6 +60,13 @@ complementary skills.
 - **Soft synthesis**: if the synthesis averages verdicts instead of honouring BLOCKERs,
   a critical flaw slips through.
 
+## Detail pages per lens
+
+- **[architecture-boundaries-lens](lenses/architecture-boundaries-lens.html)** — dependency direction, Object Calisthenics, no mocks in Domain/Application.
+- **[cold-reader-lens](lenses/cold-reader-lens.html)** — zero-context reading, business language, naming clarity.
+- **[quality-gates-lens](lenses/quality-gates-lens.html)** — falsifying the evidence log against the Git tree.
+- **[test-integrity-lens](lenses/test-integrity-lens.html)** — test theater, Iron Rule of tests, fake RED/GREEN.
+
 ## Going further
 
 - [Gates crossed per phase](gates.html)
