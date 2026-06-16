@@ -23,10 +23,14 @@ cd skraft-plugin
 
 ### 2. Installer le gestionnaire de paquets agents (optionnel)
 
-Si vous utilisez des plugins externes, installez [apm](https://github.com/anthropics/agent-package-manager) :
+Si vous utilisez des plugins externes, installez [apm — Agent Package Manager](https://github.com/microsoft/apm) :
 
 ```bash
-npm install -g @anthropic/apm
+# macOS / Linux
+curl -sSL https://aka.ms/apm-unix | sh
+# Windows : irm https://aka.ms/apm-windows | iex
+
+# puis, depuis la racine du dépôt (apm lit apm.yml) :
 apm install
 ```
 
