@@ -24,6 +24,7 @@ agents:
   - software-engineer-reviewer
 userInvocable: true
 metadata:
+  cost_role_class: reviewer  # B12 target class — routing only, never planner (genesis token-economy)
   genesis_patterns:
     - A5 PIPELINE
     - B4 PLAN MEMENTO

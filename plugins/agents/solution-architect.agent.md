@@ -5,6 +5,7 @@ model: inherit
 user-invocable: true
 tools: read/readFile, write/createFile, write/editFile, search/codebase
 metadata:
+  cost_role_class: planner  # B12 target class — cross-cutting reasoning warrants planner capacity (genesis token-economy)
   dispatched_by: skraft-orchestrator
   phase: DESIGN
   genesis_patterns:
