@@ -37,10 +37,10 @@
 
 ## Task 1 : Audit cache-invalidators (B13)
 
-- [ ] Grep des bodies d'agents + instructions chargées en prefix pour toute **date littérale / « Current date » / timestamp**. Lister les occurrences.
-- [ ] Confirmer qu'aucun agent ne mute son catalogue d'outils ni ne switche de modèle en cours de session.
-- [ ] Vérifier que l'orchestrateur charge ses instructions stables **avant** `state.json` (suffixe variable).
-- [ ] Consigner le résultat (PASS/occurrences) dans le spec.
+- [x] Grep des bodies d'agents + instructions chargées en prefix pour toute **date littérale / « Current date » / timestamp**. Lister les occurrences. → 0 date figée ; 2 templates dynamiques inoffensifs.
+- [x] Confirmer qu'aucun agent ne mute son catalogue d'outils ni ne switche de modèle en cours de session. → `tools:` statique ; `model: inherit` × 19.
+- [x] Vérifier que l'orchestrateur charge ses instructions stables **avant** `state.json` (suffixe variable). → `state.json` lu en Phase 0 via tool-read, instructions en metadata/prefix.
+- [x] Consigner le résultat (PASS/occurrences) dans le spec. → table d'audit ajoutée §1.
 
 ## Task 2 : Model-routing par primitive (B12)
 
