@@ -50,9 +50,9 @@
 
 ## Task 3 : Audit tool-surface (B15)
 
-- [ ] Pour chaque agent, comparer la frontmatter `tools:` au nombre réellement utilisé par appel.
-- [ ] Flag toute primitive voyant >20 outils et en utilisant <5 → proposer un sous-ensemble.
-- [ ] Prioriser les agents adossés à un large catalogue MCP.
+- [x] Pour chaque agent, comparer la frontmatter `tools:` au nombre réellement utilisé par appel. → surface max = 11 (`software-engineer`).
+- [x] Flag toute primitive voyant >20 outils et en utilisant <5 → proposer un sous-ensemble. → aucune ; toutes sous le seuil de 20.
+- [x] Prioriser les agents adossés à un large catalogue MCP. → aucun catalogue MCP large dans le plugin.
 
 ## Task 4 : `depthTier` comme gouverneur de coût (B16/B11)
 
