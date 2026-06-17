@@ -17,6 +17,7 @@ tools:
   - read
   - edit
   - execute
+  - context-engine/*
 agents:
   - skraft-docs-placement-architect
   - skraft-docs-derived-writer
