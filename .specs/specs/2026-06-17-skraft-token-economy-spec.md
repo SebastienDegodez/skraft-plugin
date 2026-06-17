@@ -90,6 +90,8 @@ Lier chaque primitive à sa classe (table ci-dessus). Anti-pattern à surveiller
 
 Auditer la frontmatter `tools:` de chaque agent : si une primitive voit >20 outils mais en utilise <5 par appel, réduire le catalogue exposé (il fait partie du prefix, payé chaque tour). L'orchestrateur (`agent, read, edit, execute`) et les reviewers (read-only) sont déjà étroits ; cibler surtout les agents avec MCP large.
 
+**Résultat d'audit B15 (Task 3) — PASS, aucune réduction nécessaire.** Surface d'outils max = **11** (`software-engineer`), sous le seuil de 20. Aucun catalogue MCP large. Distribution : software-engineer 11, acceptance-designer 9, workers 7, agents de phase 4, orchestrateur 4 (liste YAML : `agent`, `read`, `edit`, `execute`), reviewers/lenses 2 (read-only). Surfaces déjà conformes B15.
+
 ### 5 & 6. EFFORT GOVERNOR (B16) + FOLD-BY-DEFAULT (B11) via `depthTier`
 
 Le `depthTier` (`basic`/`standard`/`comprehensive`) **est déjà** un gouverneur d'effort : il pilote le nombre de lenses (1/2/4), les seuils de mutation, le gate Gherkin. C'est l'instrument B16/B11 de SKRAFT. Mandat : documenter ce rôle de levier de coût (pas seulement de qualité) et garder `comprehensive` réservé au code critique.
