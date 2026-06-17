@@ -12,7 +12,7 @@ After the decision table, the composition guide shows which patterns work well t
 
 | Problem | Recommended Pattern | When NOT to use | Notes |
 |---|---|---|---|
-| Simple CRUD entity — create, read, update, delete with no complex rules | Clean Architecture + Repository | Do not add CQRS, Event Sourcing, or DDD Tactical overhead | Implement as a use case with a thin domain model; skip aggregates if there are no invariants |
+| Simple CRUD entity — create, read, update, delete with no complex rules | Clean Architecture + Repository | Do not add CQRS, Event Sourcing, or DDD Tactical overhead | Implement as a use case with a thin domain model; skip aggregates if there are no invariants. The use case owns the aggregate → ViewModel mapping; the domain entity must not reference the ViewModel. Read [`read-store-pattern.md`](read-store-pattern.md) if a separate read-side interface (`IXxxReadStore`) is being considered. |
 | Complex business rules with non-trivial invariants | DDD Tactical: Aggregate + Specification | Do not use anemic domain model; do not put invariant logic in application services | Identify the consistency boundary first; invariants justify the aggregate |
 | Regulatory or business audit trail required | Event Sourcing | Only apply if the history of state changes has real business value; do not apply to supporting or generic subdomains | Requires infrastructure investment; pair with an event store |
 | Multiple diverging read models for the same data | CQRS with purpose-built projections | Not needed when the read and write shapes are nearly identical | Read models are disposable; they can be rebuilt from events or from the write database |
