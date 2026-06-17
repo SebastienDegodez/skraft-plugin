@@ -507,11 +507,11 @@
         title: "Pipeline SDLC - Agents et déclenchements",
         subtitle: "Chaque slide montre un agent (ou lens), ce qu'il fait, ce qui le déclenche, et ce qu'il déclenche ensuite.",
         role: [
-          "Point d'entree unique: /sdlc",
-          "Pipeline stateful: state.md pilote la reprise",
+          "Point d'entree unique: /skraft",
+          "Pipeline stateful: state.json pilote la reprise",
           "Boucle stricte: specialist -> reviewer -> verdict"
         ],
-        trigger: "Utilisateur lance /sdlc",
+        trigger: "Utilisateur lance /skraft",
         does: "L'orchestrateur route la phase courante",
         output: "Dispatch specialist + reviewer + update state",
         next: "Phase suivante ou escalade"
@@ -916,6 +916,48 @@
         gates: [
           ["G11", "Controle la clarte du langage metier dans les tests et le code.", "medium"]
         ]
+      },
+      {
+        phase: "ORCHESTRATOR",
+        title: "Agent skraft-orchestrator",
+        subtitle: "Point d'entree unique /skraft — sequence les 5 phases, gere les retries et la reprise.",
+        role: [
+          "Charge state.json via protocole 6-etapes",
+          "Dispatche les specialists + reviewers",
+          "Evalue la difficulte en sortie DISCOVER (3 axes)"
+        ],
+        trigger: "Utilisateur lance /skraft",
+        does: "Route la phase courante, collecte les verdicts, met a jour state.json",
+        output: "Dispatch specialist + reviewer + update state.json",
+        next: "Phase suivante ou escalade utilisateur si max retries depasse"
+      },
+      {
+        phase: "DELIVER WORKER",
+        title: "Sous-agent: contract-testing-worker",
+        subtitle: "Sous-agent interne du software-engineer — produit le test de contrat cote fournisseur.",
+        role: [
+          "Resout le stack via contract-testing-roster",
+          "Produit WebApplicationFactory + HttpClient (baseline)",
+          "Optionnel : ajoute la couche Microcks TestEndpointAsync"
+        ],
+        trigger: "Fan-out du software-engineer (DELIVER)",
+        does: "Retourne un bloc JSON structure (stack, microcks, files[], testCommand) — pas de commit",
+        output: "Wiring du test de contrat pret a integrer par le lead",
+        next: "software-engineer integre et commite"
+      },
+      {
+        phase: "DELIVER WORKER",
+        title: "Sous-agent: mock-integration-worker",
+        subtitle: "Sous-agent interne du software-engineer — resout la strategie de mock et emet le wiring d'integration.",
+        role: [
+          "Resout (strategie x stack) via mocking-strategy-roster",
+          "Microcks par defaut, overridable in-process (FakeItEasy / NSubstitute / Moq)",
+          "Emet le wiring WebApplicationFactory + mock URL"
+        ],
+        trigger: "Fan-out du software-engineer (DELIVER)",
+        does: "Retourne un bloc JSON structure (strategy, stack, files[], testCommand) — pas de commit",
+        output: "Mock wiring pret a integrer par le lead",
+        next: "software-engineer integre et commite"
       },
       {
         phase: "Wrap-up",
