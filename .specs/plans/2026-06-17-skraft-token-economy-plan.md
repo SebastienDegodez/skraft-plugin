@@ -56,8 +56,8 @@
 
 ## Task 4 : `depthTier` comme gouverneur de coût (B16/B11)
 
-- [ ] Ajouter dans `skraft-state.instructions.md` et `skraft-difficulty-routing/SKILL.md` une note : `depthTier` pilote l'**effort et le coût** (lenses 1/2/4, seuils mutation, gate Gherkin), pas seulement la qualité.
-- [ ] Rappeler la règle : `comprehensive` réservé au code critique ; `basic`/`standard` réduisent fan-out et output.
+- [x] Ajouter dans `skraft-state.instructions.md` et `skraft-difficulty-routing/SKILL.md` une note : `depthTier` pilote l'**effort et le coût** (lenses 1/2/4, seuils mutation, gate Gherkin), pas seulement la qualité.
+- [x] Rappeler la règle : `comprehensive` réservé au code critique ; `basic`/`standard` réduisent fan-out et output.
 
 ## Task 5 : Output tax — confirmer la délégation hors-LLM
 
