@@ -5,6 +5,7 @@ model: inherit
 user-invocable: false
 tools: execute/testFailure, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runInTerminal, read/readFile, agent, edit/createDirectory, edit/createFile, edit/editFiles, search/codebase
 metadata:
+  cost_role_class: implementer  # B12 target class — bounded by the edit, follows the impl-plan (genesis token-economy)
   dispatched_by: skraft-orchestrator
   phase: DELIVER
   skills:

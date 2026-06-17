@@ -84,6 +84,8 @@ Les phases qui émettent de longs artefacts (software-engineer : code ; acceptan
 
 Lier chaque primitive à sa classe (table ci-dessus). Anti-pattern à surveiller : reviewer **silencieusement promu** planner-class. La résolution classe→modèle concret vit dans l'adaptateur per-harness, pas dans les bodies.
 
+**Résultat d'annotation B12 (Task 2) — DONE.** Champ `metadata.cost_role_class` ajouté en frontmatter sur les **19** primitives (commentaire inline `# B12 …`), parse `yq` validé. Distribution : **1 planner** (`solution-architect`), **6 implementer** (`backlog-discoverer`, `backlog-planner`, `acceptance-designer`, `software-engineer`, `contract-testing-worker`, `mock-integration-worker`), **12 reviewer** (5 reviewers de phase + 4 reviewer-lenses + 2 worker fidelity-lenses + l'orchestrateur). Aucun reviewer promu planner. L'annotation est une **cible** ; la résolution classe→modèle reste à l'adaptateur per-harness.
+
 ### 4. TOOL SUBSET (B15)
 
 Auditer la frontmatter `tools:` de chaque agent : si une primitive voit >20 outils mais en utilise <5 par appel, réduire le catalogue exposé (il fait partie du prefix, payé chaque tour). L'orchestrateur (`agent, read, edit, execute`) et les reviewers (read-only) sont déjà étroits ; cibler surtout les agents avec MCP large.

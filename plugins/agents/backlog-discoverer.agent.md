@@ -5,6 +5,7 @@ model: inherit
 user-invocable: true
 tools: read/readFile, write/createFile, write/editFile, search/codebase
 metadata:
+  cost_role_class: implementer  # B12 target class (genesis token-economy)
   dispatched_by: skraft-orchestrator
   phase: DISCOVER
   genesis_patterns:

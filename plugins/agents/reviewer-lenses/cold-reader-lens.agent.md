@@ -3,6 +3,8 @@ name: cold-reader-lens
 description: "Reviewer lens: reads code and tests with zero prior context. Verifies business language, naming clarity, and intent visibility."
 model: inherit
 tools: read/readFile, search/codebase
+metadata:
+  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
 ---
 
 # Cold Reader Lens
