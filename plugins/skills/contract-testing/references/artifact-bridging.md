@@ -4,10 +4,10 @@
 
 | Phase | Artifact type | File path | Naming rule |
 |---|---|---|---|
-| DESIGN | OpenAPI 3.1 contract | `.skraft/sdlc/design/contracts/{name}.yaml` | kebab-case, resource-centric |
-| DESIGN | AsyncAPI 2.6.0 contract | `.skraft/sdlc/design/contracts/{name}-events.yaml` | kebab-case, `-events` suffix |
-| DISTILL | Microcks examples | `.skraft/sdlc/distill/contracts/{name}.apiexamples.yaml` | same stem as DESIGN contract |
-| DISTILL | Microcks metadata | `.skraft/sdlc/distill/contracts/{name}.apimetadata.yaml` | same stem as DESIGN contract |
+| DESIGN | OpenAPI 3.1 contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.yaml` | kebab-case, resource-centric |
+| DESIGN | AsyncAPI 2.6.0 contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.yaml` | kebab-case, `-events` suffix |
+| DISTILL | Microcks examples | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.apiexamples.yaml` | same stem as DESIGN contract |
+| DISTILL | Microcks metadata | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}.apimetadata.yaml` | same stem as DESIGN contract |
 | DELIVER | Test imports | Copied to `tests/{Project}/contracts/` via `.csproj` content items | mirrors DISTILL structure |
 
 **Stem rule:** the filename stem (without extension) is identical across all three phases.
@@ -70,14 +70,16 @@ Declare contracts as content files in the test `.csproj` to copy them to the out
 Reference them in `MicrocksBuilder` using relative paths from the output root:
 
 ```csharp
-new MicrocksBuilder()
-    .WithMainArtifact("contracts/eligibility-check-api.yaml")
-    .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-    .WithMainArtifact("contracts/eligibility-check-api.apimetadata.yaml")
-    .BuildAsync();
+var microcks = new MicrocksBuilder()
+    .WithMainArtifacts(
+        "contracts/eligibility-check-api.yaml",
+        "contracts/eligibility-check-api.apiexamples.yaml",
+        "contracts/eligibility-check-api.apimetadata.yaml")
+    .Build();
+await microcks.StartAsync();
 ```
 
-**Loading order is mandatory:** schema (`.yaml`) → examples (`.apiexamples.yaml`) → dispatcher (`.apimetadata.yaml`).
+**Loading order is mandatory:** schema (`.yaml`) → examples (`.apiexamples.yaml`) → dispatcher (`.apimetadata.yaml`), all in one `WithMainArtifacts` call.
 
 ---
 
@@ -85,9 +87,9 @@ new MicrocksBuilder()
 
 When the orchestrator transitions from DESIGN → DISTILL, it:
 
-1. Reads all `.yaml` files under `.skraft/sdlc/design/contracts/`.
-2. For each contract, creates a skeleton `.apiexamples.yaml` in `.skraft/sdlc/distill/contracts/`.
-3. Creates a skeleton `.apimetadata.yaml` in `.skraft/sdlc/distill/contracts/`.
+1. Reads all `.yaml` files under `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
+2. For each contract, creates a skeleton `.apiexamples.yaml` in `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
+3. Creates a skeleton `.apimetadata.yaml` in `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/`.
 4. Populates examples from OpenAPI `operationId` entries (one example per response code per operation).
 5. Selects default dispatcher (`JSON_BODY` for POST with body, none for GET/DELETE).
 
@@ -106,7 +108,7 @@ A version bump is required on any breaking change to a contract. Execute atomica
 ### Step 1 — Update the OpenAPI/AsyncAPI contract
 
 ```yaml
-# In .skraft/sdlc/design/contracts/eligibility-check-api.yaml
+# In .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.yaml
 info:
   version: 2.0.0   # ← bumped from 1.0.0
 ```
@@ -114,27 +116,28 @@ info:
 ### Step 2 — Update both DISTILL artifacts
 
 ```yaml
-# In .skraft/sdlc/distill/contracts/eligibility-check-api.apiexamples.yaml
+# In .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apiexamples.yaml
 metadata:
   name: "Eligibility Check API - 2.0.0"   # ← must match exactly
 
-# In .skraft/sdlc/distill/contracts/eligibility-check-api.apimetadata.yaml
+# In .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apimetadata.yaml
 metadata:
   name: "Eligibility Check API - 2.0.0"   # ← must match exactly
 ```
 
-### Step 3 — Update VerifyAsync calls in tests
+### Step 3 — Update the ServiceId in conformance tests
 
 ```csharp
 // In MonAssurance.IntegrationTests
-var result = await _microcks.VerifyAsync("Eligibility Check API", "2.0.0");
+var request = new TestRequest { ServiceId = "Eligibility Check API:2.0.0", /* ... */ };
 //                                                                  ↑ bumped
+var result = await _microcks.TestEndpointAsync(request);
 ```
 
-### Step 4 — Update GetRestMockUrl calls
+### Step 4 — Update GetRestMockEndpoint calls
 
 ```csharp
-var mockUrl = _microcks.GetRestMockUrl("Eligibility Check API", "2.0.0");
+Uri mockUrl = _microcks.GetRestMockEndpoint("Eligibility Check API", "2.0.0");
 ```
 
 ### Step 5 — Commit atomically
@@ -150,7 +153,7 @@ All four changes (design contract, examples, metadata, test code) must appear in
 | Stem matches across phases | `eligibility-check-api` in DESIGN, DISTILL, and DELIVER |
 | `metadata.name` = `{info.title} - {info.version}` | `"Eligibility Check API - 1.0.0"` |
 | REST mock URL name = `info.title` (URL-encoded) | `Eligibility+Check+API` in URL |
-| Version in `GetRestMockUrl` = `info.version` | `"1.0.0"` (string, not semver object) |
+| Version in `GetRestMockEndpoint` = `info.version` | `"1.0.0"` (string, not semver object) |
 | AsyncAPI stems get `-events` suffix | `monassurance-events-api` |
 
 ---

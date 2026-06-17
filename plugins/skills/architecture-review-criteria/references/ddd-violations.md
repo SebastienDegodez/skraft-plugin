@@ -163,3 +163,41 @@ eligibility.Check(driverHistory, riskScore, requestedAt)
 **Severity:** MEDIUM — the aggregate loses its role as the invariant guardian; the service is a sign of an anemic aggregate.
 
 **Correct approach:** Move the logic back into the aggregate. Domain Services are appropriate for logic that involves multiple aggregates or genuinely cross-cutting domain concerns. Single-aggregate logic belongs in the aggregate.
+
+---
+
+## V-DDD-09: Core Subdomain in a Conformist Relationship
+
+**ID:** V-DDD-09
+**Severity:** HIGH
+
+**Description:** A bounded context classified as a **Core** subdomain is declared as the downstream of a `Conformist` relationship. Conformist surrenders control of the downstream's Ubiquitous Language to the upstream. A Core subdomain is the business's competitive advantage and must never let its language be dictated by another context.
+
+**How to detect in artefacts:**
+- Context map shows `Conformist` on an arrow whose downstream context is classified `Core` in the subdomain classification (cross-check context-map.md against the subdomain table)
+- An ADR justifies a Conformist relationship for a context the same ADR (or a sibling ADR) calls Core / the competitive heart of the business
+- The ADR claims Conformist while simultaneously describing protection of the downstream model ("local copy preferred over a direct dependency on the upstream domain") — protection contradicts Conformist (see also V-DDD-10)
+
+**Severity:** HIGH — Conformist sends the wrong architectural signal for a Core subdomain and invites upstream concepts to leak into the differentiating domain. Conformist is reserved for Supporting or Generic downstreams that cannot justify the translation cost.
+
+**Correct approach:** Relabel the relationship as an **Anti-Corruption Layer** on the downstream side, ideally consuming an **Open Host Service / Published Language** exposed by the upstream. The Core context translates the upstream contract into its own types at the boundary and never depends on the upstream domain model.
+
+**Auto-insurance example:** A `SubscriptionContext` classified Core is declared `Conformist` to `EligibilityContext`. Because Subscription is the differentiating domain, the relationship must be an ACL — Subscription reads a published `EligibilityViewModel` (OHS/PL) and maps it to its own types, protecting the subscription Ubiquitous Language.
+
+---
+
+## V-DDD-10: Conformist Mislabel (Published Contract + Local Copy)
+
+**ID:** V-DDD-10
+**Severity:** MEDIUM
+
+**Description:** A relationship is labelled `Conformist`, but the artefacts describe the downstream consuming a stable **published contract** (a ViewModel, event schema, or DTO) rather than the upstream's domain entities, and keeping a **local copy or translation**. That combination is **Open Host Service / Published Language** on the upstream side plus an **Anti-Corruption Layer** on the downstream side — not Conformist.
+
+**How to detect in artefacts:**
+- The relationship is labelled `Conformist`, yet the contract consumed is an explicit public view type (e.g. `EligibilityViewModel`, an integration event) and not the upstream aggregate/entity
+- The ADR or context map states the downstream keeps a "local copy" or "copies into" its own model, or maps the contract into its own types at the boundary
+- The trade-offs section justifies avoiding a "direct dependency on the upstream domain" — a defining property of an ACL, not Conformist
+
+**Severity:** MEDIUM — the terminology misrepresents the actual integration and sends a misleading architectural signal. The structure is correct; only the label is wrong.
+
+**Correct approach:** Relabel: upstream side is **Open Host Service + Published Language** (it publishes a stable contract and hides its domain); downstream side is an **Anti-Corruption Layer** (it translates/copies the contract into its own model). "The translation is trivial today" does not make it Conformist — the isolation is structural. If the downstream is Core, see also V-DDD-09.

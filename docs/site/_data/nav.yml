@@ -1,0 +1,32 @@
+# nav.yml — barre de navigation du haut
+# Format unifié url/label/icon (compatible site-nav.html).
+# Portes bilingues rendues via item.url_fr / item.url_en + item.label_fr / item.label_en.
+# La marque SKRAFT et le toggle de langue sont rendus en dur par le layout.
+
+# --- Le handbook (entrée dans le livre) ---------------------------------
+- label_fr: "Le handbook"
+  label_en: "The handbook"
+  url_fr: "/fr/explanation/pipeline/"
+  url_en: "/en/explanation/pipeline/"
+  icon: "fa-solid fa-book-open"
+
+# --- Porte décideurs ----------------------------------------------------
+- label_fr: "Pour décideurs"
+  label_en: "For executives"
+  url_fr: "/fr/explanation/for-executives"
+  url_en: "/en/explanation/for-executives"
+  icon: "fa-solid fa-chart-line"
+
+# --- Porte praticien ----------------------------------------------------
+- label_fr: "Démarrer"
+  label_en: "Get started"
+  url_fr: "/fr/tutorials/getting-started"
+  url_en: "/en/tutorials/getting-started"
+  icon: "fa-solid fa-rocket"
+
+# --- Tableau de bord des tests (app statique plein écran) ----------------
+- label_fr: "Tableau de bord"
+  label_en: "Dashboard"
+  url_fr: "/dashboard/"
+  url_en: "/dashboard/"
+  icon: "fa-solid fa-gauge-high"

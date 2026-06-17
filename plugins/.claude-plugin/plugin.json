@@ -1,0 +1,8 @@
+{
+  "name": "skraft",
+  "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture and the DISCOVER→DELIVER workflow.",
+  "version": "1.0.0",
+  "author": {
+    "name": "SebastienDegodez"
+  }
+}

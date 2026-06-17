@@ -1,11 +1,13 @@
 lockfile_version: '1'
-generated_at: '2026-05-11T18:54:07.017205+00:00'
-apm_version: 0.12.4
+generated_at: '2026-06-15T23:10:39.560000+00:00'
+apm_version: 0.15.0
 dependencies:
 - repo_url: danielmeppiel/genesis
   host: github.com
-  resolved_commit: 16a5027d6cdc23c0fd9df21f65e21fa0f681d722
-  package_type: skill_bundle
+  resolved_commit: 18e73c35e5cefaf431fbe4e080e8f125ebfece33
+  virtual_path: skills/genesis
+  is_virtual: true
+  package_type: claude_skill
   deployed_files:
   - .agents/skills/genesis
-  content_hash: sha256:4f28e525c755aa538ed7aabd8e69cdd14c62c57b19cbfc37ddca5b0707f34730
+  content_hash: sha256:56d0bc50fc92bca28618f717dfc8b5b8467d69967f7d2eab2c08f414f142feb3

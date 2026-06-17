@@ -1,0 +1,49 @@
+# Pipeline 5D — phase DISCOVER (LIVE, l'agent produit réellement)
+#
+# DÉMARCHE :
+#   1. On part du squelette Clean Architecture VIDE (`clean-architecture-app`),
+#      sans aucune feature. Pas de checkpoint : DISCOVER est la 1re phase.
+#   2. L'ISSUE du sujet `order` est envoyée DANS LE PROMPT — c'est elle qui dit
+#      quel code doit être produit.
+#   3. L'orchestrateur exécute DISCOVER et PRODUIT son triage.
+#   4. On vérifie que l'attendu a bien été réalisé (triage + review APPROVED).
+#
+# RÈGLE ABSOLUE : on n'archive JAMAIS sur le repo ce que l'agent produit.
+#   Le run s'exécute dans un clone éphémère (supprimé à la fin) ; la fixture
+#   committée reste le squelette vide.
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/order-checkout/01-DISCOVER \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DISCOVER triage l'issue order et obtient un review APPROVED"
+    tags: [discover, pipeline, simulation, live]
+    workspace:
+      # Squelette vide seul : DISCOVER démarre sur la Clean Architecture sans feature.
+      fixture: clean-architecture-app
+    prompt: >
+      Start the SKRAFT pipeline for this GitHub issue:
+
+      ───────────────────────────────────────────────────────────
+      Issue #42 — Order checkout with loyalty discount
+      As a customer, when I check out an order, the payable total must reflect a
+      discount based on my loyalty tier: Green 0%, Gold 5%, Platinum 10%.
+      An unknown order returns a not-found error.
+      ───────────────────────────────────────────────────────────
+
+      Run ONLY the DISCOVER phase, then stop once its reviewer returns APPROVED.
+    assertions:
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/state.json"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/research/**/*-research.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/discover-*-review.md"
+          text: "APPROVED"
+      - file_judge:
+          glob: ".copilot-tracking/skraft-plans/*/research/**/*-research.md"
+          criterion: >
+            The discovery artefact triages issue #42 — building an order checkout
+            that applies a loyalty-tier discount — and is grounded in the empty
+            Clean Architecture skeleton it must populate (Domain/Application/Api).

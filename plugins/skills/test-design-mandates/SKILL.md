@@ -72,31 +72,44 @@ Outcome (Then)  → observable business result (not internal state)
 
 ---
 
-## Mandate 4 — Pure Function Extraction Before Fixtures
+## Mandate 4 — Domain Test Extraction (Gated)
 
-**Rule:** Before creating complex test fixtures or test factories, identify pure domain functions and extract them. Parameterize only the adapter layer.
+**Default rule:** Acceptance tests do the work. **No domain unit test by default**, even when a pure function is extracted by refactoring. A regression that breaks 2+ AC together is the correct business signal — the duplicated red is the proof that the rule traverses multiple user journeys, not a redundancy to eliminate.
 
-**Process:**
-1. Identify logic that is a pure function (input → output, no side effects)
-2. Extract it as a named domain policy or specification
-3. Write a focused domain unit test for it using its public signature
-4. The Application acceptance test exercises it indirectly through the use case
+**Anti-pattern this rule prevents — DOUBLE-COVERAGE:** A pure function whose every behavioral branch is already reached by planned acceptance scenarios MUST NOT receive a dedicated domain test. Two suites asserting the same behavior drift together on every rule change and add zero failure-discrimination value.
 
-**Result:** Fixtures become thin. Complex setup = signal that a pure function should be extracted.
+**A domain unit test is REQUIRED if and only if one of the two gates opens:**
+
+- **Gate (a) — Branch unreachable via AC.** A behavioral branch of the function exists but no realistic acceptance scenario can trigger it (defensive case, exhaustive-enum fallback, technical guard). The AC physically CANNOT observe it.
+- **Gate (b) — Combinatorial economy.** Covering the input grid through AC alone would explode the Gherkin scenario count (indicative threshold: > 10–15 scenarios for a single rule). Keep 3–5 representative business AC (happy path + key rejections + critical boundaries) and delegate combinatorial sweep to a parameterized domain test (`[Theory]`, `@ParameterizedTest`, table-driven).
+
+**No gate opens → REJECT extraction.** Record in the test plan: `M4 negative — saturated by AC`.
+
+**Process for each candidate pure function P:**
+1. Enumerate `B(P)` — distinct behavioral branches of P.
+2. Enumerate `A(P)` — branches reached by planned AC scenarios.
+3. If `A(P) == B(P)` AND combinatorial size ≤ 10–15 → **forbidden to extract**, log `M4 negative — saturated by AC`.
+4. Otherwise, name which gate opens and record the corresponding `Extraction Reason` code.
+
+**Counter-example (STORY-41 contrefactual):** `Vehicle.MinimumAge()` has `B(P) = {21, 16}`. Five planned AC reach both outputs, so `A(P) == B(P)`. Combinatorial size = 3 cases, well under threshold. **Both gates closed → no domain test.** The 5 AC do all the work; if `MinimumAge()` breaks, all 5 turn red — that is the intended business signal.
 
 ---
 
 ## Coverage Matrix
 
-Build this matrix for every story before implementation starts.
+Build this matrix for every story before implementation starts. **Any row with `Layer = Domain` MUST carry an `Extraction Reason` code** (see Mandate 4). Without a reason code, the row is not authorized — remove it.
 
-| Scenario | Use Case Boundary | Layer | Double Type | Walking Skeleton | Priority |
-|---|---|---|---|---|---|
-| Happy path — driver eligible | `CheckEligibilityUseCase` | Application | InMemory repository | A | P1 |
-| Edge — driver at age limit | `CheckEligibilityUseCase` | Application | InMemory repository | A | P1 |
-| Rejection — too many accidents | `CheckEligibilityUseCase` | Application | InMemory repository | A | P2 |
-| Complex invariant — age + licence | `EligibilityPolicy` (domain) | Domain | None (pure function) | — | P2 |
-| Infrastructure — real persistence | `IEligibilityRepository` | Infrastructure | Real DB (Testcontainers) | — | P3 |
+Allowed `Extraction Reason` codes:
+- `branch_unreachable_via_AC` — Gate (a)
+- `combinatorial_economy` — Gate (b)
+
+| Scenario | Use Case Boundary | Layer | Extraction Reason | Double Type | Walking Skeleton | Priority |
+|---|---|---|---|---|---|---|
+| Happy path — driver eligible | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P1 |
+| Edge — driver at age limit | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P1 |
+| Rejection — too many accidents | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P2 |
+| Combinatorial sweep — premium grid | `PricingPolicy.computePremium` | Domain | `combinatorial_economy` | None (pure function) | — | P2 |
+| Infrastructure — real persistence | `IEligibilityRepository` | Infrastructure | — | Real DB (Testcontainers) | — | P3 |
 
 **Priority:**
 - P1 — happy path, walking skeleton basis

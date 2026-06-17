@@ -1,0 +1,16 @@
+{
+  "name": "skraft",
+  "owner": {
+    "name": "SebastienDegodez"
+  },
+  "interface": {
+    "displayName": "SKRAFT SDLC Pipeline"
+  },
+  "plugins": [
+    {
+      "name": "skraft",
+      "source": "./plugins",
+      "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture and the DISCOVER→DELIVER workflow."
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+---
+layout: doc
+lang: fr
+title: "test-design-mandates"
+description: "Use when designing test coverage matrices, assigning tests to Clean Architecture layers, planning the outside-in impl..."
+persona: tech-lead
+---
+
+# test-design-mandates
+
+> Quatre règles obligatoires qui régissent la conception des tests dans un contexte Clean Architecture — chargées après l'écriture des scénarios Gherkin, avant toute implémentation.
+
+## Quand l'utiliser
+
+- Après la validation des scénarios Gherkin (sortie de DISTILL)
+- Pour concevoir la matrice de couverture avant l'implémentation
+- Pour décider si un test unitaire de domaine est autorisé (Mandate 4)
+- Pour planifier l'ordre d'implémentation outside-in et la Walking Skeleton
+
+## Contrat d'entrée
+
+- Scénarios Gherkin validés par l'utilisateur
+- Architecture Clean Architecture identifiée (Domain / Application / Infrastructure / API)
+- `state.json::userPreferences.depthTier` pour le niveau de rigueur
+
+## Contrat de sortie
+
+- Matrice de couverture par story avec colonnes : Scénario, Use Case Boundary, Layer, Extraction Reason, Double Type, Walking Skeleton, Priority
+- Chaque ligne Domain portant un code `Extraction Reason` valide (`branch_unreachable_via_AC` ou `combinatorial_economy`), ou supprimée
+- Ordre d'implémentation P1 (Walking Skeleton) → P2 (règles métier) → P3 (infrastructure)
+
+## Invariants
+
+- **M1 — Frontière de use case** — tout test d'Application entre par le use case ; jamais d'instanciation directe d'une classe interne de domaine
+- **M2 — Abstraction du langage métier** — trois couches strictes : Gherkin (métier pur) / Step methods (pont) / Business services (technique) ; aucun vocabulaire technique ne remonte vers Gherkin
+- **M3 — Complétude du parcours utilisateur** — chaque scénario inclut Setup (Given) + Action (When, une seule) + Observable Outcome (Then)
+- **M4 — Extraction de domaine conditionnelle par défaut interdite** — pas de test unitaire de domaine sauf si la porte (a) branche inaccessible via AC ou (b) économie combinatoire s'ouvre
+- **TBU interdit** — aucun code de production non câblé via le root de composition ; les tests d'acceptance valident le câblage réel
+
+## Pourquoi cette forme
+
+Les tests entrent par une frontière de use case et assertent à la prochaine frontière visible. Cette règle prévient les défauts TBU (Tested But Unwired) — du code qui fonctionne en isolation mais n'est jamais appelé via le vrai root de composition.
+
+> « Grow the application outside-in, letting the tests guide the internal design. »
+> — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
+
+La règle M4 évite la double couverture : deux suites assertant le même comportement divergent à chaque changement de règle, sans valeur discriminante supplémentaire.
+
+## Customisation autorisée
+
+- Seuil combinatoire M4 (indicatif 10–15 scénarios, ajustable en `custom`) (L2)
+- Codes `Extraction Reason` additionnels pour des cas d'infrastructure spéciaux (L3, changement de schéma)
+
+## Voir aussi
+
+- [outside-in-tdd]({{ "/fr/reference/skills/outside-in-tdd" | relative_url }}) — Cycle TDD double-boucle
+- [bdd-methodology]({{ "/fr/reference/skills/bdd-methodology" | relative_url }}) — Écriture des scénarios Gherkin
+- [clean-architecture-testing]({{ "/fr/reference/skills/clean-architecture-testing" | relative_url }}) — Tests par couche Clean Architecture
+- [acceptance-designer]({{ "/fr/reference/agents/acceptance-designer" | relative_url }}) — Agent DISTILL qui produit la matrice

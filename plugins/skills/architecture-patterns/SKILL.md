@@ -117,6 +117,25 @@ A Bounded Context is the explicit boundary within which a domain model applies. 
 | **Open Host Service** | Upstream publishes a versioned API | When many downstreams consume the same upstream | API versioning discipline required |
 | **Published Language** | Open Host Service uses a shared language (e.g., events schema) | Event-driven integration between contexts | Schema governance needed |
 
+### Context Mapping Selection Rules
+
+Apply these rules **before** labelling any arrow on the context map. They constrain which relationship is admissible, independently of how trivial the integration looks today.
+
+**Rule 1 — A Core subdomain is never Conformist.** Conformist means the downstream submits to the upstream's model with no isolation layer, surrendering control of its own Ubiquitous Language. That is acceptable only for **Supporting** or **Generic** downstreams that cannot justify the translation cost. A **Core** subdomain is the competitive advantage; its language must be protected from upstream pollution. If the downstream is Core, the relationship is an **ACL** (ideally with the upstream exposing an Open Host Service / Published Language) — never Conformist.
+
+**Rule 2 — Consuming a published contract is not Conformist.** Conformist requires consuming the upstream's *internal domain model* directly. If the upstream exposes a stable, simplified, public contract (a ViewModel, an event schema, a DTO) and hides its domain entities, the upstream is providing an **Open Host Service + Published Language**. The downstream reading that contract is *not* conformist to the upstream domain.
+
+**Rule 3 — A local copy or translation is an ACL.** If the downstream keeps its own copy of the consumed data, or translates the upstream contract into its own types at the boundary — even a trivial translation such as reading a single boolean — that boundary **is** an Anti-Corruption Layer (Translation Layer). "The translation is trivial today" does not downgrade it to Conformist; the protection is structural, not proportional to current translation effort.
+
+**Decision table — Conformist vs ACL vs OHS/PL:**
+
+| Observation in the design | Correct label |
+|---|---|
+| Downstream imports upstream domain entities directly, no translation layer | **Conformist** (admissible only when downstream is Supporting/Generic) |
+| Upstream exposes a stable public contract (ViewModel/event/DTO), hides its domain | **Open Host Service + Published Language** (upstream side) |
+| Downstream translates or copies that contract into its own types at the boundary | **Anti-Corruption Layer** (downstream side) |
+| Downstream is a **Core** subdomain | **ACL** — Conformist is forbidden regardless of translation effort |
+
 ### Subdomain Classification
 
 | Subdomain | Definition | Investment | Examples in auto insurance |

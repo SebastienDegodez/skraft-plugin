@@ -3,3 +3,16 @@
 apm_modules/
 .DS_Store
 plugins/.DS_Store
+
+# Node / Playwright (dev-only site smoke tests)
+node_modules/
+package-lock.json
+test-results/
+playwright-report/
+/_site/
+docs/site/_site/
+docs/site/.jekyll-cache/
+
+# Docs-drift reconciler — ephemeral runtime ledger (never committed)
+.skraft-docs/
+.github/aw/logs/

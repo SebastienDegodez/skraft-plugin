@@ -1,0 +1,87 @@
+{%- comment -%}
+Shared top navigation (inspired by learning-path-copilot): branded logo with
+GitHub icon, responsive burger, icon-prefixed links, language toggle.
+{%- endcomment -%}
+<nav class="site-nav" aria-label="{% if page.lang == 'en' %}Main navigation{% else %}Navigation principale{% endif %}">
+  <a class="site-nav__brand" href="{{ '/' | relative_url }}">
+    <i class="fa-solid fa-cubes-stacked" aria-hidden="true"></i>
+    SK<span>RAFT</span>
+  </a>
+
+  <button class="site-nav__burger" id="navBurger" aria-label="{% if page.lang == 'en' %}Menu{% else %}Menu{% endif %}" aria-expanded="false" aria-controls="navLinks">
+    <i class="fa-solid fa-bars" aria-hidden="true"></i>
+  </button>
+
+  <div class="site-nav__links" id="navLinks">
+    {% for item in site.data.nav %}
+      {% if item.dropdown %}
+      <div class="nav-dropdown" data-dropdown>
+        <button class="nav-dropdown__trigger" type="button">
+          {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ item.label }}
+          <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="nav-dropdown__menu">
+          {% for sub in item.items %}
+          {%- comment -%} Portfolio root-absolute links: resolve against the domain root. {%- endcomment -%}
+          <a href="{{ sub.url | prepend: site.url }}">
+            {% if sub.icon %}<i class="{{ sub.icon }}" aria-hidden="true"></i> {% endif %}{{ sub.label }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+        {%- comment -%}
+        Three supported shapes:
+        1. Bilingual handbook door  — url_fr/url_en + label_fr/label_en (baseurl-relative)
+        2. Portfolio flat link      — url + label (prepend site.url, domain-root-absolute)
+        3. Portfolio dropdown       — handled above
+        {%- endcomment -%}
+        {% if item.url_fr %}
+          {%- if page.lang == 'en' -%}
+            {% assign nav_path = item.url_en %}
+            {% assign nav_title = item.label_en %}
+          {%- else -%}
+            {% assign nav_path = item.url_fr %}
+            {% assign nav_title = item.label_fr %}
+          {%- endif -%}
+          <a href="{{ nav_path | relative_url }}"{% if page.url == nav_path %} class="active" aria-current="page"{% endif %}>
+            {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ nav_title }}
+          </a>
+        {% else %}
+          <a href="{{ item.url | prepend: site.url }}">
+            {% if item.icon %}<i class="{{ item.icon }}" aria-hidden="true"></i> {% endif %}{{ item.label }}
+          </a>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    <span class="site-nav__lang">
+      {% include lang-toggle.html %}
+    </span>
+  </div>
+</nav>
+
+<script>
+  (function () {
+    var b = document.getElementById('navBurger');
+    var l = document.getElementById('navLinks');
+    if (b && l) {
+      b.addEventListener('click', function () {
+        var open = l.classList.toggle('is-open');
+        b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+    var dropdowns = document.querySelectorAll('[data-dropdown]');
+    dropdowns.forEach(function (dd) {
+      var trigger = dd.querySelector('.nav-dropdown__trigger');
+      if (!trigger) return;
+      trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        dropdowns.forEach(function (o) { if (o !== dd) o.classList.remove('is-open'); });
+        dd.classList.toggle('is-open');
+      });
+    });
+    document.addEventListener('click', function () {
+      dropdowns.forEach(function (d) { d.classList.remove('is-open'); });
+    });
+  })();
+</script>
