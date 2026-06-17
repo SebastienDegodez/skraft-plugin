@@ -67,6 +67,15 @@ Le prefix stable d'un agent = persona/body + skills chargés + instructions + ca
 
 **Point d'attention orchestrateur :** `state.json` est **variable** et rechargé chaque tour (`// B4: reload state`) — bon pour le grounding, mais il **doit** rester en suffixe, après le prefix stable (instructions `skraft-state`/`skraft-artifacts`, dispatch table). À auditer : qu'aucun body/instruction chargé en prefix ne contienne de date littérale.
 
+**Résultat d'audit B13 (Task 1) — PASS.**
+
+| Axe | Verdict | Détail |
+|---|---|---|
+| Date littérale en prefix | ✅ 0 | Les 2 occurrences (`triage-{YYYY-MM-DD}.md`, `state.json.corrupted.{timestamp}`) sont des **templates de nom de fichier dynamiques**, évalués au runtime — pas des dates figées dans un body. |
+| Mutation du catalogue d'outils en session | ✅ aucune | `tools:` statique en frontmatter sur tous les agents. |
+| Switch de modèle en session | ✅ aucun | `model: inherit` sur les **19** agents/lenses/workers. |
+| `state.json` en suffixe variable | ✅ conforme | Lu en Phase 0 via tool-read, après le prefix stable (instructions chargées en metadata). |
+
 ### 2. OUTPUT TAX (output = 3–5× input)
 
 Les phases qui émettent de longs artefacts (software-engineer : code ; acceptance-designer : features ; backlog-planner : stories) sont dominées par l'output. Mandat : **émettre terse**, déléguer la production déterministe aux **ponts outils** (renderer `render-verdict.mjs`, `prefilter.mjs` déjà existants). Les reviewers n'émettent que des **tags JSON** ; le rendu MD est hors-LLM (déjà acté par `reviewer-verdict-schema`).
