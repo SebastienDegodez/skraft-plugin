@@ -5,6 +5,7 @@ model: inherit
 user-invocable: false
 tools: read/readFile, search/codebase, edit/createDirectory, edit/createFile, edit/editFiles, execute/runInTerminal, execute/getTerminalOutput
 metadata:
+  cost_role_class: implementer  # B12 target class — deterministic wiring (genesis token-economy)
   dispatched_by: software-engineer
   phase: DELIVER
   capability: contract-testing

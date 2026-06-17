@@ -5,6 +5,7 @@ model: inherit
 user-invocable: true
 tools: read/readFile, edit/createFile, edit/editFiles, edit/createDirectory, search/listDirectory, search/codebase, execute/runInTerminal, execute/getTerminalOutput, execute/testFailure
 metadata:
+  cost_role_class: implementer  # B12 target class (genesis token-economy)
   dispatched_by: skraft-orchestrator
   phase: DISTILL
   skills:

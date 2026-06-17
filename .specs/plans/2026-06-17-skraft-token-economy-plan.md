@@ -44,9 +44,9 @@
 
 ## Task 2 : Model-routing par primitive (B12)
 
-- [ ] Annoter chaque `*.agent.md` avec sa **classe de rôle cible** (table de la spec) en metadata ou commentaire frontmatter.
-- [ ] Vérifier que les 5 reviewers ne sont **jamais** promus planner-class (rester reviewer).
-- [ ] Confirmer `solution-architect` = planner ; orchestrateur = reviewer/trivial.
+- [x] Annoter chaque `*.agent.md` avec sa **classe de rôle cible** (table de la spec) en metadata ou commentaire frontmatter. → `metadata.cost_role_class` sur les 19 primitives, parse `yq` validé.
+- [x] Vérifier que les 5 reviewers ne sont **jamais** promus planner-class (rester reviewer). → 12 reviewer, 0 planner parmi eux.
+- [x] Confirmer `solution-architect` = planner ; orchestrateur = reviewer/trivial. → confirmé.
 
 ## Task 3 : Audit tool-surface (B15)
 

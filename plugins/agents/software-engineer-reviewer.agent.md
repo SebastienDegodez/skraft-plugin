@@ -5,6 +5,7 @@ model: inherit
 user-invocable: false
 tools: read/readFile, search/codebase, agent
 metadata:
+  cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
   dispatched_by: skraft-orchestrator
   phase: DELIVER-REVIEW
   inputs:
