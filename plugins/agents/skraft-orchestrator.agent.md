@@ -62,7 +62,8 @@ Follow the four-step Resume sequence and six-step turn protocol defined in `#fil
 2. If the file does not exist, create it with the defaults specified in the state instruction (`currentPhase="DISCOVER"`, `userPreferences.depthTier="comprehensive"`, `difficulty=null`, all retry counters zeroed) and start DISCOVER.
 3. If it exists, read the JSON, validate the schema, and resume at `currentPhase`.
 4. Scan for neighbor planners under `.copilot-tracking/security-plans/{slug}/`, `.copilot-tracking/rai-plans/{slug}/`, `.copilot-tracking/sssc-plans/{slug}/`. If found, record their paths in `state.json::neighborPlanners` and add an advisory line to `nextActions` (read-only, no coupling).
-5. Print the resume summary:
+5. **Detect an HVE backlog/sprint handoff (entry-point evaluation).** Only on a fresh pipeline (`phasesCompleted` empty and `currentPhase == "DISCOVER"`). Load `#file:plugins/skills/skraft-difficulty-routing/SKILL.md` and run its Entry Point detection. If a complete handoff is detected (backlog hierarchy AND a calculated sprint, in either GitHub-issue or ADO/Jira-artefact form), present the confirmation gate to the user. On **skip DISCOVER**: set `state.json::entryPoint = { skipPhases: ["DISCOVER"], handoffSource, handoffArtifacts }`, run the skill's ingestion protocol to write `research/{date}/triage-ingest-{date}.md` and `research/{date}/sprint-proposal.md`, also run the depth/difficulty axes now (so `difficulty` is not left `null`), set `currentPhase` to `"DISCUSS"`, and record DISCOVER in `phasesCompleted`. On **run DISCOVER anyway** (or no handoff): leave `entryPoint.skipPhases` empty and proceed with DISCOVER.
+6. Print the resume summary:
    ```
    Pipeline state loaded.
    Current phase: DISCUSS
@@ -70,9 +71,10 @@ Follow the four-step Resume sequence and six-step turn protocol defined in `#fil
    Difficulty: medium
    Story: #42 — Add eligibility check
    Neighbor planners: security-plans/eligibility (read-only)
+   Entry point: DISCOVER skipped (handoff: hve-ado)
    Pending: DISCUSS → DESIGN → DISTILL → DELIVER
    ```
-6. Proceed to the current phase.
+7. Proceed to the current phase.
 
 ## State file
 
@@ -80,7 +82,9 @@ The state file is **JSON only**, never markdown. The full schema, six-step turn 
 
 ## Phase execution protocol
 
-For each phase (DISCOVER, DISCUSS, DESIGN, DISTILL):
+Before dispatching any phase, check `state.json::entryPoint.skipPhases`. If the phase is listed there, it has already been satisfied by an upstream handoff and ingested in Phase 0 — do NOT dispatch its specialist or reviewer; advance directly to the next phase.
+
+For each phase NOT in `entryPoint.skipPhases` (DISCOVER, DISCUSS, DESIGN, DISTILL):
 
 **Step 1 — Dispatch specialist agent**
 Reload `state.json`. Dispatch the appropriate agent with full context from `state.json` and previous phase artefacts.
@@ -101,9 +105,14 @@ Pass the produced artefact paths to the reviewer agent. Do NOT summarize or inte
 
 ## Difficulty + depth-tier routing
 
-At the exit of DISCOVER (before transitioning to DISCUSS), load `#file:plugins/skills/skraft-difficulty-routing/SKILL.md` and run the 3-axis evaluation. Persist results:
+The 3-axis routing runs in two places, both driven by `#file:plugins/skills/skraft-difficulty-routing/SKILL.md`:
 
-- `state.json::entryPoint`
+- **Entry Point** is evaluated at **pipeline start** (Phase 0, step 5) so DISCOVER can be skipped when an HVE handoff is present.
+- **Depth Tier** and **Difficulty Tier** are evaluated at the **exit of DISCOVER** — or, when DISCOVER is skipped, immediately after ingestion in Phase 0 so `difficulty` is never left `null`.
+
+Persist results:
+
+- `state.json::entryPoint` (`skipPhases`, `handoffSource`, `handoffArtifacts`)
 - `state.json::userPreferences.depthTier` (default `comprehensive`; downgrade requires explicit user opt-in with rationale in `depthTierOverrides`)
 - `state.json::difficulty`
 
@@ -185,7 +194,7 @@ Max retries per phase: `state.json::userPreferences.maxRetriesPerPhase` (default
 
 ## Skill usage
 
-- `skraft-difficulty-routing` — loaded once at DISCOVER exit (3-axis routing).
+- `skraft-difficulty-routing` — loaded at pipeline start (Entry Point detection + handoff ingestion) and at DISCOVER exit (depth + difficulty axes).
 - `adversarial-review-lenses` — referenced by every reviewer dispatch.
 - `contract-testing` — DESIGN (API contracts) and DISTILL (Microcks samples).
 - `playwright-evidence` — DELIVER (evidence capture).

@@ -18,6 +18,11 @@ State is a JSON document with the following fields. All fields are required unle
   "skraftPlanFile": "string (relative path to plan instructions file)",
   "currentPhase": "DISCOVER | DISCUSS | DESIGN | DISTILL | DELIVER | DONE",
   "entryMode": "capture | from-issue | from-prd",
+  "entryPoint": {
+    "skipPhases": ["string (phase names skipped because an upstream artefact already satisfies them)"],
+    "handoffSource": "hve-ado | hve-jira | hve-github | null",
+    "handoffArtifacts": ["string (relative paths to the detected HVE backlog/sprint artefacts)"]
+  },
   "issueNumber": "number | null",
   "difficulty": "simple | medium | medium-hard | challenging | null",
   "phasesCompleted": ["string (phase names)"],
@@ -64,7 +69,8 @@ State is a JSON document with the following fields. All fields are required unle
 * `projectSlug` — kebab-case identifier derived from the originating issue title or user-provided project name.
 * `currentPhase` — single phase the pipeline is currently executing. Advances only when the reviewer verdict for that phase is `APPROVED`. `DONE` indicates the full pipeline has completed.
 * `entryMode` — how the pipeline was started. `from-issue` requires `issueNumber`; `from-prd` requires entries in `referencesProcessed`; `capture` requires neither.
-* `difficulty` — set once at the exit of DISCOVER by `skraft-difficulty-routing`. Drives the DELIVER execution model. Never reassessed mid-pipeline.
+* `entryPoint` — records which phases the orchestrator skips because an upstream HVE handoff already satisfies their checklist, evaluated at pipeline start (Phase 0) by `skraft-difficulty-routing`. `skipPhases` is empty by default (every phase runs). `handoffSource` names the detected HVE producer (`hve-ado`, `hve-jira`, `hve-github`) or `null` when no handoff exists. `handoffArtifacts` lists the relative paths of the detected backlog/sprint artefacts that were ingested. When `skipPhases` contains `"DISCOVER"`, the ingestion step writes the substitute DISCOVER artefacts (`research/{date}/triage-ingest-{date}.md`, `research/{date}/sprint-proposal.md`) so DISCUSS can start without re-triaging.
+* `difficulty` — set once at the exit of DISCOVER (or, when DISCOVER is skipped, at pipeline start alongside `entryPoint`) by `skraft-difficulty-routing`. Drives the DELIVER execution model. Never reassessed mid-pipeline.
 * `userPreferences.depthTier` — depth/strictness applied across all phases. Defaults to `comprehensive`. Any other value requires an explicit user choice recorded in `depthTierOverrides` with rationale.
 * `userPreferences.maxRetriesPerPhase` — default `2`. When `retryCount[phase] >= maxRetriesPerPhase` and the verdict is not `APPROVED`, the orchestrator escalates to the user.
 * `reviewArtifacts` — append-only list of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers write here exclusively.
@@ -92,9 +98,10 @@ Execute this protocol on **every turn** before producing user-facing output.
 On first invocation, create the project directory and write an initial `state.json`:
 
 * `projectSlug` derived from the entry context.
-* `currentPhase` set to `"DISCOVER"`.
+* `currentPhase` set to `"DISCOVER"` (or to `"DISCUSS"` when Phase 0 detects an HVE handoff and records `"DISCOVER"` in `entryPoint.skipPhases`).
 * `entryMode` set from the invoking prompt.
-* `difficulty` set to `null` (assigned at DISCOVER exit).
+* `entryPoint` set to `{ "skipPhases": [], "handoffSource": null, "handoffArtifacts": [] }` by default; populated by Phase 0 when an HVE backlog/sprint handoff is detected and confirmed.
+* `difficulty` set to `null` (assigned at DISCOVER exit, or at pipeline start when DISCOVER is skipped).
 * `userPreferences.depthTier` set to `"comprehensive"`.
 * `userPreferences.maxRetriesPerPhase` set to `2`.
 * All other arrays empty, `retryCount` zeroed, `reviewerVerdicts` all `null`, `neighborPlanners` all `null`.
