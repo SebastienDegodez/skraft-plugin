@@ -5,6 +5,7 @@ model: inherit
 user-invocable: true
 tools: read/readFile, search/codebase
 metadata:
+  cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
   dispatched_by: skraft-orchestrator
   phase: DISTILL
   genesis_patterns:
