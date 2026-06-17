@@ -78,7 +78,7 @@ Le prefix stable d'un agent = persona/body + skills chargés + instructions + ca
 
 ### 2. OUTPUT TAX (output = 3–5× input)
 
-Les phases qui émettent de longs artefacts (software-engineer : code ; acceptance-designer : features ; backlog-planner : stories) sont dominées par l'output. Mandat : **émettre terse**, déléguer la production déterministe aux **ponts outils** (renderer `render-verdict.mjs`, `prefilter.mjs` déjà existants). Les reviewers n'émettent que des **tags JSON** ; le rendu MD est hors-LLM (déjà acté par `reviewer-verdict-schema`).
+Les phases qui émettent de longs artefacts (software-engineer : code ; acceptance-designer : features ; backlog-planner : stories) sont dominées par l'output. Mandat : **émettre terse**, déléguer la production déterministe aux **ponts outils**. ⚠️ **Le rendu de verdict hors-LLM est conçu mais pas encore en place** (cf. correction Task 5 ci-dessous) : `render-verdict.mjs` / `prefilter.mjs` sont absents et `adversarial-review-lenses/SKILL.md` impose encore un verdict Markdown LLM. Tant que `reviewer-verdict-schema` n'atterrit pas, les reviewers émettent du Markdown complet et paient l'output tax.
 
 ### 3. MODEL ROUTER (B12) — classe par slot
 
@@ -114,8 +114,10 @@ Bands = **contrat** (validés à l'étape 8). La fourchette quantitative ($/toke
 
 ## Interlock avec l'existant
 
-- `reviewer-prefilter` : levier output/turn sur les reviewers — **déjà couvert**, non dupliqué.
-- `reviewer-verdict-schema` : rendu MD hors-LLM — levier output déjà acté.
-- skip-DISCOVER : *cost prune* structurel — déjà implémenté.
+> **Correction d'état (audit Task 5).** À la date de cette spec, `reviewer-prefilter` et `reviewer-verdict-schema` sont **conçus mais non implémentés** : ils n'existent que comme plans/specs sous `docs/superpowers/`. Les skills `plugins/skills/reviewer-{prefilter,verdict-schema}/` et les scripts `render-verdict.mjs` / `prefilter.mjs` sont **absents** du dépôt, et `adversarial-review-lenses/SKILL.md` §"Output format" impose **toujours un verdict Markdown complet** émis par le LLM. Le levier output-tax sur les reviewers est donc **en attente d'implémentation**, pas acté.
+
+- `reviewer-prefilter` : levier output/turn sur les reviewers — **conçu (plan `2026-06-04`), non implémenté**. À ne pas dupliquer quand il atterrira.
+- `reviewer-verdict-schema` : rendu MD hors-LLM — **conçu (spec `2026-05-26`), non implémenté**. Tant qu'il n'atterrit pas, les reviewers paient l'output tax du Markdown.
+- skip-DISCOVER : *cost prune* structurel — **implémenté** (entry-point detection dans `skraft-difficulty-routing` + `skraft-orchestrator` Phase 0).
 
 Cette spec ajoute la couche **manquante** : stance déclarée, model-routing par primitive, audit cache-invalidators, audit tool-surface, et reconnaissance du `depthTier` comme gouverneur de coût.

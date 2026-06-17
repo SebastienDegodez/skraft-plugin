@@ -61,9 +61,9 @@
 
 ## Task 5 : Output tax — confirmer la délégation hors-LLM
 
-- [ ] Vérifier que les reviewers n'émettent que des **tags JSON** (rendu MD via `render-verdict.mjs`) — déjà acté par `reviewer-verdict-schema`.
-- [ ] Confirmer que `reviewer-prefilter` sort les gates mécanisables (output/turn) — déjà en cours, **ne pas dupliquer**.
-- [ ] Identifier toute autre émission longue mécanisable (synthèses) candidate à un pont outil.
+- [x] Vérifier que les reviewers n'émettent que des **tags JSON** (rendu MD via `render-verdict.mjs`) — déjà acté par `reviewer-verdict-schema`. → ⚠️ **FAUX en l'état** : `reviewer-verdict-schema` n'est pas implémenté (plan `2026-05-26` seulement), `render-verdict.mjs` absent, `adversarial-review-lenses/SKILL.md` impose encore un verdict Markdown LLM. Spec corrigée.
+- [x] Confirmer que `reviewer-prefilter` sort les gates mécanisables (output/turn) — déjà en cours, **ne pas dupliquer**. → conçu (plan `2026-06-04`), **non implémenté** ; ne rien dupliquer quand il atterrira.
+- [x] Identifier toute autre émission longue mécanisable (synthèses) candidate à un pont outil. → le verdict reviewer Markdown est LE candidat principal ; couvert par le futur `reviewer-verdict-schema`.
 
 ## Task 6 : Projection de coût (contrat de validation)
 
