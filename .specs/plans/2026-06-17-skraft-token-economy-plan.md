@@ -32,8 +32,8 @@
 
 ## Task 0 : Déclarer la posture (stance)
 
-- [ ] Acter `balanced` comme posture par défaut SKRAFT (mandat B13 systématique).
-- [ ] Documenter la bascule `frugal` par story via `state.json` (mandats B12/B15/B16).
+- [x] Acter `balanced` comme posture par défaut SKRAFT (mandat B13 systématique). → spec §"Posture de coût" (B13 toujours).
+- [x] Documenter la bascule `frugal` par story via `state.json` (mandats B12/B15/B16). → spec §"Posture de coût".
 
 ## Task 1 : Audit cache-invalidators (B13)
 
@@ -67,15 +67,15 @@
 
 ## Task 6 : Projection de coût (contrat de validation)
 
-- [ ] Figer la table de bands (classe / prefix / output / tours / patterns) de la spec.
-- [ ] Noter explicitement que la fourchette quantitative ($/tokens) requiert l'adaptateur per-harness daté (hors-scope ici).
+- [x] Figer la table de bands (classe / prefix / output / tours / patterns) de la spec. → figée ; band output reviewers marqué « M aujourd'hui → S cible » pour refléter l'état réel.
+- [x] Noter explicitement que la fourchette quantitative ($/tokens) requiert l'adaptateur per-harness daté (hors-scope ici). → noté sous la table.
 
 ## Task 7 : Checklist de validation (étape 8 genesis)
 
-- [ ] Chaque classe de rôle annotée correspond aux bands de la projection (pas de promotion silencieuse).
-- [ ] Aucun invalidateur de cache introduit.
-- [ ] Patterns cités (B12/B13/B14/B15/B16) matérialisés quelque part.
-- [ ] Si une posture `frugal` est activée : B12/B15/B16 visibles.
+- [x] Chaque classe de rôle annotée correspond aux bands de la projection (pas de promotion silencieuse). → 19 `cost_role_class` alignés sur la table (1 planner / 6 impl / 12 reviewer) ; aucun reviewer en planner.
+- [x] Aucun invalidateur de cache introduit. → les édits Task 4 (notes prose) n'ajoutent ni date littérale, ni mutation d'outils, ni switch modèle ; B13 toujours PASS.
+- [x] Patterns cités (B12/B13/B14/B15/B16) matérialisés quelque part. → B12 (`cost_role_class`), B13 (audit §1), B15 (audit §4), B16/B11 (notes `depthTier`) ; B14 reste un mandat de validation (PROMPT THRIFT), non un artefact.
+- [x] Si une posture `frugal` est activée : B12/B15/B16 visibles. → posture par défaut `balanced` retenue ; bascule `frugal` documentée (mandats B12/B15/B16) — non activée ici.
 
 ---
 
