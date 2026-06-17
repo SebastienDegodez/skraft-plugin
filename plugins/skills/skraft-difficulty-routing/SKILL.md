@@ -66,6 +66,8 @@ Aligned with HVE-Core / RPI vocabulary. Persisted in `state.json::userPreference
 
 The orchestrator persists `comprehensive` if no explicit user choice was recorded. Any downgrade to `basic`, `standard`, or `custom` requires an explicit user decision captured at the exit of DISCOVER, with rationale appended to `state.json::depthTierOverrides`.
 
+> **Depth Tier is also a cost governor (genesis B16 EFFORT GOVERNOR / B11 FOLD-BY-DEFAULT).** The same dial that sets strictness sets token spend: the **Reviewer lenses** column is reviewer fan-out (1/2/4 parallel spawns), the mutation columns drive how many test runs execute, and the Gherkin gate adds output. A lower tier is therefore cheaper *and* less strict — they move together. Reserve `comprehensive` (4-lens fan-out) for production-critical code; `basic`/`standard` deliberately trade strictness for fewer spawns and less output on spikes and non-critical features.
+
 ### 3. Difficulty Tier — DELIVER execution model
 
 Persisted in `state.json::difficulty`. Drives whether the software-engineer agent works inline or dispatches sub-agents and intermediate artifacts:
