@@ -6,6 +6,7 @@ user-invocable: false
 tools: execute/testFailure, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runInTerminal, read/readFile, agent, edit/createDirectory, edit/createFile, edit/editFiles, search/codebase
 metadata:
   dispatched_by: skraft-orchestrator
+  phase: DELIVER
   skills:
     - outside-in-tdd
     - red-synthesize-green
@@ -13,6 +14,24 @@ metadata:
     - craft-discipline
     - test-refactoring-catalog
     - mutation-testing
+    - quality-gates-evidence-contract
+    - quality-gates-dotnet
+  inputs:
+    required:
+      - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
+    context:
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-{n}-{slug}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/state.json (depthTier + difficulty)
+  outputs:
+    - Source code commits (conventional commits)
+    - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
   model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + Iron Rule + Mutation score). Low-tier models (Haiku, Flash, mini) are NOT supported."
 ---
 
@@ -49,6 +68,8 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 | [clean-architecture-testing](../skills/clean-architecture-testing/SKILL.md) | Deciding test level, boundary placement, or doubles policy |
 | [test-refactoring-catalog](../skills/test-refactoring-catalog/SKILL.md) | Refactoring a test (helpers, renaming, deduplication) |
 | [mutation-testing](../skills/mutation-testing/SKILL.md) | Entering phase 4 (COMMIT & VERIFY) |
+| [quality-gates-evidence-contract](../skills/quality-gates-evidence-contract/SKILL.md) | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
+| [quality-gates-dotnet](../skills/quality-gates-dotnet/SKILL.md) | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
 
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
@@ -67,12 +88,15 @@ These are owned by the skills — load them, do not inline rules here.
 ## Execution Workflow (Execute in Order)
 
 ### 1. PREPARE
-- Identify entry boundaries and expected outward effects from acceptance criteria.
-- Target exactly ONE active behavioral scenario.
+- Load the DISTILL artefacts: the `.feature`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Run the suite to confirm the acceptance test is RED on a business assertion.
+- Do NOT re-author the acceptance test or alter its input / expected values (Iron Rule of tests).
+- Identify entry boundaries and expected outward effects from the existing acceptance test + impl-plan.
+- Target exactly ONE active behavioral scenario (the first RED acceptance scenario, then the next).
 
-### 2. RED
-- Write ONE failing test for the next behavior slice.
-- **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile).
+### 2. RED (inner loop)
+- The OUTER acceptance test already exists (from DISTILL). Drive the INNER loop: write ONE failing unit test for the next behavior slice the acceptance test demands.
+- **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile). Never weaken or edit the acceptance test to make it pass.
+- **Edge cases not expressible in Gherkin** (defensive branch, exhaustive-enum fallback, combinatorial sweep of an already-decided rule — e.g. a `PolicyService`) are authored HERE via TDD, but ONLY when `test-design-mandates` Mandate 4 Gate (a) or (b) opens, and ONLY with values traceable to a decided AC. The domain class emerges from this RED — create nothing before the compile failure (`outside-in-tdd` Step 2). If the case is an UNDECIDED business decision, STOP and escalate to DISCUSS — never invent a verdict or value.
 
 ### 3. SYNTHESIZE-GREEN
 - Write minimal production code to pass the test.
@@ -81,8 +105,24 @@ These are owned by the skills — load them, do not inline rules here.
 
 ### 4. COMMIT & VERIFY
 - Run static checks, formatting, and Mutation Testing.
-- **Gate**: 100% Mutation score on business logic. If a test kills no mutants, DELETE IT.
+- **Gate**: Mutation score threshold depends on `state.json::userPreferences.depthTier` (basic≅80%, standard≅90%, comprehensive=100% on business logic). If a test kills no mutants, DELETE IT.
 - Commit using conventional commits (`feat(<domain>): <behavior>`).
+- Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
+- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for the schema and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per the v1 schema. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
+
+## Test-wiring workers (fan-out, B1)
+When a slice needs **test infrastructure** rather than business logic, fan out to an internal worker, then verify its output yourself. The worker returns a structured result; it never commits. YOU integrate the returned files into your TDD loop and commit.
+
+| Slice shape | Dispatch | Worker emits |
+|---|---|---|
+| Mock a downstream dependency the SUT calls (consumer-side) | [mock-integration-worker](workers/mocking/mock-integration-worker.agent.md) | mock wiring + integration-test scaffold |
+| Provider contract test for THIS service's API | [contract-testing-worker](workers/contract-testing/contract-testing-worker.agent.md) | baseline WAF+HttpClient test (+ optional Microcks `TestEndpointAsync`) |
+
+**TIER-1 verify (A9 SUPERVISED EXECUTION) — do NOT trust the worker's prose.**
+1. Take the `testCommand` from the worker's structured result. Resolve it via `resolving-stack-commands` if absent — never hardcode `dotnet test`.
+2. Run it through the terminal. Confirm the slice goes RED on a business assertion, then drive your own GREEN.
+3. If the worker returned a `blocked` payload, surface it — do not invent the wiring yourself.
+4. Only after your own RED→GREEN passes do you commit (one-writer rule: the worker never commits).
 
 ## Quality Gates Checklist
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:

@@ -32,6 +32,12 @@ realize them in a specific harness.
    EXTERNAL CORPUS            BRIDGE                   ATTENTION ANCHOR (*)
     GROUNDING                                          GOAL STEWARD
                                                        HUMAN CHECKPOINT
+                                                       FOLD-BY-DEFAULT
+                                                       MODEL ROUTER
+                                                       CACHE-AWARE PREFIX
+                                                       PROMPT THRIFT
+                                                       TOOL SUBSET
+                                                       EFFORT GOVERNOR
 ```
 
 (*) ATTENTION ANCHOR has no classical analog. It is the LLM-physics-
@@ -755,6 +761,553 @@ rescue.
 
 ---
 
+## B11. FOLD-BY-DEFAULT
+
+CLASSICAL ANALOG: "Defaults Matter" / "Pit of Success" (Brad Abrams,
+.NET Framework Design Guidelines, 2004); the SRE error-budget
+posture of "burn the budget on prevention, not on deferring follow-
+ups" (Beyer et al., _Site Reliability Engineering_, O'Reilly 2016,
+ch. 3 on error budgets).
+
+WHEN: a loop or queue where each iteration surfaces follow-ups
+(recommended next actions, panel-suggested edits, deferred review
+comments, secondary findings). Without a default policy, follow-ups
+accumulate in an external backlog and the loop is judged "done"
+while real work remains.
+
+MECHANISM: declare the default disposition for follow-ups at the
+queue / loop boundary. The default is FOLD: re-enter the loop with
+the follow-up as a new item (or as an addition to the current
+item's todo). The exception is DEFER, taken only when the follow-
+up violates a named queue invariant (out-of-scope per the queue
+charter, requires authority the loop does not hold, irrecoverable
+side effect outside the loop's mandate). DEFER REQUIRES A
+DESTINATION (an external queue, a tracked issue) -- never a
+recommendation in prose.
+
+The pattern is the procedural counterpart to the cybernetic
+principle that a control loop's job is to drive the error to zero
+IN-LOOP, not to log the error for someone else.
+
+ANTI-PATTERNS:
+- DEFER-BY-DEFAULT -- the loop emits a "recommended follow-up"
+  section and ships. The follow-ups never re-enter; the backlog
+  grows; the next sweep starts further behind. The most common
+  failure mode of operator-shaped loops without a named policy.
+- INVARIANT-LESS FOLD -- folding every follow-up, including ones
+  that violate scope or authority. The loop grows unbounded; the
+  charter erodes; the operator who chartered the queue cannot
+  recognize what the loop is doing. Fold-by-default still requires
+  a named invariant that gates DEFER.
+- IMPLICIT DEFER -- a follow-up is "noted" in prose without a
+  destination. Equivalent to no follow-up at all.
+
+WHY THIS IS FIRST-CLASS. The default policy IS the control surface
+for an operator-shaped loop. Without it, the loop's authority over
+its own follow-ups is undeclared; every iteration re-litigates
+fold-vs-defer on individual judgement, which drifts. Pair with B4
+PLAN MEMENTO: the state table records each follow-up's disposition
+(folded / deferred / where). Pair with A11 RECONCILIATION LOOP:
+B11 is the queue-level policy that makes A11's queue drain rather
+than grow.
+
+---
+
+## B12. MODEL ROUTER
+
+CLASSICAL ANALOG: Strategy pattern (GoF) -- select algorithm at
+runtime; Content-Based Router (Hohpe & Woolf, _Enterprise
+Integration Patterns_, Addison-Wesley 2003).
+
+WHEN: a workflow has heterogeneous sub-tasks where one role class
+(see `runtime-affordances/model-catalog.md`) clearly fits some
+sub-tasks and a different role class clearly fits others. Default
+case: a cheap trivial-class classifier in front of a planner/
+implementer/reviewer fan-out so the expensive class only runs on
+work that actually needs it.
+
+MECHANISM: declare role class per module (not per concrete model)
+at design time. Place a router step (typically trivial-class) that
+inspects each incoming item and decides which downstream role
+class handles it. The router's output is a routing decision, not
+the answer. The per-harness adapter binds role class to concrete
+model name at codegen time.
+
+The router itself MUST be lightweight: planner-class routers eat
+the savings. The typical break-even is a router that costs less
+than 5% of the most expensive downstream call.
+
+SELECTION RULE (apply BEFORE writing any concrete `model:` field;
+this rule decides whether to bind at all):
+
+1. Identify the HARNESS DEFAULT role class for the primitive type
+   that will carry the work. Consult the adapter's "default role
+   class per primitive type" table (e.g. `per-harness/copilot.md`
+   section "Default role class per primitive type"). The harness
+   default is NOT always the session model -- on some harnesses,
+   subagent spawn types (e.g. Copilot CLI's `task(agent_type=
+   'explore')`) default to a CHEAPER role class than the session
+   model. Without this lookup the architect cannot reason about
+   binding direction.
+
+2. Identify the REQUIRED role class for this work (planner /
+   researcher / implementer / reviewer / trivial / long-context-
+   retriever / safety) per the rubric in `model-catalog.md`.
+
+3. Decide binding action. The default is BIND EXPLICITLY -- it
+   gives PREDICTABILITY, PORTABILITY, and AUDIT TRAIL. OMIT is
+   the exception, not the rule.
+
+   - DEFAULT < REQUIRED   -> BIND UP for STAKES. Declare the
+     higher role class explicitly. Cost increase is justified
+     by the quality requirement. Cite the stakes in the handoff.
+   - DEFAULT == REQUIRED  -> BIND EXPLICITLY at the matching
+     role class. Two reasons this is the right move even though
+     the cost is identical to OMIT:
+       (a) PORTABILITY -- the same design will route differently
+       on harnesses where defaults diverge; explicit binding
+       insulates the design from default drift.
+       (b) PREDICTABILITY -- the operator can read off "this lens
+       will run at trivial class" from the design alone, without
+       cross-referencing the harness adapter's default table.
+       Profiling and capacity planning become possible at design
+       time, not after the first run.
+     OMIT is only acceptable when (i) the primitive type CANNOT
+     carry `model:` on the target harness (e.g. SKILL.md on
+     Copilot CLI inherits session default by spec; see WRONG-
+     PRIMITIVE BINDING anti-pattern), or (ii) the skill is
+     declared single-harness AND has no audit / portability
+     requirements AND the operator accepts default drift as a
+     known risk.
+   - DEFAULT > REQUIRED   -> BIND DOWN for ECONOMY. Declare the
+     cheaper role class explicitly. Cost reduction IS the
+     benefit. This is the most common B12 use case in practice
+     (because reviewer/planner-class session defaults are
+     common while most fan-out work is trivial-class).
+   - PORTABILITY required across harnesses with different
+     defaults -> BIND explicitly so the choice survives
+     adapter swap.
+   - OPERATOR ECONOMIC BIAS = MAX_QUALITY -> tolerate more
+     binding-up where role-class need is uncertain; MAX_ECONOMY
+     -> bind down aggressively where the failure mode is
+     tolerable; BALANCED (default) -> bind to the CHEAPEST role
+     class that meets the cited requirement.
+
+CONSEQUENCE: see anti-patterns below for shape-detection
+(ZERO explicit bindings = ZERO-EXPLICIT, all-bound-up =
+BIND-UP-WITHOUT-JUSTIFICATION). Healthy shape: most elements
+bound DOWN from session default to the cheapest role class that
+meets need, a few bound UP only where cited STAKES require it.
+
+ANTI-PATTERNS:
+- HARDCODED MODEL NAMES in the design. Models age out; the
+  catalogue should reference role classes only. (Concrete names
+  live in per-harness adapters with date stamps.)
+- ROUTER-AS-PLANNER. The router started as a classifier and grew
+  into a small planner; it now eats the savings of routing. Split
+  back into a classifier (trivial) and a downstream planner if
+  planning is genuinely needed.
+- ROUTING ON DATA SIZE ONLY. Token count is a weak proxy for
+  capability need. Route on the work's CAPABILITY PROFILE (does
+  this need a planner? a long-context retriever? a trivial
+  classifier?), not just length.
+- MID-SESSION MODEL SWITCH inside the SAME thread without naming
+  it as a cache invalidator. Provider caches partition by model;
+  switching mid-session bills the next turn at fresh-input rates.
+- WRONG-PRIMITIVE BINDING -- declaring `model:` on a primitive
+  whose harness frontmatter does not accept it (the field is
+  silently ignored). The architect believes B12 is firing but
+  every agentic element still bills against the session default.
+  This is what happened in PR #12's Executor B run on Copilot CLI:
+  the design declared role classes per element but the binding
+  fell back to the session model because the per-element binding
+  site on Copilot is `.agent.md` frontmatter, NOT SKILL.md
+  frontmatter. Cure: consult the per-harness adapter (section
+  "BINDING SITE" / "Cost-pattern bindings") at step 7b to
+  confirm WHICH primitive type carries the `model:` field on the
+  target harness; restructure the unit of work to use that
+  primitive type if it is currently held by another.
+- BIND-UP-WITHOUT-JUSTIFICATION -- declaring `model:` at a HIGHER
+  role class than the work requires, without citing a STAKES
+  reason. The architect believes "more capable model = safer
+  design"; in practice this is just paying more for capability
+  that the work cannot use. PR #12's empirical A/B (Cell E v0.3.1)
+  measured this directly: 4 lens agents bound to reviewer-class
+  (claude-sonnet-4.6) when the lens work was trivial-class
+  (single-pass checklist grading over a finite diff window with
+  no cross-file reasoning). Result: +25% TOTAL run cost vs the
+  v0.1 baseline with ZERO quality delta on the bound lenses.
+  Cure: cite the role-class requirement explicitly in the handoff
+  packet. Every BIND-UP must name the STAKES (security-critical,
+  irreversible side effect, cross-file reasoning required,
+  multi-step planning required). If the cite is "to be safe" or
+  "in case it's hard," it's bind-up without justification and
+  should be demoted. VARIANT -- BULK IDENTICAL BINDING: copy-
+  pasting the same `model:` across many primitives without per-
+  element role-class distinction. The pattern fires in BOTH
+  directions: bulk-UP (every `.agent.md` gets `claude-sonnet-4.6`
+  as a template default) AND bulk-DOWN (every panel lens gets
+  `claude-haiku-4.5` because the first lens warranted trivial-
+  class so "they're all trivial"). The cost-direction does not
+  determine whether it is an anti-pattern; the LACK of per-element
+  reasoning does. The cure is the PER-ELEMENT CAPABILITY PROFILE
+  enumeration: for each primitive, name (a) does the work need
+  cross-file / multi-file reasoning? (b) does the output carry
+  STAKES (consequential write, security finding, irreversible
+  side effect)? (c) does the work require multi-step proof rather
+  than pattern matching? Record the answers in the handoff packet
+  next to the bound class. Identical bindings are LEGITIMATE if
+  every element's profile genuinely matches; ILLEGITIMATE if the
+  enumeration was skipped. Common case in PANEL fan-outs: 3-4
+  lenses are TRIVIAL (style, lint-grep-class correctness, basic
+  test-coverage parse) but security and depth-of-coverage often
+  warrant REVIEWER class. See architectural-patterns.md §A1
+  PANEL UNDIFFERENTIATED LENS BINDING for the panel-specific
+  enumeration step.
+- ZERO-EXPLICIT -- the entire design carries zero `model:`
+  declarations and relies on harness defaults. Predictability
+  evaporates the moment a default shifts (across harness version
+  or across harnesses); the operator has no contract to read.
+  Cure: bind explicitly per SELECTION RULE rule 3.
+
+---
+
+## B13. CACHE-AWARE PREFIX
+
+CLASSICAL ANALOG: Cache-Aside / Read-Through cache; Append-Only
+Log (write-once history that downstream readers cache).
+
+WHEN: any workflow that runs more than two turns OR loads a
+sizeable persona / skill body / rule file / project corpus into
+its prefix. Cache-aware prefix design IS the single largest cost
+lever on modern providers (provider-cached read tokens are
+typically billed at 10% of fresh-input rate).
+
+MECHANISM: structure the prompt so the STABLE bytes precede the
+VARIABLE bytes. Place provider cache breakpoints (see
+`assets/token-economics.md` concepts 4-5) so the largest stable
+region sits below the lowest breakpoint and is reused across the
+entire session.
+
+Audit, at design time, for cache invalidators:
+- TIMESTAMPS in the system prompt or persona body.
+- TOOL CATALOGUE that grows mid-session (MCP server additions).
+- MODEL SWITCH within a session (B12 + B13 interact: route at
+  the START of the work, not mid-flight).
+- EFFORT/THINKING-BUDGET change mid-session.
+- EDITS to project rule files mid-session.
+- COMPACTION (the harness rewrites the prefix; cache misses).
+
+ANTI-PATTERNS:
+- TIMESTAMPED PERSONA -- the persona body includes "current
+  date: ..." and invalidates on every new day's first turn.
+  Move dynamic facts to the variable suffix or a tool call.
+- TOOL CATALOGUE BLOAT then prune mid-session -- adds tools to
+  the prefix on every turn or removes them at turn N. Either
+  decide the tool set up front, or use B14 TOOL SUBSET.
+- IGNORED COMPACTION SIGNAL -- the design assumes the prefix
+  is stable but the harness compacts on its own schedule. Honor
+  ATTENTION ANCHOR (B8) and PLAN MEMENTO (B4) so the next turn
+  can re-derive state cheaply if compaction breaks the cache.
+
+---
+
+## B14. PROMPT THRIFT
+
+CLASSICAL ANALOG: Strunk & White "omit needless words"; Code
+minification with semantic preservation.
+
+WHEN: a primitive's body has been drafted to be PROSE-COMPLETE
+and now needs to be shipped at scale. Or a long-running session
+shows a clear pattern of recurring prefix bloat (verbose persona,
+redundant examples, multi-paragraph rationale where two lines
+suffice).
+
+MECHANISM: at the validation step (step 8), apply a pass that
+preserves SEMANTIC payload while reducing TOKEN payload:
+- Replace prose enumerations with tables where structure permits.
+- Replace "if/then/else" prose with rule lists.
+- Cut polite scaffolding ("In this section we will explore...")
+  with no semantic content.
+- Inline rare conditionals; load-trigger them only if they grow.
+- Where an example is one of many similar shapes, keep the
+  shortest and link to a `references/<topic>.md` for the rest.
+
+The pass MUST preserve test outcomes: re-run the content evals
+after thrift. If the value delta from step 6 narrows, revert.
+
+ANTI-PATTERNS:
+- AGGRESSIVE THRIFT -- compression past the point where the
+  prose still teaches; the persona becomes pattern-match-only
+  instructions that fail under task drift.
+- THRIFT WITHOUT EVALS -- compression that visibly preserves
+  semantics under reading but breaks the model's behavior; the
+  model's reading was thinner than the human's reading. Always
+  re-run the content evals.
+- THRIFT IN PLACE OF DESIGN -- shrinking a primitive that should
+  have been R1 SPLIT. The body shrinks but its single
+  responsibility is still violated; the thrift just hides it.
+
+### B14b. CAVEMAN BRIEF (sub-pattern of B14)
+
+CLASSICAL ANALOG: telegraphic register; signal-flag protocols;
+controlled natural language (per arXiv 2604.00025: brevity
+constraints can improve task fidelity by ~26pp on inverse-scaling
+tasks).
+
+WHEN: a TRIVIAL-class lens dispatch (see model-catalog.md) whose
+output is a fixed schema -- typically {verdict, rationale} or
+{category, evidence}. Severity classifiers, label-set pickers,
+dup-check oracles, missing-info gates, style-only diff scans all
+fit. Use also for any FIXED-SCHEMA REVIEWER lens whose work is
+classification-shaped (judgement compressed into the schema, not
+into the prose).
+
+MECHANISM (canonical drop list + preservation contract):
+
+DROP from briefs and receipts:
+- articles: a, an, the
+- filler: just, really, basically, actually, simply, essentially,
+  generally
+- pleasantries: sure, certainly, of course, happy to, I'd recommend
+- hedging: likely, possibly, it might be worth, you could consider,
+  it would be good to
+- connective fluff: however, furthermore, additionally, in addition
+  (when nonessential)
+- redundant phrases: "in order to" -> "to"; "make sure to" -> "ensure";
+  "the reason is because" -> "because"
+
+PREFER:
+- short synonyms: "big" over "extensive", "fix" over "implement a
+  solution for", "use" over "utilize"
+- fragments over full sentences
+- arrows for causality (X -> Y)
+- equations for state (inline_obj_prop = new_ref = re-render)
+- pattern: [thing] [action] [reason]. [next step].
+
+PRESERVE EXACT (caveman MUST NOT rewrite):
+- fenced code blocks (byte-identical)
+- inline code (backtick contents)
+- file paths, URLs, command lines
+- API names, library names, protocol names, algorithm names
+- error strings (quote verbatim)
+- numbers, version numbers, dates, env vars (NODE_ENV, $HOME, ...)
+- proper nouns (project / person / company)
+- markdown structure: headings (count + order), bullet count,
+  numbering, tables, frontmatter
+- JSON / YAML / SQL / shell content (skip — caveman is for prose
+  only)
+
+INTENSITY LEVELS (map to artifact tier):
+- LITE: drop filler/hedging/pleasantries; keep articles + grammar.
+  Use for SHORT_PROSE briefs to REVIEWER-tier sub-agents.
+- FULL: drop articles too; fragments OK; short synonyms.
+  Use for TRIVIAL-tier classifiers with single-anchor schemas.
+- ULTRA: arrows + equations + symbol-heavy; max compression.
+  Use for receipt schemas (already JSON; no further prose).
+
+ROLE-MODE PERSISTENCE: the brief MUST instruct the sub-agent to
+"RESPOND CAVEMAN until done" so receipts come back compressed.
+Without role-mode persistence, brief savings are erased by verbose
+returns.
+
+ANCHOR (mandatory): one grounding line for the highest-risk bucket
+to neutralize over-escalation drift. Example:
+"ANCHOR: blocker = RCE / data-loss / full-outage only."
+
+AUTO-CLARITY EXCEPTIONS (drop caveman, return to normal):
+- security warnings (do not telegraph "rm -rf safe")
+- irreversible operations (deletions, force-pushes, prod migrations)
+- ambiguous multi-step where omitted words risk misread
+- user-confusion risk (the receiver is human, not subagent)
+Resume caveman after the clarified part.
+
+OUTPUT MODE CONTRACT: every brief ends with the schema-only
+instruction: "OUTPUT JSON ONLY: {schema}. NO PROSE OUTSIDE JSON."
+For non-classifier lenses where prose IS the output, replace with:
+"RESPOND CAVEMAN-FRAGMENT. ONE FINDING PER LINE."
+
+MEASURED EFFECT (severity-keyword lens, haiku-4.5, 8-issue fixture,
+16 dispatches): 44.6% input-token saving, 75% verdict agreement
+with verbose brief, ZERO downward errors (both disagreements were
+upward escalations safer than the verbose verdict). Source:
+dev/empirical-proof/scenario-runs/results/B-pat-B14-caveman/
+cost-report.json.
+
+GATE: TRIVIAL or fixed-schema REVIEWER only. Open-ended REVIEWER+
+needs the prose context; caveman compression collapses
+multi-dimension judgement into the model's prior.
+
+SEE ALSO: B14c CAVEMAN CHANNEL for the orchestrator-side enforcement
+on internal traffic; composition-substrate.md §7 AUDIENCE BOUNDARY
+for the substrate concept; pattern-tradeoffs.md §11 for the
+audience matrix.
+
+ANTI-PATTERNS:
+- CAVEMAN ON REVIEWER (preserved from v0.3.6) — compressing a brief
+  whose lens must weigh trade-offs across multiple dimensions. The
+  output schema may still be a tag, but the reasoning behind it is
+  not classification; it is judgement. Caveman compression collapses
+  that judgement into the model's prior.
+- CAVEMAN ON EXTERNAL (new) — applying caveman to a user-facing
+  artifact (PR description, README, advisory). Compromises
+  readability; user is not a subagent.
+- ROGUE PROSE IN BRIEF (new) — architect copies HUMAN_RATIONALE
+  block into the spawn brief. The subagent ingests 5-15K tokens of
+  decision rationale that does not change its work. Defeats B14b
+  entirely. Cure: SPAWN_BRIEF block must be self-contained.
+- VERBOSE RECEIPT (new) — brief is caveman but no role-mode
+  instruction; subagent returns prose. Cure: every brief ends with
+  "RESPOND CAVEMAN" + schema directive.
+
+### B14c. CAVEMAN CHANNEL (sub-pattern of B14)
+
+CLASSICAL ANALOG: protocol layering — different wire format on
+internal hops vs external presentation; cf. backend-for-frontend.
+
+WHEN: a workflow spawns ≥1 task() and emits ≥1 user-facing artifact.
+B14c orchestrates the AUDIENCE BOUNDARY (composition-substrate §7)
+across the workflow: every internal hop uses caveman; the
+synthesizer decompresses to normal prose at the user-facing edge.
+
+MECHANISM:
+1. Architect splits every handoff into HUMAN_RATIONALE (kept in
+   handoff.md, never copied) + SPAWN_BRIEF (caveman, copied to
+   task() prompt).
+2. Every SPAWN_BRIEF declares a matching RECEIPT_SCHEMA.
+3. Subagents receive role-mode-caveman briefs; return caveman
+   receipts.
+4. Synthesizer (REVIEWER+ tier) ingests receipts, decompresses to
+   normal prose for the EXTERNAL artifact.
+
+DECLARATION (architect-side): every spawn in the handoff packet's
+PER-SPAWN DECLARATION TABLE names {Audience, Tier, Brief mode,
+Receipt mode, Justification}. Audience=INTERNAL with Brief
+mode=NORMAL fails review unless the Justification cites a canonical
+auto-clarity exception (security/destructive/irreversible/
+ambiguous).
+
+GATE: PANEL (A1) and PIPELINE (A3) workflows with ≥3 spawns benefit
+most. Single-spawn workflows still apply B14b on the lone brief but
+do not gain channel-level synthesis amortization.
+
+MEASURED EFFECT: projected on S1-shape (9 spawns, multi-lens
+panel): ~43K input + ~14K output tokens saved per run; ~$0.34
+uncached. See dev/empirical-proof/REAL-TELEMETRY-RESULTS.md "Flaw
+3" and v0.3.7 design plan §3.
+
+ANTI-PATTERNS:
+- AUDIENCE BLEED (cross-link to composition-substrate §7).
+- ROGUE PROSE IN BRIEF (cross-link to B14b).
+- DECOMPRESSION SKIPPED — synthesizer emits caveman to user. Cure:
+  synthesizer's external-artifact contract names "NORMAL prose,
+  full grammar".
+- CAVEMAN-WITHOUT-SCHEMA — subagent told to respond caveman but
+  given no output schema. Returns terse-but-unstructured findings
+  the synthesizer cannot parse. Cure: every brief pairs with a
+  RECEIPT_SCHEMA.
+
+---
+
+## B15. TOOL SUBSET
+
+CLASSICAL ANALOG: Interface Segregation Principle (Robert C.
+Martin, _Agile Software Development_, Prentice Hall 2002);
+Facade pattern (GoF) over a wide API surface.
+
+WHEN: the primitive runs against a tool surface with more tools
+than this primitive actually uses (typical of harnesses with
+many MCP servers loaded). Every tool definition consumes prefix
+tokens AND distracts the model on tool-choice turns (longer
+tool list -> more wrong tool calls -> more turns).
+
+MECHANISM: declare, at the primitive's distribution surface,
+the SUBSET of available tools this primitive expects. The
+runtime is responsible for presenting only that subset to the
+model during this primitive's invocation. Two general approaches
+(both substrate-level, both portable):
+
+- ALLOWLIST: name the tools this primitive may call.
+- CAPABILITY GROUP: name a labeled capability (e.g. "git",
+  "github-api"); the runtime expands to the tools in that
+  group.
+
+When the underlying primitive operation is a sequence of
+deterministic steps that could ALL run in one tool call, prefer
+S7 DETERMINISTIC TOOL BRIDGE: ship a single CLI / script / API
+endpoint that does the work, and present ONE tool instead of
+many. This is the strongest form of tool subset and the largest
+cost saver (the model emits one tool-call turn, not N).
+
+ANTI-PATTERNS:
+- IMPLICIT FULL SURFACE -- the primitive does not declare a
+  subset and inherits the harness's full tool catalogue every
+  turn. Cost grows with every new MCP server the operator
+  installs.
+- LEAKY SUBSET -- the primitive declares a subset but its body
+  prose names other tools, leading the model to try to call
+  unavailable tools and retry. Subset + body must match.
+- SUBSET CHURN MID-SESSION -- adding or removing tools across
+  turns. Each change is a CACHE INVALIDATOR (B13). Decide the
+  subset at primitive entry and hold it.
+- WRONG-PRIMITIVE BINDING -- declaring `tools:` on a primitive
+  whose harness frontmatter does not accept it (silently ignored).
+  Same failure mode as B12 WRONG-PRIMITIVE BINDING. Cure: consult
+  the per-harness adapter to confirm which primitive type carries
+  the `tools:` (or equivalent) field; restructure the unit of
+  work to that primitive type if needed. On Copilot, the binding
+  site is `.agent.md` frontmatter; SKILL.md does not accept
+  `tools:`.
+
+---
+
+## B16. EFFORT GOVERNOR
+
+CLASSICAL ANALOG: Quality-of-Service throttle; thread priority
+class; budget annealing in optimization.
+
+WHEN: the harness exposes a reasoning-effort or thinking-budget
+knob (Anthropic extended thinking; OpenAI reasoning effort;
+similar on other providers). Without a governor, the model
+defaults to the harness's default effort regardless of the
+task's actual difficulty -- often paying for thinking on
+trivial classification, or starving long-horizon planning of
+budget.
+
+MECHANISM: at the primitive's design surface, declare the
+expected effort level per role class:
+- trivial role class -> minimum or none.
+- reviewer role class -> low (the rubric does the heavy lifting).
+- implementer role class -> low to medium.
+- long-context-retriever role class -> low (retrieval, not
+  reasoning).
+- planner role class -> medium to high, depending on the
+  decision's blast radius.
+- researcher role class -> high to xhigh. Researcher's defining
+  capability IS open-ended reasoning; effort suppression defeats
+  the binding. Reserve for the narrow trigger where the work
+  genuinely lacks a rubric and lacks a plan.
+
+The per-harness adapter binds the abstract level to the
+provider's concrete knob (e.g. `reasoning_effort=low`,
+`thinking_budget_tokens=4096`). The architect declares INTENT,
+not knob values.
+
+ANTI-PATTERNS:
+- MAX-EFFORT EVERYWHERE -- the design declares maximum effort
+  for every step because "more thinking is better". Thinking
+  tokens bill at output rates and dominate spend. Reserve max
+  effort for the steps whose failure mode is "wrong plan", not
+  for the steps whose failure mode is "minor edit miss".
+- EFFORT-AS-QUALITY-PROXY -- raising effort to mask a missing
+  C6 EXTERNAL CORPUS GROUNDING or a missing S4 VALIDATION
+  DECORATOR. Effort buys thinking, not facts and not gates.
+- MID-SESSION EFFORT CHANGE -- some providers partition cache
+  by effort level. Changing mid-session is a CACHE INVALIDATOR
+  (see B13).
+
+---
+
 ## Selection heuristic
 
 When in doubt, prefer the pattern that minimizes context degradation
@@ -782,12 +1335,17 @@ multi-round plan with risk of goal drift   -> add B9 GOAL STEWARD
 
 irrecoverable step / suspected drift       -> add B10 HUMAN CHECKPOINT
 
+loop or queue surfaces follow-ups          -> add B11 FOLD-BY-DEFAULT
+(declare fold-or-defer policy at boundary;    (default FOLD; DEFER only
+defer requires a destination, not prose)      on named invariant violation)
+
 facts depend on external corpus or live    -> add C6 EXTERNAL CORPUS
 state; or pretraining-cutoff sensitive        GROUNDING (lazy, bounded)
 ```
 
 B4, B5, and B8 are orthogonal to topology choice. B9 layers on top of
 any multi-thread plan; B10 layers on top of any irrecoverable boundary;
+B11 layers on top of any loop or queue that surfaces follow-ups;
 C6 layers on top of any work that touches external facts. Combine them
 with whichever creational / structural / behavioral patterns shape the
 work.

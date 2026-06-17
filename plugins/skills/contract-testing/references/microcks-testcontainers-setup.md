@@ -3,8 +3,9 @@
 ## NuGet Packages
 
 ```xml
-<PackageReference Include="Microcks.Testcontainers" Version="0.1.0" />
-<PackageReference Include="Testcontainers" Version="3.9.0" />
+<!-- Brings DotNet.Testcontainers transitively. Do not add the unrelated
+     Testcontainers / TestContainers packages. -->
+<PackageReference Include="Microcks.Testcontainers" Version="0.3.4" />
 ```
 
 ---
@@ -12,19 +13,25 @@
 ## MicrocksBuilder API
 
 ```csharp
-var container = await new MicrocksBuilder()
-    // Load OpenAPI / AsyncAPI schema (defines operations and schemas)
-    .WithMainArtifact("path/to/contract.yaml")
-    // Load APIExamples (defines response examples per operation)
-    .WithMainArtifact("path/to/contract.apiexamples.yaml")
-    // Load APIMetadata (defines dispatcher rules)
-    .WithMainArtifact("path/to/contract.apimetadata.yaml")
-    // Load a secondary artifact (e.g., imported schema reference)
-    .WithSecondaryArtifact("path/to/shared-schemas.yaml")
-    // Override the Microcks Docker image version
-    .WithImage("quay.io/microcks/microcks-uber:1.9.1")
-    .BuildAsync();
+var container = new MicrocksBuilder()
+    // Load schema + examples + metadata in ONE call (schema first).
+    .WithMainArtifacts(
+        "contracts/eligibility-check-api.yaml")
+    // Optional secondary artifacts (e.g. a shared schema reference).
+    .WithSecondaryArtifacts(
+        "contracts/eligibility-check-api.apiexamples.yaml",
+        "contracts/eligibility-check-api.apimetadata.yaml",
+        "contracts/shared-schemas.yaml")
+    // Override the Microcks Docker image (uber distribution required).
+    .WithImage("quay.io/microcks/microcks-uber:1.14.0-native")
+    .Build();
+
+await container.StartAsync();   // start the container after Build()
 ```
+
+**There is no `BuildAsync()` and no singular `WithMainArtifact`.** `Build()`
+returns the container; `StartAsync()` starts it. `WithMainArtifacts` /
+`WithSecondaryArtifacts` take `params string[]`.
 
 **Artifact loading order matters:** schema (OpenAPI/AsyncAPI) → examples → metadata.
 
@@ -33,25 +40,30 @@ var container = await new MicrocksBuilder()
 ## MicrocksContainer Methods
 
 ```csharp
-// REST mock base URL for a named API and version
-string restUrl = container.GetRestMockUrl("Eligibility Check API", "1.0.0");
+// REST mock base URL for a named API and version — returns a Uri.
+Uri restUrl = container.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
 // → http://localhost:{port}/rest/Eligibility+Check+API/1.0.0
 
-// SOAP mock URL
-string soapUrl = container.GetSoapMockUrl("LegacyService", "1.0.0");
+// SOAP / GraphQL / gRPC mock endpoints
+Uri soapUrl = container.GetSoapMockEndpoint("LegacyService", "1.0.0");
+Uri graphqlUrl = container.GetGraphQLMockEndpoint("DriverProfile", "1.0.0");
+Uri grpcUrl = container.GetGrpcMockEndpoint();
 
-// gRPC mock URL (host:port, no scheme)
-string grpcUrl = container.GetGrpcMockUrl("DriverProfileService", "1.0.0");
+// PROVIDER conformance — replay the contract against your running service.
+TestResult result = await container.TestEndpointAsync(new TestRequest
+{
+    ServiceId    = "Eligibility Check API:1.0.0",
+    RunnerType   = TestRunnerType.OPEN_API_SCHEMA,
+    TestEndpoint = $"http://host.testcontainers.internal:{port}",
+    Timeout      = TimeSpan.FromSeconds(5),
+});
 
-// Verify provider contract — returns TestResult
-TestResult result = await container.VerifyAsync(
-    serviceId: "Eligibility Check API",
-    version: "1.0.0",
-    timeout: TimeSpan.FromSeconds(10)  // optional, default 5s
-);
+// CONSUMER assertion — was the mock invoked? Returns a bool, NOT conformance.
+bool wasHit = await container.VerifyAsync("Eligibility Check API", "1.0.0");
 ```
 
-**`GetRestMockUrl` name encoding:** spaces become `+`. The name must match `info.title` in the OpenAPI contract verbatim (case-sensitive).
+**`GetRestMockEndpoint` name encoding:** spaces become `+`. The name must match
+`info.title` in the OpenAPI contract verbatim (case-sensitive).
 
 ---
 
@@ -65,14 +77,16 @@ public class EligibilityContractTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/eligibility-check-api.yaml")
-            .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-            .WithMainArtifact("contracts/eligibility-check-api.apimetadata.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml",
+                "contracts/eligibility-check-api.apimetadata.yaml")
+            .Build();
+        await _microcks.StartAsync();
 
-        var mockUrl = _microcks.GetRestMockUrl("Eligibility Check API", "1.0.0");
-        _client = new HttpClient { BaseAddress = new Uri(mockUrl) };
+        Uri mockUrl = _microcks.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
+        _client = new HttpClient { BaseAddress = mockUrl };
     }
 
     public async Task DisposeAsync()
@@ -96,10 +110,12 @@ public class ApiIntegrationFactory : WebApplicationFactory<Program>, IAsyncLifet
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/eligibility-check-api.yaml")
-            .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -111,10 +127,10 @@ public class ApiIntegrationFactory : WebApplicationFactory<Program>, IAsyncLifet
                 d.ServiceType == typeof(IEligibilityGateway));
             if (descriptor != null) services.Remove(descriptor);
 
-            // Register with Microcks mock URL
-            var mockUrl = _microcks.GetRestMockUrl("Eligibility Check API", "1.0.0");
+            // Register the SUT's downstream client with the Microcks mock endpoint
+            Uri mockUrl = _microcks.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
             services.AddHttpClient<IEligibilityGateway, HttpEligibilityGateway>(
-                c => c.BaseAddress = new Uri(mockUrl));
+                c => c.BaseAddress = mockUrl);
         });
     }
 
@@ -164,10 +180,12 @@ public class MicrocksFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        Container = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/eligibility-check-api.yaml")
-            .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-            .BuildAsync();
+        Container = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml")
+            .Build();
+        await Container.StartAsync();
     }
 
     public async Task DisposeAsync() => await Container.DisposeAsync();
@@ -188,27 +206,29 @@ public class EligibilityContractTests
 
 ---
 
-## MicrocksContainersEnsemble
+## MicrocksContainerEnsemble
 
 For testing a service that calls multiple downstream APIs:
 
 ```csharp
-var ensemble = await new MicrocksContainersEnsembleBuilder()
-    .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-    .WithMainArtifact("contracts/driver-profile-api.apiexamples.yaml")
-    .WithMainArtifact("contracts/vehicle-catalog-api.apiexamples.yaml")
-    .BuildAsync();
+var network = new NetworkBuilder().Build();
+var ensemble = new MicrocksContainerEnsemble(network, "quay.io/microcks/microcks-uber:1.14.0-native")
+    .WithMainArtifacts(
+        "contracts/eligibility-check-api.apiexamples.yaml",
+        "contracts/driver-profile-api.apiexamples.yaml",
+        "contracts/vehicle-catalog-api.apiexamples.yaml");
+await ensemble.StartAsync();
 
-// Get individual mock URLs from the ensemble
-string eligibilityUrl = ensemble.GetRestMockUrl("Eligibility Check API", "1.0.0");
-string driverUrl = ensemble.GetRestMockUrl("Driver Profile API", "1.0.0");
+// Get individual mock endpoints from the wrapped container.
+Uri eligibilityUrl = ensemble.MicrocksContainer.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
+Uri driverUrl = ensemble.MicrocksContainer.GetRestMockEndpoint("Driver Profile API", "1.0.0");
 ```
 
 ---
 
 ## Artifact Path Resolution
 
-Paths passed to `WithMainArtifact` are resolved relative to the test project output directory.
+Paths passed to `WithMainArtifacts` are resolved relative to the test project output directory.
 
 **Recommended:** add contracts as content files copied to output in the `.csproj`:
 ```xml

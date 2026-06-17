@@ -172,10 +172,12 @@ public class EligibilityEventConsumerTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/monassurance-events-api.yaml")
-            .WithMainArtifact("contracts/monassurance-events-api.apiexamples.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/monassurance-events-api.yaml",
+                "contracts/monassurance-events-api.apiexamples.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
     public async Task DisposeAsync() => await _microcks.DisposeAsync();
@@ -222,10 +224,12 @@ public class EligibilityEventProducerTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/monassurance-events-api.yaml")
-            .WithMainArtifact("contracts/monassurance-events-api.apiexamples.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/monassurance-events-api.yaml",
+                "contracts/monassurance-events-api.apiexamples.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
     public async Task DisposeAsync() => await _microcks.DisposeAsync();
@@ -240,12 +244,22 @@ public class EligibilityEventProducerTests : IAsyncLifetime
         var useCase = new CheckEligibilityUseCase(
             new KafkaEventPublisher(kafkaBootstrap));
 
+        // Start the async conformance test BEFORE producing, so Microcks listens
+        // while the use case publishes (ASYNC_API_SCHEMA runner).
+        var testResultTask = _microcks.TestEndpointAsync(new TestRequest
+        {
+            ServiceId    = "MonAssurance Events API:1.0.0",
+            RunnerType   = TestRunnerType.ASYNC_API_SCHEMA,
+            TestEndpoint = "kafka://kafka:19092/eligibility.checked",
+            Timeout      = TimeSpan.FromSeconds(10),
+        });
+
         // Act
         await useCase.ExecuteAsync(new CheckEligibilityCommand("DRV-001", driverAge: 35));
 
-        // Assert — verify event was published and matches contract
-        var result = await _microcks.VerifyAsync("MonAssurance Events API", "1.0.0");
-        Assert.True(result.Success, string.Join("\n", result.Failures));
+        // Assert — await the conformance result captured during the act step.
+        var result = await testResultTask;
+        Assert.True(result.Success);
     }
 }
 ```
@@ -256,9 +270,9 @@ public class EligibilityEventProducerTests : IAsyncLifetime
 
 | Artifact | Path |
 |---|---|
-| AsyncAPI contract | `.skraft/sdlc/design/contracts/{name}-events.yaml` |
-| Microcks examples | `.skraft/sdlc/distill/contracts/{name}-events.apiexamples.yaml` |
-| Microcks metadata | `.skraft/sdlc/distill/contracts/{name}-events.apimetadata.yaml` |
+| AsyncAPI contract | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.yaml` |
+| Microcks examples | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.apiexamples.yaml` |
+| Microcks metadata | `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/{name}-events.apimetadata.yaml` |
 
 ---
 

@@ -1,0 +1,19 @@
+{%- comment -%}
+Phase ribbon — "vous êtes ici". Usage:
+  {% include phase-ribbon.html current="discover" %}
+Reads page.lang for link localisation. Labels are language-neutral (DISCOVER…).
+{%- endcomment -%}
+{%- assign phases = "discover,discuss,design,distill,deliver" | split: "," -%}
+{%- assign labels = "DISCOVER,DISCUSS,DESIGN,DISTILL,DELIVER" | split: "," -%}
+<nav class="phase-ribbon" aria-label="{% if page.lang == 'en' %}Pipeline phases{% else %}Phases du pipeline{% endif %}">
+  {%- for p in phases -%}
+    {%- assign label = labels[forloop.index0] -%}
+    {%- assign href = '/' | append: page.lang | append: '/explanation/pipeline/' | append: p -%}
+    {%- if p == include.current -%}
+      <span class="phase-ribbon__step phase-ribbon__step--active" aria-current="step">{{ label }}</span>
+    {%- else -%}
+      <a class="phase-ribbon__step" href="{{ href | relative_url }}">{{ label }}</a>
+    {%- endif -%}
+    {%- unless forloop.last -%}<span class="phase-ribbon__arrow" aria-hidden="true">→</span>{%- endunless -%}
+  {%- endfor -%}
+</nav>

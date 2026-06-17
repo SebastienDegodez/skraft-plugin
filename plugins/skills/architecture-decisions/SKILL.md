@@ -22,7 +22,7 @@ Architecture Decision Records (ADRs) are lightweight documents that capture arch
 ```markdown
 # ADR-{NNN}: {Short Title}
 
-**Status:** Proposed | Accepted | Deprecated | Superseded by ADR-{NNN}
+**Status:** Proposed | Accepted | Rejected | Deprecated | Superseded by ADR-{NNN}
 **Date:** {YYYY-MM-DD}
 
 ## Context
@@ -56,41 +56,56 @@ Architecture Decision Records (ADRs) are lightweight documents that capture arch
 
 ### Filled Example — Auto Insurance Domain
 
+> **Note on baseline vs decision.** CQS at method level (one `ICommandHandler<>` per command, one `IQueryHandler<,>` per query, no method that both mutates and returns a domain value) is the project's clean-architecture baseline — enforced by the `clean-architecture-*` skill and by NetArchTest rules. It is **not** an ADR topic. What follows is an ADR for **CQRS+Bus**: the introduction of dispatch bus interfaces (`ICommandBus`, `IQueryBus`) and a pipeline through which every handler is invoked. Adopting a bus is a structural commitment with cross-cutting consequences (DI registration strategy, pipeline behaviors, testing surface) — that is what makes it ADR-worthy.
+
 ```markdown
-# ADR-001: Apply CQRS for Eligibility Check
+# ADR-001: Introduce a CQRS Dispatch Bus for Application Handlers
 
 **Status:** Accepted
 **Date:** 2026-05-01
 
 ## Context
 
-The eligibility check feature has distinct read and write concerns. The command side modifies eligibility state and raises the `EligibilityChecked` domain event. The query side needs to return a lightweight `EligibilityResult` read model optimised for display in the driver portal. Using a single model for both would force a compromise: either the domain model is polluted with display concerns, or the read model is burdened with invariant enforcement.
+The project's baseline is CQS at the method level: every use case is implemented as either an `ICommandHandler<TCommand>` or an `IQueryHandler<TQuery, TResult>`, registered by convention. Today, the API layer injects each handler directly through the DI container.
+
+Three cross-cutting concerns have appeared on multiple handlers and are starting to be copied by hand: input validation, structured logging around every dispatch, and a unit-of-work boundary around command execution. Implementing each of these as a per-handler decorator wired manually in DI does not scale: the registration code becomes a `switch` over handler types and new behaviors require touching every registration site.
+
+A dispatch bus (`ICommandBus` / `IQueryBus`) lets us wrap handler invocation in an ordered pipeline of behaviors registered once. The handler implementations themselves remain unchanged — the bus is a structural addition over an unchanged CQS surface.
 
 ## Decision
 
-We will apply simple CQRS: separate command handlers (mutate state, raise events) from query handlers (return read models). Both sides share the same relational database but use separate models. Command handlers write to the `eligibility` table via the domain aggregate. Query handlers read from an `eligibility_read` view or projection table.
+We will introduce `ICommandBus.DispatchAsync(ICommand)` and `IQueryBus.DispatchAsync<TResult>(IQuery<TResult>)` in the Application layer. The API layer will inject these two buses instead of individual handlers. The bus implementation lives in Infrastructure and resolves the matching handler from the container, then invokes it through an ordered pipeline of behaviors:
+
+1. `ValidationBehavior` — runs FluentValidation against the message; failures short-circuit the pipeline.
+2. `LoggingBehavior` — structured log around dispatch (message type, duration, outcome).
+3. `UnitOfWorkBehavior` (commands only) — opens a UoW before the handler, commits on success, rolls back on exception.
+
+Handler interfaces and signatures do not change. Convention-based handler registration does not change.
 
 ## Consequences
 
 **Positive:**
-- Command and query models evolve independently — adding a display field does not touch the domain model
-- Read models can be optimised (indexed, denormalised) without affecting domain logic
-- Aligns with the event model produced in the Event Modeling session
+- Cross-cutting behaviors live in one place per behavior, not duplicated across handlers
+- API layer depends on two stable interfaces instead of N handler interfaces
+- New cross-cutting concerns are added by registering a behavior, not by editing every handler or every DI registration
 
 **Negative / trade-offs:**
-- Two code paths to maintain instead of one
-- Slight increase in complexity for features that are simple reads/writes
-- Developers must understand which side to modify when changing behaviour
+- One extra indirection between caller and handler — stack traces and `Find Usages` are slightly less direct
+- Pipeline order becomes part of the architecture and must be documented; reordering behaviors is a real change
+- Test setup for code that calls the bus must either stub the bus or run the full pipeline
 
 **Neutral:**
-- No separate database or event store required at this stage — keeping full CQRS as a future option if read volume grows
+- The CQS baseline is unchanged — every existing handler keeps its interface and is reachable directly for unit tests
+- No message broker, queue, or out-of-process dispatch is introduced — this remains in-process
 
 ## Alternatives Rejected
 
 | Alternative | Reason rejected |
 |---|---|
-| Single CRUD service (no CQRS) | Would mix mutation and query concerns in one model, forcing compromises in both directions as the feature grows |
-| Full CQRS with separate stores | Over-engineering for current scale; no read replica needed yet |
+| Keep direct handler injection, no bus (the baseline before this ADR) | Cross-cutting concerns force per-handler decorators registered by hand; the DI module becomes a `switch` over handler types and every new behavior touches every registration site |
+| Add the behaviors as plain decorators registered per handler in DI, without a bus | Equivalent runtime semantics, but the registration code grows as O(handlers × behaviors) instead of O(behaviors); pipeline order is implicit in registration order across N call sites |
+| Use a third-party mediator library | Adds an external dependency for a thin abstraction this project can own in ~50 lines; the library's full surface (notifications, request/response, streams) is wider than needed |
+| Full CQRS with separate read/write data stores | Out of scope of this ADR — that decision concerns the data tier, not the dispatch tier, and would warrant its own ADR if the read load required it |
 ```
 
 ---
@@ -100,13 +115,14 @@ We will apply simple CQRS: separate command handlers (mutate state, raise events
 `adr-{NNN}-{slug}.md`
 
 Examples:
-- `adr-001-cqrs-eligibility.md`
+- `adr-001-cqrs-bus-eligibility.md`
 - `adr-002-aggregate-boundary-eligibility.md`
-- `adr-003-event-sourcing-rejected.md`
+- `adr-003-event-sourcing-eligibility.md` *(slug names the topic; verdict lives in the `Status:` field — `Accepted` or `Rejected`)*
 
 Rules:
 - Numbers are three digits, zero-padded: `001`, not `1`
 - Slugs are lowercase kebab-case, derived from the short title
+- **Slugs name the SUBJECT, never the verdict.** Forbidden suffixes: `-rejected`, `-accepted`, `-deprecated`, `-superseded`. The verdict lives in `Status:`.
 - Gaps in numbering are forbidden — never skip a number
 - Numbers are never reused — a deprecated ADR keeps its number
 
@@ -115,12 +131,13 @@ Rules:
 ## Status and Lifecycle
 
 ```
-Proposed → Accepted → Deprecated
-                   → Superseded by ADR-{NNN}
+Proposed → Accepted   → Deprecated
+        ↘ Rejected    → Superseded by ADR-{NNN}
 ```
 
-- **Proposed:** Decision is drafted but not yet ratified
-- **Accepted:** Decision is in effect — the architecture reflects it
+- **Proposed:** Decision is drafted, committed, and awaiting human ratification
+- **Accepted:** Option was evaluated and adopted — the architecture reflects it
+- **Rejected:** Option was evaluated and explicitly declined — the ADR records the analysis so the debate is not re-run later without new evidence
 - **Deprecated:** Decision is no longer relevant (e.g., the feature was removed), but was never superseded
 - **Superseded:** Decision has been replaced by a newer one — always reference the successor
 
@@ -130,6 +147,21 @@ Proposed → Accepted → Deprecated
 
 **No ADR is ever deleted.** The historical record of why a decision was made is as valuable as the decision itself.
 
+### Human-in-the-loop ratification
+
+The `Proposed → Accepted | Rejected` transition is owned by a human, not the agent. The ratification channel is supplied by the execution context (the orchestrating workflow when running in an agentic pipeline, or an in-terminal prompt when running locally) — this skill does not prescribe the channel.
+
+**Both transitions are committed:** the `Proposed` revision AND the final `Accepted` / `Rejected` revision land in git history. The trail of "we paused here for a human" is part of the architectural record.
+
+### Rejected ADRs
+
+A `Rejected` ADR documents that an option was seriously evaluated and the team decided NOT to adopt it. The ADR exists so the same debate is not re-opened in six months without new evidence.
+
+- **Filename:** named after the SUBJECT — `adr-NNN-event-sourcing.md`, NEVER `adr-NNN-event-sourcing-rejected.md`. The verdict lives in `Status:`, not in the filename.
+- **Decision phrasing:** MAY start with "We will not adopt X because…" — this is precisely what a `Rejected` status means.
+- **Trigger requirement:** a `Rejected` ADR is written ONLY when a story or measurable force in the current batch raised the question (see G9 traceability). A `Rejected` ADR with no triggering story is a non-decision artefact and is forbidden.
+- **Alternatives Rejected section** is flipped: list what the team adopted INSTEAD (e.g., "state-based persistence with audit-log table").
+
 ---
 
 ## When to Write an ADR
@@ -137,10 +169,12 @@ Proposed → Accepted → Deprecated
 Write an ADR for any decision that:
 - Establishes or changes a layer boundary
 - Chooses an aggregate boundary
-- Adopts or rejects a pattern (CQRS, Event Sourcing, Saga, Specification)
+- **Adopts** a pattern that adds complexity beyond the project baseline (CQRS+Bus, Event Sourcing, Saga, Specification, ACL)
 - Establishes a bounded context boundary
 - Chooses a context mapping relationship (ACL, Conformist, etc.)
 - Affects a cross-cutting concern (error handling strategy, validation approach)
+
+ADRs are written for **additions** and **deviations** from the project baseline. The baseline itself is not an ADR — it is the set of conventions enforced by project skills and architecture tests.
 
 ### When NOT to Write an ADR
 
@@ -148,6 +182,8 @@ Do not write an ADR for:
 - Implementation details (naming conventions, code formatting)
 - Library version choices — unless the version has architectural impact (e.g., switching from EF Core to Dapper changes the data access strategy)
 - Configuration choices (connection string format, environment variable names)
+- **A pattern that was never raised by any story or measurable force.** Silence = baseline default. ADRs (whether `Accepted` or `Rejected`) ratify questions that were actually asked. A `Rejected` ADR is legitimate ONLY when a story or measurable force in the batch raised the question — in which case the ADR records the evaluation so the debate is not re-opened without new evidence. Writing a `Rejected` ADR for an unraised question is a non-decision artefact (G14).
+- **A convention already enforced by a project skill or by automated architecture tests** (e.g., CQS method-level separation, layer boundaries, convention-based DI registration). Conventions are baseline; ADRs document additions or deviations from baseline.
 
 ---
 

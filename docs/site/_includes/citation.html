@@ -1,0 +1,12 @@
+{% assign cite = nil %}
+{% for c in site.data.citations %}
+  {% if c.key == include.key %}
+    {% assign cite = c %}
+    {% break %}
+  {% endif %}
+{% endfor %}
+{% if cite %}
+<blockquote class="citation" id="cite-{{ cite.key }}">
+  <p>{{ cite.authors }} ({{ cite.year }}). <em>{{ cite.title }}</em>.</p>
+</blockquote>
+{% endif %}

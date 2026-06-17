@@ -13,14 +13,21 @@ metadata:
     - S6 RULE BRIDGE
   skills:
     - acceptance-review-criteria
+    - adversarial-review-lenses
   inputs:
     required:
-      - .skraft/sdlc/distill/{feature}.feature
-      - .skraft/sdlc/distill/test-plan-{story}.md
-      - .skraft/sdlc/distill/impl-plan-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
+      - tests/**/{Feature}AcceptanceTests.cs
     context:
-      - .skraft/sdlc/discuss/ac-draft-{story}.md
-      - .skraft/sdlc/design/contracts-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
+  outputs:
+    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Acceptance-Designer Reviewer
@@ -36,12 +43,13 @@ Load before starting:
 
 ### Phase 1: RECEIVE
 
-Collect artefacts:
-- **Feature files** — `.skraft/sdlc/distill/*.feature`
-- **Test plan** — `.skraft/sdlc/distill/test-plan-{story}.md`
-- **Implementation plan** — `.skraft/sdlc/distill/impl-plan-{story}.md`
-- **AC source** — `.skraft/sdlc/discuss/ac-draft-{story}.md` (bijection reference)
-- **Contracts** — `.skraft/sdlc/design/contracts-{story}.md` (boundary reference)
+Collect artefacts (READ-ONLY — the reviewer never writes outside `reviews/{date}/`):
+- **Feature files** — `.copilot-tracking/skraft-plans/{projectSlug}/features/*.feature`
+- **Test plan** — `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md`
+- **Implementation plan** — `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md`
+- **Outer acceptance test** — `tests/**/{Feature}AcceptanceTests.cs` (RED outer-loop test authored in DISTILL)
+- **AC source** — `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md` (bijection reference)
+- **Contracts** — `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md` (boundary reference)
 
 If artefacts are missing, note them and proceed with available inputs.
 
@@ -74,13 +82,15 @@ Evaluate 4 lenses independently. Each lens sees only its designated inputs — f
 ---
 
 #### Lens 3: testability-lens
-**Inputs:** Feature files + test plan + implementation plan
-**Question:** Are scenarios implementable as-is? Is the outside-in sequencing correct?
+**Inputs:** Feature files + test plan + implementation plan + outer acceptance test
+**Question:** Are scenarios implementable as-is? Is the outside-in sequencing correct? Is the outer acceptance test a faithful, RED encoding of the AC?
 
 | Gate | Definition | Severity if violated |
 |---|---|---|
 | G5 | Every step is unambiguous and independently implementable. | HIGH |
 | G6 | Every scenario in the feature files has a corresponding entry in the implementation plan. | HIGH |
+| G9 | Every input/expected value in the outer acceptance test matches the `.feature` verbatim — no invented or altered values. | BLOCKER |
+| G10 | The outer acceptance test exists and its first scenario fails on a business assertion (RED), not a compile/setup error. | BLOCKER |
 
 ---
 
@@ -101,17 +111,21 @@ Apply the severity matrix (from `acceptance-review-criteria` skill):
 
 | Condition | Verdict |
 |---|---|
-| ≥1 BLOCKER in any lens | `rejected` |
-| ≥1 HIGH, 0 BLOCKER | `changes_requested` |
-| MEDIUM only across all lenses | `changes_requested` |
-| LOW only or all pass | `approved` |
+| ≥1 BLOCKER in any lens | `NEEDS_REWORK` |
+| ≥1 HIGH, 0 BLOCKER | `NEEDS_REWORK` |
+| MEDIUM only across all lenses | `NEEDS_REWORK` |
+| LOW only or all pass | `APPROVED` |
+
+A BLOCKER finding is mechanically correctable by the acceptance-designer: it returns `NEEDS_REWORK` so the orchestrator re-dispatches with the findings attached (auto-retry, escalating to a human only after 3 failed attempts).
 
 **Dissent Rule:** If 3 lenses pass and 1 fails — explain explicitly why the minority finding is overridden OR upheld. Never silently override. Document in `dissent`.
 
 ### Verdict Output
 
+Persist the full verdict YAML inside a markdown wrapper (first line: `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`, then emit the same YAML to stdout.
+
 ```yaml
-verdict: approved | changes_requested | rejected
+verdict: APPROVED | NEEDS_REWORK | REJECTED
 confidence: high | medium | low
 lenses:
   coverage:

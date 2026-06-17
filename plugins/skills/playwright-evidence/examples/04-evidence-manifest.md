@@ -2,7 +2,7 @@
 
 Domain: MonAssurance auto-insurance eligibility check.
 
-After the test run, write `.skraft/sdlc/deliver/{story}/evidence/manifest.md` so agents know what
+After the test run, write `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/manifest.md` so agents know what
 was captured. The story key aligns with all other SDLC artefacts:
 `discuss/ac-draft-{story}.md`, `design/diagrams-{story}.md`, `distill/impl-plan-{story}.md`.
 
@@ -48,7 +48,7 @@ export default class EvidenceManifestReporter implements Reporter {
   }
 
   onEnd(result: FullResult) {
-    const dir = `.skraft/sdlc/deliver/${this.storyId}/evidence`;
+    const dir = `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${this.storyId}/evidence`;
     mkdirSync(dir, { recursive: true });
 
     const rows = this.entries
@@ -91,11 +91,11 @@ Register in `playwright.config.ts`:
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  outputDir: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence`,
+  outputDir: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence`,
   reporter: [
     ['./reporters/evidence-manifest-reporter.ts'],
-    ['html', { outputFolder: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports`, open: 'never' }],
-    ['junit', { outputFile: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }],
+    ['html', { outputFolder: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports`, open: 'never' }],
+    ['junit', { outputFile: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }],
   ],
   use: {
     screenshot: 'only-on-failure',
@@ -109,7 +109,7 @@ export default defineConfig({
 
 ```bash
 SKRAFT_STORY_ID=42-add-eligibility-check npx playwright test
-# manifest written to .skraft/sdlc/deliver/42-add-eligibility-check/evidence/manifest.md
+# manifest written to .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/manifest.md
 ```
 
 ## Resulting manifest
@@ -126,14 +126,14 @@ SKRAFT_STORY_ID=42-add-eligibility-check npx playwright test
 ## Files
 | Type | Path | Test |
 |---|---|---|
-| screenshot | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/eligibility-check-underage-1715770200000.png | underage driver should be rejected |
-| trace | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/eligibility-check-underage-1715770200000.zip | underage driver should be rejected |
+| screenshot | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/eligibility-check-underage-1715770200000.png | underage driver should be rejected |
+| trace | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/eligibility-check-underage-1715770200000.zip | underage driver should be rejected |
 
 ## Reports
 | Type | Path |
 |---|---|
-| html | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/reports/index.html |
-| junit | .skraft/sdlc/deliver/42-add-eligibility-check/evidence/reports/results.xml |
+| html | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/index.html |
+| junit | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/results.xml |
 ```
 
-The orchestrator resolves the manifest by reading `state.md` → active story → `.skraft/sdlc/deliver/{story}/evidence/manifest.md`.
+The orchestrator resolves the manifest by reading `state.md` → active story → `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/manifest.md`.

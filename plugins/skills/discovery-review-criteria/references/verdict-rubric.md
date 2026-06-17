@@ -54,8 +54,8 @@ verdict: approved
 confidence: high
 reviewed_at: 2026-05-14T11:45:00Z
 artefacts_reviewed:
-  - .skraft/sdlc/discover/triage-2026-05-14.md
-  - .skraft/sdlc/discover/sprint-proposal.md
+  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-2026-05-14.md
+  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
 lenses:
   completeness:
     status: pass
@@ -121,8 +121,8 @@ verdict: changes_requested
 confidence: high
 reviewed_at: 2026-05-14T12:10:00Z
 artefacts_reviewed:
-  - .skraft/sdlc/discover/triage-2026-05-14.md
-  - .skraft/sdlc/discover/sprint-proposal.md
+  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-2026-05-14.md
+  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
 lenses:
   completeness:
     status: pass
@@ -188,8 +188,8 @@ verdict: rejected
 confidence: high
 reviewed_at: 2026-05-14T12:30:00Z
 artefacts_reviewed:
-  - .skraft/sdlc/discover/triage-2026-05-14.md
-  - .skraft/sdlc/discover/sprint-proposal.md
+  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-2026-05-14.md
+  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
 lenses:
   completeness:
     status: fail

@@ -1,0 +1,81 @@
+# Trigger evals for skraft-docs-orchestrator
+# Source of truth: .specs/plans/2026-06-16-skraft-docs-drift-reconciler.md (genesis handoff packet, Evals plan)
+# Total: 18 triggers (10 should / 8 should-not) = 60/40 train/val split
+# Ship gate: validation-split rate >= 0.5 on should_trigger AND < 0.5 on should_not.
+agent: skraft-docs-orchestrator
+
+should_trigger:
+  - id: T-S-01
+    split: train
+    prompt: "reconcile the handbook with the plugin"
+    rationale: "Canonical reconciliation request — the agent's core verb."
+  - id: T-S-02
+    split: train
+    prompt: "the docs are out of date with the agents, fix the drift"
+    rationale: "Documentation drift between sources and pages."
+  - id: T-S-03
+    split: train
+    prompt: "update the documentation so every agent and skill has its own reference page"
+    rationale: "Individual per-item reference pages — the multi-level menu ask."
+  - id: T-S-04
+    split: train
+    prompt: "the left menu is missing the new worker pages, regenerate it"
+    rationale: "Menu structure drift (orphan sources not surfaced)."
+  - id: T-S-05
+    split: train
+    prompt: "sweep the book for missing or empty pages and open a PR"
+    rationale: "Full-book gap sweep producing a PR."
+  - id: T-S-06
+    split: train
+    prompt: "FR and EN reference pages are out of sync, mirror them"
+    rationale: "FR/EN parity drift."
+  - id: T-S-07
+    split: val
+    prompt: "check the handbook for documentation drift and repair it"
+    rationale: "Detect + repair drift — the A11 loop."
+  - id: T-S-08
+    split: val
+    prompt: "an agent was added under plugins, make sure the book documents it"
+    rationale: "Orphan source → new derived page."
+  - id: T-S-09
+    split: val
+    prompt: "the sidebar ordering and Diataxis sections are wrong, fix the contract"
+    rationale: "Ordering + diataxis_mode contract drift."
+  - id: T-S-10
+    split: val
+    prompt: "/skraft-docs"
+    rationale: "Direct entry-point invocation."
+
+should_not_trigger:
+  - id: T-N-01
+    split: train
+    prompt: "implement a new feature in the payment service"
+    rationale: "Product code work, not documentation reconciliation."
+  - id: T-N-02
+    split: train
+    prompt: "refactor the SDLC pipeline agents"
+    rationale: "Editing plugin sources — explicitly out of scope (sources are read-only)."
+  - id: T-N-03
+    split: train
+    prompt: "run the test suite and fix the failing tests"
+    rationale: "Test/CI work, not docs."
+  - id: T-N-04
+    split: train
+    prompt: "write a new skill for contract testing"
+    rationale: "Authoring a plugin primitive, not reconciling docs about it."
+  - id: T-N-05
+    split: train
+    prompt: "review this pull request for security issues"
+    rationale: "Code review, not handbook reconciliation."
+  - id: T-N-06
+    split: val
+    prompt: "translate the README into Spanish"
+    rationale: "A different doc task outside the FR/EN handbook contract."
+  - id: T-N-07
+    split: val
+    prompt: "design a new agent chain with genesis"
+    rationale: "Agentic-primitive design, not docs drift repair."
+  - id: T-N-08
+    split: val
+    prompt: "bump the dependencies and update the lockfile"
+    rationale: "Dependency maintenance, not documentation."

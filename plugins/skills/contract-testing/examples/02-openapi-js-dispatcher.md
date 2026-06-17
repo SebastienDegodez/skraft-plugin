@@ -7,7 +7,7 @@
 ## OpenAPI Contract (POST operation added)
 
 ```yaml
-# .skraft/sdlc/design/contracts/eligibility-check-api.yaml (excerpt — add to existing paths)
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.yaml (excerpt — add to existing paths)
 paths:
   /eligibilities:
     post:
@@ -76,7 +76,7 @@ components:
 ## Microcks Examples
 
 ```yaml
-# .skraft/sdlc/distill/contracts/eligibility-check-api.apiexamples.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apiexamples.yaml
 apiVersion: mocks.microcks.io/v1alpha1
 kind: APIExamples
 metadata:
@@ -170,7 +170,7 @@ spec:
 ## Microcks Metadata (JS Dispatcher)
 
 ```yaml
-# .skraft/sdlc/distill/contracts/eligibility-check-api.apimetadata.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apimetadata.yaml
 apiVersion: mocks.microcks.io/v1alpha1
 kind: APIMetadata
 metadata:
@@ -218,14 +218,16 @@ public class EligibilityCheckDispatcherTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _microcks = await new MicrocksBuilder()
-            .WithMainArtifact("contracts/eligibility-check-api.yaml")
-            .WithMainArtifact("contracts/eligibility-check-api.apiexamples.yaml")
-            .WithMainArtifact("contracts/eligibility-check-api.apimetadata.yaml")
-            .BuildAsync();
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml",
+                "contracts/eligibility-check-api.apimetadata.yaml")
+            .Build();
+        await _microcks.StartAsync();
 
-        var mockUrl = _microcks.GetRestMockUrl("Eligibility Check API", "1.0.0");
-        _client = new HttpClient { BaseAddress = new Uri(mockUrl) };
+        Uri mockUrl = _microcks.GetRestMockEndpoint("Eligibility Check API", "1.0.0");
+        _client = new HttpClient { BaseAddress = mockUrl };
     }
 
     public async Task DisposeAsync()

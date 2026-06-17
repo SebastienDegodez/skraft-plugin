@@ -470,6 +470,77 @@ call before depending on it.
   where the loader can see it AND verify reachability with a tool
   call before relying on it (truth #2 CONTEXT EXPLICIT + truth #6
   HARNESSES BRIDGE).
+- CLASS-UNIFORM GRAPH: every module in the design binds the same
+  role class (typically planner). At least one is doing routine
+  implementer or reviewer work. R5 COST PRUNE trigger; apply A12
+  GRADIENT WORKFLOW.
+- INVALIDATOR LEAK: the design's prefix contains at least one
+  cache invalidator (timestamp, mid-session tool catalogue
+  change, mid-session model switch, mid-session effort change).
+  Forces fresh-input billing on every turn; eats the largest cost
+  lever. Apply B13 CACHE-AWARE PREFIX.
+- COST-OPTIMIZED-BY-VIBES: cost projection in the handoff packet
+  names patterns but cites no row from the cost-shape matrix in
+  `pattern-tradeoffs.md`. Reviewers cannot reproduce the choice.
+- HARDCODED MODEL NAMES: design refers to concrete model SKUs
+  ("use Sonnet 4.6") rather than role classes ("use the
+  implementer class"). Models age out within months; per-harness
+  adapters bind at codegen time.
+- AUDIENCE BLEED: an INTERNAL artifact emitted in normal prose
+  with no justification, OR an EXTERNAL artifact compressed in
+  caveman. For every task() spawn you plan, fill a row in the
+  handoff packet's PER-SPAWN DECLARATION TABLE (Audience, Tier,
+  Brief mode, Receipt mode, Justification). Default INTERNAL =
+  caveman per B14c.
+- HIDDEN COUPLING: two modules duplicating the same content instead
+  of one depending on the other.
+- LEAKY ABSTRACTION: persona or skill body naming harness-specific
+  syntax.
+- SHARED MUTABLE STATE: multiple writers to the same sink without
+  interlock.
+- CONTEXT THRASH: loading content the thread will not use; a single
+  thread playing multiple independent lenses (forces attention to
+  jump and degrades each).
+- UNREACHED ESCAPE HATCH: a fan-out opportunity left as a sequential
+  loop (most reviews of >=3 independent lenses are this).
+- STUB ORCHESTRATION: an orchestrator that only sequences with no
+  interlock, gate, or synthesis decision.
+- DISPATCH COLLISION: two installed skills whose frontmatter
+  descriptions overlap on trigger nouns/verbs, forcing the
+  dispatcher LLM to guess. Silent failure on every miss.
+- DESCRIPTION-AS-MARKETING: a skill description written for human
+  README readers ("a powerful tool that helps you...") instead of
+  for the dispatcher. Burns dispatcher accuracy for prose that no
+  end user will read.
+- PREMATURE SPLIT: decomposing a skill into siblings when no R1 SPLIT
+  trigger fires. Each split adds a dispatcher entry and a
+  description that must disambiguate from siblings; the cost is
+  paid every session.
+- PHANTOM DEPENDENCY: a module names another module by handle in
+  prose but never declares it via the available distribution
+  mechanism (manifest dep, companion-skill recommendation in the
+  body, or tool-call probe at use-time). The reference is visible
+  to humans reading the markdown but invisible to the harness
+  loader, so the dependency cannot be supplied. Cure: declare it
+  where the loader can see it AND verify reachability with a tool
+  call before relying on it (truth #2 CONTEXT EXPLICIT + truth #6
+  HARNESSES BRIDGE).
+- CLASS-UNIFORM GRAPH: every module in the design binds the same
+  role class (typically planner). At least one is doing routine
+  implementer or reviewer work. R5 COST PRUNE trigger; apply A12
+  GRADIENT WORKFLOW.
+- INVALIDATOR LEAK: the design's prefix contains at least one
+  cache invalidator (timestamp, mid-session tool catalogue
+  change, mid-session model switch, mid-session effort change).
+  Forces fresh-input billing on every turn; eats the largest cost
+  lever. Apply B13 CACHE-AWARE PREFIX.
+- COST-OPTIMIZED-BY-VIBES: cost projection in the handoff packet
+  names patterns but cites no row from the cost-shape matrix in
+  `pattern-tradeoffs.md`. Reviewers cannot reproduce the choice.
+- HARDCODED MODEL NAMES: design refers to concrete model SKUs
+  ("use Sonnet 4.6") rather than role classes ("use the
+  implementer class"). Models age out within months; per-harness
+  adapters bind at codegen time.
 
 ## Severity rubric for findings
 

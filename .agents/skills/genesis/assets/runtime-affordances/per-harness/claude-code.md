@@ -115,3 +115,55 @@ In Claude Code: the TodoWrite tool (in-context structured list).
   chat UI for interactive skill and subagent invocation.
 - Recommended Skills: built-in skill discovery and recommendation without explicit
   orchestration; skill selector is autonomous.
+
+## 9. MODEL CATALOG & BILLING (cost-economics)
+
+Maps the abstract role classes in `../model-catalog.md` to concrete
+Claude SKUs and to Anthropic's pricing surface. The genesis architect
+designs in role classes; this adapter binds them at codegen time.
+
+Verified on: 2025-11-14. Always re-verify the dollar figures against
+the live pricing page before quoting; they age out.
+
+### Role class -> concrete model (defaults)
+
+| Role class             | Default SKU                | Alternative                  |
+|------------------------|----------------------------|------------------------------|
+| planner                | Claude Opus 4.x            | Sonnet 4.x with extended thinking |
+| implementer            | Claude Sonnet 4.x          | Haiku 4.x for narrow scope   |
+| reviewer               | Claude Sonnet 4.x          | Haiku 4.x for checklist work |
+| trivial                | Claude Haiku 4.x           | (none)                       |
+| long-context-retriever | Sonnet 4.x (1M context tier) | Opus where capability ceiling needed |
+
+### Billing surface
+
+Token pass-through. Per-Mtok rates (Anthropic public API,
+verified 2025-11-14):
+
+| SKU      | Input  | Output | Cache write (5min) | Cache write (1h) | Cache read |
+|----------|--------|--------|--------------------|------------------|------------|
+| Opus 4.x | $15    | $75    | $18.75             | $30              | $1.50      |
+| Sonnet 4.x | $3   | $15    | $3.75              | $6               | $0.30      |
+| Haiku 4.x | $1    | $5     | $1.25              | $2               | $0.10      |
+
+Source: https://www.anthropic.com/pricing#api
+
+### Cost-pattern bindings
+
+- B12 MODEL ROUTER: bind in subagent frontmatter `model:` field; route
+  by spawning subagents with different model values from a trivial-
+  class dispatcher. Note: cross-model context does NOT share cache;
+  the routing decision IS a cache partition boundary.
+- B13 CACHE-AWARE PREFIX: Anthropic exposes up to 4 cache breakpoints
+  per request. Place persona body + skill body below the lowest
+  breakpoint; per-turn tool results above the highest. Cache reads
+  bill at 10% of input.
+- B16 EFFORT GOVERNOR: extended thinking ON adds output tokens at
+  output rate. Declare per subagent. Mid-session extended-thinking
+  toggle is a CACHE INVALIDATOR.
+
+### Stance binding
+
+Operator declares stance in the first prompt OR in `.claude/CLAUDE.md`
+as `stance: <value>`. The genesis-architect subagent reads it at
+step 1.

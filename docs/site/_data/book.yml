@@ -1,0 +1,553 @@
+# book.yml — CONTRAT DE STRUCTURE DU LIVRE SKRAFT (source de verite unique)
+#
+# Ce manifeste est le contrat lu par les deux workflows gh-aw :
+#   - skraft-docs-sync  : regenere les pages `type: derived` depuis `source`.
+#   - skraft-docs-gaps  : detecte les ecarts contrat <-> fichiers <-> sources
+#                         et GENERE des pages `type: editorial` COMPLETES
+#                         (plus de brouillons a completer a la main).
+#
+# Regles dures (verifiees par skraft-docs-gaps) :
+#   1. Toute page listee ici DOIT exister en FR (`fr`) ET en EN (`en`).
+#   2. Toute page `type: derived` DOIT citer source + annee (auteur, titre, annee).
+#   3. Toute page de la partie `reference` DOIT respecter le gabarit de page
+#      `reference_template` (blocs requis) — comprehensible sans maitrise du craft.
+#   4. Tout pattern / gate / lens / agent / skill present dans `sources` mais
+#      absent d'une page derivee declenche un ecart (gap).
+#   5. La page FR et la page EN d'une meme entree PARTAGENT le meme basename
+#      (nom de fichier anglais) ; seul le prefixe de dossier `fr/` vs `en/`
+#      change. Ex. `fr/for-executives.md` <-> `en/for-executives.md`. AUCUNE
+#      exception : le basename anglais s'applique aussi aux pages dont le titre
+#      est francais (ex. `fr/reference/glossary.md`, label "Glossaire").
+#
+# `type` : derived (regenere mecaniquement depuis `source`) | editorial (redige
+#          integralement par l'agent skraft-docs-gaps : page COMPLETE et lisible,
+#          sans trou ; un chiffre non sourcable depuis le code est formule
+#          qualitativement et suffixe `(estime)`, jamais invente ni laisse vide).
+
+meta:
+  title_fr: "SKRAFT — le livre"
+  title_en: "SKRAFT — the book"
+  langs: [fr, en]
+
+  # Design : inspire du learning-path (sebastiendegodez) et du site principal.
+  #   - Theme liquid-glass (deja present dans assets/css/site.css : .glass-*).
+  #   - Mise en page "doc" : sidebar groupee par partie (comme les blocs
+  #     FONDATIONS / COMPOSITION du learning-path) + contenu max ~820px.
+  #   - Highlight vert (var(--color-highlight)), liens actifs a bordure gauche.
+  design:
+    layout: doc                 # sidebar (parties) + contenu
+    sidebar_grouped_by: parts   # chaque `part` = une section de sidebar (h3 majuscule)
+    theme: liquid-glass
+    content_max_width: 820px
+    # Artefacts qui materialisent ce design (opt-in : une page l'active via
+    # `layout: doc` dans son frontmatter ; la sidebar est lue depuis `parts`).
+    artifacts:
+      layout: "docs/site/_layouts/doc.html"
+      stylesheet: "docs/site/assets/css/doc.css"
+
+  # Admonitions colorees (style learning-path), rendues depuis des fences
+  # `:::type ... :::` ou des blockquotes. A utiliser pour signaler risques et notes.
+  admonitions: [note, info, tip, caution, warning, danger]
+
+  # GABARIT DE PAGE impose a CHAQUE page de la partie `reference` (et recommande
+  # pour les pages how-to/explanation). L'inspiration du learning-path porte sur le
+  # DESIGN (voir `design`), pas sur une notion de "module" : ce sont des pages de
+  # reference, pas des exercices. L'agent skraft-docs-gaps ECHOUE si une page de
+  # reference omet un bloc requis.
+  reference_template:
+    frontmatter:
+      required: [layout, lang, title, description]
+      optional: [persona, sidebar_position]
+    blocks:
+      - id: title
+        required: true
+        fr: "# Titre"
+        en: "# Title"
+      - id: intro-callout
+        required: true
+        fr: "Accroche en une phrase, sans jargon (blockquote)"
+        en: "One-sentence hook, no jargon (blockquote)"
+      - id: pourquoi
+        required: true
+        fr: "## Pourquoi — le probleme que ca resout"
+        en: "## Why — the problem it solves"
+      - id: concepts
+        required: true
+        fr: "## Concepts cles — comment ca marche (schema mermaid + tableaux)"
+        en: "## Key concepts — how it works (mermaid diagram + tables)"
+      - id: why-citation
+        required: true
+        fr: "## Pourquoi cette pratique — citation : auteur, *ouvrage*, annee"
+        en: "## Why this practice — citation: author, *work*, year"
+      - id: pieges
+        required: false
+        fr: "## Pieges & anti-patterns"
+        en: "## Pitfalls & anti-patterns"
+      - id: aller-plus-loin
+        required: false
+        fr: "## Pour aller plus loin (liens internes)"
+        en: "## Going further (internal links)"
+      - id: sources
+        required: true
+        fr: "## Sources — references (auteur, ouvrage, annee) depuis citations.yml"
+        en: "## Sources — references (author, work, year) from citations.yml"
+      - id: glossaire
+        required: true
+        fr: "Termes a connaitre definis en ligne (lien vers le glossaire)"
+        en: "Terms to know defined inline (link to the glossary)"
+
+  # Gabarit allege pour les pages purement editoriales (vision, contribuer).
+  editorial_template:
+    frontmatter:
+      required: [layout, lang, title, description]
+    blocks:
+      - id: title
+        fr: "# Titre"
+        en: "# Title"
+      - id: intro-callout
+        fr: "Accroche en une phrase (blockquote)"
+        en: "One-sentence hook (blockquote)"
+      - id: body
+        fr: "Sections narratives (Pourquoi -> Comment), jargon defini en ligne"
+        en: "Narrative sections (Why -> How), jargon defined inline"
+      - id: sources
+        fr: "## Sources (si des faits sont avances)"
+        en: "## Sources (if claims are made)"
+
+# Sources dérivables (plugin SKRAFT uniquement — HVE n'est PAS scanne ici).
+sources:
+  # Agents de phase, user-invocables (un par phase + leurs reviewers + l'orchestrateur).
+  # `*` ne descend PAS dans `workers/` : les subagents internes sont captes par `workers` ci-dessous.
+  agents: "plugins/agents/*.agent.md"
+  # Les 4 lentilles de revue adverse CORE (utilisees par les reviewers de phase).
+  lenses: "plugins/agents/reviewer-lenses/*.agent.md"
+  # Subagents internes (user-invocable: false) groupes par capacite sous workers/<capacite>/.
+  # Capte le bundle complet d'une capacite : les *-worker.agent.md ET leurs *-lens.agent.md
+  # conditionnels (mock-fidelity, contract-fidelity). Le glob `*/*` exige le segment <capacite>,
+  # donc il ignore d'eventuels doublons a plat (workers/*.agent.md) -> pas de double comptage.
+  workers: "plugins/agents/workers/*/*.agent.md"
+  skills: "plugins/skills/*/SKILL.md"
+  gates: "plugins/skills/*-review-criteria/SKILL.md"
+  patterns: "plugins/skills/architecture-patterns/SKILL.md"
+  citations: "docs/site/_data/citations.yml"
+
+# parts — sidebar handbook groupee par phase (modele learning-path).
+# Chaque page porte label_fr/label_en (libelle lisible affiche dans la sidebar,
+# voir _layouts/doc.html). type/source/purpose restent pour le contrat docs-gaps.
+parts:
+  # ----------------------------------------------------------------- ACCUEIL
+  - id: accueil
+    icon: "fa-solid fa-house"
+    sidebar_position: 0
+    title_fr: "Accueil"
+    title_en: "Home"
+    intro_fr: "Le point d'entree du handbook : ce que SKRAFT apporte et par ou commencer."
+    intro_en: "The handbook entry point: what SKRAFT brings and where to start."
+    pages:
+      - id: home
+        type: editorial
+        label_fr: "Accueil"
+        label_en: "Home"
+        fr: "fr/index.md"
+        en: "en/index.md"
+        purpose_fr: "Page d'accueil : pitch, promesse, routage Diataxis par role."
+        purpose_en: "Landing page: pitch, promise, Diataxis routing by role."
+
+  # --------------------------------------------------------------- TUTORIELS
+  - id: tutorials
+    icon: "fa-solid fa-graduation-cap"
+    diataxis_mode: tutorial
+    sidebar_position: 1
+    title_fr: "Tutoriels — apprendre"
+    title_en: "Tutorials — learn"
+    intro_fr: "Un parcours guide ou vous executez : installer le plugin et lancer le pipeline de bout en bout."
+    intro_en: "A guided path where you do things: install the plugin and run the pipeline end to end."
+    pages:
+      - id: getting-started
+        type: editorial
+        label_fr: "Premiers pas"
+        label_en: "First steps"
+        fr: "fr/tutorials/getting-started.md"
+        en: "en/tutorials/getting-started.md"
+        purpose_fr: "Installer le plugin et lancer le pipeline en quelques minutes."
+        purpose_en: "Install the plugin and run the pipeline in minutes."
+
+  # ----------------------------------------------------------- GUIDES PRATIQUES
+  - id: how-to
+    icon: "fa-solid fa-screwdriver-wrench"
+    diataxis_mode: how-to
+    sidebar_position: 2
+    title_fr: "Guides pratiques — faire"
+    title_en: "How-to guides — do"
+    intro_fr: "Resoudre une tache precise : adapter le pipeline, proposer un nouveau pattern de maniere disciplinee."
+    intro_en: "Solve a precise task: adapt the pipeline, propose a new pattern with discipline."
+    pages:
+      - id: customisation
+        type: editorial
+        label_fr: "Customisation"
+        label_en: "Customization"
+        fr: "fr/how-to/customisation.md"
+        en: "en/how-to/customisation.md"
+        purpose_fr: "Ce que SKRAFT permet de customiser ET le RISQUE de reduire les controles (gates, lens, reviewers)."
+        purpose_en: "What SKRAFT lets you customize AND the RISK of reducing controls (gates, lenses, reviewers)."
+        requires_risk_section: true
+      - id: contributing
+        type: editorial
+        label_fr: "Genesis & contribution"
+        label_en: "Genesis & contributing"
+        fr: "fr/how-to/contributing.md"
+        en: "en/how-to/contributing.md"
+        purpose_fr: "L'importance de genesis : pourquoi chaque pattern existe, comment en proposer un nouveau de maniere disciplinee."
+        purpose_en: "The importance of genesis: why each pattern exists, how to propose a new one with discipline."
+
+  # -------------------------------------------------------------- EXPLICATION
+  - id: explanation
+    icon: "fa-solid fa-lightbulb"
+    diataxis_mode: explanation
+    sidebar_position: 3
+    title_fr: "Explication — comprendre"
+    title_en: "Explanation — understand"
+    intro_fr: "Le pourquoi : le pipeline et ses 5 phases (gates exactes comprises), la narration fil rouge, l'architecture et les principes."
+    intro_en: "The why: the pipeline and its 5 phases (exact gates included), the running-example narrative, the architecture and the principles."
+    pages:
+      - id: phases
+        type: derived
+        label_fr: "Le pipeline (vue d'ensemble)"
+        label_en: "The pipeline (overview)"
+        fr: "fr/explanation/pipeline/index.md"
+        en: "en/explanation/pipeline/index.md"
+        source: "plugins/agents/*.agent.md"
+        purpose_fr: "Les 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, un agent par phase, un reviewer independant."
+        purpose_en: "The 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, one agent per phase, one independent reviewer."
+      - id: concepts
+        type: editorial
+        label_fr: "Concepts"
+        label_en: "Concepts"
+        fr: "fr/explanation/concepts.md"
+        en: "en/explanation/concepts.md"
+        purpose_fr: "Les concepts transverses : phase, agent, reviewer, gate, lens, artefact."
+        purpose_en: "Cross-cutting concepts: phase, agent, reviewer, gate, lens, artifact."
+      - id: fil-rouge
+        type: editorial
+        label_fr: "Le fil rouge (narration)"
+        label_en: "The running example (narrative)"
+        fr: "fr/explanation/pipeline/fil-rouge.md"
+        en: "en/explanation/pipeline/fil-rouge.md"
+        purpose_fr: "Narration : une commande Starbucks suivie de l'idee au code a travers les 5 phases (exemple illustratif)."
+        purpose_en: "Narrative: a Starbucks order followed from idea to code across the 5 phases (illustrative example)."
+      - id: discover
+        type: derived
+        label_fr: "DISCOVER"
+        label_en: "DISCOVER"
+        fr: "fr/explanation/pipeline/discover.md"
+        en: "en/explanation/pipeline/discover.md"
+        source: "plugins/agents/backlog-discoverer.agent.md"
+        purpose_fr: "Phase DISCOVER : triage et priorisation du backlog."
+        purpose_en: "DISCOVER phase: backlog triage and prioritization."
+      - id: discuss
+        type: derived
+        label_fr: "DISCUSS"
+        label_en: "DISCUSS"
+        fr: "fr/explanation/pipeline/discuss.md"
+        en: "en/explanation/pipeline/discuss.md"
+        source: "plugins/agents/backlog-planner.agent.md"
+        purpose_fr: "Phase DISCUSS : raffinage des stories (INVEST, DoR)."
+        purpose_en: "DISCUSS phase: story refinement (INVEST, DoR)."
+      - id: design
+        type: derived
+        label_fr: "DESIGN"
+        label_en: "DESIGN"
+        fr: "fr/explanation/pipeline/design.md"
+        en: "en/explanation/pipeline/design.md"
+        source: "plugins/agents/solution-architect.agent.md"
+        purpose_fr: "Phase DESIGN : Event Modeling, DDD, ADRs, contrats d'interface."
+        purpose_en: "DESIGN phase: Event Modeling, DDD, ADRs, interface contracts."
+      - id: distill
+        type: derived
+        label_fr: "DISTILL"
+        label_en: "DISTILL"
+        fr: "fr/explanation/pipeline/distill.md"
+        en: "en/explanation/pipeline/distill.md"
+        source: "plugins/agents/acceptance-designer.agent.md"
+        purpose_fr: "Phase DISTILL : scenarios BDD executables et plan de tests."
+        purpose_en: "DISTILL phase: executable BDD scenarios and test plan."
+      - id: deliver
+        type: derived
+        label_fr: "DELIVER"
+        label_en: "DELIVER"
+        fr: "fr/explanation/pipeline/deliver.md"
+        en: "en/explanation/pipeline/deliver.md"
+        source: "plugins/agents/software-engineer.agent.md"
+        purpose_fr: "Phase DELIVER : Outside-In TDD, Clean Architecture, mutation testing."
+        purpose_en: "DELIVER phase: Outside-In TDD, Clean Architecture, mutation testing."
+      - id: team
+        type: editorial
+        label_fr: "L'équipe (le relais)"
+        label_en: "The team (relay)"
+        fr: "fr/explanation/pipeline/team.md"
+        en: "en/explanation/pipeline/team.md"
+        purpose_fr: "Les 5 agents executeurs, leurs reviewers et l'orchestrateur : qui fait quoi et comment chacun passe le relais."
+        purpose_en: "The 5 executor agents, their reviewers and the orchestrator: who does what and how each hands off."
+      - id: architecture
+        type: editorial
+        label_fr: "Architecture"
+        label_en: "Architecture"
+        fr: "fr/explanation/architecture.md"
+        en: "en/explanation/architecture.md"
+        purpose_fr: "Vue d'architecture : comment les phases, agents et reviewers s'assemblent."
+        purpose_en: "Architecture view: how phases, agents and reviewers assemble."
+      - id: zoom-mocking
+        type: derived
+        label_fr: "Zoom L3 : mocking (Microcks)"
+        label_en: "L3 zoom: mocking (Microcks)"
+        fr: "fr/explanation/deep-dive/mocking-microcks.md"
+        en: "en/explanation/deep-dive/mocking-microcks.md"
+        source: "plugins/agents/workers/mocking/*.agent.md"
+        purpose_fr: "Zoom sur le fan-out L3 de DELIVER : mock-integration-worker, roster de strategie (Microcks par defaut, in-process en surcharge) et mock-fidelity-lens."
+        purpose_en: "Zoom on the DELIVER L3 fan-out: mock-integration-worker, strategy roster (Microcks by default, in-process override) and mock-fidelity-lens."
+      - id: zoom-contract
+        type: derived
+        label_fr: "Zoom L3 : contract testing"
+        label_en: "L3 zoom: contract testing"
+        fr: "fr/explanation/deep-dive/contract-testing.md"
+        en: "en/explanation/deep-dive/contract-testing.md"
+        source: "plugins/agents/workers/contract-testing/*.agent.md"
+        purpose_fr: "Zoom sur le fan-out L3 de DELIVER : contract-testing-worker, roster (integration in-process + Microcks en opt-in) et contract-fidelity-lens."
+        purpose_en: "Zoom on the DELIVER L3 fan-out: contract-testing-worker, roster (in-process integration + Microcks opt-in) and contract-fidelity-lens."
+      - id: hve-core
+        type: derived
+        label_fr: "Le substrat HVE-Core"
+        label_en: "The HVE-Core substrate"
+        fr: "fr/explanation/hve-core.md"
+        en: "en/explanation/hve-core.md"
+        source: "plugins/instructions/skraft-state.instructions.md"
+        purpose_fr: "Le substrat HVE-Core : state.json, protocole 6-etapes par tour, articulation des phases."
+        purpose_en: "The HVE-Core substrate: state.json, 6-step per-turn protocol, phase articulation."
+      - id: traces
+        type: derived
+        label_fr: "Traces & auditabilité"
+        label_en: "Traces & auditability"
+        fr: "fr/explanation/traces.md"
+        en: "en/explanation/traces.md"
+        source: "plugins/instructions/skraft-artifacts.instructions.md"
+        purpose_fr: "Les traces laissees par le pipeline : artefacts dates, state.json, PR, verdicts. Auditabilite."
+        purpose_en: "The traces left by the pipeline: dated artifacts, state.json, PRs, verdicts. Auditability."
+      - id: hve-vs-skraft
+        type: editorial
+        label_fr: "HVE → SKRAFT"
+        label_en: "HVE → SKRAFT"
+        fr: "fr/explanation/hve-vs-skraft.md"
+        en: "en/explanation/hve-vs-skraft.md"
+        purpose_fr: "Continuite HVE -> SKRAFT. SKRAFT remplace le workflow RPI par un pipeline SDLC complet."
+        purpose_en: "HVE -> SKRAFT continuity. SKRAFT replaces the RPI workflow with a full SDLC pipeline."
+        requires_diagram: true
+      - id: clean-architecture
+        type: editorial
+        label_fr: "Clean Architecture"
+        label_en: "Clean Architecture"
+        fr: "fr/explanation/clean-architecture.md"
+        en: "en/explanation/clean-architecture.md"
+        purpose_fr: "Les couches et les frontieres qui guident la phase DELIVER."
+        purpose_en: "The layers and boundaries guiding the DELIVER phase."
+      - id: outside-in-tdd
+        type: editorial
+        label_fr: "Deep-dive : Outside-In TDD"
+        label_en: "Deep dive: Outside-In TDD"
+        fr: "fr/explanation/deep-dive/outside-in-tdd.md"
+        en: "en/explanation/deep-dive/outside-in-tdd.md"
+        purpose_fr: "Double boucle, boundary-to-boundary, walking skeleton — l'approche detaillee."
+        purpose_en: "Double loop, boundary-to-boundary, walking skeleton — the detailed approach."
+      - id: walking-skeleton
+        type: editorial
+        label_fr: "Deep-dive : Walking Skeleton"
+        label_en: "Deep dive: Walking Skeleton"
+        fr: "fr/explanation/deep-dive/walking-skeleton.md"
+        en: "en/explanation/deep-dive/walking-skeleton.md"
+        purpose_fr: "Le squelette ambulant : la plus fine tranche end-to-end qui marche."
+        purpose_en: "The walking skeleton: the thinnest end-to-end slice that works."
+      - id: pourquoi-review-avant-review
+        type: editorial
+        label_fr: "La revue avant la revue"
+        label_en: "Review before review"
+        fr: "fr/explanation/why-review-before-review.md"
+        en: "en/explanation/why-review-before-review.md"
+        purpose_fr: "Le coeur de l'argument : la revue adverse assistee filtre AVANT l'humain. Moins de rework, TTM reduit."
+        purpose_en: "The core argument: assisted adversarial review filters BEFORE the human. Less rework, lower TTM."
+      - id: review-deep
+        type: editorial
+        label_fr: "Deep-dive : revue avant la revue"
+        label_en: "Deep dive: review before review"
+        fr: "fr/explanation/deep-dive/review-before-review.md"
+        en: "en/explanation/deep-dive/review-before-review.md"
+        purpose_fr: "Approfondissement : revue adverse a 4 lentilles, synthese ponderee, verdicts."
+        purpose_en: "Deep dive: 4-lens adversarial review, weighted synthesis, verdicts."
+      - id: for-executives
+        type: editorial
+        label_fr: "Pour décideurs"
+        label_en: "For executives"
+        fr: "fr/explanation/for-executives.md"
+        en: "en/explanation/for-executives.md"
+        purpose_fr: "Pourquoi la revue assistee AVANT la revue humaine reduit le TTM. Arguments qualitatifs."
+        purpose_en: "Why AI-assisted review BEFORE human review reduces TTM. Qualitative arguments."
+
+  # ---------------------------------------------------------------- REFERENCE
+  - id: reference
+    icon: "fa-solid fa-book"
+    diataxis_mode: reference
+    sidebar_position: 4
+    title_fr: "Référence — consulter"
+    title_en: "Reference — look up"
+    intro_fr: "Tout le factuel : agents, skills, les 46 gates, lentilles, patterns, citations, glossaire, changelog."
+    intro_en: "All the facts: agents, skills, the 46 gates, lenses, patterns, citations, glossary, changelog."
+    # Menu a 3 niveaux : partie -> section -> page. Chaque section porte une
+    # `sidebar_position` (ordre) ; les sections `generate` materialisent UNE page
+    # par fichier source (un agent, un skill, un worker, une lentille) via le chain
+    # docs-reconcile. doc.html liste les pages explicites (`pages`) PUIS les pages
+    # individuelles trouvees dans `folder_{fr,en}` (triees par sidebar_position du
+    # frontmatter). scan-drift.mjs detecte les sources orphelines via `generate`.
+    sections:
+      - id: agents
+        title_fr: "Agents"
+        title_en: "Agents"
+        sidebar_position: 1
+        folder_fr: "fr/reference/agents"
+        folder_en: "en/reference/agents"
+        generate:
+          from: agents
+          slug_from: basename
+          path_fr: "fr/reference/agents/{slug}.md"
+          path_en: "en/reference/agents/{slug}.md"
+          start_position: 2
+        pages:
+          - id: agents-index
+            type: derived
+            label_fr: "Vue d'ensemble"
+            label_en: "Overview"
+            sidebar_position: 1
+            fr: "fr/reference/agents/index.md"
+            en: "en/reference/agents/index.md"
+            source: "plugins/agents/*.agent.md"
+            purpose_fr: "Les agents du pipeline et leurs reviewers : role, phase, contribution aux pratiques."
+            purpose_en: "Pipeline agents and their reviewers: role, phase, contribution to practices."
+      - id: skills
+        title_fr: "Skills"
+        title_en: "Skills"
+        sidebar_position: 2
+        folder_fr: "fr/reference/skills"
+        folder_en: "en/reference/skills"
+        generate:
+          from: skills
+          slug_from: parent
+          path_fr: "fr/reference/skills/{slug}.md"
+          path_en: "en/reference/skills/{slug}.md"
+          start_position: 2
+        pages:
+          - id: skills-index
+            type: derived
+            label_fr: "Vue d'ensemble"
+            label_en: "Overview"
+            sidebar_position: 1
+            fr: "fr/reference/skills/index.md"
+            en: "en/reference/skills/index.md"
+            source: "plugins/skills/*/SKILL.md"
+            purpose_fr: "Les skills (pratiques outillees) : ce qu'elles font, quand les utiliser."
+            purpose_en: "Skills (tooled practices): what they do, when to use them."
+      - id: workers
+        title_fr: "Workers (sous-agents)"
+        title_en: "Workers (sub-agents)"
+        sidebar_position: 3
+        folder_fr: "fr/reference/workers"
+        folder_en: "en/reference/workers"
+        generate:
+          from: workers
+          slug_from: basename
+          path_fr: "fr/reference/workers/{slug}.md"
+          path_en: "en/reference/workers/{slug}.md"
+          start_position: 1
+        pages: []
+      - id: lenses
+        title_fr: "Lentilles de revue"
+        title_en: "Review lenses"
+        sidebar_position: 4
+        folder_fr: "fr/reference/lenses"
+        folder_en: "en/reference/lenses"
+        generate:
+          from: lenses
+          slug_from: basename
+          path_fr: "fr/reference/lenses/{slug}.md"
+          path_en: "en/reference/lenses/{slug}.md"
+          start_position: 2
+        pages:
+          - id: lens-index
+            type: derived
+            label_fr: "Vue d'ensemble"
+            label_en: "Overview"
+            sidebar_position: 1
+            fr: "fr/reference/lens.md"
+            en: "en/reference/lens.md"
+            source: "plugins/agents/reviewer-lenses/*.agent.md"
+            purpose_fr: "Les 4 lentilles de revue adverse : architecture-boundaries, cold-reader, quality-gates, test-integrity."
+            purpose_en: "The 4 adversarial review lenses: architecture-boundaries, cold-reader, quality-gates, test-integrity."
+      - id: gates
+        title_fr: "Gates"
+        title_en: "Gates"
+        sidebar_position: 5
+        pages:
+          - id: gates
+            type: derived
+            label_fr: "Gates"
+            label_en: "Gates"
+            sidebar_position: 1
+            fr: "fr/reference/gates.md"
+            en: "en/reference/gates.md"
+            source: "plugins/skills/*-review-criteria/SKILL.md"
+            purpose_fr: "Les gates de revue (Gxx) par phase : ce que chaque gate verifie et pourquoi."
+            purpose_en: "Review gates (Gxx) per phase: what each gate checks and why."
+      - id: patterns
+        title_fr: "Patterns"
+        title_en: "Patterns"
+        sidebar_position: 6
+        pages:
+          - id: patterns
+            type: derived
+            label_fr: "Patterns"
+            label_en: "Patterns"
+            sidebar_position: 1
+            fr: "fr/reference/patterns.md"
+            en: "en/reference/patterns.md"
+            source: "plugins/skills/architecture-patterns/SKILL.md"
+            purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
+            purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
+      - id: bibliography
+        title_fr: "Bibliographie & annexes"
+        title_en: "Bibliography & appendix"
+        sidebar_position: 7
+        pages:
+          - id: citations
+            type: derived
+            label_fr: "Citations"
+            label_en: "Citations"
+            sidebar_position: 1
+            fr: "fr/reference/citations.md"
+            en: "en/reference/citations.md"
+            source: "docs/site/_data/citations.yml"
+            purpose_fr: "Bibliographie complete : chaque reference (auteur, ouvrage, annee) qui fonde une pratique."
+            purpose_en: "Full bibliography: each reference (author, work, year) grounding a practice."
+          - id: glossaire
+            type: editorial
+            label_fr: "Glossaire"
+            label_en: "Glossary"
+            sidebar_position: 2
+            fr: "fr/reference/glossary.md"
+            en: "en/reference/glossary.md"
+            purpose_fr: "Glossaire global : chaque terme du craft explique simplement."
+            purpose_en: "Global glossary: every craft term explained plainly."
+          - id: changelog
+            type: editorial
+            label_fr: "Changelog"
+            label_en: "Changelog"
+            sidebar_position: 3
+            fr: "fr/reference/changelog.md"
+            en: "en/reference/changelog.md"
+            purpose_fr: "L'historique des evolutions du handbook et du plugin."
+            purpose_en: "The history of handbook and plugin changes."

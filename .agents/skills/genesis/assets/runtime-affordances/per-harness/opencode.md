@@ -123,3 +123,49 @@ In OpenCode: TODO: official docs needed.
   between main conversation agents and specialized task agents.
 - Command templating: custom commands support placeholders and
   argument passing for prompt parameterization.
+
+## 9. MODEL CATALOG & BILLING (cost-economics)
+
+Maps the abstract role classes in `../model-catalog.md` to concrete
+SKUs available through OpenCode and to the billing surface of the
+configured backend provider. OpenCode is BYO-model; the catalogue
+defaults below assume an OpenAI or Anthropic backend.
+
+Verified on: 2025-11-14. Always re-verify against the live pricing
+page of the configured backend.
+
+### Role class -> concrete model (defaults, by backend)
+
+| Role class             | Anthropic backend          | OpenAI backend                   |
+|------------------------|----------------------------|----------------------------------|
+| planner                | Claude Opus 4.x            | o3 / GPT-5 high reasoning        |
+| implementer            | Claude Sonnet 4.x          | GPT-5 standard                   |
+| reviewer               | Claude Sonnet 4.x          | GPT-5 standard / GPT-4.1         |
+| trivial                | Claude Haiku 4.x           | GPT-4o mini / GPT-5 mini         |
+| long-context-retriever | Sonnet 4.x (1M)            | GPT-5 with extended context      |
+
+### Billing surface
+
+Token pass-through against whichever backend is configured. OpenCode
+itself does not add a billing layer; the operator pays the underlying
+provider directly.
+
+### Cost-pattern bindings
+
+- B12 MODEL ROUTER: configure model per agent in `opencode.json`
+  agent definitions. Different agents can target different models.
+  Cross-model context does NOT share cache.
+- B13 CACHE-AWARE PREFIX: caching behavior follows the backend
+  provider (Anthropic-aggressive, OpenAI-moderate). Keep persona /
+  agent bodies stable. Mid-session backend switch fully invalidates.
+- B15 TOOL SUBSET: declare per-agent tool restrictions in the
+  agent definition to bound the catalogue per agent.
+- B16 EFFORT GOVERNOR: declare via the model SKU selection (an
+  effort-capable model IS the effort declaration on OpenCode's
+  surface).
+
+### Stance binding
+
+Operator declares stance in the first prompt OR in `opencode.json`
+agent metadata as `stance: <value>`. The genesis-architect persona
+reads it at step 1.
