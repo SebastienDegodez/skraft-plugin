@@ -16,13 +16,16 @@ metadata:
     - sprint-planning
   inputs:
     required:
-      - .skraft/sdlc/discover/triage-{date}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
       - GitHub issues with triage labels
     context:
-      - .skraft/sdlc/discover/sprint-proposal.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
   outputs:
-    - .skraft/sdlc/discuss/stories-{milestone}.md
-    - .skraft/sdlc/discuss/ac-draft-{story}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Backlog-Planner Agent
@@ -70,11 +73,11 @@ Load all available artefacts in this order:
 
 ### Phase 2: PRIOR PHASE READING GATE
 
-Verify `.skraft/sdlc/discover/` contains at least one `triage-*.md`. If missing, halt immediately:
+Verify the DISCOVER artefacts directory (`.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/`) contains at least one `triage-*.md`. If missing, halt immediately:
 
 ```
 PRIOR PHASE GATE FAILED
-Missing: .skraft/sdlc/discover/triage-{date}.md
+Missing: .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
 Action: Run DISCOVER phase before DISCUSS.
 DISCUSS phase cannot start without a triage report.
 ```
@@ -161,7 +164,7 @@ Action: Fix flagged items before marking ready-for-design.
 
 ### Phase 6: PERSIST
 
-Write output artefacts:
+Write output artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/` following `#file:plugins/instructions/skraft-artifacts.instructions.md`. Every markdown file must start with `<!-- markdownlint-disable-file -->`.
 
 **`stories-{milestone}.md`** — one file per milestone, containing:
 - Milestone summary (theme, scope, due date)
@@ -191,9 +194,9 @@ Milestone: {milestone-name}
 Stories: {count} total, {count} ready, {count} needs-refinement
 
 Files:
-  .skraft/sdlc/discuss/stories-{milestone}.md
-  .skraft/sdlc/discuss/ac-draft-{story-1}.md
-  .skraft/sdlc/discuss/ac-draft-{story-2}.md
+  .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
+  .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story-1}.md
+  .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story-2}.md
   ...
 
 Stories NOT ready (DoR failed):

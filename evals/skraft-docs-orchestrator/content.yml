@@ -1,0 +1,53 @@
+# Content evals for the skraft-docs reconciler chain
+# Source of truth: .specs/plans/2026-06-16-skraft-docs-drift-reconciler.md (genesis handoff packet, Evals plan)
+# Each fixture must show a measurable delta between with_skill (the chain) and
+# without_skill (a generic "update the docs" prompt).
+agent: skraft-docs-orchestrator
+
+fixtures:
+  - id: C-01-orphan-agent-gets-individual-page
+    name: "A new agent source produces an individual, ordered reference page"
+    user_prompt: "Reconcile the handbook with the plugin sources."
+    seed_context:
+      added_source: "plugins/agents/workers/mocking/mock-integration-worker.agent.md"
+      contract: "docs/site/_data/book.yml (reference > workers section, generate from: workers)"
+    expected_output:
+      - "scan-drift.mjs reports an orphan-source / missing-page item for the worker (deterministic, not asserted)."
+      - "placement-architect places it in the Reference > Workers section with a sidebar_position."
+      - "derived-writer creates fr/reference/workers/mock-integration-worker.md AND the EN mirror, same basename."
+      - "The page reuses the worker's canonical vocabulary verbatim (no paraphrase)."
+      - "The reviewer panel (structure + parity + citation + diataxis) returns CERTIFY before the PR."
+    forbidden:
+      - "Editing the plugin source file."
+      - "Asserting the drift list from recall instead of running scan-drift.mjs."
+      - "Leaving the EN side missing (parity break)."
+    value_delta: "with_skill yields an individually-listed, ordered, FR/EN-mirrored page reviewed by 4 lenses; without_skill yields at best a single ad-hoc page, often FR-only and unordered."
+
+  - id: C-02-missing-diataxis-mode-is-a-contract-fix
+    name: "A part missing its Diataxis mode is fixed in the contract, not the prose"
+    user_prompt: "Reconcile the handbook with the plugin sources."
+    seed_context:
+      drift: "book.yml part 'reference' lacks diataxis_mode (missing-diataxis-mode item)"
+    expected_output:
+      - "placement-architect sets diataxis_mode: reference on the part (a book.yml patch)."
+      - "No page prose is rewritten for this item (it is a structural fix)."
+      - "lint-nav.mjs goes from NAV-MODE-MISSING to clean for that part."
+    forbidden:
+      - "Rewriting page bodies to 'fix' a mode that is a contract field."
+      - "Inventing a mode not in tutorial | how-to | explanation | reference."
+    value_delta: "with_skill makes a precise one-line contract patch verified by lint-nav; without_skill tends to edit page prose and miss the structural cause."
+
+  - id: C-03-no-invented-metric-in-editorial
+    name: "An editorial gap is written complete, with untraceable figures marked (estimated)"
+    user_prompt: "Reconcile the handbook with the plugin sources."
+    seed_context:
+      drift: "missing-page for an editorial page (e.g. for-executives) with pageType: editorial"
+    expected_output:
+      - "editorial-writer produces a COMPLETE FR+EN page (no TODO, no hole)."
+      - "Any quantitative claim it cannot trace to the code is qualitative and suffixed (estimated)/(estimé)."
+      - "Craft concepts reuse the source skills' canonical vocabulary."
+      - "check-citations.mjs passes for the new pages."
+    forbidden:
+      - "Presenting an ROI/%/timeline figure as a sourced fact."
+      - "Emitting a skeleton or asking a human to finish a section."
+    value_delta: "with_skill ships a complete, honestly-hedged page that passes the citation gate; without_skill risks invented metrics or stub sections."

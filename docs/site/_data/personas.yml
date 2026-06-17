@@ -1,0 +1,27 @@
+- key: tech-lead
+  name_fr: "Tech Lead"
+  name_en: "Tech Lead"
+  need_fr: "Comprendre l'architecture en 15 minutes"
+  need_en: "Understand the architecture in 15 minutes"
+  citation_key: maclane-categories-1971
+
+- key: software-engineer
+  name_fr: "Software Engineer"
+  name_en: "Software Engineer"
+  need_fr: "Trouver la consigne exacte pour la phase courante"
+  need_en: "Find the exact instruction for the current phase"
+  citation_key: beck-smalltalk-1996
+
+- key: reviewer
+  name_fr: "Reviewer"
+  name_en: "Reviewer"
+  need_fr: "Retrouver les invariants opposables"
+  need_en: "Find the enforceable invariants"
+  citation_key: wiegers-peer-reviews-2002
+
+- key: manager
+  name_fr: "Manager / Décideur"
+  name_en: "Manager / Executive"
+  need_fr: "Argumentaire chiffré en 5 minutes pour pousser ses équipes"
+  need_en: "A data-driven argument in 5 minutes to push their teams"
+  citation_key: forsgren-accelerate-2018

@@ -141,7 +141,7 @@ Name bounded contexts after their Ubiquitous Language, not after technical layer
 1. **Per-context:** The language is defined within a bounded context. The same word can mean different things in different contexts — this is expected and correct.
 2. **No leakage:** Do not import terms from one context into another. If you need a concept from another context, translate it at the boundary.
 3. **In code:** Class names, method names, and variable names in the domain model use the Ubiquitous Language directly. No translation inside a context.
-4. **Glossary:** Each bounded context maintains a glossary of its Ubiquitous Language. Store it in `.skraft/sdlc/design/glossary-{context}.md`.
+4. **Glossary:** Each bounded context maintains a glossary of its Ubiquitous Language. Store it in `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/glossary-{context}.md`.
 
 ### Common Language Conflicts in Auto Insurance
 

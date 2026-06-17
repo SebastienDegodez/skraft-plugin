@@ -1,0 +1,12 @@
+{
+  "name": "skraft-plugin-site-tests",
+  "private": true,
+  "description": "Dev-only tooling for the SKRAFT docs site smoke tests.",
+  "scripts": {
+    "test:site": "playwright test",
+    "lint:citations": "node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages \"docs/site/**/*.md\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

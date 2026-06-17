@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>skraft eval dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    /* ── Minimal overrides ── */
+    body { margin: 0; }
+    h1 { margin-bottom: 0.25rem; }
+    .subtitle { color: var(--pico-muted-color); margin-top: 0; margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+    /* Drop zone */
+    #dropzone {
+      border: 2px dashed var(--pico-primary);
+      border-radius: var(--pico-border-radius);
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 1.5rem;
+    }
+    #dropzone.dragover { background: color-mix(in srgb, var(--pico-primary) 12%, transparent); }
+    #dropzone label { cursor: pointer; font-weight: 600; }
+    #fileInput { display: none; }
+
+    /* Aggregate */
+    #aggregate { margin-bottom: 1.5rem; }
+    .aggregate-card {
+      background: color-mix(in srgb, var(--pico-primary) 8%, var(--pico-card-background-color));
+      border: 1px solid var(--pico-primary);
+      border-radius: var(--pico-border-radius);
+      padding: 1rem 1.5rem;
+    }
+    .aggregate-card h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+
+    /* Stat grid */
+    .stats { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .stat { text-align: center; }
+    .stat .value { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+    .stat .label { font-size: 0.75rem; color: var(--pico-muted-color); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat.with-skill .value { color: #22c55e; }
+    .stat.baseline    .value { color: #ef4444; }
+    .stat.tie         .value { color: #eab308; }
+    .stat.score       .value { color: var(--pico-primary); }
+    .score-bar-wrap { flex: 1; min-width: 120px; }
+    .score-bar { height: 8px; border-radius: 4px; background: var(--pico-muted-border-color); overflow: hidden; margin-top: 4px; }
+    .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+    .score-positive { background: #22c55e; }
+    .score-negative { background: #ef4444; }
+
+    /* Cards */
+    #cards { display: grid; gap: 1rem; }
+    .skill-card {
+      border: 1px solid var(--pico-card-border-color);
+      border-radius: var(--pico-border-radius);
+      padding: 1rem 1.5rem;
+      background: var(--pico-card-background-color);
+    }
+    .card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-header h3 { margin: 0; font-size: 1rem; font-family: monospace; }
+    .card-header .filename { font-size: 0.75rem; color: var(--pico-muted-color); }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.15em 0.55em;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-with-skill { background: #166534; color: #bbf7d0; }
+    .badge-baseline    { background: #7f1d1d; color: #fecaca; }
+    .badge-tie         { background: #713f12; color: #fef08a; }
+
+    /* Scenario table */
+    details { margin-top: 0.75rem; }
+    summary { cursor: pointer; font-size: 0.85rem; color: var(--pico-muted-color); user-select: none; }
+    summary:hover { color: var(--pico-primary); }
+    table { margin-top: 0.5rem; font-size: 0.85rem; width: 100%; }
+    th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    td.reason { color: var(--pico-muted-color); font-size: 0.8rem; max-width: 420px; }
+
+    /* Misc */
+    #empty { color: var(--pico-muted-color); text-align: center; padding: 2rem 0; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <hgroup>
+      <h1>skraft eval dashboard</h1>
+      <p class="subtitle">Load JSON verdict files produced by <code>skraft-test-harness</code> to visualise skill evaluation results.</p>
+    </hgroup>
+
+    <!-- Drop zone / file picker -->
+    <div id="dropzone" role="button" tabindex="0" aria-label="Drop verdict JSON files here or click to browse">
+      <label for="fileInput">
+        📂 Drop verdict JSON files here or <u>click to browse</u>
+      </label>
+      <input type="file" id="fileInput" multiple accept=".json" aria-label="Select JSON verdict files">
+    </div>
+
+    <!-- Aggregate row -->
+    <div id="aggregate"></div>
+
+    <!-- Per-skill cards -->
+    <div id="cards">
+      <p id="empty">No files loaded yet.</p>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      // ── State ──────────────────────────────────────────────────────────────
+      /** @type {Array<{fileName: string, verdict: object, stats: object}>} */
+      const loaded = [];
+
+      // ── DOM refs ───────────────────────────────────────────────────────────
+      const dropzone  = document.getElementById('dropzone');
+      const fileInput = document.getElementById('fileInput');
+      const aggEl     = document.getElementById('aggregate');
+      const cardsEl   = document.getElementById('cards');
+
+      // ── Drag-and-drop ──────────────────────────────────────────────────────
+      dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+      dropzone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+      });
+      dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+      dropzone.addEventListener('click', e => { if (e.target !== fileInput) fileInput.click(); });
+      fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+      // ── File handling ──────────────────────────────────────────────────────
+      function handleFiles(files) {
+        if (!files || files.length === 0) return;
+        Array.from(files).forEach(file => {
+          const reader = new FileReader();
+          reader.onload = ev => {
+            try {
+              const verdict = JSON.parse(ev.target.result);
+              if (!verdict.skill || !Array.isArray(verdict.scenarios)) {
+                alert(`"${file.name}" does not look like a verdict file (missing skill or scenarios).`);
+                return;
+              }
+              // Deduplicate by fileName
+              const existing = loaded.findIndex(e => e.fileName === file.name);
+              const entry = { fileName: file.name, verdict, stats: computeStats(verdict) };
+              if (existing >= 0) loaded[existing] = entry; else loaded.push(entry);
+              render();
+            } catch (err) {
+              alert(`Failed to parse "${file.name}": ${err.message}`);
+            }
+          };
+          reader.readAsText(file);
+        });
+      }
+
+      // ── Stats ──────────────────────────────────────────────────────────────
+      function computeStats(verdict) {
+        const scenarios = verdict.scenarios ?? [];
+        const total     = scenarios.length;
+        let withSkill = 0, baseline = 0, tie = 0;
+        for (const s of scenarios) {
+          const w = (s.winner ?? '').toLowerCase();
+          if (w === 'withskill')  withSkill++;
+          else if (w === 'baseline') baseline++;
+          else tie++;
+        }
+        const score = total > 0 ? Math.round(((withSkill - baseline) / total) * 100) / 100 : 0;
+        return { total, withSkill, baseline, tie, score };
+      }
+
+      function aggregateStats(entries) {
+        let total = 0, withSkill = 0, baseline = 0, tie = 0;
+        for (const { stats } of entries) {
+          total     += stats.total;
+          withSkill += stats.withSkill;
+          baseline  += stats.baseline;
+          tie       += stats.tie;
+        }
+        const score = total > 0 ? Math.round(((withSkill - baseline) / total) * 100) / 100 : 0;
+        return { total, withSkill, baseline, tie, score };
+      }
+
+      // ── Rendering helpers ──────────────────────────────────────────────────
+      function winnerBadge(winner) {
+        const w = (winner ?? '').toLowerCase();
+        if (w === 'withskill')  return `<span class="badge badge-with-skill">WithSkill</span>`;
+        if (w === 'baseline')   return `<span class="badge badge-baseline">Baseline</span>`;
+        return                         `<span class="badge badge-tie">Tie</span>`;
+      }
+
+      function scoreBarHTML(score) {
+        // score ranges from -1 to 1; each ±1 unit = 50% of bar width
+        const halfPct    = Math.abs(score) * 50;
+        const cls        = score >= 0 ? 'score-positive' : 'score-negative';
+        const marginLeft = score >= 0 ? 50 : 50 - halfPct;
+        return `
+          <div class="score-bar-wrap">
+            <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--pico-muted-color)">
+              <span>-1</span><span>0</span><span>+1</span>
+            </div>
+            <div class="score-bar">
+              <div class="score-bar-fill ${cls}" style="width:${halfPct.toFixed(1)}%;margin-left:${marginLeft.toFixed(1)}%"></div>
+            </div>
+          </div>`;
+      }
+
+      function statsHTML(stats) {
+        return `
+          <div class="stats">
+            <div class="stat"><div class="value">${stats.total}</div><div class="label">Total</div></div>
+            <div class="stat with-skill"><div class="value">${stats.withSkill}</div><div class="label">WithSkill</div></div>
+            <div class="stat baseline"><div class="value">${stats.baseline}</div><div class="label">Baseline</div></div>
+            <div class="stat tie"><div class="value">${stats.tie}</div><div class="label">Tie</div></div>
+            <div class="stat score"><div class="value">${stats.score >= 0 ? '+' : ''}${stats.score.toFixed(2)}</div><div class="label">ImprovementScore</div></div>
+            ${scoreBarHTML(stats.score)}
+          </div>`;
+      }
+
+      function scenarioTableHTML(scenarios) {
+        if (!scenarios || scenarios.length === 0) return '<em>No scenarios.</em>';
+        const rows = scenarios.map(s => `
+          <tr>
+            <td>${esc(s.name ?? '(unnamed)')}</td>
+            <td>${winnerBadge(s.winner)}</td>
+            <td class="reason">${esc(s.reason ?? '')}</td>
+          </tr>`).join('');
+        return `
+          <table role="grid">
+            <thead><tr><th>Scenario</th><th>Winner</th><th>Reason</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      }
+
+      function esc(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // ── Main render ────────────────────────────────────────────────────────
+      function render() {
+        // Empty state
+        const empty = document.getElementById('empty');
+        if (empty) empty.remove();
+
+        // Aggregate
+        if (loaded.length > 1) {
+          const agg = aggregateStats(loaded);
+          aggEl.innerHTML = `
+            <div class="aggregate-card">
+              <h2>📊 Aggregate — ${loaded.length} skills</h2>
+              ${statsHTML(agg)}
+            </div>`;
+        } else {
+          aggEl.innerHTML = '';
+        }
+
+        // Cards — re-render all (list is small, full re-render is fine)
+        cardsEl.innerHTML = loaded.map(({ fileName, verdict, stats }) => {
+          const n = verdict.scenarios?.length ?? 0;
+          return `
+            <article class="skill-card">
+              <div class="card-header">
+                <h3>🎯 ${esc(verdict.skill)}</h3>
+                <span class="filename">${esc(fileName)}</span>
+              </div>
+              ${statsHTML(stats)}
+              <details>
+                <summary>${n} scenario${n !== 1 ? 's' : ''}</summary>
+                ${scenarioTableHTML(verdict.scenarios)}
+              </details>
+            </article>`;
+        }).join('');
+      }
+    })();
+  </script>
+</body>
+</html>

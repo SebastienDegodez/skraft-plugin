@@ -1,0 +1,38 @@
+# Pipeline 5D — piste order-checkout — phase DESIGN (LIVE)
+#
+# DÉMARCHE : base squelette + checkpoint order-checkout/after-discuss.
+# L'orchestrateur exécute DESIGN et PRODUIT un ADR + des contrats pour le checkout.
+# On vérifie l'attendu (ADR accepté + contrats + review APPROVED).
+#
+# RÈGLE ABSOLUE : on n'archive jamais la production de l'agent (clone éphémère).
+#
+# LIVE (opt-in) :
+#   dotnet run --project src/SkraftTestHarness.Cli -- evaluate \
+#     --skill skraft-orchestrator \
+#     --tests-dir ../../tests/skraft-plugin/pipeline/order-checkout/03-DESIGN \
+#     --plugin-dir ../../plugins --agent skraft:skraft-orchestrator \
+#     --fixtures-root ./fixtures
+scenarios:
+  - name: "DESIGN produit un ADR + des contrats pour le checkout et obtient un review APPROVED"
+    tags: [design, pipeline, simulation, live, order-checkout]
+    workspace:
+      fixture: clean-architecture-app
+      checkpoint: order-checkout/after-discuss
+    prompt: >
+      Resume the SKRAFT pipeline from state.json (issue #42, order checkout with a
+      loyalty-tier discount). Run ONLY the DESIGN phase, then stop once its
+      reviewer returns APPROVED.
+    assertions:
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+          text: "Accepted"
+      - file_matches_glob: ".copilot-tracking/skraft-plans/*/details/**/*-contracts.md"
+      - file_contains:
+          glob: ".copilot-tracking/skraft-plans/*/reviews/**/design-*-review.md"
+          text: "APPROVED"
+      - file_judge:
+          glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+          criterion: >
+            The ADR places the loyalty-discount rule in the Domain layer (not a
+            controller) and justifies the decision.

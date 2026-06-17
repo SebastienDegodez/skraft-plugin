@@ -196,6 +196,119 @@ across harnesses or for a planned variant fan-out, leave it.
 
 ---
 
+## R5. COST PRUNE (cost-shape refactor)
+
+CLASSICAL ANALOG: performance tuning by profile-then-prune
+(Knuth, "premature optimization is the root of all evil" --
+but mature optimization is the root of all production); query
+plan optimization in databases.
+
+PROBLEM: the existing module graph designs correctly for
+quality and threading but pays cost it does not need to pay.
+Either the role-class binding is uniformly heavy where a
+gradient would do, or the prefix design ignores cache discipline,
+or the tool surface is the harness's full catalogue where a
+subset would do.
+
+TRIGGERS (any one fires):
+
+- UNIFORM-CLASS GRAPH. Every module in the graph binds the same
+  role class (typically planner). At least one of them is doing
+  routine implementer-class work, or routine reviewer-class
+  work. Apply B12 MODEL ROUTER + A12 GRADIENT WORKFLOW.
+
+- INVALIDATOR LEAK. The prefix contains at least one cache
+  invalidator (timestamp, mid-session tool catalog change,
+  mid-session model switch, mid-session effort change). Apply
+  B13 CACHE-AWARE PREFIX.
+
+- CATALOGUE BLOAT. The primitive runs against a tool surface
+  with > 20 tools and uses fewer than 5 of them per invocation
+  in observed traces. Apply B15 TOOL SUBSET (or S7 DETERMINISTIC
+  TOOL BRIDGE if the tools sequence is deterministic).
+
+- PROSE BLOAT. A primitive body has grown past 80% of its size
+  budget but recent edits did not add new capability -- they
+  added rationale, examples, hedging. Apply B14 PROMPT THRIFT.
+
+- EFFORT-EVERYWHERE. The design declares maximum reasoning
+  effort uniformly across stages where most stages are routine.
+  Apply B16 EFFORT GOVERNOR.
+
+- OUTPUT BURST. A single step is observed to emit > 3K output
+  tokens routinely (long synthesis, full file generation in one
+  shot). Consider splitting the step (R1 SPLIT) so the bulk
+  generation moves to an implementer-class slot, OR delegating
+  the generation to a deterministic tool (S7).
+
+PROCEDURE:
+
+1. Observe (do not guess). For the workflow being pruned, gather
+   one real trace and identify the dominant cost bucket: input
+   prefix bytes per turn, total turns, total output tokens per
+   turn, observed cache hit ratio.
+2. Pick the smallest applicable B-pattern from the triggers above.
+   Do not stack multiple patterns in one refactor.
+3. Re-run the workflow on a representative task. Compare the
+   trace against the baseline along the dominant bucket.
+4. Re-run the EVALS PLAN from the step 6 handoff packet. The
+   quality delta MUST stay within the eval's pass threshold.
+   If quality degrades, revert; the cost shape was correct.
+5. Persist the trace + the change in the handoff packet's cost
+   projection so future re-pruning starts from current state,
+   not from in-context recall.
+
+ANTI-PATTERNS:
+
+- DRIVE-BY PRUNE -- changing role-class bindings without a
+  baseline trace. The "savings" are imagined; quality regresses
+  silently.
+- PRUNE-THEN-PATCH -- pruning aggressively, then adding S4
+  VALIDATION DECORATORs to catch the regressions. The validators
+  are now paying for the prune. Net cost may be higher; cognitive
+  load definitely is.
+- COST-PRUNE WHERE R1 SPLIT BELONGS -- compressing a primitive
+  that should be split. The prune is real but the structural
+  problem persists; the next round of pressure brings the cost
+  back.
+
+---
+
+## R6. AUDIENCE-BOUNDARY ENFORCE (port v0.2/v0.3.x → v0.3.7)
+
+PROBLEM: an existing handoff packet predates v0.3.7. It bundles
+HUMAN_RATIONALE and SPAWN_BRIEF as a single 5-15K-token blob; every
+spawn ingests architect's reasoning unchanged. Subagents return
+verbose prose; synthesizer re-ingests heavy receipts.
+
+TRIGGERS (any one fires):
+- handoff packet has ≥1 task() spawn AND no PER-SPAWN DECLARATION
+  TABLE block.
+- spawn-brief char count >2K and Tier=TRIVIAL.
+- subagent return prose >1K tokens for a fixed-schema lens.
+- handoff text was authored before composition-substrate §7
+  AUDIENCE BOUNDARY existed.
+
+PROCEDURE (checklist):
+1. Inventory every artifact the workflow emits. Tag each
+   INTERNAL or EXTERNAL.
+2. For every INTERNAL artifact whose mode is currently NORMAL prose,
+   pick caveman intensity (LITE / FULL / ULTRA) per the audience
+   matrix (pattern-tradeoffs.md §11).
+3. Split the existing handoff into HUMAN_RATIONALE (full prose,
+   stays in handoff.md) and SPAWN_BRIEFS (caveman, schema-paired).
+4. Author RECEIPT_SCHEMAS for every SPAWN_BRIEF.
+5. Confirm synthesizer's EXTERNAL_ARTIFACT_SPEC declares NORMAL.
+6. Re-run any content evals associated with the workflow. If
+   quality degrades on any cell, revert that cell to NORMAL and
+   record the exception in Justification.
+
+ANTI-PATTERN (OVER-PORTING): forcing caveman onto a workflow whose
+spawns are PLANNER/RESEARCHER tier. Caveman degrades open-ended
+reasoning; the audit's GATE rule is binding.
+
+---
+
 ## How refactor patterns relate
 
 ```

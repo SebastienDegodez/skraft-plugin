@@ -1,0 +1,39 @@
+{%- comment -%}
+Prev/next pager derived from the book order (site.data.book.parts) for the
+current language. Renders nothing when the current page is not in the book.
+{%- endcomment -%}
+{%- assign items = "" -%}
+{%- for part in site.data.book.parts -%}
+  {%- for p in part.pages -%}
+    {%- if page.lang == 'en' -%}{%- assign raw = p.en -%}{%- else -%}{%- assign raw = p.fr -%}{%- endif -%}
+    {%- assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' -%}
+    {%- if page.lang == 'en' -%}{%- assign lbl = p.label_en | default: p.id -%}{%- else -%}{%- assign lbl = p.label_fr | default: p.id -%}{%- endif -%}
+    {%- assign items = items | append: href | append: "::" | append: lbl | append: "||" -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- assign list = items | split: "||" -%}
+{%- assign current = -1 -%}
+{%- for entry in list -%}
+  {%- assign cols = entry | split: "::" -%}
+  {%- if page.url == cols[0] -%}{%- assign current = forloop.index0 -%}{%- endif -%}
+{%- endfor -%}
+{%- if current >= 0 -%}
+<nav class="doc-pager" aria-label="{% if page.lang == 'en' %}Page navigation{% else %}Navigation entre pages{% endif %}">
+  {%- if current > 0 -%}
+    {%- assign previdx = current | minus: 1 -%}
+    {%- assign prev = list[previdx] | split: "::" -%}
+    <a class="doc-pager__link doc-pager__prev" href="{{ prev[0] | relative_url }}">
+      <span class="doc-pager__dir">← {% if page.lang == 'en' %}Previous{% else %}Précédent{% endif %}</span>
+      <strong class="doc-pager__title">{{ prev[1] }}</strong>
+    </a>
+  {%- else -%}<span></span>{%- endif -%}
+  {%- assign nextidx = current | plus: 1 -%}
+  {%- assign nxt = list[nextidx] | split: "::" -%}
+  {%- if nxt[0] and nxt[0] != "" -%}
+    <a class="doc-pager__link doc-pager__next" href="{{ nxt[0] | relative_url }}">
+      <span class="doc-pager__dir">{% if page.lang == 'en' %}Next{% else %}Suivant{% endif %} →</span>
+      <strong class="doc-pager__title">{{ nxt[1] }}</strong>
+    </a>
+  {%- else -%}<span></span>{%- endif -%}
+</nav>
+{%- endif -%}

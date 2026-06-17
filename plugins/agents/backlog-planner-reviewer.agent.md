@@ -13,12 +13,18 @@ metadata:
     - S6 RULE BRIDGE
   skills:
     - planning-review-criteria
+    - adversarial-review-lenses
   inputs:
     required:
-      - .skraft/sdlc/discuss/stories-{milestone}.md
-      - .skraft/sdlc/discuss/ac-draft-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
     context:
-      - .skraft/sdlc/discover/triage-{date}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
+  outputs:
+    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md
+  instructions:
+    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Backlog-Planner Reviewer
@@ -35,9 +41,11 @@ Load before starting:
 ### Phase 1: RECEIVE
 
 Collect artefacts:
-- **Stories file** — `.skraft/sdlc/discuss/stories-{milestone}.md`
-- **AC drafts** — `.skraft/sdlc/discuss/ac-draft-{story}.md` (one per story)
-- **Triage context** — `.skraft/sdlc/discover/triage-{date}.md` (reference only)
+- **Stories file** — `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md`
+- **AC drafts** — `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md` (one per story)
+- **Triage context** — `.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md` (reference only)
+
+READ-ONLY on every artefact listed above. The reviewer never writes to `research/`, `plans/`, `adrs/`, `details/`, `changes/`, or `features/`. The only output path is `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`.
 
 If artefacts are missing, note them and proceed with available inputs. Never block on context files.
 
@@ -128,14 +136,14 @@ Build an adjacency list from `depends_on` fields. Run depth-first search. If a b
 | Antipattern absence | G8 | Zero CRITICAL antipatterns detected (Implement-X, Giant Stories, No Examples). Zero HIGH antipatterns detected (Technical AC, Vague Persona, Generic Data, Tests After Code, Missing Dependencies). | BLOCKER for CRITICAL; HIGH for HIGH severity |
 
 **Checking G7:**
-For each story, verify each DoR item. A story with 2+ missing DoR items is an automatic `rejected` verdict.
+For each story, verify each DoR item. A story with 2+ missing DoR items is an automatic `REJECTED` verdict.
 
 **G8 CRITICAL antipatterns (auto-reject):**
 - **Implement-X**: story says "As a dev/engineer, I want to implement/build/create {TechnicalThing}"
 - **Giant Stories**: story has 8+ ACs, or scope touches 3+ distinct user actions
 - **No Examples**: story has zero domain examples with real values
 
-**G8 HIGH antipatterns (changes_requested):**
+**G8 HIGH antipatterns (NEEDS_REWORK):**
 - **Technical AC**: any AC mentioning system internals, HTTP codes, class names
 - **Vague Persona**: "the user", "someone", "a person", "a customer" without role specificity
 - **Generic Data**: examples use "some accidents", "a few years", "enough premium" without real values
@@ -151,11 +159,13 @@ After all four lenses, synthesise findings:
 
 | Condition | Verdict |
 |---|---|
-| ≥1 BLOCKER finding | `rejected` |
-| ≥1 HIGH finding, 0 BLOCKER | `changes_requested` |
-| MEDIUM findings only | `changes_requested` |
-| LOW findings only | `approved` with recommendations |
-| No findings | `approved` |
+| ≥1 BLOCKER finding | `NEEDS_REWORK` |
+| ≥1 HIGH finding, 0 BLOCKER | `NEEDS_REWORK` |
+| MEDIUM findings only | `NEEDS_REWORK` |
+| LOW findings only | `APPROVED` with recommendations |
+| No findings | `APPROVED` |
+
+A BLOCKER finding is mechanically correctable by the backlog-planner: it returns `NEEDS_REWORK` so the orchestrator re-dispatches with the findings attached (auto-retry, escalating to a human only after 3 failed attempts).
 
 3. Confidence:
    - `high`: All artefacts present, lenses fully applied
@@ -166,10 +176,12 @@ After all four lenses, synthesise findings:
 
 ### Phase 4: VERDICT OUTPUT
 
+Persist the full verdict YAML inside a markdown wrapper (first line: `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md`, then emit the same YAML to stdout.
+
 Emit a single machine-parseable YAML verdict block:
 
 ```yaml
-verdict: approved | changes_requested | rejected
+verdict: APPROVED | NEEDS_REWORK | REJECTED
 confidence: high | medium | low
 lenses:
   invest:

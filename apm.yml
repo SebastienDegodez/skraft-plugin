@@ -4,7 +4,7 @@ description: APM project for skraft-plugin
 author: SebastienDegodez
 dependencies:
   apm:
-  - danielmeppiel/genesis
+  - danielmeppiel/genesis/skills/genesis
   mcp: []
 includes: auto
 scripts: {}

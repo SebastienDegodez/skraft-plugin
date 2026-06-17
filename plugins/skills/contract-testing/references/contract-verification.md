@@ -1,15 +1,30 @@
 # Contract Verification Reference
 
-## VerifyAsync() Signature
+Provider-side conformance uses the `OPEN_API_SCHEMA` test runner: Microcks calls
+your RUNNING service with every example from the contract and validates each
+response. The entry point is the `TestEndpointAsync` extension on
+`MicrocksContainer`.
+
+## TestEndpointAsync() Signature
 
 ```csharp
-// On MicrocksContainer
-Task<TestResult> VerifyAsync(
-    string serviceId,          // Matches info.title in the contract
-    string version,            // Matches info.version in the contract
-    TimeSpan? timeout = null   // Default: 5 seconds per operation
-);
+// Extension on MicrocksContainer
+Task<TestResult> TestEndpointAsync(
+    this MicrocksContainer container,
+    TestRequest testRequest,
+    CancellationToken cancellationToken = default);
 ```
+
+```csharp
+var request = new TestRequest
+{
+    ServiceId    = "Eligibility Check API:1.0.0",  // "info.title:info.version"
+    RunnerType   = TestRunnerType.OPEN_API_SCHEMA,
+    TestEndpoint = $"http://host.testcontainers.internal:{port}",
+    Timeout      = TimeSpan.FromSeconds(5),
+};
+```
+
 
 ---
 
@@ -18,21 +33,21 @@ Task<TestResult> VerifyAsync(
 ```csharp
 public class TestResult
 {
-    // True only when ALL operations in ALL examples pass
+    // True only when ALL examples for ALL operations passed.
     public bool Success { get; }
+    public bool InProgress { get; }
+    public string ServiceId { get; }
+    public string TestedEndpoint { get; }
 
-    // Human-readable failure descriptions — empty when Success == true
-    public IList<string> Failures { get; }
-
-    // Per-operation detail
-    public IList<OperationResult> OperationResults { get; }
+    // Per-operation detail.
+    public List<TestCaseResult> TestCaseResults { get; }
 }
 
-public class OperationResult
+public class TestCaseResult
 {
-    public string Operation { get; }       // e.g. "GET /eligibilities/{driverId}"
     public bool Success { get; }
-    public IList<string> Messages { get; } // Failure details for this operation
+    public string OperationName { get; }   // e.g. "GET /eligibilities/{driverId}"
+    public List<TestStepResult> TestStepResults { get; }
 }
 ```
 
@@ -41,10 +56,8 @@ public class OperationResult
 ## Basic Assertion Pattern
 
 ```csharp
-var result = await _microcks.VerifyAsync("Eligibility Check API", "1.0.0");
-
-// Fail with full detail on contract violation
-Assert.True(result.Success, string.Join("\n", result.Failures));
+var result = await microcks.TestEndpointAsync(request);
+Assert.True(result.Success);   // do not suppress a failing TestResult
 ```
 
 ---
@@ -52,16 +65,16 @@ Assert.True(result.Success, string.Join("\n", result.Failures));
 ## Assertion with Per-Operation Detail
 
 ```csharp
-var result = await _microcks.VerifyAsync("Eligibility Check API", "1.0.0");
+var result = await microcks.TestEndpointAsync(request);
 
 if (!result.Success)
 {
-    var detail = result.OperationResults
-        .Where(op => !op.Success)
-        .Select(op => $"[{op.Operation}] {string.Join(", ", op.Messages)}")
+    var failing = result.TestCaseResults
+        .Where(tc => !tc.Success)
+        .Select(tc => tc.OperationName)
         .ToList();
 
-    Assert.Fail($"Contract violations:\n{string.Join("\n", detail)}");
+    Assert.Fail($"Contract violations on: {string.Join(", ", failing)}");
 }
 ```
 
@@ -69,7 +82,8 @@ if (!result.Success)
 
 ## What "Verified" Means
 
-`VerifyAsync` replays every named example from `.apiexamples.yaml` against your running service:
+`TestEndpointAsync(OPEN_API_SCHEMA)` replays every named example from
+`.apiexamples.yaml` against your running service:
 
 1. Sends the example's `request` (parameters, headers, body) to the service endpoint.
 2. Compares the actual response against the example's `response` (code, headers, body).
@@ -91,7 +105,7 @@ if (!result.Success)
 | `Body mismatch: expected field 'eligible' not found` | Response missing required field | Add field to implementation response |
 | `Expected status 200 but got 500` | Implementation error | Fix the implementation, not the contract |
 | `No matching example found` | Dispatcher misconfiguration | Check dispatcher rules match example names |
-| `Connection refused` | Service not running | Ensure service started before calling VerifyAsync |
+| `Connection refused` | Service not running | Ensure service started before calling TestEndpointAsync |
 | `Timeout after 5s` | Slow service or wrong URL | Increase timeout or fix mock URL registration |
 
 ---
@@ -104,9 +118,9 @@ if (!result.Success)
 [Fact]
 public async Task Eligibility_API_satisfies_contract()
 {
-    // Service under test must be running and registered with Microcks
-    var result = await _microcks.VerifyAsync("Eligibility Check API", "1.0.0");
-    Assert.True(result.Success, string.Join("\n", result.Failures));
+    // Service under test must be running on a real port (boot real Kestrel).
+    var result = await microcks.TestEndpointAsync(request);
+    Assert.True(result.Success);
 }
 ```
 
@@ -118,11 +132,11 @@ public async Task Eligibility_API_satisfies_contract()
 [InlineData("POST /eligibilities")]
 public async Task Operation_satisfies_contract(string operation)
 {
-    var result = await _microcks.VerifyAsync("Eligibility Check API", "1.0.0");
-    var opResult = result.OperationResults.FirstOrDefault(o => o.Operation == operation);
+    var result = await microcks.TestEndpointAsync(request);
+    var opResult = result.TestCaseResults.FirstOrDefault(o => o.OperationName == operation);
 
     Assert.NotNull(opResult);
-    Assert.True(opResult.Success, string.Join("\n", opResult.Messages));
+    Assert.True(opResult!.Success);
 }
 ```
 
@@ -144,22 +158,46 @@ Add a dedicated contract verification test job:
 public class EligibilityContractVerificationTests : IAsyncLifetime
 {
     private MicrocksContainer _microcks = null!;
-    private ApiIntegrationFactory _factory = null!;
+    private WebApplication _app = null!;
+    private int _port;
 
     public async Task InitializeAsync()
     {
-        _factory = new ApiIntegrationFactory();
-        await _factory.InitializeAsync();
-        _microcks = _factory.MicrocksContainer;
+        // Boot the SUT on a real Kestrel port (a WebApplicationFactory exposes none).
+        _app = CheckoutHost.Create();
+        _app.Urls.Add("http://127.0.0.1:0");
+        await _app.StartAsync();
+        var address = _app.Services.GetRequiredService<IServer>()
+            .Features.Get<IServerAddressesFeature>()!.Addresses.First();
+        _port = int.Parse(address.Split(':').Last());
+        await TestcontainersSettings.ExposeHostPortsAsync([(ushort)_port]);
+
+        _microcks = new MicrocksBuilder()
+            .WithMainArtifacts(
+                "contracts/eligibility-check-api.yaml",
+                "contracts/eligibility-check-api.apiexamples.yaml",
+                "contracts/eligibility-check-api.apimetadata.yaml")
+            .Build();
+        await _microcks.StartAsync();
     }
 
-    public async Task DisposeAsync() => await _factory.DisposeAsync();
+    public async Task DisposeAsync()
+    {
+        await _microcks.DisposeAsync();
+        await _app.StopAsync();
+    }
 
     [Fact(DisplayName = "Eligibility Check API satisfies OpenAPI contract")]
     public async Task Eligibility_check_api_satisfies_contract()
     {
-        var result = await _microcks.VerifyAsync("Eligibility Check API", "1.0.0");
-        Assert.True(result.Success, string.Join("\n", result.Failures));
+        var result = await _microcks.TestEndpointAsync(new TestRequest
+        {
+            ServiceId    = "Eligibility Check API:1.0.0",
+            RunnerType   = TestRunnerType.OPEN_API_SCHEMA,
+            TestEndpoint = $"http://host.testcontainers.internal:{_port}",
+            Timeout      = TimeSpan.FromSeconds(5),
+        });
+        Assert.True(result.Success);
     }
 }
 ```
@@ -176,13 +214,13 @@ public class EligibilityContractVerificationTests : IAsyncLifetime
 | **Consumer contract test** | In the consumer's test suite | The provider mock (Microcks) behaves as my code expects |
 
 **Provider verification flow:**
-1. Load contract into Microcks.
-2. Start the real provider service.
-3. Call `VerifyAsync` — Microcks drives the provider.
+1. Load the contract artifacts into Microcks (`WithMainArtifacts`).
+2. Start the real provider service on a reachable TCP port (real Kestrel).
+3. Call `TestEndpointAsync(OPEN_API_SCHEMA)` — Microcks drives the provider.
 4. All examples pass → provider is contract-compliant.
 
 **Consumer contract test flow:**
-1. Load contract into Microcks.
-2. Consumer code calls Microcks mock URL (not the real provider).
-3. Assert consumer handles all mock responses correctly.
-4. Microcks enforces that consumer only relies on contract-defined behavior.
+1. Load the downstream contract into Microcks.
+2. Consumer code calls the Microcks mock endpoint (`GetRestMockEndpoint`), not the real provider.
+3. Assert the consumer handles all mock responses correctly.
+4. Optionally assert the mock was actually hit with `VerifyAsync(name, version)` (bool).

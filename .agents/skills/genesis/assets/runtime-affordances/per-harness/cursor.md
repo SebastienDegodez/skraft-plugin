@@ -110,3 +110,51 @@ In Cursor: TODO: official docs needed.
   (~/.cursor/) not backed by files, complementing project rules.
 - Nested AGENTS.md: Subdirectories may contain AGENTS.md files,
   each scoping instructions to that tree.
+
+## 9. MODEL CATALOG & BILLING (cost-economics)
+
+Maps the abstract role classes in `../model-catalog.md` to concrete
+SKUs available through Cursor and to Cursor's hybrid billing surface.
+The genesis architect designs in role classes; this adapter binds
+them at codegen time.
+
+Verified on: 2025-11-14. Always re-verify against the live pricing
+page; SKUs and multipliers change.
+
+### Role class -> concrete model (defaults)
+
+| Role class             | Default SKU                  | Alternative                  |
+|------------------------|------------------------------|------------------------------|
+| planner                | Claude Opus / GPT-5 / o3     | Claude Sonnet for cost balance |
+| implementer            | Claude Sonnet 4.x / GPT-5    | GPT-4.1 for narrow scope      |
+| reviewer               | Claude Sonnet 4.x / GPT-5    | GPT-4o-mini for checklist     |
+| trivial                | GPT-4o mini / Cursor-small   | (none)                        |
+| long-context-retriever | Gemini Pro / GPT-5           | (none)                        |
+
+### Billing surface
+
+Hybrid: subscription seat + premium-request overage. "Premium
+requests" abstract underlying token cost; each model has its own
+per-request rate (1x for standard, 2x-10x for high-cost SKUs).
+
+Source: https://cursor.com/pricing (live).
+
+### Cost-pattern bindings
+
+- B12 MODEL ROUTER: configure default model in Cursor settings;
+  per-invocation override via the model picker. Cross-model context
+  does NOT share cache.
+- B13 CACHE-AWARE PREFIX: cache management is opaque to the
+  operator; Cursor handles prompt caching against the underlying
+  provider. Discipline still pays off (stable .cursor/rules,
+  stable persona body).
+- B15 TOOL SUBSET: declare per-rule scoping in `.cursor/rules/*.mdc`
+  glob patterns to bound the rule catalogue per scope.
+- B16 EFFORT GOVERNOR: where the model exposes effort, configure
+  via the model SKU (a "high effort" SKU IS the effort declaration).
+
+### Stance binding
+
+Operator declares stance in the first prompt OR in `.cursor/rules/`
+as `stance: <value>` in a globally-scoped rule file. The
+genesis-architect persona reads it at step 1.

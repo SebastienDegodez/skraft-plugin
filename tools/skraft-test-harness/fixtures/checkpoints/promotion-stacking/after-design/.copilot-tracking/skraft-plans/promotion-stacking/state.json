@@ -1,0 +1,37 @@
+{
+  "projectSlug": "promotion-stacking",
+  "skraftPlanFile": ".copilot-tracking/skraft-plans/promotion-stacking/plans/2026-06-14/promotion-stacking-plan.instructions.md",
+  "currentPhase": "DISTILL",
+  "entryMode": "from-issue",
+  "issueNumber": 57,
+  "difficulty": "medium-hard",
+  "phasesCompleted": ["DISCOVER", "DISCUSS", "DESIGN"],
+  "phaseArtifacts": {
+    "DISCOVER": ["research/2026-06-14/promotion-stacking-research.md"],
+    "DISCUSS": ["plans/2026-06-14/promotion-stacking-plan.instructions.md"],
+    "DESIGN": [
+      "adrs/ADR-001-promotion-stacking.md",
+      "details/2026-06-14/promotion-stacking-contracts.md"
+    ],
+    "DISTILL": [],
+    "DELIVER": []
+  },
+  "reviewerVerdicts": {
+    "DISCOVER": "APPROVED",
+    "DISCUSS": "APPROVED",
+    "DESIGN": "APPROVED",
+    "DISTILL": null,
+    "DELIVER": null
+  },
+  "reviewArtifacts": [
+    "reviews/2026-06-14/discover-promotion-stacking-review.md",
+    "reviews/2026-06-14/discuss-promotion-stacking-review.md",
+    "reviews/2026-06-14/design-promotion-stacking-review.md"
+  ],
+  "retryCount": { "DISCOVER": 0, "DISCUSS": 0, "DESIGN": 0, "DISTILL": 0, "DELIVER": 0 },
+  "referencesProcessed": [],
+  "nextActions": ["Dispatch acceptance-designer to distil Gherkin scenarios and a test plan (with the Microcks mock)."],
+  "userPreferences": { "autonomyTier": "full", "depthTier": "comprehensive", "maxRetriesPerPhase": 2 },
+  "depthTierOverrides": [],
+  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null, "ssscPlanFile": null }
+}

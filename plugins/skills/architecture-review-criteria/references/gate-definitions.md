@@ -1,8 +1,8 @@
-# Gate Definitions — G1–G9
+# Gate Definitions — G1–G13
 
 ## Overview
 
-Detailed evaluation checklist for each of the 9 gates used by the `solution-architect-reviewer`. Each gate entry includes: which lens it belongs to, its definition, a step-by-step check procedure, auto-fail examples (concrete situations that immediately fail the gate), and pass examples.
+Detailed evaluation checklist for each of the 13 gates used by the `solution-architect-reviewer` (12 lens-bound + 1 cross-cutting escalation gate). Each gate entry includes: which lens it belongs to, its definition, a step-by-step check procedure, auto-fail examples (concrete situations that immediately fail the gate), and pass examples.
 
 ---
 
@@ -15,9 +15,9 @@ Evaluates: ADRs + diagrams + contracts
 ### G1 — Every Diagram Element Has an ADR Justification
 
 **Lens:** consistency-lens
-**Severity:** HIGH
+**Severity:** BLOCKER
 
-**Definition:** Every structural element visible in component diagrams — aggregates, bounded contexts, architectural patterns (CQRS, Event Sourcing, Saga), context map relationships — must have a corresponding ADR that justifies its existence. No element is introduced without a recorded architectural rationale.
+**Definition:** Every structural element visible in component diagrams — aggregates, bounded contexts, architectural patterns (CQRS, Event Sourcing, Saga), context map relationships — must have a corresponding ADR that justifies its existence. No element is introduced without a recorded architectural rationale. (Bumped to BLOCKER: ungrounded structural elements propagate silently into DISTILL and DELIVER as faith-based dependencies.)
 
 **Step-by-step check:**
 1. Open all `diagrams-{story}.md` files. List every named architectural element: aggregates, bounded contexts, patterns.
@@ -36,27 +36,39 @@ Evaluates: ADRs + diagrams + contracts
 
 ---
 
-### G2 — No Contradicting ADRs
+### G2 — No Contradicting ADRs (and Supersession is Bidirectional via Registry)
 
 **Lens:** consistency-lens
 **Severity:** BLOCKER
 
-**Definition:** No two ADRs in the DESIGN artefact set contradict each other. If one ADR supersedes another, the superseded ADR must be marked `Superseded by ADR-{NNN}` and the successor must reference the superseded ADR in its Context section.
+**Definition:** No two ADRs in the DESIGN artefact set contradict each other while both are `Accepted`. When one ADR supersedes another, the link is recorded in two places:
+
+1. **Inside the new ADR's body**, immediately after the Status line: `**Supersedes:** [ADR-MMM](./ADR-MMM-{slug}.md) — {one-line reason}`.
+2. **As an appended row in `.copilot-tracking/skraft-plans/{projectSlug}/adrs/supersessions.md`** (append-only registry):
+
+   ```markdown
+   | date | superseded ADR | new ADR | reason |
+   |---|---|---|---|
+   | 2026-05-16 | ADR-003 | ADR-007 | Conformist now justified — ACL is over-engineering |
+   ```
+
+The superseded ADR's file is **never** edited — the `adrs/` directory is append-only. Reviewers reconstruct the supersession graph from these two sources combined.
 
 **Step-by-step check:**
 1. Read all ADRs. Note the decision topic and chosen direction for each.
-2. Look for conflicting decisions: same topic, different choices, both with status `Accepted`.
-3. Check every ADR whose status is `Accepted` — verify no other `Accepted` ADR makes an incompatible choice for the same scope.
-4. For any ADR marked `Superseded by ADR-{NNN}` — verify the successor ADR exists and references the superseded one.
+2. Look for conflicting decisions: same scope, incompatible choices, both `Accepted`.
+3. For every `**Supersedes:** ADR-MMM` body line found in any ADR: open `adrs/supersessions.md` and confirm a registry row exists for that pair (same superseded ADR, same new ADR). If missing → G2 BLOCKER.
+4. For every row in `adrs/supersessions.md`: open the named new ADR and confirm the `**Supersedes:**` body line exists. If missing → G2 BLOCKER.
+5. Do **not** demand any edit to the superseded ADR's file — expecting one is itself the wrong mental model.
 
 **Auto-fail examples:**
-- ADR-001 (status: Accepted) prescribes CQRS for eligibility. ADR-005 (status: Accepted) prescribes a single unified model for eligibility. Both are `Accepted`. → G2 BLOCKER fail.
-- ADR-003 is marked `Superseded by ADR-007` but ADR-007 does not exist or does not reference ADR-003. → G2 BLOCKER fail.
-- ADR-004 accepts Event Sourcing for `EligibilityAggregate`. ADR-006 (same scope, status: Accepted) rejects Event Sourcing for `EligibilityAggregate`. → G2 BLOCKER fail.
+- ADR-001 (Accepted) prescribes CQRS for eligibility. ADR-005 (Accepted) prescribes a single unified model for eligibility. Both `Accepted`, same scope. → G2 BLOCKER fail.
+- ADR-007 contains `**Supersedes:** ADR-003` but `adrs/supersessions.md` has no row pairing ADR-003 → ADR-007. → G2 BLOCKER fail.
+- `adrs/supersessions.md` lists `ADR-003 → ADR-007` but ADR-007's body lacks the `**Supersedes:**` line. → G2 BLOCKER fail.
 
 **Pass examples:**
 - ADR-001 (Accepted): CQRS for eligibility. ADR-005 (Accepted): state-based persistence for policy renewal. Different scopes — no contradiction. → G2 pass.
-- ADR-003 (Superseded by ADR-007): original ACL pattern decision. ADR-007 (Accepted): revised to Published Language, references ADR-003 in Context. → G2 pass.
+- ADR-007 body contains `**Supersedes:** [ADR-003](./ADR-003-eligibility-acl.md) — Conformist now justified by shared RiskProfile VO`. `adrs/supersessions.md` contains a matching row dated today. → G2 pass.
 
 ---
 
@@ -221,3 +233,107 @@ Evaluates: diagrams + contracts + stories
 **Pass examples:**
 - `EligibilityAggregate` is introduced. Story US-01 (eligibility check) requires it. → G9 pass.
 - `EligibilityRenewalSaga` introduced. Story US-05 (renewal triggered by expiry, notification sent) explicitly requires cross-aggregate coordination. → G9 pass.
+
+---
+
+### G10 — Consistency Matrix Exists and Passes
+
+**Lens:** consistency-lens
+**Severity:** BLOCKER
+
+**Definition:** For every story under design there must be a `details/{date}/consistency-matrix-{story}.md` produced by the persona's Phase 9 RECONCILE & VERIFY, and its `consistency-gate` line must read `PASS`. The matrix's back-propagation journal must explain every rewrite the persona performed during reconciliation.
+
+**Step-by-step check:**
+1. List the stories under design from `plans/{date}/stories-{milestone}.md`.
+2. For each story ID, confirm `details/{date}/consistency-matrix-{story}.md` exists.
+3. Inside each matrix, locate the `consistency-gate:` line and confirm it equals `PASS`.
+4. Spot-check the back-propagation journal: every row that was reconciled must have a journal entry naming the artefact rewritten and the cause class.
+5. Any missing file, missing `PASS`, or missing journal entry → G10 BLOCKER fail.
+
+**Auto-fail examples:**
+- Stories under design are US-01, US-02. Only `consistency-matrix-US-01.md` exists. → G10 BLOCKER fail.
+- `consistency-matrix-US-01.md` exists but its `consistency-gate` line reads `FAIL` and no blocker file was emitted. → G10 BLOCKER fail (this is a persona bug — reviewer must reject it explicitly rather than continue past it).
+
+**Pass examples:**
+- One matrix per story under design, every `consistency-gate: PASS`, journals coherent. → G10 pass.
+
+---
+
+### G11 — Complexity-Adding Pattern Has an Admissible Force and a "Do Without" Alternative
+
+**Lens:** fitness-lens
+**Severity:** HIGH
+
+**Definition:** Every ADR that ratifies a pattern from `{CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL}` must cite at least one **admissible force** in its Context section AND must contain a row in `Alternatives Rejected` titled `"do without the pattern"` evaluated on technical merits.
+
+Admissible forces:
+- Read/write asymmetry (very different shapes, scales, or freshness requirements)
+- Audit trail or temporal-query requirement traceable to a story
+- Cross-service transactional boundary that cannot be a single ACID transaction
+- Contention hotspot demonstrably blocking throughput
+- Regulatory separation requirement
+
+`"Consistency with existing code"` is **not** an admissible force on its own.
+
+**Step-by-step check:**
+1. List every ADR whose decision adopts a pattern from the list above.
+2. For each such ADR, open it and search the Context section for one of the admissible-force phrases.
+3. Open the `Alternatives Rejected` section and confirm a row exists titled `"do without the pattern"` (or equivalent) with technical reasoning, not just a one-line dismissal.
+4. Missing admissible force OR missing `"do without"` row → G11 HIGH fail.
+
+**Auto-fail examples:**
+- ADR-002 adopts CQRS for eligibility. Context says only: "We use CQRS to stay consistent with the rest of the codebase." → G11 HIGH fail.
+- ADR-004 adopts Event Sourcing. `Alternatives Rejected` has only `"state-based persistence"` evaluated, with no `"do without Event Sourcing entirely"` row. → G11 HIGH fail.
+
+**Pass examples:**
+- ADR-002 adopts CQRS. Context cites: "Story US-03 requires real-time read of running policy count for 10× the write throughput — read/write asymmetry is the load-bearing force." `Alternatives Rejected` includes `"single model without CQRS"` analysed against the asymmetry. → G11 pass.
+
+---
+
+### G12 — Every Planned Supersession Is Realised in Both Places
+
+**Lens:** consistency-lens
+**Severity:** BLOCKER
+
+**Definition:** For every row in any `details/{date}/supersession-plan-{story}.md` produced by the persona's Phase 3.5, ALL THREE of the following must hold:
+
+1. The new ADR (named in the plan row's "New ADR to write" column) exists at `adrs/ADR-{NNN}-{slug}.md` AND its body contains the line `**Supersedes:** [ADR-MMM](./ADR-MMM-{slug}.md) — {reason}`.
+2. `adrs/supersessions.md` contains a row pairing the old ADR with the new ADR.
+3. No descriptive artefact (`event-model-*.md`, `diagrams-*.md`, `contracts-*.md`) still cites the superseded ADR as its current source of truth (historical narrative references are fine; what is forbidden is descriptive artefacts pointing at the superseded ADR for current ratification).
+
+**Step-by-step check:**
+1. List every supersession plan file. Read every row.
+2. For each row, open the named new ADR and `grep` for `**Supersedes:** ADR-{MMM}` — fail if absent.
+3. Open `adrs/supersessions.md` and `grep` for a row matching the (old, new) pair — fail if absent.
+4. `grep` every descriptive artefact for the superseded ADR token (`ADR-{MMM}`). For each hit, classify: narrative/history mention (OK) vs source-of-truth citation (FAIL).
+5. Any of the three conditions missing → G12 BLOCKER fail.
+
+**Auto-fail examples:**
+- `supersession-plan-US-03.md` plans `ADR-003 → ADR-007`. ADR-007 exists but body lacks `**Supersedes:**`. → G12 BLOCKER fail.
+- Plan row exists; new ADR has the body line; but `adrs/supersessions.md` does not yet carry the row. → G12 BLOCKER fail.
+- `diagrams-US-03.md` still contains "per ADR-003" as a current-ratification reference for a relationship that is now governed by ADR-007. → G12 BLOCKER fail.
+
+**Pass examples:**
+- Plan row `ADR-003 → ADR-007`. ADR-007 body line present. Registry row present. `diagrams-US-03.md` updated to cite ADR-007; only the new ADR's own Context mentions ADR-003 (historical). → G12 pass.
+
+---
+
+### G13 — Open Blockers Force Escalation (Cross-Cutting Short-Circuit Gate)
+
+**Lens:** cross-cutting (evaluated in Phase 1 RECEIVE, before any lens runs)
+**Severity:** BLOCKER (short-circuit)
+
+**Definition:** For every `decision-drift-{story}-{NNN}.md` file under `.copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/`, a sibling file `decision-drift-{story}-{NNN}-resolution.md` must exist in the same directory. An open blocker without a resolution means a human still owes an answer; the review is not the place to skip past that.
+
+**Step-by-step check:**
+1. List every file matching `blockers/{date}/decision-drift-*.md` (excluding files whose name already ends in `-resolution.md`).
+2. For each, compute the expected sibling resolution filename by inserting `-resolution` before `.md`.
+3. Check whether the sibling file exists. Missing sibling → G13 BLOCKER fail.
+4. If any G13 fails: return `verdict: REJECTED` immediately, list the open blocker files in `synthesis.blocking_findings`, and SKIP all other lens evaluation. The verdict's `recommendations` must direct the orchestrator to surface the question to a human, not to retry the persona.
+
+**Auto-fail examples:**
+- `blockers/2026-05-16/decision-drift-US-03-001.md` exists. `blockers/2026-05-16/decision-drift-US-03-001-resolution.md` does not. → G13 BLOCKER fail, verdict `REJECTED`, lenses skipped.
+
+**Pass examples:**
+- No blocker files exist at all. → G13 pass (vacuously).
+- Two blocker files exist; both have matching `-resolution.md` siblings; each resolution carries a `chosen: A|B|C` field. → G13 pass; reviewer proceeds to evaluate G1–G12 normally.

@@ -25,7 +25,7 @@ permissions:
 
 env:
   PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
-  PLAYWRIGHT_JUNIT_OUTPUT_NAME: .skraft/sdlc/deliver/${{ inputs.story_id }}/evidence/reports/results.xml
+  PLAYWRIGHT_JUNIT_OUTPUT_NAME: .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${{ inputs.story_id }}/evidence/reports/results.xml
   SKRAFT_STORY_ID: ${{ inputs.story_id }}
   CI: true
 
@@ -150,7 +150,7 @@ Set in `playwright.config.ts`:
 
 ```typescript
 reporter: process.env.CI
-  ? [['github'], ['html', { outputFolder: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports` }], ['junit', { outputFile: `.skraft/sdlc/deliver/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }]]
+  ? [['github'], ['html', { outputFolder: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports` }], ['junit', { outputFile: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }]]
   : [['html']],
 ```
 

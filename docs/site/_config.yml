@@ -1,0 +1,25 @@
+title: "SKRAFT"
+description: "Pipeline SDLC piloté par agents IA — documentation publique"
+baseurl: "/skraft-plugin"
+url: "https://sebastiendegodez.github.io"
+lang: fr
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+collections: {}
+
+defaults:
+  - scope: { path: "fr" }
+    values: { lang: fr, layout: default }
+  - scope: { path: "en" }
+    values: { lang: en, layout: default }
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md

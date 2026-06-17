@@ -12,7 +12,7 @@
 ## 1. OpenAPI Contract
 
 ```yaml
-# .skraft/sdlc/design/contracts/eligibility-check-api.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.yaml
 openapi: 3.1.0
 info:
   title: Eligibility Check API
@@ -79,7 +79,7 @@ components:
 ## 2. Microcks Examples
 
 ```yaml
-# .skraft/sdlc/distill/contracts/eligibility-check-api.apiexamples.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apiexamples.yaml
 apiVersion: mocks.microcks.io/v1alpha1
 kind: APIExamples
 metadata:
@@ -143,7 +143,7 @@ spec:
 ## 3. Microcks Metadata (JSON_BODY Dispatcher)
 
 ```yaml
-# .skraft/sdlc/distill/contracts/eligibility-check-api.apimetadata.yaml
+# .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts/eligibility-check-api.apimetadata.yaml
 apiVersion: mocks.microcks.io/v1alpha1
 kind: APIMetadata
 metadata:
@@ -184,7 +184,7 @@ spec:
 
 These three files together enable:
 
-1. **Consumer test:** point `HttpClient.BaseAddress` at `GetRestMockUrl("Eligibility Check API", "1.0.0")`. The mock returns correct JSON for each driverId.
-2. **Provider verification:** `await _microcks.VerifyAsync("Eligibility Check API", "1.0.0")` drives all three examples against the real service and asserts responses match.
+1. **Consumer test:** point `HttpClient.BaseAddress` at `GetRestMockEndpoint("Eligibility Check API", "1.0.0")` (returns a `Uri`). The mock returns correct JSON for each driverId.
+2. **Provider verification:** `await _microcks.TestEndpointAsync(new TestRequest { ServiceId = "Eligibility Check API:1.0.0", RunnerType = TestRunnerType.OPEN_API_SCHEMA, TestEndpoint = $"http://host.testcontainers.internal:{port}" })` drives all three examples against the real service (running on a real Kestrel port) and asserts responses match.
 
 **Key invariant:** `metadata.name` in both DISTILL files must equal `"Eligibility Check API - 1.0.0"` — any mismatch silently breaks example loading.
