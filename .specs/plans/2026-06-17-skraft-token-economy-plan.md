@@ -32,50 +32,50 @@
 
 ## Task 0 : Déclarer la posture (stance)
 
-- [x] Acter `balanced` comme posture par défaut SKRAFT (mandat B13 systématique). → spec §"Posture de coût" (B13 toujours).
-- [x] Documenter la bascule `frugal` par story via `state.json` (mandats B12/B15/B16). → spec §"Posture de coût".
+- [ ] Acter `balanced` comme posture par défaut SKRAFT (mandat B13 systématique).
+- [ ] Documenter la bascule `frugal` par story via `state.json` (mandats B12/B15/B16).
 
 ## Task 1 : Audit cache-invalidators (B13)
 
-- [x] Grep des bodies d'agents + instructions chargées en prefix pour toute **date littérale / « Current date » / timestamp**. Lister les occurrences. → 0 date figée ; 2 templates dynamiques inoffensifs.
-- [x] Confirmer qu'aucun agent ne mute son catalogue d'outils ni ne switche de modèle en cours de session. → `tools:` statique ; `model: inherit` × 19.
-- [x] Vérifier que l'orchestrateur charge ses instructions stables **avant** `state.json` (suffixe variable). → `state.json` lu en Phase 0 via tool-read, instructions en metadata/prefix.
-- [x] Consigner le résultat (PASS/occurrences) dans le spec. → table d'audit ajoutée §1.
+- [ ] Grep des bodies d'agents + instructions chargées en prefix pour toute **date littérale / « Current date » / timestamp**. Lister les occurrences.
+- [ ] Confirmer qu'aucun agent ne mute son catalogue d'outils ni ne switche de modèle en cours de session.
+- [ ] Vérifier que l'orchestrateur charge ses instructions stables **avant** `state.json` (suffixe variable).
+- [ ] Consigner le résultat (PASS/occurrences) dans le spec.
 
 ## Task 2 : Model-routing par primitive (B12)
 
-- [x] Annoter chaque `*.agent.md` avec sa **classe de rôle cible** (table de la spec) en metadata ou commentaire frontmatter. → `metadata.cost_role_class` sur les 19 primitives, parse `yq` validé.
-- [x] Vérifier que les 5 reviewers ne sont **jamais** promus planner-class (rester reviewer). → 12 reviewer, 0 planner parmi eux.
-- [x] Confirmer `solution-architect` = planner ; orchestrateur = reviewer/trivial. → confirmé.
+- [ ] Annoter chaque `*.agent.md` avec sa **classe de rôle cible** (table de la spec) en metadata ou commentaire frontmatter.
+- [ ] Vérifier que les 5 reviewers ne sont **jamais** promus planner-class (rester reviewer).
+- [ ] Confirmer `solution-architect` = planner ; orchestrateur = reviewer/trivial.
 
 ## Task 3 : Audit tool-surface (B15)
 
-- [x] Pour chaque agent, comparer la frontmatter `tools:` au nombre réellement utilisé par appel. → surface max = 11 (`software-engineer`).
-- [x] Flag toute primitive voyant >20 outils et en utilisant <5 → proposer un sous-ensemble. → aucune ; toutes sous le seuil de 20.
-- [x] Prioriser les agents adossés à un large catalogue MCP. → aucun catalogue MCP large dans le plugin.
+- [ ] Pour chaque agent, comparer la frontmatter `tools:` au nombre réellement utilisé par appel.
+- [ ] Flag toute primitive voyant >20 outils et en utilisant <5 → proposer un sous-ensemble.
+- [ ] Prioriser les agents adossés à un large catalogue MCP.
 
 ## Task 4 : `depthTier` comme gouverneur de coût (B16/B11)
 
-- [x] Ajouter dans `skraft-state.instructions.md` et `skraft-difficulty-routing/SKILL.md` une note : `depthTier` pilote l'**effort et le coût** (lenses 1/2/4, seuils mutation, gate Gherkin), pas seulement la qualité.
-- [x] Rappeler la règle : `comprehensive` réservé au code critique ; `basic`/`standard` réduisent fan-out et output.
+- [ ] Ajouter dans `skraft-state.instructions.md` et `skraft-difficulty-routing/SKILL.md` une note : `depthTier` pilote l'**effort et le coût** (lenses 1/2/4, seuils mutation, gate Gherkin), pas seulement la qualité.
+- [ ] Rappeler la règle : `comprehensive` réservé au code critique ; `basic`/`standard` réduisent fan-out et output.
 
 ## Task 5 : Output tax — confirmer la délégation hors-LLM
 
-- [x] Vérifier que les reviewers n'émettent que des **tags JSON** (rendu MD via `render-verdict.mjs`) — déjà acté par `reviewer-verdict-schema`. → ⚠️ **FAUX en l'état** : `reviewer-verdict-schema` n'est pas implémenté (plan `2026-05-26` seulement), `render-verdict.mjs` absent, `adversarial-review-lenses/SKILL.md` impose encore un verdict Markdown LLM. Spec corrigée.
-- [x] Confirmer que `reviewer-prefilter` sort les gates mécanisables (output/turn) — déjà en cours, **ne pas dupliquer**. → conçu (plan `2026-06-04`), **non implémenté** ; ne rien dupliquer quand il atterrira.
-- [x] Identifier toute autre émission longue mécanisable (synthèses) candidate à un pont outil. → le verdict reviewer Markdown est LE candidat principal ; couvert par le futur `reviewer-verdict-schema`.
+- [ ] Vérifier que les reviewers n'émettent que des **tags JSON** (rendu MD via `render-verdict.mjs`) — déjà acté par `reviewer-verdict-schema`.
+- [ ] Confirmer que `reviewer-prefilter` sort les gates mécanisables (output/turn) — déjà en cours, **ne pas dupliquer**.
+- [ ] Identifier toute autre émission longue mécanisable (synthèses) candidate à un pont outil.
 
 ## Task 6 : Projection de coût (contrat de validation)
 
-- [x] Figer la table de bands (classe / prefix / output / tours / patterns) de la spec. → figée ; band output reviewers marqué « M aujourd'hui → S cible » pour refléter l'état réel.
-- [x] Noter explicitement que la fourchette quantitative ($/tokens) requiert l'adaptateur per-harness daté (hors-scope ici). → noté sous la table.
+- [ ] Figer la table de bands (classe / prefix / output / tours / patterns) de la spec.
+- [ ] Noter explicitement que la fourchette quantitative ($/tokens) requiert l'adaptateur per-harness daté (hors-scope ici).
 
 ## Task 7 : Checklist de validation (étape 8 genesis)
 
-- [x] Chaque classe de rôle annotée correspond aux bands de la projection (pas de promotion silencieuse). → 19 `cost_role_class` alignés sur la table (1 planner / 6 impl / 12 reviewer) ; aucun reviewer en planner.
-- [x] Aucun invalidateur de cache introduit. → les édits Task 4 (notes prose) n'ajoutent ni date littérale, ni mutation d'outils, ni switch modèle ; B13 toujours PASS.
-- [x] Patterns cités (B12/B13/B14/B15/B16) matérialisés quelque part. → B12 (`cost_role_class`), B13 (audit §1), B15 (audit §4), B16/B11 (notes `depthTier`) ; B14 reste un mandat de validation (PROMPT THRIFT), non un artefact.
-- [x] Si une posture `frugal` est activée : B12/B15/B16 visibles. → posture par défaut `balanced` retenue ; bascule `frugal` documentée (mandats B12/B15/B16) — non activée ici.
+- [ ] Chaque classe de rôle annotée correspond aux bands de la projection (pas de promotion silencieuse).
+- [ ] Aucun invalidateur de cache introduit.
+- [ ] Patterns cités (B12/B13/B14/B15/B16) matérialisés quelque part.
+- [ ] Si une posture `frugal` est activée : B12/B15/B16 visibles.
 
 ---
 

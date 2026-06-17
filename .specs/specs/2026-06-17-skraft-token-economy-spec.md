@@ -67,30 +67,17 @@ Le prefix stable d'un agent = persona/body + skills chargés + instructions + ca
 
 **Point d'attention orchestrateur :** `state.json` est **variable** et rechargé chaque tour (`// B4: reload state`) — bon pour le grounding, mais il **doit** rester en suffixe, après le prefix stable (instructions `skraft-state`/`skraft-artifacts`, dispatch table). À auditer : qu'aucun body/instruction chargé en prefix ne contienne de date littérale.
 
-**Résultat d'audit B13 (Task 1) — PASS.**
-
-| Axe | Verdict | Détail |
-|---|---|---|
-| Date littérale en prefix | ✅ 0 | Les 2 occurrences (`triage-{YYYY-MM-DD}.md`, `state.json.corrupted.{timestamp}`) sont des **templates de nom de fichier dynamiques**, évalués au runtime — pas des dates figées dans un body. |
-| Mutation du catalogue d'outils en session | ✅ aucune | `tools:` statique en frontmatter sur tous les agents. |
-| Switch de modèle en session | ✅ aucun | `model: inherit` sur les **19** agents/lenses/workers. |
-| `state.json` en suffixe variable | ✅ conforme | Lu en Phase 0 via tool-read, après le prefix stable (instructions chargées en metadata). |
-
 ### 2. OUTPUT TAX (output = 3–5× input)
 
-Les phases qui émettent de longs artefacts (software-engineer : code ; acceptance-designer : features ; backlog-planner : stories) sont dominées par l'output. Mandat : **émettre terse**, déléguer la production déterministe aux **ponts outils**. ⚠️ **Le rendu de verdict hors-LLM est conçu mais pas encore en place** (cf. correction Task 5 ci-dessous) : `render-verdict.mjs` / `prefilter.mjs` sont absents et `adversarial-review-lenses/SKILL.md` impose encore un verdict Markdown LLM. Tant que `reviewer-verdict-schema` n'atterrit pas, les reviewers émettent du Markdown complet et paient l'output tax.
+Les phases qui émettent de longs artefacts (software-engineer : code ; acceptance-designer : features ; backlog-planner : stories) sont dominées par l'output. Mandat : **émettre terse**, déléguer la production déterministe aux **ponts outils** (renderer `render-verdict.mjs`, `prefilter.mjs` déjà existants). Les reviewers n'émettent que des **tags JSON** ; le rendu MD est hors-LLM (déjà acté par `reviewer-verdict-schema`).
 
 ### 3. MODEL ROUTER (B12) — classe par slot
 
 Lier chaque primitive à sa classe (table ci-dessus). Anti-pattern à surveiller : reviewer **silencieusement promu** planner-class. La résolution classe→modèle concret vit dans l'adaptateur per-harness, pas dans les bodies.
 
-**Résultat d'annotation B12 (Task 2) — DONE.** Champ `metadata.cost_role_class` ajouté en frontmatter sur les **19** primitives (commentaire inline `# B12 …`), parse `yq` validé. Distribution : **1 planner** (`solution-architect`), **6 implementer** (`backlog-discoverer`, `backlog-planner`, `acceptance-designer`, `software-engineer`, `contract-testing-worker`, `mock-integration-worker`), **12 reviewer** (5 reviewers de phase + 4 reviewer-lenses + 2 worker fidelity-lenses + l'orchestrateur). Aucun reviewer promu planner. L'annotation est une **cible** ; la résolution classe→modèle reste à l'adaptateur per-harness.
-
 ### 4. TOOL SUBSET (B15)
 
 Auditer la frontmatter `tools:` de chaque agent : si une primitive voit >20 outils mais en utilise <5 par appel, réduire le catalogue exposé (il fait partie du prefix, payé chaque tour). L'orchestrateur (`agent, read, edit, execute`) et les reviewers (read-only) sont déjà étroits ; cibler surtout les agents avec MCP large.
-
-**Résultat d'audit B15 (Task 3) — PASS, aucune réduction nécessaire.** Surface d'outils max = **11** (`software-engineer`), sous le seuil de 20. Aucun catalogue MCP large. Distribution : software-engineer 11, acceptance-designer 9, workers 7, agents de phase 4, orchestrateur 4 (liste YAML : `agent`, `read`, `edit`, `execute`), reviewers/lenses 2 (read-only). Surfaces déjà conformes B15.
 
 ### 5 & 6. EFFORT GOVERNOR (B16) + FOLD-BY-DEFAULT (B11) via `depthTier`
 
@@ -105,21 +92,67 @@ Le **skip de DISCOVER sur handoff HVE** (cf. spec sœur) est un *cost prune* str
 | Primitive | Classe | Prefix | Output | Tours | Patterns |
 |---|---|---|---|---|---|
 | orchestrateur | reviewer | M (instructions+dispatch) | S (routing) | high | B13 |
-| reviewers (×5) | reviewer | M (rubric cacheable) | **M aujourd'hui (Markdown LLM) → S (tags) cible** | low | B13, B16, prefilter* |
+| reviewers (×5) | reviewer | M (rubric cacheable) | S (tags) | low | B13, B16, prefilter |
 | software-engineer | implementer | M–L | L (code) | medium | B13, B14, output-delegation |
 | solution-architect | planner | L | M | medium | B13 |
 | autres agents | implementer | M | M | medium | B13, B14 |
-
-\* `prefilter` / tags JSON = **cible non encore implémentée** (cf. Interlock). Le band output des reviewers ne descendra à `S` qu'une fois `reviewer-verdict-schema` livré.
 
 Bands = **contrat** (validés à l'étape 8). La fourchette quantitative ($/tokens) requiert l'adaptateur per-harness daté — hors de cette spec.
 
 ## Interlock avec l'existant
 
-> **Correction d'état (audit Task 5).** À la date de cette spec, `reviewer-prefilter` et `reviewer-verdict-schema` sont **conçus mais non implémentés** : ils n'existent que comme plans/specs sous `docs/superpowers/`. Les skills `plugins/skills/reviewer-{prefilter,verdict-schema}/` et les scripts `render-verdict.mjs` / `prefilter.mjs` sont **absents** du dépôt, et `adversarial-review-lenses/SKILL.md` §"Output format" impose **toujours un verdict Markdown complet** émis par le LLM. Le levier output-tax sur les reviewers est donc **en attente d'implémentation**, pas acté.
-
-- `reviewer-prefilter` : levier output/turn sur les reviewers — **conçu (plan `2026-06-04`), non implémenté**. À ne pas dupliquer quand il atterrira.
-- `reviewer-verdict-schema` : rendu MD hors-LLM — **conçu (spec `2026-05-26`), non implémenté**. Tant qu'il n'atterrit pas, les reviewers paient l'output tax du Markdown.
-- skip-DISCOVER : *cost prune* structurel — **implémenté** (entry-point detection dans `skraft-difficulty-routing` + `skraft-orchestrator` Phase 0).
+- `reviewer-prefilter` : levier output/turn sur les reviewers — **déjà couvert**, non dupliqué.
+- `reviewer-verdict-schema` : rendu MD hors-LLM — levier output déjà acté.
+- skip-DISCOVER : *cost prune* structurel — déjà implémenté.
 
 Cette spec ajoute la couche **manquante** : stance déclarée, model-routing par primitive, audit cache-invalidators, audit tool-surface, et reconnaissance du `depthTier` comme gouverneur de coût.
+
+## Levier futur — pont outil S7 pour `state.json` (genesis §S7 DETERMINISTIC TOOL BRIDGE)
+
+> **Non couvert par ce plan.** À traiter dans une spec/plan dédiée.
+
+### Problème
+
+Aujourd'hui, l'orchestrateur **lit** `state.json` via tool-read (conforme, variable suffix) mais **écrit** `state.json` en émettant le JSON complet par le LLM. Ce pattern est doublement pénalisant :
+
+- **Output tax** : réécrire un fichier JSON de ~50 champs par le LLM paye le taux output (3–5× input).
+- **HAND-ROLLED HALLUCINATION** (anti-pattern S7) : le LLM peut légèrement altérer des champs qu'il ne devait pas toucher (drift silencieux sur `phasesCompleted`, `retryCount`, etc.).
+
+### Principe — pont outil S7
+
+Pour toute opération sur `state.json` qui est un **FAIT DEVANT ÊTRE VRAI** (lecture) ou un **EFFET DE BORD CONSÉQUENTIEL** (écriture), la discipline genesis impose de déléguer à un outil déterministe — le LLM décide *quoi* faire, l'outil *exécute*. Le harness SKRAFT dispose de `execute/runInTerminal`, donc n'importe quel CLI disponible dans l'environnement est un substrat valide.
+
+### Catalogue des outils disponibles
+
+| Outil | Usage `state.json` | Disponibilité |
+|---|---|---|
+| **`jq`** | Lecture de champ précis, mutation chirurgicale (`jq '.currentPhase = "DISCUSS"'`), patch atomique avec `--argjson` | macOS (brew), Linux (apt/yum) — courant |
+| **`rg` (ripgrep)** | Scan multi-fichiers pour retrouver l'état le plus récent (recovery) | macOS (brew), Linux — courant |
+| **`grep`** | Présent partout ; extraction simple d'une valeur sans `jq` | Universel |
+| **`yq`** | Si `state.json` migrait un jour vers YAML, ou pour lire des fichiers de config adjacents | Optionnel |
+| **`ast-grep`** | Pour les gates structurels sur le code source (déjà prévu par `reviewer-prefilter`) — pas pertinent pour `state.json` | Optionnel |
+
+### Contrat d'utilisation recommandé
+
+```bash
+# Lecture ciblée (remplace tool-read + parse LLM)
+jq -r '.currentPhase' state.json
+
+# Avancement de phase (remplace réécriture LLM complète)
+jq --arg phase "DISCUSS" '.currentPhase = $phase' state.json > state.tmp && mv state.tmp state.json
+
+# Ajout verdict reviewer (mutation chirurgicale)
+jq --arg v "APPROVED" '.reviewerVerdicts.DISCOVER = $v' state.json > state.tmp && mv state.tmp state.json
+
+# Incrément retryCount (arithmétique déterministe)
+jq '.retryCount.DISCUSS += 1' state.json > state.tmp && mv state.tmp state.json
+
+# Détection de jq au démarrage (fail-fast si absent — style prefilter)
+command -v jq >/dev/null || { echo "jq manquant — opérations state.json dégradées" ; exit 1 ; }
+```
+
+### Règle de sélection (conforme S7)
+
+1. Si `jq` est disponible → substrat principal pour toutes les opérations `state.json`.
+2. Si `jq` est absent → fallback `grep` pour la lecture uniquement ; les écritures restent LLM (mode dégradé documenté, jamais silencieux).
+3. Jamais de détection silencieuse : si l'outil manque, l'agent le signale explicitement avant de continuer en mode dégradé.
