@@ -105,10 +105,12 @@ Le **skip de DISCOVER sur handoff HVE** (cf. spec sœur) est un *cost prune* str
 | Primitive | Classe | Prefix | Output | Tours | Patterns |
 |---|---|---|---|---|---|
 | orchestrateur | reviewer | M (instructions+dispatch) | S (routing) | high | B13 |
-| reviewers (×5) | reviewer | M (rubric cacheable) | S (tags) | low | B13, B16, prefilter |
+| reviewers (×5) | reviewer | M (rubric cacheable) | **M aujourd'hui (Markdown LLM) → S (tags) cible** | low | B13, B16, prefilter* |
 | software-engineer | implementer | M–L | L (code) | medium | B13, B14, output-delegation |
 | solution-architect | planner | L | M | medium | B13 |
 | autres agents | implementer | M | M | medium | B13, B14 |
+
+\* `prefilter` / tags JSON = **cible non encore implémentée** (cf. Interlock). Le band output des reviewers ne descendra à `S` qu'une fois `reviewer-verdict-schema` livré.
 
 Bands = **contrat** (validés à l'étape 8). La fourchette quantitative ($/tokens) requiert l'adaptateur per-harness daté — hors de cette spec.
 
