@@ -332,6 +332,14 @@ parts:
         source: "plugins/instructions/skraft-artifacts.instructions.md"
         purpose_fr: "Les traces laissees par le pipeline : artefacts dates, state.json, PR, verdicts. Auditabilite."
         purpose_en: "The traces left by the pipeline: dated artifacts, state.json, PRs, verdicts. Auditability."
+      - id: token-economy
+        type: editorial
+        label_fr: "Économie de tokens"
+        label_en: "Token economy"
+        fr: "fr/explanation/token-economy.md"
+        en: "en/explanation/token-economy.md"
+        purpose_fr: "Pourquoi le coût d'un pipeline agentique est une forme décidée au design, pas un réglage runtime — et comment SKRAFT la tient via les leviers B12/B13/B15/B16."
+        purpose_en: "Why an agentic pipeline's cost is a design-time form, not a runtime setting — and how SKRAFT holds it via B12/B13/B15/B16 levers."
       - id: hve-vs-skraft
         type: editorial
         label_fr: "HVE → SKRAFT"
