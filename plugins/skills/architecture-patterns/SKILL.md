@@ -314,6 +314,8 @@ Command Query Responsibility Segregation separates the model used to handle comm
 | Simple CQRS | Same database, separate command and query models | Most cases |
 | Full CQRS | Separate stores (event store for commands, read DB for queries) | When Event Sourcing is also adopted |
 
+Read [`references/read-store-pattern.md`](references/read-store-pattern.md) when deciding whether a use case should call the repository or a dedicated read-side interface (`IXxxReadStore`), or when the question is "who maps the aggregate to a ViewModel".
+
 ---
 
 ## Event Sourcing

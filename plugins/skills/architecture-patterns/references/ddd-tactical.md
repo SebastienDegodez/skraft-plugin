@@ -154,6 +154,7 @@ An abstraction over the storage mechanism for an aggregate. The repository inter
 3. **Domain-friendly API** — use business method names: `GetByDriverId`, `FindEligibleDrivers`. Avoid generic query expressions in the interface.
 4. **Returns domain objects** — the repository returns aggregate root instances, not DTOs or ORM entities
 5. **No ORM leakage in domain** — LINQ expressions, EF navigation properties, and database IDs must not appear in the domain or Application interface
+6. **Never use for display-only reads** — if the use case only displays data (no mutation follows), prefer `IXxxReadStore` that returns a ViewModel directly; loading the full aggregate for a query is hydration waste. See [`read-store-pattern.md`](read-store-pattern.md).
 
 ### Interface Example
 
