@@ -63,7 +63,7 @@ une dégradation de la qualité. Pour comprendre pourquoi ces gardes-fous ne se 
 pas, voir la page [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }}).
 
 La distinction est importante en pratique : quand un run dépasse un budget de tokens
-estimé (estimé), la première question n'est pas « quels reviewers désactiver ? » mais
+estimé, la première question n'est pas « quels reviewers désactiver ? » mais
 « quel levier de forme n'est pas encore appliqué ? ».
 
 ## Ce qui est en place — ce qui arrive
