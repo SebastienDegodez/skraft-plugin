@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKRAFT Pipeline — Livraison agentique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.bunny.net/css?family=lato:300,400,500,600,700,900|jetbrains-mono:400,500,700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CSS CUSTOM PROPERTIES
+   ============================================================ */
+:root {
+  --c-discover: #24b5ff;
+  --c-discuss:  #8b5cf6;
+  --c-design:   #f59e0b;
+  --c-distill:  #10b981;
+  --c-deliver:  #3b82f6;
+  --c-ideal:    #10b981;
+  --c-probable: #f59e0b;
+  --c-error:    #ef4444;
+  --c-dark:    #0f1722;
+  --c-dark-2:  #1e293b;
+  --c-dark-3:  #334155;
+  --c-muted:   #94a3b8;
+  --c-border:  #e2e8f0;
+  --c-surface: #f8fafc;
+  --c-text:    #1e293b;
+  --sz-display: clamp(2rem, 6vw, 4rem);
+  --sz-h2:      clamp(1.1rem, 2.6vw, 1.9rem);
+  --sz-h3:      clamp(0.9rem, 1.8vw, 1.3rem);
+  --sz-body:    clamp(0.72rem, 1.3vw, 0.95rem);
+  --sz-small:   clamp(0.62rem, 1vw, 0.78rem);
+  --sz-table:   clamp(0.59rem, 0.95vw, 0.73rem);
+  --sz-mono:    clamp(0.57rem, 0.88vw, 0.7rem);
+  --pad:    clamp(1.4rem, 3.5vw, 3rem);
+  --gap:    clamp(0.6rem, 1.4vw, 1.1rem);
+  --gap-xs: clamp(0.28rem, 0.65vw, 0.5rem);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Lato',system-ui,sans-serif;background:#0f1722}
+#deck{height:100vh;height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-behavior:smooth;scrollbar-width:none}
+#deck::-webkit-scrollbar{display:none}
+.slide{width:100vw;height:100vh;height:100dvh;overflow:hidden;scroll-snap-align:start;display:flex;flex-direction:column;position:relative}
+.si{flex:1;display:flex;flex-direction:column;justify-content:center;padding:var(--pad);max-height:100%;overflow:hidden;gap:var(--gap)}
+.dark{background:#0f1722;color:#fff}
+.lite{background:#fff;color:#1e293b}
+
+/* shared */
+.kicker{font-family:'JetBrains Mono',monospace;font-size:var(--sz-small);font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--c-muted);margin-bottom:.12em}
+.dark .kicker{color:rgba(255,255,255,.32)}
+.heading{font-size:var(--sz-h2);font-weight:800;letter-spacing:-.025em;line-height:1.15;color:#1e293b}
+.dark .heading{color:#fff}
+.badge{display:inline-flex;align-items:center;padding:.18em .65em;border-radius:4px;font-size:var(--sz-small);font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#fff;white-space:nowrap}
+.bd-discover{background:var(--c-discover)}
+.bd-discuss{background:var(--c-discuss)}
+.bd-design{background:var(--c-design);color:#1e293b}
+.bd-distill{background:var(--c-distill)}
+.bd-deliver{background:var(--c-deliver)}
+
+/* metric strip */
+.metric-strip{display:flex;gap:var(--gap-xs)}
+.mbox{flex:1;background:#0f1722;border-radius:8px;padding:.62em 1em;display:flex;flex-direction:column;gap:.18em;min-width:0}
+.mval{font-family:'JetBrains Mono',monospace;font-size:clamp(.9rem,2.3vw,1.5rem);font-weight:800;color:var(--c-discover);line-height:1}
+.mlbl{font-size:var(--sz-small);color:rgba(255,255,255,.52);line-height:1.3}
+
+/* animations */
+.rv{opacity:0;transform:translateY(14px);transition:opacity .42s ease,transform .42s ease}
+.rv.on{opacity:1;transform:translateY(0)}
+.d1{transition-delay:.08s}.d2{transition-delay:.18s}.d3{transition-delay:.28s}.d4{transition-delay:.38s}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
+
+/* nav */
+#nav{position:fixed;bottom:.9rem;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.55rem;z-index:999;background:rgba(15,23,34,.9);backdrop-filter:blur(10px);padding:.32rem .85rem;border-radius:2rem;border:1px solid rgba(255,255,255,.1)}
+.nbtn{background:none;border:1px solid rgba(255,255,255,.2);color:#fff;width:1.75rem;height:1.75rem;border-radius:50%;cursor:pointer;font-size:.82rem;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s;line-height:1}
+.nbtn:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.44)}
+#counter{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.62);min-width:2.2rem;text-align:center}
+.dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.25);transition:background .18s,transform .18s;cursor:pointer;border:none;padding:0}
+.dot.on{background:#fff;transform:scale(1.4)}
+
+/* ---- SLIDE 1 ---- */
+#s1{background:#0f1722}
+#s1 .si{justify-content:center;align-items:flex-start}
+.s1-bg{position:absolute;top:0;right:0;width:55%;height:100%;pointer-events:none;overflow:hidden}
+.s1-bg::before{content:'';position:absolute;top:50%;right:-5%;transform:translateY(-50%);width:85%;height:85%;background:radial-gradient(ellipse at center,rgba(36,181,255,.14) 0%,rgba(139,92,246,.07) 45%,transparent 70%);border-radius:50%}
+.s1-bg::after{content:'';position:absolute;top:20%;right:10%;width:60%;height:60%;background:radial-gradient(ellipse at center,rgba(59,130,246,.08) 0%,transparent 65%);border-radius:50%}
+.s1-eye{font-family:'JetBrains Mono',monospace;font-size:var(--sz-small);font-weight:500;text-transform:uppercase;letter-spacing:.15em;color:var(--c-discover);margin-bottom:.4em}
+.s1-title{font-size:var(--sz-display);font-weight:900;letter-spacing:-.04em;line-height:1.0;color:#fff;margin-bottom:.08em}
+.s1-acc{background:linear-gradient(135deg,var(--c-discover) 0%,var(--c-discuss) 45%,var(--c-deliver) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.s1-sub{font-size:var(--sz-h3);color:rgba(255,255,255,.52);font-weight:400;line-height:1.5;max-width:50ch;margin-top:.5em}
+.s1-chips{display:flex;gap:.42rem;flex-wrap:wrap;margin-top:.85em}
+.chip{padding:.2em .68em;border-radius:2rem;font-size:var(--sz-small);font-weight:600;border:1px solid}
+.ca{color:var(--c-discover);border-color:var(--c-discover)}
+.cb{color:var(--c-discuss);border-color:var(--c-discuss)}
+.cc{color:var(--c-distill);border-color:var(--c-distill)}
+
+/* ---- SLIDE 2 — pipeline ---- */
+#s2{background:#fff}
+#s2 .si{gap:var(--gap-xs)}
+.pipeline{display:flex;align-items:flex-start;gap:0;flex:1;min-height:0;overflow:hidden}
+.pnode{flex:1;display:flex;flex-direction:column;align-items:center;gap:var(--gap-xs);min-width:0}
+.phead{width:100%;padding:.38em .45em;border-radius:7px;text-align:center}
+.phead span{display:block;font-size:var(--sz-small);font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fff}
+.ph-discover{background:var(--c-discover)}
+.ph-discuss{background:var(--c-discuss)}
+.ph-design{background:var(--c-design)}
+.ph-design span{color:#1e293b}
+.ph-distill{background:var(--c-distill)}
+.ph-deliver{background:var(--c-deliver)}
+.pagents{width:100%;display:flex;flex-direction:column;gap:.34rem}
+.atag{display:block;padding:.46em .42em;border-radius:7px;font-size:calc(var(--sz-small)*.96);font-weight:700;text-align:center;line-height:1.2;font-family:'JetBrains Mono',monospace;word-break:break-word}
+.ae{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
+.ar{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe}
+.atag small{display:block;font-size:.68em;opacity:.72;font-weight:600;font-family:'Lato',sans-serif;text-transform:uppercase;letter-spacing:.04em;margin-top:.14em}
+.pdesc{font-size:calc(var(--sz-small)*.94);color:var(--c-muted);text-align:center;line-height:1.4}
+.parrow{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:1.1em;flex-shrink:0;width:clamp(1.7rem,3.6vw,2.9rem);gap:.34rem}
+.pac{font-size:clamp(.95rem,1.7vw,1.4rem);color:var(--c-border);line-height:1;font-weight:800}
+.pal{display:none}
+.phuman{font-size:clamp(.72rem,1.5vw,1rem);line-height:1;width:clamp(1.55rem,3vw,2.15rem);height:clamp(1.55rem,3vw,2.15rem);border-radius:50%;background:#ede9fe;border:1.5px solid #c4b5fd;display:flex;align-items:center;justify-content:center}
+.phl{font-size:.46rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--c-discuss);font-family:'JetBrains Mono',monospace;line-height:1.1;text-align:center}
+.p2-leg{display:flex;gap:var(--gap);align-items:center;flex-wrap:wrap;font-size:var(--sz-small)}
+.p2-leg-i{display:flex;align-items:center;gap:.32em}
+.sw{display:inline-block;width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* ---- SLIDE 3 — scenarios (graphique) ---- */
+#s3{background:#fff}
+#s3 .si{gap:var(--gap)}
+.scn-lanes{display:flex;flex-direction:column;gap:var(--gap-xs);flex:1;min-height:0;justify-content:center}
+.scn-lane{display:flex;align-items:stretch;gap:clamp(.5rem,1.5vw,1.1rem);border-radius:13px;padding:.72em .95em;border:1.5px solid}
+.lane-i{border-color:rgba(16,185,129,.32);background:rgba(16,185,129,.045)}
+.lane-p{border-color:rgba(245,158,11,.32);background:rgba(245,158,11,.045)}
+.lane-e{border-color:rgba(239,68,68,.32);background:rgba(239,68,68,.045)}
+.lane-head{display:flex;flex-direction:column;justify-content:center;gap:.4em;width:clamp(6.5rem,15vw,10rem);flex-shrink:0}
+.lane-name{font-size:var(--sz-body);font-weight:900;display:flex;align-items:center;gap:.32em;line-height:1}
+.lni{color:var(--c-ideal)}.lnp{color:var(--c-probable)}.lne{color:var(--c-error)}
+.lane-freq{display:flex;align-items:center;gap:.42em}
+.freq-bar{flex:1;height:6px;border-radius:3px;background:var(--c-border);overflow:hidden}
+.freq-bar i{display:block;height:100%;border-radius:3px}
+.freq-lbl{font-size:calc(var(--sz-small)*.82);color:var(--c-muted);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.lane-flow{flex:1;display:flex;align-items:center;gap:clamp(.18rem,.7vw,.5rem);min-width:0}
+.fstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:.24em;min-width:0}
+.fdot{position:relative;width:100%;height:clamp(1.7rem,4vw,2.6rem);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:clamp(.85rem,2vw,1.25rem);font-weight:800;color:#fff;line-height:1}
+.fp-discover{background:var(--c-discover)}.fp-discuss{background:var(--c-discuss)}.fp-design{background:var(--c-design);color:#1e293b}.fp-distill{background:var(--c-distill)}.fp-deliver{background:var(--c-deliver)}
+.fdot.muted{background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 5px,#e2e8f0 5px,#e2e8f0 10px);color:var(--c-muted)}
+.fdot.retry{box-shadow:0 0 0 2.5px rgba(245,158,11,.55)}
+.fdot.stop{box-shadow:0 0 0 2.5px rgba(239,68,68,.62)}
+.fcount{position:absolute;top:-.5em;right:-.4em;color:#fff;font-size:.54rem;font-weight:800;padding:.06em .38em;border-radius:999px;border:2px solid #fff;font-family:'JetBrains Mono',monospace;line-height:1.25}
+.fcount.r{background:var(--c-probable)}.fcount.s{background:var(--c-error)}
+.flbl{font-size:.5rem;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--c-muted);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.1}
+.lane-out{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:.22em;width:clamp(4.8rem,11vw,7rem);flex-shrink:0;padding-left:clamp(.4rem,1vw,.85rem);border-left:1px solid var(--c-border)}
+.out-time{font-size:var(--sz-body);font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1}
+.out-cost{font-size:calc(var(--sz-small)*.95);font-weight:700;font-family:'JetBrains Mono',monospace}
+.scn-leg{display:flex;gap:var(--gap);align-items:center;flex-wrap:wrap;font-size:var(--sz-small);color:var(--c-muted)}
+.scn-leg span{display:flex;align-items:center;gap:.34em}
+.lg-chip{width:15px;height:15px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;color:#fff;flex-shrink:0}
+
+/* ---- SLIDE 4 — gates ---- */
+#s4{background:#fff}
+#s4 .si{gap:var(--gap-xs)}
+.gate-rows{display:flex;flex-direction:column;gap:var(--gap-xs);flex:1;min-height:0;justify-content:center}
+.grow{display:flex;align-items:center;gap:clamp(.55rem,1.6vw,1.3rem);border:1.5px solid var(--c-border);border-left-width:5px;border-radius:11px;padding:.55em .9em}
+.grow-discover{border-left-color:var(--c-discover)}
+.grow-discuss{border-left-color:var(--c-discuss)}
+.grow-design{border-left-color:var(--c-design)}
+.grow-distill{border-left-color:var(--c-distill)}
+.grow-deliver{border-left-color:var(--c-deliver)}
+.grow-head{width:clamp(8rem,17vw,11rem);flex-shrink:0;display:flex;flex-direction:column;gap:.36em}
+.grow-rev{font-family:'JetBrains Mono',monospace;font-size:calc(var(--sz-small)*.82);color:#6d28d9;line-height:1.25;word-break:break-word}
+.grow-lenses{flex:1;display:flex;flex-wrap:wrap;gap:.32em;min-width:0;align-content:center}
+.lchip{font-size:calc(var(--sz-small)*.84);font-weight:600;background:var(--c-surface);border:1px solid var(--c-border);color:#475569;padding:.18em .55em;border-radius:999px;font-family:'JetBrains Mono',monospace;line-height:1.3}
+.lchip.adv{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.32);color:var(--c-deliver);font-weight:700}
+.grow-count{flex-shrink:0;display:flex;flex-direction:column;align-items:center;width:clamp(2.7rem,6vw,3.7rem)}
+.gnum{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:clamp(1.15rem,2.7vw,1.9rem);line-height:1;color:#1e293b}
+.glbl{font-size:.5rem;text-transform:uppercase;letter-spacing:.06em;color:var(--c-muted);font-weight:700;margin-top:.2em}
+.zb{background:linear-gradient(135deg,#1e293b,#0f1722);border-radius:8px;padding:.55em 1em;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.45rem}
+.zbt{font-size:var(--sz-body);font-weight:700;color:#fff;display:block}
+.zbs{font-size:var(--sz-small);color:rgba(255,255,255,.52);display:block;margin-top:.08em}
+.zbv{font-family:'JetBrains Mono',monospace;font-size:clamp(.88rem,2.1vw,1.55rem);font-weight:800;color:var(--c-distill)}
+
+/* ---- SLIDE 5 — tokens ---- */
+#s5{background:#fff}
+#s5 .si{gap:var(--gap-xs)}
+.tt{width:100%;border-collapse:collapse;font-size:var(--sz-table)}
+.tt th{padding:.4em .48em;background:var(--c-surface);border-bottom:2px solid var(--c-border);font-size:calc(var(--sz-table)*.87);font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--c-muted);text-align:left}
+.tt th:not(:first-child){text-align:right}
+.tt td{padding:.46em .48em;border-bottom:1px solid var(--c-border);vertical-align:middle;line-height:1.3}
+.tt td:not(:first-child){text-align:right;font-family:'JetBrains Mono',monospace}
+.tt tbody tr:nth-child(even) td{background:var(--c-surface)}
+.tt tr:last-child td{border-bottom:none}
+.tex{color:#1d4ed8;font-family:'JetBrains Mono',monospace;font-size:calc(var(--sz-table)*.87)}
+.trv2{color:#6d28d9;font-family:'JetBrains Mono',monospace;font-size:calc(var(--sz-table)*.87)}
+.ttok{color:var(--c-dark-3)}
+.tc{font-weight:700;color:var(--c-deliver)}
+.tch{font-weight:700;color:var(--c-error)}
+.tnote{font-size:calc(var(--sz-small)*.88);color:var(--c-muted);font-style:italic;text-align:right}
+
+/* ---- SLIDE 6 — capabilities ---- */
+#s6{background:#fff}
+#s6 .si{gap:var(--gap-xs)}
+.cap-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap-xs);flex:1;min-height:0}
+.cap-card{background:#fff;border:1px solid var(--c-border);border-top-width:4px;border-radius:9px;padding:.75em .68em;display:flex;flex-direction:column;gap:.42rem;min-width:0;overflow:hidden}
+.cap-num{font-family:'JetBrains Mono',monospace;font-size:clamp(1rem,2.1vw,1.6rem);font-weight:800;line-height:1;opacity:.85}
+.cap-title{font-size:var(--sz-body);font-weight:800;color:#1e293b;line-height:1.22}
+.cap-desc{font-size:calc(var(--sz-small)*.92);color:#64748b;line-height:1.42}
+.cap-ex{font-family:'JetBrains Mono',monospace;font-size:calc(var(--sz-small)*.82);background:var(--c-surface);padding:.34em .46em;border-radius:5px;color:#334155;margin-top:auto;word-break:break-word;line-height:1.4;font-weight:600}
+.cycle{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:nowrap;overflow:hidden}
+.cnode{padding:.26em .5em;border-radius:4px;font-size:var(--sz-small);font-weight:600;line-height:1.2;text-align:center;white-space:nowrap}
+.cn-issue{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.cn-agent{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+.cn-art{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.cn-rev{background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe}
+.cn-cmt{background:#fce7f3;color:#9d174d;border:1px solid #fbcfe8}
+.cn-nxt{background:#e0f2fe;color:#0c4a6e;border:1px solid #bae6fd}
+.ca2{font-size:.72rem;color:var(--c-muted);padding:0 .18em}
+
+/* ---- SLIDE 7 — roi ---- */
+#s7{background:#fff}
+#s7 .si{gap:var(--gap-xs)}
+.rt{width:100%;border-collapse:collapse;font-size:var(--sz-table)}
+.rt th{padding:.48em .58em;border-bottom:2px solid var(--c-border);font-weight:700;font-size:calc(var(--sz-table)*1.0);text-align:center}
+.rt th:first-child{text-align:left;background:var(--c-surface)}
+.rt th:nth-child(2){background:rgba(16,185,129,.08);color:var(--c-ideal)}
+.rt th:nth-child(3){background:rgba(245,158,11,.08);color:var(--c-probable)}
+.rt th:nth-child(4){background:rgba(239,68,68,.08);color:var(--c-error)}
+.rt td{padding:.5em .58em;border-bottom:1px solid var(--c-border);text-align:center;vertical-align:middle;line-height:1.3}
+.rt td:first-child{text-align:left;font-weight:600;font-family:'JetBrains Mono',monospace;font-size:calc(var(--sz-table)*.89);color:var(--c-muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;background:var(--c-surface)}
+.rt td:nth-child(2){background:rgba(16,185,129,.03);color:var(--c-ideal);font-weight:700}
+.rt td:nth-child(3){background:rgba(245,158,11,.03);color:var(--c-probable);font-weight:700}
+.rt td:nth-child(4){background:rgba(239,68,68,.03);color:var(--c-error);font-weight:700}
+.rt tr:last-child td{border-bottom:none}
+.titer{text-align:center!important;font-family:'JetBrains Mono',monospace}
+.ipill{display:inline-block;min-width:1.5em;padding:.1em .5em;border-radius:999px;font-weight:800;font-size:calc(var(--sz-table)*.9);background:var(--c-surface);color:var(--c-muted);border:1px solid var(--c-border)}
+.ipill.retry{background:rgba(245,158,11,.13);color:var(--c-probable);border-color:rgba(245,158,11,.32)}
+.ipill.hot{background:rgba(239,68,68,.1);color:var(--c-error);border-color:rgba(239,68,68,.32)}
+.ttok-multi{display:flex;flex-direction:column;gap:.12em;text-align:left!important;font-family:'JetBrains Mono',monospace;font-size:calc(var(--sz-table)*.85);line-height:1.3}
+.ttok-multi .tl{display:flex;align-items:center;gap:.3em}
+.ttok-multi .tl-rev{opacity:.72;font-style:italic}
+.ttok-multi .tl-lbl{font-weight:700;min-width:1.2em}
+
+/* ---- SLIDE 7 — pratiques qualité ---- */
+.prac-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap-xs);flex:1;min-height:0}
+.prac-card{background:#fff;border:1px solid var(--c-border);border-radius:8px;padding:.6em .65em;display:flex;flex-direction:column;gap:.3rem;min-width:0;overflow:hidden}
+.prac-h{font-size:var(--sz-small);font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding-bottom:.34em;border-bottom:2px solid;line-height:1.2}
+.prac-li{font-size:calc(var(--sz-small)*.92);color:#475569;line-height:1.38;display:flex;gap:.4em;align-items:flex-start}
+.prac-li::before{content:'\2713';color:var(--c-distill);font-weight:800;flex-shrink:0}
+.prac-li.star{font-weight:800;color:#1e293b;background:rgba(245,158,11,.1);border-radius:5px;padding:.16em .34em;margin:-.06em -.34em}
+.prac-li.star::before{content:'\2605';color:var(--c-design)}
+.prac-skip{font-size:calc(var(--sz-small)*.78);font-weight:700;color:var(--c-error);font-family:'JetBrains Mono',monospace;margin-left:1.4em;margin-top:-.18em;line-height:1.2;text-transform:uppercase;letter-spacing:.03em}
+.gcount{display:inline-flex;align-items:center;justify-content:center;min-width:1.9em;padding:.12em .42em;border-radius:5px;font-family:'JetBrains Mono',monospace;font-weight:800;font-size:calc(var(--sz-table)*1.0);background:rgba(16,185,129,.12);color:var(--c-distill);border:1px solid rgba(16,185,129,.28)}
+.mut-banner{display:flex;align-items:center;gap:.85rem;background:linear-gradient(135deg,#1e293b,#0f1722);border-radius:9px;padding:.62em 1em}
+.mut-ico{font-size:clamp(1.1rem,2.6vw,1.8rem);line-height:1;flex-shrink:0}
+.mut-txt{flex:1;min-width:0}
+.mut-t{font-size:var(--sz-body);font-weight:800;color:#fff;display:block;line-height:1.25}
+.mut-d{font-size:calc(var(--sz-small)*.95);color:rgba(255,255,255,.62);display:block;margin-top:.15em;line-height:1.35}
+.mut-v{font-family:'JetBrains Mono',monospace;font-size:clamp(.95rem,2.4vw,1.7rem);font-weight:800;color:var(--c-distill);flex-shrink:0}
+
+/* ---- SLIDE 8 — conclusion ---- */
+#s8{background:#0f1722;color:#fff}
+.conc-title{font-size:var(--sz-h2);font-weight:900;letter-spacing:-.03em;line-height:1.1;color:#fff}
+.cg{background:linear-gradient(135deg,var(--c-distill),var(--c-deliver));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap-xs)}
+.pillar{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:.85em .95em;display:flex;flex-direction:column;gap:.32rem}
+.pi{font-size:clamp(1rem,2.1vw,1.5rem);line-height:1}
+.pt{font-size:var(--sz-body);font-weight:700;color:#fff}
+.pd{font-size:var(--sz-small);color:rgba(255,255,255,.48);line-height:1.4}
+.final-row{display:flex;gap:var(--gap-xs)}
+.fm{flex:1;text-align:center;padding:.62em .45em;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09)}
+.fv{font-family:'JetBrains Mono',monospace;font-size:clamp(.82rem,1.85vw,1.2rem);font-weight:800;color:var(--c-distill);display:block;line-height:1}
+.fl{font-size:calc(var(--sz-small)*.86);color:rgba(255,255,255,.42);display:block;margin-top:.22em;line-height:1.3}
+
+/* height breakpoints */
+@media(max-height:700px){
+  :root{--pad:clamp(1rem,3vw,2rem);--gap:clamp(0.38rem,1.1vw,0.8rem);--gap-xs:clamp(0.18rem,0.5vw,0.38rem);--sz-display:clamp(1.6rem,5vw,2.8rem);--sz-h2:clamp(0.95rem,2.2vw,1.5rem);--sz-table:clamp(0.55rem,0.87vw,0.67rem)}
+}
+@media(max-height:600px){
+  :root{--pad:clamp(0.65rem,2.5vw,1.4rem);--sz-display:clamp(1.25rem,4vw,1.9rem)}
+}
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- SLIDE 1 — TITRE -->
+<section class="slide dark" id="s1" data-i="0">
+  <div class="s1-bg" aria-hidden="true"></div>
+  <div class="si">
+    <p class="s1-eye rv">Meetup · Coding with AI · Juin 2026</p>
+    <h1 class="s1-title rv d1">SKRAFT<br><span class="s1-acc">Pipeline</span></h1>
+    <p class="s1-sub rv d2">De l'issue au code mergé :<br>14 agents · 28 skills · 5 phases · 48 quality gates</p>
+    <div class="s1-chips rv d3">
+      <span class="chip ca">14 agents</span>
+      <span class="chip cb">28 skills</span>
+      <span class="chip cb">5 phases</span>
+      <span class="chip cc">48 gates</span>
+      <span class="chip ca">~$29 / feature</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 2 — PIPELINE -->
+<section class="slide lite" id="s2" data-i="1">
+  <div class="si" style="gap:var(--gap-xs)">
+    <div class="rv">
+      <p class="kicker">Architecture</p>
+      <h2 class="heading">Les 5 phases du pipeline</h2>
+    </div>
+    <div class="pipeline rv d1">
+      <div class="pnode">
+        <div class="phead ph-discover"><span>DISCOVER</span></div>
+        <div class="pagents">
+          <span class="atag ae">backlog-discoverer<small>exécuteur</small></span>
+          <span class="atag ar">+ reviewer<small>indépendant</small></span>
+        </div>
+        <p class="pdesc">Triage issues<br>Sprint proposal</p>
+      </div>
+      <div class="parrow"><span class="pac">&#8250;</span><span class="pal">gate</span><span class="phuman">&#x1F464;</span><span class="phl">humain</span></div>
+      <div class="pnode">
+        <div class="phead ph-discuss"><span>DISCUSS</span></div>
+        <div class="pagents">
+          <span class="atag ae">backlog-planner<small>exécuteur</small></span>
+          <span class="atag ar">+ reviewer<small>indépendant</small></span>
+        </div>
+        <p class="pdesc">User stories<br>Acceptance criteria</p>
+      </div>
+      <div class="parrow"><span class="pac">&#8250;</span><span class="pal">gate</span><span class="phuman">&#x1F464;</span><span class="phl">humain</span></div>
+      <div class="pnode">
+        <div class="phead ph-design"><span style="color:#1e293b">DESIGN</span></div>
+        <div class="pagents">
+          <span class="atag ae">solution-architect<small>exécuteur</small></span>
+          <span class="atag ar">+ reviewer<small>indépendant</small></span>
+        </div>
+        <p class="pdesc">ADRs · DDD<br>Component diagram</p>
+      </div>
+      <div class="parrow"><span class="pac">&#8250;</span><span class="pal">gate</span><span class="phuman">&#x1F464;</span><span class="phl">humain</span></div>
+      <div class="pnode">
+        <div class="phead ph-distill"><span>DISTILL</span></div>
+        <div class="pagents">
+          <span class="atag ae">acceptance-designer<small>exécuteur</small></span>
+          <span class="atag ar">+ reviewer<small>indépendant</small></span>
+        </div>
+        <p class="pdesc">BDD scenarios<br>Test plan</p>
+      </div>
+      <div class="parrow"><span class="pac">&#8250;</span><span class="pal">gate</span><span class="phuman">&#x1F464;</span><span class="phl">humain</span></div>
+      <div class="pnode">
+        <div class="phead ph-deliver"><span>DELIVER</span></div>
+        <div class="pagents">
+          <span class="atag ae">software-engineer<small>exécuteur</small></span>
+          <span class="atag ar">+ reviewer<small>indépendant</small></span>
+        </div>
+        <p class="pdesc">TDD · PR mergée<br>Quality gates</p>
+      </div>
+    </div>
+    <div class="p2-leg rv d2">
+      <span class="p2-leg-i"><span class="sw" style="background:#dbeafe;border:1px solid #bfdbfe"></span><span style="color:#1d4ed8;font-weight:600">Agent exécuteur</span></span>
+      <span class="p2-leg-i"><span class="sw" style="background:#ede9fe;border:1px solid #ddd6fe"></span><span style="color:#6d28d9;font-weight:600">Agent reviewer indépendant</span></span>
+      <span class="p2-leg-i">&#x1F464;&nbsp;<span style="color:#6d28d9;font-weight:600">Checkpoint humain entre chaque phase</span></span>
+      <span style="margin-left:auto;font-size:var(--sz-small);color:var(--c-muted)">Chaque phase → verdict <strong>APPROVE</strong> ou <strong>RETRY / REJECT</strong></span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 3 — SCENARIOS -->
+<section class="slide lite" id="s3" data-i="2">
+  <div class="si" style="gap:var(--gap-xs)">
+    <div class="rv">
+      <p class="kicker">Scénarios d'exécution</p>
+      <h2 class="heading">3 trajectoires possibles à travers les 5 phases</h2>
+    </div>
+    <div class="scn-lanes rv d1">
+      <div class="scn-lane lane-i">
+        <div class="lane-head">
+          <span class="lane-name lni">&#x2705; IDÉAL</span>
+          <div class="lane-freq"><div class="freq-bar"><i style="width:18%;background:var(--c-ideal)"></i></div><span class="freq-lbl">15-20%</span></div>
+        </div>
+        <div class="lane-flow">
+          <div class="fstep"><div class="fdot fp-discover">&#10003;</div><span class="flbl">Discover</span></div>
+          <div class="fstep"><div class="fdot fp-discuss">&#10003;</div><span class="flbl">Discuss</span></div>
+          <div class="fstep"><div class="fdot fp-design">&#10003;</div><span class="flbl">Design</span></div>
+          <div class="fstep"><div class="fdot fp-distill">&#10003;</div><span class="flbl">Distill</span></div>
+          <div class="fstep"><div class="fdot fp-deliver">&#10003;</div><span class="flbl">Deliver</span></div>
+        </div>
+        <div class="lane-out"><span class="out-time" style="color:var(--c-ideal)">~40min</span><span class="out-cost" style="color:var(--c-ideal)">~$15</span></div>
+      </div>
+      <div class="scn-lane lane-p">
+        <div class="lane-head">
+          <span class="lane-name lnp">&#x26A0;&#xFE0F; PROBABLE</span>
+          <div class="lane-freq"><div class="freq-bar"><i style="width:73%;background:var(--c-probable)"></i></div><span class="freq-lbl">70-75%</span></div>
+        </div>
+        <div class="lane-flow">
+          <div class="fstep"><div class="fdot fp-discover retry">&#8634;<span class="fcount r">×1</span></div><span class="flbl">Discover</span></div>
+          <div class="fstep"><div class="fdot fp-discuss">&#10003;</div><span class="flbl">Discuss</span></div>
+          <div class="fstep"><div class="fdot fp-design retry">&#8634;<span class="fcount r">×1</span></div><span class="flbl">Design</span></div>
+          <div class="fstep"><div class="fdot fp-distill">&#10003;</div><span class="flbl">Distill</span></div>
+          <div class="fstep"><div class="fdot fp-deliver retry">&#8634;<span class="fcount r">×1</span></div><span class="flbl">Deliver</span></div>
+        </div>
+        <div class="lane-out"><span class="out-time" style="color:var(--c-probable)">~60min</span><span class="out-cost" style="color:var(--c-probable)">~$29</span></div>
+      </div>
+      <div class="scn-lane lane-e">
+        <div class="lane-head">
+          <span class="lane-name lne">&#x274C; ERREUR</span>
+          <div class="lane-freq"><div class="freq-bar"><i style="width:8%;background:var(--c-error)"></i></div><span class="freq-lbl">5-10%</span></div>
+        </div>
+        <div class="lane-flow">
+          <div class="fstep"><div class="fdot fp-discover">&#10003;</div><span class="flbl">Discover</span></div>
+          <div class="fstep"><div class="fdot fp-discuss">&#10003;</div><span class="flbl">Discuss</span></div>
+          <div class="fstep"><div class="fdot fp-design stop">&#x1F6D1;<span class="fcount s">STOP</span></div><span class="flbl">Design</span></div>
+          <div class="fstep"><div class="fdot muted">–</div><span class="flbl">Distill</span></div>
+          <div class="fstep"><div class="fdot muted">–</div><span class="flbl">Deliver</span></div>
+        </div>
+        <div class="lane-out"><span class="out-time" style="color:var(--c-error)">Arrêt</span><span class="out-cost" style="color:var(--c-error)">~$5+TTR</span></div>
+      </div>
+    </div>
+    <div class="scn-leg rv d2">
+      <span><span class="lg-chip" style="background:var(--c-distill)">&#10003;</span>Approuvé du 1er coup</span>
+      <span><span class="lg-chip" style="background:var(--c-probable)">&#8634;</span>Retry · relance reviewer ⟶ exécuteur</span>
+      <span><span class="lg-chip" style="background:var(--c-error)">&#x1F6D1;</span>Rejeté → escalade humaine</span>
+      <span><span class="lg-chip" style="background:#cbd5e1;color:#64748b">–</span>Phase non atteinte</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 4 — GATES -->
+<section class="slide lite" id="s4" data-i="3">
+  <div class="si" style="gap:var(--gap-xs)">
+    <div class="rv">
+      <p class="kicker">Contrôle qualité automatisé</p>
+      <h2 class="heading">Gates : ce qui bloque la propagation des erreurs</h2>
+    </div>
+    <div class="gate-rows rv d1">
+      <div class="grow grow-discover">
+        <div class="grow-head"><span class="badge bd-discover">DISCOVER</span><span class="grow-rev">backlog-discoverer-reviewer</span></div>
+        <div class="grow-lenses"><span class="lchip">completeness</span><span class="lchip">prioritization</span><span class="lchip">duplicates</span></div>
+        <div class="grow-count"><span class="gnum">6</span><span class="glbl">gates</span></div>
+      </div>
+      <div class="grow grow-discuss">
+        <div class="grow-head"><span class="badge bd-discuss">DISCUSS</span><span class="grow-rev">backlog-planner-reviewer</span></div>
+        <div class="grow-lenses"><span class="lchip">invest</span><span class="lchip">ac-quality</span><span class="lchip">planning-coherence</span><span class="lchip">dor-compliance</span></div>
+        <div class="grow-count"><span class="gnum">8</span><span class="glbl">gates</span></div>
+      </div>
+      <div class="grow grow-design">
+        <div class="grow-head"><span class="badge bd-design">DESIGN</span><span class="grow-rev">solution-architect-reviewer</span></div>
+        <div class="grow-lenses"><span class="lchip">consistency</span><span class="lchip">architecture-compliance</span><span class="lchip">fitness</span></div>
+        <div class="grow-count"><span class="gnum">15</span><span class="glbl">gates</span></div>
+      </div>
+      <div class="grow grow-distill">
+        <div class="grow-head"><span class="badge bd-distill">DISTILL</span><span class="grow-rev">acceptance-designer-reviewer</span></div>
+        <div class="grow-lenses"><span class="lchip">coverage</span><span class="lchip">business-alignment</span><span class="lchip">testability</span><span class="lchip">boundary-enforcement</span></div>
+        <div class="grow-count"><span class="gnum">8</span><span class="glbl">gates</span></div>
+      </div>
+      <div class="grow grow-deliver">
+        <div class="grow-head"><span class="badge bd-deliver">DELIVER</span><span class="grow-rev">software-engineer-reviewer · 4 sous-agents</span></div>
+        <div class="grow-lenses"><span class="lchip adv">architecture-boundaries</span><span class="lchip adv">cold-reader</span><span class="lchip adv">quality-gates</span><span class="lchip adv">test-integrity</span></div>
+        <div class="grow-count"><span class="gnum">11</span><span class="glbl">gates</span></div>
+      </div>
+    </div>
+    <div class="zb rv d2">
+      <div><span class="zbt">Aucun agent ne valide son propre travail</span><span class="zbs">5 exécuteurs + 5 reviewers · 18 lentilles d'analyse · DELIVER spawn ses 4 lentilles en sous-agents adversariaux indépendants</span></div>
+      <span class="zbv">48 gates</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 5 — TOKENS -->
+<section class="slide lite" id="s5" data-i="4">
+  <div class="si" style="gap:var(--gap-xs)">
+    <div class="rv">
+      <p class="kicker">Mesures réelles — GitHub Actions PR #74</p>
+      <h2 class="heading">Tokens &amp; itérations mesurés</h2>
+    </div>
+    <div class="rv d1">
+      <table class="tt">
+        <thead>
+          <tr><th>Phase</th><th>Modèles exec / review</th><th>Tokens in / out</th><th>Itérations</th><th>Coût ($1/1M tok)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="badge bd-discover">DISCOVER</span></td><td class="tex">sonnet-4.6 / haiku-4.5</td><td class="ttok">605K in / 4.2K out</td><td class="titer"><span class="ipill">1</span></td><td class="tc">$1.16</td></tr>
+          <tr><td><span class="badge bd-discuss">DISCUSS</span></td><td class="tex">sonnet-4.6 / haiku-4.5</td><td class="ttok">802K in / 6.9K out</td><td class="titer"><span class="ipill">1</span></td><td class="tc">$1.42</td></tr>
+          <tr><td><span class="badge bd-design">DESIGN</span></td><td class="tex">sonnet-4.6 / haiku-4.5</td><td class="ttok">1.1M in / 11.4K out</td><td class="titer"><span class="ipill">1</span></td><td class="tc">$2.68</td></tr>
+          <tr><td><span class="badge bd-distill">DISTILL</span></td><td class="tex">sonnet-4.6 / haiku-4.5</td><td><div class="ttok-multi"><span class="tl"><span class="tl-lbl">①</span>1.2M / 10.7K</span><span class="tl tl-rev"><span class="tl-lbl">🔍</span>806K / 7.2K ✗</span><span class="tl"><span class="tl-lbl">②</span>660K / 4.5K</span><span class="tl tl-rev"><span class="tl-lbl">🔍</span>819K / 7.9K ✓</span></div></td><td class="titer"><span class="ipill retry">2+2</span></td><td class="tc">$3.54</td></tr>
+          <tr><td><span class="badge bd-deliver">DELIVER</span></td><td class="tex">sonnet-4.6 / haiku-4.5</td><td><div class="ttok-multi"><span class="tl"><span class="tl-lbl">①</span>1.4M / 7K ✗</span><span class="tl"><span class="tl-lbl">②</span>793K / 4K → <span class="tl-rev">🔍 7.6M / 47K</span></span><span class="tl"><span class="tl-lbl">③</span>1.4M / 12K → <span class="tl-rev">🔍 3M / 28K</span></span><span class="tl"><span class="tl-lbl">④</span>2.3M / 13K → <span class="tl-rev">🔍 3.1M / 38K ✓</span></span><span class="tl" style="font-weight:700;border-top:1px solid rgba(255,255,255,.15);padding-top:.2em;margin-top:.15em"><span class="tl-lbl">Σ</span>19.7M tokens</span></div></td><td class="titer"><span class="ipill hot">4+3</span></td><td class="tch">$19.74</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="metric-strip rv d2">
+      <div class="mbox"><span class="mval">17</span><span class="mlbl">runs d'agents pour cette feature (DISTILL ×4, DELIVER ×7)</span></div>
+      <div class="mbox"><span class="mval" style="color:var(--c-distill)">~91%</span><span class="mlbl">cache hit rate mesuré</span></div>
+      <div class="mbox"><span class="mval" style="color:var(--c-design)">$28.54</span><span class="mlbl">coût total · $1/1M tokens Copilot</span></div>
+      <div class="mbox"><span class="mval" style="color:var(--c-deliver)">+$200</span><span class="mlbl">création de SKRAFT · 80 h · ~20% du produit cible</span></div>
+    </div>
+    <p class="tnote rv d3">Source : logs GitHub Actions PR #74 — juin 2026 · agent_usage.json par run · Coût one-shot de construction amorti sur toutes les features à venir</p>
+  </div>
+</section>
+
+<!-- SLIDE 6 — CAPABILITIES -->
+<section class="slide lite" id="s6" data-i="5">
+  <div class="si" style="gap:var(--gap-xs)">
+    <div class="rv">
+      <p class="kicker">Fondations — la littérature du craft</p>
+      <h2 class="heading">Des grands principes, pas de l'improvisation</h2>
+    </div>
+    <div class="cap-grid rv d1">
+      <div class="cap-card" style="border-top-color:var(--c-discuss)">
+        <span class="cap-num" style="color:var(--c-discuss)">01</span>
+        <span class="cap-title">User Stories &amp; INVEST</span>
+        <span class="cap-desc">Stories indépendantes, négociables, estimables, testables — découpées par la valeur</span>
+        <span class="cap-ex">« User Story Mapping »<br>Jeff Patton</span>
+      </div>
+      <div class="cap-card" style="border-top-color:var(--c-design)">
+        <span class="cap-num" style="color:var(--c-design)">02</span>
+        <span class="cap-title">Domain-Driven Design</span>
+        <span class="cap-desc">Bounded contexts, agrégats, langage ubiquitaire aligné sur le métier</span>
+        <span class="cap-ex">« Domain-Driven Design »<br>Eric Evans</span>
+      </div>
+      <div class="cap-card" style="border-top-color:var(--c-design)">
+        <span class="cap-num" style="color:var(--c-design)">03</span>
+        <span class="cap-title">Clean Architecture</span>
+        <span class="cap-desc">Dépendances dirigées vers le domaine, couches isolées, infrastructure remplaçable</span>
+        <span class="cap-ex">« Clean Architecture »<br>Robert C. Martin</span>
+      </div>
+      <div class="cap-card" style="border-top-color:var(--c-distill)">
+        <span class="cap-num" style="color:var(--c-distill)">04</span>
+        <span class="cap-title">Specification by Example</span>
+        <span class="cap-desc">BDD Gherkin : les exemples deviennent des spécifications exécutables</span>
+        <span class="cap-ex">« Specification by Example »<br>Gojko Adzic</span>
+      </div>
+      <div class="cap-card" style="border-top-color:var(--c-deliver)">
+        <span class="cap-num" style="color:var(--c-deliver)">05</span>
+        <span class="cap-title">Outside-In TDD</span>
+        <span class="cap-desc">RED→GREEN→REFACTOR, design émergent, Object Calisthenics sur le domaine</span>
+        <span class="cap-ex">« Growing Object-Oriented Software »<br>Freeman &amp; Pryce</span>
+      </div>
+    </div>
+    <div class="zb rv d2">
+      <div><span class="zbt">Chaque agent encode des décennies de discipline d'ingénierie</span><span class="zbs">28 skills encodent ces principes, appliqués par 14 agents et vérifiés par les lentilles des reviewers — la rigueur ne dépend plus de la disponibilité d'un senior</span></div>
+      <span class="zbv">5 livres</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 7 — ROI -->
+<section class="slide lite" id="s7" data-i="6">
+  <div class="si" style="gap:var(--gap-xs)">
+    <div class="rv">
+      <p class="kicker">Discipline d'ingénierie — exécutée à chaque feature</p>
+      <h2 class="heading">Tout ce que SKRAFT n'oublie jamais</h2>
+    </div>
+    <div class="prac-grid rv d1">
+      <div class="prac-card">
+        <span class="prac-h" style="border-color:var(--c-discuss);color:var(--c-discuss)">Spécification</span>
+        <span class="prac-li">INVEST appliqué aux stories</span>
+        <span class="prac-li">Definition of Ready — 8 points</span>
+        <span class="prac-li">Critères d'acceptation vérifiables</span>
+        <span class="prac-li">Scénarios BDD Gherkin G/W/T</span>
+      </div>
+      <div class="prac-card">
+        <span class="prac-h" style="border-color:var(--c-design);color:var(--c-design)">Architecture</span>
+        <span class="prac-li">ADRs tracés &amp; ratifiés</span>
+        <span class="prac-skip">habituellement rarement fait</span>
+        <span class="prac-li">Clean Architecture G1-G15</span>
+        <span class="prac-skip">habituellement jamais fait</span>
+        <span class="prac-li">DDD bounded contexts</span>
+        <span class="prac-skip">habituellement jamais fait</span>
+      </div>
+      <div class="prac-card">
+        <span class="prac-h" style="border-color:var(--c-distill);color:var(--c-distill)">Tests</span>
+        <span class="prac-li">Outside-in TDD (RED→GREEN→REFACTOR)</span>
+        <span class="prac-li">Tests unitaires + acceptance</span>
+        <span class="prac-li star">Mutation testing : 100% Domain/App</span>
+        <span class="prac-li">Architecture conformance tests</span>
+      </div>
+      <div class="prac-card">
+        <span class="prac-h" style="border-color:var(--c-deliver);color:var(--c-deliver)">Code &amp; Process</span>
+        <span class="prac-li">Object Calisthenics</span>
+        <span class="prac-skip">habituellement jamais fait</span>
+        <span class="prac-li">Revue adversariale indépendante</span>
+        <span class="prac-li">0 auto-validation · 14 agents</span>
+        <span class="prac-li">Traçabilité complète issue → merge</span>
+      </div>
+    </div>
+    <div class="mut-banner rv d2">
+      <span class="mut-ico">&#x1F9EC;</span>
+      <span class="mut-txt">
+        <span class="mut-t">Mutation testing — rarement fait à la main, systématique ici</span>
+        <span class="mut-d">Sous pression, un dev coupe la qualité d'abord sur le mutation testing. SKRAFT le rejoue à chaque feature : 100% sur Domain &amp; Application, seuil &#x2265;60% sur les autres couches. Il vérifie que les tests tuent vraiment les régressions, pas qu'ils passent.</span>
+      </span>
+      <span class="mut-v" style="display:flex;flex-direction:column;align-items:flex-end;gap:.05em"><span>100%</span><span style="font-size:.5em;color:rgba(255,255,255,.55);font-weight:600">Domain / App</span><span style="font-size:.6em">&#x2265;60%</span><span style="font-size:.5em;color:rgba(255,255,255,.55);font-weight:600">autres couches</span></span>
+    </div>
+    <div class="metric-strip rv d3">
+      <div class="mbox"><span class="mval" style="color:var(--c-distill)">48 / 48</span><span class="mlbl">gates exécutés — jamais sautés sous deadline</span></div>
+      <div class="mbox"><span class="mval" style="color:var(--c-design)">+70%</span><span class="mlbl">de la revue déjà faite par les gates → accélère le dev</span></div>
+      <div class="mbox"><span class="mval">~$29</span><span class="mlbl">par feature · discipline complète · $1/1M tokens</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 8 — CONCLUSION -->
+<section class="slide dark" id="s8" data-i="7">
+  <div class="si">
+    <div class="rv">
+      <p class="kicker">Conclusion</p>
+      <h2 class="conc-title">SKRAFT rend la qualité <span class="cg">systématique</span></h2>
+    </div>
+    <div class="pillars rv d1">
+      <div class="pillar"><span class="pi">&#x1F4CB;</span><span class="pt">Traçabilité</span><span class="pd">Chaque décision archivée : ADRs datés, artefacts versionnés, state.json auditable à tout moment</span></div>
+      <div class="pillar"><span class="pi">&#x1F6E1;&#xFE0F;</span><span class="pt">Non-régression</span><span class="pd">Les gates bloquent avant que l'erreur ne descende — jamais de mauvais artefact en aval</span></div>
+      <div class="pillar"><span class="pi">&#x1F504;</span><span class="pt">Itération bornée</span><span class="pd">Max 2 retries par phase, escalade propre si rejet — pas de boucle infinie, toujours une sortie</span></div>
+    </div>
+    <div class="final-row rv d2">
+      <div class="fm"><span class="fv">14 agents</span><span class="fl">5 exécuteurs + 9 reviewers indépendants</span></div>
+      <div class="fm"><span class="fv" style="color:var(--c-discuss)">28 skills</span><span class="fl">discipline du craft encodée &amp; réutilisable</span></div>
+      <div class="fm"><span class="fv" style="color:var(--c-discover)">~$29</span><span class="fl">coût LLM par feature · $1/1M tok</span></div>
+      <div class="fm"><span class="fv" style="color:var(--c-design)">~60 min</span><span class="fl">issue → code mergé</span></div>
+      <div class="fm"><span class="fv" style="color:var(--c-distill)">0</span><span class="fl">auto-validation — reviewers toujours indépendants</span></div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- NAV -->
+<nav id="nav" role="navigation" aria-label="Navigation slides">
+  <button class="nbtn" id="bp" aria-label="Slide précédente">&#8249;</button>
+  <div id="dots" role="tablist"></div>
+  <span id="counter" aria-live="polite"><span id="cur">1</span>&nbsp;/&nbsp;<span id="total">8</span></span>
+  <button class="nbtn" id="bn" aria-label="Slide suivante">&#8250;</button>
+</nav>
+
+<script>
+(function(){
+  'use strict';
+  var TOTAL=8,cur=0,busy=false;
+  var deck=document.getElementById('deck');
+  var curEl=document.getElementById('cur');
+  var dotsEl=document.getElementById('dots');
+  var slides=Array.from(document.querySelectorAll('.slide'));
+  var dotEls=slides.map(function(_,i){
+    var d=document.createElement('button');
+    d.className='dot'+(i===0?' on':'');
+    d.setAttribute('role','tab');
+    d.setAttribute('aria-label','Slide '+(i+1));
+    d.addEventListener('click',function(){go(i);});
+    dotsEl.appendChild(d);
+    return d;
+  });
+  function syncUI(i){curEl.textContent=i+1;dotEls.forEach(function(d,j){d.classList.toggle('on',j===i);});}
+  function go(idx){if(idx<0||idx>=TOTAL||busy)return;busy=true;cur=idx;slides[cur].scrollIntoView({behavior:'smooth'});syncUI(cur);setTimeout(function(){busy=false;},650);}
+  function next(){go(cur+1);}
+  function prev(){go(cur-1);}
+  document.getElementById('bn').addEventListener('click',next);
+  document.getElementById('bp').addEventListener('click',prev);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();next();}
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();prev();}
+  });
+  var wc=false;
+  deck.addEventListener('wheel',function(e){
+    e.preventDefault();if(wc)return;wc=true;
+    if(e.deltaY>20)next();else if(e.deltaY<-20)prev();
+    setTimeout(function(){wc=false;},620);
+  },{passive:false});
+  var ty0=0,tx0=0;
+  deck.addEventListener('touchstart',function(e){ty0=e.touches[0].clientY;tx0=e.touches[0].clientX;},{passive:true});
+  deck.addEventListener('touchend',function(e){
+    var dy=ty0-e.changedTouches[0].clientY,dx=tx0-e.changedTouches[0].clientX;
+    if(Math.abs(dy)>Math.abs(dx)){if(dy>45)next();else if(dy<-45)prev();}
+    else{if(dx>45)next();else if(dx<-45)prev();}
+  },{passive:true});
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(!entry.isIntersecting)return;
+      var idx=slides.indexOf(entry.target);
+      if(idx!==-1&&idx!==cur){cur=idx;syncUI(cur);}
+      entry.target.querySelectorAll('.rv').forEach(function(el){el.classList.add('on');});
+    });
+  },{threshold:0.55});
+  slides.forEach(function(s){io.observe(s);});
+  slides[0].querySelectorAll('.rv').forEach(function(el){el.classList.add('on');});
+}());
+</script>
+</body>
+</html>
