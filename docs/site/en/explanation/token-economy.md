@@ -62,7 +62,7 @@ number of lenses or lowering thresholds is not a cost lever — it is a quality
 degradation. To understand why these safeguards are non-negotiable, see the page
 [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}).
 
-The distinction matters in practice: when a run exceeds an estimated (estimated) token
+The distinction matters in practice: when a run exceeds an estimated token
 budget, the first question is not "which reviewers can we disable?" but "which form
 lever has not yet been applied?"
 
