@@ -41,7 +41,7 @@ Chaque levier agit sur une dimension distincte de la dépense.
 | **Discipline de cache** | Les prompts-système et les instructions partagées sont conçus pour être *rechargés* entre les tours sans recalcul — tout ce qui peut être mis en cache KV l'est, et la structure des messages le garantit. |
 | **Classe par rôle** | L'orchestrateur et les reviewers roulent sur un modèle de classe *frontier* (raisonnement large, faible fréquence) ; les agents spécialistes — implementer, planner, researcher — roulent sur un modèle de classe *capable* (fréquence haute, tâches bornées). |
 | **Surface d'outils** | Aucun agent ne reçoit un catalogue MCP complet. Chaque agent ne voit que les outils dont il a besoin pour sa tâche précise. Chaque outil superflu est une invitation à raisonner inutilement. |
-| **Profondeur (`depthTier`)** | La profondeur de chaque run est gouvernée par `depthTier` (shallow / standard / deep) : fan-out à 1, 2 ou 4 lentilles adversariales ; seuil de score de mutation ; gate Gherkin activée ou non. Un run *shallow* n'instancie pas les reviewers complets. |
+| **Profondeur (`depthTier`)** | La profondeur de chaque run est gouvernée par `depthTier` (`basic` / `standard` / `comprehensive` / `custom`) : fan-out à 1, 2 ou 4 lentilles adversariales ; périmètre/seuil de mutation ; gate Gherkin activée ou non. Un run `basic` n'instancie pas les reviewers complets. |
 | **Élagage structurel** | Sur un handoff HVE entrant, la phase DISCOVER est sautée : le backlog et la priorisation arrivent déjà formés. Le pipeline n'exécute pas ce qu'il n'a pas à recalculer. |
 
 Ces leviers ne sont pas indépendants. La discipline de cache et la classe par rôle se
