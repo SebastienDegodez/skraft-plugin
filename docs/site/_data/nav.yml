@@ -30,3 +30,10 @@
   url_fr: "/dashboard/"
   url_en: "/dashboard/"
   icon: "fa-solid fa-gauge-high"
+
+# --- Présentation SKRAFT (deck standalone plein écran) -------------------
+- label_fr: "Présentation"
+  label_en: "Presentation"
+  url_fr: "/skraft-basic-presentation.html"
+  url_en: "/skraft-basic-presentation.html"
+  icon: "fa-solid fa-person-chalkboard"
