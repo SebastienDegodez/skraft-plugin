@@ -42,3 +42,48 @@ test('project config overrides global config (cascade)', async () => {
   await rm(home, { recursive: true, force: true })
   await rm(cwd, { recursive: true, force: true })
 })
+
+// skraft.config.json fallback when .skraftrc.json absent
+test('reads skraft.config.json when .skraftrc.json not present', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-'))
+  await writeFile(join(dir, 'skraft.config.json'), JSON.stringify({ mode: 'production' }))
+  const config = await loadConfig({ cwd: dir, home: dir, env: {} })
+  assert.equal(config.mode, 'production')
+  await rm(dir, { recursive: true, force: true })
+})
+
+// env filtering: non-SKRAFT_ keys are ignored
+test('ignores env vars that do not start with SKRAFT_', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-'))
+  const config = await loadConfig({ cwd: dir, home: dir, env: { PATH: '/usr/bin', HOME: '/home/user', SKRAFT_MODE: 'test' } })
+  assert.equal(config.mode, 'test')
+  assert.equal(config.path, undefined)
+  assert.equal(config.home, undefined)
+  await rm(dir, { recursive: true, force: true })
+})
+
+// config-loader: exercises ?? process.cwd() and ?? homedir() fallback branches
+// Called without cwd and home; real process.cwd() has no .skraftrc.json
+test('uses process.cwd() and homedir() when not provided', async () => {
+  const config = await loadConfig({ env: {} })
+  assert.equal(typeof config, 'object')
+  assert.ok(config !== null)
+})
+
+// project config wins over env
+test('project config overrides env vars', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-'))
+  await writeFile(join(dir, '.skraftrc.json'), JSON.stringify({ logLevel: 'error' }))
+  const config = await loadConfig({ cwd: dir, home: dir, env: { SKRAFT_LOG_LEVEL: 'info' } })
+  assert.equal(config.logLevel, 'error')
+  await rm(dir, { recursive: true, force: true })
+})
+
+// config-loader: exercises ?? process.env fallback branch
+test('uses process.env when env option not provided', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-'))
+  const config = await loadConfig({ cwd: dir, home: dir })  // no env → process.env
+  assert.equal(typeof config, 'object')
+  await rm(dir, { recursive: true, force: true })
+})
+

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalise } from '../adapters/drivers/hooks/payload.mjs'
+import { normalise } from '../adapters/api/hooks/payload.mjs'
 
 test('AC4: camelCase payload passes through unchanged', () => {
   assert.deepEqual(normalise({ toolName: 'bash' }), { toolName: 'bash' })
@@ -28,6 +28,11 @@ test('AC4: mixed-format payload fully normalised', () => {
 test('AC4: nested objects are recursively normalised', () => {
   const result = normalise({ tool_input: { File_Path: '/repo' } })
   assert.deepEqual(result.toolInput, { filePath: '/repo' })
+})
+
+test('array values within objects are preserved and recursively normalised', () => {
+  const result = normalise({ tool_inputs: ['a', 'b'] })
+  assert.deepEqual(result.toolInputs, ['a', 'b'])
 })
 
 test('null input returns null', () => {

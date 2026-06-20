@@ -18,14 +18,14 @@ async function collectMjsFiles(dir) {
   return files
 }
 
-test('AC2: domain/ has no imports from hook protocol or driver ports', async () => {
+test('AC2: domain/ has no imports from hook protocol or api interfaces', async () => {
   const files = await collectMjsFiles(DOMAIN_DIR)
   assert.ok(files.length > 0, 'domain/ must contain at least one .mjs file')
   for (const file of files) {
     const src = await readFile(file, 'utf8')
     const forbidden = [...src.matchAll(/from\s+['"]([^'"]+)['"]/g)]
       .map(m => m[1])
-      .filter(p => p.includes('adapters/drivers/hooks') || p.includes('ports/driver'))
+      .filter(p => p.includes('adapters/api/hooks') || p.includes('interfaces/api'))
     assert.deepEqual(forbidden, [],
       `${file} must not import hook protocol: found [${forbidden.join(', ')}]`)
   }
