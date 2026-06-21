@@ -15,7 +15,8 @@ docs/site/.jekyll-cache/
 
 # skraft-framework (plugins/src) tooling
 plugins/src/node_modules/
-plugins/src/package-lock.json
+# package-lock.json IS committed (CI mutation job uses `npm ci`, which needs it)
+!plugins/src/package-lock.json
 .stryker-tmp/
 reports/mutation/
 

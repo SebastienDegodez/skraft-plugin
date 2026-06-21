@@ -7,7 +7,7 @@ test.describe('SKRAFT handbook navigation', () => {
     await page.goto(`${BASE}/fr/explanation/pipeline/`);
     // Brand and lang toggle are excluded: the handbook doors live in .site-nav__links.
     const doors = page.locator('.site-nav__links > a');
-    await expect(doors).toHaveCount(4);
+    await expect(doors).toHaveCount(5);
     await expect(doors.nth(0)).toContainText('handbook');
   });
 
