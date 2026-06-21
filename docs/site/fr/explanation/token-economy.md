@@ -50,6 +50,41 @@ fraction de ce qu'un modèle *frontier* recalculé coûterait. La surface d'outi
 profondeur limitent la surface de décision à l'intérieur de chaque tour, ce qui
 raccourcit la réponse et réduit la fenêtre de contexte nécessaire.
 
+## Mesures réelles
+
+Les deux premiers leviers — discipline de cache et classe de modèle — ont été mesurés
+sur un run réel du pipeline SKRAFT exécuté en *agentic workflow* (gh-aw), via le schéma
+*Effective Tokens* (ET v0.2.0) du harness. Les chiffres ci-dessous proviennent des
+fichiers `agent_usage.json` émis par huit exécutions d'agents et de reviewers — ils ne
+sont pas estimés.
+
+### Discipline de cache — −42,6 % de tokens effectifs
+
+Le taux de réussite du cache KV est stable autour de **48 %** de l'entrée totale sur les
+huit exécutions. Le schéma ET pondère un token lu depuis le cache à **0,1×** contre
+**1,0×** pour un token recalculé — dix fois moins cher.
+
+| Tokens effectifs (8 phases) | Sans cache | Avec cache | Gain |
+|---|---|---|---|
+| Total | 47,6 M | 27,3 M | **1,74× — −42,6 %** |
+
+Le gain découle de la **forme** des prompts : un préfixe système stable, non réécrit
+entre les tours, reste éligible au cache. C'est précisément le levier que les
+[hooks]({{ "/fr/explanation/hooks" | relative_url }}) préservent côté infrastructure —
+un invariant tenu par du code ne déplace pas le préfixe, là où un invariant ré-injecté
+en prose le ferait rater.
+
+### Classe de modèle — séparation de 27×
+
+Le même schéma applique un multiplicateur par modèle. Sur ce run, deux classes ont été
+observées : **9,0×** pour la classe *frontier* (claude-sonnet-4.6) et **0,33×** pour la
+classe *capable* (claude-haiku-4.5). À travail normalisé égal, allouer la classe capable
+plutôt que frontier coûte donc **9,0 / 0,33 ≈ 27× moins** en tokens effectifs — ce qui
+fait du choix de classe le multiplicateur dominant de la dépense.
+
+*Provenance : run gh-aw `SDLC` sur l'issue #72 du dépôt `meetup-coding-with-ai`, schéma
+Effective Tokens v0.2.0, modèle de référence `claude-sonnet-4.5`.*
+
 ## Sans rogner la qualité
 
 L'économie décrite ici provient exclusivement de la **forme** : mise en cache, classe

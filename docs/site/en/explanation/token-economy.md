@@ -50,6 +50,40 @@ each other: a *capable* model reloaded from the KV cache costs a fraction of wha
 the decision surface inside each turn, which shortens responses and reduces the context
 window required.
 
+## Measured results
+
+The first two levers — cache discipline and model class — were measured on a real run
+of the SKRAFT pipeline executed as an *agentic workflow* (gh-aw), via the harness's
+*Effective Tokens* (ET v0.2.0) schema. The figures below come from the `agent_usage.json`
+files emitted by eight agent and reviewer executions — they are not estimated.
+
+### Cache discipline — −42.6% effective tokens
+
+The KV-cache hit rate is stable around **48%** of total input across the eight
+executions. The ET schema weights a token read from cache at **0.1×** versus **1.0×**
+for a recomputed token — ten times cheaper.
+
+| Effective tokens (8 phases) | Without cache | With cache | Gain |
+|---|---|---|---|
+| Total | 47.6 M | 27.3 M | **1.74× — −42.6%** |
+
+The gain comes from the **form** of the prompts: a stable system prefix, not rewritten
+between turns, stays cache-eligible. This is precisely the lever that
+[hooks]({{ "/en/explanation/hooks" | relative_url }}) preserve on the infrastructure
+side — an invariant held by code does not shift the prefix, whereas an invariant
+re-injected as prose would make it miss.
+
+### Model class — a 27× separation
+
+The same schema applies a per-model multiplier. On this run, two classes were observed:
+**9.0×** for the *frontier* class (claude-sonnet-4.6) and **0.33×** for the *capable*
+class (claude-haiku-4.5). At equal normalised work, allocating the capable class rather
+than frontier therefore costs **9.0 / 0.33 ≈ 27× less** in effective tokens — making the
+class choice the dominant multiplier of spend.
+
+*Provenance: gh-aw `SDLC` run on issue #72 of the `meetup-coding-with-ai` repository,
+Effective Tokens schema v0.2.0, reference model `claude-sonnet-4.5`.*
+
 ## Without cutting quality
 
 The economy described here comes exclusively from **form**: caching, model class,

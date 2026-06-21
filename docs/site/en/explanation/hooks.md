@@ -112,53 +112,34 @@ Without a hook, the call would pass silently; review would catch it *after*.
 Business handlers (which actually inspect payloads to enforce SKRAFT invariants) are
 planned in subsequent user stories.
 
-## Genesis & token economy
+## Token economy — the hook angle
 
-The Genesis discipline applies directly to the hook harness on two axes.
+Hooks contribute to the pipeline's [token economy]({{ "/en/explanation/token-economy" | relative_url }})
+through two levers of the Genesis discipline.
 
-### 1. `coverageAnalysis: perTest` — mutation testing 5× cheaper
-
-`stryker.config.mjs` uses `coverageAnalysis: 'perTest'`. Stryker instruments each
-test to know which mutants it covers, then only runs the relevant tests per mutant.
-
-On this project (183 mutants, 6 test files):
-
-| Metric | Without `perTest` | With `perTest` |
-|--------|-------------------|----------------|
-| Tests run per mutant | 6 (all) | 1.14 (measured average) |
-| Total executions | 183 × 6 = **1,098** | 183 × 1.14 ≈ **209** |
-| **Savings ratio** | — | **5.25× fewer executions** |
-
-*Number measured on this project's Stryker dry-run — not estimated.*
-
-### 2. Deterministic enforcement = zero reasoning tokens
+### Deterministic enforcement = zero reasoning tokens
 
 Without a hook, the agent must *reason* about each invariant at every tool call:
+"should I normalise this payload?", "is this audit-writer really append-only?".
+Each check is a reasoning chain emitted as output, turn after turn.
 
-- "Should I normalise this payload?"
-- "Is this audit-writer really append-only?"
-- → ~50–200 reasoning tokens per tool, accumulated across the session
+With a `PreToolUse` hook, enforcement is **native code**: exit 0 or a JSON
+`deny`/`allow` response, with zero reasoning tokens. The decision leaves the model's path.
 
-With a `PreToolUse` hook, enforcement is **native code** (zero tokens, exit 0 or
-JSON response). The agent receives `deny`/`allow` without producing a reasoning
-chain about the invariant.
+### Stable prefix = KV-cache eligible
 
-The gain is not quantifiable without a comparison baseline — but the principle is
-the Genesis **"tool surface"** lever: reducing the decision surface per turn shortens
-the response and reduces the necessary context window.
+Because the invariant is held by the hook's code and not re-injected as prose into the
+context every turn, the **system prefix stays stable** between calls. A stable prefix
+remains KV-cache eligible — the lever that produces the largest *measured* token
+reduction in the pipeline. As soon as an invariant is rewritten into the prompt at every
+tool call, the prefix shifts and the cache misses.
 
-### 3. `depthTier` and reviewer fan-out
-
-The `depthTier` (`basic` / `standard` / `comprehensive`) governs how many adversarial
-lenses are spawned (1 / 2 / 4). On a DELIVER phase in `basic` mode, the reviewer's
-`SubagentStop` hook intercepts only one verdict instead of four.
-Less fan-out = less context reloaded = fewer tokens.
-
-> **Genesis rule**: a `basic` run must not cost like a `comprehensive` run.
-> Hooks enforce this mechanically — a reviewer attempting 4 lenses in `basic` mode
-> receives `deny` before execution.
+> The measured reduction ratios (cache, model class) are documented on the
+> [Token economy]({{ "/en/explanation/token-economy" | relative_url }}) page.
 
 ## Further reading
+
+- [Token economy]({{ "/en/explanation/token-economy" | relative_url }}) — the Genesis levers and the measured reduction ratios
 
 - [Hooks reference]({{ "/en/reference/infrastructure/hooks" | relative_url }}) — 7 events, 4 decisions, SKRAFT_* config
 - [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}) — Api → Infra → Application → Domain layers

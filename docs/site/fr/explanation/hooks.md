@@ -114,54 +114,34 @@ Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après
 Les handlers métier (qui inspectent réellement le payload pour enforcer les
 invariants SKRAFT) sont planifiés dans les user stories suivantes.
 
-## Genesis & économie de tokens
+## Économie de tokens — l'angle des hooks
 
-La discipline Genesis s'applique directement au harness de hooks, sur deux axes.
+Les hooks contribuent à l'[économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }})
+du pipeline sur deux leviers de la discipline Genesis.
 
-### 1. `coverageAnalysis: perTest` — mutation testing 5× moins cher
-
-Le `stryker.config.mjs` utilise `coverageAnalysis: 'perTest'`. Stryker instrumente
-chaque test pour savoir quels mutants il couvre, puis n'exécute que les tests
-pertinents pour chaque mutant.
-
-Sur ce projet (183 mutants, 6 fichiers de test) :
-
-| Métrique | Sans `perTest` | Avec `perTest` |
-|----------|---------------|----------------|
-| Tests exécutés par mutant | 6 (tous) | 1,14 (moyenne mesurée) |
-| Exécutions totales | 183 × 6 = **1 098** | 183 × 1,14 ≈ **209** |
-| **Ratio de gain** | — | **5,25× moins d'exécutions** |
-
-*Chiffre mesuré sur le dry-run Stryker de ce projet — pas estimé.*
-
-### 2. Enforcement déterministe = zéro token de raisonnement
+### Enforcement déterministe = zéro token de raisonnement
 
 Sans hook, l'agent doit *raisonner* sur chaque invariant à chaque appel d'outil :
+« dois-je normaliser ce payload ? », « cet audit-writer est-il bien append-only ? ».
+Chaque vérification est une chaîne de pensée produite en sortie, tour après tour.
 
-- « Est-ce que je dois normaliser ce payload ? »
-- « Est-ce que cet audit-writer est bien append-only ? »
-- → ~50–200 tokens de raisonnement par outil, cumulés sur toute la session
+Avec un hook `PreToolUse`, l'enforcement est **code natif** : exit 0 ou réponse JSON
+`deny`/`allow`, sans aucun token de raisonnement. La décision sort du chemin du modèle.
 
-Avec un hook `PreToolUse`, l'enforcement est **code natif** (zéro token, exit 0 ou
-réponse JSON). L'agent reçoit `deny`/`allow` sans produire de chaîne de pensée sur
-l'invariant.
+### Préfixe stable = cache KV éligible
 
-Le gain n'est pas quantifiable sans baseline de comparaison — mais le principe est
-celui du levier **"surface d'outils"** de Genesis : réduire la surface de décision
-dans chaque tour raccourcit la réponse et réduit la fenêtre de contexte nécessaire.
+Parce que l'invariant est tenu par le code du hook et non ré-injecté en prose dans le
+contexte à chaque tour, le **préfixe système reste stable** entre les appels. Un préfixe
+stable reste éligible au cache KV — le levier qui produit la plus grande réduction de
+tokens *mesurée* du pipeline. Dès qu'un invariant est réécrit dans le prompt à chaque
+appel d'outil, le préfixe change et le cache rate.
 
-### 3. `depthTier` et fan-out reviewer
-
-Le `depthTier` (`basic` / `standard` / `comprehensive`) gouverne le nombre de lentilles
-adversariales instanciées (1 / 2 / 4). Sur une phase DELIVER en `basic`, le hook
-`SubagentStop` du reviewer n'intercepte qu'un seul verdict au lieu de quatre.
-Moins de fan-out = moins de contexte rechargé = moins de tokens.
-
-> **Règle Genesis** : un run `basic` ne doit pas coûter comme un run `comprehensive`.
-> Les hooks font respecter cette règle mécaniquement — un reviewer qui tente de lancer
-> 4 lentilles en `basic` reçoit `deny` avant même d'exécuter.
+> Les ratios de réduction mesurés (cache, classe de modèle) sont documentés sur la page
+> [Économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }}).
 
 ## Pour en savoir plus
+
+- [Économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }}) — les leviers Genesis et les ratios de réduction mesurés
 
 - [Référence hooks]({{ "/fr/reference/infrastructure/hooks" | relative_url }}) — tableau des 7 événements, 4 décisions, config SKRAFT_*
 - [Clean Architecture]({{ "/fr/explanation/clean-architecture" | relative_url }}) — couches Api → Infra → Application → Domain
