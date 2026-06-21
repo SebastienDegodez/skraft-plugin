@@ -39,14 +39,14 @@ acts on a distinct dimension of spend.
 | Lever | What it does |
 |-------|--------------|
 | **Cache discipline** | System prompts and shared instructions are designed to be *reloaded* between turns without recomputation — anything that can be KV-cached is, and message structure guarantees it. |
-| **Class by role** | The orchestrator and reviewers run on a *frontier*-class model (broad reasoning, low frequency); specialist agents — implementer, planner, researcher — run on a *capable*-class model (high frequency, bounded tasks). |
+| **Class by role** | Each agent carries a B12 target class — `implementer`, `planner`, or `reviewer`. Artifact producers (discoverer, planner, architect, engineer) receive the most capable class; phase reviewers and lenses, whose task is bounded, receive the cheapest class that holds the work. Two roles are an exception and require a *Sonnet-class or above* model regardless of role: `software-engineer` and `software-engineer-reviewer` (multi-constraint arbitration). |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
 | **Depth (`depthTier`)** | The depth of each run is governed by `depthTier` (shallow / standard / deep): fan-out to 1, 2, or 4 adversarial lenses; mutation score threshold; Gherkin gate enabled or not. A *shallow* run does not instantiate the full reviewers. |
 | **Structural pruning** | On an incoming HVE handoff, the DISCOVER phase is skipped: the backlog and prioritisation arrive already formed. The pipeline does not re-execute what it has no reason to recompute. |
 
 These levers are not independent. Cache discipline and role-class allocation reinforce
-each other: a *capable* model reloaded from the KV cache costs a fraction of what a
-*frontier* model recomputed from scratch would. Tool surface and depth together limit
+each other: a low-class model reloaded from the KV cache costs a fraction of what a
+high-class model recomputed from scratch would. Tool surface and depth together limit
 the decision surface inside each turn, which shortens responses and reduces the context
 window required.
 

@@ -39,14 +39,14 @@ Chaque levier agit sur une dimension distincte de la dépense.
 | Levier | Ce que ça fait |
 |--------|----------------|
 | **Discipline de cache** | Les prompts-système et les instructions partagées sont conçus pour être *rechargés* entre les tours sans recalcul — tout ce qui peut être mis en cache KV l'est, et la structure des messages le garantit. |
-| **Classe par rôle** | L'orchestrateur et les reviewers roulent sur un modèle de classe *frontier* (raisonnement large, faible fréquence) ; les agents spécialistes — implementer, planner, researcher — roulent sur un modèle de classe *capable* (fréquence haute, tâches bornées). |
+| **Classe par rôle** | Chaque agent porte une classe cible B12 — `implementer`, `planner` ou `reviewer`. Les producteurs d'artefacts (discoverer, planner, architect, engineer) reçoivent la classe la plus capable ; les reviewers de phase et les lentilles, dont la tâche est bornée, reçoivent la classe la moins chère qui tienne le travail. Deux rôles font exception et exigent une classe *Sonnet ou supérieure* quel que soit leur rôle : `software-engineer` et `software-engineer-reviewer` (arbitrage multi-contraintes). |
 | **Surface d'outils** | Aucun agent ne reçoit un catalogue MCP complet. Chaque agent ne voit que les outils dont il a besoin pour sa tâche précise. Chaque outil superflu est une invitation à raisonner inutilement. |
 | **Profondeur (`depthTier`)** | La profondeur de chaque run est gouvernée par `depthTier` (`basic` / `standard` / `comprehensive` / `custom`) : fan-out à 1, 2 ou 4 lentilles adversariales ; périmètre/seuil de mutation ; gate Gherkin activée ou non. Un run `basic` n'instancie pas les reviewers complets. |
 | **Élagage structurel** | Sur un handoff HVE entrant, la phase DISCOVER est sautée : le backlog et la priorisation arrivent déjà formés. Le pipeline n'exécute pas ce qu'il n'a pas à recalculer. |
 
 Ces leviers ne sont pas indépendants. La discipline de cache et la classe par rôle se
-renforcent mutuellement : un modèle *capable* rechargeable depuis le cache KV coûte une
-fraction de ce qu'un modèle *frontier* recalculé coûterait. La surface d'outils et la
+renforcent mutuellement : un modèle de classe basse rechargeable depuis le cache KV coûte une
+fraction de ce qu'un modèle de classe haute recalculé coûterait. La surface d'outils et la
 profondeur limitent la surface de décision à l'intérieur de chaque tour, ce qui
 raccourcit la réponse et réduit la fenêtre de contexte nécessaire.
 
