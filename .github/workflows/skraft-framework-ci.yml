@@ -4,11 +4,13 @@ on:
   push:
     paths:
       - 'plugins/src/**'
+      - 'plugins/agents/**'
       - 'tests/skraft-framework/**'
       - '.github/workflows/skraft-framework-ci.yml'
   pull_request:
     paths:
       - 'plugins/src/**'
+      - 'plugins/agents/**'
       - 'tests/skraft-framework/**'
       - '.github/workflows/skraft-framework-ci.yml'
   workflow_dispatch:
@@ -30,6 +32,21 @@ jobs:
         run: |
           node --test --experimental-test-coverage \
             tests/skraft-framework/*.test.mjs
+
+  model-policy:
+    name: Agent model policy (B12)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check agent model assignment matches cost_role_class policy
+        run: node plugins/src/cli/resolve-model-bin.mjs --check
 
   mutation:
     name: Mutation Testing

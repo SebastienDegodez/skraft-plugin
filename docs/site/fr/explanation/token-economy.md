@@ -105,10 +105,17 @@ estimé, la première question n'est pas « quels reviewers désactiver ? » mai
 
 ### En place
 
-Les annotations `cost_role_class` dans les agents de phase allouent la bonne classe
-de modèle à chaque rôle. Le champ `depthTier` dans `state.json` gouverne le fan-out
-des lentilles et l'activation des gates optionnelles. Ces deux mécanismes constituent
-le gouverneur principal de la dépense à l'heure actuelle.
+La classe de modèle est **réellement appliquée** : un résolveur déterministe
+(`plugins/src/`, Clean Architecture, zéro dépendance) lit le `cost_role_class` et le
+plancher `model_requirement` de chaque agent, puis **pinne le champ `model:`** de son
+`*.agent.md` au modèle concret résolu. Le tableau de la section « Mesures réelles »
+décrit la politique : `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
+`planner → claude-sonnet-4.6`, le plancher Sonnet relevant les deux exceptions
+(`software-engineer`, `software-engineer-reviewer`). Une seule source de vérité ; un
+linter CI (`resolve-model --check`) échoue si un agent dérive de la politique. Le champ
+`depthTier` dans `state.json` gouverne le fan-out des lentilles et l'activation des
+gates optionnelles. Ces deux mécanismes constituent le gouverneur principal de la
+dépense à l'heure actuelle.
 
 ### Conçu, pas encore implémenté
 

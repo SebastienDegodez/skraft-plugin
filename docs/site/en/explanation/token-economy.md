@@ -104,10 +104,16 @@ lever has not yet been applied?"
 
 ### In place
 
-The `cost_role_class` annotations in the phase agents allocate the correct model class
-to each role. The `depthTier` field in `state.json` governs the lens fan-out and the
-activation of optional gates. These two mechanisms are the principal governor of spend
-at present.
+The model class is **actually applied**: a deterministic resolver (`plugins/src/`,
+Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
+`model_requirement` floor, then **pins the `model:` field** of its `*.agent.md` to the
+resolved concrete model. The "Measured results" section states the policy:
+`reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
+`planner → claude-sonnet-4.6`, with the Sonnet floor raising the two exceptions
+(`software-engineer`, `software-engineer-reviewer`). One source of truth; a CI linter
+(`resolve-model --check`) fails if an agent drifts from the policy. The `depthTier`
+field in `state.json` governs the lens fan-out and the activation of optional gates.
+These two mechanisms are the principal governor of spend at present.
 
 ### Designed, not yet implemented
 
