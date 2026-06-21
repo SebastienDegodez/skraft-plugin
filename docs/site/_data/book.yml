@@ -349,6 +349,14 @@ parts:
         purpose_fr: "Continuite HVE -> SKRAFT. SKRAFT remplace le workflow RPI par un pipeline SDLC complet."
         purpose_en: "HVE -> SKRAFT continuity. SKRAFT replaces the RPI workflow with a full SDLC pipeline."
         requires_diagram: true
+      - id: hooks
+        type: editorial
+        label_fr: "Garde-fous (hooks)"
+        label_en: "Guardrails (hooks)"
+        fr: "fr/explanation/hooks.md"
+        en: "en/explanation/hooks.md"
+        purpose_fr: "Pourquoi les hooks rendent les invariants Engineer/Reviewer mécaniquement infranchissables."
+        purpose_en: "Why hooks make Engineer/Reviewer invariants mechanically unbreakable."
       - id: clean-architecture
         type: editorial
         label_fr: "Clean Architecture"
@@ -526,10 +534,26 @@ parts:
             source: "plugins/skills/architecture-patterns/SKILL.md"
             purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
             purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
+      - id: infrastructure
+        title_fr: "Infrastructure"
+        title_en: "Infrastructure"
+        sidebar_position: 7
+        folder_fr: "fr/reference/infrastructure"
+        folder_en: "en/reference/infrastructure"
+        pages:
+          - id: hooks
+            type: editorial
+            label_fr: "Hooks"
+            label_en: "Hooks"
+            sidebar_position: 1
+            fr: "fr/reference/infrastructure/hooks.md"
+            en: "en/reference/infrastructure/hooks.md"
+            purpose_fr: "Catalogue des 7 événements hooks, 4 types de décision, normalisation payload et config SKRAFT_*."
+            purpose_en: "Catalogue of 7 hook events, 4 decision types, payload normalisation and SKRAFT_* config."
       - id: bibliography
         title_fr: "Bibliographie & annexes"
         title_en: "Bibliography & appendix"
-        sidebar_position: 7
+        sidebar_position: 8
         pages:
           - id: citations
             type: derived
