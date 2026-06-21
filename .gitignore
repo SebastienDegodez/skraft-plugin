@@ -16,7 +16,7 @@ docs/site/.jekyll-cache/
 # skraft-framework (plugins/src) tooling
 plugins/src/node_modules/
 plugins/src/package-lock.json
-plugins/src/.stryker-tmp/
+.stryker-tmp/
 reports/mutation/
 
 # Docs-drift reconciler — ephemeral runtime ledger (never committed)
