@@ -1,7 +1,7 @@
 ---
 name: backlog-discoverer
 description: "Use when discovering, triaging, or prioritizing GitHub issues for a project. Supports three discovery modes: user-assigned issues, artifact-driven discovery from code changes, and search-based exploration. Activate on 'discover backlog', 'triage issues', 'what should I work on', 'find open issues', or when the SDLC pipeline starts."
-model: inherit
+model: claude-sonnet-4.5
 user-invocable: true
 tools: read/readFile, write/createFile, write/editFile, search/codebase
 metadata:
