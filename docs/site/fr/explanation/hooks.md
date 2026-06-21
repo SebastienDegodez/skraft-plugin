@@ -114,6 +114,53 @@ Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après
 Les handlers métier (qui inspectent réellement le payload pour enforcer les
 invariants SKRAFT) sont planifiés dans les user stories suivantes.
 
+## Genesis & économie de tokens
+
+La discipline Genesis s'applique directement au harness de hooks, sur deux axes.
+
+### 1. `coverageAnalysis: perTest` — mutation testing 5× moins cher
+
+Le `stryker.config.mjs` utilise `coverageAnalysis: 'perTest'`. Stryker instrumente
+chaque test pour savoir quels mutants il couvre, puis n'exécute que les tests
+pertinents pour chaque mutant.
+
+Sur ce projet (183 mutants, 6 fichiers de test) :
+
+| Métrique | Sans `perTest` | Avec `perTest` |
+|----------|---------------|----------------|
+| Tests exécutés par mutant | 6 (tous) | 1,14 (moyenne mesurée) |
+| Exécutions totales | 183 × 6 = **1 098** | 183 × 1,14 ≈ **209** |
+| **Ratio de gain** | — | **5,25× moins d'exécutions** |
+
+*Chiffre mesuré sur le dry-run Stryker de ce projet — pas estimé.*
+
+### 2. Enforcement déterministe = zéro token de raisonnement
+
+Sans hook, l'agent doit *raisonner* sur chaque invariant à chaque appel d'outil :
+
+- « Est-ce que je dois normaliser ce payload ? »
+- « Est-ce que cet audit-writer est bien append-only ? »
+- → ~50–200 tokens de raisonnement par outil, cumulés sur toute la session
+
+Avec un hook `PreToolUse`, l'enforcement est **code natif** (zéro token, exit 0 ou
+réponse JSON). L'agent reçoit `deny`/`allow` sans produire de chaîne de pensée sur
+l'invariant.
+
+Le gain n'est pas quantifiable sans baseline de comparaison — mais le principe est
+celui du levier **"surface d'outils"** de Genesis : réduire la surface de décision
+dans chaque tour raccourcit la réponse et réduit la fenêtre de contexte nécessaire.
+
+### 3. `depthTier` et fan-out reviewer
+
+Le `depthTier` (`basic` / `standard` / `comprehensive`) gouverne le nombre de lentilles
+adversariales instanciées (1 / 2 / 4). Sur une phase DELIVER en `basic`, le hook
+`SubagentStop` du reviewer n'intercepte qu'un seul verdict au lieu de quatre.
+Moins de fan-out = moins de contexte rechargé = moins de tokens.
+
+> **Règle Genesis** : un run `basic` ne doit pas coûter comme un run `comprehensive`.
+> Les hooks font respecter cette règle mécaniquement — un reviewer qui tente de lancer
+> 4 lentilles en `basic` reçoit `deny` avant même d'exécuter.
+
 ## Pour en savoir plus
 
 - [Référence hooks]({{ "/fr/reference/infrastructure/hooks" | relative_url }}) — tableau des 7 événements, 4 décisions, config SKRAFT_*
