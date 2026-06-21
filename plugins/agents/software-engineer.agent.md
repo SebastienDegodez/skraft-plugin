@@ -1,7 +1,7 @@
 ---
 name: software-engineer
 description: "[Internal subagent — dispatched by skraft-orchestrator only] Delivers code via Outside-In TDD and Clean Architecture. Full PREPARE → RED → SYNTHESIZE-GREEN → COMMIT cycle with Object Calisthenics, mutation testing gates, and strict test integrity."
-model: inherit
+model: claude-sonnet-4.5
 user-invocable: false
 tools: execute/testFailure, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runInTerminal, read/readFile, agent, edit/createDirectory, edit/createFile, edit/editFiles, search/codebase
 metadata:

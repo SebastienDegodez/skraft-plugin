@@ -39,16 +39,50 @@ acts on a distinct dimension of spend.
 | Lever | What it does |
 |-------|--------------|
 | **Cache discipline** | System prompts and shared instructions are designed to be *reloaded* between turns without recomputation — anything that can be KV-cached is, and message structure guarantees it. |
-| **Class by role** | The orchestrator and reviewers run on a *frontier*-class model (broad reasoning, low frequency); specialist agents — implementer, planner, researcher — run on a *capable*-class model (high frequency, bounded tasks). |
+| **Class by role** | Each agent carries a B12 target class — `implementer`, `planner`, or `reviewer`. Artifact producers (discoverer, planner, architect, engineer) receive the most capable class; phase reviewers and lenses, whose task is bounded, receive the cheapest class that holds the work. Two roles are an exception and require a *Sonnet-class or above* model regardless of role: `software-engineer` and `software-engineer-reviewer` (multi-constraint arbitration). |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
 | **Depth (`depthTier`)** | The depth of each run is governed by `depthTier` (shallow / standard / deep): fan-out to 1, 2, or 4 adversarial lenses; mutation score threshold; Gherkin gate enabled or not. A *shallow* run does not instantiate the full reviewers. |
 | **Structural pruning** | On an incoming HVE handoff, the DISCOVER phase is skipped: the backlog and prioritisation arrive already formed. The pipeline does not re-execute what it has no reason to recompute. |
 
 These levers are not independent. Cache discipline and role-class allocation reinforce
-each other: a *capable* model reloaded from the KV cache costs a fraction of what a
-*frontier* model recomputed from scratch would. Tool surface and depth together limit
+each other: a low-class model reloaded from the KV cache costs a fraction of what a
+high-class model recomputed from scratch would. Tool surface and depth together limit
 the decision surface inside each turn, which shortens responses and reduces the context
 window required.
+
+## Measured results
+
+The first two levers — cache discipline and model class — were measured on a real run
+of the SKRAFT pipeline executed as an *agentic workflow* (gh-aw), via the harness's
+*Effective Tokens* (ET v0.2.0) schema. The figures below come from the `agent_usage.json`
+files emitted by eight agent and reviewer executions — they are not estimated.
+
+### Cache discipline — −42.6% effective tokens
+
+The KV-cache hit rate is stable around **48%** of total input across the eight
+executions. The ET schema weights a token read from cache at **0.1×** versus **1.0×**
+for a recomputed token — ten times cheaper.
+
+| Effective tokens (8 phases) | Without cache | With cache | Gain |
+|---|---|---|---|
+| Total | 47.6 M | 27.3 M | **1.74× — −42.6%** |
+
+The gain comes from the **form** of the prompts: a stable system prefix, not rewritten
+between turns, stays cache-eligible. This is precisely the lever that
+[hooks]({{ "/en/explanation/hooks" | relative_url }}) preserve on the infrastructure
+side — an invariant held by code does not shift the prefix, whereas an invariant
+re-injected as prose would make it miss.
+
+### Model class — a 27× separation
+
+The same schema applies a per-model multiplier. On this run, two classes were observed:
+**9.0×** for the *frontier* class (claude-sonnet-4.6) and **0.33×** for the *capable*
+class (claude-haiku-4.5). At equal normalised work, allocating the capable class rather
+than frontier therefore costs **9.0 / 0.33 ≈ 27× less** in effective tokens — making the
+class choice the dominant multiplier of spend.
+
+*Provenance: gh-aw `SDLC` run on issue #72 of the `meetup-coding-with-ai` repository,
+Effective Tokens schema v0.2.0, reference model `claude-sonnet-4.5`.*
 
 ## Without cutting quality
 
@@ -70,10 +104,16 @@ lever has not yet been applied?"
 
 ### In place
 
-The `cost_role_class` annotations in the phase agents allocate the correct model class
-to each role. The `depthTier` field in `state.json` governs the lens fan-out and the
-activation of optional gates. These two mechanisms are the principal governor of spend
-at present.
+The model class is **actually applied**: a deterministic resolver (`plugins/src/`,
+Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
+`model_requirement` floor, then **pins the `model:` field** of its `*.agent.md` to the
+resolved concrete model. The "Measured results" section states the policy:
+`reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
+`planner → claude-sonnet-4.6`, with the Sonnet floor raising the two exceptions
+(`software-engineer`, `software-engineer-reviewer`). One source of truth; a CI linter
+(`resolve-model --check`) fails if an agent drifts from the policy. The `depthTier`
+field in `state.json` governs the lens fan-out and the activation of optional gates.
+These two mechanisms are the principal governor of spend at present.
 
 ### Designed, not yet implemented
 

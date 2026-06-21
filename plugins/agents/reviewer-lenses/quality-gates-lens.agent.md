@@ -1,7 +1,7 @@
 ---
 name: quality-gates-lens
 description: "Reviewer lens: verifies the structured quality-gates evidence log produced by the software-engineer. Read-only — falsifies the log against the Git tree."
-model: inherit
+model: claude-haiku-4.5
 tools: read/readFile, search/codebase
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
