@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "node plugins/src/cli/hook.mjs PreToolUse Agent",
+        "powershell": "node plugins/src/cli/hook.mjs PreToolUse Agent",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStop": [
+      {
+        "type": "command",
+        "bash": "node plugins/src/cli/hook.mjs SubagentStop",
+        "powershell": "node plugins/src/cli/hook.mjs SubagentStop",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 ---
 name: backlog-discoverer-reviewer
 description: "Use when reviewing issue triage results, sprint proposals, or discovery coverage for completeness, prioritization accuracy, and duplicate detection. Dispatched after backlog-discoverer produces DISCOVER artefacts, or manually to audit a triage report."
-model: inherit
+model: claude-haiku-4.5
 user-invocable: true
 tools: read/readFile, search/codebase
 metadata:

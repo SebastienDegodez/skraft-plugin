@@ -1,7 +1,7 @@
 ---
 name: mock-fidelity-lens
 description: "Reviewer lens: audits consumer-side mock wiring in integration tests — strategy/override honored, mock URL actually wired, no real downstream call."
-model: inherit
+model: claude-haiku-4.5
 tools: read/readFile, search/codebase
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
