@@ -1,7 +1,7 @@
 ---
 name: acceptance-designer-reviewer
 description: Use when reviewing BDD scenarios, test plans, or implementation plans for completeness, business alignment, and testability gaps. Dispatched after acceptance-designer produces DISTILL artefacts, or manually to audit existing Gherkin scenarios.
-model: inherit
+model: claude-haiku-4.5
 user-invocable: true
 tools: read/readFile, search/codebase
 metadata:

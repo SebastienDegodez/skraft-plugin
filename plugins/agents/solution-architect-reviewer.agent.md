@@ -1,7 +1,7 @@
 ---
 name: solution-architect-reviewer
 description: Use when reviewing architecture decisions, component diagrams, or interface contracts for consistency, Clean Architecture compliance, and fitness for purpose. Dispatched after solution-architect produces DESIGN artefacts, or manually to audit existing architecture files.
-model: inherit
+model: claude-haiku-4.5
 user-invocable: true
 tools: read/readFile, search/codebase
 metadata:

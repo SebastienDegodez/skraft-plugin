@@ -49,7 +49,7 @@ test.describe('SKRAFT docs site', () => {
     await page.goto(`${BASE}/fr/`);
     // Top menu doors inside .site-nav__links (brand and lang toggle excluded).
     const doors = page.locator('.site-nav__links > a');
-    await expect(doors).toHaveCount(4);
+    await expect(doors).toHaveCount(5);
   });
 
   test('Citations page renders entries', async ({ page }) => {

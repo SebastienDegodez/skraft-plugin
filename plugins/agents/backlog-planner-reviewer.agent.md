@@ -1,7 +1,7 @@
 ---
 name: backlog-planner-reviewer
 description: Use when reviewing refined user stories, acceptance criteria drafts, and sprint plans for INVEST quality, completeness, and feasibility. Dispatched after backlog-planner produces DISCUSS artefacts, or manually to audit existing stories.
-model: inherit
+model: claude-haiku-4.5
 user-invocable: true
 tools: read/readFile, search/codebase
 metadata:
