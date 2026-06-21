@@ -3,13 +3,11 @@ export const createHookRouter = ({ preToolUse, subagentStop } = {}) => ({
     // Simple switchboard: pick right handler from hook type.
     switch (hookType) {
       case 'PreToolUse':
-        if (!preToolUse) throw new Error('No PreToolUse handler registered')
-        return preToolUse.handle(payload)
+        return preToolUse ? preToolUse.handle(payload) : undefined
       case 'SubagentStop':
-        if (!subagentStop) throw new Error('No SubagentStop handler registered')
-        return subagentStop.handle(payload)
+        return subagentStop ? subagentStop.handle(payload) : undefined
       default:
-        throw new Error(`Unknown hook type: ${hookType}`)
+        return undefined
     }
   }
 })

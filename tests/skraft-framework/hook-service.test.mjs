@@ -79,21 +79,31 @@ test('block without argument uses default message', async () => {
   assert.equal(result.decision, 'block')
   assert.equal(result.message, 'Blocked')
 })
-test('hook router throws when SubagentStop handler not registered', async () => {
+// hook-router.mjs: no handler = allow passthrough (undefined = no override)
+test('hook router returns undefined when no PreToolUse handler registered', async () => {
   const service = createHookService({})
-  await assert.rejects(() => service.handle({ hookType: 'SubagentStop' }), /No SubagentStop handler/)
+  const result = await service.handle({ hookType: 'PreToolUse', toolName: 'bash' })
+  assert.equal(result, undefined)
 })
 
-// hook-router.mjs: unknown hook type throws
-test('hook router throws for unknown hook type', async () => {
+test('hook router returns undefined when no SubagentStop handler registered', async () => {
   const service = createHookService({})
-  await assert.rejects(() => service.handle({ hookType: 'UnknownHook' }), /Unknown hook type/)
+  const result = await service.handle({ hookType: 'SubagentStop' })
+  assert.equal(result, undefined)
+})
+
+// hook-router.mjs: unknown hook type = allow passthrough (undefined)
+test('hook router returns undefined for unknown hook type', async () => {
+  const service = createHookService({})
+  const result = await service.handle({ hookType: 'UnknownHook' })
+  assert.equal(result, undefined)
 })
 
 // hook-router.mjs: default parameter = {} branch (called with no argument)
-test('hook router works with no argument — default empty handlers', async () => {
+test('hook router with no argument returns undefined for any hook type', async () => {
   const { createHookRouter } = await import('../../plugins/src/adapters/api/hooks/hook-router.mjs')
-  const router = createHookRouter()  // exercises = {} default
-  await assert.rejects(() => router.route('PreToolUse', {}), /No PreToolUse handler/)
+  const router = createHookRouter()
+  const result = await router.route('PreToolUse', {})
+  assert.equal(result, undefined)
 })
 
