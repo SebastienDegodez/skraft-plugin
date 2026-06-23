@@ -1,4 +1,18 @@
 <!-- markdownlint-disable-file -->
+---
+adr: 1
+title: Result Type Pattern (Ok/Err discriminated union)
+status: Accepted
+chosen: lightweight Ok/Err POJOs
+decision: >
+  We will represent operation outcomes with a lightweight Result type — Ok(value)
+  and Err(error) as plain objects with an `ok` discriminant — instead of throwing
+  exceptions, keeping domain functions pure and dependency-free.
+supersedes: null
+date: 2026-06-20
+ratified_by: Solution Architect (US1) 2026-06-20
+---
+
 # ADR-001 — Result Type Pattern (Ok/Err discriminated union)
 
 **Date:** 2026-06-20

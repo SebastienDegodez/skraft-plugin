@@ -60,6 +60,15 @@ State is a JSON document with the following fields. All fields are required unle
     "securityPlanFile": "string | null",
     "raiPlanFile": "string | null",
     "ssscPlanFile": "string | null"
+  },
+  "adrRatification": {
+    "checkpointStatus": "none | awaiting_human | resolved",
+    "pending": [
+      { "adr": "string (NNN)", "title": "string", "recommended": "accept | reject", "status": "Proposed" }
+    ],
+    "ratified": [
+      { "adr": "string (NNN)", "verdict": "Accepted | Rejected", "by": "string (human + date)" }
+    ]
   }
 }
 ```
@@ -75,6 +84,7 @@ State is a JSON document with the following fields. All fields are required unle
 * `userPreferences.maxRetriesPerPhase` — default `2`. When `retryCount[phase] >= maxRetriesPerPhase` and the verdict is not `APPROVED`, the orchestrator escalates to the user.
 * `reviewArtifacts` — append-only list of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers write here exclusively.
 * `neighborPlanners` — interop with sibling HVE planners (Security, RAI, SSSC). `null` when no plan exists.
+* `adrRatification` — persists the DESIGN human-ratification gate (genesis B10 HUMAN CHECKPOINT + B4 PLAN MEMENTO) so it survives turns and session resumes. `checkpointStatus` is `none` until DESIGN produces `Proposed` ADRs, `awaiting_human` while the orchestrator has HALTed for a verdict, `resolved` once every ADR is `Accepted`/`Rejected`. `pending` mirrors the `docs/adr/decisions-index.md` rows still `Proposed`; `ratified` accumulates the verdicts. The orchestrator reads the decision index (NOT full ADR bodies) to populate this block. Defaults to `{ "checkpointStatus": "none", "pending": [], "ratified": [] }`.
 
 ## Six-Step State Protocol
 
@@ -90,6 +100,7 @@ Execute this protocol on **every turn** before producing user-facing output.
 ### Transition rules
 
 * `currentPhase` transitions only on `APPROVED` reviewer verdict.
+* **DESIGN is the one phase with a second gate after `APPROVED`:** it advances to `DISTILL` only when `adrRatification.checkpointStatus == "resolved"` (zero `Proposed` ADRs remain in `docs/adr/decisions-index.md`). A DESIGN reviewer `APPROVED` with `Proposed` ADRs still open keeps `currentPhase == "DESIGN"` and sets `adrRatification.checkpointStatus = "awaiting_human"`.
 * On `REJECTED` or `NEEDS_REWORK`: the same phase agent is re-dispatched, `retryCount[phase]` is incremented, `currentPhase` does not change.
 * The terminal state `DONE` is set when DELIVER's reviewer verdict is `APPROVED` and `phasesCompleted` contains all five phase names.
 
@@ -112,7 +123,7 @@ When returning to an existing session:
 
 1. **Read** `state.json` to determine `currentPhase`, the last reviewer verdict for that phase, and `retryCount[currentPhase]`.
 2. **Identify** pending work: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, or unresolved user input.
-3. **Check** for incomplete artifacts on disk: partially written phase outputs under `research/`, `plans/`, `adrs/`, `details/`, `changes/`, or `reviews/`.
+3. **Check** for incomplete artifacts on disk: partially written phase outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/` (ADRs live project-global in `docs/adr/`, not in the run namespace).
 4. **Present** a status summary to the user with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions) before continuing.
 
 ## Recovery Procedure
@@ -120,7 +131,7 @@ When returning to an existing session:
 When `state.json` is missing, malformed, or fails schema validation:
 
 1. Search the project directory for the most recent valid `state.json` backup (`state.json.bak.*`). If found, restore it and re-run VALIDATE.
-2. If no backup is recoverable, scan `research/`, `plans/`, `adrs/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts.
+2. If no backup is recoverable, scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`).
 3. Reconstruct `state.json` with conservative defaults: `currentPhase` set to the inferred phase, `phasesCompleted` set from on-disk evidence, `reviewerVerdicts[currentPhase]` set to `null`, `retryCount` zeroed, `userPreferences.depthTier` set to `"comprehensive"`.
 4. Surface the reconstruction to the user with a checklist of inferred values and request confirmation before resuming.
 5. Write a backup of the prior corrupted file as `state.json.corrupted.{timestamp}` before overwriting.

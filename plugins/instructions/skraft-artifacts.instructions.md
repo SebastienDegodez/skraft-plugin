@@ -26,8 +26,8 @@ Each phase writes to a phase-specific subdirectory. Date-stamped directories use
 |---|---|---|
 | DISCOVER | Triage notes, sprint proposal, evidence | `research/{YYYY-MM-DD}/{slug}-research.md` |
 | DISCUSS | User stories, acceptance criteria draft | `plans/{YYYY-MM-DD}/{slug}-plan.instructions.md` |
-| DESIGN | Architecture Decision Records | `adrs/ADR-{NNN}-{slug}.md` |
-| DESIGN | ADR supersession registry (append-only) | `adrs/supersessions.md` |
+| DESIGN | Architecture Decision Records (project-global — see note) | `docs/adr/adr-{NNN}-{slug}.md` |
+| DESIGN | ADR supersession registry (append-only) | `docs/adr/supersessions.md` |
 | DESIGN | Component contracts, interface sketches | `details/{YYYY-MM-DD}/{slug}-contracts.md` |
 | DESIGN | Consistency matrix (Phase 9 output) | `details/{YYYY-MM-DD}/consistency-matrix-{story}.md` |
 | DESIGN | Supersession plan (Phase 3.5 output, when non-empty) | `details/{YYYY-MM-DD}/supersession-plan-{story}.md` |
@@ -38,19 +38,20 @@ Each phase writes to a phase-specific subdirectory. Date-stamped directories use
 | DELIVER | Change log, commit summary | `changes/{YYYY-MM-DD}/{slug}-changes.md` |
 | Reviews (every phase) | Reviewer verdict and findings | `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md` |
 
-`ADR-{NNN}` uses a three-digit zero-padded sequence number unique within the project. `features/` is not date-stamped because Gherkin scenarios are long-lived and may evolve across runs.
+ADRs are **project-global institutional memory**: they do NOT live under the per-run `skraft-plans/{project-slug}/` namespace but in the repository's `docs/adr/` directory, committed alongside the code. The filename is lowercase `adr-{NNN}-{slug}.md` where `{NNN}` is a three-digit zero-padded sequence number unique across the whole project (the in-text identifier `ADR-{NNN}` stays uppercase). `docs/adr/` is itself append-only with its own supersession registry — see below. `features/` is not date-stamped because Gherkin scenarios are long-lived and may evolve across runs.
 
 ## Append-only directories
 
 The following directories are **append-only**. Existing files must never be modified by a later phase or run:
 
-* `research/`, `plans/`, `adrs/`, `details/`, `changes/`, `reviews/`, `blockers/`
+* `research/`, `plans/`, `details/`, `changes/`, `reviews/`, `blockers/` (per-run, under `skraft-plans/{project-slug}/`)
+* `docs/adr/` — project-global, outside the run namespace, also append-only
 
 When an artifact needs revision, write a new dated file rather than editing the prior one. State recovery and audit depend on this invariant.
 
-### Supersession registry (`adrs/supersessions.md`)
+### Supersession registry (`docs/adr/supersessions.md`)
 
-Because `adrs/` is append-only, the **superseded ADR's body is never edited** when a new decision replaces it. Instead, the new ADR carries a body line `**Supersedes:** [ADR-MMM](./ADR-MMM-{slug}.md) — {reason}`, AND the registry file `adrs/supersessions.md` is **appended** with a row:
+Because `docs/adr/` is append-only, the **superseded ADR's body is never edited** when a new decision replaces it. Instead, the new ADR carries a body line `**Supersedes:** [ADR-MMM](./adr-MMM-{slug}.md) — {reason}`, AND the registry file `docs/adr/supersessions.md` is **appended** with a row:
 
 ```markdown
 | date | superseded ADR | new ADR | reason |

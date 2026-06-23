@@ -71,7 +71,7 @@ Une paire d'intégration *unbalanced* (forte distance + forte strength + forte v
 ### Inputs
 
 - `details/{date}/bc-canvas-{bc-slug}.md` (Phase 5.5, pré-requis spec stratégique) — fournit `outbound_dependencies` et `inbound_dependencies`.
-- `adrs/ADR-{NNN}-subdomain-{bc-slug}.md` (Phase 2.5, pré-requis spec stratégique) — fournit la classification d'où dérive la volatilité.
+- `docs/adr/adr-{nnn}-subdomain-{bc-slug}.md` (Phase 2.5, pré-requis spec stratégique) — fournit la classification d'où dérive la volatilité.
 - `plugins/skills/architecture-patterns/references/balanced-coupling.md` (nouveau, ci-dessous) — fournit le modèle.
 
 ### Nouvel artefact (append-only)

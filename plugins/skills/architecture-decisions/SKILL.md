@@ -20,6 +20,18 @@ Architecture Decision Records (ADRs) are lightweight documents that capture arch
 ### Blank Template
 
 ```markdown
+---
+adr: {NNN}                    # int, matches filename
+title: {Short Title}
+status: Proposed             # Proposed | Accepted | Rejected | Deprecated | Superseded
+chosen: {picked option}      # one token/phrase — the option adopted
+decision: >                  # ONE sentence: the verdict in plain words
+  {We will ... / We will not adopt ... because ...}
+supersedes: {ADR-MMM | null}
+date: {YYYY-MM-DD}
+ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Reject
+---
+
 # ADR-{NNN}: {Short Title}
 
 **Status:** Proposed | Accepted | Rejected | Deprecated | Superseded by ADR-{NNN}
@@ -161,6 +173,60 @@ A `Rejected` ADR documents that an option was seriously evaluated and the team d
 - **Decision phrasing:** MAY start with "We will not adopt X because…" — this is precisely what a `Rejected` status means.
 - **Trigger requirement:** a `Rejected` ADR is written ONLY when a story or measurable force in the current batch raised the question (see G9 traceability). A `Rejected` ADR with no triggering story is a non-decision artefact and is forbidden.
 - **Alternatives Rejected section** is flipped: list what the team adopted INSTEAD (e.g., "state-based persistence with audit-log table").
+
+---
+
+## Decision Digest — cheap-to-read verdict surface
+
+The full ADR body is the *rationale*. No reader (the orchestrator's ratification gate, the reviewer, DISTILL, the next-pass blocker re-grounding) should re-read a whole ADR body just to learn its **verdict**. The digest is the stable, cheap-to-read surface that carries only the verdict-bearing fields. It exists in two mirrored forms.
+
+### Per-ADR decision header
+
+Every ADR file begins with the YAML frontmatter shown in the Blank Template above, **before** the `# ADR-{NNN}` title. A reader greps ONLY this frontmatter (the first ~10 lines) to obtain `status`, `chosen`, and the one-line `decision`. Load the prose body solely when the *rationale* is needed (e.g. re-evaluating a supersession). Keep the header free of dynamic noise — no timestamps beyond `date`, no per-run paths — so it stays a stable prefix.
+
+### Project-global decision index — `docs/adr/decisions-index.md`
+
+An append-only registry, sibling of `docs/adr/supersessions.md`. One row per ADR aggregates the header fields. One read of this file yields every decision in the project without opening a single ADR body.
+
+```markdown
+<!-- markdownlint-disable-file -->
+# ADR decision index (append-only digest)
+
+| ADR | Title | Status | Chosen | Decision (1 line) | Ratified by | Date |
+|---|---|---|---|---|---|---|
+| 001 | CQRS dispatch bus | Accepted | CQRS+Bus | Introduce ICommandBus/IQueryBus pipeline over unchanged CQS | alice 2026-05-01 | 2026-05-01 |
+| 007 | Conformist Eligibility->Policy | Proposed | Conformist | Eligibility conforms to RiskProfile VO; ACL dropped | — | 2026-06-23 |
+```
+
+Write rule: when an ADR is first committed (`Status: Proposed`), append its row with `Ratified by: —`. On the ratification status flip, update **only** the `Status` and `Ratified by` cells of that row in place — the row is never removed and never reordered (numbering stays monotonic, matching the supersession-registry doctrine).
+
+### Reading the digest cheaply (S7 deterministic bridge + fallback)
+
+The verdict read is a deterministic tool bridge, not a body load. Prefer, in order:
+
+1. **Whole project at once** — read the index table:
+   `cat docs/adr/decisions-index.md` (one small file = every decision).
+2. **One ADR's verdict from the index** — `grep '^| 007 ' docs/adr/decisions-index.md`.
+3. **One ADR's full header without its body** — extract only the YAML frontmatter (POSIX awk, no deps):
+   ```sh
+   awk '/^---$/{c++; if(c==1){f=1; next}} c==2{exit} f' docs/adr/adr-007-*.md
+   ```
+   (Tolerates an optional leading comment line; stops at the closing `---`, so the prose body is never read. Pipe to `grep -E '^(status|chosen|decision):'` for just the verdict fields.)
+
+**Fallback:** if the command tool is unavailable or returns empty (file missing, malformed frontmatter), fall back to `read_file` on the first ~12 lines of the ADR — never load the whole body just to learn the verdict.
+
+---
+
+## Ratification Contract (single source of the human gate)
+
+This is the canonical definition of the `Proposed -> Accepted | Rejected` gate. The orchestrating workflow and the architect persona REFERENCE this contract; they do not redefine it.
+
+1. **Agent drafts, human decides.** The agent commits every story-triggered ADR with `Status: Proposed` and appends its digest row. The agent NEVER self-ratifies — it cannot set `Accepted` / `Rejected` on its own authority.
+2. **Gate fires after quality review, not before.** Ratification is requested only once the DESIGN reviewer has APPROVED the artefacts. Asking a human to ratify a draft that may fail adversarial review wastes their attention and trains rubber-stamping.
+3. **The gate is a hard pre-condition for the next phase.** No downstream phase (DISTILL) may begin while any ADR in the current pass is still `Proposed`. Advancing without the verdict is a post-hoc checkpoint — the decision would already be in effect before the human chose.
+4. **The verdict surface is the digest.** The gate presents the decision index / headers (the one-line decisions), NOT the full ADR bodies. The human may open a body on demand via the link.
+5. **Both revisions land in git.** The `Proposed` commit AND the final `Accepted` / `Rejected` commit are both committed — the trail of "we paused for a human here" is part of the architectural record. On the flip, set `ratified_by` in the header and update the index row.
+6. **Channel is supplied by the execution context.** In the agentic pipeline the orchestrator owns the channel and the HALT; in a standalone local run, prompt the developer in-terminal. This skill prescribes the contract, not the transport.
 
 ---
 

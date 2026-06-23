@@ -105,7 +105,7 @@ Rendre SKRAFT **compatible HVE** en remplaçant uniquement l'agent RPI (Research
 |---|---|---|
 | DISCOVER | Triage + sprint proposal | `research/{YYYY-MM-DD}/*-research.md` |
 | DISCUSS | User stories | `plans/{YYYY-MM-DD}/*-plan.instructions.md` (frontmatter `applyTo`) |
-| DESIGN | ADRs + contracts | `adrs/ADR-{NNN}-{slug}.md` + `details/{date}/*-contracts.md` |
+| DESIGN | ADRs + contracts | `docs/adr/adr-{nnn}-{slug}.md` + `details/{date}/*-contracts.md` |
 | DISTILL | Gherkin + impl plan | `details/{YYYY-MM-DD}/*-details.md` + `features/*.feature` (existant) |
 | DELIVER | Commits + changes log | `changes/{YYYY-MM-DD}/*-changes.md` |
 | Reviews (toutes phases) | Verdict + findings | `reviews/{YYYY-MM-DD}/*-review.md` |

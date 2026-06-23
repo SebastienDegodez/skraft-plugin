@@ -23,7 +23,7 @@ Avant tout code, ce plan repose sur un tri formel de chaque gate selon qu'il est
 | Gate | Nature | Mécanisme déterministe possible | Moteur |
 |---|---|---|---|
 | G1 | Mécanisable | rule ast-grep : nœud AST de **type** référence/implémente un port `CommandBus`/`QueryBus`/`EventStore`/`Saga` (par résolution de type, pas par nom) → cross-check ADR `Accepted` | **ast-grep** |
-| G2 | Mécanisable | cross-ref `**Supersedes:**` ↔ rows `adrs/supersessions.md` (markdown, pas AST) | Node-texte |
+| G2 | Mécanisable | cross-ref `**Supersedes:**` ↔ rows `docs/adr/supersessions.md` (markdown, pas AST) | Node-texte |
 | G3 | Mécanisable | rule ast-grep : nœud `import`/`using` ciblant un module Infra/API, `inside` un fichier dont le **chemin** appartient à la couche Domain/Application | **ast-grep** |
 | G4 | Mécanisable | rule ast-grep : nœud `interface_declaration` (peu importe le nom) `inside` un fichier dont le **chemin** est hors Application — couche résolue par path/module, **jamais** par préfixe `I*` | **ast-grep** |
 | G5 | Mixte | **AST** : champ d'un agrégat dont le **type déclaré** est un autre agrégat (référence objet) au lieu d'un type ID (ast-grep) ; **LLM** : « l'agrégat enforce ses propres invariants » | ast-grep + LLM |
@@ -245,7 +245,7 @@ Gates non-AST (markdown cross-ref + existence de fichiers) → dans la glue `pre
 
 - [ ] **Step 1 : RED + GREEN — G2 (supersession cross-ref)**
 
-Chaque `**Supersedes:** ADR-NNN` dans un ADR a une row correspondante dans `adrs/supersessions.md` (et inverse). Asymétrie → BLOCKER.
+Chaque `**Supersedes:** ADR-NNN` dans un ADR a une row correspondante dans `docs/adr/supersessions.md` (et inverse). Asymétrie → BLOCKER.
 
 - [ ] **Step 2 : RED + GREEN — G7**
 

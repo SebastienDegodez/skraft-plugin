@@ -1,4 +1,18 @@
 <!-- markdownlint-disable-file -->
+---
+adr: 2
+title: Hexagonal Architecture (Ports & Adapters)
+status: Accepted
+chosen: strict ports & adapters layout
+decision: >
+  We will adopt a strict hexagonal (ports & adapters) layout where domain/ imports
+  nothing, application/ depends on domain + driven ports, and adapters implement the
+  ports — isolating business logic from filesystem, time, and GitHub API.
+supersedes: null
+date: 2026-06-20
+ratified_by: Solution Architect (US1) 2026-06-20
+---
+
 # ADR-002 — Hexagonal Architecture (Ports & Adapters)
 
 **Date:** 2026-06-20

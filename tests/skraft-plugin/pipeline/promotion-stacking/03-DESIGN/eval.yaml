@@ -25,16 +25,16 @@ scenarios:
       Promotions service discount on the loyalty discount, capped at 20%). Run
       ONLY the DESIGN phase, then stop once its reviewer returns APPROVED.
     assertions:
-      - file_matches_glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+      - file_matches_glob: "docs/adr/adr-*.md"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+          glob: "docs/adr/adr-*.md"
           text: "Accepted"
       - file_matches_glob: ".copilot-tracking/skraft-plans/*/details/**/*-contracts.md"
       - file_contains:
           glob: ".copilot-tracking/skraft-plans/*/reviews/**/design-*-review.md"
           text: "APPROVED"
       - file_judge:
-          glob: ".copilot-tracking/skraft-plans/*/adrs/ADR-*.md"
+          glob: "docs/adr/adr-*.md"
           criterion: >
             The ADR keeps the discount/combination rule inside the domain (not a
             controller), justifies the decision, and addresses the discount cap.

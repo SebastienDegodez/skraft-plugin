@@ -26,7 +26,7 @@ persona: tech-lead
 
 - Fichier ADR nommé `adr-{NNN}-{slug}.md` au statut `Proposed`
 - Transition vers `Accepted` ou `Rejected` après ratification humaine (les deux commits sont gardés)
-- En cas de supersession : mise à jour du registre `adrs/supersessions.md` ET de l'ADR successeur
+- En cas de supersession : mise à jour du registre `docs/adr/supersessions.md` ET de l'ADR successeur
 
 ## Invariants
 

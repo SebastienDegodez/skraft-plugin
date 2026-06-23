@@ -113,8 +113,8 @@ lenses:
       - gate: G2
         severity: BLOCKER
         artefact:
-          - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-001-cqrs-eligibility.md
-          - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-005-unified-model-eligibility.md
+          - docs/adr/adr-001-cqrs-eligibility.md
+          - docs/adr/adr-005-unified-model-eligibility.md
         description: "ADR-001 (status: Accepted) prescribes CQRS for the eligibility check — separate command and query models. ADR-005 (status: Accepted) prescribes a single unified model for eligibility, stating that the read and write shapes are identical and CQRS is not needed. Both ADRs are status Accepted and apply to the same scope (EligibilityContext). This is a direct contradiction. The architecture cannot be implemented consistently until this is resolved."
   architecture-compliance:
     status: pass

@@ -68,7 +68,7 @@ Chaque case « no gate » est une *foi imposée à DISTILL* au sens du principe 
 
 ### Nouveaux artefacts (append-only, sous `.copilot-tracking/skraft-plans/{project-slug}/`)
 
-- `adrs/ADR-{NNN}-subdomain-{bc-slug}.md` — 1 ADR par BC, ratifie la classification `{ core | supporting | generic }`. Section « Decision Forces » liste les critères Khononov (compétitivité, complexité, évolution). Rentre dans la séquence ADR numérique existante.
+- `docs/adr/adr-{nnn}-subdomain-{bc-slug}.md` — 1 ADR par BC, ratifie la classification `{ core | supporting | generic }`. Section « Decision Forces » liste les critères Khononov (compétitivité, complexité, évolution). Rentre dans la séquence ADR numérique existante.
 - `details/{date}/bc-canvas-{bc-slug}.md` — 1 canvas par BC, schéma ddd-crew adapté : `purpose`, `strategic_classification` (lien vers ADR-NNN-subdomain), `domain_roles`, `ubiquitous_language` (glossaire), `business_decisions`, `inbound_dependencies`, `outbound_dependencies`, `messaging` (events publiés/consommés).
 
 ### Nouvelles étapes du persona
@@ -115,7 +115,7 @@ Chaque case « no gate » est une *foi imposée à DISTILL* au sens du principe 
 
 ## Compatibilité avec les conventions Lots 1-2
 
-- **Append-only :** tous les nouveaux artefacts sont ajoutés sous `details/{date}/` ou `adrs/`. Aucun ADR existant n'est édité. Si la classification d'un BC change, une nouvelle ADR-subdomain est écrite et la précédente est superseded via le registre `adrs/supersessions.md` (mécanisme Lot 1).
+- **Append-only :** tous les nouveaux artefacts sont ajoutés sous `details/{date}/` ou `adrs/`. Aucun ADR existant n'est édité. Si la classification d'un BC change, une nouvelle ADR-subdomain est écrite et la précédente est superseded via le registre `docs/adr/supersessions.md` (mécanisme Lot 1).
 - **Header markdown :** le nouveau template porte `<!-- markdownlint-disable-file -->`.
 
 ## Décisions à trancher avant phase plan
