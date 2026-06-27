@@ -12,7 +12,9 @@ const ORCHESTRATOR = 'skraft-orchestrator'
 const isReviewer = (name) => name.endsWith('-reviewer')
 
 // A reviewer may declare its phase as `{PHASE}-REVIEW`; it still belongs to {PHASE}.
-const basePhase = (phase) => phase.replace(/-REVIEW$/, '')
+const REVIEW_SUFFIX = '-REVIEW'
+const basePhase = (phase) =>
+  phase.endsWith(REVIEW_SUFFIX) ? phase.slice(0, -REVIEW_SUFFIX.length) : phase
 
 const deepFreeze = (value) => {
   if (value && typeof value === 'object') {

@@ -70,15 +70,15 @@ test('each phase pairs its specialist with its reviewer', () => {
 
 test('a reviewer that declares a "-REVIEW" phase is paired under its base phase', () => {
   const descriptors = [
-    orchestrator(['DELIVER']),
+    orchestrator(['DESIGN', 'DELIVER']),
+    agent({ name: 'solution-architect', phase: 'DESIGN' }),
+    agent({ name: 'solution-architect-reviewer', phase: 'DESIGN-REVIEW' }),
     agent({ name: 'software-engineer', phase: 'DELIVER' }),
     agent({ name: 'software-engineer-reviewer', phase: 'DELIVER-REVIEW' }),
   ]
   const config = buildFrameworkConfig(descriptors)
-  assert.deepEqual(config.phaseAgents.DELIVER, {
-    specialist: 'software-engineer',
-    reviewer: 'software-engineer-reviewer',
-  })
+  assert.equal(config.phaseAgents.DESIGN.reviewer, 'solution-architect-reviewer')
+  assert.equal(config.phaseAgents.DELIVER.reviewer, 'software-engineer-reviewer')
 })
 
 test('an agent that is not dispatched by the orchestrator is excluded from phase agents', () => {
