@@ -22,7 +22,7 @@ Fallback si `CLAUDE_PLUGIN_ROOT` absent : glob `~/.claude/plugins/cache/*/skraft
 | # | US | Statut | Modules livrés |
 |---|---|---|---|
 | 1 | Fondation Clean Architecture | ✅ Livré | `domain/` (result, value-objects, error-codes, specifications), `ports/api` + `ports/infrastructure`, `adapters/api/hooks` (hook-entry, hook-router, payload, decision, service-factory), `adapters/infrastructure` (jsonl-audit-writer +null, json-state-reader, system-time +fixed, real-filesystem +in-memory), `application/config-loader`, `cli/hook.mjs` — `node --test` 100 % + mutation Stryker |
-| 2 | Générateur de config data-driven | ✅ Livré | `domain/framework-config-policy.mjs` (pur), `cli/build-config.mjs` (+bin), `skraft-framework.config.json` généré, scripts npm `config:build`/`config:check` — `node --test` + mutation 98.55 % |
+| 2 | Générateur de config data-driven | ✅ Livré | `domain/framework-config-policy.mjs` (pur), `cli/build-config.mjs` (+bin), `skraft-framework.config.json` généré, scripts npm `config:build`/`config:check` — `node --test` 100 % + mutation Stryker 100 % |
 | 3 | G1 garde d'ordre de dispatch | 🔲 À faire | — |
 | 4 | G2/G3 forçage skills + audit | 🔲 À faire | — |
 | 5 | Manifests hooks Copilot + Claude | ✅ Scaffold | `hooks/hooks.json`, `.github/hooks/skraft.json`, `src/cli/hook.mjs` (stub) |
