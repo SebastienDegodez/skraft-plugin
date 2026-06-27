@@ -5,6 +5,7 @@ model: claude-haiku-4.5
 tools: read/readFile, search/codebase
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
+  dispatched_by: software-engineer-reviewer
 ---
 
 # Contract Fidelity Lens
