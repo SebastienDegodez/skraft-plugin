@@ -1,0 +1,45 @@
+{
+  "projectSlug": "us3-g1-dispatch-order-guard",
+  "skraftPlanFile": ".copilot-tracking/skraft-plans/us3-g1-dispatch-order-guard/state.json",
+  "currentPhase": "DISTILL",
+  "entryMode": "from-issue",
+  "entryPoint": { "skipPhases": [], "handoffSource": null, "handoffArtifacts": [] },
+  "issueNumber": 49,
+  "difficulty": "medium",
+  "phasesCompleted": ["DISCOVER", "DISCUSS", "DESIGN"],
+  "phaseArtifacts": {
+    "DISCOVER": ["research/2026-06-28/triage-2026-06-28.md", "research/2026-06-28/sprint-proposal.md"],
+    "DISCUSS": ["plans/2026-06-28/stories-us3-g1-dispatch-order-guard.md", "plans/2026-06-28/ac-draft-us3.md"],
+    "DESIGN": ["details/2026-06-28/event-model-us3.md", "details/2026-06-28/contracts-us3.md", "details/2026-06-28/consistency-matrix-us3.md", "docs/adr/adr-004-deny-by-default-dispatch-gate.md", "docs/adr/adr-005-config-published-language.md"],
+    "DISTILL": [],
+    "DELIVER": []
+  },
+  "reviewerVerdicts": {
+    "DISCOVER": "APPROVED",
+    "DISCUSS": "APPROVED",
+    "DESIGN": "APPROVED",
+    "DISTILL": null,
+    "DELIVER": null
+  },
+  "reviewArtifacts": ["reviews/2026-06-28/discover-us3-g1-dispatch-order-guard-review.md", "reviews/2026-06-28/discuss-us3-g1-dispatch-order-guard-review.md", "reviews/2026-06-28/design-us3-g1-dispatch-order-guard-review.md"],
+  "retryCount": { "DISCOVER": 0, "DISCUSS": 0, "DESIGN": 1, "DISTILL": 0, "DELIVER": 0 },
+  "referencesProcessed": [],
+  "phaseHistory": {
+    "DISCOVER": { "status": "done", "startedAt": "2026-06-28T00:00:00.000+02:00", "completedAt": "2026-06-28T00:05:00.000+02:00" },
+    "DISCUSS": { "status": "done", "startedAt": "2026-06-28T00:05:00.000+02:00", "completedAt": "2026-06-28T00:10:00.000+02:00" },
+    "DESIGN": { "status": "done", "startedAt": "2026-06-28T00:10:00.000+02:00", "completedAt": "2026-06-28T00:20:00.000+02:00" },
+    "DISTILL": { "status": "inProgress", "startedAt": "2026-06-28T00:20:00.000+02:00", "completedAt": null }
+  },
+  "nextActions": ["DISTILL: dispatch acceptance-designer to produce Gherkin features, impl-plan, and RED acceptance tests from ADR-004/005 + contracts."],
+  "userPreferences": { "autonomyTier": "full", "depthTier": "comprehensive", "maxRetriesPerPhase": 2 },
+  "depthTierOverrides": [],
+  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null, "ssscPlanFile": null },
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": [
+      { "adr": "ADR-004", "title": "Deny-by-default (fail-closed) posture for the dispatch gate", "file": "docs/adr/adr-004-deny-by-default-dispatch-gate.md", "verdict": "accept", "ratifiedBy": "sebastiendegodez", "ratifiedAt": "2026-06-28" },
+      { "adr": "ADR-005", "title": "Config as Published Language; dispatch guard as Conformist consumer", "file": "docs/adr/adr-005-config-published-language.md", "verdict": "accept", "ratifiedBy": "sebastiendegodez", "ratifiedAt": "2026-06-28" }
+    ]
+  }
+}
