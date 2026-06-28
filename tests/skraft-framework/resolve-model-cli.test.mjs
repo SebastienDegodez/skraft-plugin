@@ -73,7 +73,7 @@ test('planAgent applies the Sonnet floor override for a reviewer with a requirem
     agent({ name: 'se-rev', cls: 'reviewer', requirement: 'Sonnet-class or above.' }),
     { allowList: new Set() },
   )
-  assert.equal(plan.resolvedModel, 'claude-sonnet-4.5')
+  assert.equal(plan.resolvedModel, 'claude-sonnet-4.6')
 })
 
 test('planAgent skips an allow-listed agent', () => {
@@ -148,7 +148,7 @@ test('main --apply pins models, leaves the orchestrator on inherit, then --check
   assert.equal(main(['--apply', '--dir', agents], capture().io), 0)
 
   assert.match(await readFile(join(agents, 'rev.agent.md'), 'utf8'), /^model: claude-haiku-4\.5$/m)
-  assert.match(await readFile(join(agents, 'impl.agent.md'), 'utf8'), /^model: claude-sonnet-4\.5$/m)
+  assert.match(await readFile(join(agents, 'impl.agent.md'), 'utf8'), /^model: claude-sonnet-4\.6$/m)
   assert.match(await readFile(join(agents, 'nested', 'lens.agent.md'), 'utf8'), /^model: claude-haiku-4\.5$/m)
   assert.match(await readFile(join(agents, 'orch.agent.md'), 'utf8'), /^model: inherit$/m)
 
@@ -176,7 +176,7 @@ test('main --emit --json lists resolved models and omits allow-listed agents', a
   const rows = JSON.parse(out.join('\n'))
   const byName = Object.fromEntries(rows.map((r) => [r.name, r.resolvedModel]))
   assert.equal(byName.rev, 'claude-haiku-4.5')
-  assert.equal(byName.impl, 'claude-sonnet-4.5')
+  assert.equal(byName.impl, 'claude-sonnet-4.6')
   assert.equal(byName.lens, 'claude-haiku-4.5')
   assert.ok(!('skraft-orchestrator' in byName))
   await rm(dir, { recursive: true, force: true })
@@ -188,7 +188,7 @@ test('main --emit without --json prints a tab-separated table', async () => {
   main(['--emit', '--dir', agents], io)
   const text = out.join('\n')
   assert.match(text, /^rev\tclaude-haiku-4\.5$/m)
-  assert.match(text, /^impl\tclaude-sonnet-4\.5$/m)
+  assert.match(text, /^impl\tclaude-sonnet-4\.6$/m)
   assert.doesNotMatch(text, /skraft-orchestrator/)
   await rm(dir, { recursive: true, force: true })
 })

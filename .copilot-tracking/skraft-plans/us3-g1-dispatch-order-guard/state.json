@@ -6,7 +6,7 @@
   "entryPoint": { "skipPhases": [], "handoffSource": null, "handoffArtifacts": [] },
   "issueNumber": 49,
   "difficulty": "medium",
-  "phasesCompleted": ["DISCOVER", "DISCUSS", "DESIGN", "DISTILL"],
+  "phasesCompleted": ["DISCOVER", "DISCUSS", "DESIGN", "DISTILL", "DELIVER"],
   "phaseArtifacts": {
     "DISCOVER": ["research/2026-06-28/triage-2026-06-28.md", "research/2026-06-28/sprint-proposal.md"],
     "DISCUSS": ["plans/2026-06-28/stories-us3-g1-dispatch-order-guard.md", "plans/2026-06-28/ac-draft-us3.md"],
@@ -19,19 +19,19 @@
     "DISCUSS": "APPROVED",
     "DESIGN": "APPROVED",
     "DISTILL": "APPROVED",
-    "DELIVER": null
+    "DELIVER": "APPROVED"
   },
   "reviewArtifacts": ["reviews/2026-06-28/discover-us3-g1-dispatch-order-guard-review.md", "reviews/2026-06-28/discuss-us3-g1-dispatch-order-guard-review.md", "reviews/2026-06-28/design-us3-g1-dispatch-order-guard-review.md", "reviews/2026-06-28/distill-us3-g1-dispatch-order-guard-review.md"],
-  "retryCount": { "DISCOVER": 0, "DISCUSS": 0, "DESIGN": 1, "DISTILL": 0, "DELIVER": 0 },
+  "retryCount": { "DISCOVER": 0, "DISCUSS": 0, "DESIGN": 1, "DISTILL": 0, "DELIVER": 1 },
   "referencesProcessed": [],
   "phaseHistory": {
     "DISCOVER": { "status": "done", "startedAt": "2026-06-28T00:00:00.000+02:00", "completedAt": "2026-06-28T00:05:00.000+02:00" },
     "DISCUSS": { "status": "done", "startedAt": "2026-06-28T00:05:00.000+02:00", "completedAt": "2026-06-28T00:10:00.000+02:00" },
     "DESIGN": { "status": "done", "startedAt": "2026-06-28T00:10:00.000+02:00", "completedAt": "2026-06-28T00:20:00.000+02:00" },
     "DISTILL": { "status": "done", "startedAt": "2026-06-28T00:20:00.000+02:00", "completedAt": "2026-06-28T00:30:00.000+02:00" },
-    "DELIVER": { "status": "inProgress", "startedAt": "2026-06-28T00:30:00.000+02:00", "completedAt": null }
+    "DELIVER": { "status": "done", "startedAt": "2026-06-28T00:30:00.000+02:00", "completedAt": "2026-06-28T00:45:00.000+02:00" }
   },
-  "nextActions": ["DELIVER: software-engineer drives the RED acceptance suite GREEN via inline Outside-In TDD (walking skeleton first), creates state-schema.mjs + pipeline-policy.mjs + pre-tool-use-service.mjs + D1/D2/D3 domain tests, then mutation gate."],
+  "nextActions": ["Pipeline complete. US3-G1 dispatch-order guard delivered (4 commits, 31/31 green, mutation scope set). Optional: run mutation gate (node scripts/local-ci.mjs --mutation) and push feat/us3."],
   "userPreferences": { "autonomyTier": "full", "depthTier": "comprehensive", "maxRetriesPerPhase": 2 },
   "depthTierOverrides": [],
   "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null, "ssscPlanFile": null },
