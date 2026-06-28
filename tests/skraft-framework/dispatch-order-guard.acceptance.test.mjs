@@ -1,9 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-// Outer-loop boundary (Contract 3). Does NOT exist yet → suite is RED on a missing module.
-// The software-engineer creates this module (and the domain/pipeline-policy.mjs +
-// domain/state-schema.mjs it composes) to drive the suite GREEN. Acceptance values are immutable.
+// Outer-loop boundary (Contract 3). Exercises pre-tool-use dispatch gate end-to-end.
+// Acceptance values are immutable.
 import { createPreToolUseService } from '../../plugins/src/application/pre-tool-use-service.mjs'
 
 // ── Published Language (config) — copied verbatim from plugins/skraft-framework.config.json (#48).
