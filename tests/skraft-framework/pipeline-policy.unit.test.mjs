@@ -17,6 +17,35 @@ const CONFIG = {
   }
 }
 
+// D4 — SPECIALIST stage: specialist has not run yet (pins stage name + agent).
+test('D4: specialistDone false returns stage SPECIALIST with the phase specialist', () => {
+  const state = { currentPhase: 'DISCOVER', specialistDone: false, reviewerVerdict: null, retries: 0, skipPhases: [] }
+  const result = expectedNextAgent(state, CONFIG)
+  assert.ok(isOk(result))
+  assert.equal(result.value.stage, 'SPECIALIST')
+  assert.equal(result.value.agent, 'backlog-discoverer')
+  assert.ok(result.value.reason.includes('specialist must run'))
+})
+
+// D5 — ADVANCE stage: approved on non-final phase advances to next specialist.
+test('D5: APPROVED on non-final phase returns stage ADVANCE with next phase specialist', () => {
+  const state = { currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] }
+  const result = expectedNextAgent(state, CONFIG)
+  assert.ok(isOk(result))
+  assert.equal(result.value.stage, 'ADVANCE')
+  assert.equal(result.value.agent, 'backlog-planner')
+  assert.ok(result.value.reason.includes('advance to'))
+})
+
+// D6 — skipPhases: a phase in skipPhases is skipped when advancing.
+test('D6: skipPhases skips the specified phase and advances to the next eligible specialist', () => {
+  const state = { currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: ['DISCUSS'] }
+  const result = expectedNextAgent(state, CONFIG)
+  assert.ok(isOk(result))
+  assert.equal(result.value.stage, 'ADVANCE')
+  assert.equal(result.value.agent, 'solution-architect')
+})
+
 // D1 — REVIEWER stage: specialist done, no verdict yet → the phase reviewer runs next.
 test('D1: specialist done and no verdict yet expects the phase reviewer', () => {
   const state = { currentPhase: 'DESIGN', specialistDone: true, reviewerVerdict: null, retries: 0, skipPhases: [] }
