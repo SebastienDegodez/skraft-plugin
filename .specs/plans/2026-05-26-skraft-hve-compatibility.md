@@ -314,7 +314,7 @@ Mise à jour des 5 phase agents pour écrire dans les nouveaux chemins HVE.
 Remplacements (en respectant le mapping de la spec) :
 - `.skraft/sdlc/discover/` → `.copilot-tracking/skraft-plans/{slug}/research/{date}/`
 - `.skraft/sdlc/discuss/` → `.copilot-tracking/skraft-plans/{slug}/plans/{date}/`
-- `.skraft/sdlc/design/` → `.copilot-tracking/skraft-plans/{slug}/adrs/` (ADR) + `details/{date}/` (contracts)
+- `.skraft/sdlc/design/` → `docs/adr/` (ADR) + `details/{date}/` (contracts)
 - `.skraft/sdlc/distill/` → `.copilot-tracking/skraft-plans/{slug}/details/{date}/` + `features/` (Gherkin)
 - `.skraft/sdlc/deliver/` → `.copilot-tracking/skraft-plans/{slug}/changes/{date}/`
 

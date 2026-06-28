@@ -10,4 +10,67 @@ dependencies:
   package_type: claude_skill
   deployed_files:
   - .agents/skills/genesis
+  - .agents/skills/genesis/SKILL.md
+  - .agents/skills/genesis/agents/genesis-architect.agent.md
+  - .agents/skills/genesis/assets/architectural-patterns.md
+  - .agents/skills/genesis/assets/caveman-templates.md
+  - .agents/skills/genesis/assets/composition-substrate.md
+  - .agents/skills/genesis/assets/design-patterns.md
+  - .agents/skills/genesis/assets/mermaid-conventions.md
+  - .agents/skills/genesis/assets/module-system-adapters/apm.md
+  - .agents/skills/genesis/assets/pattern-tradeoffs.md
+  - .agents/skills/genesis/assets/primitives.md
+  - .agents/skills/genesis/assets/refactor-patterns.md
+  - .agents/skills/genesis/assets/runtime-affordances/common.md
+  - .agents/skills/genesis/assets/runtime-affordances/model-catalog.md
+  - .agents/skills/genesis/assets/runtime-affordances/per-harness/claude-code.md
+  - .agents/skills/genesis/assets/runtime-affordances/per-harness/codex.md
+  - .agents/skills/genesis/assets/runtime-affordances/per-harness/copilot.md
+  - .agents/skills/genesis/assets/runtime-affordances/per-harness/cursor.md
+  - .agents/skills/genesis/assets/runtime-affordances/per-harness/opencode.md
+  - .agents/skills/genesis/assets/runtime-affordances/per-trigger-surface/gh-aw.md
+  - .agents/skills/genesis/assets/runtime-affordances/portability-rules.md
+  - .agents/skills/genesis/assets/runtime-affordances/references/benchmark-grounding.md
+  - .agents/skills/genesis/assets/token-economics.md
+  - .agents/skills/genesis/examples/01-readme-iteration.md
+  - .agents/skills/genesis/examples/02-review-panel-architecture.md
+  - .agents/skills/genesis/examples/03-release-notes-single-skill.md
+  - .agents/skills/genesis/examples/04-pr-review-advisory.md
+  - .agents/skills/genesis/examples/05-pr-review-verdict.md
+  - .agents/skills/genesis/examples/06-cost-aware-panel.md
+  - .agents/skills/genesis/examples/README.md
+  - .agents/skills/genesis/references/audience-boundary.md
+  - .agents/skills/genesis/references/cost-economics-process.md
+  deployed_file_hashes:
+    .agents/skills/genesis/SKILL.md: sha256:aac6c9da9ec96b0bb5c1c76da30041fc6a1e8d9449299b8b57d6e495fa8d06d9
+    .agents/skills/genesis/agents/genesis-architect.agent.md: sha256:8aef1ec944011982ca863052263bf1fa6d8e798d13d657387b5bd5b1d2f38c43
+    .agents/skills/genesis/assets/architectural-patterns.md: sha256:36e01da56846c14fd53cda1a0f57b54cef707bdc48d346fbee7f0589c3c20fc7
+    .agents/skills/genesis/assets/caveman-templates.md: sha256:6386595d52c2c92a0670c98528a1c4b68f420b67310c01afc543248dc46903b1
+    .agents/skills/genesis/assets/composition-substrate.md: sha256:bf25156120f6a722a84c631df5403183d859378dfafeb23c52afbe28be755625
+    .agents/skills/genesis/assets/design-patterns.md: sha256:b74607df38466dc54dd58235486b8cc0846ec9be4658cb5a32d56ac431a746e7
+    .agents/skills/genesis/assets/mermaid-conventions.md: sha256:e87d19f79eb696213dce08c92a60da5c552bf0ebe6485c306d7352acce474523
+    .agents/skills/genesis/assets/module-system-adapters/apm.md: sha256:da5557656ab329845d12604eac333c885a36661f0c12c7d94542b33c8f373999
+    .agents/skills/genesis/assets/pattern-tradeoffs.md: sha256:74276224b4b01f1f4d44fca97fc60898f96d17ba4b9ed80a41ef11cc2009eefa
+    .agents/skills/genesis/assets/primitives.md: sha256:2b1e41147f465b28a16b1cff32f0abf464402db035c2d581e65ebc1ab705ba87
+    .agents/skills/genesis/assets/refactor-patterns.md: sha256:876038934797d8330f9524d54a637459249f7669d215326d6ca35dca0431eeeb
+    .agents/skills/genesis/assets/runtime-affordances/common.md: sha256:e7108e692e3f356a5423f564a5e509ebc6f8a08d569a6c44bf8e5746965ef1a1
+    .agents/skills/genesis/assets/runtime-affordances/model-catalog.md: sha256:c88ceb8394dedb609bddf23a04b72fde9c33714dfa124ea4f00b7552b3ce34a5
+    .agents/skills/genesis/assets/runtime-affordances/per-harness/claude-code.md: sha256:8a016663e696c229ea29135e37b81f9f7f9c2ba9f493cc1cc54a79bac0582978
+    .agents/skills/genesis/assets/runtime-affordances/per-harness/codex.md: sha256:92bf82715e63b2b69e9bc16a42c5e896ce70203a8a83d9fc1969ec3c72d235d9
+    .agents/skills/genesis/assets/runtime-affordances/per-harness/copilot.md: sha256:9d264b0bc3dfbb5f73668ac504c354dc5db4a1aedde3f23b302485c0f2a060af
+    .agents/skills/genesis/assets/runtime-affordances/per-harness/cursor.md: sha256:ebeebfc846b642cc58eecce3a5e2dfa8c5de4f2509de5acc4e7d08740c329b7e
+    .agents/skills/genesis/assets/runtime-affordances/per-harness/opencode.md: sha256:1b920f1a21ed5e0e94eedc354471180e99a17cf5d56df97bebfc1387f2a29315
+    .agents/skills/genesis/assets/runtime-affordances/per-trigger-surface/gh-aw.md: sha256:774132a577567ab35b0bd951af8d6ebebbb471fbbc4b2330f09a3db6102909af
+    .agents/skills/genesis/assets/runtime-affordances/portability-rules.md: sha256:49b787e57a987ff3b11dacb2d7d5803deb5296f67e78d69f1c980270f8e6d96f
+    .agents/skills/genesis/assets/runtime-affordances/references/benchmark-grounding.md: sha256:86484eb8839f1d3e62f50969ee6e6282a3f477dc2c9b3c3a7ad1637809dba393
+    .agents/skills/genesis/assets/token-economics.md: sha256:675d0d629e2a3c23da0f8981eb92a0d0fdfeee541e8200c88039790e2d75b04e
+    .agents/skills/genesis/examples/01-readme-iteration.md: sha256:faf4c3905829f91ca9c7331636672c86c1dea5f89e6462546f39963f0146a14b
+    .agents/skills/genesis/examples/02-review-panel-architecture.md: sha256:2de53dbc41ad6fe1d75dd6b5cdef8a712b3db5c20c19de2e9de37c1bd8ce8372
+    .agents/skills/genesis/examples/03-release-notes-single-skill.md: sha256:0c3cd11853c001698127c0ec459ab160ccbbd92693b4af3ba00f38dc66c14dd7
+    .agents/skills/genesis/examples/04-pr-review-advisory.md: sha256:95357a340e935eb8b0d6371f1f4b387222e102013c6da1896009b2c65cbaf155
+    .agents/skills/genesis/examples/05-pr-review-verdict.md: sha256:0f9c455e60ef7a2b05b82b58f65a22349aa858b2cb68fe381b3e59f157f031ec
+    .agents/skills/genesis/examples/06-cost-aware-panel.md: sha256:4b7f3e5a1b406a493ec54ce8dba6f26539b917acc151e7538f6dfc6ffc57f701
+    .agents/skills/genesis/examples/README.md: sha256:b2acc15f7533aa601dc832662df98710162149a63e2210f7da9d148f4a386b91
+    .agents/skills/genesis/references/audience-boundary.md: sha256:85b1dbc98a0fc3115c6c6a92046a290167e1fcd90fe0ae035ec21026e2ec9387
+    .agents/skills/genesis/references/cost-economics-process.md: sha256:e14f743132897132119b0711b252733e4804d55942fca97a2d12d1fc744285f5
   content_hash: sha256:56d0bc50fc92bca28618f717dfc8b5b8467d69967f7d2eab2c08f414f142feb3

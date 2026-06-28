@@ -1,0 +1,8 @@
+<!-- markdownlint-disable-file -->
+# Architecture Decision Index
+
+| ADR | Title | Status | Ratified by | Date | Story |
+|---|---|---|---|---|---|
+| ADR-001 | Result Type Pattern | Accepted | Solution Architect (US1) | 2026-06-20 | #47 |
+| ADR-002 | Hexagonal Architecture (Ports & Adapters) | Accepted | Solution Architect (US1) | 2026-06-20 | #47 |
+| ADR-003 | Config Loader Cascade | Accepted | Solution Architect (US1) | 2026-06-20 | #47 |

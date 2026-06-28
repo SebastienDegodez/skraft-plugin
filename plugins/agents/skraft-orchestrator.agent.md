@@ -100,9 +100,37 @@ Pass the produced artefact paths to the reviewer agent. Do NOT summarize or inte
 
 | Verdict | Action |
 |---|---|
-| `APPROVED` | Update `state.json::reviewerVerdicts[phase]`, post GitHub comment, advance to next phase |
+| `APPROVED` | Update `state.json::reviewerVerdicts[phase]`, post GitHub comment, advance to next phase. **DESIGN only:** before advancing, run the ADR ratification checkpoint below — DESIGN does not advance to DISTILL on `APPROVED` alone. |
 | `NEEDS_REWORK` | If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch agent with reviewer findings attached. Else: stop, surface to user. |
 | `REJECTED` | Stop pipeline immediately. Post GitHub comment explaining blockage. Surface to user. |
+
+### DESIGN-only: ADR ratification checkpoint (B10 HUMAN CHECKPOINT)
+
+ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in `#file:plugins/skills/architecture-decisions/SKILL.md` (Ratification Contract); this is its wiring.
+
+1. **Read the digest, not the bodies.** Read `docs/adr/decisions-index.md` (the cheap verdict surface) — `cat docs/adr/decisions-index.md`. Do NOT load full ADR bodies. To inspect one ADR's header without its body, use the S7 extraction command in `architecture-decisions` ("Reading the digest cheaply"); fall back to `read_file` on the first ~12 lines only if the command is unavailable. Collect every row whose `Status == Proposed`.
+2. **No Proposed rows →** ratification is a no-op; set `adrRatification.checkpointStatus = "resolved"`, write state, advance to DISTILL.
+3. **One or more Proposed rows → HALT.** Keep `currentPhase == "DESIGN"`. Copy those rows into `adrRatification.pending`, set `adrRatification.checkpointStatus = "awaiting_human"`, write state, then emit the checkpoint prompt (template below) and STOP. Nothing advances until the human responds.
+4. **On the human verdict (next turn)** — re-dispatch `solution-architect` in **ratify-mode** with the per-ADR verdicts (`accept` | `reject` | `amend "<note>"`). The architect flips each `Status`, sets `ratified_by`, updates the index rows, and commits the `Proposed` and final revisions. An `amend` verdict is treated as `NEEDS_REWORK` for that ADR (re-draft, re-review, re-gate).
+5. **Move `pending → ratified`.** Only when zero `Proposed` rows remain, set `adrRatification.checkpointStatus = "resolved"`, write state, and advance DESIGN → DISTILL.
+
+On session resume, `adrRatification.checkpointStatus == "awaiting_human"` means re-enter this checkpoint (re-emit the prompt) — never advance to DISTILL.
+
+**Checkpoint prompt template:**
+
+```markdown
+## DESIGN — ratification required ({N} ADR(s) await your decision)
+
+Reviewer verdict: APPROVED. The trajectory below is YOUR call — reply per ADR: `accept` | `reject` | `amend "<note>"`.
+
+1. ADR-{NNN} — {title}
+   - Decision: {one-line decision from the index}
+   - Recommended: {accept | reject}  ({why — e.g. reviewer found no blocker})
+   - Rationale (read only if needed): docs/adr/adr-{NNN}-{slug}.md
+
+Escape hatches: "accept all" · "reject all" · "pause — I'll read the bodies first".
+Nothing advances to DISTILL until every ADR is Accepted or Rejected.
+```
 
 ## Difficulty + depth-tier routing
 

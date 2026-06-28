@@ -43,9 +43,9 @@ scenarios:
       checkpoint: order-checkout/after-design
     prompt: "Model the checkout and record the decision."
     assertions:
-      - file_matches_glob: ".copilot-tracking/skraft-plans/order-checkout/adrs/ADR-*-order-checkout.md"
+      - file_matches_glob: "docs/adr/adr-*-order-checkout.md"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/order-checkout/adrs/ADR-*-order-checkout.md"
+          glob: "docs/adr/adr-*-order-checkout.md"
           text: "**Status:** Accepted"
       - file_matches_glob: ".copilot-tracking/skraft-plans/order-checkout/details/**/order-checkout-contracts.md"
       - file_contains:

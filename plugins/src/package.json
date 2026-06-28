@@ -6,7 +6,9 @@
     "test": "node --test ../../tests/skraft-framework/*.test.mjs",
     "test:mutation": "node plugins/src/node_modules/.bin/stryker run plugins/src/stryker.config.mjs",
     "models:check": "node plugins/src/cli/resolve-model-bin.mjs --check",
-    "models:apply": "node plugins/src/cli/resolve-model-bin.mjs --apply"
+    "models:apply": "node plugins/src/cli/resolve-model-bin.mjs --apply",
+    "config:build": "node plugins/src/cli/build-config-bin.mjs --apply",
+    "config:check": "node plugins/src/cli/build-config-bin.mjs --check"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.6.1",

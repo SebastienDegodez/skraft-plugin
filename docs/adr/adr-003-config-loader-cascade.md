@@ -1,4 +1,18 @@
 <!-- markdownlint-disable-file -->
+---
+adr: 3
+title: Config Loader Cascade (project > global > env)
+status: Accepted
+chosen: three-level cascade, built-in modules only
+decision: >
+  We will load configuration through a three-level cascade — project-local,
+  user-global, then environment variables — using only Node.js built-in modules,
+  with later levels filling keys not set by earlier ones.
+supersedes: null
+date: 2026-06-20
+ratified_by: Solution Architect (US1) 2026-06-20
+---
+
 # ADR-003 — Config Loader Cascade (project > global > env)
 
 **Date:** 2026-06-20
