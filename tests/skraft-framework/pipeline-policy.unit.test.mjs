@@ -34,6 +34,31 @@ test('D2: approved on the final phase leaves no next agent', () => {
   assert.equal(result.error.code, 'PIPELINE_COMPLETE')
 })
 
+// D3 — missing/malformed phaseAgents guards (fail-closed contract, ADR-004).
+test('D3: currentPhase present in phaseOrder but absent from phaseAgents returns INVALID_STATE', () => {
+  const badConfig = { ...CONFIG, phaseAgents: {} }
+  const state = { currentPhase: 'DISCOVER', specialistDone: false, reviewerVerdict: null, retries: 0, skipPhases: [] }
+  const result = expectedNextAgent(state, badConfig)
+  assert.ok(isErr(result))
+  assert.equal(result.error.code, 'INVALID_STATE')
+})
+
+test('D3: phaseAgents entry with non-string specialist returns INVALID_STATE', () => {
+  const badConfig = { ...CONFIG, phaseAgents: { ...CONFIG.phaseAgents, DISCOVER: { specialist: 42, reviewer: 'backlog-discoverer-reviewer' } } }
+  const state = { currentPhase: 'DISCOVER', specialistDone: false, reviewerVerdict: null, retries: 0, skipPhases: [] }
+  const result = expectedNextAgent(state, badConfig)
+  assert.ok(isErr(result))
+  assert.equal(result.error.code, 'INVALID_STATE')
+})
+
+test('D3: nextPhase absent from phaseAgents in ADVANCE branch returns INVALID_STATE', () => {
+  const badConfig = { ...CONFIG, phaseAgents: { DISCOVER: { specialist: 'backlog-discoverer', reviewer: 'backlog-discoverer-reviewer' } } }
+  const state = { currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] }
+  const result = expectedNextAgent(state, badConfig)
+  assert.ok(isErr(result))
+  assert.equal(result.error.code, 'INVALID_STATE')
+})
+
 // Retry budget boundary (pins the default of 3 — kills off-by-one budget mutants).
 const RETRY_ROWS = [
   { retries: 2, stage: 'RETRY', agent: 'acceptance-designer' },
