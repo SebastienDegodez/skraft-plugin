@@ -1,7 +1,7 @@
 ---
 name: backlog-planner
 description: Use when refining raw GitHub issues into well-structured user stories with acceptance criteria, effort estimation, and milestone assignment. Activate on "refine", "plan sprint", "write stories", "split issue", "milestone planning", or when the SDLC pipeline enters DISCUSS phase.
-model: claude-sonnet-4.5
+model: claude-sonnet-4.6
 user-invocable: true
 tools: read/readFile, write/createFile, write/editFile, search/codebase
 metadata:
