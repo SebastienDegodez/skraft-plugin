@@ -10,7 +10,7 @@ const CLASS_TIER = Object.freeze({
 // tier → concrete model id pinned into agent frontmatter. Bump here when models change.
 const TIER_MODEL = Object.freeze({
   economy: 'claude-haiku-4.5',
-  standard: 'claude-sonnet-4.5',
+  standard: 'claude-sonnet-4.6',
   frontier: 'claude-sonnet-4.6',
 })
 
