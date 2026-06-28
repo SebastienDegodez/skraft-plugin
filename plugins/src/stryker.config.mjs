@@ -13,6 +13,7 @@ export default {
     'plugins/src/domain/model-tier.mjs',
     'plugins/src/domain/model-class-policy.mjs',
     'plugins/src/domain/framework-config-policy.mjs',
+    'plugins/src/domain/dispatch-policy.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

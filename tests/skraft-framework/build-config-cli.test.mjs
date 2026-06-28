@@ -138,6 +138,19 @@ test('main --check returns 1 when no committed config exists yet', async () => {
   await rm(dir, { recursive: true, force: true })
 })
 
+test('main fails (exit 1) and names the orphan when an agent declares no parent', async () => {
+  const { dir, agents, out } = await fixtureDir()
+  await writeFile(
+    join(agents, 'orphan.agent.md'),
+    ['---', 'name: orphan-agent', 'description: "x"', 'metadata:', '  phase: DESIGN', '---', '', '# body'].join('\n'),
+  )
+  const { io, errs } = capture()
+  const code = main(['--check', '--dir', agents, '--out', out], io)
+  assert.equal(code, 1)
+  assert.ok(errs.some((l) => /orphan-agent/.test(l) && /ORPHAN_AGENT/.test(l)))
+  await rm(dir, { recursive: true, force: true })
+})
+
 test('main --emit --json prints the config without writing a file', async () => {
   const { dir, agents } = await fixtureDir()
   const { io, out: logs } = capture()

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { parseYaml } from '../../../scripts/lib/book.mjs'
 import { buildFrameworkConfig } from '../domain/framework-config-policy.mjs'
+import { validateDispatch } from '../domain/dispatch-policy.mjs'
 
 // Pull the frontmatter block (between the first two `---` fences).
 const frontmatterOf = (content) => {
@@ -54,7 +55,16 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
     },
   })
 
-  const rendered = serialize(buildFrameworkConfig(descriptorsFrom(values.dir)))
+  const descriptors = descriptorsFrom(values.dir)
+
+  // Presence invariant guard: bad agent data must never produce a config.
+  const violations = validateDispatch(descriptors)
+  if (violations.length > 0) {
+    for (const v of violations) error(`dispatch: ${v.agent} — ${v.message} (${v.code})`)
+    return 1
+  }
+
+  const rendered = serialize(buildFrameworkConfig(descriptors))
 
   if (values.emit) {
     log(rendered.trimEnd())
