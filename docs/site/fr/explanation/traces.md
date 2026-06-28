@@ -26,8 +26,8 @@ un sous-dossier dédié, horodaté au format `YYYY-MM-DD`.
 | --- | --- | --- |
 | DISCOVER | Notes de triage, proposition de sprint | `research/{date}/{slug}-research.md` |
 | DISCUSS | User stories, critères d'acceptation | `plans/{date}/{slug}-plan.instructions.md` |
-| DESIGN | Architecture Decision Records | `adrs/ADR-{NNN}-{slug}.md` |
-| DESIGN | Registre de supersession (append-only) | `adrs/supersessions.md` |
+| DESIGN | Architecture Decision Records | `docs/adr/adr-{nnn}-{slug}.md` |
+| DESIGN | Registre de supersession (append-only) | `docs/adr/supersessions.md` |
 | DESIGN | Contrats de composants | `details/{date}/{slug}-contracts.md` |
 | DISTILL | Détails d'implémentation, plan de tests | `details/{date}/{slug}-details.md` |
 | DISTILL | Scénarios Gherkin exécutables | `features/{slug}.feature` |
@@ -45,7 +45,7 @@ fichier daté — jamais une modification du précédent. Deux conséquences :
 
 - **Supersession d'ADR** : l'ADR remplacé n'est pas édité ; le nouvel ADR porte une
   ligne `**Supersedes:** ADR-MMM` et une ligne est *ajoutée* au registre
-  `adrs/supersessions.md`.
+  `docs/adr/supersessions.md`.
 - **Résolution de blocker** : on n'inverse pas le frontmatter du blocker ; on dépose un
   fichier frère `…-resolution.md`. La présence du frère = résolu.
 

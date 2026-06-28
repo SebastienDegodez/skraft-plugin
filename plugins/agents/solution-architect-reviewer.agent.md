@@ -17,7 +17,8 @@ metadata:
     - adversarial-review-lenses
   inputs:
     required:
-      - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-*.md
+      - docs/adr/adr-*.md
+      - docs/adr/decisions-index.md
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-{story}.md
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/consistency-matrix-{story}.md
@@ -26,7 +27,7 @@ metadata:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md
-      - .copilot-tracking/skraft-plans/{projectSlug}/adrs/supersessions.md
+      - docs/adr/supersessions.md
       - .copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-*.md
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md
@@ -46,6 +47,8 @@ Subagent Mode: Skip pleasantries. Act autonomously. Report findings as structure
 Load before starting:
 - [architecture-review-criteria](../skills/architecture-review-criteria/SKILL.md)
 
+**Reading order:** consult `docs/adr/decisions-index.md` for each ADR's status, chosen option, and one-line decision; open a full `adr-*.md` body only when a finding needs the rationale. The index is the cheap verdict surface — do not re-read every body to learn what was decided. To pull one ADR's header without its body, use the S7 extraction command documented in `architecture-decisions` ("Reading the digest cheaply"), with `read_file` on the first ~12 lines as fallback.
+
 ## Boundaries (Non-Negotiable)
 
 1. **READ ONLY** — never write, create, or edit DESIGN artefacts.
@@ -59,8 +62,8 @@ Load before starting:
 ### Phase 1: RECEIVE
 
 Load all DESIGN artefacts (READ-ONLY — the reviewer never writes outside `reviews/{date}/`):
-1. Load all `adr-*.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/adrs/`
-2. Load `adrs/supersessions.md` if present (the append-only supersession registry)
+1. Load all `adr-*.md` files from `docs/adr/`
+2. Load `docs/adr/supersessions.md` if present (the append-only supersession registry)
 3. Load all `diagrams-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
 4. Load all `contracts-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
 5. Load all `consistency-matrix-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
@@ -100,18 +103,18 @@ Evaluate gates:
 | Gate | Definition | Severity |
 |---|---|---|
 | G1 | Every structural commitment — visible in a diagram **OR** detected in the existing codebase by Phase 7.0 grep signatures — has a traceable `Accepted` ADR justification. Back-fill ADRs are required when production code already carries a structural pattern not yet covered by any ADR. | **BLOCKER** |
-| G2 | No two ADRs contradict each other. If one supersedes another, the supersession is recorded in BOTH places: (a) the new ADR carries `**Supersedes:** ADR-{MMM}` in its body, AND (b) `adrs/supersessions.md` contains a matching row. The superseded ADR's body is NOT edited (append-only). | BLOCKER |
+| G2 | No two ADRs contradict each other. If one supersedes another, the supersession is recorded in BOTH places: (a) the new ADR carries `**Supersedes:** ADR-{MMM}` in its body, AND (b) `docs/adr/supersessions.md` contains a matching row. The superseded ADR's body is NOT edited (append-only). | BLOCKER |
 | G10 | A `consistency-matrix-{story}.md` exists for every story under design AND its `consistency-gate` line is `PASS`. The back-propagation journal explains every rewrite. | BLOCKER |
-| G12 | For every row in `supersession-plan-{story}.md`: (a) the new ADR exists with `**Supersedes:** ADR-{MMM}` in its body, (b) `adrs/supersessions.md` carries the matching registry row, (c) no descriptive artefact (event-model, diagrams, contracts) still cites the superseded ADR as its source of truth. | BLOCKER |
+| G12 | For every row in `supersession-plan-{story}.md`: (a) the new ADR exists with `**Supersedes:** ADR-{MMM}` in its body, (b) `docs/adr/supersessions.md` carries the matching registry row, (c) no descriptive artefact (event-model, diagrams, contracts) still cites the superseded ADR as its source of truth. | BLOCKER |
 | G14 | No `Accepted` ADR ratifies the **absence** or **rejection** of a pattern that was never adopted. Forbidden artefacts: filename matching `adr-NNN-{pattern}-rejected.md`; Decision section reading `We will not use {pattern}` / `We reject {pattern}` when the pattern is not present in the codebase. Rejected alternatives belong in an `Alternatives Rejected` table of an adoption ADR, not as standalone ADRs. | BLOCKER |
 
 **How to check G1:** Two passes. (a) For each aggregate, bounded context, pattern (CQRS+Bus, Event Sourcing, Saga, ACL) visible in diagrams — confirm an `Accepted` ADR exists that justifies its inclusion. (b) Re-run the Phase 7.0 grep signatures over the project source tree (`ICommandBus\|IQueryBus\|CommandBus\|QueryBus`, `IEventStore\|EventStream\|Apply\(.*Event`, `Saga\|ProcessManager\|ICorrelatedBy`). Every hit must trace to an `Accepted` ADR — either an ADR adopted in this DESIGN pass or a back-fill ADR. A grep hit with no matching ADR is a G1 BLOCKER (the persona missed Step 7.0).
 
-**How to check G2:** Cross-read all ADRs. Look for conflicting decisions on the same scope. For every `**Supersedes:**` body line in any ADR, confirm `adrs/supersessions.md` carries the matching row (and vice-versa). Either direction missing = G2 BLOCKER.
+**How to check G2:** Cross-read all ADRs. Look for conflicting decisions on the same scope. For every `**Supersedes:**` body line in any ADR, confirm `docs/adr/supersessions.md` carries the matching row (and vice-versa). Either direction missing = G2 BLOCKER.
 
 **How to check G10:** For each story present in `stories-{milestone}.md`, confirm `consistency-matrix-{story}.md` exists with `consistency-gate: PASS`. If absent, the persona skipped its Phase 9 — finding is BLOCKER.
 
-**How to check G12:** For each row in `supersession-plan-{story}.md`: open the new ADR and confirm the `**Supersedes:**` body line; open `adrs/supersessions.md` and confirm the registry row. Then `grep` the descriptive artefacts (event-model, diagrams, contracts) for citations of the superseded ADR — any remaining citation as source-of-truth is a BLOCKER. (Historical references in narrative prose are fine; what is forbidden is descriptive artefacts pointing at the superseded ADR for current ratification.)
+**How to check G12:** For each row in `supersession-plan-{story}.md`: open the new ADR and confirm the `**Supersedes:**` body line; open `docs/adr/supersessions.md` and confirm the registry row. Then `grep` the descriptive artefacts (event-model, diagrams, contracts) for citations of the superseded ADR — any remaining citation as source-of-truth is a BLOCKER. (Historical references in narrative prose are fine; what is forbidden is descriptive artefacts pointing at the superseded ADR for current ratification.)
 
 **How to check G14:** Two passes. (a) `ls adrs/*.md` — any filename matching `*-rejected.md` is an immediate G14 BLOCKER. (b) For each `Accepted` ADR, read its Decision section: if the sentence starts with `We will not`, `We reject`, `We avoid`, or otherwise ratifies the *non-adoption* of a pattern, AND the persona's Phase 7.0 grep returns no hit for that pattern in the codebase, the ADR is documenting a non-decision — G14 BLOCKER. Rejected alternatives must move into an `Alternatives Rejected` table of an adoption ADR.
 

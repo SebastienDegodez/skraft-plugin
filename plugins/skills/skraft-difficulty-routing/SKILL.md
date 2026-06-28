@@ -89,7 +89,7 @@ The following invariants cannot be downgraded by any depth tier choice:
 - **Clean Architecture layer boundaries** — Domain depends on neither Application nor Infrastructure.
 - **Test integrity** — no test may be deleted or disabled to pass GREEN.
 - **state.json schema compliance** — every turn writes a valid state document.
-- **HVE dated paths** — `research/{date}/`, `adrs/`, `details/{date}/`, `changes/{date}/`, `reviews/{date}/`.
+- **HVE dated paths** — `research/{date}/`, `details/{date}/`, `changes/{date}/`, `reviews/{date}/` (ADRs are project-global in `docs/adr/`, not a per-run dated path).
 - **Reviewers are read-only** — reviewers write exclusively to `reviews/{date}/`.
 - **No secrets or credentials committed**.
 

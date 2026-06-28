@@ -10,7 +10,7 @@
     "DISCOVER": ["research/2026-06-14/order-checkout-research.md"],
     "DISCUSS": ["plans/2026-06-14/order-checkout-plan.instructions.md"],
     "DESIGN": [
-      "adrs/ADR-001-order-checkout.md",
+      "docs/adr/adr-001-order-checkout.md",
       "details/2026-06-14/order-checkout-contracts.md"
     ],
     "DISTILL": [],

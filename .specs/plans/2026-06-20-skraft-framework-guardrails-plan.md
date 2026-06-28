@@ -112,10 +112,10 @@ tests/skraft-framework/
 
 ### Task 2 : #2 Générateur de config data-driven (`fw:config` `gain:anti-drift` `gain:dx` `clean-architecture`)
 
-- [ ] `scripts/build-skraft-framework-config.mjs` : parse `plugins/agents/**/*.agent.md` (metadata.phase, dispatched_by, skills, skillPolicy, inputs.required, outputs ; orchestrator metadata.phases).
-- [ ] Émet `skraft-framework.config.json` : `phaseOrder`, `phaseAgents{specialist,reviewer}`, `agentSkills[{name,policy}]`, `agentArtifacts`.
-- [ ] Réutiliser le parseur YAML maison `scripts/lib/`.
-- [ ] Scripts npm `guard:build` + `guard:check` (échoue si le JSON committé est désync). **Dépend de #1.**
+- [x] `plugins/src/cli/build-config.mjs` (+ `build-config-bin.mjs`) : parse `plugins/agents/**/*.agent.md` (metadata.phase, dispatched_by, skills, inputs.required, outputs ; orchestrator metadata.phases). _Implémenté dans la fondation `plugins/src/` (cf. `resolve-model`), pas dans `scripts/` ; `skillPolicy` non présent → défaut `verify`._
+- [x] Émet `plugins/skraft-framework.config.json` : `phaseOrder`, `phaseAgents{specialist,reviewer}` (reviewer en phase `X-REVIEW` rattaché à `X`), `agentSkills{[agent]:[{name,policy}]}`, `agentArtifacts{[agent]:{inputs,outputs}}`. Politique métier pure `domain/framework-config-policy.mjs`.
+- [x] Réutilise le parseur YAML maison `scripts/lib/book.mjs` (`parseYaml`).
+- [x] Scripts npm `config:build` + `config:check` (échoue si le JSON committé est désync). Domaine couvert par mutation 98.55 % (1 survivant Regex équivalent documenté). **Dépend de #1.**
 
 ### Task 3 : #3 G1 garde d'ordre de dispatch (`fw:guardrail` `gain:anti-drift` `gain:eco-tokens` `gain:reliability`)
 

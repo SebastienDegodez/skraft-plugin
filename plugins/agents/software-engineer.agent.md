@@ -23,7 +23,7 @@ metadata:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
-      - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-{n}-{slug}.md
+        - docs/adr/adr-{NNN}-{slug}.md
       - .copilot-tracking/skraft-plans/{projectSlug}/state.json (depthTier + difficulty)
   outputs:
     - Source code commits (conventional commits)

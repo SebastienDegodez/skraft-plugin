@@ -18,7 +18,7 @@ persona: tech-lead
 
 ## Entry contract
 
-- ADRs (`adr-{NNN}-{slug}.md`), supersession registry (`adrs/supersessions.md`)
+- ADRs (`adr-{NNN}-{slug}.md`), supersession registry (`docs/adr/supersessions.md`)
 - Event models, component diagrams, context maps
 - Interface contracts (`contracts-{story}.md`), consistency matrices (`consistency-matrix-{story}.md`)
 - Blocker files (`decision-drift-{story}-{NNN}.md`) under `blockers/{date}/`
