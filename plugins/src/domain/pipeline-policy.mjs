@@ -19,7 +19,10 @@ export const expectedNextAgent = (state, config) => {
   if (!config.phaseOrder.includes(currentPhase)) {
     return Err({ code: 'INVALID_STATE', reason: `phase ${currentPhase} is not in the published phase order` })
   }
-  const phaseAgents = config.phaseAgents[currentPhase]
+  const phaseAgents = config.phaseAgents?.[currentPhase]
+  if (!phaseAgents || typeof phaseAgents.specialist !== 'string' || typeof phaseAgents.reviewer !== 'string') {
+    return Err({ code: 'INVALID_STATE', reason: `phase ${currentPhase} has no resolvable agents in the published config` })
+  }
 
   if (!specialistDone) {
     return Ok({ agent: phaseAgents.specialist, stage: 'SPECIALIST', reason: `${currentPhase} specialist must run before its reviewer` })
@@ -39,7 +42,11 @@ export const expectedNextAgent = (state, config) => {
   if (nextPhase === null) {
     return Err({ code: 'PIPELINE_COMPLETE', reason: `the pipeline already completed its final phase ${currentPhase}` })
   }
-  return Ok({ agent: config.phaseAgents[nextPhase].specialist, stage: 'ADVANCE', reason: `advance to ${nextPhase} specialist` })
+  const nextPhaseAgents = config.phaseAgents?.[nextPhase]
+  if (!nextPhaseAgents || typeof nextPhaseAgents.specialist !== 'string') {
+    return Err({ code: 'INVALID_STATE', reason: `phase ${nextPhase} has no resolvable specialist agent in the published config` })
+  }
+  return Ok({ agent: nextPhaseAgents.specialist, stage: 'ADVANCE', reason: `advance to ${nextPhase} specialist` })
 }
 
 export const evaluateDispatch = (requestedAgent, state, config) => {

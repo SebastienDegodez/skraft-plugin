@@ -51,6 +51,21 @@ test('blocks when the clock throws (fail-closed)', async () => {
   assert.equal(result.decision, 'block')
 })
 
+// Fail-closed: stateReader throws null (non-Error) — error?.message ?? String(error) must not throw.
+test('blocks when stateReader throws null and reason uses String(null) (fail-closed, safe-stringify)', async () => {
+  const nullThrowingReader = { read: async () => { throw null } }
+  const audit = collectingAuditWriter()
+  const service = createPreToolUseService({ stateReader: nullThrowingReader, auditWriter: audit, config: CONFIG, clock: fixedClock })
+
+  const result = await service.handle({ requestedAgent: 'solution-architect', projectSlug: PROJECT_SLUG })
+
+  assert.equal(result.decision, 'block')
+  assert.ok(result.message.includes('recorded pipeline state could not be read'), `expected harness message to contain the sentinel phrase, got: ${result.message}`)
+  assert.equal(audit.entries.length, 1)
+  assert.equal(audit.entries[0].code, 'UNREADABLE_STATE')
+  assert.ok(audit.entries[0].reason.includes('null'))
+})
+
 // Fail-closed: an audit writer that throws still blocks (swallow the audit error).
 test('blocks when the audit writer throws (fail-closed)', async () => {
   const throwingWriter = { write: async () => { throw new Error('disk full') } }

@@ -34,7 +34,7 @@ const unreadableFact = (error) => ({
   expectedAgent: null,
   decision: 'DENY',
   code: 'UNREADABLE_STATE',
-  reason: `recorded pipeline state could not be read: ${error.message}`,
+  reason: `recorded pipeline state could not be read: ${error?.message ?? String(error)}`,
   harness: block('recorded pipeline state could not be read; dispatch blocked')
 })
 
