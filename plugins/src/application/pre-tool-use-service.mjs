@@ -48,26 +48,31 @@ const decide = (requestedAgent, raw, config) => {
   return allowFact(evaluation.value)
 }
 
+const auditRecord = (projectSlug, requestedAgent, fact, evaluatedAt) => ({
+  event: 'DispatchEvaluated',
+  projectSlug,
+  requestedAgent,
+  expectedAgent: fact.expectedAgent,
+  decision: fact.decision,
+  code: fact.code,
+  reason: fact.reason,
+  evaluatedAt
+})
+
 export const createPreToolUseService = ({ stateReader, auditWriter, config, clock }) => ({
   handle: async ({ requestedAgent, projectSlug }) => {
-    const evaluatedAt = clock.now()
-    let fact
     try {
+      const evaluatedAt = clock.now()
       const raw = await stateReader.read(projectSlug)
-      fact = decide(requestedAgent, raw, config)
+      const fact = decide(requestedAgent, raw, config)
+      await auditWriter.write(auditRecord(projectSlug, requestedAgent, fact, evaluatedAt))
+      return fact.harness
     } catch (error) {
-      fact = unreadableFact(error)
+      const fact = unreadableFact(error)
+      try {
+        await auditWriter.write(auditRecord(projectSlug, requestedAgent, fact, null))
+      } catch { /* even the fallback audit may fail; still fail closed to block */ }
+      return fact.harness
     }
-    await auditWriter.write({
-      event: 'DispatchEvaluated',
-      projectSlug,
-      requestedAgent,
-      expectedAgent: fact.expectedAgent,
-      decision: fact.decision,
-      code: fact.code,
-      reason: fact.reason,
-      evaluatedAt
-    })
-    return fact.harness
   }
 })
