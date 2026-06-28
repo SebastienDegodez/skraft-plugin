@@ -1,0 +1,366 @@
+{
+  "phaseOrder": [
+    "DISCOVER",
+    "DISCUSS",
+    "DESIGN",
+    "DISTILL",
+    "DELIVER"
+  ],
+  "phaseAgents": {
+    "DISCOVER": {
+      "specialist": "backlog-discoverer",
+      "reviewer": "backlog-discoverer-reviewer"
+    },
+    "DISCUSS": {
+      "specialist": "backlog-planner",
+      "reviewer": "backlog-planner-reviewer"
+    },
+    "DESIGN": {
+      "specialist": "solution-architect",
+      "reviewer": "solution-architect-reviewer"
+    },
+    "DISTILL": {
+      "specialist": "acceptance-designer",
+      "reviewer": "acceptance-designer-reviewer"
+    },
+    "DELIVER": {
+      "specialist": "software-engineer",
+      "reviewer": "software-engineer-reviewer"
+    }
+  },
+  "agentSkills": {
+    "acceptance-designer-reviewer": [
+      {
+        "name": "acceptance-review-criteria",
+        "policy": "verify"
+      },
+      {
+        "name": "adversarial-review-lenses",
+        "policy": "verify"
+      }
+    ],
+    "acceptance-designer": [
+      {
+        "name": "bdd-methodology",
+        "policy": "verify"
+      },
+      {
+        "name": "test-design-mandates",
+        "policy": "verify"
+      },
+      {
+        "name": "outside-in-tdd",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
+        "policy": "verify"
+      }
+    ],
+    "backlog-discoverer-reviewer": [
+      {
+        "name": "discovery-review-criteria",
+        "policy": "verify"
+      },
+      {
+        "name": "adversarial-review-lenses",
+        "policy": "verify"
+      }
+    ],
+    "backlog-discoverer": [
+      {
+        "name": "github-search-protocol",
+        "policy": "verify"
+      },
+      {
+        "name": "issue-triage",
+        "policy": "verify"
+      }
+    ],
+    "backlog-planner-reviewer": [
+      {
+        "name": "planning-review-criteria",
+        "policy": "verify"
+      },
+      {
+        "name": "adversarial-review-lenses",
+        "policy": "verify"
+      }
+    ],
+    "backlog-planner": [
+      {
+        "name": "issue-refinement",
+        "policy": "verify"
+      },
+      {
+        "name": "sprint-planning",
+        "policy": "verify"
+      }
+    ],
+    "architecture-boundaries-lens": [],
+    "cold-reader-lens": [],
+    "quality-gates-lens": [],
+    "test-integrity-lens": [],
+    "skraft-orchestrator": [
+      {
+        "name": "skraft-difficulty-routing",
+        "policy": "verify"
+      },
+      {
+        "name": "adversarial-review-lenses",
+        "policy": "verify"
+      },
+      {
+        "name": "contract-testing",
+        "policy": "verify"
+      },
+      {
+        "name": "playwright-evidence",
+        "policy": "verify"
+      }
+    ],
+    "software-engineer-reviewer": [
+      {
+        "name": "adversarial-review-lenses",
+        "policy": "verify"
+      }
+    ],
+    "software-engineer": [
+      {
+        "name": "outside-in-tdd",
+        "policy": "verify"
+      },
+      {
+        "name": "red-synthesize-green",
+        "policy": "verify"
+      },
+      {
+        "name": "clean-architecture-testing",
+        "policy": "verify"
+      },
+      {
+        "name": "craft-discipline",
+        "policy": "verify"
+      },
+      {
+        "name": "test-refactoring-catalog",
+        "policy": "verify"
+      },
+      {
+        "name": "mutation-testing",
+        "policy": "verify"
+      },
+      {
+        "name": "quality-gates-evidence-contract",
+        "policy": "verify"
+      },
+      {
+        "name": "quality-gates-dotnet",
+        "policy": "verify"
+      }
+    ],
+    "solution-architect-reviewer": [
+      {
+        "name": "architecture-review-criteria",
+        "policy": "verify"
+      },
+      {
+        "name": "adversarial-review-lenses",
+        "policy": "verify"
+      }
+    ],
+    "solution-architect": [
+      {
+        "name": "architecture-patterns",
+        "policy": "verify"
+      },
+      {
+        "name": "architecture-decisions",
+        "policy": "verify"
+      }
+    ],
+    "contract-fidelity-lens": [],
+    "contract-testing-worker": [
+      {
+        "name": "contract-testing-roster",
+        "policy": "verify"
+      },
+      {
+        "name": "contract-testing",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
+        "policy": "verify"
+      }
+    ],
+    "mock-fidelity-lens": [],
+    "mock-integration-worker": [
+      {
+        "name": "mocking-strategy-roster",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
+        "policy": "verify"
+      }
+    ]
+  },
+  "agentArtifacts": {
+    "acceptance-designer-reviewer": {
+      "inputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md",
+        "tests/**/{Feature}AcceptanceTests.cs"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md"
+      ]
+    },
+    "acceptance-designer": {
+      "inputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md",
+        "tests/**/{Feature}AcceptanceTests.cs"
+      ]
+    },
+    "backlog-discoverer-reviewer": {
+      "inputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md"
+      ]
+    },
+    "backlog-discoverer": {
+      "inputs": [
+        "GitHub repository issues (via MCP tools)"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/triage-{YYYY-MM-DD}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/sprint-proposal.md"
+      ]
+    },
+    "backlog-planner-reviewer": {
+      "inputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md"
+      ]
+    },
+    "backlog-planner": {
+      "inputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md",
+        "GitHub issues with triage labels"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
+      ]
+    },
+    "architecture-boundaries-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "cold-reader-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "quality-gates-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "test-integrity-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "skraft-orchestrator": {
+      "inputs": [],
+      "outputs": []
+    },
+    "software-engineer-reviewer": {
+      "inputs": [
+        "Source code commits produced by software-engineer",
+        "Test files referenced in the commits"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md"
+      ]
+    },
+    "software-engineer": {
+      "inputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md"
+      ],
+      "outputs": [
+        "Source code commits (conventional commits)",
+        ".copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)",
+        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)"
+      ]
+    },
+    "solution-architect-reviewer": {
+      "inputs": [
+        "docs/adr/adr-*.md",
+        "docs/adr/decisions-index.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/consistency-matrix-{story}.md"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md"
+      ]
+    },
+    "solution-architect": {
+      "inputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md",
+        "docs/adr/adr-{NNN}-{slug}.md",
+        "docs/adr/supersessions.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/consistency-matrix-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md"
+      ]
+    },
+    "contract-fidelity-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "contract-testing-worker": {
+      "inputs": [
+        "the API (provider) descriptor for the active slice"
+      ],
+      "outputs": [
+        "structured result block (stack, microcks, files[], testCommand) — NO commit"
+      ]
+    },
+    "mock-fidelity-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "mock-integration-worker": {
+      "inputs": [
+        "downstream dependency descriptor (the client the SUT calls)",
+        "the integration-test intent for the active slice"
+      ],
+      "outputs": [
+        "structured result block (strategy, stack, files[], testCommand) — NO commit"
+      ]
+    }
+  }
+}

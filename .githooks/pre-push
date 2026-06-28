@@ -1,0 +1,6 @@
+#!/bin/sh
+# skraft local CI gate — mirrors .github/workflows/skraft-framework-ci.yml.
+# Installed into .git/hooks/pre-push by: npm run hooks:install
+# Runs the fast gates before every push. Use `npm run ci:local -- --mutation` to
+# also run mutation locally.
+exec node scripts/local-ci.mjs

@@ -20,7 +20,8 @@ metadata:
     recommended:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md
-      - .copilot-tracking/skraft-plans/{projectSlug}/adrs/adr-{n}-{slug}.md
+      - docs/adr/decisions-index.md
+      - docs/adr/adr-{NNN}-{slug}.md
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md
@@ -88,7 +89,7 @@ Read ALL available artefacts in this order:
 2. `ac-draft-{story}.md` — acceptance criteria (primary source of truth)
 3. `contracts-{story}.md` — use case boundaries and application interfaces
 4. `event-model-{story}.md` — event flow (commands → events → read models)
-5. `adr-{n}-{slug}.md` — architectural constraints
+5. `docs/adr/decisions-index.md` — read the digest for each ADR's verdicts (status, chosen option, one-line decision); load a full `adr-{n}-{slug}.md` body only for rationale. The index is the cheap verdict surface — do not re-read every body.
 
 **Reconciliation gate:** If any contradiction is found between DISCUSS and DESIGN artefacts, STOP and report:
 

@@ -44,7 +44,7 @@ Evaluates: ADRs + diagrams + contracts
 **Definition:** No two ADRs in the DESIGN artefact set contradict each other while both are `Accepted`. When one ADR supersedes another, the link is recorded in two places:
 
 1. **Inside the new ADR's body**, immediately after the Status line: `**Supersedes:** [ADR-MMM](./ADR-MMM-{slug}.md) — {one-line reason}`.
-2. **As an appended row in `.copilot-tracking/skraft-plans/{projectSlug}/adrs/supersessions.md`** (append-only registry):
+2. **As an appended row in `docs/adr/supersessions.md`** (append-only registry):
 
    ```markdown
    | date | superseded ADR | new ADR | reason |
@@ -52,23 +52,23 @@ Evaluates: ADRs + diagrams + contracts
    | 2026-05-16 | ADR-003 | ADR-007 | Conformist now justified — ACL is over-engineering |
    ```
 
-The superseded ADR's file is **never** edited — the `adrs/` directory is append-only. Reviewers reconstruct the supersession graph from these two sources combined.
+The superseded ADR's file is **never** edited — the `docs/adr/` directory is append-only. Reviewers reconstruct the supersession graph from these two sources combined.
 
 **Step-by-step check:**
 1. Read all ADRs. Note the decision topic and chosen direction for each.
 2. Look for conflicting decisions: same scope, incompatible choices, both `Accepted`.
-3. For every `**Supersedes:** ADR-MMM` body line found in any ADR: open `adrs/supersessions.md` and confirm a registry row exists for that pair (same superseded ADR, same new ADR). If missing → G2 BLOCKER.
-4. For every row in `adrs/supersessions.md`: open the named new ADR and confirm the `**Supersedes:**` body line exists. If missing → G2 BLOCKER.
+3. For every `**Supersedes:** ADR-MMM` body line found in any ADR: open `docs/adr/supersessions.md` and confirm a registry row exists for that pair (same superseded ADR, same new ADR). If missing → G2 BLOCKER.
+4. For every row in `docs/adr/supersessions.md`: open the named new ADR and confirm the `**Supersedes:**` body line exists. If missing → G2 BLOCKER.
 5. Do **not** demand any edit to the superseded ADR's file — expecting one is itself the wrong mental model.
 
 **Auto-fail examples:**
 - ADR-001 (Accepted) prescribes CQRS for eligibility. ADR-005 (Accepted) prescribes a single unified model for eligibility. Both `Accepted`, same scope. → G2 BLOCKER fail.
-- ADR-007 contains `**Supersedes:** ADR-003` but `adrs/supersessions.md` has no row pairing ADR-003 → ADR-007. → G2 BLOCKER fail.
-- `adrs/supersessions.md` lists `ADR-003 → ADR-007` but ADR-007's body lacks the `**Supersedes:**` line. → G2 BLOCKER fail.
+- ADR-007 contains `**Supersedes:** ADR-003` but `docs/adr/supersessions.md` has no row pairing ADR-003 → ADR-007. → G2 BLOCKER fail.
+- `docs/adr/supersessions.md` lists `ADR-003 → ADR-007` but ADR-007's body lacks the `**Supersedes:**` line. → G2 BLOCKER fail.
 
 **Pass examples:**
 - ADR-001 (Accepted): CQRS for eligibility. ADR-005 (Accepted): state-based persistence for policy renewal. Different scopes — no contradiction. → G2 pass.
-- ADR-007 body contains `**Supersedes:** [ADR-003](./ADR-003-eligibility-acl.md) — Conformist now justified by shared RiskProfile VO`. `adrs/supersessions.md` contains a matching row dated today. → G2 pass.
+- ADR-007 body contains `**Supersedes:** [ADR-003](./adr-003-eligibility-acl.md) — Conformist now justified by shared RiskProfile VO`. `docs/adr/supersessions.md` contains a matching row dated today. → G2 pass.
 
 ---
 
@@ -297,20 +297,20 @@ Admissible forces:
 
 **Definition:** For every row in any `details/{date}/supersession-plan-{story}.md` produced by the persona's Phase 3.5, ALL THREE of the following must hold:
 
-1. The new ADR (named in the plan row's "New ADR to write" column) exists at `adrs/ADR-{NNN}-{slug}.md` AND its body contains the line `**Supersedes:** [ADR-MMM](./ADR-MMM-{slug}.md) — {reason}`.
-2. `adrs/supersessions.md` contains a row pairing the old ADR with the new ADR.
+1. The new ADR (named in the plan row's "New ADR to write" column) exists at `docs/adr/adr-{nnn}-{slug}.md` AND its body contains the line `**Supersedes:** [ADR-MMM](./ADR-MMM-{slug}.md) — {reason}`.
+2. `docs/adr/supersessions.md` contains a row pairing the old ADR with the new ADR.
 3. No descriptive artefact (`event-model-*.md`, `diagrams-*.md`, `contracts-*.md`) still cites the superseded ADR as its current source of truth (historical narrative references are fine; what is forbidden is descriptive artefacts pointing at the superseded ADR for current ratification).
 
 **Step-by-step check:**
 1. List every supersession plan file. Read every row.
 2. For each row, open the named new ADR and `grep` for `**Supersedes:** ADR-{MMM}` — fail if absent.
-3. Open `adrs/supersessions.md` and `grep` for a row matching the (old, new) pair — fail if absent.
+3. Open `docs/adr/supersessions.md` and `grep` for a row matching the (old, new) pair — fail if absent.
 4. `grep` every descriptive artefact for the superseded ADR token (`ADR-{MMM}`). For each hit, classify: narrative/history mention (OK) vs source-of-truth citation (FAIL).
 5. Any of the three conditions missing → G12 BLOCKER fail.
 
 **Auto-fail examples:**
 - `supersession-plan-US-03.md` plans `ADR-003 → ADR-007`. ADR-007 exists but body lacks `**Supersedes:**`. → G12 BLOCKER fail.
-- Plan row exists; new ADR has the body line; but `adrs/supersessions.md` does not yet carry the row. → G12 BLOCKER fail.
+- Plan row exists; new ADR has the body line; but `docs/adr/supersessions.md` does not yet carry the row. → G12 BLOCKER fail.
 - `diagrams-US-03.md` still contains "per ADR-003" as a current-ratification reference for a relationship that is now governed by ADR-007. → G12 BLOCKER fail.
 
 **Pass examples:**

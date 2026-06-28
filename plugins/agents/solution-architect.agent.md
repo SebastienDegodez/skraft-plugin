@@ -25,8 +25,8 @@ metadata:
       - existing codebase architecture files
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/adrs/ADR-{NNN}-{slug}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/adrs/supersessions.md
+    - docs/adr/adr-{NNN}-{slug}.md
+    - docs/adr/supersessions.md
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-{story}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md
@@ -117,7 +117,7 @@ Scan the existing codebase for reusable architecture:
 
 ### Phase 3.5: ADR SUPERSESSION SCAN
 
-Before writing any new ADR in Phase 7, scan all existing ADRs under `.copilot-tracking/skraft-plans/{projectSlug}/adrs/` against the current story set:
+Before writing any new ADR in Phase 7, scan all existing ADRs under `docs/adr/` against the current story set:
 
 1. For every existing ADR, ask: *would today's stories make me decide differently?*
 2. If yes, the existing ADR is a **candidate for supersession**. Record it.
@@ -134,7 +134,7 @@ Produce `details/{date}/supersession-plan-{story}.md` ONLY when at least one sup
 | ADR-003 | ACL between Eligibility and Policy | story-12 introduces shared `RiskProfile` VO | Conformist now justified — ACL is over-engineering | ADR-007 |
 ```
 
-This plan is the contract Phase 7 must honour. **Do NOT modify any existing ADR in this phase** — the `adrs/` directory is append-only; supersession is recorded only via the new ADR's body line + the `adrs/supersessions.md` registry in Phase 7.
+This plan is the contract Phase 7 must honour. **Do NOT modify any existing ADR in this phase** — the `docs/adr/` directory is append-only; supersession is recorded only via the new ADR's body line + the `docs/adr/supersessions.md` registry in Phase 7.
 
 If no ADRs need supersession, do NOT create the file. Note in the Phase 10 summary table `supersessions: 0`.
 
@@ -232,7 +232,7 @@ Write one ADR per **structural commitment** the story set OR the existing codeba
 
 #### Step 7.0 — DETECT EXISTING STRUCTURAL COMMITMENTS (deterministic tool bridge)
 
-Before listing the ADRs to write, scan the existing codebase via `search/codebase` (grep) for structural commitments already in place. For each detected commitment, check `.copilot-tracking/skraft-plans/{projectSlug}/adrs/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory).
+Before listing the ADRs to write, scan the existing codebase via `search/codebase` (grep) for structural commitments already in place. For each detected commitment, check `docs/adr/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory).
 
 Detection signatures (disjoint — each pattern is identified by its dispatch / structural marker, not by interfaces that may belong to the baseline):
 
@@ -264,10 +264,10 @@ Rule of thumb: **if a constraint is enforced by a skill or by automated architec
 
 **Supersession write-side (when Phase 3.5 produced a `supersession-plan-{story}.md`):**
 
-The `adrs/` directory is **append-only** — you never edit an existing ADR's body or Status line. The supersession link is therefore expressed in two places:
+The `docs/adr/` directory is **append-only** — you never edit an existing ADR's body or Status line. The supersession link is therefore expressed in two places:
 
-1. **In the new ADR's body**, immediately after the Status line, add: `**Supersedes:** [ADR-MMM](./ADR-MMM-{slug}.md) — {one-line reason}`.
-2. **Append a row to `adrs/supersessions.md`** (create the file with header if it does not yet exist):
+1. **In the new ADR's body**, immediately after the Status line, add: `**Supersedes:** [ADR-MMM](./adr-{NNN}-{slug}.md) — {one-line reason}`.
+2. **Append a row to `docs/adr/supersessions.md`** (create the file with header if it does not yet exist):
 
    ```markdown
    <!-- markdownlint-disable-file -->
@@ -299,11 +299,15 @@ If either check fails, do NOT ratify the pattern. The correct outcome is:
 
 #### Step 7.5 — HUMAN-IN-THE-LOOP RATIFICATION (Proposed → Accepted | Rejected)
 
-Every story-triggered ADR is committed first with `Status: Proposed`, then a human ratifies it. The agent owns the drafting; the human owns the verdict.
+Every story-triggered ADR is committed first with `Status: Proposed`, then a human ratifies it. The agent owns the drafting; the human owns the verdict. The canonical rules are the **Ratification Contract** in `architecture-decisions` — follow it; do not re-derive it here.
+
+**Decision header (mandatory).** Every ADR file you write begins with the YAML decision header (see the skill's Blank Template) BEFORE the `# ADR-{NNN}` title: `adr`, `title`, `status`, `chosen`, one-line `decision`, `supersedes`, `date`, `ratified_by: null`. This header is the cheap verdict surface the orchestrator's checkpoint and downstream readers grep instead of re-reading the body.
 
 The ratification channel is provided by the execution context — the orchestrating workflow specifies it when running in the agentic pipeline; in standalone local runs, prompt the developer in-terminal. The agent's responsibility is to commit the `Proposed` revision and, after the human verdict, commit the status flip.
 
 Both the `Proposed` revision and the final `Accepted` / `Rejected` revision MUST land in git history. Do not skip the `Proposed` commit — the trail of "we paused for a human here" is part of the architectural record.
+
+**Ratify-mode (re-invocation after the human verdict).** When the orchestrator re-dispatches you with per-ADR verdicts, you do NOT redesign: for each `accept`/`reject`, flip the ADR header `status` and the `**Status:**` line, set `ratified_by: "{human} {date}"`, update only the `Status` + `Ratified by` cells of that ADR's row in `docs/adr/decisions-index.md`, and commit. An `amend "<note>"` verdict means re-draft that single ADR (back through the Phase 7 quality gate), not flip it.
 
 **ADR quality gate before writing:**
 - Decision is a single, clear choice — not a process description
@@ -397,8 +401,9 @@ Also write the blocker file to `.copilot-tracking/skraft-plans/{projectSlug}/blo
 Write all artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Every markdown file must begin with `<!-- markdownlint-disable-file -->`.
 
 - `details/{date}/event-model-{story}.md` — event timeline per story
-- `adrs/ADR-{NNN}-{slug}.md` — one file per ADR (append-only, sequential numbering across the whole project)
-- `adrs/supersessions.md` — append-only registry (only when Phase 7 added rows)
+- `docs/adr/adr-{NNN}-{slug}.md` — one file per ADR (append-only, sequential numbering across the whole project; each begins with the YAML decision header)
+- `docs/adr/decisions-index.md` — append-only verdict digest; append one row per ADR written this pass (`Status: Proposed`, `Ratified by: —`). Updated in place by ratify-mode on the status flip.
+- `docs/adr/supersessions.md` — append-only registry (only when Phase 7 added rows)
 - `details/{date}/diagrams-{story}.md` — component diagram per story
 - `details/{date}/contracts-{story}.md` — interface contracts per story
 - `details/{date}/context-map.md` — full context map (created or updated)

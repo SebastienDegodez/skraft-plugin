@@ -26,7 +26,7 @@ persona: tech-lead
 
 - ADR file named `adr-{NNN}-{slug}.md` at status `Proposed`
 - Transition to `Accepted` or `Rejected` after human ratification (both commits are kept)
-- For supersessions: update to `adrs/supersessions.md` registry AND the successor ADR
+- For supersessions: update to `docs/adr/supersessions.md` registry AND the successor ADR
 
 ## Invariants
 

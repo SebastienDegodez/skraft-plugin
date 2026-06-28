@@ -49,9 +49,9 @@ scenarios:
       checkpoint: promotion-stacking/after-design
     prompt: "Model promotion stacking and record the decision."
     assertions:
-      - file_matches_glob: ".copilot-tracking/skraft-plans/promotion-stacking/adrs/ADR-*-promotion-stacking.md"
+      - file_matches_glob: "docs/adr/adr-*-promotion-stacking.md"
       - file_contains:
-          glob: ".copilot-tracking/skraft-plans/promotion-stacking/adrs/ADR-*-promotion-stacking.md"
+          glob: "docs/adr/adr-*-promotion-stacking.md"
           text: "**Status:** Accepted"
       - file_contains:
           glob: ".copilot-tracking/skraft-plans/promotion-stacking/details/**/promotion-stacking-contracts.md"

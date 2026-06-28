@@ -26,8 +26,8 @@ writes to a dedicated subdirectory, date-stamped in `YYYY-MM-DD` format.
 | --- | --- | --- |
 | DISCOVER | Triage notes, sprint proposal | `research/{date}/{slug}-research.md` |
 | DISCUSS | User stories, acceptance criteria | `plans/{date}/{slug}-plan.instructions.md` |
-| DESIGN | Architecture Decision Records | `adrs/ADR-{NNN}-{slug}.md` |
-| DESIGN | Supersession registry (append-only) | `adrs/supersessions.md` |
+| DESIGN | Architecture Decision Records | `docs/adr/adr-{nnn}-{slug}.md` |
+| DESIGN | Supersession registry (append-only) | `docs/adr/supersessions.md` |
 | DESIGN | Component contracts | `details/{date}/{slug}-contracts.md` |
 | DISTILL | Implementation details, test plan | `details/{date}/{slug}-details.md` |
 | DISTILL | Executable Gherkin scenarios | `features/{slug}.feature` |
@@ -45,7 +45,7 @@ never an edit of the previous one. Two consequences:
 
 - **ADR supersession**: the superseded ADR is not edited; the new ADR carries a
   `**Supersedes:** ADR-MMM` line and a row is *appended* to the
-  `adrs/supersessions.md` registry.
+  `docs/adr/supersessions.md` registry.
 - **Blocker resolution**: you do not flip the blocker frontmatter; you drop a sibling
   `…-resolution.md` file. The sibling's presence = resolved.
 

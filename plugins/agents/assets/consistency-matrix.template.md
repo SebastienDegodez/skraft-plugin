@@ -41,7 +41,7 @@ Worked example for one story:
 ```yaml
 shared_artifact_registry:
   ADR-007:
-    source_of_truth: .copilot-tracking/skraft-plans/{project-slug}/adrs/ADR-007-eligibility-cqrs.md
+    source_of_truth: docs/adr/adr-007-eligibility-cqrs.md
     consumers: [DISTILL, DELIVER]
     owner: solution-architect
     integration_risk: high
@@ -78,7 +78,7 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 
 **Story:** {story-id}
 **Date:** {YYYY-MM-DD}
-**Source of truth:** ADR set under `.copilot-tracking/skraft-plans/{project-slug}/adrs/ADR-*.md`
+**Source of truth:** ADR set under `docs/adr/adr-*.md`
 
 ## Matrix
 
@@ -133,7 +133,7 @@ Never normalise across these boundaries (always drift):
 
 Emit to the orchestrator when `STRUCTURAL_DRIFT` fires, or when `CLASSIFICATION_DRIFT` survives the back-propagation retry. The orchestrator is responsible for surfacing it to a human via the available channel (GitHub issue, IDE prompt, Slack…). The persona's job is to emit a complete, actionable payload AND persist the matching blocker file (see persona Step 9.7).
 
-The append-only constraint of HVE-Core directories (`adrs/`, `details/`, `reviews/`) means the persona MUST NOT edit a previously written blocker file to record the human's answer. Instead, the human (or orchestrator on the human's behalf) writes a sibling resolution file. The persona detects "resolved" by file presence, not by frontmatter mutation.
+The append-only constraint of HVE-Core directories (`docs/adr/`, `details/`, `reviews/`) means the persona MUST NOT edit a previously written blocker file to record the human's answer. Instead, the human (or orchestrator on the human's behalf) writes a sibling resolution file. The persona detects "resolved" by file presence, not by frontmatter mutation.
 
 ```json
 {
@@ -143,7 +143,7 @@ The append-only constraint of HVE-Core directories (`adrs/`, `details/`, `review
   "story": "{story-id}",
   "concept": "{concept-name}",
   "adr_says": "{adr-truth}",
-  "adr_path": ".copilot-tracking/skraft-plans/{project-slug}/adrs/ADR-{NNN}-{slug}.md",
+  "adr_path": "docs/adr/adr-{NNN}-{slug}.md",
   "artefact_says": "{cell-value}",
   "artefact_path": ".copilot-tracking/skraft-plans/{project-slug}/details/{date}/{artefact}-{story-id}.md",
   "cause": "STRUCTURAL_DRIFT | CLASSIFICATION_DRIFT (post-retry)",

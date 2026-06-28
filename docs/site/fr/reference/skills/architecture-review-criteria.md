@@ -18,7 +18,7 @@ persona: tech-lead
 
 ## Contrat d'entrée
 
-- ADRs (`adr-{NNN}-{slug}.md`), registre de supersession (`adrs/supersessions.md`)
+- ADRs (`adr-{NNN}-{slug}.md`), registre de supersession (`docs/adr/supersessions.md`)
 - Modèles d'événements, diagrammes de composants, context maps
 - Contrats d'interface (`contracts-{story}.md`), matrices de cohérence (`consistency-matrix-{story}.md`)
 - Fichiers bloquants (`decision-drift-{story}-{NNN}.md`) sous `blockers/{date}/`
