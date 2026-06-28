@@ -221,8 +221,35 @@ graph TD
 ### Phase 7: ADR WRITING
 
 *Loads architecture-decisions skill — see ADR Template and quality checklist.*
+*Loads adr-eligibility-gate skill — see Pre-Draft Gate below.*
 
 Write one ADR per **structural commitment** the story set OR the existing codebase carries that is not yet covered by an existing Accepted ADR. Number sequentially from `ADR-001-` (zero-padded, unique across the whole project).
+
+#### Step 6.5 — ADR ELIGIBILITY GATE (pre-draft)
+
+**Before drafting any ADR, load `adr-eligibility-gate` and run each candidate architectural choice through the 5-question checklist.**
+
+For every structural commitment candidate (from the story set, event model, or codebase scan):
+
+1. **Q1:** Already enforced by skill/ADR?
+2. **Q2:** Good-practice framing (not a decision)?
+3. **Q3:** Adds complexity beyond baseline?
+4. **Q4:** Question actually raised by story/AC?
+5. **Q5:** Genuine trade-offs (not only upsides)?
+
+**Output per candidate:** `ELIGIBLE` / `NOT ELIGIBLE` + reason (1-line citation).
+
+**Only draft ADR bodies for `ELIGIBLE` candidates.** If all candidates are `NOT ELIGIBLE`, the story requires **zero ADRs** — document the choices in the event model / Technical Notes instead.
+
+**Example (US3 case study):**
+- `pure domain service` → `NOT ELIGIBLE` (Q1: ADR-002 baseline)
+- `fail-closed posture` → `ELIGIBLE` (Q3: cross-cutting concern, Q5: trade-offs)
+- `VO + validation at boundary` → `NOT ELIGIBLE` (Q1: hexagonal baseline + DDD)
+- `no hardcoding` → `NOT ELIGIBLE` (Q2: good practice) OR `ELIGIBLE` if reframed as Published Language
+
+**After the gate passes for N candidates, draft N ADRs. If zero pass, draft zero ADRs.**
+
+Load `architecture-decisions` for the ADR template and lifecycle rules only after the gate yields `ELIGIBLE` verdicts.
 
 **ADRs are written for ADDITIONS and DEVIATIONS from the project baseline. The baseline itself is not an ADR.** A project's conventions — layer boundaries, CQS method-level separation, convention-based DI — are enforced by skills and architecture tests; re-stating them as ADRs is CONTEXT THRASH.
 
