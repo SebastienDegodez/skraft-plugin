@@ -55,6 +55,20 @@ A test asserting `new PolicyNumber("abc").value == "abc"` is noise. It tests the
 
 One pair per bounded context. Shared helpers (fakes, builders) live in a separate non-test project (`TestKit` / `tests-shared`) referenced by both.
 
+### Test folder naming
+
+Test class folders and namespaces are named after the **feature or behavior** under test — never
+after the GitHub issue, story ID, or sprint.
+
+| Wrong | Right |
+|---|---|
+| `EligibilityCheck/STORY-42/` | `EligibilityCheck/` |
+| `tests/OrderSubmission/issue-105/` | `tests/OrderSubmission/` |
+| `PlaceOrder/Sprint3/` | `PlaceOrder/` |
+
+One folder per feature or bounded behavior. The folder name answers "what does this test?"
+not "which ticket created it?"
+
 ### Forbidden combinations
 
 | Wrong | Why |
@@ -64,6 +78,7 @@ One pair per bounded context. Shared helpers (fakes, builders) live in a separat
 | End-to-end app host test in `UnitTest` | API tests need full composition — belong in `IntegrationTest` |
 | Real container (DB / broker) in `UnitTest` | Breaks the <1 s suite promise |
 | Architecture scanner test in `UnitTest` | Architecture tests are a CI gate, not a development loop |
+| Third test project outside `UnitTest` / `IntegrationTest` | Creates a blind spot outside the two-speed suite; all tests belong to one of the two defined projects |
 
 ## Testing Strategy per Layer
 
