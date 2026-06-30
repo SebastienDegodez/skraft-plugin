@@ -11,6 +11,7 @@ tools:
   - read
   - edit
   - execute
+  - graphify/*
 agents:
   - backlog-discoverer
   - backlog-discoverer-reviewer

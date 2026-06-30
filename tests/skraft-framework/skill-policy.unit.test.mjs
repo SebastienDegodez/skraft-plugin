@@ -20,7 +20,10 @@ const CONFIG = {
 
 test('mandatorySkillsFor returns skill names for a known agent', () => {
   const result = mandatorySkillsFor('acceptance-designer', CONFIG)
-  assert.deepEqual(result, ['bdd-methodology', 'outside-in-tdd'])
+  assert.deepEqual(result, [
+    { name: 'bdd-methodology', policy: 'verify' },
+    { name: 'outside-in-tdd', policy: 'verify' }
+  ])
 })
 
 test('mandatorySkillsFor returns empty array for agent with no skills', () => {
@@ -33,11 +36,20 @@ test('mandatorySkillsFor returns empty array for unknown agent', () => {
 
 test('mandatorySkillsFor handles string skill entries (no policy object)', () => {
   const config = { agentSkills: { agent: ['skill-a', 'skill-b'] } }
-  assert.deepEqual(mandatorySkillsFor('agent', config), ['skill-a', 'skill-b'])
+  assert.deepEqual(mandatorySkillsFor('agent', config), [
+    { name: 'skill-a', policy: 'verify' },
+    { name: 'skill-b', policy: 'verify' }
+  ])
 })
 
 test('mandatorySkillsFor returns empty array when config is null', () => {
   assert.deepEqual(mandatorySkillsFor('agent', null), [])
+})
+
+test('mandatorySkillsFor returns empty array when agentSkills property is absent from config', () => {
+  // Kills OptionalChaining mutant: config?.agentSkills?.[agentName] vs config?.agentSkills[agentName]
+  // When agentSkills is missing, agentSkills[agentName] would throw without the second ?.
+  assert.deepEqual(mandatorySkillsFor('agent', {}), [])
 })
 
 // missingSkills ———————————————————————————————————————————————————————

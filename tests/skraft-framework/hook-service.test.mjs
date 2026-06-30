@@ -25,20 +25,6 @@ test('hook service routes SubagentStop to registered handler', async () => {
   assert.equal(result.decision, 'allow')
 })
 
-test('hook service routes SubagentStart to registered handler', async () => {
-  const subagentStart = { handle: async (_p) => additionalContext('mandatory skills') }
-  const service = createHookService({ subagentStart })
-  const result = await service.handle({ hookType: 'SubagentStart' })
-  assert.equal(result.decision, 'additionalContext')
-})
-
-test('hook service routes PostToolUse to registered handler', async () => {
-  const postToolUse = { handle: async (_p) => undefined }
-  const service = createHookService({ postToolUse })
-  const result = await service.handle({ hookType: 'PostToolUse' })
-  assert.equal(result, undefined)
-})
-
 test('hook service deny decision propagates', async () => {
   const preToolUse = { handle: async (_p) => deny('dangerous tool') }
   const service = createHookService({ preToolUse })

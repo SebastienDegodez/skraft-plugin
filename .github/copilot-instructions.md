@@ -1,30 +1,4 @@
-## Context Engine (CCE)
-
-This project uses Code Context Engine for intelligent code retrieval
-cross-session memory.
-
-### Searching the codebase
-
-**Use `context_search` instead of reading files directly** when exploring
- codebase, answering questions about code, or understanding how things
-work. `context_search` returns most relevant code chunks w/
-confidence scores instead of whole files.
-
-When to use `context_search`
-- Answering questions about codebase ("how does X work?", "where is Y?")
-- Exploring structure or architecture
-- Finding related code, functions, or patterns
-
-Other tools:
-- `expand_chunk` for full source of compressed result
-- `related_context` for what calls/imports fn
-- `session_recall` to recall past decisions
-
-### Cross-session memory
-
-Call `session_recall("topic phrase")` before answering non-trivial questions.
-Call `record_decision(decision="...", reason="...")` after making choices.
-Call `record_code_area(file_path="...", description="...")` after meaningful work.
+## 
 
 ### Output style
 
