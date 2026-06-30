@@ -1,4 +1,4 @@
-## 
+## SKRAFT Plugin — Copilot Instructions
 
 ### Output style
 

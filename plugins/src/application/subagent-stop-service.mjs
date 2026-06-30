@@ -24,6 +24,7 @@ export const createSubagentStopService = ({ config, transcriptReaderFactory, aud
           agentName,
           decision: 'ALLOW',
           reason: 'transcript_unavailable',
+          missingSkills: [],
           timestamp: now
         }).catch(() => {})
         return allow()
@@ -37,7 +38,7 @@ export const createSubagentStopService = ({ config, transcriptReaderFactory, aud
         agentName,
         decision,
         missingSkills: missing,
-        ...(missing.length === 0 && { reason: 'all_present' }),
+        reason: missing.length === 0 ? 'all_present' : 'skill_absent',
         timestamp: now
       }).catch(() => {})
 

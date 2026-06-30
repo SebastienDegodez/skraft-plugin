@@ -1,7 +1,7 @@
 // Pure domain: skill-loading policy helpers. No IO.
 
 // Pattern: any kebab-case folder segment directly before /SKILL.md in a path.
-const SKILL_MD_RE = /([a-z0-9][a-z0-9-]*)\/SKILL\.md/g
+const SKILL_MD_RE = /([a-z0-9][a-z0-9-]*)\/SKILL\.md(?![.\w])/g
 
 // Returns the SkillEntry[] the agent must load, derived from config.agentSkills.
 // Each entry: { name: string, policy: 'verify' | 'eager' }

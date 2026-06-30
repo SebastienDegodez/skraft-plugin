@@ -88,14 +88,14 @@ test('writes SkillComplianceChecked audit entry', async () => {
   assert.equal(audit.entries[0].timestamp, FIXED_NOW)
 })
 
-test('block audit entry has no reason field; allow audit entry has reason all_present', async () => {
-  // Kills ConditionalExpression mutant: missing.length === 0 && { reason } → true && { reason }
-  // (mutant always adds reason: 'all_present' even when blocking)
+test('block audit entry has reason skill_absent; allow audit entry has reason all_present', async () => {
+  // Kills ConditionalExpression mutant: missing.length === 0 ? 'all_present' : 'skill_absent'
+  // (mutant cannot set both to all_present since block path must produce skill_absent)
   const blockAudit = collectingWriter()
   const blockService = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: blockAudit, clock })
   await blockService.handle({ agentName: 'acceptance-designer', transcript: 'bdd-methodology/SKILL.md only' })
-  assert.equal(blockAudit.entries[0].reason, undefined,
-    `block audit must not have reason field; got: ${JSON.stringify(blockAudit.entries[0].reason)}`)
+  assert.equal(blockAudit.entries[0].reason, 'skill_absent',
+    `block audit must have reason skill_absent; got: ${JSON.stringify(blockAudit.entries[0].reason)}`)
 
   const allowAudit = collectingWriter()
   const allowService = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: allowAudit, clock })

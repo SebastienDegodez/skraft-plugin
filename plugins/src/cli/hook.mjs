@@ -16,7 +16,7 @@ const configPath = process.env.SKRAFT_CONFIG ?? join(pluginRoot, 'skraft-framewo
 
 const clock = { now: () => new Date().toISOString() }
 const auditWriter = createJsonlAuditWriter(auditLogPath)
-const skillFileReader = createSkillFileReader({ pluginsRoot: join(pluginRoot, 'plugins') })
+const skillFileReader = createSkillFileReader({ pluginsRoot: pluginRoot })
 
 // Load the pre-built framework config (agentSkills, etc.); fall back to empty config on error.
 let frameworkConfig = {}

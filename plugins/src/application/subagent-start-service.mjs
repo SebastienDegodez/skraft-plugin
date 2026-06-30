@@ -23,14 +23,16 @@ export const createSubagentStartService = ({ config, skillFileReader, auditWrite
       try {
         const content = await skillFileReader.read(skill.name)
         parts.push(content)
-      } catch {
+      } catch (err) {
         // ADR-006: fail-open; record warn audit so monitoring can detect the gap
+        const ts = (() => { try { return clock.now() } catch { return new Date().toISOString() } })()
         await auditWriter.write({
           eventType: 'EagerReadFailed',
           agentName,
           skillName: skill.name,
           decision: 'WARN',
-          timestamp: clock.now()
+          reason: err?.message ?? 'unknown',
+          timestamp: ts
         }).catch(() => {})
       }
     }
