@@ -107,6 +107,7 @@ Scenario: ...
 | `@edge-case` | Boundary values, limit conditions |
 | `@error-case` | System errors, missing data, invalid state |
 | `@smoke` | Minimal set for walking skeleton validation (mark ≤3 per feature) |
+| `@frontend` `@backend` `@api` `@http` `@ui` `@infrastructure` `@database` `@persistence` | ❌ FORBIDDEN — layer leak: embed implementation vocabulary in the Gherkin layer |
 
 ## The 3-Layer Abstraction Rule
 
@@ -137,6 +138,30 @@ Gherkin operates at Layer 1. No technical leak is tolerated.
 | **Technical identifiers** | `Given the DTO is populated` | `Given a driver with complete profile` |
 | **Implementation leaking** | `Then the repository returns null` | `Then no eligibility result is found` |
 | **Passive voice outcome** | `Then eligibility is checked` | `Then the driver is declared eligible` |
+
+## Gherkin Compliance Gate (MANDATORY)
+
+Before handing any `.feature` file to the engineer, scan every scenario against this checklist.
+Each violation is a BLOCKER — do not proceed until the step is rewritten in domain language.
+
+### Forbidden step patterns
+
+| Pattern | Example violation | Domain rewrite |
+|---|---|---|
+| URL path (any route segment: `/api/`, `/v1/`, `/{word}/{id}`) | `When the user accesses /contract/12345` | `When the user views the contract details` |
+| HTTP verb in step text (`POST`, `GET`, `PUT`, `DELETE`, `PATCH`) | `When I call POST /api/eligibility` | `When the driver requests an eligibility check` |
+| Class or service name (`*Service`, `*Repository`, `*Controller`, `*Handler`, `*UseCase`) | `When I invoke the EligibilityService` | `When the driver requests an eligibility check` |
+| Infrastructure vocabulary (`database`, `table`, `record`, `queue`, `topic`, `container`, `DTO`, `schema`) | `Given the database contains a record` | `Given a driver with a completed profile` |
+
+### Forbidden tags
+
+`@frontend` `@backend` `@api` `@http` `@ui` `@infrastructure` `@database` — these tags embed
+implementation vocabulary in the Gherkin layer. Use behavior tags (`@happy-path`, `@error-case`)
+or domain-feature tags (`@eligibility`) instead.
+
+**Scan instruction:** read every step and every tag of every scenario. If a hit is found,
+rewrite in domain language before handoff. A clean pass is the exit criterion for DISTILL phase.
+See the 3-Layer Abstraction Rule above for the vocabulary boundary.
 
 ## Granularity Rule
 

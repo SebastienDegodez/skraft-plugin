@@ -175,6 +175,22 @@ At most ONE walking skeleton per new feature.
 - Unit tests only if needed to decompose a complex GREEN.
 - The AT drives ALL implementation. Subsequent scenarios may find "already implemented, just remove @skip" — that's correct.
 
+## Concentric Circle Expansion
+
+The double loop (acceptance + domain unit tests) is the inner circle. Once it is GREEN for a
+behavior slice, expand outward — one circle at a time.
+
+| Phase | What to write | Prerequisite |
+|---|---|---|
+| **1 — Inner (double loop)** | Acceptance test at the application boundary + domain unit tests | none — always first |
+| **2 — API circle** | Integration test at the transport boundary (in-process host, real entry point) | Phase 1 GREEN |
+| **3 — Infrastructure circle** | Integration test at the persistence / broker / external adapter boundary | Phase 2 GREEN |
+
+**Ordering rule:** never start Phase N+1 while Phase N is RED. Expanding outward while the inner
+loop is still RED hides the root cause under outer-circle complexity and produces untraceable failures.
+
+For test project placement and folder naming conventions, see `clean-architecture-testing`.
+
 ## E2E Test Management
 
 Enable ONE acceptance test at a time to avoid commit blocks:
