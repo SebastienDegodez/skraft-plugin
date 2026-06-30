@@ -86,9 +86,21 @@ test('hook router returns undefined when no PreToolUse handler registered', asyn
   assert.equal(result, undefined)
 })
 
+test('hook router returns undefined when no SubagentStart handler registered', async () => {
+  const service = createHookService({})
+  const result = await service.handle({ hookType: 'SubagentStart' })
+  assert.equal(result, undefined)
+})
+
 test('hook router returns undefined when no SubagentStop handler registered', async () => {
   const service = createHookService({})
   const result = await service.handle({ hookType: 'SubagentStop' })
+  assert.equal(result, undefined)
+})
+
+test('hook router returns undefined when no PostToolUse handler registered', async () => {
+  const service = createHookService({})
+  const result = await service.handle({ hookType: 'PostToolUse' })
   assert.equal(result, undefined)
 })
 

@@ -1,0 +1,41 @@
+{
+    "lspServers": {
+        "typescript": {
+            "command": "vtsls",
+            "args": [
+                "--stdio"
+            ],
+            "extensionToLanguage": {
+                ".ts": "typescript",
+                ".tsx": "typescriptreact",
+                ".js": "javascript",
+                ".jsx": "javascriptreact",
+                ".mjs": "javascript",
+                ".cjs": "javascript"
+            },
+            "transport": "stdio",
+            "initializationOptions": {},
+            "settings": {},
+            "maxRestarts": 3
+        },
+        "json": {
+            "command": "vscode-json-language-server",
+            "args": ["--stdio"],
+            "extensionToLanguage": {
+                ".json": "json",
+                ".jsonc": "jsonc"
+            },
+            "transport": "stdio",
+            "initializationOptions": {},
+            "settings": {
+                "json": {
+                    "validate": {
+                        "enable": true
+                    },
+                    "schemas": []
+                }
+            },
+            "maxRestarts": 3
+        }
+    }
+}
