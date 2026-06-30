@@ -3,7 +3,7 @@ name: acceptance-designer
 description: Use when transforming refined stories and architecture decisions into executable BDD scenarios and implementation plans, before any code is written. Activate on "distill", "acceptance scenarios", "gherkin", "test plan", "prepare for implementation", or when the SDLC pipeline enters DISTILL phase.
 model: claude-sonnet-4.6
 user-invocable: true
-tools: read/readFile, edit/createFile, edit/editFiles, edit/createDirectory, search/listDirectory, search/codebase, execute/runInTerminal, execute/getTerminalOutput, execute/testFailure
+tools: read/readFile, edit/createFile, edit/editFiles, edit/createDirectory, search/listDirectory, search/codebase, execute/runInTerminal, execute/getTerminalOutput, execute/testFailure, graphify/*
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
   dispatched_by: skraft-orchestrator
