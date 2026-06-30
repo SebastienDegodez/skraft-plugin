@@ -9,6 +9,15 @@
           }
         ],
         "matcher": "Agent"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse Bash"
+          }
+        ],
+        "matcher": "Bash"
       }
     ],
     "SubagentStart": [
