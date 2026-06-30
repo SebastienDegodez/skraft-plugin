@@ -116,13 +116,13 @@ node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
 
 Read `.skraft-docs/ledger.json`. Check `summary.total`. If `summary.total == 0`, **IMMEDIATELY** call the `noop` safe-output with message:
 
-> "Skipping: derived pages already in sync. No drift detected by scan-drift.mjs."
+> "Skipping: derived pages already in sync. No drift detected by scan-drift.mjs"
 
-Then **STOP**. Do NOT proceed with steps 1-4 below. Failing to call `noop` when `summary.total == 0` will fail the workflow.
+Then **STOP**. Do NOT proceed with steps 1-3 below. Failing to call `noop` when `summary.total == 0` will fail the workflow.
 
 If `summary.total > 0`, check if **ALL** items are `severity: low` basename exceptions already listed in `meta.basename_exceptions` in `book.yml`, AND no item has `pageType: derived` or `type: orphan-source`. If true, call `noop` with message:
 
-> "Skipping: only low-severity basename exceptions remain, no derived drift."
+> "Skipping: only low-severity basename exceptions remain, no derived drift"
 
 Then **STOP**.
 
@@ -130,11 +130,9 @@ Then **STOP**.
 
 **If and only if drift requires action**, proceed with these steps:
 
-1. **Filter to derived scope.** Process ONLY items from the ledger whose `pageType: derived` or whose `type: orphan-source`.
+1. **Reconcile derived items.** Load the `skraft-docs-orchestrator` agent (in `.github/agents/`) and instruct it to process items from the ledger whose `pageType: derived` or `type: orphan-source`. It drives each to a terminal in-sync state through the `skraft-docs-placement-architect` and `skraft-docs-derived-writer` workers, runs the deterministic stop-predicates (`scan-drift`, `lint-nav`, `check-citations`), and gates the result through the `skraft-docs-reviewer` panel.
 
-2. **Reconcile.** Load the `skraft-docs-orchestrator` agent (in `.github/agents/`) and instruct it to process the filtered items. It drives each to a terminal in-sync state through the `skraft-docs-placement-architect` and `skraft-docs-derived-writer` workers, runs the deterministic stop-predicates (`scan-drift`, `lint-nav`, `check-citations`), and gates the result through the `skraft-docs-reviewer` panel.
-
-3. **Open the PR.** Emit a single `create-pull-request` bundling the staged `docs/site/{fr,en}/` changes (and any `book.yml` entry the placement-architect added for an orphan source). If the orchestrator changed nothing, call `noop`.
+2. **Open the PR.** Emit a single `create-pull-request` bundling the staged `docs/site/{fr,en}/` changes (and any `book.yml` entry the placement-architect added for an orphan source). If the orchestrator changed nothing, call `noop`.
 
 
 ## Constraints
