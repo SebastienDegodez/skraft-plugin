@@ -130,13 +130,11 @@ Then **STOP**.
 
 **If and only if drift requires action**, proceed with these steps:
 
-1. **Scan (deterministic).** You already ran the scanner above. The ledger is in `.skraft-docs/ledger.json`.
+1. **Filter to derived scope.** Process ONLY items from the ledger whose `pageType: derived` or whose `type: orphan-source`.
 
-2. **Filter to derived scope.** Process ONLY items whose `pageType: derived` or whose `type: orphan-source`. Ignore all other items (they belong to the weekly `skraft-docs-gaps` workflow).
+2. **Reconcile.** Load the `skraft-docs-orchestrator` agent (in `.github/agents/`) and instruct it to process the filtered items. It drives each to a terminal in-sync state through the `skraft-docs-placement-architect` and `skraft-docs-derived-writer` workers, runs the deterministic stop-predicates (`scan-drift`, `lint-nav`, `check-citations`), and gates the result through the `skraft-docs-reviewer` panel.
 
-3. **Reconcile.** Load the `skraft-docs-orchestrator` agent (in `.github/agents/`) and instruct it to process the filtered items. It drives each to a terminal in-sync state through the `skraft-docs-placement-architect` and `skraft-docs-derived-writer` workers, runs the deterministic stop-predicates (`scan-drift`, `lint-nav`, `check-citations`), and gates the result through the `skraft-docs-reviewer` panel.
-
-4. **Open the PR.** Emit a single `create-pull-request` bundling the staged `docs/site/{fr,en}/` changes (and any `book.yml` entry the placement-architect added for an orphan source). If the orchestrator changed nothing, call `noop`.
+3. **Open the PR.** Emit a single `create-pull-request` bundling the staged `docs/site/{fr,en}/` changes (and any `book.yml` entry the placement-architect added for an orphan source). If the orchestrator changed nothing, call `noop`.
 
 
 ## Constraints
