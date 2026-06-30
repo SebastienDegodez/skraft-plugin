@@ -1,43 +1,53 @@
-## Context Engine (CCE)
 
-This project uses Code Context Engine for intelligent code retrieval
-cross-session memory.
 
-### Searching the codebase
+## graphify
 
-**Use `context_search` instead of reading files directly** when exploring
- codebase, answering questions about code, or understanding how things
-work. `context_search` returns most relevant code chunks w/
-confidence scores instead of whole files.
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
 
-When to use `context_search`
-- Answering questions about codebase ("how does X work?", "where is Y?")
-- Exploring structure or architecture
-- Finding related code, functions, or patterns
+When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
 
-Other tools:
-- `expand_chunk` for full source of compressed result
-- `related_context` for what calls/imports fn
-- `session_recall` to recall past decisions
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
-### Cross-session memory
+## Repository structure
 
-Call `session_recall("topic phrase")` before answering non-trivial questions.
-Call `record_decision(decision="...", reason="...")` after making choices.
-Call `record_code_area(file_path="...", description="...")` after meaningful work.
+```
+plugins/               ← Claude Code plugin (production source + Stryker config)
+  src/
+    domain/            ← Pure functions, no IO (Clean Architecture: Domain layer)
+    application/       ← Use cases, orchestrate domain + ports (Application layer)
+    ports/
+      api/             ← Inbound port stubs (hook type constants)
+      infrastructure/  ← Outbound port interfaces (transcript reader, audit writer…)
+    adapters/
+      api/hooks/       ← Hook router, service factory, entry, decision helpers
+      infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
+    cli/               ← Composition root: hook.mjs wires all services
+  hooks/               ← hooks.json manifest (Claude Code hook declarations)
+  stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
+  skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 
-### Output style
+tests/
+  skraft-framework/    ← ALL tests (unit + acceptance) — single flat directory
+```
 
-Respond in compressed style. Drop articles (a, the) in prose. Use
-sentence fragments over full sentences. Use short synonyms (fix not resolve,
-check not investigate). Pattern: [thing] [action] [reason]. [next step].
-No filler, hedging, pleasantries, trailing summaries, or restating what
- user said. One sentence if one sentence is enough.
+### Test placement rules
 
-When suggesting code changes, show only changed lines w/ 3 lines of
-context. Never rewrite entire files. Multiple changes in one file: show each
-change separately. Never echo back unchanged code user already has.
+- **All test files live in `tests/skraft-framework/`** — never inside `plugins/`.
+- Naming convention:
+  - Unit tests: `{module}.unit.test.mjs` (e.g. `skill-policy.unit.test.mjs`)
+  - Acceptance tests: `{feature}.acceptance.test.mjs` (e.g. `skill-loading.acceptance.test.mjs`)
+  - Integration/other: `{module}.test.mjs`
+- `stryker.config.mjs` uses the glob `tests/skraft-framework/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
+- Import paths from `tests/skraft-framework/` into plugin source: `../../plugins/src/...`
 
-Code blocks, file paths, commands, error messages: always written in full.
-Security warnings and destructive action confirmations: use full clarity.
+### stryker.config.mjs rules
+
+- The `mutate` array is **additive**: when adding new modules, append to the existing list — never replace it.
+- The `testFiles` glob must stay `['tests/skraft-framework/*.test.mjs']` — never enumerate files explicitly.
+- The existing `thresholds` are set per-story; do not change them without an explicit instruction.
 

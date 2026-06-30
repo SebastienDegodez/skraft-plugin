@@ -17,6 +17,11 @@ export default {
     'plugins/src/domain/state-schema.mjs',
     'plugins/src/domain/pipeline-policy.mjs',
     'plugins/src/application/pre-tool-use-service.mjs',
+    // US4 — G2/G3 skill-loading guardrail (#50)
+    'plugins/src/domain/skill-policy.mjs',
+    'plugins/src/application/subagent-start-service.mjs',
+    'plugins/src/application/subagent-stop-service.mjs',
+    'plugins/src/application/post-tool-use-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },
