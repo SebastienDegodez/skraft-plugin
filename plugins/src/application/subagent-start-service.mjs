@@ -35,7 +35,6 @@ export const createSubagentStartService = ({ config, skillFileReader, auditWrite
       }
     }
 
-    // Stryker disable next-line StringLiteral: '\n\n' vs '' separator; both contain included strings — formatting choice
     return additionalContext(parts.join('\n\n'))
   }
 })

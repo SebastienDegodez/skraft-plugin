@@ -8,7 +8,6 @@ const SKILL_MD_PATH_RE =
 // Equivalent mutants (not testable beyond try-catch observable boundary):
 //   - ConditionalExpression: `typeof path === 'string'` → defensive guard; try-catch makes it equivalent
 //   - OptionalChaining: `toolInput?.path` → defensive guard; try-catch makes it equivalent
-// Stryker disable next-line ConditionalExpression: try-catch swallows TypeError making typeof-guard equivalent
 const extractSkillName = (path) => {
   const match = typeof path === 'string' ? path.match(SKILL_MD_PATH_RE) : null
   return match ? match[1] : null
@@ -17,7 +16,6 @@ const extractSkillName = (path) => {
 export const createPostToolUseService = ({ auditWriter, clock }) => ({
   handle: async ({ agentName, toolInput } = {}) => {
     try {
-      // Stryker disable next-line OptionalChaining: try-catch swallows TypeError making optional-chain equivalent
       const path = toolInput?.path
       const skillName = extractSkillName(path)
       if (skillName) {
