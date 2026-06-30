@@ -92,9 +92,15 @@ share the same English basename (only the `fr/` vs `en/` folder prefix differs).
 
 ## Activation guard
 
-The scanner decides activation deterministically (see Procedure step 2). In short:
-`noop` when `scan-drift.mjs` reports no derived/orphan drift; otherwise reconcile.
-Failing to `noop` when nothing changed fails the workflow.
+The workflow runs `scan-drift.mjs` **first** and checks `summary.total`. It calls
+`noop` when there's no derived/orphan drift and **immediately stops**. This is a
+**mandatory guard** — the agent MUST check drift before any other action.
+
+`noop` cases:
+- `summary.total == 0` → no drift at all
+- All items are `low`-severity basename exceptions AND no `pageType: derived` or `orphan-source` → no actionable drift for this workflow
+
+Failing to `noop` when nothing changed will fail the workflow.
 
 
 ## Procedure
@@ -102,30 +108,35 @@ Failing to `noop` when nothing changed fails the workflow.
 Detection is a **deterministic tool**; repair is the **agent chain**. This
 workflow orchestrates them — it never re-implements the diff in prose.
 
-1. **Scan (deterministic).** Run the drift scanner and read its ledger:
+**YOUR FIRST ACTION — MANDATORY GUARD:** Before doing anything else, run:
 
-   ```bash
-   node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
-   ```
+```bash
+node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
+```
 
-2. **Activation guard.** If `summary.total == 0`, or the only items are
-   `low`-severity basename exceptions already declared in
-   `meta.basename_exceptions`, or no item has `pageType: derived` and none is an
-   `orphan-source`, call `noop` (`"Skipping: derived pages already in sync."`) and
-   stop. Failing to `noop` when nothing changed fails the workflow.
+Read `.skraft-docs/ledger.json`. Check `summary.total`. If `summary.total == 0`, **IMMEDIATELY** call the `noop` safe-output with message:
 
-3. **Reconcile (scope: derived).** Run the `skraft-docs-orchestrator` agent (in
-   `.github/agents/`), instructing it to process ONLY items whose
-   `pageType: derived` or whose `type: orphan-source`. It drives each item to a
-   terminal in-sync state through the `skraft-docs-placement-architect` and
-   `skraft-docs-derived-writer` workers, runs the deterministic stop-predicates
-   (`scan-drift`, `lint-nav`, `check-citations`), and gates the result through the
-   `skraft-docs-reviewer` panel. Editorial gaps are left to the weekly
-   `skraft-docs-gaps` sweep.
+> "Skipping: derived pages already in sync. No drift detected by scan-drift.mjs."
 
-4. **Open the PR.** Emit a single `create-pull-request` bundling the staged
-   `docs/site/{fr,en}/` changes (and any `book.yml` entry the placement-architect
-   added for an orphan source). If the orchestrator changed nothing, call `noop`.
+Then **STOP**. Do NOT proceed with steps 1-4 below. Failing to call `noop` when `summary.total == 0` will fail the workflow.
+
+If `summary.total > 0`, check if **ALL** items are `severity: low` basename exceptions already listed in `meta.basename_exceptions` in `book.yml`, AND no item has `pageType: derived` or `type: orphan-source`. If true, call `noop` with message:
+
+> "Skipping: only low-severity basename exceptions remain, no derived drift."
+
+Then **STOP**.
+
+---
+
+**If and only if drift requires action**, proceed with these steps:
+
+1. **Scan (deterministic).** You already ran the scanner above. The ledger is in `.skraft-docs/ledger.json`.
+
+2. **Filter to derived scope.** Process ONLY items whose `pageType: derived` or whose `type: orphan-source`. Ignore all other items (they belong to the weekly `skraft-docs-gaps` workflow).
+
+3. **Reconcile.** Load the `skraft-docs-orchestrator` agent (in `.github/agents/`) and instruct it to process the filtered items. It drives each to a terminal in-sync state through the `skraft-docs-placement-architect` and `skraft-docs-derived-writer` workers, runs the deterministic stop-predicates (`scan-drift`, `lint-nav`, `check-citations`), and gates the result through the `skraft-docs-reviewer` panel.
+
+4. **Open the PR.** Emit a single `create-pull-request` bundling the staged `docs/site/{fr,en}/` changes (and any `book.yml` entry the placement-architect added for an orphan source). If the orchestrator changed nothing, call `noop`.
 
 
 ## Constraints
