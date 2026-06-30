@@ -92,15 +92,13 @@ share the same English basename (only the `fr/` vs `en/` folder prefix differs).
 
 ## Activation guard
 
-The workflow runs `scan-drift.mjs` **first** and checks `summary.total`. It calls
-`noop` when there's no derived/orphan drift and **immediately stops**. This is a
-**mandatory guard** — the agent MUST check drift before any other action.
+Workflow runs `scan-drift.mjs` **first**, checks `summary.total`. Calls `noop` when no derived/orphan drift, **stops immediately**. **Mandatory guard** — agent MUST check drift before any other action.
 
 `noop` cases:
-- `summary.total == 0` → no drift at all
-- All items are `low`-severity basename exceptions AND no `pageType: derived` or `orphan-source` → no actionable drift for this workflow
+- `summary.total == 0` → no drift
+- All items low basename exceptions AND no `pageType: derived` or `orphan-source` → no actionable drift
 
-Failing to `noop` when nothing changed will fail the workflow.
+Fail to `noop` when nothing changed → workflow fails.
 
 
 ## Procedure
@@ -108,23 +106,25 @@ Failing to `noop` when nothing changed will fail the workflow.
 Detection is a **deterministic tool**; repair is the **agent chain**. This
 workflow orchestrates them — it never re-implements the diff in prose.
 
-**YOUR FIRST ACTION — MANDATORY GUARD:** Before doing anything else, run:
+**YOUR FIRST ACTION — MANDATORY GUARD:** Before anything else, run:
 
 ```bash
 node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
 ```
 
-Read `.skraft-docs/ledger.json`. Check `summary.total`. If `summary.total == 0`, **IMMEDIATELY** call the `noop` safe-output with message:
+Read `.skraft-docs/ledger.json`. Check `summary.total`.
+
+`summary.total == 0` → call `noop` safe-output:
 
 > "Skipping: no drift detected by scan-drift"
 
-Then **STOP**. Do NOT proceed with steps 1-2 below. Failing to call `noop` when `summary.total == 0` will fail the workflow.
+Stop. Do NOT proceed with steps 1-2. Fail to `noop` when `summary.total == 0` → workflow fails.
 
-If `summary.total > 0`, check if **ALL** items are `severity: low` basename exceptions already listed in `meta.basename_exceptions` in `book.yml`, AND no item has `pageType: derived` or `type: orphan-source`. If true, call `noop` with message:
+`summary.total > 0` + all items low basename exceptions in `meta.basename_exceptions` + no `pageType: derived` or `type: orphan-source` → call `noop`:
 
 > "Skipping: only basename exceptions, no derived drift"
 
-Then **STOP**.
+Stop.
 
 ---
 
