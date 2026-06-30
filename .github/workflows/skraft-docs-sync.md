@@ -116,13 +116,13 @@ node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
 
 Read `.skraft-docs/ledger.json`. Check `summary.total`. If `summary.total == 0`, **IMMEDIATELY** call the `noop` safe-output with message:
 
-> "Skipping: no drift detected by scan-drift.mjs."
+> "Skipping: no drift detected by scan-drift"
 
 Then **STOP**. Do NOT proceed with steps 1-2 below. Failing to call `noop` when `summary.total == 0` will fail the workflow.
 
 If `summary.total > 0`, check if **ALL** items are `severity: low` basename exceptions already listed in `meta.basename_exceptions` in `book.yml`, AND no item has `pageType: derived` or `type: orphan-source`. If true, call `noop` with message:
 
-> "Skipping: only low-severity basename exceptions; no derived drift."
+> "Skipping: only basename exceptions, no derived drift"
 
 Then **STOP**.
 
