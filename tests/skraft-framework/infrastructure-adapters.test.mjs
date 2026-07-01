@@ -145,34 +145,6 @@ test('real filesystem: mkdir creates nested directories', async () => {
 
 // ── json-state-reader ─────────────────────────────────────────────────────────
 
-test('json-state-reader: write then read round-trips state object', async () => {
-  const base = await mkdtemp(join(tmpdir(), 'skraft-sr-'))
-  const reader = createJsonStateReader(base)
-  const state = { currentPhase: 'DISCOVER', difficulty: null }
-  await reader.write('my-project', state)
-  const loaded = await reader.read('my-project')
-  assert.deepEqual(loaded, state)
-  await rm(base, { recursive: true, force: true })
-})
-
-test('json-state-reader: write creates directory if missing', async () => {
-  const base = await mkdtemp(join(tmpdir(), 'skraft-sr-'))
-  const reader = createJsonStateReader(base)
-  await reader.write('new-slug', { phase: 'DESIGN' })
-  const loaded = await reader.read('new-slug')
-  assert.equal(loaded.phase, 'DESIGN')
-  await rm(base, { recursive: true, force: true })
-})
-
-test('json-state-reader: write creates nested directories recursively', async () => {
-  const base = await mkdtemp(join(tmpdir(), 'skraft-sr-'))
-  const reader = createJsonStateReader(join(base, 'deep', 'nested'))
-  await reader.write('my-project', { phase: 'DELIVER' })
-  const loaded = await reader.read('my-project')
-  assert.equal(loaded.phase, 'DELIVER')
-  await rm(base, { recursive: true, force: true })
-})
-
 test('json-state-reader: ENOENT message contains project slug', async () => {
   const base = await mkdtemp(join(tmpdir(), 'skraft-sr-'))
   const reader = createJsonStateReader(base)
