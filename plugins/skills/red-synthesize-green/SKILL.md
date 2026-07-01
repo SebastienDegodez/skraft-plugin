@@ -26,6 +26,12 @@ Write the failing test. Run it.
 
 **Programming by Wishful Thinking:** When your test won't compile, you're discovering the API you need. Stub just enough to compile, then confirm the test fails on behavior.
 
+**Placeholder assertions ARE NOT wishful thinking.** `assert.fail()`, `Assert.Fail()`, `Assert.True(false)`, `fail()`, `assert False` — any assertion designed to fail unconditionally — makes the test compile and fail, but asserts nothing about the API under test. A proper wishful thinking test calls the function you WISH existed and lets the build/runtime surface the failure naturally:
+1. Reference the missing type/function → compile error or missing-symbol/module error
+2. Stub just enough to compile (empty return / minimal implementation) → test fails on the real business assertion
+
+NEVER insert a placeholder assertion. It produces false RED evidence regardless of language.
+
 ## Between Steps: Architectural Guidance (MANDATORY)
 
 **Hard rule:** This step is not skippable. Do not proceed to SYNTHESIZE GREEN without completing it.
@@ -57,11 +63,13 @@ Implement complete, clean, production-ready solution in one shot.
 | "Compilation error IS red" | No. Compilation = wishful thinking. RED = behavior failure. |
 | "I'll write dirty code then refactor" | That's 3-step TDD. SYNTHESIZE GREEN produces clean code. |
 | "I can skip RED, I know it'll fail" | Run it. RED proves your test catches real failures. |
+| "The placeholder fails, so it's RED" | No. `assert.fail()` / `Assert.Fail()` / `Assert.True(false)` assert nothing about the API. Write the real call; let the missing symbol cause a compile error, then stub past it. |
 
 ## Red Flags — STOP and Restart
 
 - Implementation code before RED is a behavior failure
 - Compilation errors treated as RED
+- Placeholder assertion in test body (`assert.fail()`, `Assert.Fail()`, `Assert.True(false)`, `fail()`, `throw new NotImplementedException()`) — tests no behavior, produces false RED evidence
 - Skipping RED entirely
 - Skipping the Between Steps architectural guidance
 - Proceeding to SYNTHESIZE GREEN without developer test validation
