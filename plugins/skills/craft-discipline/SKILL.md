@@ -48,8 +48,10 @@ Verify that the linter/analyzer reports no new findings.
 ### C5 — No skipped tests or placeholder assertions
 
 No `[Skip]`, `[Ignore]`, `#if false`, disabling comments,
-or `assert.fail()` / `throw new Error('not implemented')` placeholders
-in test bodies. Skipped tests and placeholder assertions are both theater —
+or placeholder assertions in test bodies
+(`assert.fail()` / `Assert.Fail()` / `Assert.True(false, ...)` /
+`throw new NotImplementedException()` / `throw new Error('not implemented')`).
+Skipped tests and placeholder assertions are both theater —
 they pass the compile gate but assert nothing.
 
 ### C6 — No mocks in Domain/Application

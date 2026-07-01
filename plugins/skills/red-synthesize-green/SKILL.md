@@ -26,12 +26,11 @@ Write the failing test. Run it.
 
 **Programming by Wishful Thinking:** When your test won't compile, you're discovering the API you need. Stub just enough to compile, then confirm the test fails on behavior.
 
-**`assert.fail()` IS NOT wishful thinking.** Inserting `assert.fail()` makes the test compile and produce an assertion error, but it asserts nothing about the API under test — it is a placeholder. A proper wishful thinking test calls the function you WISH existed and lets the runtime surface the failure naturally:
-1. Write the real import (`import { fn } from './not-yet.mjs'`) → `ERR_MODULE_NOT_FOUND`
-2. Stub an empty export → test fails on `TypeError: fn is not a function`
-3. Stub the function signature (return `undefined`) → test fails on the real business assertion
+**Placeholder assertions ARE NOT wishful thinking.** `assert.fail()`, `Assert.Fail()`, `Assert.True(false)`, `fail()`, `assert False` — any assertion designed to fail unconditionally — makes the test compile and fail, but asserts nothing about the API under test. A proper wishful thinking test calls the function you WISH existed and lets the build/runtime surface the failure naturally:
+1. Reference the missing type/function → compile error or missing-symbol/module error
+2. Stub just enough to compile (empty return / minimal implementation) → test fails on the real business assertion
 
-NEVER insert `assert.fail()` as a placeholder. It produces false RED evidence.
+NEVER insert a placeholder assertion. It produces false RED evidence regardless of language.
 
 ## Between Steps: Architectural Guidance (MANDATORY)
 
@@ -64,13 +63,13 @@ Implement complete, clean, production-ready solution in one shot.
 | "Compilation error IS red" | No. Compilation = wishful thinking. RED = behavior failure. |
 | "I'll write dirty code then refactor" | That's 3-step TDD. SYNTHESIZE GREEN produces clean code. |
 | "I can skip RED, I know it'll fail" | Run it. RED proves your test catches real failures. |
-| "`assert.fail()` is wishful thinking" | No. `assert.fail()` asserts nothing about the API. Write the real call; let `ERR_MODULE_NOT_FOUND` or `TypeError` be the first failure, then stub past it. |
+| "The placeholder fails, so it's RED" | No. `assert.fail()` / `Assert.Fail()` / `Assert.True(false)` assert nothing about the API. Write the real call; let the missing symbol cause a compile error, then stub past it. |
 
 ## Red Flags — STOP and Restart
 
 - Implementation code before RED is a behavior failure
 - Compilation errors treated as RED
-- `assert.fail()` / `throw new Error('not implemented')` in test body — placeholder, tests no behavior, produces false RED evidence
+- Placeholder assertion in test body (`assert.fail()`, `Assert.Fail()`, `Assert.True(false)`, `fail()`, `throw new NotImplementedException()`) — tests no behavior, produces false RED evidence
 - Skipping RED entirely
 - Skipping the Between Steps architectural guidance
 - Proceeding to SYNTHESIZE GREEN without developer test validation
