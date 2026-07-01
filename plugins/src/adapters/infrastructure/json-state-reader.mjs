@@ -1,15 +1,19 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { readFile, copyFile } from 'node:fs/promises'
 
 export const createJsonStateReader = (basePath) => ({
+  // State lives at {basePath}/{projectSlug}/state.json for each tracked project.
+  // Detects corrupt JSON: snapshots to state.json.corrupted.{ts} then throws code=CORRUPTED_STATE.
   read: async (projectSlug) => {
-    // State lives at {basePath}/{projectSlug}/state.json for each tracked project.
-    const raw = await readFile(`${basePath}/${projectSlug}/state.json`, 'utf8')
-    return JSON.parse(raw)
-  },
-  write: async (projectSlug, state) => {
     const path = `${basePath}/${projectSlug}/state.json`
-    await mkdir(dirname(path), { recursive: true })
-    await writeFile(path, JSON.stringify(state, null, 2), 'utf8')
-  }
+    const raw = await readFile(path, 'utf8')
+    try {
+      return JSON.parse(raw)
+    } catch (parseErr) {
+      const snapshot = `${path}.corrupted.${Date.now()}`
+      await copyFile(path, snapshot).catch(() => {})
+      const err = new Error(`Corrupted state.json for ${projectSlug}: ${parseErr.message}`)
+      err.code = 'CORRUPTED_STATE'
+      throw err
+    }
+  },
 })
