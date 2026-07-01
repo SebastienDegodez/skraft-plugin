@@ -18,6 +18,13 @@ const lookup = (key, scope) => {
 
 const isTruthy = (v) => (Array.isArray(v) ? v.length > 0 : Boolean(v))
 
+// Mustache "standalone line" rule: when a section tag ({{#x}}, {{^x}}, {{/x}}) is
+// the only non-whitespace on its line, its leading indentation and trailing newline
+// are stripped. Without this, each loop iteration injects a blank line — which breaks
+// markdown tables (a blank line ends a table). Variable tags are never standalone.
+const stripStandaloneTags = (tpl) =>
+  tpl.replace(/^[ \t]*(\{\{[#^/]\s*[\w.]+\s*\}\})[ \t]*\r?\n/gm, '$1')
+
 const renderSections = (tpl, scope) =>
   tpl.replace(
     /\{\{([#^])\s*([\w.]+)\s*\}\}([\s\S]*?)\{\{\/\s*\2\s*\}\}/g,
@@ -50,4 +57,5 @@ const renderVariables = (tpl, scope) =>
  * @param {object} data plain data object
  * @returns {string}    rendered output
  */
-export const render = (tpl, data) => renderVariables(renderSections(tpl, data), data)
+export const render = (tpl, data) =>
+  renderVariables(renderSections(stripStandaloneTags(tpl), data), data)

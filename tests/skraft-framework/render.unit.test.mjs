@@ -75,3 +75,24 @@ test('render handles nested sections', () => {
   }
   assert.equal(render(tpl, data), 'L1:[a][b] L2: ')
 })
+
+// standalone tag lines ———————————————————————————————————————————————
+
+test('render strips the trailing newline of a standalone section tag', () => {
+  const tpl = 'a\n{{#items}}\n{{.}}\n{{/items}}\nb'
+  assert.equal(render(tpl, { items: ['x', 'y'] }), 'a\nx\ny\nb')
+})
+
+test('render keeps loop rows adjacent so a markdown table is not broken', () => {
+  const tpl = ['| A | B |', '|---|---|', '{{#rows}}', '| {{a}} | {{b}} |', '{{/rows}}', '| end | . |'].join('\n')
+  const data = { rows: [{ a: '1', b: '2' }, { a: '3', b: '4' }] }
+  assert.equal(
+    render(tpl, data),
+    ['| A | B |', '|---|---|', '| 1 | 2 |', '| 3 | 4 |', '| end | . |'].join('\n'),
+  )
+})
+
+test('render does not treat an inline section tag as standalone', () => {
+  assert.equal(render('x {{#body}}{{body}}{{/body}} y', { body: 'z' }), 'x z y')
+})
+
