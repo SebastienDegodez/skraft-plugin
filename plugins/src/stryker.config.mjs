@@ -22,6 +22,11 @@ export default {
     'plugins/src/application/subagent-start-service.mjs',
     'plugins/src/application/subagent-stop-service.mjs',
     'plugins/src/application/post-tool-use-service.mjs',
+    // US5 — State Transition Bridge (#60)
+    'plugins/src/domain/state-machine.mjs',
+    'plugins/src/domain/state-schema.mjs',
+    'plugins/src/adapters/infrastructure/state/json-state-writer.mjs',
+    'plugins/src/application/state-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

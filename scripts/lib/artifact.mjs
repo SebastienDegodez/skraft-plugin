@@ -11,7 +11,11 @@
 // into a machine-readable error + exit code 2 so the calling agent self-corrects.
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { render } from './render.mjs'
+
+/** Absolute path to the repository root, derived from this file's location. */
+const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
 /** Registry of artifact types. Add a type by declaring its template + schema. */
 export const ARTIFACTS = {
@@ -80,7 +84,7 @@ export function validate(type, data) {
  * Render artifact `type` from validated `data`. Assumes validation passed; reads
  * the template relative to `root` and renders it. Throws on read/render error.
  */
-export function renderArtifact(type, data, { root = process.cwd() } = {}) {
+export function renderArtifact(type, data, { root = REPO_ROOT } = {}) {
   const spec = ARTIFACTS[type]
   if (!spec) throw new Error(`unknown artifact type: ${type}`)
   const template = readFileSync(resolve(root, spec.template), 'utf8')
