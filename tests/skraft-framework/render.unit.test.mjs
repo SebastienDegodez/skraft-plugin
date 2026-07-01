@@ -115,3 +115,36 @@ test('render consumes YAML-parsed data (lens loop with a colon in a finding)', (
   )
 })
 
+// YAML block scalars carry freeform markdown bodies ——————————————————————
+
+test('parseYaml reads a literal block scalar preserving newlines and markdown #', () => {
+  const yaml = [
+    'consequences: |',
+    '  - **Positive**: explicit failure',
+    '  - **Negative**: verbose call sites',
+    '  # a comment-looking markdown line is preserved',
+    'date: 2026-07-01',
+  ].join('\n')
+  const data = parseYaml(yaml)
+  assert.equal(
+    data.consequences,
+    '- **Positive**: explicit failure\n- **Negative**: verbose call sites\n# a comment-looking markdown line is preserved\n',
+  )
+  assert.equal(data.date, '2026-07-01')
+})
+
+test('parseYaml strips the trailing newline for a |- block and renders as a raw body', () => {
+  const yaml = ['body: |-', '  line one', '  line two'].join('\n')
+  const data = parseYaml(yaml)
+  assert.equal(data.body, 'line one\nline two')
+  assert.equal(render('{{{body}}}', data), 'line one\nline two')
+})
+
+test('parseYaml folds a > block scalar, blank line becomes a newline', () => {
+  const yaml = ['note: >', '  one two', '  three', '', '  four', 'next: x'].join('\n')
+  const data = parseYaml(yaml)
+  assert.equal(data.note, 'one two three\nfour\n')
+  assert.equal(data.next, 'x')
+})
+
+

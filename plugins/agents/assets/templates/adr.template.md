@@ -11,7 +11,7 @@ date: {{date}}
 ratified_by: {{ratifiedBy}}
 ---
 
-# ADR-{{adr}} — {{title}}
+# ADR-{{adrLabel}} — {{title}}
 
 **Date:** {{date}}
 **Status:** {{status}}
@@ -25,9 +25,8 @@ ratified_by: {{ratifiedBy}}
 {{decision}}
 
 ## Consequences
-**Positive:**
-{{#positive}}- {{.}}
-{{/positive}}
-**Negative:**
-{{#negative}}- {{.}}
-{{/negative}}
+{{{consequences}}}
+{{#alternatives}}
+## Alternatives rejected
+{{{alternatives}}}
+{{/alternatives}}
