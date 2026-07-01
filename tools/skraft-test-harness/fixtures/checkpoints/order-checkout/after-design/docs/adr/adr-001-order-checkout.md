@@ -1,4 +1,18 @@
 <!-- markdownlint-disable-file -->
+---
+adr: 1
+title: Loyalty discount rule lives in the Order aggregate
+status: Accepted
+chosen: Order aggregate owns PayableTotal(LoyaltyTier)
+decision: >
+  The loyalty discount rule lives in the Order aggregate — PayableTotal(LoyaltyTier)
+  computes the payable total from the tier→rate mapping, keeping the rule out of the
+  API/controller layer.
+supersedes: null
+date: 2026-06-14
+ratified_by: Solution Architect (DESIGN) 2026-06-14
+---
+
 # ADR-001 — Loyalty discount rule lives in the Order aggregate
 
 **Status:** Accepted

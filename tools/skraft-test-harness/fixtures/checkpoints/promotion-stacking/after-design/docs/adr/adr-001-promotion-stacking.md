@@ -1,4 +1,18 @@
 <!-- markdownlint-disable-file -->
+---
+adr: 1
+title: Promotion stacking via a downstream client + capped DiscountPolicy
+status: Accepted
+chosen: capped DiscountPolicy + IPromotionsGateway downstream client
+decision: >
+  Promotion stacking is computed by a DiscountPolicy domain service that clamps the
+  combined loyalty + promotion rate to a configurable cap, with the external promotion
+  fetched through an IPromotionsGateway downstream client.
+supersedes: null
+date: 2026-06-14
+ratified_by: Solution Architect (DESIGN) 2026-06-14
+---
+
 # ADR-001 — Promotion stacking via a downstream client + capped DiscountPolicy
 
 **Status:** Accepted
