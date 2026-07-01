@@ -6,8 +6,6 @@ avec leur gain, statut et milestone.
 > **Mise à jour :** quand une US est livrée, passez son statut à ✅ Livré
 > **et** cochez la case dans `plugins/README.md`.
 
----
-
 ## 1. Vue d'ensemble
 
 | US | Titre | Gain principal | Statut | Milestone |
@@ -108,7 +106,7 @@ n'a pas lu un skill obligatoire est relancé ; les lectures sont journalisées e
 **Gain :** `gain:reliability` — mêmes garde-fous sur les deux runtimes (Copilot CLI
 et Claude Code).
 
-**Modules livrés :** `plugins/hooks/hooks.json` (Claude Code), `.github/hooks/skraft.json`
+**Modules livrés :** `plugins/hooks/hooks.json` (Claude Code), `.github/hooks/skraft-framework.json`
 (Copilot), `cli/hook.mjs` routé via `service-factory`.
 
 **Dépend de :** US3, US4
