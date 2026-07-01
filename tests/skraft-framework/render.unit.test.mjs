@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { render } from '../../scripts/lib/render.mjs'
+import { parseYaml } from '../../scripts/lib/book.mjs'
 
 // simple variable substitution ————————————————————————————————————————
 
@@ -94,5 +95,23 @@ test('render keeps loop rows adjacent so a markdown table is not broken', () => 
 
 test('render does not treat an inline section tag as standalone', () => {
   assert.equal(render('x {{#body}}{{body}}{{/body}} y', { body: 'z' }), 'x z y')
+})
+
+// YAML data feeds render the same as JSON ————————————————————————————————
+
+test('render consumes YAML-parsed data (lens loop with a colon in a finding)', () => {
+  const yaml = [
+    'lenses:',
+    '  - name: Completeness',
+    '    findings:',
+    '      - "G4: within budget"',
+    '      - All P0/P1 included',
+  ].join('\n')
+  const data = parseYaml(yaml)
+  const tpl = '{{#lenses}}## {{name}}\n{{#findings}}- {{.}}\n{{/findings}}{{/lenses}}'
+  assert.equal(
+    render(tpl, data),
+    '## Completeness\n- G4: within budget\n- All P0/P1 included\n',
+  )
 })
 

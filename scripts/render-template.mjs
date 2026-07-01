@@ -1,28 +1,45 @@
 #!/usr/bin/env node
 // Zero-dependency artifact template renderer.
 //
-// Renders a Mustache-subset template (see scripts/lib/render.mjs) against a JSON
-// data file, so agents emit only the data — not the structural boilerplate.
+// Renders a Mustache-subset template (see scripts/lib/render.mjs) against a data
+// file, so agents emit only the data — not the structural boilerplate.
 //
-//   node scripts/render-template.mjs --template <path> --data <path.json> [--out <path>]
+// Data is YAML (.yml / .yaml) or JSON (.json). YAML is preferred: it is lighter
+// for an agent to emit. Format is chosen by extension; when unknown the loader
+// tries JSON first, then YAML.
+//
+//   node scripts/render-template.mjs --template <path> --data <path> [--out <path>]
 //
 //   --template <path>   Mustache-subset template file (required)
-//   --data <path>       JSON data file (required)
+//   --data <path>       YAML or JSON data file (required)
 //   --out <path>        write rendered output here; omit to print to stdout
 //   --help, -h          show this help
 //
 // Exit codes: 0 success · 1 usage / read / parse / render error.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, extname } from 'node:path'
 import { render } from './lib/render.mjs'
+import { parseYaml } from './lib/book.mjs'
 
-const HELP = `Usage: node scripts/render-template.mjs --template <path> --data <path.json> [--out <path>]
+const HELP = `Usage: node scripts/render-template.mjs --template <path> --data <path> [--out <path>]
 
   --template <path>   Mustache-subset template file (required)
-  --data <path>       JSON data file (required)
+  --data <path>       YAML or JSON data file (required)
   --out <path>        write rendered output (default: stdout)
   --help, -h          show this help
 `
+
+// Parse the data file as YAML or JSON, chosen by extension (unknown → JSON then YAML).
+const parseData = (path, text) => {
+  const ext = extname(path).toLowerCase()
+  if (ext === '.yml' || ext === '.yaml') return parseYaml(text)
+  if (ext === '.json') return JSON.parse(text)
+  try {
+    return JSON.parse(text)
+  } catch {
+    return parseYaml(text)
+  }
+}
 
 const parseArgs = (argv) => {
   const opts = {}
@@ -64,9 +81,9 @@ const main = () => {
 
   let data
   try {
-    data = JSON.parse(readFileSync(opts.data, 'utf8'))
+    data = parseData(opts.data, readFileSync(opts.data, 'utf8'))
   } catch (err) {
-    fail(`cannot read/parse data JSON: ${err.message}`)
+    fail(`cannot read/parse data: ${err.message}`)
   }
 
   let output

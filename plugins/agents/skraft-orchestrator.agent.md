@@ -174,30 +174,29 @@ DELIVER runs the engineer↔reviewer loop directly:
 
 After each phase transition (approved or rejected), post a structured comment on the tracked issue. Do **not** hand-write the comment body — render it from data through the shared template so structure stays consistent and token-cheap:
 
-1. Write the comment data as JSON to a temp file, e.g. `/tmp/skraft-comment.json`:
+1. Write the comment data as YAML to a temp file, e.g. `/tmp/skraft-comment.yml`:
 
-   ```json
-   {
-     "phase": "DISCUSS",
-     "icon": "✅",
-     "status": "APPROVED",
-     "artefacts": ["`plans/{date}/stories-{slug}.md` — N stories, DoR 8/8"],
-     "verdictLabel": "APPROVED (attempt N)",
-     "difficulty": "medium-hard",
-     "depthTier": "comprehensive",
-     "nextPhase": "DESIGN → dispatch `solution-architect`",
-     "evidence": false
-   }
+   ```yaml
+   phase: DISCUSS
+   icon: "✅"
+   status: APPROVED
+   artefacts:
+     - "`plans/{date}/stories-{slug}.md` — N stories, DoR 8/8"
+   verdictLabel: APPROVED (attempt N)
+   difficulty: medium-hard
+   depthTier: comprehensive
+   nextPhase: "DESIGN → dispatch `solution-architect`"
+   evidence: false
    ```
 
-   Omit `difficulty`/`depthTier` when not applicable (the block is skipped). For the final DELIVER comment set `"evidence": true` and add `"evidenceLinks": ["…"]` referencing Playwright screenshots/reports from `changes/{date}/`.
+   Omit `difficulty`/`depthTier` when not applicable (the block is skipped). For the final DELIVER comment set `evidence: true` and add an `evidenceLinks` list referencing Playwright screenshots/reports from `changes/{date}/`.
 
 2. Render the body:
 
    ```bash
    node scripts/render-template.mjs \
      --template plugins/agents/assets/templates/review-comment.template.md \
-     --data /tmp/skraft-comment.json --out /tmp/skraft-comment.md
+     --data /tmp/skraft-comment.yml --out /tmp/skraft-comment.md
    ```
 
 3. Post it:
