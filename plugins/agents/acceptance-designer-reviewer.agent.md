@@ -123,7 +123,16 @@ A BLOCKER finding is mechanically correctable by the acceptance-designer: it ret
 
 ### Verdict Output
 
-Persist the full verdict YAML inside a markdown wrapper (first line: `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`, then emit the same YAML to stdout.
+Build the verdict as a JSON object — fields: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `depthTier`, `lensCount`, `score`, `lenses[]` (`index`, `name`, `lensScore`, `findings[]`), `synthesis[]` (`lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Write it to a temp file (e.g. `/tmp/distill-review.json`), then render the persisted review markdown through the shared template — do **not** hand-format the tables, the template owns the structure:
+
+```bash
+node scripts/render-template.mjs \
+  --template plugins/agents/assets/templates/review-verdict.template.md \
+  --data /tmp/distill-review.json \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md
+```
+
+The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict JSON to stdout.
 
 ```yaml
 verdict: APPROVED | NEEDS_REWORK | REJECTED

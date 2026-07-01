@@ -177,7 +177,16 @@ A BLOCKER finding is mechanically correctable by the backlog-planner: it returns
 
 ### Phase 4: VERDICT OUTPUT
 
-Persist the full verdict YAML inside a markdown wrapper (first line: `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md`, then emit the same YAML to stdout.
+Build the verdict as a JSON object — fields: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `depthTier`, `lensCount`, `score`, `lenses[]` (`index`, `name`, `lensScore`, `findings[]`), `synthesis[]` (`lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Write it to a temp file (e.g. `/tmp/discuss-review.json`), then render the persisted review markdown through the shared template — do **not** hand-format the tables, the template owns the structure:
+
+```bash
+node scripts/render-template.mjs \
+  --template plugins/agents/assets/templates/review-verdict.template.md \
+  --data /tmp/discuss-review.json \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md
+```
+
+The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict JSON to stdout.
 
 Emit a single machine-parseable YAML verdict block:
 

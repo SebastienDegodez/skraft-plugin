@@ -198,7 +198,16 @@ Aggregate all findings from the three lenses.
 
 ### Phase 4: OUTPUT
 
-Persist the full verdict YAML inside a markdown wrapper (first line: `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`, then emit the same YAML to stdout.
+Build the verdict as a JSON object — fields: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `depthTier`, `lensCount`, `score`, `lenses[]` (`index`, `name`, `lensScore`, `findings[]`), `synthesis[]` (`lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Write it to a temp file (e.g. `/tmp/design-review.json`), then render the persisted review markdown through the shared template — do **not** hand-format the tables, the template owns the structure:
+
+```bash
+node scripts/render-template.mjs \
+  --template plugins/agents/assets/templates/review-verdict.template.md \
+  --data /tmp/design-review.json \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md
+```
+
+The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict JSON to stdout.
 
 Emit the verdict as a YAML block, followed by a findings narrative.
 

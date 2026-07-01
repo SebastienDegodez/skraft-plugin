@@ -171,7 +171,16 @@ A failing BLOCKER gate is mechanically correctable by the backlog-discoverer: it
 
 ### Phase 4: OUTPUT
 
-Persist the full verdict YAML (wrapped in a markdown file starting with `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`, then emit the same YAML followed by a human-readable summary.
+Build the verdict as a JSON object — fields: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `depthTier`, `lensCount`, `score`, `lenses[]` (`index`, `name`, `lensScore`, `findings[]`), `synthesis[]` (`lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Write it to a temp file (e.g. `/tmp/discover-review.json`), then render the persisted review markdown through the shared template — do **not** hand-format the tables, the template owns the structure:
+
+```bash
+node scripts/render-template.mjs \
+  --template plugins/agents/assets/templates/review-verdict.template.md \
+  --data /tmp/discover-review.json \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
+```
+
+The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict JSON to stdout for the orchestrator.
 
 ```yaml
 verdict: APPROVED | NEEDS_REWORK | REJECTED
