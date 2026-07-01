@@ -123,7 +123,16 @@ A BLOCKER finding is mechanically correctable by the acceptance-designer: it ret
 
 ### Verdict Output
 
-Persist the full verdict YAML inside a markdown wrapper (first line: `<!-- markdownlint-disable-file -->`) at `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`, then emit the same YAML to stdout.
+Build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `depthTier`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Pipe it straight into the `review-verdict` artifact command — the subcommand owns the template and validates the required top-level keys; a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run. Do **not** hand-format the tables, the template owns the structure:
+
+```bash
+node scripts/artifact.mjs review-verdict \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md <<'EOF'
+{the verdict YAML built above}
+EOF
+```
+
+The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout.
 
 ```yaml
 verdict: APPROVED | NEEDS_REWORK | REJECTED
