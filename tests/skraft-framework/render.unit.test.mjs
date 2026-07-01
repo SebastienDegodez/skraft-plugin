@@ -1,0 +1,150 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { render } from '../../scripts/lib/render.mjs'
+import { parseYaml } from '../../scripts/lib/book.mjs'
+
+// simple variable substitution ————————————————————————————————————————
+
+test('render substitutes a simple variable', () => {
+  assert.equal(render('Hello {{name}}', { name: 'SKRAFT' }), 'Hello SKRAFT')
+})
+
+test('render resolves a dotted path', () => {
+  assert.equal(render('{{verdict.score}}', { verdict: { score: '0.92' } }), '0.92')
+})
+
+test('render emits empty string for a missing variable', () => {
+  assert.equal(render('x={{missing}}', {}), 'x=')
+})
+
+test('render treats {{{raw}}} the same as {{var}} in markdown context', () => {
+  assert.equal(render('{{{body}}}', { body: 'a*b' }), 'a*b')
+})
+
+// section as a loop —————————————————————————————————————————————————
+
+test('render loops a section over an array of objects', () => {
+  const tpl = '{{#findings}}- {{label}}\n{{/findings}}'
+  const data = { findings: [{ label: 'one' }, { label: 'two' }] }
+  assert.equal(render(tpl, data), '- one\n- two\n')
+})
+
+test('render loops a scalar list with the dot reference', () => {
+  const tpl = '{{#tags}}#{{.}} {{/tags}}'
+  assert.equal(render(tpl, { tags: ['p1', 'effort-l'] }), '#p1 #effort-l ')
+})
+
+test('render exposes outer scope inside a loop item', () => {
+  const tpl = '{{#rows}}{{phase}}:{{name}} {{/rows}}'
+  const data = { phase: 'DISCOVER', rows: [{ name: 'a' }, { name: 'b' }] }
+  assert.equal(render(tpl, data), 'DISCOVER:a DISCOVER:b ')
+})
+
+// section as a conditional ——————————————————————————————————————————
+
+test('render renders a truthy non-array section once', () => {
+  assert.equal(render('{{#body}}{{body}}{{/body}}', { body: 'present' }), 'present')
+})
+
+test('render skips a falsy section', () => {
+  assert.equal(render('a{{#body}}{{body}}{{/body}}b', { body: '' }), 'ab')
+})
+
+test('render skips a section whose array is empty', () => {
+  assert.equal(render('a{{#findings}}x{{/findings}}b', { findings: [] }), 'ab')
+})
+
+// inverted section ——————————————————————————————————————————————————
+
+test('render renders an inverted section when value is falsy', () => {
+  assert.equal(render('{{^findings}}none{{/findings}}', { findings: [] }), 'none')
+})
+
+test('render skips an inverted section when value is truthy', () => {
+  assert.equal(render('{{^body}}none{{/body}}', { body: 'x' }), '')
+})
+
+// nesting ————————————————————————————————————————————————————————————
+
+test('render handles nested sections', () => {
+  const tpl = '{{#lenses}}{{name}}:{{#findings}}[{{.}}]{{/findings}} {{/lenses}}'
+  const data = {
+    lenses: [
+      { name: 'L1', findings: ['a', 'b'] },
+      { name: 'L2', findings: [] },
+    ],
+  }
+  assert.equal(render(tpl, data), 'L1:[a][b] L2: ')
+})
+
+// standalone tag lines ———————————————————————————————————————————————
+
+test('render strips the trailing newline of a standalone section tag', () => {
+  const tpl = 'a\n{{#items}}\n{{.}}\n{{/items}}\nb'
+  assert.equal(render(tpl, { items: ['x', 'y'] }), 'a\nx\ny\nb')
+})
+
+test('render keeps loop rows adjacent so a markdown table is not broken', () => {
+  const tpl = ['| A | B |', '|---|---|', '{{#rows}}', '| {{a}} | {{b}} |', '{{/rows}}', '| end | . |'].join('\n')
+  const data = { rows: [{ a: '1', b: '2' }, { a: '3', b: '4' }] }
+  assert.equal(
+    render(tpl, data),
+    ['| A | B |', '|---|---|', '| 1 | 2 |', '| 3 | 4 |', '| end | . |'].join('\n'),
+  )
+})
+
+test('render does not treat an inline section tag as standalone', () => {
+  assert.equal(render('x {{#body}}{{body}}{{/body}} y', { body: 'z' }), 'x z y')
+})
+
+// YAML data feeds render the same as JSON ————————————————————————————————
+
+test('render consumes YAML-parsed data (lens loop with a colon in a finding)', () => {
+  const yaml = [
+    'lenses:',
+    '  - name: Completeness',
+    '    findings:',
+    '      - "G4: within budget"',
+    '      - All P0/P1 included',
+  ].join('\n')
+  const data = parseYaml(yaml)
+  const tpl = '{{#lenses}}## {{name}}\n{{#findings}}- {{.}}\n{{/findings}}{{/lenses}}'
+  assert.equal(
+    render(tpl, data),
+    '## Completeness\n- G4: within budget\n- All P0/P1 included\n',
+  )
+})
+
+// YAML block scalars carry freeform markdown bodies ——————————————————————
+
+test('parseYaml reads a literal block scalar preserving newlines and markdown #', () => {
+  const yaml = [
+    'consequences: |',
+    '  - **Positive**: explicit failure',
+    '  - **Negative**: verbose call sites',
+    '  # a comment-looking markdown line is preserved',
+    'date: 2026-07-01',
+  ].join('\n')
+  const data = parseYaml(yaml)
+  assert.equal(
+    data.consequences,
+    '- **Positive**: explicit failure\n- **Negative**: verbose call sites\n# a comment-looking markdown line is preserved\n',
+  )
+  assert.equal(data.date, '2026-07-01')
+})
+
+test('parseYaml strips the trailing newline for a |- block and renders as a raw body', () => {
+  const yaml = ['body: |-', '  line one', '  line two'].join('\n')
+  const data = parseYaml(yaml)
+  assert.equal(data.body, 'line one\nline two')
+  assert.equal(render('{{{body}}}', data), 'line one\nline two')
+})
+
+test('parseYaml folds a > block scalar, blank line becomes a newline', () => {
+  const yaml = ['note: >', '  one two', '  three', '', '  four', 'next: x'].join('\n')
+  const data = parseYaml(yaml)
+  assert.equal(data.note, 'one two three\nfour\n')
+  assert.equal(data.next, 'x')
+})
+
+

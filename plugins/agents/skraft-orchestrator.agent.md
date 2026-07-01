@@ -172,22 +172,32 @@ DELIVER runs the engineer↔reviewer loop directly:
 
 ## GitHub feedback
 
-After each phase transition (approved or rejected), post a structured comment on the tracked issue:
+After each phase transition (approved or rejected), post a structured comment on the tracked issue. Do **not** hand-write the comment body — render it from data through the `review-comment` artifact command so structure stays consistent and token-cheap. The subcommand owns the template and validates the required keys (`phase`, `icon`, `status`, `artefacts`, `verdictLabel`, `nextPhase`); a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run:
 
-```markdown
-## Phase {PHASE} {icon} {status}
+1. Render the body — pipe the comment data straight in:
 
-**Artefacts produced:**
-- {list artefacts with brief description}
+   ```bash
+   node scripts/artifact.mjs review-comment --out /tmp/skraft-comment.md <<'EOF'
+   phase: DISCUSS
+   icon: "✅"
+   status: APPROVED
+   artefacts:
+     - "`plans/{date}/stories-{slug}.md` — N stories, DoR 8/8"
+   verdictLabel: APPROVED (attempt N)
+   difficulty: medium-hard
+   depthTier: comprehensive
+   nextPhase: "DESIGN → dispatch `solution-architect`"
+   EOF
+   ```
 
-**Reviewer verdict:** {approved | changes_requested (attempt N) | rejected}
+   Omit `difficulty`/`depthTier` when not applicable (the block is skipped). For the final DELIVER comment add `evidence: true` and an `evidenceLinks` list referencing Playwright screenshots/reports from `changes/{date}/`.
 
-**Next phase:** {NEXT_PHASE | Pipeline complete | Blocked — user intervention required}
-```
+2. Post it:
 
-Post using: `gh issue comment {issue-number} --body "..." --repo {owner/repo}`
+   ```bash
+   gh issue comment {issue-number} --body-file /tmp/skraft-comment.md --repo {owner/repo}
+   ```
 
-For the final DELIVER comment, include evidence links if available (Playwright screenshots/reports referenced from `changes/{date}/`).
 
 ## Retry prompt template
 
