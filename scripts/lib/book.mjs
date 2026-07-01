@@ -106,9 +106,10 @@ function splitKeyValue(content) {
 export function parseYaml(text) {
   const root = {};
   const stack = [{ indent: -1, node: root, container: null, key: null }];
+  const rawLines = text.split('\n');
 
-  for (const rawLine of text.split('\n')) {
-    const line = stripComment(rawLine.replace(/\r$/, ''));
+  for (let li = 0; li < rawLines.length; li++) {
+    const line = stripComment(rawLines[li].replace(/\r$/, ''));
     if (line.trim() === '') continue;
 
     const indent = line.length - line.trimStart().length;
@@ -136,15 +137,92 @@ export function parseYaml(text) {
       const element = {};
       arr.push(element);
       stack.push({ indent, node: element, container: arr, key: arr.length - 1 });
-      if (kv) assignInto(element, kv, stack, indent);
+      if (kv) {
+        const bs = blockStyle(kv.value);
+        if (bs) {
+          const block = readBlockScalar(rawLines, li + 1, indent, bs);
+          element[kv.key] = block.value;
+          li = block.nextIndex - 1;
+        } else {
+          assignInto(element, kv, stack, indent);
+        }
+      }
       continue;
     }
 
     const kv = splitKeyValue(content);
-    if (kv) assignInto(parent.node, kv, stack, indent);
+    if (kv) {
+      const bs = blockStyle(kv.value);
+      if (bs) {
+        const block = readBlockScalar(rawLines, li + 1, indent, bs);
+        parent.node[kv.key] = block.value;
+        li = block.nextIndex - 1;
+      } else {
+        assignInto(parent.node, kv, stack, indent);
+      }
+    }
   }
 
   return root;
+}
+
+/** Detect a YAML block-scalar indicator (`|`, `>`, with optional `-`/`+` chomping). */
+function blockStyle(value) {
+  const m = /^([|>])([+-]?)\d*$/.exec(value);
+  if (!m) return null;
+  return { style: m[1], chomp: m[2] === '-' ? 'strip' : m[2] === '+' ? 'keep' : 'clip' };
+}
+
+/**
+ * Read a literal (`|`) or folded (`>`) block scalar starting at `start`.
+ * Lines are consumed while blank OR indented deeper than `keyIndent`. Content is
+ * taken from RAW lines (never comment-stripped) so markdown `#` survives.
+ * Returns { value, nextIndex } where nextIndex is the first unconsumed line.
+ */
+function readBlockScalar(rawLines, start, keyIndent, { style, chomp }) {
+  const collected = [];
+  let i = start;
+  for (; i < rawLines.length; i++) {
+    const raw = rawLines[i].replace(/\r$/, '');
+    if (raw.trim() === '') { collected.push(''); continue; }
+    const ind = raw.length - raw.trimStart().length;
+    if (ind <= keyIndent) break;
+    collected.push(raw);
+  }
+  // Trailing blank lines are re-applied per the chomping indicator.
+  let end = collected.length;
+  while (end > 0 && collected[end - 1] === '') end--;
+  const body = collected.slice(0, end);
+  const trailingBlanks = collected.length - end;
+
+  // Strip the common leading indentation (the least-indented non-blank line).
+  let blockIndent = Infinity;
+  for (const l of body) {
+    if (l === '') continue;
+    const ind = l.length - l.trimStart().length;
+    if (ind < blockIndent) blockIndent = ind;
+  }
+  if (!Number.isFinite(blockIndent)) blockIndent = 0;
+  const stripped = body.map((l) => (l === '' ? '' : l.slice(blockIndent)));
+
+  let value;
+  if (style === '|') {
+    value = stripped.join('\n');
+  } else {
+    let out = '';
+    for (const l of stripped) {
+      if (l === '') out += '\n';
+      else {
+        if (out !== '' && !out.endsWith('\n')) out += ' ';
+        out += l;
+      }
+    }
+    value = out;
+  }
+
+  if (chomp === 'clip') value += '\n';
+  else if (chomp === 'keep') value += '\n'.repeat(trailingBlanks + 1);
+  return { value, nextIndex: i };
 }
 
 /** Assign `key: value` into `node`; a bare key opens a child container frame. */
