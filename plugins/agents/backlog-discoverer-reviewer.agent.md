@@ -171,13 +171,13 @@ A failing BLOCKER gate is mechanically correctable by the backlog-discoverer: it
 
 ### Phase 4: OUTPUT
 
-Build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `depthTier`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Write it to a temp file (e.g. `/tmp/discover-review.yml`), then render the persisted review markdown through the shared template — do **not** hand-format the tables, the template owns the structure:
+Build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `depthTier`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Pipe it straight into the `review-verdict` artifact command — the subcommand owns the template and validates the required top-level keys; a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run. Do **not** hand-format the tables, the template owns the structure:
 
 ```bash
-node scripts/render-template.mjs \
-  --template plugins/agents/assets/templates/review-verdict.template.md \
-  --data /tmp/discover-review.yml \
-  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
+node scripts/artifact.mjs review-verdict \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md <<'EOF'
+{the verdict YAML built above}
+EOF
 ```
 
 The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout for the orchestrator.

@@ -172,11 +172,12 @@ DELIVER runs the engineer↔reviewer loop directly:
 
 ## GitHub feedback
 
-After each phase transition (approved or rejected), post a structured comment on the tracked issue. Do **not** hand-write the comment body — render it from data through the shared template so structure stays consistent and token-cheap:
+After each phase transition (approved or rejected), post a structured comment on the tracked issue. Do **not** hand-write the comment body — render it from data through the `review-comment` artifact command so structure stays consistent and token-cheap. The subcommand owns the template and validates the required keys (`phase`, `icon`, `status`, `artefacts`, `verdictLabel`, `nextPhase`); a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run:
 
-1. Write the comment data as YAML to a temp file, e.g. `/tmp/skraft-comment.yml`:
+1. Render the body — pipe the comment data straight in:
 
-   ```yaml
+   ```bash
+   node scripts/artifact.mjs review-comment --out /tmp/skraft-comment.md <<'EOF'
    phase: DISCUSS
    icon: "✅"
    status: APPROVED
@@ -186,20 +187,12 @@ After each phase transition (approved or rejected), post a structured comment on
    difficulty: medium-hard
    depthTier: comprehensive
    nextPhase: "DESIGN → dispatch `solution-architect`"
-   evidence: false
+   EOF
    ```
 
-   Omit `difficulty`/`depthTier` when not applicable (the block is skipped). For the final DELIVER comment set `evidence: true` and add an `evidenceLinks` list referencing Playwright screenshots/reports from `changes/{date}/`.
+   Omit `difficulty`/`depthTier` when not applicable (the block is skipped). For the final DELIVER comment add `evidence: true` and an `evidenceLinks` list referencing Playwright screenshots/reports from `changes/{date}/`.
 
-2. Render the body:
-
-   ```bash
-   node scripts/render-template.mjs \
-     --template plugins/agents/assets/templates/review-comment.template.md \
-     --data /tmp/skraft-comment.yml --out /tmp/skraft-comment.md
-   ```
-
-3. Post it:
+2. Post it:
 
    ```bash
    gh issue comment {issue-number} --body-file /tmp/skraft-comment.md --repo {owner/repo}
