@@ -45,10 +45,12 @@ All projects compile without warnings. Treat warnings as errors.
 
 Verify that the linter/analyzer reports no new findings.
 
-### C5 — No skipped tests
+### C5 — No skipped tests or placeholder assertions
 
-No `[Skip]`, `[Ignore]`, `#if false`, or disabling comments
-in tests. Every test is active.
+No `[Skip]`, `[Ignore]`, `#if false`, disabling comments,
+or `assert.fail()` / `throw new Error('not implemented')` placeholders
+in test bodies. Skipped tests and placeholder assertions are both theater —
+they pass the compile gate but assert nothing.
 
 ### C6 — No mocks in Domain/Application
 

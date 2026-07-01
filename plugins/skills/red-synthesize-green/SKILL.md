@@ -26,6 +26,13 @@ Write the failing test. Run it.
 
 **Programming by Wishful Thinking:** When your test won't compile, you're discovering the API you need. Stub just enough to compile, then confirm the test fails on behavior.
 
+**`assert.fail()` IS NOT wishful thinking.** Inserting `assert.fail()` makes the test compile and produce an assertion error, but it asserts nothing about the API under test — it is a placeholder. A proper wishful thinking test calls the function you WISH existed and lets the runtime surface the failure naturally:
+1. Write the real import (`import { fn } from './not-yet.mjs'`) → `ERR_MODULE_NOT_FOUND`
+2. Stub an empty export → test fails on `TypeError: fn is not a function`
+3. Stub the function signature (return `undefined`) → test fails on the real business assertion
+
+NEVER insert `assert.fail()` as a placeholder. It produces false RED evidence.
+
 ## Between Steps: Architectural Guidance (MANDATORY)
 
 **Hard rule:** This step is not skippable. Do not proceed to SYNTHESIZE GREEN without completing it.
@@ -57,11 +64,13 @@ Implement complete, clean, production-ready solution in one shot.
 | "Compilation error IS red" | No. Compilation = wishful thinking. RED = behavior failure. |
 | "I'll write dirty code then refactor" | That's 3-step TDD. SYNTHESIZE GREEN produces clean code. |
 | "I can skip RED, I know it'll fail" | Run it. RED proves your test catches real failures. |
+| "`assert.fail()` is wishful thinking" | No. `assert.fail()` asserts nothing about the API. Write the real call; let `ERR_MODULE_NOT_FOUND` or `TypeError` be the first failure, then stub past it. |
 
 ## Red Flags — STOP and Restart
 
 - Implementation code before RED is a behavior failure
 - Compilation errors treated as RED
+- `assert.fail()` / `throw new Error('not implemented')` in test body — placeholder, tests no behavior, produces false RED evidence
 - Skipping RED entirely
 - Skipping the Between Steps architectural guidance
 - Proceeding to SYNTHESIZE GREEN without developer test validation
