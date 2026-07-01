@@ -4,7 +4,7 @@ import { Ok, Err, isOk } from './result.mjs'
 // deny-by-default dispatch decision (ADR-004). No IO. Assumes state already passed
 // validateState. Distinct from build-time domain/dispatch-policy.mjs — no shared symbol.
 
-const nextPhaseAfter = (currentPhase, config, skipPhases) => {
+export const nextPhaseAfter = (currentPhase, config, skipPhases) => {
   const order = config.phaseOrder
   let index = order.indexOf(currentPhase) + 1
   while (index < order.length && skipPhases.includes(order[index])) {

@@ -35,3 +35,39 @@ export const validateState = (raw) => {
     skipPhases: Object.freeze([...raw.skipPhases])
   }))
 }
+
+// Coerces a phase-keyed map: arrays → {}, objects with array values → deep copy
+const coercePhaseMap = (val) => {
+  if (!val || Array.isArray(val) || typeof val !== 'object') return {}
+  return Object.fromEntries(
+    Object.entries(val).map(([k, v]) => [k, Array.isArray(v) ? [...v] : []])
+  )
+}
+
+// Validates (and coerces) the full orchestrator state.json shape used by the pipeline.
+// Missing optional fields are coerced to safe defaults (backward-compatible, ADR-010).
+// Distinct from validateState() which validates the hook-dispatch runtime shape.
+export const validatePipelineState = (raw) => {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return Err({ code: 'INVALID_STATE', fields: ['state'], reason: 'pipeline state must be an object' })
+  }
+  if (typeof raw.currentPhase !== 'string' || raw.currentPhase.length === 0) {
+    return Err({ code: 'INVALID_STATE', fields: ['currentPhase'], reason: 'currentPhase must be a non-empty string' })
+  }
+
+  const coerced = {
+    currentPhase: raw.currentPhase,
+    phasesCompleted: Array.isArray(raw.phasesCompleted) ? [...raw.phasesCompleted] : [],
+    verdicts: (raw.verdicts && !Array.isArray(raw.verdicts) && typeof raw.verdicts === 'object')
+      ? { ...raw.verdicts } : {},
+    retryCount: (raw.retryCount && !Array.isArray(raw.retryCount) && typeof raw.retryCount === 'object')
+      ? { ...raw.retryCount } : {},
+    phaseArtifacts: coercePhaseMap(raw.phaseArtifacts),
+    reviewArtifacts: coercePhaseMap(raw.reviewArtifacts),
+    difficulty: (typeof raw.difficulty === 'string') ? raw.difficulty : null,
+    userPreferences: (raw.userPreferences && typeof raw.userPreferences === 'object' && !Array.isArray(raw.userPreferences))
+      ? { ...raw.userPreferences } : {},
+  }
+
+  return Ok(Object.freeze(coerced))
+}
