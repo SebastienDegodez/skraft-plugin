@@ -330,6 +330,17 @@ Every story-triggered ADR is committed first with `Status: Proposed`, then a hum
 
 **Decision header (mandatory).** Every ADR file you write begins with the YAML decision header (see the skill's Blank Template) BEFORE the `# ADR-{NNN}` title: `adr`, `title`, `status`, `chosen`, one-line `decision`, `supersedes`, `date`, `ratified_by: null`. This header is the cheap verdict surface the orchestrator's checkpoint and downstream readers grep instead of re-reading the body.
 
+**Render, do not hand-write the scaffold.** Build the ADR as YAML — keys: `adr`, `title`, `status`, `chosen`, `decisionSummary` (the one-line header decision), `date`, `ratifiedBy`, `deciders`, `context`, `decision` (full body), `positive` list, `negative` list, and — only on a supersession — `supersedes` (`"ADR-MMM"`) plus `supersedesLink` (the `**Supersedes:**` body sentence). Omit `supersedes` when there is none (the header prints `supersedes: null`). Write it to a temp file and render the ADR through the shared template — the template owns the header keys and section order:
+
+```bash
+node scripts/render-template.mjs \
+  --template plugins/agents/assets/templates/adr.template.md \
+  --data /tmp/adr-{NNN}.yml \
+  --out docs/adr/adr-{NNN}-{slug}.md
+```
+
+The rendered file already begins with `<!-- markdownlint-disable-file -->`.
+
 The ratification channel is provided by the execution context — the orchestrating workflow specifies it when running in the agentic pipeline; in standalone local runs, prompt the developer in-terminal. The agent's responsibility is to commit the `Proposed` revision and, after the human verdict, commit the status flip.
 
 Both the `Proposed` revision and the final `Accepted` / `Rejected` revision MUST land in git history. Do not skip the `Proposed` commit — the trail of "we paused for a human here" is part of the architectural record.
