@@ -70,6 +70,8 @@ Test failures reveal the domain you need. Let the design emerge from failing tes
 - Real domain objects (not mocked)
 - No design upfront — the test tells you what to build
 
+**Placeholder test bodies are the same failure mode.** If the test body contains a placeholder assertion (`assert.fail()`, `Assert.Fail()`, `Assert.True(false)`, `fail()`, `throw new NotImplementedException()`), you have not done wishful thinking — you have written a placeholder. The test must call the API you wish existed and fail on an actual compile-time error or business assertion.
+
 ### Step 3: Verify with Mutation Testing
 
 Once both acceptance and domain test streams are green, run mutation testing (see `mutation-testing` skill).
