@@ -33,7 +33,7 @@ on:
 
 concurrency:
   group: skraft-docs-sync-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 timeout-minutes: 15
 
