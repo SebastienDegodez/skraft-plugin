@@ -28,7 +28,7 @@ Fallback si `CLAUDE_PLUGIN_ROOT` absent : glob `~/.claude/plugins/cache/*/skraft
 | 5 | Manifests hooks Copilot + Claude | ✅ Livré | `hooks/hooks.json` (Claude Code — PreToolUse Agent+Bash, SubagentStart, SubagentStop, PostToolUse), `.github/hooks/skraft-framework.json` (Copilot) |
 | 6 | Tests boundary-to-boundary | 🔲 À faire | — |
 | 7 | Documentation + roadmap.md | ✅ Livré | `plugins/README.md` (ancrage genesis A9/S4/S7, fail modes, guide « ajouter un garde-fou »), `docs/roadmap.md` (13 US avec gain + statut + milestone) |
-| 8 | G4/G5 artefacts + verdict + commit | 🔲 À faire | — |
+| 8 | G4/G5 artefacts + verdict + commit | ✅ Livré | `domain/artifact-policy.mjs` (artefacts attendus, parseur de verdict reviewer, `**Verdict:** APPROVED\|NEEDS_REWORK\|REJECTED`), `ports/infrastructure/commit-verifier.mjs` + `adapters/infrastructure/git-commit-verifier.mjs` (working tree propre), `subagent-stop-service` (complétion fail-closed : artefact manquant, verdict divergent du fichier écrit, DELIVER sans commit vérifié) — branché dans `cli/hook.mjs` |
 | 9 | S7 execution-log + CLI bridge | 🔲 À faire | — |
 | 10 | G6 continuation orchestrateur | 🔲 À faire | — |
 | 11 | G7/G8 protection d'état + session guard | 🔲 À faire | — |
@@ -100,8 +100,8 @@ plugins/src/
 | G1 ordre dispatch | `PreToolUse` | `Agent` | fail-closed | #3 | 🔲 |
 | G2 inject skills | `SubagentStart` | — | fail-open | #4 | 🔲 |
 | G3 audit skills | `PostToolUse` | `Read` | fail-open | #4 | 🔲 |
-| G4 structure artefacts | `SubagentStop` | — | fail-closed | #8 | 🔲 |
-| G5 verdict + commit | `SubagentStop` | — | fail-closed | #8 | 🔲 |
+| G4 structure artefacts | `SubagentStop` | — | fail-closed | #8 | ✅ |
+| G5 verdict + commit | `SubagentStop` | — | fail-closed | #8 | ✅ |
 | G6 continuation | `PostToolUse` | `Agent` | fail-open | #10 | 🔲 |
 | G7 deny state.json direct | `PreToolUse` | `Bash` | fail-closed | #11 | 🔲 |
 | G8 session guard | `PreToolUse` | `Agent` | fail-closed | #11 | 🔲 |

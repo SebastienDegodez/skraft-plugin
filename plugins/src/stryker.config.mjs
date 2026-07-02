@@ -27,6 +27,8 @@ export default {
     'plugins/src/domain/state-schema.mjs',
     'plugins/src/adapters/infrastructure/state/json-state-writer.mjs',
     'plugins/src/application/state-service.mjs',
+    // US8 — G4/G5 artifact + verdict + commit completion guard (#8)
+    'plugins/src/domain/artifact-policy.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },
