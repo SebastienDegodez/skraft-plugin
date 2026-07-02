@@ -12,10 +12,22 @@ const roleOf = (agentName, phaseAgents) => {
   return null
 }
 
+// Matches ProjectSlug (domain/value-objects.mjs) — guards path construction below
+// against directory traversal via a malformed projectSlug (e.g. "../../etc").
+const SAFE_PROJECT_SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
 // G4/G5 completion guard: fail-closed. Only runs when the state/filesystem ports
 // are wired and a projectSlug is given — unconfigured deployments skip it entirely
 // (the SubagentStop skill check above still applies unconditionally).
 const checkCompletion = async ({ config, agentName, projectSlug, stateReader, filesystem, commitVerifier }) => {
+  if (!SAFE_PROJECT_SLUG_RE.test(projectSlug)) {
+    return {
+      blocked: true,
+      message: 'Completion blocked: projectSlug is not a valid slug',
+      audit: { eventType: 'CompletionChecked', agentName, projectSlug, decision: 'BLOCK', reason: 'invalid_project_slug' }
+    }
+  }
+
   let raw
   try {
     raw = await stateReader.read(projectSlug)

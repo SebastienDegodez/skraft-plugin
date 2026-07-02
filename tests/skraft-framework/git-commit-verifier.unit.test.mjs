@@ -27,7 +27,7 @@ test('git-commit-verifier: clean true and a headSha after a commit with no pendi
     const result = await verifier.verify()
 
     assert.equal(result.clean, true)
-    assert.match(result.headSha, /^[0-9a-f]{40}$/)
+    assert.match(result.headSha, /^[0-9a-f]{40}$|^[0-9a-f]{64}$/)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

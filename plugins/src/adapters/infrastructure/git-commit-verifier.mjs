@@ -1,7 +1,7 @@
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
-const execFileAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 // Real git-backed CommitVerifier (G5). Verifies the working tree has no uncommitted
 // changes — i.e. any work the DELIVER specialist claims to have done was actually
@@ -10,8 +10,8 @@ const execFileAsync = promisify(exec)
 export const createGitCommitVerifier = ({ cwd } = {}) => ({
   verify: async () => {
     try {
-      const { stdout: status } = await execFileAsync('git status --porcelain', { cwd })
-      const { stdout: sha } = await execFileAsync('git rev-parse HEAD', { cwd })
+      const { stdout: status } = await execFileAsync('git', ['status', '--porcelain'], { cwd })
+      const { stdout: sha } = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd })
       return { clean: status.trim().length === 0, headSha: sha.trim() }
     } catch {
       return { clean: false, headSha: null }

@@ -245,7 +245,7 @@ test('G5: DELIVER blocks without a commitVerifier port wired', async () => {
 test('G5: DELIVER blocks when the git working tree is not clean', async () => {
   const audit = collectingWriter()
   const stateReader = { read: async () => pipelineState({ currentPhase: 'DELIVER' }) }
-  const commitVerifier = { verify: async () => ({ clean: false, headSha: 'abc123' }) }
+  const commitVerifier = { verify: async () => ({ clean: false, headSha: '0'.repeat(40) }) }
   const service = createSubagentStopService({
     config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader, commitVerifier
   })
@@ -257,7 +257,7 @@ test('G5: DELIVER blocks when the git working tree is not clean', async () => {
 test('G5: DELIVER allows when the git commit is verified clean', async () => {
   const audit = collectingWriter()
   const stateReader = { read: async () => pipelineState({ currentPhase: 'DELIVER' }) }
-  const commitVerifier = { verify: async () => ({ clean: true, headSha: 'abc123' }) }
+  const commitVerifier = { verify: async () => ({ clean: true, headSha: '0'.repeat(40) }) }
   const service = createSubagentStopService({
     config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader, commitVerifier
   })
@@ -303,6 +303,17 @@ test('G4/G5: skips completion check entirely when projectSlug is not given', asy
   const result = await service.handle({ agentName: 'software-engineer', transcript: '' })
   assert.equal(result.decision, 'allow')
   assert.equal(audit.entries.length, 0)
+})
+
+test('G4/G5: fail-closed — blocks on a malformed projectSlug (directory-traversal guard)', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => { throw new Error('must not be called') } }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '', projectSlug: '../../etc' })
+  assert.equal(result.decision, 'block')
+  assert.equal(audit.entries[0].reason, 'invalid_project_slug')
 })
 
 test('G2 skill block takes priority over G4/G5: a missing skill still blocks even with a passing completion state', async () => {
