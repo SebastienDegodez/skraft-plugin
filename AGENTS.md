@@ -13,6 +13,12 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
+## skraft-framework documentation
+
+- Framework architecture, genesis anchoring (A9/S4/S7), fail modes, guardrails G1–G8,
+  and the guide for adding a new guardrail: **`plugins/README.md`**.
+- Roadmap with all 13 US (gain + status + milestone): **`docs/roadmap.md`**.
+
 ## Repository structure
 
 ```
