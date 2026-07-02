@@ -23,11 +23,11 @@ Fallback si `CLAUDE_PLUGIN_ROOT` absent : glob `~/.claude/plugins/cache/*/skraft
 |---|---|---|---|
 | 1 | Fondation Clean Architecture | ✅ Livré | `domain/` (result, value-objects, error-codes, specifications), `ports/api` + `ports/infrastructure`, `adapters/api/hooks` (hook-entry, hook-router, payload, decision, service-factory), `adapters/infrastructure` (jsonl-audit-writer +null, json-state-reader, system-time +fixed, real-filesystem +in-memory), `application/config-loader`, `cli/hook.mjs` — `node --test` 100 % + mutation Stryker |
 | 2 | Générateur de config data-driven | ✅ Livré | `domain/framework-config-policy.mjs` (pur), `cli/build-config.mjs` (+bin), `skraft-framework.config.json` généré, scripts npm `config:build`/`config:check` — `node --test` 100 % + mutation Stryker 100 % |
-| 3 | G1 garde d'ordre de dispatch | 🔲 À faire | — |
-| 4 | G2/G3 forçage skills + audit | 🔲 À faire | — |
-| 5 | Manifests hooks Copilot + Claude | ✅ Scaffold | `hooks/hooks.json`, `.github/hooks/skraft.json`, `src/cli/hook.mjs` (stub) |
+| 3 | G1 garde d'ordre de dispatch | ✅ Livré | `domain/pipeline-policy.mjs`, `domain/state-schema.mjs`, `adapters/infrastructure/json-state-reader.mjs`, `application/pre-tool-use-service.mjs` — branché `PreToolUse(Agent)` fail-closed |
+| 4 | G2/G3 forçage skills + audit | ✅ Livré | `domain/skill-policy.mjs`, `application/subagent-start-service.mjs`, `application/subagent-stop-service.mjs` (block si skill manquant), `application/post-tool-use-service.mjs` G3 (fail-open) |
+| 5 | Manifests hooks Copilot + Claude | ✅ Livré | `hooks/hooks.json` (Claude Code — PreToolUse Agent+Bash, SubagentStart, SubagentStop, PostToolUse), `.github/hooks/skraft-framework.json` (Copilot) |
 | 6 | Tests boundary-to-boundary | 🔲 À faire | — |
-| 7 | Documentation + roadmap.md | 🔲 À faire | — |
+| 7 | Documentation + roadmap.md | ✅ Livré | `plugins/README.md` (ancrage genesis A9/S4/S7, fail modes, guide « ajouter un garde-fou »), `docs/roadmap.md` (13 US avec gain + statut + milestone) |
 | 8 | G4/G5 artefacts + verdict + commit | 🔲 À faire | — |
 | 9 | S7 execution-log + CLI bridge | 🔲 À faire | — |
 | 10 | G6 continuation orchestrateur | 🔲 À faire | — |
@@ -127,6 +127,94 @@ plugins/src/
 | `subagentStop` | G3 vérif + G4/G5 |
 
 > ⚠️ À compléter (US#51) : aligner Copilot sur tous les events Claude Code.
+
+---
+
+## Ancrage genesis (A9 / S4 / S7)
+
+Le framework réalise trois patterns genesis au niveau runtime :
+
+| Pattern | Rôle dans skraft-framework |
+|---|---|
+| **A9 SUPERVISED EXECUTION (strong form)** | L'exécution sort de la couche LLM vers un post-stage déterministe **non contournable** via les hooks. |
+| **S4 VALIDATION DECORATOR** | Chaque garde-fou **bloque** (pas seulement logge). Anti-pattern évité : « wrapping without blocking ». |
+| **S7 DETERMINISTIC TOOL BRIDGE** | L'ordre de dispatch est lu depuis `state.json` — pas inféré. Les phases TDD de DELIVER sont enregistrées via le CLI bridge. |
+
+---
+
+## Modes de défaillance (fail modes)
+
+| Mode | Garde-fous | Comportement |
+|---|---|---|
+| **fail-closed** | G1, G5, G7, G8 | Retourne `deny`/`block` et arrête l'outil. Un bug du garde-fou ne passe **jamais** silencieusement. |
+| **fail-open** | G2, G3, G6 | En cas d'erreur interne du hook, retourne `allow` pour ne pas figer le pipeline. La violation détectée bloque ; le bug du hook ne bloque jamais. |
+
+> Règle d'or : un **bug de hook** ne doit jamais bloquer le pipeline.
+> Une **violation d'invariant détectée** doit toujours bloquer.
+
+---
+
+## Comment ajouter un garde-fou
+
+Suivre ces 5 étapes pour ajouter un nouveau garde-fou `Gn` :
+
+### 1. Règle métier pure — `domain/`
+
+Créer `plugins/src/domain/<nom>-policy.mjs` contenant la logique pure
+(zero dépendance, pas d'import infra).
+
+```js
+// domain/example-policy.mjs
+export function validateExample(payload, config) {
+  if (/* violation */) return { ok: false, code: 'EXAMPLE_VIOLATION', message: '…' };
+  return { ok: true };
+}
+```
+
+### 2. Service applicatif — `application/`
+
+Créer ou étendre `plugins/src/application/<event>-service.mjs` :
+orchestrer domaine + ports (state-reader, audit-writer).
+
+```js
+// application/pre-tool-use-service.mjs  (extrait)
+import { validateExample } from '../domain/example-policy.mjs';
+
+export async function handlePreToolUse(payload, { stateReader, auditWriter, config }) {
+  const result = validateExample(payload, config);
+  await auditWriter.append({ event: 'pre-tool-use', result });
+  return result;
+}
+```
+
+### 3. Décision hook — `adapters/api/hooks/`
+
+Dans `hook-router.mjs`, brancher l'event et le matcher sur le service,
+puis convertir le résultat en décision (`allow` / `deny` / `block` /
+`additionalContext`) via `decision.mjs`.
+
+```js
+// hook-router.mjs  (extrait)
+case 'PreToolUse':
+  const res = await handlePreToolUse(payload, deps);
+  return res.ok ? decision.allow() : decision.deny(res.message);
+```
+
+### 4. Déclarer dans hooks.json
+
+Ajouter (ou vérifier) l'entrée dans `plugins/hooks/hooks.json` :
+
+```json
+{ "event": "PreToolUse", "matcher": "Bash", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse" }
+```
+
+### 5. Documenter et tester
+
+- Cocher la case dans le tableau **Garde-fous (G1–G8)** ci-dessus.
+- Ajouter un test unitaire `tests/skraft-framework/<policy>.unit.test.mjs`
+  (domain pur) et un test d'acceptation `tests/skraft-framework/<feature>.acceptance.test.mjs`
+  (boundary-to-boundary avec spy audit-writer).
+- Mettre à jour le statut dans `docs/roadmap.md`.
 
 ---
 
