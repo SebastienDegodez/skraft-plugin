@@ -20,7 +20,7 @@ The matrix is the supervised-execution artefact for the cross-artefact consisten
 
 ---
 
-## Shared Artifact Registry (nWave-inspired)
+## Shared Artifact Registry
 
 Before building the matrix body, declare the ownership graph of every artefact under design so the matrix has typed coordinates and downstream phases (DISTILL, DELIVER) can ask "which artefact is the source of truth for X?" without re-deriving the answer. The registry is a YAML block emitted once per story at the top of the matrix file, above the Matrix table.
 

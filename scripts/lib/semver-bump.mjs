@@ -1,6 +1,6 @@
 // Pure: Conventional Commits -> semver bump. No IO.
 // Consumed by scripts/release-version.mjs (release workflow) — the repo-side
-// half of the nWave-style auto-update chain.
+// half of the auto-update chain.
 
 const BREAKING_RE = /^[a-z]+(\([^)]*\))?!:|(^|\n)BREAKING CHANGE:/
 const MINOR_RE = /^feat(\([^)]*\))?:/

@@ -1,6 +1,6 @@
 name: skraft release
 
-# Repo-side half of the auto-update chain (nWave-style):
+# Repo-side half of the auto-update chain:
 # Conventional Commits since the last v* tag -> semver bump -> every
 # distribution surface aligned (plugin.json SSOT, package.json, apm.yml,
 # generated config) -> signed commit + tag + GitHub Release.
