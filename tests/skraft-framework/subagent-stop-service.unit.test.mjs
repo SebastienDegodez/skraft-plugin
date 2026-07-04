@@ -134,3 +134,196 @@ test('extracts skills from array transcript', async () => {
   assert.equal(result.decision, 'allow')
 })
 
+// G4/G5 completion guard — only engaged when stateReader + projectSlug are supplied ————
+
+const FW_CONFIG = {
+  agentSkills: {},
+  phaseAgents: {
+    DISCOVER: { specialist: 'backlog-discoverer', reviewer: 'backlog-discoverer-reviewer' },
+    DELIVER: { specialist: 'software-engineer', reviewer: 'software-engineer-reviewer' }
+  },
+  agentArtifacts: {
+    'backlog-discoverer': { inputs: [], outputs: ['research/{date}/triage.md'] },
+    'backlog-discoverer-reviewer': { inputs: [], outputs: ['reviews/{date}/discover-review-{N}.md'] },
+    'software-engineer': { inputs: [], outputs: ['Source code commits (conventional commits)'] }
+  }
+}
+
+const noSkillTranscriptFactory = () => ({ read: async () => '' })
+
+const pipelineState = (overrides = {}) => ({
+  currentPhase: 'DISCOVER',
+  phasesCompleted: [],
+  verdicts: {},
+  retryCount: {},
+  phaseArtifacts: {},
+  reviewArtifacts: {},
+  ...overrides
+})
+
+test('G4: allows when agent is not the current phase specialist/reviewer (nothing to complete)', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => pipelineState({ currentPhase: 'DELIVER' }) }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'backlog-discoverer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'allow')
+  assert.equal(audit.entries.length, 0)
+})
+
+test('G4: blocks when the current phase specialist finished without its expected artifact recorded', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => pipelineState({ currentPhase: 'DISCOVER', phaseArtifacts: {} }) }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'backlog-discoverer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'block')
+  assert.match(result.message, /missing expected artifact/)
+  assert.equal(audit.entries[0].reason, 'artifact_missing')
+})
+
+test('G4: allows when the expected artifact was recorded', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => pipelineState({ currentPhase: 'DISCOVER', phaseArtifacts: { DISCOVER: ['research/2026-07-02/triage.md'] } }) }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'backlog-discoverer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'allow')
+  assert.equal(audit.entries[0].reason, 'complete')
+})
+
+test('G5: blocks when the reviewer verdict recorded in state does not match the review file on disk', async () => {
+  const audit = collectingWriter()
+  const stateReader = {
+    read: async () => pipelineState({
+      currentPhase: 'DISCOVER',
+      verdicts: { DISCOVER: 'APPROVED' },
+      reviewArtifacts: { DISCOVER: ['reviews/2026-07-02/discover-review-1.md'] }
+    })
+  }
+  const filesystem = { readFile: async () => '**Verdict:** NEEDS_REWORK\n' }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader, filesystem
+  })
+  const result = await service.handle({ agentName: 'backlog-discoverer-reviewer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'block')
+  assert.equal(audit.entries[0].reason, 'verdict_mismatch')
+})
+
+test('G5: allows when the reviewer verdict on disk matches the recorded verdict', async () => {
+  const audit = collectingWriter()
+  const stateReader = {
+    read: async () => pipelineState({
+      currentPhase: 'DISCOVER',
+      verdicts: { DISCOVER: 'APPROVED' },
+      reviewArtifacts: { DISCOVER: ['reviews/2026-07-02/discover-review-1.md'] }
+    })
+  }
+  const filesystem = { readFile: async () => '**Verdict:** APPROVED\n' }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader, filesystem
+  })
+  const result = await service.handle({ agentName: 'backlog-discoverer-reviewer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'allow')
+  assert.equal(audit.entries[0].reason, 'complete')
+})
+
+test('G5: DELIVER blocks without a commitVerifier port wired', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => pipelineState({ currentPhase: 'DELIVER' }) }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'block')
+  assert.equal(audit.entries[0].reason, 'commit_verifier_unavailable')
+})
+
+test('G5: DELIVER blocks when the git working tree is not clean', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => pipelineState({ currentPhase: 'DELIVER' }) }
+  const commitVerifier = { verify: async () => ({ clean: false, headSha: '0'.repeat(40) }) }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader, commitVerifier
+  })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'block')
+  assert.equal(audit.entries[0].reason, 'commit_unverified')
+})
+
+test('G5: DELIVER allows when the git commit is verified clean', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => pipelineState({ currentPhase: 'DELIVER' }) }
+  const commitVerifier = { verify: async () => ({ clean: true, headSha: '0'.repeat(40) }) }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader, commitVerifier
+  })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'allow')
+  assert.equal(audit.entries[0].reason, 'complete')
+})
+
+test('G4/G5: fail-closed — blocks when recorded pipeline state cannot be read', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => { throw new Error('ENOENT') } }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'block')
+  assert.equal(audit.entries[0].reason, 'state_unreadable')
+})
+
+test('G4/G5: fail-closed — blocks when recorded pipeline state is invalid', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => ({ currentPhase: '' }) }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'block')
+  assert.equal(audit.entries[0].reason, 'state_invalid')
+})
+
+test('G4/G5: skips completion check entirely when stateReader is not wired', async () => {
+  const audit = collectingWriter()
+  const service = createSubagentStopService({ config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '', projectSlug: 'us8' })
+  assert.equal(result.decision, 'allow')
+  assert.equal(audit.entries.length, 0)
+})
+
+test('G4/G5: skips completion check entirely when projectSlug is not given', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => pipelineState({ currentPhase: 'DELIVER' }) }
+  const service = createSubagentStopService({ config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '' })
+  assert.equal(result.decision, 'allow')
+  assert.equal(audit.entries.length, 0)
+})
+
+test('G4/G5: fail-closed — blocks on a malformed projectSlug (directory-traversal guard)', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => { throw new Error('must not be called') } }
+  const service = createSubagentStopService({
+    config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'software-engineer', transcript: '', projectSlug: '../../etc' })
+  assert.equal(result.decision, 'block')
+  assert.equal(audit.entries[0].reason, 'invalid_project_slug')
+})
+
+test('G2 skill block takes priority over G4/G5: a missing skill still blocks even with a passing completion state', async () => {
+  const audit = collectingWriter()
+  const stateReader = { read: async () => pipelineState({ currentPhase: 'DISCOVER', phaseArtifacts: { DISCOVER: ['research/2026-07-02/triage.md'] } }) }
+  const service = createSubagentStopService({
+    config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: audit, clock, stateReader
+  })
+  const result = await service.handle({ agentName: 'acceptance-designer', transcript: 'no skills here', projectSlug: 'us8' })
+  assert.equal(result.decision, 'block')
+  assert.ok(result.message.startsWith('Mandatory skill not loaded'))
+})
+
