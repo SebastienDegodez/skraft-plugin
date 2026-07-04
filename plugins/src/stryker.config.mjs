@@ -31,6 +31,9 @@ export default {
     'plugins/src/domain/artifact-policy.mjs',
     // CLI ensemble freshness gate (versions, hooks parity, CI parity)
     'plugins/src/domain/freshness-policy.mjs',
+    // Auto-update staleness notice (SessionStart)
+    'plugins/src/domain/update-policy.mjs',
+    'plugins/src/application/session-start-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

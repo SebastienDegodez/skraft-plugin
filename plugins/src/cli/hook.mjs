@@ -11,6 +11,9 @@ import { createPostToolUseService } from '../application/post-tool-use-service.m
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createRealFilesystem } from '../adapters/infrastructure/real-filesystem.mjs'
 import { createGitCommitVerifier } from '../adapters/infrastructure/git-commit-verifier.mjs'
+import { createLatestReleaseReader } from '../adapters/infrastructure/latest-release-reader.mjs'
+import { createSessionStartService } from '../application/session-start-service.mjs'
+import { homedir } from 'node:os'
 
 // Resolve paths from CLAUDE_PLUGIN_ROOT (set by Claude Code harness) or process.cwd().
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT ?? join(new URL('.', import.meta.url).pathname, '../../..')
@@ -45,13 +48,31 @@ const subagentStop  = createSubagentStopService({
 })
 const postToolUse   = createPostToolUseService({ auditWriter, clock })
 
+// SessionStart staleness notice: installed version from the plugin manifest,
+// latest from GitHub (daily cache under ~/.skraft). Fail-open end to end.
+// Manifest lookup covers both roots: CLAUDE_PLUGIN_ROOT = plugins/ (harness)
+// and the local fallback where pluginRoot resolves to the repository root.
+let installedVersion
+for (const candidate of [
+  join(pluginRoot, '.claude-plugin', 'plugin.json'),
+  join(pluginRoot, 'plugins', '.claude-plugin', 'plugin.json')
+]) {
+  try { installedVersion = JSON.parse(await readFile(candidate, 'utf8')).version; break }
+  catch { /* fail-open: try next candidate; unknown version means no notice */ }
+}
+const releaseReader = createLatestReleaseReader({
+  cachePath: process.env.SKRAFT_UPDATE_CACHE ?? join(homedir(), '.skraft', 'update-check.json'),
+  clock
+})
+const sessionStart = createSessionStartService({ releaseReader, installedVersion })
+
 // CLI flow is dead simple: stdin in, parse JSON, route hook, stdout out.
 let raw = ''
 process.stdin.setEncoding('utf8')
 for await (const chunk of process.stdin) raw += chunk
 
 const payload = raw ? JSON.parse(raw) : {}
-const hookService = createHookService({ subagentStart, subagentStop, postToolUse })
+const hookService = createHookService({ subagentStart, subagentStop, postToolUse, sessionStart })
 const result = await hookService.handle(payload)
 
 if (result !== undefined) {

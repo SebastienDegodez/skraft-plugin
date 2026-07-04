@@ -1,0 +1,68 @@
+name: skraft release
+
+# Repo-side half of the auto-update chain (nWave-style):
+# Conventional Commits since the last v* tag -> semver bump -> every
+# distribution surface aligned (plugin.json SSOT, package.json, apm.yml,
+# generated config) -> signed commit + tag + GitHub Release.
+# The Claude Code marketplace then delivers the new version to users
+# (`claude plugin update skraft`); the SessionStart hook surfaces the lag.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Version, tag & release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Freshness gate (pre-release)
+        run: node plugins/src/cli/check-freshness-bin.mjs --check
+
+      - name: Framework tests
+        run: node --test tests/skraft-framework/*.test.mjs
+
+      - name: Compute and apply version bump
+        id: bump
+        run: |
+          VERSION=$(node scripts/release-version.mjs --apply)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Freshness gate (post-bump)
+        if: steps.bump.outputs.version != 'none'
+        run: node plugins/src/cli/check-freshness-bin.mjs --check
+
+      - name: Commit, tag and push
+        if: steps.bump.outputs.version != 'none'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add plugins/.claude-plugin/plugin.json plugins/src/package.json apm.yml plugins/skraft-framework.config.json
+          git commit -s -m "chore(release): v${{ steps.bump.outputs.version }}"
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push origin HEAD --tags
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.version != 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.bump.outputs.version }}" \
+            --title "skraft v${{ steps.bump.outputs.version }}" \
+            --generate-notes
+
+      - name: No releasable commits
+        if: steps.bump.outputs.version == 'none'
+        run: echo "No feat/fix/perf/refactor commits since the last tag — nothing to release."
