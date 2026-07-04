@@ -39,4 +39,10 @@ export default {
   thresholds: { high: 90, low: 80, break: 80 },
   reporters: ['html', 'clear-text', 'progress'],
   htmlReporter: { fileName: 'reports/mutation/mutation.html' },
+  // Incremental mode (StrykerJS equivalent of Stryker.NET --since): only mutants
+  // affected by the code/test diff since the last run are re-executed. The state
+  // file lives under reports/mutation/ (gitignored) — first run is always full;
+  // CI runners without the file fall back to a full authoritative run.
+  incremental: true,
+  incrementalFile: 'reports/mutation/stryker-incremental.json',
 }
