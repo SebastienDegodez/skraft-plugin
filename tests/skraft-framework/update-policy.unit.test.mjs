@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   compareSemver,
   isStale,
-  shouldRefreshCache,
+  shouldCheck,
   staleNotice
 } from '../../plugins/src/domain/update-policy.mjs'
 
@@ -40,31 +40,42 @@ test('isStale: false when latest is unknown (fail-open, ADR-006)', () => {
   assert.equal(isStale({ installed: '1.0.0', latest: undefined }), false)
 })
 
-// shouldRefreshCache ——————————————————————————————————————————————————
+// shouldCheck (frequency policy) —————————————————————————————————
 
-test('shouldRefreshCache: false when checked less than the TTL ago', () => {
-  assert.equal(
-    shouldRefreshCache({ checkedAt: '2026-07-04T08:00:00Z', now: '2026-07-04T20:00:00Z' }),
-    false
-  )
+test('shouldCheck: never wins over everything, even the first run', () => {
+  assert.equal(shouldCheck({ frequency: 'never', checkedAt: undefined, now: '2026-07-04T09:00:00Z' }), false)
+  assert.equal(shouldCheck({ frequency: 'never', checkedAt: '2026-01-01T00:00:00Z', now: '2026-07-04T09:00:00Z' }), false)
 })
 
-test('shouldRefreshCache: true when the last check is older than 24h', () => {
+test('shouldCheck: first run (no previous check) always checks', () => {
+  assert.equal(shouldCheck({ frequency: 'daily', checkedAt: undefined, now: '2026-07-04T09:00:00Z' }), true)
+  assert.equal(shouldCheck({ frequency: 'weekly', checkedAt: null, now: '2026-07-04T09:00:00Z' }), true)
+})
+
+test('shouldCheck: every_session always checks even inside the window', () => {
   assert.equal(
-    shouldRefreshCache({ checkedAt: '2026-07-03T08:00:00Z', now: '2026-07-04T09:00:00Z' }),
+    shouldCheck({ frequency: 'every_session', checkedAt: '2026-07-04T08:59:00Z', now: '2026-07-04T09:00:00Z' }),
     true
   )
 })
 
-test('shouldRefreshCache: true when no previous check exists', () => {
-  assert.equal(shouldRefreshCache({ checkedAt: undefined, now: '2026-07-04T09:00:00Z' }), true)
+test('shouldCheck: daily skips inside the 24h window, checks outside', () => {
+  assert.equal(shouldCheck({ frequency: 'daily', checkedAt: '2026-07-04T08:00:00Z', now: '2026-07-04T20:00:00Z' }), false)
+  assert.equal(shouldCheck({ frequency: 'daily', checkedAt: '2026-07-03T08:00:00Z', now: '2026-07-04T09:00:00Z' }), true)
 })
 
-test('shouldRefreshCache: honours a custom ttlHours', () => {
-  assert.equal(
-    shouldRefreshCache({ checkedAt: '2026-07-04T08:00:00Z', now: '2026-07-04T10:00:00Z', ttlHours: 1 }),
-    true
-  )
+test('shouldCheck: weekly skips inside the 168h window, checks outside', () => {
+  assert.equal(shouldCheck({ frequency: 'weekly', checkedAt: '2026-07-01T08:00:00Z', now: '2026-07-04T09:00:00Z' }), false)
+  assert.equal(shouldCheck({ frequency: 'weekly', checkedAt: '2026-06-26T08:00:00Z', now: '2026-07-04T09:00:00Z' }), true)
+})
+
+test('shouldCheck: defaults to daily when frequency is absent or unknown', () => {
+  assert.equal(shouldCheck({ checkedAt: '2026-07-04T08:00:00Z', now: '2026-07-04T20:00:00Z' }), false)
+  assert.equal(shouldCheck({ frequency: 'hourly', checkedAt: '2026-07-03T08:00:00Z', now: '2026-07-04T09:00:00Z' }), true)
+})
+
+test('shouldCheck: unparseable checkedAt fails open to a check', () => {
+  assert.equal(shouldCheck({ frequency: 'daily', checkedAt: 'not-a-date', now: '2026-07-04T09:00:00Z' }), true)
 })
 
 // staleNotice —————————————————————————————————————————————————————————

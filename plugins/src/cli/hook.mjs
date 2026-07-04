@@ -12,6 +12,7 @@ import { createJsonStateReader } from '../adapters/infrastructure/json-state-rea
 import { createRealFilesystem } from '../adapters/infrastructure/real-filesystem.mjs'
 import { createGitCommitVerifier } from '../adapters/infrastructure/git-commit-verifier.mjs'
 import { createLatestReleaseReader } from '../adapters/infrastructure/latest-release-reader.mjs'
+import { createUpdateCheckStore } from '../adapters/infrastructure/update-check-store.mjs'
 import { createSessionStartService } from '../application/session-start-service.mjs'
 import { homedir } from 'node:os'
 
@@ -49,7 +50,9 @@ const subagentStop  = createSubagentStopService({
 const postToolUse   = createPostToolUseService({ auditWriter, clock })
 
 // SessionStart staleness notice: installed version from the plugin manifest,
-// latest from GitHub (daily cache under ~/.skraft). Fail-open end to end.
+// latest from GitHub through the update-check store (~/.skraft, best-effort
+// writes). Frequency policy: daily | weekly | every_session | never, default
+// daily. Fail-open end to end.
 // Manifest lookup covers both roots: CLAUDE_PLUGIN_ROOT = plugins/ (harness)
 // and the local fallback where pluginRoot resolves to the repository root.
 let installedVersion
@@ -60,8 +63,12 @@ for (const candidate of [
   try { installedVersion = JSON.parse(await readFile(candidate, 'utf8')).version; break }
   catch { /* fail-open: try next candidate; unknown version means no notice */ }
 }
+const updateCheckStore = createUpdateCheckStore({
+  storePath: process.env.SKRAFT_UPDATE_CACHE ?? join(homedir(), '.skraft', 'update-check.json')
+})
 const releaseReader = createLatestReleaseReader({
-  cachePath: process.env.SKRAFT_UPDATE_CACHE ?? join(homedir(), '.skraft', 'update-check.json'),
+  store: updateCheckStore,
+  frequency: process.env.SKRAFT_UPDATE_FREQUENCY,
   clock
 })
 const sessionStart = createSessionStartService({ releaseReader, installedVersion })

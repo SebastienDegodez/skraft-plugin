@@ -22,12 +22,24 @@ export const isStale = ({ installed, latest }) => {
   return compareSemver(installed, latest) < 0
 }
 
-export const DEFAULT_TTL_HOURS = 24
+const WINDOW_HOURS = { daily: 24, weekly: 168 }
+export const DEFAULT_FREQUENCY = 'daily'
 
-export const shouldRefreshCache = ({ checkedAt, now, ttlHours = DEFAULT_TTL_HOURS }) => {
-  if (!checkedAt) return true
+const insideWindow = ({ checkedAt, now, windowHours }) => {
   const ageMs = Date.parse(now) - Date.parse(checkedAt)
-  return !(ageMs >= 0 && ageMs < ttlHours * 3_600_000)
+  return ageMs >= 0 && ageMs < windowHours * 3_600_000
+}
+
+// Deterministic frequency policy deciding whether the update check runs.
+// Priority order: never > first run > every_session > time window.
+// Unknown frequency falls back to daily; unparseable checkedAt fails open
+// to a check (ADR-006: the notice is observability, never a gate).
+export const shouldCheck = ({ frequency = DEFAULT_FREQUENCY, checkedAt, now }) => {
+  if (frequency === 'never') return false
+  if (!checkedAt) return true
+  if (frequency === 'every_session') return true
+  const windowHours = WINDOW_HOURS[frequency] ?? WINDOW_HOURS[DEFAULT_FREQUENCY]
+  return !insideWindow({ checkedAt, now, windowHours })
 }
 
 // One line, zero decoration: injected as SessionStart additionalContext.

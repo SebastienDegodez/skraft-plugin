@@ -11,11 +11,15 @@ const argv = process.argv.slice(2)
 
 if (argv.includes('--remote')) {
   const { createLatestReleaseReader } = await import('../adapters/infrastructure/latest-release-reader.mjs')
+  const { createUpdateCheckStore } = await import('../adapters/infrastructure/update-check-store.mjs')
   let installedVersion
   try { installedVersion = JSON.parse(readFileSync(new URL('../../.claude-plugin/plugin.json', import.meta.url), 'utf8')).version }
   catch { /* fail-open */ }
   const releaseReader = createLatestReleaseReader({
-    cachePath: process.env.SKRAFT_UPDATE_CACHE ?? join(homedir(), '.skraft', 'update-check.json'),
+    store: createUpdateCheckStore({
+      storePath: process.env.SKRAFT_UPDATE_CACHE ?? join(homedir(), '.skraft', 'update-check.json')
+    }),
+    frequency: process.env.SKRAFT_UPDATE_FREQUENCY,
     clock: { now: () => new Date().toISOString() }
   })
   process.exit(await remoteMain({ installedVersion, releaseReader, json: argv.includes('--json') }))
