@@ -39,3 +39,15 @@ is verified by a deterministic tool, never by an LLM assertion.
 `plugins/.claude-plugin/plugin.json` is the master version. Do not hand-bump it in
 feature work — the release workflow computes the bump from Conventional Commits and
 aligns `package.json`, `apm.yml` and the generated config in one pass.
+
+## Staleness check outside Claude Code
+
+The SessionStart staleness notice only exists inside Claude Code (hooks). On any
+other harness (Copilot, Cursor), check manually:
+
+```bash
+node plugins/src/cli/check-freshness-bin.mjs --remote        # human output
+node plugins/src/cli/check-freshness-bin.mjs --remote --json # machine output
+```
+
+Same daily cache, same fail-open behaviour; always exits 0 (observability, not a gate).

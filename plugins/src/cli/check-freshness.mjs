@@ -9,6 +9,7 @@ import {
   checkCiParity,
   hasBlockingFinding
 } from '../domain/freshness-policy.mjs'
+import { isStale } from '../domain/update-policy.mjs'
 import { SUPPORTED_HOOK_TYPES } from '../adapters/api/hooks/hook-router.mjs'
 
 // S7 deterministic tool bridge: the CLI-ensemble freshness gate.
@@ -75,4 +76,28 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
   }
 
   return ok ? 0 : 1
+}
+
+// Cross-harness staleness check (`--remote`): the SessionStart notice only
+// exists inside Claude Code; Copilot/Cursor users invoke this manually.
+// Always exit 0 — staleness is observability, never a gate (ADR-006).
+export const remoteMain = async ({ installedVersion, releaseReader, json = false }, { log = console.log } = {}) => {
+  let latest = null
+  try { latest = await releaseReader.latestVersion() } catch { /* fail-open */ }
+
+  const stale = isStale({ installed: installedVersion, latest })
+
+  if (json) {
+    log(JSON.stringify({ installed: installedVersion ?? null, latest, stale }, null, 2))
+    return 0
+  }
+
+  if (latest === null) {
+    log('latest release unknown (offline or no release yet) — could not compare')
+  } else if (stale) {
+    log(`update available: v${String(latest).replace(/^v/, '')} (installed v${installedVersion}) — update the skraft plugin via your harness, then run --check`)
+  } else {
+    log(`skraft is up to date (v${installedVersion})`)
+  }
+  return 0
 }
