@@ -10,6 +10,7 @@
 import { spawnSync } from 'node:child_process'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { TEST_GATE, STATIC_GATES } from './lib/ci-gates.mjs'
 
 const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
@@ -24,10 +25,10 @@ const frameworkTestArgs = () => {
 }
 
 // Fast gates — run on every push, fail the whole run if any fails.
+// Gate list is shared with the CI-parity freshness check (scripts/lib/ci-gates.mjs).
 const fastGates = [
-  { name: 'Framework tests & coverage (node --test)', cmd: 'node', args: frameworkTestArgs() },
-  { name: 'Guardrail config in sync (US2)', cmd: 'node', args: ['plugins/src/cli/build-config-bin.mjs', '--check'] },
-  { name: 'Agent model policy (B12)', cmd: 'node', args: ['plugins/src/cli/resolve-model-bin.mjs', '--check'] },
+  { name: TEST_GATE.name, cmd: 'node', args: frameworkTestArgs() },
+  ...STATIC_GATES.map(({ name, cmd, args }) => ({ name, cmd, args })),
 ]
 
 const run = (gate) => {

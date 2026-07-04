@@ -19,6 +19,7 @@ const EXPECTED_ROUTES = [
   { event: 'PreToolUse', matcher: 'Agent' },
   { event: 'PreToolUse', matcher: 'Bash' },
   { event: 'SubagentStart', matcher: undefined },
+  { event: 'SessionStart', matcher: undefined },
   { event: 'SubagentStop', matcher: undefined },
   { event: 'PostToolUse', matcher: 'Agent' },
   { event: 'PostToolUse', matcher: 'Read' }

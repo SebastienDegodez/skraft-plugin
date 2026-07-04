@@ -41,6 +41,13 @@ const descriptorsFrom = (dir) =>
 
 const serialize = (config) => JSON.stringify(config, null, 2) + '\n'
 
+// Provenance stamp: which plugin version generated this config. Deliberately
+// byte-stable (no timestamp) so the --check byte comparison keeps working.
+// The check-freshness gate compares it against plugin.json (version SSOT).
+const generatorVersionFrom = (manifestPath) => {
+  try { return JSON.parse(readFileSync(manifestPath, 'utf8')).version } catch { return undefined }
+}
+
 // Thin orchestration around the pure core; returns an exit code.
 export const main = (argv, { log = console.log, error = console.error } = {}) => {
   const { values } = parseArgs({
@@ -52,6 +59,7 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       json: { type: 'boolean', default: false },
       dir: { type: 'string', default: 'plugins/agents' },
       out: { type: 'string', default: 'plugins/skraft-framework.config.json' },
+      'plugin-manifest': { type: 'string', default: 'plugins/.claude-plugin/plugin.json' },
     },
   })
 
@@ -64,7 +72,11 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
     return 1
   }
 
-  const rendered = serialize(buildFrameworkConfig(descriptors))
+  const generatorVersion = generatorVersionFrom(values['plugin-manifest'])
+  const rendered = serialize({
+    ...(generatorVersion ? { _meta: { generatorVersion } } : {}),
+    ...buildFrameworkConfig(descriptors),
+  })
 
   if (values.emit) {
     log(rendered.trimEnd())

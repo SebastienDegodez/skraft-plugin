@@ -65,6 +65,21 @@ jobs:
       - name: Check skraft-framework.config.json matches the agent descriptors
         run: node plugins/src/cli/build-config-bin.mjs --check
 
+  freshness:
+    name: CLI ensemble freshness
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check versions, hooks routing and CI parity
+        run: node plugins/src/cli/check-freshness-bin.mjs --check
+
   mutation:
     name: Mutation Testing
     runs-on: ubuntu-latest

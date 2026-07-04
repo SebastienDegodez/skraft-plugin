@@ -1,4 +1,7 @@
 {
+  "_meta": {
+    "generatorVersion": "1.0.0"
+  },
   "phaseOrder": [
     "DISCOVER",
     "DISCUSS",

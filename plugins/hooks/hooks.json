@@ -30,6 +30,16 @@
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" SessionStart"
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "hooks": [
