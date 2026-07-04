@@ -395,16 +395,16 @@ findings:
 
 Un mapping équivalent (gate fail → finding `MISSING` + champs domaine dans `extras`) sera produit pour chacun des 4 autres reviewers en phase `writing-plans`.
 
-## Différenciation vs nWave-o (axe 5 corrigé — n4)
+## Différenciation vs framework de référence externe (axe 5 corrigé — n4)
 
-| Axe | skraft v1 | nWave-o (référence externe, non audité) |
+| Axe | skraft v1 | Référence externe (non auditée) |
 |---|---|---|
 | 1. Format de transport | JSON | YAML |
 | 2. Persistance | `.json` + `.md` jumeaux | Fichier MD unique |
 | 3. Structure lenses | `lens_results[]` (array, ordre fixe) | `lenses:` (dict) |
 | 4. Gates | Bloc `gates: {GN: {status, reason?}}` explicite | Pas de bloc gates dédié |
-| 5. Tags de findings | Vocabulaire fixe partagé avec `adversarial-review-lenses` | Vocabulaire différent (cf. nWave-o) |
-| 6. Process scoring | `score ∈ {0, 0.5, 1}` per-lens, somme pondérée, mapping `>=0.85/>=0.55/<0.55` | Algorithme distinct (cf. nWave-o) |
+| 5. Tags de findings | Vocabulaire fixe partagé avec `adversarial-review-lenses` | Vocabulaire différent |
+| 6. Process scoring | `score ∈ {0, 0.5, 1}` per-lens, somme pondérée, mapping `>=0.85/>=0.55/<0.55` | Algorithme distinct |
 | 7. Dissent | Champ `dissent` first-class | Non documenté |
 
 Différenciation structurelle confirmée.
