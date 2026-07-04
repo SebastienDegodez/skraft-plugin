@@ -25,7 +25,7 @@ on:
 
 concurrency:
   group: skraft-docs-gaps-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 timeout-minutes: 20
 
