@@ -145,3 +145,39 @@ test('SUPPORTED_HOOK_TYPES lists every routable hook type', async () => {
   )
 })
 
+// hook-entry.mjs: real harness payloads carry hook_event_name (Claude Code and
+// the Copilot compat layer), not hookType. Both must route.
+test('hook entry routes on hook_event_name (real Claude/Copilot payload shape)', async () => {
+  const seen = []
+  const service = createHookService({ sessionStart: { handle: async (p) => { seen.push(p); return { ok: 1 } } } })
+  const result = await service.handle({ hook_event_name: 'SessionStart' })
+  assert.deepEqual(result, { ok: 1 })
+  assert.equal(seen.length, 1)
+})
+
+// hook-entry.mjs: the CLI passes the event name as argv — used as a fallback
+// when the payload carries no recognisable event field at all.
+test('hook entry falls back to the injected hook type when the payload has none', async () => {
+  const { createHookEntry } = await import('../../plugins/src/adapters/api/hooks/hook-entry.mjs')
+  const { createHookRouter } = await import('../../plugins/src/adapters/api/hooks/hook-router.mjs')
+  const seen = []
+  const router = createHookRouter({ sessionStart: { handle: async (p) => { seen.push(p); return { ok: 2 } } } })
+  const entry = createHookEntry(router, { fallbackHookType: 'SessionStart' })
+  const result = await entry.handle({})
+  assert.deepEqual(result, { ok: 2 })
+})
+
+test('hook entry: explicit payload hookType wins over the fallback', async () => {
+  const { createHookEntry } = await import('../../plugins/src/adapters/api/hooks/hook-entry.mjs')
+  const { createHookRouter } = await import('../../plugins/src/adapters/api/hooks/hook-router.mjs')
+  const hits = { pre: 0, session: 0 }
+  const router = createHookRouter({
+    preToolUse: { handle: async () => { hits.pre++ } },
+    sessionStart: { handle: async () => { hits.session++ } }
+  })
+  const entry = createHookEntry(router, { fallbackHookType: 'SessionStart' })
+  await entry.handle({ hookType: 'PreToolUse' })
+  assert.equal(hits.pre, 1)
+  assert.equal(hits.session, 0)
+})
+

@@ -72,7 +72,15 @@ process.stdin.setEncoding('utf8')
 for await (const chunk of process.stdin) raw += chunk
 
 const payload = raw ? JSON.parse(raw) : {}
-const hookService = createHookService({ subagentStart, subagentStop, postToolUse, sessionStart })
+// argv[2] = hook event name from hooks.json ("hook.mjs SessionStart") — fallback
+// when the harness payload carries no event field.
+const hookService = createHookService({
+  subagentStart,
+  subagentStop,
+  postToolUse,
+  sessionStart,
+  fallbackHookType: process.argv[2]
+})
 const result = await hookService.handle(payload)
 
 if (result !== undefined) {

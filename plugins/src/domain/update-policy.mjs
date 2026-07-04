@@ -31,7 +31,9 @@ export const shouldRefreshCache = ({ checkedAt, now, ttlHours = DEFAULT_TTL_HOUR
 }
 
 // One line, zero decoration: injected as SessionStart additionalContext.
+// Harness-neutral: the same hook fires under Claude Code AND the Copilot
+// plugin compat layer; the Claude command is given as an example only.
 export const staleNotice = ({ installed, latest }) => {
   const latestClean = String(latest).replace(/^v/, '')
-  return `SKRAFT v${latestClean} is available (installed v${installed}) — run \`claude plugin update skraft\`, then verify with \`node plugins/src/cli/check-freshness-bin.mjs --check\`.`
+  return `SKRAFT v${latestClean} is available (installed v${installed}) — update the plugin via your harness (e.g. \`claude plugin update skraft\`), then verify with \`node plugins/src/cli/check-freshness-bin.mjs --check\`.`
 }
