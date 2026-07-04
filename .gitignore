@@ -36,3 +36,7 @@ reports/mutation/
 # Graphify generated cache
 graphify-out/
 .graphify_scope_root/
+
+# skraft-framework runtime audit log
+plugins/logs/
+

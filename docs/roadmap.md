@@ -17,7 +17,7 @@ avec leur gain, statut et milestone.
 | [US5](#us5) | Manifests hooks Copilot + Claude | `gain:reliability` | ✅ Livré | Phase 1 — MVP |
 | [US6](#us6) | Tests boundary-to-boundary | `gain:reliability` | 🔲 À faire | Phase 1 — MVP |
 | [US7](#us7) | Documentation + roadmap.md | `gain:dx` | ✅ Livré | Phase 1 — MVP |
-| [US8](#us8) | G4/G5 artefacts + verdict + commit | `gain:reliability` | 🔲 À faire | Phase 2 — Complétude |
+| [US8](#us8) | G4/G5 artefacts + verdict + commit | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [US9](#us9) | S7 execution-log + CLI bridge | `gain:reliability` | 🔲 À faire | Phase 2 — Complétude |
 | [US10](#us10) | G6 continuation orchestrateur | `gain:eco-tokens` | 🔲 À faire | Phase 2 — Complétude |
 | [US11](#us11) | G7/G8 protection d'état + session guard | `gain:safety` | 🔲 À faire | Phase 2 — Complétude |
@@ -150,7 +150,7 @@ ancrage genesis A9/S4/S7, G1..G8, guide « comment ajouter un garde-fou »),
 ### US8 — G4/G5 vérification artefacts + verdict + commit <a id="us8"></a>
 
 **Issue :** [#54](https://github.com/SebastienDegodez/skraft-plugin/issues/54)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:anti-drift` + `gain:reliability` + `gain:safety` — avancement bloqué
