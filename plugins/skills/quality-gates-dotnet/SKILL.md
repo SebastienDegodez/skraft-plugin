@@ -130,33 +130,39 @@ regex from the contract.
 
 ## G9 — Test integrity (RED→GREEN snapshots)
 
-For every TDD cycle, capture both snapshots when each commit lands:
+No manual capture needed. Record each cycle's `red_commit` / `green_commit` SHAs
+in `qg-manifest.json`; `qg-evidence assemble` regenerates both snapshots
+deterministically via `git show {commit}:{test_file}` into `$EV/snapshots/`.
 
-```bash
-mkdir -p "$EV/snapshots"
-# at RED:
-git show HEAD:tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs \
-  > "$EV/snapshots/red-1-SomeTests.cs"
-# at GREEN (after the implementation commit):
-git show HEAD:tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs \
-  > "$EV/snapshots/green-1-SomeTests.cs"
-```
-
-The producer records `red_commit`, `green_commit`, and the two snapshot paths in
-the contract. The lens diffs the two snapshots and FAILS G9 if any line was
+The lens diffs the two snapshots and FAILS G9 if any line was
 removed or mutated in a pre-existing assertion (only additions are allowed —
 that is the Iron Rule of Tests, mechanically verifiable).
 
 ## Producer flow at end of COMMIT phase
 
-1. `mkdir -p "$EV"` and `mkdir -p "$EV/snapshots"`.
+1. `mkdir -p "$EV"`.
 2. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6, G7 — each redirecting
-   stdout + exit code to disk.
-3. For each cycle in this story, dump RED + GREEN snapshots from `git show`.
-4. Compute `repo_root_rev = git rev-parse HEAD`.
-5. Build `commits_covered[]` from `git log --format='%H%x09%s' <range>` and
-   `git show --stat --name-only <sha>` per commit.
-6. Assemble `qg-{story}.json` per `quality-gates-evidence-contract`.
+   stdout + exit code to disk (recipes above).
+3. Write `$EV/qg-manifest.json` — parameters only (gate ids, verbatim commands,
+   captured file names, metrics sources, thresholds, commit range, cycles).
+   Shape defined in `quality-gates-evidence-contract`.
+4. Assemble the evidence log — the tool recomputes every fact (sha256, exit
+   codes, TRX/Stryker metrics, git data, snapshots):
+
+   ```bash
+   node <quality-gates-evidence-contract skill dir>/scripts/qg-evidence.mjs \
+     assemble --manifest "$EV/qg-manifest.json"
+   ```
+
+5. Render the markdown report from the JSON:
+
+   ```bash
+   node <quality-gates-evidence-contract skill dir>/scripts/qg-evidence.mjs \
+     render --input "$EV/qg-{story}.json"
+   ```
+
+6. If `assemble` exits `1`, fix the inputs (missing capture, wrong manifest) and
+   re-run. Never hand-write `qg-{story}.json` or `qg-{story}.md`.
 7. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
 
 If a tool is unavailable in the environment (no Stryker installed, no SDK), the

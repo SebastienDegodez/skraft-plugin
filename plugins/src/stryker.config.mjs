@@ -33,6 +33,8 @@ export default {
     'plugins/src/domain/config-schema.mjs',
     'plugins/src/application/config-service.mjs',
     'plugins/src/adapters/infrastructure/config/json-config-writer.mjs',
+    // qg-evidence — deterministic quality-gates evidence toolchain
+    'plugins/skills/quality-gates-evidence-contract/scripts/qg-evidence.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

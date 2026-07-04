@@ -1,6 +1,6 @@
 ---
 name: quality-gates-evidence-contract
-description: Use when producing or verifying the structured evidence log that attests quality gates (tests, build, mutation, commits, RED/GREEN integrity). Tech-agnostic schema. Loaded by software-engineer (writer) at COMMIT phase and by quality-gates-lens (reader) during review.
+description: Use when producing or verifying the structured evidence log that attests quality gates (tests, build, mutation, commits, RED/GREEN integrity). Tech-agnostic schema. The evidence JSON and its markdown report are emitted by the bundled `scripts/qg-evidence.mjs` tool — never assembled by hand. Loaded by software-engineer (writer) at COMMIT phase and by quality-gates-lens (reader) during review.
 ---
 
 # Quality Gates Evidence Contract
@@ -20,20 +20,78 @@ If a field cannot be falsified from the Git tree alone, the field is mis-designe
 
 ```
 .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/
-├── qg-{story}.json                       # the evidence log (this contract)
+├── qg-manifest.json                      # LLM-authored parameters for the bundled tool
+├── qg-{story}.json                       # the evidence log (this contract) — TOOL-EMITTED
+├── qg-{story}.md                         # markdown report — TOOL-EMITTED, derived view
 ├── qg-{story}-tests.stdout               # captured tool stdout (referenced by sha256)
 ├── qg-{story}-tests.exit                 # captured exit code
 ├── qg-{story}-build.stdout
 ├── qg-{story}-build.exit
 ├── qg-{story}-mutation.json              # mutation runner native report
 └── snapshots/
-    ├── red-{cycle}-{test-file-basename}  # test file at RED commit
-    └── green-{cycle}-{test-file-basename} # same test file at GREEN commit
+    ├── red-{cycle}-{test-file-basename}  # test file at RED commit (git show)
+    └── green-{cycle}-{test-file-basename} # same test file at GREEN commit (git show)
 ```
 
-The producer writes them with the **terminal redirecting output to disk**, never by
-transcribing tool output into the JSON manually. The lens reads them in
-read-only mode.
+The producer captures raw outputs with the **terminal redirecting output to disk**,
+then the bundled tool assembles the JSON and renders the markdown. Nothing in
+`qg-{story}.json` or `qg-{story}.md` is ever typed by the LLM. The lens reads them
+in read-only mode.
+
+## Bundled tool (`scripts/qg-evidence.mjs`)
+
+Deterministic assembler + renderer. Node >= 18, zero dependencies, non-interactive.
+Structured JSON envelope on stdout, diagnostics on stderr. `--help` prints the full
+contract.
+
+```bash
+# 1. after capturing all raw gate outputs, write qg-manifest.json (parameters only)
+# 2. assemble — recomputes every fact (sha256, exit codes, TRX/Stryker metrics,
+#    git rev/log, RED/GREEN snapshots via git show) and writes qg-{story}.json
+node <skill-dir>/scripts/qg-evidence.mjs assemble --manifest "$EV/qg-manifest.json"
+# 3. render — emits qg-{story}.md from the JSON (refuses non-conforming input)
+node <skill-dir>/scripts/qg-evidence.mjs render --input "$EV/qg-{story}.json"
+```
+
+Exit codes: `0` ok · `1` contradiction (evidence cannot be truthfully produced —
+missing ref, unparsable metrics, unresolvable commit; no JSON is written) · `2` bad
+usage. A **failing gate is NOT a contradiction**: `status: "fail"` yields a valid
+log and exit `0` — failure is evidence, hiding it is the violation.
+
+### `qg-manifest.json` (the only LLM-authored file)
+
+```json
+{
+  "story": "eligibilite-trottinette",
+  "projectSlug": "demo",
+  "date": "YYYY-MM-DD",
+  "tech_adapter": "quality-gates-dotnet",
+  "commit_range": "<baseline-sha>..HEAD",
+  "gates": [
+    { "id": "G2", "command_executed": "…verbatim…",
+      "stdout": "qg-tests.stdout", "exit": "qg-tests.exit",
+      "metrics_source": { "type": "trx", "path": "qg-tests.trx" } },
+    { "id": "G6", "command_executed": "…",
+      "stdout": "qg-mutation.stdout", "exit": "qg-mutation.exit",
+      "metrics_source": { "type": "stryker-json", "path": "qg-mutation.json" },
+      "threshold": 90 },
+    { "id": "G5", "status": "not_applicable", "rationale": "why" }
+  ],
+  "cycles": [
+    { "cycle": 1, "behavior": "…", "test_files": ["tests/SomeTests.cs"],
+      "red_commit": "sha", "green_commit": "sha" }
+  ]
+}
+```
+
+The manifest carries **intent only** (which gates, which files, which commits).
+Every fact — hashes, exit codes, metrics, subjects, snapshots — is recomputed by
+the tool from disk and Git; pre-computed values in the manifest are ignored.
+
+### `qg-{story}.md` is a derived view
+
+The markdown report exists for humans. It is **never authoritative**: the lens
+falsifies `qg-{story}.json` only and MUST NOT read the markdown as evidence.
 
 ## Schema (`qg-{story}.json`)
 
@@ -131,11 +189,12 @@ Every claim in the JSON resolves to something the lens can verify with `Read`,
 
 ## Producer rules (software-engineer side)
 
-- The JSON is written **once**, at the end of the COMMIT phase, after every commit landed.
+- The JSON is written **once**, at the end of the COMMIT phase, after every commit landed — by `qg-evidence assemble`, never by hand. Hand-assembling the JSON is a contract violation even if the content happens to be correct.
 - Tool stdout/exit are captured by the SHELL (`> file 2>&1; echo $? > file.exit`), never transcribed.
-- `stdout_sha256` is computed via a tool call (`shasum -a 256 file`), never asserted from memory.
-- Snapshots are extracted via `git show <commit>:<path> > snapshot-file`, never copy-pasted.
+- `stdout_sha256`, metrics, `repo_root_rev`, `commits_covered` and RED/GREEN snapshots are all computed by the bundled tool from disk and Git, never asserted from memory.
+- The markdown report is emitted by `qg-evidence render`, never written as prose.
 - A failing gate yields `status: "fail"` AND the file is still written. Do NOT suppress the log to hide a failure — the lens treats a missing log as `inconclusive` (NEEDS_REWORK), so hiding fails harder than disclosing.
+- If `assemble` exits `1` (contradiction), fix the INPUTS (capture the missing file, correct the manifest) and re-run. Never work around the tool by writing the JSON yourself.
 
 ## Verifier rules (quality-gates-lens side)
 
