@@ -1,7 +1,7 @@
 ---
 name: software-engineer-reviewer
 description: "[Internal subagent — dispatched by skraft-orchestrator only] Adversarial peer reviewer (Genesis A7): spawns 4 independent lenses, synthesizes a weighted verdict. Read-only — never modifies code."
-model: Claude Sonnet 5
+model: claude-sonnet-5
 user-invocable: false
 tools: read/readFile, search/codebase, agent
 metadata:
