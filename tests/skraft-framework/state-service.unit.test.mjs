@@ -48,6 +48,26 @@ test('state-service init: creates default state on ENOENT, returns created=true'
   assert.equal(writer._written['my-slug'].currentPhase, 'DISCOVER')
 })
 
+test('state-service init: fresh default carries the full documented field set', async () => {
+  const writer = writerOk()
+  const svc = createStateService({ stateReader: readerEnoent(), stateWriter: writer })
+  const r = await svc.init('slug')
+  assert.equal(r.ok, true)
+  const w = writer._written['slug']
+  // scalars orchestrator populates later — present (null/empty) so no reader guesses
+  assert.equal(w.projectSlug, null)
+  assert.equal(w.skraftPlanFile, null)
+  assert.equal(w.entryMode, null)
+  assert.equal(w.entryPoint, null)
+  assert.equal(w.issueNumber, null)
+  assert.deepEqual(w.adrRatification, { checkpointStatus: null, pending: [], ratified: [] })
+  assert.deepEqual(w.referencesProcessed, [])
+  assert.deepEqual(w.phaseHistory, {})
+  assert.deepEqual(w.nextActions, [])
+  assert.deepEqual(w.depthTierOverrides, [])
+  assert.deepEqual(w.neighborPlanners, { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null })
+})
+
 test('state-service init: returns created=false when state exists', async () => {
   const existing = { ...DEFAULT_PIPELINE, currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }
   const svc = createStateService({ stateReader: readerOk(existing), stateWriter: writerOk() })

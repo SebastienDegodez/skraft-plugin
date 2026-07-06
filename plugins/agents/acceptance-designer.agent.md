@@ -29,7 +29,6 @@ metadata:
     - tests/**/{Feature}AcceptanceTests.cs
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
-    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Acceptance-Designer Agent

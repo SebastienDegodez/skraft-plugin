@@ -1,23 +1,63 @@
 ---
-description: "SKRAFT pipeline state schema, six-step turn protocol, and four-step resume sequence aligned with HVE-Core conventions"
+description: "SKRAFT pipeline state: write-through model (native todo working set + deterministic CLI writes), schema, and once-per-session rehydration aligned with HVE-Core conventions"
 applyTo: '**/.copilot-tracking/skraft-plans/**'
 ---
 <!-- markdownlint-disable-file -->
+<!-- PORTABILITY: orchestrator-owned. Only the skraft-orchestrator loads this file
+     (it owns pipeline state); sub-agents never read or write state.json. `applyTo:`
+     above is Copilot auto-load metadata (belt); on harnesses without path-scoped
+     auto-load (e.g. Claude Code) the orchestrator loads it via the explicit read
+     declared in its "Companion instructions" block (suspenders). Harness-neutral;
+     per-harness tool syntax lives inline where noted. -->
 
 # SKRAFT Pipeline State Conventions
 
 These conventions govern every SKRAFT agent (orchestrator, phase agents, reviewers) that reads or writes pipeline state. State persists at `.copilot-tracking/skraft-plans/{project-slug}/state.json`. JSON only — never markdown.
 
+## Write-through model (token economy)
+
+The durable `state.json` is a **safety snapshot**, not a per-turn scratchpad. The token cost of state is driven by *frequency* (re-reading and re-writing the whole file every turn), not by file size. This model eliminates that frequency:
+
+1. **Rehydrate ONCE per session.** Read `state.json` a single time when a session starts or resumes (Phase 0). Do NOT re-read the whole file on every turn.
+2. **Native todo list is the in-session working set.** After rehydration, the orchestrator projects the pipeline into the harness-native todo list (see `#file:plugins/instructions/skraft-todo-sync.instructions.md`). Every turn consults the todo list (near-zero token), never the JSON file.
+3. **Writes are deterministic and go through the CLI.** Every invariant-bearing mutation (verdict, phase advance, artifact append, difficulty, retry) is applied by the `state.mjs` CLI, which validates, preserves ALL fields, backs up, and writes atomically. The agent never hand-edits those fields.
+4. **The file is the reconciliation point, never the hot path.** The native todo list does not persist across sessions or harnesses; the snapshot does. It is written at checkpoints and read once at the next rehydration.
+
+The snapshot remains authoritative on disk; the todo list is a disposable in-session projection, always regenerated from the snapshot at rehydration and never the source of truth.
+
+## State CLI (deterministic writes — S7 bridge)
+
+Invoke the state CLI for every invariant-bearing mutation. Portable invocation (same env var on Claude Code and Copilot CLI; falls back to the plugin cache glob when unset):
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [flags]
+```
+
+`basePath` defaults to `.copilot-tracking/skraft-plans` under the current working directory (override with `SKRAFT_TRACKING_ROOT`). The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`) · `2` IO/corrupted · `3` invalid state.
+
+| Subcommand | Flags | Effect (domain event) |
+|---|---|---|
+| `init` | `--slug` | Create default `state.json` if absent (idempotent). |
+| `get` | `--slug` `[--field X]` | Read-only. Full state, or one field. Safe; never writes. |
+| `transition` | `--slug --to {PHASE}` | Advance `currentPhase` (requires APPROVED verdict + legal next phase). |
+| `record-verdict` | `--slug --phase {P} --verdict {APPROVED\|CHANGES_REQUESTED}` | Set `verdicts[phase]`. |
+| `record-artifact` | `--slug --phase {P} --path {rel}` | Append to `phaseArtifacts[phase]` (append-only). |
+| `record-review-artifact` | `--slug --phase {P} --path {rel}` | Append to `reviewArtifacts[phase]` (append-only). |
+| `set-difficulty` | `--slug --value {tier}` | Set `difficulty` (write-once; rejects if already set). |
+| `incr-retry` | `--slug --phase {P}` | Increment `retryCount[phase]` (capped at `maxRetriesPerPhase`). |
+
+Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` (written once at Phase 0), `adrRatification` (written at the DESIGN human checkpoint), and `phaseHistory` / `neighborPlanners` / `nextActions` / `depthTierOverrides` / `referencesProcessed` — is edited directly on the snapshot. This is safe: the CLI's validator preserves every field on rewrite (round-trip fidelity), so a later CLI write never drops a hand-edited field. Everything invariant-bearing (verdicts, phase advance, artifacts, difficulty, retry) goes through the CLI.
+
 ## Schema
 
-State is a JSON document with the following fields. All fields are required unless marked optional.
+State is a JSON document. The state machine owns the invariant-bearing subset; all other fields are orchestrator-owned and preserved verbatim on every CLI write.
 
 ```json
 {
   "projectSlug": "string",
   "skraftPlanFile": "string (relative path to plan instructions file)",
   "currentPhase": "DISCOVER | DISCUSS | DESIGN | DISTILL | DELIVER | DONE",
-  "entryMode": "capture | from-issue | from-prd",
+  "entryMode": "capture | from-issue | from-prd | null",
   "entryPoint": {
     "skipPhases": ["string (phase names skipped because an upstream artefact already satisfies them)"],
     "handoffSource": "hve-ado | hve-jira | hve-github | null",
@@ -27,28 +67,21 @@ State is a JSON document with the following fields. All fields are required unle
   "difficulty": "simple | medium | medium-hard | challenging | null",
   "phasesCompleted": ["string (phase names)"],
   "phaseArtifacts": {
-    "DISCOVER": ["string (relative paths)"],
-    "DISCUSS": ["string (relative paths)"],
-    "DESIGN": ["string (relative paths)"],
-    "DISTILL": ["string (relative paths)"],
-    "DELIVER": ["string (relative paths)"]
+    "DISCOVER": ["string (relative paths)"]
   },
-  "reviewerVerdicts": {
-    "DISCOVER": "APPROVED | REJECTED | NEEDS_REWORK | null",
-    "DISCUSS": "APPROVED | REJECTED | NEEDS_REWORK | null",
-    "DESIGN": "APPROVED | REJECTED | NEEDS_REWORK | null",
-    "DISTILL": "APPROVED | REJECTED | NEEDS_REWORK | null",
-    "DELIVER": "APPROVED | REJECTED | NEEDS_REWORK | null"
+  "verdicts": {
+    "DISCOVER": "APPROVED | CHANGES_REQUESTED | null"
   },
-  "reviewArtifacts": ["string (relative paths under reviews/)"],
+  "reviewArtifacts": {
+    "DISCOVER": ["string (relative paths under reviews/)"]
+  },
   "retryCount": {
-    "DISCOVER": "number",
-    "DISCUSS": "number",
-    "DESIGN": "number",
-    "DISTILL": "number",
-    "DELIVER": "number"
+    "DISCOVER": "number"
   },
   "referencesProcessed": ["string (file paths)"],
+  "phaseHistory": {
+    "DISCOVER": { "status": "done | inProgress", "startedAt": "string", "completedAt": "string" }
+  },
   "nextActions": ["string"],
   "userPreferences": {
     "autonomyTier": "full | partial | manual",
@@ -73,68 +106,71 @@ State is a JSON document with the following fields. All fields are required unle
 }
 ```
 
+### Canonical shapes and legacy migration
+
+* `verdicts` is a phase-keyed map (`{ "DESIGN": "APPROVED" }`). Verdict values are `APPROVED`, `CHANGES_REQUESTED`, or `null`. The legacy field `reviewerVerdicts` (older hand-authored files) is migrated to `verdicts` automatically on read and the alias is dropped — do not write `reviewerVerdicts`.
+* `reviewArtifacts` and `phaseArtifacts` are phase-keyed **maps** of relative paths (`{ "DESIGN": ["reviews/..."] }`), appended through the CLI. A legacy *flat array* on an older file is preserved verbatim under `reviewArtifactsLegacy` / `phaseArtifactsLegacy`; the canonical map restarts empty for future appends. Do not author flat arrays.
+
 ### Field semantics
 
 * `projectSlug` — kebab-case identifier derived from the originating issue title or user-provided project name.
 * `currentPhase` — single phase the pipeline is currently executing. Advances only when the reviewer verdict for that phase is `APPROVED`. `DONE` indicates the full pipeline has completed.
 * `entryMode` — how the pipeline was started. `from-issue` requires `issueNumber`; `from-prd` requires entries in `referencesProcessed`; `capture` requires neither.
-* `entryPoint` — records which phases the orchestrator skips because an upstream HVE handoff already satisfies their checklist, evaluated at pipeline start (Phase 0) by `skraft-difficulty-routing`. `skipPhases` is empty by default (every phase runs). `handoffSource` names the detected HVE producer (`hve-ado`, `hve-jira`, `hve-github`) or `null` when no handoff exists. `handoffArtifacts` lists the relative paths of the detected backlog/sprint artefacts that were ingested. When `skipPhases` contains `"DISCOVER"`, the ingestion step writes the substitute DISCOVER artefacts (`research/{date}/triage-ingest-{date}.md`, `research/{date}/sprint-proposal.md`) so DISCUSS can start without re-triaging.
-* `difficulty` — set once at the exit of DISCOVER (or, when DISCOVER is skipped, at pipeline start alongside `entryPoint`) by `skraft-difficulty-routing`. Drives the DELIVER execution model. Never reassessed mid-pipeline.
+* `entryPoint` — records which phases the orchestrator skips because an upstream HVE handoff already satisfies their checklist, evaluated at pipeline start (Phase 0) by `skraft-difficulty-routing`. `skipPhases` is empty by default (every phase runs). `handoffSource` names the detected HVE producer (`hve-ado`, `hve-jira`, `hve-github`) or `null`. `handoffArtifacts` lists the relative paths of the ingested backlog/sprint artefacts. When `skipPhases` contains `"DISCOVER"`, the ingestion step writes the substitute DISCOVER artefacts (`research/{date}/triage-ingest-{date}.md`, `research/{date}/sprint-proposal.md`) so DISCUSS can start without re-triaging. Written directly on the snapshot once, at Phase 0.
+* `difficulty` — set once at the exit of DISCOVER (or, when DISCOVER is skipped, at pipeline start) via `state.mjs set-difficulty`. Write-once. Drives the DELIVER execution model. Never reassessed mid-pipeline.
 * `userPreferences.depthTier` — depth/strictness applied across all phases. Defaults to `comprehensive`. Any other value requires an explicit user choice recorded in `depthTierOverrides` with rationale. This dial is also the pipeline's **cost governor** (genesis B16 / B11): it sets reviewer fan-out (1/2/4 lenses), mutation-run count, and the Gherkin gate, so a lower tier reduces token spend and strictness together. Keep `comprehensive` for critical code.
 * `userPreferences.maxRetriesPerPhase` — default `2`. When `retryCount[phase] >= maxRetriesPerPhase` and the verdict is not `APPROVED`, the orchestrator escalates to the user.
-* `reviewArtifacts` — append-only list of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers write here exclusively.
+* `reviewArtifacts` — append-only map of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers append here exclusively, through `record-review-artifact`.
 * `neighborPlanners` — interop with sibling HVE planners (Security, RAI, SSSC). `null` when no plan exists.
-* `adrRatification` — persists the DESIGN human-ratification gate (genesis B10 HUMAN CHECKPOINT + B4 PLAN MEMENTO) so it survives turns and session resumes. `checkpointStatus` is `none` until DESIGN produces `Proposed` ADRs, `awaiting_human` while the orchestrator has HALTed for a verdict, `resolved` once every ADR is `Accepted`/`Rejected`. `pending` mirrors the `docs/adr/decisions-index.md` rows still `Proposed`; `ratified` accumulates the verdicts. The orchestrator reads the decision index (NOT full ADR bodies) to populate this block. Defaults to `{ "checkpointStatus": "none", "pending": [], "ratified": [] }`.
+* `adrRatification` — persists the DESIGN human-ratification gate (genesis B10 HUMAN CHECKPOINT + B4 PLAN MEMENTO) so it survives turns and session resumes. `checkpointStatus` is `none` until DESIGN produces `Proposed` ADRs, `awaiting_human` while the orchestrator has HALTed for a verdict, `resolved` once every ADR is `Accepted`/`Rejected`. `pending` mirrors the `docs/adr/decisions-index.md` rows still `Proposed`; `ratified` accumulates the verdicts. The orchestrator reads the decision index (NOT full ADR bodies) to populate this block. Written directly on the snapshot at the DESIGN checkpoint. Defaults to `{ "checkpointStatus": "none", "pending": [], "ratified": [] }`.
 
-## Six-Step State Protocol
+## Per-turn protocol (write-through)
 
-Execute this protocol on **every turn** before producing user-facing output.
+On a turn that changes pipeline state:
 
-1. **READ** — Load `state.json` from `.copilot-tracking/skraft-plans/{project-slug}/state.json`.
-2. **VALIDATE** — Confirm the document matches the schema above. If validation fails, follow the Recovery Procedure below before continuing.
-3. **DETERMINE** — Inspect `currentPhase`, `reviewerVerdicts[currentPhase]`, `retryCount[currentPhase]`, and `phaseArtifacts[currentPhase]` to identify the next concrete action.
-4. **EXECUTE** — Perform the action determined in step 3 (dispatch a phase agent, dispatch a reviewer, request user input, advance phase, etc.).
-5. **UPDATE** — Mutate state fields in memory. Advance `currentPhase` only when the active reviewer verdict for that phase is `APPROVED`. Append-only on `phaseArtifacts[*]`, `reviewArtifacts`, `phasesCompleted`, `referencesProcessed`, `nextActions`, `depthTierOverrides`. Increment `retryCount[phase]` when a phase is re-dispatched after a non-APPROVED verdict.
-6. **WRITE** — Persist the updated `state.json` to disk before returning to the user.
+1. **DETERMINE** the next action from the **native todo working set** (not by re-reading the file). If a scalar not carried by the todo list is needed (e.g. `difficulty`, `entryPoint`), fetch just that field: `state.mjs get --slug {slug} --field difficulty`.
+2. **EXECUTE** the action (dispatch a phase agent, dispatch a reviewer, request user input, etc.).
+3. **RECORD** the result through the CLI — one deterministic call per mutation:
+   * reviewer verdict → `record-verdict --phase {P} --verdict {V}`
+   * artifact produced → `record-artifact` / `record-review-artifact`
+   * phase advance → `transition --to {NEXT}` (only after an APPROVED verdict for the current phase)
+   * difficulty set → `set-difficulty --value {tier}`
+   * phase re-dispatched after a non-APPROVED verdict → `incr-retry --phase {P}`
+   The CLI persists the snapshot atomically. `entryPoint` / `adrRatification` are the only direct-edit exceptions.
+4. **REFLECT** the change into the native todo list (mark a todo done / in-progress, add the next). The todo list and the snapshot now agree; no whole-file re-read occurs.
 
 ### Transition rules
 
-* `currentPhase` transitions only on `APPROVED` reviewer verdict.
+* `currentPhase` transitions only on `APPROVED` reviewer verdict — enforced by `transition` (rejects with `VERDICT_NOT_APPROVED`).
 * **DESIGN is the one phase with a second gate after `APPROVED`:** it advances to `DISTILL` only when `adrRatification.checkpointStatus == "resolved"` (zero `Proposed` ADRs remain in `docs/adr/decisions-index.md`). A DESIGN reviewer `APPROVED` with `Proposed` ADRs still open keeps `currentPhase == "DESIGN"` and sets `adrRatification.checkpointStatus = "awaiting_human"`.
-* On `REJECTED` or `NEEDS_REWORK`: the same phase agent is re-dispatched, `retryCount[phase]` is incremented, `currentPhase` does not change.
-* The terminal state `DONE` is set when DELIVER's reviewer verdict is `APPROVED` and `phasesCompleted` contains all five phase names.
+* On `CHANGES_REQUESTED`: the same phase agent is re-dispatched, `incr-retry --phase {P}` is called, `currentPhase` does not change.
+* The terminal state `DONE` is reached by a final `transition --to DONE` after DELIVER's verdict is `APPROVED` and `phasesCompleted` contains all five phase names. `DONE` is terminal — the CLI rejects further mutations with `TERMINAL_STATE`.
 
 ### State creation
 
-On first invocation, create the project directory and write an initial `state.json`:
+On first invocation, create the state with `state.mjs init --slug {projectSlug}`. This writes a default snapshot (`currentPhase="DISCOVER"`, `userPreferences.maxRetriesPerPhase=2`, `difficulty=null`, all maps empty, `entryPoint=null`, `adrRatification` defaulted). Then, at Phase 0, the orchestrator direct-edits `entryPoint` (and, when an HVE handoff skips DISCOVER, calls `transition`/`set-difficulty` as needed).
 
-* `projectSlug` derived from the entry context.
-* `currentPhase` set to `"DISCOVER"` (or to `"DISCUSS"` when Phase 0 detects an HVE handoff and records `"DISCOVER"` in `entryPoint.skipPhases`).
-* `entryMode` set from the invoking prompt.
-* `entryPoint` set to `{ "skipPhases": [], "handoffSource": null, "handoffArtifacts": [] }` by default; populated by Phase 0 when an HVE backlog/sprint handoff is detected and confirmed.
-* `difficulty` set to `null` (assigned at DISCOVER exit, or at pipeline start when DISCOVER is skipped).
-* `userPreferences.depthTier` set to `"comprehensive"`.
-* `userPreferences.maxRetriesPerPhase` set to `2`.
-* All other arrays empty, `retryCount` zeroed, `reviewerVerdicts` all `null`, `neighborPlanners` all `null`.
+## Rehydration (once per session)
 
-## Four-Step Resume Sequence
+When a session starts or resumes, rehydrate exactly once:
 
-When returning to an existing session:
+1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount[currentPhase]`, `difficulty`, `entryPoint`, `adrRatification`.
+2. **Project** the pipeline into the native todo working set per `#file:plugins/instructions/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
+3. **Identify** pending work from the todo list: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
+4. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).
+5. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions).
 
-1. **Read** `state.json` to determine `currentPhase`, the last reviewer verdict for that phase, and `retryCount[currentPhase]`.
-2. **Identify** pending work: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, or unresolved user input.
-3. **Check** for incomplete artifacts on disk: partially written phase outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/` (ADRs live project-global in `docs/adr/`, not in the run namespace).
-4. **Present** a status summary to the user with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions) before continuing.
+From here, subsequent turns use the todo list and the write-through protocol above — the whole snapshot is not re-read again this session.
 
 ## Recovery Procedure
 
-When `state.json` is missing, malformed, or fails schema validation:
+When `state.json` is missing, malformed, or fails schema validation (the CLI exits `2`/`3`):
 
-1. Search the project directory for the most recent valid `state.json` backup (`state.json.bak.*`). If found, restore it and re-run VALIDATE.
+1. Search the project directory for the most recent valid backup (`state.json.bak.*`, kept rotating ≤3 by the writer). If found, restore it and re-run `state.mjs get` to validate.
 2. If no backup is recoverable, scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`).
-3. Reconstruct `state.json` with conservative defaults: `currentPhase` set to the inferred phase, `phasesCompleted` set from on-disk evidence, `reviewerVerdicts[currentPhase]` set to `null`, `retryCount` zeroed, `userPreferences.depthTier` set to `"comprehensive"`.
+3. Reconstruct a snapshot with conservative defaults: `state.mjs init` then direct-edit `currentPhase` to the inferred phase, `phasesCompleted` from on-disk evidence, `verdicts[currentPhase]` to `null`, `userPreferences.depthTier` to `"comprehensive"`.
 4. Surface the reconstruction to the user with a checklist of inferred values and request confirmation before resuming.
-5. Write a backup of the prior corrupted file as `state.json.corrupted.{timestamp}` before overwriting.
+5. Before overwriting a corrupted file, preserve it as `state.json.corrupted.{timestamp}`.
 
 ## Markdown header for tracked artifacts
 

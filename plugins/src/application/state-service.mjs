@@ -2,15 +2,32 @@ import { Ok, Err, isOk } from '../domain/result.mjs'
 import { applyTransition } from '../domain/state-machine.mjs'
 import { validatePipelineState } from '../domain/state-schema.mjs'
 
+// Fresh pipeline shape. Carries the full documented field set so a newly-initialized
+// state.json is self-describing and no downstream reader has to guess a missing field.
+// The invariant-bearing subset (currentPhase, phasesCompleted, verdicts, retryCount,
+// phaseArtifacts, reviewArtifacts, difficulty, userPreferences) is owned by the state
+// machine; the remaining scalars are populated by the orchestrator (Phase 0 / DESIGN
+// checkpoint) and only preserved here.
 const DEFAULT_STATE = () => ({
+  projectSlug: null,
+  skraftPlanFile: null,
   currentPhase: 'DISCOVER',
-  phasesCompleted: [],
-  verdicts: {},
-  retryCount: {},
-  phaseArtifacts: {},
-  reviewArtifacts: {},
+  entryMode: null,
+  entryPoint: null,
+  issueNumber: null,
   difficulty: null,
+  adrRatification: { checkpointStatus: null, pending: [], ratified: [] },
+  phasesCompleted: [],
+  phaseArtifacts: {},
+  verdicts: {},
+  reviewArtifacts: {},
+  retryCount: {},
+  referencesProcessed: [],
+  phaseHistory: {},
+  nextActions: [],
   userPreferences: { maxRetriesPerPhase: 2 },
+  depthTierOverrides: [],
+  neighborPlanners: { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null },
 })
 
 // Application use case: orchestrates stateReader port + stateMachine domain + stateWriter port.

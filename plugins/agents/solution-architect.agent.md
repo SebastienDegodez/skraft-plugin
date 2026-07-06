@@ -35,7 +35,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
-    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Solution-Architect Agent

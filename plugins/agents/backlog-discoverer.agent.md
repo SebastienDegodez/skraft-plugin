@@ -26,7 +26,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/sprint-proposal.md
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
-    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Backlog-Discoverer Agent

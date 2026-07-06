@@ -174,3 +174,94 @@ test('validatePipelineState: coerces retryCount array to {}', () => {
   assert.ok(isOk(r))
   assert.deepEqual(r.value.retryCount, {})
 })
+
+// ─── round-trip fidelity (real hand-authored state.json) ───────────────────────
+// Regression: validatePipelineState must NOT drop orchestrator-owned fields it does
+// not normalize. Prior behaviour silently coerced to 8 keys, destroying 10 fields on
+// every CLI write (proven empirically). These fields drive the DESIGN human checkpoint
+// (adrRatification), HVE handoff (entryPoint), and traceability (issueNumber, ...).
+
+const REAL_STATE = {
+  projectSlug: 'us1-clean-arch-foundation',
+  skraftPlanFile: '.copilot-tracking/skraft-plans/us1-clean-arch-foundation/state.json',
+  currentPhase: 'DESIGN',
+  entryMode: 'from-issue',
+  entryPoint: { skipPhases: [], handoffSource: null, handoffArtifacts: [] },
+  issueNumber: 47,
+  difficulty: 'medium',
+  adrRatification: { checkpointStatus: 'pending', pending: ['adr-001'], ratified: [] },
+  phasesCompleted: ['DISCOVER', 'DISCUSS'],
+  phaseArtifacts: { DISCOVER: ['research/triage.md'] },
+  reviewerVerdicts: { DISCOVER: 'APPROVED', DISCUSS: 'APPROVED' },
+  reviewArtifacts: ['reviews/discover-review.md', 'reviews/discuss-review.md'],
+  retryCount: { DISCOVER: 0, DISCUSS: 0 },
+  referencesProcessed: [],
+  phaseHistory: { DISCOVER: { status: 'done', startedAt: 't0', completedAt: 't1' } },
+  nextActions: [],
+  userPreferences: { autonomyTier: 'full', depthTier: 'comprehensive', maxRetriesPerPhase: 2 },
+  depthTierOverrides: [],
+  neighborPlanners: { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null },
+}
+
+test('round-trip: preserves every orchestrator-owned field (no silent drop)', () => {
+  const r = validatePipelineState(REAL_STATE)
+  assert.ok(isOk(r))
+  const v = r.value
+  assert.deepEqual(v.entryPoint, REAL_STATE.entryPoint, 'entryPoint preserved')
+  assert.deepEqual(v.adrRatification, REAL_STATE.adrRatification, 'adrRatification preserved')
+  assert.equal(v.issueNumber, 47, 'issueNumber preserved')
+  assert.equal(v.projectSlug, REAL_STATE.projectSlug, 'projectSlug preserved')
+  assert.equal(v.skraftPlanFile, REAL_STATE.skraftPlanFile, 'skraftPlanFile preserved')
+  assert.equal(v.entryMode, 'from-issue', 'entryMode preserved')
+  assert.deepEqual(v.phaseHistory, REAL_STATE.phaseHistory, 'phaseHistory preserved')
+  assert.deepEqual(v.nextActions, [], 'nextActions preserved')
+  assert.deepEqual(v.referencesProcessed, [], 'referencesProcessed preserved')
+  assert.deepEqual(v.depthTierOverrides, [], 'depthTierOverrides preserved')
+  assert.deepEqual(v.neighborPlanners, REAL_STATE.neighborPlanners, 'neighborPlanners preserved')
+})
+
+test('round-trip: migrates reviewerVerdicts -> verdicts and drops the alias', () => {
+  const r = validatePipelineState(REAL_STATE)
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.verdicts, { DISCOVER: 'APPROVED', DISCUSS: 'APPROVED' })
+  assert.equal(r.value.reviewerVerdicts, undefined, 'legacy alias removed (no split-brain)')
+})
+
+test('round-trip: canonical verdicts wins over legacy reviewerVerdicts when both present', () => {
+  const r = validatePipelineState({
+    currentPhase: 'DISCOVER',
+    verdicts: { DISCOVER: 'CHANGES_REQUESTED' },
+    reviewerVerdicts: { DISCOVER: 'APPROVED' },
+  })
+  assert.ok(isOk(r))
+  assert.equal(r.value.verdicts.DISCOVER, 'CHANGES_REQUESTED')
+  assert.equal(r.value.reviewerVerdicts, undefined)
+})
+
+test('round-trip: flat-array reviewArtifacts preserved under reviewArtifactsLegacy; map restarts empty', () => {
+  const r = validatePipelineState(REAL_STATE)
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.reviewArtifacts, {}, 'canonical map restarts empty')
+  assert.deepEqual(r.value.reviewArtifactsLegacy, REAL_STATE.reviewArtifacts, 'legacy paths preserved verbatim')
+})
+
+test('round-trip: no reviewArtifactsLegacy key when reviewArtifacts is already a map', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', reviewArtifacts: { DISCOVER: ['r.md'] } })
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.reviewArtifacts, { DISCOVER: ['r.md'] })
+  assert.equal(r.value.reviewArtifactsLegacy, undefined)
+})
+
+test('round-trip: empty flat arrays do not create Legacy keys', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', reviewArtifacts: [], phaseArtifacts: [] })
+  assert.ok(isOk(r))
+  assert.equal(r.value.reviewArtifactsLegacy, undefined)
+  assert.equal(r.value.phaseArtifactsLegacy, undefined)
+})
+
+test('round-trip: flat-array phaseArtifacts preserved under phaseArtifactsLegacy; map restarts empty', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', phaseArtifacts: ['plans/a.md', 'plans/b.md'] })
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.phaseArtifacts, {}, 'canonical map restarts empty')
+  assert.deepEqual(r.value.phaseArtifactsLegacy, ['plans/a.md', 'plans/b.md'], 'legacy paths preserved verbatim')
+})

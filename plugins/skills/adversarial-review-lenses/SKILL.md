@@ -132,7 +132,7 @@ Write the review under `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md`. Begin th
 - {bulleted list — present only when verdict is NEEDS_REWORK or REJECTED}
 ```
 
-The reviewer writes only this file. It never modifies upstream artifacts and never edits `state.json` — the orchestrator updates `state.json::reviewerVerdicts[phase]` from the verdict line above.
+The reviewer writes only this file. It never modifies upstream artifacts and never edits `state.json` — the orchestrator records `state.json::verdicts[phase]` from the verdict line above via `state.mjs record-verdict`.
 
 ## HVE alignment
 
