@@ -1,7 +1,7 @@
 ---
 name: mock-integration-worker
 description: "[Internal subagent — dispatched by software-engineer only] Resolves a mocking strategy (Microcks default, overridable to an in-process library) x stack and emits the downstream mock wiring plus an integration-test scaffold. Does not run the business TDD cycle."
-model: claude-sonnet-4.6
+model: claude-sonnet-5
 user-invocable: false
 tools: read/readFile, search/codebase, edit/createDirectory, edit/createFile, edit/editFiles, execute/runInTerminal, execute/getTerminalOutput
 metadata:

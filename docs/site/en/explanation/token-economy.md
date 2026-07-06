@@ -76,7 +76,7 @@ re-injected as prose would make it miss.
 ### Model class — a 27× separation
 
 The same schema applies a per-model multiplier. On this run, two classes were observed:
-**9.0×** for the *frontier* class (claude-sonnet-4.6) and **0.33×** for the *capable*
+**9.0×** for the *frontier* class (claude-sonnet-5) and **0.33×** for the *capable*
 class (claude-haiku-4.5). At equal normalised work, allocating the capable class rather
 than frontier therefore costs **9.0 / 0.33 ≈ 27× less** in effective tokens — making the
 class choice the dominant multiplier of spend.
@@ -109,7 +109,7 @@ Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
 `model_requirement` floor, then **pins the `model:` field** of its `*.agent.md` to the
 resolved concrete model. The "Measured results" section states the policy:
 `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
-`planner → claude-sonnet-4.6`, with the Sonnet floor raising the two exceptions
+`planner → claude-sonnet-5`, with the Sonnet floor raising the two exceptions
 (`software-engineer`, `software-engineer-reviewer`). One source of truth; a CI linter
 (`resolve-model --check`) fails if an agent drifts from the policy. The `depthTier`
 field in `state.json` governs the lens fan-out and the activation of optional gates.
