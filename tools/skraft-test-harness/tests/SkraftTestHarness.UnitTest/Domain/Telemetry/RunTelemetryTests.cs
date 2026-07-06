@@ -30,7 +30,7 @@ public sealed class RunTelemetryTests
     [Test]
     public async Task ReportsTheValuesItWasGiven()
     {
-        var telemetry = new RunTelemetry("claude-sonnet-4.6", outputTokens: 10, premiumRequests: 1);
+        var telemetry = new RunTelemetry("claude-sonnet-5", outputTokens: 10, premiumRequests: 1);
 
         string? model = null;
         long? output = null;
@@ -39,7 +39,7 @@ public sealed class RunTelemetryTests
         telemetry.WithOutputTokens(t => output = t);
         telemetry.WithPremiumRequests(p => aic = p);
 
-        await Assert.That(model).IsEqualTo("claude-sonnet-4.6");
+        await Assert.That(model).IsEqualTo("claude-sonnet-5");
         await Assert.That(output).IsEqualTo(10L);
         await Assert.That(aic).IsEqualTo(1L);
     }

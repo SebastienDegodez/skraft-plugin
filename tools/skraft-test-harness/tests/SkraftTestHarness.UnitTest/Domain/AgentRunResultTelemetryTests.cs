@@ -12,14 +12,14 @@ public sealed class AgentRunResultTelemetryTests
     [Test]
     public async Task CarriesTheTelemetryItWasGiven()
     {
-        var telemetry = new RunTelemetry("claude-sonnet-4.6", outputTokens: 10, premiumRequests: 1);
+        var telemetry = new RunTelemetry("claude-sonnet-5", outputTokens: 10, premiumRequests: 1);
         var result = new AgentRunResult(
             new AgentOutput("out"), ToolInvocations.None(), telemetry);
 
         string? model = null;
         result.WithTelemetry(t => t.WithModel(m => model = m));
 
-        await Assert.That(model).IsEqualTo("claude-sonnet-4.6");
+        await Assert.That(model).IsEqualTo("claude-sonnet-5");
     }
 
     [Test]

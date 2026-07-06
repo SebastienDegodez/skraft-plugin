@@ -77,7 +77,7 @@ en prose le ferait rater.
 ### Classe de modèle — séparation de 27×
 
 Le même schéma applique un multiplicateur par modèle. Sur ce run, deux classes ont été
-observées : **9,0×** pour la classe *frontier* (claude-sonnet-4.6) et **0,33×** pour la
+observées : **9,0×** pour la classe *frontier* (claude-sonnet-5) et **0,33×** pour la
 classe *capable* (claude-haiku-4.5). À travail normalisé égal, allouer la classe capable
 plutôt que frontier coûte donc **9,0 / 0,33 ≈ 27× moins** en tokens effectifs — ce qui
 fait du choix de classe le multiplicateur dominant de la dépense.
@@ -110,7 +110,7 @@ La classe de modèle est **réellement appliquée** : un résolveur déterminist
 plancher `model_requirement` de chaque agent, puis **pinne le champ `model:`** de son
 `*.agent.md` au modèle concret résolu. Le tableau de la section « Mesures réelles »
 décrit la politique : `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
-`planner → claude-sonnet-4.6`, le plancher Sonnet relevant les deux exceptions
+`planner → claude-sonnet-5`, le plancher Sonnet relevant les deux exceptions
 (`software-engineer`, `software-engineer-reviewer`). Une seule source de vérité ; un
 linter CI (`resolve-model --check`) échoue si un agent dérive de la politique. Le champ
 `depthTier` dans `state.json` gouverne le fan-out des lentilles et l'activation des

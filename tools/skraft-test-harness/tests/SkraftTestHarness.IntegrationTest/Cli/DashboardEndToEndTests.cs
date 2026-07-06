@@ -22,7 +22,7 @@ public sealed class DashboardEndToEndTests
               "skill": "outside-in-tdd",
               "scenarios": [
                 { "name": "Echo", "winner": "WithSkill", "reason": "Assertion pass count comparison",
-                  "model": "claude-sonnet-4.6", "outputTokens": 12, "premiumRequests": 2 }
+                  "model": "claude-sonnet-5", "outputTokens": 12, "premiumRequests": 2 }
               ]
             }
             """);
@@ -32,7 +32,7 @@ public sealed class DashboardEndToEndTests
               "skill": "skraft-orchestrator",
               "scenarios": [
                 { "name": "Deliver gate", "status": "PASS",
-                  "model": "claude-sonnet-4.6", "outputTokens": 30, "premiumRequests": 3 }
+                  "model": "claude-sonnet-5", "outputTokens": 30, "premiumRequests": 3 }
               ]
             }
             """);
@@ -63,6 +63,6 @@ public sealed class DashboardEndToEndTests
 
         var models = root.GetProperty("models");
         await Assert.That(models.GetArrayLength()).IsEqualTo(1);
-        await Assert.That(models[0].GetString()).IsEqualTo("claude-sonnet-4.6");
+        await Assert.That(models[0].GetString()).IsEqualTo("claude-sonnet-5");
     }
 }

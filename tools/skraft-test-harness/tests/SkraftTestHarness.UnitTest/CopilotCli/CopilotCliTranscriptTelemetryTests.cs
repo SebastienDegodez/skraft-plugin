@@ -17,9 +17,9 @@ public sealed class CopilotCliTranscriptTelemetryTests
     {
         const string jsonl =
             """
-            {"type":"session.tools_updated","data":{"model":"claude-sonnet-4.6"}}
-            {"type":"assistant.message","data":{"content":"OK","model":"claude-sonnet-4.6","outputTokens":4}}
-            {"type":"assistant.message","data":{"content":"more","model":"claude-sonnet-4.6","outputTokens":6}}
+            {"type":"session.tools_updated","data":{"model":"claude-sonnet-5"}}
+            {"type":"assistant.message","data":{"content":"OK","model":"claude-sonnet-5","outputTokens":4}}
+            {"type":"assistant.message","data":{"content":"more","model":"claude-sonnet-5","outputTokens":6}}
             {"type":"result","timestamp":"2026-06-15T20:43:04.882Z","exitCode":0,"usage":{"premiumRequests":1,"totalApiDurationMs":1910}}
             """;
 
@@ -35,7 +35,7 @@ public sealed class CopilotCliTranscriptTelemetryTests
             t.WithPremiumRequests(p => aic = p);
         });
 
-        await Assert.That(model).IsEqualTo("claude-sonnet-4.6");
+        await Assert.That(model).IsEqualTo("claude-sonnet-5");
         await Assert.That(output).IsEqualTo(10L);
         await Assert.That(aic).IsEqualTo(1L);
     }

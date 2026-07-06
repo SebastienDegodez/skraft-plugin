@@ -80,11 +80,11 @@ public sealed class CopilotCliAgentRunnerTests
     public async Task ShouldPinTheModelWhenConfigured()
     {
         var invoker = new CapturingInvoker(AssistantHi);
-        var runner = new CopilotCliAgentRunner(invoker, new CopilotCliOptions(Model: "claude-sonnet-4.6"));
+        var runner = new CopilotCliAgentRunner(invoker, new CopilotCliOptions(Model: "claude-sonnet-5"));
 
         await runner.RunAsync(ScenarioFor("go"), RunMode.Plugin, CancellationToken.None);
 
-        await Assert.That(HasPair(invoker, "--model", "claude-sonnet-4.6")).IsTrue();
+        await Assert.That(HasPair(invoker, "--model", "claude-sonnet-5")).IsTrue();
     }
 
     [Test]
