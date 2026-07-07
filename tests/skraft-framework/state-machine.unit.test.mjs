@@ -282,3 +282,44 @@ test('state-machine INCR_RETRY: uses default maxRetries=2 when userPreferences a
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'RETRY_EXHAUSTED')
 })
+
+// ─── passthrough fidelity: orchestrator-owned fields survive every transition ──
+// Regression pair for the schema round-trip fix: applyTransition validates+coerces
+// via validatePipelineState, so preserved fields must reach the returned state and
+// not be dropped by the transition spread.
+const mkRichState = (overrides = {}) => mkState({
+  projectSlug: 'us9-demo',
+  issueNumber: 99,
+  entryPoint: { skipPhases: [], handoffSource: null, handoffArtifacts: [] },
+  adrRatification: { checkpointStatus: 'pending', pending: ['adr-1'], ratified: [] },
+  neighborPlanners: { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null },
+  ...overrides,
+})
+
+const assertRichPreserved = (value) => {
+  assert.equal(value.projectSlug, 'us9-demo', 'projectSlug preserved')
+  assert.equal(value.issueNumber, 99, 'issueNumber preserved')
+  assert.deepEqual(value.entryPoint, { skipPhases: [], handoffSource: null, handoffArtifacts: [] }, 'entryPoint preserved')
+  assert.deepEqual(value.adrRatification, { checkpointStatus: 'pending', pending: ['adr-1'], ratified: [] }, 'adrRatification preserved')
+}
+
+test('passthrough: RECORD_VERDICT preserves orchestrator-owned fields', () => {
+  const r = applyTransition(mkRichState(), { type: 'RECORD_VERDICT', phase: 'DISCOVER', verdict: 'APPROVED' })
+  assert.equal(r.ok, true)
+  assertRichPreserved(r.value)
+  assert.equal(r.value.verdicts.DISCOVER, 'APPROVED')
+})
+
+test('passthrough: ADVANCE preserves orchestrator-owned fields', () => {
+  const r = applyTransition(mkRichState({ verdicts: { DISCOVER: 'APPROVED' } }), { type: 'ADVANCE', targetPhase: 'DISCUSS' })
+  assert.equal(r.ok, true)
+  assertRichPreserved(r.value)
+  assert.equal(r.value.currentPhase, 'DISCUSS')
+})
+
+test('passthrough: INCR_RETRY preserves orchestrator-owned fields', () => {
+  const r = applyTransition(mkRichState(), { type: 'INCR_RETRY', phase: 'DISCOVER' })
+  assert.equal(r.ok, true)
+  assertRichPreserved(r.value)
+  assert.equal(r.value.retryCount.DISCOVER, 1)
+})

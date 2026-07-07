@@ -28,7 +28,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
-    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Acceptance-Designer Reviewer

@@ -3,6 +3,11 @@ description: "SKRAFT artifact path conventions aligned with HVE-Core dated subdi
 applyTo: '**/.copilot-tracking/skraft-plans/**'
 ---
 <!-- markdownlint-disable-file -->
+<!-- PORTABILITY: shared convention for any agent that writes files under skraft-plans/.
+     `applyTo:` above is Copilot auto-load metadata (belt). The orchestrator points
+     sub-agents to this file through its dispatch context header (sub-agents run in
+     isolated contexts and load nothing themselves); on harnesses without path-scoped
+     auto-load (e.g. Claude Code) the agent reads it on demand. Harness-neutral. -->
 
 # SKRAFT Artifact Path Conventions
 
@@ -70,7 +75,7 @@ Because `blockers/` is append-only, the **blocker file's frontmatter is never fl
 Reviewers (`backlog-discoverer-reviewer`, `backlog-planner-reviewer`, `solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`) write **only** to `reviews/{YYYY-MM-DD}/`. They never modify upstream phase artifacts. They never write to `blockers/` — blocker creation is a `solution-architect` persona responsibility (Phase 9 HALT), not a reviewer responsibility. Their verdict is communicated through:
 
 1. The file written under `reviews/{YYYY-MM-DD}/`.
-2. The corresponding entry in `state.json::reviewerVerdicts[phase]` (updated by the orchestrator, not by the reviewer itself).
+2. The corresponding entry in `state.json::verdicts[phase]` (recorded by the orchestrator via `state.mjs record-verdict`, not by the reviewer itself).
 
 ## Markdown header requirement
 

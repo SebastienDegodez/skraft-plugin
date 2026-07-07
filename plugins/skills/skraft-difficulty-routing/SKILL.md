@@ -53,9 +53,9 @@ The DISCUSS agent (`backlog-planner`) requires DISCOVER artefacts (`research/{da
 
 The immutable invariants below still apply to the ingested artefacts (dated HVE paths, schema compliance, no secrets).
 
-### 2. Depth Tier — strictness within each phase
+### 2. Depth Tier — strictness within each repository
 
-Aligned with HVE-Core / RPI vocabulary. Persisted in `state.json::userPreferences.depthTier`. **Default = `comprehensive`**.
+Aligned with HVE-Core / RPI vocabulary. **Repo-wide** — it is a property of the codebase, not of one work item, so it lives in `skraft-config.json` (not in `state.json`), managed by the `skraft-config` configurateur. **Default = `comprehensive`**. Read it with `config.mjs get --key depthTier`; change it with `config.mjs set --key depthTier --value {tier}`.
 
 | Depth Tier | TDD (mandatory) | Mutation Domain / Application | Mutation API / Infrastructure | Reviewer lenses | Gherkin gate | Use case |
 |---|---|---|---|---|---|---|
@@ -64,7 +64,7 @@ Aligned with HVE-Core / RPI vocabulary. Persisted in `state.json::userPreference
 | `comprehensive` **(default)** | Outside-In double-loop | **100%** | **90%** | 4 (full A7) | mandatory | Production feature, critical code, public API |
 | `custom` | mandatory (variant of choice) | user-defined ≥ 0 | user-defined ≥ 0 | user-defined ≥ 1 | user-defined | Edge case — subject to immutable invariants |
 
-The orchestrator persists `comprehensive` if no explicit user choice was recorded. Any downgrade to `basic`, `standard`, or `custom` requires an explicit user decision captured at the exit of DISCOVER, with rationale appended to `state.json::depthTierOverrides`.
+`config.mjs init` seeds `comprehensive` if no config exists. Any downgrade to `basic`, `standard`, or `custom` is a repo-level decision made once through the configurateur; capture the reason with `config.mjs set --key depthTierRationale --value "<why>"`. Depth tier is NOT re-decided per work item — difficulty (below) is the per-work-item axis.
 
 > **Depth Tier is also a cost governor (genesis B16 EFFORT GOVERNOR / B11 FOLD-BY-DEFAULT).** The same dial that sets strictness sets token spend: the **Reviewer lenses** column is reviewer fan-out (1/2/4 parallel spawns), the mutation columns drive how many test runs execute, and the Gherkin gate adds output. A lower tier is therefore cheaper *and* less strict — they move together. Reserve `comprehensive` (4-lens fan-out) for production-critical code; `basic`/`standard` deliberately trade strictness for fewer spawns and less output on spikes and non-critical features.
 
@@ -98,7 +98,7 @@ The following invariants cannot be downgraded by any depth tier choice:
 Enforcement levels:
 
 - `advisory` — logged in `reviews/{date}/` but does not block.
-- `warning` — blocks unless an explicit override with rationale is appended to `state.json::depthTierOverrides`.
+- `warning` — blocks unless an explicit override with rationale is recorded via `config.mjs set --key depthTierRationale --value "<why>"`.
 - `blocking` — blocks with no override possible.
 
 | Gate | basic | standard | comprehensive |
@@ -114,7 +114,7 @@ Enforcement levels:
 
 ## Consistency checks on `custom`
 
-When the user selects `custom`, they populate `state.json::userPreferences.customDepth` with per-gate enforcement levels. The orchestrator refuses to proceed if any of the following invalid combinations is detected:
+When the user selects `custom`, they populate `skraft-config.json::customDepth` (via a direct edit of the repo config) with per-gate enforcement levels. The orchestrator refuses to proceed if any of the following invalid combinations is detected:
 
 | Forbidden combination | Reason |
 |---|---|
@@ -123,14 +123,14 @@ When the user selects `custom`, they populate `state.json::userPreferences.custo
 | `gherkinGate: advisory` combined with `mutationApi: blocking` | API tests without BDD = no observable behavior under test |
 | `tddCycle` set to anything other than `blocking` | TDD is an immutable invariant |
 
-On conflict the orchestrator halts and asks the user to correct `userPreferences.customDepth` before continuing.
+On conflict the orchestrator halts and asks the user to correct `skraft-config.json::customDepth` before continuing.
 
 ## Output protocol
 
 After evaluation, the orchestrator must:
 
-1. Write `state.json::entryPoint` (including `skipPhases`, `handoffSource`, `handoffArtifacts`), `state.json::userPreferences.depthTier`, and `state.json::difficulty`.
+1. Write `state.json::entryPoint` (including `skipPhases`, `handoffSource`, `handoffArtifacts`) and `state.json::difficulty` (per-work-item). The repo-wide depth tier is NOT written here — it lives in `skraft-config.json` and is only read (`config.mjs get --key depthTier`).
 2. When `entryPoint.skipPhases` contains `"DISCOVER"`, confirm the ingestion artefacts (`research/{date}/triage-ingest-{date}.md`, `research/{date}/sprint-proposal.md`) exist before setting `currentPhase` to `DISCUSS`.
-3. If the depth tier is not `comprehensive`, append the rationale string to `state.json::depthTierOverrides`.
+3. If the depth tier was downgraded from `comprehensive`, that was a repo-level decision — its rationale belongs in `skraft-config.json::depthTierRationale` (set once via the configurateur), not per run.
 4. Surface the routing decision in the next user-facing message using an emoji checklist (✅ chosen axis values, 🛡️ active invariants, ⏭️ any skipped phase with its handoff source).
 5. Proceed to DISCUSS once the user acknowledges the routing summary.

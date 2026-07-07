@@ -11,7 +11,7 @@ Reviewer agents use this procedure to produce an independent, defensible verdict
 
 Every SKRAFT phase reviewer (`backlog-discoverer-reviewer`, `backlog-planner-reviewer`, `solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`) invokes this skill once per review pass, after reading the upstream phase artifact(s) and the relevant `*-review-criteria` skill.
 
-The number of lenses actually executed is governed by the depth tier recorded in `state.json::userPreferences.depthTier`:
+The number of lenses actually executed is governed by the repo-wide depth tier (held in `skraft-config.json`; read with `config.mjs get --key depthTier`, or taken from the orchestrator's dispatch payload):
 
 | Depth tier | Lenses required |
 |---|---|
@@ -132,7 +132,7 @@ Write the review under `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md`. Begin th
 - {bulleted list — present only when verdict is NEEDS_REWORK or REJECTED}
 ```
 
-The reviewer writes only this file. It never modifies upstream artifacts and never edits `state.json` — the orchestrator updates `state.json::reviewerVerdicts[phase]` from the verdict line above.
+The reviewer writes only this file. It never modifies upstream artifacts and never edits `state.json` — the orchestrator records `state.json::verdicts[phase]` from the verdict line above via `state.mjs record-verdict`.
 
 ## HVE alignment
 

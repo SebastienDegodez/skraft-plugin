@@ -24,7 +24,7 @@ metadata:
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
         - docs/adr/adr-{NNN}-{slug}.md
-      - .copilot-tracking/skraft-plans/{projectSlug}/state.json (depthTier + difficulty)
+      - depthTier + difficulty (provided by the orchestrator in the dispatch payload)
   outputs:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
@@ -32,7 +32,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
-    - plugins/instructions/skraft-state.instructions.md
   model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + Iron Rule + Mutation score). Low-tier models (Haiku, Flash, mini) are NOT supported."
 ---
 
@@ -106,7 +105,7 @@ These are owned by the skills — load them, do not inline rules here.
 
 ### 4. COMMIT & VERIFY
 - Run static checks, formatting, and Mutation Testing.
-- **Gate**: Mutation score threshold depends on `state.json::userPreferences.depthTier` (basic≅80%, standard≅90%, comprehensive=100% on business logic). If a test kills no mutants, DELETE IT.
+- **Gate**: Mutation score threshold depends on the `depthTier` provided in the dispatch payload (basic≅80%, standard≅90%, comprehensive=100% on business logic). If a test kills no mutants, DELETE IT.
 - Commit using conventional commits (`feat(<domain>): <behavior>`).
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
 - **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for the schema and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per the v1 schema. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.

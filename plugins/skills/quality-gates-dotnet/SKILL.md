@@ -96,7 +96,7 @@ shasum -a 256 "$EV/qg-mutation.stdout" | awk '{print $1}' > "$EV/qg-mutation.std
 cp "$EV/stryker/reports/mutation-report.json" "$EV/qg-mutation.json"
 ```
 
-Threshold by `state.json::userPreferences.depthTier`:
+Threshold by repo-wide depth tier (`config.mjs get --key depthTier`):
 
 | depthTier | min score on business logic |
 |-----------|----------------------------|

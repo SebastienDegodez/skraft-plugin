@@ -35,6 +35,8 @@ Fallback si `CLAUDE_PLUGIN_ROOT` absent : glob `~/.claude/plugins/cache/*/skraft
 | 12 | Observabilité | 🔲 À faire | — |
 | 13 | Recovery / rollback | 🔲 À faire | — |
 | 16 | Déploiement hooks dans le projet consumer | 🔲 À faire | — |
+| S1 | State write-through (token economy) | ✅ Livré | `cli/state.mjs` (S7 bridge : `init\|get\|transition\|record-verdict\|record-artifact\|record-review-artifact\|set-difficulty\|incr-retry`), `domain/state-machine.mjs` (invariants I1-I9), `adapters/infrastructure/state/json-state-writer.mjs` (atomique + backup ≤3), `application/state-service.mjs` ; réhydratation 1×/session + `skraft-state`/`skraft-todo-sync.instructions.md` — `node --test` 100 % + mutation Stryker ≥ 86 % |
+| S2 | Config repo-wide (configurateur `depthTier`) | ✅ Livré | `domain/config-schema.mjs` (pur), `application/config-service.mjs`, `adapters/infrastructure/config/json-config-{reader,writer}.mjs` (atomique + backup ≤3), `cli/config.mjs` (`init\|get\|set`), `skills/skraft-config/SKILL.md` (configurateur S7/A9), `skraft-config.json` (racine, versionné) — `node --test` 100 % + mutation Stryker ≥ 80 % |
 
 ---
 
@@ -51,6 +53,8 @@ plugins/src/
 │   ├── skill-policy.mjs      # G2/G3
 │   ├── artifact-policy.mjs   # G4/G5
 │   ├── state-schema.mjs
+│   ├── state-machine.mjs     # invariants I1-I9 (write-through)
+│   ├── config-schema.mjs     # depthTier repo-wide
 │   └── execution-log-schema.mjs
 ├── application/
 │   ├── pre-tool-use-service.mjs
@@ -58,6 +62,8 @@ plugins/src/
 │   ├── subagent-stop-service.mjs
 │   ├── post-tool-use-service.mjs
 │   ├── session-start-service.mjs
+│   ├── state-service.mjs     # init/get/applyEvent (write-through)
+│   ├── config-service.mjs    # init/get/set (depthTier)
 │   └── config-loader.mjs
 ├── ports/
 │   ├── api/                 # contrats entrants (appelés par la couche Api)
@@ -65,6 +71,7 @@ plugins/src/
 │   │   └── subagent-stop.mjs
 │   └── infrastructure/      # contrats sortants (implémentés par l'infra)
 │       ├── state-reader.mjs
+│       ├── state-writer.mjs
 │       ├── audit-writer.mjs
 │       ├── transcript-reader.mjs
 │       ├── commit-verifier.mjs
@@ -81,10 +88,17 @@ plugins/src/
 │   └── infrastructure/
 │       ├── jsonl-audit-writer.mjs (+null)
 │       ├── json-state-reader.mjs
+│       ├── state/
+│       │   └── json-state-writer.mjs   # atomique + backup ≤3
+│       ├── config/
+│       │   ├── json-config-reader.mjs
+│       │   └── json-config-writer.mjs  # atomique + backup ≤3
 │       ├── system-time.mjs (+fixed)
 │       └── real-filesystem.mjs (+in-memory)
 └── cli/
     ├── hook.mjs               # ← appelé par hooks.json
+    ├── state.mjs             # S7 bridge état (write-through)
+    ├── config.mjs            # S7 bridge config repo-wide (depthTier)
     ├── init-log.mjs
     ├── log-phase.mjs
     ├── verify-integrity.mjs

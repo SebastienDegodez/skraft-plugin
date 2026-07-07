@@ -45,7 +45,12 @@ const coercePhaseMap = (val) => {
 }
 
 // Validates (and coerces) the full orchestrator state.json shape used by the pipeline.
-// Missing optional fields are coerced to safe defaults (backward-compatible, ADR-010).
+// FIDELITY (round-trip): every field on the raw object is preserved. The state machine
+// only owns the invariant-bearing subset normalized below; all other fields the
+// orchestrator depends on (entryPoint, adrRatification, issueNumber, projectSlug,
+// skraftPlanFile, phaseHistory, neighborPlanners, nextActions, referencesProcessed,
+// entryMode, ...) pass straight through instead of being silently
+// dropped on rewrite. Missing optional invariant fields are coerced to safe defaults.
 // Distinct from validateState() which validates the hook-dispatch runtime shape.
 export const validatePipelineState = (raw) => {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -55,11 +60,17 @@ export const validatePipelineState = (raw) => {
     return Err({ code: 'INVALID_STATE', fields: ['currentPhase'], reason: 'currentPhase must be a non-empty string' })
   }
 
+  // Legacy alias: hand-authored state.json used `reviewerVerdicts`; the canonical
+  // field is `verdicts` (identical phase->verdict map shape). Adopt the legacy value
+  // only when the canonical is absent, then drop the alias to avoid split-brain.
+  const rawVerdicts = (raw.verdicts !== undefined) ? raw.verdicts : raw.reviewerVerdicts
+
   const coerced = {
+    ...raw,
     currentPhase: raw.currentPhase,
     phasesCompleted: Array.isArray(raw.phasesCompleted) ? [...raw.phasesCompleted] : [],
-    verdicts: (raw.verdicts && !Array.isArray(raw.verdicts) && typeof raw.verdicts === 'object')
-      ? { ...raw.verdicts } : {},
+    verdicts: (rawVerdicts && !Array.isArray(rawVerdicts) && typeof rawVerdicts === 'object')
+      ? { ...rawVerdicts } : {},
     retryCount: (raw.retryCount && !Array.isArray(raw.retryCount) && typeof raw.retryCount === 'object')
       ? { ...raw.retryCount } : {},
     phaseArtifacts: coercePhaseMap(raw.phaseArtifacts),
@@ -68,6 +79,17 @@ export const validatePipelineState = (raw) => {
     userPreferences: (raw.userPreferences && typeof raw.userPreferences === 'object' && !Array.isArray(raw.userPreferences))
       ? { ...raw.userPreferences } : {},
   }
+
+  // Legacy flat-array artifacts are preserved verbatim under a *Legacy key rather
+  // than dropped; the phase-keyed map restarts empty for future appends.
+  if (Array.isArray(raw.reviewArtifacts) && raw.reviewArtifacts.length > 0) {
+    coerced.reviewArtifactsLegacy = [...raw.reviewArtifacts]
+  }
+  if (Array.isArray(raw.phaseArtifacts) && raw.phaseArtifacts.length > 0) {
+    coerced.phaseArtifactsLegacy = [...raw.phaseArtifacts]
+  }
+
+  delete coerced.reviewerVerdicts
 
   return Ok(Object.freeze(coerced))
 }

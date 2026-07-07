@@ -25,7 +25,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
-    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Backlog-Discoverer-Reviewer Agent

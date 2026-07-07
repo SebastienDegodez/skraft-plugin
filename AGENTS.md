@@ -57,3 +57,13 @@ tests/
 - The `testFiles` glob must stay `['tests/skraft-framework/*.test.mjs']` — never enumerate files explicitly.
 - The existing `thresholds` are set per-story; do not change them without an explicit instruction.
 
+### gh-aw workflow frontmatter rules
+
+- Never hand-compute `frontmatter_hash` in `.github/workflows/*.lock.yml` (no ad-hoc SHA256/Node/Python scripts). Always run `gh aw compile <workflow-name>` and let it regenerate the lockfile, then diff the result.
+- If `gh aw compile` isn't available in the environment, install it first (`gh extension install github/gh-aw`) rather than reverse-engineering the hash algorithm.
+
+### File inspection tool rules
+
+- Use the `view`/`grep`/`glob` tools to read or search files — not `bash cat`/`head`/`tail`/`find`. Reserve `bash` for git, test, and build commands.
+- Use `view_range` on large files instead of dumping the whole file into context.
+

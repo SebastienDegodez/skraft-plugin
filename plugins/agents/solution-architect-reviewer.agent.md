@@ -33,7 +33,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
-    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Solution-Architect-Reviewer Agent

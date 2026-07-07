@@ -27,7 +27,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
   instructions:
     - plugins/instructions/skraft-artifacts.instructions.md
-    - plugins/instructions/skraft-state.instructions.md
 ---
 
 # Backlog-Planner Agent
