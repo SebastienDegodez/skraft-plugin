@@ -40,3 +40,12 @@ graphify-out/
 # skraft-framework runtime audit log
 plugins/logs/
 
+
+# skraft config/state transient files (atomic-writer artefacts — never committed)
+# The canonical skraft-config.json IS versioned; its rotating backups/tmp are not.
+skraft-config.json.bak.*
+skraft-config.json.tmp.*
+skraft-config.json.corrupted.*
+**/state.json.bak.*
+**/state.json.tmp.*
+**/state.json.corrupted.*

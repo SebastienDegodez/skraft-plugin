@@ -29,6 +29,10 @@ export default {
     'plugins/src/application/state-service.mjs',
     // US8 — G4/G5 artifact + verdict + commit completion guard (#8)
     'plugins/src/domain/artifact-policy.mjs',
+    // Repo-wide config bridge (depthTier) — skraft-config configurateur
+    'plugins/src/domain/config-schema.mjs',
+    'plugins/src/application/config-service.mjs',
+    'plugins/src/adapters/infrastructure/config/json-config-writer.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },
