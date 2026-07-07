@@ -23,6 +23,8 @@ avec leur gain, statut et milestone.
 | [US11](#us11) | G7/G8 protection d'état + session guard | `gain:safety` | 🔲 À faire | Phase 2 — Complétude |
 | [US12](#us12) | Observabilité | `gain:observability` | 🔲 À faire | Phase 2 — Complétude |
 | [US13](#us13) | Recovery / rollback | `gain:reliability` | 🔲 À faire | Phase 2 — Complétude |
+| [S1](#s1) | State write-through (économie de tokens) | `gain:eco-tokens` | ✅ Livré | Phase 2 — Complétude |
+| [S2](#s2) | Config repo-wide (configurateur `depthTier`) | `gain:dx` | ✅ Livré | Phase 2 — Complétude |
 
 ---
 
@@ -249,6 +251,57 @@ résolution d'exécution stale.
 
 Extensions planifiées au-delà des 13 US initiales :
 
-- **US14 #60** — State transition bridge (S7) — écriture déterministe de `state.json`
+- **US14 #60** — State transition bridge (S7) — écriture déterministe de `state.json` — ✅ Livré (voir [S1](#s1))
 - **US15 #61** — Schéma d'état source-unique (SoC)
 - **US16 #63** — Déploiement des hooks dans le projet consumer
+
+---
+
+## 4. Fiches livrées hors séquence initiale
+
+### S1 — State write-through (économie de tokens) <a id="s1"></a>
+
+**Statut :** ✅ Livré
+**Milestone :** Phase 2 — Complétude
+
+**Gain :** `gain:eco-tokens` + `gain:reliability` — le coût token vient de la *fréquence*
+(relecture/réécriture de tout `state.json` à chaque tour), pas de la taille. Le modèle
+write-through supprime cette fréquence : réhydratation **1×/session**, working set = todo
+natif, écritures déterministes via CLI aux checkpoints. Projection ~800 → ~50 tokens/tour.
+
+**Modules livrés :** `cli/state.mjs` (S7 bridge : `init | get | transition |
+record-verdict | record-artifact | record-review-artifact | set-difficulty |
+incr-retry`), `domain/state-machine.mjs` (invariants I1-I9, append-only, DONE terminal),
+`domain/state-schema.mjs` (`validatePipelineState` round-trip fidelity — préserve tous
+les champs orchestrator-owned, migration `reviewerVerdicts`→`verdicts`),
+`adapters/infrastructure/state/json-state-writer.mjs` (atomique + backup ≤3),
+`application/state-service.mjs`, `ports/infrastructure/state-writer.mjs`.
+Instructions : `skraft-state.instructions.md` (write-through) +
+`skraft-todo-sync.instructions.md` (projection state→todo natif, Claude/Copilot).
+
+**Qualité :** `node --test` 100 % + mutation Stryker ≥ 86 % sur les fichiers état.
+
+**Dépend de :** US1, US3
+
+---
+
+### S2 — Config repo-wide (configurateur `depthTier`) <a id="s2"></a>
+
+**Statut :** ✅ Livré
+**Milestone :** Phase 2 — Complétude
+
+**Gain :** `gain:dx` + `gain:eco-tokens` — `depthTier` (dial de rigueur = cost governor)
+est une propriété du **dépôt**, pas d'un work-item. Il quitte `state.json` pour un fichier
+repo-wide `skraft-config.json` géré par un configurateur ; `difficulty` reste per-work-item
+via `state.mjs`. Les agents n'appellent que des commandes (get/set délégués au script).
+
+**Modules livrés :** `domain/config-schema.mjs` (pur, round-trip),
+`application/config-service.mjs` (`init/get/set`, clés `depthTier` + `depthTierRationale`),
+`adapters/infrastructure/config/json-config-{reader,writer}.mjs` (atomique + backup ≤3),
+`cli/config.mjs` (S7 bridge : `init | get | set`, exit 0/1/2/3, `SKRAFT_CONFIG_ROOT`|cwd),
+`skills/skraft-config/SKILL.md` (configurateur, S7 + A9 init→set→verify),
+`skraft-config.json` (racine, versionné).
+
+**Qualité :** `node --test` 100 % + mutation Stryker ≥ 80 % sur les fichiers config.
+
+**Dépend de :** US1, S1
