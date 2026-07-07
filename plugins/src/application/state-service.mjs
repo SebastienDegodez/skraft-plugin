@@ -26,7 +26,6 @@ const DEFAULT_STATE = () => ({
   phaseHistory: {},
   nextActions: [],
   userPreferences: { maxRetriesPerPhase: 2 },
-  depthTierOverrides: [],
   neighborPlanners: { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null },
 })
 

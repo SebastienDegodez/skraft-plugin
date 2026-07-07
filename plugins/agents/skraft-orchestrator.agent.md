@@ -106,7 +106,7 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 - Upstream artefacts: {paths from previous phases}
 ```
 
-The sub-agent never touches `state.json`; it consumes these values from the payload and writes only its artefacts. The orchestrator records the resulting verdict/paths into state via the CLI after the sub-agent returns.
+`depthTier` is repo-wide — read it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/config.mjs" get --key depthTier`. `difficulty` is per-work-item — read it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug} --field difficulty`. The sub-agent never touches `state.json` or `skraft-config.json`; it consumes these values from the payload and writes only its artefacts. The orchestrator records the resulting verdict/paths into state via the CLI after the sub-agent returns.
 
 For each phase NOT in `entryPoint.skipPhases` (DISCOVER, DISCUSS, DESIGN, DISTILL):
 
@@ -165,10 +165,10 @@ The 3-axis routing runs in two places, both driven by `#file:plugins/skills/skra
 Persist results:
 
 - `state.json::entryPoint` (`skipPhases`, `handoffSource`, `handoffArtifacts`) — direct-edit on the snapshot at Phase 0.
-- `state.json::userPreferences.depthTier` (default `comprehensive`; downgrade requires explicit user opt-in with rationale in `depthTierOverrides`) — direct-edit on the snapshot.
-- `state.json::difficulty` — via `state.mjs set-difficulty --value {tier}` (write-once).
+- `state.json::difficulty` — per-work-item, via `state.mjs set-difficulty --value {tier}` (write-once).
+- `skraft-config.json::depthTier` — repo-wide, NOT set per run. Managed once via the `skraft-config` configurateur (`config.mjs set --key depthTier --value {tier}`) and only READ here (`config.mjs get --key depthTier`). Default `comprehensive`.
 
-The selected difficulty drives the DELIVER execution model. The selected depth tier drives strictness inside every phase (TDD variant, mutation thresholds, reviewer lens count, Gherkin gate).
+The selected difficulty drives the DELIVER execution model. The repo-wide depth tier drives strictness inside every phase (TDD variant, mutation thresholds, reviewer lens count, Gherkin gate).
 
 ## Dispatch table
 
@@ -187,7 +187,7 @@ All paths are rooted at `.copilot-tracking/skraft-plans/{projectSlug}/`. Convent
 DELIVER runs the engineer↔reviewer loop directly:
 
 1. Read the implementation plan from `details/{date}/impl-plan-{story}.md` and the Gherkin features from `features/`.
-2. Dispatch `software-engineer` with the implementation plan. Include contract artefacts from `details/{date}/contracts-*.md` if present. Pass `difficulty` and `depthTier` from `state.json` so the engineer chooses the right execution model (inline TDD vs. sub-agent per scenario) and the right TDD variant (Red-Green up to Outside-In double-loop).
+2. Dispatch `software-engineer` with the implementation plan. Include contract artefacts from `details/{date}/contracts-*.md` if present. Pass `difficulty` (from `state.mjs get --slug {slug} --field difficulty`) and `depthTier` (from `config.mjs get --key depthTier`) so the engineer chooses the right execution model (inline TDD vs. sub-agent per scenario) and the right TDD variant (Red-Green up to Outside-In double-loop).
 3. Dispatch `software-engineer-reviewer` on the produced code.
 4. Handle verdict using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED`: capture Playwright evidence if available, write `changes/{date}/change-log.md`, post final GitHub comment, mark pipeline complete.

@@ -46,7 +46,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 | `set-difficulty` | `--slug --value {tier}` | Set `difficulty` (write-once; rejects if already set). |
 | `incr-retry` | `--slug --phase {P}` | Increment `retryCount[phase]` (capped at `maxRetriesPerPhase`). |
 
-Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` (written once at Phase 0), `adrRatification` (written at the DESIGN human checkpoint), and `phaseHistory` / `neighborPlanners` / `nextActions` / `depthTierOverrides` / `referencesProcessed` — is edited directly on the snapshot. This is safe: the CLI's validator preserves every field on rewrite (round-trip fidelity), so a later CLI write never drops a hand-edited field. Everything invariant-bearing (verdicts, phase advance, artifacts, difficulty, retry) goes through the CLI.
+Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` (written once at Phase 0), `adrRatification` (written at the DESIGN human checkpoint), and `phaseHistory` / `neighborPlanners` / `nextActions` / `referencesProcessed` — is edited directly on the snapshot. This is safe: the CLI's validator preserves every field on rewrite (round-trip fidelity), so a later CLI write never drops a hand-edited field. Everything invariant-bearing (verdicts, phase advance, artifacts, difficulty, retry) goes through the CLI.
 
 ## Schema
 
@@ -85,10 +85,8 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
   "nextActions": ["string"],
   "userPreferences": {
     "autonomyTier": "full | partial | manual",
-    "depthTier": "basic | standard | comprehensive | custom",
     "maxRetriesPerPhase": "number"
   },
-  "depthTierOverrides": ["string (rationale entries when depthTier != comprehensive)"],
   "neighborPlanners": {
     "securityPlanFile": "string | null",
     "raiPlanFile": "string | null",
@@ -117,8 +115,8 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 * `currentPhase` — single phase the pipeline is currently executing. Advances only when the reviewer verdict for that phase is `APPROVED`. `DONE` indicates the full pipeline has completed.
 * `entryMode` — how the pipeline was started. `from-issue` requires `issueNumber`; `from-prd` requires entries in `referencesProcessed`; `capture` requires neither.
 * `entryPoint` — records which phases the orchestrator skips because an upstream HVE handoff already satisfies their checklist, evaluated at pipeline start (Phase 0) by `skraft-difficulty-routing`. `skipPhases` is empty by default (every phase runs). `handoffSource` names the detected HVE producer (`hve-ado`, `hve-jira`, `hve-github`) or `null`. `handoffArtifacts` lists the relative paths of the ingested backlog/sprint artefacts. When `skipPhases` contains `"DISCOVER"`, the ingestion step writes the substitute DISCOVER artefacts (`research/{date}/triage-ingest-{date}.md`, `research/{date}/sprint-proposal.md`) so DISCUSS can start without re-triaging. Written directly on the snapshot once, at Phase 0.
-* `difficulty` — set once at the exit of DISCOVER (or, when DISCOVER is skipped, at pipeline start) via `state.mjs set-difficulty`. Write-once. Drives the DELIVER execution model. Never reassessed mid-pipeline.
-* `userPreferences.depthTier` — depth/strictness applied across all phases. Defaults to `comprehensive`. Any other value requires an explicit user choice recorded in `depthTierOverrides` with rationale. This dial is also the pipeline's **cost governor** (genesis B16 / B11): it sets reviewer fan-out (1/2/4 lenses), mutation-run count, and the Gherkin gate, so a lower tier reduces token spend and strictness together. Keep `comprehensive` for critical code.
+* `difficulty` — per-work-item. Set once at the exit of DISCOVER (or, when DISCOVER is skipped, at pipeline start) via `state.mjs set-difficulty`. Write-once. Drives the DELIVER execution model. Never reassessed mid-pipeline.
+* Depth tier — NOT in this file. It is a repo-wide property held in `skraft-config.json` (managed by the `skraft-config` configurateur; read with `config.mjs get --key depthTier`). Defaults to `comprehensive`. It is the pipeline's **cost governor** (genesis B16 / B11): it sets reviewer fan-out (1/2/4 lenses), mutation-run count, and the Gherkin gate. See `plugins/skills/skraft-difficulty-routing/SKILL.md`.
 * `userPreferences.maxRetriesPerPhase` — default `2`. When `retryCount[phase] >= maxRetriesPerPhase` and the verdict is not `APPROVED`, the orchestrator escalates to the user.
 * `reviewArtifacts` — append-only map of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers append here exclusively, through `record-review-artifact`.
 * `neighborPlanners` — interop with sibling HVE planners (Security, RAI, SSSC). `null` when no plan exists.
@@ -168,7 +166,7 @@ When `state.json` is missing, malformed, or fails schema validation (the CLI exi
 
 1. Search the project directory for the most recent valid backup (`state.json.bak.*`, kept rotating ≤3 by the writer). If found, restore it and re-run `state.mjs get` to validate.
 2. If no backup is recoverable, scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`).
-3. Reconstruct a snapshot with conservative defaults: `state.mjs init` then direct-edit `currentPhase` to the inferred phase, `phasesCompleted` from on-disk evidence, `verdicts[currentPhase]` to `null`, `userPreferences.depthTier` to `"comprehensive"`.
+3. Reconstruct a snapshot with conservative defaults: `state.mjs init` then direct-edit `currentPhase` to the inferred phase, `phasesCompleted` from on-disk evidence, `verdicts[currentPhase]` to `null`. (Depth tier is not part of state recovery — it lives in `skraft-config.json`; run `config.mjs init` if that file is also missing.)
 4. Surface the reconstruction to the user with a checklist of inferred values and request confirmation before resuming.
 5. Before overwriting a corrupted file, preserve it as `state.json.corrupted.{timestamp}`.
 

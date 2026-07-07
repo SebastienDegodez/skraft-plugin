@@ -49,7 +49,7 @@ const coercePhaseMap = (val) => {
 // only owns the invariant-bearing subset normalized below; all other fields the
 // orchestrator depends on (entryPoint, adrRatification, issueNumber, projectSlug,
 // skraftPlanFile, phaseHistory, neighborPlanners, nextActions, referencesProcessed,
-// depthTierOverrides, entryMode, ...) pass straight through instead of being silently
+// entryMode, ...) pass straight through instead of being silently
 // dropped on rewrite. Missing optional invariant fields are coerced to safe defaults.
 // Distinct from validateState() which validates the hook-dispatch runtime shape.
 export const validatePipelineState = (raw) => {

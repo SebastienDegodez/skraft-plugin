@@ -17,7 +17,7 @@ metadata:
       - downstream dependency descriptor (the client the SUT calls)
       - the integration-test intent for the active slice
     context:
-      - .copilot-tracking/skraft-plans/{projectSlug}/state.json (depthTier + difficulty)
+      - depthTier + difficulty (provided by the orchestrator in the dispatch payload)
       - the run prompt (may carry a strategy/library override)
       - .github/instructions/skraft.instructions.md (consumer repo, testing.mocking.*)
   outputs:
