@@ -10,73 +10,85 @@ description: "Les skills SKRAFT : pratiques outillées, ce qu'elles font, quand 
 > Une *skill* est une pratique outillée : une procédure testée qu'un agent charge
 > au moment où il en a besoin. Chaque skill répond à un problème précis du craft.
 
-- **[Clean Architecture Testing](clean-architecture-testing.html)** — quoi tester à
-  chaque couche (Domain, Application, Infrastructure, API), quel test double choisir
-  à chaque frontière.
-- **[Craft Discipline](craft-discipline.html)** — les points de contrôle que
-  l'ingénieur applique à son propre travail avant de committer.
-- **[Create Custom Agent](create-custom-agent.html)** — comment construire un
-  fichier d'agent (`.agent.md`) : outils, instructions, handoffs.
-- **[Outside-In TDD](outside-in-tdd.html)** — écrire les tests depuis le comportement
-  observable, double boucle RED/GREEN, walking skeleton.
-- **[Red-Synthesize-Green](red-synthesize-green.html)** — le cycle TDD discipliné :
-  un test qui échoue d'abord, puis l'implémentation minimale qui le fait passer.
+## Ordre d'usage — séparation par agent
 
-### Mocking & tests de contrat
+### 0) Entrée unique — [skraft-orchestrator]({{ "/fr/reference/agents/skraft-orchestrator" | relative_url }})
 
-Ces skills outillent le câblage des tests en phase DELIVER. Aucun agent ne code en
-dur une librairie : il résout la stratégie via un *roster*, qui pointe vers
-l'adaptateur par stack. Ajouter un stack = +1 adaptateur, zéro modification des agents.
+- **[skraft-difficulty-routing](skraft-difficulty-routing.html)** — routing 3-axes (entry point, depth tier, difficulty tier).
+- **[adversarial-review-lenses](adversarial-review-lenses.html)** — synthèse multi-lentilles pour verdict adverse.
+- **[contract-testing](contract-testing.html)** — capacité contrat API cross-phase (DESIGN → DISTILL → DELIVER).
+- **[playwright-evidence](playwright-evidence.html)** — capture des preuves E2E en fin de pipeline.
 
-- **mocking-strategy-roster** — résout la stratégie de mock (Microcks par défaut,
-  surchargeable vers une librairie in-process via `skraft.instructions.md`) et le stack.
-- **mocking-microcks-dotnet** — câblage Microcks Testcontainers + `WebApplicationFactory`
-  pointant le client HTTP typé du système sous test vers l'URL du mock (.NET).
-- **mocking-inprocess-dotnet** — double in-process (priorité FakeItEasy >
-  NSubstitute > Moq) injecté dans la DI à la place du conteneur Microcks (.NET).
-- **contract-testing** — compétence canonique pour le développement API contract-first :
-  contrats OpenAPI/AsyncAPI en DESIGN, exemples Microcks en DISTILL, vérification du
-  contrat fournisseur via Testcontainers en DELIVER. Le câblage par stack est résolu
-  via le roster.
-- **contract-testing-roster** — résout le stack et l'opt-in Microcks pour un test de
-  contrat côté fournisseur ; une baseline d'intégration in-process est toujours produite.
-- **contract-testing-dotnet** — baseline `WebApplicationFactory` + `HttpClient`
-  toujours produite ; couche de vérification Microcks ajoutée en option (.NET).
+### 1) DISCOVER — [backlog-discoverer]({{ "/fr/reference/agents/backlog-discoverer" | relative_url }})
 
-### Backlog — DISCOVER & DISCUSS
+- **[github-search-protocol](github-search-protocol.html)** — requêtes GitHub Search, pagination, filtres.
+- **[issue-triage](issue-triage.html)** — labels, priorité, effort, doublons, proposition de sprint.
 
-- **[github-search-protocol](github-search-protocol.html)** — construire des requêtes GitHub Search, paginer les résultats, filtrer par labels/milestones/assignees.
-- **[issue-triage](issue-triage.html)** — assigner labels, priorité, estimation d'effort, détecter les doublons, construire une proposition de sprint.
-- **[issue-refinement](issue-refinement.html)** — transformer une issue brute en user story INVEST avec critères d'acceptation, pattern de découpage, DoR 8-items.
-- **[sprint-planning](sprint-planning.html)** — planifier le contenu d'un sprint, prioriser les stories, estimer la capacité, analyser les dépendances.
+### 2) DISCOVER review — [backlog-discoverer-reviewer]({{ "/fr/reference/agents/backlog-discoverer-reviewer" | relative_url }})
 
-### Architecture — DESIGN
+- **[discovery-review-criteria](discovery-review-criteria.html)** — gates G1-G6 pour artefacts DISCOVER.
+- **[adversarial-review-lenses](adversarial-review-lenses.html)** — verdict adverse via panel de lentilles.
 
-- **[architecture-decisions](architecture-decisions.html)** — documenter les décisions d'architecture en ADR, évaluer les alternatives, gérer le cycle de vie.
-- **[architecture-patterns](architecture-patterns.html)** — Event Modeling, DDD stratégique & tactique, Clean Architecture, CQRS, Event Sourcing.
+### 3) DISCUSS — [backlog-planner]({{ "/fr/reference/agents/backlog-planner" | relative_url }})
 
-### Critères de revue (Reviewers)
+- **[issue-refinement](issue-refinement.html)** — transformation issue → story INVEST + AC.
+- **[sprint-planning](sprint-planning.html)** — priorisation sprint, capacité, dépendances.
 
-- **[acceptance-review-criteria](acceptance-review-criteria.html)** — gates G1-G6 pour les artefacts DISTILL (scénarios Gherkin, plans de test, plans d'implémentation).
-- **[adversarial-review-lenses](adversarial-review-lenses.html)** — produire un verdict adverse via 4 lentilles indépendantes et synthèse pondérée (pattern Genesis A7).
-- **[architecture-review-criteria](architecture-review-criteria.html)** — gates pour les artefacts DESIGN (modèles d'événements, ADR, diagrammes, contrats d'interface).
-- **[discovery-review-criteria](discovery-review-criteria.html)** — gates G1-G6 pour les artefacts DISCOVER (rapports de triage, propositions de sprint).
-- **[planning-review-criteria](planning-review-criteria.html)** — gates G1-G8 pour les artefacts DISCUSS (stories, critères d'acceptation, plans de sprint).
+### 4) DISCUSS review — [backlog-planner-reviewer]({{ "/fr/reference/agents/backlog-planner-reviewer" | relative_url }})
 
-### Tests & qualité — DELIVER
+- **[planning-review-criteria](planning-review-criteria.html)** — gates G1-G8 pour artefacts DISCUSS.
+- **[adversarial-review-lenses](adversarial-review-lenses.html)** — verdict adverse via panel de lentilles.
 
-- **[bdd-methodology](bdd-methodology.html)** — rédiger et structurer des scénarios BDD en Gherkin : Given/When/Then, Scenario Outline, Background, tag strategy.
-- **[mutation-testing](mutation-testing.html)** — tuer les mutants survivants, vérifier la qualité des tests via le mutation score, analyser les rapports Stryker.
-- **[playwright-evidence](playwright-evidence.html)** — capturer les preuves E2E (screenshots, vidéos, traces) et les stocker dans le tracking SKRAFT.
-- **[quality-gates-dotnet](quality-gates-dotnet.html)** — commandes `dotnet` / `stryker` et leur mapping vers le schéma de contrat d'évidence (.NET).
-- **[quality-gates-evidence-contract](quality-gates-evidence-contract.html)** — schéma du journal d'évidence structuré (tech-agnostique) attestant les quality gates.
-- **[test-design-mandates](test-design-mandates.html)** — matrices de couverture, assignation par couche Clean Architecture, ordre d'implémentation outside-in, Walking Skeleton.
-- **[test-refactoring-catalog](test-refactoring-catalog.html)** — refactoring des tests après GREEN : extraire des helpers, renommer pour la clarté métier, consolider les cas paramétrés.
+### 5) DESIGN — [solution-architect]({{ "/fr/reference/agents/solution-architect" | relative_url }})
 
-### Résolution de stack & routing
+- **[architecture-patterns](architecture-patterns.html)** — Event Modeling, DDD stratégique/tactique, CQRS, Event Sourcing.
+- **[architecture-decisions](architecture-decisions.html)** — ADR, alternatives, cycle de vie des décisions.
 
-- **[resolving-stack-commands](resolving-stack-commands.html)** — résoudre la commande concrète (build, test, mutation) depuis le stack détecté ; aucun agent ne hardcode `dotnet test`.
-- **[skraft-difficulty-routing](skraft-difficulty-routing.html)** — évaluer le routing 3-axes (entry point, depth tier, difficulty tier) à la sortie de DISCOVER.
+### 6) DESIGN review — [solution-architect-reviewer]({{ "/fr/reference/agents/solution-architect-reviewer" | relative_url }})
+
+- **[architecture-review-criteria](architecture-review-criteria.html)** — gates DESIGN sur ADR, diagrammes, contrats.
+- **[adversarial-review-lenses](adversarial-review-lenses.html)** — verdict adverse via panel de lentilles.
+
+### 7) DISTILL — [acceptance-designer]({{ "/fr/reference/agents/acceptance-designer" | relative_url }})
+
+- **[bdd-methodology](bdd-methodology.html)** — structuration Gherkin (Given/When/Then, outline, tags).
+- **[test-design-mandates](test-design-mandates.html)** — matrices de couverture + ordre outside-in.
+- **[outside-in-tdd](outside-in-tdd.html)** — double boucle TDD depuis comportement observable.
+- **[resolving-stack-commands](resolving-stack-commands.html)** — résolution commande concrète selon stack.
+
+### 8) DISTILL review — [acceptance-designer-reviewer]({{ "/fr/reference/agents/acceptance-designer-reviewer" | relative_url }})
+
+- **[acceptance-review-criteria](acceptance-review-criteria.html)** — gates G1-G6 pour artefacts DISTILL.
+- **[adversarial-review-lenses](adversarial-review-lenses.html)** — verdict adverse via panel de lentilles.
+
+### 9) DELIVER — [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }})
+
+- **[outside-in-tdd](outside-in-tdd.html)** — stratégie TDD outside-in de bout en bout.
+- **[red-synthesize-green](red-synthesize-green.html)** — cycle RED → implémentation minimale → GREEN.
+- **[clean-architecture-testing](clean-architecture-testing.html)** — stratégie de tests par couche et frontière.
+- **[craft-discipline](craft-discipline.html)** — checkpoints d'auto-discipline avant commit.
+- **[test-refactoring-catalog](test-refactoring-catalog.html)** — refactoring test après GREEN.
+- **[mutation-testing](mutation-testing.html)** — vérification via mutation score.
+- **[quality-gates-evidence-contract](quality-gates-evidence-contract.html)** — contrat du journal d'évidence.
+- **[quality-gates-dotnet](quality-gates-dotnet.html)** — commandes quality gates pour stack .NET.
+
+### 9b) DELIVER — workers internes (sous-agents du software-engineer)
+
+- **[mocking-strategy-roster](mocking-strategy-roster.html)** — résolution de stratégie mock + stack.
+- **[mocking-microcks-dotnet](mocking-microcks-dotnet.html)** — wiring mock Microcks côté .NET.
+- **[mocking-inprocess-dotnet](mocking-inprocess-dotnet.html)** — wiring double in-process côté .NET.
+- **[contract-testing-roster](contract-testing-roster.html)** — résolution stack + opt-in Microcks pour contrat provider.
+- **[contract-testing-dotnet](contract-testing-dotnet.html)** — baseline contrat provider + couche Microcks optionnelle.
+- **[contract-testing](contract-testing.html)** — compétence contrat rejouée par worker contrat.
+- **[resolving-stack-commands](resolving-stack-commands.html)** — résolution commande test/build/mutation pour worker.
+
+### 10) DELIVER review — [software-engineer-reviewer]({{ "/fr/reference/agents/software-engineer-reviewer" | relative_url }})
+
+- **[adversarial-review-lenses](adversarial-review-lenses.html)** — orchestration des lentilles de revue.
+
+### Hors pipeline — usage direct
+
+- **[create-custom-agent](create-custom-agent.html)** — construction d'un agent custom (`.agent.md`) : outils, instructions, handoffs.
 
 ## Voir aussi
 

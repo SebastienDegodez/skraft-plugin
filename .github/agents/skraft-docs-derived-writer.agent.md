@@ -16,7 +16,7 @@ metadata:
   capability: docs-derived
   inputs:
     required:
-      - a drift item (JSON) for a derived page (missing/empty/parity), with fr, en, source
+      - a drift item (JSON) for a derived page (missing/empty/parity/order-drift), with fr, en, source
       - docs/site/_data/book.yml (reference_template + the page entry)
       - the source file(s) named by the item's `source`
     context:
@@ -59,6 +59,20 @@ Entities / Use Cases / Interface Adapters.
    `source`, `sidebar_position`) and the `reference_template` block list.
 2. **Read the source.** Open every file matched by `source`. Extract the role,
    the canonical terms, the gates/lenses/patterns it defines.
+2b. **Forced order rediscovery rule (overview indexes).** When target page is one of:
+   - `docs/site/{fr,en}/reference/agents/index.md`
+   - `docs/site/{fr,en}/reference/skills/index.md`
+   you MUST recompute order from live agent sources at write time (never trust old
+   handbook ordering):
+   - read `plugins/agents/skraft-orchestrator.agent.md` (`metadata.phases`, `agents`)
+   - read `plugins/agents/*.agent.md` (phase agents + reviewers, each `metadata.skills`)
+   - read `plugins/agents/workers/**/*.agent.md` (DELIVER worker skills)
+   - derive **agent usage order** from orchestrator pipeline sequence:
+     `0 orchestrator`, then `DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER`
+     producer/reviewer pairs, then DELIVER workers.
+   - derive **skills order** by walking that usage order and listing each agent's
+     `metadata.skills` in place; duplicate skills are expected and must stay repeated
+     under each agent section.
 3. **Write the FR page**, then the **EN page**, mirrored — same heading structure,
    same `sidebar_position`, **same English basename** (only the `fr/` vs `en/`
    folder differs). Follow the `reference_template` required blocks:

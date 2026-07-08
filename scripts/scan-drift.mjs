@@ -21,7 +21,7 @@
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, join, basename, dirname } from 'node:path';
 import { parseArgs } from 'node:util';
-import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection } from './lib/book.mjs';
+import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection, parseYaml } from './lib/book.mjs';
 
 const SEVERITY = { blocker: 0, high: 1, medium: 2, low: 3 };
 
@@ -49,6 +49,85 @@ function makeItem(items, item) {
     state: 'open',
     ...item,
   });
+}
+
+function readFrontmatter(absPath) {
+  if (!existsSync(absPath)) return null;
+  const raw = readFileSync(absPath, 'utf-8');
+  const fm = raw.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!fm) return null;
+  try {
+    return parseYaml(fm[1]);
+  } catch {
+    return null;
+  }
+}
+
+function extractAgentLinksInOrder(markdownBody, expected) {
+  const found = [];
+  const seen = new Set();
+  const re = /\((?:[a-z]{2}\/reference\/agents\/)?([a-z0-9-]+)(?:\.html)?(?:\s*\|\s*relative_url)?\)/gi;
+  let match;
+  while ((match = re.exec(markdownBody)) !== null) {
+    const slug = match[1];
+    if (!expected.includes(slug) || seen.has(slug)) continue;
+    seen.add(slug);
+    found.push(slug);
+  }
+  return found;
+}
+
+function extractSkillSections(markdownBody) {
+  const order = [];
+  const bySection = {};
+  let current = null;
+
+  for (const line of markdownBody.split('\n')) {
+    if (/^###\s+/.test(line)) {
+      const agent = line.match(/\/reference\/agents\/([a-z0-9-]+)/i);
+      if (agent) {
+        current = agent[1];
+      } else if (/workers internes|internal workers/i.test(line)) {
+        current = 'workers';
+      } else if (/hors pipeline|outside pipeline/i.test(line)) {
+        current = 'outside';
+      } else {
+        current = null;
+      }
+      if (current && !order.includes(current)) order.push(current);
+      if (current && !bySection[current]) bySection[current] = [];
+      continue;
+    }
+    if (!current) continue;
+    const skill = line.match(/\[[^\]]+\]\(([a-z0-9-]+)\.html\)/i);
+    if (!skill) continue;
+    bySection[current].push(skill[1]);
+  }
+
+  return { order, bySection };
+}
+
+function sameOrder(expected, actual) {
+  return expected.length === actual.length && expected.every((v, i) => v === actual[i]);
+}
+
+function deriveAgentUsageOrder(root) {
+  const orchestratorPath = join(root, 'plugins/agents/skraft-orchestrator.agent.md');
+  const orchestrator = readFrontmatter(orchestratorPath);
+  if (!orchestrator) return null;
+
+  const chain = Array.isArray(orchestrator.agents) ? orchestrator.agents : [];
+  const orderedAgents = ['skraft-orchestrator', ...chain];
+  const skillsByAgent = {};
+
+  for (const agent of orderedAgents) {
+    const path = join(root, 'plugins/agents', `${agent}.agent.md`);
+    const fm = readFrontmatter(path);
+    const skills = Array.isArray(fm?.metadata?.skills) ? fm.metadata.skills : [];
+    skillsByAgent[agent] = skills;
+  }
+
+  return { orderedAgents, skillsByAgent };
 }
 
 export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
@@ -199,6 +278,67 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
           desiredState: `Place it in the contract (book.yml) and generate its FR+EN reference page.`,
         });
       }
+    }
+  }
+
+  // ---- 5. Order drift (agent usage order for overview indexes) ----
+  const usage = deriveAgentUsageOrder(root);
+  if (usage) {
+    const expectedAgents = usage.orderedAgents;
+    const checks = [
+      { kind: 'agents', lang: 'fr', path: join(siteRoot, 'fr/reference/agents/index.md') },
+      { kind: 'agents', lang: 'en', path: join(siteRoot, 'en/reference/agents/index.md') },
+      { kind: 'skills', lang: 'fr', path: join(siteRoot, 'fr/reference/skills/index.md') },
+      { kind: 'skills', lang: 'en', path: join(siteRoot, 'en/reference/skills/index.md') },
+    ];
+    const findings = [];
+
+    for (const check of checks) {
+      const page = readPage(check.path);
+      if (!page) continue;
+
+      if (check.kind === 'agents') {
+        const found = extractAgentLinksInOrder(page.body, expectedAgents);
+        if (!sameOrder(expectedAgents, found)) {
+          findings.push(
+            `${check.lang.toUpperCase()} agents/index order mismatch: expected [${expectedAgents.join(', ')}], found [${found.join(', ')}].`
+          );
+        }
+      } else {
+        const parsed = extractSkillSections(page.body);
+        const orderedSections = parsed.order.filter((s) => expectedAgents.includes(s));
+        if (!sameOrder(expectedAgents, orderedSections)) {
+          findings.push(
+            `${check.lang.toUpperCase()} skills/index section order mismatch: expected [${expectedAgents.join(', ')}], found [${orderedSections.join(', ')}].`
+          );
+        }
+        for (const agent of expectedAgents) {
+          const expected = usage.skillsByAgent[agent] || [];
+          const actual = parsed.bySection[agent] || [];
+          if (!sameOrder(expected, actual)) {
+            findings.push(
+              `${check.lang.toUpperCase()} skills/index section "${agent}" mismatch: expected [${expected.join(', ')}], found [${actual.join(', ')}].`
+            );
+          }
+        }
+      }
+    }
+
+    if (findings.length > 0) {
+      makeItem(items, {
+        type: 'order-drift',
+        severity: 'medium',
+        part: 'reference',
+        section: 'agents-skills-overview',
+        pageId: 'overview-order',
+        pageType: 'derived',
+        lang: 'both',
+        fr: 'fr/reference/agents/index.md, fr/reference/skills/index.md',
+        en: 'en/reference/agents/index.md, en/reference/skills/index.md',
+        source: 'plugins/agents/skraft-orchestrator.agent.md + plugins/agents/*.agent.md',
+        detail: findings.join('\n'),
+        desiredState: 'Regenerate FR/EN agents/index + skills/index from live agent chain and metadata.skills order.',
+      });
     }
   }
 

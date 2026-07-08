@@ -81,9 +81,32 @@ owns `.copilot-tracking/`; the docs chain never writes there.
    ```
 
 2. Read `.skraft-docs/ledger.json`. If `summary.total == 0`,
-   STOP and report "Handbook in sync — no drift." (Under gh-aw, emit `noop`.)
+   do NOT stop yet. Run the forced order-rediscovery checkpoint first.
 3. If a ledger from a previous run exists with `state` values, merge: keep
    `done` items, re-open anything the fresh scan still reports.
+
+### Phase 0.5 — Forced order rediscovery (always)
+
+Before processing drift items, ALWAYS refresh these two derived overview pages:
+
+- `docs/site/fr/reference/agents/index.md` + `docs/site/en/reference/agents/index.md`
+- `docs/site/fr/reference/skills/index.md` + `docs/site/en/reference/skills/index.md`
+
+This refresh is mandatory even when scanner reports `summary.total == 0`. Route both
+to `skraft-docs-derived-writer` with a virtual item payload (`type: forced-order-refresh`,
+`pageType: derived`) and the explicit page paths. The worker must re-discover ordering
+from current agent sources, not from previous handbook content.
+
+After both refreshes, run stop-predicate tools:
+
+```bash
+node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
+node scripts/lint-nav.mjs
+node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
+```
+
+If `summary.total == 0` and forced refresh produced no file change, STOP and report
+"Handbook in sync — no drift." (Under gh-aw, emit `noop`).
 
 ## Phase 1 — Reconcile each item (A11 loop)
 
@@ -100,6 +123,8 @@ each item with `state: open`:
    | `missing-diataxis-mode`, `invalid-diataxis-mode`, `ordering-gap`, `basename-mismatch` | `skraft-docs-placement-architect` | a `book.yml` patch (mode / position / exception) |
    | `orphan-source` | `skraft-docs-placement-architect` → then `skraft-docs-derived-writer` | a `book.yml` entry AND the FR+EN page |
    | `missing-page` / `empty-page` / `parity-break` where `pageType: derived` | `skraft-docs-derived-writer` | the FR+EN derived page(s) from `source` |
+   | `order-drift` | `skraft-docs-derived-writer` | regenerated FR+EN `agents/index` + `skills/index` matching current orchestrator/agent usage order |
+   | `forced-order-refresh` (virtual) | `skraft-docs-derived-writer` | regenerated FR+EN `agents/index` + `skills/index` ordered by current agent usage |
    | `missing-page` / `empty-page` / `parity-break` where `pageType: editorial` | `skraft-docs-editorial-writer` | the complete FR+EN editorial page(s) |
 
    Pass the worker the **raw item JSON** plus the contract path. Do not summarize.
