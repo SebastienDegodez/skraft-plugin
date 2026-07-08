@@ -7,15 +7,13 @@
 #    Without it, `gh pr create` fails with the default GITHUB_TOKEN
 #    ("GitHub Actions is not permitted to create or approve pull requests").
 #
-# 2. (Optional) Fully automate the workflow-file updates
-#    The default GITHUB_TOKEN has no `workflows` scope, so changes under
-#    .github/workflows/ (gh-aw sources *.md and compiled *.lock.yml) cannot be
-#    pushed: this job reverts them and only lists them in the PR body for a
-#    manual `gh aw compile`. To push them automatically, register a GitHub App
-#    with `contents: write` + `workflows: write` permissions, install it on the
-#    repo, mint a token with actions/create-github-app-token, and use that
-#    token for BOTH the checkout step and the GH_TOKEN env (instead of
-#    secrets.GITHUB_TOKEN). Then the "needs_recompile" branch becomes obsolete.
+# 2. Fully automate workflow-file updates with a GitHub App (recommended)
+#    Define repository secrets:
+#      - GH_AW_APP_ID
+#      - GH_AW_APP_PRIVATE_KEY
+#    With those secrets, this workflow mints an installation token and can push
+#    both regular files and .github/workflows/* updates. Without them, workflow
+#    file updates are reverted and listed in the PR body for a manual recompile.
 # =============================================================================
 name: Upgrade gh-aw
 
@@ -26,13 +24,35 @@ on:
 
 permissions:
   contents: write
+  workflows: write
   pull-requests: write
 
 jobs:
   upgrade:
     runs-on: ubuntu-latest
     steps:
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.GH_AW_APP_ID != '' && secrets.GH_AW_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.GH_AW_APP_ID }}
+          private-key: ${{ secrets.GH_AW_APP_PRIVATE_KEY }}
+
+      - name: Resolve auth mode
+        id: auth
+        run: |
+          if [ -n "${{ steps.app-token.outputs.token }}" ]; then
+            echo "using_app_token=true" >> "$GITHUB_OUTPUT"
+            echo "push_token=${{ steps.app-token.outputs.token }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "using_app_token=false" >> "$GITHUB_OUTPUT"
+            echo "push_token=${{ secrets.GITHUB_TOKEN }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ steps.auth.outputs.push_token }}
 
       - name: Install gh-aw CLI
         run: curl -sL https://raw.githubusercontent.com/github/gh-aw/main/install-gh-aw.sh | bash
@@ -40,29 +60,38 @@ jobs:
       - name: Run gh-aw upgrade
         run: gh aw upgrade
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.auth.outputs.push_token }}
 
       - name: Detect changes
         id: changes
         run: |
-          # Categorize changes: files under .github/workflows/ can't be
-          # pushed with GITHUB_TOKEN (requires workflows scope).
-          # Include both modified and untracked files.
+          changed=$(
+            git diff --name-only
+            git ls-files --others --exclude-standard
+          )
+
+          if [ -z "$changed" ]; then
+            echo "Already up to date."
+            echo "has_pushable=false" >> "$GITHUB_OUTPUT"
+            echo "needs_recompile=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           workflow_files=$(
             git diff --name-only -- '.github/workflows/'
             git ls-files --others --exclude-standard -- '.github/workflows/'
           )
+
+          if [ "${{ steps.auth.outputs.using_app_token }}" = "true" ]; then
+            echo "has_pushable=true" >> "$GITHUB_OUTPUT"
+            echo "needs_recompile=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           other=$(
             git diff --name-only -- . ':!.github/workflows/'
             git ls-files --others --exclude-standard -- . ':!.github/workflows/'
           )
-
-          if [ -z "$other" ] && [ -z "$workflow_files" ]; then
-            echo "Already up to date."
-            echo "has_pushable=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
           echo "has_pushable=$( [ -n "$other" ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
 
           if [ -n "$workflow_files" ]; then
@@ -84,10 +113,12 @@ jobs:
 
           BRANCH="automated/gh-aw-upgrade"
 
-          # Revert workflow files (can't push these with GITHUB_TOKEN)
-          git checkout HEAD -- '.github/workflows/' 2>/dev/null || true
-          # Remove any new (untracked) files added under .github/workflows/
-          git ls-files --others -- '.github/workflows/' | xargs -r rm -f
+          if [ "${{ steps.auth.outputs.using_app_token }}" != "true" ]; then
+            # Revert workflow files (can't push these with GITHUB_TOKEN)
+            git checkout HEAD -- '.github/workflows/' 2>/dev/null || true
+            # Remove any new (untracked) files added under .github/workflows/
+            git ls-files --others -- '.github/workflows/' | xargs -r rm -f
+          fi
 
           git checkout -B "$BRANCH"
           git add -A
@@ -103,6 +134,10 @@ jobs:
           # Build PR body
           BODY="Automated gh-aw runtime upgrade."
           BODY+=$'\n\n'
+          if [ "${{ steps.auth.outputs.using_app_token }}" = "true" ]; then
+            BODY+="GitHub App token detected; workflow sources and lock files are included automatically."
+            BODY+=$'\n\n'
+          fi
           if [ "${{ steps.changes.outputs.needs_recompile }}" = "true" ]; then
             BODY+="## ⚠️ Workflow recompilation needed"
             BODY+=$'\n\n'
@@ -147,4 +182,4 @@ jobs:
               --head "$BRANCH"
           fi
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.auth.outputs.push_token }}
