@@ -24,7 +24,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
   pull-requests: write
 
 jobs:
@@ -33,8 +32,8 @@ jobs:
     steps:
       - name: Create GitHub App token
         id: app-token
-        if: ${{ secrets.GH_AW_APP_ID != '' && secrets.GH_AW_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v2
+        continue-on-error: true
         with:
           app-id: ${{ secrets.GH_AW_APP_ID }}
           private-key: ${{ secrets.GH_AW_APP_PRIVATE_KEY }}
