@@ -18,6 +18,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  conflict-markers:
+    name: No merge conflict markers
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail if merge conflict markers are present
+        run: |
+          if git grep -nIE '^(<{7} |={7}$|>{7} )' -- . ':(exclude).github/workflows/skraft-framework-ci.yml'; then
+            echo "::error::Merge conflict markers detected in tracked files — resolve before merging."
+            exit 1
+          fi
+          echo "No merge conflict markers found."
+
   test:
     name: Tests & Coverage
     runs-on: ubuntu-latest
