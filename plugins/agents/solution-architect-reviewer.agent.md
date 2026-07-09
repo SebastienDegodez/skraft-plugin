@@ -1,9 +1,11 @@
 ---
 name: solution-architect-reviewer
 description: Use when reviewing architecture decisions, component diagrams, or interface contracts for consistency, Clean Architecture compliance, and fitness for purpose. Dispatched after solution-architect produces DESIGN artefacts, or manually to audit existing architecture files.
-model: claude-haiku-4.5
+model: Claude Haiku 4.5
 user-invocable: true
-tools: read/readFile, search/codebase
+tools: 
+  - read/readFile
+  - search/codebase
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
   dispatched_by: skraft-orchestrator

@@ -1,9 +1,16 @@
 ---
 name: contract-testing-worker
 description: "[Internal subagent — dispatched by software-engineer only] Emits a provider-side contract test for THIS service's API. Always produces the baseline WebApplicationFactory + HttpClient integration test; when the Microcks opt-in is set, adds the Microcks TestEndpointAsync (OPEN_API_SCHEMA) verification layer. Does not run the business TDD cycle, does not mock downstream dependencies."
-model: claude-sonnet-5
+model: Claude Sonnet 5
 user-invocable: false
-tools: read/readFile, search/codebase, edit/createDirectory, edit/createFile, edit/editFiles, execute/runInTerminal, execute/getTerminalOutput
+tools: 
+  - read/readFile
+  - search/codebase
+  - edit/createDirectory
+  - edit/createFile
+  - edit/editFiles
+  - execute/runInTerminal
+  - execute/getTerminalOutput
 metadata:
   cost_role_class: implementer  # B12 target class — deterministic wiring (genesis token-economy)
   dispatched_by: software-engineer

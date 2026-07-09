@@ -52,9 +52,9 @@ test('tierForClass rejects an unknown class', () => {
 })
 
 test('modelForTier maps each tier to its concrete model', () => {
-  assert.equal(modelForTier(ModelTier('economy')), 'claude-haiku-4.5')
-  assert.equal(modelForTier(ModelTier('standard')), 'claude-sonnet-5')
-  assert.equal(modelForTier(ModelTier('frontier')), 'claude-sonnet-5')
+  assert.equal(modelForTier(ModelTier('economy')), 'Claude Haiku 4.5')
+  assert.equal(modelForTier(ModelTier('standard')), 'Claude Sonnet 5')
+  assert.equal(modelForTier(ModelTier('frontier')), 'Claude Sonnet 5')
 })
 
 test('modelForTier rejects a tier with no mapped model', () => {
@@ -83,41 +83,41 @@ test('floorForRequirement ignores non-string inputs even if they stringify to a 
 test('resolveModel maps a plain reviewer to economy', () => {
   assert.deepEqual(resolveModel({ costRoleClass: 'reviewer' }), {
     tier: 'economy',
-    model: 'claude-haiku-4.5',
+    model: 'Claude Haiku 4.5',
   })
 })
 
 test('resolveModel maps an implementer to standard', () => {
   assert.deepEqual(resolveModel({ costRoleClass: 'implementer' }), {
     tier: 'standard',
-    model: 'claude-sonnet-5',
+    model: 'Claude Sonnet 5',
   })
 })
 
 test('resolveModel maps a planner to frontier', () => {
   assert.deepEqual(resolveModel({ costRoleClass: 'planner' }), {
     tier: 'frontier',
-    model: 'claude-sonnet-5',
+    model: 'Claude Sonnet 5',
   })
 })
 
 test('resolveModel raises a reviewer to standard when a Sonnet floor applies (override branch)', () => {
   assert.deepEqual(
     resolveModel({ costRoleClass: 'reviewer', modelRequirement: 'Sonnet-class or above.' }),
-    { tier: 'standard', model: 'claude-sonnet-5' },
+    { tier: 'standard', model: 'Claude Sonnet 5' },
   )
 })
 
 test('resolveModel keeps an implementer at standard when a Sonnet floor applies (no downgrade)', () => {
   assert.deepEqual(
     resolveModel({ costRoleClass: 'implementer', modelRequirement: 'Sonnet-class or above.' }),
-    { tier: 'standard', model: 'claude-sonnet-5' },
+    { tier: 'standard', model: 'Claude Sonnet 5' },
   )
 })
 
 test('resolveModel does not lower a planner below frontier despite a Sonnet floor', () => {
   assert.deepEqual(
     resolveModel({ costRoleClass: 'planner', modelRequirement: 'Sonnet-class or above.' }),
-    { tier: 'frontier', model: 'claude-sonnet-5' },
+    { tier: 'frontier', model: 'Claude Sonnet 5' },
   )
 })

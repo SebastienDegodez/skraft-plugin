@@ -64,7 +64,7 @@ test('planAgent marks a reviewer to be changed from inherit to haiku', () => {
   const plan = planAgent(agent({ name: 'r', cls: 'reviewer' }), { allowList: new Set() })
   assert.equal(plan.skipped, false)
   assert.equal(plan.currentModel, 'inherit')
-  assert.equal(plan.resolvedModel, 'claude-haiku-4.5')
+  assert.equal(plan.resolvedModel, 'Claude Haiku 4.5')
   assert.equal(plan.changed, true)
 })
 
@@ -73,7 +73,7 @@ test('planAgent applies the Sonnet floor override for a reviewer with a requirem
     agent({ name: 'se-rev', cls: 'reviewer', requirement: 'Sonnet-class or above.' }),
     { allowList: new Set() },
   )
-  assert.equal(plan.resolvedModel, 'claude-sonnet-5')
+  assert.equal(plan.resolvedModel, 'Claude Sonnet 5')
 })
 
 test('planAgent skips an allow-listed agent', () => {
@@ -98,7 +98,7 @@ test('planAgent skips an agent that has no cost_role_class', () => {
 })
 
 test('planAgent reports changed=false when the model already matches', () => {
-  const plan = planAgent(agent({ name: 'r', model: 'claude-haiku-4.5', cls: 'reviewer' }), {
+  const plan = planAgent(agent({ name: 'r', model: 'Claude Haiku 4.5', cls: 'reviewer' }), {
     allowList: new Set(),
   })
   assert.equal(plan.changed, false)
@@ -108,15 +108,15 @@ test('planAgent reports changed=false when the model already matches', () => {
 
 test('applyModel rewrites only the top-level model line', () => {
   const before = agent({ name: 'r', model: 'inherit', cls: 'reviewer', requirement: 'Sonnet-class or above.' })
-  const after = applyModel(before, 'claude-haiku-4.5')
-  assert.match(after, /^model: claude-haiku-4\.5$/m)
+  const after = applyModel(before, 'Claude Haiku 4.5')
+  assert.match(after, /^model: Claude Haiku 4\.5$/m)
   assert.match(after, /model_requirement: "Sonnet-class or above\."/)
   assert.doesNotMatch(after, /^model: inherit$/m)
 })
 
 test('applyModel is idempotent', () => {
-  const once = applyModel(agent({ name: 'r', cls: 'reviewer' }), 'claude-haiku-4.5')
-  const twice = applyModel(once, 'claude-haiku-4.5')
+  const once = applyModel(agent({ name: 'r', cls: 'reviewer' }), 'Claude Haiku 4.5')
+  const twice = applyModel(once, 'Claude Haiku 4.5')
   assert.equal(twice, once)
 })
 
@@ -138,7 +138,7 @@ test('main --check returns 1 and reports drift when agents do not match policy',
   const { io, errs } = capture()
   const code = main(['--check', '--dir', agents], io)
   assert.equal(code, 1)
-  assert.ok(errs.some((line) => /drift: rev .* expected 'claude-haiku-4\.5'/.test(line)))
+  assert.ok(errs.some((line) => /drift: rev .* expected 'Claude Haiku 4\.5'/.test(line)))
   await rm(dir, { recursive: true, force: true })
 })
 
@@ -147,9 +147,9 @@ test('main --apply pins models, leaves the orchestrator on inherit, then --check
 
   assert.equal(main(['--apply', '--dir', agents], capture().io), 0)
 
-  assert.match(await readFile(join(agents, 'rev.agent.md'), 'utf8'), /^model: claude-haiku-4\.5$/m)
-  assert.match(await readFile(join(agents, 'impl.agent.md'), 'utf8'), /^model: claude-sonnet-5$/m)
-  assert.match(await readFile(join(agents, 'nested', 'lens.agent.md'), 'utf8'), /^model: claude-haiku-4\.5$/m)
+  assert.match(await readFile(join(agents, 'rev.agent.md'), 'utf8'), /^model: Claude Haiku 4\.5$/m)
+  assert.match(await readFile(join(agents, 'impl.agent.md'), 'utf8'), /^model: Claude Sonnet 5$/m)
+  assert.match(await readFile(join(agents, 'nested', 'lens.agent.md'), 'utf8'), /^model: Claude Haiku 4\.5$/m)
   assert.match(await readFile(join(agents, 'orch.agent.md'), 'utf8'), /^model: inherit$/m)
 
   const { io, out } = capture()
@@ -175,9 +175,9 @@ test('main --emit --json lists resolved models and omits allow-listed agents', a
   main(['--emit', '--json', '--dir', agents], io)
   const rows = JSON.parse(out.join('\n'))
   const byName = Object.fromEntries(rows.map((r) => [r.name, r.resolvedModel]))
-  assert.equal(byName.rev, 'claude-haiku-4.5')
-  assert.equal(byName.impl, 'claude-sonnet-5')
-  assert.equal(byName.lens, 'claude-haiku-4.5')
+  assert.equal(byName.rev, 'Claude Haiku 4.5')
+  assert.equal(byName.impl, 'Claude Sonnet 5')
+  assert.equal(byName.lens, 'Claude Haiku 4.5')
   assert.ok(!('skraft-orchestrator' in byName))
   await rm(dir, { recursive: true, force: true })
 })
@@ -187,8 +187,8 @@ test('main --emit without --json prints a tab-separated table', async () => {
   const { io, out } = capture()
   main(['--emit', '--dir', agents], io)
   const text = out.join('\n')
-  assert.match(text, /^rev\tclaude-haiku-4\.5$/m)
-  assert.match(text, /^impl\tclaude-sonnet-5$/m)
+  assert.match(text, /^rev\tClaude Haiku 4\.5$/m)
+  assert.match(text, /^impl\tClaude Sonnet 5$/m)
   assert.doesNotMatch(text, /skraft-orchestrator/)
   await rm(dir, { recursive: true, force: true })
 })
