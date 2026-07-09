@@ -1,15 +1,22 @@
 {
   "name": "skraft-plugin-site-tests",
   "private": true,
-  "description": "Dev-only tooling for the SKRAFT docs site smoke tests.",
+  "description": "Dev-only tooling for the SKRAFT docs site smoke tests and release automation.",
   "scripts": {
     "prepare": "node scripts/install-git-hooks.mjs",
     "test:site": "playwright test",
     "lint:citations": "node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages \"docs/site/**/*.md\"",
     "ci:local": "node scripts/local-ci.mjs",
-    "hooks:install": "node scripts/install-git-hooks.mjs"
+    "hooks:install": "node scripts/install-git-hooks.mjs",
+    "release": "semantic-release",
+    "release:dry": "semantic-release --dry-run --no-ci"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.0"
+    "@playwright/test": "^1.49.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
+    "semantic-release": "^24.2.0"
   }
 }
