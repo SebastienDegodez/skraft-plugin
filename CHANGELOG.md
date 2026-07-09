@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.0.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.0.0...v1.0.1) (2026-07-09)
+
+### 🐛 Bug Fixes
+
+* update model names and tools formatting across agent definitions ([#97](https://github.com/SebastienDegodez/skraft-plugin/issues/97)) ([153acaf](https://github.com/SebastienDegodez/skraft-plugin/commit/153acaf54c5a1fdf0a1fee802d6f90b8cf7897e9))
+
 ## 1.0.0 (2026-07-09)
 
 ### ✨ Features
