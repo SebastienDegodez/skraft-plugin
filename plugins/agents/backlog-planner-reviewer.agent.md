@@ -1,9 +1,11 @@
 ---
 name: backlog-planner-reviewer
 description: Use when reviewing refined user stories, acceptance criteria drafts, and sprint plans for INVEST quality, completeness, and feasibility. Dispatched after backlog-planner produces DISCUSS artefacts, or manually to audit existing stories.
-model: claude-haiku-4.5
+model: Claude Haiku 4.5
 user-invocable: true
-tools: read/readFile, search/codebase
+tools: 
+  - read/readFile
+  - search/codebase
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
   dispatched_by: skraft-orchestrator

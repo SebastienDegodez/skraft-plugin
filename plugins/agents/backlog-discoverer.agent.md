@@ -1,9 +1,14 @@
 ---
 name: backlog-discoverer
 description: "Use when discovering, triaging, or prioritizing GitHub issues for a project. Supports three discovery modes: user-assigned issues, artifact-driven discovery from code changes, and search-based exploration. Activate on 'discover backlog', 'triage issues', 'what should I work on', 'find open issues', or when the SDLC pipeline starts."
-model: claude-sonnet-5
+model: Claude Sonnet 5
 user-invocable: true
-tools: read/readFile, write/createFile, write/editFile, search/codebase
+tools: 
+  - read/readFile
+  - edit/createFile
+  - edit/editFiles
+  - edit/createDirectory
+  - search/codebase
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
   dispatched_by: skraft-orchestrator
