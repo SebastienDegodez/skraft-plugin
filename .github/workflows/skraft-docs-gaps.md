@@ -1,5 +1,7 @@
 ---
-engine: copilot
+engine:
+  id: copilot
+  model: claude-sonnet-4.6
 description: |
   Editorial page generator for the SKRAFT book. Slow cadence (weekly). Reads the
   contract docs/site/_data/book.yml, compares what SHOULD exist (the contract)
