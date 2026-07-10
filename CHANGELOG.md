@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.0.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.0.1...v1.0.2) (2026-07-10)
+
+### 🐛 Bug Fixes
+
+* **aw:** pin copilot model in SKRAFT docs workflows to avoid retired-model engine failure ([#99](https://github.com/SebastienDegodez/skraft-plugin/issues/99)) ([f428843](https://github.com/SebastienDegodez/skraft-plugin/commit/f42884378c2a390da8053516b4d6f9e80d5bfc2d))
+
 ## [1.0.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.0.0...v1.0.1) (2026-07-09)
 
 ### 🐛 Bug Fixes
