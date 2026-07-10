@@ -1,5 +1,7 @@
 ---
-engine: copilot
+engine:
+  id: copilot
+  model: claude-sonnet-4.6
 description: |
   Deterministic synchronizer for the SKRAFT book. Triggers when an agent, skill
   or instruction changes under plugins/ or .agents/. Reads the contract
