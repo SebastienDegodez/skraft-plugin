@@ -26,6 +26,15 @@ test('discoverCacheRoots: sorts matches ascending (newest last)', () => {
   assert.equal(roots[roots.length - 1], `${HOME}/.claude/plugins/cache/hash/skraft/2.0.0`)
 })
 
+test('discoverCacheRoots: equal versions compare as equal (stable order)', () => {
+  const glob = () => [cacheHook('1.0.0'), cacheHook('1.0.0')]
+  const roots = discoverCacheRoots({ homeDir: HOME, glob })
+  assert.deepEqual(roots, [
+    `${HOME}/.claude/plugins/cache/hash/skraft/1.0.0`,
+    `${HOME}/.claude/plugins/cache/hash/skraft/1.0.0`,
+  ])
+})
+
 test('discoverCacheRoots: fail-open — no matches returns empty list', () => {
   assert.deepEqual(discoverCacheRoots({ homeDir: HOME, glob: () => [] }), [])
 })

@@ -47,7 +47,7 @@ export const discoverCacheRoots = ({ homeDir = homedir(), glob = globSync } = {}
 }
 
 // Full runtime resolution used by cli/hook.mjs. `moduleUrl` is the caller's
-// import.meta.url (…/plugins/src/cli/hook.mjs); `../../..` climbs to plugin root
+// import.meta.url (…/plugins/src/cli/hook.mjs); `../..` climbs to plugin root
 // (…/plugins).
 export const resolvePluginRootFromEnv = ({
   env = process.env,
@@ -55,7 +55,7 @@ export const resolvePluginRootFromEnv = ({
   homeDir = homedir(),
   glob = globSync,
 } = {}) => {
-  const moduleRoot = moduleUrl ? fileURLToPath(new URL('../../..', moduleUrl)) : undefined
+  const moduleRoot = moduleUrl ? fileURLToPath(new URL('../..', moduleUrl)) : undefined
   return resolvePluginRoot({
     envRoot: env?.CLAUDE_PLUGIN_ROOT,
     cacheRoots: discoverCacheRoots({ homeDir, glob }),
