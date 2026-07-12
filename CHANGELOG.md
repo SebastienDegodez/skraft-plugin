@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.2.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.1.0...v1.2.0) (2026-07-12)
+
+### ✨ Features
+
+* **hooks:** US16 consumer plugin-root resolution with cache glob fallback ([#122](https://github.com/SebastienDegodez/skraft-plugin/issues/122)) ([9c1ac20](https://github.com/SebastienDegodez/skraft-plugin/commit/9c1ac20e83e66e5846e8e328ff7739699c64b746))
+
 ## [1.1.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.0.2...v1.1.0) (2026-07-12)
 
 ### ✨ Features
