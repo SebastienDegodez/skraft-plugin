@@ -122,7 +122,7 @@ If the answer is "none" or "future needs" — flag as G9 MEDIUM violation.
 
 ## References
 
-- [gate-definitions.md](references/gate-definitions.md) — Detailed checklist per gate (G1–G9) with step-by-step checks
+- [gate-definitions.md](references/gate-definitions.md) — Detailed checklist per gate (G1–G16) with step-by-step checks
 - [ddd-violations.md](references/ddd-violations.md) — 10 DDD violation patterns detectable in artefacts
 - [clean-arch-violations.md](references/clean-arch-violations.md) — 8 Clean Architecture violations detectable in contracts and diagrams
 - [verdict-rubric.md](references/verdict-rubric.md) — Verdict derivation, confidence levels, and 3 example review verdicts
