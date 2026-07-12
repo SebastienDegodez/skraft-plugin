@@ -86,6 +86,39 @@ export const applyTransition = (currentState, event) => {
       }))
     }
 
+    case 'CLOSE_PHASE': {
+      // Composite: RECORD_VERDICT + (optional) RECORD_REVIEW_ARTIFACT + ADVANCE in one
+      // atomic write — for manual closures (human-validated reworks, no reviewer sub-agent
+      // verdict). event.phase must be the phase currently open; verdict must be APPROVED.
+      if (event.phase !== state.currentPhase) {
+        return Err({
+          code: 'PHASE_MISMATCH',
+          reason: `close-phase target ${event.phase} does not match currentPhase ${state.currentPhase}`,
+        })
+      }
+      if (event.verdict !== 'APPROVED') {
+        return Err({
+          code: 'VERDICT_NOT_APPROVED',
+          reason: `close-phase requires verdict APPROVED, got ${event.verdict}`,
+        })
+      }
+
+      const existingReview = state.reviewArtifacts[event.phase] ?? []
+      const reviewArtifacts = event.path
+        ? Object.freeze({ ...state.reviewArtifacts, [event.phase]: Object.freeze([...existingReview, event.path]) })
+        : state.reviewArtifacts
+
+      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }, []) ?? 'DONE'
+
+      return Ok(Object.freeze({
+        ...state,
+        verdicts: Object.freeze({ ...state.verdicts, [event.phase]: event.verdict }),
+        reviewArtifacts,
+        currentPhase: expectedNext,
+        phasesCompleted: Object.freeze([...state.phasesCompleted, state.currentPhase]),
+      }))
+    }
+
     case 'SET_DIFFICULTY': {
       // I7: write-once
       if (state.difficulty !== null) {

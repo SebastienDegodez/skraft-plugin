@@ -37,8 +37,8 @@ test('state-machine: INVALID_STATE for unknown event type', () => {
 
 // ─── TERMINAL_STATE ───────────────────────────────────────────────────────────
 test('state-machine: TERMINAL_STATE on any event when currentPhase is DONE', () => {
-  for (const type of ['ADVANCE', 'RECORD_VERDICT', 'RECORD_ARTIFACT', 'SET_DIFFICULTY', 'INCR_RETRY']) {
-    const r = applyTransition(mkState({ currentPhase: 'DONE' }), { type, targetPhase: 'DISCOVER', phase: 'X', value: 'easy', path: 'p' })
+  for (const type of ['ADVANCE', 'RECORD_VERDICT', 'RECORD_ARTIFACT', 'SET_DIFFICULTY', 'INCR_RETRY', 'CLOSE_PHASE']) {
+    const r = applyTransition(mkState({ currentPhase: 'DONE' }), { type, targetPhase: 'DISCOVER', phase: 'X', verdict: 'APPROVED', value: 'easy', path: 'p' })
     assert.equal(r.ok, false, `${type} must be rejected`)
     assert.equal(r.error.code, 'TERMINAL_STATE', `${type} must yield TERMINAL_STATE`)
     assert.ok(r.error.reason.length > 0, `TERMINAL_STATE reason must not be empty for ${type}`)
@@ -219,6 +219,58 @@ test('state-machine RECORD_REVIEW_ARTIFACT: _testForceReviewArtifacts equal leng
     { type: 'RECORD_REVIEW_ARTIFACT', phase: 'DISCOVER', path: 'r2.md', _testForceReviewArtifacts: ['r1.md'] }
   )
   assert.equal(r.ok, true)
+})
+
+// ─── CLOSE_PHASE ──────────────────────────────────────────────────────────────
+test('state-machine CLOSE_PHASE: records verdict, appends review artifact, and advances in one write', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }),
+    { type: 'CLOSE_PHASE', phase: 'DISCUSS', verdict: 'APPROVED', path: 'reviews/manual-close.md' }
+  )
+  assert.equal(r.ok, true)
+  assert.equal(r.value.verdicts.DISCUSS, 'APPROVED')
+  assert.deepEqual([...r.value.reviewArtifacts.DISCUSS], ['reviews/manual-close.md'])
+  assert.equal(r.value.currentPhase, 'DESIGN')
+  assert.deepEqual([...r.value.phasesCompleted], ['DISCOVER', 'DISCUSS'])
+})
+
+test('state-machine CLOSE_PHASE: DELIVER closure advances to DONE', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DELIVER', phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL'] }),
+    { type: 'CLOSE_PHASE', phase: 'DELIVER', verdict: 'APPROVED', path: 'reviews/manual-close.md' }
+  )
+  assert.equal(r.ok, true)
+  assert.equal(r.value.currentPhase, 'DONE')
+})
+
+test('state-machine CLOSE_PHASE: omitted path skips the review artifact append', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }),
+    { type: 'CLOSE_PHASE', phase: 'DISCUSS', verdict: 'APPROVED' }
+  )
+  assert.equal(r.ok, true)
+  assert.deepEqual(r.value.reviewArtifacts, {})
+  assert.equal(r.value.currentPhase, 'DESIGN')
+})
+
+test('state-machine CLOSE_PHASE: PHASE_MISMATCH when phase differs from currentPhase', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DISCUSS' }),
+    { type: 'CLOSE_PHASE', phase: 'DESIGN', verdict: 'APPROVED', path: 'reviews/manual-close.md' }
+  )
+  assert.equal(r.ok, false)
+  assert.equal(r.error.code, 'PHASE_MISMATCH')
+  assert.ok(r.error.reason.includes('DESIGN') && r.error.reason.includes('DISCUSS'), `reason: ${r.error.reason}`)
+})
+
+test('state-machine CLOSE_PHASE: VERDICT_NOT_APPROVED when verdict is not APPROVED', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DISCUSS' }),
+    { type: 'CLOSE_PHASE', phase: 'DISCUSS', verdict: 'CHANGES_REQUESTED', path: 'reviews/manual-close.md' }
+  )
+  assert.equal(r.ok, false)
+  assert.equal(r.error.code, 'VERDICT_NOT_APPROVED')
+  assert.equal(r.value, undefined)
 })
 
 // ─── SET_DIFFICULTY ───────────────────────────────────────────────────────────
