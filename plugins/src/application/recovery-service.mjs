@@ -52,7 +52,12 @@ export const createRecoveryService = ({ stateReader, stateWriter, backupReader, 
 
   // AC2: schema rollback — restore the most recent healthy backup after repeated failures.
   const rollback = async (projectSlug) => {
-    const backups = await backupReader.list(projectSlug)
+    let backups
+    try {
+      backups = await backupReader.list(projectSlug)
+    } catch (err) {
+      return Err({ code: 'IO_ERROR', reason: `failed to list backups for ${projectSlug}: ${err.message}` })
+    }
     const target = selectRollbackTarget(backups)
     if (target === null) {
       return Err({ code: 'NO_BACKUP', reason: `no healthy backup found for ${projectSlug}; reconstruct with 'init'` })
