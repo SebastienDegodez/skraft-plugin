@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.1.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.0.2...v1.1.0) (2026-07-12)
+
+### ✨ Features
+
+* **state-cli:** add scan-commits subcommand for commit-convention checks ([#113](https://github.com/SebastienDegodez/skraft-plugin/issues/113)) ([6305d91](https://github.com/SebastienDegodez/skraft-plugin/commit/6305d91c5472606524e24f8c6c172a258c1a30da))
+
 ## [1.0.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.0.1...v1.0.2) (2026-07-10)
 
 ### 🐛 Bug Fixes
