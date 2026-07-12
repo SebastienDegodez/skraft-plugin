@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
 import { createStateService } from '../application/state-service.mjs'
+import { createGitCommitLogReader } from '../adapters/infrastructure/git-commit-log-reader.mjs'
+import { createCommitScanService } from '../application/commit-scan-service.mjs'
 
 // basePath: SKRAFT_TRACKING_ROOT env var OR .copilot-tracking/skraft-plans (cwd)
 const basePath = process.env.SKRAFT_TRACKING_ROOT
@@ -11,6 +13,9 @@ const basePath = process.env.SKRAFT_TRACKING_ROOT
 const stateReader = createJsonStateReader(basePath)
 const stateWriter = createJsonStateWriter(basePath)
 const service = createStateService({ stateReader, stateWriter })
+const commitScanService = createCommitScanService({
+  commitLogReader: createGitCommitLogReader({ cwd: process.cwd() })
+})
 
 const argv = process.argv.slice(2)
 const subcommand = argv[0]
@@ -158,6 +163,21 @@ async function run() {
       } else {
         writeSuccess(val)
       }
+      break
+    }
+
+    case 'scan-commits': {
+      const countArg = arg('count')
+      const count = Number.parseInt(countArg ?? '20', 10)
+      if (!Number.isInteger(count) || count <= 0) {
+        writeError('INVALID_ARGUMENT', `--count must be a positive integer, got: ${countArg}`)
+        process.exitCode = 1
+        return
+      }
+      const result = await commitScanService.scanRecent(count)
+      writeSuccess(result)
+      // Non-zero exit signals rework-worthy commits without treating it as an IO/domain error.
+      process.exitCode = result.nonConventional.length > 0 ? 1 : 0
       break
     }
 
