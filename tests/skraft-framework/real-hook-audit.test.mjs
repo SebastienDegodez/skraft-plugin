@@ -54,9 +54,17 @@ for (const { event, matcher } of EXPECTED_ROUTES) {
   })
 }
 
+test('real-hook-audit: SessionStart runs the housekeeping CLI (US12)', () => {
+  const entries = hooksManifest.hooks?.SessionStart ?? []
+  assert.ok(entries.length > 0, 'hooks.json must declare a SessionStart entry')
+  const commands = (entries[0].hooks ?? []).map((h) => h.command)
+  assert.ok(commands.length > 0, 'SessionStart entry must declare at least one command')
+  assert.match(commands[0], /housekeeping\.mjs/, 'SessionStart must invoke housekeeping.mjs')
+})
+
 test('real-hook-audit: hooks.json declares no unexpected top-level events', () => {
   const declaredEvents = Object.keys(hooksManifest.hooks ?? {})
-  const expectedEvents = [...new Set(EXPECTED_ROUTES.map((r) => r.event))]
+  const expectedEvents = [...new Set(EXPECTED_ROUTES.map((r) => r.event)), 'SessionStart']
   for (const event of declaredEvents) {
     assert.ok(expectedEvents.includes(event), `unexpected event ${event} declared in hooks.json but not audited here`)
   }

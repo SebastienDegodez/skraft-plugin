@@ -39,6 +39,14 @@ export default {
     // US11 — G7/G8 state protection + session guard (#57)
     'plugins/src/domain/session-guard-policy.mjs',
     'plugins/src/application/pre-tool-use-session-guard-service.mjs',
+    // US12 — Observabilité (timeout/stale + health-check + housekeeping) (#58)
+    'plugins/src/domain/observability-policy.mjs',
+    'plugins/src/application/health-check-service.mjs',
+    'plugins/src/application/session-start-service.mjs',
+    // US13 — Recovery / rollback (#59)
+    'plugins/src/domain/recovery-policy.mjs',
+    'plugins/src/application/recovery-service.mjs',
+    'plugins/src/adapters/infrastructure/state/json-state-backup-reader.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },
