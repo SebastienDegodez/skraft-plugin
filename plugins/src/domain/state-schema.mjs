@@ -23,6 +23,8 @@ export const STATE_SCHEMA = Object.freeze({
   verdicts: Object.freeze({ owner: 'invariant' }),
   reviewArtifacts: Object.freeze({ owner: 'invariant' }),
   retryCount: Object.freeze({ owner: 'invariant' }),
+  reworkCount: Object.freeze({ owner: 'invariant' }),
+  findingsResolved: Object.freeze({ owner: 'invariant' }),
   referencesProcessed: Object.freeze({ owner: 'orchestrator' }),
   phaseHistory: Object.freeze({ owner: 'orchestrator' }),
   nextActions: Object.freeze({ owner: 'orchestrator' }),
@@ -112,6 +114,10 @@ export const validatePipelineState = (raw) => {
       ? { ...rawVerdicts } : {},
     retryCount: (raw.retryCount && !Array.isArray(raw.retryCount) && typeof raw.retryCount === 'object')
       ? { ...raw.retryCount } : {},
+    reworkCount: (raw.reworkCount && !Array.isArray(raw.reworkCount) && typeof raw.reworkCount === 'object')
+      ? { ...raw.reworkCount } : {},
+    findingsResolved: (raw.findingsResolved && !Array.isArray(raw.findingsResolved) && typeof raw.findingsResolved === 'object')
+      ? { ...raw.findingsResolved } : {},
     phaseArtifacts: coercePhaseMap(raw.phaseArtifacts),
     reviewArtifacts: coercePhaseMap(raw.reviewArtifacts),
     difficulty: (typeof raw.difficulty === 'string') ? raw.difficulty : null,

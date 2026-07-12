@@ -37,7 +37,7 @@ test('state-machine: INVALID_STATE for unknown event type', () => {
 
 // ─── TERMINAL_STATE ───────────────────────────────────────────────────────────
 test('state-machine: TERMINAL_STATE on any event when currentPhase is DONE', () => {
-  for (const type of ['ADVANCE', 'RECORD_VERDICT', 'RECORD_ARTIFACT', 'SET_DIFFICULTY', 'INCR_RETRY', 'CLOSE_PHASE']) {
+  for (const type of ['ADVANCE', 'RECORD_VERDICT', 'RECORD_ARTIFACT', 'SET_DIFFICULTY', 'INCR_RETRY', 'INCR_REWORK', 'CLOSE_PHASE']) {
     const r = applyTransition(mkState({ currentPhase: 'DONE' }), { type, targetPhase: 'DISCOVER', phase: 'X', verdict: 'APPROVED', value: 'easy', path: 'p' })
     assert.equal(r.ok, false, `${type} must be rejected`)
     assert.equal(r.error.code, 'TERMINAL_STATE', `${type} must yield TERMINAL_STATE`)
@@ -335,6 +335,45 @@ test('state-machine INCR_RETRY: uses default maxRetries=2 when userPreferences a
   assert.equal(r.error.code, 'RETRY_EXHAUSTED')
 })
 
+// ─── INCR_REWORK ──────────────────────────────────────────────────────────────
+test('state-machine INCR_REWORK: increments reworkCount from zero, defaults findings to 1', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DELIVER' }),
+    { type: 'INCR_REWORK', phase: 'DELIVER' }
+  )
+  assert.equal(r.ok, true)
+  assert.equal(r.value.reworkCount.DELIVER, 1)
+  assert.equal(r.value.findingsResolved.DELIVER, 1)
+})
+
+test('state-machine INCR_REWORK: accumulates reworkCount and findingsResolved across passes', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DELIVER', reworkCount: { DELIVER: 1 }, findingsResolved: { DELIVER: 5 } }),
+    { type: 'INCR_REWORK', phase: 'DELIVER', findings: 7 }
+  )
+  assert.equal(r.ok, true)
+  assert.equal(r.value.reworkCount.DELIVER, 2)
+  assert.equal(r.value.findingsResolved.DELIVER, 12)
+})
+
+test('state-machine INCR_REWORK: is uncapped — no RETRY_EXHAUSTED regardless of count', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DELIVER', reworkCount: { DELIVER: 50 } }),
+    { type: 'INCR_REWORK', phase: 'DELIVER' }
+  )
+  assert.equal(r.ok, true)
+  assert.equal(r.value.reworkCount.DELIVER, 51)
+})
+
+test('state-machine INCR_REWORK: negative findings falls back to default of 1', () => {
+  const r = applyTransition(
+    mkState({ currentPhase: 'DELIVER' }),
+    { type: 'INCR_REWORK', phase: 'DELIVER', findings: -3 }
+  )
+  assert.equal(r.ok, true)
+  assert.equal(r.value.findingsResolved.DELIVER, 1)
+})
+
 // ─── passthrough fidelity: orchestrator-owned fields survive every transition ──
 // Regression pair for the schema round-trip fix: applyTransition validates+coerces
 // via validatePipelineState, so preserved fields must reach the returned state and
@@ -374,4 +413,41 @@ test('passthrough: INCR_RETRY preserves orchestrator-owned fields', () => {
   assert.equal(r.ok, true)
   assertRichPreserved(r.value)
   assert.equal(r.value.retryCount.DISCOVER, 1)
+})
+
+// ─── RESOLVE_STALE (US13 recovery) ─────────────────────────────────────────────
+test('state-machine: RESOLVE_STALE resets stuck currentPhase retryCount to 0', () => {
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DESIGN: 2 }, verdicts: { DESIGN: 'CHANGES_REQUESTED' } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE' })
+  assert.equal(r.ok, true)
+  assert.equal(r.value.retryCount.DESIGN, 0)
+})
+
+test('state-machine: RESOLVE_STALE targets an explicit phase', () => {
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DISCUSS: 2 }, verdicts: { DISCUSS: 'CHANGES_REQUESTED' } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE', phase: 'DISCUSS' })
+  assert.equal(r.ok, true)
+  assert.equal(r.value.retryCount.DISCUSS, 0)
+})
+
+test('state-machine: RESOLVE_STALE rejects a non-stale phase (retries below cap)', () => {
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DESIGN: 1 } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE' })
+  assert.equal(r.ok, false)
+  assert.equal(r.error.code, 'NOT_STALE')
+})
+
+test('state-machine: RESOLVE_STALE rejects an APPROVED phase even if retries exhausted', () => {
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DESIGN: 2 }, verdicts: { DESIGN: 'APPROVED' } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE' })
+  assert.equal(r.ok, false)
+  assert.equal(r.error.code, 'NOT_STALE')
+})
+
+test('passthrough: INCR_REWORK preserves orchestrator-owned fields', () => {
+  const r = applyTransition(mkRichState(), { type: 'INCR_REWORK', phase: 'DISCOVER' })
+  assert.equal(r.ok, true)
+  assertRichPreserved(r.value)
+  assert.equal(r.value.reworkCount.DISCOVER, 1)
+  assert.equal(r.value.findingsResolved.DISCOVER, 1)
 })

@@ -337,3 +337,29 @@ Admissible forces:
 **Pass examples:**
 - No blocker files exist at all. → G13 pass (vacuously).
 - Two blocker files exist; both have matching `-resolution.md` siblings; each resolution carries a `chosen: A|B|C` field. → G13 pass; reviewer proceeds to evaluate G1–G12 normally.
+
+---
+
+### G16 — Comparable Interface Contracts Share a Consistent Convention
+
+**Lens:** consistency-lens
+**Severity:** HIGH
+
+**Definition:** When `contracts-{story}.md` introduces an interface, port, or hook that plays the same role as one already `Accepted` in a prior story for a comparable consumer category (e.g. two React hooks each wrapping a query port, two repository adapters for sibling aggregates, two API controllers exposing the same CRUD shape), the newer one must follow the same state/return/error convention as the existing one — same loading/error/data shape, same Result-vs-throw choice, same naming for the exposed fields. A divergence is admissible only when an `Accepted` ADR explicitly documents and justifies it.
+
+**Why:** cross-artefact drift between comparable components (e.g. one hook returning `{ data, error, loading }` while a sibling hook returns `{ result, isError, pending }` for an equivalent responsibility) is easy to introduce independently in DESIGN and is otherwise only caught by a human during DELIVER integration — after the cost of writing both implementations has already been paid.
+
+**Step-by-step check:**
+1. Open `contracts-{story}.md` for the story under review AND for any prior story whose contracts are still `Accepted`. List every interface/port/hook grouped by consumer category (e.g. "React hook wrapping a query port").
+2. Within each group, compare the shape of the exposed state/return value and the error-handling convention (thrown exception vs `Result`/`Either` vs status flag).
+3. Flag any pair in the same group whose shape or convention differs.
+4. For each flagged pair, search the ADR set for one that names both components (or the category) and justifies the divergence. If found → pass for that pair. If not found → G16 fail.
+
+**Auto-fail examples:**
+- `useDriverEligibility` (contracts-US-01.md, Accepted) returns `{ data, error, loading }`. `useDriverHistory` (contracts-US-04.md, under review) — same category, wraps a comparable query port — returns `{ result, isError, pending }` with no ADR documenting the rename. → G16 HIGH fail.
+- `IEligibilityRepository.find()` returns `Result<Eligibility, NotFoundError>`. `IPolicyRepository.find()` (sibling aggregate, same story batch) throws `PolicyNotFoundException` instead, with no ADR justifying the split convention. → G16 HIGH fail.
+
+**Pass examples:**
+- Both `useDriverEligibility` and `useDriverHistory` return `{ data, error, loading }` for their respective query ports. → G16 pass.
+- `IEligibilityRepository.find()` and `IPolicyRepository.find()` both return `Result<T, NotFoundError>`. → G16 pass.
+- `useDriverHistory` deliberately returns a paginated shape (`{ pages, error, loading }`) and ADR-011 documents why pagination changes the contract vs the non-paginated `useDriverEligibility`. → G16 pass.

@@ -19,10 +19,10 @@ avec leur gain, statut et milestone.
 | [US7](#us7) | Documentation + roadmap.md | `gain:dx` | ✅ Livré | Phase 1 — MVP |
 | [US8](#us8) | G4/G5 artefacts + verdict + commit | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [US9](#us9) | S7 execution-log + CLI bridge | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
-| [US10](#us10) | G6 continuation orchestrateur | `gain:eco-tokens` | 🔲 À faire | Phase 2 — Complétude |
-| [US11](#us11) | G7/G8 protection d'état + session guard | `gain:safety` | 🔲 À faire | Phase 2 — Complétude |
-| [US12](#us12) | Observabilité | `gain:observability` | 🔲 À faire | Phase 2 — Complétude |
-| [US13](#us13) | Recovery / rollback | `gain:reliability` | 🔲 À faire | Phase 2 — Complétude |
+| [US10](#us10) | G6 continuation orchestrateur | `gain:eco-tokens` | ✅ Livré | Phase 2 — Complétude |
+| [US11](#us11) | G7/G8 protection d'état + session guard | `gain:safety` | ✅ Livré | Phase 2 — Complétude |
+| [US12](#us12) | Observabilité | `gain:observability` | ✅ Livré | Phase 2 — Complétude |
+| [US13](#us13) | Recovery / rollback | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [S1](#s1) | State write-through (économie de tokens) | `gain:eco-tokens` | ✅ Livré | Phase 2 — Complétude |
 | [S2](#s2) | Config repo-wide (configurateur `depthTier`) | `gain:dx` | ✅ Livré | Phase 2 — Complétude |
 
@@ -185,7 +185,7 @@ DELIVER infalsifiable (S7 DETERMINISTIC TOOL BRIDGE).
 ### US10 — G6 injection de continuation orchestrateur <a id="us10"></a>
 
 **Issue :** [#56](https://github.com/SebastienDegodez/skraft-plugin/issues/56)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:eco-tokens` + `gain:dx` — moins de re-prompting manuel, transitions
@@ -201,7 +201,7 @@ contexte d'étape suivante (succès) ou de re-dispatch (échec). Fail-open.
 ### US11 — G7/G8 protection d'état + session guard <a id="us11"></a>
 
 **Issue :** [#57](https://github.com/SebastienDegodez/skraft-plugin/issues/57)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:safety` + `gain:anti-drift` — état et frontières du pipeline
@@ -211,6 +211,14 @@ mécaniquement inviolables.
 session guard `domain/session-guard-policy.mjs` bloque writes `src`/`tests` hors
 agent monitoré pendant DELIVER.
 
+**Livré :** `domain/session-guard-policy.mjs` (pur) + `application/pre-tool-use-session-guard-service.mjs`.
+G7 (state-independent) refuse toute mutation directe des artefacts protégés
+(redirection shell, verbe mutant, ou outil Write/Edit) ; la lecture reste permise —
+la seule voie d'écriture sanctionnée est le CLI d'état (#60, S7). G8, pendant DELIVER,
+bloque les writes `src/`/`tests/` hors des agents DELIVER monitorés
+(`phaseAgents.DELIVER`) ; fail-open si l'état est illisible (un bug du hook ne fige
+jamais le pipeline).
+
 **Dépend de :** US3
 
 ---
@@ -218,7 +226,7 @@ agent monitoré pendant DELIVER.
 ### US12 — Observabilité (timeout/stale + health-check) <a id="us12"></a>
 
 **Issue :** [#58](https://github.com/SebastienDegodez/skraft-plugin/issues/58)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:observability` + `gain:dx` — détection des phases abandonnées,
@@ -227,6 +235,12 @@ diagnostics, auto-entretien.
 **Périmètre :** timeout-monitor, turn-counter, détection phases stale, `cli/health-check.mjs`,
 housekeeping `SessionStart` (rétention audit, signaux périmés).
 
+**Modules livrés :** `domain/observability-policy.mjs` (seuils + `detectStalePhase`
+fail-open + `planAuditRetention` / `planStaleSignals`), `application/health-check-service.mjs`,
+`application/session-start-service.mjs`, `cli/health-check.mjs`, `cli/housekeeping.mjs`,
+entrées `SessionStart` dans `plugins/hooks/hooks.json` + `.github/hooks/skraft-framework.json`.
+Seuils configurés via le bloc `observability` de `skraft-config.json`.
+
 **Dépend de :** US8, US9
 
 ---
@@ -234,7 +248,7 @@ housekeeping `SessionStart` (rétention audit, signaux périmés).
 ### US13 — Recovery / rollback <a id="us13"></a>
 
 **Issue :** [#59](https://github.com/SebastienDegodez/skraft-plugin/issues/59)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:reliability` + `gain:dx` — le pipeline se rattrape au lieu de
@@ -242,6 +256,13 @@ se bloquer sur état corrompu ou stale.
 
 **Périmètre :** guidance de récupération (WHY/HOW/ACTION), rollback de schéma,
 résolution d'exécution stale.
+
+**Livraison :** `state.mjs diagnose` émet une guidance actionnable
+(`{ code, why, how[], action }`) ; `state.mjs rollback` restaure le backup
+`state.json.bak.*` sain le plus récent (lecture seule — la création/rotation
+des backups reste possédée par le writer de #60) ; `state.mjs resolve-stale`
+réinitialise le budget de retry d'une phase bloquée (événement `RESOLVE_STALE`)
+pour la relancer.
 
 **Dépend de :** US8
 

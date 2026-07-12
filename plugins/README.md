@@ -30,9 +30,9 @@ Fallback si `CLAUDE_PLUGIN_ROOT` absent : glob `~/.claude/plugins/cache/*/skraft
 | 7 | Documentation + roadmap.md | ✅ Livré | `plugins/README.md` (ancrage genesis A9/S4/S7, fail modes, guide « ajouter un garde-fou »), `docs/roadmap.md` (13 US avec gain + statut + milestone) |
 | 8 | G4/G5 artefacts + verdict + commit | ✅ Livré | `domain/artifact-policy.mjs` (artefacts attendus, parseur de verdict reviewer, `**Verdict:** APPROVED\|NEEDS_REWORK\|REJECTED`), `ports/infrastructure/commit-verifier.mjs` + `adapters/infrastructure/git-commit-verifier.mjs` (working tree propre), `subagent-stop-service` (complétion fail-closed : artefact manquant, verdict divergent du fichier écrit, DELIVER sans commit vérifié) — branché dans `cli/hook.mjs` |
 | 9 | S7 execution-log + CLI bridge | 🔲 À faire | — |
-| 10 | G6 continuation orchestrateur | 🔲 À faire | — |
-| 11 | G7/G8 protection d'état + session guard | 🔲 À faire | — |
-| 12 | Observabilité | 🔲 À faire | — |
+| 10 | G6 continuation orchestrateur | ✅ Livré | `application/post-tool-use-service.mjs` (sur `PostToolUse(Agent)` : injecte le contexte d'étape suivante via `pipeline-policy.expectedNextAgent` en cas de succès, ou un contexte de re-dispatch en cas de `CHANGES_REQUESTED` ; fail-open) — branché dans `cli/hook.mjs` |
+| 11 | G7/G8 protection d'état + session guard | ✅ Livré | `domain/session-guard-policy.mjs` (G7 deny édition directe `state.json`/execution-log — redirection/verbe mutant/Write-Edit ; lecture permise ; G8 bloque writes `src`/`tests` hors agent DELIVER monitoré pendant DELIVER), `application/pre-tool-use-session-guard-service.mjs` (G7 state-independent fail-closed ; G8 fail-open si état illisible) |
+| 12 | Observabilité | ✅ Livré | `domain/observability-policy.mjs` (seuils + `detectStalePhase` fail-open + `planAuditRetention`/`planStaleSignals`), `application/health-check-service.mjs`, `application/session-start-service.mjs`, `cli/health-check.mjs` + `cli/housekeeping.mjs`, entrées `SessionStart` dans les deux manifests hooks ; seuils via bloc `observability` de `skraft-config.json` — `node --test` 100 % |
 | 13 | Recovery / rollback | 🔲 À faire | — |
 | 16 | Déploiement hooks dans le projet consumer | 🔲 À faire | — |
 | S1 | State write-through (token economy) | ✅ Livré | `cli/state.mjs` (S7 bridge : `init\|get\|transition\|record-verdict\|record-artifact\|record-review-artifact\|set-difficulty\|incr-retry`), `domain/state-machine.mjs` (invariants I1-I9), `adapters/infrastructure/state/json-state-writer.mjs` (atomique + backup ≤3), `application/state-service.mjs` ; réhydratation 1×/session + `skraft-state`/`skraft-todo-sync.instructions.md` — `node --test` 100 % + mutation Stryker ≥ 86 % |
@@ -55,13 +55,15 @@ plugins/src/
 │   ├── state-schema.mjs
 │   ├── state-machine.mjs     # invariants I1-I9 (write-through)
 │   ├── config-schema.mjs     # depthTier repo-wide
+│   ├── observability-policy.mjs  # seuils + stale-phase + rétention (US12)
 │   └── execution-log-schema.mjs
 ├── application/
 │   ├── pre-tool-use-service.mjs
 │   ├── subagent-start-service.mjs
 │   ├── subagent-stop-service.mjs
 │   ├── post-tool-use-service.mjs
-│   ├── session-start-service.mjs
+│   ├── session-start-service.mjs # housekeeping (rétention audit + signaux)
+│   ├── health-check-service.mjs  # diagnostics (version/manifests/logs/config)
 │   ├── state-service.mjs     # init/get/applyEvent (write-through)
 │   ├── config-service.mjs    # init/get/set (depthTier)
 │   └── config-loader.mjs
@@ -99,10 +101,11 @@ plugins/src/
     ├── hook.mjs               # ← appelé par hooks.json
     ├── state.mjs             # S7 bridge état (write-through)
     ├── config.mjs            # S7 bridge config repo-wide (depthTier)
+    ├── health-check.mjs      # US12 diagnostics (fail-open)
+    ├── housekeeping.mjs      # US12 SessionStart auto-entretien
     ├── init-log.mjs
     ├── log-phase.mjs
-    ├── verify-integrity.mjs
-    └── health-check.mjs
+    └── verify-integrity.mjs
 ```
 
 ---
@@ -116,9 +119,9 @@ plugins/src/
 | G3 audit skills | `PostToolUse` | `Read` | fail-open | #4 | 🔲 |
 | G4 structure artefacts | `SubagentStop` | — | fail-closed | #8 | ✅ |
 | G5 verdict + commit | `SubagentStop` | — | fail-closed | #8 | ✅ |
-| G6 continuation | `PostToolUse` | `Agent` | fail-open | #10 | 🔲 |
-| G7 deny state.json direct | `PreToolUse` | `Bash` | fail-closed | #11 | 🔲 |
-| G8 session guard | `PreToolUse` | `Agent` | fail-closed | #11 | 🔲 |
+| G6 continuation | `PostToolUse` | `Agent` | fail-open | #10 | ✅ |
+| G7 deny state.json direct | `PreToolUse` | `Bash` | fail-closed | #11 | ✅ |
+| G8 session guard | `PreToolUse` | `Agent` | fail-open | #11 | ✅ |
 
 ---
 
@@ -128,6 +131,7 @@ plugins/src/
 
 | Event | Matcher | Garde activé |
 |---|---|---|
+| `SessionStart` | — | housekeeping (US12 — rétention audit + signaux) |
 | `PreToolUse` | `Agent` | G1 + G8 |
 | `SubagentStart` | — | G2 |
 | `SubagentStop` | — | G3 vérif + G4/G5 |
@@ -137,6 +141,7 @@ plugins/src/
 
 | Event | Garde activé |
 |---|---|
+| `sessionStart` | housekeeping (US12) |
 | `preToolUse` | G1 + G8 |
 | `subagentStop` | G3 vérif + G4/G5 |
 

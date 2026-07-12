@@ -1,4 +1,4 @@
-# Gate Definitions G1–G9
+# Gate Definitions G1–G10
 
 Formal checklist for the `acceptance-designer-reviewer`. One section per lens.
 
@@ -166,6 +166,26 @@ the rendered result; the real visual regression risk is uncaught.
 
 ---
 
+### G10 — Comparable Contract Consistency
+
+**Definition:** When `impl-plan-{story}.md` plans a component (hook, adapter, client) that plays the same role as one already implemented in a prior story for a comparable responsibility (e.g. two React hooks each wrapping a similar query, two API clients for sibling endpoints), the planned state/return/error convention must match the existing component's — same loading/error/data shape, same naming for the exposed fields — unless the impl-plan explicitly notes and justifies the divergence.
+
+**How to check:**
+1. List the components (hooks/adapters/clients) named in `impl-plan-{story}.md`, grouped by consumer category with any comparable components from prior stories' impl-plans or existing code.
+2. For each group, compare the planned state/return/error shape.
+3. Flag any pair whose shape differs with no justification recorded in the impl-plan notes.
+
+**Auto-fail example:**
+```
+impl-plan-US-01.md: useDriverEligibility → { data, error, loading }
+impl-plan-US-04.md: useDriverHistory      → { result, isError, pending }  (no rationale noted)
+```
+
+**Severity:** HIGH — an unexplained convention drift between comparable components is only caught
+during DELIVER integration otherwise, after both implementations are already written.
+
+---
+
 ## Quick Reference
 
 | Gate | Lens | Check | Severity |
@@ -179,3 +199,4 @@ the rendered result; the real visual regression risk is uncaught.
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
 | G8 | boundary-enforcement | ≥1 walking skeleton per flow | HIGH |
 | G9 | boundary-enforcement | `@visual` scenarios ↔ Playwright E2E spec bijection | HIGH |
+| G10 | boundary-enforcement | Comparable hooks/adapters/clients share a consistent convention | HIGH |

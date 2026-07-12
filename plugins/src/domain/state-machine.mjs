@@ -139,6 +139,38 @@ export const applyTransition = (currentState, event) => {
       }))
     }
 
+    case 'INCR_REWORK': {
+      // Manual rework pass (human-validated fix cycle outside the reviewer retry loop —
+      // see rework-cost tracking, ADR-115). Not capped: rework passes are human-initiated
+      // and deliberate, unlike automated retries. `findings` (default 1) accumulates the
+      // count of findings resolved in this pass onto findingsResolved[phase].
+      const currentRework = state.reworkCount[event.phase] ?? 0
+      const currentFindings = state.findingsResolved[event.phase] ?? 0
+      const resolvedThisPass = Number.isInteger(event.findings) && event.findings >= 0 ? event.findings : 1
+      return Ok(Object.freeze({
+        ...state,
+        reworkCount: Object.freeze({ ...state.reworkCount, [event.phase]: currentRework + 1 }),
+        findingsResolved: Object.freeze({ ...state.findingsResolved, [event.phase]: currentFindings + resolvedThisPass }),
+      }))
+    }
+
+    case 'RESOLVE_STALE': {
+      // US13 recovery: a phase is stale when its retry budget is exhausted while the
+      // verdict is not APPROVED — the pipeline can neither advance nor retry. Resetting
+      // retryCount to 0 for that phase re-opens the rework loop so it can be relaunched.
+      // Guarded so a non-stale phase's counter cannot be reset (retryCount stays capped).
+      const phase = event.phase ?? state.currentPhase
+      const current = state.retryCount[phase] ?? 0
+      const verdict = state.verdicts[phase] ?? null
+      if (current < maxRetries || verdict === 'APPROVED') {
+        return Err({ code: 'NOT_STALE', reason: `phase ${phase} is not stale (retryCount ${current}, verdict ${verdict})` })
+      }
+      return Ok(Object.freeze({
+        ...state,
+        retryCount: Object.freeze({ ...state.retryCount, [phase]: 0 }),
+      }))
+    }
+
     default:
       return Err({ code: 'INVALID_STATE', reason: `unknown event type: ${event.type}` })
   }
