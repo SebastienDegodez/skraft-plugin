@@ -118,7 +118,7 @@ plugins/src/
 | G5 verdict + commit | `SubagentStop` | — | fail-closed | #8 | ✅ |
 | G6 continuation | `PostToolUse` | `Agent` | fail-open | #10 | 🔲 |
 | G7 deny state.json direct | `PreToolUse` | `Bash` | fail-closed | #11 | ✅ |
-| G8 session guard | `PreToolUse` | `Agent` | fail-closed | #11 | ✅ |
+| G8 session guard | `PreToolUse` | `Agent` | fail-open | #11 | ✅ |
 
 ---
 
