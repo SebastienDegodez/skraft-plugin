@@ -11,7 +11,7 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 
 ---
 
-## Gate Definitions (G1–G8)
+## Gate Definitions (G1–G9)
 
 ### Lens 1: coverage-lens
 
@@ -61,6 +61,13 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Layer boundary compliance | G7 | Each row in the coverage matrix targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter directly as its primary entry point. | All coverage matrix entries reference a use case boundary from the contracts. | BLOCKER |
 | Walking skeleton coverage | G8 | At least one walking skeleton scenario per major feature flow is identified in the test plan (tagged `@smoke` or marked Walking Skeleton in the matrix). | ≥1 walking skeleton entry per feature flow. | HIGH |
+| Visual AC evidence | G9 | Every `@visual` scenario has ≥1 Playwright E2E spec in `tests/e2e/` per `impl-plan-{story}.md`. jsdom/unit entry invalid. | Bijection `@visual` scenarios ↔ Playwright E2E spec entries. | HIGH |
+
+**Checking G9:**
+1. List all scenarios tagged `@visual` in the `.feature` files
+2. List all `tests/e2e/` spec entries in `impl-plan-{story}.md`
+3. Verify each `@visual` scenario maps to ≥1 E2E spec performing a real measurement (`boundingBox()`, computed colour/style)
+4. Flag any `@visual` scenario whose only planned coverage is a unit/jsdom test
 
 ---
 
@@ -118,7 +125,7 @@ vocabulary. Not a technical identifier. Verdict remains approved."
 | `fail` | ≥1 gate in this lens has a finding. |
 
 Each finding includes:
-- `gate` — G1 through G8
+- `gate` — G1 through G9
 - `severity` — BLOCKER / HIGH / MEDIUM / LOW
 - `finding` — plain-language description of the problem
 - `location` — file path and line/scenario reference

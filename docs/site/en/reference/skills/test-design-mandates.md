@@ -8,7 +8,7 @@ persona: tech-lead
 
 # test-design-mandates
 
-> Four mandatory rules governing test design in a Clean Architecture context — loaded after Gherkin scenarios are written, before any implementation starts.
+> Five mandatory rules governing test design in a Clean Architecture context — loaded after Gherkin scenarios are written, before any implementation starts.
 
 ## When to use
 
@@ -35,6 +35,7 @@ persona: tech-lead
 - **M2 — Business language abstraction** — three strict layers: Gherkin (pure business) / Step methods (bridge) / Business services (technical); no technical vocabulary leaks upward into Gherkin
 - **M3 — User journey completeness** — every scenario includes Setup (Given) + Action (When, one only) + Observable Outcome (Then)
 - **M4 — Domain extraction forbidden by default** — no domain unit test unless gate (a) branch unreachable via AC or gate (b) combinatorial economy opens
+- **M5 — Visual/positional AC enforcement** — an AC in visual/positional/style terms (`@visual` tag) is closed only by a Playwright E2E test with a real measurement; a jsdom/unit test alone is not a valid closure
 - **TBU forbidden** — no production code unwired through the composition root; acceptance tests validate real wiring
 
 ## Why this shape

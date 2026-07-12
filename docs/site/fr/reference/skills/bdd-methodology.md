@@ -33,6 +33,7 @@ persona: tech-lead
 - **Règle fondamentale** : chaque mot d'un scénario Gherkin doit être compris par un expert du domaine qui n'a jamais vu de code
 - **Une seule action par scénario** (`When` unique) — deux comportements = deux scénarios
 - **Règle des 3 couches** : Layer 1 (Gherkin) = vocabulaire métier pur, zéro terme technique
+- **Règle AC visuel** : une AC exprimée en termes visuels/positionnels/de style est taguée `@visual` et nécessite un test E2E Playwright avec mesure réelle — un seul test unitaire jsdom ne peut pas la clore
 
 | Layer | Propriétaire | Langage |
 |-------|-------------|---------|
@@ -58,6 +59,7 @@ persona: tech-lead
 | `@edge-case` | Valeurs limites, conditions de frontière |
 | `@error-case` | Erreurs système, données manquantes, état invalide |
 | `@smoke` | Ensemble minimal pour la validation walking skeleton (≤3 par feature) |
+| `@visual` | Marque un scénario dont l'AC est visuel/positionnel/de style — nécessite un test E2E Playwright avec mesure réelle, ne peut pas être clos par un seul test unitaire jsdom |
 
 ## Pourquoi cette forme
 

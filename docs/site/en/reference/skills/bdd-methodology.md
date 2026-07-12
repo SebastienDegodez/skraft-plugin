@@ -33,6 +33,7 @@ persona: tech-lead
 - **Core rule**: every word in a Gherkin scenario must be understood by a domain expert who has never seen code
 - **One trigger per scenario** (single `When`) — two behaviours = two scenarios
 - **3-layer rule**: Layer 1 (Gherkin) = pure domain vocabulary, zero technical terms
+- **Visual AC rule**: an AC expressed in visual/positional/style terms is tagged `@visual` and requires a companion Playwright E2E test with a real measurement — a jsdom/unit test alone cannot close it
 
 | Layer | Owner | Language |
 |-------|-------|---------|
@@ -58,6 +59,7 @@ persona: tech-lead
 | `@edge-case` | Boundary values, limit conditions |
 | `@error-case` | System errors, missing data, invalid state |
 | `@smoke` | Minimal set for walking skeleton validation (mark ≤3 per feature) |
+| `@visual` | Marks a scenario whose AC is visual/positional/style — requires a Playwright E2E test with a real measurement, cannot be closed by a jsdom unit test alone |
 
 ## Why this shape
 

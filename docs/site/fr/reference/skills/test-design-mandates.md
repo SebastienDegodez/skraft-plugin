@@ -8,7 +8,7 @@ persona: tech-lead
 
 # test-design-mandates
 
-> Quatre règles obligatoires qui régissent la conception des tests dans un contexte Clean Architecture — chargées après l'écriture des scénarios Gherkin, avant toute implémentation.
+> Cinq règles obligatoires qui régissent la conception des tests dans un contexte Clean Architecture — chargées après l'écriture des scénarios Gherkin, avant toute implémentation.
 
 ## Quand l'utiliser
 
@@ -35,6 +35,7 @@ persona: tech-lead
 - **M2 — Abstraction du langage métier** — trois couches strictes : Gherkin (métier pur) / Step methods (pont) / Business services (technique) ; aucun vocabulaire technique ne remonte vers Gherkin
 - **M3 — Complétude du parcours utilisateur** — chaque scénario inclut Setup (Given) + Action (When, une seule) + Observable Outcome (Then)
 - **M4 — Extraction de domaine conditionnelle par défaut interdite** — pas de test unitaire de domaine sauf si la porte (a) branche inaccessible via AC ou (b) économie combinatoire s'ouvre
+- **M5 — Application de l'AC visuel/positionnel** — une AC en termes visuels/positionnels/de style (tag `@visual`) n'est close que par un test E2E Playwright avec mesure réelle ; un seul test unitaire jsdom ne suffit pas
 - **TBU interdit** — aucun code de production non câblé via le root de composition ; les tests d'acceptance valident le câblage réel
 
 ## Pourquoi cette forme

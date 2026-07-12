@@ -1,4 +1,4 @@
-# Gate Definitions G1–G8
+# Gate Definitions G1–G9
 
 Formal checklist for the `acceptance-designer-reviewer`. One section per lens.
 
@@ -147,6 +147,25 @@ If YES → ambiguous → flag.
 
 ---
 
+### G9 — Visual AC Evidence
+
+**Definition:** Every scenario tagged `@visual` (a visual/positional/style AC per `bdd-methodology`)
+has at least one corresponding Playwright E2E spec under `tests/e2e/`, referenced in
+`impl-plan-{story}.md`. A unit/jsdom test entry does NOT satisfy this gate.
+
+**How to check:**
+1. List all `@visual`-tagged scenarios in the `.feature` files
+2. List all `tests/e2e/` entries in `impl-plan-{story}.md`
+3. Verify each `@visual` scenario maps to ≥1 E2E spec performing a real measurement
+   (`boundingBox()`, `getComputedStyle()` colour, computed layout)
+4. Flag any `@visual` scenario whose only planned coverage is a unit/jsdom test — jsdom has no
+   real layout engine, so `getBoundingClientRect()` always returns zeros there
+
+**Severity:** HIGH — a `@visual` AC closed only by a unit test is a structural proxy, not proof of
+the rendered result; the real visual regression risk is uncaught.
+
+---
+
 ## Quick Reference
 
 | Gate | Lens | Check | Severity |
@@ -159,3 +178,4 @@ If YES → ambiguous → flag.
 | G6 | testability | Impl plan covers all scenarios | HIGH |
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
 | G8 | boundary-enforcement | ≥1 walking skeleton per flow | HIGH |
+| G9 | boundary-enforcement | `@visual` scenarios ↔ Playwright E2E spec bijection | HIGH |

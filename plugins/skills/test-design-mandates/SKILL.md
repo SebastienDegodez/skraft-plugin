@@ -7,7 +7,7 @@ description: Use when designing test coverage matrices, assigning tests to Clean
 
 ## Overview
 
-Four mandatory rules that govern how tests are designed in a Clean Architecture context. Applied after Gherkin scenarios are written, before any implementation starts.
+Five mandatory rules that govern how tests are designed in a Clean Architecture context. Applied after Gherkin scenarios are written, before any implementation starts.
 
 **Core principle:** Tests enter through a use case boundary and assert at the next visible boundary. Never test internal classes directly.
 
@@ -95,6 +95,24 @@ Outcome (Then)  → observable business result (not internal state)
 
 ---
 
+## Mandate 5 — Visual/Positional AC Enforcement
+
+**Rule:** Any AC expressed in visual, positional, or style terms (pixel position, full-page width,
+background colour, relative alignment between two elements) is closed ONLY by a Playwright E2E test
+performing a real measurement (`boundingBox()`, computed colour, computed layout) against a real
+browser engine. A jsdom/unit test is NOT a valid closure for this AC type.
+
+**Why:** jsdom has no layout engine (`getBoundingClientRect()` → zeros). Unit assertions proxy via
+DOM order/class presence, not rendered proof. Without this mandate, a unit-TDD-only contributor
+believes the AC is verified while CSS/mount/z-index regressions go uncaught.
+
+**Enforcement:**
+- Tag scenario `@visual` (see `bdd-methodology`).
+- Add matrix row: `Layer = E2E`, `Double Type = Real browser (Playwright)`.
+- `@visual` w/o `tests/e2e/` spec → coverage gap, block story (G9 check).
+
+---
+
 ## Coverage Matrix
 
 Build this matrix for every story before implementation starts. **Any row with `Layer = Domain` MUST carry an `Extraction Reason` code** (see Mandate 4). Without a reason code, the row is not authorized — remove it.
@@ -160,6 +178,7 @@ Does the feature write to or read from persistent storage?
 | Repository adapter | `IntegrationTest` | Infrastructure | Real DB via Testcontainers |
 | API controller / endpoint | `IntegrationTest` | API | In-process app host (WebApplicationFactory or equivalent) |
 | Architecture boundaries | `IntegrationTest` | Architecture | Static analysis (NetArchTest, ArchUnit, etc.) |
+| Visual/positional/style assertion (`@visual`) | `E2E` (Playwright) | Presentation (E2E) | Real browser engine — `boundingBox()`, `getComputedStyle()` |
 
 **Never:**
 - Test a domain entity by instantiating it directly in an Application acceptance test

@@ -107,6 +107,7 @@ Scenario: ...
 | `@edge-case` | Boundary values, limit conditions |
 | `@error-case` | System errors, missing data, invalid state |
 | `@smoke` | Minimal set for walking skeleton validation (mark ≤3 per feature) |
+| `@visual` | Marks a scenario whose AC is expressed in visual/positional/style terms — requires a companion Playwright E2E test with a real measurement, see Visual AC Rule below |
 | `@frontend` `@backend` `@api` `@http` `@ui` `@infrastructure` `@database` `@persistence` | ❌ FORBIDDEN — layer leak: embed implementation vocabulary in the Gherkin layer |
 
 ## The 3-Layer Abstraction Rule
@@ -162,6 +163,23 @@ or domain-feature tags (`@eligibility`) instead.
 **Scan instruction:** read every step and every tag of every scenario. If a hit is found,
 rewrite in domain language before handoff. A clean pass is the exit criterion for DISTILL phase.
 See the 3-Layer Abstraction Rule above for the vocabulary boundary.
+
+## Visual AC Rule (MANDATORY)
+
+Any acceptance criterion expressed in visual, positional, or style terms (pixel position, full-page
+width, background colour, relative alignment between two elements) MUST be tagged `@visual` and
+CANNOT be closed by a jsdom/unit test alone.
+
+**Why:** jsdom has no real layout engine — `getBoundingClientRect()` returns zeros unconditionally, so
+a passing unit assertion on position/size is structurally a proxy (DOM order, CSS class presence),
+never proof of the rendered result. A contributor following only the unit TDD loop can legitimately
+believe the AC is verified when the real regression risk (broken CSS, wrong mount point, wrong
+z-index) is uncaught.
+
+**Rule:** a `@visual` scenario is closed only when at least one Playwright E2E test performs a real
+measurement (`boundingBox()`, `getComputedStyle()` colour, computed layout) against a real browser
+engine. See `test-design-mandates` Mandate 5 for the coverage-matrix rule and
+`acceptance-review-criteria` Gate G9 for the review-time check.
 
 ## Granularity Rule
 
