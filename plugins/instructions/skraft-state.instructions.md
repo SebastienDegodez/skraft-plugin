@@ -45,6 +45,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 | `record-review-artifact` | `--slug --phase {P} --path {rel}` | Append to `reviewArtifacts[phase]` (append-only). |
 | `set-difficulty` | `--slug --value {tier}` | Set `difficulty` (write-once; rejects if already set). |
 | `incr-retry` | `--slug --phase {P}` | Increment `retryCount[phase]` (capped at `maxRetriesPerPhase`). |
+| `incr-rework` | `--slug --phase {P} [--findings N]` | Increment `reworkCount[phase]` (uncapped — manual, human-initiated) and add `N` (default `1`) findings resolved to `findingsResolved[phase]`. Call once per manual rework pass (e.g. `rework-5`, `rework-6`). |
 | `close-phase` | `--slug --phase {P} --verdict APPROVED [--artifact {rel}]` | Composite: record `verdicts[phase]`, append `reviewArtifacts[phase]` (if `--artifact` given), and advance `currentPhase` — one call, one write. |
 | `scan-commits` | `[--count N]` (default `20`) | No `--slug`. Read-only; never writes. Lists the N most recent HEAD commits and flags subjects that don't match `type(scope): subject` (G8). Exit `0` when all conventional, `1` otherwise. |
 
@@ -81,6 +82,12 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
   },
   "retryCount": {
     "DISCOVER": "number"
+  },
+  "reworkCount": {
+    "DISCOVER": "number (manual, human-initiated rework passes — distinct from automated reviewer retries)"
+  },
+  "findingsResolved": {
+    "DISCOVER": "number (cumulative count of review findings resolved across all rework passes for this phase)"
   },
   "referencesProcessed": ["string (file paths)"],
   "phaseHistory": {
@@ -122,6 +129,7 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 * `difficulty` — per-work-item. Set once at the exit of DISCOVER (or, when DISCOVER is skipped, at pipeline start) via `state.mjs set-difficulty`. Write-once. Drives the DELIVER execution model. Never reassessed mid-pipeline.
 * Depth tier — NOT in this file. It is a repo-wide property held in `skraft-config.json` (managed by the `skraft-config` configurateur; read with `config.mjs get --key depthTier`). Defaults to `comprehensive`. It is the pipeline's **cost governor** (genesis B16 / B11): it sets reviewer fan-out (1/2/4 lenses), mutation-run count, and the Gherkin gate. See `plugins/skills/skraft-difficulty-routing/SKILL.md`.
 * `userPreferences.maxRetriesPerPhase` — default `2`. When `retryCount[phase] >= maxRetriesPerPhase` and the verdict is not `APPROVED`, the orchestrator escalates to the user.
+* `reworkCount` / `findingsResolved` — **rework-cost tracking** (issue #115). `retryCount[phase]` already counts automated reviewer retries (re-dispatch of the same phase agent on `CHANGES_REQUESTED`); these two fields additionally count **manual** rework — the human-validated fix cycles that happen *after* a reviewer verdict, outside its retry loop (e.g. addressing BLOCKER/HIGH findings in one pass, then remaining findings in a second pass). Call `state.mjs incr-rework --phase {P} [--findings N]` once per manual rework pass; `N` (default `1`) is the count of findings that pass resolved, accumulating into `findingsResolved[phase]`. Together, `retryCount[phase] + reworkCount[phase]` is the phase's total iteration count, and `findingsResolved[phase]` is its total finding volume — the objective signal the resume summary surfaces (see Rehydration) to track whether upstream gates are improving epic over epic.
 * `reviewArtifacts` — append-only map of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers append here exclusively, through `record-review-artifact`.
 * `neighborPlanners` — interop with sibling HVE planners (Security, RAI, SSSC). `null` when no plan exists.
 * `adrRatification` — persists the DESIGN human-ratification gate (genesis B10 HUMAN CHECKPOINT + B4 PLAN MEMENTO) so it survives turns and session resumes. `checkpointStatus` is `none` until DESIGN produces `Proposed` ADRs, `awaiting_human` while the orchestrator has HALTed for a verdict, `resolved` once every ADR is `Accepted`/`Rejected`. `pending` mirrors the `docs/adr/decisions-index.md` rows still `Proposed`; `ratified` accumulates the verdicts. The orchestrator reads the decision index (NOT full ADR bodies) to populate this block. Written directly on the snapshot at the DESIGN checkpoint. Defaults to `{ "checkpointStatus": "none", "pending": [], "ratified": [] }`.
@@ -138,6 +146,7 @@ On a turn that changes pipeline state:
    * phase advance → `transition --to {NEXT}` (only after an APPROVED verdict for the current phase)
    * difficulty set → `set-difficulty --value {tier}`
    * phase re-dispatched after a non-APPROVED verdict → `incr-retry --phase {P}`
+   * a manual, human-validated rework pass is applied to a phase's artefacts (outside the reviewer retry loop) → `incr-rework --phase {P} [--findings N]`
    The CLI persists the snapshot atomically. `entryPoint` / `adrRatification` are the only direct-edit exceptions.
 4. **REFLECT** the change into the native todo list (mark a todo done / in-progress, add the next). The todo list and the snapshot now agree; no whole-file re-read occurs.
 
@@ -151,6 +160,8 @@ On a turn that changes pipeline state:
 ### Manual phase closure (no reviewer sub-agent verdict)
 
 When a phase — most commonly DELIVER — ends through a series of human-validated manual reworks rather than an explicit `APPROVED` verdict from a reviewer sub-agent, close it with a single `close-phase` call instead of hand-composing the three-step sequence.
+
+**Record the rework cost as it happens.** Each manual rework pass (e.g. addressing BLOCKER/HIGH findings, then a later pass on the remaining findings) calls `incr-rework --phase {P} --findings {count}` BEFORE `close-phase` — do not defer this to a single retroactive call, since the count-per-pass is the signal (issue #115) that shows whether findings are clustering (many small passes = upstream gate is under-detecting) or shrinking (gate is improving).
 
 The `--artifact` file is a review artifact like any other, so render it from data through the `review-verdict` artifact command — never hand-write the markdown (same convention reviewer sub-agents follow). Then pass the rendered path to `close-phase`:
 
@@ -204,7 +215,7 @@ When a session starts or resumes, rehydrate exactly once:
 2. **Project** the pipeline into the native todo working set per `#file:plugins/instructions/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
 3. **Identify** pending work from the todo list: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
 4. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).
-5. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions), followed by a **rework-cost line** derived entirely from fields already in the snapshot — no new persisted field is needed: for every phase in `phasesCompleted` plus `currentPhase`, report `(retryCount[phase] ?? 0)` (automatic retries) alongside `(reviewArtifacts[phase] ?? []).length` (review passes recorded for that phase, manual reworks included whenever they land a review artifact). Surface the per-phase pairs plus the epic-wide total, e.g. `DISCOVER 1 retry / 1 review · DESIGN 1 retry / 1 review · DELIVER 0 retries / 5 reviews — total 2 retries / 7 reviews`. This objectifies whether rework volume is trending down epic after epic (upstream gates improving) or staying flat (structural gate gap) without inventing a second source of truth for the same counts.
+5. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions), plus a **rework-cost line per phase with nonzero cost** (issue #115): `{phase}: {retryCount} retries + {reworkCount} manual reworks, {findingsResolved} findings resolved`. This is the objective signal for whether a phase is a recurring rework hotspot across epics — read it before deciding whether to strengthen that phase's exit gate.
 
 From here, subsequent turns use the todo list and the write-through protocol above — the whole snapshot is not re-read again this session.
 
