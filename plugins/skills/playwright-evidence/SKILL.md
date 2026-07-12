@@ -31,7 +31,7 @@ All other phases follow the same convention: `discuss/ac-draft-{story}.md`, `des
 
 ## Playwright Setup (TypeScript)
 
-**Before running any E2E suite, rebuild and restart Docker dependency containers.** A container left running from a prior session (or from a previous story) is a stale environment: the E2E test exercises code that was already replaced, and a pass against it is a false positive (issue #115 — one of the findings that reached DELIVER late was exactly this: an E2E test silently passing against a stale Docker container).
+**Before running any E2E suite, rebuild and restart Docker dependency containers.** A container left running from a prior session or a previous story is a stale environment. The E2E test then exercises code that was already replaced, so a pass against it is a false positive — one of the findings that reached DELIVER late on a past epic (issue #115) was exactly this: an E2E test silently passing against a stale Docker container.
 
 ```bash
 docker compose down

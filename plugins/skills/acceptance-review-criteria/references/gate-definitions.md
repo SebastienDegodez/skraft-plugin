@@ -168,7 +168,7 @@ the rendered result; the real visual regression risk is uncaught.
 
 ### G10 — Comparable Consumer Convention Traceability (issue #115)
 
-**Definition:** When `impl-plan-{story}.md` introduces a client-side consumer (hook/adapter) over a port comparable to one already covered by a sibling `impl-plan-*.md` (same shape class: list query, single-item query, command with optimistic update, ...), the plan names the prior consumer and states whether the convention (returned state shape, error handling, invalidation trigger) is the same or a justified divergence (citing the `contracts-{story}.md` divergence note required by `architecture-review-criteria` G16). This is the DISTILL-side half of the same check: DESIGN's G16 catches the divergence in the contract; G10 catches it again in the implementation plan, one phase before DELIVER would otherwise surface it as a late finding.
+**Definition:** When `impl-plan-{story}.md` introduces a client-side consumer (hook/adapter) over a port comparable to one already covered by a sibling `impl-plan-*.md` — same shape class: list query, single-item query, command with optimistic update, ... — the plan names the prior consumer. It then states whether the convention (returned state shape, error handling, invalidation trigger) is the same, or a justified divergence citing the `contracts-{story}.md` divergence note required by `architecture-review-criteria` G16. This is the DISTILL-side companion to DESIGN's G16: G16 catches the divergence in the contract, and G10 catches it again in the implementation plan, one phase before DELIVER would otherwise surface it as a late finding.
 
 **How to check:**
 1. List every consumer (hook/adapter) named in `impl-plan-{story}.md` and the port/interface it wraps.

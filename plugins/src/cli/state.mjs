@@ -154,6 +154,8 @@ async function run() {
       const event = { type: 'INCR_REWORK', phase }
       if (findingsArg !== undefined) {
         const findings = Number.parseInt(findingsArg, 10)
+        // `0` is deliberately accepted: a rework pass can be a no-op re-verification
+        // (e.g. confirming a prior fix, no new findings resolved this pass).
         if (!Number.isInteger(findings) || findings < 0) {
           writeError('INVALID_ARGUMENT', `--findings must be a non-negative integer, got: ${findingsArg}`)
           process.exitCode = 1
