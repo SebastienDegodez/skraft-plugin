@@ -7,13 +7,37 @@
 
 ## Emplacement & résolution
 
-Le framework vit dans `plugins/src/`. Il est livré avec le plugin.
+Le framework vit dans `plugins/src/`. Il est livré avec le plugin — aucune
+dépendance externe.
 
-Point d'entrée appelé par `hooks/hooks.json` (Claude Code) et `.github/hooks/skraft.json` (Copilot) :
+Point d'entrée appelé par `hooks/hooks.json` (Claude Code) et `.github/hooks/skraft-framework.json` (Copilot) :
 ```
 $CLAUDE_PLUGIN_ROOT/src/cli/hook.mjs <Event> [matcher]
 ```
-Fallback si `CLAUDE_PLUGIN_ROOT` absent : glob `~/.claude/plugins/cache/*/skraft/*/src/cli/hook.mjs`.
+
+### Résolution du runtime (US16)
+
+`cli/hook.mjs` résout sa propre racine plugin de façon **déterministe et
+cross-platform** (Mac + Windows), via `resolvePluginRootFromEnv`
+(`adapters/infrastructure/plugin-root-resolver.mjs`) qui délègue à la policy pure
+`domain/plugin-root-policy.mjs`. Ordre de priorité :
+
+1. **`CLAUDE_PLUGIN_ROOT`** — injecté par le harness Claude Code = chemin du
+   plugin installé dans le cache. Autoritaire.
+2. **Fallback glob** — si absent, recherche sur disque
+   `~/.claude/plugins/cache/*/skraft/*/src/cli/hook.mjs` (via `node:fs` `globSync`,
+   pattern à slashes valides aussi sous Windows) ; le **dernier match** (install le
+   plus récent) est retenu. Fail-open : toute erreur de glob → liste vide.
+3. **Fallback module-relatif** — si aucun match cache, la racine est déduite de
+   l'emplacement réel de `hook.mjs` (`../..` → `plugins/`).
+
+### Équivalent Copilot CLI
+
+Le manifest Copilot `.github/hooks/skraft-framework.json` **n'utilise pas**
+`CLAUDE_PLUGIN_ROOT` : les commandes sont des **chemins relatifs depuis la racine
+du repo** (`node plugins/src/cli/hook.mjs <Event> [matcher]`), exécutées avec le
+CWD = racine du projet consumer. Chaque entrée fournit `bash` **et** `powershell`
+(commande identique) pour Mac/Linux et Windows.
 
 ---
 
@@ -34,7 +58,7 @@ Fallback si `CLAUDE_PLUGIN_ROOT` absent : glob `~/.claude/plugins/cache/*/skraft
 | 11 | G7/G8 protection d'état + session guard | ✅ Livré | `domain/session-guard-policy.mjs` (G7 deny édition directe `state.json`/execution-log — redirection/verbe mutant/Write-Edit ; lecture permise ; G8 bloque writes `src`/`tests` hors agent DELIVER monitoré pendant DELIVER), `application/pre-tool-use-session-guard-service.mjs` (G7 state-independent fail-closed ; G8 fail-open si état illisible) |
 | 12 | Observabilité | ✅ Livré | `domain/observability-policy.mjs` (seuils + `detectStalePhase` fail-open + `planAuditRetention`/`planStaleSignals`), `application/health-check-service.mjs`, `application/session-start-service.mjs`, `cli/health-check.mjs` + `cli/housekeeping.mjs`, entrées `SessionStart` dans les deux manifests hooks ; seuils via bloc `observability` de `skraft-config.json` — `node --test` 100 % |
 | 13 | Recovery / rollback | 🔲 À faire | — |
-| 16 | Déploiement hooks dans le projet consumer | 🔲 À faire | — |
+| 16 | Déploiement hooks dans le projet consumer | ✅ Livré | `domain/plugin-root-policy.mjs` (résolution pure : `CLAUDE_PLUGIN_ROOT` → glob cache → module-relatif), `adapters/infrastructure/plugin-root-resolver.mjs` (`discoverCacheRoots` + `resolvePluginRootFromEnv`, `globSync` cross-platform fail-open) — branché dans `cli/hook.mjs` ; Copilot CLI via chemins relatifs (`.github/hooks/skraft-framework.json`) — `node --test` 100 % |
 | S1 | State write-through (token economy) | ✅ Livré | `cli/state.mjs` (S7 bridge : `init\|get\|transition\|record-verdict\|record-artifact\|record-review-artifact\|set-difficulty\|incr-retry`), `domain/state-machine.mjs` (invariants I1-I9), `adapters/infrastructure/state/json-state-writer.mjs` (atomique + backup ≤3), `application/state-service.mjs` ; réhydratation 1×/session + `skraft-state`/`skraft-todo-sync.instructions.md` — `node --test` 100 % + mutation Stryker ≥ 86 % |
 | S2 | Config repo-wide (configurateur `depthTier`) | ✅ Livré | `domain/config-schema.mjs` (pur), `application/config-service.mjs`, `adapters/infrastructure/config/json-config-{reader,writer}.mjs` (atomique + backup ≤3), `cli/config.mjs` (`init\|get\|set`), `skills/skraft-config/SKILL.md` (configurateur S7/A9), `skraft-config.json` (racine, versionné) — `node --test` 100 % + mutation Stryker ≥ 80 % |
 
@@ -56,6 +80,7 @@ plugins/src/
 │   ├── state-machine.mjs     # invariants I1-I9 (write-through)
 │   ├── config-schema.mjs     # depthTier repo-wide
 │   ├── observability-policy.mjs  # seuils + stale-phase + rétention (US12)
+│   ├── plugin-root-policy.mjs    # résolution racine plugin (US16)
 │   └── execution-log-schema.mjs
 ├── application/
 │   ├── pre-tool-use-service.mjs
@@ -96,6 +121,7 @@ plugins/src/
 │       │   ├── json-config-reader.mjs
 │       │   └── json-config-writer.mjs  # atomique + backup ≤3
 │       ├── system-time.mjs (+fixed)
+│       ├── plugin-root-resolver.mjs # glob cache + CLAUDE_PLUGIN_ROOT (US16)
 │       └── real-filesystem.mjs (+in-memory)
 └── cli/
     ├── hook.mjs               # ← appelé par hooks.json
@@ -137,7 +163,10 @@ plugins/src/
 | `SubagentStop` | — | G3 vérif + G4/G5 |
 | `PostToolUse` | `Agent` | G6 |
 
-### Copilot CLI — `.github/hooks/skraft.json`
+### Copilot CLI — `.github/hooks/skraft-framework.json`
+
+Chemins **relatifs depuis la racine du repo** (pas de `CLAUDE_PLUGIN_ROOT`),
+chaque entrée fournissant `bash` + `powershell` (Mac/Linux + Windows) :
 
 | Event | Garde activé |
 |---|---|
