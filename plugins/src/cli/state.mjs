@@ -2,7 +2,9 @@
 import { join } from 'node:path'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
+import { createJsonStateBackupReader } from '../adapters/infrastructure/state/json-state-backup-reader.mjs'
 import { createStateService } from '../application/state-service.mjs'
+import { createRecoveryService } from '../application/recovery-service.mjs'
 import { createGitCommitLogReader } from '../adapters/infrastructure/git-commit-log-reader.mjs'
 import { createCommitScanService } from '../application/commit-scan-service.mjs'
 
@@ -12,7 +14,9 @@ const basePath = process.env.SKRAFT_TRACKING_ROOT
 
 const stateReader = createJsonStateReader(basePath)
 const stateWriter = createJsonStateWriter(basePath)
+const backupReader = createJsonStateBackupReader(basePath)
 const service = createStateService({ stateReader, stateWriter })
+const recoveryService = createRecoveryService({ stateReader, stateWriter, backupReader, stateService: service })
 const commitScanService = createCommitScanService({
   commitLogReader: createGitCommitLogReader({ cwd: process.cwd() })
 })
@@ -203,6 +207,43 @@ async function run() {
       writeSuccess(result)
       // Non-zero exit signals rework-worthy commits without treating it as an IO/domain error.
       process.exitCode = result.nonConventional.length > 0 ? 1 : 0
+      break
+    }
+
+    case 'diagnose': {
+      // AC1: emit actionable WHY/HOW/ACTION guidance for the current state health.
+      const result = await recoveryService.diagnose(slug)
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
+      break
+    }
+
+    case 'rollback': {
+      // AC2: restore the most recent healthy backup (state.json.bak.*).
+      const result = await recoveryService.rollback(slug)
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
+      break
+    }
+
+    case 'resolve-stale': {
+      // AC3: reset the stuck phase retry budget so the phase can be relaunched.
+      const phase = arg('phase')
+      const result = await recoveryService.resolveStale(slug, phase)
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
       break
     }
 
