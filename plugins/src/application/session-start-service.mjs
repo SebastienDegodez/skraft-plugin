@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import {
   resolveObservabilityConfig,
   planAuditRetention,
@@ -53,7 +54,7 @@ export const createSessionStartService = ({
     try {
       const slugs = await filesystem.listDir(trackingRoot)
       for (const slug of slugs) {
-        const dir = `${trackingRoot}/${slug}`
+        const dir = join(trackingRoot, slug)
         let names
         try {
           names = (await filesystem.listDir(dir)).filter(isStaleSignalFile)
@@ -64,14 +65,14 @@ export const createSessionStartService = ({
         const entries = []
         for (const name of names) {
           try {
-            const { mtimeMs } = await filesystem.stat(`${dir}/${name}`)
+            const { mtimeMs } = await filesystem.stat(join(dir, name))
             entries.push({ name, mtimeMs })
           } catch { /* undatable → skip (never purged) */ }
         }
         const { purge } = planStaleSignals({ entries, nowMs: nowMs(), retentionDays })
         for (const name of purge) {
           try {
-            await filesystem.remove(`${dir}/${name}`)
+            await filesystem.remove(join(dir, name))
             purged += 1
           } catch (err) {
             warnings.push(`remove ${slug}/${name} failed: ${err.message}`)
