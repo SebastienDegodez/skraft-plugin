@@ -18,9 +18,10 @@ const deliverAgentsFrom = (config) => {
 // Extract the write signals from a normalised PreToolUse payload. Bash carries the
 // command; Write/Edit tools carry the file path (filePath or path).
 const writeSignals = (payload) => {
+  const toolName = payload.toolName
   const toolInput = payload.toolInput ?? {}
-  const command = typeof toolInput.command === 'string' ? toolInput.command : undefined
-  const filePath = toolInput.filePath ?? toolInput.path ?? undefined
+  const command = toolName === 'Bash' && typeof toolInput.command === 'string' ? toolInput.command : undefined
+  const filePath = (toolName === 'Write' || toolName === 'Edit') ? (toolInput.filePath ?? toolInput.path ?? undefined) : undefined
   return { command, filePath }
 }
 
