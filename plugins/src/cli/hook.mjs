@@ -43,7 +43,7 @@ const subagentStop  = createSubagentStopService({
   filesystem,
   commitVerifier
 })
-const postToolUse   = createPostToolUseService({ auditWriter, clock })
+const postToolUse   = createPostToolUseService({ auditWriter, clock, stateReader, config: frameworkConfig })
 
 // CLI flow is dead simple: stdin in, parse JSON, route hook, stdout out.
 let raw = ''
