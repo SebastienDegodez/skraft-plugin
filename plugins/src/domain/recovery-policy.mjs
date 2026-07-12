@@ -43,7 +43,10 @@ export const selectRollbackTarget = (backups) => {
   return candidates.length > 0 ? candidates[0] : null
 }
 
-const CLI = 'node cli/state.mjs'
+// Guidance `action` strings reference the CLI by the bare `state.mjs {subcommand}`
+// form used throughout skraft-state.instructions.md; they are indicative next-steps
+// for the orchestrator, not literal argv (the real entry is $CLAUDE_PLUGIN_ROOT/src/cli/state.mjs).
+const CLI = 'state.mjs'
 
 // Produces actionable guidance for a diagnosis, structured as WHY / HOW / ACTION.
 //   diagnosis: { code, slug, reason, backupCount, phase }

@@ -27,7 +27,7 @@ async function stateCli(args, { basePath }) {
     const { stdout, stderr } = await execFileAsync('node', [CLI, ...args], { env })
     return { exitCode: 0, stdout, stderr }
   } catch (err) {
-    return { exitCode: err.code ?? 1, stdout: err.stdout ?? '', stderr: err.stderr ?? '' }
+    return { exitCode: err.exitCode ?? err.code ?? 1, stdout: err.stdout ?? '', stderr: err.stderr ?? '' }
   }
 }
 

@@ -35,6 +35,7 @@ function domainExitCode(code) {
   if (code === 'INVALID_STATE') return 3
   return 1
 }
+
 function writeError(code, reason) {
   process.stderr.write(JSON.stringify({ code, reason }) + '\n')
 }
