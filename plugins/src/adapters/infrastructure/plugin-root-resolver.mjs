@@ -1,4 +1,4 @@
-import { globSync } from 'node:fs'
+import * as fs from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,6 +7,7 @@ import {
   resolvePluginRoot,
 } from '../../domain/plugin-root-policy.mjs'
 
+const globSync = fs.globSync
 // Infrastructure adapter for US16 plugin-root resolution. Owns the IO the pure
 // domain policy can't do: reading the home dir and globbing the Claude Code
 // plugin cache. globSync (Node ≥ 22) accepts forward-slash patterns on Windows
