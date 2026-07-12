@@ -211,7 +211,7 @@ On first invocation, create the state with `state.mjs init --slug {projectSlug}`
 
 When a session starts or resumes, rehydrate exactly once:
 
-1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount[currentPhase]`, `difficulty`, `entryPoint`, `adrRatification`.
+1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount` (the full phase-keyed map, not only the current phase), `reviewArtifacts`, `difficulty`, `entryPoint`, `adrRatification`.
 2. **Project** the pipeline into the native todo working set per `#file:plugins/instructions/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
 3. **Identify** pending work from the todo list: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
 4. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).

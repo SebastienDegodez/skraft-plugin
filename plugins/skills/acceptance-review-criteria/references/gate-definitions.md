@@ -166,24 +166,23 @@ the rendered result; the real visual regression risk is uncaught.
 
 ---
 
-### G10 — Comparable Consumer Convention Traceability (issue #115)
+### G10 — Comparable Contract Consistency
 
-**Definition:** When `impl-plan-{story}.md` introduces a client-side consumer (hook/adapter) over a port comparable to one already covered by a sibling `impl-plan-*.md` — same shape class: list query, single-item query, command with optimistic update, ... — the plan names the prior consumer. It then states whether the convention (returned state shape, error handling, invalidation trigger) is the same, or a justified divergence citing the `contracts-{story}.md` divergence note required by `architecture-review-criteria` G16. This is the DISTILL-side companion to DESIGN's G16: G16 catches the divergence in the contract, and G10 catches it again in the implementation plan, one phase before DELIVER would otherwise surface it as a late finding.
+**Definition:** When `impl-plan-{story}.md` plans a component (hook, adapter, client) that plays the same role as one already implemented in a prior story for a comparable responsibility (e.g. two React hooks each wrapping a similar query, two API clients for sibling endpoints), the planned state/return/error convention must match the existing component's — same loading/error/data shape, same naming for the exposed fields — unless the impl-plan explicitly notes and justifies the divergence.
 
 **How to check:**
-1. List every consumer (hook/adapter) named in `impl-plan-{story}.md` and the port/interface it wraps.
-2. Search sibling `impl-plan-*.md` files for a consumer wrapping a comparable port.
-3. When found, confirm the current plan names the sibling and declares "same convention" or points at the contract's inline divergence note.
-4. No comparable sibling in scope → gate passes vacuously.
+1. List the components (hooks/adapters/clients) named in `impl-plan-{story}.md`, grouped by consumer category with any comparable components from prior stories' impl-plans or existing code.
+2. For each group, compare the planned state/return/error shape.
+3. Flag any pair whose shape differs with no justification recorded in the impl-plan notes.
 
-**Auto-fail examples:**
-- `impl-plan-US-07.md` adds `useDriverHistory()` (a query hook) with no mention of the earlier `useDriverEligibility()` query hook from `impl-plan-US-04.md`, and the two hooks' planned return shapes differ (`{data, isLoading, error}` vs `{status, value, err}`). → G10 HIGH fail.
+**Auto-fail example:**
+```
+impl-plan-US-01.md: useDriverEligibility → { data, error, loading }
+impl-plan-US-04.md: useDriverHistory      → { result, isError, pending }  (no rationale noted)
+```
 
-**Pass examples:**
-- `impl-plan-US-07.md` states: "`useDriverHistory` follows the same `{data, isLoading, error}` convention as `useDriverEligibility` (impl-plan-US-04)." → G10 pass.
-- `impl-plan-US-09.md` states: "`usePolicyDraft` diverges from `useDriverHistory`'s convention per the divergence note in `contracts-US-09.md`." → G10 pass.
-
-**Severity:** HIGH — undetected here, this class of drift becomes a DELIVER-phase rework finding.
+**Severity:** HIGH — an unexplained convention drift between comparable components is only caught
+during DELIVER integration otherwise, after both implementations are already written.
 
 ---
 
@@ -200,4 +199,4 @@ the rendered result; the real visual regression risk is uncaught.
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
 | G8 | boundary-enforcement | ≥1 walking skeleton per flow | HIGH |
 | G9 | boundary-enforcement | `@visual` scenarios ↔ Playwright E2E spec bijection | HIGH |
-| G10 | boundary-enforcement | Comparable consumer convention traceability across impl-plans | HIGH |
+| G10 | boundary-enforcement | Comparable hooks/adapters/clients share a consistent convention | HIGH |
