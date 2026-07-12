@@ -36,6 +36,10 @@ export default {
     // Issue #105/#106 — commit-convention scan for manual DELIVER closure
     'plugins/src/domain/commit-convention.mjs',
     'plugins/src/application/commit-scan-service.mjs',
+    // US12 — Observabilité (timeout/stale + health-check + housekeeping) (#58)
+    'plugins/src/domain/observability-policy.mjs',
+    'plugins/src/application/health-check-service.mjs',
+    'plugins/src/application/session-start-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },
