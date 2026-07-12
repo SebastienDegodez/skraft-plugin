@@ -110,7 +110,7 @@ const main = () => {
       fail(`cannot read data file: ${err.message}`)
     }
   } else {
-    if (process.stdin.isTTY) fail('no payload: pipe YAML/JSON on stdin (heredoc) or pass --data <file>')
+    if (process.stdin.isTTY) fail('no payload: provide YAML/JSON via stdin or use --data <file>')
     try {
       raw = readFileSync(0, 'utf8')
     } catch (err) {
