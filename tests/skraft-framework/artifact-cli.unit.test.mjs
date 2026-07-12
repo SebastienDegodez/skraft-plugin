@@ -27,6 +27,12 @@ test('artifact-registry: template paths are relative to the plugin root (no "plu
   }
 })
 
+test('artifact-registry: every registered template path resolves to a real file under the plugin root', () => {
+  for (const [type, spec] of Object.entries(ARTIFACTS)) {
+    assert.doesNotThrow(() => readTemplate(spec.template), `${type}: cannot read ${spec.template}`)
+  }
+})
+
 test('validate + renderArtifact: full review-comment payload renders via the shipped templates dir', () => {
   const result = validate('review-comment', fullComment())
   assert.equal(result.ok, true)

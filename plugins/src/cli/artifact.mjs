@@ -26,7 +26,8 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseYaml } from '../domain/yaml-parser.mjs'
-import { ARTIFACTS, validate, renderArtifact } from '../application/render-artifact.mjs'
+import { ARTIFACTS, validate } from '../domain/artifact-registry.mjs'
+import { renderArtifact } from '../application/render-artifact.mjs'
 
 // Resolve the plugin root the same way regardless of install location: this file
 // always lives at {pluginRoot}/src/cli/artifact.mjs.
