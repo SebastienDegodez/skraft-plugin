@@ -20,7 +20,7 @@ export const pluginCacheGlobPattern = (homeDir) => {
   return `${base}/${CLAUDE_PLUGIN_CACHE_GLOB}`
 }
 
-// Deterministic root selection. Never throws; always returns a usable root.
+// Deterministic root selection. Never throws; returns env/cache/moduleRoot (can be undefined).
 //   envRoot     — value of CLAUDE_PLUGIN_ROOT (string | undefined).
 //   cacheRoots  — plugin roots discovered via the cache glob (already derived,
 //                 sorted ascending by the caller; the last = newest install).
