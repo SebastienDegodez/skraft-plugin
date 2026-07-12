@@ -11,9 +11,11 @@ import { createPostToolUseService } from '../application/post-tool-use-service.m
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createRealFilesystem } from '../adapters/infrastructure/real-filesystem.mjs'
 import { createGitCommitVerifier } from '../adapters/infrastructure/git-commit-verifier.mjs'
+import { resolvePluginRootFromEnv } from '../adapters/infrastructure/plugin-root-resolver.mjs'
 
-// Resolve paths from CLAUDE_PLUGIN_ROOT (set by Claude Code harness) or process.cwd().
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT ?? join(new URL('.', import.meta.url).pathname, '../../..')
+// Resolve the plugin root (US16): CLAUDE_PLUGIN_ROOT (harness-injected) →
+// cache glob (~/.claude/plugins/cache/*/skraft/*) → module-relative fallback.
+const pluginRoot = resolvePluginRootFromEnv({ moduleUrl: import.meta.url })
 const auditLogPath = process.env.SKRAFT_AUDIT_LOG ?? join(pluginRoot, 'logs', 'skill-audit.jsonl')
 const configPath = process.env.SKRAFT_CONFIG ?? join(pluginRoot, 'skraft-framework.config.json')
 // Same tracking root convention as cli/state.mjs (S7 CLI bridge).

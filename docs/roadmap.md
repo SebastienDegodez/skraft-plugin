@@ -274,7 +274,7 @@ Extensions planifiées au-delà des 13 US initiales :
 
 - **US14 #60** — State transition bridge (S7) — écriture déterministe de `state.json` — ✅ Livré (voir [S1](#s1))
 - **US15 #61** — Schéma d'état source-unique (SoC)
-- **US16 #63** — Déploiement des hooks dans le projet consumer
+- **US16 #63** — Déploiement des hooks dans le projet consumer — ✅ Livré (`domain/plugin-root-policy.mjs` + `adapters/infrastructure/plugin-root-resolver.mjs` : résolution `CLAUDE_PLUGIN_ROOT` → glob cache `~/.claude/plugins/cache/*/skraft/*` → module-relatif, cross-platform ; Copilot CLI via chemins relatifs)
 
 ---
 
