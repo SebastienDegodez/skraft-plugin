@@ -46,6 +46,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 | `set-difficulty` | `--slug --value {tier}` | Set `difficulty` (write-once; rejects if already set). |
 | `incr-retry` | `--slug --phase {P}` | Increment `retryCount[phase]` (capped at `maxRetriesPerPhase`). |
 | `close-phase` | `--slug --phase {P} --verdict APPROVED [--artifact {rel}]` | Composite: record `verdicts[phase]`, append `reviewArtifacts[phase]` (if `--artifact` given), and advance `currentPhase` — one call, one write. |
+| `scan-commits` | `[--count N]` (default `20`) | No `--slug`. Read-only; never writes. Lists the N most recent HEAD commits and flags subjects that don't match `type(scope): subject` (G8). Exit `0` when all conventional, `1` otherwise. |
 
 Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` (written once at Phase 0), `adrRatification` (written at the DESIGN human checkpoint), and `phaseHistory` / `neighborPlanners` / `nextActions` / `referencesProcessed` — is edited directly on the snapshot. This is safe: the CLI's validator preserves every field on rewrite (round-trip fidelity), so a later CLI write never drops a hand-edited field. Everything invariant-bearing (verdicts, phase advance, artifacts, difficulty, retry) goes through the CLI.
 
@@ -182,6 +183,14 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" close-phase --slug {projectSlug} --
 ```
 
 `close-phase` atomically performs, in one write: `record-verdict --verdict APPROVED` for `{P}`, `record-review-artifact` (only when `--artifact` is given), then advances `currentPhase` to the next phase in order (`DONE` after DELIVER). `--phase` must equal the current `currentPhase` (rejected with `PHASE_MISMATCH` otherwise) and `--verdict` must be `APPROVED` (rejected with `VERDICT_NOT_APPROVED` otherwise) — `close-phase` only ever closes forward, never records a `CHANGES_REQUESTED` disposition. Use `record-verdict` + `incr-retry` for that case instead.
+
+**Before closing DELIVER manually, scan for stray auto-commit-hook messages.** Some environments run an external commit hook that auto-commits at session end with a generic non-conventional message (e.g. `Copilot CLI session ... changes`) instead of the `type(scope): subject` format the TDD workflow expects — even when the commit's actual content is a real RED/GREEN step. Run `scan-commits` first and amend/rebase any flagged commit before calling `close-phase`:
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" scan-commits --count 20
+```
+
+Exits `0` (all recent commits conventional) or `1` with a `nonConventional` list of `{ sha, subject }` pairs. For each flagged commit, rename it in place (`git commit --amend -m 'type(scope): subject'` for HEAD, or a targeted interactive rebase for older commits) before proceeding to `close-phase`.
 
 ### State creation
 
