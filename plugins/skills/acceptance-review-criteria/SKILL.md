@@ -11,7 +11,7 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 
 ---
 
-## Gate Definitions (G1–G9)
+## Gate Definitions (G1–G10)
 
 ### Lens 1: coverage-lens
 
@@ -62,12 +62,20 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 | Layer boundary compliance | G7 | Each row in the coverage matrix targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter directly as its primary entry point. | All coverage matrix entries reference a use case boundary from the contracts. | BLOCKER |
 | Walking skeleton coverage | G8 | At least one walking skeleton scenario per major feature flow is identified in the test plan (tagged `@smoke` or marked Walking Skeleton in the matrix). | ≥1 walking skeleton entry per feature flow. | HIGH |
 | Visual AC evidence | G9 | Every `@visual` scenario has ≥1 Playwright E2E spec in `tests/e2e/` per `impl-plan-{story}.md`. jsdom/unit entry invalid. | Bijection `@visual` scenarios ↔ Playwright E2E spec entries. | HIGH |
+| Comparable consumer convention traceability | G10 | When `impl-plan-{story}.md` introduces a consumer (hook/adapter) over a port comparable to one already covered in a prior/sibling `impl-plan-*.md`, it names the prior consumer and either confirms the same convention (state shape, error handling) or cites the contract's inline divergence note (`architecture-review-criteria` G16). This is the DISTILL-side check that catches the same convention-drift class one phase earlier than DELIVER. | Every impl-plan entry for a comparable consumer names the prior sibling and its convention status (same \| justified divergence). | HIGH |
 
 **Checking G9:**
 1. List all scenarios tagged `@visual` in the `.feature` files
 2. List all `tests/e2e/` spec entries in `impl-plan-{story}.md`
 3. Verify each `@visual` scenario maps to ≥1 E2E spec performing a real measurement (`boundingBox()`, computed colour/style)
 4. Flag any `@visual` scenario whose only planned coverage is a unit/jsdom test
+
+**Checking G10:**
+1. List every client-side consumer (hook/adapter) named in `impl-plan-{story}.md` and the port it wraps.
+2. Scan sibling `impl-plan-*.md` files (other stories in the same or prior milestones) for a consumer wrapping a comparable port (same shape class: list query, single-item query, command with optimistic update, ...).
+3. When a comparable prior consumer exists, confirm `impl-plan-{story}.md` names it and states either "same convention as `{prior}`" or cites the `contracts-{story}.md` divergence note.
+4. No comparable prior consumer in scope → gate is vacuously satisfied (nothing to compare against).
+5. A named prior consumer with no convention statement, or a silent state-shape difference undetected by the plan → G10 HIGH fail.
 
 ---
 
@@ -125,7 +133,7 @@ vocabulary. Not a technical identifier. Verdict remains approved."
 | `fail` | ≥1 gate in this lens has a finding. |
 
 Each finding includes:
-- `gate` — G1 through G9
+- `gate` — G1 through G10
 - `severity` — BLOCKER / HIGH / MEDIUM / LOW
 - `finding` — plain-language description of the problem
 - `location` — file path and line/scenario reference

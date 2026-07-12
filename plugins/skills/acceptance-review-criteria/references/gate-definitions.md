@@ -1,4 +1,4 @@
-# Gate Definitions G1–G9
+# Gate Definitions G1–G10
 
 Formal checklist for the `acceptance-designer-reviewer`. One section per lens.
 
@@ -166,6 +166,27 @@ the rendered result; the real visual regression risk is uncaught.
 
 ---
 
+### G10 — Comparable Consumer Convention Traceability (issue #115)
+
+**Definition:** When `impl-plan-{story}.md` introduces a client-side consumer (hook/adapter) over a port comparable to one already covered by a sibling `impl-plan-*.md` (same shape class: list query, single-item query, command with optimistic update, ...), the plan names the prior consumer and states whether the convention (returned state shape, error handling, invalidation trigger) is the same or a justified divergence (citing the `contracts-{story}.md` divergence note required by `architecture-review-criteria` G16). This is the DISTILL-side half of the same check: DESIGN's G16 catches the divergence in the contract; G10 catches it again in the implementation plan, one phase before DELIVER would otherwise surface it as a late finding.
+
+**How to check:**
+1. List every consumer (hook/adapter) named in `impl-plan-{story}.md` and the port/interface it wraps.
+2. Search sibling `impl-plan-*.md` files for a consumer wrapping a comparable port.
+3. When found, confirm the current plan names the sibling and declares "same convention" or points at the contract's inline divergence note.
+4. No comparable sibling in scope → gate passes vacuously.
+
+**Auto-fail examples:**
+- `impl-plan-US-07.md` adds `useDriverHistory()` (a query hook) with no mention of the earlier `useDriverEligibility()` query hook from `impl-plan-US-04.md`, and the two hooks' planned return shapes differ (`{data, isLoading, error}` vs `{status, value, err}`). → G10 HIGH fail.
+
+**Pass examples:**
+- `impl-plan-US-07.md` states: "`useDriverHistory` follows the same `{data, isLoading, error}` convention as `useDriverEligibility` (impl-plan-US-04)." → G10 pass.
+- `impl-plan-US-09.md` states: "`usePolicyDraft` diverges from `useDriverHistory`'s convention per the divergence note in `contracts-US-09.md`." → G10 pass.
+
+**Severity:** HIGH — undetected here, this class of drift becomes a DELIVER-phase rework finding.
+
+---
+
 ## Quick Reference
 
 | Gate | Lens | Check | Severity |
@@ -179,3 +200,4 @@ the rendered result; the real visual regression risk is uncaught.
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
 | G8 | boundary-enforcement | ≥1 walking skeleton per flow | HIGH |
 | G9 | boundary-enforcement | `@visual` scenarios ↔ Playwright E2E spec bijection | HIGH |
+| G10 | boundary-enforcement | Comparable consumer convention traceability across impl-plans | HIGH |

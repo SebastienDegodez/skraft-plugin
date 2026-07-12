@@ -72,6 +72,30 @@ The superseded ADR's file is **never** edited — the `docs/adr/` directory is a
 
 ---
 
+### G16 — Consumer Convention Consistency (issue #115)
+
+**Lens:** consistency-lens
+**Severity:** HIGH
+
+**Definition:** When two or more contracts define client-side consumers (React hooks, CLI adapters, SDK wrappers, ...) of ports/interfaces that share the same shape class — e.g. two hooks each wrapping a query port that returns list data, or two hooks each wrapping a command port with an optimistic update — their consumption conventions must be consistent: the shape of the returned loading/error/success state, the naming of returned tuple/object fields, the cache-invalidation trigger, and the optimistic-update strategy. A pair may diverge only when the contract carries an inline justification (`Diverges from {other-consumer} because {reason}`). This gate exists specifically to catch the class of finding that otherwise surfaces late in DELIVER (e.g. two React hooks over comparable ports returning incompatible state shapes), rather than in DESIGN where it is cheap to fix.
+
+**Step-by-step check:**
+1. Open all `contracts-{story}.md` files in scope (including prior stories already merged, when the current batch adds a comparable consumer). List every client-side consumer (hook/adapter/wrapper) and the port/interface it wraps.
+2. Group consumers by shape class: same port category (query returning a collection, query returning a single item, command with optimistic update, command without) and same comparable domain shape.
+3. Within each group, compare: returned state shape (e.g. `{data, isLoading, error}` vs `{status, value, err}`), field names, invalidation trigger, optimistic-update strategy.
+4. Any divergence with no inline justification note in the contract → G16 HIGH fail.
+5. A single consumer with no comparable sibling in scope is exempt (nothing to compare against yet).
+
+**Auto-fail examples:**
+- `contracts-US-04.md` defines `useDriverEligibility()` returning `{ data, isLoading, error }`; `contracts-US-07.md` defines `useDriverHistory()` — a comparable query hook over a sibling port — returning `{ status, value, err }`, with no divergence note. → G16 HIGH fail.
+- Two comparable command hooks: one rolls back optimistic state on failure, the other leaves it applied; contract does not explain why. → G16 HIGH fail.
+
+**Pass examples:**
+- `useDriverEligibility()` and `useDriverHistory()` both return `{ data, isLoading, error }` and both invalidate on the same event class. → G16 pass.
+- `usePolicyDraft()` intentionally returns `{ status: 'idle' | 'saving' | 'saved' | 'error' }` instead of the standard shape; the contract states: "Diverges from `useDriverHistory` because draft saves are multi-step and need an intermediate `saving` state the boolean-flag shape cannot express." → G16 pass.
+
+---
+
 ## Lens 2 — architecture-compliance-lens
 
 Evaluates: diagrams + contracts + event models

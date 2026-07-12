@@ -31,6 +31,15 @@ All other phases follow the same convention: `discuss/ac-draft-{story}.md`, `des
 
 ## Playwright Setup (TypeScript)
 
+**Before running any E2E suite, rebuild and restart Docker dependency containers.** A container left running from a prior session (or from a previous story) is a stale environment: the E2E test exercises code that was already replaced, and a pass against it is a false positive (issue #115 — one of the findings that reached DELIVER late was exactly this: an E2E test silently passing against a stale Docker container).
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
+Wait for health checks to report ready (`docker compose ps` shows all dependency services `healthy`/`running`, not just `Up`) before invoking `npx playwright test`. If the project has no `docker-compose.yml`, this step does not apply — do not invent one.
+
 Install dependencies:
 
 ```bash
