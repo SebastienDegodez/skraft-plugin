@@ -72,6 +72,43 @@ dotnet stryker --version
 # If fails: dotnet tool install -g dotnet-stryker
 ```
 
+### Frontend (`npx stryker run`) — different flag syntax
+
+⚠️ **`dotnet stryker` and `npx stryker run` do NOT share the same reporter
+flag.** Do not copy `-r`/`--reporter` between stacks:
+
+| Stack | Flag | Syntax |
+|-------|------|--------|
+| `dotnet stryker` (.NET) | `-r` / `--reporter` | repeatable, one value each: `-r json -r cleartext` |
+| `npx stryker run` (JS/TS) | `--reporters` | single flag, comma-separated: `--reporters clear-text,json` |
+
+```bash
+npx stryker run --reporters clear-text,json --mutate "src/path/to/changed-file.ts"
+```
+
+The frontend JSON reporter always writes to the **same fixed path**
+(`reports/mutation/mutation.json`), overwriting it on every run — unlike
+`dotnet stryker`, which creates a fresh timestamped `StrykerOutput/<run>/`
+directory each time. **Before parsing `reports/mutation/mutation.json`,
+verify it was written by the run you just triggered** (e.g. compare its
+mtime to the time the command started), otherwise a scoped run may be
+analyzed against a stale, wider report from a previous full run:
+
+```bash
+date +%s > /tmp/run-start.txt
+npx stryker run --reporters clear-text,json --mutate "src/path/to/changed-file.ts"
+node -e '
+  const fs = require("fs");
+  const start = Number(fs.readFileSync("/tmp/run-start.txt", "utf8").trim());
+  const mtime = fs.statSync("reports/mutation/mutation.json").mtimeMs / 1000;
+  if (mtime < start) { console.error("STALE REPORT — do not parse"); process.exit(1); }
+'
+```
+
+For scoped/fast runs, prefer parsing the `clear-text` reporter's stdout
+output directly instead of the JSON file — it always reflects the current
+run and avoids the staleness risk entirely.
+
 ## Step 2: Parse Results (via terminal)
 
 Extract survivors from the JSON report:
@@ -81,7 +118,8 @@ jq '[.files | to_entries[] | {file: .key, survivors: [.value.mutants[] | select(
   StrykerOutput/$(ls -t StrykerOutput | head -1)/reports/mutation-report.json
 ```
 
-If `jq` is unavailable, use the `cleartext` reporter output directly.
+If `jq` is unavailable, or you are running a scoped frontend run, use the
+`cleartext`/`clear-text` reporter output directly.
 
 ## Step 3: Classify Survivors
 
