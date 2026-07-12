@@ -155,7 +155,7 @@ When a phase — most commonly DELIVER — ends through a series of human-valida
 The `--artifact` file is a review artifact like any other, so render it from data through the `review-verdict` artifact command — never hand-write the markdown (same convention reviewer sub-agents follow). Then pass the rendered path to `close-phase`:
 
 ```bash
-node scripts/artifact.mjs review-verdict \
+node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/manual-close.md <<'EOF'
 phase: {P}
 projectSlug: {projectSlug}

@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { parseYaml } from '../../../scripts/lib/book.mjs'
+import { parseYaml } from '../domain/yaml-parser.mjs'
 import { buildFrameworkConfig } from '../domain/framework-config-policy.mjs'
 import { validateDispatch } from '../domain/dispatch-policy.mjs'
 
