@@ -77,7 +77,7 @@ dotnet stryker \
   -tp <UnitTests.csproj> \
   --since:main \
   --break-at 100 \
-  -r json -r cleartext
+  --reporter json --reporter cleartext
 ```
 2. Parse output — extract survivors.
 3. For real survivors → write boundary test → re-run scoped.

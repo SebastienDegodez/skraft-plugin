@@ -47,7 +47,7 @@ dotnet stryker \
   -tp <Tests.csproj> \
   --since:main \
   --break-at 100 \
-  -r json -r cleartext
+  --reporter json --reporter cleartext
 ```
 
 ### Before merge (full business logic)
@@ -62,7 +62,7 @@ dotnet stryker \
   --mutate "!**/obj/**" \
   --break-at 100 \
   --threshold-high 90 --threshold-low 80 \
-  -r json -r cleartext
+  --reporter json --reporter cleartext
 ```
 
 ### Tool availability check
@@ -156,7 +156,7 @@ For each real survivor:
      -tp <Tests.csproj> \
      --mutate "**/<FileWithSurvivor>.cs" \
      --break-at 100 \
-     -r cleartext
+     --reporter cleartext
    ```
 
 ## Step 5: Gate Decision
