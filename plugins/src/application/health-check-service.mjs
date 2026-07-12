@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { resolveObservabilityConfig, detectStalePhase } from '../domain/observability-policy.mjs'
 
 // Application use case (US12): health-check diagnostics. Assembles a fail-open report
@@ -66,7 +67,7 @@ export const createHealthCheckService = ({
     catch { return phases }
 
     for (const slug of slugs) {
-      const statePath = `${trackingRoot}/${slug}/state.json`
+      const statePath = join(trackingRoot, slug, 'state.json')
       let currentPhase = null
       let lastUpdatedMs = null
       const r = await readJson(statePath)
