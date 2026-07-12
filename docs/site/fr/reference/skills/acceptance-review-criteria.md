@@ -31,7 +31,7 @@ persona: tech-lead
 
 ## Invariants
 
-- **8 gates (G1–G8)** réparties sur 4 lenses — aucune gate ne peut être ignorée
+- **9 gates (G1–G9)** réparties sur 4 lenses — aucune gate ne peut être ignorée
 - **Un seul BLOCKER suffit à déclencher `rejected`** — G1, G4, G7 sont toujours des BLOCKERs
 - **Pas de correction silencieuse** — un minority finding est toujours documenté même s'il est overridé
 - **La dissidence est tracée** — quand 3 lenses passent et 1 échoue, le raisonnement d'override est explicite
@@ -46,6 +46,7 @@ persona: tech-lead
 | G6 | Testabilité | HIGH | Bijection scénarios feature ↔ entrées du plan d'implémentation |
 | G7 | Frontières | BLOCKER | Chaque entrée de la matrice de couverture cible un cas d'utilisation Application |
 | G8 | Frontières | HIGH | ≥1 scénario walking skeleton par flux fonctionnel principal |
+| G9 | Frontières | HIGH | Chaque scénario tagué `@visual` a ≥1 spec E2E Playwright correspondante dans `tests/e2e/` |
 
 ## Pourquoi cette forme
 
@@ -58,7 +59,7 @@ Les revues adversariales par lenses indépendantes réduisent le biais de confir
 
 - Seuil de confiance à partir duquel une revue est considérée incomplète (L2)
 - Messages de dissent (L1)
-- Sévérité des gates G2, G5, G6, G8 (L2 — ne pas descendre sous HIGH)
+- Sévérité des gates G2, G5, G6, G8, G9 (L2 — ne pas descendre sous HIGH)
 
 ## Voir aussi
 

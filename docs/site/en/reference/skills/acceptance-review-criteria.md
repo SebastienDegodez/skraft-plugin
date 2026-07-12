@@ -31,7 +31,7 @@ persona: tech-lead
 
 ## Invariants
 
-- **8 gates (G1–G8)** spread across 4 lenses — no gate may be skipped
+- **9 gates (G1–G9)** spread across 4 lenses — no gate may be skipped
 - **A single BLOCKER forces `rejected`** — G1, G4, G7 are always BLOCKERs
 - **No silent correction** — a minority finding is always documented even when overridden
 - **Dissent is traced** — when 3 lenses pass and 1 fails, the override reasoning is explicit
@@ -46,6 +46,7 @@ persona: tech-lead
 | G6 | Testability | HIGH | Feature scenarios ↔ implementation plan entries bijection |
 | G7 | Boundary Enforcement | BLOCKER | Every coverage-matrix row targets an Application use case boundary |
 | G8 | Boundary Enforcement | HIGH | ≥1 walking skeleton scenario per major feature flow |
+| G9 | Boundary Enforcement | HIGH | Every `@visual`-tagged scenario has ≥1 matching Playwright E2E spec in `tests/e2e/` |
 
 ## Why this shape
 
@@ -58,7 +59,7 @@ Adversarial lens-by-lens reviews reduce confirmation bias: each lens applies a s
 
 - Confidence threshold at which a review is considered incomplete (L2)
 - Dissent messages (L1)
-- Severity of gates G2, G5, G6, G8 (L2 — do not lower below HIGH)
+- Severity of gates G2, G5, G6, G8, G9 (L2 — do not lower below HIGH)
 
 ## See also
 
