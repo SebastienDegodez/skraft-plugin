@@ -102,17 +102,14 @@ background colour, relative alignment between two elements) is closed ONLY by a 
 performing a real measurement (`boundingBox()`, computed colour, computed layout) against a real
 browser engine. A jsdom/unit test is NOT a valid closure for this AC type.
 
-**Why:** jsdom has no real layout engine — `getBoundingClientRect()` returns zeros unconditionally.
-A passing unit assertion on position/size is structurally a proxy (DOM order, CSS class presence),
-never proof of the rendered result. Without this mandate, a contributor following only the unit TDD
-loop can legitimately believe a visual AC is verified while the real regression risk (broken CSS,
-wrong mount point, wrong z-index) goes uncaught unless someone explicitly writes the Playwright test.
+**Why:** jsdom has no layout engine (`getBoundingClientRect()` → zeros). Unit assertions proxy via
+DOM order/class presence, not rendered proof. Without this mandate, a unit-TDD-only contributor
+believes the AC is verified while CSS/mount/z-index regressions go uncaught.
 
 **Enforcement:**
-- Tag the corresponding Gherkin scenario `@visual` (see `bdd-methodology` Tag Strategy).
-- Add a coverage-matrix row with `Layer = E2E` and `Double Type = Real browser (Playwright)`.
-- A `@visual`-tagged scenario with no matching Playwright spec under `tests/e2e/` is a coverage gap —
-  block the story until the spec exists (checked at review time by `acceptance-review-criteria` Gate G9).
+- Tag scenario `@visual` (see `bdd-methodology`).
+- Add matrix row: `Layer = E2E`, `Double Type = Real browser (Playwright)`.
+- `@visual` w/o `tests/e2e/` spec → coverage gap, block story (G9 check).
 
 ---
 

@@ -61,7 +61,7 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Layer boundary compliance | G7 | Each row in the coverage matrix targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter directly as its primary entry point. | All coverage matrix entries reference a use case boundary from the contracts. | BLOCKER |
 | Walking skeleton coverage | G8 | At least one walking skeleton scenario per major feature flow is identified in the test plan (tagged `@smoke` or marked Walking Skeleton in the matrix). | ≥1 walking skeleton entry per feature flow. | HIGH |
-| Visual AC evidence | G9 | Every scenario tagged `@visual` (visual/positional/style AC per `bdd-methodology`) has ≥1 corresponding Playwright E2E spec under `tests/e2e/` referenced in `impl-plan-{story}.md`. A jsdom/unit test entry does NOT satisfy this gate. | Bijection `@visual` scenarios ↔ Playwright E2E spec entries. | HIGH |
+| Visual AC evidence | G9 | Every `@visual` scenario has ≥1 Playwright E2E spec in `tests/e2e/` per `impl-plan-{story}.md`. jsdom/unit entry invalid. | Bijection `@visual` scenarios ↔ Playwright E2E spec entries. | HIGH |
 
 **Checking G9:**
 1. List all scenarios tagged `@visual` in the `.feature` files
