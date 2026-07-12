@@ -112,7 +112,7 @@ test('G6: injects next-step continuation after a successful sub-agent (ADVANCE)'
   const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
   const result = await service.handle({ toolName: 'Agent', agentName: 'backlog-discoverer-reviewer', projectSlug: 'my-project' })
   assert.equal(result?.decision, 'additionalContext')
-  assert.match(result.context, /next step/i)
+  assert.match(result.context, /next/i)
   assert.match(result.context, /backlog-planner/)
   assert.equal(audit.entries.length, 1)
   assert.equal(audit.entries[0].eventType, 'ContinuationInjected')

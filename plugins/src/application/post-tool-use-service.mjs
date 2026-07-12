@@ -29,16 +29,16 @@ const describeContinuation = (expected, phase, agentName) => {
   if (isOk(expected)) {
     const { agent, stage, reason } = expected.value
     if (stage === 'RETRY') {
-      // Reviewer requested changes → ask the orchestrator to re-dispatch with the gaps.
+      // Reviewer requested changes → ask orchestrator to re-dispatch with gaps.
       return {
-        context: `SKRAFT G6 continuation — the ${phase} reviewer requested changes. ` +
-          `Re-dispatch ${agent} to address the reviewer's recorded gaps for ${phase} before advancing. ${reason}`,
+        context: `SKRAFT G6 — ${phase} reviewer requested changes. ` +
+          `Re-dispatch ${agent} to address reviewer's recorded gaps for ${phase} before advancing. ${reason}`,
         audit: { eventType: 'ContinuationInjected', agentName, phase, stage, expectedAgent: agent, kind: 'REDISPATCH' }
       }
     }
-    // Success → remind the orchestrator of the next phase/step to dispatch.
+    // Success → remind orchestrator of next phase/step to dispatch.
     return {
-      context: `SKRAFT G6 continuation — next step: dispatch ${agent} (${stage}) for ${phase}. ${reason}`,
+      context: `SKRAFT G6 — next: dispatch ${agent} (${stage}) for ${phase}. ${reason}`,
       audit: { eventType: 'ContinuationInjected', agentName, phase, stage, expectedAgent: agent, kind: 'NEXT_STEP' }
     }
   }
@@ -46,17 +46,17 @@ const describeContinuation = (expected, phase, agentName) => {
   const { code, reason } = expected.error
   if (code === 'PIPELINE_COMPLETE') {
     return {
-      context: `SKRAFT G6 continuation — the pipeline completed its final phase ${phase}. ${reason}`,
+      context: `SKRAFT G6 — pipeline completed final phase ${phase}. ${reason}`,
       audit: { eventType: 'ContinuationInjected', agentName, phase, kind: 'COMPLETE' }
     }
   }
   if (code === 'RETRY_EXHAUSTED') {
     return {
-      context: `SKRAFT G6 continuation — ${phase} exhausted its retry budget; escalate to the user rather than re-dispatching. ${reason}`,
+      context: `SKRAFT G6 — ${phase} exhausted retry budget; escalate to user instead of re-dispatching. ${reason}`,
       audit: { eventType: 'ContinuationInjected', agentName, phase, kind: 'ESCALATE' }
     }
   }
-  // INVALID_STATE (or any unresolvable state) → inject nothing, stay out of the way.
+  // INVALID_STATE (or any unresolvable state) → inject nothing, stay out of way.
   return {
     context: null,
     audit: { eventType: 'ContinuationInjected', agentName, phase, kind: 'SKIPPED', reason }
@@ -66,7 +66,7 @@ const describeContinuation = (expected, phase, agentName) => {
 export const createPostToolUseService = ({ auditWriter, clock, stateReader, config } = {}) => {
   // G6: derive and inject the orchestrator continuation for a finished sub-agent.
   const continuationFor = async ({ agentName, projectSlug }) => {
-    // Unconfigured deployments (no state port / no slug) skip G6 entirely — fail-open.
+    // No stateReader/slug → skip G6, fail-open.
     if (!stateReader || !projectSlug) return allow()
 
     const raw = await stateReader.read(projectSlug)
