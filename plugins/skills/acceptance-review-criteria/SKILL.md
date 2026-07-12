@@ -11,7 +11,7 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 
 ---
 
-## Gate Definitions (G1–G9)
+## Gate Definitions (G1–G10)
 
 ### Lens 1: coverage-lens
 
@@ -62,6 +62,7 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 | Layer boundary compliance | G7 | Each row in the coverage matrix targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter directly as its primary entry point. | All coverage matrix entries reference a use case boundary from the contracts. | BLOCKER |
 | Walking skeleton coverage | G8 | At least one walking skeleton scenario per major feature flow is identified in the test plan (tagged `@smoke` or marked Walking Skeleton in the matrix). | ≥1 walking skeleton entry per feature flow. | HIGH |
 | Visual AC evidence | G9 | Every `@visual` scenario has ≥1 Playwright E2E spec in `tests/e2e/` per `impl-plan-{story}.md`. jsdom/unit entry invalid. | Bijection `@visual` scenarios ↔ Playwright E2E spec entries. | HIGH |
+| Comparable contract consistency | G10 | When `impl-plan-{story}.md` plans a component (hook/adapter/client) that is comparable to one already implemented for a similar responsibility in a prior story, its planned state/return/error convention matches the existing component's, unless the plan notes an explicit, justified divergence. | Every comparable pair of planned components shares its convention, or the divergence is explicitly noted and justified in the impl-plan. | HIGH |
 
 **Checking G9:**
 1. List all scenarios tagged `@visual` in the `.feature` files
@@ -125,7 +126,7 @@ vocabulary. Not a technical identifier. Verdict remains approved."
 | `fail` | ≥1 gate in this lens has a finding. |
 
 Each finding includes:
-- `gate` — G1 through G9
+- `gate` — G1 through G10
 - `severity` — BLOCKER / HIGH / MEDIUM / LOW
 - `finding` — plain-language description of the problem
 - `location` — file path and line/scenario reference
