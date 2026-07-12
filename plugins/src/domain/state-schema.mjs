@@ -1,5 +1,44 @@
 import { Ok, Err } from './result.mjs'
 
+// SINGLE SOURCE OF TRUTH for the state.json document shape (SoC — genesis A9/S4/#15).
+// This descriptor is the authority for the field set of the pipeline state; the prose
+// in plugins/instructions/skraft-state.instructions.md documents the SAME fields and
+// MUST NOT redefine them independently. The alignment test
+// tests/skraft-framework/state-schema-instructions.acceptance.test.mjs fails if the
+// instruction schema block and this descriptor diverge, so the two can never drift.
+//
+// owner:
+//   'invariant'    — owned & normalized by the state machine (validatePipelineState).
+//   'orchestrator' — written by the orchestrator, preserved verbatim on every CLI write.
+export const STATE_SCHEMA = Object.freeze({
+  projectSlug: Object.freeze({ owner: 'orchestrator' }),
+  skraftPlanFile: Object.freeze({ owner: 'orchestrator' }),
+  currentPhase: Object.freeze({ owner: 'invariant' }),
+  entryMode: Object.freeze({ owner: 'orchestrator' }),
+  entryPoint: Object.freeze({ owner: 'orchestrator' }),
+  issueNumber: Object.freeze({ owner: 'orchestrator' }),
+  difficulty: Object.freeze({ owner: 'invariant' }),
+  phasesCompleted: Object.freeze({ owner: 'invariant' }),
+  phaseArtifacts: Object.freeze({ owner: 'invariant' }),
+  verdicts: Object.freeze({ owner: 'invariant' }),
+  reviewArtifacts: Object.freeze({ owner: 'invariant' }),
+  retryCount: Object.freeze({ owner: 'invariant' }),
+  referencesProcessed: Object.freeze({ owner: 'orchestrator' }),
+  phaseHistory: Object.freeze({ owner: 'orchestrator' }),
+  nextActions: Object.freeze({ owner: 'orchestrator' }),
+  userPreferences: Object.freeze({ owner: 'invariant' }),
+  neighborPlanners: Object.freeze({ owner: 'orchestrator' }),
+  adrRatification: Object.freeze({ owner: 'orchestrator' }),
+})
+
+// Canonical field set (all top-level keys of state.json).
+export const STATE_FIELDS = Object.freeze(Object.keys(STATE_SCHEMA))
+
+// Invariant-bearing subset owned & normalized by validatePipelineState below.
+export const INVARIANT_FIELDS = Object.freeze(
+  STATE_FIELDS.filter((field) => STATE_SCHEMA[field].owner === 'invariant')
+)
+
 // Pure intrinsic-shape validation of the recorded pipeline state. No IO, no config
 // cross-checks (phase membership / agent resolvability belong to pipeline-policy, ADR-005).
 
