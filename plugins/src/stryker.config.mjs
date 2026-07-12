@@ -36,6 +36,10 @@ export default {
     // Issue #105/#106 — commit-convention scan for manual DELIVER closure
     'plugins/src/domain/commit-convention.mjs',
     'plugins/src/application/commit-scan-service.mjs',
+    // US9 — S7 execution-log + CLI bridge (#55)
+    'plugins/src/domain/execution-log-schema.mjs',
+    'plugins/src/application/execution-log-service.mjs',
+    'plugins/src/adapters/infrastructure/execution-log/json-execution-log-writer.mjs',
     // US11 — G7/G8 state protection + session guard (#57)
     'plugins/src/domain/session-guard-policy.mjs',
     'plugins/src/application/pre-tool-use-session-guard-service.mjs',
