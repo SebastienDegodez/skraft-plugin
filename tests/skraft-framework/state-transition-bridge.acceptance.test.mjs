@@ -564,6 +564,7 @@ test('AC13c: close-phase rejects with VERDICT_NOT_APPROVED when verdict is CHANG
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac13c-'))
   try {
     await writeState(basePath, 'us5', baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }))
+    const before = await readState(basePath, 'us5')
 
     const result = await stateCli(
       ['close-phase', '--phase', 'DISCUSS', '--verdict', 'CHANGES_REQUESTED', '--artifact', 'reviews/manual-close.md', '--slug', 'us5'],
@@ -572,8 +573,8 @@ test('AC13c: close-phase rejects with VERDICT_NOT_APPROVED when verdict is CHANG
 
     assert.equal(result.exitCode, 1)
     assert.ok(result.stderr.includes('VERDICT_NOT_APPROVED'), `stderr: ${result.stderr}`)
-    const state = await readState(basePath, 'us5')
-    assert.equal(state.currentPhase, 'DISCUSS', 'state must be unchanged on rejection')
+    const after = await readState(basePath, 'us5')
+    assert.deepEqual(after, before, 'state.json must be unchanged on rejection')
   } finally {
     await rm(basePath, { recursive: true, force: true })
   }
