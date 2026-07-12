@@ -149,13 +149,39 @@ On a turn that changes pipeline state:
 
 ### Manual phase closure (no reviewer sub-agent verdict)
 
-When a phase — most commonly DELIVER — ends through a series of human-validated manual reworks rather than an explicit `APPROVED` verdict from a reviewer sub-agent, close it with a single `close-phase` call instead of hand-composing the three-step sequence:
+When a phase — most commonly DELIVER — ends through a series of human-validated manual reworks rather than an explicit `APPROVED` verdict from a reviewer sub-agent, close it with a single `close-phase` call instead of hand-composing the three-step sequence.
+
+The `--artifact` file is a review artifact like any other, so render it from data through the `review-verdict` artifact command — never hand-write the markdown (same convention reviewer sub-agents follow). Then pass the rendered path to `close-phase`:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" close-phase --slug {projectSlug} --phase {P} --verdict APPROVED --artifact {reviews/{date}/manual-close.md}
+node scripts/artifact.mjs review-verdict \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/manual-close.md <<'EOF'
+phase: {P}
+projectSlug: {projectSlug}
+date: {date}
+attempt: manual
+verdict: APPROVED
+depthTier: {tier}
+lensCount: 1
+score: manual
+lenses:
+  - index: 1
+    name: human-validation
+    lensScore: manual
+    findings:
+      - "Closed after human-validated manual reworks; no reviewer sub-agent dispatched."
+synthesis:
+  - lens: human-validation
+    weight: "1.0"
+    lensScore: manual
+    contribution: manual
+conclusion: "Closed after human-validated manual reworks; no reviewer sub-agent verdict."
+EOF
+
+node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" close-phase --slug {projectSlug} --phase {P} --verdict APPROVED --artifact reviews/{date}/manual-close.md
 ```
 
-This atomically performs, in one write: `record-verdict --verdict APPROVED` for `{P}`, `record-review-artifact` (only when `--artifact` is given), then advances `currentPhase` to the next phase in order (`DONE` after DELIVER). `--phase` must equal the current `currentPhase` (rejected with `PHASE_MISMATCH` otherwise) and `--verdict` must be `APPROVED` (rejected with `VERDICT_NOT_APPROVED` otherwise) — `close-phase` only ever closes forward, never records a `CHANGES_REQUESTED` disposition. Use `record-verdict` + `incr-retry` for that case instead.
+`close-phase` atomically performs, in one write: `record-verdict --verdict APPROVED` for `{P}`, `record-review-artifact` (only when `--artifact` is given), then advances `currentPhase` to the next phase in order (`DONE` after DELIVER). `--phase` must equal the current `currentPhase` (rejected with `PHASE_MISMATCH` otherwise) and `--verdict` must be `APPROVED` (rejected with `VERDICT_NOT_APPROVED` otherwise) — `close-phase` only ever closes forward, never records a `CHANGES_REQUESTED` disposition. Use `record-verdict` + `incr-retry` for that case instead.
 
 ### State creation
 
