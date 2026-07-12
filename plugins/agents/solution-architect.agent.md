@@ -339,7 +339,7 @@ Every story-triggered ADR is committed first with `Status: Proposed`, then a hum
 Required keys (the command rejects a payload that is missing any of them): `adr` (int for the frontmatter), `adrLabel` (zero-padded 3-digit string for the `# ADR-NNN` title, e.g. `"008"`), `title`, `status`, `chosen`, `decisionSummary` (the one-line header decision), `date`, `deciders`, `context`, `decision` (full body), `consequences` (raw markdown bullet list — inline-label the `# ADR-001` house style: `- **Positive**: …`, `- **Negative**: …`, `- **Invariant**: …`). Optional keys: `ratifiedBy`, `alternatives` (raw markdown for the `## Alternatives rejected` section — omit to drop it), and — only on a supersession — `supersedes` (`"ADR-MMM"`) plus `supersedesLink` (the `**Supersedes:**` body sentence). Omit `supersedes` when there is none (the header prints `supersedes: null`). Use YAML block scalars (`key: |`) for the multi-line markdown bodies (`context`, `decision`, `consequences`, `alternatives`).
 
 ```bash
-node scripts/artifact.mjs adr --out docs/adr/adr-{NNN}-{slug}.md <<'EOF'
+node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" adr --out docs/adr/adr-{NNN}-{slug}.md <<'EOF'
 adr: {NNN}
 adrLabel: "{NNN zero-padded}"
 title: {title}

@@ -199,7 +199,7 @@ After each phase transition (approved or rejected), post a structured comment on
 1. Render the body — pipe the comment data straight in:
 
    ```bash
-   node scripts/artifact.mjs review-comment --out /tmp/skraft-comment.md <<'EOF'
+   node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-comment --out /tmp/skraft-comment.md <<'EOF'
    phase: DISCUSS
    icon: "✅"
    status: APPROVED
