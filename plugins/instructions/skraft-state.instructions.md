@@ -200,11 +200,11 @@ On first invocation, create the state with `state.mjs init --slug {projectSlug}`
 
 When a session starts or resumes, rehydrate exactly once:
 
-1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount[currentPhase]`, `difficulty`, `entryPoint`, `adrRatification`.
+1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount` (the full phase-keyed map, not only the current phase), `reviewArtifacts`, `difficulty`, `entryPoint`, `adrRatification`.
 2. **Project** the pipeline into the native todo working set per `#file:plugins/instructions/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
 3. **Identify** pending work from the todo list: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
 4. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).
-5. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions).
+5. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions), followed by a **rework-cost line** derived entirely from fields already in the snapshot — no new persisted field is needed: for every phase in `phasesCompleted` plus `currentPhase`, report `(retryCount[phase] ?? 0)` (automatic retries) alongside `(reviewArtifacts[phase] ?? []).length` (review passes recorded for that phase, manual reworks included whenever they land a review artifact). Surface the per-phase pairs plus the epic-wide total, e.g. `DISCOVER 1 retry / 1 review · DESIGN 1 retry / 1 review · DELIVER 0 retries / 5 reviews — total 2 retries / 7 reviews`. This objectifies whether rework volume is trending down epic after epic (upstream gates improving) or staying flat (structural gate gap) without inventing a second source of truth for the same counts.
 
 From here, subsequent turns use the todo list and the write-through protocol above — the whole snapshot is not re-read again this session.
 
