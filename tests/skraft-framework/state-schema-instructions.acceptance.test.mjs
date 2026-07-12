@@ -21,7 +21,7 @@ const instructionsPath = join(repoRoot, 'plugins/instructions/skraft-state.instr
 // Extract the top-level field names from the ```json``` block under the `## Schema` heading.
 const instructionSchemaFields = () => {
   const md = readFileSync(instructionsPath, 'utf8')
-  const match = md.match(/^## Schema[\s\S]*?```json\n([\s\S]*?)\n```/m)
+  const match = md.match(/^## Schema[\s\S]*?```json\r?\n([\s\S]*?)\r?\n```/m)
   assert.ok(match, 'skraft-state.instructions.md must contain a ```json``` schema block under `## Schema`')
   return Object.keys(JSON.parse(match[1]))
 }
