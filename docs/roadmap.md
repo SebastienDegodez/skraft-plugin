@@ -20,7 +20,7 @@ avec leur gain, statut et milestone.
 | [US8](#us8) | G4/G5 artefacts + verdict + commit | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [US9](#us9) | S7 execution-log + CLI bridge | `gain:reliability` | 🔲 À faire | Phase 2 — Complétude |
 | [US10](#us10) | G6 continuation orchestrateur | `gain:eco-tokens` | 🔲 À faire | Phase 2 — Complétude |
-| [US11](#us11) | G7/G8 protection d'état + session guard | `gain:safety` | 🔲 À faire | Phase 2 — Complétude |
+| [US11](#us11) | G7/G8 protection d'état + session guard | `gain:safety` | ✅ Livré | Phase 2 — Complétude |
 | [US12](#us12) | Observabilité | `gain:observability` | ✅ Livré | Phase 2 — Complétude |
 | [US13](#us13) | Recovery / rollback | `gain:reliability` | 🔲 À faire | Phase 2 — Complétude |
 | [S1](#s1) | State write-through (économie de tokens) | `gain:eco-tokens` | ✅ Livré | Phase 2 — Complétude |
@@ -201,7 +201,7 @@ contexte d'étape suivante (succès) ou de re-dispatch (échec). Fail-open.
 ### US11 — G7/G8 protection d'état + session guard <a id="us11"></a>
 
 **Issue :** [#57](https://github.com/SebastienDegodez/skraft-plugin/issues/57)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:safety` + `gain:anti-drift` — état et frontières du pipeline
@@ -210,6 +210,14 @@ mécaniquement inviolables.
 **Périmètre :** `PreToolUse(Bash)` deny édition directe `state.json`/execution-log ;
 session guard `domain/session-guard-policy.mjs` bloque writes `src`/`tests` hors
 agent monitoré pendant DELIVER.
+
+**Livré :** `domain/session-guard-policy.mjs` (pur) + `application/pre-tool-use-session-guard-service.mjs`.
+G7 (state-independent) refuse toute mutation directe des artefacts protégés
+(redirection shell, verbe mutant, ou outil Write/Edit) ; la lecture reste permise —
+la seule voie d'écriture sanctionnée est le CLI d'état (#60, S7). G8, pendant DELIVER,
+bloque les writes `src/`/`tests/` hors des agents DELIVER monitorés
+(`phaseAgents.DELIVER`) ; fail-open si l'état est illisible (un bug du hook ne fige
+jamais le pipeline).
 
 **Dépend de :** US3
 
