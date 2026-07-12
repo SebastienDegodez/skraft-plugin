@@ -68,9 +68,12 @@ export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, 
       return allow()
     }
 
-    const workspaceResult = guardWorkspaceWrite({
-      command, filePath, phase, agentName, deliverAgents: deliverAgentsFrom(config)
-    })
+    const deliverAgents = deliverAgentsFrom(config)
+    if (phase === 'DELIVER' && deliverAgents.length === 0) {
+      await record({ decision: 'ALLOW', code: 'UNCONFIGURED_DELIVER_AGENTS', reason: 'no monitored DELIVER agents configured; session guard fail-open' })
+      return allow()
+    }
+    const workspaceResult = guardWorkspaceWrite({ command, filePath, phase, agentName, deliverAgents })
     if (isErr(workspaceResult)) {
       await record({ decision: 'DENY', code: workspaceResult.error.code, reason: workspaceResult.error.reason })
       return deny(workspaceResult.error.reason)
