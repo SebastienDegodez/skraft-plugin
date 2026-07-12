@@ -18,7 +18,7 @@ avec leur gain, statut et milestone.
 | [US6](#us6) | Tests boundary-to-boundary | `gain:reliability` | 🔲 À faire | Phase 1 — MVP |
 | [US7](#us7) | Documentation + roadmap.md | `gain:dx` | ✅ Livré | Phase 1 — MVP |
 | [US8](#us8) | G4/G5 artefacts + verdict + commit | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
-| [US9](#us9) | S7 execution-log + CLI bridge | `gain:reliability` | 🔲 À faire | Phase 2 — Complétude |
+| [US9](#us9) | S7 execution-log + CLI bridge | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [US10](#us10) | G6 continuation orchestrateur | `gain:eco-tokens` | 🔲 À faire | Phase 2 — Complétude |
 | [US11](#us11) | G7/G8 protection d'état + session guard | `gain:safety` | 🔲 À faire | Phase 2 — Complétude |
 | [US12](#us12) | Observabilité | `gain:observability` | 🔲 À faire | Phase 2 — Complétude |
@@ -169,7 +169,7 @@ complétion fail-closed.
 ### US9 — S7 execution-log + CLI bridge <a id="us9"></a>
 
 **Issue :** [#55](https://github.com/SebastienDegodez/skraft-plugin/issues/55)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:anti-drift` + `gain:eco-tokens` + `gain:reliability` — progression
