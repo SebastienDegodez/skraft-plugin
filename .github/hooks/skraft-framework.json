@@ -1,6 +1,14 @@
 {
   "version": 1,
   "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "node plugins/src/cli/housekeeping.mjs",
+        "powershell": "node plugins/src/cli/housekeeping.mjs",
+        "timeoutSec": 10
+      }
+    ],
     "preToolUse": [
       {
         "type": "command",
