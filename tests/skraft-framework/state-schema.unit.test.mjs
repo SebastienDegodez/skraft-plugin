@@ -175,6 +175,42 @@ test('validatePipelineState: coerces retryCount array to {}', () => {
   assert.deepEqual(r.value.retryCount, {})
 })
 
+test('validatePipelineState: coerces missing reworkCount to {}', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.reworkCount, {})
+})
+
+test('validatePipelineState: coerces reworkCount array to {}', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', reworkCount: [1] })
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.reworkCount, {})
+})
+
+test('validatePipelineState: preserves existing reworkCount object', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', reworkCount: { DELIVER: 2 } })
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.reworkCount, { DELIVER: 2 })
+})
+
+test('validatePipelineState: coerces missing findingsResolved to {}', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.findingsResolved, {})
+})
+
+test('validatePipelineState: coerces findingsResolved array to {}', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', findingsResolved: [1] })
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.findingsResolved, {})
+})
+
+test('validatePipelineState: preserves existing findingsResolved object', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', findingsResolved: { DELIVER: 12 } })
+  assert.ok(isOk(r))
+  assert.deepEqual(r.value.findingsResolved, { DELIVER: 12 })
+})
+
 // ─── round-trip fidelity (real hand-authored state.json) ───────────────────────
 // Regression: validatePipelineState must NOT drop orchestrator-owned fields it does
 // not normalize. Prior behaviour silently coerced to 8 keys, destroying 10 fields on
