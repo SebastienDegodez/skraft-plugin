@@ -12,8 +12,12 @@ import {
 // domain. No filesystem access here — all IO is delegated to injected ports.
 export const createRecoveryService = ({ stateReader, stateWriter, backupReader, stateService }) => {
   const countBackups = async (projectSlug) => {
-    const backups = await backupReader.list(projectSlug)
-    return backups.filter((b) => isOk(validatePipelineState(b.raw))).length
+    try {
+      const backups = await backupReader.list(projectSlug)
+      return backups.filter((b) => isOk(validatePipelineState(b.raw))).length
+    } catch {
+      return 0
+    }
   }
 
   // AC1: on corrupted/incomplete/stale state, produce actionable WHY/HOW/ACTION guidance.
