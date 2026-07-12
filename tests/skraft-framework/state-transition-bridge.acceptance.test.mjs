@@ -516,3 +516,67 @@ test('AC12: pre-existing state.json without retryCount/phasesCompleted is coerce
   }
 })
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AC13 — close-phase composite: verdict + review artifact + advance in one call
+// ─────────────────────────────────────────────────────────────────────────────
+test('AC13a: close-phase records verdict, appends review artifact, and advances currentPhase', async () => {
+  const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac13a-'))
+  try {
+    await writeState(basePath, 'us5', baseState({ currentPhase: 'DELIVER', phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL'] }))
+
+    const result = await stateCli(
+      ['close-phase', '--phase', 'DELIVER', '--verdict', 'APPROVED', '--artifact', 'reviews/2026-07-12/manual-close.md', '--slug', 'us5'],
+      { basePath }
+    )
+
+    assert.equal(result.exitCode, 0, `expected exit 0\nstderr: ${result.stderr}`)
+    const state = await readState(basePath, 'us5')
+    assert.equal(state.verdicts['DELIVER'], 'APPROVED')
+    assert.deepEqual(state.reviewArtifacts['DELIVER'], ['reviews/2026-07-12/manual-close.md'])
+    assert.equal(state.currentPhase, 'DONE')
+    assert.ok(state.phasesCompleted.includes('DELIVER'))
+  } finally {
+    await rm(basePath, { recursive: true, force: true })
+  }
+})
+
+test('AC13b: close-phase rejects with PHASE_MISMATCH when --phase differs from currentPhase', async () => {
+  const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac13b-'))
+  try {
+    await writeState(basePath, 'us5', baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }))
+    const before = await readState(basePath, 'us5')
+
+    const result = await stateCli(
+      ['close-phase', '--phase', 'DESIGN', '--verdict', 'APPROVED', '--artifact', 'reviews/manual-close.md', '--slug', 'us5'],
+      { basePath }
+    )
+
+    assert.equal(result.exitCode, 1)
+    assert.ok(result.stderr.includes('PHASE_MISMATCH'), `stderr: ${result.stderr}`)
+    const after = await readState(basePath, 'us5')
+    assert.deepEqual(after, before, 'state.json must be unchanged on rejection')
+  } finally {
+    await rm(basePath, { recursive: true, force: true })
+  }
+})
+
+test('AC13c: close-phase rejects with VERDICT_NOT_APPROVED when verdict is CHANGES_REQUESTED', async () => {
+  const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac13c-'))
+  try {
+    await writeState(basePath, 'us5', baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }))
+    const before = await readState(basePath, 'us5')
+
+    const result = await stateCli(
+      ['close-phase', '--phase', 'DISCUSS', '--verdict', 'CHANGES_REQUESTED', '--artifact', 'reviews/manual-close.md', '--slug', 'us5'],
+      { basePath }
+    )
+
+    assert.equal(result.exitCode, 1)
+    assert.ok(result.stderr.includes('VERDICT_NOT_APPROVED'), `stderr: ${result.stderr}`)
+    const after = await readState(basePath, 'us5')
+    assert.deepEqual(after, before, 'state.json must be unchanged on rejection')
+  } finally {
+    await rm(basePath, { recursive: true, force: true })
+  }
+})
+

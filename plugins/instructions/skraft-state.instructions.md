@@ -45,6 +45,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 | `record-review-artifact` | `--slug --phase {P} --path {rel}` | Append to `reviewArtifacts[phase]` (append-only). |
 | `set-difficulty` | `--slug --value {tier}` | Set `difficulty` (write-once; rejects if already set). |
 | `incr-retry` | `--slug --phase {P}` | Increment `retryCount[phase]` (capped at `maxRetriesPerPhase`). |
+| `close-phase` | `--slug --phase {P} --verdict APPROVED [--artifact {rel}]` | Composite: record `verdicts[phase]`, append `reviewArtifacts[phase]` (if `--artifact` given), and advance `currentPhase` — one call, one write. |
 
 Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` (written once at Phase 0), `adrRatification` (written at the DESIGN human checkpoint), and `phaseHistory` / `neighborPlanners` / `nextActions` / `referencesProcessed` — is edited directly on the snapshot. This is safe: the CLI's validator preserves every field on rewrite (round-trip fidelity), so a later CLI write never drops a hand-edited field. Everything invariant-bearing (verdicts, phase advance, artifacts, difficulty, retry) goes through the CLI.
 
@@ -145,6 +146,42 @@ On a turn that changes pipeline state:
 * **DESIGN is the one phase with a second gate after `APPROVED`:** it advances to `DISTILL` only when `adrRatification.checkpointStatus == "resolved"` (zero `Proposed` ADRs remain in `docs/adr/decisions-index.md`). A DESIGN reviewer `APPROVED` with `Proposed` ADRs still open keeps `currentPhase == "DESIGN"` and sets `adrRatification.checkpointStatus = "awaiting_human"`.
 * On `CHANGES_REQUESTED`: the same phase agent is re-dispatched, `incr-retry --phase {P}` is called, `currentPhase` does not change.
 * The terminal state `DONE` is reached by a final `transition --to DONE` after DELIVER's verdict is `APPROVED` and `phasesCompleted` contains all five phase names. `DONE` is terminal — the CLI rejects further mutations with `TERMINAL_STATE`.
+
+### Manual phase closure (no reviewer sub-agent verdict)
+
+When a phase — most commonly DELIVER — ends through a series of human-validated manual reworks rather than an explicit `APPROVED` verdict from a reviewer sub-agent, close it with a single `close-phase` call instead of hand-composing the three-step sequence.
+
+The `--artifact` file is a review artifact like any other, so render it from data through the `review-verdict` artifact command — never hand-write the markdown (same convention reviewer sub-agents follow). Then pass the rendered path to `close-phase`:
+
+```bash
+node scripts/artifact.mjs review-verdict \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/manual-close.md <<'EOF'
+phase: {P}
+projectSlug: {projectSlug}
+date: {date}
+attempt: manual
+verdict: APPROVED
+depthTier: {tier}
+lensCount: 1
+score: manual
+lenses:
+  - index: 1
+    name: human-validation
+    lensScore: manual
+    findings:
+      - "Closed after human-validated manual reworks; no reviewer sub-agent dispatched."
+synthesis:
+  - lens: human-validation
+    weight: "1.0"
+    lensScore: manual
+    contribution: manual
+conclusion: "Closed after human-validated manual reworks; no reviewer sub-agent verdict."
+EOF
+
+node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" close-phase --slug {projectSlug} --phase {P} --verdict APPROVED --artifact reviews/{date}/manual-close.md
+```
+
+`close-phase` atomically performs, in one write: `record-verdict --verdict APPROVED` for `{P}`, `record-review-artifact` (only when `--artifact` is given), then advances `currentPhase` to the next phase in order (`DONE` after DELIVER). `--phase` must equal the current `currentPhase` (rejected with `PHASE_MISMATCH` otherwise) and `--verdict` must be `APPROVED` (rejected with `VERDICT_NOT_APPROVED` otherwise) — `close-phase` only ever closes forward, never records a `CHANGES_REQUESTED` disposition. Use `record-verdict` + `incr-retry` for that case instead.
 
 ### State creation
 

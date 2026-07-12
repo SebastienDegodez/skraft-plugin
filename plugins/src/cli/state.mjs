@@ -105,6 +105,20 @@ async function run() {
       break
     }
 
+    case 'close-phase': {
+      const phase = arg('phase')
+      const verdict = arg('verdict')
+      const path = arg('artifact')
+      const result = await service.applyEvent(slug, { type: 'CLOSE_PHASE', phase, verdict, path })
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
+      break
+    }
+
     case 'set-difficulty': {
       const value = arg('value')
       const result = await service.applyEvent(slug, { type: 'SET_DIFFICULTY', value })
