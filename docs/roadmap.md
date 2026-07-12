@@ -22,7 +22,7 @@ avec leur gain, statut et milestone.
 | [US10](#us10) | G6 continuation orchestrateur | `gain:eco-tokens` | 🔲 À faire | Phase 2 — Complétude |
 | [US11](#us11) | G7/G8 protection d'état + session guard | `gain:safety` | 🔲 À faire | Phase 2 — Complétude |
 | [US12](#us12) | Observabilité | `gain:observability` | 🔲 À faire | Phase 2 — Complétude |
-| [US13](#us13) | Recovery / rollback | `gain:reliability` | 🔲 À faire | Phase 2 — Complétude |
+| [US13](#us13) | Recovery / rollback | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [S1](#s1) | State write-through (économie de tokens) | `gain:eco-tokens` | ✅ Livré | Phase 2 — Complétude |
 | [S2](#s2) | Config repo-wide (configurateur `depthTier`) | `gain:dx` | ✅ Livré | Phase 2 — Complétude |
 
@@ -234,7 +234,7 @@ housekeeping `SessionStart` (rétention audit, signaux périmés).
 ### US13 — Recovery / rollback <a id="us13"></a>
 
 **Issue :** [#59](https://github.com/SebastienDegodez/skraft-plugin/issues/59)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:reliability` + `gain:dx` — le pipeline se rattrape au lieu de
@@ -242,6 +242,13 @@ se bloquer sur état corrompu ou stale.
 
 **Périmètre :** guidance de récupération (WHY/HOW/ACTION), rollback de schéma,
 résolution d'exécution stale.
+
+**Livraison :** `state.mjs diagnose` émet une guidance actionnable
+(`{ code, why, how[], action }`) ; `state.mjs rollback` restaure le backup
+`state.json.bak.*` sain le plus récent (lecture seule — la création/rotation
+des backups reste possédée par le writer de #60) ; `state.mjs resolve-stale`
+réinitialise le budget de retry d'une phase bloquée (événement `RESOLVE_STALE`)
+pour la relancer.
 
 **Dépend de :** US8
 

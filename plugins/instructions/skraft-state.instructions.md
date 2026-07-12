@@ -210,13 +210,13 @@ From here, subsequent turns use the todo list and the write-through protocol abo
 
 ## Recovery Procedure
 
-When `state.json` is missing, malformed, or fails schema validation (the CLI exits `2`/`3`):
+When `state.json` is missing, malformed, or fails schema validation (the CLI exits `2`/`3`), or when a phase is stuck, ask the deterministic recovery service what to do — `state.mjs diagnose --slug {slug}` emits actionable guidance as `{ code, why, how[], action }` (WHY/HOW/ACTION). `code` is one of `HEALTHY`, `MISSING_STATE`, `CORRUPTED_STATE`, `INVALID_STATE`, `STALE`, `IO_ERROR`; `action` is the exact next command to run. Surface `why`/`how` to the user and follow `action`:
 
-1. Search the project directory for the most recent valid backup (`state.json.bak.*`, kept rotating ≤3 by the writer). If found, restore it and re-run `state.mjs get` to validate.
-2. If no backup is recoverable, scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`).
-3. Reconstruct a snapshot with conservative defaults: `state.mjs init` then direct-edit `currentPhase` to the inferred phase, `phasesCompleted` from on-disk evidence, `verdicts[currentPhase]` to `null`. (Depth tier is not part of state recovery — it lives in `skraft-config.json`; run `config.mjs init` if that file is also missing.)
+1. **Rollback of schema (repeated failures).** When the guidance `action` is `state.mjs rollback --slug {slug}`, run it: the recovery service restores the most recent **healthy** backup (`state.json.bak.*`, kept rotating ≤3 by the writer of #60 — this service only reads and restores them; it never creates or rotates backups). Corrupt or schema-invalid backups are skipped; if none is healthy it exits with `NO_BACKUP`. The restore goes through the atomic writer, so the corrupted file is itself snapshotted first.
+2. **Stale execution.** When `diagnose` reports `STALE` (the current phase's retry budget is exhausted while the verdict is not `APPROVED`, so the pipeline can neither advance nor retry), run `state.mjs resolve-stale --slug {slug} [--phase {P}]` to reset that phase's `retryCount` to `0` so the phase agent can be relaunched. A non-stale phase is rejected with `NOT_STALE`.
+3. **No recoverable backup.** When the `action` is `state.mjs init --slug {slug}` (no healthy backup exists): scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`), then reconstruct with conservative defaults (`init`, then direct-edit `currentPhase` to the inferred phase, `phasesCompleted` from on-disk evidence, `verdicts[currentPhase]` to `null`). Depth tier is not part of state recovery — it lives in `skraft-config.json`; run `config.mjs init` if that file is also missing.
 4. Surface the reconstruction to the user with a checklist of inferred values and request confirmation before resuming.
-5. Before overwriting a corrupted file, preserve it as `state.json.corrupted.{timestamp}`.
+5. The corrupted file is preserved as `state.json.corrupted.{timestamp}` by the reader before any overwrite.
 
 ## Markdown header for tracked artifacts
 

@@ -36,6 +36,10 @@ export default {
     // Issue #105/#106 — commit-convention scan for manual DELIVER closure
     'plugins/src/domain/commit-convention.mjs',
     'plugins/src/application/commit-scan-service.mjs',
+    // US13 — Recovery / rollback (#59)
+    'plugins/src/domain/recovery-policy.mjs',
+    'plugins/src/application/recovery-service.mjs',
+    'plugins/src/adapters/infrastructure/state/json-state-backup-reader.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

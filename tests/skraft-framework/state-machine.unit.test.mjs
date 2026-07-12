@@ -375,3 +375,32 @@ test('passthrough: INCR_RETRY preserves orchestrator-owned fields', () => {
   assertRichPreserved(r.value)
   assert.equal(r.value.retryCount.DISCOVER, 1)
 })
+
+// ─── RESOLVE_STALE (US13 recovery) ─────────────────────────────────────────────
+test('state-machine: RESOLVE_STALE resets stuck currentPhase retryCount to 0', () => {
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DESIGN: 2 }, verdicts: { DESIGN: 'CHANGES_REQUESTED' } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE' })
+  assert.equal(r.ok, true)
+  assert.equal(r.value.retryCount.DESIGN, 0)
+})
+
+test('state-machine: RESOLVE_STALE targets an explicit phase', () => {
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DISCUSS: 2 }, verdicts: { DISCUSS: 'CHANGES_REQUESTED' } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE', phase: 'DISCUSS' })
+  assert.equal(r.ok, true)
+  assert.equal(r.value.retryCount.DISCUSS, 0)
+})
+
+test('state-machine: RESOLVE_STALE rejects a non-stale phase (retries below cap)', () => {
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DESIGN: 1 } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE' })
+  assert.equal(r.ok, false)
+  assert.equal(r.error.code, 'NOT_STALE')
+})
+
+test('state-machine: RESOLVE_STALE rejects an APPROVED phase even if retries exhausted', () => {
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DESIGN: 2 }, verdicts: { DESIGN: 'APPROVED' } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE' })
+  assert.equal(r.ok, false)
+  assert.equal(r.error.code, 'NOT_STALE')
+})
