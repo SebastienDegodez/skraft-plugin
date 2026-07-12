@@ -40,5 +40,12 @@ drainStdin()
   })
   .catch((err) => {
     // Never fail the session on a housekeeping error.
-    process.stderr.write(JSON.stringify({ skraftHousekeeping: { error: err.message } }) + '\n')
+    process.stdout.write(JSON.stringify({
+      skraftHousekeeping: {
+        auditPurged: 0,
+        signalsPurged: 0,
+        warnings: [`housekeeping failed: ${err.message}`],
+      },
+    }) + '\n')
+    process.exitCode = 0
   })
