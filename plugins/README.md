@@ -31,7 +31,7 @@ Fallback si `CLAUDE_PLUGIN_ROOT` absent : glob `~/.claude/plugins/cache/*/skraft
 | 8 | G4/G5 artefacts + verdict + commit | ✅ Livré | `domain/artifact-policy.mjs` (artefacts attendus, parseur de verdict reviewer, `**Verdict:** APPROVED\|NEEDS_REWORK\|REJECTED`), `ports/infrastructure/commit-verifier.mjs` + `adapters/infrastructure/git-commit-verifier.mjs` (working tree propre), `subagent-stop-service` (complétion fail-closed : artefact manquant, verdict divergent du fichier écrit, DELIVER sans commit vérifié) — branché dans `cli/hook.mjs` |
 | 9 | S7 execution-log + CLI bridge | 🔲 À faire | — |
 | 10 | G6 continuation orchestrateur | ✅ Livré | `application/post-tool-use-service.mjs` (sur `PostToolUse(Agent)` : injecte le contexte d'étape suivante via `pipeline-policy.expectedNextAgent` en cas de succès, ou un contexte de re-dispatch en cas de `CHANGES_REQUESTED` ; fail-open) — branché dans `cli/hook.mjs` |
-| 11 | G7/G8 protection d'état + session guard | 🔲 À faire | — |
+| 11 | G7/G8 protection d'état + session guard | ✅ Livré | `domain/session-guard-policy.mjs` (G7 deny édition directe `state.json`/execution-log — redirection/verbe mutant/Write-Edit ; lecture permise ; G8 bloque writes `src`/`tests` hors agent DELIVER monitoré pendant DELIVER), `application/pre-tool-use-session-guard-service.mjs` (G7 state-independent fail-closed ; G8 fail-open si état illisible) |
 | 12 | Observabilité | 🔲 À faire | — |
 | 13 | Recovery / rollback | 🔲 À faire | — |
 | 16 | Déploiement hooks dans le projet consumer | 🔲 À faire | — |
@@ -117,8 +117,8 @@ plugins/src/
 | G4 structure artefacts | `SubagentStop` | — | fail-closed | #8 | ✅ |
 | G5 verdict + commit | `SubagentStop` | — | fail-closed | #8 | ✅ |
 | G6 continuation | `PostToolUse` | `Agent` | fail-open | #10 | ✅ |
-| G7 deny state.json direct | `PreToolUse` | `Bash` | fail-closed | #11 | 🔲 |
-| G8 session guard | `PreToolUse` | `Agent` | fail-closed | #11 | 🔲 |
+| G7 deny state.json direct | `PreToolUse` | `Bash` | fail-closed | #11 | ✅ |
+| G8 session guard | `PreToolUse` | `Agent` | fail-open | #11 | ✅ |
 
 ---
 

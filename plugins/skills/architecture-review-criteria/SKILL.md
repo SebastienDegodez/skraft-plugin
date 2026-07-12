@@ -7,7 +7,7 @@ description: Use when reviewing DESIGN artefacts (event models, ADRs, component 
 
 ## Overview
 
-15 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied by the `solution-architect-reviewer` agent to DESIGN artefacts. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
+16 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied by the `solution-architect-reviewer` agent to DESIGN artefacts. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
 
 **Applied by:** `solution-architect-reviewer`
 **Applied to:** ADRs, event models, component diagrams, context maps, interface contracts, consistency matrices, supersession plans, supersession registry, blocker files
@@ -28,6 +28,7 @@ Evaluates: ADRs + supersession registry + diagrams + contracts + consistency mat
 | G10 | A `consistency-matrix-{story}.md` exists for every story under design, and its `consistency-gate` line is `PASS`. The back-propagation journal explains every rewrite. | One matrix per story, all marked PASS, journals filled. | BLOCKER |
 | G12 | Every row in a `supersession-plan-{story}.md` is realised: (a) new ADR contains the `**Supersedes:**` body line, (b) registry row exists in `docs/adr/supersessions.md`, (c) no descriptive artefact still cites the superseded ADR as its source of truth. | All three conditions hold for every planned supersession. | BLOCKER |
 | G14 | No ADR encodes the verdict in the FILENAME: filenames must name the topic (`adr-NNN-event-sourcing.md`), never carry a verdict suffix (`*-rejected.md`, `*-accepted.md`, `*-deprecated.md`, `*-superseded.md`). The verdict belongs in the `Status:` frontmatter (`Proposed \| Accepted \| Rejected \| Deprecated \| Superseded`). A `Status: Rejected` ADR is admissible IFF a story or measurable force in this batch raised the question (per G9 traceability) AND the `Alternatives Rejected` section lists the option that was adopted instead. A `Rejected` ADR with no triggering story is a non-decision artefact. | Zero verdict-bearing filenames; every `Status: Rejected` ADR traces to a triggering story and names the adopted alternative. | BLOCKER |
+| G16 | When `contracts-{story}.md` introduces an interface/port/hook that is comparable to an existing one already accepted for a similar responsibility (same category of consumer — e.g. two React hooks each wrapping a query port, two repository adapters for sibling aggregates), its state/return/error shape follows the same convention (loading/error/data shape, Result-vs-throw, naming of the exposed fields) unless an ADR explicitly documents and justifies the divergence. | Every comparable pair of interfaces/ports/hooks in `contracts-{story}.md` shares its shape convention, OR the divergence is covered by an `Accepted` ADR. | HIGH |
 
 ### Lens 2 — architecture-compliance-lens
 
@@ -121,7 +122,7 @@ If the answer is "none" or "future needs" — flag as G9 MEDIUM violation.
 
 ## References
 
-- [gate-definitions.md](references/gate-definitions.md) — Detailed checklist per gate (G1–G9) with step-by-step checks
+- [gate-definitions.md](references/gate-definitions.md) — Detailed checklist per gate (G1–G16) with step-by-step checks
 - [ddd-violations.md](references/ddd-violations.md) — 10 DDD violation patterns detectable in artefacts
 - [clean-arch-violations.md](references/clean-arch-violations.md) — 8 Clean Architecture violations detectable in contracts and diagrams
 - [verdict-rubric.md](references/verdict-rubric.md) — Verdict derivation, confidence levels, and 3 example review verdicts

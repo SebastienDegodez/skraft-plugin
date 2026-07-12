@@ -36,6 +36,9 @@ export default {
     // Issue #105/#106 — commit-convention scan for manual DELIVER closure
     'plugins/src/domain/commit-convention.mjs',
     'plugins/src/application/commit-scan-service.mjs',
+    // US11 — G7/G8 state protection + session guard (#57)
+    'plugins/src/domain/session-guard-policy.mjs',
+    'plugins/src/application/pre-tool-use-session-guard-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

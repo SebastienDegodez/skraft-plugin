@@ -29,6 +29,25 @@ All other phases follow the same convention: `discuss/ac-draft-{story}.md`, `des
 
 **Scope of this skill:** capture, name, store, and list evidence. Publishing is the agent's responsibility.
 
+## Docker Dependency Freshness (MANDATORY)
+
+Before running ANY e2e verification — first run or re-run after a fix — rebuild and restart every
+Docker Compose / Testcontainers dependency the suite talks to (`docker compose down && docker compose
+up -d --build`, or the equivalent Testcontainers container recreation). Do NOT reuse a container left
+running from a previous session or a previous story.
+
+**Why:** a stale container silently passes tests against yesterday's image — the suite is green but
+proves nothing about the current code. This exact failure mode (e2e passing against an out-of-date
+dependency container) reached DELIVER undetected on a prior epic and was only caught by a manual
+rework pass. Treat it as a checklist item, not an optional troubleshooting step:
+
+1. Tear down existing dependency containers for this story before the FIRST test run of the session.
+2. Rebuild images (`--build` / equivalent) so local code/config changes are actually picked up.
+3. Re-run the full e2e suite after every dependency rebuild — a partial re-run against a mixed
+   old/new environment is worse than no run, since it produces a false-positive green.
+4. Record the rebuild in the evidence manifest run notes (e.g. `containers: rebuilt`) so reviewers
+   can see freshness was verified, not assumed.
+
 ## Playwright Setup (TypeScript)
 
 Install dependencies:
@@ -139,6 +158,7 @@ The story key makes the manifest unambiguous when multiple stories run in sequen
 - timestamp: 2026-05-15T10:30:00Z
 - status: failed (2 failures, 8 passed)
 - duration: 45s
+- containers: rebuilt
 
 ## Files
 | Type | Path | Test |
