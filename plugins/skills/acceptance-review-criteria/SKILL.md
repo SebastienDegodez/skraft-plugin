@@ -11,7 +11,7 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 
 ---
 
-## Gate Definitions (G1–G10)
+## Gate Definitions (G1–G11)
 
 ### Lens 1: coverage-lens
 
@@ -50,8 +50,15 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Step unambiguity | G5 | Every step can be implemented without asking the designer for clarification. The step's meaning is unambiguous within the domain vocabulary. | Every step maps uniquely to a domain action or state. | HIGH |
 | Implementation plan completeness | G6 | Every scenario listed in the `.feature` files has a corresponding entry in `impl-plan-{story}.md` with a file path and a use case boundary. | Bijection feature scenarios ↔ impl-plan entries. | HIGH |
+| Inner-loop boundary presence | G11 | For every use case named in the coverage matrix that is NEW to this story (not reused from a prior story), the outer acceptance test enters at the Application layer (`<Context>.UnitTest`, per `clean-architecture-testing`) — not solely via an Integration/HTTP test — and an Application/UseCase-level test file for it physically exists in the repo, referenced from `impl-plan-{story}.md`. | Every NEW use case has a real `<Context>.UnitTest` acceptance test file on disk; no NEW use case is covered only by `<Context>.IntegrationTest`. | BLOCKER |
 
 **Checking G5:** For each step, ask "could two engineers implement this differently and both be correct?" If yes, the step is ambiguous.
+
+**Checking G11:**
+1. From the boundary-enforcement coverage matrix (G7), list every use case boundary and mark which are NEW to this story vs reused from a prior story/epic.
+2. For each NEW use case, search the repo (`search/codebase`) for a test file matching it under `tests/**/*.UnitTest/**`.
+3. Missing file, or the only match lives under `tests/**/*.IntegrationTest/**` → BLOCKER: the outer loop skipped the Application-layer inner circle (`outside-in-tdd` Concentric Circle Expansion Phase 1) and jumped straight to the API/Infrastructure circle.
+4. A reused use case with no new test file is NOT a violation — G11 only applies to use cases introduced by this story.
 
 ---
 
@@ -133,7 +140,7 @@ vocabulary. Not a technical identifier. Verdict remains approved."
 | `fail` | ≥1 gate in this lens has a finding. |
 
 Each finding includes:
-- `gate` — G1 through G10
+- `gate` — G1 through G11
 - `severity` — BLOCKER / HIGH / MEDIUM / LOW
 - `finding` — plain-language description of the problem
 - `location` — file path and line/scenario reference

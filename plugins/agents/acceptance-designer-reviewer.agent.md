@@ -52,6 +52,7 @@ Collect artefacts (READ-ONLY — the reviewer never writes outside `reviews/{dat
 - **Outer acceptance test** — `tests/**/{Feature}AcceptanceTests.cs` (RED outer-loop test authored in DISTILL)
 - **AC source** — `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md` (bijection reference)
 - **Contracts** — `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md` (boundary reference)
+- **Repo test files for NEW use cases** (G11) — `search/codebase` for `tests/**/*.UnitTest/**` entries matching each use case marked NEW in the coverage matrix. Do not infer existence from the plan text; search for the actual file.
 
 If artefacts are missing, note them and proceed with available inputs.
 
@@ -84,8 +85,8 @@ Evaluate 4 lenses independently. Each lens sees only its designated inputs — f
 ---
 
 #### Lens 3: testability-lens
-**Inputs:** Feature files + test plan + implementation plan + outer acceptance test
-**Question:** Are scenarios implementable as-is? Is the outside-in sequencing correct? Is the outer acceptance test a faithful, RED encoding of the AC?
+**Inputs:** Feature files + test plan + implementation plan + outer acceptance test + repo test-file search (`search/codebase`)
+**Question:** Are scenarios implementable as-is? Is the outside-in sequencing correct? Is the outer acceptance test a faithful, RED encoding of the AC? Did the outer loop actually enter at the Application/UseCase boundary?
 
 | Gate | Definition | Severity if violated |
 |---|---|---|
@@ -93,6 +94,7 @@ Evaluate 4 lenses independently. Each lens sees only its designated inputs — f
 | G6 | Every scenario in the feature files has a corresponding entry in the implementation plan. | HIGH |
 | G9 | Every input/expected value in the outer acceptance test matches the `.feature` verbatim — no invented or altered values. | BLOCKER |
 | G10 | The outer acceptance test exists and its first scenario fails on a business assertion (RED), not a compile/setup error. | BLOCKER |
+| G11 | For every use case NEW to this story, an Application-layer test file exists under `tests/**/*.UnitTest/**` — not only an Integration/HTTP test under `tests/**/*.IntegrationTest/**`. | BLOCKER |
 
 ---
 
