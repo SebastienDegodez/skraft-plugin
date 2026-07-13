@@ -171,6 +171,7 @@ Author the executable Application-layer acceptance test (Step 1 of the impl-plan
 - [ ] Every input/output value in the test matches the `.feature` exactly (no invented values)
 - [ ] First acceptance scenario runs and fails on a business assertion (RED proven via the resolved test command's output)
 - [ ] No production behavior written — stubs only
+- [ ] The outer acceptance test file lives under `tests/{Context}.UnitTest/**` (Application layer), NOT under `tests/{Context}.IntegrationTest/**`. An HTTP/API/Infrastructure test alone never satisfies this step — it is Phase 2/3 of `outside-in-tdd` Concentric Circle Expansion and can only be authored after Phase 1 (this Application-layer test) is RED.
 
 **Handoff:** The RED acceptance test(s) are the immutable outer loop. The software-engineer drives production code + inner unit tests to GREEN and MUST NOT alter the acceptance-test input values (Iron Rule of tests).
 

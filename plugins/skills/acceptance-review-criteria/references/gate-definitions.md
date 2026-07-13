@@ -1,4 +1,4 @@
-# Gate Definitions G1–G10
+# Gate Definitions G1–G11
 
 Formal checklist for the `acceptance-designer-reviewer`. One section per lens.
 
@@ -118,6 +118,30 @@ If YES → ambiguous → flag.
 
 ---
 
+### G11 — Inner-Loop Boundary Presence
+
+**Definition:** For every use case named in the coverage matrix that is NEW to this story (not reused from a prior story), the outer acceptance test enters at the Application layer (`<Context>.UnitTest`, per `clean-architecture-testing`) — not solely via an Integration/HTTP test — and an Application/UseCase-level test file for it physically exists in the repo, referenced from `impl-plan-{story}.md`.
+
+**Why this gate exists:** `outside-in-tdd`'s Concentric Circle Expansion mandates Phase 1 (Application-layer acceptance test + domain unit tests) GREEN before Phase 2 (API/HTTP integration test) or Phase 3 (Infrastructure) begins. A DISTILL pass that ships only HTTP/Integration tests for a brand-new use case has silently skipped Phase 1 — G1–G10 do not detect this because they check Gherkin/plan artefacts, never the actual test files on disk.
+
+**How to check:**
+1. From the boundary-enforcement coverage matrix (see G7), list every use case boundary named in `test-plan-{story}.md` / `contracts-{story}.md`.
+2. Mark which use cases are NEW to this story (introduced here) vs REUSED (already existed before this story, only extended).
+3. For each NEW use case, use `search/codebase` to look for a matching test file under `tests/**/*.UnitTest/**`.
+4. If no such file exists, or the only test coverage for that use case lives under `tests/**/*.IntegrationTest/**` (HTTP/API/Infrastructure test project), flag it.
+
+**Auto-fail example:**
+```
+test-plan-eligibility.md: use case "CheckDriverHistoryUseCase" — NEW this story
+Repo search: tests/Eligibility.IntegrationTest/Api/DriverHistoryEndpointTests.cs (found)
+             tests/Eligibility.UnitTest/Features/DriverHistory/*.cs (NOT FOUND)
+→ G11 BLOCKER: outer loop entered via HTTP endpoint, not the Application use case boundary.
+```
+
+**Severity:** BLOCKER — the acceptance test does not exercise the Application layer directly, so the RED it proves (G10) is not a RED of the use case itself; it is one circle removed from the boundary DELIVER must implement against.
+
+---
+
 ## Lens 4: boundary-enforcement-lens
 
 ### G7 — Layer Boundary Compliance
@@ -196,6 +220,7 @@ during DELIVER integration otherwise, after both implementations are already wri
 | G4 | business-alignment | No implementation details in steps | BLOCKER |
 | G5 | testability | Unambiguous steps | HIGH |
 | G6 | testability | Impl plan covers all scenarios | HIGH |
+| G11 | testability | NEW use case has an Application-layer (`UnitTest`) acceptance test, not only Integration/HTTP | BLOCKER |
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
 | G8 | boundary-enforcement | ≥1 walking skeleton per flow | HIGH |
 | G9 | boundary-enforcement | `@visual` scenarios ↔ Playwright E2E spec bijection | HIGH |
