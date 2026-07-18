@@ -125,10 +125,24 @@ tranche Strangler non basculable.
 
 ## Comment ça alimente le pipeline
 
-Les deux workflows sont **en amont** du pipeline, pas dedans :
+Les deux workflows sont **en amont** du pipeline, pas dedans : ils tournent hors de
+`skraft-orchestrator`, mais leur sortie **referme la boucle** vers lui.
 
-- Le PRD du *workflow 1* franchit la frontière vers les agents HVE, qui remplissent
-  le backlog que **DISCOVER** trie ensuite.
+```mermaid
+flowchart LR
+    subgraph BF ["brownfield (standalone, hors orchestrateur)"]
+        BA[["brownfield-analyst"]] --> PRD[("docs/prds/name.md")]
+    end
+    PRD -->|"l'humain remet le PRD"| GHM(["GitHub Backlog Manager<br/>(agent HVE)"])
+    GHM -->|"crée issues / user-stories"| ISSUES[("backlog GitHub")]
+    ISSUES -->|"triage"| ORCH(["skraft-orchestrator"])
+    ORCH --> DISCOVER(["DISCOVER"]) --> DISCUSS(["DISCUSS"]) --> DESIGN(["DESIGN"]) --> DISTILL(["DISTILL"]) --> DELIVER(["DELIVER"])
+```
+
+- Le PRD du *workflow 1* franchit la frontière vers les agents HVE — **GitHub
+  Backlog Manager** en tête — qui remplissent le backlog que **DISCOVER** trie
+  ensuite. C'est la boucle qui reconnecte le brownfield au pipeline : sortie du
+  workflow standalone, entrée dans `skraft-orchestrator` via DISCOVER.
 - Le code sécurisé par le *workflow 2* redevient un terrain où la phase **DELIVER**
   (Outside-In TDD, mutation) peut évoluer sans casse — le filet de caractérisation
   reste le garde-fou sous les nouveaux tests.

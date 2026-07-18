@@ -122,10 +122,24 @@ discovered Mikado prerequisite, or a Strangler slice that cannot cut over.
 
 ## How it feeds the pipeline
 
-Both workflows sit **upstream** of the pipeline, not inside it:
+Both workflows sit **upstream** of the pipeline, not inside it: they run outside
+`skraft-orchestrator`, but their output **closes the loop** back into it.
 
-- The *workflow 1* PRD crosses the boundary to the HVE agents, which fill the backlog
-  that **DISCOVER** then triages.
+```mermaid
+flowchart LR
+    subgraph BF ["brownfield (standalone, outside the orchestrator)"]
+        BA[["brownfield-analyst"]] --> PRD[("docs/prds/name.md")]
+    end
+    PRD -->|"human hands off the PRD"| GHM(["GitHub Backlog Manager<br/>(HVE agent)"])
+    GHM -->|"creates issues / user stories"| ISSUES[("GitHub backlog")]
+    ISSUES -->|"triage"| ORCH(["skraft-orchestrator"])
+    ORCH --> DISCOVER(["DISCOVER"]) --> DISCUSS(["DISCUSS"]) --> DESIGN(["DESIGN"]) --> DISTILL(["DISTILL"]) --> DELIVER(["DELIVER"])
+```
+
+- The *workflow 1* PRD crosses the boundary to the HVE agents — **GitHub Backlog
+  Manager** foremost — which fill the backlog that **DISCOVER** then triages. This
+  is the loop that reconnects brownfield to the pipeline: exit the standalone
+  workflow, re-enter `skraft-orchestrator` via DISCOVER.
 - The code secured by *workflow 2* becomes ground where the **DELIVER** phase
   (Outside-In TDD, mutation) can evolve without breakage — the characterization net
   stays the guardrail beneath the new tests.
