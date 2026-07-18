@@ -1,0 +1,8 @@
+{
+  "name": "skraft-hve-overlays",
+  "description": "SKRAFT rigor overlays imposed on HVE backlog + RPI artifacts via applyTo. Requires the skraft plugin (skills resolve from it).",
+  "version": "0.1.0",
+  "author": {
+    "name": "SebastienDegodez"
+  }
+}
