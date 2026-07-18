@@ -70,6 +70,24 @@
   title: "Refactoring, 2nd ed."
   type: book
 
+- key: fowler-strangler-2004
+  authors: "Fowler, M."
+  year: 2004
+  title: "Bliki: StranglerFigApplication"
+  type: article
+
+- key: feathers-legacy-2004
+  authors: "Feathers, M."
+  year: 2004
+  title: "Working Effectively with Legacy Code"
+  type: book
+
+- key: ellnestam-brolund-mikado-2014
+  authors: "Ellnestam & Brolund"
+  year: 2014
+  title: "The Mikado Method"
+  type: book
+
 - key: forsgren-accelerate-2018
   authors: "Forsgren, N., Humble, J. & Kim, G."
   year: 2018

@@ -68,3 +68,46 @@ test('all violations are collected, not failed-fast, and the result is frozen', 
   assert.deepEqual(codes(violations).sort(), ['ORPHAN_AGENT', 'ROOT_WITH_PARENT'])
   assert.throws(() => violations.push({}))
 })
+
+// --- standalone roots: independent, user-invocable workflows outside the pipeline ---
+
+const standalone = (overrides = {}) => ({
+  name: 'brownfield-analyst',
+  phase: undefined,
+  phases: [],
+  dispatchedBy: undefined,
+  userInvocable: true,
+  ...overrides,
+})
+
+test('a user-invocable agent with no phase and no parent is a valid standalone root', () => {
+  const violations = validateDispatch([root(), standalone()])
+  assert.deepEqual(violations, [])
+})
+
+test('multiple independent standalone roots coexist alongside the phase root', () => {
+  const violations = validateDispatch([
+    root(),
+    standalone({ name: 'brownfield-analyst' }),
+    standalone({ name: 'brownfield-harness-builder' }),
+  ])
+  assert.deepEqual(violations, [])
+})
+
+test('a standalone root that declares a parent is treated as a valid dispatched child', () => {
+  const violations = validateDispatch([root(), standalone({ dispatchedBy: 'skraft-orchestrator' })])
+  assert.deepEqual(violations, [])
+})
+
+test('a user-invocable pipeline specialist is NOT a standalone root and stays an orphan without dispatched_by', () => {
+  const violations = validateDispatch([
+    root(),
+    child({ name: 'backlog-discoverer', phase: 'DISCOVER', userInvocable: true, dispatchedBy: undefined }),
+  ])
+  assert.deepEqual(codes(violations), ['ORPHAN_AGENT'])
+})
+
+test('a non-invocable agent with no phase and no parent is still an orphan (invocability is the signal)', () => {
+  const violations = validateDispatch([root(), standalone({ userInvocable: false })])
+  assert.deepEqual(codes(violations), ['ORPHAN_AGENT'])
+})

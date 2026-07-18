@@ -58,6 +58,64 @@ test('parseAgentFrontmatter yields empty fields when there is no frontmatter', (
   assert.equal(fm.costRoleClass, undefined)
 })
 
+// --- pure: parseAgentFrontmatter, model as a prioritized YAML list ---
+
+const agentWithModelList = ({ name, items, cls = 'implementer' }) =>
+  [
+    '---',
+    `name: ${name}`,
+    'description: "x"',
+    'model:',
+    ...items.map((item) => ` - ${item}`),
+    'tools: read/readFile',
+    'metadata:',
+    `  cost_role_class: ${cls}  # B12 target class`,
+    '---',
+    '',
+    '# body',
+  ].join('\n')
+
+test('parseAgentFrontmatter parses a model: block list into an array', () => {
+  const fm = parseAgentFrontmatter(
+    agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6', 'claude-sonnet-4.6'] }),
+  )
+  assert.deepEqual(fm.model, ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6', 'claude-sonnet-4.6'])
+})
+
+test('planAgent treats a model list containing the resolved model as compliant (no drift)', () => {
+  const plan = planAgent(
+    agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6'], cls: 'implementer' }),
+    { allowList: new Set() },
+  )
+  assert.equal(plan.resolvedModel, 'Claude Sonnet 5')
+  assert.equal(plan.changed, false)
+})
+
+test('planAgent still flags drift when a model list omits the resolved model', () => {
+  const plan = planAgent(
+    agentWithModelList({ name: 'a', items: ['claude-sonnet-4.6', 'claude-sonnet-4'], cls: 'implementer' }),
+    { allowList: new Set() },
+  )
+  assert.equal(plan.changed, true)
+})
+
+test('applyModel collapses a prior model: list back to a single scalar line', () => {
+  const before = agentWithModelList({ name: 'a', items: ['claude-sonnet-4.6', 'claude-sonnet-4'], cls: 'implementer' })
+  const after = applyModel(before, 'Claude Sonnet 5')
+  assert.match(after, /^model: Claude Sonnet 5$/m)
+  assert.doesNotMatch(after, /^\s+-\s*claude-sonnet-4\.6\s*$/m)
+  assert.match(after, /^tools: read\/readFile$/m)
+})
+
+test('parseAgentFrontmatter parses a model: list even when the "model:" line has a trailing space', () => {
+  const raw = agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5'], cls: 'implementer' }).replace(
+    'model:\n',
+    'model: \n',
+  )
+  const fm = parseAgentFrontmatter(raw)
+  assert.deepEqual(fm.model, ['Claude Sonnet 5', 'claude-sonnet-5'])
+})
+
 // --- pure: planAgent ---
 
 test('planAgent marks a reviewer to be changed from inherit to haiku', () => {
