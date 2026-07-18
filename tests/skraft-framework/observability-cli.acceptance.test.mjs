@@ -18,6 +18,11 @@ const execFileAsync = promisify(execFile)
 const HEALTH_CLI = fileURLToPath(new URL('../../plugins/src/cli/health-check.mjs', import.meta.url))
 const HOUSEKEEP_CLI = fileURLToPath(new URL('../../plugins/src/cli/housekeeping.mjs', import.meta.url))
 const PLUGIN_ROOT = fileURLToPath(new URL('../../plugins', import.meta.url))
+const PLUGIN_MANIFEST = fileURLToPath(new URL('../../plugins/.claude-plugin/plugin.json', import.meta.url))
+// Read the real packaged version at test-run time — never hardcode it. The manifest's
+// version bumps often (release-please, manual releases); a literal string here would
+// drift and fail on every bump instead of verifying the CLI reads the manifest correctly.
+const PACKAGED_VERSION = JSON.parse(await readFile(PLUGIN_MANIFEST, 'utf8')).version
 
 const runCli = async (cli, { cwd, env, input }) => {
   try {
@@ -52,7 +57,7 @@ test('health-check: exit 0 and reports version/manifests/config for a healthy re
     assert.equal(res.exitCode, 0)
     const report = JSON.parse(res.stdout)
     assert.equal(report.status, 'ok')
-    assert.equal(report.version, '1.1.0', 'reads the real packaged plugin.json version')
+    assert.equal(report.version, PACKAGED_VERSION, 'reads the real packaged plugin.json version')
     assert.equal(report.manifests.claudeHooks.present, true)
     assert.equal(report.manifests.frameworkConfig.present, true)
     assert.ok(report.config.observability.stalePhaseHours > 0)

@@ -97,6 +97,32 @@
         "policy": "verify"
       }
     ],
+    "brownfield-analyst": [
+      {
+        "name": "characterize-brownfield",
+        "policy": "verify"
+      },
+      {
+        "name": "compose-brownfield-prd",
+        "policy": "verify"
+      }
+    ],
+    "brownfield-harness-builder": [
+      {
+        "name": "characterize-with-contracts",
+        "policy": "verify"
+      }
+    ],
+    "brownfield-refactorer": [
+      {
+        "name": "mikado-method",
+        "policy": "verify"
+      },
+      {
+        "name": "strangler-fig-method",
+        "policy": "verify"
+      }
+    ],
     "architecture-boundaries-lens": [],
     "cold-reader-lens": [],
     "quality-gates-lens": [],
@@ -204,7 +230,8 @@
         "name": "resolving-stack-commands",
         "policy": "verify"
       }
-    ]
+    ],
+    "refactoring-worker": []
   },
   "agentArtifacts": {
     "acceptance-designer-reviewer": {
@@ -265,6 +292,37 @@
       "outputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
+      ]
+    },
+    "brownfield-analyst": {
+      "inputs": [
+        "repository path"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/characterization/{YYYY-MM-DD}/*.md",
+        "docs/prds/<kebab-case-name>.md",
+        ".copilot-tracking/prd-sessions/<kebab-case-name>.state.json"
+      ]
+    },
+    "brownfield-harness-builder": {
+      "inputs": [
+        "target service path or project name"
+      ],
+      "outputs": [
+        "discovered or reconstructed contract file(s)",
+        "characterization test project/files",
+        "gate verdict report"
+      ]
+    },
+    "brownfield-refactorer": {
+      "inputs": [
+        "a stated goal (what to modify, or what to replace)",
+        "confirmation that a safety net already exists for the target"
+      ],
+      "outputs": [
+        ".copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/mikado-<slug>.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/strangler-<slug>.md",
+        "a sequence of green commits (one per completed leaf/slice)"
       ]
     },
     "architecture-boundaries-lens": {
@@ -360,6 +418,16 @@
       ],
       "outputs": [
         "structured result block (strategy, stack, files[], testCommand) — NO commit"
+      ]
+    },
+    "refactoring-worker": {
+      "inputs": [
+        "full current graph/slice-plan artifact content",
+        "the specific leaf/slice to implement, verbatim",
+        "acceptance criteria (from mikado-method or strangler-fig-method, verbatim)"
+      ],
+      "outputs": [
+        "one of ADVANCE / EXPAND / DONE / BLOCKED (structured result) — no commit on EXPAND/BLOCKED"
       ]
     }
   }
