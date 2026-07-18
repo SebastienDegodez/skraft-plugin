@@ -17,19 +17,55 @@ const field = (block, re) => {
   return m ? m[1].trim() : undefined
 }
 
+// `model:` accepts either a scalar (`model: X`) or a YAML block list (`model:\n  - X\n  - Y`).
+// A list is a PRIORITIZED fallback chain (documented VS Code agent-frontmatter convention:
+// "the system tries each model in order until an available one is found") — not a policy
+// violation on its own. Returns a string for the scalar form, an array for the list form,
+// or undefined when the field is absent.
+const parseModelField = (block) => {
+  const lines = block.split('\n')
+  const idx = lines.findIndex((line) => /^model:/.test(line))
+  if (idx === -1) return undefined
+  const inline = lines[idx].match(/^model:\s*(.+?)\s*$/)
+  const inlineValue = inline ? inline[1].trim() : ''
+  if (inlineValue !== '') return inlineValue
+  const items = []
+  for (let i = idx + 1; i < lines.length; i++) {
+    const item = lines[i].match(/^\s*-\s*(.+?)\s*$/)
+    if (!item) break
+    items.push(item[1].trim())
+  }
+  return items.length > 0 ? items : undefined
+}
+
 // Extract just the fields the policy needs — minimal, no YAML dependency.
 export const parseAgentFrontmatter = (content) => {
   const block = frontmatterOf(content)
   return {
     name: field(block, /^name:\s*(.+?)\s*$/m),
-    model: field(block, /^model:\s*(.+?)\s*$/m),
+    model: parseModelField(block),
     costRoleClass: field(block, /^\s*cost_role_class:\s*(\w+)/m),
     modelRequirement: field(block, /^\s*model_requirement:\s*"?(.+?)"?\s*$/m),
   }
 }
 
-// Rewrite only the top-level `model:` line; everything else stays byte-for-byte.
-export const applyModel = (content, model) => content.replace(/^model:.*$/m, `model: ${model}`)
+// Rewrite the top-level `model:` field to a single scalar line; everything else stays
+// byte-for-byte. Collapses a prior list form (its `- item` continuation lines) too, so
+// --apply never leaves orphaned list items dangling under a rewritten scalar.
+export const applyModel = (content, model) => {
+  const lines = content.split('\n')
+  const idx = lines.findIndex((line) => /^model:/.test(line))
+  if (idx === -1) return content
+  let end = idx + 1
+  while (end < lines.length && /^\s+-\s*.+$/.test(lines[end])) end++
+  lines.splice(idx, end - idx, `model: ${model}`)
+  return lines.join('\n')
+}
+
+// Compliant when the scalar equals the resolved canonical model, OR — for the prioritized
+// list form — when the resolved canonical model appears anywhere in the fallback chain.
+const modelMatches = (model, resolvedModel) =>
+  Array.isArray(model) ? model.includes(resolvedModel) : model === resolvedModel
 
 // Decide what should happen to one agent file, purely from its content.
 export const planAgent = (content, { allowList = DEFAULT_ALLOW_LIST } = {}) => {
@@ -37,7 +73,7 @@ export const planAgent = (content, { allowList = DEFAULT_ALLOW_LIST } = {}) => {
   if (allowList.has(name)) return { name, skipped: true, reason: 'allow-list' }
   if (costRoleClass === undefined) return { name, skipped: true, reason: 'no cost_role_class' }
   const { model: resolvedModel } = resolveModel({ costRoleClass, modelRequirement })
-  return { name, skipped: false, currentModel: model, resolvedModel, changed: model !== resolvedModel }
+  return { name, skipped: false, currentModel: model, resolvedModel, changed: !modelMatches(model, resolvedModel) }
 }
 
 const findAgentFiles = (dir) =>
@@ -83,7 +119,10 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
 
   const drift = active.filter((p) => p.changed)
   if (drift.length > 0) {
-    for (const p of drift) error(`drift: ${p.name} has '${p.currentModel}', expected '${p.resolvedModel}'`)
+    for (const p of drift) {
+      const shown = Array.isArray(p.currentModel) ? p.currentModel.join(', ') : p.currentModel
+      error(`drift: ${p.name} has '${shown}', expected '${p.resolvedModel}'`)
+    }
     return 1
   }
   log('all agent models match policy')
