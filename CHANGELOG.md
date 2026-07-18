@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.3.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.2.0...v1.3.0) (2026-07-18)
+
+### ✨ Features
+
+* **brownfield:** brownfield workflows ([#129](https://github.com/SebastienDegodez/skraft-plugin/issues/129)) ([9bd0d36](https://github.com/SebastienDegodez/skraft-plugin/commit/9bd0d366fa2931212eb51c8f5c6baf87fa8beac0))
+
 ## [1.2.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.1.0...v1.2.0) (2026-07-12)
 
 ### ✨ Features
