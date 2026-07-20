@@ -11,6 +11,12 @@ the change, let the compiler and test suite reveal what it actually depends on, 
 the missing prerequisites bottom-up. The graph is the artifact — the failed experiment's code is
 always thrown away.
 
+Validation discipline adapted from
+[chaabani-anis/mikado-method](https://github.com/chaabani-anis/mikado-method) (MIT License): the
+same rigor (mandatory graph validation, traceability, golden-master gate, atomic leaf commits),
+reimplemented against SKRAFT's Mermaid graph convention instead of that project's rail-notation
+format.
+
 **Precondition.** A green safety net must exist before starting (see `characterize-with-contracts`
 / `brownfield-harness-builder`). Mikado surfaces prerequisites via real compiler/test failures — a
 codebase with weak or no test coverage gives false leaves (nothing breaks because nothing was
@@ -41,25 +47,51 @@ are done.
 ## Graph persistence (the durable artifact)
 
 Persist the graph to `.copilot-tracking/skraft-plans/{projectSlug}/refactoring/{YYYY-MM-DD}/
-mikado-<slug>.md` as a Mermaid `graph TD`:
+mikado-<slug>.md` as a Mermaid `graph TD`. Minimal skeleton (read
+[references/graph-format.md](references/graph-format.md) for the full annotated spec — node
+shapes, the `discovered:`/`error:` traceability fields, `requires:` cross-links for shared
+prerequisites, and the golden-master gate — before writing the first node):
 
 ```mermaid
 graph TD
   G((Goal: <one sentence>))
   classDef observed fill:#2e7d32,stroke:#66bb6a
   classDef anticipated fill:#e65100,stroke:#ff9800,stroke-dasharray:5 5
-  P1["<prerequisite, file:line, error>"]
-  P1a["<nested prerequisite>"]
+  P1["[ ] {P1} <prerequisite><br/>discovered: <sha><br/>error: <file:line: msg>"]
   G --> P1
-  P1 --> P1a
-  class P1,P1a observed
+  class P1 observed
 ```
 
-`observed` = a real naive-experiment failure. `anticipated` = a hypothesis (e.g. carried in from a
-design doc or a prior planning pass) not yet confirmed by an experiment — confirm or refute it
-with a real attempt before treating it as a true prerequisite. One writer on this file per run
-(the `brownfield-refactorer` agent); reload it at every re-grounding boundary (before each leaf,
-after each spawn returns) rather than trusting recall.
+`[ ]` / `[x]` = pending / done, marked in the SAME commit as the leaf's implementation. `observed`
+= a real naive-experiment failure. `anticipated` = a hypothesis not yet confirmed by an experiment
+— confirm or refute it with a real attempt before treating it as a true prerequisite. One writer on
+this file per run (the `brownfield-refactorer` agent); reload it at every re-grounding boundary
+(before each leaf, after each spawn returns) rather than trusting recall.
+
+**Commit convention (required for the tree-direction check below).** Every graph-update commit
+(creating the file, recording a new discovery) uses the message prefix `refactor(mikado-graph):
+<what>` — matching this repo's existing conventional-commit scopes (`feat(scope):`, `docs(scope):`).
+Example: `refactor(mikado-graph): {P1} requires {P2} in src/Admin.cs:40`.
+
+## Mandatory validation gate (S7 — never assert graph validity from recall)
+
+Run the deterministic validator before every leaf commit and after every graph-update commit:
+
+```bash
+bash plugins/skills/mikado-method/scripts/validate-mikado.sh <path-to-graph.md>
+```
+
+Exit 0 = valid, safe to proceed. Exit non-zero = STOP and fix the graph first — never proceed on a
+graph the script has not validated. Eight passes: (1) parse nodes/edges/classes; (2) traceability
+— every non-goal node (unless `anticipated`) carries `discovered:` + `error:` evidence; (3) every
+edge (`-->` and `-.requires.->`) resolves to a defined node id — an unresolved reference is reported
+as exactly that, never left to masquerade as a cycle; (4) no cycle exists across tree and
+`requires:` edges; (5) tree direction — each child's `discovered:` commit exists, matches the
+`refactor(mikado-graph):` prefix, and is an ancestor-or-equal of its parent's commit (skip with
+`--no-git` for fixtures/examples with fictional SHAs — never on a real graph); (6) orphan detection
+(warning only) — a node never referenced by any edge; (7) a golden-master node or an explicit
+`%% no-golden-master: <reason>` declaration is present; (8) enumerates the true leaves (pending
+nodes with no pending children) ready for the next dispatch.
 
 ## Driving leaves to completion (per-leaf worker contract)
 
@@ -69,7 +101,8 @@ never accumulate leaves in one session (context drift risk). The dispatch packet
 1. The full current graph file content.
 2. The specific leaf to implement, verbatim, with its evidence citation.
 3. Acceptance: the harness (characterization + contract tests) passes; the full regression suite
-   passes; no new failures anywhere; the change is scoped strictly to this leaf — nothing else.
+   passes; no new failures anywhere; the change is scoped strictly to this leaf — nothing else;
+   `scripts/validate-mikado.sh` exits 0 after marking the leaf `[x]`.
 4. The explicit instruction: if this leaf turns out to have its own unimplemented prerequisites,
    STOP and report them as new sub-prerequisites. Do not attempt to fix them inline.
 
@@ -84,7 +117,8 @@ contract the `brownfield-refactorer` orchestrator polls:
 - `DONE` — the goal is achievable cleanly now (verified by a final naive re-attempt that no longer
   breaks); the graph is empty of unimplemented leaves.
 - `BLOCKED` — needs human input (ambiguous prerequisite, conflicting constraint, harness itself
-  broke in a way the worker cannot diagnose).
+  broke in a way the worker cannot diagnose, or `validate-mikado.sh` reports an error the worker
+  cannot resolve on its own).
 
 ## Common failure modes (reject these)
 
@@ -97,3 +131,11 @@ contract the `brownfield-refactorer` orchestrator polls:
   loop iterations; if it is not reloaded before each leaf, prerequisites get re-discovered or missed.
 - **Running the naive experiment against a shared/live environment** — always an isolated worktree;
   stale state (caches, migrations) produces false signal otherwise.
+- **Skipping the validation gate** — marking a leaf `[x]` or starting a parent without a clean
+  `validate-mikado.sh` run first. The script is cheap; a corrupted graph discovered three leaves
+  later is not.
+
+Read [references/worked-example.md](references/worked-example.md) for a full traced example
+(naive experiment through leaf execution) the first time this skill runs in a session, or when a
+concrete reference shape is needed for a dispatch packet.
+
