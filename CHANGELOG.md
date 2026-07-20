@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.3.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.3.0...v1.3.1) (2026-07-20)
+
+### ♻️ Refactoring
+
+* **mikado-method:** 8-pass deterministic graph validator + scripts/references layout ([d68316f](https://github.com/SebastienDegodez/skraft-plugin/commit/d68316f8bdb59e9bbebe2dd4d92a8f398e342ab4))
+
 ## [1.3.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.2.0...v1.3.0) (2026-07-18)
 
 ### ✨ Features
