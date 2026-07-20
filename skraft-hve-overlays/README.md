@@ -10,7 +10,7 @@ Skills referenced by these overlays (`issue-refinement`, `architecture-patterns`
 
 | File | Attaches to | Imposes |
 |---|---|---|
-| `skraft-backlog-story-quality` | backlog tracking artifacts | `issue-refinement` (INVEST/DoR) |
+| `skraft-backlog-story-quality` | backlog tracking artifacts | `issue-refinement` (INVEST/DoR), `issue-triage` (labels), `planning-review-criteria` (gates) |
 | `skraft-prd-quality` | PRD sessions + `docs/prds/` | `issue-refinement` (FR-/NFR- quality, traceability) |
 | `skraft-rpi-design-rigor` | RPI research/plans/details | DDD, modularity, ADR, test-design, BDD, contracts |
 | `skraft-rpi-implementation-rigor` | RPI changes + code files | outside-in TDD, Clean Architecture, craft-discipline (incl. Object Calisthenics), mocking, stack commands |
