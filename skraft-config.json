@@ -1,3 +1,4 @@
 {
-  "depthTier": "comprehensive"
+  "depthTier": "comprehensive",
+  "trackingLayout": "namespaced"
 }

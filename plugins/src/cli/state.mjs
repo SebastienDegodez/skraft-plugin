@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { join } from 'node:path'
+import { rename, mkdir, readdir, access } from 'node:fs/promises'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
 import { createJsonStateBackupReader } from '../adapters/infrastructure/state/json-state-backup-reader.mjs'
@@ -7,10 +8,12 @@ import { createStateService } from '../application/state-service.mjs'
 import { createRecoveryService } from '../application/recovery-service.mjs'
 import { createGitCommitLogReader } from '../adapters/infrastructure/git-commit-log-reader.mjs'
 import { createCommitScanService } from '../application/commit-scan-service.mjs'
+import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
+import { stateDirSegments } from '../domain/tracking-layout-policy.mjs'
 
-// basePath: SKRAFT_TRACKING_ROOT env var OR .copilot-tracking/skraft-plans (cwd)
-const basePath = process.env.SKRAFT_TRACKING_ROOT
-  ?? join(process.cwd(), '.copilot-tracking', 'skraft-plans')
+// basePath: resolved from SKRAFT_TRACKING_ROOT (explicit) → SKRAFT_TRACKING_LAYOUT env →
+// skraft-config.json::trackingLayout → default namespaced. State lives at {basePath}/{slug}/.
+const basePath = resolveTrackingRoot()
 
 const stateReader = createJsonStateReader(basePath)
 const stateWriter = createJsonStateWriter(basePath)
@@ -244,6 +247,65 @@ async function run() {
         return
       }
       writeSuccess(result.value)
+      break
+    }
+
+    case 'migrate': {
+      // P4 back-compat: relocate a project's STATE from the namespaced layout
+      // (.copilot-tracking/skraft-plans/{slug}/) to the bare layout
+      // (.copilot-tracking/skraft/{slug}/). Dry-run by default; --apply performs the move.
+      // Artefacts (research/plans/details/changes/reviews) are intentionally LEFT IN PLACE:
+      // they stay readable, and bare-mode agents write new artefacts to the shared
+      // .copilot-tracking dirs. Bulk artefact relocation is deliberately out of scope to
+      // avoid collisions with an existing HVE-RPI run on the same bare dirs.
+      if (!slug) {
+        writeError('INVALID_ARGUMENT', 'migrate requires --slug')
+        process.exitCode = 1
+        return
+      }
+      const apply = rest.includes('--apply')
+      const cwd = process.cwd()
+      const fromDir = join(cwd, ...stateDirSegments('namespaced', slug))
+      const toDir = join(cwd, ...stateDirSegments('bare', slug))
+      const fromState = join(fromDir, 'state.json')
+      const toState = join(toDir, 'state.json')
+
+      try {
+        await access(fromState)
+      } catch {
+        writeError('NOT_FOUND', `no namespaced state found at ${fromState}`)
+        process.exitCode = 1
+        return
+      }
+      let targetExists = false
+      try { await access(toState); targetExists = true } catch { /* target free */ }
+      if (targetExists) {
+        writeError('TARGET_EXISTS', `bare state already exists at ${toState}; refusing to overwrite`)
+        process.exitCode = 3
+        return
+      }
+
+      if (!apply) {
+        writeSuccess({ dryRun: true, from: fromState, to: toState, hint: 'pass --apply to perform the move' })
+        break
+      }
+
+      await mkdir(toDir, { recursive: true })
+      const entries = await readdir(fromDir).catch(() => [])
+      const moved = []
+      for (const name of entries) {
+        if (name === 'state.json' || /^state\.json\.bak\.\d+$/.test(name)) {
+          await rename(join(fromDir, name), join(toDir, name))
+          moved.push(name)
+        }
+      }
+      writeSuccess({
+        applied: true,
+        from: fromState,
+        to: toState,
+        moved,
+        note: 'artefacts left in place; bare-mode agents write new artefacts to the shared .copilot-tracking dirs'
+      })
       break
     }
 

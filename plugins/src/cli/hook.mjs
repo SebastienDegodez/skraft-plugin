@@ -12,14 +12,17 @@ import { createJsonStateReader } from '../adapters/infrastructure/json-state-rea
 import { createRealFilesystem } from '../adapters/infrastructure/real-filesystem.mjs'
 import { createGitCommitVerifier } from '../adapters/infrastructure/git-commit-verifier.mjs'
 import { resolvePluginRootFromEnv } from '../adapters/infrastructure/plugin-root-resolver.mjs'
+import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
 
 // Resolve the plugin root (US16): CLAUDE_PLUGIN_ROOT (harness-injected) →
 // cache glob (~/.claude/plugins/cache/*/skraft/*) → module-relative fallback.
 const pluginRoot = resolvePluginRootFromEnv({ moduleUrl: import.meta.url })
 const auditLogPath = process.env.SKRAFT_AUDIT_LOG ?? join(pluginRoot, 'logs', 'skill-audit.jsonl')
 const configPath = process.env.SKRAFT_CONFIG ?? join(pluginRoot, 'skraft-framework.config.json')
-// Same tracking root convention as cli/state.mjs (S7 CLI bridge).
-const trackingRoot = process.env.SKRAFT_TRACKING_ROOT ?? join(process.cwd(), '.copilot-tracking', 'skraft-plans')
+// Same tracking-root resolution as cli/state.mjs (SKRAFT_TRACKING_ROOT → layout env →
+// skraft-config.json::trackingLayout → default namespaced), so guards read state.json
+// from the layout-correct location.
+const trackingRoot = resolveTrackingRoot()
 
 const clock = { now: () => new Date().toISOString() }
 const auditWriter = createJsonlAuditWriter(auditLogPath)

@@ -54,6 +54,8 @@ export default {
     // US16 — Consumer hook deployment / plugin-root resolution (#63)
     'plugins/src/domain/plugin-root-policy.mjs',
     'plugins/src/adapters/infrastructure/plugin-root-resolver.mjs',
+    // Layer separation — tracking layout (namespaced|bare) resolution
+    'plugins/src/domain/tracking-layout-policy.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },
