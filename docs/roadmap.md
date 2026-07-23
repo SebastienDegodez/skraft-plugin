@@ -348,9 +348,13 @@ l'autre) et — en layout `bare` — opèrent sur les **mêmes fichiers** `.copi
 1. **Étape RESEARCH** (doctrine task-research RPI) en tête du pipeline : document de recherche
    cité, gated par la difficulté (sautée pour Simple/Medium, comme RPI ne produit pas
    d'artefact de recherche pour du travail simple).
-2. **G1 active-pipeline-only** : le garde d'ordre de dispatch ne gouverne QUE les agents de
-   phase ; les agents produit (invoqués en top-level) et les workers (dispatchés dans DELIVER)
-   passent (`UNGOVERNED`). Les invariants existants restent intacts (AC-01/02/04).
+2. **G1 active-pipeline-only + câblage `PreToolUse`** : le garde d'ordre de dispatch ne
+   gouverne QUE les agents de phase ; les agents produit (invoqués en top-level) et les
+   workers (dispatchés dans DELIVER) passent (`UNGOVERNED`). Les trois gardes `PreToolUse`
+   (G1 + G7/G8) sont désormais **câblés** dans `cli/hook.mjs` via un composite : G1 gated sur
+   `projectSlug` + `requestedAgent` (un agent standalone n'est jamais bloqué), G7/G8 toujours
+   exécuté, décisions combinées fail-closed. Les invariants existants restent intacts
+   (AC-01/02/04).
 3. **Layout `trackingLayout` (namespaced | bare)** : dial repo-wide. `namespaced` (défaut,
    legacy) sous `skraft-plans/{slug}/` ; `bare` converge sur les répertoires RPI nus et place
    l'état sous `.copilot-tracking/skraft/{slug}/`. Migration via `state.mjs migrate`.
@@ -358,15 +362,17 @@ l'autre) et — en layout `bare` — opèrent sur les **mêmes fichiers** `.copi
 **Modules livrés :** `domain/tracking-layout-policy.mjs` (pur),
 `adapters/infrastructure/tracking-root-resolver.mjs` (précédence env → config → défaut),
 `domain/pipeline-policy.mjs` (`isPipelineAgent` + court-circuit `UNGOVERNED`),
+`application/pre-tool-use-composite.mjs` (compose G1 + G7/G8, câblé dans `cli/hook.mjs`),
 `domain/config-schema.mjs` + `application/config-service.mjs` (clé `trackingLayout`),
-`cli/state.mjs` (résolution de layout + `migrate`), `cli/hook.mjs` (résolveur partagé),
+`cli/state.mjs` (résolution de layout + `migrate`), `cli/hook.mjs` (résolveur partagé +
+câblage `PreToolUse` + bridge args event/matcher),
 agents `solution-researcher` (+`-reviewer`), orchestrateur re-ciblé (`phases`
 `[RESEARCH, DESIGN, DISTILL, DELIVER]`), `backlog-*` en racines autonomes,
 `skraft-framework.config.json` régénéré, instructions `skraft-state`/`skraft-artifacts`
 (layouts documentés).
 
-**Qualité :** `node --test` 100 % (748 tests) + mutation Stryker : `tracking-layout-policy`
-100 %, `pipeline-policy`/`config-*`/`pre-tool-use-service` ≥ 80 % (break).
+**Qualité :** `node --test` 100 % (760 tests) + mutation Stryker : `tracking-layout-policy`
+100 %, `pre-tool-use-composite` 96 %, `pipeline-policy`/`config-*`/`pre-tool-use-service` ≥ 80 % (break).
 
 **Dépend de :** US3, S1, S2
 

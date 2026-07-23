@@ -17,6 +17,7 @@ export default {
     'plugins/src/domain/state-schema.mjs',
     'plugins/src/domain/pipeline-policy.mjs',
     'plugins/src/application/pre-tool-use-service.mjs',
+    'plugins/src/application/pre-tool-use-composite.mjs',
     // US4 — G2/G3 skill-loading guardrail (#50)
     'plugins/src/domain/skill-policy.mjs',
     'plugins/src/application/subagent-start-service.mjs',

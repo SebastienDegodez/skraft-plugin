@@ -84,14 +84,16 @@ plugins/src/
 │   ├── plugin-root-policy.mjs    # résolution racine plugin (US16)
 │   └── execution-log-schema.mjs
 ├── application/
-│   ├── pre-tool-use-service.mjs
+│   ├── pre-tool-use-service.mjs       # G1 ordre dispatch
+│   ├── pre-tool-use-session-guard-service.mjs # G7/G8
+│   ├── pre-tool-use-composite.mjs     # compose G1 + G7/G8 (câblé dans hook.mjs)
 │   ├── subagent-start-service.mjs
 │   ├── subagent-stop-service.mjs
 │   ├── post-tool-use-service.mjs
 │   ├── session-start-service.mjs # housekeeping (rétention audit + signaux)
 │   ├── health-check-service.mjs  # diagnostics (version/manifests/logs/config)
 │   ├── state-service.mjs     # init/get/applyEvent (write-through)
-│   ├── config-service.mjs    # init/get/set (depthTier)
+│   ├── config-service.mjs    # init/get/set (depthTier, trackingLayout)
 │   └── config-loader.mjs
 ├── ports/
 │   ├── api/                 # contrats entrants (appelés par la couche Api)
@@ -142,7 +144,7 @@ plugins/src/
 
 | Garde | Event hook | Matcher | Mode | US | Statut |
 |---|---|---|---|---|---|
-| G1 ordre dispatch (active-pipeline-only) | `PreToolUse` | `Agent` | fail-closed | #3 | 🔲 |
+| G1 ordre dispatch (active-pipeline-only) | `PreToolUse` | `Agent` | fail-closed | #3 | ✅ |
 | G2 inject skills | `SubagentStart` | — | fail-open | #4 | 🔲 |
 | G3 audit skills | `PostToolUse` | `Read` | fail-open | #4 | 🔲 |
 | G4 structure artefacts | `SubagentStop` | — | fail-closed | #8 | ✅ |
@@ -192,6 +194,14 @@ Résolution (via `cli/state.mjs`/`cli/hook.mjs`) : `SKRAFT_TRACKING_ROOT` → `S
 | `SubagentStart` | — | G2 |
 | `SubagentStop` | — | G3 vérif + G4/G5 |
 | `PostToolUse` | `Agent` | G6 |
+
+> **Câblage `PreToolUse` (S3).** `cli/hook.mjs` compose les trois gardes `PreToolUse` via
+> `application/pre-tool-use-composite.mjs` : G1 (ordre de dispatch) ne s'exécute que pour un
+> dispatch d'agent tracké par l'orchestrateur (`projectSlug` + `requestedAgent` présents) —
+> sinon il est sauté, pour ne pas bloquer un agent invoqué en standalone ; G7/G8 (session
+> guard) s'exécute toujours (G7 inconditionnel). Décisions combinées **fail-closed** :
+> `block > deny > allow`. Le manifest transmet `event [matcher]` en args CLI (signal de
+> dispatch autoritaire ; les payloads harness portent `hook_event_name`, pas `hookType`).
 
 ### Copilot CLI — `.github/hooks/skraft-framework.json`
 
