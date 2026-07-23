@@ -1,16 +1,18 @@
 import { Ok, Err, isOk } from '../domain/result.mjs'
-import { validateConfig, DEPTH_TIERS, DEFAULT_DEPTH_TIER } from '../domain/config-schema.mjs'
+import { validateConfig, DEPTH_TIERS, DEFAULT_DEPTH_TIER, TRACKING_LAYOUTS, DEFAULT_TRACKING_LAYOUT } from '../domain/config-schema.mjs'
 
-const DEFAULT_CONFIG = () => ({ depthTier: DEFAULT_DEPTH_TIER })
+const DEFAULT_CONFIG = () => ({ depthTier: DEFAULT_DEPTH_TIER, trackingLayout: DEFAULT_TRACKING_LAYOUT })
 
 // Keys the CLI may `set`, each with its own value validator. depthTier is the governed
 // dial; depthTierRationale captures the "why" when the tier is downgraded from the
 // comprehensive default (repo-level replacement for the old per-run depthTierOverrides).
+// trackingLayout switches the artefact/state substrate (namespaced legacy vs bare RPI-shared).
 // Extra human-authored fields are preserved on read/write but are not settable through
 // the guarded `set` path (edit the file directly for those).
 const SETTABLE_KEYS = {
   depthTier: (value) => DEPTH_TIERS.includes(value),
   depthTierRationale: (value) => typeof value === 'string' && value.length > 0,
+  trackingLayout: (value) => TRACKING_LAYOUTS.includes(value),
 }
 
 // Application use case: orchestrates configReader port + config-schema domain +

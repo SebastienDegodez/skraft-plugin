@@ -165,6 +165,33 @@ test('config-service set: on ENOENT starts from default then applies the set', a
   assert.equal(writer._written.depthTier, 'standard')
 })
 
+test('config-service set: writes a valid trackingLayout and returns the new config', async () => {
+  const writer = writerOk()
+  const svc = createConfigService({ configReader: readerOk({ depthTier: 'comprehensive' }), configWriter: writer })
+  const r = await svc.set('trackingLayout', 'bare')
+  assert.equal(r.ok, true)
+  assert.equal(r.value.trackingLayout, 'bare')
+  assert.equal(writer._written.trackingLayout, 'bare')
+})
+
+test('config-service set: rejects an invalid trackingLayout value', async () => {
+  const writer = writerOk()
+  const svc = createConfigService({ configReader: readerOk({ depthTier: 'comprehensive' }), configWriter: writer })
+  const r = await svc.set('trackingLayout', 'sideways')
+  assert.equal(r.ok, false)
+  assert.equal(r.error.code, 'INVALID_VALUE')
+  assert.equal(writer._written, null, 'invalid set must not write')
+})
+
+test('config-service init: default config carries the namespaced trackingLayout', async () => {
+  const writer = writerOk()
+  const svc = createConfigService({ configReader: readerEnoent(), configWriter: writer })
+  const r = await svc.init()
+  assert.equal(r.ok, true)
+  assert.equal(r.value.trackingLayout, 'namespaced')
+  assert.equal(writer._written.trackingLayout, 'namespaced')
+})
+
 test('config-service set: rejects an unknown key', async () => {
   const writer = writerOk()
   const svc = createConfigService({ configReader: readerOk({ depthTier: 'comprehensive' }), configWriter: writer })
