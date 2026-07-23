@@ -13,6 +13,18 @@ export const nextPhaseAfter = (currentPhase, config, skipPhases) => {
   return index < order.length ? order[index] : null
 }
 
+// The set of agents governed by the phase-order guard: every specialist and reviewer
+// declared across the pipeline. Anything NOT in this set (product-layer agents invoked
+// top-level, DELIVER workers, arbitrary sub-agents) is UNGOVERNED — the phase-order
+// invariant does not apply to it, so it must not be denied for being "out of order".
+export const isPipelineAgent = (agent, config) => {
+  for (const phase of config.phaseOrder ?? []) {
+    const phaseAgents = config.phaseAgents?.[phase]
+    if (phaseAgents?.specialist === agent || phaseAgents?.reviewer === agent) return true
+  }
+  return false
+}
+
 export const expectedNextAgent = (state, config) => {
   const { currentPhase, specialistDone, reviewerVerdict, retries, skipPhases } = state
 
@@ -50,6 +62,17 @@ export const expectedNextAgent = (state, config) => {
 }
 
 export const evaluateDispatch = (requestedAgent, state, config) => {
+  // Active-pipeline-only: the phase-order invariant governs pipeline agents. An
+  // ungoverned agent (product-layer, worker, arbitrary) is allowed unconditionally —
+  // it is not part of the sequence, so "out of order" is meaningless for it.
+  if (!isPipelineAgent(requestedAgent, config)) {
+    return Ok({
+      requestedAgent,
+      expectedAgent: null,
+      stage: 'UNGOVERNED',
+      reason: `${requestedAgent} is not a pipeline phase agent; dispatch is not governed by phase order`
+    })
+  }
   const expected = expectedNextAgent(state, config)
   if (!isOk(expected)) {
     return Err({ code: expected.error.code, requestedAgent, expectedAgent: null, reason: expected.error.reason })

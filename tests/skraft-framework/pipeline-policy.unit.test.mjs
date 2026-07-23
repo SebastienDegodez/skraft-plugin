@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { isOk, isErr } from '../../plugins/src/domain/result.mjs'
-import { expectedNextAgent } from '../../plugins/src/domain/pipeline-policy.mjs'
+import { expectedNextAgent, evaluateDispatch, isPipelineAgent } from '../../plugins/src/domain/pipeline-policy.mjs'
 
 // Inner-loop domain tests for branches the immutable acceptance suite cannot observe
 // (Mandate 4 gate a — branch_unreachable_via_AC) plus the retry-budget boundary sweep
@@ -107,3 +107,44 @@ for (const { retries, stage, agent, exhausted } of RETRY_ROWS) {
     }
   })
 }
+
+// ─── isPipelineAgent + UNGOVERNED dispatch (t3 — active-pipeline-only relaxation) ──
+// The phase-order guard governs ONLY agents that belong to a phase. Product-layer
+// agents (invoked top-level) and workers (dispatched inside DELIVER) are ungoverned:
+// they must never be denied for being "out of order" against the pipeline.
+
+test('isPipelineAgent: true for a configured specialist and reviewer', () => {
+  assert.equal(isPipelineAgent('solution-architect', CONFIG), true)
+  assert.equal(isPipelineAgent('solution-architect-reviewer', CONFIG), true)
+})
+
+test('isPipelineAgent: false for a worker / unknown agent', () => {
+  assert.equal(isPipelineAgent('contract-testing-worker', CONFIG), false)
+  assert.equal(isPipelineAgent('nonexistent-agent', CONFIG), false)
+})
+
+test('evaluateDispatch: an ungoverned agent is allowed with stage UNGOVERNED regardless of phase', () => {
+  // Active pipeline mid-DELIVER; a worker dispatch must pass, not collide with phase order.
+  const state = { currentPhase: 'DELIVER', specialistDone: true, reviewerVerdict: null, retries: 0, skipPhases: [] }
+  const result = evaluateDispatch('contract-testing-worker', state, CONFIG)
+  assert.ok(isOk(result))
+  assert.equal(result.value.stage, 'UNGOVERNED')
+  assert.equal(result.value.expectedAgent, null)
+  assert.equal(result.value.requestedAgent, 'contract-testing-worker')
+  assert.match(result.value.reason, /not.*governed by phase order/)
+})
+
+test('evaluateDispatch: a governed pipeline agent still enforces order (out-of-order denied)', () => {
+  const state = { currentPhase: 'DISCUSS', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] }
+  const result = evaluateDispatch('acceptance-designer', state, CONFIG)
+  assert.ok(isErr(result))
+  assert.equal(result.error.code, 'OUT_OF_ORDER')
+  assert.equal(result.error.expectedAgent, 'solution-architect')
+})
+
+test('evaluateDispatch: a governed pipeline agent that matches the expected agent is allowed', () => {
+  const state = { currentPhase: 'DISCUSS', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] }
+  const result = evaluateDispatch('solution-architect', state, CONFIG)
+  assert.ok(isOk(result))
+  assert.equal(result.value.stage, 'ADVANCE')
+})

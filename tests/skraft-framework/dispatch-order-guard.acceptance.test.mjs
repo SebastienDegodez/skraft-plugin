@@ -212,18 +212,29 @@ const AC04_CASES = [
   }
 ]
 
-for (const { label, reader, code } of AC04_CASES) {
-  test(`AC-04: ${label} blocks the dispatch (fail-closed, never allow) and reports ${code}`, async () => {
-    const { result, entries } = await runGate({ reader, requestedAgent: 'solution-architect' })
+// ───────────────────────────────────────────────────────────────────────────
+// AC-05 — The guard governs ONLY pipeline agents (active-pipeline-only)
+// A worker or product-layer agent dispatched during an active pipeline is allowed;
+// it is ungoverned by phase order. Fail-closed on missing/invalid state is unchanged.
+// ───────────────────────────────────────────────────────────────────────────
 
-    assert.notEqual(result.decision, 'allow', 'absence of a trustworthy decision input must never allow')
-    assert.equal(result.decision, 'block')
+test('AC-05: an ungoverned agent (worker) is allowed during an active pipeline and audited as UNGOVERNED', async () => {
+  // Active DELIVER pipeline, specialist done, reviewer pending — a worker dispatch must pass.
+  const state = { currentPhase: 'DELIVER', specialistDone: true, reviewerVerdict: null, retries: 0, skipPhases: [] }
+  const { result, entries } = await runGate({ reader: stateReaderReturning(state), requestedAgent: 'contract-testing-worker' })
 
-    assert.equal(entries.length, 1, 'fail-closed evaluations are still audited (AC-03)')
-    const audit = entries[0]
-    assert.equal(audit.event, 'DispatchEvaluated')
-    assert.equal(audit.requestedAgent, 'solution-architect')
-    assert.equal(audit.decision, 'DENY')
-    assert.equal(audit.code, code)
-  })
-}
+  assert.equal(result.decision, 'allow', 'a non-pipeline agent must not be denied for phase order')
+
+  assert.equal(entries.length, 1)
+  const audit = entries[0]
+  assert.equal(audit.event, 'DispatchEvaluated')
+  assert.equal(audit.requestedAgent, 'contract-testing-worker')
+  assert.equal(audit.expectedAgent, null)
+  assert.equal(audit.decision, 'ALLOW')
+  assert.equal(audit.code, 'UNGOVERNED')
+})
+
+test('AC-05: an ungoverned agent with a missing state file still fails closed (safety unchanged)', async () => {
+  const { result } = await runGate({ reader: stateReaderThrowing(enoent), requestedAgent: 'contract-testing-worker' })
+  assert.equal(result.decision, 'block', 'missing state blocks regardless of the agent (AC-04 invariant holds)')
+})

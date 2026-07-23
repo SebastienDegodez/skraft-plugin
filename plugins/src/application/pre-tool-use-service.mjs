@@ -9,7 +9,7 @@ import { allow, deny, block } from '../adapters/api/hooks/decision.mjs'
 const allowFact = (decision) => ({
   expectedAgent: decision.expectedAgent,
   decision: 'ALLOW',
-  code: 'CONFORMING',
+  code: decision.stage === 'UNGOVERNED' ? 'UNGOVERNED' : 'CONFORMING',
   reason: decision.reason,
   harness: allow()
 })
