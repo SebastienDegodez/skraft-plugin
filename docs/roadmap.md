@@ -25,6 +25,7 @@ avec leur gain, statut et milestone.
 | [US13](#us13) | Recovery / rollback | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [S1](#s1) | State write-through (économie de tokens) | `gain:eco-tokens` | ✅ Livré | Phase 2 — Complétude |
 | [S2](#s2) | Config repo-wide (configurateur `depthTier`) | `gain:dx` | ✅ Livré | Phase 2 — Complétude |
+| [S3](#s3) | Séparation des couches (produit / ingénierie, RPI-aligné) | `gain:dx` | ✅ Livré | Phase 3 — Alignement RPI |
 
 ---
 
@@ -326,3 +327,48 @@ via `state.mjs`. Les agents n'appellent que des commandes (get/set délégués a
 **Qualité :** `node --test` 100 % + mutation Stryker ≥ 80 % sur les fichiers config.
 
 **Dépend de :** US1, S1
+
+---
+
+### S3 — Séparation des couches (produit / ingénierie, RPI-aligné) <a id="s3"></a>
+
+**Statut :** ✅ Livré
+**Milestone :** Phase 3 — Alignement RPI
+
+**Gain :** `gain:dx` — vraie séparation des couches. L'orchestrateur devient l'équivalent
+SKRAFT du `rpi-agent` HVE : un pipeline d'**ingénierie** pur `RESEARCH → DESIGN → DISTILL →
+DELIVER`. La découverte de backlog et le raffinement d'histoires **quittent** l'orchestrateur
+et deviennent des agents **produit** autonomes (`backlog-discoverer`, `backlog-planner`), que
+le développeur invoque directement. SKRAFT et HVE-RPI sont **mutuellement exclusifs** (l'un ou
+l'autre) et — en layout `bare` — opèrent sur les **mêmes fichiers** `.copilot-tracking/`
+(swappabilité).
+
+**Décisions clés :**
+
+1. **Étape RESEARCH** (doctrine task-research RPI) en tête du pipeline : document de recherche
+   cité, gated par la difficulté (sautée pour Simple/Medium, comme RPI ne produit pas
+   d'artefact de recherche pour du travail simple).
+2. **G1 active-pipeline-only** : le garde d'ordre de dispatch ne gouverne QUE les agents de
+   phase ; les agents produit (invoqués en top-level) et les workers (dispatchés dans DELIVER)
+   passent (`UNGOVERNED`). Les invariants existants restent intacts (AC-01/02/04).
+3. **Layout `trackingLayout` (namespaced | bare)** : dial repo-wide. `namespaced` (défaut,
+   legacy) sous `skraft-plans/{slug}/` ; `bare` converge sur les répertoires RPI nus et place
+   l'état sous `.copilot-tracking/skraft/{slug}/`. Migration via `state.mjs migrate`.
+
+**Modules livrés :** `domain/tracking-layout-policy.mjs` (pur),
+`adapters/infrastructure/tracking-root-resolver.mjs` (précédence env → config → défaut),
+`domain/pipeline-policy.mjs` (`isPipelineAgent` + court-circuit `UNGOVERNED`),
+`domain/config-schema.mjs` + `application/config-service.mjs` (clé `trackingLayout`),
+`cli/state.mjs` (résolution de layout + `migrate`), `cli/hook.mjs` (résolveur partagé),
+agents `solution-researcher` (+`-reviewer`), orchestrateur re-ciblé (`phases`
+`[RESEARCH, DESIGN, DISTILL, DELIVER]`), `backlog-*` en racines autonomes,
+`skraft-framework.config.json` régénéré, instructions `skraft-state`/`skraft-artifacts`
+(layouts documentés).
+
+**Qualité :** `node --test` 100 % (748 tests) + mutation Stryker : `tracking-layout-policy`
+100 %, `pipeline-policy`/`config-*`/`pre-tool-use-service` ≥ 80 % (break).
+
+**Dépend de :** US3, S1, S2
+
+**Suivi (docs) :** réconciliation du handbook FR/EN (`docs/site/`) — pages de référence
+`solution-researcher`, page pipeline, navigation — à passer via `skraft-docs-orchestrator`.

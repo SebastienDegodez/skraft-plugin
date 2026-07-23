@@ -78,7 +78,8 @@ plugins/src/
 │   ├── artifact-policy.mjs   # G4/G5
 │   ├── state-schema.mjs
 │   ├── state-machine.mjs     # invariants I1-I9 (write-through)
-│   ├── config-schema.mjs     # depthTier repo-wide
+│   ├── config-schema.mjs     # depthTier + trackingLayout repo-wide
+│   ├── tracking-layout-policy.mjs # layout namespaced|bare (S3)
 │   ├── observability-policy.mjs  # seuils + stale-phase + rétention (US12)
 │   ├── plugin-root-policy.mjs    # résolution racine plugin (US16)
 │   └── execution-log-schema.mjs
@@ -122,11 +123,12 @@ plugins/src/
 │       │   └── json-config-writer.mjs  # atomique + backup ≤3
 │       ├── system-time.mjs (+fixed)
 │       ├── plugin-root-resolver.mjs # glob cache + CLAUDE_PLUGIN_ROOT (US16)
+│       ├── tracking-root-resolver.mjs # basePath namespaced|bare (S3)
 │       └── real-filesystem.mjs (+in-memory)
 └── cli/
     ├── hook.mjs               # ← appelé par hooks.json
-    ├── state.mjs             # S7 bridge état (write-through)
-    ├── config.mjs            # S7 bridge config repo-wide (depthTier)
+    ├── state.mjs             # S7 bridge état (write-through) + migrate (S3)
+    ├── config.mjs            # S7 bridge config repo-wide (depthTier, trackingLayout)
     ├── health-check.mjs      # US12 diagnostics (fail-open)
     ├── housekeeping.mjs      # US12 SessionStart auto-entretien
     ├── init-log.mjs
@@ -140,7 +142,7 @@ plugins/src/
 
 | Garde | Event hook | Matcher | Mode | US | Statut |
 |---|---|---|---|---|---|
-| G1 ordre dispatch | `PreToolUse` | `Agent` | fail-closed | #3 | 🔲 |
+| G1 ordre dispatch (active-pipeline-only) | `PreToolUse` | `Agent` | fail-closed | #3 | 🔲 |
 | G2 inject skills | `SubagentStart` | — | fail-open | #4 | 🔲 |
 | G3 audit skills | `PostToolUse` | `Read` | fail-open | #4 | 🔲 |
 | G4 structure artefacts | `SubagentStop` | — | fail-closed | #8 | ✅ |
@@ -148,6 +150,34 @@ plugins/src/
 | G6 continuation | `PostToolUse` | `Agent` | fail-open | #10 | ✅ |
 | G7 deny state.json direct | `PreToolUse` | `Bash` | fail-closed | #11 | ✅ |
 | G8 session guard | `PreToolUse` | `Agent` | fail-open | #11 | ✅ |
+
+> **G1 active-pipeline-only (S3).** Le garde d'ordre de dispatch ne gouverne que les
+> **agents de phase** du pipeline (`phaseAgents`). Un agent hors-pipeline — agent produit
+> (`backlog-discoverer`, `backlog-planner`) invoqué en top-level, ou worker dispatché dans
+> DELIVER (`contract-testing-worker`…) — reçoit un verdict `UNGOVERNED` (allow) au lieu d'un
+> `OUT_OF_ORDER`. Les invariants restent : un agent de phase in-flight respecte l'ordre, et
+> un état manquant/corrompu bloque toujours (fail-closed).
+
+## Couches : produit vs ingénierie (S3)
+
+L'orchestrateur (`/skraft`) est l'équivalent SKRAFT du `rpi-agent` HVE : un pipeline
+d'**ingénierie** pur `RESEARCH → DESIGN → DISTILL → DELIVER`. La **découverte de backlog** et
+le **raffinement d'histoires** sont des agents **produit** autonomes (`backlog-discoverer`,
+`backlog-planner`), invoqués directement par le développeur — hors orchestrateur. SKRAFT et
+HVE-RPI sont mutuellement exclusifs ; en layout `bare` ils partagent les mêmes fichiers
+`.copilot-tracking/`.
+
+**Tracking layout** (`skraft-config.json::trackingLayout`, dial repo-wide, défaut
+`namespaced`) :
+
+| Layout | Artefacts | État |
+|---|---|---|
+| `namespaced` (défaut, legacy) | `.copilot-tracking/skraft-plans/{slug}/` | `…/skraft-plans/{slug}/state.json` |
+| `bare` (convergence HVE-RPI) | `.copilot-tracking/{research,plans,details,changes,reviews}/` (partagés RPI) | `.copilot-tracking/skraft/{slug}/state.json` |
+
+Résolution (via `cli/state.mjs`/`cli/hook.mjs`) : `SKRAFT_TRACKING_ROOT` → `SKRAFT_TRACKING_LAYOUT`
+→ `skraft-config.json::trackingLayout` → `namespaced`. Bascule d'un dépôt existant :
+`state.mjs migrate --slug {slug} [--apply]`.
 
 ---
 
