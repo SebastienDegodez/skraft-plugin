@@ -1,6 +1,6 @@
 ---
 description: "SKRAFT pipeline state: write-through model (native todo working set + deterministic CLI writes), schema, and once-per-session rehydration aligned with HVE-Core conventions"
-applyTo: '**/.copilot-tracking/skraft-plans/**'
+applyTo: '**/.copilot-tracking/**'
 ---
 <!-- markdownlint-disable-file -->
 <!-- PORTABILITY: orchestrator-owned. Only the skraft-orchestrator loads this file
@@ -12,7 +12,16 @@ applyTo: '**/.copilot-tracking/skraft-plans/**'
 
 # SKRAFT Pipeline State Conventions
 
-These conventions govern every SKRAFT agent (orchestrator, phase agents, reviewers) that reads or writes pipeline state. State persists at `.copilot-tracking/skraft-plans/{project-slug}/state.json`. JSON only — never markdown.
+These conventions govern every SKRAFT agent (orchestrator, phase agents, reviewers) that reads or writes pipeline state. State persists under the resolved **tracking layout** (see below). JSON only — never markdown.
+
+### Tracking layout (namespaced | bare)
+
+The state location depends on the repo-wide `skraft-config.json::trackingLayout` dial (read it with `config.mjs get --key trackingLayout`; default `namespaced`):
+
+- **`namespaced`** (default, legacy): `.copilot-tracking/skraft-plans/{project-slug}/state.json`.
+- **`bare`** (HVE-RPI convergence): `.copilot-tracking/skraft/{project-slug}/state.json` — a dedicated SKRAFT control dir that HVE-RPI ignores, while the phase ARTEFACTS converge onto the bare RPI dirs (`research/`, `plans/`, `details/`, `changes/`, `reviews/`) so a SKRAFT run and an HVE-RPI run are drop-in swappable on the same files.
+
+Never hand-build the path — the `state.mjs` CLI resolves it (precedence: `SKRAFT_TRACKING_ROOT` → `SKRAFT_TRACKING_LAYOUT` env → `skraft-config.json::trackingLayout` → `namespaced`). Switch an existing repo with `state.mjs migrate --slug {slug} [--apply]`.
 
 ## Write-through model (token economy)
 
@@ -33,7 +42,7 @@ Invoke the state CLI for every invariant-bearing mutation. Portable invocation (
 node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [flags]
 ```
 
-`basePath` defaults to `.copilot-tracking/skraft-plans` under the current working directory (override with `SKRAFT_TRACKING_ROOT`). The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`) · `2` IO/corrupted · `3` invalid state.
+`basePath` is resolved from the tracking layout (see "Tracking layout" above): `.copilot-tracking/skraft-plans` for `namespaced`, `.copilot-tracking/skraft` for `bare`; an explicit `SKRAFT_TRACKING_ROOT` overrides both. The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`) · `2` IO/corrupted · `3` invalid state.
 
 | Subcommand | Flags | Effect (domain event) |
 |---|---|---|
@@ -48,6 +57,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 | `incr-rework` | `--slug --phase {P} [--findings N]` | Increment `reworkCount[phase]` (uncapped — manual, human-initiated) and add `N` (default `1`) findings resolved to `findingsResolved[phase]`. Call once per manual rework pass (e.g. `rework-5`, `rework-6`). |
 | `close-phase` | `--slug --phase {P} --verdict APPROVED [--artifact {rel}]` | Composite: record `verdicts[phase]`, append `reviewArtifacts[phase]` (if `--artifact` given), and advance `currentPhase` — one call, one write. |
 | `scan-commits` | `[--count N]` (default `20`) | No `--slug`. Read-only; never writes. Lists the N most recent HEAD commits and flags subjects that don't match `type(scope): subject` (G8). Exit `0` when all conventional, `1` otherwise. |
+| `migrate` | `--slug [--apply]` | Relocate a project's `state.json` (+ backups) from the `namespaced` layout to the `bare` layout. Dry-run by default; `--apply` performs the move. Refuses to overwrite an existing bare state (`TARGET_EXISTS`, exit `3`). Artefacts are left in place. |
 
 Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` (written once at Phase 0), `adrRatification` (written at the DESIGN human checkpoint), and `phaseHistory` / `neighborPlanners` / `nextActions` / `referencesProcessed` — is edited directly on the snapshot. This is safe: the CLI's validator preserves every field on rewrite (round-trip fidelity), so a later CLI write never drops a hand-edited field. Everything invariant-bearing (verdicts, phase advance, artifacts, difficulty, retry) goes through the CLI.
 

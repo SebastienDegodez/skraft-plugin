@@ -1,6 +1,6 @@
 ---
 description: "SKRAFT artifact path conventions aligned with HVE-Core dated subdirectories"
-applyTo: '**/.copilot-tracking/skraft-plans/**'
+applyTo: '**/.copilot-tracking/**'
 ---
 <!-- markdownlint-disable-file -->
 <!-- PORTABILITY: shared convention for any agent that writes files under skraft-plans/.
@@ -13,9 +13,20 @@ applyTo: '**/.copilot-tracking/skraft-plans/**'
 
 These conventions define where every SKRAFT phase agent and reviewer writes its output. They mirror the dated-subdirectory layout used by all HVE-Core planners.
 
+## Tracking layout (namespaced | bare)
+
+Where artifacts land depends on the repo-wide `skraft-config.json::trackingLayout` dial (read it with `config.mjs get --key trackingLayout`; default `namespaced`). The two layouts share the SAME dated subdirectory names and the SAME file conventions — only the prefix differs:
+
+| Layout | Artifact root | State | Use |
+|---|---|---|---|
+| `namespaced` (default, legacy) | `.copilot-tracking/skraft-plans/{project-slug}/` | `.copilot-tracking/skraft-plans/{slug}/state.json` | multiple projects in one workspace; isolation from HVE-RPI |
+| `bare` (HVE-RPI convergence) | `.copilot-tracking/` (shared with HVE-RPI) | `.copilot-tracking/skraft/{slug}/state.json` | drop-in swappability: a SKRAFT run and an HVE-RPI run operate on the SAME `research/`, `plans/`, `details/`, `changes/`, `reviews/` files |
+
+Under `bare`, drop the `skraft-plans/{project-slug}/` prefix from every path below — e.g. `research/{date}/{slug}-research.md` instead of `skraft-plans/{slug}/research/{date}/{slug}-research.md`. SKRAFT and HVE-RPI never run concurrently on the same work (l'un ou l'autre), so sharing those dirs is safe. The orchestrator's dispatch header tells each sub-agent the exact output path for the active layout; a standalone agent reads the layout from `skraft-config.json`.
+
 ## Namespace root
 
-All SKRAFT artifacts for a single pipeline run live under:
+The `namespaced` layout roots all SKRAFT artifacts for a single pipeline run under:
 
 ```
 .copilot-tracking/skraft-plans/{project-slug}/
@@ -29,8 +40,9 @@ Each phase writes to a phase-specific subdirectory. Date-stamped directories use
 
 | Phase | Artifact | Path |
 |---|---|---|
-| DISCOVER | Triage notes, sprint proposal, evidence | `research/{YYYY-MM-DD}/{slug}-research.md` |
-| DISCUSS | User stories, acceptance criteria draft | `plans/{YYYY-MM-DD}/{slug}-plan.instructions.md` |
+| DISCOVER (product layer) | Triage notes, sprint proposal, evidence | `research/{YYYY-MM-DD}/triage-{YYYY-MM-DD}.md`, `research/{YYYY-MM-DD}/sprint-proposal.md` |
+| DISCUSS (product layer) | User stories, acceptance criteria draft | `plans/{YYYY-MM-DD}/{slug}-plan.instructions.md` |
+| RESEARCH | Cited research document (de-risks work before DESIGN) | `research/{YYYY-MM-DD}/{slug}-research.md` |
 | DESIGN | Architecture Decision Records (project-global — see note) | `docs/adr/adr-{NNN}-{slug}.md` |
 | DESIGN | ADR supersession registry (append-only) | `docs/adr/supersessions.md` |
 | DESIGN | Component contracts, interface sketches | `details/{YYYY-MM-DD}/{slug}-contracts.md` |
