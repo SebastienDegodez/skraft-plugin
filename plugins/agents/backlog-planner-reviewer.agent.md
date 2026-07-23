@@ -8,8 +8,6 @@ tools:
   - search/codebase
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
-  dispatched_by: skraft-orchestrator
-  phase: DISCUSS
   genesis_patterns:
     - A7 ADVERSARIAL REVIEW
     - B1 FAN-OUT + SYNTHESIZER

@@ -1,6 +1,6 @@
 ---
 name: backlog-planner
-description: Use when refining raw GitHub issues into well-structured user stories with acceptance criteria, effort estimation, and milestone assignment. Activate on "refine", "plan sprint", "write stories", "split issue", "milestone planning", or when the SDLC pipeline enters DISCUSS phase.
+description: Use when refining raw GitHub issues into well-structured user stories with acceptance criteria, effort estimation, and milestone assignment. Activate on "refine", "plan sprint", "write stories", "split issue", "milestone planning", or when preparing a refined story before handing off to the skraft engineering orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline.
 model: Claude Sonnet 5
 user-invocable: true
 tools: 
@@ -11,8 +11,6 @@ tools:
   - search/codebase
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
-  dispatched_by: skraft-orchestrator
-  phase: DISCUSS
   genesis_patterns:
     - A3 ORCHESTRATOR-SAGA
     - C2 PERSONA PRELOAD
