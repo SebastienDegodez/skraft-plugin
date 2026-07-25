@@ -347,7 +347,9 @@ l'autre) et — en layout `bare` — opèrent sur les **mêmes fichiers** `.copi
 
 1. **Étape RESEARCH** (doctrine task-research RPI) en tête du pipeline : document de recherche
    cité, gated par la difficulté (sautée pour Simple/Medium, comme RPI ne produit pas
-   d'artefact de recherche pour du travail simple).
+   d'artefact de recherche pour du travail simple). **Pas de reviewer** : la qualité se
+   vérifie directement par les citations, pas par un gate adversarial ; la phase se clôture
+   via `state.mjs close-phase` (fermeture manuelle, comme DELIVER en clôture humaine).
 2. **G1 active-pipeline-only + câblage `PreToolUse`** : le garde d'ordre de dispatch ne
    gouverne QUE les agents de phase ; les agents produit (invoqués en top-level) et les
    workers (dispatchés dans DELIVER) passent (`UNGOVERNED`). Les trois gardes `PreToolUse`
@@ -366,7 +368,8 @@ l'autre) et — en layout `bare` — opèrent sur les **mêmes fichiers** `.copi
 `domain/config-schema.mjs` + `application/config-service.mjs` (clé `trackingLayout`),
 `cli/state.mjs` (résolution de layout + `migrate`), `cli/hook.mjs` (résolveur partagé +
 câblage `PreToolUse` + bridge args event/matcher),
-agents `Skraft - Solution Researcher` (+`Skraft - Solution Researcher Reviewer`), orchestrateur re-ciblé (`phases`
+agent `Skraft - Solution Researcher` (spécialiste sans reviewer — `pipeline-policy.mjs`
+supporte désormais les phases `reviewer: null`), orchestrateur re-ciblé (`phases`
 `[RESEARCH, DESIGN, DISTILL, DELIVER]`), `backlog-*` en racines autonomes,
 `skraft-framework.config.json` régénéré, instructions `skraft-state`/`skraft-artifacts`
 (layouts documentés).

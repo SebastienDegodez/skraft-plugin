@@ -8,7 +8,7 @@
   "phaseAgents": {
     "RESEARCH": {
       "specialist": "Skraft - Solution Researcher",
-      "reviewer": "Skraft - Solution Researcher Reviewer"
+      "reviewer": null
     },
     "DESIGN": {
       "specialist": "Skraft - Solution Architect",
@@ -197,12 +197,6 @@
       },
       {
         "name": "architecture-decisions",
-        "policy": "verify"
-      }
-    ],
-    "Skraft - Solution Researcher Reviewer": [
-      {
-        "name": "adversarial-review-lenses",
         "policy": "verify"
       }
     ],
@@ -395,14 +389,6 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/consistency-matrix-{story}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md"
-      ]
-    },
-    "Skraft - Solution Researcher Reviewer": {
-      "inputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md"
-      ],
-      "outputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/research-review-{N}.md"
       ]
     },
     "Skraft - Solution Researcher": {

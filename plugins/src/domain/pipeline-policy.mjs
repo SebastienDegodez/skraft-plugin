@@ -32,22 +32,28 @@ export const expectedNextAgent = (state, config) => {
     return Err({ code: 'INVALID_STATE', reason: `phase ${currentPhase} is not in the published phase order` })
   }
   const phaseAgents = config.phaseAgents?.[currentPhase]
-  if (!phaseAgents || typeof phaseAgents.specialist !== 'string' || typeof phaseAgents.reviewer !== 'string') {
+  const reviewerOk = phaseAgents?.reviewer === null || typeof phaseAgents?.reviewer === 'string'
+  if (!phaseAgents || typeof phaseAgents.specialist !== 'string' || !reviewerOk) {
     return Err({ code: 'INVALID_STATE', reason: `phase ${currentPhase} has no resolvable agents in the published config` })
   }
 
   if (!specialistDone) {
     return Ok({ agent: phaseAgents.specialist, stage: 'SPECIALIST', reason: `${currentPhase} specialist must run before its reviewer` })
   }
-  if (reviewerVerdict === null) {
-    return Ok({ agent: phaseAgents.reviewer, stage: 'REVIEWER', reason: `${currentPhase} reviewer must run before advancing` })
-  }
-  if (reviewerVerdict === 'CHANGES_REQUESTED') {
-    const budget = config.retryBudget ?? 3
-    if (retries >= budget) {
-      return Err({ code: 'RETRY_EXHAUSTED', reason: `retry budget of ${budget} exhausted for ${currentPhase}; the run must escalate` })
+
+  // Reviewer-less phase (e.g. RESEARCH): specialist completion is sufficient — no
+  // REVIEWER stage, no verdict gate, no retry loop. Fall straight through to ADVANCE.
+  if (phaseAgents.reviewer !== null) {
+    if (reviewerVerdict === null) {
+      return Ok({ agent: phaseAgents.reviewer, stage: 'REVIEWER', reason: `${currentPhase} reviewer must run before advancing` })
     }
-    return Ok({ agent: phaseAgents.specialist, stage: 'RETRY', reason: `${currentPhase} specialist retries within the retry budget` })
+    if (reviewerVerdict === 'CHANGES_REQUESTED') {
+      const budget = config.retryBudget ?? 3
+      if (retries >= budget) {
+        return Err({ code: 'RETRY_EXHAUSTED', reason: `retry budget of ${budget} exhausted for ${currentPhase}; the run must escalate` })
+      }
+      return Ok({ agent: phaseAgents.specialist, stage: 'RETRY', reason: `${currentPhase} specialist retries within the retry budget` })
+    }
   }
 
   const nextPhase = nextPhaseAfter(currentPhase, config, skipPhases)

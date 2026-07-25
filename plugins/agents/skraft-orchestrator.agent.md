@@ -20,7 +20,6 @@ tools:
   - graphify/*
 agents:
   - Skraft - Solution Researcher
-  - Skraft - Solution Researcher Reviewer
   - Skraft - Solution Architect
   - Skraft - Solution Architect Reviewer
   - Skraft - Acceptance Designer
@@ -113,7 +112,7 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 
 `depthTier` is repo-wide — read it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/config.mjs" get --key depthTier`. `difficulty` is per-work-item — read it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug} --field difficulty`. The sub-agent never touches `state.json` or `skraft-config.json`; it consumes these values from the payload and writes only its artefacts. The orchestrator records the resulting verdict/paths into state via the CLI after the sub-agent returns.
 
-For each phase NOT in `entryPoint.skipPhases` (RESEARCH, DESIGN, DISTILL):
+For each phase NOT in `entryPoint.skipPhases` (DESIGN, DISTILL):
 
 **Step 1 — Dispatch specialist agent**
 Consult the native todo working set for the current phase (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above (story, output path, artifact conventions, depthTier, difficulty, upstream artefacts). If a scalar not carried by the todo list is needed, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
@@ -131,6 +130,15 @@ Pass the produced artefact paths to the reviewer agent. Do NOT summarize or inte
 | `APPROVED` | `state.mjs record-verdict --phase {P} --verdict APPROVED`, append review artefact with `record-review-artifact`, post GitHub comment, then `state.mjs transition --to {NEXT}`. Reflect into the todo list. **DESIGN only:** before `transition`, run the ADR ratification checkpoint below — DESIGN does not advance to DISTILL on `APPROVED` alone. |
 | `NEEDS_REWORK` | `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED` then `state.mjs incr-retry --phase {P}`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch agent with reviewer findings attached. Else: stop, surface to user. |
 | `REJECTED` | `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Stop pipeline immediately. Post GitHub comment explaining blockage. Surface to user. |
+
+### RESEARCH (reviewer-less phase — specialist-only)
+
+RESEARCH has no reviewer: findings are grounded in citations the human can verify directly, not an adversarial gate. If RESEARCH is not in `entryPoint.skipPhases`:
+
+1. Dispatch `Skraft - Solution Researcher` with the Dispatch context header above.
+2. Verify the research document exists at `research/{date}/{slug}-research.md`. If missing, re-dispatch once; otherwise surface to user.
+3. Close the phase with the manual-closure command (`#file:plugins/instructions/skraft-state.instructions.md` § Manual phase closure) — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
+4. Post the GitHub comment and reflect into the todo list, same as an `APPROVED` verdict from Step 4 above.
 
 ### DESIGN-only: ADR ratification checkpoint (B10 HUMAN CHECKPOINT)
 
@@ -182,7 +190,7 @@ Paths are rooted at the resolved tracking layout — namespaced (default) under 
 
 | Phase | Specialist | Reviewer | Expected artefacts |
 |---|---|---|---|
-| RESEARCH | `Skraft - Solution Researcher` | `Skraft - Solution Researcher Reviewer` | `research/{date}/{slug}-research.md` (skipped when difficulty is Simple/Medium) |
+| RESEARCH | `Skraft - Solution Researcher` | — (none; closed via manual `close-phase`) | `research/{date}/{slug}-research.md` (skipped when difficulty is Simple/Medium) |
 | DESIGN | `Skraft - Solution Architect` | `Skraft - Solution Architect Reviewer` | `adrs/adr-*.md`, `details/{date}/contracts-*.md` |
 | DISTILL | `Skraft - Acceptance Designer` | `Skraft - Acceptance Designer Reviewer` | `features/*.feature`, `details/{date}/impl-plan-*.md`, `tests/**/{Feature}AcceptanceTests.cs` (RED) |
 | DELIVER | `Skraft - Software Engineer` | `Skraft - Software Engineer Reviewer` | Committed code + passing tests + `changes/{date}/change-log.md` |

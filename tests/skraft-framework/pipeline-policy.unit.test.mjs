@@ -27,6 +27,39 @@ test('D4: specialistDone false returns stage SPECIALIST with the phase specialis
   assert.ok(result.value.reason.includes('specialist must run'))
 })
 
+// ─── reviewer === null (S3.1 — reviewer-less phase, e.g. RESEARCH) ──────────────
+// A phase can declare no reviewer at all (config.phaseAgents[phase].reviewer === null).
+// Specialist completion is then sufficient to advance — there is no REVIEWER stage,
+// no verdict gate, and no retry loop for that phase.
+const NO_REVIEWER_CONFIG = {
+  phaseOrder: ['RESEARCH', 'DESIGN'],
+  phaseAgents: {
+    RESEARCH: { specialist: 'solution-researcher', reviewer: null },
+    DESIGN: { specialist: 'solution-architect', reviewer: 'solution-architect-reviewer' }
+  }
+}
+
+test('reviewer-less phase: specialist not yet run still returns stage SPECIALIST', () => {
+  const state = { currentPhase: 'RESEARCH', specialistDone: false, reviewerVerdict: null, retries: 0, skipPhases: [] }
+  const result = expectedNextAgent(state, NO_REVIEWER_CONFIG)
+  assert.ok(isOk(result))
+  assert.equal(result.value.stage, 'SPECIALIST')
+  assert.equal(result.value.agent, 'solution-researcher')
+})
+
+test('reviewer-less phase: specialist done skips the REVIEWER stage and advances directly', () => {
+  const state = { currentPhase: 'RESEARCH', specialistDone: true, reviewerVerdict: null, retries: 0, skipPhases: [] }
+  const result = expectedNextAgent(state, NO_REVIEWER_CONFIG)
+  assert.ok(isOk(result))
+  assert.equal(result.value.stage, 'ADVANCE')
+  assert.equal(result.value.agent, 'solution-architect')
+})
+
+test('reviewer-less phase: isPipelineAgent is true for the specialist and false for an arbitrary reviewer name', () => {
+  assert.equal(isPipelineAgent('solution-researcher', NO_REVIEWER_CONFIG), true)
+  assert.equal(isPipelineAgent('solution-researcher-reviewer', NO_REVIEWER_CONFIG), false)
+})
+
 // D5 — ADVANCE stage: approved on non-final phase advances to next specialist.
 test('D5: APPROVED on non-final phase returns stage ADVANCE with next phase specialist', () => {
   const state = { currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] }
@@ -74,6 +107,14 @@ test('D3: currentPhase present in phaseOrder but absent from phaseAgents returns
 
 test('D3: phaseAgents entry with non-string specialist returns INVALID_STATE', () => {
   const badConfig = { ...CONFIG, phaseAgents: { ...CONFIG.phaseAgents, DISCOVER: { specialist: 42, reviewer: 'backlog-discoverer-reviewer' } } }
+  const state = { currentPhase: 'DISCOVER', specialistDone: false, reviewerVerdict: null, retries: 0, skipPhases: [] }
+  const result = expectedNextAgent(state, badConfig)
+  assert.ok(isErr(result))
+  assert.equal(result.error.code, 'INVALID_STATE')
+})
+
+test('D3: phaseAgents entry with a non-string, non-null reviewer returns INVALID_STATE (reviewer must be a string or explicitly null)', () => {
+  const badConfig = { ...CONFIG, phaseAgents: { ...CONFIG.phaseAgents, DISCOVER: { specialist: 'backlog-discoverer', reviewer: 42 } } }
   const state = { currentPhase: 'DISCOVER', specialistDone: false, reviewerVerdict: null, retries: 0, skipPhases: [] }
   const result = expectedNextAgent(state, badConfig)
   assert.ok(isErr(result))

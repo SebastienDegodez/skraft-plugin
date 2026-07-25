@@ -20,10 +20,10 @@ test('layer separation: DISCOVER / DISCUSS are NOT engineering phases', () => {
   assert.ok(!config.phaseOrder.includes('DISCUSS'))
 })
 
-test('layer separation: RESEARCH pairs solution-researcher with its reviewer', () => {
+test('layer separation: RESEARCH has a specialist and NO reviewer (evidence is citation-verifiable, not adversarially reviewed)', () => {
   assert.deepEqual(config.phaseAgents.RESEARCH, {
     specialist: 'Skraft - Solution Researcher',
-    reviewer: 'Skraft - Solution Researcher Reviewer',
+    reviewer: null,
   })
 })
 
@@ -44,9 +44,8 @@ test('layer separation: backlog agents still exist as standalone product agents'
   }
 })
 
-test('layer separation: the RESEARCH specialist declares research output + reviewer writes reviews', () => {
+test('layer separation: the RESEARCH specialist declares a research output and no reviewer agent exists in the catalogue', () => {
   const specialist = config.agentArtifacts['Skraft - Solution Researcher']
   assert.ok(specialist.outputs.some((o) => o.includes('research/')), 'researcher writes a research doc')
-  const reviewer = config.agentArtifacts['Skraft - Solution Researcher Reviewer']
-  assert.ok(reviewer.outputs.some((o) => o.includes('reviews/')), 'reviewer writes only under reviews/')
+  assert.ok(!('Skraft - Solution Researcher Reviewer' in config.agentSkills), 'no reviewer agent for RESEARCH')
 })
