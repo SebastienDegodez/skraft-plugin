@@ -155,7 +155,7 @@ plugins/src/
 
 > **G1 active-pipeline-only (S3).** Le garde d'ordre de dispatch ne gouverne que les
 > **agents de phase** du pipeline (`phaseAgents`). Un agent hors-pipeline — agent produit
-> (`backlog-discoverer`, `backlog-planner`) invoqué en top-level, ou worker dispatché dans
+> (`Skraft - Backlog Discoverer`, `Skraft - Backlog Planner`) invoqué en top-level, ou worker dispatché dans
 > DELIVER (`contract-testing-worker`…) — reçoit un verdict `UNGOVERNED` (allow) au lieu d'un
 > `OUT_OF_ORDER`. Les invariants restent : un agent de phase in-flight respecte l'ordre, et
 > un état manquant/corrompu bloque toujours (fail-closed).
@@ -164,8 +164,8 @@ plugins/src/
 
 L'orchestrateur (`/skraft`) est l'équivalent SKRAFT du `rpi-agent` HVE : un pipeline
 d'**ingénierie** pur `RESEARCH → DESIGN → DISTILL → DELIVER`. La **découverte de backlog** et
-le **raffinement d'histoires** sont des agents **produit** autonomes (`backlog-discoverer`,
-`backlog-planner`), invoqués directement par le développeur — hors orchestrateur. SKRAFT et
+le **raffinement d'histoires** sont des agents **produit** autonomes (`Skraft - Backlog Discoverer`,
+`Skraft - Backlog Planner`), invoqués directement par le développeur — hors orchestrateur. SKRAFT et
 HVE-RPI sont mutuellement exclusifs ; en layout `bare` ils partagent les mêmes fichiers
 `.copilot-tracking/`.
 

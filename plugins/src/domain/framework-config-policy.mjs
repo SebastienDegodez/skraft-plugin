@@ -4,12 +4,15 @@
 //
 // A descriptor is: { name, phase?, dispatchedBy?, phases?, skills[], inputs[], outputs[] }.
 // Only the orchestrator carries `phases` (the pipeline order); pipeline specialists
-// and reviewers carry `phase` and are `dispatchedBy: skraft-orchestrator`.
+// and reviewers carry `phase` and are `dispatchedBy: <the orchestrator's own name>`.
 
 export const DEFAULT_SKILL_POLICY = 'verify'
 
-const ORCHESTRATOR = 'skraft-orchestrator'
-const isReviewer = (name) => name.endsWith('-reviewer')
+// A reviewer's name ends with the word "Reviewer", separated by a hyphen (legacy
+// kebab-case, e.g. `solution-architect-reviewer`) or whitespace (display-style
+// names, e.g. `Skraft - Solution Architect Reviewer`). Case-insensitive so either
+// naming convention is recognized without a migration step.
+const isReviewer = (name) => /(?:^|[\s-])reviewer$/i.test((name ?? '').trim())
 
 // A reviewer may declare its phase as `{PHASE}-REVIEW`; it still belongs to {PHASE}.
 const REVIEW_SUFFIX = '-REVIEW'
@@ -25,14 +28,21 @@ const deepFreeze = (value) => {
 }
 
 // The phase order is whatever the orchestrator declares — single source of truth.
+// The orchestrator is identified structurally (it's the descriptor that declares
+// `phases`), never by a hardcoded name literal — so renaming it requires no change here.
+const orchestratorOf = (descriptors) => descriptors.find((d) => Array.isArray(d.phases) && d.phases.length > 0)
+
 const phaseOrderOf = (descriptors) => {
-  const orchestrator = descriptors.find((d) => Array.isArray(d.phases) && d.phases.length > 0)
+  const orchestrator = orchestratorOf(descriptors)
   return orchestrator ? [...orchestrator.phases] : []
 }
 
 // For each phase, pick the one orchestrator-dispatched specialist and its reviewer.
 const phaseAgentsOf = (descriptors, phaseOrder) => {
-  const pipeline = descriptors.filter((d) => d.dispatchedBy === ORCHESTRATOR && d.phase)
+  const orchestrator = orchestratorOf(descriptors)
+  const pipeline = orchestrator
+    ? descriptors.filter((d) => d.dispatchedBy === orchestrator.name && d.phase)
+    : []
   return Object.fromEntries(
     phaseOrder.map((phase) => {
       const inPhase = pipeline.filter((d) => basePhase(d.phase) === phase)

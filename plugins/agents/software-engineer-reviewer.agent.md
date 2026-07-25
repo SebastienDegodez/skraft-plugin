@@ -1,6 +1,6 @@
 ---
-name: software-engineer-reviewer
-description: "[Internal subagent — dispatched by skraft-orchestrator only] Adversarial peer reviewer (Genesis A7): spawns 4 independent lenses, synthesizes a weighted verdict. Read-only — never modifies code."
+name: Skraft - Software Engineer Reviewer
+description: "[Internal subagent — dispatched by Skraft - Orchestrator only] Adversarial peer reviewer (Genesis A7): spawns 4 independent lenses, synthesizes a weighted verdict. Read-only — never modifies code."
 model: Claude Sonnet 5
 user-invocable: false
 tools: 
@@ -9,7 +9,7 @@ tools:
   - agent
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
-  dispatched_by: skraft-orchestrator
+  dispatched_by: Skraft - Orchestrator
   phase: DELIVER-REVIEW
   inputs:
     required:

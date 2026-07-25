@@ -1,5 +1,5 @@
 ---
-name: solution-researcher-reviewer
+name: Skraft - Solution Researcher Reviewer
 description: Use when reviewing a RESEARCH document for evidence quality, citation fidelity, scope coverage, and decision-readiness before the DESIGN phase consumes it. Dispatched after solution-researcher produces the research artefact, or manually to audit an existing research document. It reports findings and a verdict — it never edits the research or does the research itself.
 model: Claude Haiku 4.5
 user-invocable: true
@@ -8,7 +8,7 @@ tools:
   - search/codebase
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
-  dispatched_by: skraft-orchestrator
+  dispatched_by: Skraft - Orchestrator
   phase: RESEARCH
   genesis_patterns:
     - A7 ADVERSARIAL REVIEW

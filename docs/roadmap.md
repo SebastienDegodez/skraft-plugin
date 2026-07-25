@@ -338,7 +338,7 @@ via `state.mjs`. Les agents n'appellent que des commandes (get/set délégués a
 **Gain :** `gain:dx` — vraie séparation des couches. L'orchestrateur devient l'équivalent
 SKRAFT du `rpi-agent` HVE : un pipeline d'**ingénierie** pur `RESEARCH → DESIGN → DISTILL →
 DELIVER`. La découverte de backlog et le raffinement d'histoires **quittent** l'orchestrateur
-et deviennent des agents **produit** autonomes (`backlog-discoverer`, `backlog-planner`), que
+et deviennent des agents **produit** autonomes (`Skraft - Backlog Discoverer`, `Skraft - Backlog Planner`), que
 le développeur invoque directement. SKRAFT et HVE-RPI sont **mutuellement exclusifs** (l'un ou
 l'autre) et — en layout `bare` — opèrent sur les **mêmes fichiers** `.copilot-tracking/`
 (swappabilité).
@@ -366,7 +366,7 @@ l'autre) et — en layout `bare` — opèrent sur les **mêmes fichiers** `.copi
 `domain/config-schema.mjs` + `application/config-service.mjs` (clé `trackingLayout`),
 `cli/state.mjs` (résolution de layout + `migrate`), `cli/hook.mjs` (résolveur partagé +
 câblage `PreToolUse` + bridge args event/matcher),
-agents `solution-researcher` (+`-reviewer`), orchestrateur re-ciblé (`phases`
+agents `Skraft - Solution Researcher` (+`Skraft - Solution Researcher Reviewer`), orchestrateur re-ciblé (`phases`
 `[RESEARCH, DESIGN, DISTILL, DELIVER]`), `backlog-*` en racines autonomes,
 `skraft-framework.config.json` régénéré, instructions `skraft-state`/`skraft-artifacts`
 (layouts documentés).
@@ -377,4 +377,4 @@ agents `solution-researcher` (+`-reviewer`), orchestrateur re-ciblé (`phases`
 **Dépend de :** US3, S1, S2
 
 **Suivi (docs) :** réconciliation du handbook FR/EN (`docs/site/`) — pages de référence
-`solution-researcher`, page pipeline, navigation — à passer via `skraft-docs-orchestrator`.
+`Skraft - Solution Researcher`, page pipeline, navigation — à passer via `skraft-docs-orchestrator`.

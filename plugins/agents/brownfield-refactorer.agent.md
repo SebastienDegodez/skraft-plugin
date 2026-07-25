@@ -1,6 +1,6 @@
 ---
-name: brownfield-refactorer
-description: "Use when the human wants to refactor or replace part of an existing brownfield codebase that already has a safety net (characterization/contract tests) — recommend Mikado (in-place restructuring) or Strangler Fig (incremental replacement behind a facade), let the human choose, then drive the work leaf-by-leaf or slice-by-slice, keeping the safety net green at every commit. Activate on 'refactor this module safely', 'apply Mikado to this change', 'strangle this component', 'replace this service incrementally'. Standalone workflow — the human invokes it directly; it is not a skraft-orchestrator phase."
+name: Skraft - Brownfield Refactorer
+description: "Use when the human wants to refactor or replace part of an existing brownfield codebase that already has a safety net (characterization/contract tests) — recommend Mikado (in-place restructuring) or Strangler Fig (incremental replacement behind a facade), let the human choose, then drive the work leaf-by-leaf or slice-by-slice, keeping the safety net green at every commit. Activate on 'refactor this module safely', 'apply Mikado to this change', 'strangle this component', 'replace this service incrementally'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
 model:
  - Claude Sonnet 5
  - claude-sonnet-5
@@ -46,7 +46,7 @@ never do the refactor yourself in one shot — you pick a strategy (with the hum
 one artifact that survives the work (the graph or the slice plan), and dispatch each unit of work
 to a fresh `refactoring-worker`, verifying the safety net stays green at every step.
 
-This is a **standalone workflow the human chooses to run** — not a `skraft-orchestrator` phase.
+This is a **standalone workflow the human chooses to run** — not a `Skraft - Orchestrator` phase.
 
 ## Skill loading — MANDATORY
 
@@ -61,7 +61,7 @@ Load both before starting. If either is missing, report `[SKILL MISSING] {name}`
    structural decision this consequential is never made by inference alone.
 2. **NEVER skip the safety-net check** — confirm a harness exists (ask the human, or check for
    characterization test artifacts) before starting. If none exists, redirect to
-   `brownfield-harness-builder` first.
+   `Skraft - Brownfield Harness Builder` first.
 3. **NEVER let a worker skip its revert/rollback discipline** — every dispatch packet carries the
    full acceptance criteria from the loaded skill, verbatim.
 4. **NEVER accumulate leaves/slices in one session** — one fresh `refactoring-worker` spawn per
@@ -119,6 +119,6 @@ blocker if the safety-net precondition is not met:
   "status": "blocked",
   "type": "missing_precondition",
   "message": "No safety net found for target",
-  "context": { "suggested_next": "brownfield-harness-builder" }
+  "context": { "suggested_next": "Skraft - Brownfield Harness Builder" }
 }
 ```

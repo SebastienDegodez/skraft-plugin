@@ -22,26 +22,31 @@ test('layer separation: DISCOVER / DISCUSS are NOT engineering phases', () => {
 
 test('layer separation: RESEARCH pairs solution-researcher with its reviewer', () => {
   assert.deepEqual(config.phaseAgents.RESEARCH, {
-    specialist: 'solution-researcher',
-    reviewer: 'solution-researcher-reviewer',
+    specialist: 'Skraft - Solution Researcher',
+    reviewer: 'Skraft - Solution Researcher Reviewer',
   })
 })
 
 test('layer separation: no phase agent is a backlog (product-layer) agent', () => {
-  const wired = JSON.stringify(config.phaseAgents)
-  assert.ok(!wired.includes('backlog-'), 'backlog-* must not appear in phaseAgents')
+  const wired = JSON.stringify(config.phaseAgents).toLowerCase()
+  assert.ok(!wired.includes('backlog'), 'backlog agents must not appear in phaseAgents')
 })
 
 test('layer separation: backlog agents still exist as standalone product agents', () => {
   // They remain in the agent catalogue (agentSkills) — just no longer pipeline-dispatched.
-  for (const a of ['backlog-discoverer', 'backlog-discoverer-reviewer', 'backlog-planner', 'backlog-planner-reviewer']) {
+  for (const a of [
+    'Skraft - Backlog Discoverer',
+    'Skraft - Backlog Discoverer Reviewer',
+    'Skraft - Backlog Planner',
+    'Skraft - Backlog Planner Reviewer',
+  ]) {
     assert.ok(a in config.agentSkills, `${a} should still be a known agent`)
   }
 })
 
 test('layer separation: the RESEARCH specialist declares research output + reviewer writes reviews', () => {
-  const specialist = config.agentArtifacts['solution-researcher']
+  const specialist = config.agentArtifacts['Skraft - Solution Researcher']
   assert.ok(specialist.outputs.some((o) => o.includes('research/')), 'researcher writes a research doc')
-  const reviewer = config.agentArtifacts['solution-researcher-reviewer']
+  const reviewer = config.agentArtifacts['Skraft - Solution Researcher Reviewer']
   assert.ok(reviewer.outputs.some((o) => o.includes('reviews/')), 'reviewer writes only under reviews/')
 })

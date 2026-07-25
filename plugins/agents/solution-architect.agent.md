@@ -1,5 +1,5 @@
 ---
-name: solution-architect
+name: Skraft - Solution Architect
 description: Use when designing software architecture for refined stories using Event Modeling, DDD strategic design (bounded contexts, context mapping), DDD tactical patterns (aggregates, value objects, domain events), producing Architecture Decision Records, component diagrams, and interface contracts. Activate on 'design', 'architect', 'ADR', 'event modeling', 'bounded context', 'aggregate', 'domain event', 'context map', or when the SDLC pipeline enters DESIGN phase.
 model: Claude Sonnet 5
 user-invocable: true
@@ -11,7 +11,7 @@ tools:
   - graphify/*
 metadata:
   cost_role_class: planner  # B12 target class — cross-cutting reasoning warrants planner capacity (genesis token-economy)
-  dispatched_by: skraft-orchestrator
+  dispatched_by: Skraft - Orchestrator
   phase: DESIGN
   genesis_patterns:
     - A3 ORCHESTRATOR-SAGA
@@ -481,4 +481,4 @@ After writing, print a summary table:
 
 **The orchestrator MUST NOT advance to DISTILL while `open blockers > 0`.** A failing consistency-gate without an open blocker is a persona bug — emit the BLOCKER and HALT.
 
-Then halt and await handoff to DISTILL or review by `solution-architect-reviewer`.
+Then halt and await handoff to DISTILL or review by `Skraft - Solution Architect Reviewer`.

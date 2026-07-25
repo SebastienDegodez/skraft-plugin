@@ -7,24 +7,24 @@
   ],
   "phaseAgents": {
     "RESEARCH": {
-      "specialist": "solution-researcher",
-      "reviewer": "solution-researcher-reviewer"
+      "specialist": "Skraft - Solution Researcher",
+      "reviewer": "Skraft - Solution Researcher Reviewer"
     },
     "DESIGN": {
-      "specialist": "solution-architect",
-      "reviewer": "solution-architect-reviewer"
+      "specialist": "Skraft - Solution Architect",
+      "reviewer": "Skraft - Solution Architect Reviewer"
     },
     "DISTILL": {
-      "specialist": "acceptance-designer",
-      "reviewer": "acceptance-designer-reviewer"
+      "specialist": "Skraft - Acceptance Designer",
+      "reviewer": "Skraft - Acceptance Designer Reviewer"
     },
     "DELIVER": {
-      "specialist": "software-engineer",
-      "reviewer": "software-engineer-reviewer"
+      "specialist": "Skraft - Software Engineer",
+      "reviewer": "Skraft - Software Engineer Reviewer"
     }
   },
   "agentSkills": {
-    "acceptance-designer-reviewer": [
+    "Skraft - Acceptance Designer Reviewer": [
       {
         "name": "acceptance-review-criteria",
         "policy": "verify"
@@ -34,7 +34,7 @@
         "policy": "verify"
       }
     ],
-    "acceptance-designer": [
+    "Skraft - Acceptance Designer": [
       {
         "name": "bdd-methodology",
         "policy": "verify"
@@ -52,7 +52,7 @@
         "policy": "verify"
       }
     ],
-    "backlog-discoverer-reviewer": [
+    "Skraft - Backlog Discoverer Reviewer": [
       {
         "name": "discovery-review-criteria",
         "policy": "verify"
@@ -62,7 +62,7 @@
         "policy": "verify"
       }
     ],
-    "backlog-discoverer": [
+    "Skraft - Backlog Discoverer": [
       {
         "name": "github-search-protocol",
         "policy": "verify"
@@ -72,7 +72,7 @@
         "policy": "verify"
       }
     ],
-    "backlog-planner-reviewer": [
+    "Skraft - Backlog Planner Reviewer": [
       {
         "name": "planning-review-criteria",
         "policy": "verify"
@@ -82,7 +82,7 @@
         "policy": "verify"
       }
     ],
-    "backlog-planner": [
+    "Skraft - Backlog Planner": [
       {
         "name": "issue-refinement",
         "policy": "verify"
@@ -92,7 +92,7 @@
         "policy": "verify"
       }
     ],
-    "brownfield-analyst": [
+    "Skraft - Brownfield Analyst": [
       {
         "name": "characterize-brownfield",
         "policy": "verify"
@@ -102,13 +102,13 @@
         "policy": "verify"
       }
     ],
-    "brownfield-harness-builder": [
+    "Skraft - Brownfield Harness Builder": [
       {
         "name": "characterize-with-contracts",
         "policy": "verify"
       }
     ],
-    "brownfield-refactorer": [
+    "Skraft - Brownfield Refactorer": [
       {
         "name": "mikado-method",
         "policy": "verify"
@@ -122,7 +122,7 @@
     "cold-reader-lens": [],
     "quality-gates-lens": [],
     "test-integrity-lens": [],
-    "skraft-orchestrator": [
+    "Skraft - Orchestrator": [
       {
         "name": "skraft-difficulty-routing",
         "policy": "verify"
@@ -140,13 +140,13 @@
         "policy": "verify"
       }
     ],
-    "software-engineer-reviewer": [
+    "Skraft - Software Engineer Reviewer": [
       {
         "name": "adversarial-review-lenses",
         "policy": "verify"
       }
     ],
-    "software-engineer": [
+    "Skraft - Software Engineer": [
       {
         "name": "outside-in-tdd",
         "policy": "verify"
@@ -180,7 +180,7 @@
         "policy": "verify"
       }
     ],
-    "solution-architect-reviewer": [
+    "Skraft - Solution Architect Reviewer": [
       {
         "name": "architecture-review-criteria",
         "policy": "verify"
@@ -190,7 +190,7 @@
         "policy": "verify"
       }
     ],
-    "solution-architect": [
+    "Skraft - Solution Architect": [
       {
         "name": "architecture-patterns",
         "policy": "verify"
@@ -200,13 +200,13 @@
         "policy": "verify"
       }
     ],
-    "solution-researcher-reviewer": [
+    "Skraft - Solution Researcher Reviewer": [
       {
         "name": "adversarial-review-lenses",
         "policy": "verify"
       }
     ],
-    "solution-researcher": [],
+    "Skraft - Solution Researcher": [],
     "contract-fidelity-lens": [],
     "contract-testing-worker": [
       {
@@ -236,7 +236,7 @@
     "refactoring-worker": []
   },
   "agentArtifacts": {
-    "acceptance-designer-reviewer": {
+    "Skraft - Acceptance Designer Reviewer": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md",
@@ -247,7 +247,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md"
       ]
     },
-    "acceptance-designer": {
+    "Skraft - Acceptance Designer": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
@@ -259,7 +259,7 @@
         "tests/**/{Feature}AcceptanceTests.cs"
       ]
     },
-    "backlog-discoverer-reviewer": {
+    "Skraft - Backlog Discoverer Reviewer": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md"
@@ -268,7 +268,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md"
       ]
     },
-    "backlog-discoverer": {
+    "Skraft - Backlog Discoverer": {
       "inputs": [
         "GitHub repository issues (via MCP tools)"
       ],
@@ -277,7 +277,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/sprint-proposal.md"
       ]
     },
-    "backlog-planner-reviewer": {
+    "Skraft - Backlog Planner Reviewer": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
@@ -286,7 +286,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md"
       ]
     },
-    "backlog-planner": {
+    "Skraft - Backlog Planner": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md",
         "GitHub issues with triage labels"
@@ -296,7 +296,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
       ]
     },
-    "brownfield-analyst": {
+    "Skraft - Brownfield Analyst": {
       "inputs": [
         "repository path"
       ],
@@ -306,7 +306,7 @@
         ".copilot-tracking/prd-sessions/<kebab-case-name>.state.json"
       ]
     },
-    "brownfield-harness-builder": {
+    "Skraft - Brownfield Harness Builder": {
       "inputs": [
         "target service path or project name"
       ],
@@ -316,7 +316,7 @@
         "gate verdict report"
       ]
     },
-    "brownfield-refactorer": {
+    "Skraft - Brownfield Refactorer": {
       "inputs": [
         "a stated goal (what to modify, or what to replace)",
         "confirmation that a safety net already exists for the target"
@@ -343,11 +343,11 @@
       "inputs": [],
       "outputs": []
     },
-    "skraft-orchestrator": {
+    "Skraft - Orchestrator": {
       "inputs": [],
       "outputs": []
     },
-    "software-engineer-reviewer": {
+    "Skraft - Software Engineer Reviewer": {
       "inputs": [
         "Source code commits produced by software-engineer",
         "Test files referenced in the commits"
@@ -356,7 +356,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md"
       ]
     },
-    "software-engineer": {
+    "Skraft - Software Engineer": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md"
@@ -368,7 +368,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)"
       ]
     },
-    "solution-architect-reviewer": {
+    "Skraft - Solution Architect Reviewer": {
       "inputs": [
         "docs/adr/adr-*.md",
         "docs/adr/decisions-index.md",
@@ -380,7 +380,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md"
       ]
     },
-    "solution-architect": {
+    "Skraft - Solution Architect": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
@@ -397,7 +397,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md"
       ]
     },
-    "solution-researcher-reviewer": {
+    "Skraft - Solution Researcher Reviewer": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md"
       ],
@@ -405,7 +405,7 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/research-review-{N}.md"
       ]
     },
-    "solution-researcher": {
+    "Skraft - Solution Researcher": {
       "inputs": [],
       "outputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md"
