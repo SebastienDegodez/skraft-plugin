@@ -43,9 +43,15 @@ plugins/logs/
 
 # skraft config/state transient files (atomic-writer artefacts — never committed)
 # The canonical skraft-config.json IS versioned; its rotating backups/tmp are not.
-skraft-config.json.bak.*
-skraft-config.json.tmp.*
-skraft-config.json.corrupted.*
-**/state.json.bak.*
-**/state.json.tmp.*
-**/state.json.corrupted.*
+# Match with AND without the timestamp suffix: an interrupted atomic write (killed
+# process, crash) can leave a bare `*.tmp` file with no suffix, which the old
+# `.tmp.*`-only patterns did not catch.
+skraft-config.json.bak*
+skraft-config.json.tmp*
+skraft-config.json.corrupted*
+**/state.json.bak*
+**/state.json.tmp*
+**/state.json.corrupted*
+**/execution-log.json.bak*
+**/execution-log.json.tmp*
+**/execution-log.json.corrupted*
