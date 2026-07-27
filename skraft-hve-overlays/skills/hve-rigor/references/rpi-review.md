@@ -1,45 +1,26 @@
----
-title: RPI Review Profiles
-description: Mandatory and optional SKRAFT skill loading for HVE RPI review agents
----
+# RPI review route
 
-## Task Reviewer
+Use for RPI Agent Review, Task Reviewer, RPI Validator, Implementation
+Validator, and review artifacts.
 
-### MANDATORY
+## Skill Loading — MANDATORY
 
-* Load `adversarial-review-lenses` skill.
-* Load `quality-gates-evidence-contract` skill.
+Load each always-load skill before starting Review. Only announce missing ones:
+`[SKILL MISSING] {skill-name}`. A missing mandatory skill blocks acceptance.
 
-### OPTIONAL
+### Always load for this route
 
-* When reviewing architecture: Load `architecture-review-criteria` skill.
-* When reviewing Gherkin or test plans: Load `acceptance-review-criteria` skill.
-* When reviewing mutation evidence: Load `mutation-testing` skill.
-* When the repository is .NET: Load `quality-gates-dotnet` skill.
+* `adversarial-review-lenses`
+* `architecture-review-criteria`
+* `acceptance-review-criteria`
+* `quality-gates-evidence-contract`
 
-## RPI Validator
+### Load on demand (trigger-based)
 
-### MANDATORY
+| Skill | Load when... |
+|---|---|
+| `mutation-testing` | Verifying mutation quality or analyzing surviving mutants |
+| applicable `quality-gates-<stack>` adapter | Verifying stack-specific build, test, or mutation evidence |
 
-* Load `adversarial-review-lenses` skill.
-* Load `architecture-review-criteria` skill.
-* Load `acceptance-review-criteria` skill.
-
-### OPTIONAL
-
-* When validating delivery evidence: Load `quality-gates-evidence-contract` skill.
-* When validating mutation evidence: Load `mutation-testing` skill.
-* When the repository is .NET: Load `quality-gates-dotnet` skill.
-
-## Implementation Validator
-
-### MANDATORY
-
-* Load `architecture-review-criteria` skill.
-
-### OPTIONAL
-
-* When reviewing Gherkin or test plans: Load `acceptance-review-criteria` skill.
-* When validating delivery evidence: Load `quality-gates-evidence-contract` skill.
-* When validating mutation evidence: Load `mutation-testing` skill.
-* When the repository is .NET: Load `quality-gates-dotnet` skill.
+Do not accept a verdict without structured test, build, mutation, and RED/GREEN
+evidence. Resolve or explicitly escalate every blocker dissent.

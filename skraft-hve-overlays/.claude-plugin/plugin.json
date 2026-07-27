@@ -1,6 +1,6 @@
 {
   "name": "skraft-hve-overlays",
-  "description": "One HVE rigor instruction loads mandatory and optional SKRAFT skills for Backlog, PRD, and RPI agents.",
+  "description": "SKRAFT rigor for HVE backlog, PRD, and RPI agents through one bootstrap instruction and one routed skill. Requires the skraft plugin.",
   "version": "0.1.0",
   "author": {
     "name": "SebastienDegodez"

@@ -1,38 +1,38 @@
----
-title: skraft-hve-overlays
-description: One instruction that loads HVE rigor profiles for Backlog, PRD, and RPI agents
----
+# skraft-hve-overlays
 
-## HVE Rigor Overlay
+SKRAFT rigor for HVE workflows through one global bootstrap instruction and one
+`hve-rigor` skill. Additive only: HVE sources stay unchanged.
 
-`hve-rigor.instructions.md` is the only scope-attached instruction. Its
-`applyTo: '**'` scope enters HVE work before a tracking artifact exists, then
-requires the `hve-rigor` skill before Backlog, PRD, or RPI workflow work.
+## Dependency
 
-## Skill Profiles
+Leaf skills referenced by `hve-rigor` (`issue-refinement`,
+`architecture-patterns`, `outside-in-tdd`, `craft-discipline`, and others) live
+in the **`skraft`** plugin. Install `skraft` alongside this plugin. Missing leaf
+skills block HVE route completion.
 
-The root `hve-rigor` skill routes each agent to focused Backlog and PRD, RPI
-design, RPI delivery, or RPI review references. Each profile defines its
-`MANDATORY` and `OPTIONAL` loads using `Load \`<skill-name>\` skill.`, rather
-than direct skill paths or links.
+## Activation and enforcement
 
-Covered agents:
+* `hve-rigor-bootstrap` provides always-available discovery guidance.
+* `hve-rigor` is a single entrypoint (`skills/hve-rigor/SKILL.md`) that
+	identifies the current HVE agent, phase, and target artifacts, then
+	follows the SKRAFT agent convention: **Skill Loading — MANDATORY**, with
+	startup requirements and trigger-based **Load on demand** tables. It loads
+	only the matching local route reference under
+	`skills/hve-rigor/references/`: `backlog.md`, `prd.md`,
+	`rpi-research-plan.md`, `rpi-implementation.md`, or `rpi-review.md`.
+	A missing route reference or leaf skill blocks completion rather than
+	being silently skipped.
+* Delegated HVE work carries the selected route and required leaf skills in its
+	subagent brief.
 
-* ADO, GitHub, and Jira Backlog Managers
-* AzDO and Jira PRD to WIT
-* RPI Agent and its Research, Plan, Implement, and Review agents
+## Components
 
-Security, RAI, SSSC, Design Thinking, and Doc Ops are outside this overlay's
-scope.
-
-## Missing Skills
-
-The `skraft` plugin supplies the referenced skills. When a required skill is
-unavailable, the active HVE agent reports `[SKILL MISSING] <skill-name>` and
-continues. An applicable optional skill reports
-`[SKILL OPTIONAL-MISSING] <skill-name>` and continues.
-
-## Distribution
-
-This overlay does not modify HVE-Core, APM files, lockfiles, GitOps manifests,
-or the `skraft` core plugin.
+| Component | Scope | Responsibility |
+|---|---|---|
+| `hve-rigor-bootstrap` | all paths | Detect HVE work and mandate skill loading |
+| `hve-rigor` | HVE backlog, PRD, and RPI workflows | Select route and enforce loading contract |
+| `references/backlog.md` | backlog route | Backlog quality gates |
+| `references/prd.md` | PRD route | Requirement quality gates |
+| `references/rpi-research-plan.md` | RPI Research and Plan | Architecture and test-design gates |
+| `references/rpi-implementation.md` | RPI Implement | TDD and craft gates |
+| `references/rpi-review.md` | RPI Review | Adversarial review and evidence gates |
