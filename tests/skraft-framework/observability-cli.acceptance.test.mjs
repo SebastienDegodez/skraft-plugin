@@ -18,6 +18,7 @@ const execFileAsync = promisify(execFile)
 const HEALTH_CLI = fileURLToPath(new URL('../../plugins/src/cli/health-check.mjs', import.meta.url))
 const HOUSEKEEP_CLI = fileURLToPath(new URL('../../plugins/src/cli/housekeeping.mjs', import.meta.url))
 const PLUGIN_ROOT = fileURLToPath(new URL('../../plugins', import.meta.url))
+const PLUGIN_MANIFEST = join(PLUGIN_ROOT, '.claude-plugin', 'plugin.json')
 
 const runCli = async (cli, { cwd, env, input }) => {
   try {
@@ -48,11 +49,12 @@ const setup = async () => {
 test('health-check: exit 0 and reports version/manifests/config for a healthy repo', async () => {
   const { dir, env } = await setup()
   try {
+    const expectedVersion = JSON.parse(await readFile(PLUGIN_MANIFEST, 'utf8')).version
     const res = await runCli(HEALTH_CLI, { cwd: dir, env })
     assert.equal(res.exitCode, 0)
     const report = JSON.parse(res.stdout)
     assert.equal(report.status, 'ok')
-    assert.equal(report.version, '1.1.0', 'reads the real packaged plugin.json version')
+    assert.equal(report.version, expectedVersion, 'reads the real packaged plugin.json version')
     assert.equal(report.manifests.claudeHooks.present, true)
     assert.equal(report.manifests.frameworkConfig.present, true)
     assert.ok(report.config.observability.stalePhaseHours > 0)
