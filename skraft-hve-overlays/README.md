@@ -1,17 +1,38 @@
-# skraft-hve-overlays
+---
+title: skraft-hve-overlays
+description: One instruction that loads HVE rigor profiles for Backlog, PRD, and RPI agents
+---
 
-SKRAFT rigor overlays that attach to HVE artifacts (backlog + RPI + PRD) via `applyTo` and impose SKRAFT skills in fail-closed prose. Additive only — does not modify HVE or the `skraft` core plugin.
+## HVE Rigor Overlay
 
-## Dependency
+`hve-rigor.instructions.md` is the only scope-attached instruction. Its
+`applyTo: '**'` scope enters HVE work before a tracking artifact exists, then
+requires the `hve-rigor` skill before Backlog, PRD, or RPI workflow work.
 
-Skills referenced by these overlays (`issue-refinement`, `architecture-patterns`, `outside-in-tdd`, `craft-discipline`, …) live in the **`skraft`** plugin. Install `skraft` alongside this plugin, otherwise the overlays attach but the skills do not resolve.
+## Skill Profiles
 
-## Overlays
+The root `hve-rigor` skill routes each agent to focused Backlog and PRD, RPI
+design, RPI delivery, or RPI review references. Each profile defines its
+`MANDATORY` and `OPTIONAL` loads using `Load \`<skill-name>\` skill.`, rather
+than direct skill paths or links.
 
-| File | Attaches to | Imposes |
-|---|---|---|
-| `skraft-backlog-story-quality` | backlog tracking artifacts | `issue-refinement` (INVEST/DoR), `issue-triage` (labels), `planning-review-criteria` (gates) |
-| `skraft-prd-quality` | PRD sessions + `docs/prds/` | `issue-refinement` (FR-/NFR- quality, traceability) |
-| `skraft-rpi-design-rigor` | RPI research/plans/details | DDD, modularity, ADR, test-design, BDD, contracts |
-| `skraft-rpi-implementation-rigor` | RPI changes + code files | outside-in TDD, Clean Architecture, craft-discipline (incl. Object Calisthenics), mocking, stack commands |
-| `skraft-rpi-review-rigor` | RPI reviews | adversarial lenses, mutation testing, quality-gate evidence |
+Covered agents:
+
+* ADO, GitHub, and Jira Backlog Managers
+* AzDO and Jira PRD to WIT
+* RPI Agent and its Research, Plan, Implement, and Review agents
+
+Security, RAI, SSSC, Design Thinking, and Doc Ops are outside this overlay's
+scope.
+
+## Missing Skills
+
+The `skraft` plugin supplies the referenced skills. When a required skill is
+unavailable, the active HVE agent reports `[SKILL MISSING] <skill-name>` and
+continues. An applicable optional skill reports
+`[SKILL OPTIONAL-MISSING] <skill-name>` and continues.
+
+## Distribution
+
+This overlay does not modify HVE-Core, APM files, lockfiles, GitOps manifests,
+or the `skraft` core plugin.

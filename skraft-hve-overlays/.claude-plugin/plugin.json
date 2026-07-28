@@ -1,6 +1,6 @@
 {
   "name": "skraft-hve-overlays",
-  "description": "SKRAFT rigor overlays imposed on HVE backlog + RPI artifacts via applyTo. Requires the skraft plugin (skills resolve from it).",
+  "description": "One HVE rigor instruction loads mandatory and optional SKRAFT skills for Backlog, PRD, and RPI agents.",
   "version": "0.1.0",
   "author": {
     "name": "SebastienDegodez"
