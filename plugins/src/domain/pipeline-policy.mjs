@@ -7,6 +7,12 @@ import { Ok, Err, isOk } from './result.mjs'
 export const nextPhaseAfter = (currentPhase, config, skipPhases) => {
   const order = config.phaseOrder
   let index = order.indexOf(currentPhase) + 1
+  // NOTE (equivalent mutant, documented not chased): the loop's own `index < order.length`
+  // guard and the RETURN statement's `index < order.length` below are two independent AST
+  // nodes checking the same invariant. Weakening the loop guard alone (e.g. to `<=`) can only
+  // change how many times the loop body runs; the final answer is still gated by the
+  // (unmutated) return-statement check, so no test input can distinguish the two — a Stryker
+  // survivor here is expected and does not indicate missing coverage.
   while (index < order.length && skipPhases.includes(order[index])) {
     index += 1
   }
@@ -61,6 +67,12 @@ export const expectedNextAgent = (state, config) => {
     return Err({ code: 'PIPELINE_COMPLETE', reason: `the pipeline already completed its final phase ${currentPhase}` })
   }
   const nextPhaseAgents = config.phaseAgents?.[nextPhase]
+  // NOTE (equivalent mutant, documented not chased): by this point `phaseAgents` (above, for
+  // currentPhase) was already proven truthy — and `phaseAgents` is only ever truthy if
+  // `config.phaseAgents` itself is non-null/undefined (the optional-chaining short-circuits to
+  // undefined otherwise, which fails that earlier guard). So `config.phaseAgents` is guaranteed
+  // a defined object here, making `?.` on this line a no-op: removing it cannot change behavior
+  // for any reachable input.
   if (!nextPhaseAgents || typeof nextPhaseAgents.specialist !== 'string') {
     return Err({ code: 'INVALID_STATE', reason: `phase ${nextPhase} has no resolvable specialist agent in the published config` })
   }
