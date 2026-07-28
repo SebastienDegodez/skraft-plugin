@@ -35,6 +35,17 @@ This file provides the blank ADR template for direct copy-paste and a filled exa
 **Neutral:**
 - {change that is neither good nor bad but worth noting}
 
+## Coupling Balance
+
+<!-- MANDATORY when the decision creates/moves/tightens an inter-component dependency. Lookup, not judgment — see architecture-patterns "Balanced Coupling — general fractal verdict". -->
+
+- **Coupled components:** {A} ↔ {B} (level: context | aggregate | layer | ...)
+- **Strength:** Low (Contract) | High (Model/Functional/Intrusive)
+- **Distance:** Low (same module/team/in-process) | High (cross-module/team/async)
+- **Volatility:** Core (high) | Supporting/Generic (low)
+- **Verdict:** BALANCED | UNBALANCED-ACCEPTED | UNBALANCED-SMELL
+- **Justification:** {counterbalancing axis, or the low-volatility subdomain cited for UNBALANCED-ACCEPTED; UNBALANCED-SMELL must be rebalanced before commit}
+
 ## Alternatives Rejected
 
 | Alternative | Reason rejected |

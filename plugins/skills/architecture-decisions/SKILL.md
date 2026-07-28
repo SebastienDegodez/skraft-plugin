@@ -58,6 +58,17 @@ ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Rej
 **Neutral:**
 - {change that is neither good nor bad but worth noting}
 
+## Coupling Balance
+
+<!-- MANDATORY for any decision that creates, removes, moves, or tightens a dependency between two components (context, aggregate, layer, service). Omit ONLY if the decision introduces no inter-component dependency at all. This is a LOOKUP, not a judgment — see architecture-patterns "Balanced Coupling — general fractal verdict". -->
+
+- **Coupled components:** {A} ↔ {B} (level: context | aggregate | layer | ...)
+- **Strength:** Low (Contract) | High (Model/Functional/Intrusive)
+- **Distance:** Low (same module/team/in-process) | High (cross-module/team/async)
+- **Volatility:** Core (high) | Supporting/Generic (low)
+- **Verdict:** BALANCED | UNBALANCED-ACCEPTED | UNBALANCED-SMELL
+- **Justification:** {for BALANCED: which axis counterbalances the other. For UNBALANCED-ACCEPTED: name the low-volatility subdomain that makes the imbalance tolerable. UNBALANCED-SMELL must NOT be committed — rebalance first.}
+
 ## Alternatives Rejected
 
 | Alternative | Reason rejected |
@@ -109,6 +120,15 @@ Handler interfaces and signatures do not change. Convention-based handler regist
 **Neutral:**
 - The CQS baseline is unchanged — every existing handler keeps its interface and is reachable directly for unit tests
 - No message broker, queue, or out-of-process dispatch is introduced — this remains in-process
+
+## Coupling Balance
+
+- **Coupled components:** API layer ↔ Application handlers (level: layer)
+- **Strength:** Low (Contract) — the API now depends on two stable bus interfaces, not on N concrete handler types; the pipeline is encapsulated behind `DispatchAsync`
+- **Distance:** Low — same solution, same team, in-process synchronous dispatch
+- **Volatility:** Core — the handler set grows with every use case
+- **Verdict:** BALANCED
+- **Justification:** Low strength (contract boundary) with low distance is the high-cohesion / loose-contract corner — the bus replaces N direct high-strength API→handler dependencies with one low-strength contract, reducing cascading change even though the two sides stay close.
 
 ## Alternatives Rejected
 
@@ -292,6 +312,7 @@ Before writing the final ADR, verify:
 - [ ] **Clear decision statement** — starts with "We will…" or "We have decided to…"; no ambiguity
 - [ ] **Context explains the why** — the forces that made this decision necessary are described
 - [ ] **Consequences include negatives** — no decision is trade-off-free; if you can't name a downside, keep thinking
+- [ ] **Coupling Balance is stated** — every decision that creates/moves/tightens an inter-component dependency carries the `## Coupling Balance` section with a matrix-lookup verdict; a `UNBALANCED-SMELL` verdict is NEVER committed (rebalance first), and `UNBALANCED-ACCEPTED` cites the low-volatility subdomain
 - [ ] **Alternatives are genuine** — rejected alternatives are real options that were seriously considered, not strawmen
 - [ ] **Alternatives explain the rejection** — not "too complex" but "too complex because X and Y are not needed given the current story set"
 - [ ] **Status is set** — `Proposed` when drafting, `Accepted` when ratified

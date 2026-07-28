@@ -1,6 +1,6 @@
 ---
 name: architecture-patterns
-description: Use when selecting architecture patterns for a new feature, performing Event Modeling, defining bounded contexts, choosing DDD tactical patterns, evaluating pattern fitness, or understanding how patterns compose. Covers Event Modeling methodology, DDD strategic design, DDD tactical patterns, Clean Architecture, CQRS, and Event Sourcing.
+description: Use when selecting architecture patterns for a new feature, performing Event Modeling, defining bounded contexts, choosing DDD tactical patterns, evaluating pattern fitness, judging whether a coupling decision is balanced, or understanding how patterns compose. Covers Event Modeling methodology, DDD strategic design, the Balanced Coupling model (integration strength, distance, volatility), DDD tactical patterns, Clean Architecture, CQRS, and Event Sourcing.
 ---
 
 # Architecture Patterns
@@ -143,6 +143,82 @@ Apply these rules **before** labelling any arrow on the context map. They constr
 | **Core** | The competitive advantage of the business | Build, invest, DDD deep dive | Eligibility engine, risk scoring |
 | **Supporting** | Necessary but not differentiating | Build or buy, standard patterns | Document management, notifications |
 | **Generic** | Commodity functionality | Buy or use off-the-shelf | Authentication, payment processing |
+
+### Balanced Coupling — the lens behind these choices
+
+Every choice above (which context-mapping pattern, how big an aggregate, whether to isolate a subdomain) is a coupling decision. The Balanced Coupling model (Vlad Khononov) names three dimensions and one rule that make those decisions explicit instead of a matter of taste.
+
+| Dimension | Question it answers | Levels / factors |
+|---|---|---|
+| **Integration strength** | How much knowledge do the two sides share? | Contract (weakest) → Model → Functional → Intrusive (strongest) |
+| **Distance** | How costly is a coordinated change? | Same method < same class < same module < cross-service < cross-team/cross-system |
+| **Volatility** | How likely is either side to change? | Core subdomain = high · Supporting = low · Generic = low functional / variable implementation |
+
+**The balance rule:**
+```
+MODULARITY = STRENGTH XOR DISTANCE
+BALANCE    = (STRENGTH XOR DISTANCE) OR NOT VOLATILITY
+```
+Coupling is healthy when strength and distance counterbalance each other (strong knowledge sharing kept close, or weak sharing allowed to drift far apart) — or when volatility is low enough that an imbalance never gets exercised. "Loose coupling" and "high cohesion" are both forms of balanced coupling, just at opposite ends of the same rule. Unbalanced coupling is either a **big ball of mud** (low strength, low distance — unrelated things forced together) or a **distributed monolith** (high strength, high distance — tightly bound things forced apart).
+
+**Applying it to the decisions above:**
+- **Context-mapping pattern choice** is a strength/distance trade. `Conformist` accepts high strength at high distance — unbalanced unless volatility is low, which is exactly why Rule 1 forbids it for a Core downstream. `ACL` / `OHS+PL` spend translation effort to drop strength to Contract level, rebalancing a high-distance relationship. `Shared Kernel` / `Partnership` keep strength high but compensate with low organisational distance (same team, tight coordination).
+- **Subdomain classification** is the volatility axis. Core = high volatility → coupling there must be actively balanced (ACL, never Conformist). Supporting/Generic = low volatility → an unbalanced shortcut is tolerable (Eric Evans: "not all of a large system will be well designed").
+- **Aggregate boundaries** (below) are the low-distance/high-strength cell: invariants that must co-change are kept in one consistency boundary precisely because co-location makes that high strength cheap.
+- The rule is fractal — it applies identically whether comparing two methods, two aggregates, two bounded contexts, or two systems, always relative to the highest distance available at that level.
+
+Use this lens whenever a context-map label or an aggregate boundary feels arbitrary: name the strength, name the distance, name the volatility, then check the rule before committing the ADR.
+
+### Balanced Coupling — general fractal verdict (applies to EVERY architecture choice)
+
+Every architecture choice is a coupling choice: it creates, removes, moves, or tightens a dependency between two components — two methods, two aggregates, two layers, two bounded contexts, two services. The SAME rule decides all of them; only the level of abstraction changes (the model is fractal). Do not reason it freehand — classify two axes with the concrete cues below, then read the cell.
+
+**Classify STRENGTH (how much knowledge the two sides share):**
+- **LOW** = Contract — the dependency crosses an explicit, encapsulated contract (DTO, published event, facade, port/interface, ACL). Neither side sees the other's internals, requirements, or domain model.
+- **HIGH** = Model / Functional / Intrusive — the sides share a domain model, share a business rule (must co-change), or reach into each other's implementation.
+
+**Classify DISTANCE (cost of a coordinated change), relative to the level you are at:**
+- **LOW** = same method, same class, or same module/aggregate — and, socio-technically, same team, synchronous or in-process.
+- **HIGH** = cross-module, cross-service, cross-team, cross-system — or bound only by async messaging.
+
+**Read the cell:**
+
+| | **Low Distance** | **High Distance** |
+|---|---|---|
+| **Low Strength** | LOW COHESION — unrelated things crammed together (big-ball-of-mud drift) | **BALANCED** (loose coupling) |
+| **High Strength** | **BALANCED** (high cohesion) | TIGHT COUPLING — distributed-monolith step |
+
+**Apply the volatility override to the two complexity cells:**
+- A cell reading LOW COHESION or TIGHT COUPLING is `UNBALANCED`.
+- `UNBALANCED` is **ACCEPTED** — but only if the volatile side is a low-volatility **Supporting/Generic** subdomain AND the ADR cites that as the accepted trade-off (`NOT VOLATILITY` branch).
+- Otherwise (a **Core** / high-volatility subdomain, or no citation) it is an `UNBALANCED-SMELL`: rebalance before committing. Rebalance by moving ONE axis: drop strength to a Contract (introduce a port/DTO/ACL/published event), OR reduce distance (co-locate the two sides in one module/aggregate/team).
+
+This is the master rule. The context-map matrix below is simply this table instantiated for the six named inter-context patterns (all of which sit in the High-Distance column).
+
+### Balanced Coupling — precomputed verdict matrix (context-map arrows)
+
+You do NOT need to reason the `STRENGTH XOR DISTANCE` chain by hand. In this pipeline every coupling decision is already an enumerated label: a **context-map pattern** (the arrow) crossed with the **downstream subdomain class** (the volatility). Each pattern has a fixed integration-strength / distance signature, so the balance verdict is a total function over a small finite domain — it is precomputed below. Read the cell; do not re-derive it.
+
+**3-step lookup (no reasoning required):**
+1. Read the **arrow label** off the context map (the pattern).
+2. Read the **downstream context's subdomain class** (Core, or Supporting/Generic).
+3. Read the matching **cell** in the table. That IS the verdict.
+
+| Pattern (arrow label) | Strength | Distance | Core downstream | Supporting / Generic downstream |
+|---|---|---|---|---|
+| Shared Kernel | High | Low | BALANCED | BALANCED |
+| Partnership | High | Low | BALANCED | BALANCED |
+| Anti-Corruption Layer | Contract | High | BALANCED | BALANCED |
+| Open Host Service / Published Language | Contract | High | BALANCED | BALANCED |
+| Separate Ways | None | High | BALANCED | BALANCED |
+| Conformist | High | High | **UNBALANCED-SMELL** | **UNBALANCED-ACCEPTED** |
+
+**What each verdict obliges you to do:**
+- **BALANCED** — nothing. Strength and distance counterbalance (XOR holds). Commit the label as-is.
+- **UNBALANCED-ACCEPTED** — admissible ONLY because the downstream is a low-volatility Supporting/Generic subdomain. You MUST write one sentence in the relevant ADR naming that subdomain as the accepted trade-off (`NOT VOLATILITY` branch of the rule). No citation → treat as a smell.
+- **UNBALANCED-SMELL** — both strength and distance are high on a volatile Core subdomain: this is a distributed-monolith step. Do NOT commit it. Rebalance by dropping strength to Contract level (introduce an **ACL**, or have the upstream expose an **OHS + Published Language**). This cell is also forbidden outright by the Context Mapping Selection Rules (Rule 1) and by review gate G17 / G6.
+
+The matrix is closed: these six patterns are the only admissible arrow labels, and Core-vs-(Supporting|Generic) is the only volatility distinction that changes a verdict. Any arrow whose label is not in the left column is itself a defect (unlabelled / ad-hoc coupling).
 
 ### Ubiquitous Language
 

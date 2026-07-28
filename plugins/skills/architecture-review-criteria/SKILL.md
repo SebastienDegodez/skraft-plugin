@@ -7,7 +7,7 @@ description: Use when reviewing DESIGN artefacts (event models, ADRs, component 
 
 ## Overview
 
-16 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied by the `solution-architect-reviewer` agent to DESIGN artefacts. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
+17 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied by the `solution-architect-reviewer` agent to DESIGN artefacts. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, coupling balance, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
 
 **Applied by:** `solution-architect-reviewer`
 **Applied to:** ADRs, event models, component diagrams, context maps, interface contracts, consistency matrices, supersession plans, supersession registry, blocker files
@@ -40,6 +40,7 @@ Evaluates: diagrams + contracts + event models
 | G4 | All application interfaces (repositories, gateways, event publishers) are defined in the Application layer contracts. None are defined in Infrastructure. | Zero infrastructure-defined interfaces in contracts. All I* interfaces listed under Application layer. | BLOCKER |
 | G5 | Each aggregate enforces its own invariants. No aggregate enforces invariants that belong to another aggregate. | Zero cross-aggregate invariant references in contracts or diagrams. | HIGH |
 | G6 | Context map declares every inter-context relationship with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, Open Host Service, Published Language) AND every label is admissible: (a) no relationship labelled `Conformist` has a **Core** subdomain as its downstream; (b) no relationship labelled `Conformist` is in fact a published contract consumed with a local copy or translation (that is OHS/PL upstream + ACL downstream, see V-DDD-09 / V-DDD-10). | Zero unlabelled arrows between bounded contexts in context-map.md AND zero inadmissible labels. | HIGH |
+| G17 | Balanced Coupling by matrix lookup, on EVERY structural ADR and EVERY context-map arrow (not only inter-context arrows). (a) Each context-map arrow's cell = f(pattern, downstream subdomain) from `architecture-patterns` → context-map matrix. (b) Each ADR whose decision creates/moves/tightens an inter-component dependency carries a `## Coupling Balance` section whose Verdict is the correct cell of the general fractal matrix for its stated strength/distance/volatility. `UNBALANCED-SMELL` is a violation (must have been rebalanced, never committed). `UNBALANCED-ACCEPTED` is admissible ONLY with the low-volatility Supporting/Generic subdomain cited. `BALANCED` needs nothing. Do NOT re-derive by hand — read the cell. | Every context-map arrow AND every structural ADR resolves to `BALANCED`, or to `UNBALANCED-ACCEPTED` with the required citation. Zero `UNBALANCED-SMELL`. Zero structural ADRs missing the `## Coupling Balance` section. | HIGH |
 
 ### Lens 3 — fitness-lens
 
@@ -101,6 +102,7 @@ Evaluates: every `decision-drift-*.md` file under `.copilot-tracking/skraft-plan
 6. Context map relationships are explicit and labelled — implicit dependencies are forbidden
 7. Subdomains are classified (Core/Supporting/Generic) and the investment level is justified
 8. A Core subdomain is never the downstream of a `Conformist` relationship — it protects its Ubiquitous Language via an ACL. Consuming a published contract (ViewModel/event/DTO) with a local copy or translation is OHS/PL + ACL, never Conformist, regardless of how trivial the translation is
+9. Every context-map relationship and aggregate boundary is a coupling decision: it must balance integration strength against distance, or the ADR must name the low-volatility subdomain that makes the imbalance acceptable (Balanced Coupling, G17)
 
 ---
 

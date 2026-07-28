@@ -203,6 +203,10 @@
       {
         "name": "architecture-decisions",
         "policy": "verify"
+      },
+      {
+        "name": "clean-architecture-roster",
+        "policy": "verify"
       }
     ],
     "contract-fidelity-lens": [],

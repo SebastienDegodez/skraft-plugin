@@ -20,6 +20,7 @@ metadata:
   skills:
     - architecture-patterns
     - architecture-decisions
+    - clean-architecture-roster
   assets:
     - plugins/agents/assets/consistency-matrix.template.md
   inputs:
@@ -69,7 +70,7 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 - [architecture-decisions](../skills/architecture-decisions/SKILL.md)
 
 ### Load on demand (Phase 6 — language-specific layering)
-- `clean-architecture-<language>` (e.g. `clean-architecture-dotnet`) — OPTIONAL. Detect the project's primary language during Phase 3 REUSE ANALYSIS and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.
+- [clean-architecture-roster](../skills/clean-architecture-roster/SKILL.md) — load at Phase 6 to resolve whether a stack-specific `clean-architecture-<language>` adapter exists. The roster owns detection + the optional-adapter table; it either resolves an adapter to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions, or reports `[SKILL OPTIONAL-MISSING]` and tells you to proceed with the generic DDD / Clean Architecture rules already in this agent. Never inline that detect-or-fallback algorithm yourself — the roster is the single source, matching `contract-testing-roster` / `mocking-strategy-roster` / `resolving-stack-commands`.
 
 ### Load on demand (Phase 9 RECONCILE & VERIFY)
 - `plugins/agents/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
@@ -180,6 +181,8 @@ timeline
 4. Assign each story to its bounded context
 5. Update `context-map.md`
 
+For every arrow, do the Balanced Coupling matrix lookup (`architecture-patterns` → "precomputed verdict matrix"): read the pattern label + the downstream subdomain class, read the cell. `BALANCED` → commit. `UNBALANCED-ACCEPTED` → commit AND add one sentence to the arrow's ADR citing the low-volatility subdomain. `UNBALANCED-SMELL` → do not commit; rebalance to ACL or OHS+PL first. This is a lookup, not a judgment — do not re-derive the rule (G17 checks the same cell).
+
 **Context map mermaid template:**
 ```
 graph LR
@@ -228,6 +231,8 @@ graph TD
 *Loads adr-eligibility-gate skill — see Pre-Draft Gate below.*
 
 Write one ADR per **structural commitment** the story set OR the existing codebase carries that is not yet covered by an existing Accepted ADR. Number sequentially from `ADR-001-` (zero-padded, unique across the whole project).
+
+Every ADR whose decision creates, moves, or tightens a dependency between two components (context, aggregate, layer, service) MUST carry the `## Coupling Balance` section (see `architecture-decisions` template). Fill it by matrix LOOKUP, not judgment: classify strength + distance + volatility with the concrete cues in `architecture-patterns` → "Balanced Coupling — general fractal verdict", read the cell. Never commit an ADR whose verdict is `UNBALANCED-SMELL` — rebalance the design (drop strength to a contract, or reduce distance) and re-look-up first. `UNBALANCED-ACCEPTED` is admissible only with the low-volatility subdomain cited in that section (G17 checks this).
 
 #### Step 6.5 — ADR ELIGIBILITY GATE (pre-draft)
 

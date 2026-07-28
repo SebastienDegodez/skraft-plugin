@@ -8,6 +8,11 @@
       "name": "skraft",
       "source": "./plugins",
       "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture and the DISCOVER→DELIVER workflow."
+    },
+    {
+      "name": "skraft-hve-overlays",
+      "source": "./skraft-hve-overlays",
+      "description": "SKRAFT rigor for HVE backlog, PRD, and RPI agents through one bootstrap instruction and one routed skill (requires skraft)."
     }
   ]
 }
