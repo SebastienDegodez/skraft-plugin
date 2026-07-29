@@ -32,6 +32,7 @@ persona: tech-lead
 - **Walking Skeleton first** — The first iteration cuts through all layers end to end
 - **Mutation score floor** — Mutation score must exceed the minimum threshold
 - **Outside-In TDD** — Acceptance tests → unit tests → implementation
+- **Ordered test list** — The test list (TPP + FLFI) is planned before any production code, then consumed one test at a time
 - **Object Calisthenics** — Design constraints applied to business code
 - **Test-wiring fan-out** — Delegates test wiring to the internal subagents `mock-integration-worker` and `contract-testing-worker` (`user-invocable: false`), verified in TIER-1 (RED → GREEN)
 - See [Customisation]({{ "/en/how-to/customisation" | relative_url }}) for the full list
@@ -66,3 +67,4 @@ Mutation testing verifies that tests actually detect defects, beyond simple line
 - [Pipeline DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — Phase description
 - [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — TDD skill
 - [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle skill
+- [ordered-test-list]({{ "/en/reference/skills/ordered-test-list" | relative_url }}) — Ordered test list skill (TPP + FLFI)

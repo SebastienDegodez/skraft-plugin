@@ -32,6 +32,7 @@ persona: tech-lead
 - **Walking Skeleton d'abord** — La première itération traverse toutes les couches de bout en bout
 - **Mutation score floor** — Le score de mutation doit dépasser le seuil minimum
 - **Outside-In TDD** — Tests d'acceptation → tests unitaires → implémentation
+- **Liste de tests ordonnée** — La liste de tests (TPP + FLFI) est planifiée avant tout code de production, puis consommée un test à la fois
 - **Object Calisthenics** — Contraintes de design appliquées au code métier
 - **Fan-out du câblage de test** — Délègue le wiring des tests aux sous-agents internes `mock-integration-worker` et `contract-testing-worker` (`user-invocable: false`), vérifiés en TIER-1 (RED → GREEN)
 - Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
@@ -66,3 +67,4 @@ Le mutation testing vérifie que les tests détectent réellement les défauts, 
 - [Pipeline DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — Description de la phase
 - [outside-in-tdd]({{ "/fr/reference/skills/outside-in-tdd" | relative_url }}) — Skill TDD
 - [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Skill cycle TDD
+- [ordered-test-list]({{ "/fr/reference/skills/ordered-test-list" | relative_url }}) — Skill liste de tests ordonnée (TPP + FLFI)

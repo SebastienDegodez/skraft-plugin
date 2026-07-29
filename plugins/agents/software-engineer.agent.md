@@ -24,6 +24,7 @@ metadata:
   phase: DELIVER
   skills:
     - outside-in-tdd
+    - ordered-test-list
     - red-synthesize-green
     - clean-architecture-testing
     - craft-discipline
@@ -41,6 +42,7 @@ metadata:
       - depthTier + difficulty (provided by the orchestrator in the dispatch payload)
   outputs:
     - Source code commits (conventional commits)
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-list-{story}.md (ordered test list — TPP + FLFI)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
     - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)
     - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)
@@ -73,6 +75,7 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 
 ### Always load at startup (before PREPARE)
 - [outside-in-tdd](../skills/outside-in-tdd/SKILL.md)
+- [ordered-test-list](../skills/ordered-test-list/SKILL.md)
 - [red-synthesize-green](../skills/red-synthesize-green/SKILL.md)
 - [craft-discipline](../skills/craft-discipline/SKILL.md)
 
@@ -89,9 +92,10 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
 2. **Double-Loop TDD**: 1 Acceptance test (outside) -> Focused Unit tests (inside).
 3. **4-Phase Cycle**: PREPARE -> RED -> SYNTHESIZE-GREEN -> COMMIT (No commit on red!).
-4. **Iron Rule of Tests**: NEVER modify a failing test to make it pass. Fix the implementation. If stuck after 3 attempts, revert to green and escalate.
-5. **No Test Theater**: Tests MUST fail if behavior changes. Every unit test must kill a unique mutant. Zero mockist tests in Domain/Application.
-6. **Token Economy**: Concise responses, no unsolicited docs, no unnecessary files.
+4. **Ordered Test List (TPP + FLFI)**: The ordered test list is planned BEFORE any production code, and consumed one entry at a time. No bulk generation, no anticipation.
+5. **Iron Rule of Tests**: NEVER modify a failing test to make it pass. Fix the implementation. If stuck after 3 attempts, revert to green and escalate.
+6. **No Test Theater**: Tests MUST fail if behavior changes. Every unit test must kill a unique mutant. Zero mockist tests in Domain/Application.
+7. **Token Economy**: Concise responses, no unsolicited docs, no unnecessary files.
 
 ## Test Design & Theater Prevention
 These are owned by the skills — load them, do not inline rules here.
@@ -106,14 +110,17 @@ These are owned by the skills — load them, do not inline rules here.
 - Do NOT re-author the acceptance test or alter its input / expected values (Iron Rule of tests).
 - Identify entry boundaries and expected outward effects from the existing acceptance test + impl-plan.
 - Target exactly ONE active behavioral scenario (the first RED acceptance scenario, then the next).
+- **Emit the ORDERED TEST LIST before any production code** (`ordered-test-list`): one ordered entry per planned test across the pyramid (unit / integration / e2e), each declaring its BDD semantics, its TPP transformation, and the logical contradiction that forces the code to evolve. Persist it as `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-list-{story}.md`. Writing production code before this list exists is a fatal defect.
 
 ### 2. RED (inner loop)
 - The OUTER acceptance test already exists (from DISTILL). Drive the INNER loop: write ONE failing unit test for the next behavior slice the acceptance test demands.
+- **Take the HEAD of the ordered test list — one entry at a time.** Never open two RED slices at once (the outer acceptance test excepted). Re-planning the remaining entries is allowed only when recorded in the test-list artifact (`ordered-test-list` → Re-planning).
 - **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile). Never weaken or edit the acceptance test to make it pass.
 - **Edge cases not expressible in Gherkin** (defensive branch, exhaustive-enum fallback, combinatorial sweep of an already-decided rule — e.g. a `PolicyService`) are authored HERE via TDD, but ONLY when `test-design-mandates` Mandate 4 Gate (a) or (b) opens, and ONLY with values traceable to a decided AC. The domain class emerges from this RED — create nothing before the compile failure (`outside-in-tdd` Step 2). If the case is an UNDECIDED business decision, STOP and escalate to DISCUSS — never invent a verdict or value.
 
 ### 3. SYNTHESIZE-GREEN
 - Write minimal production code to pass the test.
+- Apply **exactly the TPP transformation declared for the active entry** — no code the active test does not require, even when a later entry will obviously need it.
 - Apply **Object Calisthenics in full** (all 9 rules). See `craft-discipline` C10 → [references/object-calisthenics.md](../skills/craft-discipline/references/object-calisthenics.md) for the complete reference.
 - **Gate**: Entire test suite must run green. Do NOT refactor during Green.
 
@@ -140,6 +147,7 @@ When a slice needs **test infrastructure** rather than business logic, fan out t
 
 ## Quality Gates Checklist
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:
+- [ ] Ordered test list written before the first line of production code, and fully consumed
 - [ ] Active acceptance and unit tests pass
 - [ ] Build and static analysis pass
 - [ ] 100% Mutation score on business logic proven
@@ -151,9 +159,9 @@ Before concluding, verify and output this valid markdown checklist visually in t
 Always print a trace of your cycle directly into the chat/console output exclusively. Do not add this to the commit message:
 ```markdown
 ### Cycle <N>: <Behavior>
-**PREPARE**: Target boundary `<Class/Method>`.
-**RED**: Wrote `<TestName>`. Failed because `<reason>`.
-**GREEN**: Implemented `<Classes/Files>`. All green.
+**PREPARE**: Target boundary `<Class/Method>`. Test-list entry `<N>` (`<level>`).
+**RED**: Wrote `<TestName>`. Failed because `<reason>` (contradiction: `<contradiction>`).
+**GREEN**: Implemented `<Classes/Files>` via `<TPP transformation>`. All green.
 **COMMIT**: <Hash/Message>. Mutation score: 100%.
 ```
 
