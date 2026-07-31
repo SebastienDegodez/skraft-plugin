@@ -3,6 +3,32 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.4.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.3.1...v1.4.0) (2026-07-31)
+
+### ✨ Features
+
+* **agents:** separate product layer from engineering orchestrator (RPI-aligned) ([677bb13](https://github.com/SebastienDegodez/skraft-plugin/commit/677bb133740756c096bc4d0efdb1b486bdfe150f))
+* **config:** add trackingLayout dial (namespaced|bare) to repo-wide config ([9b64bb5](https://github.com/SebastienDegodez/skraft-plugin/commit/9b64bb5c69263dc90ee54d0d70e11cc195d3d5a2))
+* **g1:** scope dispatch-order guard to pipeline agents (active-pipeline-only) ([ffcbbf7](https://github.com/SebastienDegodez/skraft-plugin/commit/ffcbbf7cf1d91182e4391e1a62a4d2036e49b423))
+* **hooks:** wire PreToolUse guards (G1 + G7/G8) into cli/hook.mjs ([776e03f](https://github.com/SebastienDegodez/skraft-plugin/commit/776e03ff59c757d87521195a78d0392a2a8401a1))
+* **orchestrator:** drop the RESEARCH reviewer — evidence is citation-verifiable, not adversarially gated ([1224dd4](https://github.com/SebastienDegodez/skraft-plugin/commit/1224dd4718916ddf189d2a6a788520658ed667cb))
+* **state:** resolve tracking layout (namespaced|bare) + add migrate command ([16fa8be](https://github.com/SebastienDegodez/skraft-plugin/commit/16fa8be9b83123aedce3681a368da12b459b9518))
+
+### 🐛 Bug Fixes
+
+* **gitignore:** ignore atomic-writer tmp/bak/corrupted files without requiring timestamp suffix ([6e3a532](https://github.com/SebastienDegodez/skraft-plugin/commit/6e3a532dd8efa1133c5384ed1b99083eb01d849a))
+
+### ♻️ Refactoring
+
+* **agents:** rename all agent identifiers to "Skraft - X" display convention ([a034ab5](https://github.com/SebastienDegodez/skraft-plugin/commit/a034ab58aea233149921cefa6cc7d0b979362bba))
+
+### 📝 Documentation
+
+* **agents:** drop "adapted from HVE-RPI" provenance framing, state equivalence only ([025ba3f](https://github.com/SebastienDegodez/skraft-plugin/commit/025ba3ff339196009f8bbfadf8b26a6b2c568988))
+* **agents:** make HVE-RPI attribution concrete, not vague "counterpart" phrasing ([15c1d7d](https://github.com/SebastienDegodez/skraft-plugin/commit/15c1d7d5e3120302f7ada1837aab3b0c90ab8ec4))
+* **instructions:** document namespaced|bare tracking layout + migrate ([a93213e](https://github.com/SebastienDegodez/skraft-plugin/commit/a93213e142f9d85eeef072d52c59ec59b448b5bf))
+* record S3 layer separation (product/engineering, RPI-aligned) ([932ec6c](https://github.com/SebastienDegodez/skraft-plugin/commit/932ec6c888f2c5a52d28addb782e42ed12bb3611))
+
 ## [1.3.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.3.0...v1.3.1) (2026-07-20)
 
 ### ♻️ Refactoring
