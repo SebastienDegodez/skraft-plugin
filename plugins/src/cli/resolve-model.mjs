@@ -4,7 +4,7 @@ import { parseArgs } from 'node:util'
 import { resolveModel } from '../application/resolve-model.mjs'
 
 // User-invocable top-of-loop agents keep `inherit` (session model flows through them).
-const DEFAULT_ALLOW_LIST = new Set(['skraft-orchestrator'])
+const DEFAULT_ALLOW_LIST = new Set(['skraft-orchestrator', 'Skraft - Orchestrator'])
 
 // Pull the frontmatter block (between the first two `---` fences).
 const frontmatterOf = (content) => {

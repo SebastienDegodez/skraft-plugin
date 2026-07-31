@@ -134,6 +134,11 @@ test('planAgent applies the Sonnet floor override for a reviewer with a requirem
   assert.equal(plan.resolvedModel, 'Claude Sonnet 5')
 })
 
+test('planAgent resolves a researcher to Sonnet 5', () => {
+  const plan = planAgent(agent({ name: 'res', cls: 'researcher' }), { allowList: new Set() })
+  assert.equal(plan.resolvedModel, 'Claude Sonnet 5')
+})
+
 test('planAgent skips an allow-listed agent', () => {
   const plan = planAgent(agent({ name: 'skraft-orchestrator', cls: 'reviewer' }), {
     allowList: new Set(['skraft-orchestrator']),

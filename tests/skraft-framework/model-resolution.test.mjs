@@ -41,9 +41,10 @@ test('maxTier returns the first argument when both ranks are equal', () => {
 
 // --- domain: policy maps ---
 
-test('tierForClass maps the three B12 classes', () => {
+test('tierForClass maps the B12 classes', () => {
   assert.equal(tierForClass('reviewer').value, 'economy')
   assert.equal(tierForClass('implementer').value, 'standard')
+  assert.equal(tierForClass('researcher').value, 'standard')
   assert.equal(tierForClass('planner').value, 'frontier')
 })
 
@@ -89,6 +90,13 @@ test('resolveModel maps a plain reviewer to economy', () => {
 
 test('resolveModel maps an implementer to standard', () => {
   assert.deepEqual(resolveModel({ costRoleClass: 'implementer' }), {
+    tier: 'standard',
+    model: 'Claude Sonnet 5',
+  })
+})
+
+test('resolveModel maps a researcher to standard', () => {
+  assert.deepEqual(resolveModel({ costRoleClass: 'researcher' }), {
     tier: 'standard',
     model: 'Claude Sonnet 5',
   })
