@@ -39,29 +39,33 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 - **[planning-review-criteria](planning-review-criteria.html)** — gates G1-G8 for DISCUSS artefacts.
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — adversarial panel verdict.
 
-### 5) DESIGN — [solution-architect]({{ "/en/reference/agents/solution-architect" | relative_url }})
+### 5) RESEARCH — [solution-researcher]({{ "/en/reference/agents/solution-researcher" | relative_url }})
+
+*(No dedicated skills — the agent uses `read/readFile`, `search/codebase`, and `graphify/*` tools directly.)*
+
+### 6) DESIGN — [solution-architect]({{ "/en/reference/agents/solution-architect" | relative_url }})
 
 - **[architecture-patterns](architecture-patterns.html)** — Event Modeling, strategic/tactical DDD, CQRS, Event Sourcing.
 - **[architecture-decisions](architecture-decisions.html)** — ADR decisions, alternatives, lifecycle.
 
-### 6) DESIGN review — [solution-architect-reviewer]({{ "/en/reference/agents/solution-architect-reviewer" | relative_url }})
+### 7) DESIGN review — [solution-architect-reviewer]({{ "/en/reference/agents/solution-architect-reviewer" | relative_url }})
 
 - **[architecture-review-criteria](architecture-review-criteria.html)** — DESIGN gates on ADRs, diagrams, contracts.
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — adversarial panel verdict.
 
-### 7) DISTILL — [acceptance-designer]({{ "/en/reference/agents/acceptance-designer" | relative_url }})
+### 8) DISTILL — [acceptance-designer]({{ "/en/reference/agents/acceptance-designer" | relative_url }})
 
 - **[bdd-methodology](bdd-methodology.html)** — Gherkin structure (Given/When/Then, outline, tags).
 - **[test-design-mandates](test-design-mandates.html)** — coverage matrices + outside-in order.
 - **[outside-in-tdd](outside-in-tdd.html)** — outside-in TDD double loop from observable behaviour.
 - **[resolving-stack-commands](resolving-stack-commands.html)** — stack-based concrete command resolution.
 
-### 8) DISTILL review — [acceptance-designer-reviewer]({{ "/en/reference/agents/acceptance-designer-reviewer" | relative_url }})
+### 9) DISTILL review — [acceptance-designer-reviewer]({{ "/en/reference/agents/acceptance-designer-reviewer" | relative_url }})
 
 - **[acceptance-review-criteria](acceptance-review-criteria.html)** — gates G1-G6 for DISTILL artefacts.
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — adversarial panel verdict.
 
-### 9) DELIVER — [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }})
+### 10) DELIVER — [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }})
 
 - **[outside-in-tdd](outside-in-tdd.html)** — end-to-end outside-in TDD strategy.
 - **[red-synthesize-green](red-synthesize-green.html)** — RED → minimal implementation → GREEN cycle.
@@ -72,7 +76,7 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 - **[quality-gates-evidence-contract](quality-gates-evidence-contract.html)** — evidence-log schema contract.
 - **[quality-gates-dotnet](quality-gates-dotnet.html)** — quality-gate commands for .NET stack.
 
-### 9b) DELIVER — internal workers (software-engineer sub-agents)
+### 10b) DELIVER — internal workers (software-engineer sub-agents)
 
 - **[mocking-strategy-roster](mocking-strategy-roster.html)** — mocking strategy + stack resolution.
 - **[mocking-microcks-dotnet](mocking-microcks-dotnet.html)** — .NET Microcks mock wiring.
@@ -82,7 +86,7 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 - **[contract-testing](contract-testing.html)** — contract capability reused by contract worker.
 - **[resolving-stack-commands](resolving-stack-commands.html)** — test/build/mutation command resolution for workers.
 
-### 10) DELIVER review — [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }})
+### 11) DELIVER review — [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }})
 
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — review-lens orchestration.
 

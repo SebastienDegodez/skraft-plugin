@@ -111,20 +111,32 @@ function sameOrder(expected, actual) {
   return expected.length === actual.length && expected.every((v, i) => v === actual[i]);
 }
 
+function agentNameToSlug(name) {
+  // "Skraft - Solution Researcher" → "solution-researcher"
+  // "skraft-orchestrator" → "skraft-orchestrator" (already a slug)
+  if (/^[a-z0-9-]+$/.test(name)) return name; // already a slug
+  return name
+    .replace(/^Skraft\s*-\s*/i, '')  // strip "Skraft - " prefix
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 function deriveAgentUsageOrder(root) {
   const orchestratorPath = join(root, 'plugins/agents/skraft-orchestrator.agent.md');
   const orchestrator = readFrontmatter(orchestratorPath);
   if (!orchestrator) return null;
 
   const chain = Array.isArray(orchestrator.agents) ? orchestrator.agents : [];
-  const orderedAgents = ['skraft-orchestrator', ...chain];
+  const rawAgents = ['skraft-orchestrator', ...chain];
+  const orderedAgents = rawAgents.map(agentNameToSlug);
   const skillsByAgent = {};
 
-  for (const agent of orderedAgents) {
-    const path = join(root, 'plugins/agents', `${agent}.agent.md`);
+  for (const slug of orderedAgents) {
+    const path = join(root, 'plugins/agents', `${slug}.agent.md`);
     const fm = readFrontmatter(path);
     const skills = Array.isArray(fm?.metadata?.skills) ? fm.metadata.skills : [];
-    skillsByAgent[agent] = skills;
+    skillsByAgent[slug] = skills;
   }
 
   return { orderedAgents, skillsByAgent };
