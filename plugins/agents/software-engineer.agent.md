@@ -25,6 +25,7 @@ metadata:
   skills:
     - outside-in-tdd
     - red-synthesize-green
+    - ordered-test-list
     - clean-architecture-testing
     - craft-discipline
     - test-refactoring-catalog
@@ -74,6 +75,7 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 ### Always load at startup (before PREPARE)
 - [outside-in-tdd](../skills/outside-in-tdd/SKILL.md)
 - [red-synthesize-green](../skills/red-synthesize-green/SKILL.md)
+- [ordered-test-list](../skills/ordered-test-list/SKILL.md)
 - [craft-discipline](../skills/craft-discipline/SKILL.md)
 
 ### Load on demand (trigger-based)

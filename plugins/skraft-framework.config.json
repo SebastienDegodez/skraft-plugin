@@ -156,6 +156,10 @@
         "policy": "verify"
       },
       {
+        "name": "ordered-test-list",
+        "policy": "verify"
+      },
+      {
         "name": "clean-architecture-testing",
         "policy": "verify"
       },

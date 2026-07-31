@@ -65,6 +65,7 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 
 - **[outside-in-tdd](outside-in-tdd.html)** — end-to-end outside-in TDD strategy.
 - **[red-synthesize-green](red-synthesize-green.html)** — RED → minimal implementation → GREEN cycle.
+- **[ordered-test-list](ordered-test-list.html)** — strict one-test-at-a-time progression (TPP + FLFI) for incremental TDD.
 - **[clean-architecture-testing](clean-architecture-testing.html)** — layer/boundary test strategy.
 - **[craft-discipline](craft-discipline.html)** — self-discipline checkpoints before commit.
 - **[test-refactoring-catalog](test-refactoring-catalog.html)** — post-GREEN test refactoring.
