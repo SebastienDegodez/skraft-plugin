@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.5.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.4.0...v1.5.0) (2026-07-31)
+
+### ✨ Features
+
+* add support for researcher role in model resolution and tests ([1823936](https://github.com/SebastienDegodez/skraft-plugin/commit/18239361f4056bcb12a61bd225fd1d77049a0217))
+
 ## [1.4.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.3.1...v1.4.0) (2026-07-31)
 
 ### ✨ Features
