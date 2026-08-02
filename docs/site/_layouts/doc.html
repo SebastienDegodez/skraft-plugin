@@ -37,60 +37,80 @@
         {% else %}
           {% assign part_title = part.title_fr %}
         {% endif %}
-        <h3 class="doc-sidebar__group">{% if part.icon %}<i class="{{ part.icon }}" aria-hidden="true"></i> {% endif %}{{ part_title }}</h3>
 
-        {% if part.sections %}
-          {% comment %} 3-level menu: part > section > pages (explicit + discovered per-item). {% endcomment %}
-          {% for section in part.sections %}
-            {% if page.lang == 'en' %}
-              {% assign section_title = section.title_en | default: section.id %}
-              {% assign folder = section.folder_en %}
-            {% else %}
-              {% assign section_title = section.title_fr | default: section.id %}
-              {% assign folder = section.folder_fr %}
-            {% endif %}
-            <h4 class="doc-sidebar__section">{{ section_title }}</h4>
-            <ul class="doc-sidebar__list doc-sidebar__sublist">
-              {% assign explicit = section.pages | sort: 'sidebar_position' %}
-              {% for p in explicit %}
-                {% if page.lang == 'en' %}{% assign raw = p.en %}{% else %}{% assign raw = p.fr %}{% endif %}
-                {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
-                {% assign fallback = p.id | replace: '-', ' ' | capitalize %}
-                {% if page.lang == 'en' %}{% assign label = p.label_en | default: fallback %}{% else %}{% assign label = p.label_fr | default: fallback %}{% endif %}
-                <li><a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a></li>
+        <div class="doc-sidebar__part">
+          <button class="doc-sidebar__group" type="button" aria-expanded="false">
+            {% if part.icon %}<i class="{{ part.icon }}" aria-hidden="true"></i> {% endif %}{{ part_title }}<i class="fa-solid fa-chevron-right doc-sidebar__chevron" aria-hidden="true"></i>
+          </button>
+
+          <div class="doc-sidebar__part-body">
+            {% if part.sections %}
+              {% comment %} 3-level menu: part > section > pages (explicit + discovered per-item). {% endcomment %}
+              {% for section in part.sections %}
+                {% if page.lang == 'en' %}
+                  {% assign section_title = section.title_en | default: section.id %}
+                  {% assign folder = section.folder_en %}
+                  {% assign section_url = section.url_en %}
+                {% else %}
+                  {% assign section_title = section.title_fr | default: section.id %}
+                  {% assign folder = section.folder_fr %}
+                  {% assign section_url = section.url_fr %}
+                {% endif %}
+
+                <div class="doc-sidebar__section-wrap">
+                  {% if section_url %}
+                    <a class="doc-sidebar__section doc-sidebar__section--link" href="{{ section_url | relative_url }}" aria-expanded="false" data-section-link>
+                      {{ section_title }}<i class="fa-solid fa-chevron-right doc-sidebar__chevron" aria-hidden="true"></i>
+                    </a>
+                  {% else %}
+                    <button class="doc-sidebar__section" type="button" aria-expanded="false">
+                      {{ section_title }}<i class="fa-solid fa-chevron-right doc-sidebar__chevron" aria-hidden="true"></i>
+                    </button>
+                  {% endif %}
+                  <ul class="doc-sidebar__list doc-sidebar__sublist" hidden>
+                    {% assign explicit = section.pages | sort: 'sidebar_position' %}
+                    {% for p in explicit %}
+                      {% if page.lang == 'en' %}{% assign raw = p.en %}{% else %}{% assign raw = p.fr %}{% endif %}
+                      {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
+                      {% assign fallback = p.id | replace: '-', ' ' | capitalize %}
+                      {% if page.lang == 'en' %}{% assign label = p.label_en | default: fallback %}{% else %}{% assign label = p.label_fr | default: fallback %}{% endif %}
+                      <li><a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a></li>
+                    {% endfor %}
+                    {% if folder %}
+                      {% assign discovered = site.pages | where_exp: "pg", "pg.path contains folder" | sort: 'sidebar_position' %}
+                      {% for pg in discovered %}
+                        {% unless pg.name == 'index.md' %}
+                          <li><a href="{{ pg.url | relative_url }}"{% if page.url == pg.url %} class="active" aria-current="page"{% endif %}>{{ pg.title | default: pg.name }}</a></li>
+                        {% endunless %}
+                      {% endfor %}
+                    {% endif %}
+                  </ul>
+                </div>
               {% endfor %}
-              {% if folder %}
-                {% assign discovered = site.pages | where_exp: "pg", "pg.path contains folder" | sort: 'sidebar_position' %}
-                {% for pg in discovered %}
-                  {% unless pg.name == 'index.md' %}
-                    <li><a href="{{ pg.url | relative_url }}"{% if page.url == pg.url %} class="active" aria-current="page"{% endif %}>{{ pg.title | default: pg.name }}</a></li>
-                  {% endunless %}
+            {% else %}
+              {% comment %} 2-level menu: part > pages (flat). {% endcomment %}
+              <ul class="doc-sidebar__list">
+                {% for p in part.pages %}
+                  {% if page.lang == 'en' %}
+                    {% assign raw = p.en %}
+                  {% else %}
+                    {% assign raw = p.fr %}
+                  {% endif %}
+                  {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
+                  {% assign fallback = p.id | replace: '-', ' ' | capitalize %}
+                  {% if page.lang == 'en' %}
+                    {% assign label = p.label_en | default: fallback %}
+                  {% else %}
+                    {% assign label = p.label_fr | default: fallback %}
+                  {% endif %}
+                  <li>
+                    <a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a>
+                  </li>
                 {% endfor %}
-              {% endif %}
-            </ul>
-          {% endfor %}
-        {% else %}
-          {% comment %} 2-level menu: part > pages (flat). {% endcomment %}
-          <ul class="doc-sidebar__list">
-            {% for p in part.pages %}
-              {% if page.lang == 'en' %}
-                {% assign raw = p.en %}
-              {% else %}
-                {% assign raw = p.fr %}
-              {% endif %}
-              {% assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' %}
-              {% assign fallback = p.id | replace: '-', ' ' | capitalize %}
-              {% if page.lang == 'en' %}
-                {% assign label = p.label_en | default: fallback %}
-              {% else %}
-                {% assign label = p.label_fr | default: fallback %}
-              {% endif %}
-              <li>
-                <a href="{{ href | relative_url }}"{% if page.url == href %} class="active" aria-current="page"{% endif %}>{{ label }}</a>
-              </li>
-            {% endfor %}
-          </ul>
-        {% endif %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
       {% endfor %}
     </aside>
 
@@ -114,13 +134,113 @@
 
   <script>
     (function () {
-      var toggle = document.querySelector('.doc-sidebar-toggle');
+      /* ── Mobile sidebar toggle ── */
+      var mobileToggle = document.querySelector('.doc-sidebar-toggle');
       var sidebar = document.getElementById('doc-sidebar');
-      if (!toggle || !sidebar) return;
-      toggle.addEventListener('click', function () {
-        var open = sidebar.classList.toggle('is-open');
-        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', function () {
+          var open = sidebar.classList.toggle('is-open');
+          mobileToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+      }
+
+      /* ── Part (N1) accordion ── */
+      var parts = Array.prototype.slice.call(document.querySelectorAll('.doc-sidebar__part'));
+
+      function openPart(part) {
+        var btn  = part.querySelector(':scope > .doc-sidebar__group');
+        var body = part.querySelector(':scope > .doc-sidebar__part-body');
+        part.classList.add('is-open');
+        if (btn)  btn.setAttribute('aria-expanded', 'true');
+        if (body) body.removeAttribute('hidden');
+      }
+      function closePart(part) {
+        var btn  = part.querySelector(':scope > .doc-sidebar__group');
+        var body = part.querySelector(':scope > .doc-sidebar__part-body');
+        part.classList.remove('is-open');
+        if (btn)  btn.setAttribute('aria-expanded', 'false');
+        if (body) body.setAttribute('hidden', '');
+      }
+      function accordionOpenPart(target) {
+        parts.forEach(function (p) { if (p !== target) closePart(p); });
+        openPart(target);
+      }
+
+      parts.forEach(function (part) {
+        var btn = part.querySelector(':scope > .doc-sidebar__group');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          if (part.classList.contains('is-open')) {
+            closePart(part);
+          } else {
+            accordionOpenPart(part);
+          }
+        });
       });
+
+      /* ── Section (N2) collapse ── */
+      var sectionWraps = Array.prototype.slice.call(document.querySelectorAll('.doc-sidebar__section-wrap'));
+
+      function openSection(wrap) {
+        var trigger = wrap.querySelector(':scope > .doc-sidebar__section');
+        var list    = wrap.querySelector(':scope > .doc-sidebar__sublist');
+        wrap.classList.add('is-open');
+        if (trigger) trigger.setAttribute('aria-expanded', 'true');
+        if (list)    list.removeAttribute('hidden');
+      }
+      function closeSection(wrap) {
+        var trigger = wrap.querySelector(':scope > .doc-sidebar__section');
+        var list    = wrap.querySelector(':scope > .doc-sidebar__sublist');
+        wrap.classList.remove('is-open');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        if (list)    list.setAttribute('hidden', '');
+      }
+
+      sectionWraps.forEach(function (wrap) {
+        var trigger = wrap.querySelector(':scope > .doc-sidebar__section');
+        if (!trigger) return;
+
+        /* Section with page behind it: the trigger is an <a> — navigate + open */
+        var isLink = trigger.hasAttribute('data-section-link');
+
+        trigger.addEventListener('click', function (e) {
+          /* Close other N1 groups (accordion) */
+          var parentPart = wrap.closest('.doc-sidebar__part');
+          if (parentPart) accordionOpenPart(parentPart);
+
+          if (isLink) {
+            /* Let the browser navigate; also expand */
+            openSection(wrap);
+          } else {
+            e.preventDefault();
+            if (wrap.classList.contains('is-open')) {
+              closeSection(wrap);
+            } else {
+              openSection(wrap);
+            }
+          }
+        });
+      });
+
+      /* ── Auto-expand branch containing the active link ── */
+      var activeLink = document.querySelector('.doc-sidebar__list a.active');
+      if (activeLink) {
+        var parentSection = activeLink.closest('.doc-sidebar__section-wrap');
+        if (parentSection) openSection(parentSection);
+
+        var parentPart = activeLink.closest('.doc-sidebar__part');
+        if (parentPart) openPart(parentPart);
+        else if (!parentSection) {
+          /* flat 2-level: just open the part */
+          var flatPart = activeLink.closest('.doc-sidebar__part');
+          if (flatPart) openPart(flatPart);
+        }
+
+        /* Scroll sidebar so active link is visible */
+        setTimeout(function () {
+          activeLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, 80);
+      }
     })();
   </script>
 
