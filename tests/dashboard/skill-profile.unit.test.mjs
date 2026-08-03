@@ -15,22 +15,20 @@ describe('skill tier', () => {
 })
 
 describe('skill profile', () => {
-  const body = ['# Title', '', '## When to use', '', '1. First step', '2. Second step', '', '```bash', 'dotnet test', '```', ''].join('\n')
+  const body = ['# Title', '', '## When to use', '', '1. First step', ''].join('\n')
   const content = `---\nname: demo\n---\n${body}`
 
-  it('measures structure from the body, and cost from the whole file', () => {
+  it('measures the context cost from the whole file', () => {
     const profile = profileSkill(content, body)
 
     strictEqual(profile.estimatedTokens, Math.ceil(content.length / 4))
-    strictEqual(profile.sectionCount, 2)
-    strictEqual(profile.codeBlockCount, 1)
-    strictEqual(profile.numberedStepCount, 2)
-    strictEqual(profile.hasWhenToUse, true)
-    strictEqual(profile.hasWhenNotToUse, false)
+    strictEqual(profile.lineCount, content.split('\n').length)
+    strictEqual(profile.tier, 'compact')
   })
 
-  it('detects a "When not to use" section independently', () => {
-    strictEqual(profileSkill('x', '## When NOT to use\n').hasWhenNotToUse, true)
+  it('detects the activation guidance the catalogue scan warns about', () => {
+    strictEqual(profileSkill(content, body).hasWhenToUse, true)
+    strictEqual(profileSkill('x', '# No guidance\n').hasWhenToUse, false)
   })
 })
 

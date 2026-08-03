@@ -58,13 +58,11 @@ const rawUrl = (file) => `https://raw.githubusercontent.com/${values.repository}
 const dashboard = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
-  catalogueGeneratedAt: report.generatedAt,
   repository: values.repository,
   plugin: report.plugin,
   summary: report.summary,
   skills: report.skills,
   agents: report.agents,
-  findings: report.findings ?? [],
   history: history.skills ?? {},
   agentHistory: history.agents ?? {},
   sources: {

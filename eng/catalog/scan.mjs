@@ -50,7 +50,7 @@ const warn = (code, path, message) => findings.push({ severity: 'warning', code,
 // ── Skills ─────────────────────────────────────────────────────────
 const skillsRoot = join(repoRoot, 'plugins/skills')
 const evalsRoot = join(repoRoot, 'tests/skills')
-const agentEvalsRoot = join(repoRoot, 'tests/agents')
+
 
 const skills = readdirSync(skillsRoot)
   .filter((name) => existsSync(join(skillsRoot, name, 'SKILL.md')))
@@ -92,9 +92,6 @@ const agents = walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((pat
   const id = posix(relative(agentsRoot, path)).replace(/\.agent\.md$/, '').split('/').at(-1)
   if (!description) warn('AGENT_DESCRIPTION_MISSING', fromRoot(path), 'Agent has no description in its front matter')
 
-  const evalPath = join(agentEvalsRoot, id, 'eval.yaml')
-  const evaluation = existsSync(evalPath) ? { path: fromRoot(evalPath) } : { path: null }
-
   return {
     id,
     name: String(data.name || id),
@@ -102,8 +99,6 @@ const agents = walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((pat
     path: fromRoot(path),
     kind: agentKind(path),
     model: data.model ? String(data.model) : null,
-    userInvocable: String(data['user-invocable'] ?? 'true') !== 'false',
-    evaluation,
   }
 })
 
@@ -133,8 +128,6 @@ const report = {
     workers: agents.filter((agent) => agent.kind === 'worker').length,
     lenses: agents.filter((agent) => agent.kind === 'lens').length,
     evaluatedSkills: skills.filter((skill) => skill.evaluation.path).length,
-    evaluatedAgents: agents.filter((agent) => agent.evaluation.path).length,
-    plannedTrials: skills.reduce((total, skill) => total + skill.evaluation.trials, 0),
     warnings: findings.length,
   },
   skills,

@@ -58,23 +58,7 @@ export function verdictFromHarnessReport(report, subject) {
   )
 }
 
-/**
- * Telemetry the harness recorded, summed over the report's scenarios.
- * Absent counters stay absent — they are never defaulted to zero, which would
- * read as "measured, and it was nothing".
- */
-export function harnessTelemetry(report) {
-  const scenarios = report?.scenarios ?? []
-  const total = (key) => {
-    const values = scenarios.map((scenario) => scenario?.[key]).filter((value) => typeof value === 'number')
-    return values.length ? values.reduce((sum, value) => sum + value, 0) : null
-  }
-
-  return {
-    model: scenarios.find((scenario) => scenario?.model)?.model ?? null,
-    outputTokens: total('outputTokens'),
-    premiumRequests: total('premiumRequests'),
-    agentsInvoked: total('agentsInvoked'),
-    skillsInvoked: total('skillsInvoked'),
-  }
+/** The model the harness ran the scenarios on, if it recorded one. */
+export function harnessModel(report) {
+  return (report?.scenarios ?? []).find((scenario) => scenario?.model)?.model ?? 'unknown'
 }

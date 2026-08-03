@@ -58,15 +58,15 @@ describe('catalogue scan', () => {
     strictEqual(report.summary.agents, 1)
     strictEqual(report.summary.lenses, 1)
     strictEqual(report.summary.evaluatedSkills, 1)
-    strictEqual(report.summary.plannedTrials, 6)
 
     const evaluated = report.skills.find((skill) => skill.directory === 'demo-skill')
     strictEqual(evaluated.evaluation.path, 'tests/skills/demo-skill/eval.yaml')
+    strictEqual(evaluated.evaluation.trials, 6)
     strictEqual(evaluated.profile.hasWhenToUse, true)
 
     const lens = report.agents.find((agent) => agent.kind === 'lens')
     strictEqual(lens.name, 'Demo Lens')
-    strictEqual(report.agents.find((agent) => agent.kind === 'agent').userInvocable, false)
+    strictEqual(lens.id, 'demo-lens')
   })
 
   it('warns about a skill with no description instead of failing silently', () => {
@@ -142,7 +142,6 @@ describe('agent evaluation', () => {
 
     strictEqual(result.runner, 'skraft-test-harness')
     strictEqual(result.model, 'claude-sonnet-5')
-    strictEqual(result.telemetry.outputTokens, 700)
     strictEqual(result.verdicts[0].subject.kind, 'agent')
     strictEqual(result.verdicts[0].trialCount, 7)
     strictEqual(result.verdicts[0].passed, true)

@@ -15,8 +15,6 @@ const searchNode = document.querySelector('#search')
 const replayCallout = document.querySelector('#replay-callout')
 const replayLink = document.querySelector('#replay-link')
 
-const REPOSITORY = 'https://github.com/SebastienDegodez/skraft-plugin'
-
 const escapeHtml = (value = '') =>
   String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
 
@@ -43,9 +41,9 @@ const sparkline = (entries) => {
   return `<div class="spark" title="Last ${Math.min(entries.length, 5)} evaluation(s)">${bars}</div>`
 }
 
-const sourceUrl = (file) => `${REPOSITORY}/blob/main/${file}`
-
 let data
+const repositoryUrl = () => `https://github.com/${data.repository}`
+const sourceUrl = (file) => `${repositoryUrl()}/blob/main/${file}`
 
 const renderSummary = () => {
   const evaluated = data.skills.filter((skill) => skill.evaluation.path).length
@@ -69,7 +67,7 @@ const renderSummary = () => {
 // reached, and the judged score when the run reported one.
 const evidenceCell = (history, hasSpec) => {
   const latest = history.at(-1)
-  if (!latest) return badge(hasSpec ? 'no-data' : 'no-eval', hasSpec ? 'No runtime data' : 'No eval')
+  if (!latest) return badge(hasSpec ? 'no-data' : 'no-eval', hasSpec ? 'No runtime data' : 'Not evaluated')
   const verdict = latest.url
     ? `<a href="${escapeHtml(latest.url)}" aria-label="Open the evaluation run">${badge(latest.state)}</a>`
     : badge(latest.state)
@@ -101,7 +99,7 @@ const agentRow = (agent) => {
     </td>
     <td data-label="Kind">${badge('neutral', agent.kind)}</td>
     <td data-label="Model"><div class="profile">${escapeHtml(agent.model ?? 'inherited')}</div></td>
-    <td data-label="Evidence">${evidenceCell(history, Boolean(agent.evaluation?.path))}</td>
+    <td data-label="Evidence">${evidenceCell(history, false)}</td>
     <td data-label="Trend">${sparkline(history)}</td>
   </tr>`
 }
@@ -129,7 +127,7 @@ const render = () => {
             <h3>Skills</h3>
             <p>Craft knowledge an agent loads on demand. The profile is its context cost; the evidence is what a controlled run proved.</p>
           </div>
-          <div class="family-actions"><a class="button" href="${escapeHtml(REPOSITORY)}/tree/main/plugins/skills">Browse sources</a></div>
+          <div class="family-actions"><a class="button" href="${escapeHtml(repositoryUrl())}/tree/main/plugins/skills">Browse sources</a></div>
         </header>
         <table class="rows">
           <thead><tr><th>Skill</th><th>Profile</th><th>Evaluation</th><th>Evidence</th><th>Trend</th></tr></thead>
@@ -146,7 +144,7 @@ const render = () => {
             <h3>Agents, workers and review lenses</h3>
             <p>Who runs the pipeline, which sub-agents they fan out to, and which lenses review the result.</p>
           </div>
-          <div class="family-actions"><a class="button" href="${escapeHtml(REPOSITORY)}/tree/main/plugins/agents">Browse sources</a></div>
+          <div class="family-actions"><a class="button" href="${escapeHtml(repositoryUrl())}/tree/main/plugins/agents">Browse sources</a></div>
         </header>
         <table class="rows">
           <thead><tr><th>Agent</th><th>Kind</th><th>Model</th><th>Evidence</th><th>Trend</th></tr></thead>

@@ -1,7 +1,7 @@
-import { deepStrictEqual, ok, strictEqual } from 'node:assert/strict'
+import { deepStrictEqual, strictEqual } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { harnessTelemetry, tallyHarnessReport, verdictFromHarnessReport } from '../../eng/lib/harness-report.mjs'
+import { harnessModel, tallyHarnessReport, verdictFromHarnessReport } from '../../eng/lib/harness-report.mjs'
 
 const agent = { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/agents/skraft-orchestrator.agent.md' }
 const scenario = (winner, extra = {}) => ({ name: `scenario ${winner}`, winner, ...extra })
@@ -70,28 +70,12 @@ describe('harness verdict', () => {
   })
 })
 
-describe('harness telemetry', () => {
-  it('sums the counters the harness recorded', () => {
-    const report = {
-      scenarios: [
-        scenario('WithSkill', { model: 'claude-sonnet-5', outputTokens: 1200, agentsInvoked: 3, skillsInvoked: 5 }),
-        scenario('WithSkill', { model: 'claude-sonnet-5', outputTokens: 800, agentsInvoked: 2, skillsInvoked: 4 }),
-      ],
-    }
-
-    const telemetry = harnessTelemetry(report)
-
-    strictEqual(telemetry.model, 'claude-sonnet-5')
-    strictEqual(telemetry.outputTokens, 2000)
-    strictEqual(telemetry.agentsInvoked, 5)
-    strictEqual(telemetry.skillsInvoked, 9)
+describe('harness model', () => {
+  it('reports the model the harness recorded', () => {
+    strictEqual(harnessModel({ scenarios: [scenario('WithSkill', { model: 'claude-sonnet-5' })] }), 'claude-sonnet-5')
   })
 
-  it('leaves an unmeasured counter absent rather than reporting zero', () => {
-    const telemetry = harnessTelemetry({ scenarios: [scenario('WithSkill')] })
-
-    strictEqual(telemetry.outputTokens, null)
-    strictEqual(telemetry.premiumRequests, null)
-    ok(telemetry.model === null)
+  it('says the model is unknown rather than guessing one', () => {
+    strictEqual(harnessModel({ scenarios: [scenario('WithSkill')] }), 'unknown')
   })
 })

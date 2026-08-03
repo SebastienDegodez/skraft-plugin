@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { basename, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
-import { harnessTelemetry, verdictFromHarnessReport } from '../lib/harness-report.mjs'
+import { harnessModel, verdictFromHarnessReport } from '../lib/harness-report.mjs'
 
 const { values } = parseArgs({
   options: {
@@ -85,13 +85,11 @@ for (const [agent, report] of [...runs].sort(([left], [right]) => left.localeCom
     name: agent,
     path: `plugins/agents/${agent}.agent.md`,
   })
-  const telemetry = harnessTelemetry(report)
   const result = {
     runner: 'skraft-test-harness',
-    model: telemetry.model ?? 'unknown',
+    model: harnessModel(report),
     judgeModel: values['judge-model'],
     timestamp: new Date().toISOString(),
-    telemetry,
     verdicts: [verdict],
   }
 

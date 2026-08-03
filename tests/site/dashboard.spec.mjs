@@ -31,7 +31,7 @@ test.describe('quality dashboard', () => {
   test('states plainly when a skill has no runtime evidence yet', async ({ page }) => {
     const row = page.locator('.rows tr', { hasText: 'outside-in-tdd' }).first()
 
-    await expect(row.locator('.badge')).toHaveText(/No runtime data|pass|regression|inconclusive|no-improvement/i)
+    await expect(row.locator('.badge')).toHaveText(/No runtime data|Not evaluated|pass|regression|inconclusive|no-improvement/i)
   })
 
   test('lists the orchestration agents and their review lenses', async ({ page }) => {
@@ -43,7 +43,7 @@ test.describe('quality dashboard', () => {
   test('states plainly when an agent has no runtime evidence yet', async ({ page }) => {
     const row = page.locator('.rows tr', { hasText: 'Skraft - Orchestrator' }).first()
 
-    await expect(row.locator('.badge')).toHaveText([/agent/i, /No eval|No runtime data|pass|regression|inconclusive|no-improvement/i])
+    await expect(row.locator('.badge')).toHaveText([/agent/i, /Not evaluated|pass|regression|inconclusive|no-improvement/i])
   })
 
   test('narrows the catalogue as the reader searches', async ({ page }) => {

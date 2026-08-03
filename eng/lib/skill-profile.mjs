@@ -5,7 +5,11 @@
 // theirs: roughly four characters per token, tiers by estimated size.
 
 /**
- * Size and shape profile of a SKILL.md.
+ * Size profile of a SKILL.md.
+ *
+ * Only what the dashboard shows, plus the activation guidance the catalogue scan
+ * warns about. A skill's cost is its context; that is what a reader needs.
+ *
  * @param {string} content full file content, front matter included
  * @param {string} body file content with the front matter stripped
  */
@@ -15,11 +19,7 @@ export function profileSkill(content, body) {
     estimatedTokens,
     lineCount: content.split(/\r?\n/).length,
     tier: skillTier(estimatedTokens),
-    sectionCount: [...body.matchAll(/^#{1,4}\s+/gm)].length,
-    codeBlockCount: Math.floor([...body.matchAll(/^```/gm)].length / 2),
-    numberedStepCount: [...body.matchAll(/^[ \t]*\d+\.\s+/gm)].length,
     hasWhenToUse: /^#{1,4}\s+when\s+to\s+use/im.test(body),
-    hasWhenNotToUse: /^#{1,4}\s+when\s+not\s+to\s+use/im.test(body),
   }
 }
 
