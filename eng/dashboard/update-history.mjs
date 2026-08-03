@@ -67,6 +67,14 @@ for (const resultInput of values.results) {
       reason: verdict.reason ?? '',
       netWin: verdict.netWin ?? 0,
       trialCount: verdict.trialCount ?? 0,
+      // The judged score of the skilled variant, with the interval the judge
+      // reported around it. Kept alongside the verdict so the dashboard can show
+      // a scoring trend, not just a pass/fail badge.
+      meanScore: verdict.meanScore ?? null,
+      confidenceInterval: {
+        low: verdict.confidenceInterval?.low ?? null,
+        high: verdict.confidenceInterval?.high ?? null,
+      },
       signTest: {
         wins: verdict.signTest?.wins ?? 0,
         ties: verdict.signTest?.ties ?? 0,

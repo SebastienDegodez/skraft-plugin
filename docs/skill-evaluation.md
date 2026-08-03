@@ -51,6 +51,26 @@ tests/dashboard/                   # tests for all of the above
 Everything is Node with no dependency: the scripts run from a bare `node`, in any
 CI job, with no install step.
 
+## One workflow, split by cost
+
+`.github/workflows/skill-evaluation.yml` carries both halves, because the split
+that matters is not "lint versus run" but **what costs model quota**:
+
+| Job | Runs on | Blocking | Calls a model |
+| --- | --- | --- | --- |
+| `lint` | every pull request touching skills, specs or `eng/` | yes | no |
+| `evaluate` | schedule (Monday 03:00 UTC) and manual dispatch | no | yes |
+
+The `lint` job runs the dashboard tooling tests, scans the catalogue, lints every
+eval spec with `--strict`, and plans the experiment with `--dry-run`. That last
+step is the one that catches a silent misconfiguration: it proves the baseline
+and skilled plans share their prompts and differ only in the skill set, without
+starting a single agent.
+
+Skill linting itself is advisory. Vally's `valid-refs` check rejects any link
+that leaves a skill's own directory, which SKRAFT's roster → adapter skills do
+deliberately — a roster's whole job is to point at its adapters.
+
 ## Adding an evaluation for a skill
 
 1. Create `tests/skills/<skill>/eval.yaml`, where `<skill>` is the directory name

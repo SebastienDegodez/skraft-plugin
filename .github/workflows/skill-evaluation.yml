@@ -1,13 +1,24 @@
 name: Skill evaluation
 
-# The credentialed half of the dashboard: run every skill twice — once without it
-# (baseline) and once with it (skilled) — judge the pair, and publish the verdicts
-# and the recorded agent sessions to the `dashboard-data` branch.
+# One workflow, two jobs, deliberately split by cost:
 #
-# This job drives a real agent, so it never runs on a push or a pull request. It
-# is scheduled, or dispatched by a maintainer.
+#   lint     — on every pull request. Structural checks only, no model is called,
+#              so it never consumes Copilot quota.
+#   evaluate — scheduled or dispatched. Runs every skill twice (baseline vs
+#              skilled), judges the pairs, and publishes verdicts and recorded
+#              agent sessions to the `dashboard-data` branch.
 
 on:
+  pull_request:
+    paths:
+      - 'plugins/skills/**'
+      - 'plugins/agents/**'
+      - 'plugins/.claude-plugin/plugin.json'
+      - 'tests/skills/**'
+      - 'tests/dashboard/**'
+      - 'eng/**'
+      - 'skraft-plugin.experiment.yaml'
+      - '.github/workflows/skill-evaluation.yml'
   schedule:
     # Monday, 03:00 UTC.
     - cron: '0 3 * * 1'
@@ -22,16 +33,75 @@ permissions:
   contents: write
 
 concurrency:
-  group: skill-evaluation
+  group: skill-evaluation-${{ github.ref }}
   cancel-in-progress: false
 
 env:
+  VALLY: npx --yes @microsoft/vally-cli@0.12.0
   DATA_BRANCH: dashboard-data
   RETENTION_DAYS: '14'
+  VALLY_TELEMETRY_OPTOUT: '1'
 
 jobs:
+  lint:
+    name: Lint skills and eval specs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Dashboard tooling tests
+        run: node --test tests/dashboard/*.test.mjs
+
+      - name: Scan the plugin catalogue
+        run: node eng/catalog/scan.mjs
+
+      - name: Fail on a catalogue finding
+        run: |
+          node -e "
+            const { findings } = require('./artifacts/catalog/report.json');
+            for (const finding of findings) console.log(\`::warning file=\${finding.path}::[\${finding.code}] \${finding.message}\`);
+            if (findings.length) {
+              console.log(\`::error::The catalogue scan reported \${findings.length} finding(s); fix them or adjust the skill.\`);
+              process.exit(1);
+            }
+          "
+
+      # Advisory, not blocking. Vally's `valid-refs` check rejects any link that
+      # leaves a skill's own directory, which SKRAFT's roster → adapter skills do
+      # deliberately (a roster's whole job is to point at its adapters).
+      - name: Lint the shipped skills (advisory)
+        continue-on-error: true
+        run: $VALLY lint plugins/skills
+
+      - name: Lint every evaluation spec
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          specs=(tests/skills/*/eval.yaml)
+          if [ ${#specs[@]} -eq 0 ]; then
+            echo "No evaluation spec to lint."
+            exit 0
+          fi
+          for spec in "${specs[@]}"; do
+            echo "::group::$spec"
+            $VALLY lint --eval-spec "$spec" --strict
+            echo "::endgroup::"
+          done
+
+      # Proves the comparison is still well formed: same prompts on both sides,
+      # different skill sets. Costs nothing — no agent is started.
+      - name: Plan the experiment without spending quota
+        run: $VALLY experiment run skraft-plugin.experiment.yaml --dry-run
+
   evaluate:
     name: Skill versus baseline
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -46,7 +116,6 @@ jobs:
           # A fine-grained PAT with the "Copilot Requests" account permission.
           # The auto-generated GITHUB_TOKEN cannot reach Copilot.
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          VALLY_TELEMETRY_OPTOUT: '1'
           # Passed through the environment and quoted at the call site so a
           # dispatch input can never be interpreted as shell.
           SKILL: ${{ inputs.skill }}

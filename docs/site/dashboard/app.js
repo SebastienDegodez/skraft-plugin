@@ -22,6 +22,15 @@ const escapeHtml = (value = '') =>
 
 const badge = (state, text = state) => `<span class="badge ${escapeHtml(state)}">${escapeHtml(text)}</span>`
 
+// The judged score of the skilled variant, with the interval around it. Shown
+// only when the run actually reported one — an absent score is left absent.
+const score = (entry) => {
+  if (entry?.meanScore == null) return ''
+  const { low, high } = entry.confidenceInterval ?? {}
+  const interval = low == null || high == null ? '' : ` (${low.toFixed(2)}–${high.toFixed(2)})`
+  return `<div class="profile">score ${escapeHtml(entry.meanScore.toFixed(2))}${escapeHtml(interval)}</div>`
+}
+
 const sparkline = (entries) => {
   if (!entries.length) return ''
   const bars = entries
@@ -70,7 +79,7 @@ const skillRow = (skill) => {
     </td>
     <td data-label="Profile"><div class="profile">${escapeHtml(skill.profile.tier)} · ~${escapeHtml(skill.profile.estimatedTokens)} tokens · ${escapeHtml(skill.profile.lineCount)} lines</div></td>
     <td data-label="Evaluation"><div class="profile">${skill.evaluation.path ? `${escapeHtml(skill.evaluation.stimuli)} stimuli · ${escapeHtml(skill.evaluation.trials)} trials` : '—'}</div></td>
-    <td data-label="Evidence">${evidence}${latest ? `<div class="profile">${escapeHtml(latest.reason)}</div>` : ''}</td>
+    <td data-label="Evidence">${evidence}${latest ? `<div class="profile">${escapeHtml(latest.reason)}</div>` : ''}${score(latest)}</td>
     <td data-label="Trend">${sparkline(history)}</td>
   </tr>`
 }

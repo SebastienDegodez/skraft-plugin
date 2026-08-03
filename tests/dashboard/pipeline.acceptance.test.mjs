@@ -96,6 +96,8 @@ describe('history publication', () => {
             regressed: false,
             netWin: 0.75,
             trialCount: 8,
+            meanScore: 4.25,
+            confidenceInterval: { low: 3.9, high: 4.6, level: 0.95 },
             reason: 'credibly better (7W/0T/1L, sign test p=0.008)',
             signTest: { wins: 7, ties: 0, losses: 1, pValue: 0.008 },
           },
@@ -111,6 +113,13 @@ describe('history publication', () => {
     strictEqual(history.skills['demo-skill'][0].state, 'pass')
     strictEqual(history.skills['demo-skill'][0].commit, 'abc1234')
     strictEqual(history.skills['demo-skill'][0].model, 'claude-sonnet-5')
+  })
+
+  it('carries the judged score and its interval so the dashboard can show a trend', () => {
+    const history = JSON.parse(readFileSync(join(workspace, 'history.json'), 'utf8'))
+
+    strictEqual(history.skills['demo-skill'][0].meanScore, 4.25)
+    deepStrictEqual(history.skills['demo-skill'][0].confidenceInterval, { low: 3.9, high: 4.6 })
   })
 
   it('does not duplicate the same run when it is republished', () => {
