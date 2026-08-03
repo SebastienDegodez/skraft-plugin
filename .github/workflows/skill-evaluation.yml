@@ -132,6 +132,8 @@ jobs:
 
       - name: Publish verdicts and sessions to the data branch
         if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -140,49 +142,14 @@ jobs:
             echo "::warning::No verdict was produced; nothing to publish."
             exit 0
           fi
+          run_dir="$(find eval-results/_experiment -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
 
-          repository="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          if git ls-remote --exit-code --heads "$repository" "$DATA_BRANCH" >/dev/null 2>&1; then
-            git clone --branch "$DATA_BRANCH" --single-branch --depth 1 "$repository" /tmp/data-branch
-          else
-            mkdir -p /tmp/data-branch
-            git -C /tmp/data-branch init -q
-            git -C /tmp/data-branch checkout -q -b "$DATA_BRANCH"
-            git -C /tmp/data-branch remote add origin "$repository"
-          fi
-          mkdir -p /tmp/data-branch/data
-
-          node eng/dashboard/update-history.mjs \
-            --history /tmp/data-branch/data/history.json \
+          ./eng/dashboard/publish.sh \
+            $(printf -- '--results %s ' "${results[@]}") \
+            ${run_dir:+--replay-from "$run_dir"} \
             --commit "${{ github.sha }}" \
             --run "${{ github.run_id }}" \
-            --url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            $(printf -- '--results %s ' "${results[@]}")
-
-          # AGENTVIZ reads session URLs relative to the manifest, so both live
-          # side by side under data/ on the branch.
-          run_dir="$(find eval-results/_experiment -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
-          if [ -n "$run_dir" ]; then
-            node eng/dashboard/build-replay-sessions.mjs \
-              --results-dir "$run_dir" \
-              --output-dir /tmp/data-branch/data \
-              --source scheduled
-          fi
-
-          node eng/dashboard/purge-replay-sessions.mjs \
-            --root /tmp/data-branch/data \
-            --retention-days "$RETENTION_DAYS"
-
-          cd /tmp/data-branch
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A data
-          if git diff --cached --quiet; then
-            echo "Nothing changed on $DATA_BRANCH."
-            exit 0
-          fi
-          git commit -q -m "chore(dashboard): publish evaluation run ${{ github.run_id }}"
-          git push origin "$DATA_BRANCH"
+            --url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Summarise the run
         if: always()
@@ -192,7 +159,7 @@ jobs:
           {
             echo "## Skill versus baseline"
             echo
-            echo "| Skill | Verdict | Evidence |"
+            echo "| Subject | Verdict | Evidence |"
             echo "| --- | --- | --- |"
             for result in eval-results/*/results.json; do
               node -e "
@@ -200,7 +167,7 @@ jobs:
                 for (const verdict of verdicts) {
                   const state = !verdict.conclusive || verdict.underpowered ? 'inconclusive'
                     : verdict.regressed ? 'regression' : verdict.passed ? 'pass' : 'no improvement';
-                  console.log(\`| \${verdict.skillName} | \${state} | \${verdict.reason} |\`);
+                  console.log(\`| \${verdict.subject.name} | \${state} | \${verdict.reason} |\`);
                 }
               "
             done

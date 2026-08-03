@@ -37,7 +37,7 @@ if (values.help || !values.results.length) {
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const historyPath = resolve(repoRoot, values.history)
 
-let history = { schemaVersion: 1, skills: {} }
+let history = { schemaVersion: 1, skills: {}, agents: {} }
 try {
   history = JSON.parse(readFileSync(historyPath, 'utf8'))
 } catch {
@@ -46,30 +46,33 @@ try {
 if (history.schemaVersion !== 1 || typeof history.skills !== 'object' || history.skills === null) {
   throw new Error(`Unsupported dashboard history: ${historyPath}`)
 }
+history.agents ??= {}
 
 let appended = 0
 for (const resultInput of values.results) {
   const result = JSON.parse(readFileSync(resolve(repoRoot, resultInput), 'utf8'))
   for (const verdict of result.verdicts ?? []) {
-    const skill = /^plugins\/skills\/([^/]+)$/.exec(verdict.skillPath ?? '')?.[1] ?? verdict.skillName
-    if (!skill) continue
+    const subject = verdict.subject
+    if (!subject?.name || (subject.kind !== 'skill' && subject.kind !== 'agent')) continue
+    const bucket = subject.kind === 'agent' ? history.agents : history.skills
 
     const timestamp = result.timestamp ?? new Date().toISOString()
     const entry = {
-      id: `${values.run ?? 'local'}:${skill}:${timestamp}`,
+      id: `${values.run ?? 'local'}:${subject.kind}:${subject.name}:${timestamp}`,
       timestamp,
       commit: values.commit ?? null,
       run: values.run ?? null,
       url: values.url ?? null,
+      runner: result.runner ?? 'unknown',
       model: result.model ?? 'unknown',
       judgeModel: result.judgeModel ?? 'unknown',
       state: verdictState(verdict),
       reason: verdict.reason ?? '',
       netWin: verdict.netWin ?? 0,
       trialCount: verdict.trialCount ?? 0,
-      // The judged score of the skilled variant, with the interval the judge
-      // reported around it. Kept alongside the verdict so the dashboard can show
-      // a scoring trend, not just a pass/fail badge.
+      // The judged score of the treatment, with the interval the judge reported
+      // around it. Kept alongside the verdict so the dashboard can show a
+      // scoring trend, not just a pass/fail badge.
       meanScore: verdict.meanScore ?? null,
       confidenceInterval: {
         low: verdict.confidenceInterval?.low ?? null,
@@ -83,8 +86,8 @@ for (const resultInput of values.results) {
       },
     }
 
-    const previous = Array.isArray(history.skills[skill]) ? history.skills[skill] : []
-    history.skills[skill] = [...previous.filter((item) => item.id !== entry.id), entry]
+    const previous = Array.isArray(bucket[subject.name]) ? bucket[subject.name] : []
+    bucket[subject.name] = [...previous.filter((item) => item.id !== entry.id), entry]
       .sort((left, right) => String(left.timestamp).localeCompare(String(right.timestamp)))
       .slice(-RETAINED_ENTRIES)
     appended += 1

@@ -49,28 +49,35 @@ let data
 
 const renderSummary = () => {
   const evaluated = data.skills.filter((skill) => skill.evaluation.path).length
-  const withEvidence = data.skills.filter((skill) => (data.history[skill.directory] ?? []).length).length
+  const withEvidence =
+    data.skills.filter((skill) => (data.history[skill.directory] ?? []).length).length +
+    data.agents.filter((agent) => (data.agentHistory[agent.id] ?? []).length).length
   const agentTotal = data.summary.agents + data.summary.workers + data.summary.lenses
 
   const metrics = [
     [data.summary.skills, 'Distributed skills'],
     [agentTotal, 'Agents, workers and review lenses'],
     [`${evaluated}/${data.summary.skills}`, 'Skills with an evaluation spec'],
-    [withEvidence, 'Skills with published runtime evidence'],
+    [withEvidence, 'Subjects with published runtime evidence'],
   ]
   summaryNode.innerHTML = metrics
     .map(([value, label]) => `<article class="metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></article>`)
     .join('')
 }
 
+// Evidence cell shared by skills and agents: the verdict badge, why it was
+// reached, and the judged score when the run reported one.
+const evidenceCell = (history, hasSpec) => {
+  const latest = history.at(-1)
+  if (!latest) return badge(hasSpec ? 'no-data' : 'no-eval', hasSpec ? 'No runtime data' : 'No eval')
+  const verdict = latest.url
+    ? `<a href="${escapeHtml(latest.url)}" aria-label="Open the evaluation run">${badge(latest.state)}</a>`
+    : badge(latest.state)
+  return `${verdict}<div class="profile">${escapeHtml(latest.reason)}</div>${score(latest)}`
+}
+
 const skillRow = (skill) => {
   const history = data.history[skill.directory] ?? []
-  const latest = history.at(-1)
-  const evidence = latest
-    ? latest.url
-      ? `<a href="${escapeHtml(latest.url)}" aria-label="Open the evaluation run">${badge(latest.state)}</a>`
-      : badge(latest.state)
-    : badge(skill.evaluation.path ? 'no-data' : 'no-eval', skill.evaluation.path ? 'No runtime data' : 'No eval')
 
   return `<tr>
     <td data-label="Skill">
@@ -79,20 +86,25 @@ const skillRow = (skill) => {
     </td>
     <td data-label="Profile"><div class="profile">${escapeHtml(skill.profile.tier)} · ~${escapeHtml(skill.profile.estimatedTokens)} tokens · ${escapeHtml(skill.profile.lineCount)} lines</div></td>
     <td data-label="Evaluation"><div class="profile">${skill.evaluation.path ? `${escapeHtml(skill.evaluation.stimuli)} stimuli · ${escapeHtml(skill.evaluation.trials)} trials` : '—'}</div></td>
-    <td data-label="Evidence">${evidence}${latest ? `<div class="profile">${escapeHtml(latest.reason)}</div>` : ''}${score(latest)}</td>
+    <td data-label="Evidence">${evidenceCell(history, Boolean(skill.evaluation.path))}</td>
     <td data-label="Trend">${sparkline(history)}</td>
   </tr>`
 }
 
-const agentRow = (agent) => `<tr>
+const agentRow = (agent) => {
+  const history = data.agentHistory[agent.id] ?? []
+
+  return `<tr>
     <td data-label="Agent">
       <div class="item-name"><a href="${escapeHtml(sourceUrl(agent.path))}">${escapeHtml(agent.name)}</a></div>
       <div class="item-description">${escapeHtml(agent.description || 'No description available')}</div>
     </td>
     <td data-label="Kind">${badge('neutral', agent.kind)}</td>
     <td data-label="Model"><div class="profile">${escapeHtml(agent.model ?? 'inherited')}</div></td>
-    <td data-label="Invocable"><div class="profile">${agent.userInvocable ? 'user invocable' : 'internal subagent'}</div></td>
+    <td data-label="Evidence">${evidenceCell(history, Boolean(agent.evaluation?.path))}</td>
+    <td data-label="Trend">${sparkline(history)}</td>
   </tr>`
+}
 
 const matches = (query, ...fields) => fields.join(' ').toLowerCase().includes(query)
 
@@ -137,7 +149,7 @@ const render = () => {
           <div class="family-actions"><a class="button" href="${escapeHtml(REPOSITORY)}/tree/main/plugins/agents">Browse sources</a></div>
         </header>
         <table class="rows">
-          <thead><tr><th>Agent</th><th>Kind</th><th>Model</th><th>Invocation</th></tr></thead>
+          <thead><tr><th>Agent</th><th>Kind</th><th>Model</th><th>Evidence</th><th>Trend</th></tr></thead>
           <tbody>${agents.map(agentRow).join('')}</tbody>
         </table>
       </article>`)
@@ -181,6 +193,7 @@ try {
 
   await refresh(data.sources?.history, (history) => {
     data.history = history.skills ?? data.history
+    data.agentHistory = history.agents ?? data.agentHistory
   })
 
   renderSummary()

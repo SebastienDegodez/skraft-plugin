@@ -88,8 +88,7 @@ describe('history publication', () => {
         timestamp: '2026-08-03T10:00:00.000Z',
         verdicts: [
           {
-            skillName: 'demo-skill',
-            skillPath: 'plugins/skills/demo-skill',
+            subject: { kind: 'skill', name: 'demo-skill', path: 'plugins/skills/demo-skill' },
             conclusive: true,
             underpowered: false,
             passed: true,
@@ -128,6 +127,59 @@ describe('history publication', () => {
     const history = JSON.parse(readFileSync(historyPath, 'utf8'))
 
     strictEqual(history.skills['demo-skill'].length, 1)
+  })
+})
+
+describe('agent evaluation', () => {
+  it('turns harness reports into an agent verdict, judged by the same bar', () => {
+    // Two phase reports for one agent: the adapter folds them into one verdict.
+    const winning = (index) => ({ name: `phase ${index}`, winner: 'WithSkill', model: 'claude-sonnet-5', outputTokens: 100 })
+    write(join(workspace, 'eval-reports/skraft-orchestrator-A.json'), JSON.stringify({ skill: 'skraft-orchestrator', scenarios: [1, 2, 3].map(winning) }))
+    write(join(workspace, 'eval-reports/skraft-orchestrator-B.json'), JSON.stringify({ skill: 'skraft-orchestrator', scenarios: [4, 5, 6, 7].map(winning) }))
+
+    run('eng/harness-adapter/adapt.mjs', ['--reports-dir', join(workspace, 'eval-reports'), '--output-root', join(workspace, 'eval-results')])
+    const result = JSON.parse(readFileSync(join(workspace, 'eval-results/agents/skraft-orchestrator/results.json'), 'utf8'))
+
+    strictEqual(result.runner, 'skraft-test-harness')
+    strictEqual(result.model, 'claude-sonnet-5')
+    strictEqual(result.telemetry.outputTokens, 700)
+    strictEqual(result.verdicts[0].subject.kind, 'agent')
+    strictEqual(result.verdicts[0].trialCount, 7)
+    strictEqual(result.verdicts[0].passed, true)
+  })
+
+  it('publishes the agent verdict into its own history bucket', () => {
+    const historyPath = join(workspace, 'history.json')
+    run('eng/dashboard/update-history.mjs', [
+      '--results',
+      join(workspace, 'eval-results/agents/skraft-orchestrator/results.json'),
+      '--history',
+      historyPath,
+      '--run',
+      '101',
+    ])
+    const history = JSON.parse(readFileSync(historyPath, 'utf8'))
+
+    strictEqual(history.agents['skraft-orchestrator'][0].state, 'pass')
+    strictEqual(history.agents['skraft-orchestrator'][0].runner, 'skraft-test-harness')
+    // The skill bucket is untouched: the two subjects never collide.
+    strictEqual(history.skills['demo-skill'].length, 1)
+  })
+
+  it('hands the agent history to the dashboard separately from the skills', () => {
+    const outputPath = join(workspace, 'dashboard-with-agent.json')
+    run('eng/dashboard/build.mjs', [
+      '--report',
+      join(workspace, 'report.json'),
+      '--history',
+      join(workspace, 'history.json'),
+      '--out',
+      outputPath,
+    ])
+    const dashboard = JSON.parse(readFileSync(outputPath, 'utf8'))
+
+    strictEqual(dashboard.agentHistory['skraft-orchestrator'][0].state, 'pass')
+    strictEqual(dashboard.history['demo-skill'][0].state, 'pass')
   })
 })
 

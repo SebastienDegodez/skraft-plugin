@@ -58,7 +58,7 @@ const groupByEval = (records) => {
 // tests/skills/<skill>/eval.yaml → the skill it exercises.
 const identity = (evalFile) => {
   const skill = basename(dirname(evalFile.split('\\').join('/')))
-  return { skill, skillPath: `plugins/skills/${skill}` }
+  return { kind: 'skill', name: skill, path: `plugins/skills/${skill}` }
 }
 
 const splitCommand = (command) =>
@@ -92,12 +92,12 @@ try {
     const evaluation = identity(evalFile)
 
     if (!baselineRecords.length || !skilledRecords.length) {
-      console.warn(`⚠ ${evaluation.skill}: missing baseline or skilled records`)
+      console.warn(`⚠ ${evaluation.name}: missing baseline or skilled records`)
       incomplete += 1
       continue
     }
 
-    const prefix = evaluation.skill
+    const prefix = evaluation.name
     const baselineFile = join(temporary, `${prefix}__baseline.jsonl`)
     const skilledFile = join(temporary, `${prefix}__skilled.jsonl`)
     const compareFile = join(temporary, `${prefix}__compare.jsonl`)
@@ -108,30 +108,31 @@ try {
     try {
       report = compare(baselineFile, skilledFile, compareFile)
     } catch (error) {
-      console.warn(`⚠ ${evaluation.skill}: Vally compare failed: ${error.message}`)
+      console.warn(`⚠ ${evaluation.name}: Vally compare failed: ${error.message}`)
       incomplete += 1
       continue
     }
     if (!report) {
-      console.warn(`⚠ ${evaluation.skill}: Vally compare wrote no report`)
+      console.warn(`⚠ ${evaluation.name}: Vally compare wrote no report`)
       incomplete += 1
       continue
     }
 
     const verdict = comparisonVerdict(report, evaluation)
     const result = {
+      runner: 'vally',
       model: options.model,
       judgeModel: options['judge-model'],
       timestamp: new Date().toISOString(),
       verdicts: [verdict],
     }
-    const directory = join(outputRoot, evaluation.skill)
+    const directory = join(outputRoot, evaluation.name)
     mkdirSync(directory, { recursive: true })
     writeFileSync(join(directory, 'results.json'), `${JSON.stringify(result, null, 2)}\n`)
     written += 1
 
     const icon = verdict.passed ? '✅' : verdict.underpowered || !verdict.conclusive ? '⚠️' : '❌'
-    console.log(`${icon} ${evaluation.skill}: ${verdict.reason}`)
+    console.log(`${icon} ${evaluation.name}: ${verdict.reason}`)
   }
 } finally {
   rmSync(temporary, { recursive: true, force: true })

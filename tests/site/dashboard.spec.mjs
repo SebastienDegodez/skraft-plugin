@@ -40,6 +40,12 @@ test.describe('quality dashboard', () => {
     await expect(page.locator('.badge', { hasText: 'lens' }).first()).toBeVisible()
   })
 
+  test('states plainly when an agent has no runtime evidence yet', async ({ page }) => {
+    const row = page.locator('.rows tr', { hasText: 'Skraft - Orchestrator' }).first()
+
+    await expect(row.locator('.badge')).toHaveText([/agent/i, /No eval|No runtime data|pass|regression|inconclusive|no-improvement/i])
+  })
+
   test('narrows the catalogue as the reader searches', async ({ page }) => {
     await page.locator('#search').fill('mocking')
 

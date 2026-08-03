@@ -90,7 +90,8 @@ jobs:
     name: Live workflow evals (real Copilot CLI)
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # Needed to publish the agent verdict to the dashboard data branch.
+      contents: write
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live_evals }}
     steps:
       - uses: actions/checkout@v4
@@ -173,10 +174,29 @@ jobs:
           dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
             dashboard --reports-dir eval-reports --out dashboard-data.json
 
-      # The published handbook dashboard is fed by the Vally skill-evaluation
-      # workflow, which owns the `dashboard-data` branch. This harness publishes
-      # its pipeline-conformance output as an artifact only — force-pushing an
-      # orphan branch here would wipe that evidence.
+      # Vally environments load skills, not custom agents, so the published
+      # dashboard gets its AGENT evidence from here. The reports are folded into
+      # the same verdict shape the Vally adapter produces for a skill, judged by
+      # the same sign test, and published to the same branch.
+      - name: Publish the agent verdict to the dashboard
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          node eng/harness-adapter/adapt.mjs --reports-dir eval-reports --agent skraft-orchestrator
+          results=(eval-results/agents/*/results.json)
+          if [ ${#results[@]} -eq 0 ]; then
+            echo "::warning::No agent verdict was produced; nothing to publish."
+            exit 0
+          fi
+          ./eng/dashboard/publish.sh \
+            $(printf -- '--results %s ' "${results[@]}") \
+            --commit "${{ github.sha }}" \
+            --run "${{ github.run_id }}" \
+            --url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
       - name: Upload dashboard data
         if: always()
         uses: actions/upload-artifact@v4

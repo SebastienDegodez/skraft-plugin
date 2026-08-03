@@ -34,17 +34,20 @@ export const SIGN_TEST_ALPHA = 0.05
 export const MIN_CREDIBLE_TRIALS = 5
 
 /**
- * Classify a Vally comparison report into a publishable verdict.
+ * Classify a comparison into a publishable verdict.
  *
  * A verdict is only credible when the comparison is complete (no errored or
  * unmatched trials) and powered (enough trials to distinguish signal from
  * noise). Anything else is reported as inconclusive rather than silently
  * counted as a pass — no data is not a passing result.
  *
- * @param {object} report Vally `compare` report
- * @param {{ skill: string, skillPath: string }} evaluation the skill under test
+ * The subject is whatever was added on the treatment side: a skill made
+ * available to a plain agent, or a custom agent dispatched instead of one.
+ *
+ * @param {object} report comparison report (Vally `compare`, or a harness report)
+ * @param {{ kind: 'skill' | 'agent', name: string, path: string }} subject what was under test
  */
-export function comparisonVerdict(report, evaluation) {
+export function comparisonVerdict(report, subject) {
   const summary = report.summary ?? {}
   const wins = summary.wins ?? 0
   const ties = summary.ties ?? 0
@@ -61,8 +64,7 @@ export function comparisonVerdict(report, evaluation) {
   const regressed = credible && losses > wins
 
   return {
-    skillName: evaluation.skill,
-    skillPath: evaluation.skillPath,
+    subject: { kind: subject.kind, name: subject.name, path: subject.path },
     conclusive,
     underpowered,
     minCredibleTrials: MIN_CREDIBLE_TRIALS,

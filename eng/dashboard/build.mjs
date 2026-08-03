@@ -66,6 +66,7 @@ const dashboard = {
   agents: report.agents,
   findings: report.findings ?? [],
   history: history.skills ?? {},
+  agentHistory: history.agents ?? {},
   sources: {
     history: rawUrl('history.json'),
     replayManifest: rawUrl('manifest.json'),
