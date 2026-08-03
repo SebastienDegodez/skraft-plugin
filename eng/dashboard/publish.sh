@@ -43,13 +43,20 @@ if (( ${#RESULTS[@]} == 0 )); then
   echo "::warning::No verdict to publish."
   exit 0
 fi
-if [[ -z "${GITHUB_REPOSITORY:-}" || -z "${GITHUB_TOKEN:-}" ]]; then
-  echo "GITHUB_REPOSITORY and GITHUB_TOKEN are required to publish." >&2
+
+# The remote holding the evidence branch. Defaults to the GitHub repository the
+# workflow runs in; overridable so the script can be exercised against a local
+# repository instead of only ever being tried in production.
+if [[ -n "${DATA_REMOTE:-}" ]]; then
+  REMOTE="$DATA_REMOTE"
+elif [[ -n "${GITHUB_REPOSITORY:-}" && -n "${GITHUB_TOKEN:-}" ]]; then
+  REMOTE="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+else
+  echo "Set DATA_REMOTE, or GITHUB_REPOSITORY and GITHUB_TOKEN, to publish." >&2
   exit 1
 fi
 
 cd "$ROOT"
-REMOTE="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 CHECKOUT="$(mktemp -d)"
 
 # The branch accumulates evidence; it is never force-replaced. A fresh branch is

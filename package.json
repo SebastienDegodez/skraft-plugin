@@ -9,6 +9,7 @@
     "catalog:scan": "node eng/catalog/scan.mjs",
     "dashboard:build": "node eng/catalog/scan.mjs && node eng/dashboard/build.mjs",
     "evals": "./eng/run-skill-evals.sh",
+    "evals:agent": "./eng/run-agent-evals.sh",
     "lint:citations": "node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages \"docs/site/**/*.md\"",
     "ci:local": "node scripts/local-ci.mjs",
     "paths:check": "node scripts/migrate-plugin-paths.mjs --check",

@@ -94,7 +94,9 @@ for (const resultInput of values.results) {
   }
 }
 
-history.updatedAt = new Date().toISOString()
+// No `updatedAt` stamp: the git commit already dates the change, and a stamp
+// that moves on every run would make each publication look like new evidence
+// even when the verdicts are identical.
 mkdirSync(dirname(historyPath), { recursive: true })
 writeFileSync(historyPath, `${JSON.stringify(history, null, 2)}\n`)
 console.log(`Appended ${appended} verdict(s) to ${values.history}`)

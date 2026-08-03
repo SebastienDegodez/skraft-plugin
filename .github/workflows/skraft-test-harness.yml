@@ -191,8 +191,11 @@ jobs:
             echo "::warning::No agent verdict was produced; nothing to publish."
             exit 0
           fi
-          ./eng/dashboard/publish.sh \
-            $(printf -- '--results %s ' "${results[@]}") \
+
+          args=()
+          for result in "${results[@]}"; do args+=(--results "$result"); done
+
+          ./eng/dashboard/publish.sh "${args[@]}" \
             --commit "${{ github.sha }}" \
             --run "${{ github.run_id }}" \
             --url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
