@@ -3,6 +3,7 @@
 How SKRAFT proves a skill earns its place, and where that proof is published.
 
 - **Dashboard** — <https://sebastiendegodez.github.io/skraft-plugin/dashboard/>
+- **How-to (handbook)** — [Évaluer un skill](https://sebastiendegodez.github.io/skraft-plugin/fr/how-to/evaluation) · [Evaluate a skill](https://sebastiendegodez.github.io/skraft-plugin/en/how-to/evaluation)
 - **Evidence branch** — `dashboard-data` (verdict history + recorded agent sessions)
 
 ## Why
