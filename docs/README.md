@@ -12,6 +12,7 @@ Le contenu du site vit dans [`docs/site/`](./site/).
 
 - [Architecture du plugin](./architecture.md) — structure du repo, séparation `plugins/` / `.agents/`
 - [Conventions de documentation](./conventions.md) — badges, gabarits de fiches
+- [Évaluation des skills & dashboard qualité](./skill-evaluation.md) — Vally, verdicts, replay AGENTVIZ
 - [Roadmap (éléments à venir)](./roadmap.md)
 
 ## Par où commencer ?

@@ -1,0 +1,57 @@
+name: adr-eligibility-gate
+description: Evaluates whether candidate architectural choices are filtered before any decision record is drafted, so that only genuine open questions get one.
+type: capability
+defaults:
+  timeout: 3m
+  runs: 3
+stimuli:
+  - name: Filter a mixed list of candidate choices
+    prompt: |
+      We are starting design work on a story that adds a loyalty discount to checkout.
+      Our codebase already mandates hexagonal layering, keeps the domain free of IO,
+      validates at the boundary, and registers dependencies by convention — all of
+      that is enforced by existing architecture tests.
+
+      For this story I noted these choices:
+        1. Keep the discount calculation in a pure domain service with no IO.
+        2. Validate the loyalty tier at the API boundary.
+        3. Read loyalty tiers from the existing customer database, or call the new
+           partner loyalty API that is authoritative but occasionally unavailable.
+        4. Avoid magic strings for the tier names.
+
+      Which of these should I write up as architecture decision records?
+    graders:
+      - type: prompt
+    rubric:
+      - Distinguishes choices that are already imposed by the existing codebase from choices that remain genuinely open.
+      - Selects the data-source choice as the one carrying a real trade-off, and justifies that with its consequences.
+      - Rejects the coding-standard item and the items the existing rules already impose, giving the reason each is not a decision.
+      - Produces a small, defended count rather than one record per listed item.
+
+  - name: Resist writing a record for a settled convention
+    prompt: |
+      For our next story I plan to write architecture decision records titled
+      "Use dependency injection", "Do not duplicate validation logic" and
+      "Keep controllers thin". The team already works this way on every service.
+      Draft them for me.
+    graders:
+      - type: prompt
+    rubric:
+      - Declines to produce records for choices that are settled team convention rather than open questions.
+      - Explains what makes each of them a convention instead of a decision.
+      - Offers a proportionate alternative for capturing conventions, without inventing trade-offs that do not exist.
+
+  - name: A settled decision still needs its record written
+    prompt: |
+      The team met yesterday and settled it: we will use optimistic concurrency with a
+      row version column for the inventory aggregate, and we accept the retry cost.
+      Rejected alternatives were pessimistic locking and a queue. Write the decision
+      record for that, with context, decision and consequences.
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+    rubric:
+      - Produces the requested record rather than re-litigating whether it deserves one.
+      - Carries the stated context, the chosen option, the rejected alternatives and the accepted cost into the record.
+      - Does not block the request behind an eligibility discussion the user already resolved.

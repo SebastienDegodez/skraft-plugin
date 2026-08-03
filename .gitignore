@@ -37,6 +37,13 @@ reports/mutation/
 graphify-out/
 .graphify_scope_root/
 
+# Skill evaluation & dashboard — everything here is generated, never committed.
+# The catalogue is re-derived from the plugin sources on every build; verdicts
+# and agent trajectories are published to the `dashboard-data` branch.
+artifacts/
+eval-results/
+dashboard-data/
+
 # skraft-framework runtime audit log
 plugins/skraft-framework/logs/
 

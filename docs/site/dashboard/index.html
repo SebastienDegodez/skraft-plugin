@@ -1,38 +1,63 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SKRAFT Test Dashboard</title>
-  <link rel="stylesheet" href="dashboard.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SKRAFT agents, skills, static quality profile, and skill-versus-baseline evaluation evidence.">
+  <title>SKRAFT Agent Skills — quality dashboard</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <p style="margin-bottom:12px;"><a href="../" style="color:var(--accent,#58a6ff);text-decoration:none;font-size:13px;">&larr; Handbook</a></p>
-  <h1>SKRAFT Test Dashboard</h1>
-  <p class="subtitle">
-    Generated from real harness runs — gate health, skill value, and the real cost (AIC,
-    output tokens) per model. Input tokens are not emitted by the Copilot CLI.
-  </p>
+  <header class="hero">
+    <nav class="nav" aria-label="Primary navigation">
+      <a class="brand" href="./">SKRAFT <span>Agent Skills</span></a>
+      <span class="spacer"></span>
+      <a href="../">Handbook</a>
+      <a href="https://github.com/SebastienDegodez/skraft-plugin">GitHub</a>
+    </nav>
+    <div class="hero-content">
+      <p class="eyebrow">Plugin quality dashboard</p>
+      <h1>Skills that make delivery <em>disciplined.</em></h1>
+      <p class="lead">
+        Everything the SKRAFT plugin ships — skills, agents, workers, review lenses —
+        with its context profile, its evaluation coverage, and the evidence from
+        controlled skill-versus-baseline runs.
+      </p>
+    </div>
+  </header>
 
-  <div class="toolbar">
-    <label for="model-filter">Model</label>
-    <select id="model-filter"><option value="">All models</option></select>
-    <span id="generated-at" class="subtitle" style="margin-left:auto;margin-bottom:0;"></span>
-  </div>
+  <main>
+    <section id="summary" class="summary" aria-label="Plugin summary"></section>
 
-  <div class="tab-bar" id="tab-bar">
-    <div class="tab active" data-tab="gates">Gates</div>
-    <div class="tab" data-tab="skill-value">Skill value</div>
-  </div>
+    <section class="callout" id="replay-callout" hidden>
+      <p>
+        <strong>Session replay.</strong> Every evaluated trial records the agent's full
+        trajectory. Replay them side by side — with the skill and without — to see where
+        the difference actually happens.
+      </p>
+      <a class="button primary" id="replay-link" href="#">Open session replay</a>
+    </section>
 
-  <div class="tab-content active" id="panel-gates"></div>
-  <div class="tab-content" id="panel-skill-value"></div>
+    <section class="catalog-heading">
+      <div>
+        <p class="eyebrow">Catalogue</p>
+        <h2>Skills and agents</h2>
+      </div>
+      <label class="search">
+        <span>Search</span>
+        <input id="search" type="search" placeholder="Skill, agent, description…" autocomplete="off">
+      </label>
+    </section>
 
-  <div class="footer">
-    <span id="status-line">Loading…</span>
-  </div>
+    <div id="status" class="status" role="status">Loading catalogue…</div>
+    <section id="catalog" class="catalog" aria-live="polite"></section>
+  </main>
 
-  <script src="dashboard.js"
-          data-source="https://raw.githubusercontent.com/SebastienDegodez/skraft-plugin/dashboard-data/dashboard-data.json"></script>
+  <footer>
+    <p>The catalogue is derived from the shipped plugin sources at site build time.</p>
+    <p>Evidence comes from Vally skill-versus-baseline runs, judged by an exact sign test. No data is not a passing result.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,48 @@
+name: mocking-strategy-roster
+description: Evaluates whether the way a downstream dependency is faked in an integration test is resolved from the project's own configuration instead of being assumed.
+type: capability
+defaults:
+  timeout: 3m
+  runs: 3
+environment:
+  files:
+    - src: fixtures/skraft.instructions.md
+      dest: .github/instructions/skraft.instructions.md
+stimuli:
+  - name: Resolve the approach from the project instead of assuming one
+    prompt: |
+      Our .NET checkout service calls a downstream pricing API over HTTP. I want an
+      integration test that exercises our own endpoint end to end with that downstream
+      call faked. Set up the faking for me.
+    graders:
+      - type: prompt
+    rubric:
+      - Consults the repository's own testing configuration before wiring anything, instead of assuming an approach.
+      - Ends up with the in-process substitute this repository declares, rather than a containerised or generic default.
+      - Registers the substitute so it replaces the real downstream inside the test host.
+      - Leaves the business behaviour of the test to the caller instead of inventing assertions about pricing rules.
+
+  - name: An explicit request overrides the project default
+    prompt: |
+      Same .NET checkout service and the same downstream pricing API. For this one
+      test I want the dependency replaced with NSubstitute, not with anything that
+      needs a container. Wire it up.
+    graders:
+      - type: prompt
+    rubric:
+      - Honours the explicitly requested library instead of the repository default.
+      - Registers the substitute so it replaces the real downstream inside the test host.
+      - Does not introduce a container or an external process for this test.
+
+  - name: A dependency-free rule needs no fake at all
+    prompt: |
+      In the same .NET service, the domain has a pure rule that turns a loyalty tier
+      into a discount percentage. It calls nothing external. Write a test for it.
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+    rubric:
+      - Writes a direct test for the rule with no test double at all.
+      - Recognises that nothing external is involved and therefore nothing needs faking.
+      - Does not introduce a test host, a container, or a mocking library for a self-contained rule.

@@ -1,0 +1,50 @@
+name: outside-in-tdd
+description: Evaluates whether a feature is driven from an observable business behaviour at the system boundary, with the internal design emerging from failing tests.
+type: capability
+defaults:
+  timeout: 3m
+  runs: 3
+stimuli:
+  - name: Drive a business rule from the outside
+    prompt: |
+      Our checkout service is a .NET solution split into Domain, Application and Api
+      projects, with an existing xUnit test project.
+
+      Add this rule: the payable total of an order gets a discount based on the
+      customer's loyalty tier — 0% for Green, 5% for Gold, 10% for Platinum — and an
+      unknown order must produce a not-found error.
+
+      Implement it.
+    graders:
+      - type: prompt
+    rubric:
+      - Starts from a test that exercises the behaviour through the service's outward-facing boundary, described in business terms.
+      - Lets the internal breakdown follow from that test instead of fixing classes and interfaces before any test exists.
+      - Ties every production change to a test that fails before it and passes after it.
+      - Confirms the new behaviour is reachable from the outside once it passes, not merely present in an isolated class.
+
+  - name: Do not test the internals first
+    prompt: |
+      Same .NET checkout service. I want to add a rule that rejects an order with no
+      lines. Start by writing unit tests for the private helper methods you plan to
+      add inside the domain service, then build up from there.
+    graders:
+      - type: prompt
+    rubric:
+      - Pushes back on starting from internal helpers and anchors the work in the observable rejection behaviour instead.
+      - Explains the cost of tests coupled to internals, without refusing to help.
+      - Still delivers the requested rule.
+
+  - name: A read-only question needs no test cycle
+    prompt: |
+      In our checkout service there is a regular expression `^\d{2}-[A-Z]{3}-\d{4}$`
+      applied to the promotion code field. What does it accept? I am only trying to
+      understand it, I am not changing anything.
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+    rubric:
+      - Answers what the pattern accepts.
+      - Does not propose a development cycle, a work breakdown, or new tests for a question that changes nothing.
+      - Stays proportionate to a read-only request.

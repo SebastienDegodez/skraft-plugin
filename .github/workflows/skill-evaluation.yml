@@ -1,0 +1,138 @@
+name: Skill evaluation
+
+# The credentialed half of the dashboard: run every skill twice — once without it
+# (baseline) and once with it (skilled) — judge the pair, and publish the verdicts
+# and the recorded agent sessions to the `dashboard-data` branch.
+#
+# This job drives a real agent, so it never runs on a push or a pull request. It
+# is scheduled, or dispatched by a maintainer.
+
+on:
+  schedule:
+    # Monday, 03:00 UTC.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: 'Evaluate a single skill (directory name under plugins/skills). Leave empty for all.'
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: skill-evaluation
+  cancel-in-progress: false
+
+env:
+  DATA_BRANCH: dashboard-data
+  RETENTION_DAYS: '14'
+
+jobs:
+  evaluate:
+    name: Skill versus baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run the experiment and judge each pair
+        env:
+          # A fine-grained PAT with the "Copilot Requests" account permission.
+          # The auto-generated GITHUB_TOKEN cannot reach Copilot.
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          VALLY_TELEMETRY_OPTOUT: '1'
+          # Passed through the environment and quoted at the call site so a
+          # dispatch input can never be interpreted as shell.
+          SKILL: ${{ inputs.skill }}
+        run: ./eng/run-skill-evals.sh ${SKILL:+"$SKILL"}
+
+      - name: Upload trajectories
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: eval-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish verdicts and sessions to the data branch
+        if: always()
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          results=(eval-results/*/results.json)
+          if [ ${#results[@]} -eq 0 ]; then
+            echo "::warning::No verdict was produced; nothing to publish."
+            exit 0
+          fi
+
+          repository="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$repository" "$DATA_BRANCH" >/dev/null 2>&1; then
+            git clone --branch "$DATA_BRANCH" --single-branch --depth 1 "$repository" /tmp/data-branch
+          else
+            mkdir -p /tmp/data-branch
+            git -C /tmp/data-branch init -q
+            git -C /tmp/data-branch checkout -q -b "$DATA_BRANCH"
+            git -C /tmp/data-branch remote add origin "$repository"
+          fi
+          mkdir -p /tmp/data-branch/data
+
+          node eng/dashboard/update-history.mjs \
+            --history /tmp/data-branch/data/history.json \
+            --commit "${{ github.sha }}" \
+            --run "${{ github.run_id }}" \
+            --url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            $(printf -- '--results %s ' "${results[@]}")
+
+          # AGENTVIZ reads session URLs relative to the manifest, so both live
+          # side by side under data/ on the branch.
+          run_dir="$(find eval-results/_experiment -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+          if [ -n "$run_dir" ]; then
+            node eng/dashboard/build-replay-sessions.mjs \
+              --results-dir "$run_dir" \
+              --output-dir /tmp/data-branch/data \
+              --source scheduled
+          fi
+
+          node eng/dashboard/purge-replay-sessions.mjs \
+            --root /tmp/data-branch/data \
+            --retention-days "$RETENTION_DAYS"
+
+          cd /tmp/data-branch
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A data
+          if git diff --cached --quiet; then
+            echo "Nothing changed on $DATA_BRANCH."
+            exit 0
+          fi
+          git commit -q -m "chore(dashboard): publish evaluation run ${{ github.run_id }}"
+          git push origin "$DATA_BRANCH"
+
+      - name: Summarise the run
+        if: always()
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          {
+            echo "## Skill versus baseline"
+            echo
+            echo "| Skill | Verdict | Evidence |"
+            echo "| --- | --- | --- |"
+            for result in eval-results/*/results.json; do
+              node -e "
+                const { verdicts = [] } = require('./$result');
+                for (const verdict of verdicts) {
+                  const state = !verdict.conclusive || verdict.underpowered ? 'inconclusive'
+                    : verdict.regressed ? 'regression' : verdict.passed ? 'pass' : 'no improvement';
+                  console.log(\`| \${verdict.skillName} | \${state} | \${verdict.reason} |\`);
+                }
+              "
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

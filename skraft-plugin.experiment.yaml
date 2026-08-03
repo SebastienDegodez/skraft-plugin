@@ -1,0 +1,35 @@
+# Skill-versus-baseline evaluation experiment for the SKRAFT plugin.
+#
+# Every eval spec is run twice against the same prompts:
+#   • baseline — the agent has no SKRAFT skill available;
+#   • skilled  — the agent has exactly the one skill the eval path names.
+#
+# Only the available skill set changes between the two runs, so a difference in
+# outcome is attributable to the skill and to nothing else. `vally compare` then
+# judges the two trajectories pairwise and eng/vally-adapter/adapt.mjs turns that
+# tally into a published verdict.
+name: skraft-plugin
+
+evals:
+  - tests/skills/*/eval.yaml
+
+overrides:
+  executor: copilot-sdk
+  model: claude-sonnet-5
+  judge_model: gpt-5.6-luna
+
+# A valid comparison may change only the skills made available to the agent.
+# Any other difference between the two variants is rejected at plan time.
+vary:
+  - /environment/skills
+
+baseline: baseline
+
+variants:
+  baseline:
+    environment:
+      skills: []
+  skilled:
+    environment:
+      skills:
+        - plugins/skills/${eval.parent}
