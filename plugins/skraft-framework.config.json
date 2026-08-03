@@ -152,6 +152,10 @@
         "policy": "verify"
       },
       {
+        "name": "ordered-test-list",
+        "policy": "verify"
+      },
+      {
         "name": "red-synthesize-green",
         "policy": "verify"
       },
@@ -357,6 +361,7 @@
       ],
       "outputs": [
         "Source code commits (conventional commits)",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-list-{story}.md (ordered test list — TPP + FLFI)",
         ".copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)",
         ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)"

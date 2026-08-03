@@ -136,6 +136,12 @@
   title: "Clean Code"
   type: book
 
+- key: martin-tpp-2013
+  authors: "Martin, R. C."
+  year: 2013
+  title: "The Transformation Priority Premise"
+  type: article
+
 - key: martin-cleanarch-2017
   authors: "Martin, R. C."
   year: 2017

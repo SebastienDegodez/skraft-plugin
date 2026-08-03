@@ -29,16 +29,27 @@
   display: flex;
   align-items: center;
   gap: 0.5em;
+  width: 100%;
+  font-family: var(--font-sans);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--color-highlight);
-  margin: 1.25rem 0 0.5rem;
-  padding-left: 0.5rem;
+  margin: 1.25rem 0 0.35rem;
+  padding: 0.2rem 0.35rem 0.2rem 0.5rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--motion-fast), color var(--motion-fast);
 }
-.doc-sidebar__group i { font-size: 0.95em; opacity: 0.9; }
-.doc-sidebar__group:first-child { margin-top: 0; }
+.doc-sidebar__group:hover {
+  background: rgba(139, 229, 177, 0.07);
+}
+.doc-sidebar__group i:not(.doc-sidebar__chevron) { font-size: 0.95em; opacity: 0.9; }
+.doc-sidebar__part:first-child .doc-sidebar__group { margin-top: 0; }
 .doc-sidebar__list {
   list-style: none;
   margin: 0 0 0.5rem;
@@ -70,20 +81,59 @@
 
 /* Section heading (3-level menu: part > section > pages) */
 .doc-sidebar__section {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  font-family: var(--font-sans);
   font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--color-dimmed);
-  margin: 0.6rem 0 0.25rem;
-  padding-left: 0.75rem;
+  margin: 0.6rem 0 0;
+  padding: 0.25rem 0.35rem 0.25rem 0.75rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: color var(--motion-fast), background var(--motion-fast);
+}
+.doc-sidebar__section:hover {
+  color: var(--color-foreground);
+  background: rgba(139, 229, 177, 0.06);
+}
+.doc-sidebar__section-wrap.is-open > .doc-sidebar__section {
+  color: var(--color-foreground);
 }
 .doc-sidebar__sublist {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 .doc-sidebar__sublist a {
   padding-left: 1.25rem;
   font-size: 0.88rem;
+}
+
+/* ── Collapsible: chevron & body ── */
+.doc-sidebar__chevron {
+  margin-left: auto;
+  font-size: 0.65em;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.doc-sidebar__part.is-open > .doc-sidebar__group .doc-sidebar__chevron {
+  transform: rotate(90deg);
+}
+.doc-sidebar__section-wrap.is-open > .doc-sidebar__section .doc-sidebar__chevron {
+  transform: rotate(90deg);
+}
+.doc-sidebar__part-body {
+  overflow: hidden;
+}
+.doc-sidebar__part-body[hidden],
+.doc-sidebar__sublist[hidden] {
+  display: none;
 }
 
 /* ============================================================
@@ -93,6 +143,16 @@
   max-width: 820px;
   margin: 0;
   padding: 0;
+}
+
+/* Offset anchor scroll to clear the fixed top-nav */
+.doc-content h1,
+.doc-content h2,
+.doc-content h3,
+.doc-content h4,
+.doc-content h5,
+.doc-content h6 {
+  scroll-margin-top: 5.5rem;
 }
 
 /* ============================================================

@@ -64,6 +64,7 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 ### 9) DELIVER — [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }})
 
 - **[outside-in-tdd](outside-in-tdd.html)** — end-to-end outside-in TDD strategy.
+- **[ordered-test-list](ordered-test-list.html)** — ordered test list (TPP + FLFI) before any code.
 - **[red-synthesize-green](red-synthesize-green.html)** — RED → minimal implementation → GREEN cycle.
 - **[clean-architecture-testing](clean-architecture-testing.html)** — layer/boundary test strategy.
 - **[craft-discipline](craft-discipline.html)** — self-discipline checkpoints before commit.

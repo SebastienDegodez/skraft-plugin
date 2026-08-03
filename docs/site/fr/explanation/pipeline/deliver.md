@@ -37,7 +37,10 @@ Le scénario entre. DELIVER implémente le calcul du total et l'attribution des 
 
 ## Ce que produit l'agent
 
-- Code implémenté selon le cycle RED → GREEN → REFACTOR.
+- Une **liste de tests ordonnée** (TPP + FLFI), écrite avant tout code de production :
+  chaque test planifié porte sa sémantique BDD, sa transformation TPP et la contradiction
+  logique qui le justifie (voir [ordered-test-list]({{ "/fr/reference/skills/ordered-test-list" | relative_url }})).
+- Code implémenté selon le cycle RED → GREEN → REFACTOR, une entrée de la liste à la fois.
 - Tests d'acceptation passants liés aux scénarios Gherkin.
 - Tests unitaires couvrant les invariants du Domain.
 - Mutation Score comme preuve empirique de la qualité des tests.

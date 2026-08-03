@@ -22,6 +22,7 @@ Outer drives **WHAT** to build, inner drives **HOW**. Never build a class not re
 ## 4-Phase Cycle (per behavior slice)
 
 ### 1. PREPARE (owned by this skill)
+Plan the **ordered test list** first (`ordered-test-list`): every planned test, in order, with its BDD semantics, its TPP transformation and the logical contradiction that justifies it. No production code before that list exists.
 Identify the **input boundary** (use case / interactor the test enters through) and the **output boundaries** (gateways the test observes: repositories, presenters, external services). Target exactly ONE scenario.
 
 ### 2. RED & 3. SYNTHESIZE-GREEN (delegated to `red-synthesize-green`)
@@ -222,6 +223,7 @@ After both test streams are green, verify test effectiveness with the `mutation-
 
 ## Integration with other skills
 
+- `ordered-test-list` — **mandatory** preliminary planning: ordered test list (TPP + FLFI), consumed one entry at a time
 - `red-synthesize-green` — **mandatory** mechanics of the RED → validation → SYNTHESIZE-GREEN cycle
 - `mutation-testing` — run after GREEN, before commit
 - `clean-architecture-testing` — test level & doubles policy

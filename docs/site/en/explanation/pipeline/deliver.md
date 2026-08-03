@@ -37,7 +37,10 @@ The scenario enters. DELIVER implements the total calculation and loyalty credit
 
 ## What the agent produces
 
-- Code implemented following the RED → GREEN → REFACTOR cycle.
+- An **ordered test list** (TPP + FLFI), written before any production code: each planned
+  test carries its BDD semantics, its TPP transformation and the logical contradiction that
+  justifies it (see [ordered-test-list]({{ "/en/reference/skills/ordered-test-list" | relative_url }})).
+- Code implemented following the RED → GREEN → REFACTOR cycle, one list entry at a time.
 - Passing acceptance tests linked to Gherkin scenarios.
 - Unit tests covering Domain invariants.
 - Mutation Score as empirical proof of test quality.
