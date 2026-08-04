@@ -71,40 +71,11 @@ Skill linting itself is advisory. Vally's `valid-refs` check rejects any link
 that leaves a skill's own directory, which SKRAFT's roster → adapter skills do
 deliberately — a roster's whole job is to point at its adapters.
 
-## Evaluating an agent
+## Agent coverage
 
-A skill is offered to a plain agent; an agent **replaces** it. Both are the same
-experiment — add one thing on the treatment side, change nothing else — but they
-need different runners, because Vally environments load skills and have no notion
-of a custom agent.
-
-An agent is therefore evaluated by [`skraft-test-harness`](../tools/skraft-test-harness/),
-which drives the real Copilot CLI twice per scenario:
-
-```text
-baseline   copilot -p "…" --no-custom-instructions
-treatment  copilot -p "…" --plugin-dir plugins --agent skraft:skraft-orchestrator
-```
-
-```bash
-./eng/run-agent-evals.sh                  # every pipeline suite
-./eng/run-agent-evals.sh order-checkout   # one story
-AGENT=solution-architect ./eng/run-agent-evals.sh
-```
-
-The runner folds every report through `eng/harness-adapter/adapt.mjs` into
-`eval-results/agents/<agent>/results.json` — **the same verdict shape the Vally
-adapter writes for a skill**, judged by the same sign test and the same
-credibility bar. From there the path is identical: `update-history.mjs` files it
-under the `agents` bucket, and the dashboard renders it beside the skills.
-
-One consequence worth stating: an agent whose scenario winner the harness cannot
-read is reported as *inconclusive*, never as a tie. A run that failed to parse is
-not a run that came out even.
-
-In CI this lives in the `skraft-test-harness` workflow's opt-in `live-evals` job,
-which publishes to the same `dashboard-data` branch through the shared
-`eng/dashboard/publish.sh`.
+Vally evaluates skills, not custom agents. Agent orchestration is covered by the
+deterministic framework and integration tests; no second model-backed harness is
+maintained.
 
 ## Adding an evaluation for a skill
 
@@ -172,19 +143,7 @@ side — that is where a verdict stops being a number and becomes an explanation
 Scheduled recordings are kept for 14 days; pull-request recordings are dropped
 when the pull request closes.
 
-## Relationship with `skraft-test-harness`
+## Evaluation boundary
 
-Two runners, one dashboard. They answer different questions and both publish
-through the same contract:
-
-| | `tests/skills/**` + Vally | [`tools/skraft-test-harness`](../tools/skraft-test-harness/) |
-| --- | --- | --- |
-| Question | does *this skill* improve the answer? | does *this agent* produce a better result than a plain one? |
-| Treatment | one skill made available | `--plugin-dir plugins --agent skraft:<agent>` |
-| Baseline | no skill available | `--no-custom-instructions` |
-| Scenarios | `tests/skills/<skill>/eval.yaml` | `tests/skraft-plugin/pipeline/**/eval.yaml` |
-| Published | yes, under `skills` | yes, under `agents` |
-
-Vally environments load skills, not custom agents, which is why the harness
-remains. Everything downstream of the verdict — statistics, history, retention,
-dashboard — is shared, so the two never diverge in how they judge.
+All model-backed evaluations use Vally and compare a baseline with one isolated
+skill. Framework and integration tests cover orchestration and agent behavior.

@@ -84,6 +84,7 @@ for (const resultInput of values.results) {
         losses: verdict.signTest?.losses ?? 0,
         pValue: verdict.signTest?.pValue ?? null,
       },
+      metrics: verdict.metrics ?? null,
     }
 
     const previous = Array.isArray(bucket[subject.name]) ? bucket[subject.name] : []

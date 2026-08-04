@@ -15,7 +15,7 @@ WORKERS="${WORKERS:-4}"
 VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
 VALLY_NPM_CACHE="${VALLY_NPM_CACHE:-${TMPDIR:-/tmp}/skraft-vally-npm-cache}"
 ADAPTER="$ROOT/eng/vally-adapter/adapt.mjs"
-MODEL="${MODEL:-claude-sonnet-5}"
+MODEL="${MODEL:-gpt-5.6-luna}"
 JUDGE_MODEL="${JUDGE_MODEL:-gpt-5.6-luna}"
 
 usage() { sed -n '2,9p' "$0"; }

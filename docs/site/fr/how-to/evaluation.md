@@ -96,30 +96,13 @@ Le [tableau de bord]({{ "/dashboard/" | relative_url }}) affiche le catalogue co
 
 Chaque essai enregistre aussi la trajectoire complète de l'agent. Quand des sessions ont été publiées, le tableau de bord ouvre une vue de rejeu : la passe baseline et la passe skilled du même scénario s'y rejouent côte à côte. C'est là que le verdict cesse d'être un chiffre et devient une explication — on voit *où* l'agent a bifurqué.
 
-## Évaluer un agent plutôt qu'un skill
+## Couverture des agents
 
-Un skill est *proposé* à un agent générique ; un agent, lui, le *remplace*. C'est la même expérience — on ajoute une seule chose du côté traitement, rien d'autre ne bouge — mais l'exécution diffère : Vally sait charger des skills, pas des agents personnalisés.
-
-Un agent est donc évalué en pilotant deux fois le vrai Copilot CLI :
-
-```text
-baseline    copilot -p "…" --no-custom-instructions
-traitement  copilot -p "…" --plugin-dir plugins --agent skraft:skraft-orchestrator
-```
-
-```bash
-./eng/run-agent-evals.sh                  # toutes les suites du pipeline
-./eng/run-agent-evals.sh order-checkout   # une seule story
-AGENT=solution-architect ./eng/run-agent-evals.sh
-```
-
-Le verdict qui en sort a **exactement la même forme** que celui d'un skill : même test des signes, même barre de crédibilité, même tableau de bord — l'agent s'affiche simplement dans sa propre table, avec sa preuve et sa tendance.
-
-Un détail qui compte : si le résultat d'un scénario ne peut pas être lu, il est compté comme *non concluant*, jamais comme une égalité. Un run qu'on n'a pas su interpréter n'est pas un run qui a fait match nul.
+Vally évalue les skills, pas les agents personnalisés. L'orchestration des agents est couverte par les tests déterministes du framework et les tests d'intégration ; aucun second harness piloté par modèle n'est maintenu.
 
 ## Ce qu'une évaluation ne couvre pas
 
-Une évaluation mesure **un seul sujet à la fois** : un skill isolé, ou un agent face à un agent générique. Elle ne dit rien de la composition — ce qui se passe quand plusieurs skills se chargent ensemble dans une même passe reste hors de portée de cette mesure.
+Une évaluation mesure **un seul skill à la fois**. Elle ne dit rien de la composition — ce qui se passe quand plusieurs skills se chargent ensemble dans une même passe reste hors de portée de cette mesure.
 
 ## Aller plus loin
 

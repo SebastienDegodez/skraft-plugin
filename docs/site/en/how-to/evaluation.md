@@ -96,30 +96,13 @@ The [dashboard]({{ "/dashboard/" | relative_url }}) shows the whole catalogue �
 
 Every trial also records the agent's full trajectory. When sessions have been published, the dashboard opens a replay view where the baseline and skilled passes of the same scenario play side by side. That is where a verdict stops being a number and becomes an explanation — you can see *where* the agent diverged.
 
-## Evaluating an agent rather than a skill
+## Agent coverage
 
-A skill is *offered* to a plain agent; an agent *replaces* it. It is the same experiment — add one thing on the treatment side, change nothing else — but the execution differs: Vally knows how to load skills, not custom agents.
-
-An agent is therefore evaluated by driving the real Copilot CLI twice:
-
-```text
-baseline   copilot -p "…" --no-custom-instructions
-treatment  copilot -p "…" --plugin-dir plugins --agent skraft:skraft-orchestrator
-```
-
-```bash
-./eng/run-agent-evals.sh                  # every pipeline suite
-./eng/run-agent-evals.sh order-checkout   # a single story
-AGENT=solution-architect ./eng/run-agent-evals.sh
-```
-
-The verdict that comes out has **exactly the same shape** as a skill's: same sign test, same credibility bar, same dashboard — the agent simply appears in its own table, with its evidence and its trend.
-
-One detail that matters: when a scenario's outcome cannot be read, it counts as *inconclusive*, never as a tie. A run nobody could interpret is not a run that came out even.
+Vally evaluates skills, not custom agents. Agent orchestration is covered by the deterministic framework and integration tests; no second model-backed harness is maintained.
 
 ## What an evaluation does not cover
 
-An evaluation measures **one subject at a time**: a skill in isolation, or an agent against a plain one. It says nothing about composition — what happens when several skills load together in the same pass is outside what this measurement can see.
+An evaluation measures **one skill at a time**. It says nothing about composition — what happens when several skills load together in the same pass is outside what this measurement can see.
 
 ## Going further
 

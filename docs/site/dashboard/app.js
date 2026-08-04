@@ -14,6 +14,9 @@ const statusNode = document.querySelector('#status')
 const searchNode = document.querySelector('#search')
 const replayCallout = document.querySelector('#replay-callout')
 const replayLink = document.querySelector('#replay-link')
+const qualityGrid = document.querySelector('#quality-grid')
+const efficiencyGrid = document.querySelector('#efficiency-grid')
+const tabs = [...document.querySelectorAll('.tab')]
 
 const escapeHtml = (value = '') =>
   String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character])
@@ -27,6 +30,14 @@ const score = (entry) => {
   const { low, high } = entry.confidenceInterval ?? {}
   const interval = low == null || high == null ? '' : ` (${low.toFixed(2)}–${high.toFixed(2)})`
   return `<div class="profile">score ${escapeHtml(entry.meanScore.toFixed(2))}${escapeHtml(interval)}</div>`
+}
+
+const number = (value, digits = 2) => (value == null ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: digits }))
+const percent = (value) => (value == null ? '—' : `${value > 0 ? '+' : ''}${number(value, 1)}%`)
+const deltaClass = (value, inverse = false) => {
+  if (value == null || value === 0) return 'neutral'
+  const positive = inverse ? value < 0 : value > 0
+  return positive ? 'positive' : 'negative'
 }
 
 const sparkline = (entries) => {
@@ -61,6 +72,82 @@ const renderSummary = () => {
   summaryNode.innerHTML = metrics
     .map(([value, label]) => `<article class="metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></article>`)
     .join('')
+}
+
+const metricBar = (label, baseline, skilled, formatter = number) => {
+  const max = Math.max(Number(baseline ?? 0), Number(skilled ?? 0), 1)
+  return `<div class="comparison-row">
+    <div class="comparison-label">${escapeHtml(label)}</div>
+    <div class="bar-pair">
+      <div class="bar-line"><span>Baseline</span><i class="baseline" style="width:${Math.max(2, (Number(baseline ?? 0) / max) * 100)}%"></i><strong>${escapeHtml(formatter(baseline))}</strong></div>
+      <div class="bar-line"><span>Skilled</span><i class="skilled" style="width:${Math.max(2, (Number(skilled ?? 0) / max) * 100)}%"></i><strong>${escapeHtml(formatter(skilled))}</strong></div>
+    </div>
+  </div>`
+}
+
+const evidenceEntries = () => data.skills
+  .map((skill) => ({ skill, history: data.history[skill.directory] ?? [] }))
+  .map(({ skill, history }) => ({ skill, history, latest: history.at(-1) }))
+  .filter(({ latest }) => latest?.metrics)
+
+const renderQuality = () => {
+  const entries = evidenceEntries()
+  if (!entries.length) {
+    qualityGrid.innerHTML = '<div class="empty">No aggregate quality evidence published yet.</div>'
+    return
+  }
+
+  qualityGrid.innerHTML = entries.map(({ skill, latest }) => {
+    const quality = latest.metrics.quality ?? {}
+    const activation = latest.metrics.activation ?? {}
+    const activationRate = activation.rate == null ? null : activation.rate * 100
+    return `<article class="evidence-card">
+      <header>
+        <div><p class="eyebrow">${escapeHtml(latest.model)}</p><h3>${escapeHtml(skill.name)}</h3></div>
+        ${badge(latest.state)}
+      </header>
+      <div class="score-strip">
+        <div><span>Baseline</span><strong>${number(quality.baseline, 3)}</strong></div>
+        <div><span>Skilled</span><strong>${number(quality.skilled, 3)}</strong></div>
+        <div><span>Lift</span><strong class="${deltaClass(quality.delta)}">${quality.delta > 0 ? '+' : ''}${number(quality.delta, 3)}</strong></div>
+      </div>
+      ${metricBar('Rubric score', quality.baseline, quality.skilled, (value) => number(value, 3))}
+      <div class="activation">
+        <div><span>Expected activations</span><strong>${number(activation.expected, 0)}</strong></div>
+        <div><span>Observed</span><strong>${number(activation.actual, 0)}</strong></div>
+        <div><span>Unexpected</span><strong class="${activation.unexpected ? 'negative' : 'positive'}">${number(activation.unexpected, 0)}</strong></div>
+        <div><span>Activation rate</span><strong>${number(activationRate, 1)}%</strong></div>
+      </div>
+      <p class="card-note">${escapeHtml(latest.reason)}</p>
+    </article>`
+  }).join('')
+}
+
+const renderEfficiency = () => {
+  const entries = evidenceEntries()
+  if (!entries.length) {
+    efficiencyGrid.innerHTML = '<div class="empty">No aggregate efficiency evidence published yet.</div>'
+    return
+  }
+
+  efficiencyGrid.innerHTML = entries.map(({ skill, latest }) => {
+    const efficiency = latest.metrics.efficiency ?? {}
+    const baseline = efficiency.baseline ?? {}
+    const skilled = efficiency.skilled ?? {}
+    return `<article class="evidence-card">
+      <header>
+        <div><p class="eyebrow">Median per trial</p><h3>${escapeHtml(skill.name)}</h3></div>
+        <div class="delta-stack">
+          <span class="${deltaClass(efficiency.tokenDeltaPercent, true)}">${percent(efficiency.tokenDeltaPercent)} tokens</span>
+          <span class="${deltaClass(efficiency.durationDeltaPercent, true)}">${percent(efficiency.durationDeltaPercent)} time</span>
+        </div>
+      </header>
+      ${metricBar('Duration', baseline.durationMs, skilled.durationMs, (value) => value == null ? '—' : `${number(value / 1000, 1)}s`)}
+      ${metricBar('Tokens', baseline.tokens, skilled.tokens, (value) => number(value, 0))}
+      ${metricBar('Turns', baseline.turns, skilled.turns, (value) => number(value, 1))}
+      ${metricBar('Tool calls', baseline.toolCalls, skilled.toolCalls, (value) => number(value, 1))}
+    </article>`
+  }).join('')
 }
 
 // Evidence cell shared by skills and agents: the verdict badge, why it was
@@ -155,6 +242,15 @@ const render = () => {
   catalogNode.innerHTML = families.join('')
 }
 
+const switchPanel = (name) => {
+  tabs.forEach((tab) => {
+    const active = tab.dataset.panel === name
+    tab.classList.toggle('active', active)
+    tab.setAttribute('aria-selected', String(active))
+  })
+  document.querySelectorAll('.panel').forEach((panel) => panel.classList.toggle('active', panel.id === `panel-${name}`))
+}
+
 // Evidence is published independently of the site: refresh it from the data
 // branch when it is reachable, and fall back to whatever was inlined at build
 // time otherwise.
@@ -196,7 +292,10 @@ try {
 
   renderSummary()
   render()
+  renderQuality()
+  renderEfficiency()
   searchNode.addEventListener('input', render)
+  tabs.forEach((tab) => tab.addEventListener('click', () => switchPanel(tab.dataset.panel)))
   await showReplay()
 } catch (error) {
   statusNode.textContent = 'Dashboard data could not be loaded.'

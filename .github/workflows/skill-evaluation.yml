@@ -38,6 +38,8 @@ concurrency:
 
 env:
   VALLY: npx --yes @microsoft/vally-cli@0.12.0
+  MODEL: gpt-5.6-luna
+  JUDGE_MODEL: gpt-5.6-luna
   DATA_BRANCH: dashboard-data
   RETENTION_DAYS: '14'
   VALLY_TELEMETRY_OPTOUT: '1'

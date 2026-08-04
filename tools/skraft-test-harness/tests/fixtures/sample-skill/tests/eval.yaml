@@ -1,7 +1,0 @@
-scenarios:
-  - name: "Echo scenario"
-    prompt: "Say hello."
-    assertions:
-      - type: "output_contains"
-        value: "hello"
-    mock_response: "hello from sample-skill"

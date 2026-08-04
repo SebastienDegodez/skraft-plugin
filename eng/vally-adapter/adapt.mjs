@@ -15,6 +15,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
 import { comparisonVerdict } from '../lib/verdict.mjs'
+import { buildEvaluationMetrics } from '../lib/vally-metrics.mjs'
 
 const { values: options } = parseArgs({
   options: {
@@ -118,7 +119,10 @@ try {
       continue
     }
 
-    const verdict = comparisonVerdict(report, evaluation)
+    const verdict = {
+      ...comparisonVerdict(report, evaluation),
+      metrics: buildEvaluationMetrics(baselineRecords, skilledRecords, evaluation.name),
+    }
     const result = {
       runner: 'vally',
       model: options.model,

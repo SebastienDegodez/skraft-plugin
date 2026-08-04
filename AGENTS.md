@@ -49,10 +49,8 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   lib/                 ← Pure rules (front matter, skill profile, verdict, replay naming)
   catalog/scan.mjs     ← Plugin sources → artifacts/catalog/report.json
   vally-adapter/       ← Vally experiment run → eval-results/<skill>/results.json
-  harness-adapter/     ← Harness reports    → eval-results/agents/<agent>/results.json
   dashboard/           ← History, published data, AGENTVIZ manifest, retention, publish.sh
-  run-skill-evals.sh   ← Local runner for a skill (Vally experiment + comparison)
-  run-agent-evals.sh   ← Local runner for an agent (harness pipeline suites)
+  run-skill-evals.sh   ← Local runner for skills (Vally experiment + comparison)
 ```
 
 ### Test placement rules
@@ -75,10 +73,9 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   outcome, not the technique. Otherwise the evaluation measures nothing.
 - Budget at least 5 trials (`stimuli × runs`); below that a verdict is reported as
   inconclusive by design.
-- **Agents are not evaluated by Vally** — its environments load skills, not custom agents.
-  An agent goes through `eng/run-agent-evals.sh`, which drives the harness pipeline suites
-  and emits the same verdict shape. Do not add `tests/agents/**` eval specs; nothing reads them.
-- Generated output (`artifacts/`, `eval-results/`, `eval-reports/`, `dashboard-data/`,
+- Vally evaluates skills only. Do not add agent eval specs; agent behavior is covered by
+  framework and integration tests.
+- Generated output (`artifacts/`, `eval-results/`, `dashboard-data/`,
   `docs/site/dashboard/data/`) is never committed.
 
 ### stryker.config.mjs rules

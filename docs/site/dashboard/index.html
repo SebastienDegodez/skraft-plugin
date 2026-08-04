@@ -38,24 +38,49 @@
       <a class="button primary" id="replay-link" href="#">Open session replay</a>
     </section>
 
-    <section class="catalog-heading">
-      <div>
-        <p class="eyebrow">Catalogue</p>
-        <h2>Skills and agents</h2>
-      </div>
-      <label class="search">
-        <span>Search</span>
-        <input id="search" type="search" placeholder="Skill, agent, description…" autocomplete="off">
-      </label>
+    <nav class="tabs" aria-label="Dashboard views">
+      <button class="tab active" type="button" data-panel="overview" aria-selected="true">Overview</button>
+      <button class="tab" type="button" data-panel="quality" aria-selected="false">Quality</button>
+      <button class="tab" type="button" data-panel="efficiency" aria-selected="false">Efficiency</button>
+    </nav>
+
+    <section class="panel active" id="panel-overview" aria-labelledby="tab-overview">
+      <section class="catalog-heading">
+        <div>
+          <p class="eyebrow">Catalogue</p>
+          <h2>Skills and agents</h2>
+        </div>
+        <label class="search">
+          <span>Search</span>
+          <input id="search" type="search" placeholder="Skill, agent, description…" autocomplete="off">
+        </label>
+      </section>
+
+      <div id="status" class="status" role="status">Loading catalogue…</div>
+      <section id="catalog" class="catalog" aria-live="polite"></section>
     </section>
 
-    <div id="status" class="status" role="status">Loading catalogue…</div>
-    <section id="catalog" class="catalog" aria-live="polite"></section>
+    <section class="panel" id="panel-quality">
+      <div class="view-heading">
+        <p class="eyebrow">Controlled comparison</p>
+        <h2>Quality and activation</h2>
+        <p>Raw rubric scores expose lift hidden by binary pass rates. Activation confirms the skill ran only when expected.</p>
+      </div>
+      <section id="quality-grid" class="evidence-grid" aria-live="polite"></section>
+    </section>
+
+    <section class="panel" id="panel-efficiency">
+      <div class="view-heading">
+        <p class="eyebrow">Runtime profile</p>
+        <h2>Efficiency</h2>
+        <p>Median duration, tokens, turns, and tool calls compare the same prompts with and without the skill.</p>
+      </div>
+      <section id="efficiency-grid" class="evidence-grid" aria-live="polite"></section>
+    </section>
   </main>
 
   <footer>
-    <p>The catalogue is derived from the shipped plugin sources at site build time.</p>
-    <p>Evidence comes from Vally skill-versus-baseline runs, judged by an exact sign test. No data is not a passing result.</p>
+    <p>Generated from repository contracts and maintainer-approved Vally evaluations. No data is not a passing result.</p>
   </footer>
 
   <script type="module" src="app.js"></script>

@@ -7,33 +7,38 @@ defaults:
 stimuli:
   - name: Drive a business rule from the outside
     prompt: |
-      Our checkout service is a .NET solution split into Domain, Application and Api
-      projects, with an existing xUnit test project.
+      We have an existing .NET checkout service and xUnit test project. The approved
+      business scenario is: "Given an existing Gold customer's order, when checkout
+      calculates the payable total, then the returned total includes a 5% loyalty
+      discount." The checkout application boundary is the only entry point named by
+      the product team; internal types and interfaces are not decided yet.
 
-      Add this rule: the payable total of an order gets a discount based on the
-      customer's loyalty tier — 0% for Green, 5% for Gold, 10% for Platinum — and an
-      unknown order must produce a not-found error.
-
-      Implement it.
+      Prepare the first implementation slice. Show the first meaningful test to write,
+      identify what observable result it checks, and explain what should happen next
+      when that test fails. Stop before writing production code or tests for other
+      loyalty tiers.
     graders:
       - type: prompt
     rubric:
-      - Starts from a test that exercises the behaviour through the service's outward-facing boundary, described in business terms.
-      - Lets the internal breakdown follow from that test instead of fixing classes and interfaces before any test exists.
-      - Ties every production change to a test that fails before it and passes after it.
-      - Confirms the new behaviour is reachable from the outside once it passes, not merely present in an isolated class.
+      - Defines one first slice around the approved business scenario instead of expanding into a tier matrix or unrelated error case.
+      - Enters through the checkout application boundary and asserts the payable total in business terms.
+      - Leaves internal classes, policies, and interfaces undecided until the test exposes what is needed.
+      - Describes a real failing behavioral or compilation test and the next implementation step, not a placeholder assertion or a completed production design.
 
   - name: Do not test the internals first
     prompt: |
-      Same .NET checkout service. I want to add a rule that rejects an order with no
-      lines. Start by writing unit tests for the private helper methods you plan to
-      add inside the domain service, then build up from there.
+      We need one new checkout behavior: an order with no lines is rejected with a
+      business error. I want to start by writing unit tests for the private helper
+      methods I plan to add inside the domain service, then build up from there.
+
+      Tell me how to start this slice and what the first test should observe.
     graders:
       - type: prompt
     rubric:
-      - Pushes back on starting from internal helpers and anchors the work in the observable rejection behaviour instead.
-      - Explains the cost of tests coupled to internals, without refusing to help.
-      - Still delivers the requested rule.
+      - Rejects private-helper tests as the starting point and redirects the work to the observable rejection behavior.
+      - Names an application or use-case boundary as the entry point and states the business outcome to assert.
+      - Explains the coupling cost without refusing the request or inventing internal types before the first failure.
+      - Gives a concrete next step for this one behavior rather than a generic testing lecture.
 
   - name: A read-only question needs no test cycle
     prompt: |

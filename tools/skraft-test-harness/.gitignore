@@ -1,8 +1,0 @@
-artifacts/
-bin/
-obj/
-*.user
-.vs/
-
-# Eval reports are agent output and must never be committed.
-reports/

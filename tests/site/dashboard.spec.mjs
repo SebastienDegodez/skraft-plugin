@@ -53,6 +53,19 @@ test.describe('quality dashboard', () => {
     await expect(page.locator('.rows tbody tr', { hasText: 'mocking-strategy-roster' }).first()).toBeVisible()
   })
 
+  test('separates catalogue, quality, and efficiency evidence', async ({ page }) => {
+    const tabs = page.locator('.tabs .tab')
+    await expect(tabs).toHaveCount(3)
+
+    await page.getByRole('button', { name: 'Quality' }).click()
+    await expect(page.locator('#panel-quality')).toBeVisible()
+    await expect(page.locator('#panel-quality h2')).toHaveText('Quality and activation')
+
+    await page.getByRole('button', { name: 'Efficiency' }).click()
+    await expect(page.locator('#panel-efficiency')).toBeVisible()
+    await expect(page.locator('#panel-efficiency h2')).toHaveText('Efficiency')
+  })
+
   test('is reachable from the handbook', async ({ page }) => {
     await expect(page.locator('.nav a', { hasText: 'Handbook' })).toHaveAttribute('href', '../')
   })
