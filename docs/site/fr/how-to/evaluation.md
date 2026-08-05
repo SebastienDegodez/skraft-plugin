@@ -52,27 +52,30 @@ Une spec mal écrite produit un chiffre rassurant qui ne mesure rien. Ces quatre
 
 ## Étape 3 — Valider sans dépenser de quota
 
-Ces deux commandes n'appellent aucun modèle. Lancez-les avant toute exécution réelle.
+Installez le CLI une fois, [comme le prescrit Vally](https://microsoft.github.io/vally/get-started/install/) :
 
 ```bash
-npx --yes @microsoft/vally-cli@0.12.0 lint --eval-spec tests/skills/<skill>/eval.yaml --strict
-npx --yes @microsoft/vally-cli@0.12.0 experiment run skraft-plugin.experiment.yaml --dry-run
+npm install -g @microsoft/vally-cli@0.12.0
+vally --version
 ```
 
-Le `--dry-run` affiche, pour chaque évaluation, un plan `baseline` et un plan `skilled`. Vérifiez-y deux choses :
+La spec est la seule chose qu'une coquille peut casser en silence. Cet appel ne démarre aucun agent :
 
-- les **`Eval hash`** des deux variantes sont **identiques** — les prompts n'ont pas bougé ;
-- les **`Config hash`** sont **différents** — le jeu de skills, lui, a bien changé.
+```bash
+vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
+```
 
-Si les `Config hash` sont égaux, le nom du dossier ne correspond pas à un skill existant : corrigez-le avant d'aller plus loin.
+Pas besoin de vérifier que les deux côtés de la comparaison sont restés comparables : le runner passe la **même** spec aux deux, et la seule différence est `--skill-dir` — vide pour la baseline, le skill évalué pour l'autre. Il ne reste aucune configuration qui puisse dériver.
+
+Ce qui peut encore être faux, c'est le nom du dossier. Si `tests/skills/<skill>/` ne correspond à aucun dossier sous `plugins/skills/`, le runner signale l'évaluation comme ignorée plutôt que d'évaluer le vide en silence.
 
 ## Étape 4 — Lancer l'évaluation
 
-L'exécution pilote un vrai agent. Elle exige `COPILOT_GITHUB_TOKEN` : un PAT *fine-grained* portant la permission **Account › Copilot Requests**. Le jeton généré automatiquement par les Actions n'atteint pas Copilot.
+L'exécution pilote un vrai agent. Elle exige `COPILOT_GITHUB_TOKEN` : un PAT *fine-grained* portant la permission **Account › Copilot Requests**. Le jeton généré automatiquement par les Actions n'atteint pas Copilot. Le runner réexporte aussi cette valeur sous `GITHUB_TOKEN`, la variable que Vally 0.12.0 lit pour son juge de comparaison.
 
 ```bash
-./eng/run-skill-evals.sh <skill>   # un seul skill
-./eng/run-skill-evals.sh           # tous les skills évalués
+./eng/run-vally-evals.sh <skill>   # un seul skill
+./eng/run-vally-evals.sh           # tous les skills évalués
 ```
 
 En intégration continue, le workflow `skill-evaluation` fait la même chose de façon planifiée, puis publie les verdicts.
@@ -93,6 +96,12 @@ Un résultat absent ou fragile n'est **jamais** affiché comme un succès. Une a
 ## Étape 6 — Consulter la preuve
 
 Le [tableau de bord]({{ "/dashboard/" | relative_url }}) affiche le catalogue complet — chaque skill, son coût en contexte, sa couverture d'évaluation — et, pour ceux qui ont été évalués, le verdict et sa tendance sur les derniers passages.
+
+Nul besoin de publier un passage pour le voir. Une seule commande replie les verdicts locaux dans un historique local, rescanne le catalogue et sert la même page :
+
+```bash
+npm run dashboard:preview   # → http://127.0.0.1:4173/dashboard/
+```
 
 Chaque essai enregistre aussi la trajectoire complète de l'agent. Quand des sessions ont été publiées, le tableau de bord ouvre une vue de rejeu : la passe baseline et la passe skilled du même scénario s'y rejouent côte à côte. C'est là que le verdict cesse d'être un chiffre et devient une explication — on voit *où* l'agent a bifurqué.
 

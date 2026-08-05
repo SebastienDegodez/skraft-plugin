@@ -128,3 +128,64 @@ describe('publishing evidence', () => {
     ok(output.includes('No verdict to publish'))
   })
 })
+
+describe('compacting the evidence branch', () => {
+  const compact = (args) =>
+    execFileSync(join(repoRoot, 'eng/dashboard/compact-data-branch.sh'), args, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: { ...process.env, DATA_REMOTE: remote },
+    })
+
+  /** The branch tip and how many commits lead to it, read from the remote. */
+  const branchState = () => {
+    const clone = mkdtempSync(join(tmpdir(), 'skraft-compact-read-'))
+    git(clone, 'clone', '--branch', 'dashboard-data', '--single-branch', remote, '.')
+    return {
+      commits: Number(git(clone, 'rev-list', '--count', 'HEAD').trim()),
+      tree: git(clone, 'rev-parse', 'HEAD^{tree}').trim(),
+    }
+  }
+
+  it('leaves a young history alone', () => {
+    const before = branchState()
+    const output = compact([])
+
+    ok(output.includes('nothing to compact'))
+    strictEqual(branchState().commits, before.commits)
+  })
+
+  it('keeps the published tree byte for byte while dropping the history', () => {
+    const before = branchState()
+    ok(before.commits > 1, 'the earlier publications should have built up a history')
+
+    compact(['--max-commits', '1', '--max-megabytes', '0'])
+    const after = branchState()
+
+    strictEqual(after.commits, 1)
+    // The whole point: readers see exactly the same files afterwards.
+    strictEqual(after.tree, before.tree)
+  })
+
+  it('reports what it would do without touching the branch', () => {
+    const before = branchState()
+    const output = compact(['--max-commits', '0', '--max-megabytes', '0', '--dry-run'])
+
+    ok(output.includes('Dry run'))
+    strictEqual(branchState().tree, before.tree)
+    strictEqual(branchState().commits, before.commits)
+  })
+
+  it('does nothing when the branch does not exist yet', () => {
+    const empty = join(workspace, 'empty.git')
+    mkdirSync(empty, { recursive: true })
+    git(empty, 'init', '--bare', '-q')
+    const output = execFileSync(join(repoRoot, 'eng/dashboard/compact-data-branch.sh'), [], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: { ...process.env, DATA_REMOTE: empty },
+    })
+
+    ok(output.includes('does not exist'))
+  })
+})

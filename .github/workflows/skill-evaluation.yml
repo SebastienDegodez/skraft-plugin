@@ -17,7 +17,6 @@ on:
       - 'tests/skills/**'
       - 'tests/dashboard/**'
       - 'eng/**'
-      - 'skraft-plugin.experiment.yaml'
       - '.github/workflows/skill-evaluation.yml'
   schedule:
     # Monday, 03:00 UTC.
@@ -37,7 +36,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VALLY: npx --yes @microsoft/vally-cli@0.12.0
+  VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0'
   MODEL: gpt-5.6-luna
   JUDGE_MODEL: gpt-5.6-luna
   DATA_BRANCH: dashboard-data
@@ -56,6 +55,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Install the Vally CLI
+        run: npm install -g "$VALLY_PACKAGE"
 
       - name: Dashboard tooling tests
         run: node --test tests/dashboard/*.test.mjs
@@ -79,7 +81,7 @@ jobs:
       # deliberately (a roster's whole job is to point at its adapters).
       - name: Lint the shipped skills (advisory)
         continue-on-error: true
-        run: $VALLY lint plugins/skills
+        run: vally lint plugins/skills
 
       - name: Lint every evaluation spec
         run: |
@@ -92,20 +94,20 @@ jobs:
           fi
           for spec in "${specs[@]}"; do
             echo "::group::$spec"
-            $VALLY lint --eval-spec "$spec" --strict
+            vally lint --eval-spec "$spec" --strict
             echo "::endgroup::"
           done
-
-      # Proves the comparison is still well formed: same prompts on both sides,
-      # different skill sets. Costs nothing — no agent is started.
-      - name: Plan the experiment without spending quota
-        run: $VALLY experiment run skraft-plugin.experiment.yaml --dry-run
 
   evaluate:
     name: Skill versus baseline
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    # Shared with dashboard-data-compact.yml: a publication and a history
+    # compaction must never interleave on the evidence branch.
+    concurrency:
+      group: dashboard-data
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
@@ -113,15 +115,20 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Run the experiment and judge each pair
+      - name: Install the Vally CLI
+        run: npm install -g "$VALLY_PACKAGE"
+
+      - name: Run each eval twice and judge the pair
         env:
           # A fine-grained PAT with the "Copilot Requests" account permission.
-          # The auto-generated GITHUB_TOKEN cannot reach Copilot.
+          # The auto-generated GITHUB_TOKEN cannot reach Copilot. The runner
+          # re-exports it under every name Vally 0.12.0 and the spawned Copilot
+          # runtime read.
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           # Passed through the environment and quoted at the call site so a
           # dispatch input can never be interpreted as shell.
           SKILL: ${{ inputs.skill }}
-        run: ./eng/run-skill-evals.sh ${SKILL:+"$SKILL"}
+        run: ./eng/run-vally-evals.sh ${SKILL:+"$SKILL"}
 
       - name: Upload trajectories
         if: always()
@@ -147,8 +154,9 @@ jobs:
 
           args=()
           for result in "${results[@]}"; do args+=(--results "$result"); done
-          run_dir="$(find eval-results/_experiment -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
-          if [ -n "$run_dir" ]; then args+=(--replay-from "$run_dir"); fi
+          # Scan the whole output root: the session logs sit under
+          # eval-results/<skill>/<variant>/, one subtree per evaluated spec.
+          args+=(--replay-from eval-results)
 
           ./eng/dashboard/publish.sh "${args[@]}" \
             --commit "${{ github.sha }}" \

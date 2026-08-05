@@ -1,7 +1,7 @@
 import { deepStrictEqual, ok, strictEqual } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { expiredScheduledDates, sessionEntry, sessionSubDirectory, skillOf, slug } from '../../eng/lib/replay-sessions.mjs'
+import { expiredScheduledDates, sessionEntry, sessionSubDirectory, skillOf, slug, variantFromPath } from '../../eng/lib/replay-sessions.mjs'
 
 describe('replay session naming', () => {
   it('derives the skill from the eval spec path', () => {
@@ -19,6 +19,26 @@ describe('replay session naming', () => {
   it('separates scheduled runs by day and pull-request runs by number', () => {
     strictEqual(sessionSubDirectory({ source: 'scheduled', date: '2026-08-03' }), 'scheduled/2026-08-03')
     strictEqual(sessionSubDirectory({ source: 'pr', prNumber: 134, date: '2026-08-03' }), 'pr/134')
+  })
+})
+
+describe('variant recovered from the output path', () => {
+  it('reads the variant an isolated eval run did not stamp', () => {
+    strictEqual(variantFromPath('eval-results/outside-in-tdd/baseline/run/executor-session-logs/a/metadata.json'), 'baseline')
+    strictEqual(variantFromPath('eval-results\\outside-in-tdd\\skilled\\run\\metadata.json'), 'skilled')
+  })
+
+  it('takes the segment nearest the trial when the root repeats a variant name', () => {
+    strictEqual(variantFromPath('/tmp/baseline/outside-in-tdd/skilled/run/metadata.json'), 'skilled')
+  })
+
+  it('reports no variant rather than inventing one', () => {
+    strictEqual(variantFromPath('eval-results/_experiment/run/executor-session-logs/a/metadata.json'), '')
+    strictEqual(variantFromPath(''), '')
+  })
+
+  it('never mistakes an inherited object property for a variant', () => {
+    strictEqual(variantFromPath('eval-results/constructor/run/metadata.json'), '')
   })
 })
 

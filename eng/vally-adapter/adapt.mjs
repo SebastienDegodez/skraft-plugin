@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-// Turn a Vally experiment run into one publishable verdict per evaluated skill.
+// Turn a pair of Vally runs into one publishable verdict for the skill they
+// isolate.
 //
-// `vally experiment run` produces one JSONL stream per variant (baseline =
-// no skill, skilled = only the skill under test). This adapter regroups those
-// records per eval spec, asks `vally compare` to judge each pair, and writes:
+// eng/run-vally-evals.sh runs the same eval spec twice — once with no skill
+// (baseline), once with only the skill under test (skilled) — and hands both
+// JSONL streams here. `vally compare` judges the trajectories pairwise, and the
+// tally becomes a verdict at <output-root>/<skill>/results.json.
 //
-//   <output-root>/<skill>/results.json
-//
-//   node eng/vally-adapter/adapt.mjs --experiment-dir eval-results/_experiment/<run>
+//   node eng/vally-adapter/adapt.mjs --baseline <jsonl> --skilled <jsonl> --skill <name>
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { basename, dirname, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
 import { comparisonVerdict } from '../lib/verdict.mjs'
@@ -19,10 +19,11 @@ import { buildEvaluationMetrics } from '../lib/vally-metrics.mjs'
 
 const { values: options } = parseArgs({
   options: {
-    'experiment-dir': { type: 'string' },
+    baseline: { type: 'string' },
+    skilled: { type: 'string' },
+    skill: { type: 'string' },
+    'skill-path': { type: 'string' },
     'output-root': { type: 'string', default: 'eval-results' },
-    'baseline-variant': { type: 'string', default: 'baseline' },
-    'skilled-variant': { type: 'string', default: 'skilled' },
     vally: { type: 'string', default: 'npx --yes @microsoft/vally-cli@0.12.0' },
     model: { type: 'string', default: 'unknown' },
     'judge-model': { type: 'string', default: 'unknown' },
@@ -31,35 +32,17 @@ const { values: options } = parseArgs({
   strict: true,
 })
 
-if (options.help || !options['experiment-dir']) {
-  console.log(`Usage: node eng/vally-adapter/adapt.mjs --experiment-dir <run-dir> [options]
+if (options.help || !options.baseline || !options.skilled || !options.skill) {
+  console.log(`Usage: node eng/vally-adapter/adapt.mjs --baseline <jsonl> --skilled <jsonl> --skill <name> [options]
 
-Compare the baseline and skilled records of a Vally experiment, one verdict per
-evaluated skill, and write <output-root>/<skill>/results.json.`)
+Compare the baseline and skilled records of one eval spec and write
+<output-root>/<skill>/results.json.`)
   process.exit(options.help ? 0 : 1)
 }
 
 const parseJsonl = (file) => {
   const text = readFileSync(file, 'utf8').trim()
   return text ? text.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)) : []
-}
-
-const evalFileOf = (record) => record.experiment?.evalFile ?? record.evalFilePath ?? ''
-
-const groupByEval = (records) => {
-  const grouped = new Map()
-  for (const record of records.filter((record) => record.type === 'trial-result')) {
-    const evalFile = evalFileOf(record)
-    if (!evalFile) continue
-    grouped.set(evalFile, [...(grouped.get(evalFile) ?? []), record])
-  }
-  return grouped
-}
-
-// tests/skills/<skill>/eval.yaml → the skill it exercises.
-const identity = (evalFile) => {
-  const skill = basename(dirname(evalFile.split('\\').join('/')))
-  return { kind: 'skill', name: skill, path: `plugins/skills/${skill}` }
 }
 
 const splitCommand = (command) =>
@@ -76,22 +59,24 @@ const compare = (baseline, skilled, output) => {
   return parseJsonl(output)[0] ?? null
 }
 
-const runDirectory = resolve(options['experiment-dir'])
 const outputRoot = resolve(options['output-root'])
-const baseline = groupByEval(parseJsonl(join(runDirectory, options['baseline-variant'], 'results.jsonl')))
-const skilled = groupByEval(parseJsonl(join(runDirectory, options['skilled-variant'], 'results.jsonl')))
-const evaluations = [...new Set([...baseline.keys(), ...skilled.keys()])].sort()
+const trialsOf = (file) => parseJsonl(resolve(file)).filter((record) => record.type === 'trial-result')
+
+const pairs = [
+  {
+    evaluation: { kind: 'skill', name: options.skill, path: options['skill-path'] ?? `plugins/skills/${options.skill}` },
+    baselineRecords: trialsOf(options.baseline),
+    skilledRecords: trialsOf(options.skilled),
+  },
+]
+
 const temporary = mkdtempSync(join(tmpdir(), 'skraft-vally-adapter-'))
 
 let written = 0
 let incomplete = 0
 
 try {
-  for (const evalFile of evaluations) {
-    const baselineRecords = baseline.get(evalFile) ?? []
-    const skilledRecords = skilled.get(evalFile) ?? []
-    const evaluation = identity(evalFile)
-
+  for (const { evaluation, baselineRecords, skilledRecords } of pairs) {
     if (!baselineRecords.length || !skilledRecords.length) {
       console.warn(`⚠ ${evaluation.name}: missing baseline or skilled records`)
       incomplete += 1

@@ -1,0 +1,7 @@
+# Eval directory names that run-vally-evals.sh must not run.
+#
+# One name per line, matching a directory under tests/skills/. Blank lines and
+# lines starting with `#` are ignored. Override the file with SKIP_EVALS="a b".
+#
+# Use it for an eval that is temporarily too expensive or known to be flaky —
+# never to hide a regression. State the reason next to the entry.

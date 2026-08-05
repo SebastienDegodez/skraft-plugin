@@ -32,10 +32,9 @@ site rebuild, and a site rebuild must never invent evidence.
 ## Layout
 
 ```text
-skraft-plugin.experiment.yaml      # baseline vs skilled — the comparison contract
 tests/skills/<skill>/eval.yaml     # what to ask, and how to judge the answer
 eng/
-  run-skill-evals.sh               # local runner: experiment + comparison
+  run-vally-evals.sh               # local runner: two isolated runs + comparison
   catalog/scan.mjs                 # source tree  → artifacts/catalog/report.json
   vally-adapter/adapt.mjs          # Vally run    → eval-results/<skill>/results.json
   dashboard/
@@ -96,22 +95,51 @@ maintained.
 
 ## Running an evaluation
 
+Install the CLI once, [the way Vally prescribes](https://microsoft.github.io/vally/get-started/install/):
+
 ```bash
-./eng/run-skill-evals.sh --dry-run        # validate the plan, spend nothing
-./eng/run-skill-evals.sh outside-in-tdd   # one skill
-./eng/run-skill-evals.sh                  # every evaluated skill
+npm install -g @microsoft/vally-cli@0.12.0
 ```
+
+The runner uses that binary when it is on the path, and otherwise falls back to a
+one-off `npx` download of the same pinned version.
+
+```bash
+./eng/run-vally-evals.sh outside-in-tdd   # one skill
+./eng/run-vally-evals.sh <plugin>         # one plugin
+./eng/run-vally-evals.sh                  # every eval spec
+```
+
+Each spec is run twice on its own: once with an empty `--skill-dir` (baseline),
+once with only the skill under test. Isolation is structural — the same spec goes
+to both sides, so there is no comparison contract left to drift.
 
 An evaluation drives a real agent, so it needs `COPILOT_GITHUB_TOKEN`: a
 fine-grained PAT with the **Account › Copilot Requests** permission. The
-auto-generated Actions token cannot reach Copilot.
+auto-generated Actions token cannot reach Copilot. The runner re-exports that
+value as `GITHUB_TOKEN` as well, the variable Vally 0.12.0 reads for its
+comparison judge.
 
-Preview the result locally:
+`PARALLEL`, `RUNS`, `WORKERS`, `MODEL`, `JUDGE_MODEL` and `RESULTS_DIR` tune the
+run; `eng/vally-adapter/skip-evals.txt`, when present, lists eval directories to
+leave out. Each eval keeps its own `eval-results/<skill>/eval.log`.
+
+## Reading the result on a local dashboard
+
+One command turns the verdicts under `eval-results/` into the page the project
+publishes: it folds them into a local `dashboard-data/history.json`, rescans the
+catalogue from the plugin sources, then serves the site.
 
 ```bash
-node eng/dashboard/update-history.mjs --results eval-results/*/results.json
-npm run dashboard:build
+npm run dashboard:preview                 # → http://127.0.0.1:4173/dashboard/
+npm run dashboard:preview -- --port 8080  # another port
+npm run dashboard:preview -- --no-serve   # build the data only
 ```
+
+With no verdict yet, the dashboard still renders the full catalogue — every skill
+with its context cost and evaluation coverage — and reports the rest as
+unevaluated. Nothing this writes is committed: `eval-results/`, `dashboard-data/`
+and `docs/site/dashboard/data/` are all ignored.
 
 ## How a verdict is decided
 

@@ -9,6 +9,26 @@
 /** Vally variant → the role tag a reader filters on in AGENTVIZ. */
 export const ROLE_BY_VARIANT = { baseline: 'baseline', skilled: 'skilled' }
 
+/**
+ * The variant a recorded trial belongs to, read back from where it was written.
+ *
+ * Vally stamps `metadata.variant` only when the run itself declares variants.
+ * Two isolated `vally eval` runs do not — the only remaining evidence is the
+ * directory the runner pointed `--output-dir` at. Without this, both passes tag
+ * as `unknown` and the replay loses the one distinction that makes it worth
+ * reading: baseline against skilled.
+ *
+ * @param {string} path any path inside the run's output directory
+ * @returns {string} the variant, or an empty string when the path carries none
+ */
+export function variantFromPath(path) {
+  const segments = String(path ?? '')
+    .split('\\')
+    .join('/')
+    .split('/')
+  return segments.findLast((segment) => Object.hasOwn(ROLE_BY_VARIANT, segment)) ?? ''
+}
+
 /** Filesystem- and URL-safe slug. */
 export function slug(value) {
   const cleaned = String(value ?? '')

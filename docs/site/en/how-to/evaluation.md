@@ -52,27 +52,30 @@ A badly written spec produces a reassuring number that measures nothing. These f
 
 ## Step 3 — Validate without spending quota
 
-Neither command calls a model. Run both before any real execution.
+Install the CLI once, [the way Vally prescribes](https://microsoft.github.io/vally/get-started/install/):
 
 ```bash
-npx --yes @microsoft/vally-cli@0.12.0 lint --eval-spec tests/skills/<skill>/eval.yaml --strict
-npx --yes @microsoft/vally-cli@0.12.0 experiment run skraft-plugin.experiment.yaml --dry-run
+npm install -g @microsoft/vally-cli@0.12.0
+vally --version
 ```
 
-The dry run prints a `baseline` plan and a `skilled` plan for every evaluation. Check two things in it:
+The spec is the one thing a typo can silently break. This call starts no agent:
 
-- the two variants' **`Eval hash`** are **identical** — the prompts did not move;
-- their **`Config hash`** are **different** — the skill set genuinely changed.
+```bash
+vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
+```
 
-If the config hashes match, the directory name does not resolve to a shipped skill. Fix that before going further.
+You do not have to check that the two sides of the comparison stayed comparable: the runner passes the **same** spec to both, and the only difference is `--skill-dir` — empty for the baseline, the skill under test for the other. There is no configuration left to drift.
+
+What *can* still be wrong is the directory name. If `tests/skills/<skill>/` does not match a directory under `plugins/skills/`, the runner reports the eval as skipped rather than evaluating nothing silently.
 
 ## Step 4 — Run the evaluation
 
-A run drives a real agent. It needs `COPILOT_GITHUB_TOKEN`: a fine-grained PAT carrying the **Account › Copilot Requests** permission. The auto-generated Actions token cannot reach Copilot.
+A run drives a real agent. It needs `COPILOT_GITHUB_TOKEN`: a fine-grained PAT carrying the **Account › Copilot Requests** permission. The auto-generated Actions token cannot reach Copilot. The runner also re-exports that value as `GITHUB_TOKEN`, the variable Vally 0.12.0 reads for its comparison judge.
 
 ```bash
-./eng/run-skill-evals.sh <skill>   # a single skill
-./eng/run-skill-evals.sh           # every evaluated skill
+./eng/run-vally-evals.sh <skill>   # a single skill
+./eng/run-vally-evals.sh           # every evaluated skill
 ```
 
 In continuous integration the `skill-evaluation` workflow does the same on a schedule, then publishes the verdicts.
@@ -93,6 +96,12 @@ A missing or fragile result is **never** rendered as a pass. No data is not a pa
 ## Step 6 — Look at the evidence
 
 The [dashboard]({{ "/dashboard/" | relative_url }}) shows the whole catalogue — every skill, its context cost, its evaluation coverage — and, for those that were evaluated, the verdict and its trend over the last runs.
+
+You do not have to publish a run to see it. One command folds the local verdicts into a local history, rescans the catalogue and serves the same page:
+
+```bash
+npm run dashboard:preview   # → http://127.0.0.1:4173/dashboard/
+```
 
 Every trial also records the agent's full trajectory. When sessions have been published, the dashboard opens a replay view where the baseline and skilled passes of the same scenario play side by side. That is where a verdict stops being a number and becomes an explanation — you can see *where* the agent diverged.
 

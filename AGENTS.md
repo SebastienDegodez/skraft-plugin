@@ -48,9 +48,9 @@ tests/
 eng/                   ← Skill evaluation & dashboard tooling (zero-dependency Node)
   lib/                 ← Pure rules (front matter, skill profile, verdict, replay naming)
   catalog/scan.mjs     ← Plugin sources → artifacts/catalog/report.json
-  vally-adapter/       ← Vally experiment run → eval-results/<skill>/results.json
+  vally-adapter/       ← Paired Vally runs → eval-results/<skill>/results.json
   dashboard/           ← History, published data, AGENTVIZ manifest, retention, publish.sh
-  run-skill-evals.sh   ← Local runner for skills (Vally experiment + comparison)
+  run-vally-evals.sh   ← Local runner, one eval spec at a time (two isolated `vally eval` runs)
 ```
 
 ### Test placement rules
@@ -67,8 +67,8 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
 ### Skill evaluation rules
 
 - One eval spec per skill at `tests/skills/<skill>/eval.yaml`; `<skill>` MUST match the
-  directory under `plugins/skills/` — `skraft-plugin.experiment.yaml` resolves the skill
-  from that path.
+  directory under `plugins/skills/` — `eng/run-vally-evals.sh` resolves the skill from
+  that path, and reports the eval as skipped when it does not.
 - A prompt must **never name the skill** or copy its wording, and a rubric must judge the
   outcome, not the technique. Otherwise the evaluation measures nothing.
 - Budget at least 5 trials (`stimuli × runs`); below that a verdict is reported as

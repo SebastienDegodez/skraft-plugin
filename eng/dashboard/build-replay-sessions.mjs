@@ -15,7 +15,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSyn
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
-import { ROLE_BY_VARIANT, sessionEntry, sessionSubDirectory, skillOf, slug } from '../lib/replay-sessions.mjs'
+import { ROLE_BY_VARIANT, sessionEntry, sessionSubDirectory, skillOf, slug, variantFromPath } from '../lib/replay-sessions.mjs'
 
 const { values } = parseArgs({
   options: {
@@ -78,7 +78,7 @@ for (const metadataFile of metadataFiles) {
     continue
   }
 
-  const variant = String(metadata.variant ?? '')
+  const variant = String(metadata.variant ?? '') || variantFromPath(metadataFile)
   const role = ROLE_BY_VARIANT[variant] ?? (variant ? slug(variant) : 'unknown')
   const skill = skillOf(metadata.evalFilePath ?? metadata.evalName ?? '')
   const stimulusName = String(metadata.stimulusName ?? '')

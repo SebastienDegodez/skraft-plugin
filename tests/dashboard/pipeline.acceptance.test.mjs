@@ -196,6 +196,36 @@ describe('replay sessions', () => {
     ok(manifest.sessions.every((session) => session.tags.includes('pr-134')))
   })
 
+  it('still separates baseline from skilled when the runner recorded no variant', () => {
+    // Two isolated `vally eval` runs leave no `variant` in the metadata; the
+    // only evidence left is the output directory each run was pointed at.
+    const runRoot = join(workspace, 'paired-run/demo-skill')
+    for (const variant of ['baseline', 'skilled']) {
+      const sessionRoot = join(runRoot, variant, 'run/executor-session-logs/demo-skill/claude/first')
+      write(
+        join(sessionRoot, 'metadata.json'),
+        JSON.stringify({ evalFilePath: 'tests/skills/demo-skill/eval.yaml', stimulusName: 'Drive the demo', trialIndex: 0 }),
+      )
+      write(join(sessionRoot, 'events.jsonl'), '{"type":"start"}\n')
+    }
+
+    const replayRoot = join(workspace, 'paired-replay')
+    run('eng/dashboard/build-replay-sessions.mjs', [
+      '--results-dir',
+      join(workspace, 'paired-run'),
+      '--output-dir',
+      replayRoot,
+      '--date',
+      '2026-08-05',
+    ])
+    const manifest = JSON.parse(readFileSync(join(replayRoot, 'manifest.json'), 'utf8'))
+
+    strictEqual(manifest.sessions.length, 2)
+    ok(manifest.sessions.some((session) => session.tags.includes('baseline')))
+    ok(manifest.sessions.some((session) => session.tags.includes('skilled')))
+    ok(!manifest.sessions.some((session) => session.tags.includes('unknown')))
+  })
+
   it('drops sessions older than the retention window and never leaves a dangling entry', () => {
     const replayRoot = join(workspace, 'replay')
     write(join(replayRoot, 'sessions/scheduled/2026-01-01/demo-skill/old--skilled--run0.jsonl'), '{}\n')
