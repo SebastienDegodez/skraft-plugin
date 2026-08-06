@@ -19,7 +19,7 @@ metadata:
       - docs/site/fr/reference/glossaire.md
       - docs/site/en/reference/glossary.md
     context:
-      - the relevant plugins/skills/*/SKILL.md for the canonical definition of each term
+      - the relevant plugins/skraft-framework/skills/*/SKILL.md for the canonical definition of each term
   outputs:
     - updated glossary pages (FR + EN), mirrored — NO commit
   genesis_patterns:
@@ -55,6 +55,6 @@ Subagent Mode: skip pleasantries, act autonomously, NEVER ask questions.
 ```yaml
 status: ok
 capability: docs-glossary
-terms_added: [ { term: "<t>", fr: "<def>", en: "<def>", source: "plugins/skills/.../SKILL.md" } ]
+terms_added: [ { term: "<t>", fr: "<def>", en: "<def>", source: "plugins/skraft-framework/skills/.../SKILL.md" } ]
 files: [fr/reference/glossaire.md, en/reference/glossary.md]
 ```

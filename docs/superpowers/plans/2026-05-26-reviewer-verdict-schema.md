@@ -13,29 +13,29 @@
 ## File Structure
 
 **Créés (skill complet) :**
-- `plugins/skills/reviewer-verdict-schema/SKILL.md` — entry-point skill, contrat d'invocation, mapping gate→tag par reviewer.
-- `plugins/skills/reviewer-verdict-schema/scripts/render-verdict.mjs` — renderer + validateur (autorité unique).
-- `plugins/skills/reviewer-verdict-schema/assets/reference/schema-v1.md` — référence humaine.
-- `plugins/skills/reviewer-verdict-schema/assets/examples/verdict-approved.json`
-- `plugins/skills/reviewer-verdict-schema/assets/examples/verdict-needs-rework.json`
-- `plugins/skills/reviewer-verdict-schema/assets/examples/verdict-rejected.json`
-- `plugins/skills/reviewer-verdict-schema/assets/examples/verdict-with-dissent.json`
-- `plugins/skills/reviewer-verdict-schema/assets/examples/verdict-with-escaping-edge-cases.json`
-- `plugins/skills/reviewer-verdict-schema/assets/fixtures/broken-skipped-without-reason.json`
-- `plugins/skills/reviewer-verdict-schema/assets/fixtures/broken-unknown-tag.json`
-- `plugins/skills/reviewer-verdict-schema/assets/fixtures/broken-lenses-length-mismatch.json`
-- `plugins/skills/reviewer-verdict-schema/assets/fixtures/broken-weighted-score.json`
-- `plugins/skills/reviewer-verdict-schema/references/render-internals.md` — load-on-demand.
-- `plugins/skills/reviewer-verdict-schema/tests/render-verdict.test.mjs` — `node --test`.
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/SKILL.md` — entry-point skill, contrat d'invocation, mapping gate→tag par reviewer.
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/scripts/render-verdict.mjs` — renderer + validateur (autorité unique).
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/reference/schema-v1.md` — référence humaine.
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/examples/verdict-approved.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/examples/verdict-needs-rework.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/examples/verdict-rejected.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/examples/verdict-with-dissent.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/examples/verdict-with-escaping-edge-cases.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/fixtures/broken-skipped-without-reason.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/fixtures/broken-unknown-tag.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/fixtures/broken-lenses-length-mismatch.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/assets/fixtures/broken-weighted-score.json`
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/references/render-internals.md` — load-on-demand.
+- `plugins/skraft-framework/skills/reviewer-verdict-schema/tests/render-verdict.test.mjs` — `node --test`.
 
 **Modifiés :**
-- `plugins/skills/adversarial-review-lenses/SKILL.md` — §"Output format" → cross-ref.
-- `plugins/agents/backlog-discoverer-reviewer.agent.md` — Option C + skill load + fix enum.
-- `plugins/agents/backlog-planner-reviewer.agent.md` — Option C + skill load.
-- `plugins/agents/acceptance-designer-reviewer.agent.md` — Option C + skill load.
-- `plugins/agents/solution-architect-reviewer.agent.md` — Option C + skill load.
-- `plugins/agents/software-engineer-reviewer.agent.md` — Option C + skill load (était déjà JSON).
-- `plugins/agents/skraft-orchestrator.agent.md` — Step 3.5 (render), Step 3.6 (validate), Step 4 (state).
+- `plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md` — §"Output format" → cross-ref.
+- `plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md` — Option C + skill load + fix enum.
+- `plugins/skraft-framework/agents/backlog-planner-reviewer.agent.md` — Option C + skill load.
+- `plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md` — Option C + skill load.
+- `plugins/skraft-framework/agents/solution-architect-reviewer.agent.md` — Option C + skill load.
+- `plugins/skraft-framework/agents/software-engineer-reviewer.agent.md` — Option C + skill load (était déjà JSON).
+- `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` — Step 3.5 (render), Step 3.6 (validate), Step 4 (state).
 
 **Découpage par responsabilité :** un fichier par lens de validation aurait été plus pur, mais le renderer reste sous ~250 LoC et la cohésion validate↔render est forte ; un seul `render-verdict.mjs` est le bon arbitrage.
 
@@ -46,13 +46,13 @@
 ### Task 0: Audit capacité d'écriture des 5 reviewers
 
 **Files:**
-- Read: `plugins/agents/{backlog-discoverer,backlog-planner,acceptance-designer,solution-architect,software-engineer}-reviewer.agent.md`
+- Read: `plugins/skraft-framework/agents/{backlog-discoverer,backlog-planner,acceptance-designer,solution-architect,software-engineer}-reviewer.agent.md`
 - Write: `.copilot-tracking/changes/2026-05-26-reviewer-write-audit.md` (journal du résultat)
 
 - [ ] **Step 1 : Inspecter les 5 frontmatter `tools:`**
 
 ```bash
-grep -A1 '^tools:' plugins/agents/*-reviewer.agent.md
+grep -A1 '^tools:' plugins/skraft-framework/agents/*-reviewer.agent.md
 ```
 
 Consigner pour chaque reviewer la liste exacte de tools.
@@ -69,7 +69,7 @@ Le grant attendu est `edit` (idéalement) ou tout autre tool documenté comme pe
 - [ ] **Step 4 : Commit (si correctif appliqué)**
 
 ```bash
-git add plugins/agents/*-reviewer.agent.md .copilot-tracking/changes/2026-05-26-reviewer-write-audit.md
+git add plugins/skraft-framework/agents/*-reviewer.agent.md .copilot-tracking/changes/2026-05-26-reviewer-write-audit.md
 git commit -m "fix(agents): ensure reviewers have edit tool grant"
 ```
 
@@ -80,14 +80,14 @@ git commit -m "fix(agents): ensure reviewers have edit tool grant"
 ### Task 1: Scaffolding du skill `reviewer-verdict-schema`
 
 **Files:**
-- Create: `plugins/skills/reviewer-verdict-schema/SKILL.md`
-- Create: `plugins/skills/reviewer-verdict-schema/scripts/render-verdict.mjs` (stub)
-- Create: `plugins/skills/reviewer-verdict-schema/tests/render-verdict.test.mjs` (stub)
+- Create: `plugins/skraft-framework/skills/reviewer-verdict-schema/SKILL.md`
+- Create: `plugins/skraft-framework/skills/reviewer-verdict-schema/scripts/render-verdict.mjs` (stub)
+- Create: `plugins/skraft-framework/skills/reviewer-verdict-schema/tests/render-verdict.test.mjs` (stub)
 
 - [ ] **Step 1 : Créer l'arborescence**
 
 ```bash
-mkdir -p plugins/skills/reviewer-verdict-schema/{scripts,assets/examples,assets/fixtures,assets/reference,references,tests}
+mkdir -p plugins/skraft-framework/skills/reviewer-verdict-schema/{scripts,assets/examples,assets/fixtures,assets/reference,references,tests}
 ```
 
 - [ ] **Step 2 : SKILL.md minimal**
@@ -118,21 +118,21 @@ test('placeholder', () => assert.ok(true));
 
 - [ ] **Step 5 : Vérifier que le test runner est fonctionnel**
 
-Run: `node --test plugins/skills/reviewer-verdict-schema/tests/`
+Run: `node --test plugins/skraft-framework/skills/reviewer-verdict-schema/tests/`
 Expected: `tests 1, pass 1`.
 
 - [ ] **Step 6 : Commit**
 
 ```bash
-git add plugins/skills/reviewer-verdict-schema/
+git add plugins/skraft-framework/skills/reviewer-verdict-schema/
 git commit -m "feat(skills): scaffold reviewer-verdict-schema"
 ```
 
 ### Task 2: Validation — parsing + champs requis racine
 
 **Files:**
-- Modify: `plugins/skills/reviewer-verdict-schema/scripts/render-verdict.mjs`
-- Modify: `plugins/skills/reviewer-verdict-schema/tests/render-verdict.test.mjs`
+- Modify: `plugins/skraft-framework/skills/reviewer-verdict-schema/scripts/render-verdict.mjs`
+- Modify: `plugins/skraft-framework/skills/reviewer-verdict-schema/tests/render-verdict.test.mjs`
 
 - [ ] **Step 1 : Test RED — JSON invalide doit échouer**
 
@@ -154,7 +154,7 @@ test('missing $schema → KO', () => {
 });
 ```
 
-Run: `node --test plugins/skills/reviewer-verdict-schema/tests/` → FAIL (validate non exporté).
+Run: `node --test plugins/skraft-framework/skills/reviewer-verdict-schema/tests/` → FAIL (validate non exporté).
 
 - [ ] **Step 2 : Implémenter `validate(input: string) → {ok, error?, payload?}`**
 
@@ -404,7 +404,7 @@ Décrit la structure interne du template Markdown produit (load-on-demand, pour 
 - [ ] **Step 4 : Commit**
 
 ```bash
-git add plugins/skills/reviewer-verdict-schema/
+git add plugins/skraft-framework/skills/reviewer-verdict-schema/
 git commit -m "docs(verdict-schema): finalize SKILL.md and references"
 ```
 
@@ -414,7 +414,7 @@ git commit -m "docs(verdict-schema): finalize SKILL.md and references"
 
 ### Task 13: Cross-ref dans `adversarial-review-lenses/SKILL.md`
 
-**Files:** `plugins/skills/adversarial-review-lenses/SKILL.md`
+**Files:** `plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md`
 
 - [ ] **Step 1 : Lire la §"Output format" actuelle**
 
@@ -440,7 +440,7 @@ git commit -am "refactor(adversarial-review-lenses): defer output format to verd
 
 ### Task 14: Migrer `backlog-discoverer-reviewer.agent.md` (corrige enum)
 
-**Files:** `plugins/agents/backlog-discoverer-reviewer.agent.md`
+**Files:** `plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md`
 
 - [ ] **Step 1 : Repérer l'ancien bloc Output (YAML inline avec `verdict: approved|changes_requested|rejected`)**
 
@@ -462,7 +462,7 @@ git commit -am "feat(backlog-discoverer-reviewer): JSON v1 verdict + enum fix (B
 
 ### Task 15: Migrer `backlog-planner-reviewer.agent.md`
 
-**Files:** `plugins/agents/backlog-planner-reviewer.agent.md`
+**Files:** `plugins/skraft-framework/agents/backlog-planner-reviewer.agent.md`
 
 - [ ] **Step 1 : Lire l'ancien bloc Output (YAML, champs `story/criterion/ac/dor_item/antipattern`)**
 - [ ] **Step 2 : Remplacer par le bloc Option C. Documenter le mapping : ces champs passent dans `findings[*].extras`.**
@@ -475,7 +475,7 @@ git commit -am "feat(backlog-planner-reviewer): JSON v1 verdict (BREAKING)"
 
 ### Task 16: Migrer `acceptance-designer-reviewer.agent.md`
 
-**Files:** `plugins/agents/acceptance-designer-reviewer.agent.md`
+**Files:** `plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md`
 
 - [ ] **Step 1 : Lire l'ancien bloc Output (YAML, `finding: ...`)**
 - [ ] **Step 2 : Remplacer par bloc Option C ; champ `finding` ancien → `description` nouveau**
@@ -488,7 +488,7 @@ git commit -am "feat(acceptance-designer-reviewer): JSON v1 verdict (BREAKING)"
 
 ### Task 17: Migrer `solution-architect-reviewer.agent.md`
 
-**Files:** `plugins/agents/solution-architect-reviewer.agent.md`
+**Files:** `plugins/skraft-framework/agents/solution-architect-reviewer.agent.md`
 
 - [ ] **Step 1 : Lire l'ancien bloc (YAML, `confidence` top-level)**
 - [ ] **Step 2 : Remplacer par bloc Option C ; `confidence` est drop (cf. spec §"Champs abandonnés"). Signal capté par `weighted_score`. Ajouter si pertinent à `synthesis.headline`.**
@@ -501,7 +501,7 @@ git commit -am "feat(solution-architect-reviewer): JSON v1 verdict, drop confide
 
 ### Task 18: Migrer `software-engineer-reviewer.agent.md`
 
-**Files:** `plugins/agents/software-engineer-reviewer.agent.md`
+**Files:** `plugins/skraft-framework/agents/software-engineer-reviewer.agent.md`
 
 - [ ] **Step 1 : Lire l'ancien bloc (JSON inline ad-hoc, `lens_results.verdict: pass/fail`)**
 - [ ] **Step 2 : Remplacer par bloc Option C. `verdict: pass/fail` ancien → `score: 0|0.5|1`. `dissent_analysis` ancien → `dissent`.**
@@ -518,7 +518,7 @@ git commit -am "feat(software-engineer-reviewer): JSON v1 verdict (BREAKING)"
 
 ### Task 19: Ajouter Step 3.5 / 3.6 / 4 dans `skraft-orchestrator.agent.md`
 
-**Files:** `plugins/agents/skraft-orchestrator.agent.md`
+**Files:** `plugins/skraft-framework/agents/skraft-orchestrator.agent.md`
 
 - [ ] **Step 1 : Lire la section actuelle "Phase 4 / Handle verdict"**
 
@@ -533,7 +533,7 @@ Texte exact :
 ```markdown
 After dispatching the reviewer, build the deterministic path from state.json::projectSlug, state.currentReviewDate, current phase, and state.retryCount[phase] + 1. Then execute:
 
-  node plugins/skills/reviewer-verdict-schema/scripts/render-verdict.mjs --input <verdict.json> --output <verdict.md>
+  node plugins/skraft-framework/skills/reviewer-verdict-schema/scripts/render-verdict.mjs --input <verdict.json> --output <verdict.md>
 
 If exit code ≠ 0, phase = error; do not advance.
 ```

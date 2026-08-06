@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { resolveTrackingRoot } from '../../plugins/src/adapters/infrastructure/tracking-root-resolver.mjs'
+import { resolveTrackingRoot } from '../../plugins/skraft-framework/src/adapters/infrastructure/tracking-root-resolver.mjs'
 
 const withTempCwd = (fn) => {
   const dir = mkdtempSync(join(tmpdir(), 'skraft-track-'))

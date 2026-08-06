@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createCommitScanService } from '../../plugins/src/application/commit-scan-service.mjs'
+import { createCommitScanService } from '../../plugins/skraft-framework/src/application/commit-scan-service.mjs'
 
 const stubReader = (commits) => ({ listRecent: async () => commits })
 

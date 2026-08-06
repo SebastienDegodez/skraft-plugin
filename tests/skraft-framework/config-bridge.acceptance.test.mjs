@@ -17,7 +17,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
-const CLI = fileURLToPath(new URL('../../plugins/src/cli/config.mjs', import.meta.url))
+const CLI = fileURLToPath(new URL('../../plugins/skraft-framework/src/cli/config.mjs', import.meta.url))
 
 async function configCli(args, { basePath }) {
   const env = { ...process.env, SKRAFT_CONFIG_ROOT: basePath }

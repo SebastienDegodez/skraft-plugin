@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path'
 // committed framework config so a future frontmatter edit cannot silently re-merge the
 // product layer (backlog discovery / refinement) back into the engineering orchestrator.
 const here = dirname(fileURLToPath(import.meta.url))
-const configPath = join(here, '../..', 'plugins/skraft-framework.config.json')
+const configPath = join(here, '../..', 'plugins/skraft-framework/skraft-framework.config.json')
 const config = JSON.parse(readFileSync(configPath, 'utf8'))
 
 test('layer separation: orchestrator pipeline is RESEARCH -> DESIGN -> DISTILL -> DELIVER', () => {

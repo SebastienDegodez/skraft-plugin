@@ -15,10 +15,10 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
-const HEALTH_CLI = fileURLToPath(new URL('../../plugins/src/cli/health-check.mjs', import.meta.url))
-const HOUSEKEEP_CLI = fileURLToPath(new URL('../../plugins/src/cli/housekeeping.mjs', import.meta.url))
-const PLUGIN_ROOT = fileURLToPath(new URL('../../plugins', import.meta.url))
-const PLUGIN_MANIFEST = fileURLToPath(new URL('../../plugins/.claude-plugin/plugin.json', import.meta.url))
+const HEALTH_CLI = fileURLToPath(new URL('../../plugins/skraft-framework/src/cli/health-check.mjs', import.meta.url))
+const HOUSEKEEP_CLI = fileURLToPath(new URL('../../plugins/skraft-framework/src/cli/housekeeping.mjs', import.meta.url))
+const PLUGIN_ROOT = fileURLToPath(new URL('../../plugins/skraft-framework/', import.meta.url))
+const PLUGIN_MANIFEST = fileURLToPath(new URL('../../plugins/skraft-framework/.claude-plugin/plugin.json', import.meta.url))
 // Read the real packaged version at test-run time — never hardcode it. The manifest's
 // version bumps often (release-please, manual releases); a literal string here would
 // drift and fail on every bump instead of verifying the CLI reads the manifest correctly.

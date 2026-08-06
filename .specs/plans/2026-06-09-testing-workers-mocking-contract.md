@@ -377,7 +377,7 @@ M — Additional layer on top of US-05; Testcontainers networking setup adds mea
 #### Acceptance Criteria
 
 **AC-01:** Generic skill contains no stack-specific DELIVER wiring after R3 EXTRACT
-Given `plugins/skills/contract-testing/SKILL.md` exists
+Given `plugins/skraft-framework/skills/contract-testing/SKILL.md` exists
 When it is read
 Then the DELIVER section contains no stack-specific code snippets (no `csharp`, no `.NET` wiring)
 And it includes a redirect to `contract-testing-roster` + `contract-testing-<stack>` for delivery
@@ -435,7 +435,7 @@ S — Edit to one existing skill (redirect note) + new adapter file; orchestrato
 **AC-01:** Template is shipped in the plugin's `assets/` directory
 Given the skraft-plugin repository
 When a developer looks for the configuration template
-Then `plugins/agents/assets/skraft.instructions.template.md` is present
+Then `plugins/skraft-framework/agents/assets/skraft.instructions.template.md` is present
 And it contains both `testing.mocking.*` and `testing.contract.*` sections with comments
 
 **AC-02:** Each roster reads only its own namespace
@@ -596,8 +596,8 @@ S — New lens agent file; reviewer edit adds one trigger row.
 
 #### Domain Examples
 
-1. Maintainer creates `plugins/skills/mocking-microcks-java/SKILL.md` and adds a row `| microcks | Java | [mocking-microcks-java](../mocking-microcks-java/SKILL.md) | supported |` to `mocking-strategy-roster` — no other file is modified.
-2. Maintainer creates `plugins/skills/contract-testing-java/SKILL.md` and adds one row to `contract-testing-roster` — `software-engineer.agent.md` and `software-engineer-reviewer.agent.md` are untouched.
+1. Maintainer creates `plugins/skraft-framework/skills/mocking-microcks-java/SKILL.md` and adds a row `| microcks | Java | [mocking-microcks-java](../mocking-microcks-java/SKILL.md) | supported |` to `mocking-strategy-roster` — no other file is modified.
+2. Maintainer creates `plugins/skraft-framework/skills/contract-testing-java/SKILL.md` and adds one row to `contract-testing-roster` — `software-engineer.agent.md` and `software-engineer-reviewer.agent.md` are untouched.
 3. Existing `.NET` adapter tests continue to pass after both new files are added — the rosters' `.NET` rows are unchanged.
 
 #### Acceptance Criteria
@@ -605,7 +605,7 @@ S — New lens agent file; reviewer edit adds one trigger row.
 **AC-01:** Adding a stack requires exactly two file changes
 Given a maintainer wants to add `(microcks, Java)` mocking support
 When the maintainer creates `mocking-microcks-java/SKILL.md` and adds one roster row
-Then no other file in `plugins/agents/` or `plugins/skills/` requires modification
+Then no other file in `plugins/skraft-framework/agents/` or `plugins/skraft-framework/skills/` requires modification
 And `mocking-strategy-roster` routes `.NET` requests correctly without change
 
 **AC-02:** Agents and orchestrator are never touched
@@ -621,7 +621,7 @@ And no regression is introduced in the `.NET` adapter's output
 
 #### Technical Notes
 - Roster entry format: `| <strategy> | <stack> | [<adapter-name>](<relative-path>) | supported |`
-- Adapter SKILL.md must be a LOCAL SIBLING under `plugins/skills/` — no external dependencies.
+- Adapter SKILL.md must be a LOCAL SIBLING under `plugins/skraft-framework/skills/` — no external dependencies.
 - No PHANTOM DEPENDENCY: adapter links must be relative markdown paths, not recalled names.
 
 #### Dependencies

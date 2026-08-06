@@ -78,7 +78,7 @@ Example: `refactor(mikado-graph): {P1} requires {P2} in src/Admin.cs:40`.
 Run the deterministic validator before every leaf commit and after every graph-update commit:
 
 ```bash
-bash plugins/skills/mikado-method/scripts/validate-mikado.sh <path-to-graph.md>
+bash plugins/skraft-framework/skills/mikado-method/scripts/validate-mikado.sh <path-to-graph.md>
 ```
 
 Exit 0 = valid, safe to proceed. Exit non-zero = STOP and fix the graph first — never proceed on a

@@ -12,7 +12,7 @@ applyTo: '**/.copilot-tracking/skraft-plans/**'
 
 # SKRAFT Todo Sync (native working set)
 
-The durable `state.json` snapshot is authoritative (see `#file:plugins/instructions/skraft-state.instructions.md`). This instruction projects that snapshot into the **harness-native todo list**, which becomes the in-session working set the orchestrator consults every turn — instead of re-reading the whole JSON file.
+The durable `state.json` snapshot is authoritative (see `#file:plugins/skraft-framework/instructions/skraft-state.instructions.md`). This instruction projects that snapshot into the **harness-native todo list**, which becomes the in-session working set the orchestrator consults every turn — instead of re-reading the whole JSON file.
 
 The native todo list is **disposable**: it is regenerated from the snapshot at each rehydration and is **never the source of truth**. If the two ever disagree, the snapshot wins and the todo list is rebuilt. Native todo tools cost near-zero tokens to query, so per-turn state inspection stops paying the whole-file read/write tax.
 

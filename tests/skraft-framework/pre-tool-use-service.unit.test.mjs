@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createPreToolUseService } from '../../plugins/src/application/pre-tool-use-service.mjs'
+import { createPreToolUseService } from '../../plugins/skraft-framework/src/application/pre-tool-use-service.mjs'
 
 // Application-boundary tests for routes the immutable acceptance suite cannot observe:
 // the PIPELINE_COMPLETE block route, and the fail-closed wrap when clock/auditWriter throw.

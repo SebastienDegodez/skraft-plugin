@@ -8,7 +8,7 @@ import {
   parseReviewVerdict,
   isApprovedVerdict,
   requiresVerifiedCommit
-} from '../../plugins/src/domain/artifact-policy.mjs'
+} from '../../plugins/skraft-framework/src/domain/artifact-policy.mjs'
 
 // isFileArtifactPattern ————————————————————————————————————————————————
 

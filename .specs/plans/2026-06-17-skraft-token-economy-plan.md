@@ -18,10 +18,10 @@
 
 **Audités / annotés (modifiés) :**
 
-- `plugins/agents/skraft-orchestrator.agent.md` — audit cache-invalidators (aucune date littérale en prefix) ; confirmer `state.json` en suffixe variable.
-- `plugins/agents/*.agent.md` (10 agents) — annoter la classe de rôle cible ; audit frontmatter `tools:` (B15).
-- `plugins/instructions/skraft-state.instructions.md` — documenter `depthTier` comme gouverneur d'effort/coût (B16/B11).
-- `plugins/skills/skraft-difficulty-routing/SKILL.md` — note : Axe 2 (`depthTier`) = levier de coût, pas seulement de qualité.
+- `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` — audit cache-invalidators (aucune date littérale en prefix) ; confirmer `state.json` en suffixe variable.
+- `plugins/skraft-framework/agents/*.agent.md` (10 agents) — annoter la classe de rôle cible ; audit frontmatter `tools:` (B15).
+- `plugins/skraft-framework/instructions/skraft-state.instructions.md` — documenter `depthTier` comme gouverneur d'effort/coût (B16/B11).
+- `plugins/skraft-framework/skills/skraft-difficulty-routing/SKILL.md` — note : Axe 2 (`depthTier`) = levier de coût, pas seulement de qualité.
 
 **Créés :**
 

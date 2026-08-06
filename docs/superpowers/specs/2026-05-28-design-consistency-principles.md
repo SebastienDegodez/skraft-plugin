@@ -27,7 +27,7 @@ Sans nom, ces mécanismes risquent d'être ré-inventés (ou pire, contredits) p
 
 ### P1 — Registre typé des artefacts (Shared Artifact Registry)
 
-**Énoncé.** Chaque artefact d'une story est typé dans `plugins/agents/assets/consistency-matrix.template.md` par cinq attributs : `source_of_truth`, `consumers`, `owner`, `integration_risk`, `validation`. Les gates de cohérence cross-artefact (G10, G12, et tout gate équivalent ajouté ultérieurement) lisent ce registre comme un système de coordonnées au lieu de re-dériver la propriété depuis la prose.
+**Énoncé.** Chaque artefact d'une story est typé dans `plugins/skraft-framework/agents/assets/consistency-matrix.template.md` par cinq attributs : `source_of_truth`, `consumers`, `owner`, `integration_risk`, `validation`. Les gates de cohérence cross-artefact (G10, G12, et tout gate équivalent ajouté ultérieurement) lisent ce registre comme un système de coordonnées au lieu de re-dériver la propriété depuis la prose.
 
 **Implication pour les specs consommatrices.** Toute spec qui introduit un nouveau type d'artefact destiné à être consommé par DISTILL/DELIVER doit ajouter une ligne au registre dans la même livraison. Une spec qui produit un nouvel artefact sans entrée registre crée une **PHANTOM DEPENDENCY** (visible aux humains, invisible aux gates).
 
@@ -56,7 +56,7 @@ Sans nom, ces mécanismes risquent d'être ré-inventés (ou pire, contredits) p
 ## Hors périmètre
 
 - Les principes opérationnels propres à un domaine (DDD, sécurité, performance, …). Ils vivent dans leurs specs respectives et citent P1/P2/P3 si pertinent.
-- Le mécanisme de supersession des ADR (Lot 1). C'est une convention d'artefact, pas un principe transversal — il reste documenté dans `plugins/instructions/skraft-artifacts.instructions.md`.
+- Le mécanisme de supersession des ADR (Lot 1). C'est une convention d'artefact, pas un principe transversal — il reste documenté dans `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`.
 - Les budgets de retry pour les drifts de label/classification/structure (Lot 1). Idem : convention d'artefact, dans `consistency-matrix.template.md`.
 
 ## Décisions à trancher

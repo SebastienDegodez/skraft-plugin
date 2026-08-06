@@ -38,7 +38,7 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
     - tests/**/{Feature}AcceptanceTests.cs
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 ---
 
 # Acceptance-Designer Agent
@@ -177,7 +177,7 @@ Author the executable Application-layer acceptance test (Step 1 of the impl-plan
 
 ### 7. PERSIST
 
-Write all artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Markdown files require the `<!-- markdownlint-disable-file -->` header.
+Write all artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` per `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`. Markdown files require the `<!-- markdownlint-disable-file -->` header.
 
 - `features/{feature}.feature` — Gherkin scenarios (one file per bounded context feature)
 - `details/{date}/test-plan-{story}.md` — coverage matrix with layer assignment

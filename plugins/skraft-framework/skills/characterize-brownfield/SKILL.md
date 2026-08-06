@@ -92,7 +92,7 @@ security gate — the human confirms or corrects, then work continues.
 ## Outputs
 
 Written under `.copilot-tracking/skraft-plans/{projectSlug}/characterization/{YYYY-MM-DD}/`
-(see `plugins/instructions/skraft-artifacts.instructions.md` for the path root; this workflow is
+(see `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md` for the path root; this workflow is
 standalone and does not claim a pipeline phase row):
 
 - `index.md` — summary, confidence distribution, coverage summary, gate verdict.

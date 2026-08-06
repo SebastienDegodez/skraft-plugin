@@ -50,7 +50,7 @@ blocked, return the structured `blocked` block below.
 `source` by tool call and reuse their **exact canonical vocabulary** — never
 paraphrase a concept into competing terminology. Example: the Clean Architecture
 layers are **Domain / Application / Infrastructure / API** as defined in
-`plugins/skills/clean-architecture-testing/SKILL.md`; never substitute
+`plugins/skraft-framework/skills/clean-architecture-testing/SKILL.md`; never substitute
 Entities / Use Cases / Interface Adapters.
 
 ## Procedure
@@ -64,9 +64,9 @@ Entities / Use Cases / Interface Adapters.
    - `docs/site/{fr,en}/reference/skills/index.md`
    you MUST recompute order from live agent sources at write time (never trust old
    handbook ordering):
-   - read `plugins/agents/skraft-orchestrator.agent.md` (`metadata.phases`, `agents`)
-   - read `plugins/agents/*.agent.md` (phase agents + reviewers, each `metadata.skills`)
-   - read `plugins/agents/workers/**/*.agent.md` (DELIVER worker skills)
+   - read `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` (`metadata.phases`, `agents`)
+   - read `plugins/skraft-framework/agents/*.agent.md` (phase agents + reviewers, each `metadata.skills`)
+   - read `plugins/skraft-framework/agents/workers/**/*.agent.md` (DELIVER worker skills)
    - derive **agent usage order** from orchestrator pipeline sequence:
      `0 orchestrator`, then `DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER`
      producer/reviewer pairs, then DELIVER workers.

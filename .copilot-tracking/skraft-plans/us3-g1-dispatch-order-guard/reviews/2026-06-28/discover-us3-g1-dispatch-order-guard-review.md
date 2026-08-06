@@ -33,7 +33,7 @@
 - Scope discipline [OK] — no invented requirements; effort/AC breakdown (5 branching rules + state-schema + application service + PreToolUse wiring) is bounded to #49, no scope creep into #10/#11.
 
 ## Lens 3 — Quality (weight 0.15 · score 1.0)
-- Cross-references valid [OK] — verified on disk: `plugins/src/adapters/infrastructure/json-state-reader.mjs`, `plugins/skraft-framework.config.json` (`phaseOrder` + `phaseAgents`), and `plugins/src/domain/dispatch-policy.mjs` all exist and match the triage's claims.
+- Cross-references valid [OK] — verified on disk: `plugins/skraft-framework/src/adapters/infrastructure/json-state-reader.mjs`, `plugins/skraft-framework/skraft-framework.config.json` (`phaseOrder` + `phaseAgents`), and `plugins/skraft-framework/src/domain/dispatch-policy.mjs` all exist and match the triage's claims.
 - Internal consistency [OK] — effort (M / ~1d) and capacity figures agree across triage and sprint proposal; dependency statuses agree; ready-for-DISCUSS checklist coherent (only reviewer-approval box open).
 - Self-contained [OK] — DISCUSS can consume the pair without extra context; the `pipeline-policy.mjs` (new) vs `dispatch-policy.mjs` (existing) disambiguation is explicit.
 

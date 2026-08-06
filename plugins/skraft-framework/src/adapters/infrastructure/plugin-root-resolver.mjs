@@ -47,8 +47,8 @@ export const discoverCacheRoots = ({ homeDir = homedir(), glob = globSync } = {}
 }
 
 // Full runtime resolution used by cli/hook.mjs. `moduleUrl` is the caller's
-// import.meta.url (…/plugins/src/cli/hook.mjs); `../..` climbs to plugin root
-// (…/plugins).
+// import.meta.url (…/plugins/skraft-framework/src/cli/hook.mjs); `../..` climbs to plugin root
+// (…/plugins/skraft-framework).
 export const resolvePluginRootFromEnv = ({
   env = process.env,
   moduleUrl,

@@ -16,9 +16,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createSubagentStartService } from '../../plugins/src/application/subagent-start-service.mjs'
-import { createSubagentStopService }  from '../../plugins/src/application/subagent-stop-service.mjs'
-import { createPostToolUseService }   from '../../plugins/src/application/post-tool-use-service.mjs'
+import { createSubagentStartService } from '../../plugins/skraft-framework/src/application/subagent-start-service.mjs'
+import { createSubagentStopService }  from '../../plugins/skraft-framework/src/application/subagent-stop-service.mjs'
+import { createPostToolUseService }   from '../../plugins/skraft-framework/src/application/post-tool-use-service.mjs'
 
 // ── Published Language config (domain examples — verbatim from stories-2026-06-29.md §Domain Examples)
 const CONFIG = {
@@ -87,7 +87,7 @@ const transcriptReaderFactory = ({ transcript }) => ({
 const transcriptWith = (...skillNames) =>
   skillNames.map((name) => ({
     role: 'tool_result',
-    content: `plugins/skills/${name}/SKILL.md`
+    content: `plugins/skraft-framework/skills/${name}/SKILL.md`
   }))
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ test('AC-04 — solution-architect reading architecture-decisions/SKILL.md produ
   const audit = collectingAuditWriter()
   const service = createPostToolUseService({ auditWriter: audit, clock: fixedClock })
 
-  const SKILL_PATH = 'plugins/skills/architecture-decisions/SKILL.md'
+  const SKILL_PATH = 'plugins/skraft-framework/skills/architecture-decisions/SKILL.md'
   const result = await service.handle({
     agentName: 'solution-architect',
     toolInput: { path: SKILL_PATH }
@@ -321,7 +321,7 @@ test('AC-04 — audit write failure does not block the agent (fail-open, ADR-006
 
   const result = await service.handle({
     agentName: 'solution-architect',
-    toolInput: { path: 'plugins/skills/architecture-decisions/SKILL.md' }
+    toolInput: { path: 'plugins/skraft-framework/skills/architecture-decisions/SKILL.md' }
   })
 
   assert.equal(result?.decision, 'allow',

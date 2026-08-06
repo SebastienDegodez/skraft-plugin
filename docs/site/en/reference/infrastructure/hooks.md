@@ -63,11 +63,11 @@ All incoming payloads are normalised to camelCase before routing:
 | `toolName` (camelCase) | `toolName` (unchanged) |
 | `File_Path` (mixed) | `filePath` |
 
-Implemented in `plugins/src/adapters/api/hooks/payload.mjs`.
+Implemented in `plugins/skraft-framework/src/adapters/api/hooks/payload.mjs`.
 
 ## SKRAFT_* config and cascade
 
-The config-loader (`plugins/src/application/config-loader.mjs`) resolves configuration
+The config-loader (`plugins/skraft-framework/src/application/config-loader.mjs`) resolves configuration
 using the following cascade (last source wins):
 
 ```
@@ -90,14 +90,14 @@ using the following cascade (last source wins):
 
 | File | Role |
 |------|------|
-| `plugins/src/cli/hook.mjs` | CLI entry point (stdin → stdout) |
-| `plugins/src/adapters/api/hooks/payload.mjs` | Payload normalisation |
-| `plugins/src/adapters/api/hooks/decision.mjs` | Decision constructors |
-| `plugins/src/adapters/api/hooks/hook-router.mjs` | Route by event type |
-| `plugins/src/adapters/api/hooks/hook-entry.mjs` | Normalise then route |
-| `plugins/src/adapters/api/hooks/service-factory.mjs` | Composition root |
-| `plugins/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Append-only audit |
-| `plugins/src/application/config-loader.mjs` | Config cascade |
+| `plugins/skraft-framework/src/cli/hook.mjs` | CLI entry point (stdin → stdout) |
+| `plugins/skraft-framework/src/adapters/api/hooks/payload.mjs` | Payload normalisation |
+| `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Decision constructors |
+| `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Route by event type |
+| `plugins/skraft-framework/src/adapters/api/hooks/hook-entry.mjs` | Normalise then route |
+| `plugins/skraft-framework/src/adapters/api/hooks/service-factory.mjs` | Composition root |
+| `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Append-only audit |
+| `plugins/skraft-framework/src/application/config-loader.mjs` | Config cascade |
 | `.github/hooks/skraft.json` | Hook declarations for the Copilot runtime |
 
 ## See also

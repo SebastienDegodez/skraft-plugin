@@ -17,7 +17,7 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
-const CLI = fileURLToPath(new URL('../../plugins/src/cli/state.mjs', import.meta.url))
+const CLI = fileURLToPath(new URL('../../plugins/skraft-framework/src/cli/state.mjs', import.meta.url))
 
 async function stateCli(args, { cwd }) {
   try {

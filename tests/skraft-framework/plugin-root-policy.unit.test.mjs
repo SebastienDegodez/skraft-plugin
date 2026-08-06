@@ -4,7 +4,7 @@ import {
   CLAUDE_PLUGIN_CACHE_GLOB,
   pluginCacheGlobPattern,
   resolvePluginRoot,
-} from '../../plugins/src/domain/plugin-root-policy.mjs'
+} from '../../plugins/skraft-framework/src/domain/plugin-root-policy.mjs'
 
 // ─── pluginCacheGlobPattern ─────────────────────────────────────────────────
 

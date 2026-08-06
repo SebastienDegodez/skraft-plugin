@@ -26,7 +26,7 @@ metadata:
     - characterize-brownfield
     - compose-brownfield-prd
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
   inputs:
     required:
       - repository path

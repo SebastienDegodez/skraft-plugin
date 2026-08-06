@@ -22,7 +22,7 @@ ratified_by: sebastiendegodez (human ratification, 2026-06-28)
 
 ## Context
 The guard must know two things to decide: the canonical **order** of phases/agents, and the **current
-progress** of the run. #48 already generates `plugins/skraft-framework.config.json` with `phaseOrder`
+progress** of the run. #48 already generates `plugins/skraft-framework/skraft-framework.config.json` with `phaseOrder`
 and `phaseAgents.{phase}.{specialist,reviewer}`. This file is not an internal detail of the guard — it
 is the **framework-wide contract** that #48 publishes and that the rest of the pipeline already
 consumes. The open question for this story is therefore a **context-mapping** one: what relationship

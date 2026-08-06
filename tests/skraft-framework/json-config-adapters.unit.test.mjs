@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { mkdtemp, writeFile, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createJsonConfigReader } from '../../plugins/src/adapters/infrastructure/config/json-config-reader.mjs'
-import { createJsonConfigWriter } from '../../plugins/src/adapters/infrastructure/config/json-config-writer.mjs'
+import { createJsonConfigReader } from '../../plugins/skraft-framework/src/adapters/infrastructure/config/json-config-reader.mjs'
+import { createJsonConfigWriter } from '../../plugins/skraft-framework/src/adapters/infrastructure/config/json-config-writer.mjs'
 
 const withTmp = async (fn) => {
   const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-'))

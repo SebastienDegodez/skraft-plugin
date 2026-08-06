@@ -121,7 +121,7 @@ async function withFixture({ wrongOrder }) {
     'docs/site/en/reference/agents',
     'docs/site/fr/reference/skills',
     'docs/site/en/reference/skills',
-    'plugins/agents',
+    'plugins/skraft-framework/agents',
   ]
   await Promise.all(paths.map((p) => mkdir(join(root, p), { recursive: true })))
 
@@ -131,9 +131,9 @@ async function withFixture({ wrongOrder }) {
   await writeFile(join(root, 'docs/site/fr/reference/skills/index.md'), skillsIndex({ wrongOrder }))
   await writeFile(join(root, 'docs/site/en/reference/skills/index.md'), skillsIndex({ wrongOrder }))
 
-  await writeFile(join(root, 'plugins/agents/skraft-orchestrator.agent.md'), orchestratorAgent)
-  await writeFile(join(root, 'plugins/agents/backlog-discoverer.agent.md'), discovererAgent)
-  await writeFile(join(root, 'plugins/agents/backlog-discoverer-reviewer.agent.md'), discovererReviewerAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'), orchestratorAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/agents/backlog-discoverer.agent.md'), discovererAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md'), discovererReviewerAgent)
 
   return {
     root,

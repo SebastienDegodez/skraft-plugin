@@ -57,7 +57,7 @@ Key divergences (each is a RED case in the acceptance suite):
 
 ## Walking Skeleton Steps (outside-in order)
 
-### Step 1 — Domain extension: `plugins/src/domain/skill-policy.mjs`
+### Step 1 — Domain extension: `plugins/skraft-framework/src/domain/skill-policy.mjs`
 
 **TDD cycle (Red → Green → Refactor):**
 - **RED**: The AC-03 acceptance test calls `subagentStartService.handle({ agentName: 'acceptance-designer' })`
@@ -67,13 +67,13 @@ Key divergences (each is a RED case in the acceptance suite):
 - **Refactor**: None — the function is already a one-liner with a clear contract.
 
 **Files touched:**
-- `plugins/src/domain/skill-policy.mjs` — add `isEagerSkill` export
+- `plugins/skraft-framework/src/domain/skill-policy.mjs` — add `isEagerSkill` export
 
 **Acceptance scenario activated:** AC-03 compilation unblocked.
 
 ---
 
-### Step 2 — Application: `plugins/src/application/subagent-start-service.mjs`
+### Step 2 — Application: `plugins/skraft-framework/src/application/subagent-start-service.mjs`
 
 **Contract interface (from Contract 3):**
 ```
@@ -94,8 +94,8 @@ createSubagentStartService({ config, skillFileReader, auditWriter, clock })
 - **Refactor**: Extract `buildDirective(skills)` helper if needed for clarity.
 
 **Files touched:**
-- `plugins/src/application/subagent-start-service.mjs` — full rewrite to contract interface
-- `plugins/src/ports/api/subagent-start.mjs` — create port stub constant (`SUBAGENT_START_INTERFACE`)
+- `plugins/skraft-framework/src/application/subagent-start-service.mjs` — full rewrite to contract interface
+- `plugins/skraft-framework/src/ports/api/subagent-start.mjs` — create port stub constant (`SUBAGENT_START_INTERFACE`)
 
 **Acceptance scenarios activated:** AC-01, AC-03 (both happy-path and fail-open).
 
@@ -105,7 +105,7 @@ to reflect the new contract interface (Iron Rule: fix the implementation, not th
 
 ---
 
-### Step 3 — Application: `plugins/src/application/subagent-stop-service.mjs`
+### Step 3 — Application: `plugins/skraft-framework/src/application/subagent-stop-service.mjs`
 
 **Contract interface (from Contract 4):**
 ```
@@ -127,8 +127,8 @@ createSubagentStopService({ config, transcriptReaderFactory, auditWriter, clock 
 - **Refactor**: `extractPathsFromTranscript(jsonString): string[]` — pure function; extract if >3 lines.
 
 **Files touched:**
-- `plugins/src/application/subagent-stop-service.mjs` — refactor to contract interface
-- `plugins/src/adapters/infrastructure/jsonl-transcript-reader.mjs` — create new adapter (Contract 6)
+- `plugins/skraft-framework/src/application/subagent-stop-service.mjs` — refactor to contract interface
+- `plugins/skraft-framework/src/adapters/infrastructure/jsonl-transcript-reader.mjs` — create new adapter (Contract 6)
 
 **jsonl-transcript-reader contract:**
 ```
@@ -142,7 +142,7 @@ createJsonlTranscriptReader({ transcript })
 
 ---
 
-### Step 4 — Application: `plugins/src/application/post-tool-use-service.mjs`
+### Step 4 — Application: `plugins/skraft-framework/src/application/post-tool-use-service.mjs`
 
 **Contract interface (from Contract 5):**
 ```
@@ -164,13 +164,13 @@ createPostToolUseService({ auditWriter, clock })
 - **Refactor**: Extract `extractSkillName(path): string | null` if logic is non-trivial.
 
 **Files touched:**
-- `plugins/src/application/post-tool-use-service.mjs` — update interface and return shape
+- `plugins/skraft-framework/src/application/post-tool-use-service.mjs` — update interface and return shape
 
 **Acceptance scenarios activated:** AC-04 (happy-path, fail-open, non-skill).
 
 ---
 
-### Step 5 — Hook wiring: `plugins/src/cli/hook.mjs`
+### Step 5 — Hook wiring: `plugins/skraft-framework/src/cli/hook.mjs`
 
 **Current state:** `createHookService()` called with no arguments → SubagentStart, SubagentStop,
 PostToolUse return `undefined`.
@@ -186,7 +186,7 @@ import { generatedConfig }            from '../skraft-framework.config.json' ass
 
 const auditWriter     = createJsonlAuditWriter()
 const clock           = { now: () => new Date().toISOString() }
-const skillFileReader = { read: (name) => fs.readFile(`plugins/skills/${name}/SKILL.md`, 'utf8') }
+const skillFileReader = { read: (name) => fs.readFile(`plugins/skraft-framework/skills/${name}/SKILL.md`, 'utf8') }
 
 const subagentStart = createSubagentStartService({ config: generatedConfig, skillFileReader, auditWriter, clock })
 const subagentStop  = createSubagentStopService({ config: generatedConfig, transcriptReaderFactory: createJsonlTranscriptReader, auditWriter, clock })
@@ -196,16 +196,16 @@ const hookService = createHookService({ subagentStart, subagentStop, postToolUse
 ```
 
 **TDD cycle:** The acceptance tests exercise services directly with in-memory doubles. The wiring
-integration is verified with a post-GREEN walk: run `node plugins/src/cli/hook.mjs` with a
+integration is verified with a post-GREEN walk: run `node plugins/skraft-framework/src/cli/hook.mjs` with a
 representative `SubagentStart` payload and confirm `{ decision: 'additionalContext', context: '...' }`
 is written to stdout.
 
 **Files touched:**
-- `plugins/src/cli/hook.mjs` — wire all three new service instances
+- `plugins/skraft-framework/src/cli/hook.mjs` — wire all three new service instances
 
 ---
 
-### Step 6 — Manifest: `plugins/hooks/hooks.json`
+### Step 6 — Manifest: `plugins/skraft-framework/hooks/hooks.json`
 
 Add a second `PostToolUse` entry with `matcher: "Read"` (DD-2):
 
@@ -221,7 +221,7 @@ This entry fires the hook for ALL `Read` tool events; the service-level path fil
 the `SKILL.md` check (no change to the existing `PostToolUse Agent` entry).
 
 **Files touched:**
-- `plugins/hooks/hooks.json` — append PostToolUse Read entry
+- `plugins/skraft-framework/hooks/hooks.json` — append PostToolUse Read entry
 
 ---
 
@@ -271,9 +271,9 @@ Target: **100% mutation score** on business logic; only equivalent mutants accep
 | `application/post-tool-use-service.mjs` | Path-match gate, allow() vs undefined return, fail-open catch | 100% |
 | `adapters/infrastructure/jsonl-transcript-reader.mjs` | Empty-array gate, null/undefined guard | 100% |
 
-**Run command** (resolved from `plugins/src/package.json` `test:mutation` script):
+**Run command** (resolved from `plugins/skraft-framework/src/package.json` `test:mutation` script):
 ```
-cd plugins/src && node node_modules/.bin/stryker run stryker.config.mjs
+cd plugins/skraft-framework/src && node node_modules/.bin/stryker run stryker.config.mjs
 ```
 
 Survivors requiring justification: regex capture-group index (equivalent — changing [0] to [1] on

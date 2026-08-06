@@ -8,7 +8,7 @@ namespace SkraftTestHarness.IntegrationTest.Hooks;
 /// things a phase-conformance suite cannot see:
 /// <list type="number">
 ///   <item>Both shipped manifests — the Claude Code manifest
-///   (<c>plugins/hooks/hooks.json</c>, PascalCase) and the Copilot manifest
+///   (<c>plugins/skraft-framework/hooks/hooks.json</c>, PascalCase) and the Copilot manifest
 ///   (<c>.github/hooks/skraft-framework.json</c>, camelCase) — declare the
 ///   new <c>SubagentStart</c>, <c>SubagentStop</c> and <c>PostToolUse</c>
 ///   events, all routed through <c>src/cli/hook.mjs</c>.</item>
@@ -28,7 +28,7 @@ public sealed class HookManifestFileProductionTests
     public async Task ClaudeManifestDeclaresTheGuardrailHooksRoutedThroughTheHookCli()
     {
         var repoRoot = LocateRepoRoot();
-        var manifest = Path.Combine(repoRoot, "plugins", "hooks", "hooks.json");
+        var manifest = Path.Combine(repoRoot, "plugins", "skraft-framework", "hooks", "hooks.json");
 
         using var document = JsonDocument.Parse(await File.ReadAllTextAsync(manifest));
         var hooks = document.RootElement.GetProperty("hooks");
@@ -56,7 +56,7 @@ public sealed class HookManifestFileProductionTests
             await Assert.That(HasProperty(hooks, CamelCase(eventName))).IsTrue();
 
         var raw = await File.ReadAllTextAsync(manifest);
-        await Assert.That(raw).Contains("plugins/src/cli/hook.mjs");
+        await Assert.That(raw).Contains("plugins/skraft-framework/src/cli/hook.mjs");
         await Assert.That(raw).Contains("PostToolUse Read");
     }
 
@@ -64,7 +64,7 @@ public sealed class HookManifestFileProductionTests
     public async Task PostToolUseHookProducesAnAuditFileForASkillRead()
     {
         var repoRoot = LocateRepoRoot();
-        var hookCli = Path.Combine(repoRoot, "plugins", "src", "cli", "hook.mjs");
+        var hookCli = Path.Combine(repoRoot, "plugins", "skraft-framework", "src", "cli", "hook.mjs");
         await Assert.That(File.Exists(hookCli)).IsTrue();
 
         var auditLog = Path.Combine(
@@ -75,7 +75,7 @@ public sealed class HookManifestFileProductionTests
         // A PostToolUse payload for a SKILL.md read — the G3 tracer journals it.
         const string payload =
             """
-            {"hookType":"PostToolUse","agentName":"solution-architect","toolInput":{"path":"plugins/skills/architecture-decisions/SKILL.md"}}
+            {"hookType":"PostToolUse","agentName":"solution-architect","toolInput":{"path":"plugins/skraft-framework/skills/architecture-decisions/SKILL.md"}}
             """;
 
         var run = TryRunNode(repoRoot, hookCli, payload, auditLog);
@@ -157,18 +157,18 @@ public sealed class HookManifestFileProductionTests
         }
     }
 
-    /// <summary>Walks up from the test binary to the repo root (the dir holding <c>plugins/hooks/hooks.json</c>).</summary>
+    /// <summary>Walks up from the test binary to the repo root (the dir holding <c>plugins/skraft-framework/hooks/hooks.json</c>).</summary>
     private static string LocateRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "plugins", "hooks", "hooks.json")))
+            if (File.Exists(Path.Combine(directory.FullName, "plugins", "skraft-framework", "hooks", "hooks.json")))
                 return directory.FullName;
             directory = directory.Parent;
         }
 
         throw new DirectoryNotFoundException(
-            "Could not locate the repo root (no 'plugins/hooks/hooks.json' above the test binary).");
+            "Could not locate the repo root (no 'plugins/skraft-framework/hooks/hooks.json' above the test binary).");
     }
 }

@@ -72,7 +72,7 @@ Une paire d'intégration *unbalanced* (forte distance + forte strength + forte v
 
 - `details/{date}/bc-canvas-{bc-slug}.md` (Phase 5.5, pré-requis spec stratégique) — fournit `outbound_dependencies` et `inbound_dependencies`.
 - `docs/adr/adr-{nnn}-subdomain-{bc-slug}.md` (Phase 2.5, pré-requis spec stratégique) — fournit la classification d'où dérive la volatilité.
-- `plugins/skills/architecture-patterns/references/balanced-coupling.md` (nouveau, ci-dessous) — fournit le modèle.
+- `plugins/skraft-framework/skills/architecture-patterns/references/balanced-coupling.md` (nouveau, ci-dessous) — fournit le modèle.
 
 ### Nouvel artefact (append-only)
 
@@ -90,7 +90,7 @@ Format YAML frontmatter + tableau markdown ; voir template ci-dessous.
 
 - **Phase 5.7 BALANCE EVALUATION** entre Phase 5.5 BC CANVAS et Phase 6 EVENT MODELING tactique. Le persona :
   1. Énumère les paires `(BC-A, BC-B)` depuis les `outbound_dependencies` de chaque bc-canvas.
-  2. Pour chaque paire, charge lazy `plugins/skills/architecture-patterns/references/balanced-coupling.md` au premier appel.
+  2. Pour chaque paire, charge lazy `plugins/skraft-framework/skills/architecture-patterns/references/balanced-coupling.md` au premier appel.
   3. Renseigne le tuple, applique la balance rule, écrit `coupling-matrix-{milestone}.md`.
   4. Si `balanced: false`, le persona DOIT soit ajouter une arête context-map (Phase 5) avec un pattern de modulation (Conformist, ACL, OHS, Separate Ways …), soit produire une nouvelle ADR qui ratifie l'écart, soit reclasser le subdomain (nouvelle ADR-subdomain). Pas de troisième voie silencieuse.
 
@@ -108,11 +108,11 @@ Format YAML frontmatter + tableau markdown ; voir template ci-dessous.
 >
 > **Slug par milestone (et non par story ou bc).** La matrice est agrégée par milestone (PANEL pattern : un seul reviewer-readable artefact par cycle DESIGN au lieu d'un par paire). Conforme HVE car le fichier reste sous `details/{date}/` ; seule la convention de slug change.
 
-- `plugins/agents/assets/coupling-matrix.template.md` — squelette avec en-tête `<!-- markdownlint-disable-file -->`, frontmatter YAML (`milestone`, `date`, `consistency_matrix_ref`), tableau markdown avec colonnes `(bc_a, bc_b, strength, distance, volatility, balanced, rationale, mitigation_ref)`, et en pied une note rappelant que la lecture complète du modèle est dans la référence balanced-coupling, pas dans le template (anti-LEAKY ABSTRACTION).
+- `plugins/skraft-framework/agents/assets/coupling-matrix.template.md` — squelette avec en-tête `<!-- markdownlint-disable-file -->`, frontmatter YAML (`milestone`, `date`, `consistency_matrix_ref`), tableau markdown avec colonnes `(bc_a, bc_b, strength, distance, volatility, balanced, rationale, mitigation_ref)`, et en pied une note rappelant que la lecture complète du modèle est dans la référence balanced-coupling, pas dans le template (anti-LEAKY ABSTRACTION).
 
 ### Nouvelle référence asset
 
-- `plugins/skills/architecture-patterns/references/balanced-coupling.md` — **reformulation** du modèle Khononov, ~150 lignes maximum :
+- `plugins/skraft-framework/skills/architecture-patterns/references/balanced-coupling.md` — **reformulation** du modèle Khononov, ~150 lignes maximum :
   - Les 3 dimensions (définitions courtes + exemple).
   - Les 4 niveaux de strength (Intrusive > Functional > Model > Contract), mappés au coupling classique (Content > Common > External > Control > Stamp > Data).
   - L'échelle de distance (fractale, socio-technique).

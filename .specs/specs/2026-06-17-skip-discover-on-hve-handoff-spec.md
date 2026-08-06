@@ -48,7 +48,7 @@ Le garde-fou prévu — l'**Axe 1 « Entry Point »** du skill `skraft-difficult
 
 ### 1. Schéma d'état — champ `entryPoint`
 
-Ajouté à `state.json` (cf. `plugins/instructions/skraft-state.instructions.md`) :
+Ajouté à `state.json` (cf. `plugins/skraft-framework/instructions/skraft-state.instructions.md`) :
 
 ```json
 "entryPoint": {

@@ -126,7 +126,7 @@ OpenAPI / AsyncAPI    →   Microcks samples           →   Testcontainers mock
 ### Structure du skill
 
 ```
-plugins/skills/contract-testing/
+plugins/skraft-framework/skills/contract-testing/
 ├── SKILL.md                                ← workflow contract-first complet
 ├── references/
 │   ├── microcks-testcontainers-setup.md    ← .NET MicrocksContainer patterns
@@ -302,32 +302,32 @@ Les handoff packets sont persistés dans `docs/superpowers/specs/genesis-packets
 
 | Agent | Fichier |
 |---|---|
-| `backlog-discoverer` | `plugins/agents/backlog-discoverer.agent.md` |
-| `backlog-discoverer-reviewer` | `plugins/agents/backlog-discoverer-reviewer.agent.md` |
-| `backlog-planner` | `plugins/agents/backlog-planner.agent.md` |
-| `backlog-planner-reviewer` | `plugins/agents/backlog-planner-reviewer.agent.md` |
-| `solution-architect` | `plugins/agents/solution-architect.agent.md` |
-| `solution-architect-reviewer` | `plugins/agents/solution-architect-reviewer.agent.md` |
-| `acceptance-designer` | `plugins/agents/acceptance-designer.agent.md` |
-| `acceptance-designer-reviewer` | `plugins/agents/acceptance-designer-reviewer.agent.md` |
-| `skraft-orchestrator` | `plugins/agents/skraft-orchestrator.agent.md` (unifié — remplace l'ancien) |
-| Sub-agents reviewers (lenses) | `plugins/agents/reviewer-lenses/` (réutilisation pattern A7) |
+| `backlog-discoverer` | `plugins/skraft-framework/agents/backlog-discoverer.agent.md` |
+| `backlog-discoverer-reviewer` | `plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md` |
+| `backlog-planner` | `plugins/skraft-framework/agents/backlog-planner.agent.md` |
+| `backlog-planner-reviewer` | `plugins/skraft-framework/agents/backlog-planner-reviewer.agent.md` |
+| `solution-architect` | `plugins/skraft-framework/agents/solution-architect.agent.md` |
+| `solution-architect-reviewer` | `plugins/skraft-framework/agents/solution-architect-reviewer.agent.md` |
+| `acceptance-designer` | `plugins/skraft-framework/agents/acceptance-designer.agent.md` |
+| `acceptance-designer-reviewer` | `plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md` |
+| `skraft-orchestrator` | `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` (unifié — remplace l'ancien) |
+| Sub-agents reviewers (lenses) | `plugins/skraft-framework/agents/reviewer-lenses/` (réutilisation pattern A7) |
 
 ### Skills (14)
 
 | Skill | Fichier |
 |---|---|
-| `github-search-protocol` | `plugins/skills/github-search-protocol/SKILL.md` |
-| `issue-triage` | `plugins/skills/issue-triage/SKILL.md` |
-| `discovery-review-criteria` | `plugins/skills/discovery-review-criteria/SKILL.md` |
-| `issue-refinement` | `plugins/skills/issue-refinement/SKILL.md` |
-| `sprint-planning` | `plugins/skills/sprint-planning/SKILL.md` |
-| `planning-review-criteria` | `plugins/skills/planning-review-criteria/SKILL.md` |
-| `architecture-patterns` | `plugins/skills/architecture-patterns/SKILL.md` |
-| `architecture-decisions` | `plugins/skills/architecture-decisions/SKILL.md` |
-| `architecture-review-criteria` | `plugins/skills/architecture-review-criteria/SKILL.md` |
-| `bdd-methodology` | `plugins/skills/bdd-methodology/SKILL.md` |
-| `test-design-mandates` | `plugins/skills/test-design-mandates/SKILL.md` |
-| `acceptance-review-criteria` | `plugins/skills/acceptance-review-criteria/SKILL.md` |
-| `contract-testing` | `plugins/skills/contract-testing/SKILL.md` |
-| `playwright-evidence` | `plugins/skills/playwright-evidence/SKILL.md` |
+| `github-search-protocol` | `plugins/skraft-framework/skills/github-search-protocol/SKILL.md` |
+| `issue-triage` | `plugins/skraft-framework/skills/issue-triage/SKILL.md` |
+| `discovery-review-criteria` | `plugins/skraft-framework/skills/discovery-review-criteria/SKILL.md` |
+| `issue-refinement` | `plugins/skraft-framework/skills/issue-refinement/SKILL.md` |
+| `sprint-planning` | `plugins/skraft-framework/skills/sprint-planning/SKILL.md` |
+| `planning-review-criteria` | `plugins/skraft-framework/skills/planning-review-criteria/SKILL.md` |
+| `architecture-patterns` | `plugins/skraft-framework/skills/architecture-patterns/SKILL.md` |
+| `architecture-decisions` | `plugins/skraft-framework/skills/architecture-decisions/SKILL.md` |
+| `architecture-review-criteria` | `plugins/skraft-framework/skills/architecture-review-criteria/SKILL.md` |
+| `bdd-methodology` | `plugins/skraft-framework/skills/bdd-methodology/SKILL.md` |
+| `test-design-mandates` | `plugins/skraft-framework/skills/test-design-mandates/SKILL.md` |
+| `acceptance-review-criteria` | `plugins/skraft-framework/skills/acceptance-review-criteria/SKILL.md` |
+| `contract-testing` | `plugins/skraft-framework/skills/contract-testing/SKILL.md` |
+| `playwright-evidence` | `plugins/skraft-framework/skills/playwright-evidence/SKILL.md` |

@@ -16,7 +16,7 @@ Rules:
 ## skraft-framework documentation
 
 - Framework architecture, genesis anchoring (A9/S4/S7), fail modes, guardrails G1–G8,
-  and the guide for adding a new guardrail: **`plugins/README.md`**.
+  and the guide for adding a new guardrail: **`plugins/skraft-framework/README.md`**.
 - Roadmap with all 13 US (gain + status + milestone): **`docs/roadmap.md`**.
 
 ## Repository structure
@@ -49,7 +49,7 @@ tests/
   - Acceptance tests: `{feature}.acceptance.test.mjs` (e.g. `skill-loading.acceptance.test.mjs`)
   - Integration/other: `{module}.test.mjs`
 - `stryker.config.mjs` uses the glob `tests/skraft-framework/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
-- Import paths from `tests/skraft-framework/` into plugin source: `../../plugins/src/...`
+- Import paths from `tests/skraft-framework/` into plugin source: `../../plugins/skraft-framework/src/...`
 
 ### stryker.config.mjs rules
 

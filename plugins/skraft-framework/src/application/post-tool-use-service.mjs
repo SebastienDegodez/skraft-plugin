@@ -10,7 +10,7 @@ import { expectedNextAgent } from '../domain/pipeline-policy.mjs'
 import { isOk } from '../domain/result.mjs'
 
 const SKILL_MD_PATH_RE =
-  /(?:plugins\/skills|\.agents\/skills|\.github\/skills|\.copilot\/skills)\/([^/]+)\/SKILL\.md$/i
+  /(?:plugins\/skraft-framework\/skills|\.agents\/skills|\.github\/skills|\.copilot\/skills)\/([^/]+)\/SKILL\.md$/i
 
 // The subagent-dispatch tool. PostToolUse(Agent) fires after a sub-agent finishes.
 const AGENT_TOOL = 'Agent'

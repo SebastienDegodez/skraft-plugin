@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createSubagentStartService } from '../../plugins/src/application/subagent-start-service.mjs'
+import { createSubagentStartService } from '../../plugins/skraft-framework/src/application/subagent-start-service.mjs'
 
 const CONFIG = {
   agentSkills: {

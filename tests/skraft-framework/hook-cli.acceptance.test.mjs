@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url'
 // the CLI args the manifest forwards (event + matcher), proving the PreToolUse guards are
 // actually wired (previously the preToolUse slot was unwired and the router returned no
 // decision). Uses env seams so nothing touches the repo working tree.
-const HOOK_CLI = resolve(fileURLToPath(import.meta.url), '../../../plugins/src/cli/hook.mjs')
-const REAL_CONFIG = resolve(fileURLToPath(import.meta.url), '../../../plugins/skraft-framework.config.json')
+const HOOK_CLI = resolve(fileURLToPath(import.meta.url), '../../../plugins/skraft-framework/src/cli/hook.mjs')
+const REAL_CONFIG = resolve(fileURLToPath(import.meta.url), '../../../plugins/skraft-framework/skraft-framework.config.json')
 
 const runHook = (args, payload) => {
   const dir = mkdtempSync(join(tmpdir(), 'skraft-hook-'))

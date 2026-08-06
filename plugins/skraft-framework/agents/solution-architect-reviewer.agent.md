@@ -34,7 +34,7 @@ metadata:
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 ---
 
 # Solution-Architect-Reviewer Agent
@@ -208,7 +208,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
 EOF
 ```
 
-The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout.
+The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout.
 
 Emit the verdict as a YAML block, followed by a findings narrative.
 

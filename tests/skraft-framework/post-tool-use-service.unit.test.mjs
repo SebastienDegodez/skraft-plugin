@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createPostToolUseService } from '../../plugins/src/application/post-tool-use-service.mjs'
+import { createPostToolUseService } from '../../plugins/skraft-framework/src/application/post-tool-use-service.mjs'
 
 const FIXED_NOW = '2026-06-29T12:00:00.000Z'
 const clock = { now: () => FIXED_NOW }
@@ -15,13 +15,13 @@ const collectingWriter = () => {
 test('writes SkillRead audit entry for a SKILL.md path', async () => {
   const audit = collectingWriter()
   const service = createPostToolUseService({ auditWriter: audit, clock })
-  const result = await service.handle({ agentName: 'solution-architect', toolInput: { path: 'plugins/skills/bdd-methodology/SKILL.md' } })
+  const result = await service.handle({ agentName: 'solution-architect', toolInput: { path: 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md' } })
   assert.equal(result?.decision, 'allow')
   assert.equal(audit.entries.length, 1)
   assert.equal(audit.entries[0].eventType, 'SkillRead')
   assert.equal(audit.entries[0].agentName, 'solution-architect')
   assert.equal(audit.entries[0].skillName, 'bdd-methodology')
-  assert.equal(audit.entries[0].path, 'plugins/skills/bdd-methodology/SKILL.md')
+  assert.equal(audit.entries[0].path, 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md')
   assert.equal(audit.entries[0].timestamp, FIXED_NOW)
 })
 
@@ -53,7 +53,7 @@ test('returns allow without writing when path ends in SKILL.md but has trailing 
   // Kills the Regex survivor: removing $ anchor would match 'SKILL.md.bak', which must NOT produce audit
   const audit = collectingWriter()
   const service = createPostToolUseService({ auditWriter: audit, clock })
-  const result = await service.handle({ agentName: 'test', toolInput: { path: 'plugins/skills/foo/SKILL.md.bak' } })
+  const result = await service.handle({ agentName: 'test', toolInput: { path: 'plugins/skraft-framework/skills/foo/SKILL.md.bak' } })
   assert.equal(audit.entries.length, 0, 'path with extension after SKILL.md must produce no audit entry')
   assert.equal(result?.decision, 'allow')
 })
@@ -71,7 +71,7 @@ test('returns allow without writing when path is absent', async () => {
 test('returns allow (fail-open) when auditWriter throws', async () => {
   const throwingWriter = { write: async () => { throw new Error('disk full') } }
   const service = createPostToolUseService({ auditWriter: throwingWriter, clock })
-  const result = await service.handle({ agentName: 'test', toolInput: { path: 'plugins/skills/bdd-methodology/SKILL.md' } })
+  const result = await service.handle({ agentName: 'test', toolInput: { path: 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md' } })
   assert.equal(result?.decision, 'allow')
 })
 
@@ -79,7 +79,7 @@ test('returns allow (fail-open) when clock throws', async () => {
   const throwingClock = { now: () => { throw new Error('clock error') } }
   const audit = collectingWriter()
   const service = createPostToolUseService({ auditWriter: audit, clock: throwingClock })
-  const result = await service.handle({ agentName: 'test', toolInput: { path: 'plugins/skills/bdd-methodology/SKILL.md' } })
+  const result = await service.handle({ agentName: 'test', toolInput: { path: 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md' } })
   assert.equal(result?.decision, 'allow')
 })
 
@@ -220,7 +220,7 @@ test('G6: an Agent post-tool-use never runs the G3 skill tracer', async () => {
   const audit = collectingWriter()
   const stateReader = stateReaderReturning({ currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] })
   const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project', toolInput: { path: 'plugins/skills/bdd-methodology/SKILL.md' } })
+  await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project', toolInput: { path: 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md' } })
   assert.equal(audit.entries.length, 1)
   assert.equal(audit.entries[0].eventType, 'ContinuationInjected')
 })

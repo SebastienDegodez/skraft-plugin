@@ -2,8 +2,8 @@
 # Interface Contracts — US3 / G1 Dispatch-Order Guard (#49)
 
 Phase: DESIGN · Date: 2026-06-28 · Project slug: us3-g1-dispatch-order-guard
-Conventions: Result type (ADR-001, `plugins/src/domain/result.mjs`), hook decision vocabulary
-(`plugins/src/adapters/api/hooks/decision.mjs`), hexagonal layering (ADR-002). DESIGN artefact —
+Conventions: Result type (ADR-001, `plugins/skraft-framework/src/domain/result.mjs`), hook decision vocabulary
+(`plugins/skraft-framework/src/adapters/api/hooks/decision.mjs`), hexagonal layering (ADR-002). DESIGN artefact —
 signatures and shapes only, no implementation.
 
 ## Value Objects & shapes
@@ -90,7 +90,7 @@ same Result (AC-03).
 
 ## Contract 3 — `application/pre-tool-use-service.mjs` (use case)
 
-Conforms to the `PreToolUse` driver port (`plugins/src/ports/api/pre-tool-use.mjs`): exposes
+Conforms to the `PreToolUse` driver port (`plugins/skraft-framework/src/ports/api/pre-tool-use.mjs`): exposes
 `handle(payload)` and is the `preToolUse` handler wired through `service-factory.mjs` →
 `hook-router.mjs`. The hook entry is `type: command` with matcher `Agent` (equivalently `task`) —
 per the hooks-reference runtime → Claude tool-name table (`task` → `Agent`). A command hook is

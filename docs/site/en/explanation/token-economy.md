@@ -104,7 +104,7 @@ lever has not yet been applied?"
 
 ### In place
 
-The model class is **actually applied**: a deterministic resolver (`plugins/src/`,
+The model class is **actually applied**: a deterministic resolver (`plugins/skraft-framework/src/`,
 Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
 `model_requirement` floor, then **pins the `model:` field** of its `*.agent.md` to the
 resolved concrete model. The "Measured results" section states the policy:

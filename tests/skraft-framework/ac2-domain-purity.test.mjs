@@ -4,7 +4,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const FW_ROOT = fileURLToPath(new URL('../../plugins/src/', import.meta.url))
+const FW_ROOT = fileURLToPath(new URL('../../plugins/skraft-framework/src/', import.meta.url))
 const DOMAIN_DIR = join(FW_ROOT, 'domain')
 
 async function collectMjsFiles(dir) {

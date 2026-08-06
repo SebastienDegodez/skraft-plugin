@@ -18,7 +18,7 @@
 
 ## Classification des gates (fondement du plan)
 
-Avant tout code, ce plan repose sur un tri formel de chaque gate selon qu'il est **mécanisable** (décidable par script, zéro LLM) ou **sémantique** (exige le jugement du modèle). Source : [plugins/skills/architecture-review-criteria/SKILL.md](../../../plugins/skills/architecture-review-criteria/SKILL.md).
+Avant tout code, ce plan repose sur un tri formel de chaque gate selon qu'il est **mécanisable** (décidable par script, zéro LLM) ou **sémantique** (exige le jugement du modèle). Source : [plugins/skraft-framework/skills/architecture-review-criteria/SKILL.md](../../../plugins/skraft-framework/skills/architecture-review-criteria/SKILL.md).
 
 | Gate | Nature | Mécanisme déterministe possible | Moteur |
 |---|---|---|---|
@@ -53,30 +53,30 @@ Avant tout code, ce plan repose sur un tri formel de chaque gate selon qu'il est
 ## File Structure
 
 **Créés (skill `reviewer-prefilter`) :**
-- `plugins/skills/reviewer-prefilter/SKILL.md` — entry-point, contrat d'invocation, pré-requis ast-grep, mapping gate→moteur.
-- `plugins/skills/reviewer-prefilter/sgconfig.yml` — config ast-grep : déclare le dossier `rules/` et les langages. C'est le point d'entrée de `ast-grep scan`.
-- `plugins/skills/reviewer-prefilter/rules/` — rule-sets **ast-grep** YAML, le moteur structurel : `g01-structural-ports.yml`, `g03-dependency-rule.yml`, `g04-interface-placement.yml`, `g05-cross-aggregate-ref.yml`, déclinés par langage via `language:` (csharp, java, kotlin, typescript, python). Chaque rule porte un `metadata: { gate, severity }` pour l'agrégation.
-- `plugins/skills/reviewer-prefilter/scripts/prefilter.mjs` — **glue unique** : fail-fast ast-grep → `sg scan --json` → + gates non-AST (FS/markdown) → agrégation `prefilter-report.json`. Pas de dossier `detectors/`.
-- `plugins/skills/reviewer-prefilter/assets/reference/prefilter-report-schema.md` — référence humaine du format JSON.
-- `plugins/skills/reviewer-prefilter/assets/examples/report-clean.json`
-- `plugins/skills/reviewer-prefilter/assets/examples/report-blocker-shortcircuit.json`
-- `plugins/skills/reviewer-prefilter/assets/examples/report-suspect-sections.json`
-- `plugins/skills/reviewer-prefilter/assets/fixtures/repo-fixture-clean/` — arbre minimal pour tests.
-- `plugins/skills/reviewer-prefilter/assets/fixtures/repo-fixture-g13-open/` — blocker sans résolution.
-- `plugins/skills/reviewer-prefilter/assets/fixtures/repo-fixture-g14-rejected-filename/`
-- `plugins/skills/reviewer-prefilter/references/detector-internals.md` — load-on-demand.
-- `plugins/skills/reviewer-prefilter/tests/prefilter.test.mjs` — `node --test`.
+- `plugins/skraft-framework/skills/reviewer-prefilter/SKILL.md` — entry-point, contrat d'invocation, pré-requis ast-grep, mapping gate→moteur.
+- `plugins/skraft-framework/skills/reviewer-prefilter/sgconfig.yml` — config ast-grep : déclare le dossier `rules/` et les langages. C'est le point d'entrée de `ast-grep scan`.
+- `plugins/skraft-framework/skills/reviewer-prefilter/rules/` — rule-sets **ast-grep** YAML, le moteur structurel : `g01-structural-ports.yml`, `g03-dependency-rule.yml`, `g04-interface-placement.yml`, `g05-cross-aggregate-ref.yml`, déclinés par langage via `language:` (csharp, java, kotlin, typescript, python). Chaque rule porte un `metadata: { gate, severity }` pour l'agrégation.
+- `plugins/skraft-framework/skills/reviewer-prefilter/scripts/prefilter.mjs` — **glue unique** : fail-fast ast-grep → `sg scan --json` → + gates non-AST (FS/markdown) → agrégation `prefilter-report.json`. Pas de dossier `detectors/`.
+- `plugins/skraft-framework/skills/reviewer-prefilter/assets/reference/prefilter-report-schema.md` — référence humaine du format JSON.
+- `plugins/skraft-framework/skills/reviewer-prefilter/assets/examples/report-clean.json`
+- `plugins/skraft-framework/skills/reviewer-prefilter/assets/examples/report-blocker-shortcircuit.json`
+- `plugins/skraft-framework/skills/reviewer-prefilter/assets/examples/report-suspect-sections.json`
+- `plugins/skraft-framework/skills/reviewer-prefilter/assets/fixtures/repo-fixture-clean/` — arbre minimal pour tests.
+- `plugins/skraft-framework/skills/reviewer-prefilter/assets/fixtures/repo-fixture-g13-open/` — blocker sans résolution.
+- `plugins/skraft-framework/skills/reviewer-prefilter/assets/fixtures/repo-fixture-g14-rejected-filename/`
+- `plugins/skraft-framework/skills/reviewer-prefilter/references/detector-internals.md` — load-on-demand.
+- `plugins/skraft-framework/skills/reviewer-prefilter/tests/prefilter.test.mjs` — `node --test`.
 - `docs/superpowers/specs/2026-06-04-reviewer-determinism-design.md` — spec source.
 
 **Modifiés :**
-- `plugins/skills/adversarial-review-lenses/SKILL.md` — §Procédure : étape pré-filtre avant les lentilles ; tags émis uniquement pour gates sémantiques ; description requise seulement si tag ≠ OK.
-- `plugins/skills/architecture-review-criteria/SKILL.md` — marquer chaque gate `mechanizable: true|false` ; renvoyer les gates mécanisés vers `reviewer-prefilter`.
-- `plugins/agents/solution-architect-reviewer.agent.md` — Phase 0 (run prefilter), court-circuit, FAN-OUT réduit aux gates sémantiques sur sections suspectes.
-- `plugins/agents/backlog-discoverer-reviewer.agent.md` — idem (gates de sa phase).
-- `plugins/agents/backlog-planner-reviewer.agent.md` — idem.
-- `plugins/agents/acceptance-designer-reviewer.agent.md` — idem.
-- `plugins/agents/software-engineer-reviewer.agent.md` — idem.
-- `plugins/agents/skraft-orchestrator.agent.md` — exécuter `prefilter.mjs` avant dispatch reviewer ; fusionner `prefilter-report.json` + tags LLM → `render-verdict.mjs` ; peupler `state.json::reviewerVerdicts[phase]`.
+- `plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md` — §Procédure : étape pré-filtre avant les lentilles ; tags émis uniquement pour gates sémantiques ; description requise seulement si tag ≠ OK.
+- `plugins/skraft-framework/skills/architecture-review-criteria/SKILL.md` — marquer chaque gate `mechanizable: true|false` ; renvoyer les gates mécanisés vers `reviewer-prefilter`.
+- `plugins/skraft-framework/agents/solution-architect-reviewer.agent.md` — Phase 0 (run prefilter), court-circuit, FAN-OUT réduit aux gates sémantiques sur sections suspectes.
+- `plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md` — idem (gates de sa phase).
+- `plugins/skraft-framework/agents/backlog-planner-reviewer.agent.md` — idem.
+- `plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md` — idem.
+- `plugins/skraft-framework/agents/software-engineer-reviewer.agent.md` — idem.
+- `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` — exécuter `prefilter.mjs` avant dispatch reviewer ; fusionner `prefilter-report.json` + tags LLM → `render-verdict.mjs` ; peupler `state.json::reviewerVerdicts[phase]`.
 
 **Découpage par responsabilité :** le moteur structurel vit en **YAML déclaratif** (`rules/*.yml` + `sgconfig.yml`), testé par fixtures de code. La glue `prefilter.mjs` reste **un seul fichier** (~150 LoC) : lancer ast-grep, ajouter les gates FS/markdown, agréger. Pas de framework de détecteurs Node — ce serait dupliquer ast-grep.
 
@@ -88,7 +88,7 @@ Rédige la spec qui fige : la classification des gates, le schéma `prefilter-re
 
 **Files:**
 - Create: `docs/superpowers/specs/2026-06-04-reviewer-determinism-design.md`
-- Read: `plugins/skills/architecture-review-criteria/SKILL.md`, `plugins/skills/adversarial-review-lenses/SKILL.md`, `plugins/skills/reviewer-verdict-schema/SKILL.md`
+- Read: `plugins/skraft-framework/skills/architecture-review-criteria/SKILL.md`, `plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md`, `plugins/skraft-framework/skills/reviewer-verdict-schema/SKILL.md`
 
 - [ ] **Step 1 : Figer la classification des gates + le moteur**
 
@@ -121,15 +121,15 @@ Définir les KPI vérifiables : (a) % de décisions hors-LLM ≥ 60 %, (b) golde
 ### Task 1: Scaffolding du skill `reviewer-prefilter`
 
 **Files:**
-- Create: `plugins/skills/reviewer-prefilter/SKILL.md`
-- Create: `plugins/skills/reviewer-prefilter/sgconfig.yml`
-- Create: `plugins/skills/reviewer-prefilter/scripts/prefilter.mjs` (stub)
-- Create: `plugins/skills/reviewer-prefilter/tests/prefilter.test.mjs` (stub)
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/SKILL.md`
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/sgconfig.yml`
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/scripts/prefilter.mjs` (stub)
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/tests/prefilter.test.mjs` (stub)
 
 - [ ] **Step 1 : Créer l'arborescence**
 
 ```bash
-mkdir -p plugins/skills/reviewer-prefilter/{rules,scripts,assets/examples,assets/fixtures,assets/reference,references,tests}
+mkdir -p plugins/skraft-framework/skills/reviewer-prefilter/{rules,scripts,assets/examples,assets/fixtures,assets/reference,references,tests}
 ```
 
 - [ ] **Step 2 : SKILL.md minimal**
@@ -162,7 +162,7 @@ if (probe.status !== 0) {
 - [ ] **Step 5 : Stub test + vérifier le runner**
 
 ```bash
-node --test plugins/skills/reviewer-prefilter/tests/
+node --test plugins/skraft-framework/skills/reviewer-prefilter/tests/
 ```
 
 ---
@@ -172,10 +172,10 @@ node --test plugins/skills/reviewer-prefilter/tests/
 Les BLOCKER déterministes prioritaires : ils évitent tout appel LLM. Pure filesystem → dans la glue `prefilter.mjs`, **pas** de fichier détecteur dédié.
 
 **Files:**
-- Modify: `plugins/skills/reviewer-prefilter/scripts/prefilter.mjs`
-- Create: `plugins/skills/reviewer-prefilter/assets/fixtures/repo-fixture-g13-open/`
-- Create: `plugins/skills/reviewer-prefilter/assets/fixtures/repo-fixture-g14-rejected-filename/`
-- Modify: `plugins/skills/reviewer-prefilter/tests/prefilter.test.mjs`
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/scripts/prefilter.mjs`
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/assets/fixtures/repo-fixture-g13-open/`
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/assets/fixtures/repo-fixture-g14-rejected-filename/`
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/tests/prefilter.test.mjs`
 
 - [ ] **Step 1 : RED — test G13**
 
@@ -196,7 +196,7 @@ Scan des filenames `adrs/*.md`, match `/-(rejected|accepted|deprecated|supersede
 - [ ] **Step 5 : Refactor + commit**
 
 ```bash
-git add plugins/skills/reviewer-prefilter/
+git add plugins/skraft-framework/skills/reviewer-prefilter/
 git commit -m "feat(prefilter): G13/G14 short-circuit (filesystem gates)"
 ```
 
@@ -207,9 +207,9 @@ git commit -m "feat(prefilter): G13/G14 short-circuit (filesystem gates)"
 Le cœur du système : **rules YAML déclaratives**, exécutées par `ast-grep scan --json`. **Aucun code Node** ici — ast-grep parse, matche et agrège.
 
 **Files:**
-- Create: `plugins/skills/reviewer-prefilter/rules/{g01-structural-ports,g03-dependency-rule,g04-interface-placement,g05-cross-aggregate-ref}.yml`
-- Create: `plugins/skills/reviewer-prefilter/assets/fixtures/repo-fixture-clean/` (+ fixture violante par gate **et par langage**)
-- Modify: `plugins/skills/reviewer-prefilter/tests/prefilter.test.mjs`
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/rules/{g01-structural-ports,g03-dependency-rule,g04-interface-placement,g05-cross-aggregate-ref}.yml`
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/assets/fixtures/repo-fixture-clean/` (+ fixture violante par gate **et par langage**)
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/tests/prefilter.test.mjs`
 
 - [ ] **Step 1 : RED — `sg scan` produit du JSON exploitable**
 
@@ -240,8 +240,8 @@ git commit -am "feat(prefilter): ast-grep rules for G1/G3/G4/G5-AST"
 Gates non-AST (markdown cross-ref + existence de fichiers) → dans la glue `prefilter.mjs`, fonctions pures, **pas** de framework de détecteurs.
 
 **Files:**
-- Modify: `plugins/skills/reviewer-prefilter/scripts/prefilter.mjs`
-- Modify: `plugins/skills/reviewer-prefilter/tests/prefilter.test.mjs`
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/scripts/prefilter.mjs`
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/tests/prefilter.test.mjs`
 
 - [ ] **Step 1 : RED + GREEN — G2 (supersession cross-ref)**
 
@@ -270,9 +270,9 @@ git commit -am "feat(prefilter): markdown/traceability gates G2/G7/G8/G10/G12"
 ### Task 5: Agrégateur `prefilter.mjs` + index des sections suspectes — TDD
 
 **Files:**
-- Modify: `plugins/skills/reviewer-prefilter/scripts/prefilter.mjs`
-- Create: `plugins/skills/reviewer-prefilter/assets/examples/{report-clean,report-blocker-shortcircuit,report-suspect-sections}.json`
-- Modify: `plugins/skills/reviewer-prefilter/tests/prefilter.test.mjs`
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/scripts/prefilter.mjs`
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/assets/examples/{report-clean,report-blocker-shortcircuit,report-suspect-sections}.json`
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/tests/prefilter.test.mjs`
 
 - [ ] **Step 1 : RED — agrégation + court-circuit prioritaire**
 
@@ -301,7 +301,7 @@ Geler les 3 exemples JSON comme golden. `git commit -am "feat(prefilter): aggreg
 ### Task 6: Brancher `adversarial-review-lenses` sur le pré-filtre
 
 **Files:**
-- Modify: `plugins/skills/adversarial-review-lenses/SKILL.md`
+- Modify: `plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md`
 
 - [ ] **Step 1 : Ajouter l'étape "Phase 0 — Pré-filtre"**
 
@@ -324,8 +324,8 @@ Lien vers le nouveau skill ; préciser que le score pondéré fusionne `mechaniz
 ### Task 7: Retarget des 5 reviewers + marquage des gates
 
 **Files:**
-- Modify: `plugins/skills/architecture-review-criteria/SKILL.md`
-- Modify: `plugins/agents/{solution-architect,backlog-discoverer,backlog-planner,acceptance-designer,software-engineer}-reviewer.agent.md`
+- Modify: `plugins/skraft-framework/skills/architecture-review-criteria/SKILL.md`
+- Modify: `plugins/skraft-framework/agents/{solution-architect,backlog-discoverer,backlog-planner,acceptance-designer,software-engineer}-reviewer.agent.md`
 
 - [ ] **Step 1 : Marquer chaque gate `mechanizable`**
 
@@ -352,8 +352,8 @@ Les reviewers restent READ-ONLY. `prefilter.mjs` écrit **uniquement** `prefilte
 ### Task 8: Orchestrateur — exécution prefilter + fusion verdict
 
 **Files:**
-- Modify: `plugins/agents/skraft-orchestrator.agent.md`
-- Modify: `plugins/skills/reviewer-prefilter/SKILL.md` (contenu détaillé final)
+- Modify: `plugins/skraft-framework/agents/skraft-orchestrator.agent.md`
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/SKILL.md` (contenu détaillé final)
 
 - [ ] **Step 1 : Étape "Run prefilter" avant dispatch**
 
@@ -382,8 +382,8 @@ Compléter `reviewer-prefilter/SKILL.md` : contrat d'invocation, mapping gate→
 ### Task 9: Golden cases anti-régression
 
 **Files:**
-- Create: `plugins/skills/reviewer-prefilter/tests/golden/` (artefacts figés + rapports attendus)
-- Modify: `plugins/skills/reviewer-prefilter/tests/prefilter.test.mjs`
+- Create: `plugins/skraft-framework/skills/reviewer-prefilter/tests/golden/` (artefacts figés + rapports attendus)
+- Modify: `plugins/skraft-framework/skills/reviewer-prefilter/tests/prefilter.test.mjs`
 
 - [ ] **Step 1 : Figer ≥4 cas golden**
 

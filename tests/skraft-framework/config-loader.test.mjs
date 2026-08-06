@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { loadConfig } from '../../plugins/src/application/config-loader.mjs'
+import { loadConfig } from '../../plugins/skraft-framework/src/application/config-loader.mjs'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'

@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import {
   discoverCacheRoots,
   resolvePluginRootFromEnv,
-} from '../../plugins/src/adapters/infrastructure/plugin-root-resolver.mjs'
+} from '../../plugins/skraft-framework/src/adapters/infrastructure/plugin-root-resolver.mjs'
 
 const HOME = '/home/alice'
 const cacheHook = (version) =>
@@ -53,7 +53,7 @@ test('discoverCacheRoots: fail-open — glob that throws returns empty list', ()
 test('resolvePluginRootFromEnv: CLAUDE_PLUGIN_ROOT wins over cache + module', () => {
   const root = resolvePluginRootFromEnv({
     env: { CLAUDE_PLUGIN_ROOT: '/injected/skraft' },
-    moduleUrl: pathToFileURL('/local/plugins/src/cli/hook.mjs').href,
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
     homeDir: HOME,
     glob: () => [cacheHook('1.1.0')],
   })
@@ -63,7 +63,7 @@ test('resolvePluginRootFromEnv: CLAUDE_PLUGIN_ROOT wins over cache + module', ()
 test('resolvePluginRootFromEnv: no env → newest cache match', () => {
   const root = resolvePluginRootFromEnv({
     env: {},
-    moduleUrl: pathToFileURL('/local/plugins/src/cli/hook.mjs').href,
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
     homeDir: HOME,
     glob: () => [cacheHook('1.1.0'), cacheHook('1.2.0')],
   })
@@ -73,9 +73,9 @@ test('resolvePluginRootFromEnv: no env → newest cache match', () => {
 test('resolvePluginRootFromEnv: no env + no cache → module-relative plugin root', () => {
   const root = resolvePluginRootFromEnv({
     env: {},
-    moduleUrl: pathToFileURL('/local/plugins/src/cli/hook.mjs').href,
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
     homeDir: HOME,
     glob: () => [],
   })
-  assert.equal(root, '/local/plugins/')
+  assert.equal(root, '/local/plugins/skraft-framework/')
 })

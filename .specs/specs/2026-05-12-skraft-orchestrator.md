@@ -201,7 +201,7 @@ Le commentaire final (post-DELIVER) peut inclure des évidences : screenshots Pl
 
 ### Fichier
 
-`plugins/agents/skraft-orchestrator.agent.md`
+`plugins/skraft-framework/agents/skraft-orchestrator.agent.md`
 
 ### Frontmatter attendu
 

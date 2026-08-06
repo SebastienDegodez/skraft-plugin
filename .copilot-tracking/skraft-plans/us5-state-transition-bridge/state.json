@@ -40,14 +40,14 @@
     ],
     "DELIVER": [
       "changes/2026-07-01/change-log.md",
-      "plugins/src/domain/state-machine.mjs",
-      "plugins/src/domain/state-schema.mjs",
-      "plugins/src/domain/pipeline-policy.mjs",
-      "plugins/src/ports/infrastructure/state-writer.mjs",
-      "plugins/src/adapters/infrastructure/state/json-state-writer.mjs",
-      "plugins/src/adapters/infrastructure/json-state-reader.mjs",
-      "plugins/src/application/state-service.mjs",
-      "plugins/src/cli/state.mjs"
+      "plugins/skraft-framework/src/domain/state-machine.mjs",
+      "plugins/skraft-framework/src/domain/state-schema.mjs",
+      "plugins/skraft-framework/src/domain/pipeline-policy.mjs",
+      "plugins/skraft-framework/src/ports/infrastructure/state-writer.mjs",
+      "plugins/skraft-framework/src/adapters/infrastructure/state/json-state-writer.mjs",
+      "plugins/skraft-framework/src/adapters/infrastructure/json-state-reader.mjs",
+      "plugins/skraft-framework/src/application/state-service.mjs",
+      "plugins/skraft-framework/src/cli/state.mjs"
     ]
   },
   "reviewerVerdicts": {

@@ -10,21 +10,21 @@ Source: plans/2026-06-29/stories-2026-06-29.md (AC-01..AC-04, DD-1/DD-2/DD-3, 8 
 
 | Element | Source | Classification |
 |---|---|---|
-| Result type (`Ok/Err/isOk/isErr`) | `plugins/src/domain/result.mjs` (ADR-001) | reuse as-is |
+| Result type (`Ok/Err/isOk/isErr`) | `plugins/skraft-framework/src/domain/result.mjs` (ADR-001) | reuse as-is |
 | Hexagonal layout | ADR-002 | conform |
-| Generated config (`agentSkills`) | `plugins/skraft-framework.config.json` (#48, ADR-005 Published Language) | reuse as-is (Conformist) |
-| Audit writer (`write(entry)`) | `plugins/src/adapters/infrastructure/jsonl-audit-writer.mjs` | reuse as-is |
-| Hook decision vocabulary (`allow/additionalContext/block`) | `plugins/src/adapters/api/hooks/decision.mjs` | reuse as-is |
-| Hook router | `plugins/src/adapters/api/hooks/hook-router.mjs` | reuse as-is |
-| Service factory (`createHookService`) | `plugins/src/adapters/api/hooks/service-factory.mjs` | reuse as-is (slots already present) |
-| Transcript reader port stub | `plugins/src/ports/infrastructure/transcript-reader.mjs` | reuse as-is |
-| SubagentStop port stub | `plugins/src/ports/api/subagent-stop.mjs` | reuse as-is |
-| SubagentStart port stub | **NEW** `plugins/src/ports/api/subagent-start.mjs` | create new |
-| Skill policy domain service | **NEW** `plugins/src/domain/skill-policy.mjs` | create new |
-| SubagentStart use case | **NEW** `plugins/src/application/subagent-start-service.mjs` | create new |
-| SubagentStop use case | **NEW** `plugins/src/application/subagent-stop-service.mjs` | create new |
-| PostToolUse Read use case | **NEW** `plugins/src/application/post-tool-use-service.mjs` | create new |
-| JSONL transcript reader adapter | **NEW** `plugins/src/adapters/infrastructure/jsonl-transcript-reader.mjs` | create new |
+| Generated config (`agentSkills`) | `plugins/skraft-framework/skraft-framework.config.json` (#48, ADR-005 Published Language) | reuse as-is (Conformist) |
+| Audit writer (`write(entry)`) | `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | reuse as-is |
+| Hook decision vocabulary (`allow/additionalContext/block`) | `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | reuse as-is |
+| Hook router | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | reuse as-is |
+| Service factory (`createHookService`) | `plugins/skraft-framework/src/adapters/api/hooks/service-factory.mjs` | reuse as-is (slots already present) |
+| Transcript reader port stub | `plugins/skraft-framework/src/ports/infrastructure/transcript-reader.mjs` | reuse as-is |
+| SubagentStop port stub | `plugins/skraft-framework/src/ports/api/subagent-stop.mjs` | reuse as-is |
+| SubagentStart port stub | **NEW** `plugins/skraft-framework/src/ports/api/subagent-start.mjs` | create new |
+| Skill policy domain service | **NEW** `plugins/skraft-framework/src/domain/skill-policy.mjs` | create new |
+| SubagentStart use case | **NEW** `plugins/skraft-framework/src/application/subagent-start-service.mjs` | create new |
+| SubagentStop use case | **NEW** `plugins/skraft-framework/src/application/subagent-stop-service.mjs` | create new |
+| PostToolUse Read use case | **NEW** `plugins/skraft-framework/src/application/post-tool-use-service.mjs` | create new |
+| JSONL transcript reader adapter | **NEW** `plugins/skraft-framework/src/adapters/infrastructure/jsonl-transcript-reader.mjs` | create new |
 
 ---
 

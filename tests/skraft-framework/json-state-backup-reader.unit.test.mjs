@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { createJsonStateBackupReader } from '../../plugins/src/adapters/infrastructure/state/json-state-backup-reader.mjs'
+import { createJsonStateBackupReader } from '../../plugins/skraft-framework/src/adapters/infrastructure/state/json-state-backup-reader.mjs'
 
 const mkBase = () => mkdtemp(join(tmpdir(), 'skraft-bakreader-'))
 

@@ -51,7 +51,7 @@ skraft-plugin/
 Établit la convention `state.json` et le protocole 6-étapes. Fondation des autres tâches.
 
 **Files:**
-- Create: `plugins/instructions/skraft-state.instructions.md`
+- Create: `plugins/skraft-framework/instructions/skraft-state.instructions.md`
 
 **Reference:** `hve-core/.github/instructions/security/identity.instructions.md` (lignes 100-165 pour schéma + protocole).
 
@@ -74,7 +74,7 @@ Vérifier : H1 présent, sections (Schema / State Protocol / Resume / Recovery),
 - [ ] **Step 3: Commit**
 
 ```bash
-git add plugins/instructions/skraft-state.instructions.md
+git add plugins/skraft-framework/instructions/skraft-state.instructions.md
 git commit -m "feat(instructions): add skraft-state convention (state.json + 6-step protocol)"
 ```
 
@@ -85,7 +85,7 @@ git commit -m "feat(instructions): add skraft-state convention (state.json + 6-s
 Définit le mapping chemins SKRAFT → HVE pour tous les artefacts produits par les phase agents et reviewers.
 
 **Files:**
-- Create: `plugins/instructions/skraft-artifacts.instructions.md`
+- Create: `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`
 
 - [ ] **Step 1: Créer le fichier avec table de mapping**
 
@@ -106,7 +106,7 @@ Confronter avec la section "Mapping artefacts SKRAFT → HVE" du spec.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add plugins/instructions/skraft-artifacts.instructions.md
+git add plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 git commit -m "feat(instructions): add skraft-artifacts path conventions (HVE-aligned)"
 ```
 
@@ -117,7 +117,7 @@ git commit -m "feat(instructions): add skraft-artifacts path conventions (HVE-al
 Procédure d'évaluation 3-axes en sortie de DISCOVER. Référencée par l'orchestrator.
 
 **Files:**
-- Create: `plugins/skills/skraft-difficulty-routing/SKILL.md`
+- Create: `plugins/skraft-framework/skills/skraft-difficulty-routing/SKILL.md`
 
 - [ ] **Step 1: Créer SKILL.md avec frontmatter**
 
@@ -191,7 +191,7 @@ Référence : `/memories/session/skraft-hve-design.md` section "Combined Design:
 - [ ] **Step 3: Commit**
 
 ```bash
-git add plugins/skills/skraft-difficulty-routing/SKILL.md
+git add plugins/skraft-framework/skills/skraft-difficulty-routing/SKILL.md
 git commit -m "feat(skills): add skraft-difficulty-routing (3-axis assessment + HVE depth tier alignment)"
 ```
 
@@ -202,7 +202,7 @@ git commit -m "feat(skills): add skraft-difficulty-routing (3-axis assessment + 
 Procédure A7 ADVERSARIAL REVIEW : 4 lentilles indépendantes + synthèse. Référencée par les 5 reviewers.
 
 **Files:**
-- Create: `plugins/skills/adversarial-review-lenses/SKILL.md`
+- Create: `plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md`
 
 - [ ] **Step 1: Créer SKILL.md avec frontmatter**
 
@@ -223,7 +223,7 @@ Lien `#file:` vers `.copilot-tracking/reviews/code-reviews/review-artifacts.inst
 - [ ] **Step 3: Commit**
 
 ```bash
-git add plugins/skills/adversarial-review-lenses/SKILL.md
+git add plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md
 git commit -m "feat(skills): add adversarial-review-lenses (Genesis A7 4-lens procedure)"
 ```
 
@@ -234,7 +234,7 @@ git commit -m "feat(skills): add adversarial-review-lenses (Genesis A7 4-lens pr
 Cœur du changement : `/sdlc` → `/skraft`, paths HVE, retry inline, neighbor warning, références aux nouvelles instructions.
 
 **Files:**
-- Modify: `plugins/agents/skraft-orchestrator.agent.md`
+- Modify: `plugins/skraft-framework/agents/skraft-orchestrator.agent.md`
 
 - [ ] **Step 1: Frontmatter — renommer entry_point et state_file**
 
@@ -248,7 +248,7 @@ Mettre à jour `description:` pour mentionner `/skraft`.
 
 - [ ] **Step 2: Phase 0 LOAD STATE — pivot vers state.json**
 
-Remplacer le bloc Phase 0 : lire `state.json` (pas `state.md`), suivre protocole 6-étapes référencé via `#file:plugins/instructions/skraft-state.instructions.md`.
+Remplacer le bloc Phase 0 : lire `state.json` (pas `state.md`), suivre protocole 6-étapes référencé via `#file:plugins/skraft-framework/instructions/skraft-state.instructions.md`.
 
 - [ ] **Step 3: State schema — supprimer le bloc markdown, référencer skraft-state**
 
@@ -263,7 +263,7 @@ Remplacer tous les `.skraft/sdlc/{phase}/...` par chemins HVE :
 - DISTILL → `details/{date}/` + `features/`
 - DELIVER → `changes/{date}/`
 
-Référencer `#file:plugins/instructions/skraft-artifacts.instructions.md`.
+Référencer `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`.
 
 - [ ] **Step 5: Retry policy — inline**
 
@@ -285,14 +285,14 @@ Section finale : "Single entry point: `/skraft`. The user never needs to specify
 
 Vérifier que toutes les anciennes mentions `.skraft/sdlc/` et `/sdlc` ont disparu :
 ```bash
-grep -n "\.skraft/sdlc\|/sdlc" plugins/agents/skraft-orchestrator.agent.md || echo "Clean"
+grep -n "\.skraft/sdlc\|/sdlc" plugins/skraft-framework/agents/skraft-orchestrator.agent.md || echo "Clean"
 ```
 Expected: `Clean`
 
 - [ ] **Step 10: Commit**
 
 ```bash
-git add plugins/agents/skraft-orchestrator.agent.md
+git add plugins/skraft-framework/agents/skraft-orchestrator.agent.md
 git commit -m "refactor(agents): rewrite skraft-orchestrator for HVE compatibility (/sdlc → /skraft, state.json, dated paths)"
 ```
 
@@ -303,11 +303,11 @@ git commit -m "refactor(agents): rewrite skraft-orchestrator for HVE compatibili
 Mise à jour des 5 phase agents pour écrire dans les nouveaux chemins HVE.
 
 **Files:**
-- Modify: `plugins/agents/backlog-discoverer.agent.md`
-- Modify: `plugins/agents/backlog-planner.agent.md`
-- Modify: `plugins/agents/solution-architect.agent.md`
-- Modify: `plugins/agents/acceptance-designer.agent.md`
-- Modify: `plugins/agents/software-engineer.agent.md`
+- Modify: `plugins/skraft-framework/agents/backlog-discoverer.agent.md`
+- Modify: `plugins/skraft-framework/agents/backlog-planner.agent.md`
+- Modify: `plugins/skraft-framework/agents/solution-architect.agent.md`
+- Modify: `plugins/skraft-framework/agents/acceptance-designer.agent.md`
+- Modify: `plugins/skraft-framework/agents/software-engineer.agent.md`
 
 - [ ] **Step 1: Find & replace global sur les 5 fichiers**
 
@@ -320,19 +320,19 @@ Remplacements (en respectant le mapping de la spec) :
 
 - [ ] **Step 2: Ajouter référence à `skraft-artifacts.instructions.md`**
 
-Dans chaque phase agent, ajouter dans la section "Output" : "Suit les conventions de `#file:plugins/instructions/skraft-artifacts.instructions.md`."
+Dans chaque phase agent, ajouter dans la section "Output" : "Suit les conventions de `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`."
 
 - [ ] **Step 3: Lint check**
 
 ```bash
-grep -rn "\.skraft/sdlc" plugins/agents/ || echo "Clean"
+grep -rn "\.skraft/sdlc" plugins/skraft-framework/agents/ || echo "Clean"
 ```
 Expected: `Clean`
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add plugins/agents/backlog-discoverer.agent.md plugins/agents/backlog-planner.agent.md plugins/agents/solution-architect.agent.md plugins/agents/acceptance-designer.agent.md plugins/agents/software-engineer.agent.md
+git add plugins/skraft-framework/agents/backlog-discoverer.agent.md plugins/skraft-framework/agents/backlog-planner.agent.md plugins/skraft-framework/agents/solution-architect.agent.md plugins/skraft-framework/agents/acceptance-designer.agent.md plugins/skraft-framework/agents/software-engineer.agent.md
 git commit -m "refactor(agents): retarget phase agents to HVE artifact paths"
 ```
 
@@ -343,11 +343,11 @@ git commit -m "refactor(agents): retarget phase agents to HVE artifact paths"
 Les 5 reviewers n'écrivent QUE dans `reviews/{date}/`. Pas dans le namespace des artefacts qu'ils auditent.
 
 **Files:**
-- Modify: `plugins/agents/backlog-discoverer-reviewer.agent.md`
-- Modify: `plugins/agents/backlog-planner-reviewer.agent.md`
-- Modify: `plugins/agents/solution-architect-reviewer.agent.md`
-- Modify: `plugins/agents/acceptance-designer-reviewer.agent.md`
-- Modify: `plugins/agents/software-engineer-reviewer.agent.md`
+- Modify: `plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md`
+- Modify: `plugins/skraft-framework/agents/backlog-planner-reviewer.agent.md`
+- Modify: `plugins/skraft-framework/agents/solution-architect-reviewer.agent.md`
+- Modify: `plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md`
+- Modify: `plugins/skraft-framework/agents/software-engineer-reviewer.agent.md`
 
 - [ ] **Step 1: Find & replace paths**
 
@@ -357,8 +357,8 @@ Remplacer tous les `.skraft/sdlc/{phase}/reviews/` (et toute écriture hors `rev
 - [ ] **Step 2: Ajouter référence aux 2 skills**
 
 Chaque reviewer référence :
-- `#file:plugins/skills/adversarial-review-lenses/SKILL.md` (procédure 4-lentilles)
-- `#file:plugins/instructions/skraft-artifacts.instructions.md` (chemins reviews/)
+- `#file:plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md` (procédure 4-lentilles)
+- `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md` (chemins reviews/)
 
 - [ ] **Step 3: Verrou lecture seule sur artefacts**
 
@@ -367,14 +367,14 @@ Ajouter une clause explicite dans chaque reviewer : "READ-ONLY sur les artefacts
 - [ ] **Step 4: Lint check**
 
 ```bash
-grep -rn "\.skraft/sdlc" plugins/agents/*reviewer* || echo "Clean"
+grep -rn "\.skraft/sdlc" plugins/skraft-framework/agents/*reviewer* || echo "Clean"
 ```
 Expected: `Clean`
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add plugins/agents/backlog-discoverer-reviewer.agent.md plugins/agents/backlog-planner-reviewer.agent.md plugins/agents/solution-architect-reviewer.agent.md plugins/agents/acceptance-designer-reviewer.agent.md plugins/agents/software-engineer-reviewer.agent.md
+git add plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md plugins/skraft-framework/agents/backlog-planner-reviewer.agent.md plugins/skraft-framework/agents/solution-architect-reviewer.agent.md plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md plugins/skraft-framework/agents/software-engineer-reviewer.agent.md
 git commit -m "refactor(agents): retarget reviewer agents to reviews/{date}/ (read-only on artefacts)"
 ```
 

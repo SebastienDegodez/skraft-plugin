@@ -46,7 +46,7 @@ Un filet de sécurité vert doit exister ([characterize-with-contracts]({{ "/fr/
 ## Validation obligatoire (8 passes)
 
 ```bash
-bash plugins/skills/mikado-method/scripts/validate-mikado.sh <path-to-graph.md>
+bash plugins/skraft-framework/skills/mikado-method/scripts/validate-mikado.sh <path-to-graph.md>
 ```
 
 À exécuter avant chaque commit de feuille et après chaque commit de mise à jour du graphe. Exit 0 requis pour continuer — jamais avancer sur un graphe non validé.

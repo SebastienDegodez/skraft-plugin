@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 
 // Outer-loop boundary (Contract 3). Exercises pre-tool-use dispatch gate end-to-end.
 // Acceptance values are immutable.
-import { createPreToolUseService } from '../../plugins/src/application/pre-tool-use-service.mjs'
+import { createPreToolUseService } from '../../plugins/skraft-framework/src/application/pre-tool-use-service.mjs'
 
-// ── Published Language (config) — copied verbatim from plugins/skraft-framework.config.json (#48).
+// ── Published Language (config) — copied verbatim from plugins/skraft-framework/skraft-framework.config.json (#48).
 // retryBudget intentionally omitted to exercise the policy default of 3 (AC-01 "max 3").
 const CONFIG = {
   phaseOrder: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER'],

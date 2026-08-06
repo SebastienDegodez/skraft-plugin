@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createConfigService } from '../../plugins/src/application/config-service.mjs'
-import { Ok, Err } from '../../plugins/src/domain/result.mjs'
+import { createConfigService } from '../../plugins/skraft-framework/src/application/config-service.mjs'
+import { Ok, Err } from '../../plugins/skraft-framework/src/domain/result.mjs'
 
 // ─── Test doubles ─────────────────────────────────────────────────────────────
 const readerOk = (config) => ({ read: async () => config })

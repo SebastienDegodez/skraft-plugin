@@ -63,11 +63,11 @@ Tous les payloads entrants sont normalisés en camelCase avant routage :
 | `toolName` (camelCase) | `toolName` (inchangé) |
 | `File_Path` (mixte) | `filePath` |
 
-Implémenté dans `plugins/src/adapters/api/hooks/payload.mjs`.
+Implémenté dans `plugins/skraft-framework/src/adapters/api/hooks/payload.mjs`.
 
 ## Config SKRAFT_* et cascade
 
-Le config-loader (`plugins/src/application/config-loader.mjs`) résout la config
+Le config-loader (`plugins/skraft-framework/src/application/config-loader.mjs`) résout la config
 selon la cascade suivante (la dernière source gagne) :
 
 ```
@@ -90,14 +90,14 @@ selon la cascade suivante (la dernière source gagne) :
 
 | Fichier | Rôle |
 |---------|------|
-| `plugins/src/cli/hook.mjs` | Point d'entrée CLI (stdin → stdout) |
-| `plugins/src/adapters/api/hooks/payload.mjs` | Normalisation payload |
-| `plugins/src/adapters/api/hooks/decision.mjs` | Constructeurs de décision |
-| `plugins/src/adapters/api/hooks/hook-router.mjs` | Routage par type d'événement |
-| `plugins/src/adapters/api/hooks/hook-entry.mjs` | Normalise puis route |
-| `plugins/src/adapters/api/hooks/service-factory.mjs` | Composition root |
-| `plugins/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Audit append-only |
-| `plugins/src/application/config-loader.mjs` | Config cascade |
+| `plugins/skraft-framework/src/cli/hook.mjs` | Point d'entrée CLI (stdin → stdout) |
+| `plugins/skraft-framework/src/adapters/api/hooks/payload.mjs` | Normalisation payload |
+| `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Constructeurs de décision |
+| `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Routage par type d'événement |
+| `plugins/skraft-framework/src/adapters/api/hooks/hook-entry.mjs` | Normalise puis route |
+| `plugins/skraft-framework/src/adapters/api/hooks/service-factory.mjs` | Composition root |
+| `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Audit append-only |
+| `plugins/skraft-framework/src/application/config-loader.mjs` | Config cascade |
 | `.github/hooks/skraft.json` | Déclaration des hooks auprès du runtime Copilot |
 
 ## Voir aussi

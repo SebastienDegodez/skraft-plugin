@@ -15,7 +15,7 @@ createPreToolUseService({ stateReader, auditWriter, config, clock }).handle({ re
 ```
 
 `application/pre-tool-use-service.mjs` conforms to the `PreToolUse` driver port
-(`plugins/src/ports/api/pre-tool-use.mjs`) and returns a harness decision from
+(`plugins/skraft-framework/src/ports/api/pre-tool-use.mjs`) and returns a harness decision from
 `decision.mjs` (`allow` / `deny` / `block`). The test observes (1) the returned decision and
 (2) the append-only `DispatchEvaluated` audit fact — never an internal domain object (Mandate 1).
 
@@ -74,9 +74,9 @@ acceptance test in this deliverable.
 
 | Module | Kind | Notes |
 |---|---|---|
-| `plugins/src/domain/state-schema.mjs` | pure Domain Service | `validateState(raw) -> Result<PipelineState>` (Contract 1). No I/O. |
-| `plugins/src/domain/pipeline-policy.mjs` | pure Domain Service | `expectedNextAgent(state, config)` + `evaluateDispatch(requestedAgent, state, config)` (Contract 2). No I/O. **Distinct from build-time `domain/dispatch-policy.mjs` — no shared symbol.** |
-| `plugins/src/application/pre-tool-use-service.mjs` | use case | `createPreToolUseService(...).handle(payload)` (Contract 3). Wires read → validate → evaluate → audit → map. Deny-by-default; whole `handle` wrapped so any throw ⇒ `block` (ADR-004). |
+| `plugins/skraft-framework/src/domain/state-schema.mjs` | pure Domain Service | `validateState(raw) -> Result<PipelineState>` (Contract 1). No I/O. |
+| `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | pure Domain Service | `expectedNextAgent(state, config)` + `evaluateDispatch(requestedAgent, state, config)` (Contract 2). No I/O. **Distinct from build-time `domain/dispatch-policy.mjs` — no shared symbol.** |
+| `plugins/skraft-framework/src/application/pre-tool-use-service.mjs` | use case | `createPreToolUseService(...).handle(payload)` (Contract 3). Wires read → validate → evaluate → audit → map. Deny-by-default; whole `handle` wrapped so any throw ⇒ `block` (ADR-004). |
 
 Reused as-is: `result.mjs`, `decision.mjs`, `json-state-reader.mjs` (#47), `jsonl-audit-writer.mjs`,
 generated `skraft-framework.config.json` (#48), `pre-tool-use.mjs` port. **Do not touch**
@@ -131,7 +131,7 @@ not `dotnet`:
   `node --test tests/skraft-framework/dispatch-order-guard.acceptance.test.mjs`
 - Full framework suite + coverage (mirrors CI):
   `node scripts/local-ci.mjs`  (alias `npm run ci:local`)
-- From `plugins/src`: `npm test`  (`node --test ../../tests/skraft-framework/*.test.mjs`)
+- From `plugins/skraft-framework/src`: `npm test`  (`node --test ../../tests/skraft-framework/*.test.mjs`)
 - Mutation gate: `node scripts/local-ci.mjs --mutation`
 
 ## Traceability

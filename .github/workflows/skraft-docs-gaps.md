@@ -161,7 +161,7 @@ three-way diff in prose.
   measurement. Prefer qualitative arguments overall.
 - **Faithful to the skills' canonical vocabulary.** When a page explains a craft
   concept, the names, layers and terms MUST match the source skill verbatim. The
-  `plugins/skills/*/SKILL.md` files are the terminology authority. Concretely:
+  `plugins/skraft-framework/skills/*/SKILL.md` files are the terminology authority. Concretely:
   Clean Architecture layers are **Domain / Application / Infrastructure / API**
   (per `clean-architecture-testing`); never substitute Entities / Use Cases /
   Interface Adapters / Frameworks or any other competing naming. If a concept is

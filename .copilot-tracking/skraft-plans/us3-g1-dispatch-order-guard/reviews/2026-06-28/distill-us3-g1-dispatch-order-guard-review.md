@@ -12,7 +12,7 @@
 - `.copilot-tracking/skraft-plans/us3-g1-dispatch-order-guard/features/dispatch-order-guard.feature`
 - `.copilot-tracking/skraft-plans/us3-g1-dispatch-order-guard/details/2026-06-28/impl-plan-us3.md`
 - `tests/skraft-framework/dispatch-order-guard.acceptance.test.mjs`
-- Cross-checked against: `plans/2026-06-28/ac-draft-us3.md`, `details/2026-06-28/contracts-us3.md`, `details/2026-06-28/event-model-us3.md`, ADR-004, ADR-005, `plugins/src/adapters/api/hooks/decision.mjs`
+- Cross-checked against: `plans/2026-06-28/ac-draft-us3.md`, `details/2026-06-28/contracts-us3.md`, `details/2026-06-28/event-model-us3.md`, ADR-004, ADR-005, `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs`
 
 ## Gate summary (acceptance-review-criteria G1–G10)
 

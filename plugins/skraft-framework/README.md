@@ -7,7 +7,7 @@
 
 ## Emplacement & résolution
 
-Le framework vit dans `plugins/src/`. Il est livré avec le plugin — aucune
+Le framework vit dans `plugins/skraft-framework/src/`. Il est livré avec le plugin — aucune
 dépendance externe.
 
 Point d'entrée appelé par `hooks/hooks.json` (Claude Code) et `.github/hooks/skraft-framework.json` (Copilot) :
@@ -35,7 +35,7 @@ cross-platform** (Mac + Windows), via `resolvePluginRootFromEnv`
 
 Le manifest Copilot `.github/hooks/skraft-framework.json` **n'utilise pas**
 `CLAUDE_PLUGIN_ROOT` : les commandes sont des **chemins relatifs depuis la racine
-du repo** (`node plugins/src/cli/hook.mjs <Event> [matcher]`), exécutées avec le
+du repo** (`node plugins/skraft-framework/src/cli/hook.mjs <Event> [matcher]`), exécutées avec le
 CWD = racine du projet consumer. Chaque entrée fournit `bash` **et** `powershell`
 (commande identique) pour Mac/Linux et Windows.
 
@@ -51,7 +51,7 @@ CWD = racine du projet consumer. Chaque entrée fournit `bash` **et** `powershel
 | 4 | G2/G3 forçage skills + audit | ✅ Livré | `domain/skill-policy.mjs`, `application/subagent-start-service.mjs`, `application/subagent-stop-service.mjs` (block si skill manquant), `application/post-tool-use-service.mjs` G3 (fail-open) |
 | 5 | Manifests hooks Copilot + Claude | ✅ Livré | `hooks/hooks.json` (Claude Code — PreToolUse Agent+Bash, SubagentStart, SubagentStop, PostToolUse), `.github/hooks/skraft-framework.json` (Copilot) |
 | 6 | Tests boundary-to-boundary | 🔲 À faire | — |
-| 7 | Documentation + roadmap.md | ✅ Livré | `plugins/README.md` (ancrage genesis A9/S4/S7, fail modes, guide « ajouter un garde-fou »), `docs/roadmap.md` (13 US avec gain + statut + milestone) |
+| 7 | Documentation + roadmap.md | ✅ Livré | `plugins/skraft-framework/README.md` (ancrage genesis A9/S4/S7, fail modes, guide « ajouter un garde-fou »), `docs/roadmap.md` (13 US avec gain + statut + milestone) |
 | 8 | G4/G5 artefacts + verdict + commit | ✅ Livré | `domain/artifact-policy.mjs` (artefacts attendus, parseur de verdict reviewer, `**Verdict:** APPROVED\|NEEDS_REWORK\|REJECTED`), `ports/infrastructure/commit-verifier.mjs` + `adapters/infrastructure/git-commit-verifier.mjs` (working tree propre), `subagent-stop-service` (complétion fail-closed : artefact manquant, verdict divergent du fichier écrit, DELIVER sans commit vérifié) — branché dans `cli/hook.mjs` |
 | 9 | S7 execution-log + CLI bridge | 🔲 À faire | — |
 | 10 | G6 continuation orchestrateur | ✅ Livré | `application/post-tool-use-service.mjs` (sur `PostToolUse(Agent)` : injecte le contexte d'étape suivante via `pipeline-policy.expectedNextAgent` en cas de succès, ou un contexte de re-dispatch en cas de `CHANGES_REQUESTED` ; fail-open) — branché dans `cli/hook.mjs` |
@@ -67,7 +67,7 @@ CWD = racine du projet consumer. Chaque entrée fournit `bash` **et** `powershel
 ## Architecture cible
 
 ```
-plugins/src/
+plugins/skraft-framework/src/
 ├── domain/              # pur, zéro dépendance
 │   ├── result.mjs
 │   ├── value-objects.mjs
@@ -185,7 +185,7 @@ Résolution (via `cli/state.mjs`/`cli/hook.mjs`) : `SKRAFT_TRACKING_ROOT` → `S
 
 ## Hooks déployés
 
-### Claude Code — `plugins/hooks/hooks.json`
+### Claude Code — `plugins/skraft-framework/hooks/hooks.json`
 
 | Event | Matcher | Garde activé |
 |---|---|---|
@@ -248,7 +248,7 @@ Suivre ces 5 étapes pour ajouter un nouveau garde-fou `Gn` :
 
 ### 1. Règle métier pure — `domain/`
 
-Créer `plugins/src/domain/<nom>-policy.mjs` contenant la logique pure
+Créer `plugins/skraft-framework/src/domain/<nom>-policy.mjs` contenant la logique pure
 (zero dépendance, pas d'import infra).
 
 ```js
@@ -261,7 +261,7 @@ export function validateExample(payload, config) {
 
 ### 2. Service applicatif — `application/`
 
-Créer ou étendre `plugins/src/application/<event>-service.mjs` :
+Créer ou étendre `plugins/skraft-framework/src/application/<event>-service.mjs` :
 orchestrer domaine + ports (state-reader, audit-writer).
 
 ```js
@@ -290,7 +290,7 @@ case 'PreToolUse':
 
 ### 4. Déclarer dans hooks.json
 
-Ajouter (ou vérifier) l'entrée dans `plugins/hooks/hooks.json` :
+Ajouter (ou vérifier) l'entrée dans `plugins/skraft-framework/hooks/hooks.json` :
 
 ```json
 { "event": "PreToolUse", "matcher": "Bash", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse" }

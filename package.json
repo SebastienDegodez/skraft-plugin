@@ -7,6 +7,8 @@
     "test:site": "playwright test",
     "lint:citations": "node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages \"docs/site/**/*.md\"",
     "ci:local": "node scripts/local-ci.mjs",
+    "paths:check": "node scripts/migrate-plugin-paths.mjs --check",
+    "paths:migrate": "node scripts/migrate-plugin-paths.mjs --apply",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "release": "semantic-release",
     "release:dry": "semantic-release --dry-run --no-ci"

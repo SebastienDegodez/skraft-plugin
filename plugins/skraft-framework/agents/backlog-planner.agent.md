@@ -29,7 +29,7 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 ---
 
 # Backlog-Planner Agent
@@ -170,7 +170,7 @@ Action: Fix flagged items before marking ready-for-design.
 
 ### Phase 6: PERSIST
 
-Write output artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/` following `#file:plugins/instructions/skraft-artifacts.instructions.md`. Every markdown file must start with `<!-- markdownlint-disable-file -->`.
+Write output artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/` following `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`. Every markdown file must start with `<!-- markdownlint-disable-file -->`.
 
 **`stories-{milestone}.md`** — one file per milestone, containing:
 - Milestone summary (theme, scope, due date)

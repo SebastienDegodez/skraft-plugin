@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { createGitCommitLogReader } from '../../plugins/src/adapters/infrastructure/git-commit-log-reader.mjs'
+import { createGitCommitLogReader } from '../../plugins/skraft-framework/src/adapters/infrastructure/git-commit-log-reader.mjs'
 
 const execFileAsync = promisify(execFile)
 

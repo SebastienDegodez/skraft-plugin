@@ -12,19 +12,19 @@ Feature: G3 Skill Read Audit at PostToolUse Read
   @happy-path @ac-04
   Scenario: Solution architect reading a skill definition file produces a SkillRead audit entry
     # Domain example 5
-    When solution-architect reads "plugins/skills/architecture-decisions/SKILL.md"
+    When solution-architect reads "plugins/skraft-framework/skills/architecture-decisions/SKILL.md"
     Then the hook returns allow
     And the audit log contains exactly one SkillRead entry
     And the entry records agent "solution-architect"
     And the entry records skill name "architecture-decisions"
-    And the entry records the full file path "plugins/skills/architecture-decisions/SKILL.md"
+    And the entry records the full file path "plugins/skraft-framework/skills/architecture-decisions/SKILL.md"
     And the entry records a timestamp
 
   @error-case @ac-04
   Scenario: Audit write failure does not block the agent (fail-open)
     # Domain example 6 — I/O error on audit write; ADR-006 fail-open
     Given the audit writer will fail on any write attempt
-    When solution-architect reads "plugins/skills/architecture-decisions/SKILL.md"
+    When solution-architect reads "plugins/skraft-framework/skills/architecture-decisions/SKILL.md"
     Then the hook returns allow
 
   @edge-case @ac-04

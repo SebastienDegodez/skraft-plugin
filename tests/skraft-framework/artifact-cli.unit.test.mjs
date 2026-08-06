@@ -3,13 +3,13 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ARTIFACTS, validate } from '../../plugins/src/domain/artifact-registry.mjs'
-import { renderArtifact } from '../../plugins/src/application/render-artifact.mjs'
+import { ARTIFACTS, validate } from '../../plugins/skraft-framework/src/domain/artifact-registry.mjs'
+import { renderArtifact } from '../../plugins/skraft-framework/src/application/render-artifact.mjs'
 
-// Mirrors how plugins/src/cli/artifact.mjs resolves templates at runtime: relative
-// to the plugin root (this repo's plugins/ directory), so this test exercises the
+// Mirrors how plugins/skraft-framework/src/cli/artifact.mjs resolves templates at runtime: relative
+// to the plugin root (this repo's skraft-framework plugin directory), so this test exercises the
 // exact shipped codepath an agent hits via `${CLAUDE_PLUGIN_ROOT}/src/cli/artifact.mjs`.
-const pluginRoot = fileURLToPath(new URL('../../plugins', import.meta.url))
+const pluginRoot = fileURLToPath(new URL('../../plugins/skraft-framework/', import.meta.url))
 const readTemplate = (templatePath) => readFileSync(join(pluginRoot, templatePath), 'utf8')
 
 const fullComment = () => ({

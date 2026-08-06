@@ -14,11 +14,11 @@ blocks fail-closed (ADR-004) as a Conformist consumer of the generated config (A
 
 | Module | Layer | Responsibility |
 |---|---|---|
-| plugins/src/domain/state-schema.mjs | Domain | `validateState(raw) -> Result` — frozen PipelineState VO, fail-closed on bad shape |
-| plugins/src/domain/pipeline-policy.mjs | Domain | `expectedNextAgent` (SPECIALIST/REVIEWER/RETRY/ADVANCE, `retryBudget ?? 3`, PIPELINE_COMPLETE) + `evaluateDispatch` single-equality deny-by-default |
-| plugins/src/application/pre-tool-use-service.mjs | Application | `createPreToolUseService(...).handle()` — read→validate→evaluate→one DispatchEvaluated audit→harness; whole body fail-closed to block |
+| plugins/skraft-framework/src/domain/state-schema.mjs | Domain | `validateState(raw) -> Result` — frozen PipelineState VO, fail-closed on bad shape |
+| plugins/skraft-framework/src/domain/pipeline-policy.mjs | Domain | `expectedNextAgent` (SPECIALIST/REVIEWER/RETRY/ADVANCE, `retryBudget ?? 3`, PIPELINE_COMPLETE) + `evaluateDispatch` single-equality deny-by-default |
+| plugins/skraft-framework/src/application/pre-tool-use-service.mjs | Application | `createPreToolUseService(...).handle()` — read→validate→evaluate→one DispatchEvaluated audit→harness; whole body fail-closed to block |
 
-Stryker mutation scope extended to the three modules (plugins/src/stryker.config.mjs).
+Stryker mutation scope extended to the three modules (plugins/skraft-framework/src/stryker.config.mjs).
 
 ## Tests
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isOk, isErr } from '../../plugins/src/domain/result.mjs'
-import { validateConfig, DEPTH_TIERS, DEFAULT_DEPTH_TIER, TRACKING_LAYOUTS, DEFAULT_TRACKING_LAYOUT } from '../../plugins/src/domain/config-schema.mjs'
+import { isOk, isErr } from '../../plugins/skraft-framework/src/domain/result.mjs'
+import { validateConfig, DEPTH_TIERS, DEFAULT_DEPTH_TIER, TRACKING_LAYOUTS, DEFAULT_TRACKING_LAYOUT } from '../../plugins/skraft-framework/src/domain/config-schema.mjs'
 
 // ─── constants ─────────────────────────────────────────────────────────────────
 

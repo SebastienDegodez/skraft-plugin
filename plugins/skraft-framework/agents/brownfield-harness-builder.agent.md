@@ -26,7 +26,7 @@ metadata:
   skills:
     - characterize-with-contracts
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
   inputs:
     required:
       - target service path or project name

@@ -25,7 +25,7 @@
 ## Lens 2 — Clean Architecture : pass
 
 - [LOW] `state-machine.mjs` contient `_testForcePhasesCompleted` / `_testForceReviewArtifacts` — test seams dans le domaine. Documenté dans Mandate 4 Gate a (branch_unreachable_via_AC). Acceptable.
-- [LOW] `stryker.config.mjs` : `plugins/src/domain/state-schema.mjs` en double (ancienne + nouvelle entrée US5). Stryker déduplique, dette maintenance.
+- [LOW] `stryker.config.mjs` : `plugins/skraft-framework/src/domain/state-schema.mjs` en double (ancienne + nouvelle entrée US5). Stryker déduplique, dette maintenance.
 
 ## Lens 3 — Test integrity : pass
 

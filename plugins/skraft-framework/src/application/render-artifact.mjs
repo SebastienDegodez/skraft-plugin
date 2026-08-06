@@ -1,5 +1,5 @@
 // Renders a SKRAFT artifact from validated data — the use case behind the
-// `artifact` mini-command CLI (plugins/src/cli/artifact.mjs).
+// `artifact` mini-command CLI (plugins/skraft-framework/src/cli/artifact.mjs).
 //
 // Keeps IO (reading the template file) behind a `readTemplate` port so the
 // rendering logic itself stays a pure composition of domain functions.

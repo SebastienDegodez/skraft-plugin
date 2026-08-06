@@ -4,14 +4,14 @@
 // and a recursive glob matcher, shared by scan-drift.mjs and lint-nav.mjs.
 //
 // The YAML subset parser itself (`parseYaml`) lives in
-// plugins/src/domain/yaml-parser.mjs — it is also the parser behind the shipped
-// `artifact` CLI (plugins/src/cli/artifact.mjs), so both consumers share one
+// plugins/skraft-framework/src/domain/yaml-parser.mjs — it is also the parser behind the shipped
+// `artifact` CLI (plugins/skraft-framework/src/cli/artifact.mjs), so both consumers share one
 // implementation instead of drifting. This module re-exports it and adds the
 // book-contract-specific loading/traversal helpers below.
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { parseYaml } from '../../plugins/src/domain/yaml-parser.mjs';
+import { parseYaml } from '../../plugins/skraft-framework/src/domain/yaml-parser.mjs';
 
 export { parseYaml };
 

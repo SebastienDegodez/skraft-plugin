@@ -54,7 +54,7 @@
 
 ## Lens 3 — Quality (weight 0.15 · score 1.0)
 - Cross-references [OK] — upstream triage/sprint paths resolve; dependency IDs (#47/#48/#42/#10/#11) consistent across triage, sprint, and stories.
-- Naming disambiguation [OK] — runtime `domain/pipeline-policy.mjs` vs build-time `plugins/src/domain/dispatch-policy.mjs` preserved in Technical Notes, triage Duplicates, and stories Non-goals; no conflation.
+- Naming disambiguation [OK] — runtime `domain/pipeline-policy.mjs` vs build-time `plugins/skraft-framework/src/domain/dispatch-policy.mjs` preserved in Technical Notes, triage Duplicates, and stories Non-goals; no conflation.
 - Internal consistency [OK] — effort (M/1.0d), DoR (8/8), AC count (4), and coverage table agree across both artefacts.
 - Self-containment [OK] — DESIGN can consume without extra context (state shape, config source, fail-closed posture, test boundary specified).
 

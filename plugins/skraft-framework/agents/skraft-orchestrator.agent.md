@@ -46,17 +46,17 @@ metadata:
     - contract-testing
     - playwright-evidence
   instructions:
-    - plugins/instructions/skraft-state.instructions.md
-    - plugins/instructions/skraft-todo-sync.instructions.md
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-state.instructions.md
+    - plugins/skraft-framework/instructions/skraft-todo-sync.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 ---
 
 # skraft Engineering Pipeline Orchestrator
 
 > **Companion instructions (orchestrator-owned, portable load).** These convention files are the orchestrator's responsibility — sub-agents do NOT load them; the orchestrator provides sub-agents their context at dispatch time (see "Dispatch context header"). They are declared in this agent's frontmatter `instructions:` and carry an `applyTo:` scope for harnesses that auto-load path-scoped instructions (e.g. Copilot). Harnesses that do NOT auto-load them (e.g. Claude Code) require an explicit read: at session start / rehydration, read each file with your file-read tool and treat it as the source of truth. Read once, not every turn.
-> - `plugins/instructions/skraft-state.instructions.md` — pipeline state (write-through model, schema, rehydration)
-> - `plugins/instructions/skraft-todo-sync.instructions.md` — native todo working set projection
-> - `plugins/instructions/skraft-artifacts.instructions.md` — artifact path conventions (also pointed to sub-agents via the dispatch header)
+> - `plugins/skraft-framework/instructions/skraft-state.instructions.md` — pipeline state (write-through model, schema, rehydration)
+> - `plugins/skraft-framework/instructions/skraft-todo-sync.instructions.md` — native todo working set projection
+> - `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md` — artifact path conventions (also pointed to sub-agents via the dispatch header)
 
 ## Identity
 
@@ -68,14 +68,14 @@ You consume a refined story from the PRODUCT layer as your input. You do **NOT**
 
 ## Phase 0: LOAD STATE (B4 PLAN MEMENTO) — rehydrate once
 
-Follow the write-through model and the once-per-session Rehydration sequence defined in `#file:plugins/instructions/skraft-state.instructions.md`. Read the snapshot ONE time here; every later turn uses the native todo working set, not a whole-file re-read.
+Follow the write-through model and the once-per-session Rehydration sequence defined in `#file:plugins/skraft-framework/instructions/skraft-state.instructions.md`. Read the snapshot ONE time here; every later turn uses the native todo working set, not a whole-file re-read.
 
 1. Determine the project slug from the user request or the active issue. The state file lives under the resolved tracking layout — namespaced (default): `.copilot-tracking/skraft-plans/{projectSlug}/state.json`; bare (HVE-RPI shared): `.copilot-tracking/skraft/{projectSlug}/state.json`. Read the layout with `node "$CLAUDE_PLUGIN_ROOT/src/cli/config.mjs" get --key trackingLayout`; the `state.mjs` CLI resolves the path itself, so always go through it rather than hand-building the path.
 2. If the state does not exist, create it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" init --slug {projectSlug}` and start at RESEARCH.
 3. If it exists, rehydrate in one call — `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`.
-4. **Project the pipeline into the native todo working set** per `#file:plugins/instructions/skraft-todo-sync.instructions.md` (phases as todos with dependencies + statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`). This list — not the JSON file — drives every subsequent turn.
+4. **Project the pipeline into the native todo working set** per `#file:plugins/skraft-framework/instructions/skraft-todo-sync.instructions.md` (phases as todos with dependencies + statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`). This list — not the JSON file — drives every subsequent turn.
 5. Scan for neighbor planners under `.copilot-tracking/security-plans/{slug}/`, `.copilot-tracking/rai-plans/{slug}/`, `.copilot-tracking/sssc-plans/{slug}/`. If found, direct-edit their paths into `state.json::neighborPlanners` and add an advisory line to `nextActions` (read-only, no coupling).
-6. **Evaluate the RESEARCH gate (entry-point evaluation).** Only on a fresh pipeline (`phasesCompleted` empty and `currentPhase == "RESEARCH"`). Load `#file:plugins/skills/skraft-difficulty-routing/SKILL.md` and run the depth + difficulty axes now against the incoming story so `difficulty` is never left `null` (`set-difficulty`). Then apply the RESEARCH gate: for **Simple** or **Medium** difficulty, RESEARCH adds no value — direct-edit `state.json::entryPoint = { skipPhases: ["RESEARCH"] }` and advance with `transition --to DESIGN`. For **Medium-hard** or **Challenging**, leave `skipPhases` empty and run RESEARCH. (This mirrors the HVE-RPI rule: no research artefacts for simple work.)
+6. **Evaluate the RESEARCH gate (entry-point evaluation).** Only on a fresh pipeline (`phasesCompleted` empty and `currentPhase == "RESEARCH"`). Load `#file:plugins/skraft-framework/skills/skraft-difficulty-routing/SKILL.md` and run the depth + difficulty axes now against the incoming story so `difficulty` is never left `null` (`set-difficulty`). Then apply the RESEARCH gate: for **Simple** or **Medium** difficulty, RESEARCH adds no value — direct-edit `state.json::entryPoint = { skipPhases: ["RESEARCH"] }` and advance with `transition --to DESIGN`. For **Medium-hard** or **Challenging**, leave `skipPhases` empty and run RESEARCH. (This mirrors the HVE-RPI rule: no research artefacts for simple work.)
 7. Print the resume summary:
    ```
    Pipeline state loaded.
@@ -91,7 +91,7 @@ Follow the write-through model and the once-per-session Rehydration sequence def
 
 ## State file
 
-The state file is **JSON only**, never markdown. It is a durable safety snapshot, not a per-turn scratchpad. The full schema, the write-through model (native todo working set + deterministic `state.mjs` CLI writes), and the once-per-session rehydration are defined in `#file:plugins/instructions/skraft-state.instructions.md`. Every mutation goes through the CLI (or the two documented direct-edit scalars, `entryPoint` / `adrRatification`); the whole file is never re-read mid-session.
+The state file is **JSON only**, never markdown. It is a durable safety snapshot, not a per-turn scratchpad. The full schema, the write-through model (native todo working set + deterministic `state.mjs` CLI writes), and the once-per-session rehydration are defined in `#file:plugins/skraft-framework/instructions/skraft-state.instructions.md`. Every mutation goes through the CLI (or the two documented direct-edit scalars, `entryPoint` / `adrRatification`); the whole file is never re-read mid-session.
 
 ## Phase execution protocol
 
@@ -105,7 +105,7 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 ## Working context (provided by orchestrator)
 - Story / issue: {issueNumber} — {title}
 - Output path (write here): .copilot-tracking/skraft-plans/{projectSlug}/{phaseDir}/{YYYY-MM-DD}/
-- Artifact conventions: follow `plugins/instructions/skraft-artifacts.instructions.md` (dated subdirs + `<!-- markdownlint-disable-file -->` header). Read it if not already in context.
+- Artifact conventions: follow `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md` (dated subdirs + `<!-- markdownlint-disable-file -->` header). Read it if not already in context.
 - depthTier: {depthTier}   difficulty: {difficulty}
 - Upstream artefacts: {paths from previous phases}
 ```
@@ -121,7 +121,7 @@ Consult the native todo working set for the current phase (no whole-file re-read
 Verify the expected artefacts exist at the dated HVE paths (see Dispatch table). If missing, count as implicit failure.
 
 **Step 3 — Dispatch reviewer**
-Pass the produced artefact paths to the reviewer agent. Do NOT summarize or interpret — pass raw paths only. The reviewer applies `#file:plugins/skills/adversarial-review-lenses/SKILL.md` and writes its verdict file to `reviews/{date}/`.
+Pass the produced artefact paths to the reviewer agent. Do NOT summarize or interpret — pass raw paths only. The reviewer applies `#file:plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md` and writes its verdict file to `reviews/{date}/`.
 
 **Step 4 — Handle verdict**
 
@@ -137,12 +137,12 @@ RESEARCH has no reviewer: findings are grounded in citations the human can verif
 
 1. Dispatch `Skraft - Solution Researcher` with the Dispatch context header above.
 2. Verify the research document exists at `research/{date}/{slug}-research.md`. If missing, re-dispatch once; otherwise surface to user.
-3. Close the phase with the manual-closure command (`#file:plugins/instructions/skraft-state.instructions.md` § Manual phase closure) — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
+3. Close the phase with the manual-closure command (`#file:plugins/skraft-framework/instructions/skraft-state.instructions.md` § Manual phase closure) — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
 4. Post the GitHub comment and reflect into the todo list, same as an `APPROVED` verdict from Step 4 above.
 
 ### DESIGN-only: ADR ratification checkpoint (B10 HUMAN CHECKPOINT)
 
-ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in `#file:plugins/skills/architecture-decisions/SKILL.md` (Ratification Contract); this is its wiring.
+ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in `#file:plugins/skraft-framework/skills/architecture-decisions/SKILL.md` (Ratification Contract); this is its wiring.
 
 1. **Read the digest, not the bodies.** Read `docs/adr/decisions-index.md` (the cheap verdict surface) — `cat docs/adr/decisions-index.md`. Do NOT load full ADR bodies. To inspect one ADR's header without its body, use the S7 extraction command in `architecture-decisions` ("Reading the digest cheaply"); fall back to `read_file` on the first ~12 lines only if the command is unavailable. Collect every row whose `Status == Proposed`.
 2. **No Proposed rows →** ratification is a no-op; direct-edit `adrRatification.checkpointStatus = "resolved"` on the snapshot, then `state.mjs transition --to DISTILL`.
@@ -170,7 +170,7 @@ Nothing advances to DISTILL until every ADR is Accepted or Rejected.
 
 ## Difficulty + depth-tier routing
 
-The routing runs at **pipeline start** (Phase 0, step 6), driven by `#file:plugins/skills/skraft-difficulty-routing/SKILL.md`, against the refined story the product layer handed in:
+The routing runs at **pipeline start** (Phase 0, step 6), driven by `#file:plugins/skraft-framework/skills/skraft-difficulty-routing/SKILL.md`, against the refined story the product layer handed in:
 
 - **Difficulty Tier** is evaluated first (`set-difficulty`, write-once) so it is never `null`.
 - **Entry Point** = the RESEARCH gate: **Simple / Medium** difficulty skips RESEARCH (`entryPoint.skipPhases = ["RESEARCH"]`); **Medium-hard / Challenging** runs it. This mirrors the HVE-RPI rule that simple work produces no research artefacts.
@@ -186,7 +186,7 @@ The selected difficulty drives the RESEARCH gate and the DELIVER execution model
 
 ## Dispatch table
 
-Paths are rooted at the resolved tracking layout — namespaced (default) under `.copilot-tracking/skraft-plans/{projectSlug}/`, or bare (HVE-RPI shared) directly under `.copilot-tracking/`. Conventions are defined in `#file:plugins/instructions/skraft-artifacts.instructions.md`.
+Paths are rooted at the resolved tracking layout — namespaced (default) under `.copilot-tracking/skraft-plans/{projectSlug}/`, or bare (HVE-RPI shared) directly under `.copilot-tracking/`. Conventions are defined in `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`.
 
 | Phase | Specialist | Reviewer | Expected artefacts |
 |---|---|---|---|

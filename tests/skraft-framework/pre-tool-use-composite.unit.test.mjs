@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createPreToolUseCompositeService } from '../../plugins/src/application/pre-tool-use-composite.mjs'
+import { createPreToolUseCompositeService } from '../../plugins/skraft-framework/src/application/pre-tool-use-composite.mjs'
 
 // The composite fans a single PreToolUse event out to the two guards that govern it —
 // G1 dispatch-order (only for orchestrator-tracked agent dispatches) and G7/G8 session

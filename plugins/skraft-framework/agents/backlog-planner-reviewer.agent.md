@@ -24,7 +24,7 @@ metadata:
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 ---
 
 # Backlog-Planner Reviewer
@@ -45,7 +45,7 @@ Collect artefacts:
 - **AC drafts** — `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md` (one per story)
 - **Triage context** — `.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md` (reference only)
 
-READ-ONLY on every artefact listed above. The reviewer never writes to `research/`, `plans/`, `adrs/`, `details/`, `changes/`, or `features/`. The only output path is `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md` per `#file:plugins/instructions/skraft-artifacts.instructions.md`.
+READ-ONLY on every artefact listed above. The reviewer never writes to `research/`, `plans/`, `adrs/`, `details/`, `changes/`, or `features/`. The only output path is `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md` per `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`.
 
 If artefacts are missing, note them and proceed with available inputs. Never block on context files.
 
@@ -185,7 +185,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
 EOF
 ```
 
-The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout.
+The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout.
 
 Emit a single machine-parseable YAML verdict block:
 
