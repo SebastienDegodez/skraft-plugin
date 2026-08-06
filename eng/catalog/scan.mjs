@@ -48,7 +48,8 @@ const findings = []
 const warn = (code, path, message) => findings.push({ severity: 'warning', code, path, message })
 
 // ── Skills ─────────────────────────────────────────────────────────
-const skillsRoot = join(repoRoot, 'plugins/skills')
+const pluginRoot = join(repoRoot, 'plugins/skraft-framework')
+const skillsRoot = join(pluginRoot, 'skills')
 const evalsRoot = join(repoRoot, 'tests/skills')
 
 
@@ -76,7 +77,7 @@ const skills = readdirSync(skillsRoot)
   })
 
 // ── Agents, workers, review lenses ─────────────────────────────────────────
-const agentsRoot = join(repoRoot, 'plugins/agents')
+const agentsRoot = join(pluginRoot, 'agents')
 const agentKind = (path) => {
   const relativePath = posix(relative(agentsRoot, path))
   if (relativePath.startsWith('workers/')) return 'worker'
@@ -112,7 +113,7 @@ if (existsSync(evalsRoot)) {
   }
 }
 
-const manifest = JSON.parse(readFileSync(join(repoRoot, 'plugins/.claude-plugin/plugin.json'), 'utf8'))
+const manifest = JSON.parse(readFileSync(join(pluginRoot, '.claude-plugin/plugin.json'), 'utf8'))
 const report = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
@@ -120,7 +121,7 @@ const report = {
     name: manifest.name,
     version: manifest.version,
     description: manifest.description,
-    path: 'plugins',
+    path: 'plugins/skraft-framework',
   },
   summary: {
     skills: skills.length,

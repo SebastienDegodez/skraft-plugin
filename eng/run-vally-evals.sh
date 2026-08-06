@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
 #
-# run-vally-evals.sh — Run the skill-versus-baseline evaluations one eval spec at
-# a time, the way `dotnet/skills` does it: two isolated `vally eval` runs per
-# skill, one with no skill at all and one with only the skill under test.
+# run-vally-evals.sh — Single entry point for every Vally evaluation.
+# Skills run as isolated baseline-versus-treatment comparisons. Agent suites run
+# once through their declared custom executor and grade the resulting trajectory.
 #
 # Usage:
-#   ./eng/run-vally-evals.sh                          # every eval spec
-#   ./eng/run-vally-evals.sh outside-in-tdd            # one skill
-#   ./eng/run-vally-evals.sh <plugin>                  # one plugin
-#   ./eng/run-vally-evals.sh <plugin> <skill>          # one skill of one plugin
+#   ./eng/run-vally-evals.sh                         # every skill + agent suite
+#   ./eng/run-vally-evals.sh outside-in-tdd          # one skill
+#   ./eng/run-vally-evals.sh agents                  # every agent suite
+#   ./eng/run-vally-evals.sh agents agent-behavior   # one agent suite
 #
 # The plugin axis follows the eval layout, so it activates on its own the day the
 # repository ships more than one plugin:
-#   one plugin  — tests/skills/<skill>/eval.yaml     ↔ plugins/skills/<skill>
+#   one plugin  — tests/skills/<skill>/eval.yaml     ↔ plugins/skraft-framework/skills/<skill>
 #   many plugins — tests/<plugin>/<skill>/eval.yaml ↔ plugins/<plugin>/skills/<skill>
 #
 # Environment:
 #   PARALLEL=4        Max concurrent evals (default: 4)
 #   RUNS=1            Trials per stimulus (default: 1)
-#   WORKERS=3         Concurrent stimuli within an eval (default: 3)
+#   WORKERS=3         Concurrent stimuli within a skill eval (default: 3)
+#   AGENT_WORKERS=1   Concurrent stimuli within an agent eval (default: 1)
 #   MODEL             Agent model (default: gpt-5.6-luna)
 #   JUDGE_MODEL       Judge model (default: gpt-5.6-luna)
 #   SKIP_EVALS=""     Override skip list (default: reads skip-evals.txt)
@@ -28,22 +29,27 @@
 #   - the Vally CLI: npm install -g @microsoft/vally-cli@0.12.0
 #   - COPILOT_GITHUB_TOKEN (fine-grained PAT with Copilot Requests), or `gh auth login`
 #
-# Results go to ./eval-results/<skill>/results.json
+# Skill verdicts go to ./eval-results/<skill>/results.json.
+# Raw agent results go to ./eval-results/<suite>/live/.
 
 set -euo pipefail
 
 SKRAFT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
-if command -v vally >/dev/null 2>&1; then
-  VALLY="${VALLY:-vally}"
+if [ -n "${VALLY:-}" ]; then
+  VALLY="$VALLY"
+elif command -v vally >/dev/null 2>&1 && [ "$(vally --version)" = "0.12.0" ]; then
+  VALLY="vally"
 else
-  VALLY="${VALLY:-npx --yes $VALLY_PACKAGE}"
+  VALLY="npx --yes $VALLY_PACKAGE"
 fi
 RESULTS_ROOT="${RESULTS_DIR:-$SKRAFT_ROOT/eval-results}"
 MODEL="${MODEL:-gpt-5.6-luna}"
 JUDGE_MODEL="${JUDGE_MODEL:-gpt-5.6-luna}"
 RUNS="${RUNS:-1}"
 WORKERS="${WORKERS:-3}"
+AGENT_WORKERS="${AGENT_WORKERS:-1}"
+AGENT_MAX_RETRIES="${AGENT_MAX_RETRIES:-0}"
 PARALLEL="${PARALLEL:-4}"
 
 SKILL="${1:-}"
@@ -134,8 +140,53 @@ echo ""
 
 STATUS_DIR=$(mktemp -d)
 
+run_agent_eval() {
+  local EVAL_SPEC="$1"
+  local EVAL_DIR="$(dirname "$EVAL_SPEC")"
+  local EVAL_NAME="$(basename "$EVAL_DIR")"
+  local LIVE_DIR="$RESULTS_ROOT/$EVAL_NAME/live"
+  local LOG="$RESULTS_ROOT/$EVAL_NAME/eval.log"
+  local STATUS_FILE="$STATUS_DIR/agent__$EVAL_NAME"
+  local EXECUTOR="$SKRAFT_ROOT/eng/vally-agent-executor/plugin.mjs"
+
+  mkdir -p "$RESULTS_ROOT/$EVAL_NAME"
+  rm -rf "$LIVE_DIR"
+  mkdir -p "$LIVE_DIR"
+
+  echo -e "  ${BOLD}▶${NC} $EVAL_NAME — real agent..." >&2
+  local EVAL_EXIT=0
+  {
+    echo "=== $EVAL_NAME (agent) ==="
+    if $VALLY eval \
+      --eval-spec "$EVAL_SPEC" \
+      --skill-dir "$SKRAFT_ROOT/plugins/skraft-framework/skills" \
+      --executor-plugin "$EXECUTOR" \
+      --workers "$AGENT_WORKERS" \
+      --max-retries "$AGENT_MAX_RETRIES" \
+      --output-dir "$LIVE_DIR"; then
+      echo "Agent eval completed"
+    else
+      EVAL_EXIT=$?
+      echo "WARNING: Agent eval failed"
+    fi
+  } > "$LOG" 2>&1
+
+  local RESULTS_JSONL
+  RESULTS_JSONL=$(find "$LIVE_DIR" -name "results.jsonl" -type f 2>/dev/null | head -1)
+  if [ "$EVAL_EXIT" -eq 0 ] && [ -n "$RESULTS_JSONL" ]; then
+    echo "pass" > "$STATUS_FILE"
+    echo -e "  ${GREEN}✔${NC} $EVAL_NAME"
+  else
+    echo "error" > "$STATUS_FILE"
+    echo -e "  ${RED}✘${NC} $EVAL_NAME (see $LOG)"
+  fi
+}
+
 run_one_eval() {
   local EVAL_SPEC="$1"
+  case "$EVAL_SPEC" in
+    "$SKRAFT_ROOT/tests/agents/"*) run_agent_eval "$EVAL_SPEC"; return ;;
+  esac
   local EVAL_DIR="$(dirname "$EVAL_SPEC")"
   local EVAL_NAME="$(basename "$EVAL_DIR")"
   local EVAL_PLUGIN="$(basename "$(dirname "$EVAL_DIR")")"
@@ -143,7 +194,7 @@ run_one_eval() {
   # EVAL_PLUGIN is the literal `skills` segment of tests/skills/<skill>.
   local SKILL_DIR="$SKRAFT_ROOT/plugins/$EVAL_PLUGIN/skills/$EVAL_NAME"
   if [ ! -d "$SKILL_DIR" ]; then
-    SKILL_DIR="$SKRAFT_ROOT/plugins/skills/$EVAL_NAME"
+    SKILL_DIR="$SKRAFT_ROOT/plugins/skraft-framework/skills/$EVAL_NAME"
   fi
   local BASELINE_DIR="$RESULTS_ROOT/$EVAL_NAME/baseline"
   local SKILLED_DIR="$RESULTS_ROOT/$EVAL_NAME/skilled"
@@ -164,7 +215,7 @@ run_one_eval() {
 
   # Empty dir used as `--skill-dir` for the baseline so vally discovers zero
   # skills (without it, vally walks up to the repo root and loads every skill
-  # under plugins/skills/, contaminating the baseline). One dir per eval to
+  # under plugins/skraft-framework/skills/, contaminating the baseline). One dir per eval to
   # avoid any cross-run contention when running in parallel.
   local EMPTY_SKILL_DIR
   EMPTY_SKILL_DIR=$(mktemp -d -t vally-empty-skills-XXXXXX)
@@ -238,7 +289,8 @@ run_one_eval() {
 }
 
 export -f run_one_eval
-export SKRAFT_ROOT VALLY RESULTS_ROOT MODEL JUDGE_MODEL RUNS WORKERS STATUS_DIR
+export -f run_agent_eval
+export SKRAFT_ROOT VALLY RESULTS_ROOT MODEL JUDGE_MODEL RUNS WORKERS AGENT_WORKERS AGENT_MAX_RETRIES STATUS_DIR
 export GREEN RED YELLOW CYAN BOLD NC
 
 # ---- Run in parallel --------------------------------------------------------

@@ -20,6 +20,8 @@
     "release:dry": "semantic-release --dry-run --no-ci"
   },
   "devDependencies": {
+    "@github/copilot-sdk": "1.0.9",
+    "@microsoft/vally": "0.12.0",
     "@playwright/test": "^1.49.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/exec": "^6.0.3",

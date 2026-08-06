@@ -18,7 +18,7 @@ The same prompts are sent twice — **once with no skill at all** (baseline), **
 
 ## Step 1 — Create the evaluation spec
 
-Create `tests/skills/<skill>/eval.yaml`, where `<skill>` is **exactly** the directory name under `plugins/skills/`. That path is how the experiment resolves which skill to load: if the two names diverge, the baseline and the skilled pass become identical and the evaluation measures nothing.
+Create `tests/skills/<skill>/eval.yaml`, where `<skill>` is **exactly** the directory name under `plugins/skraft-framework/skills/`. That path is how the experiment resolves which skill to load: if the two names diverge, the baseline and the skilled pass become identical and the evaluation measures nothing.
 
 ```yaml
 name: outside-in-tdd
@@ -67,7 +67,7 @@ vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
 
 You do not have to check that the two sides of the comparison stayed comparable: the runner passes the **same** spec to both, and the only difference is `--skill-dir` — empty for the baseline, the skill under test for the other. There is no configuration left to drift.
 
-What *can* still be wrong is the directory name. If `tests/skills/<skill>/` does not match a directory under `plugins/skills/`, the runner reports the eval as skipped rather than evaluating nothing silently.
+What *can* still be wrong is the directory name. If `tests/skills/<skill>/` does not match a directory under `plugins/skraft-framework/skills/`, the runner reports the eval as skipped rather than evaluating nothing silently.
 
 ## Step 4 — Run the evaluation
 

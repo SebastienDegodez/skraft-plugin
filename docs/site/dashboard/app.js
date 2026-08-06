@@ -214,7 +214,7 @@ const render = () => {
             <h3>Skills</h3>
             <p>Craft knowledge an agent loads on demand. The profile is its context cost; the evidence is what a controlled run proved.</p>
           </div>
-          <div class="family-actions"><a class="button" href="${escapeHtml(repositoryUrl())}/tree/main/plugins/skills">Browse sources</a></div>
+          <div class="family-actions"><a class="button" href="${escapeHtml(repositoryUrl())}/tree/main/plugins/skraft-framework/skills">Browse sources</a></div>
         </header>
         <table class="rows">
           <thead><tr><th>Skill</th><th>Profile</th><th>Evaluation</th><th>Evidence</th><th>Trend</th></tr></thead>
@@ -231,7 +231,7 @@ const render = () => {
             <h3>Agents, workers and review lenses</h3>
             <p>Who runs the pipeline, which sub-agents they fan out to, and which lenses review the result.</p>
           </div>
-          <div class="family-actions"><a class="button" href="${escapeHtml(repositoryUrl())}/tree/main/plugins/agents">Browse sources</a></div>
+          <div class="family-actions"><a class="button" href="${escapeHtml(repositoryUrl())}/tree/main/plugins/skraft-framework/agents">Browse sources</a></div>
         </header>
         <table class="rows">
           <thead><tr><th>Agent</th><th>Kind</th><th>Model</th><th>Evidence</th><th>Trend</th></tr></thead>

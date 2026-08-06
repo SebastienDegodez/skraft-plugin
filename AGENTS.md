@@ -24,8 +24,9 @@ Rules:
 ## Repository structure
 
 ```
-plugins/               ← Claude Code plugin (production source + Stryker config)
-  src/
+plugins/
+  skraft-framework/    ← Claude Code plugin (production source + Stryker config)
+   src/
     domain/            ← Pure functions, no IO (Clean Architecture: Domain layer)
     application/       ← Use cases, orchestrate domain + ports (Application layer)
     ports/
@@ -35,14 +36,15 @@ plugins/               ← Claude Code plugin (production source + Stryker confi
       api/hooks/       ← Hook router, service factory, entry, decision helpers
       infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
     cli/               ← Composition root: hook.mjs wires all services
-  hooks/               ← hooks.json manifest (Claude Code hook declarations)
-  stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
-  skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
+    hooks/               ← hooks.json manifest (Claude Code hook declarations)
+    stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
+    skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 
 tests/
   skraft-framework/    ← ALL framework tests (unit + acceptance) — single flat directory
   dashboard/           ← Tests for the eng/ evaluation & dashboard tooling
   skills/              ← Vally eval specs: tests/skills/<skill>/eval.yaml
+  agents/              ← Vally real-agent specs: tests/agents/<suite>/eval.yaml
   site/                ← Playwright smoke tests for docs/site (incl. the dashboard)
 
 eng/                   ← Skill evaluation & dashboard tooling (zero-dependency Node)
@@ -50,7 +52,7 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   catalog/scan.mjs     ← Plugin sources → artifacts/catalog/report.json
   vally-adapter/       ← Paired Vally runs → eval-results/<skill>/results.json
   dashboard/           ← History, published data, AGENTVIZ manifest, retention, publish.sh
-  run-vally-evals.sh   ← Local runner, one eval spec at a time (two isolated `vally eval` runs)
+  run-vally-evals.sh   ← One local runner: paired skill comparisons + real-agent suites
 ```
 
 ### Test placement rules
@@ -64,17 +66,20 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
 - `stryker.config.mjs` uses the glob `tests/skraft-framework/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
 - Import paths from `tests/skraft-framework/` into plugin source: `../../plugins/skraft-framework/src/...`
 
-### Skill evaluation rules
+### Vally evaluation rules
 
 - One eval spec per skill at `tests/skills/<skill>/eval.yaml`; `<skill>` MUST match the
-  directory under `plugins/skills/` — `eng/run-vally-evals.sh` resolves the skill from
+  directory under `plugins/skraft-framework/skills/` — `eng/run-vally-evals.sh` resolves the skill from
   that path, and reports the eval as skipped when it does not.
 - A prompt must **never name the skill** or copy its wording, and a rubric must judge the
   outcome, not the technique. Otherwise the evaluation measures nothing.
 - Budget at least 5 trials (`stimuli × runs`); below that a verdict is reported as
   inconclusive by design.
-- Vally evaluates skills only. Do not add agent eval specs; agent behavior is covered by
-  framework and integration tests.
+- Real-agent specs live under `tests/agents/<suite>/eval.yaml`. Their custom executor
+  selects an allowlisted `.agent.md`; use Vally's typed trajectory events and built-in
+  graders where available instead of duplicating event conversion or grading logic.
+- `eng/run-vally-evals.sh` is the only eval entry point. Skill specs run baseline vs
+  treatment; agent specs run once through their declared executor.
 - Generated output (`artifacts/`, `eval-results/`, `dashboard-data/`,
   `docs/site/dashboard/data/`) is never committed.
 

@@ -1,0 +1,46 @@
+name: software-engineer-agent
+description: Verifies that Vally selects the exact SKRAFT Software Engineer, loads its required skills, and blocks safely when DISTILL inputs are absent.
+version: 0.1.0
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 2m
+  model: gpt-5.6-luna
+  runs: 1
+scoring:
+  threshold: 1
+stimuli:
+  - name: Missing DISTILL artifacts block implementation
+    prompt: |
+      Implement the requested behavior for this repository. The evaluation workspace
+      contains no approved feature file or implementation plan. If required inputs are
+      absent, report the blocker in the structured handoff format and stop without
+      changing files.
+    tags:
+      agent: software-engineer
+      scenario: missing-preconditions
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/empty-workspace/README.md
+          dest: README.md
+    graders:
+      - type: completed
+      - type: output-matches
+        config:
+          pattern: '(?s)"status"\s*:\s*"blocked"'
+      - type: output-matches
+        config:
+          pattern: '(?s)"type"\s*:\s*"clarification_needed"'
+      - type: skill-invocation
+        config:
+          required:
+            - outside-in-tdd
+            - craft-discipline
+            - red-synthesize-green
+      - type: output-not-matches
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+      - type: diff-empty

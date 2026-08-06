@@ -64,7 +64,7 @@ const trialsOf = (file) => parseJsonl(resolve(file)).filter((record) => record.t
 
 const pairs = [
   {
-    evaluation: { kind: 'skill', name: options.skill, path: options['skill-path'] ?? `plugins/skills/${options.skill}` },
+    evaluation: { kind: 'skill', name: options.skill, path: options['skill-path'] ?? `plugins/skraft-framework/skills/${options.skill}` },
     baselineRecords: trialsOf(options.baseline),
     skilledRecords: trialsOf(options.skilled),
   },

@@ -79,7 +79,7 @@ maintained.
 ## Adding an evaluation for a skill
 
 1. Create `tests/skills/<skill>/eval.yaml`, where `<skill>` is the directory name
-   under `plugins/skills/`. The experiment resolves the skill from that path, so
+   under `plugins/skraft-framework/skills/`. The experiment resolves the skill from that path, so
    the two must match.
 2. Write stimuli as a developer would phrase the request. **Never name the skill
    in a prompt** and never copy its wording — an eval that tells the agent which

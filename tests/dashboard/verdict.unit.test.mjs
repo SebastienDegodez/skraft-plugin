@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import { MIN_CREDIBLE_TRIALS, comparisonVerdict, signTestPValue, verdictState } from '../../eng/lib/verdict.mjs'
 
 const report = (summary, extra = {}) => ({ summary, ...extra })
-const subject = { kind: 'skill', name: 'outside-in-tdd', path: 'plugins/skills/outside-in-tdd' }
+const subject = { kind: 'skill', name: 'outside-in-tdd', path: 'plugins/skraft-framework/skills/outside-in-tdd' }
 
 describe('sign test', () => {
   it('is certain when nothing is discordant', () => {
@@ -81,11 +81,11 @@ describe('comparison verdict', () => {
     strictEqual(verdict.netWin, 0.5)
     strictEqual(verdict.subject.kind, 'skill')
     strictEqual(verdict.subject.name, 'outside-in-tdd')
-    strictEqual(verdict.subject.path, 'plugins/skills/outside-in-tdd')
+    strictEqual(verdict.subject.path, 'plugins/skraft-framework/skills/outside-in-tdd')
   })
 
   it('judges an agent by exactly the same bar as a skill', () => {
-    const agent = { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/agents/skraft-orchestrator.agent.md' }
+    const agent = { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md' }
     const verdict = comparisonVerdict(report({ wins: 8, ties: 1, losses: 0, trialCount: 9 }), agent)
 
     strictEqual(verdict.passed, true)

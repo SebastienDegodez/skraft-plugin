@@ -21,21 +21,21 @@ let workspace
 before(() => {
   workspace = mkdtempSync(join(tmpdir(), 'skraft-dashboard-'))
 
-  write(join(workspace, 'plugins/.claude-plugin/plugin.json'), JSON.stringify({ name: 'demo', version: '2.0.0', description: 'Demo plugin.' }))
+  write(join(workspace, 'plugins/skraft-framework/.claude-plugin/plugin.json'), JSON.stringify({ name: 'demo', version: '2.0.0', description: 'Demo plugin.' }))
   write(
-    join(workspace, 'plugins/skills/demo-skill/SKILL.md'),
+    join(workspace, 'plugins/skraft-framework/skills/demo-skill/SKILL.md'),
     ['---', 'name: demo-skill', 'description: Use when demonstrating the dashboard pipeline.', '---', '', '# Demo', '', '## When to use', '', '1. Always', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skills/undescribed-skill/SKILL.md'),
+    join(workspace, 'plugins/skraft-framework/skills/undescribed-skill/SKILL.md'),
     ['---', 'name: undescribed-skill', '---', '', '# Undescribed', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/agents/demo.agent.md'),
+    join(workspace, 'plugins/skraft-framework/agents/demo.agent.md'),
     ['---', 'name: Demo Agent', 'description: Runs the demo.', 'model: Claude Sonnet 5', 'user-invocable: false', '---', '', '# Demo agent', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/agents/reviewer-lenses/demo-lens.agent.md'),
+    join(workspace, 'plugins/skraft-framework/agents/reviewer-lenses/demo-lens.agent.md'),
     ['---', 'name: Demo Lens', 'description: Reviews the demo.', '---', '', '# Demo lens', ''].join('\n'),
   )
   write(
@@ -88,7 +88,7 @@ describe('history publication', () => {
         timestamp: '2026-08-03T10:00:00.000Z',
         verdicts: [
           {
-            subject: { kind: 'skill', name: 'demo-skill', path: 'plugins/skills/demo-skill' },
+            subject: { kind: 'skill', name: 'demo-skill', path: 'plugins/skraft-framework/skills/demo-skill' },
             conclusive: true,
             underpowered: false,
             passed: true,

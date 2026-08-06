@@ -18,7 +18,7 @@ Les mêmes prompts sont soumis deux fois — **une fois sans aucun skill** (base
 
 ## Étape 1 — Créer la spec d'évaluation
 
-Créez `tests/skills/<skill>/eval.yaml`, où `<skill>` est **exactement** le nom du dossier sous `plugins/skills/`. C'est ce chemin qui permet à l'expérience de retrouver le skill à charger : si les deux noms divergent, la baseline et la passe skilled deviennent identiques et l'évaluation ne mesure plus rien.
+Créez `tests/skills/<skill>/eval.yaml`, où `<skill>` est **exactement** le nom du dossier sous `plugins/skraft-framework/skills/`. C'est ce chemin qui permet à l'expérience de retrouver le skill à charger : si les deux noms divergent, la baseline et la passe skilled deviennent identiques et l'évaluation ne mesure plus rien.
 
 ```yaml
 name: outside-in-tdd
@@ -67,7 +67,7 @@ vally lint --eval-spec tests/skills/<skill>/eval.yaml --strict
 
 Pas besoin de vérifier que les deux côtés de la comparaison sont restés comparables : le runner passe la **même** spec aux deux, et la seule différence est `--skill-dir` — vide pour la baseline, le skill évalué pour l'autre. Il ne reste aucune configuration qui puisse dériver.
 
-Ce qui peut encore être faux, c'est le nom du dossier. Si `tests/skills/<skill>/` ne correspond à aucun dossier sous `plugins/skills/`, le runner signale l'évaluation comme ignorée plutôt que d'évaluer le vide en silence.
+Ce qui peut encore être faux, c'est le nom du dossier. Si `tests/skills/<skill>/` ne correspond à aucun dossier sous `plugins/skraft-framework/skills/`, le runner signale l'évaluation comme ignorée plutôt que d'évaluer le vide en silence.
 
 ## Étape 4 — Lancer l'évaluation
 

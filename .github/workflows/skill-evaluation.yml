@@ -11,9 +11,9 @@ name: Skill evaluation
 on:
   pull_request:
     paths:
-      - 'plugins/skills/**'
-      - 'plugins/agents/**'
-      - 'plugins/.claude-plugin/plugin.json'
+      - 'plugins/skraft-framework/skills/**'
+      - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skills/**'
       - 'tests/dashboard/**'
       - 'eng/**'
@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       skill:
-        description: 'Evaluate a single skill (directory name under plugins/skills). Leave empty for all.'
+        description: 'Evaluate a single skill (directory name under plugins/skraft-framework/skills). Leave empty for all.'
         type: string
         required: false
 
@@ -81,7 +81,7 @@ jobs:
       # deliberately (a roster's whole job is to point at its adapters).
       - name: Lint the shipped skills (advisory)
         continue-on-error: true
-        run: vally lint plugins/skills
+        run: vally lint plugins/skraft-framework/skills
 
       - name: Lint every evaluation spec
         run: |

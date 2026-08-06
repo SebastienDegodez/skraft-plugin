@@ -35,7 +35,7 @@ const resultFile = (name, timestamp) => {
       timestamp,
       verdicts: [
         {
-          subject: { kind: 'skill', name, path: `plugins/skills/${name}` },
+          subject: { kind: 'skill', name, path: `plugins/skraft-framework/skills/${name}` },
           conclusive: true,
           underpowered: false,
           passed: true,
@@ -94,7 +94,7 @@ describe('publishing evidence', () => {
         timestamp: '2026-08-03T10:00:00.000Z',
         verdicts: [
           {
-            subject: { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/agents/skraft-orchestrator.agent.md' },
+            subject: { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md' },
             conclusive: true,
             underpowered: false,
             passed: true,
