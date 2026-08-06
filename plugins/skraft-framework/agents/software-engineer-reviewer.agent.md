@@ -1,8 +1,11 @@
 ---
 name: Skraft - Software Engineer Reviewer
 description: "[Internal subagent — dispatched by Skraft - Orchestrator only] Adversarial peer reviewer (Genesis A7): spawns 4 independent lenses, synthesizes a weighted verdict. Read-only — never modifies code."
-model: Claude Sonnet 5
-user-invocable: false
+model:
+  - Claude Sonnet 5
+  - Claude Sonnet 5 (copilot)
+  - claude-sonnet-5
+user-invocable: true
 tools: 
   - read/readFile
   - search/codebase
