@@ -22,7 +22,7 @@ metadata:
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
   skills:
     - adversarial-review-lenses
   genesis_patterns:

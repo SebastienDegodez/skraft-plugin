@@ -8,14 +8,14 @@ Source: plans/2026-06-28/ac-draft-us3.md (AC-01..AC-04, 8 examples)
 
 | Element | Source | Classification |
 |---|---|---|
-| Result type (`Ok/Err/isOk/isErr`) | `plugins/src/domain/result.mjs` (ADR-001) | reuse as-is |
+| Result type (`Ok/Err/isOk/isErr`) | `plugins/skraft-framework/src/domain/result.mjs` (ADR-001) | reuse as-is |
 | Hexagonal layout | ADR-002 | conform |
-| Generated config (`phaseOrder`, `phaseAgents`) | `plugins/skraft-framework.config.json` (#48) | reuse as-is |
-| State reader (`read(projectSlug)`, throws) | `plugins/src/adapters/infrastructure/json-state-reader.mjs` (#47) | reuse as-is |
-| Audit writer (`write(entry)`, append-only) | `plugins/src/adapters/infrastructure/jsonl-audit-writer.mjs` | reuse as-is |
-| Hook decision (`allow/deny/block`) | `plugins/src/adapters/api/hooks/decision.mjs` | reuse as-is |
-| PreToolUse port (`handle(payload)`) | `plugins/src/ports/api/pre-tool-use.mjs` | extend (new handler) |
-| Build-time `dispatch-policy.mjs` | `plugins/src/domain/dispatch-policy.mjs` | **DO NOT TOUCH** — distinct module/lifecycle; already exports `validateDispatch(descriptors)` |
+| Generated config (`phaseOrder`, `phaseAgents`) | `plugins/skraft-framework/skraft-framework.config.json` (#48) | reuse as-is |
+| State reader (`read(projectSlug)`, throws) | `plugins/skraft-framework/src/adapters/infrastructure/json-state-reader.mjs` (#47) | reuse as-is |
+| Audit writer (`write(entry)`, append-only) | `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | reuse as-is |
+| Hook decision (`allow/deny/block`) | `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | reuse as-is |
+| PreToolUse port (`handle(payload)`) | `plugins/skraft-framework/src/ports/api/pre-tool-use.mjs` | extend (new handler) |
+| Build-time `dispatch-policy.mjs` | `plugins/skraft-framework/src/domain/dispatch-policy.mjs` | **DO NOT TOUCH** — distinct module/lifecycle; already exports `validateDispatch(descriptors)` |
 | `domain/pipeline-policy.mjs` | — | **create new** (pure Domain Service) |
 | `domain/state-schema.mjs` | — | **create new** (Value Object + pure validator) |
 | `application/pre-tool-use-service.mjs` | — | **create new** (use case) |

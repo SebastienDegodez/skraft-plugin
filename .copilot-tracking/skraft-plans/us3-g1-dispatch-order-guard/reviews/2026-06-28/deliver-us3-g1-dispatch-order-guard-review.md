@@ -9,9 +9,9 @@ Baseline asserted: 28/28 GREEN · 100% coverage on new modules · `node scripts/
 
 | Module | Kind | Verdict |
 |---|---|---|
-| plugins/src/domain/state-schema.mjs | pure Domain Service | clean |
-| plugins/src/domain/pipeline-policy.mjs | pure Domain Service | clean |
-| plugins/src/application/pre-tool-use-service.mjs | use case | one contract gap |
+| plugins/skraft-framework/src/domain/state-schema.mjs | pure Domain Service | clean |
+| plugins/skraft-framework/src/domain/pipeline-policy.mjs | pure Domain Service | clean |
+| plugins/skraft-framework/src/application/pre-tool-use-service.mjs | use case | one contract gap |
 | tests/*.unit.test.mjs, *.acceptance.test.mjs | suites | acceptance immutable; minor gaps |
 
 ---
@@ -33,7 +33,7 @@ Baseline asserted: 28/28 GREEN · 100% coverage on new modules · `node scripts/
 ## Lens 3 — Correctness / contract alignment (weight 0.35) → FAIL
 
 - Contract 1 ✓ frozen VO, frozen `skipPhases`, all five field rules exact. Contract 2 ✓ four stages + `?? 3` + PIPELINE_COMPLETE + skip walk; `evaluateDispatch` single-equality deny-by-default. Contract 4 ✓ 8-field shape; decision→harness→audit-code mapping exact; one fact per evaluation.
-- **high** — Contract 3 step 6 ("whole `handle` wrapped so any throw ⇒ audit + block") not met: `clock.now()` and `auditWriter.write()` sit OUTSIDE the try/catch. A clock/writer throw escapes unaudited. Mitigated by ADR-004 `type:command` platform fail-closed, but the application-level guarantee is contract-incomplete. → [pre-tool-use-service.mjs](plugins/src/application/pre-tool-use-service.mjs#L54)
+- **high** — Contract 3 step 6 ("whole `handle` wrapped so any throw ⇒ audit + block") not met: `clock.now()` and `auditWriter.write()` sit OUTSIDE the try/catch. A clock/writer throw escapes unaudited. Mitigated by ADR-004 `type:command` platform fail-closed, but the application-level guarantee is contract-incomplete. → [pre-tool-use-service.mjs](plugins/skraft-framework/src/application/pre-tool-use-service.mjs#L54)
 - **medium** — adapter-exception fail-closed unverified (no test for clock/writer throw); AC-04 covers reader/schema only.
 
 ## Lens 4 — Risk / mutation readiness (weight 0.15) → PASS (with gap)
@@ -57,7 +57,7 @@ NEEDS_REWORK
 
 ## Actionable findings
 
-1. **[high]** Wrap the whole `handle` body — move `clock.now()` and `auditWriter.write()` inside the try, with a catch → `block(...)` + audit fallback, satisfying Contract 3 step 6. [pre-tool-use-service.mjs](plugins/src/application/pre-tool-use-service.mjs#L54-L62)
+1. **[high]** Wrap the whole `handle` body — move `clock.now()` and `auditWriter.write()` inside the try, with a catch → `block(...)` + audit fallback, satisfying Contract 3 step 6. [pre-tool-use-service.mjs](plugins/skraft-framework/src/application/pre-tool-use-service.mjs#L54-L62)
 2. **[medium]** Add one app-boundary test: DELIVER + APPROVED → `block` / `PIPELINE_COMPLETE`, killing the unmutated `blockedFact` route.
 3. **[medium]** Add a fail-closed test for clock/writer throw asserting `block` + audited (or note as accepted residual once #1 lands).
 4. **[low]** Complete row g audit assertions (`event`/`projectSlug`/`evaluatedAt`).

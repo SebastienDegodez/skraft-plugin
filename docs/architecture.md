@@ -79,8 +79,8 @@ skraft-plugin/
 
 | Dossier | Rôle | Public |
 |---|---|---|
-| `plugins/agents/` | Agents distribués (personas opérationnels). | Utilisateur final du plugin. |
-| `plugins/skills/` | Skills opérationnels chargés par les agents. | Agents distribués. |
+| `plugins/skraft-framework/agents/` | Agents distribués (personas opérationnels). | Utilisateur final du plugin. |
+| `plugins/skraft-framework/skills/` | Skills opérationnels chargés par les agents. | Agents distribués. |
 | `.agents/skills/` | Skills **méta** — utilisés pour *créer* ou *maintenir* les agents/skills du plugin. | Mainteneur du plugin. |
 
 ---
@@ -90,7 +90,7 @@ skraft-plugin/
 | Type de fichier | Pattern | Exemple |
 |---|---|---|
 | Définition d'agent | `<nom>.agent.md` | `software-engineer.agent.md` |
-| Définition de skill | `SKILL.md` (un par dossier de skill) | `plugins/skills/outside-in-tdd/SKILL.md` |
+| Définition de skill | `SKILL.md` (un par dossier de skill) | `plugins/skraft-framework/skills/outside-in-tdd/SKILL.md` |
 | Référence d'un skill | `references/<sujet>.md` | `references/cqrs-patterns.md` |
 | Asset d'un skill | `assets/<fichier>` | `assets/CommandHandlerTestTemplate.cs` |
 
@@ -178,9 +178,9 @@ pour la matrice complète des skills consommés.
 
 | Composant | Présence physique | Statut |
 |---|---|---|
-| Orchestrateur `skraft-orchestrator` | `plugins/agents/skraft-orchestrator.agent.md` | ✅ |
-| Agents SDLC (10 sous-agents) | `plugins/agents/*.agent.md` | ✅ |
-| Reviewer lenses (4) | `plugins/agents/reviewer-lenses/*.agent.md` | ✅ |
-| Skills opérationnels | `plugins/skills/*/SKILL.md` | ✅ |
+| Orchestrateur `skraft-orchestrator` | `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` | ✅ |
+| Agents SDLC (10 sous-agents) | `plugins/skraft-framework/agents/*.agent.md` | ✅ |
+| Reviewer lenses (4) | `plugins/skraft-framework/agents/reviewer-lenses/*.agent.md` | ✅ |
+| Skills opérationnels | `plugins/skraft-framework/skills/*/SKILL.md` | ✅ |
 | Skill méta `create-custom-agent` | `.agents/skills/create-custom-agent/` | ✅ |
 | Hooks de gardiennage | — | 🚧 [roadmap §2](./roadmap.md#hooks) |

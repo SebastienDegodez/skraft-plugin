@@ -43,10 +43,10 @@ be silently violated.
 
 ## Framework structure
 
-The framework lives under `plugins/src/` at the repo root:
+The framework lives under `plugins/skraft-framework/src/` at the repo root:
 
 ```
-plugins/src/
+plugins/skraft-framework/src/
   domain/                ← pure invariants (zero dependencies)
     result.mjs           Ok/Err discriminated union
     value-objects.mjs    Phase, AgentName, ProjectSlug, Verdict
@@ -79,7 +79,7 @@ plugins/src/
     hook.mjs             CLI: stdin JSON → router → stdout JSON
 ```
 
-The Copilot runtime calls `node plugins/src/cli/hook.mjs <HookType>` for each event
+The Copilot runtime calls `node plugins/skraft-framework/src/cli/hook.mjs <HookType>` for each event
 declared in `.github/hooks/skraft.json`.
 
 ## Starbucks example (illustrative)

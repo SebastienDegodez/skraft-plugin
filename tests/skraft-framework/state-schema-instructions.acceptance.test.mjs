@@ -8,15 +8,15 @@ import {
   STATE_FIELDS,
   INVARIANT_FIELDS,
   validatePipelineState,
-} from '../../plugins/src/domain/state-schema.mjs'
-import { isOk } from '../../plugins/src/domain/result.mjs'
+} from '../../plugins/skraft-framework/src/domain/state-schema.mjs'
+import { isOk } from '../../plugins/skraft-framework/src/domain/result.mjs'
 
 // SoC (#15): the schema of state.json has ONE authority — STATE_SCHEMA in
-// plugins/src/domain/state-schema.mjs. The prose instructions document the same fields;
+// plugins/skraft-framework/src/domain/state-schema.mjs. The prose instructions document the same fields;
 // this test fails the build if the two diverge, so drift is impossible.
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '../..')
-const instructionsPath = join(repoRoot, 'plugins/instructions/skraft-state.instructions.md')
+const instructionsPath = join(repoRoot, 'plugins/skraft-framework/instructions/skraft-state.instructions.md')
 
 // Extract the top-level field names from the ```json``` block under the `## Schema` heading.
 const instructionSchemaFields = () => {
@@ -32,8 +32,8 @@ test('SoC: instructions schema block lists exactly the STATE_SCHEMA fields', () 
   assert.deepEqual(
     documented,
     canonical,
-    'plugins/instructions/skraft-state.instructions.md schema block has drifted from STATE_SCHEMA ' +
-      '(plugins/src/domain/state-schema.mjs). Update the instruction JSON block or STATE_SCHEMA so the ' +
+    'plugins/skraft-framework/instructions/skraft-state.instructions.md schema block has drifted from STATE_SCHEMA ' +
+      '(plugins/skraft-framework/src/domain/state-schema.mjs). Update the instruction JSON block or STATE_SCHEMA so the ' +
       'two agree — the code descriptor is the single source of truth.'
   )
 })

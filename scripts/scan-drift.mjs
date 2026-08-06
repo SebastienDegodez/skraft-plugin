@@ -112,7 +112,7 @@ function sameOrder(expected, actual) {
 }
 
 function deriveAgentUsageOrder(root) {
-  const orchestratorPath = join(root, 'plugins/agents/skraft-orchestrator.agent.md');
+  const orchestratorPath = join(root, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md');
   const orchestrator = readFrontmatter(orchestratorPath);
   if (!orchestrator) return null;
 
@@ -121,7 +121,7 @@ function deriveAgentUsageOrder(root) {
   const skillsByAgent = {};
 
   for (const agent of orderedAgents) {
-    const path = join(root, 'plugins/agents', `${agent}.agent.md`);
+    const path = join(root, 'plugins/skraft-framework/agents', `${agent}.agent.md`);
     const fm = readFrontmatter(path);
     const skills = Array.isArray(fm?.metadata?.skills) ? fm.metadata.skills : [];
     skillsByAgent[agent] = skills;
@@ -335,7 +335,7 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
         lang: 'both',
         fr: 'fr/reference/agents/index.md, fr/reference/skills/index.md',
         en: 'en/reference/agents/index.md, en/reference/skills/index.md',
-        source: 'plugins/agents/skraft-orchestrator.agent.md + plugins/agents/*.agent.md',
+        source: 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md + plugins/skraft-framework/agents/*.agent.md',
         detail: findings.join('\n'),
         desiredState: 'Regenerate FR/EN agents/index + skills/index from live agent chain and metadata.skills order.',
       });

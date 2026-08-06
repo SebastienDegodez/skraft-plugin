@@ -171,15 +171,15 @@ sequenceDiagram
 
 | Box | Mode | Rationale |
 |---|---|---|
-| `mock-integration-worker` | LOCAL SIBLING (`plugins/agents/`) | Interne, ship runtime |
-| `contract-testing-worker` | LOCAL SIBLING (`plugins/agents/`) | Interne, frère du précédent |
-| `mocking-strategy-roster` | LOCAL SIBLING (`plugins/skills/`) | Calque resolving-stack-commands |
-| `contract-testing-roster` | LOCAL SIBLING (`plugins/skills/`) | Idem, lit l'opt-in |
-| `mocking-microcks-dotnet` | LOCAL SIBLING (`plugins/skills/`) | Adapter (stratégie × stack) |
-| `mocking-inprocess-dotnet` | LOCAL SIBLING (`plugins/skills/`) | Adapter (stratégie × stack) |
-| `contract-testing-dotnet` | LOCAL SIBLING (`plugins/skills/`) | Adapter par stack, 2 couches |
-| `mock-fidelity-lens` | LOCAL SIBLING (`plugins/agents/reviewer-lenses/`) | 5e lens |
-| `contract-fidelity-lens` | LOCAL SIBLING (`plugins/agents/reviewer-lenses/`) | 6e lens |
+| `mock-integration-worker` | LOCAL SIBLING (`plugins/skraft-framework/agents/`) | Interne, ship runtime |
+| `contract-testing-worker` | LOCAL SIBLING (`plugins/skraft-framework/agents/`) | Interne, frère du précédent |
+| `mocking-strategy-roster` | LOCAL SIBLING (`plugins/skraft-framework/skills/`) | Calque resolving-stack-commands |
+| `contract-testing-roster` | LOCAL SIBLING (`plugins/skraft-framework/skills/`) | Idem, lit l'opt-in |
+| `mocking-microcks-dotnet` | LOCAL SIBLING (`plugins/skraft-framework/skills/`) | Adapter (stratégie × stack) |
+| `mocking-inprocess-dotnet` | LOCAL SIBLING (`plugins/skraft-framework/skills/`) | Adapter (stratégie × stack) |
+| `contract-testing-dotnet` | LOCAL SIBLING (`plugins/skraft-framework/skills/`) | Adapter par stack, 2 couches |
+| `mock-fidelity-lens` | LOCAL SIBLING (`plugins/skraft-framework/agents/reviewer-lenses/`) | 5e lens |
+| `contract-fidelity-lens` | LOCAL SIBLING (`plugins/skraft-framework/agents/reviewer-lenses/`) | 6e lens |
 | `contract-testing` (générique) | EXISTE | Source ; R3 EXTRACT du .NET |
 | `resolving-stack-commands` | EXISTE | Détection stack + commande test (S7) |
 | `skraft.instructions.md` | RULE (repo cible, runtime) | Template partagé, namespaces disjoints |
@@ -349,18 +349,18 @@ Fondations partagées :
 3. [x] Edit `software-engineer-reviewer.agent.md` : 2 lignes de lens conditionnelles, batché.
 
 Mocking :
-4. [x] `plugins/skills/mocking-strategy-roster/SKILL.md` (cascade override, schéma blocker).
-5. [x] `plugins/skills/mocking-microcks-dotnet/SKILL.md` (dép 4).
-6. [x] `plugins/skills/mocking-inprocess-dotnet/SKILL.md` (dép 4).
-7. [x] `plugins/agents/workers/mocking/mock-integration-worker.agent.md` (dép 4-6).
-8. [x] `plugins/agents/workers/mocking/mock-fidelity-lens.agent.md`.
+4. [x] `plugins/skraft-framework/skills/mocking-strategy-roster/SKILL.md` (cascade override, schéma blocker).
+5. [x] `plugins/skraft-framework/skills/mocking-microcks-dotnet/SKILL.md` (dép 4).
+6. [x] `plugins/skraft-framework/skills/mocking-inprocess-dotnet/SKILL.md` (dép 4).
+7. [x] `plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md` (dép 4-6).
+8. [x] `plugins/skraft-framework/agents/workers/mocking/mock-fidelity-lens.agent.md`.
 9. [x] `evals/mock-integration-worker/{triggers.yml,content.yml}`.
 
 Contract testing :
-10. [x] `plugins/skills/contract-testing-roster/SKILL.md` (stack + opt-in, schéma blocker).
-11. [x] R3 EXTRACT : `plugins/skills/contract-testing-dotnet/SKILL.md` (DELIVER .NET extrait ; générique redirige vers roster).
-12. [x] `plugins/agents/workers/contract-testing/contract-testing-worker.agent.md` (dép 10-11).
-13. [x] `plugins/agents/workers/contract-testing/contract-fidelity-lens.agent.md`.
+10. [x] `plugins/skraft-framework/skills/contract-testing-roster/SKILL.md` (stack + opt-in, schéma blocker).
+11. [x] R3 EXTRACT : `plugins/skraft-framework/skills/contract-testing-dotnet/SKILL.md` (DELIVER .NET extrait ; générique redirige vers roster).
+12. [x] `plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md` (dép 10-11).
+13. [x] `plugins/skraft-framework/agents/workers/contract-testing/contract-fidelity-lens.agent.md`.
 14. [x] `evals/contract-testing-worker/{triggers.yml,content.yml}`.
 
 Validation (step 8) :

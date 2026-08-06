@@ -292,7 +292,7 @@ Checkpoints d'exécution pour le `software-engineer` — pas un contrat de revue
 ### Structure
 
 ```
-plugins/skills/craft-discipline/
+plugins/skraft-framework/skills/craft-discipline/
 ├── SKILL.md
 └── references/
     ├── test-theater-patterns.md
@@ -370,7 +370,7 @@ plugins/
 
 | Fichier | Modification |
 |---------|-------------|
-| `plugins/agents/software-engineer.agent.md` | Remplacer `quality-framework` → `craft-discipline` dans la liste des skills |
+| `plugins/skraft-framework/agents/software-engineer.agent.md` | Remplacer `quality-framework` → `craft-discipline` dans la liste des skills |
 | `docs/roadmap.md` | Retirer reviewer + quality-framework des « à venir », ajouter liens vers les nouvelles fiches |
 | `docs/agents/software-engineer-and-reviewer.md` | Mettre à jour le statut reviewer : ✅ Implémenté |
 | `docs/agents/software-engineer.md` | Remplacer `quality-framework` → `craft-discipline` |

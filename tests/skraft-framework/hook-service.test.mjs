@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHookService } from '../../plugins/src/adapters/api/hooks/service-factory.mjs'
-import { allow, deny, block, additionalContext } from '../../plugins/src/adapters/api/hooks/decision.mjs'
+import { createHookService } from '../../plugins/skraft-framework/src/adapters/api/hooks/service-factory.mjs'
+import { allow, deny, block, additionalContext } from '../../plugins/skraft-framework/src/adapters/api/hooks/decision.mjs'
 
 test('hook service routes PreToolUse to registered handler', async () => {
   const preToolUse = { handle: async (_p) => allow() }
@@ -67,14 +67,14 @@ test('hook entry falls back to payload.type when hookType absent', async () => {
 test('deny without argument uses default message', async () => {
   const preToolUse = { handle: async (_p) => ({ decision: 'deny', message: undefined ?? 'Denied' }) }
   // Test deny() default via direct import
-  const { deny: d } = await import('../../plugins/src/adapters/api/hooks/decision.mjs')
+  const { deny: d } = await import('../../plugins/skraft-framework/src/adapters/api/hooks/decision.mjs')
   const result = d()
   assert.equal(result.decision, 'deny')
   assert.equal(result.message, 'Denied')
 })
 
 test('block without argument uses default message', async () => {
-  const { block: b } = await import('../../plugins/src/adapters/api/hooks/decision.mjs')
+  const { block: b } = await import('../../plugins/skraft-framework/src/adapters/api/hooks/decision.mjs')
   const result = b()
   assert.equal(result.decision, 'block')
   assert.equal(result.message, 'Blocked')
@@ -113,7 +113,7 @@ test('hook router returns undefined for unknown hook type', async () => {
 
 // hook-router.mjs: default parameter = {} branch (called with no argument)
 test('hook router with no argument returns undefined for any hook type', async () => {
-  const { createHookRouter } = await import('../../plugins/src/adapters/api/hooks/hook-router.mjs')
+  const { createHookRouter } = await import('../../plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs')
   const router = createHookRouter()
   const result = await router.route('PreToolUse', {})
   assert.equal(result, undefined)

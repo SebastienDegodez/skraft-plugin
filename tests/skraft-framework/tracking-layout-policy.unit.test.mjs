@@ -4,7 +4,7 @@ import {
   resolveTrackingLayout,
   stateBaseSegments,
   stateDirSegments,
-} from '../../plugins/src/domain/tracking-layout-policy.mjs'
+} from '../../plugins/skraft-framework/src/domain/tracking-layout-policy.mjs'
 
 // ─── resolveTrackingLayout ──────────────────────────────────────────────────
 

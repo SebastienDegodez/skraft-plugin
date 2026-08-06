@@ -106,7 +106,7 @@ estimé, la première question n'est pas « quels reviewers désactiver ? » mai
 ### En place
 
 La classe de modèle est **réellement appliquée** : un résolveur déterministe
-(`plugins/src/`, Clean Architecture, zéro dépendance) lit le `cost_role_class` et le
+(`plugins/skraft-framework/src/`, Clean Architecture, zéro dépendance) lit le `cost_role_class` et le
 plancher `model_requirement` de chaque agent, puis **pinne le champ `model:`** de son
 `*.agent.md` au modèle concret résolu. Le tableau de la section « Mesures réelles »
 décrit la politique : `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,

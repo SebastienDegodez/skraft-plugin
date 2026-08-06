@@ -45,10 +45,10 @@ peut pas être violé discrètement.
 
 ## Structure du framework
 
-Le framework est dans `plugins/src/` à la racine du repo :
+Le framework est dans `plugins/skraft-framework/src/` à la racine du repo :
 
 ```
-plugins/src/
+plugins/skraft-framework/src/
   domain/                ← invariants purs (zero dépendance)
     result.mjs           Ok/Err discriminated union
     value-objects.mjs    Phase, AgentName, ProjectSlug, Verdict
@@ -81,7 +81,7 @@ plugins/src/
     hook.mjs             CLI : stdin JSON → router → stdout JSON
 ```
 
-Le runtime Copilot invoque `node plugins/src/cli/hook.mjs <HookType>` à chaque
+Le runtime Copilot invoque `node plugins/skraft-framework/src/cli/hook.mjs <HookType>` à chaque
 événement déclaré dans `.github/hooks/skraft.json`.
 
 ## Exemple Starbucks (illustratif)

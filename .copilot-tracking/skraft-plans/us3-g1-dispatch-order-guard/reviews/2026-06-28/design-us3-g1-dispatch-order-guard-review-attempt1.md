@@ -16,7 +16,7 @@
 - docs/adr/adr-007-config-derived-expected-dispatch.md
 - docs/adr/decisions-index.md
 - (upstream) plans/2026-06-28/ac-draft-us3.md
-**Conventions cross-checked:** plugins/src/domain/result.mjs, plugins/src/adapters/api/hooks/decision.mjs, plugins/src/ports/api/pre-tool-use.mjs, plugins/src/domain/dispatch-policy.mjs
+**Conventions cross-checked:** plugins/skraft-framework/src/domain/result.mjs, plugins/skraft-framework/src/adapters/api/hooks/decision.mjs, plugins/skraft-framework/src/ports/api/pre-tool-use.mjs, plugins/skraft-framework/src/domain/dispatch-policy.mjs
 
 ---
 

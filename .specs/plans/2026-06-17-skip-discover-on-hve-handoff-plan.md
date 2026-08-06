@@ -18,10 +18,10 @@
 
 **Modifiés :**
 
-- `plugins/instructions/skraft-state.instructions.md` — champ `entryPoint` (schéma + sémantique + création).
-- `plugins/skills/skraft-difficulty-routing/SKILL.md` — détection handoff (2 formes), gate de confirmation, protocole d'ingestion, protocole de sortie.
-- `plugins/agents/skraft-orchestrator.agent.md` — Phase 0 détection + branchement skip, routing 3-axes en deux temps, protocole d'exécution qui ignore `skipPhases`.
-- `plugins/agents/backlog-planner.agent.md` — acceptation de `triage-ingest-*.md`, sémantique d'héritage (pas de re-priorisation).
+- `plugins/skraft-framework/instructions/skraft-state.instructions.md` — champ `entryPoint` (schéma + sémantique + création).
+- `plugins/skraft-framework/skills/skraft-difficulty-routing/SKILL.md` — détection handoff (2 formes), gate de confirmation, protocole d'ingestion, protocole de sortie.
+- `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` — Phase 0 détection + branchement skip, routing 3-axes en deux temps, protocole d'exécution qui ignore `skipPhases`.
+- `plugins/skraft-framework/agents/backlog-planner.agent.md` — acceptation de `triage-ingest-*.md`, sémantique d'héritage (pas de re-priorisation).
 
 **Créés :**
 

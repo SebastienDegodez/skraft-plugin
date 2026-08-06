@@ -26,8 +26,8 @@ const frameworkTestArgs = () => {
 // Fast gates — run on every push, fail the whole run if any fails.
 const fastGates = [
   { name: 'Framework tests & coverage (node --test)', cmd: 'node', args: frameworkTestArgs() },
-  { name: 'Guardrail config in sync (US2)', cmd: 'node', args: ['plugins/src/cli/build-config-bin.mjs', '--check'] },
-  { name: 'Agent model policy (B12)', cmd: 'node', args: ['plugins/src/cli/resolve-model-bin.mjs', '--check'] },
+  { name: 'Guardrail config in sync (US2)', cmd: 'node', args: ['plugins/skraft-framework/src/cli/build-config-bin.mjs', '--check'] },
+  { name: 'Agent model policy (B12)', cmd: 'node', args: ['plugins/skraft-framework/src/cli/resolve-model-bin.mjs', '--check'] },
 ]
 
 const run = (gate) => {
@@ -44,7 +44,7 @@ if (withMutation && results.every((r) => r.ok)) {
     run({
       name: 'Mutation testing (Stryker)',
       cmd: 'node',
-      args: ['plugins/src/node_modules/.bin/stryker', 'run', 'plugins/src/stryker.config.mjs'],
+      args: ['plugins/skraft-framework/src/node_modules/.bin/stryker', 'run', 'plugins/skraft-framework/src/stryker.config.mjs'],
     }),
   )
 } else if (withMutation) {

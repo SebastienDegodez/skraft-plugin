@@ -47,13 +47,13 @@ Rendre SKRAFT **compatible HVE** en remplaçant uniquement l'agent RPI (Research
 
 | Élément | Type | Cible | Action |
 |---|---|---|---|
-| `skraft-orchestrator` | persona | `plugins/agents/skraft-orchestrator.agent.md` | **Modifier** : `/sdlc`→`/skraft`, paths HVE, retry inline, neighbor warning |
-| 5 phase agents | personas | `plugins/agents/*.agent.md` | **Modifier** : retarget paths HVE |
-| 5 reviewer agents | personas | `plugins/agents/*.agent.md` | **Modifier** : retarget paths HVE, write only `reviews/{date}/` |
-| `skraft-state` | scope-attached rule | `plugins/instructions/skraft-state.instructions.md` | **Créer** — applyTo `**/.copilot-tracking/skraft-plans/**` |
-| `skraft-artifacts` | scope-attached rule | `plugins/instructions/skraft-artifacts.instructions.md` | **Créer** — applyTo `**/.copilot-tracking/**` (scope SKRAFT) |
-| `skraft-difficulty-routing` | skill | `plugins/skills/skraft-difficulty-routing/SKILL.md` | **Créer** — 3-axis assessment |
-| `adversarial-review-lenses` | skill | `plugins/skills/adversarial-review-lenses/SKILL.md` | **Créer** — Genesis A7 4-lens procedure |
+| `skraft-orchestrator` | persona | `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` | **Modifier** : `/sdlc`→`/skraft`, paths HVE, retry inline, neighbor warning |
+| 5 phase agents | personas | `plugins/skraft-framework/agents/*.agent.md` | **Modifier** : retarget paths HVE |
+| 5 reviewer agents | personas | `plugins/skraft-framework/agents/*.agent.md` | **Modifier** : retarget paths HVE, write only `reviews/{date}/` |
+| `skraft-state` | scope-attached rule | `plugins/skraft-framework/instructions/skraft-state.instructions.md` | **Créer** — applyTo `**/.copilot-tracking/skraft-plans/**` |
+| `skraft-artifacts` | scope-attached rule | `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md` | **Créer** — applyTo `**/.copilot-tracking/**` (scope SKRAFT) |
+| `skraft-difficulty-routing` | skill | `plugins/skraft-framework/skills/skraft-difficulty-routing/SKILL.md` | **Créer** — 3-axis assessment |
+| `adversarial-review-lenses` | skill | `plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md` | **Créer** — Genesis A7 4-lens procedure |
 | TDD/contract/playwright skills | skills | existants | **Réutiliser tel quel** |
 
 ### state.json — schéma

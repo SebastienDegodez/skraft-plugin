@@ -51,8 +51,8 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       apply: { type: 'boolean', default: false },
       emit: { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
-      dir: { type: 'string', default: 'plugins/agents' },
-      out: { type: 'string', default: 'plugins/skraft-framework.config.json' },
+      dir: { type: 'string', default: 'plugins/skraft-framework/agents' },
+      out: { type: 'string', default: 'plugins/skraft-framework/skraft-framework.config.json' },
     },
   })
 

@@ -1,7 +1,7 @@
 # Test plan — US2 Générateur de config data-driven
 
 Story: Task 2 of `.specs/plans/2026-06-20-skraft-framework-guardrails-plan.md`.
-Layer model: foundation hexagonal under `plugins/src/` (mirrors `resolve-model`).
+Layer model: foundation hexagonal under `plugins/skraft-framework/src/` (mirrors `resolve-model`).
 Runner: `node --test` (zero deps), tests in `tests/skraft-framework/`.
 
 ## Use case boundary

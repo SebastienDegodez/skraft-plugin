@@ -41,7 +41,7 @@
 ## Ordre d'implémentation (outside-in, RED first)
 
 ### Étape 1 — `domain/pipeline-policy.mjs` [MODIFY]
-- Fichier : `plugins/src/domain/pipeline-policy.mjs`
+- Fichier : `plugins/skraft-framework/src/domain/pipeline-policy.mjs`
 - Action : **MODIFY**
 - Changement : exporter `nextPhaseAfter` (actuellement `const` privé ligne 7)
 - Dépendances : `domain/result.mjs` (existant, non modifié)
@@ -50,7 +50,7 @@
 - Notes : export pur, aucun comportement modifié — tests régression `pipeline-policy.unit.test.mjs` doivent rester verts AVANT ce commit
 
 ### Étape 2 — `domain/state-schema.mjs` [MODIFY]
-- Fichier : `plugins/src/domain/state-schema.mjs`
+- Fichier : `plugins/skraft-framework/src/domain/state-schema.mjs`
 - Action : **MODIFY**
 - Changement : ajouter `validatePipelineState(raw)` — valide le schéma orchestrateur `{ currentPhase, retryCount, phasesCompleted, verdicts, phaseArtifacts, reviewArtifacts, difficulty?, userPreferences? }`
 - Dépendances : aucune (domaine pur)
@@ -59,7 +59,7 @@
 - Notes : `validateState()` existante INCHANGÉE — deux validators coexistent pour deux formes d'état différentes
 
 ### Étape 3 — `domain/state-machine.mjs` [NEW]
-- Fichier : `plugins/src/domain/state-machine.mjs`
+- Fichier : `plugins/skraft-framework/src/domain/state-machine.mjs`
 - Action : **NEW**
 - Signature : `export const applyTransition = (currentState, event) => Result<FrozenState>`
 - Dépendances : `domain/result.mjs`, `domain/state-schema.mjs` (`validatePipelineState`), `domain/pipeline-policy.mjs` (`nextPhaseAfter`)
@@ -68,7 +68,7 @@
 - Notes : module pur sans IO. `phaseOrder` et `maxRetriesPerPhase` lus depuis `currentState.userPreferences` (pas d'injection externe). Invariants I1–I8 tous dans ce module.
 
 ### Étape 4 — `ports/infrastructure/state-writer.mjs` [NEW]
-- Fichier : `plugins/src/ports/infrastructure/state-writer.mjs`
+- Fichier : `plugins/skraft-framework/src/ports/infrastructure/state-writer.mjs`
 - Action : **NEW**
 - Contenu : constante `STATE_WRITER_PORT` + contrat duck-typed `{ write(projectSlug, state): Promise<Result<void>> }`
 - Dépendances : aucune
@@ -77,7 +77,7 @@
 - Notes : port interface only, pas de logique
 
 ### Étape 5 — `adapters/infrastructure/state/json-state-writer.mjs` [NEW]
-- Fichier : `plugins/src/adapters/infrastructure/state/json-state-writer.mjs`
+- Fichier : `plugins/skraft-framework/src/adapters/infrastructure/state/json-state-writer.mjs`
 - Action : **NEW**
 - Signature : `export const createJsonStateWriter = (basePath) => ({ write: async (projectSlug, state) => Result<void> })`
 - Protocole atomique : `tmp write → backup current (bak.{ts}) → rotate >3 → rename tmp → state.json`
@@ -87,7 +87,7 @@
 - Notes : contrainte cross-platform Windows+macOS — source et destination sur même volume (`EXDEV` → `Err(IO_ERROR)`). Fichier tmp JAMAIS laissé sur disque après succès ou échec avant rename.
 
 ### Étape 6 — `adapters/infrastructure/json-state-reader.mjs` [MODIFY]
-- Fichier : `plugins/src/adapters/infrastructure/json-state-reader.mjs`
+- Fichier : `plugins/skraft-framework/src/adapters/infrastructure/json-state-reader.mjs`
 - Action : **MODIFY**
 - Changement : supprimer `write()` — garder uniquement `read()`
 - Dépendances : `node:fs/promises`, `node:path` (existants)
@@ -96,7 +96,7 @@
 - Notes : **BREAKING CHANGE** — tous les appelants existants utilisent `read()` uniquement (vérifiés dans contracts). Le test `infrastructure-adapters.test.mjs` doit être mis à jour dans le MÊME commit.
 
 ### Étape 7 — `application/state-service.mjs` [NEW]
-- Fichier : `plugins/src/application/state-service.mjs`
+- Fichier : `plugins/skraft-framework/src/application/state-service.mjs`
 - Action : **NEW**
 - Signature : `export const createStateService = ({ stateReader, stateWriter }) => ({ init, applyEvent, get })`
 - Dépendances : `STATE_READER_PORT`, `STATE_WRITER_PORT`, `domain/state-machine.mjs`
@@ -105,7 +105,7 @@
 - Notes : `applyEvent` gère ENOENT → auto-init + replay. `get` : lecture seule sans écriture ni backup.
 
 ### Étape 8 — `cli/state.mjs` [NEW]
-- Fichier : `plugins/src/cli/state.mjs`
+- Fichier : `plugins/skraft-framework/src/cli/state.mjs`
 - Action : **NEW**
 - Sous-commandes : `init`, `transition`, `record-verdict`, `record-artifact`, `record-review-artifact`, `set-difficulty`, `incr-retry`, `get`
 - Dépendances : `application/state-service.mjs`, `adapters/infrastructure/json-state-reader.mjs`, `adapters/infrastructure/state/json-state-writer.mjs`
@@ -152,14 +152,14 @@
 
 ## Stryker additif
 
-Modules à **ajouter** au tableau `mutate` dans `plugins/stryker.config.mjs` :
+Modules à **ajouter** au tableau `mutate` dans `plugins/skraft-framework/stryker.config.mjs` :
 
 ```js
 // Ajouter ces entrées au tableau mutate existant (additif — ne pas remplacer)
-'plugins/src/domain/state-machine.mjs',
-'plugins/src/domain/state-schema.mjs',        // nouvelle fonction validatePipelineState
-'plugins/src/adapters/infrastructure/state/json-state-writer.mjs',
-'plugins/src/application/state-service.mjs',
+'plugins/skraft-framework/src/domain/state-machine.mjs',
+'plugins/skraft-framework/src/domain/state-schema.mjs',        // nouvelle fonction validatePipelineState
+'plugins/skraft-framework/src/adapters/infrastructure/state/json-state-writer.mjs',
+'plugins/skraft-framework/src/application/state-service.mjs',
 ```
 
 > `domain/pipeline-policy.mjs` est déjà dans `mutate` si présent ; vérifier avant d'ajouter.

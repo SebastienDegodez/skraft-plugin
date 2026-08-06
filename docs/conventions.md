@@ -46,7 +46,7 @@ Chemin attendu : `docs/agents/<nom-agent>.md`.
 # Agent `<nom>`
 
 **Statut :** ✅ Implémenté | 🚧 À venir | 📝 Partiel
-**Source :** `plugins/agents/<nom>.agent.md` (ou `—` si à venir)
+**Source :** `plugins/skraft-framework/agents/<nom>.agent.md` (ou `—` si à venir)
 
 ## Mission
 Une à deux phrases.
@@ -81,7 +81,7 @@ Chemin attendu : `docs/skills/<nom-skill>.md`.
 # Skill `<nom>`
 
 **Statut :** ✅ Implémenté | 🚧 À venir | 📝 Partiel
-**Source :** `plugins/skills/<nom>/SKILL.md` (ou `.agents/skills/<nom>/SKILL.md`, ou `—`)
+**Source :** `plugins/skraft-framework/skills/<nom>/SKILL.md` (ou `.agents/skills/<nom>/SKILL.md`, ou `—`)
 
 ## Quand l'utiliser
 Déclencheurs (frontmatter `description` du SKILL).

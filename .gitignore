@@ -13,10 +13,10 @@ playwright-report/
 docs/site/_site/
 docs/site/.jekyll-cache/
 
-# skraft-framework (plugins/src) tooling
-plugins/src/node_modules/
+# skraft-framework (plugins/skraft-framework/src) tooling
+plugins/skraft-framework/src/node_modules/
 # package-lock.json IS committed (CI mutation job uses `npm ci`, which needs it)
-!plugins/src/package-lock.json
+!plugins/skraft-framework/src/package-lock.json
 .stryker-tmp/
 reports/mutation/
 
@@ -38,7 +38,7 @@ graphify-out/
 .graphify_scope_root/
 
 # skraft-framework runtime audit log
-plugins/logs/
+plugins/skraft-framework/logs/
 
 
 # skraft config/state transient files (atomic-writer artefacts — never committed)

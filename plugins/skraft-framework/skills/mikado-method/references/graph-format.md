@@ -175,5 +175,5 @@ graph TD
 Validate any graph file with (add `--no-git` since the SHAs above are fictional):
 
 ```bash
-bash plugins/skills/mikado-method/scripts/validate-mikado.sh --no-git <path-to-graph.md>
+bash plugins/skraft-framework/skills/mikado-method/scripts/validate-mikado.sh --no-git <path-to-graph.md>
 ```

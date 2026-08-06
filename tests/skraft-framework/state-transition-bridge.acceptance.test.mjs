@@ -21,7 +21,7 @@ import { promisify } from 'node:util'
 const execFileAsync = promisify(execFile)
 
 // Path to the CLI entry point — does not exist yet (RED)
-const CLI = fileURLToPath(new URL('../../plugins/src/cli/state.mjs', import.meta.url))
+const CLI = fileURLToPath(new URL('../../plugins/skraft-framework/src/cli/state.mjs', import.meta.url))
 
 // ─── CLI runner ───────────────────────────────────────────────────────────────
 // Spawns cli/state.mjs with SKRAFT_TRACKING_ROOT pointing to the isolated tmpdir.
@@ -436,7 +436,7 @@ test('AC10b: record-verdict is rejected with TERMINAL_STATE when currentPhase is
 // Entered via applyTransition() directly — not reachable through CLI subcommands
 // RED: will fail with ERR_MODULE_NOT_FOUND until domain/state-machine.mjs exists
 // ─────────────────────────────────────────────────────────────────────────────
-const { applyTransition } = await import('../../plugins/src/domain/state-machine.mjs')
+const { applyTransition } = await import('../../plugins/skraft-framework/src/domain/state-machine.mjs')
   .catch(() => ({ applyTransition: null }))
 
 const frozenState = (overrides = {}) => Object.freeze({

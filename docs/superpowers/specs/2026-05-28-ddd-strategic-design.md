@@ -87,7 +87,7 @@ Chaque case « no gate » est une *foi imposée à DISTILL* au sens du principe 
 > **Note emplacement.** Templates et références vivent dans l'arbre **plugin** (`plugins/...`), pas sous `.copilot-tracking/`. Seules les **instances** générées par le persona vont sous `.copilot-tracking/skraft-plans/{project-slug}/details/{date}/` ou `adrs/`.
 
 
-- `plugins/agents/assets/bc-canvas.template.md` — squelette du canvas, identique à ddd-crew mais avec en-tête `<!-- markdownlint-disable-file -->`, slots `{bc-slug}`, `{strategic_classification}`, `{adr-subdomain-path}`, et une section « Ubiquitous Language » dont les termes alimenteront le glossaire DELIVER (anti-LEAKY ABSTRACTION : le canvas ne nomme aucun type C# / aucun chemin Clean Architecture).
+- `plugins/skraft-framework/agents/assets/bc-canvas.template.md` — squelette du canvas, identique à ddd-crew mais avec en-tête `<!-- markdownlint-disable-file -->`, slots `{bc-slug}`, `{strategic_classification}`, `{adr-subdomain-path}`, et une section « Ubiquitous Language » dont les termes alimenteront le glossaire DELIVER (anti-LEAKY ABSTRACTION : le canvas ne nomme aucun type C# / aucun chemin Clean Architecture).
 
 ### Compteur de gates
 
@@ -99,7 +99,7 @@ Chaque case « no gate » est une *foi imposée à DISTILL* au sens du principe 
 
 **Source :** Khononov chap. 4 + `ContextMapper` patterns (Partnership, Customer-Supplier, Conformist, Anticorruption Layer, Open Host Service, Published Language, Separate Ways).
 
-**Nouvel artefact :** `plugins/skills/architecture-patterns/references/context-mapping.md` — catalogue des 7 patterns (when to use, when NOT to use, symétrie, exemple).
+**Nouvel artefact :** `plugins/skraft-framework/skills/architecture-patterns/references/context-mapping.md` — catalogue des 7 patterns (when to use, when NOT to use, symétrie, exemple).
 
 **Modification persona :** Phase 5 CONTEXT MAP étendu — chaque arête `BC-A → BC-B` doit citer un pattern nommé.
 

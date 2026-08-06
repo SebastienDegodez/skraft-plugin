@@ -8,8 +8,8 @@ import {
   guardProtectedArtifact,
   guardWorkspaceWrite,
   evaluateSessionGuard
-} from '../../plugins/src/domain/session-guard-policy.mjs'
-import { STATE_WRITE_FORBIDDEN, UNMONITORED_WRITE } from '../../plugins/src/domain/error-codes.mjs'
+} from '../../plugins/skraft-framework/src/domain/session-guard-policy.mjs'
+import { STATE_WRITE_FORBIDDEN, UNMONITORED_WRITE } from '../../plugins/skraft-framework/src/domain/error-codes.mjs'
 
 const DELIVER_AGENTS = ['software-engineer', 'software-engineer-reviewer']
 
@@ -49,7 +49,7 @@ test('commandMutatesProtectedArtifact allows reads of protected artifacts', () =
   assert.equal(commandMutatesProtectedArtifact('jq . state.json'), false)
   assert.equal(commandMutatesProtectedArtifact('grep currentPhase state.json'), false)
   assert.equal(commandMutatesProtectedArtifact('cat state.json > /tmp/copy.json'), false)
-  assert.equal(commandMutatesProtectedArtifact('node plugins/src/cli/state.mjs get us11'), false)
+  assert.equal(commandMutatesProtectedArtifact('node plugins/skraft-framework/src/cli/state.mjs get us11'), false)
   assert.equal(commandMutatesProtectedArtifact(undefined), false)
 })
 

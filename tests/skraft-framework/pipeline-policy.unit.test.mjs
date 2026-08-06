@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isOk, isErr } from '../../plugins/src/domain/result.mjs'
-import { expectedNextAgent, evaluateDispatch, isPipelineAgent, nextPhaseAfter } from '../../plugins/src/domain/pipeline-policy.mjs'
+import { isOk, isErr } from '../../plugins/skraft-framework/src/domain/result.mjs'
+import { expectedNextAgent, evaluateDispatch, isPipelineAgent, nextPhaseAfter } from '../../plugins/skraft-framework/src/domain/pipeline-policy.mjs'
 
 // Inner-loop domain tests for branches the immutable acceptance suite cannot observe
 // (Mandate 4 gate a — branch_unreachable_via_AC) plus the retry-budget boundary sweep

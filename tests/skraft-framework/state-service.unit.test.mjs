@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createStateService } from '../../plugins/src/application/state-service.mjs'
-import { Ok, Err } from '../../plugins/src/domain/result.mjs'
+import { createStateService } from '../../plugins/skraft-framework/src/application/state-service.mjs'
+import { Ok, Err } from '../../plugins/skraft-framework/src/domain/result.mjs'
 
 // ─── Test doubles ─────────────────────────────────────────────────────────────
 const readerOk = (state) => ({ read: async () => state })

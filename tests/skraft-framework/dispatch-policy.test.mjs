@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { validateDispatch } from '../../plugins/src/domain/dispatch-policy.mjs'
+import { validateDispatch } from '../../plugins/skraft-framework/src/domain/dispatch-policy.mjs'
 
 // --- descriptor factories (the pure function's input boundary) ---
 

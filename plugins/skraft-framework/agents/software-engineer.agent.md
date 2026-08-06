@@ -45,7 +45,7 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)
     - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
   model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + Iron Rule + Mutation score). Low-tier models (Haiku, Flash, mini) are NOT supported."
 ---
 

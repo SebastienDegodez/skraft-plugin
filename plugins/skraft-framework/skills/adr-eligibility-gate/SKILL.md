@@ -201,8 +201,8 @@ Run this gate on **existing ADRs** to verify calibration:
 
 ## Dependencies
 
-- `plugins/skills/architecture-decisions/SKILL.md` (cites "When NOT to write an ADR")
-- `plugins/skills/architecture-patterns/SKILL.md` (cites baseline patterns for Q3)
+- `plugins/skraft-framework/skills/architecture-decisions/SKILL.md` (cites "When NOT to write an ADR")
+- `plugins/skraft-framework/skills/architecture-patterns/SKILL.md` (cites baseline patterns for Q3)
 
 ---
 

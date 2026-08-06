@@ -22,7 +22,7 @@ metadata:
       - .github/instructions/skraft-handbook-content.instructions.md
     context:
       - .github/instructions/skraft-handbook-agent-chains.instructions.md (if the page describes orchestration)
-      - the relevant plugins/skills/*/SKILL.md for any craft concept named
+      - the relevant plugins/skraft-framework/skills/*/SKILL.md for any craft concept named
       - docs/site/_data/citations.yml (for any factual claim)
   outputs:
     - the complete FR and EN editorial page(s), mirrored — NO commit
@@ -67,7 +67,7 @@ Read `.github/instructions/skraft-handbook-content.instructions.md` and obey:
    `purpose_fr/purpose_en`, `sidebar_position`, any `requires_*` flag) and the
    `editorial_template` blocks.
 2. **Gather grounding.** For every craft concept you will name, open the relevant
-   `plugins/skills/*/SKILL.md` and reuse its **exact canonical vocabulary**. For
+   `plugins/skraft-framework/skills/*/SKILL.md` and reuse its **exact canonical vocabulary**. For
    every factual claim, find its entry in `citations.yml`.
 3. **Write the FR page**, then the **EN page**, mirrored — same heading structure,
    same `sidebar_position`, **same English basename**. Frontmatter

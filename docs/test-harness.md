@@ -53,11 +53,11 @@ dotnet run --project tools/skraft-test-harness/src/SkraftTestHarness.Cli -- \
 
 ## Testing the workflow agents (real mode)
 
-The skraft SDLC workflow is a set of Copilot agents under `plugins/agents/*.agent.md` (e.g. `software-engineer`, `solution-architect`, `acceptance-designer`, `backlog-planner`). The harness regression-tests each one by replaying behavioural `eval.yaml` scenarios against the **real agent** and asserting on its output.
+The skraft SDLC workflow is a set of Copilot agents under `plugins/skraft-framework/agents/*.agent.md` (e.g. `software-engineer`, `solution-architect`, `acceptance-designer`, `backlog-planner`). The harness regression-tests each one by replaying behavioural `eval.yaml` scenarios against the **real agent** and asserting on its output.
 
 ### Plugin manifest
 
-For `copilot --plugin-dir plugins` to expose the agents, the `plugins/` directory must contain a Copilot plugin manifest at [`plugins/.claude-plugin/plugin.json`](../plugins/.claude-plugin/plugin.json). With it, every agent is registered under the `skraft:` namespace:
+For `copilot --plugin-dir plugins` to expose the agents, the `plugins/` directory must contain a Copilot plugin manifest at [`plugins/skraft-framework/.claude-plugin/plugin.json`](../plugins/skraft-framework/.claude-plugin/plugin.json). With it, every agent is registered under the `skraft:` namespace:
 
 ```text
 skraft:software-engineer, skraft:solution-architect, skraft:acceptance-designer, …

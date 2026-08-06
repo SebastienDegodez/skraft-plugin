@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalise } from '../../plugins/src/adapters/api/hooks/payload.mjs'
+import { normalise } from '../../plugins/skraft-framework/src/adapters/api/hooks/payload.mjs'
 
 test('AC4: camelCase payload passes through unchanged', () => {
   assert.deepEqual(normalise({ toolName: 'bash' }), { toolName: 'bash' })

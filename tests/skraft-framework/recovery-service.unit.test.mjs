@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createRecoveryService } from '../../plugins/src/application/recovery-service.mjs'
-import { createStateService } from '../../plugins/src/application/state-service.mjs'
-import { DIAGNOSIS } from '../../plugins/src/domain/recovery-policy.mjs'
-import { Ok, Err } from '../../plugins/src/domain/result.mjs'
+import { createRecoveryService } from '../../plugins/skraft-framework/src/application/recovery-service.mjs'
+import { createStateService } from '../../plugins/skraft-framework/src/application/state-service.mjs'
+import { DIAGNOSIS } from '../../plugins/skraft-framework/src/domain/recovery-policy.mjs'
+import { Ok, Err } from '../../plugins/skraft-framework/src/domain/result.mjs'
 
 const validState = (overrides = {}) => ({
   currentPhase: 'DESIGN',

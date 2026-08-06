@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isOk, isErr } from '../../plugins/src/domain/result.mjs'
-import { validateState, validatePipelineState } from '../../plugins/src/domain/state-schema.mjs'
+import { isOk, isErr } from '../../plugins/skraft-framework/src/domain/result.mjs'
+import { validateState, validatePipelineState } from '../../plugins/skraft-framework/src/domain/state-schema.mjs'
 
 const VALID = { currentPhase: 'DISCUSS', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: ['DESIGN'] }
 

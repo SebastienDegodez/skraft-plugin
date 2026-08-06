@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 // Outer-loop boundary (US#11 — G7/G8). Exercises the PreToolUse session guard
 // end-to-end through the service handle(payload) entry, with in-memory driven
 // adapters (audit-writer as the observable seam).
-import { createPreToolUseSessionGuardService } from '../../plugins/src/application/pre-tool-use-session-guard-service.mjs'
+import { createPreToolUseSessionGuardService } from '../../plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs'
 
 const CONFIG = {
   phaseOrder: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER'],

@@ -75,7 +75,7 @@ C'est la classe d'incohérence la plus coûteuse à propager en aval : un invari
 
 ### Nouveau template asset
 
-- `plugins/agents/assets/agg-canvas.template.md`.
+- `plugins/skraft-framework/agents/assets/agg-canvas.template.md`.
 
 > **Note emplacement.** Le template vit dans l'arbre **plugin** (`plugins/...`), pas sous `.copilot-tracking/`. Seules les **instances** générées par le persona vont sous `.copilot-tracking/skraft-plans/{project-slug}/details/{date}/`.
 

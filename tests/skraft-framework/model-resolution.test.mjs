@@ -1,12 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ModelTier, maxTier } from '../../plugins/src/domain/model-tier.mjs'
+import { ModelTier, maxTier } from '../../plugins/skraft-framework/src/domain/model-tier.mjs'
 import {
   tierForClass,
   modelForTier,
   floorForRequirement,
-} from '../../plugins/src/domain/model-class-policy.mjs'
-import { resolveModel } from '../../plugins/src/application/resolve-model.mjs'
+} from '../../plugins/skraft-framework/src/domain/model-class-policy.mjs'
+import { resolveModel } from '../../plugins/skraft-framework/src/application/resolve-model.mjs'
 
 // --- domain: ModelTier ---
 

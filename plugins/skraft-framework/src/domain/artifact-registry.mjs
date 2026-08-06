@@ -1,5 +1,5 @@
 // Artifact registry + validation for the `artifact` mini-command CLI
-// (plugins/src/cli/artifact.mjs).
+// (plugins/skraft-framework/src/cli/artifact.mjs).
 //
 // Each SKRAFT artifact type owns ONE entry here: its template path (relative to
 // the plugin root, i.e. this repo's `plugins/` directory) and the required /

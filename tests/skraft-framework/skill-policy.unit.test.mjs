@@ -4,7 +4,7 @@ import {
   mandatorySkillsFor,
   missingSkills,
   extractReadSkills
-} from '../../plugins/src/domain/skill-policy.mjs'
+} from '../../plugins/skraft-framework/src/domain/skill-policy.mjs'
 
 const CONFIG = {
   agentSkills: {
@@ -75,7 +75,7 @@ test('missingSkills preserves order of missing skills', () => {
 // extractReadSkills ———————————————————————————————————————————————————
 
 test('extractReadSkills finds a skill from a string transcript', () => {
-  const result = extractReadSkills('read plugins/skills/bdd-methodology/SKILL.md for the session')
+  const result = extractReadSkills('read plugins/skraft-framework/skills/bdd-methodology/SKILL.md for the session')
   assert.ok(result.includes('bdd-methodology'))
 })
 

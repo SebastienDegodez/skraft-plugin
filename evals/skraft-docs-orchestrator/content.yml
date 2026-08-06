@@ -9,7 +9,7 @@ fixtures:
     name: "A new agent source produces an individual, ordered reference page"
     user_prompt: "Reconcile the handbook with the plugin sources."
     seed_context:
-      added_source: "plugins/agents/workers/mocking/mock-integration-worker.agent.md"
+      added_source: "plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md"
       contract: "docs/site/_data/book.yml (reference > workers section, generate from: workers)"
     expected_output:
       - "scan-drift.mjs reports an orphan-source / missing-page item for the worker (deterministic, not asserted)."

@@ -118,17 +118,17 @@ meta:
 sources:
   # Agents de phase, user-invocables (un par phase + leurs reviewers + l'orchestrateur).
   # `*` ne descend PAS dans `workers/` : les subagents internes sont captes par `workers` ci-dessous.
-  agents: "plugins/agents/*.agent.md"
+  agents: "plugins/skraft-framework/agents/*.agent.md"
   # Les 4 lentilles de revue adverse CORE (utilisees par les reviewers de phase).
-  lenses: "plugins/agents/reviewer-lenses/*.agent.md"
+  lenses: "plugins/skraft-framework/agents/reviewer-lenses/*.agent.md"
   # Subagents internes (user-invocable: false) groupes par capacite sous workers/<capacite>/.
   # Capte le bundle complet d'une capacite : les *-worker.agent.md ET leurs *-lens.agent.md
   # conditionnels (mock-fidelity, contract-fidelity). Le glob `*/*` exige le segment <capacite>,
   # donc il ignore d'eventuels doublons a plat (workers/*.agent.md) -> pas de double comptage.
-  workers: "plugins/agents/workers/*/*.agent.md"
-  skills: "plugins/skills/*/SKILL.md"
-  gates: "plugins/skills/*-review-criteria/SKILL.md"
-  patterns: "plugins/skills/architecture-patterns/SKILL.md"
+  workers: "plugins/skraft-framework/agents/workers/*/*.agent.md"
+  skills: "plugins/skraft-framework/skills/*/SKILL.md"
+  gates: "plugins/skraft-framework/skills/*-review-criteria/SKILL.md"
+  patterns: "plugins/skraft-framework/skills/architecture-patterns/SKILL.md"
   citations: "docs/site/_data/citations.yml"
 
 # parts — sidebar handbook groupee par phase (modele learning-path).
@@ -216,7 +216,7 @@ parts:
         label_en: "The pipeline (overview)"
         fr: "fr/explanation/pipeline/index.md"
         en: "en/explanation/pipeline/index.md"
-        source: "plugins/agents/*.agent.md"
+        source: "plugins/skraft-framework/agents/*.agent.md"
         purpose_fr: "Les 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, un agent par phase, un reviewer independant."
         purpose_en: "The 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, one agent per phase, one independent reviewer."
       - id: concepts
@@ -241,7 +241,7 @@ parts:
         label_en: "DISCOVER"
         fr: "fr/explanation/pipeline/discover.md"
         en: "en/explanation/pipeline/discover.md"
-        source: "plugins/agents/backlog-discoverer.agent.md"
+        source: "plugins/skraft-framework/agents/backlog-discoverer.agent.md"
         purpose_fr: "Phase DISCOVER : triage et priorisation du backlog."
         purpose_en: "DISCOVER phase: backlog triage and prioritization."
       - id: discuss
@@ -250,7 +250,7 @@ parts:
         label_en: "DISCUSS"
         fr: "fr/explanation/pipeline/discuss.md"
         en: "en/explanation/pipeline/discuss.md"
-        source: "plugins/agents/backlog-planner.agent.md"
+        source: "plugins/skraft-framework/agents/backlog-planner.agent.md"
         purpose_fr: "Phase DISCUSS : raffinage des stories (INVEST, DoR)."
         purpose_en: "DISCUSS phase: story refinement (INVEST, DoR)."
       - id: design
@@ -259,7 +259,7 @@ parts:
         label_en: "DESIGN"
         fr: "fr/explanation/pipeline/design.md"
         en: "en/explanation/pipeline/design.md"
-        source: "plugins/agents/solution-architect.agent.md"
+        source: "plugins/skraft-framework/agents/solution-architect.agent.md"
         purpose_fr: "Phase DESIGN : Event Modeling, DDD, ADRs, contrats d'interface."
         purpose_en: "DESIGN phase: Event Modeling, DDD, ADRs, interface contracts."
       - id: distill
@@ -268,7 +268,7 @@ parts:
         label_en: "DISTILL"
         fr: "fr/explanation/pipeline/distill.md"
         en: "en/explanation/pipeline/distill.md"
-        source: "plugins/agents/acceptance-designer.agent.md"
+        source: "plugins/skraft-framework/agents/acceptance-designer.agent.md"
         purpose_fr: "Phase DISTILL : scenarios BDD executables et plan de tests."
         purpose_en: "DISTILL phase: executable BDD scenarios and test plan."
       - id: deliver
@@ -277,7 +277,7 @@ parts:
         label_en: "DELIVER"
         fr: "fr/explanation/pipeline/deliver.md"
         en: "en/explanation/pipeline/deliver.md"
-        source: "plugins/agents/software-engineer.agent.md"
+        source: "plugins/skraft-framework/agents/software-engineer.agent.md"
         purpose_fr: "Phase DELIVER : Outside-In TDD, Clean Architecture, mutation testing."
         purpose_en: "DELIVER phase: Outside-In TDD, Clean Architecture, mutation testing."
       - id: team
@@ -302,7 +302,7 @@ parts:
         label_en: "L3 zoom: mocking (Microcks)"
         fr: "fr/explanation/deep-dive/mocking-microcks.md"
         en: "en/explanation/deep-dive/mocking-microcks.md"
-        source: "plugins/agents/workers/mocking/*.agent.md"
+        source: "plugins/skraft-framework/agents/workers/mocking/*.agent.md"
         purpose_fr: "Zoom sur le fan-out L3 de DELIVER : mock-integration-worker, roster de strategie (Microcks par defaut, in-process en surcharge) et mock-fidelity-lens."
         purpose_en: "Zoom on the DELIVER L3 fan-out: mock-integration-worker, strategy roster (Microcks by default, in-process override) and mock-fidelity-lens."
       - id: zoom-contract
@@ -311,7 +311,7 @@ parts:
         label_en: "L3 zoom: contract testing"
         fr: "fr/explanation/deep-dive/contract-testing.md"
         en: "en/explanation/deep-dive/contract-testing.md"
-        source: "plugins/agents/workers/contract-testing/*.agent.md"
+        source: "plugins/skraft-framework/agents/workers/contract-testing/*.agent.md"
         purpose_fr: "Zoom sur le fan-out L3 de DELIVER : contract-testing-worker, roster (integration in-process + Microcks en opt-in) et contract-fidelity-lens."
         purpose_en: "Zoom on the DELIVER L3 fan-out: contract-testing-worker, roster (in-process integration + Microcks opt-in) and contract-fidelity-lens."
       - id: hve-core
@@ -320,7 +320,7 @@ parts:
         label_en: "The HVE-Core substrate"
         fr: "fr/explanation/hve-core.md"
         en: "en/explanation/hve-core.md"
-        source: "plugins/instructions/skraft-state.instructions.md"
+        source: "plugins/skraft-framework/instructions/skraft-state.instructions.md"
         purpose_fr: "Le substrat HVE-Core : state.json, protocole 6-etapes par tour, articulation des phases."
         purpose_en: "The HVE-Core substrate: state.json, 6-step per-turn protocol, phase articulation."
       - id: traces
@@ -329,7 +329,7 @@ parts:
         label_en: "Traces & auditability"
         fr: "fr/explanation/traces.md"
         en: "en/explanation/traces.md"
-        source: "plugins/instructions/skraft-artifacts.instructions.md"
+        source: "plugins/skraft-framework/instructions/skraft-artifacts.instructions.md"
         purpose_fr: "Les traces laissees par le pipeline : artefacts dates, state.json, PR, verdicts. Auditabilite."
         purpose_en: "The traces left by the pipeline: dated artifacts, state.json, PRs, verdicts. Auditability."
       - id: token-economy
@@ -450,7 +450,7 @@ parts:
             sidebar_position: 1
             fr: "fr/reference/agents/index.md"
             en: "en/reference/agents/index.md"
-            source: "plugins/agents/*.agent.md"
+            source: "plugins/skraft-framework/agents/*.agent.md"
             purpose_fr: "Les agents du pipeline et leurs reviewers : role, phase, contribution aux pratiques."
             purpose_en: "Pipeline agents and their reviewers: role, phase, contribution to practices."
       - id: skills
@@ -473,7 +473,7 @@ parts:
             sidebar_position: 1
             fr: "fr/reference/skills/index.md"
             en: "en/reference/skills/index.md"
-            source: "plugins/skills/*/SKILL.md"
+            source: "plugins/skraft-framework/skills/*/SKILL.md"
             purpose_fr: "Les skills (pratiques outillees) : ce qu'elles font, quand les utiliser."
             purpose_en: "Skills (tooled practices): what they do, when to use them."
       - id: workers
@@ -509,7 +509,7 @@ parts:
             sidebar_position: 1
             fr: "fr/reference/lens.md"
             en: "en/reference/lens.md"
-            source: "plugins/agents/reviewer-lenses/*.agent.md"
+            source: "plugins/skraft-framework/agents/reviewer-lenses/*.agent.md"
             purpose_fr: "Les 4 lentilles de revue adverse : architecture-boundaries, cold-reader, quality-gates, test-integrity."
             purpose_en: "The 4 adversarial review lenses: architecture-boundaries, cold-reader, quality-gates, test-integrity."
       - id: gates
@@ -524,7 +524,7 @@ parts:
             sidebar_position: 1
             fr: "fr/reference/gates.md"
             en: "en/reference/gates.md"
-            source: "plugins/skills/*-review-criteria/SKILL.md"
+            source: "plugins/skraft-framework/skills/*-review-criteria/SKILL.md"
             purpose_fr: "Les gates de revue (Gxx) par phase : ce que chaque gate verifie et pourquoi."
             purpose_en: "Review gates (Gxx) per phase: what each gate checks and why."
       - id: patterns
@@ -539,7 +539,7 @@ parts:
             sidebar_position: 1
             fr: "fr/reference/patterns.md"
             en: "en/reference/patterns.md"
-            source: "plugins/skills/architecture-patterns/SKILL.md"
+            source: "plugins/skraft-framework/skills/architecture-patterns/SKILL.md"
             purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
             purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
       - id: infrastructure

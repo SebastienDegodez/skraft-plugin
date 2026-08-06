@@ -10,9 +10,9 @@ Prior verdict: NEEDS_REWORK (1 high, 2 medium, 0 blocker)
 
 | Module | Kind | Verdict |
 |---|---|---|
-| plugins/src/domain/state-schema.mjs | pure Domain Service | clean (unchanged) |
-| plugins/src/domain/pipeline-policy.mjs | pure Domain Service | clean (unchanged) |
-| plugins/src/application/pre-tool-use-service.mjs | use case | high resolved |
+| plugins/skraft-framework/src/domain/state-schema.mjs | pure Domain Service | clean (unchanged) |
+| plugins/skraft-framework/src/domain/pipeline-policy.mjs | pure Domain Service | clean (unchanged) |
+| plugins/skraft-framework/src/application/pre-tool-use-service.mjs | use case | high resolved |
 | tests/skraft-framework/pre-tool-use-service.unit.test.mjs | new app-boundary suite | mediums closed |
 
 ## Attempt-1 finding disposition

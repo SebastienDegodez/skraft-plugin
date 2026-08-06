@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createExecutionLogService } from '../../plugins/src/application/execution-log-service.mjs'
-import { Ok, Err } from '../../plugins/src/domain/result.mjs'
+import { createExecutionLogService } from '../../plugins/skraft-framework/src/application/execution-log-service.mjs'
+import { Ok, Err } from '../../plugins/skraft-framework/src/domain/result.mjs'
 
 const TS = '2026-07-12T20:54:18.931Z'
 

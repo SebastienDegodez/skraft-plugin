@@ -74,7 +74,7 @@ All documentation lives in [`docs/`](./docs/).
 |---|---|
 | 📑 Documentation index | [`docs/README.md`](./docs/README.md) |
 | 🏗️ Plugin architecture | [`docs/architecture.md`](./docs/architecture.md) |
-| 🛠️ Guardrail framework (hexagonal, G1–G8, genesis anchoring) | [`plugins/README.md`](./plugins/README.md) |
+| 🛠️ Guardrail framework (hexagonal, G1–G8, genesis anchoring) | [`plugins/skraft-framework/README.md`](./plugins/skraft-framework/README.md) |
 | 🛣️ Roadmap (13 US + status) | [`docs/roadmap.md`](./docs/roadmap.md) |
 | 🤝 Engineer/Reviewer cross-cutting view | [`docs/agents/software-engineer-and-reviewer.md`](./docs/agents/software-engineer-and-reviewer.md) |
 | 🎨 Documentation conventions | [`docs/conventions.md`](./docs/conventions.md) |
@@ -86,7 +86,7 @@ All documentation lives in [`docs/`](./docs/).
 | SDLC pipeline orchestrated by `skraft-orchestrator` | ✅ Implemented |
 | Specialized phase agents (`backlog-*`, `solution-architect*`, `acceptance-designer*`, `software-engineer*`) | ✅ Implemented |
 | Reviewer lenses (`quality-gates`, `architecture-boundaries`, `test-integrity`, `cold-reader`) | ✅ Implemented |
-| Operational skills (`plugins/skills/*`) | ✅ Implemented |
+| Operational skills (`plugins/skraft-framework/skills/*`) | ✅ Implemented |
 | Hook guardrails G1–G5 + G4/G5 (artifact/verdict/commit) | ✅ Implemented |
 | Guardrails G6–G8, observability, recovery | 🚧 [Roadmap](./docs/roadmap.md) |
 
@@ -97,11 +97,11 @@ All documentation lives in [`docs/`](./docs/).
 node --test tests/skraft-framework/*.test.mjs
 
 # Mutation testing (Stryker)
-npm --prefix plugins/src ci && node plugins/src/node_modules/.bin/stryker run plugins/src/stryker.config.mjs
+npm --prefix plugins/skraft-framework/src ci && node plugins/skraft-framework/src/node_modules/.bin/stryker run plugins/skraft-framework/src/stryker.config.mjs
 
 # Policy checks (data-driven config, models by cost class)
-node plugins/src/cli/build-config-bin.mjs --check
-node plugins/src/cli/resolve-model-bin.mjs --check
+node plugins/skraft-framework/src/cli/build-config-bin.mjs --check
+node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check
 ```
 
 Test placement and Stryker configuration rules are described in [`AGENTS.md`](./AGENTS.md).
@@ -117,7 +117,7 @@ This project follows [**SemVer**](https://semver.org/) and publishes releases **
 - Automatic online-documentation commits (`docs(sync):` / `docs(gaps):`) never trigger a release.
 - On every push to `main`, the [`release.yml`](./.github/workflows/release.yml) workflow:
   1. computes the next version from the commit history,
-  2. updates [`CHANGELOG.md`](./CHANGELOG.md) and the version in `plugins/.claude-plugin/plugin.json` + `plugins/src/package.json`,
+  2. updates [`CHANGELOG.md`](./CHANGELOG.md) and the version in `plugins/skraft-framework/.claude-plugin/plugin.json` + `plugins/skraft-framework/src/package.json`,
   3. creates the **`vX.Y.Z` tag** and the **GitHub Release** with the release notes,
   4. commits everything with `chore(release): X.Y.Z [skip ci]`.
 

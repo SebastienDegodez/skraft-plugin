@@ -3,18 +3,18 @@ name: skraft-framework CI
 on:
   push:
     paths:
-      - 'plugins/src/**'
-      - 'plugins/agents/**'
-      - 'plugins/instructions/**'
-      - 'plugins/skraft-framework.config.json'
+      - 'plugins/skraft-framework/src/**'
+      - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/instructions/**'
+      - 'plugins/skraft-framework/skraft-framework.config.json'
       - 'tests/skraft-framework/**'
       - '.github/workflows/skraft-framework-ci.yml'
   pull_request:
     paths:
-      - 'plugins/src/**'
-      - 'plugins/agents/**'
-      - 'plugins/instructions/**'
-      - 'plugins/skraft-framework.config.json'
+      - 'plugins/skraft-framework/src/**'
+      - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/instructions/**'
+      - 'plugins/skraft-framework/skraft-framework.config.json'
       - 'tests/skraft-framework/**'
       - '.github/workflows/skraft-framework-ci.yml'
   workflow_dispatch:
@@ -50,7 +50,7 @@ jobs:
           node-version: '22'
 
       - name: Check agent model assignment matches cost_role_class policy
-        run: node plugins/src/cli/resolve-model-bin.mjs --check
+        run: node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check
 
   config-policy:
     name: Guardrail config in sync (US2)
@@ -65,7 +65,7 @@ jobs:
           node-version: '22'
 
       - name: Check skraft-framework.config.json matches the agent descriptors
-        run: node plugins/src/cli/build-config-bin.mjs --check
+        run: node plugins/skraft-framework/src/cli/build-config-bin.mjs --check
 
   mutation:
     name: Mutation Testing
@@ -81,13 +81,13 @@ jobs:
           node-version: '22'
 
       - name: Install Stryker dependencies
-        working-directory: plugins/src
+        working-directory: plugins/skraft-framework/src
         run: npm ci
 
       - name: Run mutation tests
         run: |
-          node plugins/src/node_modules/.bin/stryker run \
-            plugins/src/stryker.config.mjs
+          node plugins/skraft-framework/src/node_modules/.bin/stryker run \
+            plugins/skraft-framework/src/stryker.config.mjs
 
       - name: Upload mutation report
         if: always()

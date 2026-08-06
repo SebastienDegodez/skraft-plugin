@@ -46,7 +46,7 @@ A green safety net must exist ([characterize-with-contracts]({{ "/en/reference/s
 ## Mandatory validation (8 passes)
 
 ```bash
-bash plugins/skills/mikado-method/scripts/validate-mikado.sh <path-to-graph.md>
+bash plugins/skraft-framework/skills/mikado-method/scripts/validate-mikado.sh <path-to-graph.md>
 ```
 
 Run before every leaf commit and after every graph-update commit. Exit 0 required to proceed — never advance on an unvalidated graph.

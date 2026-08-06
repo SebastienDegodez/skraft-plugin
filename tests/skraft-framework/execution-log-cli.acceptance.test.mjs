@@ -16,7 +16,7 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
-const CLI_DIR = fileURLToPath(new URL('../../plugins/src/cli/', import.meta.url))
+const CLI_DIR = fileURLToPath(new URL('../../plugins/skraft-framework/src/cli/', import.meta.url))
 const INIT_LOG = join(CLI_DIR, 'init-log.mjs')
 const LOG_PHASE = join(CLI_DIR, 'log-phase.mjs')
 const VERIFY = join(CLI_DIR, 'verify-integrity.mjs')

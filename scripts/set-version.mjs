@@ -11,8 +11,8 @@ if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const targets = [
-  'plugins/.claude-plugin/plugin.json',
-  'plugins/src/package.json',
+  'plugins/skraft-framework/.claude-plugin/plugin.json',
+  'plugins/skraft-framework/src/package.json',
 ];
 
 for (const rel of targets) {

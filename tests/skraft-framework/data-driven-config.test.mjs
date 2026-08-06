@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   buildFrameworkConfig,
   DEFAULT_SKILL_POLICY,
-} from '../../plugins/src/domain/framework-config-policy.mjs'
+} from '../../plugins/skraft-framework/src/domain/framework-config-policy.mjs'
 
 // --- descriptor factories (the pure function's input boundary) ---
 

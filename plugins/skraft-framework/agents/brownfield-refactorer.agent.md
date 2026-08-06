@@ -28,7 +28,7 @@ metadata:
     - mikado-method
     - strangler-fig-method
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
   inputs:
     required:
       - a stated goal (what to modify, or what to replace)

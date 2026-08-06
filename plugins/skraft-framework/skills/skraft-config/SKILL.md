@@ -9,7 +9,7 @@ description: "Use to initialize and configure the repo-wide SKRAFT settings file
 `skraft-config.json` holds settings that belong to the **repository**, not to any
 single work item. Today that is the **depth tier** — the strictness dial that governs
 TDD variant, mutation thresholds, reviewer lens count, and the Gherkin gate across
-every phase of the pipeline (see `plugins/skills/skraft-difficulty-routing/SKILL.md`
+every phase of the pipeline (see `plugins/skraft-framework/skills/skraft-difficulty-routing/SKILL.md`
 for the tier table). This skill is the configurateur: it initializes and edits that
 file. Per-work-item difficulty is NOT here — it lives in `state.json` via the state CLI.
 

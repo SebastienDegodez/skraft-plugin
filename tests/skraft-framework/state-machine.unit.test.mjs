@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { applyTransition } from '../../plugins/src/domain/state-machine.mjs'
+import { applyTransition } from '../../plugins/skraft-framework/src/domain/state-machine.mjs'
 
 // Minimal valid pipeline state builder
 const mkState = (overrides = {}) => ({

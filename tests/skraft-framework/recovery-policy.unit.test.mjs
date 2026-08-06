@@ -6,7 +6,7 @@ import {
   isStalePhase,
   selectRollbackTarget,
   buildRecoveryGuidance,
-} from '../../plugins/src/domain/recovery-policy.mjs'
+} from '../../plugins/skraft-framework/src/domain/recovery-policy.mjs'
 
 const validState = (overrides = {}) => ({
   currentPhase: 'DESIGN',

@@ -9,7 +9,7 @@ import {
   planAuditRetention,
   planStaleSignals,
   isStaleSignalFile,
-} from '../../plugins/src/domain/observability-policy.mjs'
+} from '../../plugins/skraft-framework/src/domain/observability-policy.mjs'
 
 // ─── resolveObservabilityConfig ─────────────────────────────────────────────────
 

@@ -21,7 +21,7 @@ metadata:
     - architecture-patterns
     - architecture-decisions
   assets:
-    - plugins/agents/assets/consistency-matrix.template.md
+    - plugins/skraft-framework/agents/assets/consistency-matrix.template.md
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
@@ -39,7 +39,7 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 ---
 
 # Solution-Architect Agent
@@ -72,7 +72,7 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 - `clean-architecture-<language>` (e.g. `clean-architecture-dotnet`) — OPTIONAL. Detect the project's primary language during Phase 3 REUSE ANALYSIS and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.
 
 ### Load on demand (Phase 9 RECONCILE & VERIFY)
-- `plugins/agents/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
+- `plugins/skraft-framework/agents/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
 
 ## Earned Consistency
 
@@ -402,7 +402,7 @@ Produce `contracts-{story}.md` with the full interface inventory.
 
 ### Phase 9: RECONCILE & VERIFY (cross-artefact consistency gate)
 
-*Loads asset: `plugins/agents/assets/consistency-matrix.template.md`.*
+*Loads asset: `plugins/skraft-framework/agents/assets/consistency-matrix.template.md`.*
 
 This phase is the **supervised-execution gate** between the design draft and PERSIST. ADRs are the source of truth; every descriptive artefact must align. Drift is classified by cause and either back-propagated once OR halted as a `decision_drift` BLOCKER. **The orchestrator MUST NOT advance to DISTILL if any open blocker exists.**
 
@@ -455,7 +455,7 @@ Also write the blocker file to `.copilot-tracking/skraft-plans/{projectSlug}/blo
 
 ### Phase 10: PERSIST
 
-Write all artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Every markdown file must begin with `<!-- markdownlint-disable-file -->`.
+Write all artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` per `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`. Every markdown file must begin with `<!-- markdownlint-disable-file -->`.
 
 - `details/{date}/event-model-{story}.md` — event timeline per story
 - `docs/adr/adr-{NNN}-{slug}.md` — one file per ADR (append-only, sequential numbering across the whole project; each begins with the YAML decision header)

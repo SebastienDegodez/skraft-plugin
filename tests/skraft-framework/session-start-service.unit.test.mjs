@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createSessionStartService } from '../../plugins/src/application/session-start-service.mjs'
-import { createInMemoryFilesystem } from '../../plugins/src/adapters/infrastructure/in-memory-filesystem.mjs'
-import { createFixedTime } from '../../plugins/src/adapters/infrastructure/fixed-time.mjs'
-import { DAY_MS } from '../../plugins/src/domain/observability-policy.mjs'
+import { createSessionStartService } from '../../plugins/skraft-framework/src/application/session-start-service.mjs'
+import { createInMemoryFilesystem } from '../../plugins/skraft-framework/src/adapters/infrastructure/in-memory-filesystem.mjs'
+import { createFixedTime } from '../../plugins/skraft-framework/src/adapters/infrastructure/fixed-time.mjs'
+import { DAY_MS } from '../../plugins/skraft-framework/src/domain/observability-policy.mjs'
 
 const NOW = new Date('2026-01-01T00:00:00Z')
 const nowMs = NOW.getTime()

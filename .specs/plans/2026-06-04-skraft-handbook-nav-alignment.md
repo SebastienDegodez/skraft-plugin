@@ -14,7 +14,7 @@
 3. Granularité agents → **les deux niveaux** : page par phase (résumé agent+reviewer+gates) DANS la section Pipeline + 1 page par agent dans le Catalogue (les pages agent existent déjà).
 4. Deep-dives premier passage → **3 pages** : Outside-In TDD, Walking Skeleton, Review-before-review (les 2 dernières s'appuient sur des pages/concepts déjà partiellement présents).
 
-**HVE-Core (substrat) — pourquoi c'est dans ce plan :** SKRAFT n'est pas autonome — il s'exécute sur le substrat **HVE-Core** (`microsoft/hve-core`). C'est HVE-Core qui porte l'**articulation des phases en architecture** : chaque phase lit/écrit `state.json`, suit le **protocole 6-étapes par tour**, et dépose ses artefacts dans une **arborescence datée** (`.copilot-tracking/skraft-plans/{slug}/`) ; les verdicts des reviewers (gates) y sont tracés et conditionnent la transition. La demande « montrer comment chaque phase s'articule en architecture » impose donc deux pages dédiées (substrat + traces), placées dans la section **Le pipeline**. Sources : `plugins/instructions/skraft-state.instructions.md`, `plugins/instructions/skraft-artifacts.instructions.md`.
+**HVE-Core (substrat) — pourquoi c'est dans ce plan :** SKRAFT n'est pas autonome — il s'exécute sur le substrat **HVE-Core** (`microsoft/hve-core`). C'est HVE-Core qui porte l'**articulation des phases en architecture** : chaque phase lit/écrit `state.json`, suit le **protocole 6-étapes par tour**, et dépose ses artefacts dans une **arborescence datée** (`.copilot-tracking/skraft-plans/{slug}/`) ; les verdicts des reviewers (gates) y sont tracés et conditionnent la transition. La demande « montrer comment chaque phase s'articule en architecture » impose donc deux pages dédiées (substrat + traces), placées dans la section **Le pipeline**. Sources : `plugins/skraft-framework/instructions/skraft-state.instructions.md`, `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`.
 
 ---
 
@@ -29,14 +29,14 @@
 **Créés (contenu manquant, FR + EN) :**
 - `docs/site/{fr,en}/reference/agents/index.md` — index des agents.
 - `docs/site/{fr,en}/reference/skills/index.md` — index des skills.
-- `docs/site/{fr,en}/catalogue/patterns.md` — patterns d'architecture (source : `plugins/skills/architecture-patterns/SKILL.md`).
-- `docs/site/{fr,en}/catalogue/gates.md` — gates Gxx par phase (source : `plugins/skills/*-review-criteria/SKILL.md`).
-- `docs/site/{fr,en}/catalogue/lens.md` — 4 lentilles (source : `plugins/agents/reviewer-lenses/*.agent.md`).
+- `docs/site/{fr,en}/catalogue/patterns.md` — patterns d'architecture (source : `plugins/skraft-framework/skills/architecture-patterns/SKILL.md`).
+- `docs/site/{fr,en}/catalogue/gates.md` — gates Gxx par phase (source : `plugins/skraft-framework/skills/*-review-criteria/SKILL.md`).
+- `docs/site/{fr,en}/catalogue/lens.md` — 4 lentilles (source : `plugins/skraft-framework/agents/reviewer-lenses/*.agent.md`).
 - `docs/site/{fr,en}/deep-dive/outside-in-tdd.md`
 - `docs/site/{fr,en}/deep-dive/walking-skeleton.md`
 - `docs/site/{fr,en}/deep-dive/review-before-review.md`
-- `docs/site/{fr,en}/hve-core.md` — le substrat HVE-Core (source : `plugins/instructions/skraft-state.instructions.md`).
-- `docs/site/{fr,en}/traces.md` — traces & auditabilité (source : `plugins/instructions/skraft-artifacts.instructions.md`).
+- `docs/site/{fr,en}/hve-core.md` — le substrat HVE-Core (source : `plugins/skraft-framework/instructions/skraft-state.instructions.md`).
+- `docs/site/{fr,en}/traces.md` — traces & auditabilité (source : `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`).
 
 **Enrichis (citations nommées) :**
 - `docs/site/{fr,en}/pipeline/{discover,discuss,design,distill,deliver}.md` — ajout bloc « gates de la phase » + citation.
@@ -267,11 +267,11 @@ git commit -m "feat(site): labels de sidebar lisibles (label_fr/label_en)"
 **Files:**
 - Create: `docs/site/fr/reference/agents/index.md`
 - Create: `docs/site/en/reference/agents/index.md`
-- Source: `plugins/agents/*.agent.md`
+- Source: `plugins/skraft-framework/agents/*.agent.md`
 
 - [ ] **Step 1: Lire les sources agents**
 
-Lire l'en-tête (frontmatter `description`) de chaque `plugins/agents/*.agent.md` pour rédiger une ligne par agent (rôle + phase).
+Lire l'en-tête (frontmatter `description`) de chaque `plugins/skraft-framework/agents/*.agent.md` pour rédiger une ligne par agent (rôle + phase).
 
 - [ ] **Step 2: Créer l'index FR**
 
@@ -353,7 +353,7 @@ git commit -m "feat(site): index des skills (FR/EN)"
 **Files:**
 - Create: `docs/site/fr/catalogue/gates.md`
 - Create: `docs/site/en/catalogue/gates.md`
-- Source: `plugins/skills/discovery-review-criteria/SKILL.md`, `plugins/skills/planning-review-criteria/SKILL.md`, `plugins/skills/architecture-review-criteria/SKILL.md`, `plugins/skills/acceptance-review-criteria/SKILL.md`
+- Source: `plugins/skraft-framework/skills/discovery-review-criteria/SKILL.md`, `plugins/skraft-framework/skills/planning-review-criteria/SKILL.md`, `plugins/skraft-framework/skills/architecture-review-criteria/SKILL.md`, `plugins/skraft-framework/skills/acceptance-review-criteria/SKILL.md`
 
 - [ ] **Step 1: Extraire les gates par phase**
 
@@ -391,7 +391,7 @@ git commit -m "feat(site): page catalogue gates (FR/EN, citées)"
 **Files:**
 - Create: `docs/site/fr/catalogue/lens.md`
 - Create: `docs/site/en/catalogue/lens.md`
-- Source: `plugins/agents/reviewer-lenses/{cold-reader,architecture-boundaries,test-integrity,quality-gates}-lens.agent.md`
+- Source: `plugins/skraft-framework/agents/reviewer-lenses/{cold-reader,architecture-boundaries,test-integrity,quality-gates}-lens.agent.md`
 
 - [ ] **Step 1: Extraire les 4 lentilles**
 
@@ -424,7 +424,7 @@ git commit -m "feat(site): page catalogue lentilles de revue (FR/EN, citées)"
 **Files:**
 - Create: `docs/site/fr/catalogue/patterns.md`
 - Create: `docs/site/en/catalogue/patterns.md`
-- Source: `plugins/skills/architecture-patterns/SKILL.md`
+- Source: `plugins/skraft-framework/skills/architecture-patterns/SKILL.md`
 
 - [ ] **Step 1: Extraire les patterns**
 
@@ -538,7 +538,7 @@ git commit -m "feat(site): pourquoi cité sur chaque page agent"
 **Files:**
 - Create: `docs/site/fr/deep-dive/outside-in-tdd.md`
 - Create: `docs/site/en/deep-dive/outside-in-tdd.md`
-- Source: `plugins/skills/outside-in-tdd/SKILL.md`, `docs/site/{fr,en}/reference/skills/outside-in-tdd.md`
+- Source: `plugins/skraft-framework/skills/outside-in-tdd/SKILL.md`, `docs/site/{fr,en}/reference/skills/outside-in-tdd.md`
 
 - [ ] **Step 1: Créer la page FR**
 
@@ -567,7 +567,7 @@ git commit -m "feat(site): deep-dive Outside-In TDD (FR/EN)"
 **Files:**
 - Create: `docs/site/fr/deep-dive/walking-skeleton.md`
 - Create: `docs/site/en/deep-dive/walking-skeleton.md`
-- Source: `plugins/skills/outside-in-tdd/SKILL.md` (section walking skeleton), Cockburn 2005 / Freeman & Pryce 2009
+- Source: `plugins/skraft-framework/skills/outside-in-tdd/SKILL.md` (section walking skeleton), Cockburn 2005 / Freeman & Pryce 2009
 
 - [ ] **Step 1: Créer la page FR**
 
@@ -594,7 +594,7 @@ git commit -m "feat(site): deep-dive Walking Skeleton (FR/EN)"
 **Files:**
 - Create: `docs/site/fr/deep-dive/review-before-review.md`
 - Create: `docs/site/en/deep-dive/review-before-review.md`
-- Source: `docs/site/{fr,en}/pourquoi-review-avant-review.md` (page existante), `plugins/skills/adversarial-review-lenses/SKILL.md`
+- Source: `docs/site/{fr,en}/pourquoi-review-avant-review.md` (page existante), `plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md`
 
 - [ ] **Step 1: Créer la page FR**
 
@@ -674,7 +674,7 @@ git commit -m "test(site): smoke nav handbook (4 portes + sidebar)"
 **Files:**
 - Create: `docs/site/fr/hve-core.md`
 - Create: `docs/site/en/hve-core.md`
-- Source: `plugins/instructions/skraft-state.instructions.md`
+- Source: `plugins/skraft-framework/instructions/skraft-state.instructions.md`
 
 - [ ] **Step 1: Extraire les conventions du substrat**
 
@@ -709,7 +709,7 @@ git commit -m "feat(site): page substrat HVE-Core (FR/EN)"
 **Files:**
 - Create: `docs/site/fr/traces.md`
 - Create: `docs/site/en/traces.md`
-- Source: `plugins/instructions/skraft-artifacts.instructions.md`
+- Source: `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`
 
 - [ ] **Step 1: Extraire le mapping phase → artefact**
 

@@ -9,7 +9,7 @@ import {
   validateLog,
   appendEntry,
   verifyIntegrity,
-} from '../../plugins/src/domain/execution-log-schema.mjs'
+} from '../../plugins/skraft-framework/src/domain/execution-log-schema.mjs'
 
 const TS = '2026-07-12T20:54:18.931Z'
 

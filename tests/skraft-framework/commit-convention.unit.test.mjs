@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isConventionalCommitSubject, scanCommitConvention } from '../../plugins/src/domain/commit-convention.mjs'
+import { isConventionalCommitSubject, scanCommitConvention } from '../../plugins/skraft-framework/src/domain/commit-convention.mjs'
 
 test('isConventionalCommitSubject: true for a well-formed type(scope): subject', () => {
   assert.equal(isConventionalCommitSubject('test(harness): assert OverfittingJudge detects keyword stuffing'), true)

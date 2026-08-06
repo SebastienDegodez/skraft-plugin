@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { parseAgentDescriptor, main } from '../../plugins/src/cli/build-config.mjs'
+import { parseAgentDescriptor, main } from '../../plugins/skraft-framework/src/cli/build-config.mjs'
 
 // Capture console-like io so main() stays testable in-process.
 const capture = () => {

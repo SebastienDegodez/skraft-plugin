@@ -2,7 +2,7 @@
 // SKRAFT housekeeping CLI (US12). Runs the SessionStart auto-maintenance: trims the
 // audit log to its retention window and purges stale state signals (rotated backups
 // and corruption snapshots) past their retention. Wired into the SessionStart hook of
-// both runtimes (plugins/hooks/hooks.json + .github/hooks/skraft-framework.json).
+// both runtimes (plugins/skraft-framework/hooks/hooks.json + .github/hooks/skraft-framework.json).
 //
 // Fail-open: reads (and ignores) the hook payload on stdin, then always exits 0 so a
 // housekeeping hiccup can never block a session. A one-line JSON summary goes to

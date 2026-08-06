@@ -4,11 +4,11 @@
   "type": "module",
   "scripts": {
     "test": "node --test ../../tests/skraft-framework/*.test.mjs",
-    "test:mutation": "node plugins/src/node_modules/.bin/stryker run plugins/src/stryker.config.mjs",
-    "models:check": "node plugins/src/cli/resolve-model-bin.mjs --check",
-    "models:apply": "node plugins/src/cli/resolve-model-bin.mjs --apply",
-    "config:build": "node plugins/src/cli/build-config-bin.mjs --apply",
-    "config:check": "node plugins/src/cli/build-config-bin.mjs --check"
+    "test:mutation": "node plugins/skraft-framework/src/node_modules/.bin/stryker run plugins/skraft-framework/src/stryker.config.mjs",
+    "models:check": "node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check",
+    "models:apply": "node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --apply",
+    "config:build": "node plugins/skraft-framework/src/cli/build-config-bin.mjs --apply",
+    "config:check": "node plugins/skraft-framework/src/cli/build-config-bin.mjs --check"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.6.1",

@@ -8,7 +8,7 @@ import {
   applyModel,
   planAgent,
   main,
-} from '../../plugins/src/cli/resolve-model.mjs'
+} from '../../plugins/skraft-framework/src/cli/resolve-model.mjs'
 
 const agent = ({ name, model = 'inherit', cls = 'reviewer', requirement }) =>
   [

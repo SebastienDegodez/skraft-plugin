@@ -28,7 +28,7 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/triage-{YYYY-MM-DD}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/sprint-proposal.md
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 ---
 
 # Backlog-Discoverer Agent
@@ -149,7 +149,7 @@ For each issue in the raw list:
 
 ### Phase 6: PERSIST
 
-Write both files under the DISCOVER subdirectory defined in `#file:plugins/instructions/skraft-artifacts.instructions.md` — i.e. `.copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/`:
+Write both files under the DISCOVER subdirectory defined in `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md` — i.e. `.copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/`:
 
 1. **`triage-{YYYY-MM-DD}.md`** — full triage report (discovery mode, raw counts, triage table, duplicates, sprint proposal)
 2. **`sprint-proposal.md`** — standalone sprint proposal (latest run overwrites previous within the same dated subfolder)

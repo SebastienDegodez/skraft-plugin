@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 // Boundary test for `state.mjs migrate` (P4 layout back-compat). Drives the real CLI in a
 // temp workspace so the namespaced → bare state relocation is exercised end-to-end.
-const STATE_CLI = resolve(fileURLToPath(import.meta.url), '../../../plugins/src/cli/state.mjs')
+const STATE_CLI = resolve(fileURLToPath(import.meta.url), '../../../plugins/skraft-framework/src/cli/state.mjs')
 
 const withWorkspace = (fn) => {
   const dir = mkdtempSync(join(tmpdir(), 'skraft-migrate-'))

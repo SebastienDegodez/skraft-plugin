@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { createGitCommitVerifier } from '../../plugins/src/adapters/infrastructure/git-commit-verifier.mjs'
+import { createGitCommitVerifier } from '../../plugins/skraft-framework/src/adapters/infrastructure/git-commit-verifier.mjs'
 
 const execFileAsync = promisify(execFile)
 

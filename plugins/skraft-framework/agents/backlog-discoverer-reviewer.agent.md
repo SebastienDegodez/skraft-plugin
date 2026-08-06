@@ -24,7 +24,7 @@ metadata:
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
   instructions:
-    - plugins/instructions/skraft-artifacts.instructions.md
+    - plugins/skraft-framework/instructions/skraft-artifacts.instructions.md
 ---
 
 # Backlog-Discoverer-Reviewer Agent
@@ -179,7 +179,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
 EOF
 ```
 
-The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout for the orchestrator.
+The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/skraft-framework/instructions/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout for the orchestrator.
 
 ```yaml
 verdict: APPROVED | NEEDS_REWORK | REJECTED
