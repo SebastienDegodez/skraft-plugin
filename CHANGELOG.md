@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.5.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.5.0...v1.5.1) (2026-08-06)
+
+### ♻️ Refactoring
+
+* **plugins:** move skraft framework into subdirectory ([08bf03c](https://github.com/SebastienDegodez/skraft-plugin/commit/08bf03c0e0bff4c6d6895786257e8eb8220a0915))
+
+### 📝 Documentation
+
+* **sync:** add solution-researcher derived pages and update indexes ([e838155](https://github.com/SebastienDegodez/skraft-plugin/commit/e838155f30ea475f0a242578cf04d84b8dbc911d))
+
 ## [1.5.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.4.0...v1.5.0) (2026-07-31)
 
 ### ✨ Features
