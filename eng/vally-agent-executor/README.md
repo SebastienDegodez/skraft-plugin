@@ -47,7 +47,9 @@ The business prompt remains role-neutral. Persona text never appears in stimulus
 | `executor.mjs` | Vally-facing orchestration: select agent, create SDK session, pass events through `CopilotAdapter`, attach selected-agent audit event |
 | `tests/agents/agent-behavior/eval.yaml` | Real-agent Vally stimuli and deterministic graders |
 
-Executor tests live under `tests/dashboard/`; agent eval suites and fixtures live under `tests/agents/`.
+Executor tests live under `tests/dashboard/`; agent eval suites live under `tests/agents/`.
+Reusable application environments live under `tests/environments/` so agent and skill
+suites can stage the same named workspace state.
 
 ## Evidence model
 

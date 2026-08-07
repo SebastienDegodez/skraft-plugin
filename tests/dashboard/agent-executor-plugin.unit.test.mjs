@@ -37,4 +37,66 @@ describe('Vally executor plugin registration', () => {
     strictEqual(pilotPermissionHandler({ kind: 'shell' }).kind, 'reject')
   })
 
+  it('allows only workspace-local writes and local toolchain commands for delivery stimuli', () => {
+    const context = {
+      stimulus: { tags: { permissions: 'workspace-write' } },
+      workDir: '/tmp/work',
+    }
+
+    deepStrictEqual(
+      pilotPermissionHandler({ kind: 'write', fileName: '/tmp/work/src/domain.mjs' }, context),
+      { kind: 'approve-once' },
+    )
+    strictEqual(pilotPermissionHandler({ kind: 'write', fileName: '/tmp/outside.mjs' }, context).kind, 'reject')
+    deepStrictEqual(
+      pilotPermissionHandler({
+        kind: 'shell',
+        commands: [{ identifier: 'dotnet test CheckoutPricing.slnx --no-restore', readOnly: true }],
+        commandSegments: [
+          { identifier: 'dotnet test', fullCommandText: 'dotnet test CheckoutPricing.slnx --no-restore' },
+          { identifier: 'tail', fullCommandText: 'tail -30' },
+        ],
+        possiblePaths: ['/tmp/work'],
+        possibleUrls: [],
+        fullCommandText: 'dotnet test CheckoutPricing.slnx --no-restore',
+      }, context),
+      { kind: 'approve-once' },
+    )
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commands: [{ identifier: 'dotnet restore CheckoutPricing.slnx', readOnly: false }],
+      commandSegments: [{ identifier: 'dotnet restore', fullCommandText: 'dotnet restore CheckoutPricing.slnx' }],
+      possiblePaths: ['/tmp/work'],
+      possibleUrls: [],
+      fullCommandText: 'dotnet restore CheckoutPricing.slnx',
+    }, context).kind, 'reject')
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commands: [{ identifier: 'curl https://example.com', readOnly: false }],
+      commandSegments: [{ identifier: 'curl', fullCommandText: 'curl https://example.com' }],
+      possiblePaths: [],
+      possibleUrls: [{ url: 'https://example.com' }],
+      fullCommandText: 'curl https://example.com',
+    }, context).kind, 'reject')
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commands: [{ identifier: 'mkdir -p .copilot-tracking/evidence && cat', readOnly: false }],
+      commandSegments: [
+        { identifier: 'mkdir', fullCommandText: 'mkdir -p .copilot-tracking/evidence' },
+        { identifier: 'cat', fullCommandText: 'cat > .copilot-tracking/evidence/result.json' },
+        { identifier: 'echo', fullCommandText: 'echo done' },
+      ],
+      possiblePaths: ['/tmp/work/.copilot-tracking/evidence/result.json'],
+      possibleUrls: [],
+      fullCommandText: 'mkdir -p .copilot-tracking/evidence && cat > .copilot-tracking/evidence/result.json && echo done',
+    }, context), { kind: 'approve-once' })
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'grep', fullCommandText: "grep -r 'Mock<' src" }],
+      possiblePaths: ['/tmp/work/src'],
+      possibleUrls: [],
+      fullCommandText: "grep -r 'Mock<' src",
+    }, context), { kind: 'approve-once' })
+  })
+
 })

@@ -41,6 +41,14 @@ const selectedAgentEvent = (agent) => ({
   },
 })
 
+const readOnlyTools = ['skill', 'glob', 'grep', 'view']
+const workspaceWriteTools = [...readOnlyTools, 'edit', 'bash']
+const toolsFor = (stimulus) => stimulus?.tags?.permissions === 'workspace-write' ? workspaceWriteTools : readOnlyTools
+const qualifiedTools = (tools) => tools.map((tool) => `builtin:${tool}`)
+const promptsFor = (stimulus) => Array.isArray(stimulus.turns) && stimulus.turns.length
+  ? stimulus.turns
+  : [stimulus.prompt]
+
 export const createAgentExecutor = ({
   repoRoot,
   createClient,
@@ -60,7 +68,7 @@ export const createAgentExecutor = ({
   return {
     name: 'skraft-agent-runner',
     supportsPreparedWorkspace: true,
-    supportsMultiTurn: false,
+    supportsMultiTurn: true,
     async execute(stimulus, options) {
       const startedAt = clock.now()
       const agent = loadAgent(repoRoot, agentTag(stimulus))
@@ -71,6 +79,7 @@ export const createAgentExecutor = ({
 
       try {
         await client.start()
+        const tools = toolsFor(stimulus)
         const skillDirectories = [...new Set((options.skills ?? []).flatMap((skill) => skill.path ? [dirname(skill.path)] : []))]
         session = await client.createSession({
           model: options.model,
@@ -79,7 +88,7 @@ export const createAgentExecutor = ({
             name: agent.id,
             displayName: agent.name,
             description: agent.description,
-            tools: ['skill', 'glob', 'grep', 'view'],
+            tools,
             prompt: agentPrompt(agent),
             model: options.model,
             infer: false,
@@ -88,17 +97,27 @@ export const createAgentExecutor = ({
           skillDirectories,
           customAgentsLocalOnly: true,
           skipCustomInstructions: true,
-          availableTools: ['builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view'],
+          availableTools: qualifiedTools(tools),
           infiniteSessions: { enabled: false },
           enableSessionTelemetry: false,
-          onPermissionRequest: permissionHandler,
+          onPermissionRequest: (request) => permissionHandler(request, { stimulus, workDir: options.workDir }),
         })
         session.on((event) => {
           adapter.on(event)
           options.onRawEvent?.(event)
         })
 
-        const response = await session.sendAndWait({ prompt: stimulus.prompt }, options.timeout)
+        let response
+        const turnOutputs = []
+        let eventCursor = 0
+        for (const [turn, prompt] of promptsFor(stimulus).entries()) {
+          response = await session.sendAndWait({ prompt }, options.timeout)
+          turnOutputs.push(response?.data?.content ?? '')
+          for (let index = eventCursor; index < adapter.events.length; index += 1) {
+            adapter.events[index].turn = turn
+          }
+          eventCursor = adapter.events.length
+        }
         const completedAt = clock.now()
         const events = [selectedAgentEvent(agent), ...adapter.events]
         const skillsLoaded = events
@@ -111,7 +130,7 @@ export const createAgentExecutor = ({
           stimulus,
           events,
           metrics: { ...metrics, wallTimeMs: completedAt.getTime() - startedAt.getTime() },
-          output: response?.data?.content ?? '',
+          output: turnOutputs.map((output, index) => `## Turn ${index + 1}\n${output}`).join('\n\n'),
           workDir: options.workDir,
           endReason: 'completed',
           metadata: {

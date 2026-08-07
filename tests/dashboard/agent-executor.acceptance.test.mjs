@@ -87,7 +87,7 @@ describe('Vally real-agent executor', () => {
     deepStrictEqual(calls.prompts, [{ prompt }])
 
     strictEqual(trajectory.id, 'trajectory-1')
-    strictEqual(trajectory.output, blockedOutput)
+    strictEqual(trajectory.output, `## Turn 1\n${blockedOutput}`)
     deepStrictEqual(
       trajectory.events.filter(({ type }) => type === 'skill_activation').map(({ data }) => data.name),
       activatedSkills,
@@ -112,6 +112,76 @@ describe('Vally real-agent executor', () => {
     })
     strictEqual(calls.disconnected, 1)
     strictEqual(calls.stopped, 1)
+  })
+  it('runs an approved delivery stimulus across the RED checkpoint with bounded write tools', async () => {
+    const calls = { sessions: [], prompts: [] }
+    const responses = ['{"status":"blocked","type":"clarification_needed","message":"RED ready for validation"}', 'GREEN']
+    let eventHandler
+    const session = {
+      sessionId: 'session-2',
+      on(handler) { eventHandler = handler },
+      async sendAndWait(message) {
+        calls.prompts.push(message)
+        const content = responses[calls.prompts.length - 1]
+        eventHandler({ type: 'assistant.message', data: { content } })
+        return { data: { content } }
+      },
+      async disconnect() {},
+    }
+    const client = {
+      async start() {},
+      async createSession(config) { calls.sessions.push(config); return session },
+      async stop() {},
+    }
+    const permissionCalls = []
+    const executor = createAgentExecutor({
+      repoRoot,
+      createClient: () => client,
+      permissionHandler(request, context) { permissionCalls.push({ request, context }); return { kind: 'approve-once' } },
+      adapterFactory: () => new CopilotAdapter(),
+      computeMetrics,
+      clock: { now: () => new Date('2026-08-06T10:00:10.000Z') },
+      randomUUID: () => 'trajectory-2',
+    })
+    const turns = [
+      'Implement the approved behavior and stop after a clean inner RED for validation.',
+      'I validate the failing inner test. Continue through GREEN and available verification.',
+    ]
+    const stimulus = {
+      name: 'approved-node-delivery',
+      prompt: turns.join('\n\n'),
+      turns,
+      tags: { agent: 'software-engineer', permissions: 'workspace-write' },
+    }
+
+    const trajectory = await executor.execute(stimulus, {
+      workDir: '/tmp/work',
+      model: 'claude-sonnet-4.6',
+      timeout: 30_000,
+      sessionLog: { rootDir: '/tmp/session-log' },
+      skills: [],
+    })
+
+    strictEqual(executor.supportsMultiTurn, true)
+    deepStrictEqual(calls.prompts, turns.map((prompt) => ({ prompt })))
+    deepStrictEqual(calls.sessions[0].availableTools, [
+      'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash',
+    ])
+    deepStrictEqual(calls.sessions[0].customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash'])
+    strictEqual(trajectory.output, [
+      '## Turn 1',
+      responses[0],
+      '',
+      '## Turn 2',
+      responses[1],
+    ].join('\n'))
+    deepStrictEqual(
+      trajectory.events.filter(({ type }) => type === 'assistant_message').map(({ turn, data }) => ({ turn, content: data.content })),
+      responses.map((content, turn) => ({ turn, content })),
+    )
+
+    calls.sessions[0].onPermissionRequest({ kind: 'write', fileName: '/tmp/work/src/domain.mjs' })
+    deepStrictEqual(permissionCalls[0].context, { stimulus, workDir: '/tmp/work' })
   })
 
 })

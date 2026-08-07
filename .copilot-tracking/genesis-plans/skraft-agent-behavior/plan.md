@@ -344,12 +344,13 @@ adapter, history, dashboard, lint, and CI tests remain green.
 ## Comprehensive Software Engineer delivery stimulus
 
 Intent and scope: add a separate Sonnet-class real-agent suite that exercises an
-approved Node behavior slice beyond prerequisite detection. It supplies DISTILL
+approved .NET Clean Architecture behavior slice beyond prerequisite detection. It supplies DISTILL
 artifacts and an already-RED outer acceptance test, enforces the mandatory human
 checkpoint through two turns, permits bounded workspace edits/test execution, and
-grades final observable behavior plus test integrity. It does not pretend Node quality
-gate/mutation adapters exist, install dependencies, touch network, or weaken the outer
-test. Cost stance: balanced; one Sonnet-class implementation session, one trial.
+grades final observable behavior, architecture boundaries, stack routing, and test
+integrity. NuGet restore happens before agent execution; agent cannot install packages,
+touch network, or weaken the outer test. Cost stance: balanced; one Sonnet-class
+implementation session, one trial.
 
 ```mermaid
 flowchart LR
@@ -358,7 +359,7 @@ flowchart LR
         R[RED-SYNTHESIZE-GREEN skill]
         C[Craft discipline skill]
         S[(Comprehensive delivery stimulus)]:::new
-        F[(Approved Node fixture)]:::new
+        F[(Approved .NET fixture)]:::new
         E[(Real-agent executor)]:::new
         G[(Vally deterministic graders)]
         S --> P
@@ -395,7 +396,7 @@ on Luna while this multi-constraint coding slice binds to implementer class.
 
 ```mermaid
 flowchart LR
-        S[Delivery suite] -- LOCAL SIBLING --> F[Node fixture]
+        S[Delivery suite] -- SHARED NAMED STATE --> F[.NET Clean Architecture environment]
         S -- LOCAL SIBLING --> E[Executor capability profile]
         E -- EXTERNAL --> V[(Vally)]
         E -- EXTERNAL --> C[(Copilot SDK)]
@@ -407,22 +408,26 @@ Interface sketch:
 - Turn 1: neutral delivery request with project slug, story, depth tier, and difficulty;
     agent must inspect repository artifacts rather than receive solution prose.
 - Turn 2: explicit developer approval of the observed inner RED; continue GREEN.
-- Fixture: dependency-free Node module, production stub, failing outer acceptance test,
-    approved feature, implementation plan, and package test command.
+- Shared environment: named `approved-loyalty-discount-red`; .NET 10 solution with Domain, Application, Infrastructure, and API under
+    `src/`; exactly `CheckoutPricing.UnitTest` and `CheckoutPricing.IntegrationTest`
+    under `tests/`; failing Application-boundary outer test, approved feature, plan,
+    architecture test, and centrally restored test packages. Agent and skill suites stage
+    explicit files from `tests/environments/checkout-pricing/` to avoid build-output leakage.
 - Executor profile: `workspace-write`; add edit + shell only for tagged stimuli. Reads
     remain allowed. Writes must stay under prepared workspace. Shell rejects URLs,
-    sandbox bypass, paths outside workspace, and commands outside a narrow local
-    toolchain allowlist.
+    sandbox bypass, package installation/restore, paths outside workspace, and commands
+    outside a narrow .NET/git/evidence toolchain allowlist.
 - Graders: completed session; final test command succeeds; production diff exists;
     outer acceptance test absent from diff; startup skills activated; no skill-loading
     failure. No grader requires a particular implementation syntax or private method.
-- Expected terminal state: behavior GREEN. If COMMIT & VERIFY lacks a Node adapter,
-    disclose blocker rather than fabricate mutation/evidence success.
+- Expected terminal state: behavior/build/architecture tests GREEN. The .NET quality
+    adapter must activate. If Stryker is unavailable, record the failed mutation gate
+    and disclose the blocker rather than fabricate evidence.
 
 | Box | Mode | Audience | Cost shape |
 |---|---|---|---|
 | Delivery suite | LOCAL SIBLING | INTERNAL | no model itself |
-| Node fixture | LOCAL SIBLING | INTERNAL | small variable suffix |
+| Shared .NET environment | SHARED NAMED STATE | INTERNAL | medium variable suffix |
 | Executor profile | LOCAL SIBLING | INTERNAL | deterministic |
 | Software Engineer | existing persona | INTERNAL receipt | implementer; prefix L; output M; turns medium |
 | Vally graders | EXTERNAL | INTERNAL verdict | deterministic |

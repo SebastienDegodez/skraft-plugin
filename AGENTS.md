@@ -45,6 +45,7 @@ tests/
   dashboard/           ← Tests for the eng/ evaluation & dashboard tooling
   skills/              ← Vally eval specs: tests/skills/<skill>/eval.yaml
   agents/              ← Vally real-agent specs: tests/agents/<suite>/eval.yaml
+  environments/        ← Shared, named Vally workspaces reusable by agent + skill specs
   site/                ← Playwright smoke tests for docs/site (incl. the dashboard)
 
 eng/                   ← Skill evaluation & dashboard tooling (zero-dependency Node)
@@ -78,6 +79,9 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
 - Real-agent specs live under `tests/agents/<suite>/eval.yaml`. Their custom executor
   selects an allowlisted `.agent.md`; use Vally's typed trajectory events and built-in
   graders where available instead of duplicating event conversion or grading logic.
+- Reusable application fixtures live under `tests/environments/<app>/<state>/`, never
+  under one agent or skill suite. Specs stage explicit files from a named state so local
+  ignored build outputs cannot leak into prepared workspaces.
 - `eng/run-vally-evals.sh` is the only eval entry point. Skill specs run baseline vs
   treatment; agent specs run once through their declared executor.
 - Generated output (`artifacts/`, `eval-results/`, `dashboard-data/`,

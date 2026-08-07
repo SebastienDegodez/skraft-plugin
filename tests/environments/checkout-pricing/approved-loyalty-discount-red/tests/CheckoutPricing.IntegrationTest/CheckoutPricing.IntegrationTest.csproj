@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/CheckoutPricing.Api/CheckoutPricing.Api.csproj" />
+    <ProjectReference Include="../../src/CheckoutPricing.Application/CheckoutPricing.Application.csproj" />
+    <ProjectReference Include="../../src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj" />
+    <ProjectReference Include="../../src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>
