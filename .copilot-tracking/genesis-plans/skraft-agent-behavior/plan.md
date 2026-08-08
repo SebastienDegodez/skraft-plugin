@@ -396,7 +396,7 @@ on Luna while this multi-constraint coding slice binds to implementer class.
 
 ```mermaid
 flowchart LR
-        S[Delivery suite] -- SHARED NAMED STATE --> F[.NET Clean Architecture environment]
+    S[Delivery suite] -- LOCAL SIBLING --> F[.NET Clean Architecture fixture]
         S -- LOCAL SIBLING --> E[Executor capability profile]
         E -- EXTERNAL --> V[(Vally)]
         E -- EXTERNAL --> C[(Copilot SDK)]
@@ -408,11 +408,11 @@ Interface sketch:
 - Turn 1: neutral delivery request with project slug, story, depth tier, and difficulty;
     agent must inspect repository artifacts rather than receive solution prose.
 - Turn 2: explicit developer approval of the observed inner RED; continue GREEN.
-- Shared environment: named `approved-loyalty-discount-red`; .NET 10 solution with Domain, Application, Infrastructure, and API under
+- Suite-local fixture: named `approved-loyalty-discount-red`; .NET 10 solution with Domain, Application, Infrastructure, and API under
     `src/`; exactly `CheckoutPricing.UnitTest` and `CheckoutPricing.IntegrationTest`
     under `tests/`; failing Application-boundary outer test, approved feature, plan,
-    architecture test, and centrally restored test packages. Agent and skill suites stage
-    explicit files from `tests/environments/checkout-pricing/` to avoid build-output leakage.
+    architecture test, and centrally restored test packages. The delivery suite stages
+    explicit files from its `fixtures/` directory to avoid build-output leakage.
 - Executor profile: `workspace-write`; add edit + shell only for tagged stimuli. Reads
     remain allowed. Writes must stay under prepared workspace. Shell rejects URLs,
     sandbox bypass, package installation/restore, paths outside workspace, and commands
@@ -427,7 +427,7 @@ Interface sketch:
 | Box | Mode | Audience | Cost shape |
 |---|---|---|---|
 | Delivery suite | LOCAL SIBLING | INTERNAL | no model itself |
-| Shared .NET environment | SHARED NAMED STATE | INTERNAL | medium variable suffix |
+| .NET fixture | LOCAL SIBLING | INTERNAL | medium variable suffix |
 | Executor profile | LOCAL SIBLING | INTERNAL | deterministic |
 | Software Engineer | existing persona | INTERNAL receipt | implementer; prefix L; output M; turns medium |
 | Vally graders | EXTERNAL | INTERNAL verdict | deterministic |

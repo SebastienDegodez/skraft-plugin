@@ -44,41 +44,41 @@ stimuli:
       max_duration: 8m
     environment:
       files:
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/.gitignore
+        - src: fixtures/approved-loyalty-discount-red/.gitignore
           dest: .gitignore
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/CheckoutPricing.slnx
+        - src: fixtures/approved-loyalty-discount-red/CheckoutPricing.slnx
           dest: CheckoutPricing.slnx
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/Directory.Build.props
+        - src: fixtures/approved-loyalty-discount-red/Directory.Build.props
           dest: Directory.Build.props
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/Directory.Packages.props
+        - src: fixtures/approved-loyalty-discount-red/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
           dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
           dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
           dest: src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
           dest: src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
           dest: src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/src/CheckoutPricing.Api/Program.cs
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Api/Program.cs
           dest: src/CheckoutPricing.Api/Program.cs
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
           dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests.cs
+        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests.cs
           dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests.cs
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
           dest: tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/tests/CheckoutPricing.IntegrationTest/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.IntegrationTest/Architecture/CleanArchitectureDependencyTests.cs
           dest: tests/CheckoutPricing.IntegrationTest/Architecture/CleanArchitectureDependencyTests.cs
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+        - src: fixtures/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
           dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-        - src: ../../environments/checkout-pricing/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md
+        - src: fixtures/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md
           dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md
       commands:
         - 'dotnet restore CheckoutPricing.slnx'

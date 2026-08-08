@@ -11,7 +11,7 @@ import { loadEvalSpec } from '@microsoft/vally'
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const suiteRoot = join(repoRoot, 'tests/agents/software-engineer-delivery')
 const specPath = join(suiteRoot, 'eval.yaml')
-const fixtureRoot = join(repoRoot, 'tests/environments/checkout-pricing/approved-loyalty-discount-red')
+const fixtureRoot = join(suiteRoot, 'fixtures/approved-loyalty-discount-red')
 
 describe('Software Engineer delivery eval spec', () => {
   it('uses a separate Sonnet-class two-turn suite with bounded write access', async () => {
@@ -30,7 +30,7 @@ describe('Software Engineer delivery eval spec', () => {
     strictEqual(/(?:outside-in-tdd|red-synthesize-green|craft-discipline)/i.test(stimulus.prompt), false)
     deepStrictEqual(stimulus.supported_executors, ['skraft-agent-runner'])
     strictEqual(
-      stimulus.environment.files.every(({ src }) => src.startsWith('../../environments/checkout-pricing/')),
+      stimulus.environment.files.every(({ src }) => src.startsWith('fixtures/approved-loyalty-discount-red/')),
       true,
     )
 
@@ -67,7 +67,7 @@ describe('Software Engineer delivery eval spec', () => {
   it('starts from a compiling outer test that fails only on business behavior', () => {
     const env = { ...process.env }
     delete env.NODE_TEST_CONTEXT
-    const workDir = mkdtempSync(join(tmpdir(), 'checkout-pricing-environment-'))
+    const workDir = mkdtempSync(join(tmpdir(), 'checkout-pricing-fixture-'))
 
     try {
       cpSync(fixtureRoot, workDir, { recursive: true })

@@ -1,8 +1,8 @@
-# CheckoutPricing evaluation environment
+# CheckoutPricing delivery fixture
 
-Shared .NET 10 Clean Architecture application for agent and skill evaluations.
+Suite-local .NET 10 Clean Architecture application for the Software Engineer delivery evaluation.
 
-## States
+## Fixture states
 
 ### `approved-loyalty-discount-red`
 
@@ -18,5 +18,5 @@ Prepare with `dotnet restore CheckoutPricing.slnx`. Baseline verification with
 `dotnet test CheckoutPricing.slnx --no-restore` must exit `1` and report
 `MemberReceivesApprovedDiscountOnCartSubtotal` without compiler errors.
 
-Consumers should stage explicit files from this state. This prevents ignored local build
-outputs from becoming hidden fixture inputs.
+The eval stages explicit files from this state. This prevents ignored local build outputs
+from becoming hidden fixture inputs.
