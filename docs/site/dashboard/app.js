@@ -155,7 +155,9 @@ const renderEfficiency = () => {
 const evidenceCell = (history, hasSpec) => {
   const latest = history.at(-1)
   if (!latest) return badge(hasSpec ? 'no-data' : 'no-eval', hasSpec ? 'No runtime data' : 'Not evaluated')
-  const verdict = latest.url
+  // Only a real, followable URL (e.g. a CI run) is worth linking — a local
+  // placeholder is not a page the browser can navigate to.
+  const verdict = /^https?:\/\//.test(latest.url ?? '')
     ? `<a href="${escapeHtml(latest.url)}" aria-label="Open the evaluation run">${badge(latest.state)}</a>`
     : badge(latest.state)
   return `${verdict}<div class="profile">${escapeHtml(latest.reason)}</div>${score(latest)}`
@@ -264,6 +266,21 @@ const refresh = async (url, onLoaded) => {
   }
 }
 
+// Per subject, keep whichever side has the freshest entry. A run inlined at
+// build time (e.g. a local preview of a not-yet-published evaluation) must
+// survive a successful fetch of an older published history — the remote
+// branch not knowing about it yet is not a reason to hide it.
+const mergeHistoryBucket = (local = {}, remote = {}) => {
+  const merged = { ...local }
+  for (const [subject, remoteEntries] of Object.entries(remote)) {
+    const localEntries = local[subject]
+    const remoteLatest = remoteEntries.at(-1)?.timestamp ?? ''
+    const localLatest = localEntries?.at(-1)?.timestamp ?? ''
+    if (!localEntries || remoteLatest > localLatest) merged[subject] = remoteEntries
+  }
+  return merged
+}
+
 const showReplay = async () => {
   const manifest = data.sources?.replayManifest
   const replay = data.sources?.replay
@@ -286,8 +303,8 @@ try {
   data = await response.json()
 
   await refresh(data.sources?.history, (history) => {
-    data.history = history.skills ?? data.history
-    data.agentHistory = history.agents ?? data.agentHistory
+    data.history = mergeHistoryBucket(data.history, history.skills)
+    data.agentHistory = mergeHistoryBucket(data.agentHistory, history.agents)
   })
 
   renderSummary()

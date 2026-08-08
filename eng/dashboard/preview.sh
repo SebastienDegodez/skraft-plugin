@@ -35,8 +35,7 @@ if (( ${#RESULTS[@]} > 0 )); then
   HISTORY_ARGS=()
   for result in "${RESULTS[@]}"; do HISTORY_ARGS+=(--results "$result"); done
   node eng/dashboard/update-history.mjs "${HISTORY_ARGS[@]}" \
-    --commit "$(git rev-parse HEAD)" \
-    --url "local"
+    --commit "$(git rev-parse HEAD)"
 else
   echo "No verdict under $RESULTS_ROOT — run ./eng/run-vally-evals.sh first; the dashboard will show the catalogue only."
 fi
