@@ -47,6 +47,19 @@ dashboard-data/
 # skraft-framework runtime audit log
 plugins/skraft-framework/logs/
 
+# Exclude .NET / JAVA build artifacts, IDE configs, and other local-only files.
+# These are not needed for the plugin to build or run, and they clutter the repo.
+# .NET build artifacts
+**/bin/
+**/obj/
+# .NET IDE configs
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+# Java build artifacts
+**/target/
+
 
 # skraft config/state transient files (atomic-writer artefacts — never committed)
 # The canonical skraft-config.json IS versioned; its rotating backups/tmp are not.
@@ -62,3 +75,4 @@ skraft-config.json.corrupted*
 **/execution-log.json.bak*
 **/execution-log.json.tmp*
 **/execution-log.json.corrupted*
+session-state/
