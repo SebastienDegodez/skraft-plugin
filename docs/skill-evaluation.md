@@ -35,6 +35,9 @@ site rebuild, and a site rebuild must never invent evidence.
 tests/skills/<skill>/eval.yaml     # what to ask, and how to judge the answer
 eng/
   run-vally-evals.sh               # local runner: two isolated runs + comparison
+  detect-changed-skills.mjs        # PR diff        → changed skill name(s)
+  build-pr-comment.mjs             # results.json*  → PR comment markdown
+  check-pr-regressions.mjs         # results.json*  → non-zero exit on a regression
   catalog/scan.mjs                 # source tree  → artifacts/catalog/report.json
   vally-adapter/adapt.mjs          # Vally run    → eval-results/<skill>/results.json
   dashboard/
@@ -58,6 +61,7 @@ that matters is not "lint versus run" but **what costs model quota**:
 | Job | Runs on | Blocking | Calls a model |
 | --- | --- | --- | --- |
 | `lint` | every pull request touching skills, specs or `eng/` | yes | no |
+| `evaluate-pr` | every pull request that changed a skill (same repo, not a fork) | only on a regression | yes |
 | `evaluate` | schedule (Monday 03:00 UTC) and manual dispatch | no | yes |
 
 The `lint` job runs the dashboard tooling tests, scans the catalogue, lints every
@@ -69,6 +73,33 @@ starting a single agent.
 Skill linting itself is advisory. Vally's `valid-refs` check rejects any link
 that leaves a skill's own directory, which SKRAFT's roster → adapter skills do
 deliberately — a roster's whole job is to point at its adapters.
+
+## Pre-merge evaluation on a PR
+
+`evaluate-pr` gives a contributor evaluation evidence *before* merge, without a
+dashboard round-trip:
+
+1. `eng/detect-changed-skills.mjs` diffs the PR against its base branch and
+   prints the skill(s) touched under `plugins/skraft-framework/skills/<skill>/`
+   or `tests/skills/<skill>/`. Only those skills are evaluated — never the
+   whole catalogue, so the job's model cost scales with the PR, not the repo.
+2. `eng/run-vally-evals.sh` runs baseline-vs-skilled for each changed skill with
+   the default `RUNS=1` (one trial per stimulus). `eng/lib/verdict.mjs` needs at
+   least `MIN_CREDIBLE_TRIALS = 5` trials before it calls a verdict `pass` or
+   `regression`, so with one trial most verdicts come back `inconclusive` — that
+   is expected, not a bug. Widen `RUNS` in a spec's own dispatch if a skill needs
+   a credible per-PR verdict; the default keeps every PR run cheap.
+3. `eng/build-pr-comment.mjs` renders every produced verdict as a markdown table
+   (score, sign test, quality/efficiency deltas, reason) and the workflow posts
+   it as a **new comment on the PR** — always a fresh comment, not an edited one,
+   so the comment history doubles as a run history.
+4. `eng/check-pr-regressions.mjs` fails the job only when a verdict is a
+   credible `regression`. `inconclusive`, `no-improvement`, and `pass` never
+   block merge — the gate exists to catch a proven regression, not to demand
+   proof of improvement on every single PR.
+
+Fork PRs skip this job entirely: `COPILOT_GITHUB_TOKEN` is a repo secret and is
+never available to a fork's workflow run.
 
 ## Agent coverage
 
