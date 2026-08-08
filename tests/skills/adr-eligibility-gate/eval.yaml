@@ -4,6 +4,8 @@ type: capability
 defaults:
   timeout: 3m
   runs: 3
+scoring:
+  threshold: 1
 stimuli:
   - name: Filter a mixed list of candidate choices
     prompt: |

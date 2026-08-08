@@ -76,7 +76,7 @@ jobs:
         run: npm install -g "$VALLY_PACKAGE"
 
       - name: Install project dependencies
-        run: npm ci
+        run: npm install
 
       - name: Dashboard tooling tests
         run: node --test tests/dashboard/*.test.mjs
