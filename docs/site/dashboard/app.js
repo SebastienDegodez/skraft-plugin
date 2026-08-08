@@ -40,16 +40,25 @@ const deltaClass = (value, inverse = false) => {
   return positive ? 'positive' : 'negative'
 }
 
+// One bar per recorded evaluation, oldest to newest (last 5). Each bar sits in
+// a full-height track so a single run still reads as a chart, its colour is the
+// verdict and its fill is how decisive that verdict was. A floor keeps every
+// bar legible: a near-zero net win must still be visible, not a hairline.
 const sparkline = (entries) => {
-  if (!entries.length) return ''
-  const bars = entries
-    .slice(-5)
+  if (!entries.length) return '<span class="spark-label">No run yet</span>'
+  const recent = entries.slice(-5)
+  const bars = recent
     .map((entry) => {
-      const height = Math.max(5, Math.round(Math.abs(entry.netWin ?? 0) * 20 + 6))
-      return `<i class="${escapeHtml(entry.state)}" style="height:${height}px" title="${escapeHtml(entry.state)}: ${escapeHtml(entry.reason)}"></i>`
+      const netWin = entry.netWin ?? 0
+      const fill = Math.round(38 + Math.min(1, Math.abs(netWin)) * 62)
+      const title = `${entry.state} — ${entry.model} — net win ${netWin > 0 ? '+' : ''}${netWin.toFixed(2)} over ${entry.trialCount ?? 0} trial(s): ${entry.reason}`
+      return `<span class="spark-slot" title="${escapeHtml(title)}"><i class="${escapeHtml(entry.state)}" style="height:${fill}%"></i></span>`
     })
     .join('')
-  return `<div class="spark" title="Last ${Math.min(entries.length, 5)} evaluation(s)">${bars}</div>`
+  return `<div class="spark-wrap">
+    <div class="spark">${bars}</div>
+    <span class="spark-label">${recent.length} run${recent.length === 1 ? '' : 's'}</span>
+  </div>`
 }
 
 let data
