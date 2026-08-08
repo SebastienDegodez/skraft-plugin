@@ -68,6 +68,18 @@ test.describe('quality dashboard', () => {
     await expect(page.locator('#panel-efficiency h2')).toHaveText('Efficiency')
   })
 
+  test('hides the session replay entry point until a session is published', async ({ page }) => {
+    // A visible callout must always lead somewhere: either it is hidden, or its
+    // link points at the replay app rather than the placeholder anchor.
+    const callout = page.locator('#replay-callout')
+
+    if (await callout.isVisible()) {
+      await expect(page.locator('#replay-link')).not.toHaveAttribute('href', '#')
+    } else {
+      await expect(callout).toBeHidden()
+    }
+  })
+
   test('is reachable from the handbook', async ({ page }) => {
     await expect(page.locator('.nav a', { hasText: 'Handbook' })).toHaveAttribute('href', '../')
   })

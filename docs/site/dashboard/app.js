@@ -299,6 +299,13 @@ const showReplay = async () => {
     if (!response.ok) return
     const { sessions = [] } = await response.json()
     if (!sessions.length) return
+    // The replay app is built into the site at deploy time, so it is absent
+    // from a local preview. Offering a link that leads nowhere is worse than
+    // offering none: check it resolves before showing the entry point.
+    const available = await fetch(replay, { method: 'HEAD', cache: 'no-store' })
+      .then((probe) => probe.ok)
+      .catch(() => false)
+    if (!available) return
     replayLink.href = `${replay}?manifest=${encodeURIComponent(manifest)}`
     replayCallout.hidden = false
   } catch {

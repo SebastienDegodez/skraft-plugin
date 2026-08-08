@@ -55,6 +55,9 @@ main { padding: 3.5rem 0 5rem; }
 .metric span { display: block; margin-top: .7rem; color: var(--muted); font-size: .85rem; }
 
 .callout { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1.25rem; border: 1px solid var(--line); border-radius: 18px; padding: 1.25rem 1.4rem; background: var(--surface); }
+/* `hidden` must win over the rule above, or the callout shows before there is
+   anything to replay and its placeholder link goes nowhere. */
+.callout[hidden] { display: none; }
 .callout p { flex: 1; min-width: 260px; margin: 0; color: var(--muted); font-size: .9rem; }
 .callout strong { color: var(--text); }
 
