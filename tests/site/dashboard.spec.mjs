@@ -57,7 +57,7 @@ test.describe('quality dashboard', () => {
 
   test('separates catalogue, quality, and efficiency evidence', async ({ page }) => {
     const tabs = page.locator('.tabs .tab')
-    await expect(tabs).toHaveCount(3)
+    await expect(tabs).toHaveCount(4)
 
     await page.getByRole('button', { name: 'Quality' }).click()
     await expect(page.locator('#panel-quality')).toBeVisible()
@@ -66,6 +66,24 @@ test.describe('quality dashboard', () => {
     await page.getByRole('button', { name: 'Efficiency' }).click()
     await expect(page.locator('#panel-efficiency')).toBeVisible()
     await expect(page.locator('#panel-efficiency h2')).toHaveText('Efficiency')
+
+    await page.getByRole('button', { name: 'Models' }).click()
+    await expect(page.locator('#panel-models')).toBeVisible()
+    await expect(page.locator('#panel-models h2')).toHaveText('Model comparison')
+  })
+
+  test('compares model arms only within a single judge', async ({ page }) => {
+    // Two judges do not share a scale, so a comparison table that mixed them
+    // would be meaningless. Every rendered cohort names exactly one judge, and
+    // holds at least the two arms that make it a comparison.
+    await page.getByRole('button', { name: 'Models' }).click()
+
+    const cohorts = page.locator('#model-grid .family')
+    for (let index = 0; index < (await cohorts.count()); index += 1) {
+      const cohort = cohorts.nth(index)
+      await expect(cohort.locator('.eyebrow')).toHaveText(/judged by \S+$/)
+      expect(await cohort.locator('.rows tbody tr').count()).toBeGreaterThan(1)
+    }
   })
 
   test('hides the session replay entry point until a session is published', async ({ page }) => {

@@ -16,6 +16,7 @@ const replayCallout = document.querySelector('#replay-callout')
 const replayLink = document.querySelector('#replay-link')
 const qualityGrid = document.querySelector('#quality-grid')
 const efficiencyGrid = document.querySelector('#efficiency-grid')
+const modelGrid = document.querySelector('#model-grid')
 const tabs = [...document.querySelectorAll('.tab')]
 
 const escapeHtml = (value = '') =>
@@ -98,6 +99,75 @@ const evidenceEntries = () => data.skills
   .map((skill) => ({ skill, history: data.history[skill.directory] ?? [] }))
   .map(({ skill, history }) => ({ skill, history, latest: history.at(-1) }))
   .filter(({ latest }) => latest?.metrics)
+
+// Model arms grouped by the judge that scored them. Scores from two different
+// judges are not on the same scale, so they are never put in the same table:
+// one judge is one cohort, and only a cohort holding more than one agent model
+// is a comparison. Within a cohort, the latest run per model wins.
+const modelCohorts = () => data.skills.flatMap((skill) => {
+  const cohorts = new Map()
+  for (const entry of data.history[skill.directory] ?? []) {
+    if (!entry.metrics) continue
+    const cohort = cohorts.get(entry.judgeModel) ?? new Map()
+    const current = cohort.get(entry.model)
+    if (!current || String(entry.timestamp) > String(current.timestamp)) cohort.set(entry.model, entry)
+    cohorts.set(entry.judgeModel, cohort)
+  }
+  return [...cohorts.entries()]
+    .map(([judge, arms]) => ({
+      skill,
+      judge,
+      arms: [...arms.values()].sort((left, right) => String(left.model).localeCompare(String(right.model))),
+    }))
+    .filter(({ arms }) => arms.length > 1)
+    .sort((left, right) => String(right.arms.at(-1).timestamp).localeCompare(String(left.arms.at(-1).timestamp)))
+})
+
+const renderModels = () => {
+  const cohorts = modelCohorts()
+  if (!cohorts.length) {
+    modelGrid.innerHTML =
+      '<div class="empty">No model comparison published yet. Two arms of the same skill, scored by the same judge, are needed before one model can be compared with another.</div>'
+    return
+  }
+
+  modelGrid.innerHTML = cohorts.map(({ skill, judge, arms }) => {
+    const bestScore = Math.max(...arms.map((arm) => arm.metrics.quality?.skilled ?? Number.NEGATIVE_INFINITY))
+    const rows = arms.map((arm) => {
+      const quality = arm.metrics.quality ?? {}
+      const efficiency = arm.metrics.efficiency ?? {}
+      const activation = arm.metrics.activation ?? {}
+      const best = quality.skilled != null && quality.skilled === bestScore
+      return `<tr${best ? ' class="best"' : ''}>
+        <td data-label="Model">
+          <div class="item-name">${escapeHtml(arm.model)}${best ? ' <span class="pill">best</span>' : ''}</div>
+          <div class="profile">${escapeHtml(arm.reason)}</div>
+        </td>
+        <td data-label="Verdict">${badge(arm.state)}</td>
+        <td data-label="Baseline">${number(quality.baseline, 3)}</td>
+        <td data-label="Skilled">${number(quality.skilled, 3)}</td>
+        <td data-label="Lift"><strong class="${deltaClass(quality.delta)}">${quality.delta > 0 ? '+' : ''}${number(quality.delta, 3)}</strong></td>
+        <td data-label="Activation">${activation.rate == null ? '—' : `${number(activation.rate * 100, 0)}%`}</td>
+        <td data-label="Tokens"><span class="${deltaClass(efficiency.tokenDeltaPercent, true)}">${percent(efficiency.tokenDeltaPercent)}</span></td>
+        <td data-label="Time"><span class="${deltaClass(efficiency.durationDeltaPercent, true)}">${percent(efficiency.durationDeltaPercent)}</span></td>
+      </tr>`
+    }).join('')
+
+    return `<article class="family">
+      <header class="family-header">
+        <div>
+          <p class="eyebrow">${escapeHtml(arms.length)} agent models · judged by ${escapeHtml(judge)}</p>
+          <h3>${escapeHtml(skill.name)}</h3>
+          <p>Same skill, same stimuli, one agent model per arm. Baseline and skilled are the judged rubric scores; the lift is what the skill added on that model, and activation is how often it actually fired.</p>
+        </div>
+      </header>
+      <table class="rows">
+        <thead><tr><th>Model</th><th>Verdict</th><th>Baseline</th><th>Skilled</th><th>Lift</th><th>Activation</th><th>Tokens</th><th>Time</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </article>`
+  }).join('')
+}
 
 const renderQuality = () => {
   const entries = evidenceEntries()
@@ -327,6 +397,7 @@ try {
   render()
   renderQuality()
   renderEfficiency()
+  renderModels()
   searchNode.addEventListener('input', render)
   tabs.forEach((tab) => tab.addEventListener('click', () => switchPanel(tab.dataset.panel)))
   await showReplay()

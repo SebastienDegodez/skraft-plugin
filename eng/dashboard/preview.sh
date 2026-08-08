@@ -30,7 +30,11 @@ for argument in "$@"; do
 done
 
 shopt -s nullglob
-RESULTS=("$RESULTS_ROOT"/*/results.json)
+# Recursive, not a single-level glob: a model comparison writes one verdict per
+# arm under <root>/<arm>/<skill>/results.json, and every arm belongs on the page.
+RESULTS=()
+while IFS= read -r result; do RESULTS+=("$result"); done \
+  < <(find "$RESULTS_ROOT" -name "results.json" -type f 2>/dev/null | sort)
 if (( ${#RESULTS[@]} > 0 )); then
   HISTORY_ARGS=()
   for result in "${RESULTS[@]}"; do HISTORY_ARGS+=(--results "$result"); done

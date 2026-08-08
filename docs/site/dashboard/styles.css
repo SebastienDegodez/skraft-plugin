@@ -127,6 +127,9 @@ h2 { font-size: clamp(1.9rem, 5vw, 3.2rem); }
 .activation > div { padding: 1rem; background: var(--surface); }
 .activation strong { display: block; margin-top: .3rem; font-size: 1.1rem; }
 .card-note { margin: 0; padding: 1rem 1.3rem; color: var(--muted); font-size: .8rem; }
+.card-note.warning { color: var(--amber); }
+.pill { border: 1px solid currentColor; border-radius: 999px; padding: .1rem .4rem; color: var(--mint); font-size: .62rem; font-weight: 850; text-transform: uppercase; vertical-align: middle; }
+.rows tr.best { background: rgb(126 226 184 / 7%); }
 .delta-stack { display: grid; justify-items: end; gap: .2rem; font-size: .78rem; font-weight: 800; }
 .positive { color: var(--mint) !important; }
 .negative { color: var(--red) !important; }

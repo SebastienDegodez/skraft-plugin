@@ -42,6 +42,7 @@
       <button class="tab active" type="button" data-panel="overview" aria-selected="true">Overview</button>
       <button class="tab" type="button" data-panel="quality" aria-selected="false">Quality</button>
       <button class="tab" type="button" data-panel="efficiency" aria-selected="false">Efficiency</button>
+      <button class="tab" type="button" data-panel="models" aria-selected="false">Models</button>
     </nav>
 
     <section class="panel active" id="panel-overview" aria-labelledby="tab-overview">
@@ -76,6 +77,15 @@
         <p>Median duration, tokens, turns, and tool calls compare the same prompts with and without the skill.</p>
       </div>
       <section id="efficiency-grid" class="evidence-grid" aria-live="polite"></section>
+    </section>
+
+    <section class="panel" id="panel-models">
+      <div class="view-heading">
+        <p class="eyebrow">Same skill, one arm per agent model</p>
+        <h2>Model comparison</h2>
+        <p>What the skill is worth on each agent model, scored by a single judge. A skill that only helps one model is a finding, not a detail.</p>
+      </div>
+      <section id="model-grid" class="catalog" aria-live="polite"></section>
     </section>
   </main>
 
