@@ -22,6 +22,7 @@
 #   AGENT_WORKERS=1   Concurrent stimuli within an agent eval (default: 1)
 #   MODEL             Agent model (default: gpt-5.6-luna)
 #   JUDGE_MODEL       Judge model (default: gpt-5.6-luna)
+#   LIVE_LOGS=1       Stream Vally output while retaining eval.log (default: 1)
 #   SKIP_EVALS=""     Override skip list (default: reads skip-evals.txt)
 #   RESULTS_DIR       Output root (default: ./eval-results)
 #
@@ -51,6 +52,12 @@ WORKERS="${WORKERS:-3}"
 AGENT_WORKERS="${AGENT_WORKERS:-1}"
 AGENT_MAX_RETRIES="${AGENT_MAX_RETRIES:-0}"
 PARALLEL="${PARALLEL:-4}"
+LIVE_LOGS="${LIVE_LOGS:-1}"
+
+case "$LIVE_LOGS" in
+  0|1) ;;
+  *) echo "LIVE_LOGS must be 0 or 1." >&2; exit 1 ;;
+esac
 
 SKILL="${1:-}"
 
@@ -140,6 +147,15 @@ echo ""
 
 STATUS_DIR=$(mktemp -d)
 
+open_log_fd() {
+  local LOG="$1"
+  if [ "$LIVE_LOGS" = "1" ]; then
+    exec 3> >(tee "$LOG")
+  else
+    exec 3> "$LOG"
+  fi
+}
+
 run_agent_eval() {
   local EVAL_SPEC="$1"
   local EVAL_DIR="$(dirname "$EVAL_SPEC")"
@@ -155,6 +171,7 @@ run_agent_eval() {
 
   echo -e "  ${BOLD}▶${NC} $EVAL_NAME — real agent..." >&2
   local EVAL_EXIT=0
+  open_log_fd "$LOG"
   {
     echo "=== $EVAL_NAME (agent) ==="
     if $VALLY eval \
@@ -169,7 +186,8 @@ run_agent_eval() {
       EVAL_EXIT=$?
       echo "WARNING: Agent eval failed"
     fi
-  } > "$LOG" 2>&1
+  } >&3 2>&1
+  exec 3>&-
 
   local RESULTS_JSONL
   RESULTS_JSONL=$(find "$LIVE_DIR" -name "results.jsonl" -type f 2>/dev/null | head -1)
@@ -223,6 +241,7 @@ run_one_eval() {
 
   echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline..." >&2
 
+  open_log_fd "$LOG"
   {
     echo "=== $EVAL_NAME ==="
 
@@ -253,8 +272,10 @@ run_one_eval() {
       2>&1 || echo "WARNING: Skilled eval failed"
 
     # Adapt
-    local BASELINE_JSONL=$(find "$BASELINE_DIR" -name "*.jsonl" -type f 2>/dev/null | head -1)
-    local SKILLED_JSONL=$(find "$SKILLED_DIR" -name "*.jsonl" -type f 2>/dev/null | head -1)
+    # Session logging also emits events.jsonl and OpenTelemetry JSONL streams.
+    # Only Vally's results.jsonl contains trial-result records for comparison.
+    local BASELINE_JSONL=$(find "$BASELINE_DIR" -name "results.jsonl" -type f 2>/dev/null | head -1)
+    local SKILLED_JSONL=$(find "$SKILLED_DIR" -name "results.jsonl" -type f 2>/dev/null | head -1)
 
     if [ -n "$BASELINE_JSONL" ] && [ -n "$SKILLED_JSONL" ]; then
       echo "--- Adapting results ---"
@@ -269,7 +290,8 @@ run_one_eval() {
         --judge-model "$JUDGE_MODEL" \
         2>&1
     fi
-  } > "$LOG" 2>&1
+  } >&3 2>&1
+  exec 3>&-
 
   # Determine status outside the log-capture block
   local RESULTS_FILE="$RESULTS_ROOT/$EVAL_NAME/results.json"
@@ -290,7 +312,8 @@ run_one_eval() {
 
 export -f run_one_eval
 export -f run_agent_eval
-export SKRAFT_ROOT VALLY RESULTS_ROOT MODEL JUDGE_MODEL RUNS WORKERS AGENT_WORKERS AGENT_MAX_RETRIES STATUS_DIR
+export -f open_log_fd
+export SKRAFT_ROOT VALLY RESULTS_ROOT MODEL JUDGE_MODEL RUNS WORKERS AGENT_WORKERS AGENT_MAX_RETRIES STATUS_DIR LIVE_LOGS
 export GREEN RED YELLOW CYAN BOLD NC
 
 # ---- Run in parallel --------------------------------------------------------
