@@ -1,55 +1,326 @@
 name: outside-in-tdd
-description: Evaluates whether a feature is driven from an observable business behaviour at the system boundary, with the internal design emerging from failing tests.
+description: Evaluates whether observable business behaviour drives a feature from its first test through safe implementation, wiring, and incremental delivery.
 type: capability
 defaults:
   timeout: 3m
   runs: 3
 stimuli:
-  - name: Drive a business rule from the outside
+  - name: Resist a generic design before one behavior exists
     prompt: |
-      We have an existing .NET checkout service and xUnit test project. The approved
-      business scenario is: "Given an existing Gold customer's order, when checkout
-      calculates the payable total, then the returned total includes a 5% loyalty
-      discount." The checkout application boundary is the only entry point named by
-      the product team; internal types and interfaces are not decided yet.
+      Product approved one checkout outcome: a Gold customer pays 95% of the order
+      subtotal. No outcome has been approved for any other loyalty tier or error case.
+      A teammate insists that we first build a reusable discount engine covering every
+      tier and likely failure before delivering the Gold outcome.
 
-      Prepare the first implementation slice. Show the first meaningful test to write,
-      identify what observable result it checks, and explain what should happen next
-      when that test fails. Stop before writing production code or tests for other
-      loyalty tiers.
+      Decide what should be delivered now and what should wait.
+    tags:
+      intent: forced-concept
     graders:
       - type: prompt
     rubric:
-      - Defines one first slice around the approved business scenario instead of expanding into a tier matrix or unrelated error case.
-      - Enters through the checkout application boundary and asserts the payable total in business terms.
-      - Leaves internal classes, policies, and interfaces undecided until the test exposes what is needed.
-      - Describes a real failing behavioral or compilation test and the next implementation step, not a placeholder assertion or a completed production design.
+      - Prioritizes delivery of the approved Gold payable total instead of the unapproved tier matrix and error cases.
+      - Challenges the generic engine as premature because no observable outcomes currently require it.
+      - Leaves internal abstractions undecided until the approved behavior demonstrates a concrete need.
+      - Defers speculative scope without claiming that future extensibility is permanently forbidden.
 
-  - name: Do not test the internals first
+  - name: Preserve an approved expectation when implementation disagrees
     prompt: |
-      We need one new checkout behavior: an order with no lines is rejected with a
-      business error. I want to start by writing unit tests for the private helper
-      methods I plan to add inside the domain service, then build up from there.
+      Product approved this checkout example: a Gold customer with a 100.00 total
+      pays 95.00. The acceptance test expresses that example, but the implementation
+      currently returns 100.00. A teammate suggests changing the expected value to
+      100.00 so the suite is green again and revisiting the discount later.
 
-      Tell me how to start this slice and what the first test should observe.
+      What should we change now, and why?
     graders:
       - type: prompt
     rubric:
-      - Rejects private-helper tests as the starting point and redirects the work to the observable rejection behavior.
-      - Names an application or use-case boundary as the entry point and states the business outcome to assert.
-      - Explains the coupling cost without refusing the request or inventing internal types before the first failure.
-      - Gives a concrete next step for this one behavior rather than a generic testing lecture.
+      - Keeps the approved 95.00 expectation unchanged rather than adapting it to the current implementation.
+      - Directs the implementation to produce the approved payable total through the tested checkout entry point.
+      - Explains that weakening the expectation would stop the test from protecting the agreed business behavior.
+      - Distinguishes fixing faulty implementation from returning to product when an approved expectation is genuinely wrong.
 
-  - name: A read-only question needs no test cycle
+  - name: Do not invent an unresolved business outcome
     prompt: |
-      In our checkout service there is a regular expression `^\d{2}-[A-Z]{3}-\d{4}$`
-      applied to the promotion code field. What does it accept? I am only trying to
-      understand it, I am not changing anything.
+      Product is still deciding what checkout should do with an expired promotion:
+      reject the order, ignore the promotion, or ask the customer to confirm. There
+      is no approved example or expected result yet. I have time today, so please
+      choose the most sensible outcome and start the tests and implementation.
     tags:
       intent: non-activation
     graders:
       - type: prompt
     rubric:
-      - Answers what the pattern accepts.
-      - Does not propose a development cycle, a work breakdown, or new tests for a question that changes nothing.
-      - Stays proportionate to a read-only request.
+      - Does not choose a business outcome on behalf of product.
+      - Stops before writing tests or production code whose expected result has not been approved.
+      - Identifies the decision that must be settled and asks for an observable example before implementation starts.
+      - May help clarify the alternatives without presenting any one of them as decided.
+
+  - name: Prove the first route through a new feature
+    prompt: |
+      Product approved the first outcome for a new refund capability: submitting a
+      valid refund stores it as Pending and returns its id. No validation failures,
+      fraud decisions, or additional refund states have been approved yet.
+
+      Decide what constitutes completion for this first delivery and what remains out
+      of scope.
+    graders:
+      - type: prompt
+    rubric:
+      - Requires the approved refund outcome to be reachable through the service and stored as Pending with its id returned.
+      - Defines completion using observable evidence that the supported route and storage collaborate correctly.
+      - Does not introduce a fraud decision because the approved outcome does not require one.
+      - Defers validation failures, additional refund states, and speculative abstractions.
+
+  - name: Keep wider integration work behind the failing behavior
+    prompt: |
+      The application-level test for approving an order is still failing because the
+      business rule is wrong. A teammate wants to add an in-process HTTP test and a
+      database-container test now, hoping the extra failures will make the flow easier
+      to understand.
+
+      Should we add those tests now? Give the next sequence of work.
+    tags:
+      intent: forced-concept
+    graders:
+      - type: prompt
+    rubric:
+      - Keeps the work focused on making the existing application-level behavior pass before adding transport or infrastructure coverage.
+      - Explains that failures from more boundaries would obscure rather than clarify the current business-rule failure.
+      - Adds HTTP coverage only after the inner behavior is green, followed by infrastructure coverage when the preceding level is stable.
+      - Gives a concrete ordered sequence instead of rejecting integration tests altogether.
+
+  - name: Deliver approved acceptance examples incrementally
+    prompt: |
+      Product approved six checkout examples covering loyalty levels and invalid
+      orders. Their acceptance tests already exist but are disabled. I plan to enable
+      all six, implement everything until the suite is green, and make one final commit.
+
+      Is that a good execution plan? Propose a safer sequence without changing the
+      approved examples.
+    tags:
+      intent: forced-concept
+    graders:
+      - type: prompt
+    rubric:
+      - Keeps only one new acceptance example active while its behavior is being implemented.
+      - Reaches green and records that completed behavior before enabling the next example.
+      - Repeats the sequence without rewriting already approved expectations.
+      - Explains how the incremental sequence localizes failures and prevents unrelated scenarios from expanding one change.
+
+  - name: Make the domain emerge from an approved scenario
+    prompt: |
+      Deliver the approved checkout behavior described in the project artifacts.
+      Do not add outcomes that have not been approved.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/approved-discount-red/.gitignore
+          dest: .gitignore
+        - src: fixtures/approved-discount-red/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/approved-discount-red/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/approved-discount-red/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/approved-discount-red/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/approved-discount-red/src/CheckoutPricing.Domain/DomainMarker.cs
+          dest: src/CheckoutPricing.Domain/DomainMarker.cs
+        - src: fixtures/approved-discount-red/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/approved-discount-red/src/CheckoutPricing.Application/CalculatePayableTotal.cs
+          dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
+        - src: fixtures/approved-discount-red/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+          dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+        - src: fixtures/approved-discount-red/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/approved-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: approved checkout scenario"'
+    graders:
+      - type: run-command
+        name: Approved acceptance examples are GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Clean Architecture dependency tests are GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+            - --no-restore
+            - --filter
+            - FullyQualifiedName~Architecture
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Application and Domain line coverage is 100 percent
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+            - /p:CollectCoverage=true
+            - /p:CoverletOutputFormat=json
+            - /p:Threshold=100
+            - /p:ThresholdType=line
+            - /p:ThresholdStat=total
+            - /p:Include=[CheckoutPricing.Domain]*%2c[CheckoutPricing.Application]*
+          expected_exit_code: 0
+          timeout: 1m
+      - type: diff-not-contains
+        name: Approved Gherkin stayed intact
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount\.feature '
+      - type: diff-contains
+        name: Approved behavior became executable at the Application boundary
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTests/(?!Architecture/|bin/|obj/).*(?:Tests|Test)\.cs '
+      - type: diff-contains
+        name: Business policy emerged in Domain
+        config:
+          pattern: '(?m)^diff --git a/src/CheckoutPricing\.Domain/(?!bin/|obj/).*\.cs '
+      - type: diff-contains
+        name: Application delegates the emerged policy
+        config:
+          pattern: '(?m)^diff --git a/src/CheckoutPricing\.Application/(?!bin/|obj/).*\.cs '
+      - type: file-not-matches
+        name: Application does not own the discount percentage
+        config:
+          path: src/CheckoutPricing.Application/**/*.cs
+          pattern: '(0\.0?5m?|0\.95m?|95m?\s*/\s*100m?|5m?\s*/\s*100m?|5\s*%)'
+      - type: file-not-contains
+        name: Unapproved Green behavior was not invented
+        config:
+          path: src/CheckoutPricing.Domain/**/*.cs
+          value: Green
+      - type: file-not-contains
+        name: Unapproved Platinum behavior was not invented
+        config:
+          path: src/CheckoutPricing.Domain/**/*.cs
+          value: Platinum
+      - type: prompt
+    rubric:
+      - The recorded work turns the approved scenario into an executable failing behavior before implementing its production rule.
+      - Domain concepts are introduced only after the executable behavior exposes their need.
+      - The completed change remains limited to the single approved Gold outcome.
+
+  - name: Replace a fixture-provided discount with production behavior
+    prompt: |
+      Product approved that Gold customers pay 95% of their order subtotal. The checkout
+      suite is green, but calling the deployed calculation still returns the full
+      subtotal.
+
+      Deliver the approved runtime outcome and leave the suite as trustworthy evidence
+      of that behavior.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/discount-fixture-theater/.gitignore
+          dest: .gitignore
+        - src: fixtures/discount-fixture-theater/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/discount-fixture-theater/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/discount-fixture-theater/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/discount-fixture-theater/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/discount-fixture-theater/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/discount-fixture-theater/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/discount-fixture-theater/src/CheckoutPricing.Application/CalculatePayableTotal.cs
+          dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
+        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+          dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/DiscountFixture.cs
+          dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/DiscountFixture.cs
+        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
+          dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
+        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: fixture-provided false green"'
+    graders:
+      - type: run-command
+        name: Complete suite remains GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Clean Architecture dependency tests are GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+            - --no-restore
+            - --filter
+            - FullyQualifiedName~Architecture
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Application and Domain line coverage is 100 percent
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+            - /p:CollectCoverage=true
+            - /p:CoverletOutputFormat=json
+            - /p:Threshold=100
+            - /p:ThresholdType=line
+            - /p:ThresholdStat=total
+            - /p:Include=[CheckoutPricing.Domain]*%2c[CheckoutPricing.Application]*
+          expected_exit_code: 0
+          timeout: 1m
+      - type: diff-contains
+        name: Business policy moved into Domain
+        config:
+          pattern: '(?m)^diff --git a/src/CheckoutPricing\.Domain/(?!bin/|obj/).*\.cs '
+      - type: diff-contains
+        name: Acceptance wiring changed
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests\.cs '
+      - type: file-not-contains
+        name: Acceptance test no longer imports the discount helper
+        config:
+          path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
+          value: 'DiscountFixture'
+      - type: file-not-exists
+        name: Misleading discount helper was removed
+        config:
+          path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/DiscountFixture.cs
+      - type: file-contains
+        name: Approved payable total remains asserted
+        config:
+          path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
+          value: '9_500'
