@@ -73,6 +73,10 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   that path, and reports the eval as skipped when it does not.
 - A prompt must **never name the skill** or copy its wording, and a rubric must judge the
   outcome, not the technique. Otherwise the evaluation measures nothing.
+- **NEVER create tests for eval specs.** Do not add unit or acceptance tests that load,
+  parse, snapshot, or assert an `eval.yaml` file, its prompts, tags, fixtures, graders,
+  ordering, or scenario-specific behavior. Validate specs through Vally loading and live
+  eval runs. Tests may cover reusable evaluation tooling, but must not mirror spec contents.
 - Budget at least 5 trials (`stimuli × runs`); below that a verdict is reported as
   inconclusive by design.
 - Real-agent specs live under `tests/agents/<suite>/eval.yaml`. Their custom executor
