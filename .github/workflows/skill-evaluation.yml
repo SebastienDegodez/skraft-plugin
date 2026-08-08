@@ -75,6 +75,9 @@ jobs:
       - name: Install the Vally CLI
         run: npm install -g "$VALLY_PACKAGE"
 
+      - name: Install project dependencies
+        run: npm ci
+
       - name: Dashboard tooling tests
         run: node --test tests/dashboard/*.test.mjs
 
