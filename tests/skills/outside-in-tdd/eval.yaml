@@ -110,9 +110,15 @@ stimuli:
       - Explains how the incremental sequence localizes failures and prevents unrelated scenarios from expanding one change.
 
   - name: Make the domain emerge from an approved scenario
-    prompt: |
-      Deliver the approved checkout behavior described in the project artifacts.
-      Do not add outcomes that have not been approved.
+    turns:
+      - |
+        Deliver the approved checkout behavior described in the project artifacts.
+        Do not add outcomes that have not been approved. Before changing any
+        production code, get the suite to demonstrate this behavior failing for
+        the right reason, then stop and report what fails and why.
+      - |
+        That check is correct. Make it pass without adding anything beyond
+        what was approved.
     constraints:
       max_duration: 3m
     environment:
@@ -147,6 +153,11 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "test: approved checkout scenario"'
     graders:
+      - type: diff-contains
+        name: A failing check exists after the first turn
+        turn: 0
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTests/(?!Architecture/|bin/|obj/).*(?:Tests|Test)\.cs '
       - type: run-command
         name: Approved acceptance examples are GREEN
         config:
