@@ -23,49 +23,29 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 
 No additional skills — relies on built-in tools (`read`, `search/codebase`, `graphify/*`) to investigate the codebase and external sources and produce the cited research document.
 
-### 2) DISCOVER — [backlog-discoverer]({{ "/en/reference/agents/backlog-discoverer" | relative_url }})
-
-- **[github-search-protocol](github-search-protocol.html)** — GitHub Search query building, pagination, filtering.
-- **[issue-triage](issue-triage.html)** — labels, priority, effort, duplicates, sprint proposal.
-
-### 3) DISCOVER review — [backlog-discoverer-reviewer]({{ "/en/reference/agents/backlog-discoverer-reviewer" | relative_url }})
-
-- **[discovery-review-criteria](discovery-review-criteria.html)** — gates G1-G6 for DISCOVER artefacts.
-- **[adversarial-review-lenses](adversarial-review-lenses.html)** — adversarial panel verdict.
-
-### 4) DISCUSS — [backlog-planner]({{ "/en/reference/agents/backlog-planner" | relative_url }})
-
-- **[issue-refinement](issue-refinement.html)** — raw issue → INVEST story + acceptance criteria.
-- **[sprint-planning](sprint-planning.html)** — sprint prioritisation, capacity, dependencies.
-
-### 5) DISCUSS review — [backlog-planner-reviewer]({{ "/en/reference/agents/backlog-planner-reviewer" | relative_url }})
-
-- **[planning-review-criteria](planning-review-criteria.html)** — gates G1-G8 for DISCUSS artefacts.
-- **[adversarial-review-lenses](adversarial-review-lenses.html)** — adversarial panel verdict.
-
-### 6) DESIGN — [solution-architect]({{ "/en/reference/agents/solution-architect" | relative_url }})
+### 2) DESIGN — [solution-architect]({{ "/en/reference/agents/solution-architect" | relative_url }})
 
 - **[architecture-patterns](architecture-patterns.html)** — Event Modeling, strategic/tactical DDD, CQRS, Event Sourcing.
 - **[architecture-decisions](architecture-decisions.html)** — ADR decisions, alternatives, lifecycle.
 
-### 7) DESIGN review — [solution-architect-reviewer]({{ "/en/reference/agents/solution-architect-reviewer" | relative_url }})
+### 3) DESIGN review — [solution-architect-reviewer]({{ "/en/reference/agents/solution-architect-reviewer" | relative_url }})
 
 - **[architecture-review-criteria](architecture-review-criteria.html)** — DESIGN gates on ADRs, diagrams, contracts.
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — adversarial panel verdict.
 
-### 8) DISTILL — [acceptance-designer]({{ "/en/reference/agents/acceptance-designer" | relative_url }})
+### 4) DISTILL — [acceptance-designer]({{ "/en/reference/agents/acceptance-designer" | relative_url }})
 
 - **[bdd-methodology](bdd-methodology.html)** — Gherkin structure (Given/When/Then, outline, tags).
 - **[test-design-mandates](test-design-mandates.html)** — coverage matrices + outside-in order.
 - **[outside-in-tdd](outside-in-tdd.html)** — outside-in TDD double loop from observable behaviour.
 - **[resolving-stack-commands](resolving-stack-commands.html)** — stack-based concrete command resolution.
 
-### 9) DISTILL review — [acceptance-designer-reviewer]({{ "/en/reference/agents/acceptance-designer-reviewer" | relative_url }})
+### 5) DISTILL review — [acceptance-designer-reviewer]({{ "/en/reference/agents/acceptance-designer-reviewer" | relative_url }})
 
 - **[acceptance-review-criteria](acceptance-review-criteria.html)** — gates G1-G6 for DISTILL artefacts.
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — adversarial panel verdict.
 
-### 10) DELIVER — [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }})
+### 6) DELIVER — [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }})
 
 - **[outside-in-tdd](outside-in-tdd.html)** — end-to-end outside-in TDD strategy.
 - **[clean-architecture-testing](clean-architecture-testing.html)** — layer/boundary test strategy.
@@ -75,7 +55,7 @@ No additional skills — relies on built-in tools (`read`, `search/codebase`, `g
 - **[quality-gates-evidence-contract](quality-gates-evidence-contract.html)** — evidence-log schema contract.
 - **[quality-gates-dotnet](quality-gates-dotnet.html)** — quality-gate commands for .NET stack.
 
-### 10b) DELIVER — internal workers (software-engineer sub-agents)
+### 6b) DELIVER — internal workers (software-engineer sub-agents)
 
 - **[mocking-strategy-roster](mocking-strategy-roster.html)** — mocking strategy + stack resolution.
 - **[mocking-microcks-dotnet](mocking-microcks-dotnet.html)** — .NET Microcks mock wiring.
@@ -85,7 +65,7 @@ No additional skills — relies on built-in tools (`read`, `search/codebase`, `g
 - **[contract-testing](contract-testing.html)** — contract capability reused by contract worker.
 - **[resolving-stack-commands](resolving-stack-commands.html)** — test/build/mutation command resolution for workers.
 
-### 11) DELIVER review — [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }})
+### 7) DELIVER review — [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }})
 
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — review-lens orchestration.
 
