@@ -31,10 +31,19 @@ describe('Vally executor plugin registration', () => {
     strictEqual(typeof registerExecutors, 'function')
   })
 
-  it('allows reads and rejects write or shell requests in the pilot', () => {
-    deepStrictEqual(pilotPermissionHandler({ kind: 'read' }), { kind: 'approve-once' })
-    strictEqual(pilotPermissionHandler({ kind: 'write' }).kind, 'reject')
-    strictEqual(pilotPermissionHandler({ kind: 'shell' }).kind, 'reject')
+  it('allows reads inside the prepared workspace and rejects write or shell requests in the pilot', () => {
+    const context = { workDir: '/tmp/work', readableRoots: ['/tmp/work', '/tmp/skills/outside-in-tdd'] }
+
+    deepStrictEqual(pilotPermissionHandler({ kind: 'read', path: '/tmp/work/src' }, context), { kind: 'approve-once' })
+    deepStrictEqual(pilotPermissionHandler({ kind: 'read', path: 'README.md' }, context), { kind: 'approve-once' })
+    deepStrictEqual(
+      pilotPermissionHandler({ kind: 'read', path: '/tmp/skills/outside-in-tdd/SKILL.md' }, context),
+      { kind: 'approve-once' },
+    )
+    strictEqual(pilotPermissionHandler({ kind: 'read', path: '/repo/plugins' }, context).kind, 'reject')
+    strictEqual(pilotPermissionHandler({ kind: 'read' }, context).kind, 'reject')
+    strictEqual(pilotPermissionHandler({ kind: 'write' }, context).kind, 'reject')
+    strictEqual(pilotPermissionHandler({ kind: 'shell' }, context).kind, 'reject')
   })
 
   it('allows only workspace-local writes and local toolchain commands for delivery stimuli', () => {
@@ -96,6 +105,28 @@ describe('Vally executor plugin registration', () => {
       possiblePaths: ['/tmp/work/src'],
       possibleUrls: [],
       fullCommandText: "grep -r 'Mock<' src",
+    }, context), { kind: 'approve-once' })
+  })
+
+  it('rejects a shell command that names an absolute path outside the workspace', () => {
+    const context = {
+      stimulus: { tags: { permissions: 'workspace-write' } },
+      workDir: '/tmp/work',
+    }
+
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'find', fullCommandText: 'find /repo/.copilot-tracking -type f' }],
+      possiblePaths: [],
+      possibleUrls: [],
+      fullCommandText: 'find /repo/.copilot-tracking -type f',
+    }, context).kind, 'reject')
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'git', fullCommandText: 'git status --porcelain 2>/dev/null' }],
+      possiblePaths: ['/tmp/work'],
+      possibleUrls: [],
+      fullCommandText: 'git status --porcelain 2>/dev/null',
     }, context), { kind: 'approve-once' })
   })
 

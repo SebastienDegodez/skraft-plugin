@@ -22,7 +22,17 @@ Load this reference while ranking scenarios and again during final static review
 | Agent edits oracle | Initialize fixture git state and add negative diff checks for approved tests/contracts. |
 | Fixture tests assert eval structure | Remove them; fixtures test sample application behavior only. |
 | Over-specified static grader | Assert build/runtime/file outcomes, not one class name, algorithm, or internal structure. |
-| Baseline already solves every case | Rank for discrimination and replace generic low-signal prompts. |
+| Baseline already solves every case | Rank for discrimination and replace generic low-signal prompts — but keep one deliberate regression guard, since a slice the baseline passes is the only place skill-induced degradation can show. |
+| Regression guard cut for low signal | Exempt it from discrimination ranking and record a tie, not a win, as its expected result. |
+| End-to-end stimulus for a single decision | Ask the narrowest task that forces the decision; breadth multiplies agent turns across two arms without adding signal. |
+| Trial budget set to the floor | Size for six or more discordant pairs; ties consume pairs, so a five-trial plan cannot reach `p <= 0.05`. |
+| Breadth bought with runs | Prefer 3 stimuli x 5 runs to 5 stimuli x 3 runs at equal cost; only the first leaves readable per-scenario cells. |
+| Per-scenario cell read as a verdict | Report it as descriptive; the sign test pools trials and no single scenario carries its own power. |
+| Power bought after a noisy result | Diagnose the tie cause and re-approve a new design; retroactive runs are the worst-value spend in the protocol. |
+| Full portfolio funded in one step | Stage it: harness validation, pilot signal check, then full arm, each separately approved. |
+| Harness validated on a tidy stimulus | Validate on the broadest, most destructive one; a well-behaved trial hides tooling damage. |
+| Broken toolchain scored as architecture | Add a build-infrastructure sentinel; a wrecked manifest records as an ordinary loss, not an error. |
+| Grader fixed by re-running agents | Re-grade recorded trajectories with `vally oracle`; only prompt or fixture changes need fresh trials. |
 | Copying sibling YAML blindly | Use siblings as format examples; derive behavior from target skill. |
 | Static/live conflation | Label parse/lint/gates static; only paired runs measure value. |
 | Quota use without consent | Stop at second hard checkpoint and state trial/cost shape. |

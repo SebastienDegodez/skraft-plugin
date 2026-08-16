@@ -6,7 +6,7 @@ defaults:
   executor: skraft-agent-runner
   timeout: 8m
   model: claude-sonnet-4.6
-  runs: 1
+  runs: 3
 scoring:
   threshold: 1
 stimuli:

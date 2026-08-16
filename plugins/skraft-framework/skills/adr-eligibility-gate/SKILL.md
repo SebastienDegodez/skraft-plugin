@@ -1,14 +1,18 @@
 ---
 name: adr-eligibility-gate
 description: >
-  Use BEFORE drafting any ADR when a story enters DESIGN phase, or when reviewing
-  an ADR set that feels inflated. Runs a baseline-vs-decision gate: for each
-  candidate architectural choice, determines whether it ratifies a genuine open
-  question (→ ADR-worthy) or re-declares project baseline / skill-enforced
-  convention (→ not ADR-worthy). Prevents ADR over-production by filtering out
-  non-decisions before any draft is written. Triggers: "should I write an ADR
-  for X?", "how many ADRs does this story need?", "ADR-INFLATION detected",
-  "disambiguate baseline from decision".
+  Use when deciding WHETHER a candidate architectural choice deserves an
+  architecture decision record, before any record is drafted: a story enters
+  DESIGN with a list of candidate choices, a reviewer flags ADR inflation, or
+  someone asks "should I write an ADR for X?", "how many ADRs does this story
+  need?", "is this ADR-worthy?", "this feels like too many ADRs", "disambiguate
+  baseline from decision". Runs a baseline-vs-decision gate over each candidate
+  and returns ELIGIBLE or NOT ELIGIBLE with the baseline, convention or
+  architecture test that already covers it. Do NOT use when the decision is
+  already settled and the user asks for the record to be written, when the
+  request is about the ADR template, status transitions, superseding or
+  lifecycle, or when the question is which pattern to adopt — those belong to
+  architecture-decisions and architecture-patterns.
 ---
 
 # ADR Eligibility Gate

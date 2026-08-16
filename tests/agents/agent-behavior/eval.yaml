@@ -6,7 +6,7 @@ defaults:
   executor: skraft-agent-runner
   timeout: 2m
   model: gpt-5.6-luna
-  runs: 1
+  runs: 3
 scoring:
   threshold: 1
 stimuli:

@@ -62,4 +62,39 @@ describe('buildPrComment', () => {
   it('says so when no verdict was produced at all', () => {
     ok(buildPrComment([]).toLowerCase().includes('no verdict'))
   })
+
+  it('renders agent conformance in its own section, with no sign test', () => {
+    const agentVerdict = {
+      subject: { kind: 'agent', name: 'software-engineer', path: 'plugins/skraft-framework/agents/software-engineer.agent.md' },
+      conclusive: true,
+      underpowered: false,
+      passed: true,
+      regressed: false,
+      conformance: { threshold: 1, conforming: 2, breaking: 0, trialCount: 2 },
+      trialCount: 2,
+      meanScore: 1,
+      reason: 'conforms on every trial (2/2 at or above 1)',
+    }
+    const comment = buildPrComment(results(agentVerdict))
+
+    ok(comment.includes('Agent conformance'))
+    ok(comment.includes('software-engineer'))
+    ok(comment.includes('2/2'))
+    ok(!comment.includes('Sign test'))
+  })
+
+  it('renders both sections when a PR changed a skill and an agent suite', () => {
+    const agentVerdict = {
+      subject: { kind: 'agent', name: 'software-engineer' },
+      conclusive: true,
+      passed: true,
+      conformance: { threshold: 1, conforming: 1, breaking: 0, trialCount: 1 },
+      trialCount: 1,
+      reason: 'conforms on every trial (1/1 at or above 1)',
+    }
+    const comment = buildPrComment(results(verdict(), agentVerdict))
+
+    ok(comment.includes('Skill evaluation'))
+    ok(comment.includes('Agent conformance'))
+  })
 })

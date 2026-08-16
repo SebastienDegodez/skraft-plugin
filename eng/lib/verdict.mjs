@@ -33,6 +33,15 @@ function binomial(n, k) {
 export const SIGN_TEST_ALPHA = 0.05
 export const MIN_CREDIBLE_TRIALS = 5
 
+// Power lives in the discordant pairs, not in the trial count. The two-sided
+// exact sign test bottoms out at p = 2 · 2^-d, so below six discordant pairs no
+// tally can reach alpha: a flawless 5W/0L sweep scores p = 0.0625 and 7W/1L
+// scores p = 0.070. Reporting those as "no improvement" blames the skill for a
+// budget that could never have concluded in either direction, so they are
+// inconclusive instead. An all-tie comparison is exempt: zero discordant pairs
+// is a genuine no-difference measurement, not a power failure.
+export const MIN_DISCORDANT_PAIRS = 6
+
 /**
  * Classify a comparison into a publishable verdict.
  *
@@ -42,9 +51,11 @@ export const MIN_CREDIBLE_TRIALS = 5
  * counted as a pass — no data is not a passing result.
  *
  * The subject is whatever was added on the treatment side: a skill made
- * available to a plain agent, or a custom agent dispatched instead of one.
+ * available to a plain agent, or a custom agent dispatched instead of one. Both
+ * need two arms. A single-arm agent suite has no baseline to test against;
+ * `agent-verdict.mjs` classifies those.
  *
- * @param {object} report comparison report (Vally `compare`, or a harness report)
+ * @param {object} report Vally `compare` report
  * @param {{ kind: 'skill' | 'agent', name: string, path: string }} subject what was under test
  */
 export function comparisonVerdict(report, subject) {
@@ -55,10 +66,12 @@ export function comparisonVerdict(report, subject) {
   const trialCount = summary.trialCount ?? wins + ties + losses
   const erroredCount = summary.erroredCount ?? 0
   const unmatchedTrialCount = (report.unmatchedBaseline?.length ?? 0) + (report.unmatchedTreatment?.length ?? 0)
+  const discordant = wins + losses
   const pValue = signTestPValue(wins, losses)
 
   const conclusive = erroredCount === 0 && unmatchedTrialCount === 0 && wins + ties + losses === trialCount
-  const underpowered = conclusive && trialCount < MIN_CREDIBLE_TRIALS
+  const starved = discordant > 0 && discordant < MIN_DISCORDANT_PAIRS
+  const underpowered = conclusive && (trialCount < MIN_CREDIBLE_TRIALS || starved)
   const credible = conclusive && !underpowered && pValue <= SIGN_TEST_ALPHA
   const passed = credible && wins > losses
   const regressed = credible && losses > wins
@@ -68,10 +81,11 @@ export function comparisonVerdict(report, subject) {
     conclusive,
     underpowered,
     minCredibleTrials: MIN_CREDIBLE_TRIALS,
+    minDiscordantPairs: MIN_DISCORDANT_PAIRS,
     passed,
     regressed,
     netWin: trialCount ? (wins - losses) / trialCount : 0,
-    signTest: { wins, ties, losses, discordant: wins + losses, pValue, alpha: SIGN_TEST_ALPHA },
+    signTest: { wins, ties, losses, discordant, pValue, alpha: SIGN_TEST_ALPHA },
     meanScore: summary.meanScore ?? 0,
     confidenceInterval: { low: summary.ciLow ?? null, high: summary.ciHigh ?? null, level: 0.95 },
     winRate: summary.winRate ?? null,
@@ -87,7 +101,7 @@ export function comparisonVerdict(report, subject) {
         errored: trial.errored ?? false,
       })),
     })),
-    reason: verdictReason({ conclusive, underpowered, passed, regressed, wins, ties, losses, pValue, erroredCount, unmatchedTrialCount, trialCount }),
+    reason: verdictReason({ conclusive, underpowered, starved, passed, regressed, wins, ties, losses, discordant, pValue, erroredCount, unmatchedTrialCount, trialCount }),
   }
 }
 
@@ -99,11 +113,16 @@ export function verdictState(verdict) {
   return 'no-improvement'
 }
 
-function verdictReason({ conclusive, underpowered, passed, regressed, wins, ties, losses, pValue, erroredCount, unmatchedTrialCount, trialCount }) {
+function verdictReason({ conclusive, underpowered, starved, passed, regressed, wins, ties, losses, discordant, pValue, erroredCount, unmatchedTrialCount, trialCount }) {
   const tally = `${wins}W/${ties}T/${losses}L`
   const significance = `sign test p=${pValue.toFixed(3)}`
   if (!conclusive) return `incomplete comparison (${erroredCount} errored, ${unmatchedTrialCount} unmatched trial(s))`
-  if (underpowered) return `underpowered (${trialCount} trial(s); a credible verdict needs at least ${MIN_CREDIBLE_TRIALS})`
+  if (underpowered && trialCount < MIN_CREDIBLE_TRIALS) {
+    return `underpowered (${trialCount} trial(s); a credible verdict needs at least ${MIN_CREDIBLE_TRIALS})`
+  }
+  if (starved) {
+    return `underpowered (${tally}: ${discordant} discordant pair(s); no tally below ${MIN_DISCORDANT_PAIRS} can reach p<=${SIGN_TEST_ALPHA}, so budget more runs)`
+  }
   if (passed) return `credibly better (${tally}, ${significance})`
   if (regressed) return `credibly worse (${tally}, ${significance})`
   return `no credible improvement (${tally}, ${significance})`

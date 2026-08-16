@@ -15,6 +15,9 @@ const localCommands = new Set([
 ])
 const forbiddenShell = /(?:^|\s)(?:restore|add\s+package|tool\s+(?:install|update)|nuget\s+push|git\s+(?:clean|reset\s+--hard))(?:\s|$)/i
 const commandName = ({ identifier = '' }) => identifier.trim().split(/\s+/, 1)[0]
+// A device node carries no repository evidence, so it stays reachable even
+// though it sits outside the prepared workspace.
+const neutralAbsolutePath = /^\/dev\//
 
 const insideWorkspace = (workDir, candidate) => {
 	if (!workDir || !candidate) return false
@@ -23,10 +26,41 @@ const insideWorkspace = (workDir, candidate) => {
 	return path === '' || (!path.startsWith('..') && !isAbsolute(path))
 }
 
+const readableRootsOf = (context) => {
+	const roots = context?.readableRoots?.length ? context.readableRoots : [context?.workDir]
+	return roots.filter(Boolean)
+}
+
+const requestedPaths = (request) => [
+	request.fileName,
+	request.path,
+	...(request.paths ?? []),
+	...(request.possiblePaths ?? []),
+].filter((value) => typeof value === 'string' && value.length > 0)
+
+// An allowlisted command is not evidence of a bounded command: `find /elsewhere`
+// and `cd /elsewhere && git log` both name an absolute path the caller never
+// declared. Reading the repository under evaluation would contaminate the trial,
+// so an absolute path outside the workspace disqualifies the whole invocation.
+// Only a token that starts with a slash counts — a relative path such as
+// `.copilot-tracking/evidence/result.json` is not an absolute path.
+const absolutePathTokens = (text) => [...text.matchAll(/(?:^|[\s'"`=(<>|&;])(\/[^\s'"`;|&()<>]*)/g)]
+	.map(([, candidate]) => candidate)
+
+const escapesWorkspace = (workDir, text) => absolutePathTokens(text)
+	.filter((candidate) => !neutralAbsolutePath.test(candidate))
+	.some((candidate) => !insideWorkspace(workDir, candidate))
+
 const deliveryWriteAllowed = (context) => context?.stimulus?.tags?.permissions === 'workspace-write'
 
 export const pilotPermissionHandler = (request, context) => {
-	if (request.kind === 'read') return approved
+	if (request.kind === 'read') {
+		const roots = readableRootsOf(context)
+		const paths = requestedPaths(request)
+		return paths.length > 0 && paths.every((path) => roots.some((root) => insideWorkspace(root, path)))
+			? approved
+			: rejected('Reads are limited to the prepared evaluation workspace and its staged skills.')
+	}
 	if (!deliveryWriteAllowed(context)) return rejected('The routing pilot permits read-only workspace access.')
 
 	if (request.kind === 'write') {
@@ -39,10 +73,12 @@ export const pilotPermissionHandler = (request, context) => {
 		const commands = request.commandSegments?.length ? request.commandSegments : (request.commands ?? [])
 		const paths = request.possiblePaths ?? []
 		const urls = request.possibleUrls ?? []
+		const commandText = request.fullCommandText ?? ''
 		const localOnly = urls.length === 0 && !request.requestSandboxBypass
 		const knownCommands = commands.length > 0 && commands.every((command) => localCommands.has(commandName(command)))
 		const workspacePaths = paths.every((path) => insideWorkspace(context.workDir, path))
-		const operationAllowed = !forbiddenShell.test(request.fullCommandText ?? '')
+			&& !escapesWorkspace(context.workDir, commandText)
+		const operationAllowed = !forbiddenShell.test(commandText)
 		return localOnly && knownCommands && workspacePaths && operationAllowed
 			? approved
 			: rejected('Delivery shell access is limited to local build/test/git commands inside the prepared workspace; restore and package installation are disabled.')

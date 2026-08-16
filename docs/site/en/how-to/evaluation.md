@@ -12,6 +12,70 @@ A skill is a **claim**: *"an agent that loads this file produces a better result
 
 This guide covers the task: turning that intuition into evidence published on the [dashboard]({{ "/dashboard/" | relative_url }}).
 
+## Why evaluate: the three-layer strategy
+
+SKRAFT proves quality through three layers, each answering a different question.
+
+### Layer 1: Framework correctness (deterministic tests)
+
+**What?** Does the framework load, route, and dispatch skills correctly?
+
+- Unit tests in `tests/skraft-framework/*.test.mjs` that cover parsing, orchestration, config loading and decision gates
+- Mutation testing (Stryker) to verify that tests actually catch bugs — a mutant that passes all tests = a missing case
+- All tests are **deterministic** (no flakiness, no model calls, no randomness)
+
+**Why it matters:** if the framework has a logic bug, every skill built on it amplifies that bug. These tests catch structural problems before they reach evaluation.
+
+### Layer 2: Skill behaviour (model-backed comparison)
+
+**What?** Does this skill produce better outcomes than the baseline?
+
+- Vally compares baseline (no skill) vs treatment (skill enabled) on the same stimuli
+- Outcomes are judged by a rubric, not by hand: a scorer reads what the agent produced and assigns a score
+- Results compared by an **exact two-sided binomial sign test** (p ≤ 0.05 = credible)
+- Each spec budgets its own trials through `defaults.runs`; CI never overrides it, on a PR or on schedule
+
+**Why it matters:** a skill that *looks good* often performs worse in practice, or costs tokens with no return. Empirical measurement catches it; intuition does not.
+
+### Layer 3: Agent orchestration (integration tests)
+
+**What?** Do the skills, framework, and agent work together end-to-end?
+
+- Playwright tests in `tests/site/` verify the handbook renders and links are live
+- Real-agent eval specs in `tests/agents/` measure whether agents using the full suite make better decisions than a baseline agent
+- Covers multi-skill workflows, skill sequencing, and cross-skill side effects
+
+**Status:** Working. An agent suite is single-arm — it asserts conformance (right agent, required skills loaded, declared handoff shape) rather than lift — and its verdict is published to the dashboard and to the PR comment alongside the skills. It stays advisory: one real agent session must not block an unrelated merge.
+
+### Why this is better
+
+Traditional approaches (code review + manual testing) have blind spots:
+
+| Traditional blind spot | SKRAFT approach |
+| --- | --- |
+| "The code looks good" but produces wrong output | Layer 2 forces empirical measurement: if it doesn't score better, it doesn't ship |
+| Mutations in the code hide subtle bugs | Layer 1 uses Stryker: a mutant that passes all tests = missing case |
+| Skills work in isolation but break together | Layer 3 tests real agent orchestration |
+| "It worked the last time I tried it" | Every evaluation is reproducible; agent trajectories are recorded and can be replayed |
+| P-hacking (cherry-picking positive results) | Layer 2 uses a pre-registered two-sided test; regressions block merge automatically |
+
+### Current state (and what is coming)
+
+✅ **Working now:**
+- Framework deterministic tests + mutation coverage
+- Skill evaluation with Vally (pre-PR and scheduled runs)
+- Real-agent conformance suites, published to the dashboard and to the PR comment
+- Session replay: baseline vs treatment side-by-side in AGENTVIZ
+- Regression gate: regressions block merge automatically
+
+🔄 **In progress:**
+- Trend dashboard (multi-run performance tracking)
+- Cost projections per skill (token budgeting)
+
+The work is incomplete, but it demonstrates a **testable, measurable, empirical
+foundation** instead of opinion-based releases. Every gap you see today is one we
+can measure and fill tomorrow.
+
 ## The principle in one sentence
 
 The same prompts are sent twice — **once with no skill at all** (baseline), **once with only the skill under test** (skilled) — and a judge compares the two trajectories. Nothing else differs between the two passes, so any difference in outcome is attributable to the skill and to nothing else.

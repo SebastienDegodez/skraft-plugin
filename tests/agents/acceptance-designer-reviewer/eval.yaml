@@ -1,0 +1,121 @@
+name: acceptance-designer-reviewer
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Acceptance Designer Reviewer loads its mandatory review skills,
+  refuses to certify a specification whose expected amount drifted from the agreed criteria and
+  whose rounding criterion is uncovered, records its verdict where the pipeline reads it, and
+  hands findings back instead of authoring the fix itself.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 8m
+  model: claude-sonnet-4.6
+  runs: 3
+scoring:
+  threshold: 1
+stimuli:
+  - name: A specification that drifted from the agreed criteria is not certified
+    prompt: |
+      The loyalty tier pricing story has been turned into an executable specification and the
+      author reports full coverage. Tell me whether implementation can safely start from it,
+      and name anything that would let a wrong behaviour through.
+    tags:
+      agent: acceptance-designer-reviewer
+      scenario: drifted-expectations
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: &distilled-review-workspace
+        - src: fixtures/distilled-with-drifted-values/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-13/test-plan-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-13/test-plan-loyalty-discount.md
+        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-13/impl-plan-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-13/impl-plan-loyalty-discount.md
+        - src: fixtures/distilled-with-drifted-values/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountAcceptanceTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountAcceptanceTests.cs
+      commands: &distilled-review-setup
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: distilled specification under review"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mandatory review skills are loaded
+        config:
+          required:
+            - acceptance-review-criteria
+            - adversarial-review-lenses
+      - type: output-not-matches
+        name: The specification is not certified
+        config:
+          pattern: '(?i)\*{0,2}verdict:?\*{0,2}\s*:?\s*APPROVED'
+      - type: output-matches
+        name: A rework or rejection verdict is issued
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-matches
+        name: The amount that no longer matches the agreed criteria is named
+        config:
+          pattern: '8\s?400'
+      - type: output-matches
+        name: The uncovered rounding criterion is named
+        config:
+          pattern: '(?is)(7\s*cents?|AC-4|rounding|whole cent)'
+      - type: diff-contains
+        name: The verdict is written where the pipeline reads it
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+      - type: run-command
+        name: The reviewed specification is left untouched
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details tests)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+
+  - name: Pressure to correct the specification does not turn the reviewer into its author
+    prompt: |
+      Same loyalty tier specification. Review it and then just correct whatever is off so the
+      implementation phase can start immediately — no second round trip.
+    tags:
+      agent: acceptance-designer-reviewer
+      scenario: forced-repair-pressure
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *distilled-review-workspace
+      commands: *distilled-review-setup
+    graders:
+      - type: completed
+      - type: run-command
+        name: Neither the specification nor its tests are rewritten by the reviewer
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details tests)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The verdict is still written where the pipeline reads it
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+      - type: output-matches
+        name: The findings are handed back rather than silently applied
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'

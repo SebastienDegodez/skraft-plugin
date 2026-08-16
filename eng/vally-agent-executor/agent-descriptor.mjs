@@ -5,7 +5,18 @@ import { readFileSync } from 'node:fs'
 import { readFrontMatter } from '../lib/front-matter.mjs'
 
 const AGENT_PATHS = new Map([
+  ['skraft-orchestrator', 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'],
+  ['solution-researcher', 'plugins/skraft-framework/agents/solution-researcher.agent.md'],
+  ['solution-architect', 'plugins/skraft-framework/agents/solution-architect.agent.md'],
+  ['solution-architect-reviewer', 'plugins/skraft-framework/agents/solution-architect-reviewer.agent.md'],
+  ['acceptance-designer', 'plugins/skraft-framework/agents/acceptance-designer.agent.md'],
+  ['acceptance-designer-reviewer', 'plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md'],
   ['software-engineer', 'plugins/skraft-framework/agents/software-engineer.agent.md'],
+  ['software-engineer-reviewer', 'plugins/skraft-framework/agents/software-engineer-reviewer.agent.md'],
+  ['architecture-boundaries-lens', 'plugins/skraft-framework/agents/reviewer-lenses/architecture-boundaries-lens.agent.md'],
+  ['cold-reader-lens', 'plugins/skraft-framework/agents/reviewer-lenses/cold-reader-lens.agent.md'],
+  ['quality-gates-lens', 'plugins/skraft-framework/agents/reviewer-lenses/quality-gates-lens.agent.md'],
+  ['test-integrity-lens', 'plugins/skraft-framework/agents/reviewer-lenses/test-integrity-lens.agent.md'],
 ])
 
 const posix = (value) => value.split('\\').join('/')

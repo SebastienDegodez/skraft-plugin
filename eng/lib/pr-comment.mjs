@@ -45,21 +45,39 @@ export function extractVerdicts(results) {
   return (results ?? []).flatMap((result) => (result?.verdicts ?? []).filter((verdict) => verdict.subject?.kind === 'skill'))
 }
 
-/** True only when a changed skill's verdict is a credible regression. */
+/** Every agent-suite verdict across one or more `results.json` payloads. */
+export function extractAgentVerdicts(results) {
+  return (results ?? []).flatMap((result) => (result?.verdicts ?? []).filter((verdict) => verdict.subject?.kind === 'agent'))
+}
+
+/**
+ * True only when a changed skill's verdict is a credible regression.
+ *
+ * Agent suites are deliberately excluded: they run a single trial of a real
+ * agent, so one flaky session would block an unrelated merge. Their verdicts are
+ * reported for the reviewer to read, not enforced.
+ */
 export function hasRegression(results) {
   return extractVerdicts(results).some((verdict) => verdictState(verdict) === 'regression')
 }
 
-/** Render the changed-skill verdicts as a PR-comment-ready markdown table. */
+/** Render the changed-skill and changed-agent verdicts as a PR-comment-ready markdown table. */
 export function buildPrComment(results) {
   const verdicts = extractVerdicts(results)
-  if (!verdicts.length) {
+  const agentVerdicts = extractAgentVerdicts(results)
+  if (!verdicts.length && !agentVerdicts.length) {
     return [
       '## Skill evaluation — baseline vs skilled',
       '',
       'No verdict was produced for the skill(s) this PR changed.',
     ].join('\n')
   }
+
+  return [...skillSection(verdicts), ...agentSection(agentVerdicts)].join('\n')
+}
+
+function skillSection(verdicts) {
+  if (!verdicts.length) return []
 
   const rows = verdicts.map((verdict) => {
     const state = verdictState(verdict)
@@ -69,13 +87,37 @@ export function buildPrComment(results) {
   return [
     '## Skill evaluation — baseline vs skilled',
     '',
-    'Automated pre-merge comparison for the skill(s) this PR changed. One trial per ' +
-      'stimulus (`RUNS=1`), so most verdicts are reported as `inconclusive` unless the eval ' +
-      'spec budgets at least 5 trials — see `docs/skill-evaluation.md`. Merge is only ' +
-      'blocked by a credible `regression`.',
+    'Automated pre-merge comparison for the skill(s) this PR changed. Each spec ' +
+      'budgets its own trials through `defaults.runs`; a verdict stays `inconclusive` ' +
+      'below 5 trials — see `docs/skill-evaluation.md`. Merge is only blocked by a ' +
+      'credible `regression`.',
     '',
     '| Skill | Verdict | Score (95% CI) | Sign test | Quality Δ | Efficiency Δ | Reason |',
     '| --- | --- | --- | --- | --- | --- | --- |',
     ...rows,
-  ].join('\n')
+    '',
+  ]
+}
+
+function agentSection(verdicts) {
+  if (!verdicts.length) return []
+
+  const rows = verdicts.map((verdict) => {
+    const state = verdictState(verdict)
+    const conformance = verdict.conformance ?? {}
+    return `| ${dash(verdict.subject?.name)} | ${BADGE[state] ?? state} | ${scoreCell(verdict)} | ${dash(conformance.conforming)}/${dash(verdict.trialCount)} | ${dash(verdict.reason)} |`
+  })
+
+  return [
+    '## Agent conformance',
+    '',
+    'The agent suite(s) this PR touched, dispatched for real and graded by ' +
+      'deterministic checks (identity, skill loading, handoff shape). Single-arm, so ' +
+      'there is no baseline and no sign test. Advisory: an agent verdict never blocks ' +
+      'the merge.',
+    '',
+    '| Agent | Verdict | Score | Conforming trials | Reason |',
+    '| --- | --- | --- | --- | --- |',
+    ...rows,
+  ]
 }

@@ -36,7 +36,7 @@ done
 mkdir -p "$output_dir/run"
 mkdir -p "$output_dir/000-decoy"
 printf '%s\n' '{"type":"span"}' > "$output_dir/000-decoy/otel-spans.jsonl"
-printf '%s\n' '{"type":"trial-result","status":"success"}' '{"type":"run-summary","passed":true}' > "$output_dir/run/results.jsonl"
+printf '%s\n' '{"type":"trial-result","status":"success","stimulus":"Missing DISTILL artifacts block implementation","gradeResult":{"passed":true,"score":1}}' '{"type":"run-summary","passed":true}' > "$output_dir/run/results.jsonl"
 `)
   chmodSync(fakeVally, 0o755)
 })
@@ -71,7 +71,129 @@ describe('unified Vally runner', () => {
     strictEqual(calls[0].includes('--grader-plugin'), false)
   })
 
+  it('turns an agent suite into the same publishable results.json a skill produces', () => {
+    writeFileSync(callsPath, '')
+    execFileSync('bash', [join(repoRoot, 'eng/run-vally-evals.sh'), 'agents', 'agent-behavior'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        COPILOT_GITHUB_TOKEN: 'test-token',
+        VALLY: fakeVally,
+        FAKE_CALLS: callsPath,
+        RESULTS_DIR: resultsPath,
+        LIVE_LOGS: '0',
+      },
+    })
+
+    const published = JSON.parse(readFileSync(join(resultsPath, 'agent-behavior/results.json'), 'utf8'))
+    const [verdict] = published.verdicts
+    strictEqual(verdict.subject.kind, 'agent')
+    strictEqual(verdict.subject.name, 'software-engineer')
+    strictEqual(verdict.passed, true)
+  })
+
+  it('leaves the trial budget to the eval spec unless RUNS is set explicitly', () => {
+    writeFileSync(callsPath, '')
+    execFileSync('bash', [join(repoRoot, 'eng/run-vally-evals.sh'), 'outside-in-tdd'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        COPILOT_GITHUB_TOKEN: 'test-token',
+        VALLY: fakeVally,
+        FAKE_CALLS: callsPath,
+        RESULTS_DIR: resultsPath,
+        LIVE_LOGS: '0',
+        WORKERS: '1',
+        PARALLEL: '1',
+      },
+    })
+
+    const evalCalls = readFileSync(callsPath, 'utf8')
+      .trim()
+      .split(/\r?\n/)
+      .filter((call) => call.startsWith('eval '))
+    strictEqual(evalCalls.length > 0, true)
+    strictEqual(
+      evalCalls.every((call) => !call.includes('--runs')),
+      true,
+    )
+  })
+
+  it('narrows a run to the named stimuli without touching the committed spec', () => {
+    writeFileSync(callsPath, '')
+    const committedSpec = join(repoRoot, 'tests/skills/outside-in-tdd/eval.yaml')
+    const before = readFileSync(committedSpec, 'utf8')
+
+    execFileSync('bash', [join(repoRoot, 'eng/run-vally-evals.sh'), 'outside-in-tdd'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        COPILOT_GITHUB_TOKEN: 'test-token',
+        VALLY: fakeVally,
+        FAKE_CALLS: callsPath,
+        RESULTS_DIR: resultsPath,
+        LIVE_LOGS: '0',
+        WORKERS: '1',
+        PARALLEL: '1',
+        STIMULI: 'Preserve an approved',
+        PILOT_RUNS: '5',
+      },
+    })
+
+    // Both arms run the generated pilot, never the committed instrument.
+    const evalCalls = readFileSync(callsPath, 'utf8')
+      .trim()
+      .split(/\r?\n/)
+      .filter((call) => call.startsWith('eval '))
+    strictEqual(evalCalls.length, 2)
+    strictEqual(
+      evalCalls.every((call) => call.includes(join(resultsPath, 'outside-in-tdd/pilot.eval.yaml'))),
+      true,
+    )
+    strictEqual(
+      evalCalls.some((call) => call.includes(committedSpec)),
+      false,
+    )
+
+    const pilot = readFileSync(join(resultsPath, 'outside-in-tdd/pilot.eval.yaml'), 'utf8')
+    strictEqual(pilot.includes('Preserve an approved expectation'), true)
+    strictEqual(pilot.includes('Resist a generic design'), false)
+    strictEqual(pilot.includes('runs: 5'), true)
+    strictEqual(readFileSync(committedSpec, 'utf8'), before)
+  })
+
+  it('refuses a pilot selector that matches nothing instead of paying for an arm', () => {
+    writeFileSync(callsPath, '')
+    let failed = false
+    try {
+      execFileSync('bash', [join(repoRoot, 'eng/run-vally-evals.sh'), 'outside-in-tdd'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          COPILOT_GITHUB_TOKEN: 'test-token',
+          VALLY: fakeVally,
+          FAKE_CALLS: callsPath,
+          RESULTS_DIR: resultsPath,
+          LIVE_LOGS: '0',
+          WORKERS: '1',
+          PARALLEL: '1',
+          STIMULI: 'no such scenario',
+        },
+      })
+    } catch {
+      failed = true
+    }
+
+    strictEqual(failed, true)
+    strictEqual(readFileSync(callsPath, 'utf8').trim(), '')
+  })
+
   it('compares skill runs from results.jsonl instead of nested telemetry streams', () => {
+    writeFileSync(callsPath, '')
     const output = execFileSync('bash', [join(repoRoot, 'eng/run-vally-evals.sh'), 'outside-in-tdd'], {
       cwd: repoRoot,
       encoding: 'utf8',
@@ -95,6 +217,10 @@ describe('unified Vally runner', () => {
     const compare = calls.find((call) => call.startsWith('compare '))
     strictEqual(Boolean(compare), true)
     strictEqual(compare.includes('otel-spans.jsonl'), false)
+    strictEqual(
+      calls.some((call) => call.startsWith('eval ') && call.includes('--runs 1')),
+      true,
+    )
     strictEqual(readFileSync(join(resultsPath, 'outside-in-tdd/eval.log'), 'utf8').includes('missing baseline or skilled records'), false)
   })
 })

@@ -77,8 +77,16 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   parse, snapshot, or assert an `eval.yaml` file, its prompts, tags, fixtures, graders,
   ordering, or scenario-specific behavior. Validate specs through Vally loading and live
   eval runs. Tests may cover reusable evaluation tooling, but must not mirror spec contents.
-- Budget at least 5 trials (`stimuli × runs`); below that a verdict is reported as
-  inconclusive by design.
+- Budget trials for **power, not for a floor**. The sign test needs at least 6 discordant
+  pairs before any tally can reach `p <= 0.05`, so 5 trials — or a flawless 5W/0L sweep —
+  is reported as inconclusive by design. Ties are common, so plan **12–15 trials** for a
+  verdict you can defend, and buy that power up front: adding runs to an already-noisy
+  comparison is the worst purchase in the protocol.
+- Spend the budget on **runs, not on breadth**. `3 stimuli × 5 runs` and `5 stimuli × 3 runs`
+  cost the same and only the first yields readable per-scenario cells. Each stimulus should
+  force **one** decision through the narrowest task that exposes it — a paired run executes
+  every trial twice plus judge work, and cost per trial is driven by how much work the prompt
+  asks for, not by fixture size.
 - Real-agent specs live under `tests/agents/<suite>/eval.yaml`. Their custom executor
   selects an allowlisted `.agent.md`; use Vally's typed trajectory events and built-in
   graders where available instead of duplicating event conversion or grading logic.
@@ -87,7 +95,11 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   outputs cannot leak into prepared workspaces.
 - `eng/run-vally-evals.sh` is the only eval entry point. Skill specs run baseline vs
   treatment; agent specs run once through their declared executor.
-- Generated output (`artifacts/`, `eval-results/`, `dashboard-data/`,
+- `STIMULI=` on the runner narrows a run to named stimuli — the pilot signal check before
+  funding a full paired arm. It derives the pilot from the frozen spec and writes to
+  `eval-results-pilot/`, so a probe can never be published as a verdict. Never hand-edit a
+  committed spec to make a cheaper run possible.
+- Generated output (`artifacts/`, `eval-results/`, `eval-results-pilot/`, `dashboard-data/`,
   `docs/site/dashboard/data/`) is never committed.
 
 ### stryker.config.mjs rules

@@ -58,6 +58,7 @@ Clean Architecture remains mandatory for tiny fixtures. A smaller fixture may om
 - [ ] Complete solution/project build and tests are gradable with bounded `run-command` checks.
 - [ ] Independent probe prevents hardcoding to visible example when relevant.
 - [ ] Approved outer tests/contracts are protected from silent edits.
+- [ ] A sentinel grader proves the build infrastructure survived, so toolchain damage cannot be scored as an architectural loss.
 - [ ] Diff graders distinguish production from test-only or fixture-only changes.
 - [ ] File graders assert durable outcomes without prescribing internal implementation.
 - [ ] Fixture tests exercise sample application behavior only, never eval-spec structure.
@@ -99,7 +100,16 @@ Clean Architecture remains mandatory for tiny fixtures. A smaller fixture may om
       name: Approved test stayed intact
       config:
         pattern: 'tests/Feature\.UnitTests/.*AcceptanceTests\.cs'
+    - type: run-command
+      name: Sentinel — build infrastructure survived the trial
+      config:
+        command: dotnet
+        args: [restore, Feature.slnx]
+        expected_exit_code: 0
+        timeout: 1m
 ```
+
+The sentinel is not redundant with the test grader. When an agent deletes or corrupts the solution or a project file, `dotnet test` fails for a tooling reason and the trial is recorded as an ordinary loss — the comparison then measures harness damage while reporting architecture. A separate, named restore check makes that failure legible in the results instead of silently biasing the tally.
 
 Adapt paths and commands to current repository evidence. Grade externally visible outcomes, not one preferred implementation.
 

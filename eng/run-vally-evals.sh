@@ -17,13 +17,24 @@
 #
 # Environment:
 #   PARALLEL=4        Max concurrent evals (default: 4)
-#   RUNS=1            Trials per stimulus (default: 1)
+#   RUNS=             Trials per stimulus. Unset — the default — lets each spec's
+#                     own `defaults.runs` decide, so the trial budget lives with
+#                     the eval it belongs to. Set it only to override every spec.
 #   WORKERS=3         Concurrent stimuli within a skill eval (default: 3)
 #   AGENT_WORKERS=1   Concurrent stimuli within an agent eval (default: 1)
 #   MODEL             Agent model (default: gpt-5.6-luna)
 #   JUDGE_MODEL       Judge model (default: gpt-5.6-luna)
 #   LIVE_LOGS=1       Stream Vally output while retaining eval.log (default: 1)
 #   SKIP_EVALS=""     Override skip list (default: reads skip-evals.txt)
+#   SKIP_AGENTS=1     Leave every agent suite out of an unnamed run (default: 0)
+#   STIMULI=""        Comma-separated stimulus name fragments. Runs the frozen
+#                     spec against only those stimuli — a cheap signal check
+#                     before committing the full portfolio to two paired arms.
+#                     Output goes to ./eval-results-pilot: a pilot is a budget
+#                     probe, never a publishable verdict.
+#   PILOT_RUNS=       Override defaults.runs for a pilot only. Keep it at the
+#                     depth the real run will use; a pilot that is shallow as
+#                     well as narrow measures nothing.
 #   RESULTS_DIR       Output root (default: ./eval-results)
 #
 # Prerequisites:
@@ -31,7 +42,7 @@
 #   - COPILOT_GITHUB_TOKEN (fine-grained PAT with Copilot Requests), or `gh auth login`
 #
 # Skill verdicts go to ./eval-results/<skill>/results.json.
-# Raw agent results go to ./eval-results/<suite>/live/.
+# Agent verdicts go to ./eval-results/<suite>/results.json, raw trials to <suite>/live/.
 
 set -euo pipefail
 
@@ -44,10 +55,24 @@ elif command -v vally >/dev/null 2>&1 && [ "$(vally --version)" = "0.12.0" ]; th
 else
   VALLY="npx --yes $VALLY_PACKAGE"
 fi
-RESULTS_ROOT="${RESULTS_DIR:-$SKRAFT_ROOT/eval-results}"
+STIMULI="${STIMULI:-}"
+PILOT_RUNS="${PILOT_RUNS:-}"
+# A pilot answers "does this move anything at all", not "does this skill pass".
+# Its output stays out of the directory the dashboard publishes so a probe can
+# never be read back as a verdict.
+if [ -n "$STIMULI" ]; then
+  RESULTS_ROOT="${RESULTS_DIR:-$SKRAFT_ROOT/eval-results-pilot}"
+else
+  RESULTS_ROOT="${RESULTS_DIR:-$SKRAFT_ROOT/eval-results}"
+fi
 MODEL="${MODEL:-gpt-5.6-luna}"
 JUDGE_MODEL="${JUDGE_MODEL:-gpt-5.6-luna}"
-RUNS="${RUNS:-1}"
+# Empty on purpose: `--runs` overrides whatever the spec declares, so passing it
+# unconditionally would silently reduce every spec to one trial per stimulus and
+# make almost every verdict underpowered.
+RUNS="${RUNS:-}"
+RUNS_ARGS=()
+[ -n "$RUNS" ] && RUNS_ARGS=(--runs "$RUNS")
 WORKERS="${WORKERS:-3}"
 AGENT_WORKERS="${AGENT_WORKERS:-1}"
 AGENT_MAX_RETRIES="${AGENT_MAX_RETRIES:-0}"
@@ -125,6 +150,11 @@ EVAL_SPECS=()
 for spec in "${ALL_SPECS[@]}"; do
   EVAL_NAME=$(basename "$(dirname "$spec")")
   SKIPPED=false
+  # An agent suite is single-arm and pins its own model, so a run that varies the
+  # model would publish the same suite verdict once per arm.
+  if [ "${SKIP_AGENTS:-0}" = "1" ]; then
+    case "$spec" in "$SKRAFT_ROOT/tests/agents/"*) SKIPPED=true ;; esac
+  fi
   for skip in $SKIP_EVALS; do
     if [ "$EVAL_NAME" = "$skip" ]; then SKIPPED=true; break; fi
   done
@@ -140,7 +170,7 @@ if [ ${#EVAL_SPECS[@]} -eq 0 ]; then
   exit 1
 fi
 
-echo -e "${BOLD}Running ${#EVAL_SPECS[@]} eval(s) with PARALLEL=$PARALLEL RUNS=$RUNS${NC}"
+echo -e "${BOLD}Running ${#EVAL_SPECS[@]} eval(s) with PARALLEL=$PARALLEL RUNS=${RUNS:-per-spec}${NC}"
 echo ""
 
 # ---- Per-eval function (runs in background) --------------------------------
@@ -191,6 +221,19 @@ run_agent_eval() {
 
   local RESULTS_JSONL
   RESULTS_JSONL=$(find "$LIVE_DIR" -name "results.jsonl" -type f 2>/dev/null | head -1)
+
+  # Turn the raw trajectory into the same results.json a skill comparison
+  # writes, so the publisher and the PR comment need no agent-specific path.
+  if [ -n "$RESULTS_JSONL" ]; then
+    node "$SKRAFT_ROOT/eng/vally-adapter/adapt-agent.mjs" \
+      --results "$RESULTS_JSONL" \
+      --spec "$EVAL_SPEC" \
+      --suite "$EVAL_NAME" \
+      --output-root "$RESULTS_ROOT" \
+      --model "$MODEL" \
+      >> "$LOG" 2>&1 || echo "WARNING: agent adapter failed" >> "$LOG"
+  fi
+
   if [ "$EVAL_EXIT" -eq 0 ] && [ -n "$RESULTS_JSONL" ]; then
     echo "pass" > "$STATUS_FILE"
     echo -e "  ${GREEN}✔${NC} $EVAL_NAME"
@@ -219,6 +262,19 @@ run_one_eval() {
   local LOG="$RESULTS_ROOT/$EVAL_NAME/eval.log"
 
   mkdir -p "$RESULTS_ROOT/$EVAL_NAME"
+
+  # Two concurrent runs of the same eval clobber each other: both wipe and
+  # recreate the arm directories, both truncate the same log, and the pairing
+  # below can then match a baseline from one run with a treatment from the
+  # other. Refuse to start rather than produce a verdict nobody can trust.
+  local LOCK_DIR="$RESULTS_ROOT/$EVAL_NAME/.run.lock"
+  if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    echo -e "  ${RED}✘${NC} $EVAL_NAME (already running — remove $LOCK_DIR if stale)"
+    echo "error" > "$STATUS_DIR/$EVAL_NAME"
+    return
+  fi
+  trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
+
   rm -rf "$BASELINE_DIR" "$SKILLED_DIR"
   mkdir -p "$BASELINE_DIR" "$SKILLED_DIR"
 
@@ -237,7 +293,22 @@ run_one_eval() {
   # avoid any cross-run contention when running in parallel.
   local EMPTY_SKILL_DIR
   EMPTY_SKILL_DIR=$(mktemp -d -t vally-empty-skills-XXXXXX)
-  trap 'rm -rf "$EMPTY_SKILL_DIR"' RETURN
+  trap 'rm -rf "$EMPTY_SKILL_DIR"; rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
+
+  # Pilot: the same frozen spec with fewer stimuli, generated per run. The
+  # committed instrument is never edited to make a cheaper measurement possible.
+  if [ -n "$STIMULI" ]; then
+    local PILOT_SPEC="$RESULTS_ROOT/$EVAL_NAME/pilot.eval.yaml"
+    local KEPT
+    if ! KEPT=$(node "$SKRAFT_ROOT/eng/make-pilot-spec.mjs" "$EVAL_SPEC" "$PILOT_SPEC" "$STIMULI" ${PILOT_RUNS:+"$PILOT_RUNS"} 2>&1); then
+      echo "$KEPT" > "$LOG"
+      echo -e "  ${RED}✘${NC} $EVAL_NAME (pilot: $KEPT)"
+      echo "error" > "$STATUS_DIR/$EVAL_NAME"
+      return
+    fi
+    EVAL_SPEC="$PILOT_SPEC"
+    echo -e "  ${YELLOW}⚠${NC} $EVAL_NAME — PILOT on $(echo "$KEPT" | paste -sd';' -) (probe only, not a verdict)" >&2
+  fi
 
   echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline..." >&2
 
@@ -251,7 +322,7 @@ run_one_eval() {
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$EMPTY_SKILL_DIR" \
       --model "$MODEL" \
-      --runs "$RUNS" --workers "$WORKERS" \
+      ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
       --skip-validate \
       --judge-model "$JUDGE_MODEL" \
       --output-dir "$BASELINE_DIR" \
@@ -265,7 +336,7 @@ run_one_eval() {
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$SKILL_DIR" \
       --model "$MODEL" \
-      --runs "$RUNS" --workers "$WORKERS" \
+      ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
       --skip-validate \
       --judge-model "$JUDGE_MODEL" \
       --output-dir "$SKILLED_DIR" \
@@ -274,8 +345,14 @@ run_one_eval() {
     # Adapt
     # Session logging also emits events.jsonl and OpenTelemetry JSONL streams.
     # Only Vally's results.jsonl contains trial-result records for comparison.
-    local BASELINE_JSONL=$(find "$BASELINE_DIR" -name "results.jsonl" -type f 2>/dev/null | head -1)
-    local SKILLED_JSONL=$(find "$SKILLED_DIR" -name "results.jsonl" -type f 2>/dev/null | head -1)
+    # Vally writes one timestamped directory per invocation. `find` returns
+    # them in filesystem order, so pick the newest explicitly: matching a
+    # baseline from one invocation with a treatment from another silently
+    # breaks the pairing and yields unmatched trials.
+    # Vally names its output directory after an ISO timestamp, so the newest
+    # invocation sorts last. Lexicographic order is portable and deterministic.
+    local BASELINE_JSONL=$(find "$BASELINE_DIR" -name "results.jsonl" -type f 2>/dev/null | sort | tail -1)
+    local SKILLED_JSONL=$(find "$SKILLED_DIR" -name "results.jsonl" -type f 2>/dev/null | sort | tail -1)
 
     if [ -n "$BASELINE_JSONL" ] && [ -n "$SKILLED_JSONL" ]; then
       echo "--- Adapting results ---"

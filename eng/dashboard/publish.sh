@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Publish evaluation evidence to the dashboard data branch.
 #
-# Shared by both runners — the Vally skill evaluation and the harness agent
-# evaluation — so the branch is updated the same way whoever produced the
-# verdicts, and neither can clobber the other's evidence.
+# Every runner writes the same `results.json`, whether it compared a skill
+# against a baseline or ran an agent suite, so the branch is updated the same way
+# whoever produced the verdicts and neither can clobber the other's evidence.
 #
 # Usage:
 #   eng/dashboard/publish.sh --results <file> [--results <file> ...]

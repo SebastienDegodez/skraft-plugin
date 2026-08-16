@@ -1,7 +1,7 @@
 import { ok, strictEqual } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { MIN_CREDIBLE_TRIALS, comparisonVerdict, signTestPValue, verdictState } from '../../eng/lib/verdict.mjs'
+import { MIN_CREDIBLE_TRIALS, MIN_DISCORDANT_PAIRS, comparisonVerdict, signTestPValue, verdictState } from '../../eng/lib/verdict.mjs'
 
 const report = (summary, extra = {}) => ({ summary, ...extra })
 const subject = { kind: 'skill', name: 'outside-in-tdd', path: 'plugins/skraft-framework/skills/outside-in-tdd' }
@@ -50,6 +50,34 @@ describe('comparison verdict', () => {
     strictEqual(verdict.passed, false)
     strictEqual(verdictState(verdict), 'inconclusive')
     ok(verdict.reason.includes(String(MIN_CREDIBLE_TRIALS)))
+  })
+
+  it('refuses to blame the skill for a sweep the sign test could never certify', () => {
+    // 5W/0L is the best possible outcome at five discordant pairs and still
+    // scores p=0.0625. Calling that "no improvement" would report a budget
+    // failure as a skill failure.
+    const verdict = comparisonVerdict(report({ wins: 5, ties: 0, losses: 0, trialCount: 5 }), subject)
+
+    strictEqual(verdict.underpowered, true)
+    strictEqual(verdict.passed, false)
+    strictEqual(verdictState(verdict), 'inconclusive')
+    ok(verdict.reason.includes(String(MIN_DISCORDANT_PAIRS)))
+  })
+
+  it('treats an all-tie comparison as a measured absence of difference, not a power failure', () => {
+    const verdict = comparisonVerdict(report({ wins: 0, ties: 12, losses: 0, trialCount: 12 }), subject)
+
+    strictEqual(verdict.underpowered, false)
+    strictEqual(verdictState(verdict), 'no-improvement')
+  })
+
+  it('separates a powered non-significant margin from an unpowered one', () => {
+    // 7W/1L clears the discordant floor, so the margin itself is what fails.
+    const verdict = comparisonVerdict(report({ wins: 7, ties: 4, losses: 1, trialCount: 12 }), subject)
+
+    strictEqual(verdict.underpowered, false)
+    strictEqual(verdictState(verdict), 'no-improvement')
+    ok(verdict.reason.includes('no credible improvement'))
   })
 
   it('refuses to conclude when a trial errored', () => {

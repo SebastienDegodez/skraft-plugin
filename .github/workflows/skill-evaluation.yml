@@ -4,16 +4,21 @@ name: Skill evaluation
 #
 #   lint        — on every pull request. Structural checks only, no model is
 #                 called, so it never consumes Copilot quota.
-#   evaluate-pr — on every pull request that changed a skill. Evaluates only
-#                 the skill(s) the PR touched (RUNS=1) and posts the verdict
-#                 as a PR comment; blocks merge only on a credible regression.
+#   evaluate-pr — on every pull request that changed a skill or an agent suite.
+#                 Evaluates only what the PR touched and posts the verdict as a
+#                 PR comment; blocks merge only on a credible skill regression.
 #                 Skipped for fork PRs (no secrets available there anyway).
 #   evaluate    — scheduled or dispatched. Runs every skill twice (baseline vs
-#                 skilled), judges the pairs, and publishes verdicts and
-#                 recorded agent sessions to the `dashboard-data` branch.
+#                 skilled), runs every agent suite once, judges the pairs, and
+#                 publishes verdicts and recorded agent sessions to the
+#                 `dashboard-data` branch.
 #   compare-*   — dispatched with `models`. Runs the same skill(s) once per
 #                 agent model, all scored by one pinned judge, so the dashboard
 #                 can show which model the skill actually helps.
+#
+# No job sets RUNS: each eval spec budgets its own trials through
+# `defaults.runs`, and overriding it here would silently make every verdict
+# underpowered.
 
 on:
   pull_request:
@@ -22,6 +27,7 @@ on:
       - 'plugins/skraft-framework/agents/**'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skills/**'
+      - 'tests/agents/**'
       - 'tests/dashboard/**'
       - 'eng/**'
       - '.github/workflows/skill-evaluation.yml'
@@ -118,11 +124,11 @@ jobs:
           done
 
   evaluate-pr:
-    name: Skill versus baseline (changed skills only)
+    name: Pre-merge evaluation (changed skills and agent suites only)
     # Fork PRs have no access to COPILOT_GITHUB_TOKEN, so skip rather than fail.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     permissions:
       contents: read
       pull-requests: write
@@ -145,9 +151,25 @@ jobs:
             echo 'PR_SKILLS_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      - name: Detect which agent suite(s) this PR changed
+        id: changed-agents
+        run: |
+          set -euo pipefail
+          {
+            echo 'suites<<PR_SUITES_EOF'
+            node eng/detect-changed-skills.mjs --kind agents --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}"
+            echo 'PR_SUITES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Install the Vally CLI
-        if: steps.changed.outputs.skills != ''
+        if: steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != ''
         run: npm install -g "$VALLY_PACKAGE"
+
+      # The agent executor drives a real agent through @github/copilot-sdk, a
+      # devDependency: without it an agent suite cannot start at all.
+      - name: Install project dependencies
+        if: steps.changed-agents.outputs.suites != ''
+        run: npm install
 
       - name: Run each changed skill twice and judge the pair
         if: steps.changed.outputs.skills != ''
@@ -162,8 +184,20 @@ jobs:
             ./eng/run-vally-evals.sh "$skill"
           done <<< "$SKILLS"
 
+      - name: Run each changed agent suite
+        if: steps.changed-agents.outputs.suites != ''
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          SUITES: ${{ steps.changed-agents.outputs.suites }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r suite; do
+            [ -n "$suite" ] || continue
+            ./eng/run-vally-evals.sh agents "$suite"
+          done <<< "$SUITES"
+
       - name: Upload trajectories
-        if: always() && steps.changed.outputs.skills != ''
+        if: always() && (steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != '')
         uses: actions/upload-artifact@v4
         with:
           name: eval-results-pr-${{ github.event.pull_request.number }}
@@ -172,11 +206,11 @@ jobs:
           retention-days: 3
 
       - name: Build the PR comment
-        if: always() && steps.changed.outputs.skills != ''
+        if: always() && (steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != '')
         run: node eng/build-pr-comment.mjs --results-dir eval-results --out pr-comment.md
 
       - name: Post the PR comment
-        if: always() && steps.changed.outputs.skills != ''
+        if: always() && (steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != '')
         uses: actions/github-script@v7
         with:
           script: |
@@ -194,11 +228,13 @@ jobs:
         run: node eng/check-pr-regressions.mjs --results-dir eval-results
 
   evaluate:
-    name: Skill versus baseline
+    name: Skills versus baseline, agents against their suites
     # A dispatch that names models wants the comparison below, not this job.
     if: github.event_name != 'pull_request' && inputs.models == ''
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # Each spec budgets its own trials, so the wall clock follows the specs, not
+    # a flat one-trial-per-stimulus floor.
+    timeout-minutes: 150
     # Shared with dashboard-data-compact.yml: a publication and a history
     # compaction must never interleave on the evidence branch.
     concurrency:
@@ -214,7 +250,12 @@ jobs:
       - name: Install the Vally CLI
         run: npm install -g "$VALLY_PACKAGE"
 
-      - name: Run each eval twice and judge the pair
+      # The agent executor drives a real agent through @github/copilot-sdk, a
+      # devDependency: without it an agent suite cannot start at all.
+      - name: Install project dependencies
+        run: npm install
+
+      - name: Run every eval and judge the pairs
         env:
           # A fine-grained PAT with the "Copilot Requests" account permission.
           # The auto-generated GITHUB_TOKEN cannot reach Copilot. The runner
@@ -265,7 +306,7 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           {
-            echo "## Skill versus baseline"
+            echo "## Evaluation verdicts"
             echo
             echo "| Subject | Verdict | Evidence |"
             echo "| --- | --- | --- |"
@@ -275,7 +316,7 @@ jobs:
                 for (const verdict of verdicts) {
                   const state = !verdict.conclusive || verdict.underpowered ? 'inconclusive'
                     : verdict.regressed ? 'regression' : verdict.passed ? 'pass' : 'no improvement';
-                  console.log(\`| \${verdict.subject.name} | \${state} | \${verdict.reason} |\`);
+                  console.log(\`| \${verdict.subject.kind}: \${verdict.subject.name} | \${state} | \${verdict.reason} |\`);
                 }
               "
             done
@@ -342,6 +383,10 @@ jobs:
           # is the only thing that makes the arms comparable at all.
           MODEL: ${{ matrix.model }}
           JUDGE_MODEL: ${{ inputs.judge_model }}
+          # A comparison is about skills. An agent suite is single-arm and pins
+          # its own model, so running it per arm would publish the same verdict
+          # several times.
+          SKIP_AGENTS: '1'
           RESULTS_DIR: ${{ github.workspace }}/eval-results/model-compare/${{ matrix.model }}
         run: ./eng/run-vally-evals.sh ${SKILL:+"$SKILL"}
 

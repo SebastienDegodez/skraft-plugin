@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { deepStrictEqual, strictEqual } from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
@@ -181,7 +182,110 @@ describe('Vally real-agent executor', () => {
     )
 
     calls.sessions[0].onPermissionRequest({ kind: 'write', fileName: '/tmp/work/src/domain.mjs' })
-    deepStrictEqual(permissionCalls[0].context, { stimulus, workDir: '/tmp/work' })
+    deepStrictEqual(permissionCalls[0].context, { stimulus, workDir: '/tmp/work', readableRoots: ['/tmp/work'] })
+  })
+
+  it('registers the declared review chain and grants dispatch only to a delegating stimulus', async () => {
+    const calls = { sessions: [] }
+    const session = {
+      sessionId: 'session-3',
+      on() {},
+      async sendAndWait() { return { data: { content: 'APPROVED' } } },
+      async disconnect() {},
+    }
+    const executor = createAgentExecutor({
+      repoRoot,
+      createClient: () => ({
+        async start() {},
+        async createSession(config) { calls.sessions.push(config); return session },
+        async stop() {},
+      }),
+      permissionHandler: () => ({ kind: 'approve-once' }),
+      adapterFactory: () => new CopilotAdapter(),
+      computeMetrics,
+      clock: { now: () => new Date('2026-08-12T10:00:00.000Z') },
+      randomUUID: () => 'trajectory-3',
+    })
+    const lenses = ['quality-gates-lens', 'architecture-boundaries-lens', 'test-integrity-lens', 'cold-reader-lens']
+    const stimulus = {
+      name: 'delivery-review-fans-out',
+      prompt: 'Review the delivered change and report a verdict.',
+      tags: { agent: 'software-engineer-reviewer', subagents: lenses, permissions: 'workspace-write' },
+    }
+
+    const trajectory = await executor.execute(stimulus, {
+      workDir: '/tmp/work',
+      model: 'claude-sonnet-4.6',
+      timeout: 30_000,
+      sessionLog: { rootDir: '/tmp/session-log' },
+      skills: [],
+    })
+
+    const config = calls.sessions[0]
+    strictEqual(config.agent, 'software-engineer-reviewer')
+    deepStrictEqual(config.customAgents.map(({ name }) => name), ['software-engineer-reviewer', ...lenses])
+    deepStrictEqual(config.customAgents.map(({ infer }) => infer), [false, true, true, true, true])
+    deepStrictEqual(config.customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash', 'agent'])
+    deepStrictEqual(config.availableTools, [
+      'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash', 'builtin:agent',
+    ])
+    deepStrictEqual(trajectory.metadata.subagents.map(({ id }) => id), lenses)
+    deepStrictEqual(trajectory.metadata.skillsConfigured, ['adversarial-review-lenses'])
+    deepStrictEqual(trajectory.metadata.subagentSkillsConfigured, Object.fromEntries(lenses.map((id) => [id, []])))
+  })
+
+  it('publishes the dispatches that actually happened so a narrated fan-out cannot pass', async () => {
+    const artifactDir = mkdtempSync(join(tmpdir(), 'skraft-agent-artifacts-'))
+    const dispatched = ['quality-gates-lens', 'architecture-boundaries-lens']
+    const rawDispatchEvents = [
+      ...dispatched.map((agent, index) => ({
+        type: 'tool.execution_start',
+        timestamp: `2026-08-13T10:00:0${index}.000Z`,
+        data: { toolName: 'agent', toolCallId: `call-${index}`, turnId: '0', arguments: { agent } },
+      })),
+      { type: 'assistant.message', timestamp: '2026-08-13T10:00:09.000Z', data: { content: 'NEEDS_REWORK' } },
+    ]
+    let eventHandler
+    const session = {
+      sessionId: 'session-4',
+      on(handler) { eventHandler = handler },
+      async sendAndWait() {
+        for (const event of rawDispatchEvents) eventHandler(event)
+        return { data: { content: 'NEEDS_REWORK' } }
+      },
+      async disconnect() {},
+    }
+    const executor = createAgentExecutor({
+      repoRoot,
+      createClient: () => ({
+        async start() {},
+        async createSession() { return session },
+        async stop() {},
+      }),
+      permissionHandler: () => ({ kind: 'approve-once' }),
+      adapterFactory: () => new CopilotAdapter(),
+      computeMetrics,
+      clock: { now: () => new Date('2026-08-13T10:00:10.000Z') },
+      randomUUID: () => 'trajectory-4',
+    })
+    const stimulus = {
+      name: 'delivery-review-fans-out',
+      prompt: 'Review the delivered change and report a verdict.',
+      tags: { agent: 'software-engineer-reviewer', subagents: dispatched, permissions: 'workspace-write' },
+    }
+
+    const trajectory = await executor.execute(stimulus, {
+      workDir: '/tmp/work',
+      model: 'claude-sonnet-4.6',
+      timeout: 30_000,
+      sessionLog: { rootDir: artifactDir },
+      skills: [],
+    })
+
+    strictEqual(trajectory.artifactDir, artifactDir)
+    const published = JSON.parse(readFileSync(join(artifactDir, 'custom_metrics.json'), 'utf8'))
+    strictEqual(published.subagentDispatchCount, 2)
+    for (const agent of dispatched) strictEqual(published.dispatchedSubagents.includes(agent), true)
   })
 
 })

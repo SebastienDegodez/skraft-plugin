@@ -42,6 +42,7 @@ graphify-out/
 # and agent trajectories are published to the `dashboard-data` branch.
 artifacts/
 eval-results/
+eval-results-pilot/
 dashboard-data/
 
 # skraft-framework runtime audit log

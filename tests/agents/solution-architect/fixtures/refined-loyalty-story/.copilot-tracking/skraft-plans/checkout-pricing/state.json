@@ -1,0 +1,64 @@
+{
+  "projectSlug": "checkout-pricing",
+  "skraftPlanFile": ".copilot-tracking/skraft-plans/checkout-pricing/state.json",
+  "currentPhase": "DESIGN",
+  "entryMode": "capture",
+  "entryPoint": {
+    "skipPhases": [],
+    "handoffSource": null,
+    "handoffArtifacts": []
+  },
+  "issueNumber": null,
+  "difficulty": "medium-hard",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": []
+  },
+  "phasesCompleted": [
+    "RESEARCH"
+  ],
+  "phaseArtifacts": {
+    "RESEARCH": [
+      ".copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-12/loyalty-discount-research.md"
+    ]
+  },
+  "verdicts": {
+    "RESEARCH": "APPROVED"
+  },
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "referencesProcessed": [],
+  "phaseHistory": {
+    "RESEARCH": {
+      "status": "done",
+      "startedAt": "2026-08-12T09:00:00Z",
+      "completedAt": "2026-08-12T09:40:00Z"
+    },
+    "DESIGN": {
+      "status": "inProgress",
+      "startedAt": "2026-08-12T09:40:00Z",
+      "completedAt": null
+    }
+  },
+  "nextActions": [
+    "Design the loyalty-discount story from the refined acceptance criteria."
+  ],
+  "userPreferences": {
+    "autonomyTier": "full",
+    "maxRetriesPerPhase": 2,
+    "phaseOrder": [
+      "RESEARCH",
+      "DESIGN",
+      "DISTILL",
+      "DELIVER"
+    ]
+  },
+  "neighborPlanners": {
+    "securityPlanFile": null,
+    "raiPlanFile": null,
+    "ssscPlanFile": null
+  }
+}

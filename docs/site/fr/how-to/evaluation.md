@@ -12,6 +12,68 @@ Un skill est une **affirmation** : *« un agent qui charge ce fichier produit un
 
 Ce guide décrit la tâche : transformer cette intuition en preuve publiée sur le [tableau de bord]({{ "/dashboard/" | relative_url }}).
 
+## Pourquoi évaluer : la stratégie en trois couches
+
+SKRAFT prouve la qualité par trois couches, chacune répondant à une question différente.
+
+### Couche 1 : correction du framework (tests déterministes)
+
+**Quoi ?** Le framework charge-t-il, route-t-il et dirige-t-il correctement les skills ?
+
+- Tests unitaires dans `tests/skraft-framework/*.test.mjs` qui couvrent le parsing, l'orchestration, le chargement de config et les portes de décision
+- Tests de mutation (Stryker) pour vérifier que les tests détectent vraiment les bugs — un mutant qui passe tous les tests = une case oubliée
+- Tous les tests sont **déterministes** (pas de flakiness, pas d'appel modèle, pas d'aléatoire)
+
+**Pourquoi ça compte :** si le framework a un bug logique, chaque skill construit dessus amplifie ce bug. Ces tests attrapent les problèmes structurels avant qu'ils ne remontent à l'évaluation.
+
+### Couche 2 : comportement du skill (comparaison modèle)
+
+**Quoi ?** Ce skill produit-il de meilleurs résultats que la baseline ?
+
+- Vally compare baseline (zéro skill) vs traitement (skill activé) sur les mêmes stimuli
+- Les résultats sont jugés par une rubrique, pas à la main : un scoreur lit ce que l'agent a produit et assigne un score
+- Résultats comparés par un **test des signes binomial bilatéral** (p ≤ 0,05 = crédible)
+- Chaque spec budgète ses propres essais via `defaults.runs` ; la CI ne l'écrase jamais, ni sur PR ni en scheduled
+
+**Pourquoi ça compte :** un skill qui *semble bon* produit souvent un pire résultat en pratique, ou coûte des tokens sans rien apporter. La mesure empirique le détecte ; l'intuition non.
+
+### Couche 3 : orchestration d'agents (tests d'intégration)
+
+**Quoi ?** Les skills, le framework et l'agent travaillent-ils ensemble end-to-end ?
+
+- Tests Playwright dans `tests/site/` qui vérifient que le handbook s'affiche et que les liens sont vivants
+- Specs d'évaluation agent réel dans `tests/agents/` qui mesurent si des agents utilisant la suite complète prennent de meilleures décisions qu'un agent baseline
+- Couvre les workflows multi-skills, l'ordre des skills, et les effets de bord cross-skills
+
+**État :** En place. Une suite agent est mono-bras — elle atteste une conformité (le bon agent, les skills requis chargés, la forme de handoff déclarée) plutôt qu'un gain — et son verdict est publié sur le tableau de bord et dans le commentaire de PR, à côté des skills. Elle reste indicative : une seule session d'agent réel ne doit pas bloquer un merge sans rapport.
+
+### Pourquoi c'est mieux
+
+Les approches classiques (review de code + tests manuels) ont des angles morts :
+
+| Angle mort classique | Approche SKRAFT |
+| --- | --- |
+| « Le code a l'air correct » mais produit un mauvais résultat | Couche 2 force la mesure empirique : si ça ne score pas mieux, ça ne ship pas |
+| Les mutations du code cachent des bugs subtils | Couche 1 utilise Stryker : un mutant qui passe tous les tests = case oubliée |
+| Les skills fonctionnent isolés mais cassent ensemble | Couche 3 teste l'orchestration agent réelle |
+| « Ça a marché la dernière fois que j'ai essayé » | Chaque évaluation est reproductible ; les trajectoires agents sont enregistrées et rejouables |
+| P-hacking (cherry-picking les bons résultats) | Couche 2 utilise un test bilatéral pré-enregistré ; les régressions bloquent le merge automatiquement |
+
+### État actuel (et ce qui arrive)
+
+✅ **Fonctionne maintenant :**
+- Tests déterministes du framework + couverture mutation
+- Évaluation skills avec Vally (pré-PR et scheduled)
+- Suites de conformité agent réel, publiées sur le tableau de bord et dans le commentaire de PR
+- Replay de sessions : baseline vs traitement côte à côte en AGENTVIZ
+- Porte de régression : les régressions bloquent le merge automatiquement
+
+🔄 **En cours :**
+- Tableau de bord tendance (performance sur plusieurs runs)
+- Projections de coût par skill (budgétisation de tokens)
+
+Le travail est incomplet, mais il démontre une **base testable, mesurable, empirique** au lieu des releases basées sur l'opinion. Chaque gap que vous voyez aujourd'hui est quelque chose qu'on peut mesurer et combler demain.
+
 ## Le principe en une phrase
 
 Les mêmes prompts sont soumis deux fois — **une fois sans aucun skill** (baseline), **une fois avec le seul skill testé** (skilled) — puis un juge compare les deux trajectoires. Rien d'autre ne change entre les deux passes : la différence observée est donc attribuable au skill, et à rien d'autre.

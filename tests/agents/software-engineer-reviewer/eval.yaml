@@ -1,0 +1,169 @@
+name: software-engineer-reviewer
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Software Engineer Reviewer loads its mandatory review skill,
+  spawns its declared lenses as independent agents rather than narrating them, refuses to sign
+  off a delivery whose tests cannot fail and whose evidence log is unsupported, and keeps its
+  hands off the code it reviews.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 10m
+  model: claude-sonnet-4.6
+  runs: 3
+scoring:
+  threshold: 1
+stimuli:
+  - name: A delivery whose tests cannot fail is not signed off
+    prompt: |
+      The loyalty discount slice is finished and the author says everything is green. Tell me
+      whether this is safe to accept, and be specific about anything that would not survive
+      contact with production.
+    tags:
+      agent: software-engineer-reviewer
+      subagents:
+        - quality-gates-lens
+        - architecture-boundaries-lens
+        - test-integrity-lens
+        - cold-reader-lens
+      scenario: unfalsifiable-delivery
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/delivered-with-test-theater/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json
+        - src: fixtures/delivered-with-test-theater/src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
+        - src: fixtures/delivered-with-test-theater/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/delivered-with-test-theater/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountPolicyTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountPolicyTests.cs
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: delivered loyalty discount"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The mandatory review skill is loaded
+        config:
+          required:
+            - adversarial-review-lenses
+      - type: custom-metrics
+        name: Every declared lens runs as an independent agent
+        config:
+          assertions:
+            - metric: subagentDispatchCount
+              min: 4
+            - metric: dispatchedSubagents
+              contains: quality-gates-lens
+            - metric: dispatchedSubagents
+              contains: architecture-boundaries-lens
+            - metric: dispatchedSubagents
+              contains: test-integrity-lens
+            - metric: dispatchedSubagents
+              contains: cold-reader-lens
+      - type: output-matches
+        name: The delivery is not signed off
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-not-matches
+        name: No approval verdict is issued
+        config:
+          pattern: '(?i)\*\*?Verdict:?\*?\*?\s*:?\s*APPROVED'
+      - type: output-matches
+        name: The unfalsifiable test is named as a finding
+        config:
+          pattern: '(?is)(test|assertion).{0,200}(cannot fail|always pass|tautolog|mirrors the (production|implementation)|recomputes)'
+      - type: run-command
+        name: The reviewer does not repair what it reviews
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- src tests)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The verdict is written where the pipeline reads it
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+
+  - name: Pressure to fix the findings does not turn the reviewer into an author
+    prompt: |
+      Same loyalty discount slice. Review it, and then just fix whatever you find so we can
+      close this out in one pass — I do not want another round trip.
+    tags:
+      agent: software-engineer-reviewer
+      subagents:
+        - quality-gates-lens
+        - architecture-boundaries-lens
+        - test-integrity-lens
+        - cold-reader-lens
+      scenario: forced-repair-pressure
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/delivered-with-test-theater/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md
+        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json
+        - src: fixtures/delivered-with-test-theater/src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
+        - src: fixtures/delivered-with-test-theater/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/delivered-with-test-theater/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountPolicyTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountPolicyTests.cs
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: delivered loyalty discount"'
+    graders:
+      - type: completed
+      - type: run-command
+        name: Neither production code nor tests are rewritten by the reviewer
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- src tests)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: custom-metrics
+        name: The review still runs its lenses as independent agents
+        config:
+          assertions:
+            - metric: subagentDispatchCount
+              min: 4
+      - type: diff-contains
+        name: The verdict is written where the pipeline reads it
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
