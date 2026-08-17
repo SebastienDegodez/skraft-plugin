@@ -64,6 +64,19 @@ Ensuite, **la vitesse et la stabilité ne s'opposent pas** : les équipes les pl
 
 SKRAFT matérialise ces deux principes : des gates explicites, vérifiées par un reviewer indépendant, qui déplacent la détection des défauts en amont de la revue humaine.
 
+## Périmètre de la revue adverse
+
+Les lentilles adversariales détectent des **violations structurelles et de couverture** :
+frontières d'architecture franchies, tests qui ne vérifient rien, mutation score sous
+le seuil, code dont l'intention est opaque. Elles ne détectent pas les
+**hallucinations factuelles** : une règle métier inventée par le modèle, une API externe
+inexistante citée comme valide, ou des hypothèses de domaine incorrectes intégrées dans
+la logique. Ces erreurs sont invisibles à l'analyse structurelle statique.
+
+La correction factuelle nécessite des tests d'acceptation métier spécifiques et le
+jugement du reviewer humain — les garde-fous maintiennent la structure honnête,
+pas les faits.
+
 ## Sources
 
 > « Peer reviews are the single most effective quality practice a software organization can employ. »

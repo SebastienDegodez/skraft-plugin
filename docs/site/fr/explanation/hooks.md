@@ -139,6 +139,31 @@ appel d'outil, le préfixe change et le cache rate.
 > Les ratios de réduction mesurés (cache, classe de modèle) sont documentés sur la page
 > [Économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }}).
 
+## Ce que les hooks ne couvrent pas
+
+Les hooks font respecter des **invariants structurels et comportementaux** — ordre de
+dispatch, présence des artefacts, format du verdict reviewer, intégrité du fichier
+d'état. Ils ne constituent pas un système anti-hallucination général, et deux limites
+importantes doivent être énoncées explicitement.
+
+### G2 et G3 ne sont pas encore actifs
+
+Le garde-fou G2 (injection de skills à `SubagentStart`) et G3 (audit de skills à
+`PostToolUse`) sont planifiés mais non implémentés. Un sous-agent démarre donc
+aujourd'hui sans ensemble de skills garanti : les contraintes méthodologiques attendues
+peuvent ne pas être injectées, ce qui constitue un angle mort pour les
+*hallucinations de méthode* — l'agent se comporte correctement du point de vue du
+runtime, mais sans la discipline que le skill aurait imposée.
+
+### Violations structurelles vs. hallucinations factuelles
+
+Les hooks détectent les **hallucinations de qualité** : artefact manquant, dispatch
+hors ordre, verdict ne correspondant pas au fichier écrit. Ils ne détectent pas les
+**hallucinations factuelles** : une règle métier inventée par le modèle, un endpoint
+d'API inexistant cité dans le code, ou une connaissance du domaine incorrecte intégrée
+dans un test. La correction factuelle reste la responsabilité du reviewer humain et
+des tests d'acceptation métier.
+
 ## Pour en savoir plus
 
 - [Économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }}) — les leviers Genesis et les ratios de réduction mesurés
