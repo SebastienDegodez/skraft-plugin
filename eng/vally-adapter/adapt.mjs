@@ -4,8 +4,9 @@
 //
 // eng/run-vally-evals.sh runs the same eval spec twice — once with no skill
 // (baseline), once with only the skill under test (skilled) — and hands both
-// JSONL streams here. `vally compare` judges the trajectories pairwise, and the
-// tally becomes a verdict at <output-root>/<skill>/results.json.
+// JSONL streams here. The eval's deterministic graders decide the pairwise
+// tally; `vally compare` judges the trajectories as a published second opinion.
+// The verdict lands at <output-root>/<skill>/results.json.
 //
 //   node eng/vally-adapter/adapt.mjs --baseline <jsonl> --skilled <jsonl> --skill <name>
 import { execFileSync } from 'node:child_process'
@@ -104,8 +105,11 @@ try {
       continue
     }
 
+    // The raw records go in beside the judge's report: the eval's own graders
+    // scored every trial, and that score — not the judge's read of the
+    // trajectory — is what decides the tally. See eng/lib/verdict.mjs.
     const verdict = {
-      ...comparisonVerdict(report, evaluation),
+      ...comparisonVerdict(report, evaluation, { baselineRecords, skilledRecords }),
       metrics: buildEvaluationMetrics(baselineRecords, skilledRecords, evaluation.name),
     }
     const result = {

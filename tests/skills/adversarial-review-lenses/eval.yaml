@@ -1,0 +1,273 @@
+name: adversarial-review-lenses
+description: Evaluates whether a hand-off decision lands where the evidence puts it — blocking work that breaks an agreed guarantee, passing work that is sound without inflating a blemish, and staying an ordinary code review when nothing is being signed off.
+type: capability
+defaults:
+  timeout: 5m
+  runs: 3
+scoring:
+  threshold: 1
+stimuli:
+  - name: A delivered slice whose dropped scenario is invisible at HEAD
+    prompt: |
+      The loyalty discount slice is delivered. The change log says every agreed scenario is
+      covered and the suite is green.
+
+      Before the next slice builds on it, tell me whether this can move on. Answer with exactly
+      one of APPROVED, NEEDS_REWORK or REJECTED, then the reasons and anything the author has
+      to bring back.
+    environment:
+      files:
+        - src: fixtures/delivered-with-dropped-scenario/.gitignore
+          dest: .gitignore
+        - src: fixtures/delivered-with-dropped-scenario/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/delivered-with-dropped-scenario/LoyaltyPricing.slnx
+          dest: LoyaltyPricing.slnx
+        - src: fixtures/delivered-with-dropped-scenario/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/delivered-with-dropped-scenario/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/delivered-with-dropped-scenario/src/LoyaltyPricing.Domain/LoyaltyPricing.Domain.csproj
+          dest: src/LoyaltyPricing.Domain/LoyaltyPricing.Domain.csproj
+        - src: fixtures/delivered-with-dropped-scenario/src/LoyaltyPricing.Domain/LoyaltyDiscountPolicy.cs
+          dest: src/LoyaltyPricing.Domain/LoyaltyDiscountPolicy.cs
+        - src: fixtures/delivered-with-dropped-scenario/src/LoyaltyPricing.Application/LoyaltyPricing.Application.csproj
+          dest: src/LoyaltyPricing.Application/LoyaltyPricing.Application.csproj
+        - src: fixtures/delivered-with-dropped-scenario/src/LoyaltyPricing.Application/CalculatePayableTotal.cs
+          dest: src/LoyaltyPricing.Application/CalculatePayableTotal.cs
+        - src: fixtures/delivered-with-dropped-scenario/tests/LoyaltyPricing.UnitTests/LoyaltyPricing.UnitTests.csproj
+          dest: tests/LoyaltyPricing.UnitTests/LoyaltyPricing.UnitTests.csproj
+        - src: fixtures/delivered-with-dropped-scenario/tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
+          dest: tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
+        - src: fixtures/delivered-with-dropped-scenario/red/CalculatePayableTotalAcceptanceTests.cs
+          dest: .fixture-red/CalculatePayableTotalAcceptanceTests.cs
+        - src: fixtures/delivered-with-dropped-scenario/.copilot-tracking/skraft-plans/loyalty-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/features/loyalty-discount.feature
+        - src: fixtures/delivered-with-dropped-scenario/.copilot-tracking/skraft-plans/loyalty-pricing/changes/2026-08-14/change-log.md
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/changes/2026-08-14/change-log.md
+      commandTimeout: 2m
+      commands:
+        - 'dotnet restore LoyaltyPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'cp tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs .fixture-red/delivered-state.cs'
+        - 'cp .fixture-red/CalculatePayableTotalAcceptanceTests.cs tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs'
+        - 'git add .gitignore skraft-config.json LoyaltyPricing.slnx Directory.Build.props Directory.Packages.props src tests .copilot-tracking'
+        - 'git commit --quiet -m "test: loyalty discount scenarios"'
+        - 'cp .fixture-red/delivered-state.cs tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs'
+        - 'rm -rf .fixture-red'
+        - 'git add -A'
+        - 'git commit --quiet -m "feat: loyalty discount"'
+    graders:
+      - type: output-matches
+        name: The scenario that is no longer exercised is named
+        config:
+          pattern: '9[_ ,]?499'
+      - type: output-matches
+        name: The delivery is refused
+        config:
+          pattern: '(?i)\bREJECTED\b'
+      - type: output-matches
+        name: The delivery is at least not signed off
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-not-matches
+        name: The delivery is not waved through
+        config:
+          pattern: '(?i)\bAPPROVED\b'
+      - type: diff-not-contains
+        name: The reviewed code and suite were left untouched
+        config:
+          pattern: '(?m)^diff --git a/(src|tests)/'
+      - type: run-command
+        name: Build infrastructure sentinel — the solution still restores
+        config:
+          command: dotnet
+          args:
+            - restore
+            - LoyaltyPricing.slnx
+          expected_exit_code: 0
+          timeout: 2m
+
+  - name: A design reviewed under time pressure
+    prompt: |
+      The loyalty tier design is finished and I am short on time — a quick once-over is fine,
+      I just need to know whether the next phase can start from it. Answer with exactly one of
+      APPROVED, NEEDS_REWORK or REJECTED, then whatever the author still owes us.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/design-with-buried-coupling/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/design-with-buried-coupling/.copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/contracts-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/contracts-loyalty-discount.md
+        - src: fixtures/design-with-buried-coupling/.copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/diagrams-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/diagrams-loyalty-discount.md
+        - src: fixtures/design-with-buried-coupling/.copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/context-map.md
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/context-map.md
+      commandTimeout: 1m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "design: loyalty tier"'
+    graders:
+      - type: output-matches
+        name: The external source of the tier is named
+        config:
+          pattern: '(?i)partner portal'
+      - type: output-matches
+        name: The unbounded assumption is named
+        config:
+          pattern: '(?is)assum\w+.{0,200}(validat|upstream)'
+      - type: output-matches
+        name: The design is sent back for rework
+        config:
+          pattern: '(?i)\bNEEDS_REWORK\b'
+      - type: output-not-matches
+        name: The design is not waved through
+        config:
+          pattern: '(?i)\bAPPROVED\b'
+      - type: diff-not-contains
+        name: The reviewed design artifacts were left untouched
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/.*/details/'
+
+  - name: A sound specification with one cosmetic blemish
+    prompt: |
+      The loyalty tier specification is ready and the author says it is complete. The team's
+      review checklist for this phase is in the workspace.
+
+      Tell me whether implementation can start from it. Answer with exactly one of APPROVED,
+      NEEDS_REWORK or REJECTED, then anything worth noting.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/sound-specification/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/sound-specification/.copilot-tracking/skraft-plans/loyalty-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/sound-specification/.copilot-tracking/skraft-plans/loyalty-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/features/loyalty-discount.feature
+        - src: fixtures/sound-specification/.copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/test-plan-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/test-plan-loyalty-discount.md
+        - src: fixtures/sound-specification/.copilot-tracking/skraft-plans/loyalty-pricing/review-checklist.md
+          dest: .copilot-tracking/skraft-plans/loyalty-pricing/review-checklist.md
+      commandTimeout: 1m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "spec: loyalty discount"'
+    graders:
+      - type: output-matches
+        name: The sound specification is allowed through
+        config:
+          pattern: '(?i)\bAPPROVED\b'
+      - type: output-not-matches
+        name: A cosmetic blemish is not escalated into a block
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-matches
+        name: Blindness guard — the misspelling was actually seen
+        config:
+          pattern: '(?i)boundry'
+      - type: output-not-matches
+        name: No check identifier outside the team's four was invented
+        config:
+          pattern: '(?i)\bDQ-([5-9]|\d\d)\b'
+      - type: diff-not-contains
+        name: The reviewed specification was left untouched
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/'
+
+  - name: An ordinary helper going out tomorrow
+    prompt: |
+      A teammate added this helper to our shared toolbox and it is going out in tomorrow's
+      release. Be tough on it — I would rather hear about a problem now than from a customer.
+    tags:
+      intent: non-activation
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/ordinary-helper-review/Toolbox.csproj
+          dest: Toolbox.csproj
+        - src: fixtures/ordinary-helper-review/src/BatchSplitter.cs
+          dest: src/BatchSplitter.cs
+      commandTimeout: 1m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "chore: shared toolbox"'
+    graders:
+      - type: output-matches
+        name: The dropped trailing batch is found
+        config:
+          pattern: '(?is)(last|final|remaining|partial).{0,80}(batch|items?)'
+      - type: output-not-matches
+        name: No scoring apparatus was deployed on an ordinary review
+        config:
+          pattern: '(?i)(weighted (score|sum)|depth tier|lenses executed)'
+      - type: diff-not-contains
+        name: No dated review artifact was created
+        config:
+          pattern: 'reviews/\d{4}-\d{2}-\d{2}/'
+      - type: diff-not-contains
+        name: No project tracking tree was fabricated
+        config:
+          pattern: '\.copilot-tracking/'
+      - type: file-exists
+        name: Build infrastructure sentinel — the delivered project file survived
+        config:
+          path: Toolbox.csproj
+      - type: prompt
+    rubric:
+      - Explains what the defect costs a caller of this helper.
+      - States what the behaviour should be for an input that does not divide exactly.
+      - Answers without making the usefulness of the review conditional on a project phase, a verdict or an approval gate.
+
+  - name: A story that contradicts its own example
+    prompt: |
+      Here are the refined stories for the next milestone. The author reports them ready for
+      design. Tell me whether they are. Answer with exactly one of APPROVED, NEEDS_REWORK or
+      REJECTED, then what has to change.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/self-contradicting-story/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/self-contradicting-story/.copilot-tracking/skraft-plans/driver-quotes/plans/2026-08-12/stories-milestone-1.md
+          dest: .copilot-tracking/skraft-plans/driver-quotes/plans/2026-08-12/stories-milestone-1.md
+      commandTimeout: 1m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "stories: milestone 1"'
+    graders:
+      - type: output-matches
+        name: The offending example is cited
+        config:
+          pattern: '\b17\b'
+      - type: output-matches
+        name: The criterion it contradicts is cited
+        config:
+          pattern: '\b18\b'
+      - type: output-not-matches
+        name: The contradiction is not signed off
+        config:
+          pattern: '(?i)\bAPPROVED\b'
+      - type: diff-not-contains
+        name: The reviewed stories were left untouched
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/.*/plans/'

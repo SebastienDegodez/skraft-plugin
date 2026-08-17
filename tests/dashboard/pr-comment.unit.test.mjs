@@ -46,12 +46,51 @@ describe('hasRegression', () => {
 })
 
 describe('buildPrComment', () => {
-  it('renders one row per changed skill with score, sign test and deltas', () => {
+  it('renders one row per changed skill with both tests and the grader deltas', () => {
     const comment = buildPrComment(results(verdict()))
     ok(comment.includes('outside-in-tdd'))
-    ok(comment.includes('0.82'))
     ok(comment.includes('8W/1T/0L'))
     ok(comment.includes('+0.320'))
+  })
+
+  it('shows the grader means and the rank test when the tally came from the graders', () => {
+    const comment = buildPrComment(
+      results(
+        verdict({
+          signTest: { wins: 2, ties: 1, losses: 1, pValue: 1, source: 'graders' },
+          wilcoxon: { available: true, pValue: 0.5 },
+          graderScores: { baselineMean: 0.531, skilledMean: 0.836, medianDelta: 0.313 },
+        }),
+      ),
+    )
+    ok(comment.includes('0.531 → 0.836'))
+    ok(comment.includes('+0.305'))
+    ok(comment.includes('p=0.500'))
+  })
+
+  it('leaves the rank test empty on a judge-only comparison, which carries no magnitude', () => {
+    const comment = buildPrComment(results(verdict({ wilcoxon: { available: false, pValue: null } })))
+    ok(comment.includes('| — |'))
+  })
+
+  it('flags an excluded pair and a partial activation rate below the table', () => {
+    const comment = buildPrComment(
+      results(
+        verdict({
+          inactivatedCount: 1,
+          signTest: { wins: 2, ties: 1, losses: 1, pValue: 1, source: 'graders' },
+          judgeTally: { wins: 2, ties: 1, losses: 2 },
+          metrics: {
+            quality: { baseline: 0.5, skilled: 0.82, delta: 0.32 },
+            efficiency: { tokenDeltaPercent: 5.3, durationDeltaPercent: -19.1 },
+            activation: { rate: 0.8 },
+          },
+        }),
+      ),
+    )
+    ok(comment.includes('the skill never loaded'))
+    ok(comment.includes('80%'))
+    ok(comment.includes('2W/1T/2L'))
   })
 
   it('shows a dash instead of crashing on a null score', () => {

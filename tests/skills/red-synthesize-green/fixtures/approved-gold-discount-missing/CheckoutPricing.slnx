@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CheckoutPricing.Application/CheckoutPricing.Application.csproj" />
+    <Project Path="src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj" />
+  </Folder>
+</Solution>

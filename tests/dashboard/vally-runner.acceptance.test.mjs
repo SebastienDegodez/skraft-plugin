@@ -143,14 +143,17 @@ describe('unified Vally runner', () => {
       },
     })
 
-    // Both arms run the generated pilot, never the committed instrument.
+    // Both arms run the generated pilot, never the committed instrument. The
+    // pilot executes from the eval's own directory: vally resolves fixture
+    // `src:` paths relative to the spec file, so a pilot run from the results
+    // tree could not stage any fixture.
     const evalCalls = readFileSync(callsPath, 'utf8')
       .trim()
       .split(/\r?\n/)
       .filter((call) => call.startsWith('eval '))
     strictEqual(evalCalls.length, 2)
     strictEqual(
-      evalCalls.every((call) => call.includes(join(resultsPath, 'outside-in-tdd/pilot.eval.yaml'))),
+      evalCalls.every((call) => call.includes(join(dirname(committedSpec), '.pilot.eval.yaml'))),
       true,
     )
     strictEqual(

@@ -32,7 +32,23 @@ const signTestCell = (verdict) => {
   return `${wins}W/${ties}T/${losses}L (p=${pValue == null ? '—' : pValue.toFixed(3)})`
 }
 
-const qualityDeltaCell = (verdict) => signedFixed(verdict.metrics?.quality?.delta)
+// The rank test needs a magnitude per pair, which only the grader scores carry.
+// A judge-only comparison labels a winner and stops, so the cell stays empty
+// rather than pretending the test ran.
+const wilcoxonCell = (verdict) => {
+  const wilcoxon = verdict.wilcoxon
+  if (!wilcoxon?.available) return '—'
+  return `p=${wilcoxon.pValue == null ? '—' : wilcoxon.pValue.toFixed(3)}`
+}
+
+// Baseline and treatment means over the pairs that actually counted, so a
+// reviewer sees the size of the effect and not only its direction.
+const graderCell = (verdict) => {
+  const scores = verdict.graderScores
+  if (!scores) return signedFixed(verdict.metrics?.quality?.delta)
+  const delta = scores.skilledMean - scores.baselineMean
+  return `${scores.baselineMean.toFixed(3)} → ${scores.skilledMean.toFixed(3)} (${signedFixed(delta)})`
+}
 
 const efficiencyCell = (verdict) => {
   const efficiency = verdict.metrics?.efficiency
@@ -81,7 +97,7 @@ function skillSection(verdicts) {
 
   const rows = verdicts.map((verdict) => {
     const state = verdictState(verdict)
-    return `| ${dash(verdict.subject?.name)} | ${BADGE[state] ?? state} | ${scoreCell(verdict)} | ${signTestCell(verdict)} | ${qualityDeltaCell(verdict)} | ${efficiencyCell(verdict)} | ${dash(verdict.reason)} |`
+    return `| ${dash(verdict.subject?.name)} | ${BADGE[state] ?? state} | ${graderCell(verdict)} | ${signTestCell(verdict)} | ${wilcoxonCell(verdict)} | ${efficiencyCell(verdict)} | ${dash(verdict.reason)} |`
   })
 
   return [
@@ -92,11 +108,44 @@ function skillSection(verdicts) {
       'below 5 trials — see `docs/skill-evaluation.md`. Merge is only blocked by a ' +
       'credible `regression`.',
     '',
-    '| Skill | Verdict | Score (95% CI) | Sign test | Quality Δ | Efficiency Δ | Reason |',
+    'Both tests read the deterministic grader scores, and both must clear their ' +
+      'alpha before a verdict is credible: the sign test asks whether the treatment ' +
+      'wins more often, the rank test whether it wins by enough. Agreement is ' +
+      'required rather than either alone, so two shots at the same question cannot ' +
+      'double the false-positive rate on the field that gates a merge.',
+    '',
+    '| Skill | Verdict | Graders (base → skilled) | Sign test | Rank test | Efficiency Δ | Reason |',
     '| --- | --- | --- | --- | --- | --- | --- |',
     ...rows,
+    ...caveats(verdicts),
     '',
   ]
+}
+
+/**
+ * Facts that change how a row should be read but do not belong in a column.
+ *
+ * A null result measured at 67% activation is not the same finding as a null
+ * result where the skill loaded every time, and a tally the judge scored
+ * differently is worth a second look before anyone trusts the badge.
+ */
+function caveats(verdicts) {
+  const notes = verdicts.flatMap((verdict) => {
+    const parts = []
+    if (verdict.inactivatedCount) {
+      parts.push(`${verdict.inactivatedCount} pair(s) left out of the tally — the skill never loaded on the treatment side`)
+    }
+    const rate = verdict.metrics?.activation?.rate
+    if (rate != null && rate < 1) parts.push(`loaded on ${Math.round(rate * 100)}% of the runs that expected it`)
+    const judge = verdict.judgeTally
+    const sign = verdict.signTest
+    if (judge && sign?.source === 'graders' && (judge.wins !== sign.wins || judge.losses !== sign.losses)) {
+      parts.push(`the judge read the same runs as ${judge.wins}W/${judge.ties}T/${judge.losses}L`)
+    }
+    return parts.length ? [`- **${dash(verdict.subject?.name)}** — ${parts.join('; ')}.`] : []
+  })
+
+  return notes.length ? ['', 'Before reading the table:', '', ...notes] : []
 }
 
 function agentSection(verdicts) {

@@ -293,12 +293,16 @@ run_one_eval() {
   # avoid any cross-run contention when running in parallel.
   local EMPTY_SKILL_DIR
   EMPTY_SKILL_DIR=$(mktemp -d -t vally-empty-skills-XXXXXX)
-  trap 'rm -rf "$EMPTY_SKILL_DIR"; rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
+  local PILOT_SPEC=""
+  trap 'rm -rf "$EMPTY_SKILL_DIR"; [ -n "$PILOT_SPEC" ] && rm -f "$PILOT_SPEC"; rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
 
   # Pilot: the same frozen spec with fewer stimuli, generated per run. The
   # committed instrument is never edited to make a cheaper measurement possible.
+  # The pilot lands beside the frozen spec, never in the results tree: vally
+  # resolves fixture `src:` paths relative to the spec file, so a pilot written
+  # elsewhere cannot stage any fixture.
   if [ -n "$STIMULI" ]; then
-    local PILOT_SPEC="$RESULTS_ROOT/$EVAL_NAME/pilot.eval.yaml"
+    PILOT_SPEC="$(dirname "$EVAL_SPEC")/.pilot.eval.yaml"
     local KEPT
     if ! KEPT=$(node "$SKRAFT_ROOT/eng/make-pilot-spec.mjs" "$EVAL_SPEC" "$PILOT_SPEC" "$STIMULI" ${PILOT_RUNS:+"$PILOT_RUNS"} 2>&1); then
       echo "$KEPT" > "$LOG"
@@ -306,6 +310,10 @@ run_one_eval() {
       echo "error" > "$STATUS_DIR/$EVAL_NAME"
       return
     fi
+    # Archive the pilot beside the results as the record of what actually ran;
+    # the executed copy lives next to the spec and is removed by the trap.
+    mkdir -p "$RESULTS_ROOT/$EVAL_NAME"
+    cp "$PILOT_SPEC" "$RESULTS_ROOT/$EVAL_NAME/pilot.eval.yaml"
     EVAL_SPEC="$PILOT_SPEC"
     echo -e "  ${YELLOW}⚠${NC} $EVAL_NAME — PILOT on $(echo "$KEPT" | paste -sd';' -) (probe only, not a verdict)" >&2
   fi

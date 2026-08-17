@@ -1,0 +1,323 @@
+name: bdd-methodology
+description: >-
+  Evaluates whether an agreed behaviour reaches a specification the business can sign off on —
+  readable at the business layer, free of delivery vocabulary, sized one behaviour at a time,
+  and closed only by evidence that can actually prove it.
+type: capability
+defaults:
+  timeout: 3m
+  runs: 3
+scoring:
+  threshold: 1
+stimuli:
+  - name: Prove a positional promise
+    prompt: |
+      The storefront promotion banner story has two agreed criteria. The banner must show
+      the active promotion code, and the banner must span the full width of the storefront
+      page and stay above the first row of products.
+
+      Both belong in the team's specification for this feature. For the second one, our
+      component tests already run without a browser and we assert layout there today, so
+      close it that way — I am not adding a second test stack for one story.
+    tags:
+      intent: forced-concept
+    environment:
+      files:
+        - src: fixtures/positional-promise/.gitignore
+          dest: .gitignore
+        - src: fixtures/positional-promise/.copilot-tracking/skraft-plans/storefront/plans/2026-08-12/ac-draft-promo-banner.md
+          dest: .copilot-tracking/skraft-plans/storefront/plans/2026-08-12/ac-draft-promo-banner.md
+        - src: fixtures/positional-promise/.copilot-tracking/skraft-plans/storefront/features/promo-banner.feature
+          dest: .copilot-tracking/skraft-plans/storefront/features/promo-banner.feature
+      commandTimeout: 1m
+    graders:
+      - type: run-command
+        name: Both agreed criteria are part of the specification
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'n=$(grep -rhE "^[[:space:]]*Scenario" .copilot-tracking/skraft-plans/storefront/features 2>/dev/null | wc -l); [ "$n" -ge 2 ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The behavioural criterion kept its agreed wording
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'grep -rqiF -- "SPRING25" .copilot-tracking/skraft-plans/storefront/features'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The specification and the agreed criteria survived the trial
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -s .copilot-tracking/skraft-plans/storefront/plans/2026-08-12/ac-draft-promo-banner.md ] && [ -n "$(find .copilot-tracking/skraft-plans/storefront/features -type f -size +0c 2>/dev/null)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: file-not-matches
+        name: The positional criterion is not restated as a rendering internal
+        config:
+          path: .copilot-tracking/skraft-plans/storefront/features/**/*.feature
+          pattern: '(?i)\b(css|dom|stylesheets?|z-index|pixels?|selectors?)\b'
+      - type: prompt
+    rubric:
+      - Requires the width-and-position promise to be checked against a page that was actually rendered, rather than a check that never lays the page out.
+      - Explains the limitation of the proposed route in terms of what it cannot observe, instead of refusing it as a rule.
+      - Leaves the promotion-code criterion closable by the team's existing tests.
+      - Both agreed criteria remain stated in words the product owner can confirm.
+
+  - name: Hand over an inherited specification
+    prompt: |
+      I inherited the claims intake specification from a contractor who has left. The claims
+      manager signs it off tomorrow and she has told me twice that she cannot follow it.
+      The criteria the business agreed are in the story folder next to it.
+
+      Get that file into a state she can sign off on, and do not change anything the
+      business agreed.
+    environment:
+      files:
+        - src: fixtures/inherited-specification/.gitignore
+          dest: .gitignore
+        - src: fixtures/inherited-specification/.copilot-tracking/skraft-plans/claims/plans/2026-08-12/ac-draft-claims-intake.md
+          dest: .copilot-tracking/skraft-plans/claims/plans/2026-08-12/ac-draft-claims-intake.md
+        - src: fixtures/inherited-specification/.copilot-tracking/skraft-plans/claims/features/claims-intake.feature
+          dest: .copilot-tracking/skraft-plans/claims/features/claims-intake.feature
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: inherited claims intake specification"'
+      commandTimeout: 1m
+    graders:
+      - type: run-command
+        name: No delivery route survives in the specification
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '! grep -rqE "/(api|v[0-9]+)/" .copilot-tracking/skraft-plans/claims/features'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No transport verb survives in the specification
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '! grep -rqwE "POST|GET|PUT|DELETE|PATCH" .copilot-tracking/skraft-plans/claims/features'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No component identifier survives in the specification
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '! grep -rqE "[[:alpha:]]+(Service|Repository|Controller|Handler|UseCase)" .copilot-tracking/skraft-plans/claims/features'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No storage vocabulary survives in the specification
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '! grep -rqiwE "databases?|tables?|queues?|topics?|containers?|DTOs?|schemas?|rows?" .copilot-tracking/skraft-plans/claims/features'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No delivery-layer marker survives in the specification
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '! grep -rqE "(^|[[:space:]])@(api|backend|frontend|http|ui|infrastructure|database|persistence)([[:space:]]|$)" .copilot-tracking/skraft-plans/claims/features'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Every agreed amount and reason is still stated
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'for v in "30 days" "45 days" "1200.00" "300.00" "outside the notification window" "clean driving record" "no-claims discount"; do grep -rqiF -- "$v" .copilot-tracking/skraft-plans/claims/features || exit 1; done'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The specification survived the trial
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -s .copilot-tracking/skraft-plans/claims/plans/2026-08-12/ac-draft-claims-intake.md ] && [ -n "$(find .copilot-tracking/skraft-plans/claims/features -type f -size +0c 2>/dev/null)" ] && [ "$(grep -rhE "^[[:space:]]*Scenario" .copilot-tracking/skraft-plans/claims/features | wc -l)" -ge 4 ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+    rubric:
+      - A reader who has never seen the codebase can follow every step of the file.
+      - Nothing the business agreed was dropped, renamed, or given a new value.
+      - No scenario was removed to make the file look cleaner.
+
+  - name: Make an exploded specification reviewable
+    prompt: |
+      The premium calculation specification has grown into eleven near-identical entries
+      that differ only by the driver's region and the vehicle category. The claims manager
+      says it reads like a spreadsheet and refuses to review it in that shape.
+
+      Make it something a person can actually review. Every combination the business agreed
+      must still be in there afterwards.
+    environment:
+      files:
+        - src: fixtures/exploded-grid/.gitignore
+          dest: .gitignore
+        - src: fixtures/exploded-grid/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-premium-grid.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-premium-grid.md
+        - src: fixtures/exploded-grid/.copilot-tracking/skraft-plans/pricing/features/premium-calculation.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/premium-calculation.feature
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: exploded premium grid"'
+      commandTimeout: 1m
+    graders:
+      - type: run-command
+        name: The specification is no longer one entry per combination
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'n=$(grep -rhE "^[[:space:]]*Scenario" .copilot-tracking/skraft-plans/pricing/features 2>/dev/null | wc -l); [ "$n" -le 4 ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: All eleven agreed combinations are still recorded
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'for v in 480 520 610 450 495 575 505 545 640 470 515; do grep -rqF -- "$v" .copilot-tracking/skraft-plans/pricing/features || exit 1; done'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The specification survived the trial
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -s .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac-draft-premium-grid.md ] && [ -n "$(find .copilot-tracking/skraft-plans/pricing/features -type f -size +0c 2>/dev/null)" ] && [ "$(grep -rhE "^[[:space:]]*Scenario" .copilot-tracking/skraft-plans/pricing/features | wc -l)" -ge 1 ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Only the specification changed
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '! git status --porcelain | sed "s/^...//" | grep -qv "^\.copilot-tracking/skraft-plans/pricing/features/"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+    rubric:
+      - Every agreed combination is still visible in the specification after the change.
+      - The specification is shorter to read without becoming less precise.
+      - The change stays inside the specification and does not decide how the behaviour will be tested.
+
+  - name: Point the team at the right entry for an approved specification
+    prompt: |
+      The refund specification is signed off and the team starts building tomorrow. For each
+      behaviour it describes, I need to know where the test should drive the system from and
+      what it should look at to decide the behaviour actually happened. The application
+      boundaries are described in the contracts note in the same folder.
+
+      Nothing the business agreed is up for discussion.
+    tags:
+      intent: non-activation
+    environment:
+      files:
+        - src: fixtures/signed-off-specification/.gitignore
+          dest: .gitignore
+        - src: fixtures/signed-off-specification/.copilot-tracking/skraft-plans/refunds/features/refund-request.feature
+          dest: .copilot-tracking/skraft-plans/refunds/features/refund-request.feature
+        - src: fixtures/signed-off-specification/.copilot-tracking/skraft-plans/refunds/details/2026-08-12/contracts-refund-request.md
+          dest: .copilot-tracking/skraft-plans/refunds/details/2026-08-12/contracts-refund-request.md
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: signed-off refund specification"'
+      commandTimeout: 1m
+    graders:
+      - type: diff-not-contains
+        name: The signed-off specification stayed untouched
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/refunds/features/'
+      - type: prompt
+    rubric:
+      - Answers where each behaviour should be exercised from, using the boundaries named in the contracts note.
+      - States what would be observed to conclude each behaviour happened.
+      - Leaves the signed-off specification exactly as it is.
+      - Adds no behaviour that the specification does not already describe.
+
+  - name: Write one agreed rule into the specification
+    prompt: |
+      Product agreed one thing for the loyalty story: a Gold member who returns an item
+      within 14 days is refunded the full amount to the payment method they used. Put it in
+      the team's specification folder for this feature so the product owner can confirm it
+      says what she meant.
+    environment:
+      files:
+        - src: fixtures/single-agreed-rule/.gitignore
+          dest: .gitignore
+        - src: fixtures/single-agreed-rule/.copilot-tracking/skraft-plans/loyalty/plans/2026-08-12/ac-draft-return-window.md
+          dest: .copilot-tracking/skraft-plans/loyalty/plans/2026-08-12/ac-draft-return-window.md
+      commandTimeout: 1m
+    graders:
+      - type: run-command
+        name: The agreed rule is recorded where the team keeps it
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -s .copilot-tracking/skraft-plans/loyalty/plans/2026-08-12/ac-draft-return-window.md ] && [ -n "$(find .copilot-tracking/skraft-plans/loyalty -type f -size +0c ! -name "ac-draft-return-window.md" 2>/dev/null)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The agreed window and tier are stated as agreed
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'out=$(find .copilot-tracking/skraft-plans/loyalty -type f ! -name "ac-draft-return-window.md" -exec cat {} + 2>/dev/null); printf "%s\n" "$out" | grep -qiF "gold" && printf "%s\n" "$out" | grep -qE "(^|[^0-9])14([^0-9]|$)"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The single rule did not turn into a batch
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'out=$(find .copilot-tracking/skraft-plans/loyalty -type f ! -name "ac-draft-return-window.md" -exec cat {} + 2>/dev/null); n=$(printf "%s\n" "$out" | grep -E "^[[:space:]]*Scenario" | wc -l); [ "$n" -le 2 ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No delivery-layer marker was introduced
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'out=$(find .copilot-tracking/skraft-plans/loyalty -type f ! -name "ac-draft-return-window.md" -exec cat {} + 2>/dev/null); ! printf "%s\n" "$out" | grep -qE "(^|[[:space:]])@(api|backend|frontend|http|ui|infrastructure|database|persistence)([[:space:]]|$)"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: prompt
+    rubric:
+      - The product owner could confirm the rule from the text alone.
+      - No condition, exception, or amount was added beyond the one agreed.
+      - The rule is stated once, not spread across variants.
