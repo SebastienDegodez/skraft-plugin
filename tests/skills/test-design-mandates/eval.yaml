@@ -20,19 +20,13 @@ stimuli:
         Correct. Now explain why I should NOT instantiate domain classes directly in this test.
     graders:
       - type: prompt
-        name: Entry and output boundaries identified
-        config:
-          rubric:
-            - Names entry boundary as RefundHandler use case / interactor (or equivalent application entry point)
-            - Identifies output observation via repository contract (IRefundRepository)
-            - Distinguishes from direct domain object instantiation
-      - type: prompt
-        name: Mandate 1 rationale understood
-        config:
-          rubric:
-            - Explains that direct domain instantiation creates Tested But Unwired (TBU) defects
-            - Identifies that entry through the use case proves wiring, not just the isolated class
-            - Connects boundary enforcement to detecting production failures (untested composition)
+    rubric:
+      - Names entry boundary as RefundHandler use case / interactor (or equivalent application entry point)
+      - Identifies output observation via repository contract (IRefundRepository)
+      - Distinguishes from direct domain object instantiation
+      - Explains that direct domain instantiation creates Tested But Unwired (TBU) defects
+      - Identifies that entry through the use case proves wiring, not just the isolated class
+      - Connects boundary enforcement to detecting production failures (untested composition)
 
   - name: Apply Mandate 4 — Domain Test Extraction Gate (a)
     turns:
@@ -44,13 +38,11 @@ stimuli:
         Why or why not? Apply the two extraction gates from Mandate 4.
     graders:
       - type: prompt
-        name: Gate (a) and (b) applied correctly
-        config:
-          rubric:
-            - Identifies branch unreachability gate (a): both branches < 100 AND >= 100 are reachable via AC → gate (a) CLOSED
-            - Identifies combinatorial economy gate (b): only 2 cases, well under 10–15 scenario threshold → gate (b) CLOSED
-            - Concludes: both gates closed → no domain test extraction authorized
-            - Records decision: "M4 negative — saturated by AC"
+    rubric:
+      - "Identifies branch unreachability gate (a): both branches < 100 AND >= 100 are reachable via AC → gate (a) CLOSED"
+      - "Identifies combinatorial economy gate (b): only 2 cases, well under 10–15 scenario threshold → gate (b) CLOSED"
+      - "Concludes: both gates closed → no domain test extraction authorized"
+      - 'Records decision: "M4 negative — saturated by AC"'
 
   - name: Apply Mandate 2 — Business Language Abstraction (3 layers)
     turns:
@@ -61,20 +53,14 @@ stimuli:
         Now show how the step method should implement that Gherkin line without leaking technical vocabulary upward.
     graders:
       - type: prompt
-        name: Gherkin rewritten with business language only
-        config:
-          rubric:
-            - Rejects "EligibilityApplicationService is instantiated" as a technical detail
-            - Rewrites using business term (e.g. "Given a driver with a clean record")
-            - Explains Gherkin layer must express pure business, not technical wiring
-      - type: prompt
-        name: Step method implements the bridge correctly
-        config:
-          rubric:
-            - Step method calls eligibilityUseCase.Handle(command) with builder factory
-            - Does not hardcode primitives or DTOs directly in the step
-            - Uses builder pattern (e.g. DriverBuilder.withCleanRecord) to separate concerns
-            - Maintains strict abstraction boundary between Gherkin (pure business) and Step (technical bridge)
+    rubric:
+      - Rejects "EligibilityApplicationService is instantiated" as a technical detail
+      - Rewrites using business term (e.g. "Given a driver with a clean record")
+      - Explains Gherkin layer must express pure business, not technical wiring
+      - Step method calls eligibilityUseCase.Handle(command) with builder factory
+      - Does not hardcode primitives or DTOs directly in the step
+      - Uses builder pattern (e.g. DriverBuilder.withCleanRecord) to separate concerns
+      - Maintains strict abstraction boundary between Gherkin (pure business) and Step (technical bridge)
 
   - name: Apply Mandate 3 — User Journey Completeness
     turns:
@@ -85,19 +71,13 @@ stimuli:
         Now give an example of a complete three-part journey for a refund request.
     graders:
       - type: prompt
-        name: Then clause identified as mandatory
-        config:
-          rubric:
-            - Identifies test is incomplete without observable outcome
-            - Explains Then must assert on something a user can observe (not internal state)
-            - Distinguishes observable outcome (persisted refund returned with id) from internal state (private field value)
-      - type: prompt
-        name: Complete journey example given
-        config:
-          rubric:
-            - Given: refund request in valid state (submitted form, valid amounts)
-            - When: submitting refund through the API/use case
-            - Then: refund appears as Pending and id is returned (observable business outcome)
+    rubric:
+      - Identifies test is incomplete without observable outcome
+      - Explains Then must assert on something a user can observe (not internal state)
+      - Distinguishes observable outcome (persisted refund returned with id) from internal state (private field value)
+      - "Given: refund request in valid state (submitted form, valid amounts)"
+      - "When: submitting refund through the API/use case"
+      - "Then: refund appears as Pending and id is returned (observable business outcome)"
 
   - name: Build and validate Coverage Matrix
     turns:
@@ -114,19 +94,13 @@ stimuli:
         Explain which rows need domain tests and why (or why not).
     graders:
       - type: prompt
-        name: Complete coverage matrix built
-        config:
-          rubric:
-            - Creates separate scenario rows for Gold, Silver, and Invalid tier (distinct business outcomes)
-            - Consolidates price boundaries into parametrized acceptance tests (not separate scenarios)
-            - Names use case entry boundary (CalculatePayableTotal or equivalent)
-            - Assigns Application layer for each tier scenario
-            - Provides extraction reason ("—" if no domain test needed, or "branch_unreachable_via_AC" / "combinatorial_economy")
-            - Total: 3 primary scenarios (one per tier)
-      - type: prompt
-        name: Extraction gate decisions justified
-        config:
-          rubric:
-            - Each tier is covered by AC, both branches (< 100 and >= 100) are reachable → no domain test (Gate a/b closed)
-            - Explains that 3 acceptance scenarios + parametrization covers the complete rule
-            - May mention: if combinatorial size exploded (e.g., 15 tiers with many price boundaries), domain test would emerge as economical
+    rubric:
+      - Creates separate scenario rows for Gold, Silver, and Invalid tier (distinct business outcomes)
+      - Consolidates price boundaries into parametrized acceptance tests (not separate scenarios)
+      - Names use case entry boundary (CalculatePayableTotal or equivalent)
+      - Assigns Application layer for each tier scenario
+      - Provides extraction reason ("—" if no domain test needed, or "branch_unreachable_via_AC" / "combinatorial_economy")
+      - "Total: 3 primary scenarios (one per tier)"
+      - Each tier is covered by AC, both branches (< 100 and >= 100) are reachable → no domain test (Gate a/b closed)
+      - Explains that 3 acceptance scenarios + parametrization covers the complete rule
+      - "May mention: if combinatorial size exploded (e.g., 15 tiers with many price boundaries), domain test would emerge as economical"

@@ -27,21 +27,15 @@ stimuli:
         Now explain the naming convention for this helper and what parameters should be exposed.
     graders:
       - type: prompt
-        name: Helper extracted with correct pattern
-        config:
-          rubric:
-            - Creates helper starting with A, An, or Create (e.g. ADriver, AEligibilityRequest, CreatePolicy)
-            - Removes repetition in all 4 tests
-            - Each test calls the helper instead of inline setup
-            - Tests remain readable and test logic is visible
-      - type: prompt
-        name: Naming and parameterization justified
-        config:
-          rubric:
-            - "Explains 'A' / 'An' pattern names helpers as test fixtures (e.g. ADriver, ARequest)"
-            - "Parameters only what VARIES across tests (e.g. age, years, vehicle type)"
-            - "Defaults for happy-path values (Age: 25, LicenseYears: 5, Type: sedan)"
-            - "Demonstrates one test using modified parameter (e.g. ADriver(age: 17))"
+    rubric:
+      - Creates helper starting with A, An, or Create (e.g. ADriver, AEligibilityRequest, CreatePolicy)
+      - Removes repetition in all 4 tests
+      - Each test calls the helper instead of inline setup
+      - Tests remain readable and test logic is visible
+      - "Explains 'A' / 'An' pattern names helpers as test fixtures (e.g. ADriver, ARequest)"
+      - "Parameters only what VARIES across tests (e.g. age, years, vehicle type)"
+      - "Defaults for happy-path values (Age: 25, LicenseYears: 5, Type: sedan)"
+      - "Demonstrates one test using modified parameter (e.g. ADriver(age: 17))"
 
   - name: Apply R2 — Rename for Business Intent
     turns:
@@ -55,22 +49,16 @@ stimuli:
         Explain the renaming pattern and why technical words were removed.
     graders:
       - type: prompt
-        name: Tests renamed with business intent
-        config:
-          rubric:
-            - Renames to When<BusinessCondition>_Should<BusinessOutcome> pattern
-            - Example: "WhenDriverMeetsAllCriteria_ShouldBeEligible"
-            - Example: "WhenDriverIsTooYoung_ShouldBeRejected"
-            - Removes all technical words (Handle, Returns, Validate, OK, DTO, etc.)
-            - Uses business vocabulary (eligible, rejected, approved, pending, etc.)
-      - type: prompt
-        name: Pattern and rationale explained
-        config:
-          rubric:
-            - Explains When_Should pattern expresses business scenario and outcome, not implementation
-            - Identifies removed technical terms and why they hide intent (Handler, Returns, DTO)
-            - Gives business terms for rejections (rejected, denied, failed-check, etc.)
-            - Notes that test readers instantly see business value, not implementation details
+    rubric:
+      - Renames to When<BusinessCondition>_Should<BusinessOutcome> pattern
+      - 'Example: "WhenDriverMeetsAllCriteria_ShouldBeEligible"'
+      - 'Example: "WhenDriverIsTooYoung_ShouldBeRejected"'
+      - Removes all technical words (Handle, Returns, Validate, OK, DTO, etc.)
+      - Uses business vocabulary (eligible, rejected, approved, pending, etc.)
+      - Explains When_Should pattern expresses business scenario and outcome, not implementation
+      - Identifies removed technical terms and why they hide intent (Handler, Returns, DTO)
+      - Gives business terms for rejections (rejected, denied, failed-check, etc.)
+      - Notes that test readers instantly see business value, not implementation details
 
   - name: Apply R3 — Consolidate to Parametrized Test
     turns:
@@ -88,22 +76,16 @@ stimuli:
         Show the parametrized [Theory] and explain which row differs and why.
     graders:
       - type: prompt
-        name: Consolidation candidates identified correctly
-        config:
-          rubric:
-            - Recognizes first 3 tests (Age 25/30/40 eligible) belong to same scenario class
-            - Consolidates to single [Theory] with [InlineData(25)] [InlineData(30)] [InlineData(40)]
-            - Keeps "Age16 Ineligible" separate because it's a different scenario (rejection condition)
-            - Keeps "Vehicle Age" separate because it tests different business rule (vehicle constraint)
-            - Explains: consolidation is safe only when assertion structure and business outcome are identical
-      - type: prompt
-        name: Safe consolidation boundaries understood
-        config:
-          rubric:
-            - Confirms parametrized test checks same condition on varied inputs
-            - Distinguishes from unsound consolidation: "consolidate everything with an if statement in the test"
-            - Explains that different outcome types (eligible vs ineligible, pass vs reject) require separate tests
-            - Notes: "I changed only test structure, not coverage or behavior"
+    rubric:
+      - Recognizes first 3 tests (Age 25/30/40 eligible) belong to same scenario class
+      - Consolidates to single [Theory] with [InlineData(25)] [InlineData(30)] [InlineData(40)]
+      - Keeps "Age16 Ineligible" separate because it's a different scenario (rejection condition)
+      - Keeps "Vehicle Age" separate because it tests different business rule (vehicle constraint)
+      - "Explains: consolidation is safe only when assertion structure and business outcome are identical"
+      - Confirms parametrized test checks same condition on varied inputs
+      - 'Distinguishes from unsound consolidation: "consolidate everything with an if statement in the test"'
+      - Explains that different outcome types (eligible vs ineligible, pass vs reject) require separate tests
+      - 'Notes: "I changed only test structure, not coverage or behavior"'
 
   - name: Apply R4 — Extract Custom Assertion
     turns:
@@ -121,21 +103,15 @@ stimuli:
         Explain the naming convention and why hiding assertions inside helpers is risky.
     graders:
       - type: prompt
-        name: Custom assertion extracted correctly
-        config:
-          rubric:
-            - Creates helper named ShouldBeRejectedWith(result, reasonCode) or similar
-            - Extracts all 3 assertions into one place
-            - Test bodies become single-line calls to the helper
-            - Each test is shorter and intent is clearer
-      - type: prompt
-        name: Naming and safety boundaries understood
-        config:
-          rubric:
-            - Helper name follows ShouldBe<State> or ShouldHave<Property> pattern
-            - Explains danger of hiding assertions: can lose observability of actual vs expected
-            - Confirms helper ONLY asserts (no arrange/act inside it)
-            - Notes: assertions must fail loudly with clear message on mismatch
+    rubric:
+      - Creates helper named ShouldBeRejectedWith(result, reasonCode) or similar
+      - Extracts all 3 assertions into one place
+      - Test bodies become single-line calls to the helper
+      - Each test is shorter and intent is clearer
+      - Helper name follows ShouldBe<State> or ShouldHave<Property> pattern
+      - "Explains danger of hiding assertions: can lose observability of actual vs expected"
+      - Confirms helper ONLY asserts (no arrange/act inside it)
+      - "Notes: assertions must fail loudly with clear message on mismatch"
 
   - name: Apply R5 — Split Test Class by Scenario Group
     turns:
@@ -152,22 +128,16 @@ stimuli:
         How should shared helpers be organized after the split?
     graders:
       - type: prompt
-        name: Test class split by scenario group
-        config:
-          rubric:
-            - Creates separate class/file per scenario group (WhenDriverMeetsAllCriteria_Tests, WhenDriverIsTooYoung_Tests, etc.)
-            - File names match class names exactly
-            - Each class is focused on one business scenario outcome
-            - Edge cases and boundary values move to a dedicated "Boundaries" class
-            - Original file removed or empty
-      - type: prompt
-        name: Shared helpers organized correctly
-        config:
-          rubric:
-            - Moves common helpers (A<Domain>, Create<Fixture>) to shared base class or TestKit
-            - Each test class inherits from base or imports static helpers
-            - Eliminates helper duplication across split classes
-            - Maintains DRY principle while keeping test classes focused
+    rubric:
+      - Creates separate class/file per scenario group (WhenDriverMeetsAllCriteria_Tests, WhenDriverIsTooYoung_Tests, etc.)
+      - File names match class names exactly
+      - Each class is focused on one business scenario outcome
+      - Edge cases and boundary values move to a dedicated "Boundaries" class
+      - Original file removed or empty
+      - Moves common helpers (A<Domain>, Create<Fixture>) to shared base class or TestKit
+      - Each test class inherits from base or imports static helpers
+      - Eliminates helper duplication across split classes
+      - Maintains DRY principle while keeping test classes focused
 
   - name: Preserve GREEN state during refactoring
     turns:
@@ -178,20 +148,14 @@ stimuli:
         What signals tell you a refactoring went wrong and you should revert?
     graders:
       - type: prompt
-        name: Refactoring validation process described
-        config:
-          rubric:
-            - Run full test suite before refactoring (baseline green)
-            - Apply refactoring changes
-            - Run full test suite after refactoring (must still be green)
-            - Verify test count unchanged (no tests skipped or deleted)
-            - Confirm code coverage threshold maintained or improved
-      - type: prompt
-        name: Regression signals identified
-        config:
-          rubric:
-            - Test turns red → stop, revert, investigate
-            - Test count decreased → accidental deletion or skip
-            - Code coverage drops below threshold → helper extracted behavior away
-            - Build breaks → refactoring introduced syntax error
-            - First regression signal → REVERT entire change and re-examine
+    rubric:
+      - Run full test suite before refactoring (baseline green)
+      - Apply refactoring changes
+      - Run full test suite after refactoring (must still be green)
+      - Verify test count unchanged (no tests skipped or deleted)
+      - Confirm code coverage threshold maintained or improved
+      - Test turns red → stop, revert, investigate
+      - Test count decreased → accidental deletion or skip
+      - Code coverage drops below threshold → helper extracted behavior away
+      - Build breaks → refactoring introduced syntax error
+      - First regression signal → REVERT entire change and re-examine
