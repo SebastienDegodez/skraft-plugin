@@ -1,6 +1,6 @@
 ---
 name: test-design-mandates
-description: Use when designing test coverage matrices, assigning tests to Clean Architecture layers, planning the outside-in implementation order, or applying the Walking Skeleton strategy. Ensures every behaviour is tested at the right level with no redundancy. Load after writing Gherkin scenarios.
+description: Use when planning which tests an approved set of examples actually needs before any code is written — where each test enters and what it observes, whether a rule those examples already cover deserves a test of its own, and whether a scenario reads in business terms and ends in an outcome a user could observe.
 ---
 
 # Test Design Mandates

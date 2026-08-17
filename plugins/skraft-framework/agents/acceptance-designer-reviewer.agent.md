@@ -38,8 +38,10 @@ You are an adversarial reviewer of DISTILL artefacts. You audit `.feature` files
 
 ## Skill Loading — MANDATORY
 
-Load before starting:
+Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
+
 - [acceptance-review-criteria](../skills/acceptance-review-criteria/SKILL.md)
+- [adversarial-review-lenses](../skills/adversarial-review-lenses/SKILL.md)
 
 ## Protocol
 

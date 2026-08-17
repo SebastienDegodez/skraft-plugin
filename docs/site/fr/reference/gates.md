@@ -33,7 +33,7 @@ vérifie, sa **condition de passage** (binaire) et sa **sévérité**.
 | **MEDIUM** | Design smell, choix sous-optimal. | Force `changes_requested`. |
 | **LOW** | Détail de style ou de cohérence. | `approved` avec note. |
 
-Total : **46 gates** réparties sur les 5 phases. Tout ce qui suit est la grille
+Total : **47 gates** réparties sur les 5 phases. Tout ce qui suit est la grille
 intégrale, telle que chaque reviewer l'applique.
 
 ---
@@ -182,7 +182,7 @@ Gherkin, le plan de test et le plan d'implémentation.
 
 ---
 
-## DELIVER — G1 à G9
+## DELIVER — G1 à G10
 
 Producteur : `software-engineer` ; vérificateur : `quality-gates-lens`. Chaque gate
 est attestée par une **évidence falsifiable** (SHA git, sortie d'outil déposée sur
@@ -199,6 +199,7 @@ disque) que le reviewer re-résout sans jamais rejouer le build.
 | **G7** | Aucun mock dans le cœur Domain/Application. | Attestation par grep : zéro symbole de framework de mock dans ces couches. | HIGH |
 | **G8** | Format de commit conventionnel. | Chaque commit couvert suit `<type>(<scope>): <sujet>`. | MEDIUM |
 | **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque cycle, le fichier de test n'a changé que par **ajout** entre les snapshots RED et GREEN. | BLOCKER |
+| **G10** | RED constaté : le test a bien été exécuté et a **échoué** avant l'arrivée de l'implémentation. | Pour chaque cycle, un stdout RED capturé au moment du RED et haché en sha256, plus un code de sortie **non nul** enregistré. | BLOCKER |
 
 > Une gate réellement non pertinente est marquée `not_applicable` **avec
 > justification** — jamais en remplacement d'un `fail` ou d'une évidence manquante.

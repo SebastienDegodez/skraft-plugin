@@ -125,6 +125,13 @@ describe('unified Vally runner', () => {
     writeFileSync(callsPath, '')
     const committedSpec = join(repoRoot, 'tests/skills/outside-in-tdd/eval.yaml')
     const before = readFileSync(committedSpec, 'utf8')
+    // Read the two names out of the spec rather than hardcoding them. Naming a
+    // stimulus here would make this test a second, undeclared owner of the
+    // eval's contents — it would go red the next time the portfolio is
+    // rebalanced, which is a change to the instrument and no business of the
+    // runner's. What is under test is that the selector narrows and that the
+    // committed file is left alone, neither of which depends on the wording.
+    const [selected, excluded] = [...before.matchAll(/^ {2}- name: (.+)$/gm)].map((match) => match[1].trim())
 
     execFileSync('bash', [join(repoRoot, 'eng/run-vally-evals.sh'), 'outside-in-tdd'], {
       cwd: repoRoot,
@@ -138,7 +145,7 @@ describe('unified Vally runner', () => {
         LIVE_LOGS: '0',
         WORKERS: '1',
         PARALLEL: '1',
-        STIMULI: 'Preserve an approved',
+        STIMULI: selected,
         PILOT_RUNS: '5',
       },
     })
@@ -162,8 +169,8 @@ describe('unified Vally runner', () => {
     )
 
     const pilot = readFileSync(join(resultsPath, 'outside-in-tdd/pilot.eval.yaml'), 'utf8')
-    strictEqual(pilot.includes('Preserve an approved expectation'), true)
-    strictEqual(pilot.includes('Resist a generic design'), false)
+    strictEqual(pilot.includes(selected), true)
+    strictEqual(pilot.includes(excluded), false)
     strictEqual(pilot.includes('runs: 5'), true)
     strictEqual(readFileSync(committedSpec, 'utf8'), before)
   })

@@ -13,7 +13,8 @@ persona: tech-lead
 ## When to use
 
 - When the active repository is a .NET solution (`*.sln`, `*.slnx`, `*.csproj`, `Directory.Packages.props`)
-- During the COMMIT phase, to produce falsifiable evidence for gates G1 to G9
+- During the COMMIT phase, to produce falsifiable evidence for gates G1 to G10
+- At RED, to capture the run that proves the test fails — the only evidence G10 accepts, and it cannot be reconstructed later
 - Loaded by the `software-engineer` after .NET stack detection via `resolving-stack-commands`
 - If multiple stacks coexist, run in parallel with the other adapters
 
@@ -26,7 +27,7 @@ persona: tech-lead
 ## Exit contract
 
 - Evidence files in `$EV/`: stdout redirected to disk, exit code, sha256, RED/GREEN snapshots
-- `gates[G1..G9]` entries of the `quality-gates-evidence-contract` populated
+- `gates[G1..G10]` entries of the `quality-gates-evidence-contract` populated
 - Complete `qg-{story}.json` verifiable by the `quality-gates-lens`
 
 ## Invariants

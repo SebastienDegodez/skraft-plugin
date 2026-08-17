@@ -135,8 +135,15 @@ function caveats(verdicts) {
     if (verdict.inactivatedCount) {
       parts.push(`${verdict.inactivatedCount} pair(s) left out of the tally — the skill never loaded on the treatment side`)
     }
+    const silent = neverActivatedStimuli(verdict)
+    // Naming them turns an unactionable count into the next thing to fix: a
+    // stimulus that never loads the skill is a gap between what the eval asks
+    // for and what the skill's description says it is for.
+    if (silent.length) parts.push(`never loaded on ${silent.join(', ')}`)
     const rate = verdict.metrics?.activation?.rate
     if (rate != null && rate < 1) parts.push(`loaded on ${Math.round(rate * 100)}% of the runs that expected it`)
+    const ties = tieNote(verdict)
+    if (ties) parts.push(ties)
     const judge = verdict.judgeTally
     const sign = verdict.signTest
     if (judge && sign?.source === 'graders' && (judge.wins !== sign.wins || judge.losses !== sign.losses)) {
@@ -146,6 +153,44 @@ function caveats(verdicts) {
   })
 
   return notes.length ? ['', 'Before reading the table:', '', ...notes] : []
+}
+
+/**
+ * Stimuli where the skill loaded on none of their trials, as `name (0/n)`.
+ *
+ * Grouped rather than listed per trial: non-activation is a property of the
+ * stimulus wording, so the same stimulus failing on every one of its runs is one
+ * finding, not n of them. A stimulus that loaded at least once is left out — it
+ * activates, just not reliably, and `activation.rate` already carries that.
+ */
+function neverActivatedStimuli(verdict) {
+  const counts = new Map()
+  for (const pair of verdict.graderPairs ?? []) {
+    const name = pair?.stimulus
+    if (name == null) continue
+    const seen = counts.get(name) ?? { total: 0, inactivated: 0 }
+    seen.total += 1
+    if (pair.outcome === 'inactivated') seen.inactivated += 1
+    counts.set(name, seen)
+  }
+
+  return [...counts]
+    .filter(([, seen]) => seen.inactivated === seen.total)
+    .map(([name, seen]) => `${name} (0/${seen.total})`)
+}
+
+/** Where the ties landed, when there are ties and the split is known. */
+function tieNote(verdict) {
+  const breakdown = verdict.tieBreakdown
+  if (!breakdown) return null
+
+  const described = [
+    breakdown.ceiling ? `${breakdown.ceiling} at the ceiling — the baseline already scored full marks` : null,
+    breakdown.middle ? `${breakdown.middle} in the same grader bucket` : null,
+    breakdown.floor ? `${breakdown.floor} at the floor — neither arm scored` : null,
+  ].filter(Boolean)
+
+  return described.length ? `ties: ${described.join(', ')}` : null
 }
 
 function agentSection(verdicts) {

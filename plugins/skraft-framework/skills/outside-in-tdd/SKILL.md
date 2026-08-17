@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: Use when writing tests from the outside-in, defining behavior before code, or any feature where tests should start from observable business behavior and let internal design emerge. Covers double-loop TDD, 4-phase cycle, boundary-to-boundary testing, iron rule of tests, walking skeleton, and post-GREEN wiring verification.
+description: Use when an approved business example has to become working software — deciding what to deliver now and what to defer, what counts as done for the first route through a feature, and in what order to take the remaining examples and any wider integration work. Also use when the implementation contradicts an approved expectation, or when the suite is green but the running behavior is not.
 ---
 
 # Outside-In TDD

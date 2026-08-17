@@ -93,6 +93,36 @@ describe('buildPrComment', () => {
     ok(comment.includes('2W/1T/2L'))
   })
 
+  it('names the stimuli the skill never loaded on, so the gap is actionable', () => {
+    const comment = buildPrComment(
+      results(
+        verdict({
+          inactivatedCount: 3,
+          graderPairs: [
+            { stimulus: 'Apply Mandate 1', outcome: 'inactivated' },
+            { stimulus: 'Apply Mandate 1', outcome: 'inactivated' },
+            { stimulus: 'Apply Mandate 4', outcome: 'win' },
+            { stimulus: 'Apply Mandate 4', outcome: 'tie' },
+            { stimulus: 'Build a matrix', outcome: 'inactivated' },
+          ],
+        }),
+      ),
+    )
+
+    ok(comment.includes('Apply Mandate 1 (0/2)'))
+    ok(comment.includes('Build a matrix (0/1)'))
+    // Loaded at least once, so it is a reliability question, not a wording gap.
+    ok(!comment.includes('Apply Mandate 4 (0/'))
+  })
+
+  it('says where the ties landed rather than leaving them a bare count', () => {
+    const comment = buildPrComment(results(verdict({ tieBreakdown: { ceiling: 2, middle: 3, floor: 0 } })))
+
+    ok(comment.includes('2 at the ceiling'))
+    ok(comment.includes('3 in the same grader bucket'))
+    ok(!comment.includes('at the floor'))
+  })
+
   it('shows a dash instead of crashing on a null score', () => {
     const comment = buildPrComment(results(verdict({ meanScore: null, confidenceInterval: null, metrics: null })))
     ok(comment.includes('—'))

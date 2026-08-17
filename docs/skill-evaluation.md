@@ -144,15 +144,36 @@ A suite needs `@github/copilot-sdk`, a devDependency, so any job that runs one m
 3. Judge outcomes, not techniques. `Identified the missing dependency as the cause
    of the failure` is an outcome; `ran the diagnostic command with --verbose` is
    an implementation detail that a different valid approach would fail.
-4. Include a non-activation stimulus (`expect_activation: false`) for a request
-   that looks like the skill's territory but falls outside it. Restraint is part
-   of the behaviour.
-5. Budget for **power, not for a floor**. The sign test runs on discordant pairs,
+4. Include a non-activation stimulus (`tags: { intent: non-activation }`) for a
+   request that looks like the skill's territory but falls outside it. Restraint
+   is part of the behaviour.
+5. Write the `rubric` as a **sibling of `graders`**, and give every stimulus a
+   `skill-invocation` grader — `required` on positive cases, `disallowed` on the
+   near miss. A rubric nested under `graders[].config` is silently replaced by
+   Vally's generic default, which a competent baseline satisfies as readily as
+   the treatment; the run then costs an hour to report a tie. Set
+   `scoring: scale_1_10` on `prompt` graders, and never declare
+   `scoring.weights` — see [How a verdict is decided](#how-a-verdict-is-decided).
+
+   ```yaml
+   graders:
+     - type: prompt
+       config:
+         scoring: scale_1_10
+     - type: skill-invocation
+       name: The skill under test is loaded
+       config:
+         required:
+           - <skill>
+   rubric:
+     - <observable outcome, not a technique>
+   ```
+6. Budget for **power, not for a floor**. The sign test runs on discordant pairs,
    and below 6 of them no tally can reach `p <= 0.05` — a flawless 5W/0L sweep
    scores 0.0625. Ties eat pairs, so plan **12–15 trials** for a defendable
    verdict. Buy that power up front: topping up runs on a noisy comparison is the
    worst-value spend in the protocol.
-6. Spend on **depth over breadth**. `3 stimuli × 5 runs` and `5 stimuli × 3 runs`
+7. Spend on **depth over breadth**. `3 stimuli × 5 runs` and `5 stimuli × 3 runs`
    cost the same; only the first gives per-scenario cells worth reading, because
    the verdict pools every trial while the per-scenario tallies do not. Keep each
    stimulus to **one** decision, asked through the narrowest task that forces it —
@@ -305,6 +326,29 @@ When **p ≤ 0.05**, the result is unlikely to be chance, so it earns a credible
 only looked at wins and ignored losses, you would need p ≤ 0.025 per tail. Instead,
 Vally asks: "Could this extreme imbalance have happened by coin flip?" That is
 the two-sided question, and it avoids inflation.
+
+#### Ties are three different findings
+
+Ties dominate most tallies, and only one of the three kinds is a statement about the
+skill. The PR comment splits them, because the fix is different in each case:
+
+| What the comment says | What happened | What fixes it |
+| --- | --- | --- |
+| `n at the ceiling` | Both arms scored full marks. The stimulus is already solved by a plain agent. | Replace the stimulus, or keep it deliberately as a regression guard. More runs cannot help. |
+| `n in the same grader bucket` | The arms differed, but not by a whole step on the judge's scale. An LLM grader returns one integer, so a difference in *method* that leaves the answer correct does not move it. | Sharpen the rubric onto the observable that actually differs, or prove it with a deterministic grader. |
+| `n at the floor` | Neither arm scored. The task is out of reach for both, or the rubric asks for something neither attempts. | Re-scope the stimulus or the rubric. |
+
+A fourth case never reaches the tally at all: a trial where the skill never loaded is
+excluded, and the comment names the stimulus as `never loaded on <name> (0/n)`. Those
+pairs measured a baseline against a baseline. The gap is between the stimulus wording
+and what the skill's `description` claims to cover — fix that, not the trial count.
+
+Every stimulus declares a `skill-invocation` grader so that "did it load?" is a
+deterministic, per-stimulus fact rather than an inference. It is deliberately kept out
+of the paired score: the baseline arm runs with no skills mounted, so counting it
+would hand the treatment a standing win on every pair and manufacture significance.
+`eng/lib/paired-trials.mjs` removes it before the comparison — which is why a skill
+spec must never declare `scoring.weights`.
 
 ### Score and confidence interval
 

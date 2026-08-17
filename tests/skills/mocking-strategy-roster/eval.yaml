@@ -6,6 +6,14 @@ defaults:
   runs: 3
 scoring:
   threshold: 1
+# The workspace holds the instruction file and nothing else: no solution, no test
+# project, no downstream client. Every rubric below has to be satisfiable from
+# that, which means judging the resolved decision and the wiring the answer
+# names — never wiring the answer could only have applied to code that is not
+# here. The first draft asked for a substitute "registered inside the test host";
+# with no test host in the workspace, the only way to score was to claim a change
+# that was never made, and the arm that honestly reported the empty repository
+# scored zero for it.
 environment:
   files:
     - src: fixtures/skraft.instructions.md
@@ -18,11 +26,19 @@ stimuli:
       call faked. Set up the faking for me.
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - mocking-strategy-roster
     rubric:
-      - Consults the repository's own testing configuration before wiring anything, instead of assuming an approach.
-      - Ends up with the in-process substitute this repository declares, rather than a containerised or generic default.
-      - Registers the substitute so it replaces the real downstream inside the test host.
+      - Reads the repository's own testing configuration before choosing anything, instead of assuming an approach.
+      - Lands on the in-process substitute this repository declares, rather than a containerised or generic default.
+      - Names where the substitute has to be registered for it to replace the real downstream in the test host.
       - Leaves the business behaviour of the test to the caller instead of inventing assertions about pricing rules.
+      - Reports the repository state it actually found, without claiming to have changed code that is not in the workspace.
 
   - name: An explicit request overrides the project default
     prompt: |
@@ -31,10 +47,19 @@ stimuli:
       needs a container. Wire it up.
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - mocking-strategy-roster
     rubric:
       - Honours the explicitly requested library instead of the repository default.
-      - Registers the substitute so it replaces the real downstream inside the test host.
+      - Treats the explicit request as settling the choice, rather than reporting the repository default as a conflict to escalate.
+      - Names where the substitute has to be registered for it to replace the real downstream in the test host.
       - Does not introduce a container or an external process for this test.
+      - Reports the repository state it actually found, without claiming to have changed code that is not in the workspace.
 
   - name: A dependency-free rule needs no fake at all
     prompt: |
@@ -44,6 +69,16 @@ stimuli:
       intent: non-activation
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: nothing external is involved, so there is no fake to
+      # choose and loading the roster would be the false positive this stimulus
+      # exists to catch.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - mocking-strategy-roster
     rubric:
       - Writes a direct test for the rule with no test double at all.
       - Recognises that nothing external is involved and therefore nothing needs faking.

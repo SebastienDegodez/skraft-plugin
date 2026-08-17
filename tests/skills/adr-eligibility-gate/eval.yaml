@@ -3,7 +3,7 @@ description: Evaluates whether candidate architectural choices are filtered befo
 type: capability
 defaults:
   timeout: 3m
-  runs: 3
+  runs: 5
 scoring:
   threshold: 1
 stimuli:
@@ -24,6 +24,13 @@ stimuli:
       Which of these should I write up as architecture decision records?
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - adr-eligibility-gate
     rubric:
       - Distinguishes choices that are already imposed by the existing codebase from choices that remain genuinely open.
       - Selects the data-source choice as the one carrying a real trade-off, and justifies that with its consequences.
@@ -38,6 +45,13 @@ stimuli:
       Draft them for me.
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - adr-eligibility-gate
     rubric:
       - Declines to produce records for choices that are settled team convention rather than open questions.
       - Explains what makes each of them a convention instead of a decision.
@@ -53,6 +67,16 @@ stimuli:
       intent: non-activation
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: the request is settled, so the eligibility gate has
+      # nothing to arbitrate and loading it would be the false positive this
+      # stimulus exists to catch.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - adr-eligibility-gate
     rubric:
       - Produces the requested record rather than re-litigating whether it deserves one.
       - Carries the stated context, the chosen option, the rejected alternatives and the accepted cost into the record.

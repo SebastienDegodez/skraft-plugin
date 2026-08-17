@@ -25,7 +25,7 @@ the verdict is `inconclusive` (never `pass`).
 
 Load before any review work. If missing, announce `[SKILL MISSING] {name}` and continue.
 
-- [quality-gates-evidence-contract](../../skills/quality-gates-evidence-contract/SKILL.md) — schema, falsification surface, fixed gate taxonomy (G1..G9).
+- [quality-gates-evidence-contract](../../skills/quality-gates-evidence-contract/SKILL.md) — schema, falsification surface, fixed gate taxonomy (G1..G10).
 
 ## Inputs (handed by `software-engineer-reviewer`)
 
@@ -39,9 +39,16 @@ You DO NOT receive the cold-reader's output, nor do you receive any other lens's
 
 ### 1. Locate the log
 
-Resolve the evidence log path. If absent, malformed JSON, or `$schema` not equal
-to `quality-gates-evidence/v1` → emit a single defect `missing_log` /
-`malformed_log` / `unsupported_schema` and return `verdict: inconclusive`.
+Resolve the evidence log path. If absent, malformed JSON, or `$schema` neither
+`quality-gates-evidence/v2` (current) nor `quality-gates-evidence/v1` (legacy —
+old logs stay parseable under their declared version) → emit a single defect
+`missing_log` / `malformed_log` / `unsupported_schema` and return
+`verdict: inconclusive`.
+
+A `v1` log predates the G10 fields (`red_stdout_ref`, `red_stdout_sha256`,
+`red_exit_code_ref`), so its RED evidence is simply absent: G10 resolves
+`inconclusive` — never `pass`, and you do NOT downgrade it to `not_applicable`
+to "save" the gate.
 
 ### 2. Self-consistency checks (no Git access yet)
 
@@ -68,6 +75,9 @@ For each gate, run the verification rule from the contract's *Falsification surf
 | `gates[].exit_code_ref` | file exists; for `status: "pass"` content equals `0` |
 | `test_integrity.cycles[].red_snapshot_ref` | content equals `git show {red_commit}:{test_file}` |
 | `test_integrity.cycles[].green_snapshot_ref` | same against `green_commit` |
+| `test_integrity.cycles[].red_stdout_ref` | file exists at the declared path (G10) |
+| `test_integrity.cycles[].red_stdout_sha256` | re-hashing the RED stdout file equals the declared value (G10) |
+| `test_integrity.cycles[].red_exit_code_ref` | file exists; content is NON-zero — a `0` means the test never failed (G10) |
 
 You access the Git tree via `Read` on the working copy (HEAD) and via `Glob`
 to enumerate commit-bound paths. You DO NOT call `git` as a shell tool.
@@ -86,11 +96,12 @@ This is the mechanical check of the Iron Rule of Tests.
 | Condition | Verdict |
 |-----------|---------|
 | log missing, malformed, or schema unsupported | `inconclusive` |
-| any referenced file unreachable, or `stdout_sha256` mismatches, or snapshot does not match `git show` | `inconclusive` |
+| any referenced file unreachable, or `stdout_sha256` / `red_stdout_sha256` mismatches, or snapshot does not match `git show` | `inconclusive` |
 | any `gates[].status == "fail"` | `fail` |
 | internal contradiction (`status: "pass"` with `tests_failed > 0`) | `fail` |
 | G8 regex fails on any `commits_covered[].subject` | `fail` |
 | G9 RED→GREEN diff shows removal/mutation | `fail` |
+| G10 any cycle's `red_exit_code_ref` content is `0` — the RED run never failed | `fail` |
 | `commits_covered[].sha` does not resolve, or `files_changed` lists a path absent from the diff | `fail` |
 | every applicable gate is `pass` and every reference resolves | `pass` |
 
@@ -107,7 +118,7 @@ Return EXACTLY this JSON:
   "defects": [
     {
       "id": "D<N>",
-      "gate": "G1..G9 | meta",
+      "gate": "G1..G10 | meta",
       "severity": "blocker | high | medium | low",
       "location": "evidence file path or git commit ref",
       "description": "what is wrong, citing the field",

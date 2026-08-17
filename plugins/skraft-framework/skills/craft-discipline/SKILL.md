@@ -1,6 +1,6 @@
 ---
 name: craft-discipline
-description: Use when completing a TDD phase or before committing — self-discipline checkpoints the software-engineer runs against their own output. Not a review contract. The reviewer verifies artifacts independently.
+description: Use when a change looks finished and is about to be committed, or a phase has just turned green — the self-check the software-engineer runs before claiming the work is done. Not a review contract. The reviewer verifies artifacts independently.
 ---
 
 # Craft Discipline

@@ -24,9 +24,10 @@ persona: tech-lead
 
 ## Exit contract
 
-- `qg-{story}.json` file conforming to the `quality-gates-evidence/v1` schema
+- `qg-{story}.json` file conforming to the `quality-gates-evidence/v2` schema
 - Ancillary files in `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/`
 - Each gate G1-G9 with `status`, `command_executed`, `exit_code_ref`, `stdout_ref`, `stdout_sha256`, `stdout_tail`
+- G10 with `status` alone — its evidence lives in the per-cycle `red_stdout_ref`, `red_stdout_sha256` and `red_exit_code_ref` fields
 - `snapshots/` directory containing `red-{n}-{file}` / `green-{n}-{file}` pairs
 
 ## Invariants
@@ -35,7 +36,8 @@ persona: tech-lead
 - **No manual transcription** — stdout and sha256 are produced by shell tools, never dictated
 - **`not_applicable` ≠ `fail`** — an inapplicable gate requires an explicit `rationale` field
 - **RED→GREEN integrity (G9)** — only added lines are allowed between RED and GREEN; any removal or mutation of an existing line is a G9 violation
-- **Fixed gate identifiers** — G1 to G9 only; adding an identifier is a schema version change
+- **RED observed (G10)** — every cycle records a RED stdout hashed by sha256 and a non-zero exit code, both captured at RED time; a zero exit code means the test never failed
+- **Fixed gate identifiers** — G1 to G10 only; adding an identifier is a schema version change
 - **Hidden gate = `inconclusive`** — concealing a failure by omitting the log fails harder on the lens side
 
 ## Why this shape
@@ -50,7 +52,7 @@ A missing or incoherent evidence log is treated as `inconclusive` (NEEDS_REWORK)
 ## Allowed customisation
 
 - Adding fields within an existing gate (L2, backward-compatible)
-- Version bump (`evidence/v2`) to add or remove a gate (L3)
+- Version bump (`evidence/v3`) to add or remove a gate (L3)
 - Custom tech adapters (`quality-gates-<stack>`) (L2)
 
 ## See also

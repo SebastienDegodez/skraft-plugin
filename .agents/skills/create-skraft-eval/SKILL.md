@@ -98,6 +98,32 @@ For each behavior, decide how success can be observed before drafting a grader:
 
 Prefer deterministic proof whenever several valid implementations can satisfy the same command or observable file contract. Do not force grader variety when one evidence type is the only honest proof.
 
+#### Schema rules that silently void a spec
+
+These three cost a full evaluation run each when they are wrong, and only one of them fails the linter.
+
+**The rubric belongs to the stimulus, never to a grader.** Write `rubric:` as a sibling of `graders:`. A `rubric` nested under `graders[].config` is rejected by `vally lint --strict`, but a spec that reaches a runner some other way falls back to Vally's default rubric — *the agent completed the requested task correctly* and *the output is clear and well-structured* — which a competent baseline satisfies as readily as the treatment. The run then measures prose quality and reports a tie. One rubric serves every `prompt` grader on the stimulus; two graders cannot judge two different rubrics.
+
+**Every stimulus carries a `skill-invocation` grader.** Positive cases require the target, near misses disallow it:
+
+```yaml
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - <target-skill>
+```
+
+Without it, a run where the skill never loaded is a baseline measured against a baseline, and it lands in the tally as a tie that reads as "the skill did not help". The grader turns that into a named, deterministic fact the PR comment can report per stimulus.
+
+**Never add `scoring.weights` to a skill spec.** The baseline arm runs with an empty skill directory, so it fails a `required` activation grader on every single stimulus. `eng/lib/paired-trials.mjs` takes that grader back out of the paired score for exactly that reason; weights would change how the remaining graders aggregate and break the arithmetic that removal relies on. Agent suites are single-arm and unaffected.
+
+Give `prompt` graders `scoring: scale_1_10`. The default `scale_1_5` collapses each judgement into five buckets, and two arms that differ in method but not in correctness land in the same bucket far more often than they differ.
+
 For any executable case, load [references/executable-fixtures.md](references/executable-fixtures.md) before proposing it. Apply its C#-first stack selection and complete its Clean Architecture and evidence-integrity checklist.
 
 A non-activation case must be meaningful. Changing only a noun, using an obviously unrelated language, or asking an unrelated question gives little activation signal.
@@ -241,6 +267,8 @@ Static validation must not call a model. At minimum:
 4. scan every prompt sentence for HOW leakage: implementation patterns, class/interface names, layer placement, algorithms, libraries, test doubles, commands, file names, and grader hints must be absent;
 5. verify every prompt that names an implementation concept is an approved forced-concept case and that portfolio evidence defines when resistance is correct;
 6. verify judgement-based stimuli have outcome-focused rubrics; do not require a prompt grader when deterministic evidence fully proves the outcome;
+6b. verify every `rubric` sits beside `graders`, never under `graders[].config`, and that no rubric was dropped when several prompt graders on one stimulus were merged;
+6c. verify every stimulus carries a `skill-invocation` grader — `required` on positive cases, `disallowed` on near misses — that the spec declares no `scoring.weights`, and that every `prompt` grader sets `scoring: scale_1_10`;
 7. verify fixture source paths exist and destination paths are safe;
 8. execute fixture baselines locally to confirm their intended RED, GREEN, or deceptive-GREEN state;
 9. verify grading commands are bounded and pass against a known-correct implementation when practical;
@@ -296,6 +324,13 @@ Read a regression guard by its own rule: a tie is the expected outcome and a los
 
 When the verdict comes back inconclusive for want of discordant pairs, resist buying power retroactively. Extra runs on a design that was too small pay full price to re-learn that, and the pooled tally rarely crosses alpha. Diagnose why the pairs are ties — a skill with no effect on those cases, stimuli too easy for the baseline, or rubrics that cannot separate the arms — and fix the cause in a new, separately approved iteration.
 
+The PR comment names the cause for you; read it before touching `runs`. Each one has a different fix, and only the last is a budget problem:
+
+- **`never loaded on <stimulus> (0/n)`** — the stimulus is outside what the skill's `description` claims to cover. Those pairs were baseline against baseline and never belonged in the tally. Fix the wording gap, not the trial count.
+- **`ties: n at the ceiling`** — the baseline already scored full marks. The stimulus cannot discriminate by construction; no number of runs changes that. Replace it, or keep it deliberately as a regression guard and say so.
+- **`ties: n in the same grader bucket`** — the arms differed but not by a whole step on the judge's scale. Sharpen the rubric onto the observable that actually differs, or move that observable to a deterministic grader.
+- **A clean tally that simply ran out of pairs** — five discordant pairs cannot reach alpha whatever they say. This is the one case where more runs is the honest answer.
+
 Do not change the frozen instrument during this measurement.
 
 ## Validation checklist
@@ -315,6 +350,9 @@ Do not change the frozen instrument during this measurement.
 - [ ] Every forced-concept case documents why resistance or acceptance is correct from evidence, not from preference.
 - [ ] Evaluator-only details remain in fixtures and graders, never in prompts.
 - [ ] Rubrics judge independent outcomes, not techniques or vocabulary.
+- [ ] Every `rubric` sits beside `graders`, never under `graders[].config`, so no stimulus falls back to Vally's default rubric.
+- [ ] Every stimulus carries a `skill-invocation` grader: `required` on positive cases, `disallowed` on near misses.
+- [ ] The spec declares no `scoring.weights`, and every `prompt` grader sets `scoring: scale_1_10`.
 - [ ] Graders match proof surfaces; executable outcomes are not reduced to prose-only judgement.
 - [ ] Code-changing scenarios use minimal fixtures and deterministic build, test, runtime, diff, or file evidence where applicable.
 - [ ] Fixture tests validate sample behavior and never assert eval-spec contents.

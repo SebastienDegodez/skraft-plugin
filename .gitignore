@@ -44,6 +44,8 @@ artifacts/
 eval-results/
 eval-results-pilot/
 dashboard-data/
+# eval-baselines/ IS committed: frozen results.json snapshots keyed by the repo SHA that produced them — verdicts only, never trajectories.
+!eval-baselines/
 
 # skraft-framework runtime audit log
 plugins/skraft-framework/logs/

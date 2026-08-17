@@ -89,6 +89,11 @@ stimuli:
             - LoyaltyPricing.slnx
           expected_exit_code: 0
           timeout: 2m
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - adversarial-review-lenses
 
   - name: A design reviewed under time pressure
     prompt: |
@@ -135,6 +140,11 @@ stimuli:
         name: The reviewed design artifacts were left untouched
         config:
           pattern: '(?m)^diff --git a/\.copilot-tracking/.*/details/'
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - adversarial-review-lenses
 
   - name: A sound specification with one cosmetic blemish
     prompt: |
@@ -185,6 +195,11 @@ stimuli:
         name: The reviewed specification was left untouched
         config:
           pattern: '(?m)^diff --git a/\.copilot-tracking/'
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - adversarial-review-lenses
 
   - name: An ordinary helper going out tomorrow
     prompt: |
@@ -229,6 +244,15 @@ stimuli:
         config:
           path: Toolbox.csproj
       - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: this stimulus is outside the skill's remit, so
+      # loading it is the false positive the guard exists to catch.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - adversarial-review-lenses
     rubric:
       - Explains what the defect costs a caller of this helper.
       - States what the behaviour should be for an input that does not divide exactly.
@@ -271,3 +295,8 @@ stimuli:
         name: The reviewed stories were left untouched
         config:
           pattern: '(?m)^diff --git a/\.copilot-tracking/.*/plans/'
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - adversarial-review-lenses

@@ -35,16 +35,26 @@ results from prose. The flow is:
 
 ### Detect project paths first
 
-Before running, identify:
-- `--project` : the production `.csproj` being mutated (Domain or Application)
-- `-tp` : the test `.csproj` that exercises it
+Before running, identify them and bind them to shell variables — the commands
+below reference the variables, so they stay copy-paste runnable:
+
+```bash
+PROD_CSPROJ=$(find src -name '*.csproj' | grep -E '(Domain|Application)' | head -1)
+TEST_CSPROJ=$(find tests -name '*.csproj' | grep -E 'UnitTest' | head -1)
+```
+
+- `PROD_CSPROJ` : the production `.csproj` being mutated (Domain or Application)
+- `TEST_CSPROJ` : the test `.csproj` that exercises it
+
+Never paste `<Production.csproj>` literally: bash reads `<` and `>` as
+redirections, silently dropping the flag and creating stray files.
 
 ### During development (fast — changed code only)
 
 ```bash
 dotnet stryker \
-  --project <Production.csproj> \
-  -tp <Tests.csproj> \
+  --project "$PROD_CSPROJ" \
+  -tp "$TEST_CSPROJ" \
   --since:main \
   --break-at 100 \
   --reporter json --reporter cleartext
@@ -54,14 +64,13 @@ dotnet stryker \
 
 ```bash
 dotnet stryker \
-  --project <Production.csproj> \
-  -tp <Tests.csproj> \
+  --project "$PROD_CSPROJ" \
+  -tp "$TEST_CSPROJ" \
   --mutate "**/*.cs" \
   --mutate "!**/*Marker.cs" \
   --mutate "!**/DependencyInjection.cs" \
   --mutate "!**/obj/**" \
   --break-at 100 \
-  --threshold-high 90 --threshold-low 80 \
   --reporter json --reporter cleartext
 ```
 
@@ -152,8 +161,8 @@ For each real survivor:
 3. **Re-run scoped Stryker** to confirm the kill:
    ```bash
    dotnet stryker \
-     --project <Production.csproj> \
-     -tp <Tests.csproj> \
+     --project "$PROD_CSPROJ" \
+     -tp "$TEST_CSPROJ" \
      --mutate "**/<FileWithSurvivor>.cs" \
      --break-at 100 \
      --reporter cleartext

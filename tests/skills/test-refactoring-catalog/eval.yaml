@@ -5,7 +5,7 @@ description: |
 type: capability
 defaults:
   timeout: 4m
-  runs: 2
+  runs: 3
 scoring:
   threshold: 1
 
@@ -27,6 +27,13 @@ stimuli:
         Now explain the naming convention for this helper and what parameters should be exposed.
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-refactoring-catalog
     rubric:
       - Creates helper starting with A, An, or Create (e.g. ADriver, AEligibilityRequest, CreatePolicy)
       - Removes repetition in all 4 tests
@@ -49,6 +56,13 @@ stimuli:
         Explain the renaming pattern and why technical words were removed.
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-refactoring-catalog
     rubric:
       - Renames to When<BusinessCondition>_Should<BusinessOutcome> pattern
       - 'Example: "WhenDriverMeetsAllCriteria_ShouldBeEligible"'
@@ -59,33 +73,6 @@ stimuli:
       - Identifies removed technical terms and why they hide intent (Handler, Returns, DTO)
       - Gives business terms for rejections (rejected, denied, failed-check, etc.)
       - Notes that test readers instantly see business value, not implementation details
-
-  - name: Apply R3 — Consolidate to Parametrized Test
-    turns:
-      - |
-        I have these 5 test methods (all passing):
-        
-        - WhenAge25_ShouldBeEligible (passes)
-        - WhenAge30_ShouldBeEligible (passes)
-        - WhenAge40_ShouldBeEligible (passes)
-        - WhenAge16_ShouldBeIneligible (passes)
-        - WhenVehicleAgeOver10Years_ShouldBeRejected (passes)
-        
-        Which can be consolidated to parametrized? Which should stay separate?
-      - |
-        Show the parametrized [Theory] and explain which row differs and why.
-    graders:
-      - type: prompt
-    rubric:
-      - Recognizes first 3 tests (Age 25/30/40 eligible) belong to same scenario class
-      - Consolidates to single [Theory] with [InlineData(25)] [InlineData(30)] [InlineData(40)]
-      - Keeps "Age16 Ineligible" separate because it's a different scenario (rejection condition)
-      - Keeps "Vehicle Age" separate because it tests different business rule (vehicle constraint)
-      - "Explains: consolidation is safe only when assertion structure and business outcome are identical"
-      - Confirms parametrized test checks same condition on varied inputs
-      - 'Distinguishes from unsound consolidation: "consolidate everything with an if statement in the test"'
-      - Explains that different outcome types (eligible vs ineligible, pass vs reject) require separate tests
-      - 'Notes: "I changed only test structure, not coverage or behavior"'
 
   - name: Apply R4 — Extract Custom Assertion
     turns:
@@ -103,6 +90,13 @@ stimuli:
         Explain the naming convention and why hiding assertions inside helpers is risky.
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-refactoring-catalog
     rubric:
       - Creates helper named ShouldBeRejectedWith(result, reasonCode) or similar
       - Extracts all 3 assertions into one place
@@ -113,32 +107,6 @@ stimuli:
       - Confirms helper ONLY asserts (no arrange/act inside it)
       - "Notes: assertions must fail loudly with clear message on mismatch"
 
-  - name: Apply R5 — Split Test Class by Scenario Group
-    turns:
-      - |
-        I have one test class with 35 tests covering these scenarios:
-        - WhenDriverMeetsAll Criteria (8 tests: all age/license combinations)
-        - WhenDriverIsTooYoung (7 tests)
-        - WhenVehicleIsTooOld (6 tests)
-        - WhenMultipleReasonsForRejection (8 tests)
-        - Edge cases and boundary values (6 tests)
-        
-        Suggest a split structure. Show file names and class names.
-      - |
-        How should shared helpers be organized after the split?
-    graders:
-      - type: prompt
-    rubric:
-      - Creates separate class/file per scenario group (WhenDriverMeetsAllCriteria_Tests, WhenDriverIsTooYoung_Tests, etc.)
-      - File names match class names exactly
-      - Each class is focused on one business scenario outcome
-      - Edge cases and boundary values move to a dedicated "Boundaries" class
-      - Original file removed or empty
-      - Moves common helpers (A<Domain>, Create<Fixture>) to shared base class or TestKit
-      - Each test class inherits from base or imports static helpers
-      - Eliminates helper duplication across split classes
-      - Maintains DRY principle while keeping test classes focused
-
   - name: Preserve GREEN state during refactoring
     turns:
       - |
@@ -146,8 +114,20 @@ stimuli:
         What steps should I take to ensure no regressions?
       - |
         What signals tell you a refactoring went wrong and you should revert?
+    tags:
+      # Regression guard: the baseline already scores full marks here, so a
+      # tie is the expected result and a loss is the finding. Kept out of the
+      # discriminating-pair budget for that reason.
+      role: regression-guard
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-refactoring-catalog
     rubric:
       - Run full test suite before refactoring (baseline green)
       - Apply refactoring changes
@@ -159,3 +139,28 @@ stimuli:
       - Code coverage drops below threshold → helper extracted behavior away
       - Build breaks → refactoring introduced syntax error
       - First regression signal → REVERT entire change and re-examine
+
+  - name: Cleaning up production code is not test refactoring
+    prompt: |
+      CalculatePayableTotal has grown to three hundred lines of nested conditionals
+      and nobody on the team wants to touch it. The tests around it are green.
+      Clean it up.
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: the tests are healthy and it is the production code
+      # that has gone bad, so a catalogue of test-code transformations has
+      # nothing to offer here.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - test-refactoring-catalog
+    rubric:
+      - Refactors the production class rather than the tests around it.
+      - Leans on the green tests as the safety net and keeps them passing throughout.
+      - Leaves the existing test names, structure, and helpers alone.
+      - Does not propose renaming or splitting tests that are not the problem.

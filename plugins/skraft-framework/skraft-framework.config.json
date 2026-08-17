@@ -160,6 +160,10 @@
         "policy": "verify"
       },
       {
+        "name": "test-design-mandates",
+        "policy": "verify"
+      },
+      {
         "name": "craft-discipline",
         "policy": "verify"
       },
@@ -177,6 +181,10 @@
       },
       {
         "name": "quality-gates-dotnet",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
         "policy": "verify"
       }
     ],

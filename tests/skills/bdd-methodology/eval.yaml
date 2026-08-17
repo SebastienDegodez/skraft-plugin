@@ -64,6 +64,13 @@ stimuli:
           path: .copilot-tracking/skraft-plans/storefront/features/**/*.feature
           pattern: '(?i)\b(css|dom|stylesheets?|z-index|pixels?|selectors?)\b'
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - bdd-methodology
     rubric:
       - Requires the width-and-position promise to be checked against a page that was actually rendered, rather than a check that never lays the page out.
       - Explains the limitation of the proposed route in terms of what it cannot observe, instead of refusing it as a rule.
@@ -158,6 +165,13 @@ stimuli:
           expected_exit_code: 0
           timeout: 30s
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - bdd-methodology
     rubric:
       - A reader who has never seen the codebase can follow every step of the file.
       - Nothing the business agreed was dropped, renamed, or given a new value.
@@ -224,6 +238,13 @@ stimuli:
           expected_exit_code: 0
           timeout: 30s
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - bdd-methodology
     rubric:
       - Every agreed combination is still visible in the specification after the change.
       - The specification is shorter to read without becoming less precise.
@@ -260,6 +281,15 @@ stimuli:
         config:
           pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/refunds/features/'
       - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: this stimulus is outside the skill's remit, so
+      # loading it is the false positive the guard exists to catch.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - bdd-methodology
     rubric:
       - Answers where each behaviour should be exercised from, using the boundaries named in the contracts note.
       - States what would be observed to conclude each behaviour happened.
@@ -317,6 +347,13 @@ stimuli:
           expected_exit_code: 0
           timeout: 30s
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - bdd-methodology
     rubric:
       - The product owner could confirm the rule from the text alone.
       - No condition, exception, or amount was added beyond the one agreed.

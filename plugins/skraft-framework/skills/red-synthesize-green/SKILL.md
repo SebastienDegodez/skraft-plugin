@@ -87,7 +87,8 @@ Implement complete, clean, production-ready solution in one shot.
 
 ## When Orchestrating Subagents (MANDATORY)
 
-If you are an orchestrating agent using `subagent-driven-development`:
+If you dispatch subagents to carry out a TDD slice — whatever the orchestration
+mechanism:
 
 **NEVER put RED and SYNTHESIZE GREEN in the same subagent prompt.**
 
@@ -118,9 +119,8 @@ The mandatory human validation checkpoint is the **orchestrator's responsibility
 
 This skill owns the strict TDD quality gate for business logic layers:
 
-1. Application and Domain logic must reach **100% code coverage** before completion.
-2. Mutation testing on Application and Domain logic must end with **0 non-equivalent surviving mutants**.
-3. Any equivalent mutant must be explicitly documented with justification.
+1. Mutation testing on Application and Domain logic must end with **0 non-equivalent surviving mutants**.
+2. Any equivalent mutant must be explicitly documented with justification.
 
 If one of these conditions is not met, work is not complete.
 

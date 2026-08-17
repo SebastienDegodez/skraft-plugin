@@ -182,6 +182,12 @@ export function comparisonVerdict(report, subject, trials) {
     graderScores: pairing
       ? { baselineMean: pairing.baselineMean, skilledMean: pairing.skilledMean, medianDelta: pairing.medianDelta }
       : null,
+    // A tally is read as "the skill did nothing" long before anyone opens the
+    // trajectories, and ties are the bulk of most tallies. Publishing where they
+    // landed separates the two findings a bare `T` conflates: a stimulus the
+    // baseline already aces, versus a difference the grader's resolution could
+    // not hold.
+    tieBreakdown: pairing?.tieBreakdown ?? null,
     graderPairs: pairing?.pairs ?? null,
     trialCount,
     pairedTrialCount,

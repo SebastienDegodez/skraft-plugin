@@ -74,6 +74,13 @@ stimuli:
           path: docs/adr/decisions-index.md
           pattern: '(?mi)^\|[ \t]*(adr-)?0*4[ \t]*\|'
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
     rubric:
       - Produces the record for the question that was raised, carrying its context, the consequences of each direction and the alternatives that were weighed.
       - Leaves the outcome open and says that choosing between the two directions belongs to a person, despite being told to settle it.
@@ -165,6 +172,13 @@ stimuli:
         config:
           pattern: '(?m)^diff --git a/docs/adr/adr-00[123]-'
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
     rubric:
       - Names the record after the subject that was weighed rather than after the answer the team reached.
       - Carries the outcome inside the record itself rather than in how the file is labelled or titled.
@@ -260,6 +274,13 @@ stimuli:
           path: docs/adr/decisions-index.md
           value: Single model for quote reads and writes
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
     rubric:
       - Adds a new record for the position the measurements now support instead of rewriting the earlier one to match.
       - Leaves the earlier record where it was and still readable as the position that was held before.
@@ -317,6 +338,15 @@ stimuli:
         config:
           pattern: '(?m)^diff --git a/docs/adr/'
       - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: this stimulus is outside the skill's remit, so
+      # loading it is the false positive the guard exists to catch.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - architecture-decisions
     rubric:
       - Answers which way pricing should take billing's shape, and names what each direction costs.
       - Treats billing as fixed and pricing's own language as the thing worth protecting, without inventing leverage over the upstream team.
@@ -332,6 +362,13 @@ stimuli:
       understands the call.
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
     rubric:
       - Lands on one of the two options and says plainly which one.
       - Names at least one real cost the chosen option imposes, not only what it buys.

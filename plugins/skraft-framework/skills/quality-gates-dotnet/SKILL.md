@@ -1,6 +1,6 @@
 ---
 name: quality-gates-dotnet
-description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must populate the quality-gates evidence contract at the end of the COMMIT phase. Provides the concrete `dotnet` / `stryker` commands and how their outputs map onto the tech-agnostic schema.
+description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Most gates are captured at the end of the COMMIT phase; the G10 RED capture is taken **at RED**, before any production code, and cannot be reconstructed later. Provides the concrete `dotnet` / `stryker` commands and how their outputs map onto the tech-agnostic schema.
 ---
 
 # Quality Gates — .NET Adapter
@@ -86,8 +86,30 @@ If absent, mark G5 `status: "not_applicable"` with `rationale: "no architecture 
 
 ## G6 — Mutation score
 
+Scope the run to business logic — the same exclusions as `mutation-testing`
+(no Infrastructure, no `Program.cs`, no `DependencyInjection.cs`, no DTOs) —
+otherwise the score measures the whole solution and cannot be compared to the
+threshold below.
+
+Detect the project paths first, as `mutation-testing` requires:
+- `PROD_CSPROJ` — the production `.csproj` being mutated (Domain or Application)
+- `TEST_CSPROJ` — the test `.csproj` that exercises it
+
+Set them as shell variables and reference them quoted. `<Production.csproj>` is
+NOT a placeholder the shell tolerates: `<...>` is parsed as two REDIRECTIONS, so
+`-tp` disappears from `argv`, `--project` swallows the next glob, stray files
+named `-tp` and `--mutate` are created, and the run is silently unscoped.
+
 ```bash
+PROD_CSPROJ="src/MonAssurance.Domain/MonAssurance.Domain.csproj"
+TEST_CSPROJ="tests/MonAssurance.UnitTests/MonAssurance.UnitTests.csproj"
 dotnet stryker \
+  --project "$PROD_CSPROJ" \
+  -tp "$TEST_CSPROJ" \
+  --mutate "**/*.cs" \
+  --mutate "!**/*Marker.cs" \
+  --mutate "!**/DependencyInjection.cs" \
+  --mutate "!**/obj/**" \
   --reporter json --reporter cleartext \
   --output "$EV/stryker" \
   > "$EV/qg-mutation.stdout" 2>&1
@@ -147,17 +169,56 @@ the contract. The lens diffs the two snapshots and FAILS G9 if any line was
 removed or mutated in a pre-existing assertion (only additions are allowed —
 that is the Iron Rule of Tests, mechanically verifiable).
 
+## G10 — RED observed
+
+For every TDD cycle, capture the failing run **at RED**, before the
+implementation lands. Run the G1/G2 test command narrowed to the cycle's test:
+
+```bash
+mkdir -p "$EV"
+# at RED, for cycle {cycle} of story {story} — BEFORE writing the implementation:
+dotnet test --nologo \
+  --filter "FullyQualifiedName~SomeTests" \
+  > "$EV/qg-{story}-red-{cycle}.stdout" 2>&1
+echo $? > "$EV/qg-{story}-red-{cycle}.exit"
+shasum -a 256 "$EV/qg-{story}-red-{cycle}.stdout" | awk '{print $1}' \
+  > "$EV/qg-{story}-red-{cycle}.stdout.sha256"
+```
+
+This capture CANNOT be reconstructed afterwards: once the implementation is in,
+the same command returns green. Run it while the cycle is red or the evidence
+does not exist.
+
+Populate the matching entry of `test_integrity.cycles[]`:
+
+- `red_stdout_ref` = `evidence/{date}/qg-{story}-red-{cycle}.stdout`
+- `red_stdout_sha256` = contents of `qg-{story}-red-{cycle}.stdout.sha256`
+- `red_exit_code_ref` = `evidence/{date}/qg-{story}-red-{cycle}.exit`
+
+G10's `gates[]` entry carries `status` (and `rationale`) **only** — no
+`command_executed`, no `exit_code_ref`. One story runs N RED commands but has a
+single gate entry, and the generic "exit code MUST be `0` for pass" rule is
+inverted here; the per-cycle `red_*` fields above are where its evidence lives.
+
+The recorded exit code MUST be NON-zero: a `0` means the test never failed and
+G10 is `status: "fail"`. G10 attests the RED *run*, nothing about commit SHAs —
+G9 keeps the commit/snapshot job unchanged.
+
 ## Producer flow at end of COMMIT phase
 
 1. `mkdir -p "$EV"` and `mkdir -p "$EV/snapshots"`.
 2. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6, G7 — each redirecting
    stdout + exit code to disk.
 3. For each cycle in this story, dump RED + GREEN snapshots from `git show`.
-4. Compute `repo_root_rev = git rev-parse HEAD`.
-5. Build `commits_covered[]` from `git log --format='%H%x09%s' <range>` and
+4. For each cycle, check the G10 RED captures taken at RED time are present in
+   `$EV` (`qg-{story}-red-{cycle}.stdout` / `.exit` / `.stdout.sha256`) and that
+   every recorded exit code is non-zero. They are NOT re-runnable here — a
+   missing capture is `status: "fail"`, never `not_applicable`.
+5. Compute `repo_root_rev = git rev-parse HEAD`.
+6. Build `commits_covered[]` from `git log --format='%H%x09%s' <range>` and
    `git show --stat --name-only <sha>` per commit.
-6. Assemble `qg-{story}.json` per `quality-gates-evidence-contract`.
-7. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
+7. Assemble `qg-{story}.json` per `quality-gates-evidence-contract`.
+8. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
 
 If a tool is unavailable in the environment (no Stryker installed, no SDK), the
 gate is `status: "fail"` with the captured stderr — NOT `not_applicable`. The

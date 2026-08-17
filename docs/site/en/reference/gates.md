@@ -31,7 +31,7 @@ its `Gxx` identifier, what it checks, its **pass condition** (binary) and its
 | **MEDIUM** | Design smell, sub-optimal choice. | Forces `changes_requested`. |
 | **LOW** | Style or consistency detail. | `approved` with a note. |
 
-Total: **46 gates** across the 5 phases. What follows is the full grid, exactly as
+Total: **47 gates** across the 5 phases. What follows is the full grid, exactly as
 each reviewer applies it.
 
 ---
@@ -179,7 +179,7 @@ test plan and the implementation plan.
 
 ---
 
-## DELIVER — G1 to G9
+## DELIVER — G1 to G10
 
 Producer: `software-engineer`; verifier: `quality-gates-lens`. Every gate is attested
 by **falsifiable evidence** (git SHA, tool output written to disk) the reviewer
@@ -196,6 +196,7 @@ re-resolves without ever re-running the build.
 | **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. | HIGH |
 | **G8** | Conventional commit format. | Every covered commit matches `<type>(<scope>): <subject>`. | MEDIUM |
 | **G9** | No test tampering (RED→GREEN integrity). | For each cycle, the test file changed only by **addition** between RED and GREEN snapshots. | BLOCKER |
+| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each cycle, a RED stdout captured at RED time and hashed by sha256, plus a recorded **non-zero** exit code. | BLOCKER |
 
 > A genuinely irrelevant gate is marked `not_applicable` **with a rationale** — never
 > as a substitute for `fail` or missing evidence.

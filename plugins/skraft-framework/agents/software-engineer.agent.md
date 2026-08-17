@@ -29,11 +29,13 @@ metadata:
     - outside-in-tdd
     - red-synthesize-green
     - clean-architecture-testing
+    - test-design-mandates
     - craft-discipline
     - test-refactoring-catalog
     - mutation-testing
     - quality-gates-evidence-contract
     - quality-gates-dotnet
+    - resolving-stack-commands
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
@@ -83,10 +85,12 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 | Skill | Load when... |
 |-------|--------------|
 | [clean-architecture-testing](../skills/clean-architecture-testing/SKILL.md) | Deciding test level, boundary placement, or doubles policy |
+| [test-design-mandates](../skills/test-design-mandates/SKILL.md) | Deciding whether a Domain unit test is authorized |
 | [test-refactoring-catalog](../skills/test-refactoring-catalog/SKILL.md) | Refactoring a test (helpers, renaming, deduplication) |
 | [mutation-testing](../skills/mutation-testing/SKILL.md) | Entering phase 4 (COMMIT & VERIFY) |
 | [quality-gates-evidence-contract](../skills/quality-gates-evidence-contract/SKILL.md) | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
 | [quality-gates-dotnet](../skills/quality-gates-dotnet/SKILL.md) | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
+| [resolving-stack-commands](../skills/resolving-stack-commands/SKILL.md) | Needing any build or test command — never hardcode one |
 
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
@@ -98,7 +102,7 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 
 ## Test Design & Theater Prevention
 These are owned by the skills — load them, do not inline rules here.
-- **Test design mandates** (boundaries, doubles, parametrization): loaded via `clean-architecture-testing`.
+- **Test design mandates** (boundaries, doubles, parametrization, Mandate 4 Domain-extraction gate): loaded via `test-design-mandates`.
 - **Theater detection** (tautology, mock-dominated, circular, mirroring, fixture): loaded via `craft-discipline` → [references/test-theater-patterns.md](../skills/craft-discipline/references/test-theater-patterns.md).
 - **Parametrize variations** (`[Theory]`/`[InlineData]`): see `craft-discipline` C11.
 
@@ -113,6 +117,7 @@ These are owned by the skills — load them, do not inline rules here.
 ### 2. RED (inner loop)
 - The OUTER acceptance test already exists (from DISTILL). Drive the INNER loop: write ONE failing unit test for the next behavior slice the acceptance test demands.
 - **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile). Never weaken or edit the acceptance test to make it pass.
+- **Capture the RED evidence NOW — it cannot be reconstructed at COMMIT.** The run that proves this test fails is the only evidence gate **G10 — RED observed** accepts. Redirect its stdout and exit code to the evidence directory before writing a line of production code, following the RED-capture recipe of your stack's `quality-gates-<tech>` adapter (`quality-gates-dotnet` for .NET). Load that adapter here, not only at COMMIT. A cycle that reaches COMMIT without its capture is `G10: fail`, never `not_applicable`.
 - **Edge cases not expressible in Gherkin** (defensive branch, exhaustive-enum fallback, combinatorial sweep of an already-decided rule — e.g. a `PolicyService`) are authored HERE via TDD, but ONLY when `test-design-mandates` Mandate 4 Gate (a) or (b) opens, and ONLY with values traceable to a decided AC. The domain class emerges from this RED — create nothing before the compile failure (`outside-in-tdd` Step 2). If the case is an UNDECIDED business decision, STOP and escalate to DISCUSS — never invent a verdict or value.
 
 ### 3. SYNTHESIZE-GREEN
@@ -125,7 +130,7 @@ These are owned by the skills — load them, do not inline rules here.
 - **Gate**: Mutation score threshold depends on the `depthTier` provided in the dispatch payload (basic≅80%, standard≅90%, comprehensive=100% on business logic). If a test kills no mutants, DELETE IT.
 - Commit using conventional commits (`feat(<domain>): <behavior>`).
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for the schema and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per the v1 schema. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
+- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for the schema and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per the v2 schema. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
 
 ## Test-wiring workers (fan-out, B1)
 When a slice needs **test infrastructure** rather than business logic, fan out to an internal worker, then verify its output yourself. The worker returns a structured result; it never commits. YOU integrate the returned files into your TDD loop and commit.

@@ -123,6 +123,13 @@ stimuli:
           expected_exit_code: 0
           timeout: 1m
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - red-synthesize-green
     rubric:
       - The delivered check would fail again if the approved calculation were removed.
       - The handover claim that the failure already proved the missing behaviour is not accepted at face value.
@@ -219,6 +226,13 @@ stimuli:
           expected_exit_code: 0
           timeout: 1m
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - red-synthesize-green
     rubric:
       - The report names the business outcome that is not produced, rather than a build or setup problem.
       - Work stopped before the approved outcome was produced, and this is stated plainly.
@@ -234,6 +248,13 @@ stimuli:
       would send instead and in what order.
     graders:
       - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - red-synthesize-green
     rubric:
       - The single instruction is rejected because it lets the implementation start before anyone has seen the failure.
       - The work is split into separate handoffs, with the failure coming back for inspection before any implementation is sent.
@@ -332,6 +353,15 @@ stimuli:
           expected_exit_code: 0
           timeout: 1m
       - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: this stimulus is outside the skill's remit, so
+      # loading it is the false positive the guard exists to catch.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - red-synthesize-green
     rubric:
       - The existing tests become easier to read without any new behaviour being introduced.
       - No approval step or extra ceremony is requested for a change that alters no observable behaviour.

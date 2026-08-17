@@ -13,7 +13,8 @@ persona: tech-lead
 ## Quand l'utiliser
 
 - Lorsque le dépôt actif est une solution .NET (`*.sln`, `*.slnx`, `*.csproj`, `Directory.Packages.props`)
-- En phase COMMIT, pour produire les preuves falsifiables des portes G1 à G9
+- En phase COMMIT, pour produire les preuves falsifiables des portes G1 à G10
+- Au RED, pour capturer le run qui prouve que le test échoue — la seule preuve acceptée par G10, et elle ne peut pas être reconstituée après coup
 - Chargé par le `software-engineer` après détection de la pile .NET via `resolving-stack-commands`
 - Si plusieurs piles coexistent, exécuté en parallèle des autres adaptateurs
 
@@ -26,7 +27,7 @@ persona: tech-lead
 ## Contrat de sortie
 
 - Fichiers de preuves dans `$EV/` : stdout redirigé sur disque, code de sortie, sha256, snapshots RED/GREEN
-- Entrées `gates[G1..G9]` du contrat `quality-gates-evidence-contract` renseignées
+- Entrées `gates[G1..G10]` du contrat `quality-gates-evidence-contract` renseignées
 - `qg-{story}.json` complet et vérifiable par le `quality-gates-lens`
 
 ## Invariants
