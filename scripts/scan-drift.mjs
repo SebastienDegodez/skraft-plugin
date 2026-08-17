@@ -111,13 +111,27 @@ function sameOrder(expected, actual) {
   return expected.length === actual.length && expected.every((v, i) => v === actual[i]);
 }
 
+/** Convert agent display name to file slug.
+ * "Skraft - Solution Researcher" → "solution-researcher"
+ * "skraft-orchestrator"           → "skraft-orchestrator" (already a slug)
+ */
+function agentNameToSlug(name) {
+  return name
+    .replace(/^Skraft\s*-\s*/i, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+}
+
 function deriveAgentUsageOrder(root) {
   const orchestratorPath = join(root, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md');
   const orchestrator = readFrontmatter(orchestratorPath);
   if (!orchestrator) return null;
 
   const chain = Array.isArray(orchestrator.agents) ? orchestrator.agents : [];
-  const orderedAgents = ['skraft-orchestrator', ...chain];
+  // Normalise display names (e.g. "Skraft - Solution Researcher") to slugs so
+  // they match both the .agent.md filenames and the link slugs in index pages.
+  const orderedAgents = ['skraft-orchestrator', ...chain.map(agentNameToSlug)];
   const skillsByAgent = {};
 
   for (const agent of orderedAgents) {
