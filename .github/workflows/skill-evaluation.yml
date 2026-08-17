@@ -127,6 +127,13 @@ jobs:
     name: Pre-merge evaluation (changed skills and agent suites only)
     # Fork PRs have no access to COPILOT_GITHUB_TOKEN, so skip rather than fail.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # A spec the linter rejects still runs, and still bills an hour of live model
+    # time, to produce a verdict about an instrument that was never wired. The
+    # `rubric` under `graders[].config` was exactly that: silently ignored by
+    # Vally, silently replaced by its default rubric, and only caught by a lint
+    # job that finished forty minutes before the evaluation it should have
+    # stopped. Gate the spend on the static check.
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 150
     permissions:
@@ -231,6 +238,8 @@ jobs:
     name: Skills versus baseline, agents against their suites
     # A dispatch that names models wants the comparison below, not this job.
     if: github.event_name != 'pull_request' && inputs.models == ''
+    # Same reason as evaluate-pr: no live spend on a spec the linter rejects.
+    needs: lint
     runs-on: ubuntu-latest
     # Each spec budgets its own trials, so the wall clock follows the specs, not
     # a flat one-trial-per-stimulus floor.
