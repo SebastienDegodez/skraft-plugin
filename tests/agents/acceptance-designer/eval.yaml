@@ -205,6 +205,16 @@ stimuli:
             - 'grep -rq 9500 .copilot-tracking/skraft-plans/checkout-pricing/features'
           expected_exit_code: 0
           timeout: 30s
+      # A conformance failure has to say whether the skills even loaded.
+      # Without this, telling "never loaded" from "loaded and changed
+      # nothing" means opening the raw trajectory by hand.
+      - type: skill-invocation
+        name: Mandatory specification skills are loaded
+        config:
+          required:
+            - bdd-methodology
+            - test-design-mandates
+            - outside-in-tdd
 
   - name: Absent acceptance criteria halt the distillation
     prompt: |
@@ -234,3 +244,10 @@ stimuli:
         config:
           pattern: '(?s)"status"\s*:\s*"blocked"'
       - type: diff-empty
+      - type: skill-invocation
+        name: Mandatory specification skills are loaded
+        config:
+          required:
+            - bdd-methodology
+            - test-design-mandates
+            - outside-in-tdd

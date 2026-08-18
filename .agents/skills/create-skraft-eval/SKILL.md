@@ -120,6 +120,28 @@ These three cost a full evaluation run each when they are wrong, and only one of
 
 Without it, a run where the skill never loaded is a baseline measured against a baseline, and it lands in the tally as a tie that reads as "the skill did not help". The grader turns that into a named, deterministic fact the PR comment can report per stimulus.
 
+**Agent suites carry the same rule, for a different reason.** Every stimulus of a
+suite under `tests/agents/` declares the skills the agent must load, or must not:
+
+```yaml
+      - type: skill-invocation
+        name: Mandatory specification skills are loaded
+        config:
+          required: [bdd-methodology, test-design-mandates, outside-in-tdd]
+```
+
+Take the `required` set from the agent's own `skills:` front matter, never from
+guesswork. When the agent declares none, `required` would be a fabricated claim —
+assert `disallowed` instead where the stimulus has a stated failure mode that
+loading a skill would signal (a researcher under pressure to start implementing,
+say), and leave the stimulus bare otherwise.
+
+Without it, a conformance failure cannot say whether the agent never loaded the
+skill or loaded it and ignored it — two findings with opposite fixes, and telling
+them apart means opening the raw trajectory by hand. Unlike a skill spec, a suite
+is single-arm: there is no skill-less control to bias, so the grader contributes
+to the score normally and a missing skill is a conformance failure, as intended.
+
 **Never add `scoring.weights` to a skill spec.** The baseline arm runs with an empty skill directory, so it fails a `required` activation grader on every single stimulus. `eng/lib/paired-trials.mjs` takes that grader back out of the paired score for exactly that reason; weights would change how the remaining graders aggregate and break the arithmetic that removal relies on. Agent suites are single-arm and unaffected.
 
 Give `prompt` graders `scoring: scale_1_10`. The default `scale_1_5` collapses each judgement into five buckets, and two arms that differ in method but not in correctness land in the same bucket far more often than they differ.

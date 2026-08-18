@@ -167,3 +167,8 @@ stimuli:
         name: The verdict is written where the pipeline reads it
         config:
           pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+      - type: skill-invocation
+        name: Review skills stay loaded under pressure
+        config:
+          required:
+            - adversarial-review-lenses

@@ -448,6 +448,59 @@ test, because a suite has no baseline:
 - **✅ pass**: Merge confidently; the skill helps.
 - **➖ no-improvement, ⚪ inconclusive**: Safe to merge; just don't claim success yet.
 
+### Deciding what to do with a skill: fix, merge, or delete
+
+A null verdict is not one finding. It collapses four situations that call for
+four opposite actions, and the comment now carries the evidence to tell them
+apart. Read the checks **in this order** — an earlier one makes the later ones
+meaningless.
+
+**0. Does an agent require this skill?** The agent suites under `tests/agents/`
+declare it, in their `skill-invocation` graders. Grep before anything else:
+
+```bash
+grep -rn "^            - <skill>$" tests/agents/*/eval.yaml
+```
+
+*No agent requires it* — nothing downstream falls if it goes; the measurement
+alone decides. *An agent requires it* — merging or deleting means rewriting that
+suite's `required:` list, and its conformance run becomes the safety net for the
+change.
+
+**1. Did it load?** `never loaded on <stimulus> (0/n)` in the comment, or an
+activation rate well under 1. Those pairs measured a baseline against a
+baseline, so **nothing was measured** and no other reading is valid. The gap is
+between the stimulus wording and what the skill's `description` claims to cover.
+Fix that, not the trial count.
+
+**2. Did it change anything?** `no measured effect on either instrument … the
+skill loaded and behaved like its own control`. This flag is deliberately hard
+to trip: it needs the deterministic graders *and* the trajectory judge to tie on
+at least 80% of pairs. The graders alone are not enough — they return one
+integer on a coarse scale and tie routinely on a real change of method. When
+both agree, the arm was indistinguishable from its control to a reader.
+**That is the only evidence that supports deleting a skill** rather than fixing
+its eval — subject to check 0.
+
+**3. Is the effect real but invisible?** `ties: n at the ceiling` means the
+baseline already scored full marks and the stimulus cannot discriminate by
+construction. `n in the same grader bucket` means the arms differed by less than
+one step of the judging scale. Both say **fix the eval**, not the skill.
+
+**4. Is it just underpowered?** A clean tally that ran out of discordant pairs.
+This is the one case where more `runs` is the honest answer.
+
+Two things this cannot yet tell you, and it is worth knowing which:
+
+- **Whether a sibling already does the job.** That needs a third arm — the eval
+  spec of skill A, run with only sibling B mounted. If B passes A's exam, A is a
+  merge candidate. The runner mounts one skill against an empty directory today,
+  so this is not built; `vally experiment` is the intended tool and is unused.
+- **Whether the effect survives at agent level.** A skill can win its own eval
+  and still fail to change what the agent does. `acceptance-designer` has shown
+  exactly that. The agent suite is the outcome that matters; the skill eval is a
+  proxy for it.
+
 ### Getting a credible pre-merge verdict
 
 CI never overrides the trial budget: the number of trials is the spec's own

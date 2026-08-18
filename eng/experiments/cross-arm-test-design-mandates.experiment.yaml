@@ -1,0 +1,62 @@
+name: cross-arm-test-design-mandates
+
+# Does a sibling skill already pass this eval's exam?
+#
+# The two-arm design under eng/run-vally-evals.sh answers "does this skill help
+# against no skill at all", which cannot tell a skill that earns its place from
+# one whose sibling already does the same job. That distinction is the whole
+# merge-or-keep decision, and it needs a third arm: the same spec, the same
+# stimuli, the same everything — run with only the sibling mounted.
+#
+#   lift(under-test) ~= lift(sibling)  -> the sibling passes this exam too; merge
+#   lift(under-test)  > lift(sibling)  -> this skill carries something of its own
+#   lift(under-test) ~= 0 < lift(sibling) -> subsumed; delete
+#   both ~= 0                          -> the eval sees nothing; fix the eval
+#
+# `vary` is what makes this a controlled comparison rather than three unrelated
+# runs: any difference between the variants outside /environment/skills is a
+# hard error at resolve time, so the arms cannot drift apart by accident.
+#
+# Validate without spending a single trial:
+#   vally experiment run eng/experiments/cross-arm-test-design-mandates.experiment.yaml --dry-run
+#
+# `--dry-run` checks the structure and the `vary` invariant. It does NOT check
+# that the paths below resolve — a typo produces an arm with nothing mounted,
+# which reads downstream exactly like "the skill did not help". That gap is
+# closed by a separate check, which the lint job runs on every pull request:
+#
+#   node eng/check-experiment-paths.mjs
+#
+# Pair the variants afterwards with the adapter that already reads two JSONL
+# streams — no new statistics, just three invocations:
+#   node eng/vally-adapter/adapt.mjs --baseline <no-skill>/results.jsonl \
+#        --skilled <under-test>/results.jsonl --skill test-design-mandates
+
+evals:
+  - ../../tests/skills/test-design-mandates/eval.yaml
+
+vary:
+  - /environment/skills
+
+baseline: no-skill
+
+variants:
+  # The control. An explicit empty list rather than an omitted field: omitting it
+  # would inherit whatever the spec declares, which is exactly the drift `vary`
+  # exists to catch.
+  no-skill:
+    environment:
+      skills: []
+
+  under-test:
+    environment:
+      skills:
+        - ../../plugins/skraft-framework/skills/test-design-mandates
+
+  # The suspected overlap, from PLAN-differentiation-skills.md. Mounted alone,
+  # never alongside the skill under test: the question is whether it can pass
+  # this exam by itself, not whether the pair is better than either.
+  sibling-outside-in-tdd:
+    environment:
+      skills:
+        - ../../plugins/skraft-framework/skills/outside-in-tdd

@@ -140,6 +140,12 @@ stimuli:
         config:
           pattern: '(?s)"status"\s*:\s*"blocked"'
       - type: diff-empty
+      - type: skill-invocation
+        name: Mandatory design skills are loaded
+        config:
+          required:
+            - architecture-patterns
+            - architecture-decisions
 
   - name: A contradicted decision is surfaced instead of quietly rewritten
     prompt: |

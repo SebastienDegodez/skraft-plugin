@@ -45,6 +45,14 @@ export const SIGN_TEST_ALPHA = 0.05
 export const WILCOXON_ALPHA = 0.05
 export const MIN_CREDIBLE_TRIALS = 5
 
+// Tie rate at which a skill stops looking quiet and starts looking absent.
+//
+// Four in five pairs showing no difference on either instrument is not a
+// borderline reading — it is the shape of an arm that behaved like its own
+// control. Set lower, ordinary skills with a narrow remit trip it; set higher,
+// nothing ever does and the signal is decorative.
+export const INERT_TIE_RATE = 0.8
+
 // Power lives in the discordant pairs, not in the trial count. The two-sided
 // exact sign test bottoms out at p = 2 · 2^-d, so below six discordant pairs no
 // tally can reach alpha: a flawless 5W/0L sweep scores p = 0.0625 and 7W/1L
@@ -133,6 +141,37 @@ export function comparisonVerdict(report, subject, trials) {
   const erroredCount = pairing ? Math.max(summary.erroredCount ?? 0, pairing.erroredCount) : (summary.erroredCount ?? 0)
   const unmatchedTrialCount = pairing ? Math.max(reportUnmatched, pairing.unmatchedCount) : reportUnmatched
 
+  // Did the skill change anything at all, as opposed to changing something the
+  // score could not resolve?
+  //
+  // A high grader tie rate on its own does not answer that. An LLM grader
+  // returns one integer on a coarse scale, so a real change in method that
+  // leaves the answer correct routinely lands in the same bucket. The judge is
+  // what closes the gap: it reads both trajectories side by side and calls a
+  // winner without ever seeing a grader result, so it is looking at how the
+  // agent worked, not at what it scored. When both instruments call tie on
+  // nearly every pair, the two arms were indistinguishable to a reader and not
+  // merely to the rubric.
+  //
+  // That is the only evidence that can argue for deleting a skill rather than
+  // fixing its eval, so it is published as two rates and a flag rather than
+  // folded into the verdict — the decision is the reader's, and it belongs
+  // beside the activation rate, which says whether the skill was there at all.
+  const countedPairs = wins + ties + losses
+  const judgeCounted = judgeWins + judgeTies + judgeLosses
+  const graderTieRate = countedPairs ? ties / countedPairs : null
+  const judgeTieRate = judgeCounted ? judgeTies / judgeCounted : null
+  const inertia = {
+    graderTieRate,
+    judgeTieRate,
+    threshold: INERT_TIE_RATE,
+    idle:
+      graderTieRate != null &&
+      judgeTieRate != null &&
+      graderTieRate >= INERT_TIE_RATE &&
+      judgeTieRate >= INERT_TIE_RATE,
+  }
+
   const discordant = wins + losses
   const pValue = signTestPValue(wins, losses)
   const wilcoxon = {
@@ -188,6 +227,7 @@ export function comparisonVerdict(report, subject, trials) {
     // baseline already aces, versus a difference the grader's resolution could
     // not hold.
     tieBreakdown: pairing?.tieBreakdown ?? null,
+    inertia,
     graderPairs: pairing?.pairs ?? null,
     trialCount,
     pairedTrialCount,

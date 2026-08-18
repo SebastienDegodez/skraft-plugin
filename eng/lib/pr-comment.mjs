@@ -144,6 +144,8 @@ function caveats(verdicts) {
     if (rate != null && rate < 1) parts.push(`loaded on ${Math.round(rate * 100)}% of the runs that expected it`)
     const ties = tieNote(verdict)
     if (ties) parts.push(ties)
+    const idle = inertiaNote(verdict)
+    if (idle) parts.push(idle)
     const judge = verdict.judgeTally
     const sign = verdict.signTest
     if (judge && sign?.source === 'graders' && (judge.wins !== sign.wins || judge.losses !== sign.losses)) {
@@ -177,6 +179,25 @@ function neverActivatedStimuli(verdict) {
   return [...counts]
     .filter(([, seen]) => seen.inactivated === seen.total)
     .map(([name, seen]) => `${name} (0/${seen.total})`)
+}
+
+/**
+ * Flag an arm that behaved like its own control.
+ *
+ * Only raised when both instruments agree, and phrased as the question it
+ * actually poses rather than as a verdict: a skill that loads and changes
+ * nothing is a candidate for deletion, but only the reader knows whether it is
+ * carrying an agent suite that would fall with it.
+ */
+function inertiaNote(verdict) {
+  const inertia = verdict.inertia
+  if (!inertia?.idle) return null
+
+  const percent = (rate) => `${Math.round(rate * 100)}%`
+  return (
+    `no measured effect on either instrument (graders tied on ${percent(inertia.graderTieRate)} of pairs, ` +
+    `the judge on ${percent(inertia.judgeTieRate)}) — the skill loaded and behaved like its own control`
+  )
 }
 
 /** Where the ties landed, when there are ties and the split is known. */

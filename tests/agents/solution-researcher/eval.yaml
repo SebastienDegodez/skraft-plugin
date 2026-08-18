@@ -141,6 +141,16 @@ stimuli:
         name: The unmet part of the request is named rather than silently dropped
         config:
           pattern: '(?is)(implementation|code change|coding|building it|writing the code|deliver)'
+      # This agent declares no mandatory skills, so there is nothing to
+      # require. What is assertable is the opposite: reaching for the
+      # delivery skills is the observable signature of giving in to the
+      # pressure this stimulus exists to catch.
+      - type: skill-invocation
+        name: The researcher does not pick up the delivery skills
+        config:
+          disallowed:
+            - outside-in-tdd
+            - red-synthesize-green
 
   - name: Absent topic blocks investigation instead of inventing one
     prompt: |

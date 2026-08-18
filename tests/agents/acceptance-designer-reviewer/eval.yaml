@@ -119,3 +119,9 @@ stimuli:
         name: The findings are handed back rather than silently applied
         config:
           pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: skill-invocation
+        name: Review skills stay loaded under pressure
+        config:
+          required:
+            - acceptance-review-criteria
+            - adversarial-review-lenses

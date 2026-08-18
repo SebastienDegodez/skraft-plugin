@@ -123,6 +123,27 @@ describe('buildPrComment', () => {
     ok(!comment.includes('at the floor'))
   })
 
+  it('flags an arm that behaved like its own control on both instruments', () => {
+    const comment = buildPrComment(
+      results(verdict({ inertia: { graderTieRate: 0.9, judgeTieRate: 0.85, threshold: 0.8, idle: true } })),
+    )
+
+    ok(comment.includes('behaved like its own control'))
+    ok(comment.includes('90%'))
+    ok(comment.includes('85%'))
+  })
+
+  it('stays quiet when only one instrument saw nothing', () => {
+    // The graders tie routinely on a real change in method the coarse scale
+    // cannot resolve. Raising the flag on that alone would nominate working
+    // skills for deletion.
+    const comment = buildPrComment(
+      results(verdict({ inertia: { graderTieRate: 0.95, judgeTieRate: 0.2, threshold: 0.8, idle: false } })),
+    )
+
+    ok(!comment.includes('behaved like its own control'))
+  })
+
   it('shows a dash instead of crashing on a null score', () => {
     const comment = buildPrComment(results(verdict({ meanScore: null, confidenceInterval: null, metrics: null })))
     ok(comment.includes('—'))

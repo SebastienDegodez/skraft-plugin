@@ -108,6 +108,13 @@ jobs:
         continue-on-error: true
         run: vally lint plugins/skraft-framework/skills
 
+      - name: Check every experiment file points at something real
+        # `vally experiment run --dry-run` validates structure and the `vary`
+        # invariant but not the targets, so a mistyped skill path yields an arm
+        # with nothing mounted — which reads downstream exactly like "the skill
+        # did not help". Silent, and fatal to the conclusion.
+        run: node eng/check-experiment-paths.mjs
+
       - name: Lint every evaluation spec
         run: |
           set -euo pipefail

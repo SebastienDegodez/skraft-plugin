@@ -385,3 +385,41 @@ describe('the two tests that gate a pass', () => {
     strictEqual(verdict.passed, false)
   })
 })
+
+describe('inertia — did the skill change anything at all', () => {
+  const flat = (n) => arms(Array.from({ length: n }, () => [0.5, 0.5]))
+
+  it('calls an arm idle when both instruments tied on nearly every pair', () => {
+    const verdict = comparisonVerdict(report({ wins: 0, ties: 5, losses: 0, trialCount: 5 }), subject, flat(5))
+
+    strictEqual(verdict.inertia.graderTieRate, 1)
+    strictEqual(verdict.inertia.judgeTieRate, 1)
+    strictEqual(verdict.inertia.idle, true)
+  })
+
+  it('holds back when the judge saw a difference the graders could not resolve', () => {
+    // The whole point of the second instrument: an LLM grader returns one
+    // integer, so a real change in method that leaves the answer correct lands
+    // in the same bucket. Deleting a skill on the graders alone would kill
+    // working ones.
+    const verdict = comparisonVerdict(report({ wins: 4, ties: 1, losses: 0, trialCount: 5 }), subject, flat(5))
+
+    strictEqual(verdict.inertia.graderTieRate, 1)
+    strictEqual(verdict.inertia.judgeTieRate, 0.2)
+    strictEqual(verdict.inertia.idle, false)
+  })
+
+  it('holds back when the graders separated the arms', () => {
+    const verdict = comparisonVerdict(report({ wins: 0, ties: 6, losses: 0, trialCount: 6 }), subject, cleanSweep(6))
+
+    strictEqual(verdict.inertia.graderTieRate, 0)
+    strictEqual(verdict.inertia.idle, false)
+  })
+
+  it('reports no rate at all rather than a misleading zero when nothing was paired', () => {
+    const verdict = comparisonVerdict(report({ wins: 0, ties: 0, losses: 0, trialCount: 0 }), subject, arms([]))
+
+    strictEqual(verdict.inertia.graderTieRate, null)
+    strictEqual(verdict.inertia.idle, false)
+  })
+})
