@@ -18,7 +18,7 @@
 // Output: a JSON object { generatedAt, root, summary, items[] } on stdout (or --out).
 // Exit code: 0 when no drift, 1 when drift was found (so CI can branch), 2 on usage error.
 
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { resolve, join, basename, dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection, parseYaml } from './lib/book.mjs';
@@ -117,7 +117,21 @@ function deriveAgentUsageOrder(root) {
   if (!orchestrator) return null;
 
   const chain = Array.isArray(orchestrator.agents) ? orchestrator.agents : [];
-  const orderedAgents = ['skraft-orchestrator', ...chain];
+
+  // Build display-name → slug map from all agent files so that orchestrator.agents
+  // display names (e.g. "Skraft - Solution Researcher") resolve to file slugs
+  // (e.g. "solution-researcher") used in handbook links and skill section headings.
+  const agentsDir = join(root, 'plugins/skraft-framework/agents');
+  const nameToSlug = {};
+  for (const file of readdirSync(agentsDir).filter((f) => f.endsWith('.agent.md'))) {
+    const slug = file.replace(/\.agent\.md$/, '');
+    const fm = readFrontmatter(join(agentsDir, file));
+    if (fm?.name) nameToSlug[fm.name] = slug;
+  }
+
+  const resolveSlug = (nameOrSlug) => nameToSlug[nameOrSlug] ?? nameOrSlug;
+
+  const orderedAgents = ['skraft-orchestrator', ...chain.map(resolveSlug)];
   const skillsByAgent = {};
 
   for (const agent of orderedAgents) {
