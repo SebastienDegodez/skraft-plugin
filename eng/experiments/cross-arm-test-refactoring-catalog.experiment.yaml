@@ -29,3 +29,54 @@ variants:
     environment:
       skills:
         - ../../plugins/skraft-framework/skills/outside-in-tdd
+
+  # No `as-shipped` arm: this SKILL.md names no sibling to delegate to, so
+  # the isolated arm above already is the shipping configuration.
+
+  # The configuration a developer actually has: the whole plugin available,
+  # the agent free to reach for whatever it judges relevant. It answers a
+  # different question from the arms above — not "what does this skill add"
+  # but "does the shipped plugin help on this task at all" — and it buys
+  # something the declared arms cannot: `skillActivationBreakdown` records
+  # which skills the agent actually pulled in, so the dependency closure is
+  # measured rather than read out of prose. Availability is not activation:
+  # on the agent suites all 36 of these are mounted and three activate.
+  all-skills:
+    environment:
+      skills:
+        - ../../plugins/skraft-framework/skills/acceptance-review-criteria
+        - ../../plugins/skraft-framework/skills/adr-eligibility-gate
+        - ../../plugins/skraft-framework/skills/adversarial-review-lenses
+        - ../../plugins/skraft-framework/skills/architecture-decisions
+        - ../../plugins/skraft-framework/skills/architecture-patterns
+        - ../../plugins/skraft-framework/skills/architecture-review-criteria
+        - ../../plugins/skraft-framework/skills/bdd-methodology
+        - ../../plugins/skraft-framework/skills/characterize-brownfield
+        - ../../plugins/skraft-framework/skills/characterize-with-contracts
+        - ../../plugins/skraft-framework/skills/clean-architecture-testing
+        - ../../plugins/skraft-framework/skills/compose-brownfield-prd
+        - ../../plugins/skraft-framework/skills/contract-testing
+        - ../../plugins/skraft-framework/skills/contract-testing-dotnet
+        - ../../plugins/skraft-framework/skills/contract-testing-roster
+        - ../../plugins/skraft-framework/skills/craft-discipline
+        - ../../plugins/skraft-framework/skills/discovery-review-criteria
+        - ../../plugins/skraft-framework/skills/github-search-protocol
+        - ../../plugins/skraft-framework/skills/issue-refinement
+        - ../../plugins/skraft-framework/skills/issue-triage
+        - ../../plugins/skraft-framework/skills/mikado-method
+        - ../../plugins/skraft-framework/skills/mocking-inprocess-dotnet
+        - ../../plugins/skraft-framework/skills/mocking-microcks-dotnet
+        - ../../plugins/skraft-framework/skills/mocking-strategy-roster
+        - ../../plugins/skraft-framework/skills/mutation-testing
+        - ../../plugins/skraft-framework/skills/outside-in-tdd
+        - ../../plugins/skraft-framework/skills/planning-review-criteria
+        - ../../plugins/skraft-framework/skills/playwright-evidence
+        - ../../plugins/skraft-framework/skills/quality-gates-dotnet
+        - ../../plugins/skraft-framework/skills/quality-gates-evidence-contract
+        - ../../plugins/skraft-framework/skills/resolving-stack-commands
+        - ../../plugins/skraft-framework/skills/skraft-config
+        - ../../plugins/skraft-framework/skills/skraft-difficulty-routing
+        - ../../plugins/skraft-framework/skills/sprint-planning
+        - ../../plugins/skraft-framework/skills/strangler-fig-method
+        - ../../plugins/skraft-framework/skills/test-design-mandates
+        - ../../plugins/skraft-framework/skills/test-refactoring-catalog

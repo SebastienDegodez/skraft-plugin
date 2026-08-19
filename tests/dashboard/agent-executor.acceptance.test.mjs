@@ -15,7 +15,7 @@ const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const agentPath = join(repoRoot, 'plugins/skraft-framework/agents/software-engineer.agent.md')
 const relativeAgentPath = relative(repoRoot, agentPath).split('\\').join('/')
 const expectedHash = createHash('sha256').update(readFileSync(agentPath)).digest('hex')
-const activatedSkills = ['outside-in-tdd', 'red-synthesize-green', 'craft-discipline']
+const activatedSkills = ['outside-in-tdd', 'test-design-mandates', 'craft-discipline']
 const blockedOutput = '{"status":"blocked","type":"clarification_needed"}'
 
 const rawEvents = [

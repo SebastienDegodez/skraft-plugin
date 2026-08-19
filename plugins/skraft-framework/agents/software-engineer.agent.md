@@ -27,7 +27,6 @@ metadata:
   phase: DELIVER
   skills:
     - outside-in-tdd
-    - red-synthesize-green
     - clean-architecture-testing
     - test-design-mandates
     - craft-discipline
@@ -78,7 +77,6 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 
 ### Always load at startup (before PREPARE)
 - [outside-in-tdd](../skills/outside-in-tdd/SKILL.md)
-- [red-synthesize-green](../skills/red-synthesize-green/SKILL.md)
 - [craft-discipline](../skills/craft-discipline/SKILL.md)
 
 ### Load on demand (trigger-based)
@@ -112,7 +110,7 @@ These are owned by the skills — load them, do not inline rules here.
 - Load the DISTILL artefacts: the `.feature`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Run the suite to confirm the acceptance test is RED on a business assertion.
 - Do NOT re-author the acceptance test or alter its input / expected values (Iron Rule of tests).
 - Identify entry boundaries and expected outward effects from the existing acceptance test + impl-plan.
-- Target exactly ONE active behavioral scenario (the first RED acceptance scenario, then the next).
+- Target exactly ONE active behavioral scenario. The acceptance-designer authored the FIRST scenario's test only; once that slice is green and committed, YOU author the next scenario's acceptance test from the `.feature`. Never park a pending scenario with `Skip` / `[Ignore]` — see `outside-in-tdd` → One Acceptance Test at a Time.
 
 ### 2. RED (inner loop)
 - The OUTER acceptance test already exists (from DISTILL). Drive the INNER loop: write ONE failing unit test for the next behavior slice the acceptance test demands.
@@ -126,6 +124,7 @@ These are owned by the skills — load them, do not inline rules here.
 - **Gate**: Entire test suite must run green. Do NOT refactor during Green.
 
 ### 4. COMMIT & VERIFY
+- **Post-GREEN Wiring Verification — FIRST, before anything else in this phase.** Run `git diff --name-only`. Every production file the behavior required MUST appear. If only test files changed while the suite flipped RED → GREEN, that is **Fixture Theater**: BLOCK the commit, go back and write the production code. Then apply the deletion test — revert the production change mentally; if the tests still pass, they are exercising fixture state, not behavior. (`outside-in-tdd` → Post-GREEN Wiring Verification.)
 - Run static checks, formatting, and Mutation Testing.
 - **Gate**: Mutation score threshold depends on the `depthTier` provided in the dispatch payload (basic≅80%, standard≅90%, comprehensive=100% on business logic). If a test kills no mutants, DELETE IT.
 - Commit using conventional commits (`feat(<domain>): <behavior>`).

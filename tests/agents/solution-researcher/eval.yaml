@@ -150,7 +150,6 @@ stimuli:
         config:
           disallowed:
             - outside-in-tdd
-            - red-synthesize-green
 
   - name: Absent topic blocks investigation instead of inventing one
     prompt: |

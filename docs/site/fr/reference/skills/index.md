@@ -68,7 +68,6 @@ Aucune skill additionnelle — s'appuie sur les outils natifs (`read`, `search/c
 ### 10) DELIVER — [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }})
 
 - **[outside-in-tdd](outside-in-tdd.html)** — stratégie TDD outside-in de bout en bout.
-- **[red-synthesize-green](red-synthesize-green.html)** — cycle RED → implémentation minimale → GREEN.
 - **[clean-architecture-testing](clean-architecture-testing.html)** — stratégie de tests par couche et frontière.
 - **[craft-discipline](craft-discipline.html)** — checkpoints d'auto-discipline avant commit.
 - **[test-refactoring-catalog](test-refactoring-catalog.html)** — refactoring test après GREEN.

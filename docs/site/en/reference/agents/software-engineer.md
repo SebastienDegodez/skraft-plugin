@@ -65,4 +65,3 @@ Mutation testing verifies that tests actually detect defects, beyond simple line
 - [software-engineer-and-reviewer]({{ "/en/reference/agents/software-engineer-and-reviewer" | relative_url }}) — Full DELIVER cycle
 - [Pipeline DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — Phase description
 - [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — TDD skill
-- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle skill

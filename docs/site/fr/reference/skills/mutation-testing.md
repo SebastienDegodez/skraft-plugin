@@ -55,7 +55,7 @@ Le flux déterministe en 5 étapes (run → parse JSON → classify → kill →
 
 ## Voir aussi
 
-- [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Cycle TDD dont la phase COMMIT utilise ce skill
+- [outside-in-tdd]({{ "/fr/reference/skills/outside-in-tdd" | relative_url }}) — Cycle TDD dont la phase COMMIT & VERIFY utilise ce skill
 - [craft-discipline]({{ "/fr/reference/skills/craft-discipline" | relative_url }}) — Checkpoints d'auto-discipline avant commit
 - [quality-gates-evidence-contract]({{ "/fr/reference/skills/quality-gates-evidence-contract" | relative_url }}) — Contrat d'évidence qui consomme le score de mutation
 - [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Agent DELIVER qui exécute ce skill

@@ -152,10 +152,6 @@
         "policy": "verify"
       },
       {
-        "name": "red-synthesize-green",
-        "policy": "verify"
-      },
-      {
         "name": "clean-architecture-testing",
         "policy": "verify"
       },

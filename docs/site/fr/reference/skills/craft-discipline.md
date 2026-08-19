@@ -51,6 +51,6 @@ L'auto-discipline réduit le bruit dans les cycles de revue : le reviewer peut s
 
 ## Voir aussi
 
-- [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Cycle TDD
+- [outside-in-tdd]({{ "/fr/reference/skills/outside-in-tdd" | relative_url }}) — Cycle RED → SYNTHESIZE GREEN
 - [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Agent qui utilise ce skill
 - [software-engineer-reviewer]({{ "/fr/reference/agents/software-engineer-reviewer" | relative_url }}) — Le reviewer qui vérifie indépendamment

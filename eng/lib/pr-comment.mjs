@@ -56,6 +56,84 @@ const efficiencyCell = (verdict) => {
   return `${percent(efficiency.tokenDeltaPercent)} tokens, ${percent(efficiency.durationDeltaPercent)} time`
 }
 
+// The two tables report different instruments, and the difference is easy to
+// miss: one is a paired comparison with a p-value, the other a single-arm
+// conformance tally with no comparison in it at all. Collapsed so the comment
+// stays skimmable, spelled out so a reader never has to guess what `p` means —
+// the most common misreading is treating it as "the chance the skill works".
+const SKILL_LEGEND = [
+  '<details>',
+  '<summary><b>How to read this table</b></summary>',
+  '',
+  '**The design.** Every stimulus runs twice on the same input: once with no skill mounted at all',
+  '(*baseline*), once with only this skill mounted (*skilled*). Nothing else differs. Pairing the two',
+  'run by run cancels most of the model\'s own variance, so what is left is attributable to the skill.',
+  '',
+  '| Column | What it says |',
+  '| --- | --- |',
+  '| **Verdict** | `✅ pass` credible improvement · `🔴 regression` credible harm, the only state that blocks the merge · `➖ no improvement` measured, nothing found · `⚪ inconclusive` the run could not decide — trials errored, went unmatched, or the budget was too small |',
+  '| **Graders (base → skilled)** | Mean deterministic grader score on each arm over the pairs that counted, and the delta. The *size* of the effect, not only its direction. |',
+  '| **Sign test** | Wins/Ties/Losses across paired runs, with its p-value. Asks **how often** the skilled arm won. |',
+  '| **Rank test** | Wilcoxon signed-rank p-value. Asks **by how much** — one pair improving by 0.40 outweighs three improving by 0.02. Blank when only the LLM judge labelled a winner, since a rank test needs a magnitude per pair. |',
+  '| **Efficiency Δ** | Token and wall-time cost of the skilled arm against baseline. Reported, never gated. |',
+  '',
+  '#### What is `p`?',
+  '',
+  '`p` is the probability of seeing a result **at least this lopsided if the skill changed nothing at',
+  'all**. It is not the probability that the skill works, and `1 − p` is not a confidence level.',
+  '',
+  'The sign test discards every tied pair — a tie carries no information about direction — and keeps',
+  'only the pairs that went one way or the other (the *discordant* pairs). If the skill did nothing,',
+  'each of those is a coin flip, so `p` is the exact two-sided binomial probability of a split this',
+  'extreme from a fair coin. The alpha is 0.05.',
+  '',
+  '| Discordant pairs | All in one direction | `p` | |',
+  '| --- | --- | --- | --- |',
+  '| 6 | 6W/0L | 0.031 | ✅ below alpha |',
+  '| 5 | 5W/0L | 0.062 | ❌ above it |',
+  '',
+  'That is why a comparison with fewer than 6 discordant pairs is reported `⚪ inconclusive` rather',
+  'than `➖ no improvement`: **no tally that small can reach significance, however one-sided it is.**',
+  'Calling it "no improvement" would blame the skill for a trial budget that could never have',
+  'concluded in either direction. An all-tie comparison is exempt — zero discordant pairs is a genuine',
+  'no-difference measurement, not a power failure.',
+  '',
+  '**Why both tests must clear.** They ask different questions, and a verdict is credible only when',
+  'they agree. Requiring agreement rather than either alone stops two shots at the same question from',
+  'doubling the false-positive rate on the field that gates a merge.',
+  '',
+  '**Notes above the table** qualify a row without belonging in a column: pairs dropped because the',
+  'skill never loaded (a baseline-versus-baseline pair measures nothing), where the ties landed — a tie',
+  '*at the ceiling* means the baseline already scored full marks, so that stimulus cannot discriminate',
+  'no matter how good the skill is — and whether the LLM judge read the same runs differently.',
+  '',
+  'Each spec budgets its own trials through `defaults.runs`; see `docs/skill-evaluation.md`.',
+  '',
+  '</details>',
+]
+
+const AGENT_LEGEND = [
+  '<details>',
+  '<summary><b>How to read this table</b></summary>',
+  '',
+  '**A different instrument — there is no `p` here.** An agent suite dispatches the real agent once per',
+  'trial and grades the resulting trajectory. There is **no baseline arm**, so there is no pairing, no',
+  'sign test and no p-value: nothing in this table is a comparison. What it measures is *conformance* —',
+  'did the agent load the skills it declares, keep its identity, produce the expected handoff shape,',
+  'refuse what it is required to refuse.',
+  '',
+  '| Column | What it says |',
+  '| --- | --- |',
+  '| **Verdict** | Whether the suite met its own `scoring.threshold` |',
+  '| **Score** | Mean trial score, with a 95% interval when one is available |',
+  '| **Conforming trials** | How many trials met the threshold, out of how many ran. `2/3` with one trial *erroring* is not the same finding as `2/3` with three completing — the Reason column says which. |',
+  '',
+  '**Advisory by design.** An agent verdict never blocks a merge: a suite runs a real agent making real',
+  'tool calls, so one flaky or timed-out session would block an unrelated PR. Read it, do not gate on it.',
+  '',
+  '</details>',
+]
+
 /** Every skill verdict across one or more `results.json` payloads. */
 export function extractVerdicts(results) {
   return (results ?? []).flatMap((result) => (result?.verdicts ?? []).filter((verdict) => verdict.subject?.kind === 'skill'))
@@ -103,16 +181,10 @@ function skillSection(verdicts) {
   return [
     '## Skill evaluation — baseline vs skilled',
     '',
-    'Automated pre-merge comparison for the skill(s) this PR changed. Each spec ' +
-      'budgets its own trials through `defaults.runs`; a verdict stays `inconclusive` ' +
-      'below 5 trials — see `docs/skill-evaluation.md`. Merge is only blocked by a ' +
-      'credible `regression`.',
+    'Automated pre-merge comparison for the skill(s) this PR changed. Merge is only ' +
+      'blocked by a credible `regression`.',
     '',
-    'Both tests read the deterministic grader scores, and both must clear their ' +
-      'alpha before a verdict is credible: the sign test asks whether the treatment ' +
-      'wins more often, the rank test whether it wins by enough. Agreement is ' +
-      'required rather than either alone, so two shots at the same question cannot ' +
-      'double the false-positive rate on the field that gates a merge.',
+    ...SKILL_LEGEND,
     '',
     '| Skill | Verdict | Graders (base → skilled) | Sign test | Rank test | Efficiency Δ | Reason |',
     '| --- | --- | --- | --- | --- | --- | --- |',
@@ -227,9 +299,9 @@ function agentSection(verdicts) {
     '## Agent conformance',
     '',
     'The agent suite(s) this PR touched, dispatched for real and graded by ' +
-      'deterministic checks (identity, skill loading, handoff shape). Single-arm, so ' +
-      'there is no baseline and no sign test. Advisory: an agent verdict never blocks ' +
-      'the merge.',
+      'deterministic checks (identity, skill loading, handoff shape).',
+    '',
+    ...AGENT_LEGEND,
     '',
     '| Agent | Verdict | Score | Conforming trials | Reason |',
     '| --- | --- | --- | --- | --- |',

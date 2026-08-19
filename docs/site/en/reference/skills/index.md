@@ -68,7 +68,6 @@ No additional skills — relies on built-in tools (`read`, `search/codebase`, `g
 ### 10) DELIVER — [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }})
 
 - **[outside-in-tdd](outside-in-tdd.html)** — end-to-end outside-in TDD strategy.
-- **[red-synthesize-green](red-synthesize-green.html)** — RED → minimal implementation → GREEN cycle.
 - **[clean-architecture-testing](clean-architecture-testing.html)** — layer/boundary test strategy.
 - **[craft-discipline](craft-discipline.html)** — self-discipline checkpoints before commit.
 - **[test-refactoring-catalog](test-refactoring-catalog.html)** — post-GREEN test refactoring.

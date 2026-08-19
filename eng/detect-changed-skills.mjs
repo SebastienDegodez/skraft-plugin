@@ -31,12 +31,17 @@ if (values.help || !values.base || !['skills', 'agents'].includes(values.kind)) 
 const diff = execFileSync('git', ['diff', '--name-only', values.base, values.head], { encoding: 'utf8' })
 const changedPaths = diff.split('\n').filter(Boolean)
 
+const specNames = (root) =>
+  existsSync(root) ? readdirSync(root).filter((entry) => existsSync(join(root, entry, 'eval.yaml'))) : []
+
+const testsRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../tests'))
+
 if (values.kind === 'skills') {
-  for (const skill of changedSkills(changedPaths)) console.log(skill)
+  // Only skills that actually carry a spec: see `changedSkills` for why naming
+  // an unrunnable one takes the whole job down with it.
+  const evaluable = specNames(join(testsRoot, 'skills'))
+  for (const skill of changedSkills(changedPaths, { evaluable })) console.log(skill)
 } else {
-  const suitesRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../tests/agents'))
-  const suites = existsSync(suitesRoot)
-    ? readdirSync(suitesRoot).filter((entry) => existsSync(join(suitesRoot, entry, 'eval.yaml')))
-    : []
+  const suites = specNames(join(testsRoot, 'agents'))
   for (const suite of changedAgentSuites(changedPaths, { suites })) console.log(suite)
 }

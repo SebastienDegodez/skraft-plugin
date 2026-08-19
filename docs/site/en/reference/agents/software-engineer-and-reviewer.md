@@ -73,4 +73,3 @@ Outside-In TDD starts with the acceptance test (the observable behaviour) and le
 - [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }}) — Reviewer agent
 - [Pipeline DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — Phase description
 - [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — TDD skill
-- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle skill

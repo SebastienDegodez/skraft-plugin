@@ -1,8 +1,8 @@
 name: outside-in-tdd
-description: Evaluates whether observable business behaviour drives a feature from its first test through safe implementation, wiring, and incremental delivery.
+description: Evaluates whether observable business behaviour drives a feature from its first test through safe implementation, wiring, and incremental delivery — including whether a failing suite is treated as trustworthy evidence of a missing approved outcome before any implementation is produced, and whether that inspection point survives delegation.
 type: capability
 defaults:
-  timeout: 3m
+  timeout: 4m
   runs: 4
 scoring:
   threshold: 1
@@ -320,3 +320,377 @@ stimuli:
         config:
           path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
           value: '9_500'
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - outside-in-tdd
+    rubric:
+      - The approved 95% outcome is produced by production code rather than supplied by test setup.
+      - The suite would fail again if the production rule were reverted.
+      - The misleading fixture is removed rather than left beside the corrected wiring.
+
+  - name: Turn an untrustworthy failure into evidence of the approved outcome
+    turns:
+      - |
+        Product approved one checkout outcome: a Gold customer with a 100.00 order
+        subtotal pays 95.00. Nothing else has been approved.
+
+        A teammate handed the work over saying the suite is already failing, so the
+        missing behaviour is proven and the only thing left is to make it pass.
+
+        Before changing any production code, get the suite to demonstrate the
+        approved outcome is missing, then stop and report what it proves.
+      - |
+        That is the right failure. Now make it pass without adding anything beyond
+        what was approved, and leave the suite as trustworthy evidence of it.
+    constraints:
+      max_duration: 5m
+    environment:
+      files:
+        - src: fixtures/placeholder-red-evidence/.gitignore
+          dest: .gitignore
+        - src: fixtures/placeholder-red-evidence/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/placeholder-red-evidence/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/placeholder-red-evidence/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/placeholder-red-evidence/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/placeholder-red-evidence/src/CheckoutPricing.Domain/DomainMarker.cs
+          dest: src/CheckoutPricing.Domain/DomainMarker.cs
+        - src: fixtures/placeholder-red-evidence/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/placeholder-red-evidence/src/CheckoutPricing.Application/CalculatePayableTotal.cs
+          dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
+        - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+          dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+        - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/GoldCustomerDiscountTests.cs
+          dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/GoldCustomerDiscountTests.cs
+        - src: fixtures/placeholder-red-evidence/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: handover with an unconditional failure"'
+    graders:
+      - type: run-command
+        name: Approved outcome is GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 1m
+      - type: file-not-matches
+        name: No assertion that fails regardless of behaviour remains
+        config:
+          path: tests/CheckoutPricing.UnitTests/**/*.cs
+          pattern: 'Assert\.Fail\s*\(|Assert\.True\s*\(\s*false\s*\)|Assert\.False\s*\(\s*true\s*\)|NotImplementedException|Skip\s*='
+      - type: file-matches
+        name: The approved payable total is asserted
+        config:
+          path: tests/CheckoutPricing.UnitTests/**/*.cs
+          pattern: '9[_ ]?500'
+      - type: run-command
+        name: Application and Domain line coverage is 100 percent
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+            - /p:CollectCoverage=true
+            - /p:CoverletOutputFormat=json
+            - /p:Threshold=100
+            - /p:ThresholdType=line
+            - /p:ThresholdStat=total
+            - /p:Include=[CheckoutPricing.Domain]*%2c[CheckoutPricing.Application]*
+          expected_exit_code: 0
+          timeout: 1m
+      - type: diff-contains
+        name: Production behaviour changed
+        config:
+          pattern: '(?m)^diff --git a/src/CheckoutPricing\.(?:Domain|Application)/(?!bin/|obj/).*\.cs '
+      - type: diff-not-contains
+        name: Approved scenario stayed intact
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount\.feature '
+      - type: run-command
+        name: Clean Architecture dependency tests are GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+            - --no-restore
+            - --filter
+            - FullyQualifiedName~Architecture
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Sentinel — build infrastructure survived the trial
+        config:
+          command: dotnet
+          args:
+            - restore
+            - CheckoutPricing.slnx
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - outside-in-tdd
+    rubric:
+      - The delivered check would fail again if the approved calculation were removed.
+      - The handover claim that the failure already proved the missing behaviour is not accepted at face value.
+      - The approved 95.00 outcome is the one the suite now demonstrates, and no other outcome was added.
+
+  - name: Reach a failure that witnesses the missing behaviour
+    prompt: |
+      Product approved one checkout outcome: a Gold customer with a 100.00 order
+      subtotal pays 95.00. Nothing else has been approved, and checkout does not
+      produce that outcome yet.
+
+      Take the repository just far enough to demonstrate that the approved outcome is
+      missing today, then stop and report exactly what fails and why. Do not produce
+      the approved outcome yet.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/approved-gold-discount-missing/.gitignore
+          dest: .gitignore
+        - src: fixtures/approved-gold-discount-missing/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/approved-gold-discount-missing/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/approved-gold-discount-missing/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/approved-gold-discount-missing/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/approved-gold-discount-missing/src/CheckoutPricing.Domain/DomainMarker.cs
+          dest: src/CheckoutPricing.Domain/DomainMarker.cs
+        - src: fixtures/approved-gold-discount-missing/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/approved-gold-discount-missing/src/CheckoutPricing.Application/ApplicationMarker.cs
+          dest: src/CheckoutPricing.Application/ApplicationMarker.cs
+        - src: fixtures/approved-gold-discount-missing/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+          dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+        - src: fixtures/approved-gold-discount-missing/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/approved-gold-discount-missing/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: approved outcome not implemented"'
+    graders:
+      - type: run-command
+        name: Solution builds
+        config:
+          command: dotnet
+          args:
+            - build
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Suite demonstrates a failure
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 1
+          timeout: 1m
+      - type: file-not-matches
+        name: No assertion that fails regardless of behaviour was used
+        config:
+          path: tests/CheckoutPricing.UnitTests/**/*.cs
+          pattern: 'Assert\.Fail\s*\(|Assert\.True\s*\(\s*false\s*\)|Assert\.False\s*\(\s*true\s*\)|NotImplementedException'
+      - type: file-not-matches
+        name: The approved calculation was not produced yet
+        config:
+          path: src/**/*.cs
+          pattern: '0\.95|95\s*/\s*100|\*\s*95\b|9[_ ]?500|0\.05\b'
+      - type: diff-contains
+        name: A check for the approved outcome now exists
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTests/(?!Architecture/|bin/|obj/).*\.cs '
+      - type: diff-not-contains
+        name: Approved scenario stayed intact
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount\.feature '
+      - type: run-command
+        name: Sentinel — build infrastructure survived the trial
+        config:
+          command: dotnet
+          args:
+            - restore
+            - CheckoutPricing.slnx
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - outside-in-tdd
+    rubric:
+      - The report names the business outcome that is not produced, rather than a build or setup problem.
+      - Work stopped before the approved outcome was produced, and this is stated plainly.
+
+  - name: Hand off a TDD slice to an unattended worker
+    prompt: |
+      I am about to hand the approved Gold discount slice to a background worker that
+      runs unattended while I am away. The single instruction I plan to send is:
+      "write the check that proves the discount is missing, then make it pass, then
+      commit."
+
+      Is that instruction safe to send as written? If not, tell me exactly what you
+      would send instead and in what order.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - outside-in-tdd
+    rubric:
+      - The single instruction is rejected because it lets the implementation start before anyone has seen the failure.
+      - The work is split into separate handoffs, with the failure coming back for inspection before any implementation is sent.
+      - The confirmation stays with the person delegating rather than being requested from the unattended worker itself.
+      - A written note inside a plan or inside the worker's own instruction is not treated as sufficient to create the stop.
+
+  - name: Tidy a green test class without inventing new work
+    prompt: |
+      Our checkout test class has four tests that all pass. They repeat the same six
+      lines of setup, and their names read like method signatures rather than
+      behaviour. Clean that up. Observable behaviour must not change.
+    tags:
+      intent: non-activation
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/green-checkout-tests/.gitignore
+          dest: .gitignore
+        - src: fixtures/green-checkout-tests/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/green-checkout-tests/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/green-checkout-tests/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/green-checkout-tests/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/green-checkout-tests/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/green-checkout-tests/src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
+        - src: fixtures/green-checkout-tests/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/green-checkout-tests/src/CheckoutPricing.Application/CalculatePayableTotal.cs
+          dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
+        - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+          dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+        - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalTests.cs
+          dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalTests.cs
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: green checkout suite"'
+    graders:
+      - type: run-command
+        name: Suite is still GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Application and Domain line coverage is still 100 percent
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+            - /p:CollectCoverage=true
+            - /p:CoverletOutputFormat=json
+            - /p:Threshold=100
+            - /p:ThresholdType=line
+            - /p:ThresholdStat=total
+            - /p:Include=[CheckoutPricing.Domain]*%2c[CheckoutPricing.Application]*
+          expected_exit_code: 0
+          timeout: 1m
+      - type: diff-not-contains
+        name: Production behaviour was left alone
+        config:
+          pattern: '(?m)^diff --git a/src/CheckoutPricing\.(?:Domain|Application)/(?!bin/|obj/).*\.cs '
+      - type: file-not-matches
+        name: No failing check was introduced and nothing was disabled
+        config:
+          path: tests/CheckoutPricing.UnitTests/**/*.cs
+          pattern: 'Assert\.Fail\s*\(|Assert\.True\s*\(\s*false\s*\)|NotImplementedException|Skip\s*='
+      - type: diff-contains
+        name: The test class was actually cleaned up
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTests/LoyaltyDiscount/.*\.cs '
+      - type: run-command
+        name: Sentinel — build infrastructure survived the trial
+        config:
+          command: dotnet
+          args:
+            - restore
+            - CheckoutPricing.slnx
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: tidying an already-green suite introduces no new
+      # behaviour, so there is no cycle to drive and loading the skill is the
+      # false positive this guard exists to catch. Test cleanup belongs to
+      # `test-refactoring-catalog`.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - outside-in-tdd
+    rubric:
+      - The existing tests become easier to read without any new behaviour being introduced.
+      - No approval step or extra ceremony is requested for a change that alters no observable behaviour.
+      - The unchanged behaviour is confirmed by the suite rather than asserted in prose.

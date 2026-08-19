@@ -66,7 +66,7 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 ### Always load at startup
 - [bdd-methodology](../skills/bdd-methodology/SKILL.md)
 - [test-design-mandates](../skills/test-design-mandates/SKILL.md)
-- [outside-in-tdd](../skills/outside-in-tdd/SKILL.md)
+- [outside-in-tdd](../skills/outside-in-tdd/SKILL.md) — **scoped: PREPARE and RED only.** That skill describes the whole cycle, including SYNTHESIZE-GREEN and the mutation gate. Those phases belong to the software-engineer in DELIVER. You read it for the boundary rules, Step 2 (let the domain emerge), Concentric Circle Expansion, and One Acceptance Test at a Time. You stop at RED — Boundary #2 below overrides anything in that skill that reads as an instruction to implement.
 
 ## Boundaries (Non-Negotiable)
 
@@ -84,7 +84,7 @@ Three kinds of "edge case", three destinations — never blur them:
 | Kind | Example | Owner | Where |
 |---|---|---|---|
 | Decided business case (in AC/Gherkin) | motorcycle + age 21 → refused | acceptance-designer (you) | OUTER acceptance test, value copied VERBATIM |
-| Undecided business case (absent from AC) | "what about a 120-year-old driver?" | nobody → **escalate** | Flag → DISCUSS (gherkin-gate). NEVER invent a value or a verdict |
+| Undecided business case (absent from AC) | "what about a 120-year-old driver?" | nobody → **escalate** | Flag → DISCUSS (`bdd-methodology`). NEVER invent a value or a verdict |
 | Implementation-derived branch (not expressible in Gherkin) | exhaustive-enum fallback, defensive guard, combinatorial sweep of an already-decided rule (e.g. a `PolicyService`) | software-engineer (inner loop) | Domain unit test, gated by `test-design-mandates` Mandate 4 |
 
 You **plan** Domain unit tests in the coverage matrix with an `Extraction Reason` code (Gate a/b) — but you **do NOT author** them: the domain must emerge from the engineer's RED (`outside-in-tdd` Step 2). If a needed edge case is a business decision absent from the AC, STOP and escalate; do not encode an invented value.
@@ -165,7 +165,7 @@ Author the executable Application-layer acceptance test (Step 1 of the impl-plan
 3. **Parametrize** AC tables with `[Theory]` / `[InlineData]` (see test-design-mandates); one `[InlineData]` row per example line.
 4. **Stub only to compile** — add the minimum production signature(s) so the test compiles. Write NO behavior.
 5. **Run and confirm RED**: execute the test suite (resolve the command via the `resolving-stack-commands` skill — never hardcode it here). The first scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If it fails for setup reasons, fix the harness — never weaken the assertion.
-6. Mark any not-yet-deliverable scenarios `Skip = "pending GREEN"` so the suite stays runnable, leaving at least the first scenario actively RED.
+6. Author the executable test for the **first** scenario only, and leave it actively RED. Do NOT write tests for the remaining scenarios yet, and never mark one `Skip` / `[Ignore]` to park it — a skipped test asserts nothing and carries a false green through every commit (`craft-discipline` C1/C5). The remaining scenarios stay recorded in the `.feature` file and in `impl-plan-{story}.md`; the software-engineer authors each one's test when its slice starts (`outside-in-tdd` — One Acceptance Test at a Time).
 
 **Self-check before persisting** (output the result):
 - [ ] Every input/output value in the test matches the `.feature` exactly (no invented values)

@@ -55,7 +55,7 @@ The deterministic 5-step flow (run → parse JSON → classify → kill → re-r
 
 ## See also
 
-- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle whose COMMIT phase uses this skill
+- [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — TDD cycle whose COMMIT & VERIFY phase uses this skill
 - [craft-discipline]({{ "/en/reference/skills/craft-discipline" | relative_url }}) — Self-discipline checkpoints before commit
 - [quality-gates-evidence-contract]({{ "/en/reference/skills/quality-gates-evidence-contract" | relative_url }}) — Evidence contract that consumes the mutation score
 - [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — DELIVER agent that runs this skill

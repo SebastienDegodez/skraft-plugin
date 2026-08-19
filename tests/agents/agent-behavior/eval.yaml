@@ -39,7 +39,6 @@ stimuli:
           required:
             - outside-in-tdd
             - craft-discipline
-            - red-synthesize-green
       - type: output-not-matches
         config:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'

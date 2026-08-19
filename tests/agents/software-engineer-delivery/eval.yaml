@@ -129,7 +129,6 @@ stimuli:
           required:
             - outside-in-tdd
             - craft-discipline
-            - red-synthesize-green
             - clean-architecture-testing
             - mutation-testing
             - quality-gates-evidence-contract

@@ -28,6 +28,33 @@ describe('changedSkills', () => {
   it('ignores an empty change set', () => {
     deepStrictEqual(changedSkills([]), [])
   })
+
+  // The plugin ships far more skills than eval specs, so a PR that edits a
+  // spec-less skill used to hand CI a name the runner exits non-zero on —
+  // taking the whole pre-merge job down after it had already paid for the
+  // skills that did have specs.
+  it('drops a changed skill that carries no eval spec', () => {
+    const paths = [
+      'plugins/skraft-framework/skills/craft-discipline/SKILL.md',
+      'plugins/skraft-framework/skills/outside-in-tdd/SKILL.md',
+    ]
+    deepStrictEqual(changedSkills(paths, { evaluable: ['outside-in-tdd'] }), ['outside-in-tdd'])
+  })
+
+  it('drops a skill whose eval spec the change itself deleted', () => {
+    const paths = ['tests/skills/red-synthesize-green/eval.yaml']
+    deepStrictEqual(changedSkills(paths, { evaluable: ['outside-in-tdd'] }), [])
+  })
+
+  it('yields nothing rather than everything when no skill is evaluable', () => {
+    const paths = ['plugins/skraft-framework/skills/craft-discipline/SKILL.md']
+    deepStrictEqual(changedSkills(paths, { evaluable: [] }), [])
+  })
+
+  it('filters nothing when the caller does not say what is evaluable', () => {
+    const paths = ['plugins/skraft-framework/skills/craft-discipline/SKILL.md']
+    deepStrictEqual(changedSkills(paths), ['craft-discipline'])
+  })
 })
 
 describe('changedAgentSuites', () => {

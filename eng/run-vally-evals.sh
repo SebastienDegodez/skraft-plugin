@@ -147,7 +147,12 @@ else
 fi
 
 EVAL_SPECS=()
-for spec in "${ALL_SPECS[@]}"; do
+# `${ARR[@]}` on an EMPTY array is an unbound-variable error under `set -u` in
+# bash 3.2 (the macOS default); bash 4.4+ (the CI runner) is lenient, which is
+# why this only ever bit locally. The `+` expansion yields nothing when the array
+# is unset or empty, so a named subject with no spec reaches the message below in
+# both shells instead of dying on "ALL_SPECS[@]: unbound variable".
+for spec in ${ALL_SPECS[@]+"${ALL_SPECS[@]}"}; do
   EVAL_NAME=$(basename "$(dirname "$spec")")
   SKIPPED=false
   # An agent suite is single-arm and pins its own model, so a run that varies the
@@ -166,7 +171,14 @@ for spec in "${ALL_SPECS[@]}"; do
 done
 
 if [ ${#EVAL_SPECS[@]} -eq 0 ]; then
-  echo "No eval.yaml files to run"
+  if [ -n "${1:-}" ]; then
+    # Named subject with nothing to run: most often a skill that ships without an
+    # eval spec (8 of 36 have one). Say which, so the caller does not read this as
+    # "the evaluation found nothing".
+    echo "No eval spec for '${1}': expected tests/skills/${1}/eval.yaml or tests/agents/${1}/eval.yaml" >&2
+  else
+    echo "No eval.yaml files to run" >&2
+  fi
   exit 1
 fi
 

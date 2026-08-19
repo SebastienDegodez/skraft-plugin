@@ -149,7 +149,7 @@ On commence par le test d'acceptation (boucle externe, comportement observable) 
 
 ### RED → GREEN → REFACTOR
 
-Le rythme fondamental du TDD : écrire un test qui échoue, le faire passer au plus simple, puis refactorer. Skill : [red-synthesize-green]({{ "/fr/reference/skills/" | relative_url }}).
+Le rythme fondamental du TDD : écrire un test qui échoue, puis le faire passer par une synthèse propre en un seul geste — pas de code sale suivi d'un refactoring. Skill : [outside-in-tdd]({{ "/fr/reference/skills/" | relative_url }}).
 
 > « Write new code only if an automated test has failed; eliminate duplication. »
 > — Beck, K., *Test-Driven Development by Example*, 2003.
