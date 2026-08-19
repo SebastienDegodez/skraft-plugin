@@ -99,8 +99,18 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   funding a full paired arm. It derives the pilot from the frozen spec and writes to
   `eval-results-pilot/`, so a probe can never be published as a verdict. Never hand-edit a
   committed spec to make a cheaper run possible.
+- `BASELINE_CACHE=1` on the runner reuses baseline records per `- name:` block, so only the
+  stimuli you actually edited are re-run. **ALWAYS ASK THE HUMAN before using it, every time,
+  and never enable it on your own initiative.** A cached arm is a frozen draw rather than a
+  fresh sample — two archived baseline arms of the same spec, same model, twelve minutes
+  apart, differ by 0.14 in contrast score — so it biases the paired tests in whichever
+  direction that draw happened to land. It answers "did my edit move anything" in the local
+  loop; it never produces a verdict. The runner refuses it under CI, and any result it
+  touches carries `baselineProvenance.publishable: false`. Never publish, commit, or quote
+  such a result as a measurement.
 - Generated output (`artifacts/`, `eval-results/`, `eval-results-pilot/`, `dashboard-data/`,
-  `docs/site/dashboard/data/`) is never committed.
+  `docs/site/dashboard/data/`) is never committed. The local baseline cache
+  (`eval-baseline-cache/`) is likewise disposable and gitignored.
 
 ### stryker.config.mjs rules
 

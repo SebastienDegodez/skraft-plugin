@@ -48,6 +48,16 @@ Your PR must contain:
 
 Include in the PR description: the identified problem, the proposed solution, and the reference(s) that justify it.
 
+### Step 5 — Read the verdict CI posts on your PR
+
+If your PR touches a skill that carries an evaluation spec, CI runs the paired comparison and posts a comment containing a line such as `9W/4T/2L (p=0.065)`.
+
+**Do not read that verdict as a grade.** A `➖ no improvement` is not a rejection, and an `⚪ inconclusive` is almost never the skill's fault — most often it is a trial budget that could not conclude, or a skill that never loaded at all.
+
+> 📐 Before reacting to a verdict, read [Reading an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }}). The deep dive explains where the `p` comes from, why ties are discarded, why at least six decisive pairs are needed, and how to tell apart the four causes of a non-conclusive verdict — three of which are **not** fixed by adding trials.
+
+Only a credible `🔴 regression` blocks the merge. Everything else is information to interpret.
+
 ## What genesis forbids
 
 - **Inventing a metric.** If you claim the pattern reduces bugs by 30%, you must cite the source. Without a source, rephrase qualitatively: "reduces late-detected defects (estimated)".

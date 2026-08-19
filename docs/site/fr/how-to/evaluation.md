@@ -146,6 +146,8 @@ En intégration continue, le workflow `skill-evaluation` fait la même chose de 
 
 Le juge remonte un décompte de victoires, égalités et défaites. Ce décompte devient un verdict via un **test des signes binomial exact bilatéral** : une majorité de victoires ne suffit pas, encore faut-il qu'elle soit improbable sous l'hypothèse du hasard.
 
+> 📐 **Vous ne comprenez pas d'où sort le `p` ?** Le deep-dive [Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/lire-un-verdict" | relative_url }}) déplie la ligne `9V/4E/2D (p=0,065)` chiffre par chiffre sur un cas réel : pourquoi les égalités sont jetées, pourquoi le plancher est à six paires, et pourquoi une skill qui gagne largement peut quand même échouer au test des signes.
+
 | Verdict | Ce qu'il signifie |
 |---|---|
 | `pass` | comparaison complète, suffisamment d'essais, avantage significatif |

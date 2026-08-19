@@ -33,6 +33,8 @@ SKRAFT proves quality through three layers, each answering a different question.
 - Vally compares baseline (no skill) vs treatment (skill enabled) on the same stimuli
 - Outcomes are judged by a rubric, not by hand: a scorer reads what the agent produced and assigns a score
 - Results compared by an **exact two-sided binomial sign test** (p ≤ 0.05 = credible)
+
+> 📐 **Not sure where the `p` comes from?** The deep dive [Reading an evaluation verdict]({{ "/en/explanation/deep-dive/reading-a-verdict" | relative_url }}) unfolds the line `9W/4T/2L (p=0.065)` number by number on a real case: why ties are discarded, why the floor sits at six pairs, and why a skill that wins by a wide margin can still fail the sign test.
 - Each spec budgets its own trials through `defaults.runs`; CI never overrides it, on a PR or on schedule
 
 **Why it matters:** a skill that *looks good* often performs worse in practice, or costs tokens with no return. Empirical measurement catches it; intuition does not.

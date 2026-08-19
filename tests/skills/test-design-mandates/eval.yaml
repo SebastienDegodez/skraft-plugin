@@ -148,11 +148,19 @@ stimuli:
       - Requires a test driving a real browser and reading the rendered geometry of both elements.
       - Keeps the component test for what it does prove instead of proposing to delete it.
 
+  # Advisory, not imperative, and deliberately so. This spec stages no workspace,
+  # so an order to edit a file lands in an empty temp directory: both arms search,
+  # find nothing, and report it. The two arms then differ only in how the judge
+  # scores the same non-answer — measured, it credited the baseline a partial for
+  # "incidental" preservation of tests it had not touched, and charged the skilled
+  # arm full marks for the identical non-answer. Asking for the shape of the fix
+  # keeps the near-miss guard intact and makes every criterion satisfiable without
+  # a filesystem. Do not "restore" the imperative without also staging a fixture.
   - name: Tidying a green test class is not a coverage decision
     prompt: |
       Our refund acceptance tests all pass, but the test class has grown past four
       hundred lines and the same six-line setup is copied into every one of them.
-      Tidy it up.
+      How would you tidy it up? Show me the shape of the result.
     tags:
       intent: non-activation
     graders:
@@ -168,7 +176,7 @@ stimuli:
           disallowed:
             - test-design-mandates
     rubric:
-      - Removes the duplicated setup without changing which behaviours the tests cover.
-      - Keeps every existing test case rather than merging or dropping any of them.
+      - Proposes hoisting the duplicated setup into one shared setup or fixture, without changing which behaviours the tests cover.
+      - Keeps every existing test case in the proposal rather than merging or dropping any of them.
       - Does not reopen where each test should enter or which layer it belongs to.
       - Does not ask for a coverage matrix for tests that already exist and pass.

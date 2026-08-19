@@ -17,9 +17,16 @@ const RUNS_LINE = /^([ \t]*)runs:[ \t]*\d+[ \t]*$/
 /**
  * Split a spec into its header and one entry per stimulus block.
  * A block runs from its `- name:` line to the line before the next one.
+ *
+ * Exported because the baseline cache keys on the same unit: one block is one
+ * stimulus, and one stimulus is what gets re-run or served from cache. Two
+ * parsers over the same file shape would drift, which is the defect class this
+ * repository keeps paying for.
+ *
  * @param {string} content raw eval.yaml content
+ * @returns {{ header: string[], blocks: { name: string, lines: string[] }[] }}
  */
-function parseBlocks(content) {
+export function parseBlocks(content) {
   const lines = content.split('\n')
   const header = []
   const blocks = []
@@ -34,7 +41,7 @@ function parseBlocks(content) {
   return { header, blocks }
 }
 
-function stripQuotes(value) {
+export function stripQuotes(value) {
   const quoted = /^(['"])(.*)\1$/.exec(value)
   return quoted ? quoted[2] : value
 }

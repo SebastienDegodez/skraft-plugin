@@ -35,6 +35,14 @@
 #   PILOT_RUNS=       Override defaults.runs for a pilot only. Keep it at the
 #                     depth the real run will use; a pilot that is shallow as
 #                     well as narrow measures nothing.
+#   BASELINE_CACHE=1  LOCAL LOOP ONLY. Reuse cached baseline records per stimulus
+#                     instead of re-running the baseline arm. The baseline runs
+#                     with an empty --skill-dir, so editing a skill cannot move
+#                     it; editing the eval can, and the cache keys per stimulus
+#                     so only the stimuli you touched are re-run. Refused under
+#                     CI, and any run served from cache is stamped
+#                     `baselineProvenance.publishable: false` — a frozen draw is
+#                     not a fresh sample and must never gate a merge.
 #   RESULTS_DIR       Output root (default: ./eval-results)
 #
 # Prerequisites:
@@ -77,6 +85,12 @@ WORKERS="${WORKERS:-3}"
 AGENT_WORKERS="${AGENT_WORKERS:-1}"
 AGENT_MAX_RETRIES="${AGENT_MAX_RETRIES:-0}"
 PARALLEL="${PARALLEL:-4}"
+BASELINE_CACHE="${BASELINE_CACHE:-0}"
+BASELINE_CACHE_ROOT="${BASELINE_CACHE_ROOT:-$SKRAFT_ROOT/eval-baseline-cache}"
+if [ "$BASELINE_CACHE" = "1" ] && { [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; }; then
+  echo "BASELINE_CACHE=1 is a local-loop tool and must not run in CI." >&2
+  exit 2
+fi
 LIVE_LOGS="${LIVE_LOGS:-1}"
 
 case "$LIVE_LOGS" in
@@ -306,7 +320,7 @@ run_one_eval() {
   local EMPTY_SKILL_DIR
   EMPTY_SKILL_DIR=$(mktemp -d -t vally-empty-skills-XXXXXX)
   local PILOT_SPEC=""
-  trap 'rm -rf "$EMPTY_SKILL_DIR"; [ -n "$PILOT_SPEC" ] && rm -f "$PILOT_SPEC"; rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
+  trap 'rm -rf "$EMPTY_SKILL_DIR"; [ -n "$PILOT_SPEC" ] && rm -f "$PILOT_SPEC"; rm -f "$(dirname "$EVAL_SPEC")/.baseline-cache.eval.yaml"; rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
 
   # Pilot: the same frozen spec with fewer stimuli, generated per run. The
   # committed instrument is never edited to make a cheaper measurement possible.
@@ -330,23 +344,49 @@ run_one_eval() {
     echo -e "  ${YELLOW}⚠${NC} $EVAL_NAME — PILOT on $(echo "$KEPT" | paste -sd';' -) (probe only, not a verdict)" >&2
   fi
 
-  echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline..." >&2
-
   open_log_fd "$LOG"
   {
     echo "=== $EVAL_NAME ==="
 
     # Baseline: no skill available to the agent.
-    echo "--- Baseline run ---"
-    $VALLY eval \
-      --eval-spec "$EVAL_SPEC" \
-      --skill-dir "$EMPTY_SKILL_DIR" \
-      --model "$MODEL" \
-      ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
-      --skip-validate \
-      --judge-model "$JUDGE_MODEL" \
-      --output-dir "$BASELINE_DIR" \
-      2>&1 || echo "WARNING: Baseline eval failed"
+    #
+    # With BASELINE_CACHE=1 the arm is assembled per stimulus: anything whose
+    # stimulus block, staged fixtures, model, judge, depth and vally pin are all
+    # unchanged is served from disk, and only the remainder is run.
+    local BASELINE_SPEC="$EVAL_SPEC"
+    local CACHE_MODE="off"
+    local PLANNED_SPEC="" CACHED_N=0 FRESH_N=0
+    if [ "$BASELINE_CACHE" = "1" ]; then
+      local PLAN
+      if PLAN=$(node "$SKRAFT_ROOT/eng/baseline-cache-bin.mjs" plan \
+          --spec "$EVAL_SPEC" --cache-dir "$BASELINE_CACHE_ROOT/$EVAL_NAME" --work "$BASELINE_DIR" \
+          --model "$MODEL" --judge-model "$JUDGE_MODEL" --runs "${RUNS:-}" --vally "$VALLY"); then
+        IFS=$'\t' read -r CACHE_MODE PLANNED_SPEC CACHED_N FRESH_N <<< "$PLAN"
+        [ -n "$PLANNED_SPEC" ] && BASELINE_SPEC="$PLANNED_SPEC"
+        echo "--- Baseline cache: $CACHE_MODE ($CACHED_N cached, $FRESH_N to run) ---"
+      else
+        # A cache that cannot plan must never stop an evaluation: fall back to a
+        # full, correct baseline arm and say so.
+        echo "WARNING: baseline cache unavailable, running the full baseline arm"
+        CACHE_MODE="off"
+      fi
+    fi
+
+    if [ "$CACHE_MODE" = "hit" ]; then
+      echo "--- Baseline run skipped: every stimulus served from cache ---"
+    else
+      echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline..." >&2
+      echo "--- Baseline run ---"
+      $VALLY eval \
+        --eval-spec "$BASELINE_SPEC" \
+        --skill-dir "$EMPTY_SKILL_DIR" \
+        --model "$MODEL" \
+        ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
+        --skip-validate \
+        --judge-model "$JUDGE_MODEL" \
+        --output-dir "$BASELINE_DIR" \
+        2>&1 || echo "WARNING: Baseline eval failed"
+    fi
 
     echo -e "  ${BOLD}▶${NC} $EVAL_NAME — skilled..." >&2
 
@@ -372,6 +412,17 @@ run_one_eval() {
     # Vally names its output directory after an ISO timestamp, so the newest
     # invocation sorts last. Lexicographic order is portable and deterministic.
     local BASELINE_JSONL=$(find "$BASELINE_DIR" -name "results.jsonl" -type f 2>/dev/null | sort | tail -1)
+    if [ "$BASELINE_CACHE" = "1" ] && [ "$CACHE_MODE" != "off" ]; then
+      local MERGED
+      if MERGED=$(node "$SKRAFT_ROOT/eng/baseline-cache-bin.mjs" commit \
+          --spec "$EVAL_SPEC" --cache-dir "$BASELINE_CACHE_ROOT/$EVAL_NAME" --work "$BASELINE_DIR" \
+          ${BASELINE_JSONL:+--fresh "$BASELINE_JSONL"} \
+          --model "$MODEL" --judge-model "$JUDGE_MODEL" --runs "${RUNS:-}" --vally "$VALLY"); then
+        BASELINE_JSONL="$MERGED"
+      else
+        echo "WARNING: baseline cache commit failed, using the freshly run arm only"
+      fi
+    fi
     local SKILLED_JSONL=$(find "$SKILLED_DIR" -name "results.jsonl" -type f 2>/dev/null | sort | tail -1)
 
     if [ -n "$BASELINE_JSONL" ] && [ -n "$SKILLED_JSONL" ]; then
@@ -385,6 +436,7 @@ run_one_eval() {
         --vally "$VALLY" \
         --model "$MODEL" \
         --judge-model "$JUDGE_MODEL" \
+        $([ "$BASELINE_CACHE" = "1" ] && [ "$CACHE_MODE" != "off" ] && echo "--baseline-provenance $BASELINE_DIR/.cache-plan.json") \
         2>&1
     fi
   } >&3 2>&1

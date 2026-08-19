@@ -18,6 +18,8 @@ import { parseArgs } from 'node:util'
 import { comparisonVerdict } from '../lib/verdict.mjs'
 import { buildEvaluationMetrics } from '../lib/vally-metrics.mjs'
 
+let baselineProvenance = null
+
 const { values: options } = parseArgs({
   options: {
     baseline: { type: 'string' },
@@ -28,10 +30,21 @@ const { values: options } = parseArgs({
     vally: { type: 'string', default: 'npx --yes @microsoft/vally-cli@0.12.0' },
     model: { type: 'string', default: 'unknown' },
     'judge-model': { type: 'string', default: 'unknown' },
+    // Written by eng/baseline-cache-bin.mjs when the local loop served part of
+    // the baseline arm from disk. Absent means the arm was run fresh.
+    'baseline-provenance': { type: 'string' },
     help: { type: 'boolean', default: false },
   },
   strict: true,
 })
+
+if (options['baseline-provenance']) {
+  try {
+    baselineProvenance = JSON.parse(readFileSync(options['baseline-provenance'], 'utf8'))
+  } catch (error) {
+    console.error(`baseline provenance unreadable (${error.message}) — treating the arm as fresh`)
+  }
+}
 
 if (options.help || !options.baseline || !options.skilled || !options.skill) {
   console.log(`Usage: node eng/vally-adapter/adapt.mjs --baseline <jsonl> --skilled <jsonl> --skill <name> [options]
@@ -117,6 +130,11 @@ try {
       model: options.model,
       judgeModel: options['judge-model'],
       timestamp: new Date().toISOString(),
+      // A baseline served from cache is a frozen draw, not a fresh sample, so
+      // the comparison is against one historical arm rather than against the
+      // baseline distribution. Usable for a local "did my edit move anything";
+      // never publishable, and stamped so nothing downstream has to guess.
+      ...(baselineProvenance ? { baselineProvenance } : {}),
       verdicts: [verdict],
     }
     const directory = join(outputRoot, evaluation.name)

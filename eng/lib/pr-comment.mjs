@@ -6,6 +6,16 @@
 // markdown table, it computes nothing new.
 import { verdictState } from './verdict.mjs'
 
+// The legend answers "what is p" inline, but a reader who wants the mechanism —
+// why ties are discarded, why six decisive pairs is a hard floor, why a skill can
+// win by a wide margin and still fail the sign test — needs more than a PR
+// comment can hold without burying the table it is meant to explain.
+const DOCS = 'https://sebastiendegodez.github.io/skraft-plugin'
+const DEEP_DIVE =
+  '📐 **Full explanation, with worked numbers:** ' +
+  `[🇫🇷 Lire un verdict d'évaluation](${DOCS}/fr/explanation/deep-dive/lire-un-verdict.html) · ` +
+  `[🇬🇧 Reading an evaluation verdict](${DOCS}/en/explanation/deep-dive/reading-a-verdict.html)`
+
 const BADGE = {
   pass: '✅ pass',
   regression: '🔴 regression',
@@ -109,6 +119,8 @@ const SKILL_LEGEND = [
   '',
   'Each spec budgets its own trials through `defaults.runs`; see `docs/skill-evaluation.md`.',
   '',
+  DEEP_DIVE,
+  '',
   '</details>',
 ]
 
@@ -130,6 +142,8 @@ const AGENT_LEGEND = [
   '',
   '**Advisory by design.** An agent verdict never blocks a merge: a suite runs a real agent making real',
   'tool calls, so one flaky or timed-out session would block an unrelated PR. Read it, do not gate on it.',
+  '',
+  DEEP_DIVE,
   '',
   '</details>',
 ]
@@ -221,7 +235,19 @@ function caveats(verdicts) {
     const judge = verdict.judgeTally
     const sign = verdict.signTest
     if (judge && sign?.source === 'graders' && (judge.wins !== sign.wins || judge.losses !== sign.losses)) {
-      parts.push(`the judge read the same runs as ${judge.wins}W/${judge.ties}T/${judge.losses}L`)
+      // `judgeTally` comes straight from the comparison report, which never
+      // applies the inactivation exclusion the grader pairing does. When pairs
+      // were dropped the two tallies are computed over different sets, so
+      // "the same runs" would be a false statement — and a damaging one, since
+      // the judge's extra pairs are baseline-versus-baseline and drag its tally
+      // toward losses that say nothing about the skill.
+      parts.push(
+        verdict.inactivatedCount
+          ? `the judge scored all ${judge.wins + judge.ties + judge.losses} pairs — including the ` +
+            `${verdict.inactivatedCount} the graders dropped — as ${judge.wins}W/${judge.ties}T/${judge.losses}L, ` +
+            'so it is not the same set'
+          : `the judge read the same runs as ${judge.wins}W/${judge.ties}T/${judge.losses}L`
+      )
     }
     return parts.length ? [`- **${dash(verdict.subject?.name)}** — ${parts.join('; ')}.`] : []
   })

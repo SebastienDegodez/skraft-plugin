@@ -79,3 +79,6 @@ skraft-config.json.corrupted*
 **/execution-log.json.tmp*
 **/execution-log.json.corrupted*
 session-state/
+
+# Local-loop baseline cache: frozen draws, never a publishable verdict.
+eval-baseline-cache/
