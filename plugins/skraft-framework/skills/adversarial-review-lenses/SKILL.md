@@ -1,6 +1,6 @@
 ---
 name: adversarial-review-lenses
-description: "Use when a reviewer agent must produce an adversarial verdict via 4 independent lenses and weighted synthesis (Genesis A7 pattern)"
+description: "Use when reviewing a phase artifact — a discovery brief, a plan, a design, an acceptance specification, or a slice reported as delivered — and the review has to end in a defensible pass-or-block verdict rather than a list of remarks. Covers judging whether the artifact covers everything that fed into it, whether it matches the business intent, whether it holds together internally, and what it puts at risk downstream, then weighing those into a single call. Not for routine code review of an ordinary change."
 ---
 
 # Adversarial Review Lenses
