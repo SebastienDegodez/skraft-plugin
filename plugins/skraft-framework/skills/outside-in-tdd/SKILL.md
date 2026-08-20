@@ -1,9 +1,24 @@
 ---
 name: outside-in-tdd
-description: Use when an approved business example has to become working software — deciding what to deliver now and what to defer, what counts as done for the first route through a feature, and in what order to take the remaining examples and any wider integration work. Also use before writing any implementation code for a feature or fix, when judging whether a failing suite is trustworthy evidence that a behavior is missing, and when handing a write-the-test-then-implement slice to a worker or subagent. Also use when the implementation contradicts an approved expectation, or when the suite is green but the running behavior is not.
+description: Use when an approved business example has to become working software — deciding what to deliver now and what to defer, what counts as done for the first route through a feature, and in what order to take the remaining examples and any wider integration work. Also use before writing implementation code for a behaviour whose expected result is already approved, when judging whether a failing suite is trustworthy evidence that a behavior is missing, and when handing a write-the-test-then-implement slice to a worker or subagent. Also use when the implementation contradicts an approved expectation, or when the suite is green but the running behavior is not.
 ---
 
 # Outside-In TDD
+
+## Entry Gate — read before anything else
+
+This skill turns an **approved** expected result into working software. It never decides what that
+expected result should be.
+
+Before entering any phase below, confirm the behaviour has an approved observable outcome — a
+Gherkin scenario, a worked example, an agreed expected value. When it does not:
+
+- **Stop.** No test, no implementation, no provisional choice of outcome on the business's behalf.
+- Name the decision that is still open, and ask for one observable example that closes it.
+- `bdd-methodology` owns that conversation. Re-enter here once it has an answer.
+
+An unapproved outcome driven out through a clean cycle still yields a suite that proves only that
+the code matches a guess. The same prerequisite is restated under **Outside-In Approach** below.
 
 ## Precedence
 
@@ -126,6 +141,7 @@ list below, and it is what the descriptor means by "minimal production code".
 
 ## Red Flags — STOP and Restart
 
+- Entering the cycle at all while the expected result is still an open business decision
 - Implementation code before RED is a behavior failure
 - Compilation errors treated as RED
 - Placeholder assertion in the test body — tests no behavior, produces false RED evidence
