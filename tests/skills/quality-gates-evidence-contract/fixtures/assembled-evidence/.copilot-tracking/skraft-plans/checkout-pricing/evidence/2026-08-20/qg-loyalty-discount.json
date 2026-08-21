@@ -1,0 +1,31 @@
+{
+  "$schema": "quality-gates-evidence/v2",
+  "story": "loyalty-discount",
+  "produced_at": "2026-08-20T09:14:00Z",
+  "producer": "software-engineer",
+  "tech_adapter": "quality-gates-dotnet",
+  "repo_root_rev": "0000000000000000000000000000000000000000",
+  "commits_covered": [],
+  "gates": [
+    {
+      "gate": "tests",
+      "stdout_path": ".copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.stdout",
+      "stdout_sha256": "4cd4b2a6ec40a6e3ba3d1a2681298e0fdfbbb344f88b09c01358d47e1dd15814",
+      "exit_path": ".copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.exit",
+      "exit_code": 0
+    },
+    {
+      "gate": "build",
+      "stdout_path": ".copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.stdout",
+      "stdout_sha256": "0a807488c42b96a25c9795735f2fc340c5f2c1a1ffd730229b575ece30c8d481",
+      "exit_path": ".copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.exit",
+      "exit_code": 0
+    },
+    {
+      "gate": "mutation",
+      "report_path": ".copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-mutation.json",
+      "report_sha256": "304366ba480c01fa0cc672d23067f701d9c4d199c784ea59b82dd0b837c4c15e",
+      "score": 80.0
+    }
+  ]
+}

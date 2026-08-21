@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Eligibility.Api/Eligibility.Api.csproj" />
+    <Project Path="src/Eligibility.Application/Eligibility.Application.csproj" />
+    <Project Path="src/Eligibility.Domain/Eligibility.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Eligibility.IntegrationTest/Eligibility.IntegrationTest.csproj" />
+  </Folder>
+</Solution>

@@ -138,7 +138,10 @@ export GITHUB_TOKEN="$TOKEN"
 SKIP_FILE="$SKRAFT_ROOT/eng/vally-adapter/skip-evals.txt"
 if [ -z "${SKIP_EVALS+x}" ] && [ -f "$SKIP_FILE" ]; then
   # awk, not grep: an empty skip list must not abort the run under `set -e`.
-  SKIP_EVALS=$(awk '!/^#/ && NF' "$SKIP_FILE" | tr '\n' ' ')
+  # The file asks each entry to state its reason next to the name, so strip from
+  # `#` to end of line before taking what is left: without that the reason's own
+  # words survive word-splitting below and are compared against eval names.
+  SKIP_EVALS=$(awk '{ sub(/#.*/, "") } NF' "$SKIP_FILE" | tr '\n' ' ')
 fi
 SKIP_EVALS="${SKIP_EVALS:-}"
 
@@ -161,6 +164,7 @@ else
 fi
 
 EVAL_SPECS=()
+SKIPPED_COUNT=0
 # `${ARR[@]}` on an EMPTY array is an unbound-variable error under `set -u` in
 # bash 3.2 (the macOS default); bash 4.4+ (the CI runner) is lenient, which is
 # why this only ever bit locally. The `+` expansion yields nothing when the array
@@ -179,10 +183,20 @@ for spec in ${ALL_SPECS[@]+"${ALL_SPECS[@]}"}; do
   done
   if [ "$SKIPPED" = "true" ]; then
     echo -e "${YELLOW}⚠ Skipping $EVAL_NAME (in skip-evals.txt)${NC}"
+    SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
   else
     EVAL_SPECS+=("$spec")
   fi
 done
+
+# "Everything I was asked to run is on the skip list" is not the same failure as
+# "there was nothing to run". CI names one changed subject per invocation, so a
+# PR that touches only a skipped eval would otherwise exit 1 under
+# `set -euo pipefail` and fail the job for doing exactly what the skip list asked.
+if [ ${#EVAL_SPECS[@]} -eq 0 ] && [ "$SKIPPED_COUNT" -gt 0 ]; then
+  echo -e "${YELLOW}Nothing to run: all $SKIPPED_COUNT matching eval(s) are skipped.${NC}"
+  exit 0
+fi
 
 if [ ${#EVAL_SPECS[@]} -eq 0 ]; then
   if [ -n "${1:-}" ]; then

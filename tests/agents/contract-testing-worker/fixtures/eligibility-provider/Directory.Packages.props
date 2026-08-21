@@ -1,0 +1,23 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+  <!--
+    The worker emits test wiring; it may not install packages (the evaluation
+    permission handler rejects `dotnet add package` and `dotnet restore`), so
+    every package its two layers can need is declared here up front.
+    Layer 1 — baseline WebApplicationFactory + HttpClient.
+    Layer 2 — Microcks contract verification, added only under the opt-in.
+    PINS ARE UNVERIFIED: no restore has ever run against this fixture. Resolve
+    them against the live feed before taking this suite out of skip-evals.txt.
+  -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
+    <PackageVersion Include="Microcks.Testcontainers" Version="0.3.4" />
+  </ItemGroup>
+</Project>

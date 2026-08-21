@@ -1,0 +1,113 @@
+name: architecture-patterns
+version: 0.1.0
+description: >-
+  Evaluates whether a balance verdict on an integration arrow is reached by LOOKUP rather than by
+  reasoning. Every coupling decision in SKRAFT is already an enumerated context-map pattern
+  crossed with an enumerated subdomain class, so the verdict is a total function over a finite
+  domain: a Conformist arrow into a volatile Core context is UNBALANCED-SMELL by table, and an
+  Anticorruption Layer on the same arrow is not. What the skill has to buy is autonomy — the
+  verdict has to survive a model that cannot hold a multi-step XOR chain together.
+  Materialized from the "Evals plan" section of the GENESIS handoff packet
+  .copilot-tracking/genesis-plans/balanced-coupling-autonomy/plan.md, whose last state is
+  642b18d. The packet declares no trigger evals: the skill is DISCOVERY-loaded by one named agent
+  at one named phase, never description-matched against open user text.
+  DISABLED, AND RED BY CONSTRUCTION: the verdict matrix this grades does not exist in the skill
+  yet. See ./README.md.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 3
+scoring:
+  threshold: 1
+stimuli:
+  - name: A Conformist arrow into a volatile Core context is called out
+    prompt: |
+      The context map for the driver-quotes work is in the workspace. The patterns on the arrows
+      and the subdomain class of each context are already agreed — do not re-open them.
+
+      For arrow A1, tell me whether the coupling is balanced, and say why in one line.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/context-map-conformist-into-core/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/context-map-conformist-into-core/.copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
+          dest: .copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
+      commandTimeout: 1m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "design: driver quotes context map"'
+    graders:
+      - type: output-matches
+        name: The verdict is the enumerated one, not a paraphrase
+        config:
+          pattern: 'UNBALANCED-SMELL'
+      - type: output-matches
+        name: The pattern that produced the verdict is named
+        config:
+          pattern: '(?i)conformist'
+      - type: output-matches
+        name: The downstream context whose volatility makes it a smell is named
+        config:
+          pattern: 'QuotePricing'
+      - type: diff-not-contains
+        name: The agreed context map was left untouched
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/'
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-patterns
+
+  # The guard that makes the first stimulus mean something: swap the pattern on
+  # the same arrow, between the same two contexts, and the verdict has to move.
+  # A skill that answers UNBALANCED-SMELL to everything passes stimulus 1 and
+  # fails here.
+  - name: The same arrow with a translator at the boundary is left alone
+    prompt: |
+      The context map for the driver-quotes work is in the workspace. The patterns on the arrows
+      and the subdomain class of each context are already agreed — do not re-open them.
+
+      For arrow A1, tell me whether the coupling is balanced, and say why in one line.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/context-map-balanced-arrow/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/context-map-balanced-arrow/.copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
+          dest: .copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
+      commandTimeout: 1m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "design: driver quotes context map"'
+    graders:
+      - type: output-not-matches
+        name: A balanced arrow is not flagged
+        config:
+          pattern: 'UNBALANCED-SMELL'
+      - type: output-matches
+        name: The arrow is reported as balanced
+        config:
+          pattern: '(?i)\bbalanced\b'
+      - type: output-matches
+        name: The translator that carries the balance is named
+        config:
+          pattern: '(?i)anticorruption|\bACL\b'
+      - type: diff-not-contains
+        name: The agreed context map was left untouched
+        config:
+          pattern: '(?m)^diff --git a/\.copilot-tracking/'
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-patterns

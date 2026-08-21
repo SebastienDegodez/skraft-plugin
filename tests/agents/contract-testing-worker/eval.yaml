@@ -1,0 +1,325 @@
+name: contract-testing-worker
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT contract-testing worker resolves the Microcks opt-in through
+  its cascade (prompt > skraft.instructions.md > default false), always emits the baseline
+  WebApplicationFactory + HttpClient provider test, stacks the Microcks TestEndpointAsync layer
+  only when the opt-in is on, and hands back a structured result without committing or touching
+  production code.
+  Migrated from the GENESIS content evals at evals/contract-testing-worker/content.yml
+  (removed by 97705d8, "feat(evals): adopt vally evaluation pipeline"). The GENESIS
+  with_skill/without_skill delta has no equivalent here — an agent suite is single-arm — so each
+  fixture's `value_delta` became a grader on the behaviour it claimed. The 20 trigger evals have
+  no vally equivalent at all and are preserved verbatim in ./triggers.yml.
+  DISABLED: listed in eng/vally-adapter/skip-evals.txt. See ./README.md for what it needs first.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 6m
+  model: claude-sonnet-4.6
+  runs: 3
+scoring:
+  threshold: 1
+stimuli:
+  # C-01-baseline-no-optin — guard against the opt-in leaking on by default.
+  - name: No opt-in declared anywhere yields the baseline provider test alone
+    prompt: |
+      Write a contract test for the Eligibility API. The provider for the active slice is the
+      HTTP API served by src/Eligibility.Api; the endpoint under contract is
+      GET /eligibility/{age}, which answers with the decision or with an error payload when the
+      age is out of range.
+    tags:
+      agent: contract-testing-worker
+      scenario: baseline-no-optin
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 6m
+    environment:
+      files:
+        - src: fixtures/eligibility-provider/.gitignore
+          dest: .gitignore
+        - src: fixtures/eligibility-provider/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/eligibility-provider/Eligibility.slnx
+          dest: Eligibility.slnx
+        - src: fixtures/eligibility-provider/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/eligibility-provider/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/eligibility-provider/src/Eligibility.Domain/Eligibility.Domain.csproj
+          dest: src/Eligibility.Domain/Eligibility.Domain.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Domain/EligibilityDecision.cs
+          dest: src/Eligibility.Domain/EligibilityDecision.cs
+        - src: fixtures/eligibility-provider/src/Eligibility.Application/Eligibility.Application.csproj
+          dest: src/Eligibility.Application/Eligibility.Application.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Application/EvaluateEligibility.cs
+          dest: src/Eligibility.Application/EvaluateEligibility.cs
+        - src: fixtures/eligibility-provider/src/Eligibility.Api/Eligibility.Api.csproj
+          dest: src/Eligibility.Api/Eligibility.Api.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Api/Program.cs
+          dest: src/Eligibility.Api/Program.cs
+        - src: fixtures/eligibility-provider/tests/Eligibility.IntegrationTest/Eligibility.IntegrationTest.csproj
+          dest: tests/Eligibility.IntegrationTest/Eligibility.IntegrationTest.csproj
+      commandTimeout: 3m
+      commands:
+        - 'dotnet restore Eligibility.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: eligibility provider without a contract opt-in"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The worker's mandatory skills are loaded
+        config:
+          required:
+            - contract-testing-roster
+            - contract-testing
+            - resolving-stack-commands
+      - type: output-matches
+        name: The structured result reports the resolved opt-in as false
+        config:
+          pattern: '(?im)^\s*microcks:\s*false\s*$'
+      - type: output-matches
+        name: The structured result resolves a test command instead of hardcoding one
+        config:
+          pattern: '(?im)^\s*testCommand:\s*\S'
+      - type: diff-contains
+        name: The baseline provider test was emitted
+        config:
+          pattern: 'tests/Eligibility\.IntegrationTest/.*\.cs'
+      - type: diff-contains
+        name: The baseline drives the API through WebApplicationFactory
+        config:
+          pattern: 'WebApplicationFactory'
+      - type: diff-contains
+        name: The error path asserts the response contract, not just the status code
+        config:
+          pattern: '(?i)ProblemDetails|application/problem\+json'
+      - type: diff-not-contains
+        name: No Microcks layer when the opt-in resolved false
+        config:
+          pattern: '(?i)microcks'
+      - type: diff-not-contains
+        name: The business TDD cycle stayed with the lead
+        config:
+          pattern: '(?m)^diff --git a/src/Eligibility\.(?:Domain|Application)/'
+      - type: run-command
+        name: The worker returned a result instead of committing
+        config:
+          command: sh
+          args:
+            - '-c'
+            - 'test "$(git rev-list --count HEAD)" = "1"'
+          expected_exit_code: 0
+          timeout: 1m
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+
+  # C-02-optin-instruction-file — the additive layer, read from the repo, stacked not swapped.
+  - name: Repo opt-in stacks the Microcks layer on top of the baseline
+    prompt: |
+      Write a contract test for the Eligibility API. The provider for the active slice is the
+      HTTP API served by src/Eligibility.Api; the endpoint under contract is
+      GET /eligibility/{age}, which answers with the decision or with an error payload when the
+      age is out of range. The published contract artifacts for it are under contracts/.
+    tags:
+      agent: contract-testing-worker
+      scenario: optin-instruction-file
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 6m
+    environment:
+      files:
+        - src: fixtures/eligibility-provider/.gitignore
+          dest: .gitignore
+        - src: fixtures/eligibility-provider/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/eligibility-provider/Eligibility.slnx
+          dest: Eligibility.slnx
+        - src: fixtures/eligibility-provider/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/eligibility-provider/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/eligibility-provider/src/Eligibility.Domain/Eligibility.Domain.csproj
+          dest: src/Eligibility.Domain/Eligibility.Domain.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Domain/EligibilityDecision.cs
+          dest: src/Eligibility.Domain/EligibilityDecision.cs
+        - src: fixtures/eligibility-provider/src/Eligibility.Application/Eligibility.Application.csproj
+          dest: src/Eligibility.Application/Eligibility.Application.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Application/EvaluateEligibility.cs
+          dest: src/Eligibility.Application/EvaluateEligibility.cs
+        - src: fixtures/eligibility-provider/src/Eligibility.Api/Eligibility.Api.csproj
+          dest: src/Eligibility.Api/Eligibility.Api.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Api/Program.cs
+          dest: src/Eligibility.Api/Program.cs
+        - src: fixtures/eligibility-provider/tests/Eligibility.IntegrationTest/Eligibility.IntegrationTest.csproj
+          dest: tests/Eligibility.IntegrationTest/Eligibility.IntegrationTest.csproj
+        - src: fixtures/overlays/microcks-optin/.github/instructions/skraft.instructions.md
+          dest: .github/instructions/skraft.instructions.md
+        - src: fixtures/overlays/contracts/eligibility-openapi.yaml
+          dest: contracts/eligibility-openapi.yaml
+        - src: fixtures/overlays/contracts/eligibility.apiexamples.yaml
+          dest: contracts/eligibility.apiexamples.yaml
+      commandTimeout: 3m
+      commands:
+        - 'dotnet restore Eligibility.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: eligibility provider with the contract opt-in on"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The worker's mandatory skills and the .NET adapter are loaded
+        config:
+          required:
+            - contract-testing-roster
+            - contract-testing
+            - resolving-stack-commands
+            - contract-testing-dotnet
+      - type: output-matches
+        name: The structured result reports the resolved opt-in as true
+        config:
+          pattern: '(?im)^\s*microcks:\s*true\s*$'
+      - type: diff-contains
+        name: The baseline was kept, not replaced by the Microcks layer
+        config:
+          pattern: 'WebApplicationFactory'
+      - type: diff-contains
+        name: Provider conformance runs through TestEndpointAsync
+        config:
+          pattern: 'TestEndpointAsync'
+      - type: diff-contains
+        name: The published contract drives the replay
+        config:
+          pattern: 'OPEN_API_SCHEMA'
+      - type: diff-contains
+        name: Microcks is seeded from the staged contract artifacts
+        config:
+          pattern: '(?i)eligibility[-.](?:openapi|apiexamples)'
+      - type: diff-contains
+        name: The test result is asserted, not suppressed
+        config:
+          pattern: '(?i)(?:testResult|result)\.Success'
+      - type: diff-not-contains
+        name: Provider verification did not fall back to the consumer-side call
+        config:
+          pattern: 'VerifyAsync'
+      - type: diff-not-contains
+        name: The business TDD cycle stayed with the lead
+        config:
+          pattern: '(?m)^diff --git a/src/Eligibility\.(?:Domain|Application)/'
+      - type: run-command
+        name: The worker returned a result instead of committing
+        config:
+          command: sh
+          args:
+            - '-c'
+            - 'test "$(git rev-list --count HEAD)" = "1"'
+          expected_exit_code: 0
+          timeout: 1m
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+
+  # C-03-prompt-optin — the prompt is the first writer in the cascade, above the default.
+  - name: An opt-in asked for in the prompt beats the default false
+    prompt: |
+      Write a contract test for the Eligibility API and verify it with Microcks too. The provider
+      for the active slice is the HTTP API served by src/Eligibility.Api; the endpoint under
+      contract is GET /eligibility/{age}. The published contract for it is under contracts/.
+    tags:
+      agent: contract-testing-worker
+      scenario: prompt-optin
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 6m
+    environment:
+      files:
+        - src: fixtures/eligibility-provider/.gitignore
+          dest: .gitignore
+        - src: fixtures/eligibility-provider/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/eligibility-provider/Eligibility.slnx
+          dest: Eligibility.slnx
+        - src: fixtures/eligibility-provider/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/eligibility-provider/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/eligibility-provider/src/Eligibility.Domain/Eligibility.Domain.csproj
+          dest: src/Eligibility.Domain/Eligibility.Domain.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Domain/EligibilityDecision.cs
+          dest: src/Eligibility.Domain/EligibilityDecision.cs
+        - src: fixtures/eligibility-provider/src/Eligibility.Application/Eligibility.Application.csproj
+          dest: src/Eligibility.Application/Eligibility.Application.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Application/EvaluateEligibility.cs
+          dest: src/Eligibility.Application/EvaluateEligibility.cs
+        - src: fixtures/eligibility-provider/src/Eligibility.Api/Eligibility.Api.csproj
+          dest: src/Eligibility.Api/Eligibility.Api.csproj
+        - src: fixtures/eligibility-provider/src/Eligibility.Api/Program.cs
+          dest: src/Eligibility.Api/Program.cs
+        - src: fixtures/eligibility-provider/tests/Eligibility.IntegrationTest/Eligibility.IntegrationTest.csproj
+          dest: tests/Eligibility.IntegrationTest/Eligibility.IntegrationTest.csproj
+        - src: fixtures/overlays/contracts/eligibility-openapi.yaml
+          dest: contracts/eligibility-openapi.yaml
+      commandTimeout: 3m
+      commands:
+        - 'dotnet restore Eligibility.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: eligibility provider, opt-in carried by the prompt"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The worker's mandatory skills are loaded
+        config:
+          required:
+            - contract-testing-roster
+            - contract-testing
+            - resolving-stack-commands
+      - type: output-matches
+        name: The prompt won the cascade over the built-in default
+        config:
+          pattern: '(?im)^\s*microcks:\s*true\s*$'
+      - type: diff-contains
+        name: The baseline provider test is still there
+        config:
+          pattern: 'WebApplicationFactory'
+      - type: diff-contains
+        name: The requested Microcks layer was added on top
+        config:
+          pattern: 'TestEndpointAsync'
+      - type: diff-not-contains
+        name: The business TDD cycle stayed with the lead
+        config:
+          pattern: '(?m)^diff --git a/src/Eligibility\.(?:Domain|Application)/'
+      - type: run-command
+        name: The worker returned a result instead of committing
+        config:
+          command: sh
+          args:
+            - '-c'
+            - 'test "$(git rev-list --count HEAD)" = "1"'
+          expected_exit_code: 0
+          timeout: 1m
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'

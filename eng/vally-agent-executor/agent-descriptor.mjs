@@ -17,6 +17,22 @@ const AGENT_PATHS = new Map([
   ['cold-reader-lens', 'plugins/skraft-framework/agents/reviewer-lenses/cold-reader-lens.agent.md'],
   ['quality-gates-lens', 'plugins/skraft-framework/agents/reviewer-lenses/quality-gates-lens.agent.md'],
   ['test-integrity-lens', 'plugins/skraft-framework/agents/reviewer-lenses/test-integrity-lens.agent.md'],
+  // DELIVER-phase workers. Internal subagents (`user-invocable: false`), dispatched
+  // by software-engineer; a suite selects one directly to grade the wiring it emits
+  // without paying for the lead's whole TDD loop around it.
+  ['contract-testing-worker', 'plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md'],
+  ['mock-integration-worker', 'plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md'],
+  // The handbook reconciler chain. It lives under .github/agents/ rather than
+  // plugins/: it maintains the documentation of the plugin and is not itself part
+  // of what ships to a consumer repository. The four specialists are here so a
+  // stimulus can name them in `tags.subagents` — the orchestrator's whole job is
+  // dispatching them, so a suite that could not register them would grade a
+  // monologue.
+  ['skraft-docs-orchestrator', '.github/agents/skraft-docs-orchestrator.agent.md'],
+  ['skraft-docs-placement-architect', '.github/agents/skraft-docs-placement-architect.agent.md'],
+  ['skraft-docs-derived-writer', '.github/agents/skraft-docs-derived-writer.agent.md'],
+  ['skraft-docs-editorial-writer', '.github/agents/skraft-docs-editorial-writer.agent.md'],
+  ['skraft-docs-reviewer', '.github/agents/skraft-docs-reviewer.agent.md'],
 ])
 
 const posix = (value) => value.split('\\').join('/')

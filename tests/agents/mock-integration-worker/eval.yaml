@@ -1,0 +1,361 @@
+name: mock-integration-worker
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT mock-integration worker resolves the mocking strategy through its
+  override cascade (prompt > skraft.instructions.md > default microcks), mocks the DOWNSTREAM
+  dependency rather than the system under test, applies the resolved adapter's wiring, and hands
+  back a structured result without committing or driving the business TDD cycle.
+  Migrated from the GENESIS content evals at evals/mock-integration-worker/content.yml
+  (removed by 97705d8, "feat(evals): adopt vally evaluation pipeline"). The GENESIS
+  with_skill/without_skill delta has no equivalent here — an agent suite is single-arm — so each
+  fixture's `value_delta` became a grader on the behaviour it claimed. The 20 trigger evals have
+  no vally equivalent at all and are preserved verbatim in ./triggers.yml.
+  DISABLED: listed in eng/vally-adapter/skip-evals.txt. See ./README.md for what it needs first.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 6m
+  model: claude-sonnet-4.6
+  runs: 3
+scoring:
+  threshold: 1
+stimuli:
+  # C-01-microcks-default — nothing overrides, so the container strategy has to win by default.
+  - name: With no override declared the downstream is mocked from its contract
+    prompt: |
+      Write an integration test that mocks the downstream Eligibility API for this endpoint. The
+      system under test is the checkout API served by src/Checkout.Api; the dependency it calls
+      is the Eligibility API, and its published contract is under contracts/.
+    tags:
+      agent: mock-integration-worker
+      scenario: microcks-default
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 6m
+    environment:
+      files:
+        - src: fixtures/checkout-with-downstream/.gitignore
+          dest: .gitignore
+        - src: fixtures/checkout-with-downstream/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/checkout-with-downstream/Checkout.slnx
+          dest: Checkout.slnx
+        - src: fixtures/checkout-with-downstream/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/checkout-with-downstream/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/checkout-with-downstream/src/Checkout.Domain/Checkout.Domain.csproj
+          dest: src/Checkout.Domain/Checkout.Domain.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Domain/Basket.cs
+          dest: src/Checkout.Domain/Basket.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/Checkout.Application.csproj
+          dest: src/Checkout.Application/Checkout.Application.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/IEligibilityClient.cs
+          dest: src/Checkout.Application/IEligibilityClient.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/ApproveCheckout.cs
+          dest: src/Checkout.Application/ApproveCheckout.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Infrastructure/Checkout.Infrastructure.csproj
+          dest: src/Checkout.Infrastructure/Checkout.Infrastructure.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Infrastructure/EligibilityHttpClient.cs
+          dest: src/Checkout.Infrastructure/EligibilityHttpClient.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Api/Checkout.Api.csproj
+          dest: src/Checkout.Api/Checkout.Api.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Api/Program.cs
+          dest: src/Checkout.Api/Program.cs
+        - src: fixtures/checkout-with-downstream/tests/Checkout.IntegrationTest/Checkout.IntegrationTest.csproj
+          dest: tests/Checkout.IntegrationTest/Checkout.IntegrationTest.csproj
+        - src: fixtures/overlays/contracts/eligibility-openapi.yaml
+          dest: contracts/eligibility-openapi.yaml
+        - src: fixtures/overlays/contracts/eligibility.apiexamples.yaml
+          dest: contracts/eligibility.apiexamples.yaml
+      commandTimeout: 3m
+      commands:
+        - 'dotnet restore Checkout.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: checkout calling a downstream, no mocking override"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The roster and the resolved .NET adapter are loaded
+        config:
+          required:
+            - mocking-strategy-roster
+            - resolving-stack-commands
+            - mocking-microcks-dotnet
+      - type: skill-invocation
+        name: The override adapter stayed out of a run that resolved the default
+        config:
+          disallowed:
+            - mocking-inprocess-dotnet
+      - type: output-matches
+        name: The structured result reports the default strategy
+        config:
+          pattern: '(?im)^\s*strategy:\s*microcks\s*$'
+      - type: output-matches
+        name: The test command was resolved rather than recalled
+        config:
+          pattern: '(?im)^\s*testCommand:\s*\S'
+      - type: diff-contains
+        name: An integration test was emitted
+        config:
+          pattern: 'tests/Checkout\.IntegrationTest/.*\.cs'
+      - type: diff-contains
+        name: The mock is a Microcks ensemble, not a hand-rolled message handler
+        config:
+          pattern: 'MicrocksContainerEnsemble'
+      - type: diff-contains
+        name: The ensemble is seeded from the downstream contract
+        config:
+          pattern: 'WithMainArtifacts'
+      - type: diff-contains
+        name: The SUT is repointed at the mock endpoint
+        config:
+          pattern: 'GetRestMockEndpoint'
+      - type: diff-contains
+        name: The base URL is injected through configuration, not edited into the client
+        config:
+          pattern: 'UseSetting'
+      - type: diff-not-contains
+        name: The downstream was replaced, not faked by hand
+        config:
+          pattern: '(?i)HttpMessageHandler'
+      - type: diff-not-contains
+        name: The system under test was left alone
+        config:
+          pattern: '(?m)^diff --git a/src/Checkout\.(?:Domain|Application|Infrastructure)/'
+      - type: run-command
+        name: The worker returned a result instead of committing
+        config:
+          command: sh
+          args:
+            - '-c'
+            - 'test "$(git rev-list --count HEAD)" = "1"'
+          expected_exit_code: 0
+          timeout: 1m
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+
+  # C-02-inprocess-instruction-file — the repo override wins, and the unnamed library
+  # falls to the roster's preference order rather than to whatever the model likes.
+  - name: A repo override to an in-process double is honoured, library included
+    prompt: |
+      Write an integration test mocking the downstream Eligibility API for this endpoint. The
+      system under test is the checkout API served by src/Checkout.Api; the dependency it calls
+      is the Eligibility API.
+    tags:
+      agent: mock-integration-worker
+      scenario: inprocess-instruction-file
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 6m
+    environment:
+      files:
+        - src: fixtures/checkout-with-downstream/.gitignore
+          dest: .gitignore
+        - src: fixtures/checkout-with-downstream/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/checkout-with-downstream/Checkout.slnx
+          dest: Checkout.slnx
+        - src: fixtures/checkout-with-downstream/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/checkout-with-downstream/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/checkout-with-downstream/src/Checkout.Domain/Checkout.Domain.csproj
+          dest: src/Checkout.Domain/Checkout.Domain.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Domain/Basket.cs
+          dest: src/Checkout.Domain/Basket.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/Checkout.Application.csproj
+          dest: src/Checkout.Application/Checkout.Application.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/IEligibilityClient.cs
+          dest: src/Checkout.Application/IEligibilityClient.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/ApproveCheckout.cs
+          dest: src/Checkout.Application/ApproveCheckout.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Infrastructure/Checkout.Infrastructure.csproj
+          dest: src/Checkout.Infrastructure/Checkout.Infrastructure.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Infrastructure/EligibilityHttpClient.cs
+          dest: src/Checkout.Infrastructure/EligibilityHttpClient.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Api/Checkout.Api.csproj
+          dest: src/Checkout.Api/Checkout.Api.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Api/Program.cs
+          dest: src/Checkout.Api/Program.cs
+        - src: fixtures/checkout-with-downstream/tests/Checkout.IntegrationTest/Checkout.IntegrationTest.csproj
+          dest: tests/Checkout.IntegrationTest/Checkout.IntegrationTest.csproj
+        - src: fixtures/overlays/inprocess-instructions/.github/instructions/skraft.instructions.md
+          dest: .github/instructions/skraft.instructions.md
+      commandTimeout: 3m
+      commands:
+        - 'dotnet restore Checkout.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: checkout with an in-process mocking override"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The roster and the in-process adapter are loaded
+        config:
+          required:
+            - mocking-strategy-roster
+            - resolving-stack-commands
+            - mocking-inprocess-dotnet
+      - type: skill-invocation
+        name: The default adapter stayed out of an overridden run
+        config:
+          disallowed:
+            - mocking-microcks-dotnet
+      - type: output-matches
+        name: The structured result reports the overridden strategy
+        config:
+          pattern: '(?im)^\s*strategy:\s*inprocess\s*$'
+      - type: output-matches
+        name: An unnamed library resolves to the head of the preference order
+        config:
+          pattern: '(?im)^\s*library:\s*fakeiteasy\s*$'
+      - type: diff-contains
+        name: The double is a FakeItEasy fake of the downstream port
+        config:
+          pattern: 'A\.Fake<'
+      - type: diff-contains
+        name: The double is swapped into the test host container
+        config:
+          pattern: '(?i)ConfigureTestServices|ConfigureServices'
+      - type: diff-not-contains
+        name: No container was started for a strategy that resolved in-process
+        config:
+          pattern: '(?i)microcks'
+      - type: diff-not-contains
+        name: The preference order was not skipped in favour of Moq
+        config:
+          pattern: '(?i)\bMoq\b|new Mock<'
+      - type: diff-not-contains
+        name: The system under test was left alone
+        config:
+          pattern: '(?m)^diff --git a/src/Checkout\.(?:Domain|Application|Infrastructure)/'
+      - type: run-command
+        name: The worker returned a result instead of committing
+        config:
+          command: sh
+          args:
+            - '-c'
+            - 'test "$(git rev-list --count HEAD)" = "1"'
+          expected_exit_code: 0
+          timeout: 1m
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+
+  # C-03-prompt-override-moq — the prompt is the first writer: it beats the default AND
+  # displaces the library preference order.
+  - name: A library named in the prompt beats both the default strategy and the preference order
+    prompt: |
+      Mock the downstream Eligibility API with Moq for this integration test. The system under
+      test is the checkout API served by src/Checkout.Api; the dependency it calls is the
+      Eligibility API.
+    tags:
+      agent: mock-integration-worker
+      scenario: prompt-override-moq
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 6m
+    environment:
+      files:
+        - src: fixtures/checkout-with-downstream/.gitignore
+          dest: .gitignore
+        - src: fixtures/checkout-with-downstream/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/checkout-with-downstream/Checkout.slnx
+          dest: Checkout.slnx
+        - src: fixtures/checkout-with-downstream/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/checkout-with-downstream/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/checkout-with-downstream/src/Checkout.Domain/Checkout.Domain.csproj
+          dest: src/Checkout.Domain/Checkout.Domain.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Domain/Basket.cs
+          dest: src/Checkout.Domain/Basket.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/Checkout.Application.csproj
+          dest: src/Checkout.Application/Checkout.Application.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/IEligibilityClient.cs
+          dest: src/Checkout.Application/IEligibilityClient.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Application/ApproveCheckout.cs
+          dest: src/Checkout.Application/ApproveCheckout.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Infrastructure/Checkout.Infrastructure.csproj
+          dest: src/Checkout.Infrastructure/Checkout.Infrastructure.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Infrastructure/EligibilityHttpClient.cs
+          dest: src/Checkout.Infrastructure/EligibilityHttpClient.cs
+        - src: fixtures/checkout-with-downstream/src/Checkout.Api/Checkout.Api.csproj
+          dest: src/Checkout.Api/Checkout.Api.csproj
+        - src: fixtures/checkout-with-downstream/src/Checkout.Api/Program.cs
+          dest: src/Checkout.Api/Program.cs
+        - src: fixtures/checkout-with-downstream/tests/Checkout.IntegrationTest/Checkout.IntegrationTest.csproj
+          dest: tests/Checkout.IntegrationTest/Checkout.IntegrationTest.csproj
+      commandTimeout: 3m
+      commands:
+        - 'dotnet restore Checkout.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: checkout with the override carried by the prompt"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The roster and the in-process adapter are loaded
+        config:
+          required:
+            - mocking-strategy-roster
+            - resolving-stack-commands
+            - mocking-inprocess-dotnet
+      - type: output-matches
+        name: The prompt override moved the strategy off its default
+        config:
+          pattern: '(?im)^\s*strategy:\s*inprocess\s*$'
+      - type: output-matches
+        name: The named library was taken over the preference order
+        config:
+          pattern: '(?im)^\s*library:\s*moq\s*$'
+      - type: diff-contains
+        name: The double is a Moq mock of the downstream port
+        config:
+          pattern: 'new Mock<'
+      - type: diff-not-contains
+        name: The default strategy did not survive an explicit request
+        config:
+          pattern: '(?i)microcks'
+      - type: diff-not-contains
+        name: The preference order did not override the explicit request
+        config:
+          pattern: 'A\.Fake<|Substitute\.For<'
+      - type: diff-not-contains
+        name: The system under test was left alone
+        config:
+          pattern: '(?m)^diff --git a/src/Checkout\.(?:Domain|Application|Infrastructure)/'
+      - type: run-command
+        name: The worker returned a result instead of committing
+        config:
+          command: sh
+          args:
+            - '-c'
+            - 'test "$(git rev-list --count HEAD)" = "1"'
+          expected_exit_code: 0
+          timeout: 1m
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'

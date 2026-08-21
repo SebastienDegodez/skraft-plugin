@@ -1,0 +1,29 @@
+# book.yml — structure contract for the evaluation handbook.
+#
+# A deliberately small book: one part, one generated section. Small enough to
+# reason about, real enough that scripts/scan-drift.mjs reads it the same way it
+# reads the shipped one.
+meta:
+  title_fr: "SKRAFT — le livre"
+  title_en: "SKRAFT — the book"
+  langs: [fr, en]
+
+sources:
+  workers: "plugins/skraft-framework/agents/workers/*/*.agent.md"
+
+parts:
+  - id: reference
+    sidebar_position: 1
+    title_fr: "Référence"
+    title_en: "Reference"
+    diataxis_mode: reference
+    sections:
+      - id: workers
+        title_fr: "Workers"
+        title_en: "Workers"
+        generate:
+          from: workers
+          slug_from: basename
+          start_position: 1
+          path_fr: "fr/reference/workers/{slug}.md"
+          path_en: "en/reference/workers/{slug}.md"

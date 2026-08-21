@@ -1,0 +1,22 @@
+apiVersion: mocks.microcks.io/v1alpha1
+kind: APIExamples
+metadata:
+  name: Eligibility API
+  version: 1.0.0
+operations:
+  GET /eligibility/{age}:
+    adult:
+      parameters:
+        age: '21'
+      response: |-
+        {"age":21,"eligible":true}
+    minor:
+      parameters:
+        age: '12'
+      response: |-
+        {"age":12,"eligible":false}
+    negative-age:
+      parameters:
+        age: '-1'
+      response: |-
+        {"title":"Age is out of range","detail":"Age must be zero or greater.","status":400}
