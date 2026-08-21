@@ -5,10 +5,15 @@ description: Use when an approved business example has to become working softwar
 
 # Outside-In TDD
 
+Turns an **approved** expected result into working software. Start from observable behavior,
+let design emerge from failing tests.
+
+**Core rule:** real domain objects, mocked external boundaries, fast in-memory tests.
+**Hard rule:** no implementation code before RED is a clean behavior failure.
+
 ## Entry Gate — read before anything else
 
-This skill turns an **approved** expected result into working software. It never decides what that
-expected result should be.
+This skill never decides what the expected result should be.
 
 Before entering any phase below, confirm the behaviour has an approved observable outcome — a
 Gherkin scenario, a worked example, an agreed expected value. When it does not:
@@ -18,69 +23,84 @@ Gherkin scenario, a worked example, an agreed expected value. When it does not:
 - `bdd-methodology` owns that conversation. Re-enter here once it has an answer.
 
 An unapproved outcome driven out through a clean cycle still yields a suite that proves only that
-the code matches a guess. The same prerequisite is restated under **Outside-In Approach** below.
+the code matches a guess.
 
-## Precedence
+## What this skill owns
 
-This skill owns **SEQUENCE** — what must be true before the next phase may start, and what counts as
-evidence that it is true. A loading agent descriptor owns **MODE** — interactivity, thresholds, and
-what its dispatch payload carries.
+It owns **SEQUENCE**: what must be true before the next phase may start, and what evidence proves
+it. Everything else is delegated — load the owner rather than re-deriving its rules here.
 
-Where the two disagree, **the descriptor wins on mode and this skill wins on sequence.** A rule here
-that names a mode (pause and ask, a specific mutation percentage, how big one increment is) is
-describing the common case, not overriding the descriptor that loads it.
+| Question | Owner |
+|---|---|
+| What the observable behaviour IS, and whether it is approved | `bdd-methodology` |
+| Which test project, which layer, which double | `clean-architecture-testing` |
+| Whether a domain test is authorized; coverage matrix; walking-skeleton strategy A–D | `test-design-mandates` |
+| Mutation score, survivor classification, report parsing | `mutation-testing` |
+| Commit-time self-check | `craft-discipline` |
+| Cleaning up test code that already passes | `test-refactoring-catalog` |
+| **Phase order, entry evidence, and the outer→inner handoff** | **this skill** |
 
-## Overview
+A loading agent descriptor owns **MODE** — interactivity, thresholds, and what its dispatch payload
+carries. Where the two disagree, **the descriptor wins on mode and this skill wins on sequence.** A
+rule here that names a mode (pause and ask, a mutation percentage, how big one increment is)
+describes the common case; it does not override the descriptor that loads it.
 
-Complete testing methodology for outside-in development.
-Start from observable behavior (Gherkin), let design emerge from tests.
+## Double-Loop TDD
 
-The inner cycle is **2 steps, not 3**:
+- **Outer loop** — acceptance test (customer view). Stays RED while the inner loop cycles.
+- **Inner loop** — unit tests (developer view). RED → GREEN in minutes.
 
-- **Traditional (3 steps):** RED → green (dirty) → Refactor
-- **Here (2 steps):** RED (behavior failure) → SYNTHESIZE GREEN (clean synthesis)
+Outer drives **WHAT** to build, inner drives **HOW**. Never build a class not required by an active
+scenario.
 
-**Core rule:** Real domain objects, mocked external boundaries, fast in-memory tests.
+The inner cycle is **2 steps, not 3**: RED (behavior failure) → SYNTHESIZE GREEN (clean synthesis).
+There is no dirty-then-refactor step.
 
-**Hard rule:** No implementation code before RED is a clean behavior failure.
-
-## Double-Loop TDD Architecture
-
-- **Outer loop** — Acceptance test (customer view): business requirement. Stays RED while the inner loop cycles.
-- **Inner loop** — Unit tests (developer view): technical decomposition. RED → GREEN → REFACTOR in minutes.
-
-Outer drives **WHAT** to build, inner drives **HOW**. Never build a class not required by an active scenario.
-
-## 4-Phase Cycle (per behavior slice)
+## The 4-Phase Cycle (per behavior slice)
 
 ### 1. PREPARE
 
-Identify the **input boundary** (use case / interactor the test enters through) and the **output boundaries** (gateways the test observes: repositories, presenters, external services). Target exactly ONE scenario.
+Identify the **input boundary** (use case / interactor the test enters through) and the **output
+boundaries** (gateways the test observes: repositories, presenters, external services). Target
+exactly ONE scenario.
 
-### 2. RED (Behavior Failure Only)
+Every test enters through an input boundary and asserts at an output boundary or on the return
+value. Internal classes (entities, value objects, domain services) are exercised **indirectly** —
+never instantiated directly in a test of Application behaviour. A unit test is not an "isolated
+object test": testing a pure domain function by calling it directly IS boundary-to-boundary, because
+the function's public signature is the contract under test. `clean-architecture-testing` maps each
+level to its project and doubles, and lists what must never be tested directly.
+
+### 2. RED (behavior failure only)
 
 Write the failing test. Run it.
 
 - Compilation errors = **wishful thinking phase** → implement stubs/empty returns to compile, rerun
 - Assertion/behavior failure = **RED** ✓ → proceed to the architectural checkpoint
-- Never treat compilation errors as RED
+- Never treat compilation errors as RED. "I know it will fail" is not RED either — run it.
 
-**Programming by Wishful Thinking:** When your test won't compile, you're discovering the API you need. Stub just enough to compile, then confirm the test fails on behavior.
+**Programming by Wishful Thinking:** when your test won't compile, you're discovering the API you
+need. Stub just enough to compile, then confirm the test fails on behavior.
 
 #### Placeholder assertions are NOT wishful thinking
 
-`assert.fail()`, `Assert.Fail()`, `Assert.True(false)`, `Assert.False(true)`, `fail()`, `assert False`, `throw new NotImplementedException()`, `throw new Error('not implemented')` — any assertion designed to fail unconditionally — makes the test compile and fail, but asserts **nothing** about the API under test. It produces false RED evidence, in every language.
+`assert.fail()`, `Assert.Fail()`, `Assert.True(false)`, `Assert.False(true)`, `fail()`, `assert False`,
+`throw new NotImplementedException()`, `throw new Error('not implemented')` — any assertion designed
+to fail unconditionally — makes the test compile and fail, but asserts **nothing** about the API
+under test. It produces false RED evidence, in every language.
 
-A proper wishful-thinking test calls the function you WISH existed and lets the build or runtime surface the failure naturally:
+A proper wishful-thinking test calls the function you WISH existed and lets the build or runtime
+surface the failure naturally:
 
 1. Reference the missing type/function → compile error or missing-symbol/module error
 2. Stub just enough to compile (empty return / minimal implementation) → test fails on the real business assertion
 
-NEVER insert a placeholder assertion. This list is the single reference for the whole framework — `craft-discipline` C5 enforces it at commit time.
+NEVER insert a placeholder assertion. This list is the single reference for the whole framework —
+`craft-discipline` C5 enforces it at commit time.
 
 ### Between RED and GREEN: Architectural Guidance (MANDATORY)
 
-**Hard rule:** This checkpoint is not skippable. Do not proceed to SYNTHESIZE GREEN without completing it.
+**Hard rule:** this checkpoint is not skippable. Do not proceed to SYNTHESIZE GREEN without it.
 
 **The invariant:** the failing test is inspected — by someone other than whoever is about to write
 the implementation — before any production code exists. What is inspected is the RED output itself,
@@ -92,32 +112,29 @@ orchestrator and happens between two separate dispatches (see *When Orchestratin
 subagent instructed to act autonomously does not satisfy this by asking anyway — it reports the
 failing test and stops there. Either way, no implementation is written until the inspection happened.
 
-Orient design before synthesis:
+Orient design before synthesis: which pattern (specification, factory, builder), which layer owns
+the logic, immutability and return values vs mutations.
 
-- Which pattern? (specification, factory, builder)
-- Which layer owns the logic?
-- Immutability, return values vs mutations?
-
-### 3. SYNTHESIZE-GREEN (Clean Synthesis)
+### 3. SYNTHESIZE-GREEN (clean synthesis)
 
 Implement the smallest slice the failing test demands — and implement it clean the first time.
 
 **"Clean synthesis" constrains the QUALITY of the first draft, not its SCOPE.** Complete means
 complete for THIS test: no speculative branches, no unrequested error handling, no abstraction the
-test does not force. Gold-plating here contradicts the Walking Skeleton rule and the anti-pattern
-list below, and it is what the descriptor means by "minimal production code".
+test does not force. Gold-plating here contradicts the Walking Skeleton rule and is what a
+descriptor means by "minimal production code".
 
-- Follows all architectural rules and coding standards
+- Follows all architectural rules and coding standards — idiomatic, domain semantics, SOLID
 - No dirty-then-refactor — synthesize properly from the start
-- Idiomatic code, domain semantics, SOLID principles
 - If the test was misunderstood → revise the test, restart from RED
 
 **No iteration after SYNTHESIZE GREEN** unless RED was wrong or architectural guidance changed.
+Refining code instead of revising RED means you are back in 3-step TDD — stop and restart.
 
 ### 4. COMMIT & VERIFY
 
-- Run the **Post-GREEN Wiring Verification** (see below) to detect Fixture Theater.
-- Run the **mutation gate** (see below).
+- Run the **Post-GREEN Wiring Verification** below to detect Fixture Theater.
+- Run the **Mutation Gate** below.
 - Commit using conventional commits (`feat(<domain>): <behavior>`). **Never commit on red.**
 
 ## Quick Reference
@@ -152,32 +169,6 @@ list below, and it is what the descriptor means by "minimal production code".
 
 **Any of these mean:** Delete the code, start over with a proper RED.
 
-## When Orchestrating Subagents (MANDATORY)
-
-If you dispatch subagents to carry out a TDD slice — whatever the orchestration
-mechanism:
-
-**NEVER put RED and SYNTHESIZE GREEN in the same subagent prompt.**
-
-Split every TDD task into **two separate dispatches**:
-
-1. **Dispatch 1 — RED only:** subagent writes the test, stubs to compile, runs to confirm behavior failure, reports the failing test output
-2. **YOU inspect** — the RED output comes back to you. In an interactive session you show it to the developer and wait for explicit confirmation ("ok, proceed"); running autonomously you inspect it yourself. Either way it is inspected before GREEN is dispatched.
-3. **Dispatch 2 — SYNTHESIZE GREEN:** only after that inspection
-
-The inspection checkpoint is the **orchestrator's responsibility**. It cannot be delegated to the subagent that will implement the result — that is the entire point of splitting the dispatch.
-
-**Red flags — you are violating this rule if:**
-- Your subagent prompt contains both "write the failing test" AND "implement the solution"
-- You wrote `PAUSE` in a plan comment but included all steps in one prompt
-- You assumed the developer would confirm via the plan document
-
-| Rationalization | Reality |
-|---|---|
-| "The pause is in the plan text" | Plans are documentation. Dispatch boundaries are enforcement. |
-| "The subagent will stop and ask" | Subagents execute what they receive. Split the prompt. |
-| "It's more efficient in one shot" | Efficiency that skips developer validation is not efficiency. |
-
 ## Iron Rule of Tests
 
 NEVER modify a failing test to make it pass — fix the implementation.
@@ -197,79 +188,9 @@ Every test enters through an **input boundary** (use case / interactor) and asse
 
 **Unit tests are NOT "isolated object tests."** They are boundary-to-boundary at a smaller scope. Testing a pure domain function by calling it directly IS boundary-to-boundary — the function's public signature is the contract under test.
 
-## Outside-In Approach
-
-**Prerequisite:** Gherkin scenarios written and approved before this skill applies — for new features, bug fixes, and behavior-changing refactoring. `bdd-methodology` defines WHAT the observable behavior is; this skill turns it into working software.
-
-### Step 1: Map Scenario to Acceptance Test
-
-1. **Map Gherkin to test** — translate scenario to a top-level acceptance-style test
-2. **Write the test** — mock only external boundaries, use real domain objects
-
-### Step 2: Let Domain Emerge
-
-**STOP. Do NOT create any domain class, value object, entity, policy, or enum before your first test fails to compile.** Design MUST emerge from red — not from upfront thinking. Even if you already know the domain from context, create nothing until the test's compilation failure confirms what's needed. This includes adding 'just a new variant' of something that already exists: a new vehicle type, a new rejection reason, a new value object field, or a new boundary value — even if similar ones already exist in the codebase. Wait for the test's compilation failure before creating the new type.
-
-Test failures reveal the domain you need. Let the design emerge from failing tests — don't design upfront.
-- Domain objects (policies, value objects, services) emerge from what the test demands
-- Orchestrators only coordinate — domain logic lives in the domain
-- Real domain objects (not mocked)
-- No design upfront — the test tells you what to build
-
-Placeholder test bodies are the same failure mode — see **Placeholder assertions are NOT wishful thinking** above.
-
-### Step 3: Verify with the Mutation Gate
-
-Once both acceptance and domain test streams are green, run the mutation gate below.
-
-## Acceptance-Style Tests (Sociable — Entry Point Level)
-
-Test the system entry point with real domain objects. Mock only external boundaries. Verify orchestration + observable behavior.
-
-```csharp
-[Fact]
-public async Task WhenSubmittingValidRequest_ShouldPersistPendingRecord()
-{
-    var repository = A.Fake<IRequestRepository>();
-    var handler = new SubmitRequestHandler(repository);
-    var command = new SubmitRequestCommand(
-        UserId.CreateNew(),
-        new UserInfo(Age: 25, YearsOfExperience: 3),
-        new ResourceInfo(Type: "standard", Age: 1));
-
-    await handler.Handle(command);
-
-    A.CallTo(() => repository.AddAsync(
-        A<RequestRecord>.That.Matches(r => r.Status == RequestStatus.Pending),
-        A<CancellationToken>._)).MustHaveHappenedOnceExactly();
-}
-```
-
-## Domain Tests (Pure — Rule Level)
-
-Test business **policies**, **rules**, and **domain services** — not data structures directly.  
-No mocks — pure state-based assertions.
-
-```csharp
-[Fact]
-public void WhenUserIsUnderMinimumAge_ShouldBeRejected()
-{
-    var policy = new EligibilityPolicy();
-    var user = new UserInfo(Age: 17, YearsOfExperience: 0);
-    var resource = new ResourceInfo(Type: "standard", Age: 1);
-
-    var result = policy.Evaluate(user, resource);
-
-    Assert.False(result.IsEligible);
-    Assert.Equal("minimum_age_not_met", result.RejectionReason);
-}
-```
-
-**What NOT to test directly:**
-- Basic constructors (unless complex invariants)
-- Simple value objects (covered by usage in policies/orchestrators)
-- Simple getters/setters
-- DTOs or passive data structures
+**Do not test directly:** basic constructors (unless they enforce complex invariants), simple
+getters/setters, or DTOs and passive data structures. Simple value objects are covered by their use
+in policies and orchestrators.
 
 ## When to Write Which
 
@@ -282,41 +203,47 @@ public void WhenUserIsUnderMinimumAge_ShouldBeRejected()
 
 **Default:** Start with a Use Case test. Add Domain tests only if extracting a complex rule makes testing simpler.
 
-## Testing Rules
+## Outside-In Approach
 
-### DO ✅
-- Mock only external boundaries (repositories, external services)
-- Use real domain objects (entities, policies, services)
-- Keep tests fast (< 100ms, no DB, no network)
-- Name tests with business language (`WhenCondition_ShouldOutcome`)
-- Cover meaningful edge-case combinations
+**Prerequisite:** Gherkin scenarios written and approved before this skill applies — for new
+features, bug fixes, and behavior-changing refactoring. `bdd-methodology` defines WHAT the
+observable behavior is; this skill turns it into working software.
 
-### DON'T ❌
-- Don't mock domain objects
-- Don't centralize strategic rules in orchestrators
-- Don't use integration tooling in unit tests
-- Don't test implementation details — test behavior
-- Don't couple to a specific assertion library in the skill
+### Step 1: Map Scenario to Acceptance Test
 
-## Anti-Patterns
+Translate the scenario to a top-level acceptance-style test entering at the Application boundary.
+Mock only external boundaries; use real domain objects.
 
-- Strategic rules in orchestrators instead of domain
-- Over-mocking that hides real business behavior
-- Treating coverage percentage as the quality target
-- Duplicating acceptance test coverage with redundant domain tests
+### Step 2: Let Domain Emerge
+
+**STOP. Do NOT create any domain class, value object, entity, policy, or enum before your first test
+fails to compile.** Design MUST emerge from red — not from upfront thinking. Even if you already know
+the domain from context, create nothing until the test's compilation failure confirms what's needed.
+This includes adding 'just a new variant' of something that already exists: a new vehicle type, a new
+rejection reason, a new value object field, or a new boundary value — even if similar ones already
+exist in the codebase. Wait for the test's compilation failure before creating the new type.
+
+- Domain objects (policies, value objects, services) emerge from what the test demands
+- Orchestrators only coordinate — domain logic lives in the domain
+- Real domain objects, never mocked
+
+Placeholder test bodies are the same failure mode — see **Placeholder assertions are NOT wishful
+thinking** above.
 
 ## Post-GREEN Wiring Verification (MANDATORY)
 
 After the suite turns green and BEFORE commit:
 
 1. Run `git diff --name-only`. Every production file the behavior required MUST appear in the diff.
-2. If only test files changed but tests flipped RED → GREEN → you hit **Fixture Theater**: the test setup implements the feature. BLOCK the commit, go back to GREEN, write the production code.
-3. Deletion test: mentally revert the production changes. If tests still pass, the test is exercising fixture state, not behavior.
+2. If only test files changed but tests flipped RED → GREEN → you hit **Fixture Theater**: the test
+   setup implements the feature. BLOCK the commit, go back to GREEN, write the production code.
+3. Deletion test: mentally revert the production changes. If tests still pass, the test is exercising
+   fixture state, not behavior.
 
-## Mutation Gate (third validation layer)
+## Mutation Gate
 
 This skill owns **when** the gate runs and **what evidence closes it**. After both test streams are
-green and before merge, run the `mutation-testing` skill:
+green and before merge, run the `mutation-testing` skill, which owns the mechanics:
 
 1. Mutation testing covers Application and Domain logic, and its result is recorded.
 2. Every surviving mutant is either killed or documented as equivalent with a justification.
@@ -331,18 +258,20 @@ it. Do not read a fixed percentage into this section.
 ## Walking Skeleton (first slice of a feature)
 
 **ONE walking skeleton at a time.** A feature has several — `test-design-mandates` sizes them at
-2–5, one per major flow variant — but you drive one to GREEN before starting the next. Two
-skeletons RED at once is the Concentric Circle ordering rule broken at the skeleton level: two
-incomplete end-to-end paths, neither of them evidence.
+2–5, one per major flow variant, and picks each one's strategy (A/B/C/D) — but you drive one to GREEN
+before starting the next. Two skeletons RED at once is the Concentric Circle ordering rule broken at
+the skeleton level: two incomplete end-to-end paths, neither of them evidence.
 
-`test-design-mandates` decides **how many** skeletons a feature needs and which strategy each one
-uses (A/B/C/D). This skill decides **in what order** you take them and what "done" means for one.
+This skill decides **in what order** you take them and what "done" means for one:
 
-For each skeleton:
-- Write ONE acceptance test proving end-to-end wiring with **real adapters** (filesystem, DB, subprocess, HTTP — fake only costly externals like paid APIs).
-- Implement the thinnest possible slice: hardcoded values, minimal branching, no error handling beyond what the AT requires.
+- Write ONE acceptance test proving end-to-end wiring with **real adapters** (filesystem, DB,
+  subprocess, HTTP — fake only costly externals like paid APIs).
+- Implement the thinnest possible slice: hardcoded values, minimal branching, no error handling
+  beyond what the AT requires.
 - Unit tests only if needed to decompose a complex GREEN.
-- The AT drives ALL implementation. A later scenario's test may go green on its first run because an earlier skeleton already covered it — that is correct. Confirm it with the deletion test rather than assuming it.
+- The AT drives ALL implementation. A later scenario's test may go green on its first run because an
+  earlier skeleton already covered it — that is correct. Confirm it with the deletion test rather
+  than assuming it.
 
 ## Concentric Circle Expansion
 
@@ -356,16 +285,17 @@ behavior slice, expand outward — one circle at a time.
 | **3 — Infrastructure circle** | Integration test at the persistence / broker / external adapter boundary | Phase 2 GREEN |
 
 **Ordering rule:** never start Phase N+1 while Phase N is RED. Expanding outward while the inner
-loop is still RED hides the root cause under outer-circle complexity and produces untraceable failures.
+loop is still RED hides the root cause under outer-circle complexity and produces untraceable
+failures.
 
 For test project placement and folder naming conventions, see `clean-architecture-testing`.
 
 ## One Acceptance Test at a Time
 
 Every commit leaves the suite fully green — no `[Skip]`, no `[Ignore]`, nothing disabled
-(`craft-discipline` C1, C2, C5). That rules out the common shortcut of authoring every
-acceptance test up front and skipping all but one: a skipped test asserts nothing and carries
-a false green through every commit until someone remembers to enable it.
+(`craft-discipline` C1, C2, C5). That rules out the common shortcut of authoring every acceptance
+test up front and skipping all but one: a skipped test asserts nothing and carries a false green
+through every commit until someone remembers to enable it.
 
 Author acceptance tests **on demand**, one per slice:
 
@@ -377,6 +307,35 @@ Author acceptance tests **on demand**, one per slice:
 
 A scenario whose test has not been written yet is not "skipped" — it is not started, and the
 `.feature` file already records that it is owed.
+
+## When Orchestrating Subagents (MANDATORY)
+
+If you dispatch subagents to carry out a TDD slice — whatever the orchestration mechanism:
+
+**NEVER put RED and SYNTHESIZE GREEN in the same subagent prompt.**
+
+Split every TDD task into **two separate dispatches**:
+
+1. **Dispatch 1 — RED only:** subagent writes the test, stubs to compile, runs to confirm behavior failure, reports the failing test output
+2. **YOU inspect** — the RED output comes back to you. In an interactive session you show it to the developer and wait for explicit confirmation ("ok, proceed"); running autonomously you inspect it yourself. Either way it is inspected before GREEN is dispatched.
+3. **Dispatch 2 — SYNTHESIZE GREEN:** only after that inspection
+
+The inspection checkpoint is the **orchestrator's responsibility**. It cannot be delegated to the
+subagent that will implement the result — that is the entire point of splitting the dispatch.
+
+**You are violating this rule if** your subagent prompt contains both "write the failing test" AND
+"implement the solution", or you wrote `PAUSE` in a plan comment but included all steps in one
+prompt, or you assumed the developer would confirm via the plan document. Plans are documentation;
+dispatch boundaries are enforcement. Subagents execute what they receive — split the prompt. And
+efficiency that skips developer validation is not efficiency: one-shot dispatch is not a shortcut
+worth taking.
+
+## Anti-Patterns
+
+- Strategic rules in orchestrators instead of domain
+- Over-mocking that hides real business behavior
+- Treating coverage percentage as the quality target
+- Duplicating acceptance test coverage with redundant domain tests
 
 ## Common Mistakes
 
@@ -397,23 +356,12 @@ A scenario whose test has not been written yet is not "skipped" — it is not st
 
 ## Integration with other skills
 
-Behavior-first workflow:
-
-1. `bdd-methodology` defines WHAT (observable behavior, approved before this skill applies)
-2. This skill maps scenarios to executable tests and drives the RED → validation → SYNTHESIZE-GREEN cycle
-3. `mutation-testing` validates test quality after GREEN, before merge
-4. `craft-discipline` is the commit-time self-check that enforces the result
-
-- `bdd-methodology` — the approved scenarios this skill consumes
-- `test-design-mandates` — coverage matrix, layer assignment, walking skeleton strategy
-- `mutation-testing` — run after GREEN, before commit
-- `clean-architecture-testing` — test level & doubles policy
-- `craft-discipline` — commit-time quality gates checklist
-- `test-refactoring-catalog` — safe test refactorings
-
-Pair with domain-specific testing skills for patterns and examples.
+`bdd-methodology` defines WHAT → this skill drives RED → inspection → SYNTHESIZE-GREEN →
+`mutation-testing` validates test quality before merge → `craft-discipline` is the commit-time
+self-check. See **What this skill owns** for the full delegation map, and pair with domain-specific
+testing skills for patterns and examples.
 
 ## References
-- [test-examples.md](references/test-examples.md) - Examples of both Acceptance and Domain tests.
-- [testing-strategy.md](references/testing-strategy.md) - Detailed explanation of the testing pyramid and strategy.
+- [test-examples.md](references/test-examples.md) - Worked Acceptance and Domain test examples (real domain objects, mocked boundaries).
+- [testing-strategy.md](references/testing-strategy.md) - Testing pyramid and strategy.
 - [cqrs-patterns.md](references/cqrs-patterns.md) - CQRS architecture references.

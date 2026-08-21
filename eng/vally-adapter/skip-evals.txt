@@ -7,11 +7,12 @@
 # Use it for an eval that is temporarily too expensive or known to be flaky —
 # never to hide a regression. State the reason next to the entry.
 #
-# CURRENT STATE: every eval the repository ships is listed here — 10 skills and
-# 12 agent suites, the complete set. Nothing runs. `run-vally-evals.sh` exits 0
-# having executed no trial, so the PR eval job is a no-op and ./eval-results
-# holds whatever the last real run left behind; the dashboard keeps publishing
-# it and it goes stale silently. Take an entry out to bring one suite back.
+# CURRENT STATE: 9 skills and 12 agent suites are listed — everything the
+# repository ships except `outside-in-tdd`, which was taken out to measure the
+# body-size reduction of its SKILL.md. Every other suite is still a no-op: the
+# PR eval job runs one skill, and ./eval-results holds whatever the last real
+# run left behind for the rest; the dashboard keeps publishing it and it goes
+# stale silently. Take an entry out to bring one more suite back.
 
 # ---- Skills (tests/skills/<name>) -------------------------------------------
 adr-eligibility-gate
@@ -19,7 +20,6 @@ adversarial-review-lenses
 architecture-decisions
 bdd-methodology
 mocking-strategy-roster
-outside-in-tdd
 test-design-mandates
 test-refactoring-catalog
 architecture-patterns           # balanced-coupling verdict matrix does not exist yet
