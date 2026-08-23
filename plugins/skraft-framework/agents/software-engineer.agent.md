@@ -73,11 +73,16 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions. If bloc
 ```
 
 ## Skill Loading -- MANDATORY
-Load each skill via its link using your read tool. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
+Load each skill via its link using your read tool before ANY blocker check, DISTILL artefact validation, or code change. Missing inputs do NOT waive this startup read. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup (before PREPARE)
 - [outside-in-tdd](../skills/outside-in-tdd/SKILL.md)
 - [craft-discipline](../skills/craft-discipline/SKILL.md)
+
+Startup order:
+1. Read `outside-in-tdd`.
+2. Read `craft-discipline`.
+3. Then inspect DISTILL artefacts and decide whether you must block.
 
 ### Load on demand (trigger-based)
 | Skill | Load when... |

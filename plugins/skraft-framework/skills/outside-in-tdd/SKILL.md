@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: Use when an approved scenario, Gherkin example, worked example, or expected result has to become working software through outside-in / double-loop TDD: start from an acceptance or application-boundary test, get a trustworthy RED before implementation, let domain logic emerge only from failing behavior, and drive one walking skeleton or first delivery slice at a time. Also use to decide what belongs in first delivery and what stays out of scope, when checking whether a failing suite proves a missing approved behavior or is false evidence, when replacing fixture-provided or test-provided false greens with production behavior, when wider HTTP/DB/infrastructure tests should wait behind an inner failing behavior, and when splitting RED and GREEN across workers or subagents with inspection between them. Finish with post-GREEN wiring verification, mutation/coverage gates, and never commit on red.
+description: Use when an approved business example has to become working software — deciding what to deliver now and what to defer, what counts as done for first route through feature, and in what order to take remaining examples and any wider integration work. Also use before writing any implementation code for feature or fix, when judging whether failing suite is trustworthy evidence that behavior is missing, when suite is green but running behavior is not, when fixture-provided or test-provided false green must be replaced with production behavior, and when handing write-the-test-then-implement slice to worker or subagent.
 ---
 
 # Outside-In TDD
@@ -168,6 +168,32 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 - Refining code after SYNTHESIZE GREEN instead of revising RED
 
 **Any of these mean:** Delete the code, start over with a proper RED.
+
+## When Orchestrating Subagents (MANDATORY)
+
+If you dispatch subagents to carry out a TDD slice — whatever the orchestration
+mechanism:
+
+**NEVER put RED and SYNTHESIZE GREEN in the same subagent prompt.**
+
+Split every TDD task into **two separate dispatches**:
+
+1. **Dispatch 1 — RED only:** subagent writes the test, stubs to compile, runs to confirm behavior failure, reports the failing test output
+2. **YOU inspect** — the RED output comes back to you. In an interactive session you show it to the developer and wait for explicit confirmation ("ok, proceed"); running autonomously you inspect it yourself. Either way it is inspected before GREEN is dispatched.
+3. **Dispatch 2 — SYNTHESIZE GREEN:** only after that inspection
+
+The inspection checkpoint is the **orchestrator's responsibility**. It cannot be delegated to the subagent that will implement the result — that is the entire point of splitting the dispatch.
+
+**Red flags — you are violating this rule if:**
+- Your subagent prompt contains both "write the failing test" AND "implement the solution"
+- You wrote `PAUSE` in a plan comment but included all steps in one prompt
+- You assumed the developer would confirm via the plan document
+
+| Rationalization | Reality |
+|---|---|
+| "The pause is in the plan text" | Plans are documentation. Dispatch boundaries are enforcement. |
+| "The subagent will stop and ask" | Subagents execute what they receive. Split the prompt. |
+| "It's more efficient in one shot" | Efficiency that skips developer validation is not efficiency. |
 
 ## Iron Rule of Tests
 
