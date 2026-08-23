@@ -487,6 +487,7 @@ run_one_eval() {
         --baseline "$BASELINE_JSONL" \
         --skilled "$SKILLED_JSONL" \
         --skill "$EVAL_NAME" \
+        --eval-spec "$EVAL_SPEC" \
         --skill-path "${TARGET_SKILL_DIR#"$SKRAFT_ROOT/"}" \
         --output-root "$RESULTS_ROOT" \
         --vally "$VALLY" \

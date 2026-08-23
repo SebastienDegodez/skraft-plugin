@@ -25,6 +25,7 @@ const { values: options } = parseArgs({
     baseline: { type: 'string' },
     skilled: { type: 'string' },
     skill: { type: 'string' },
+    'eval-spec': { type: 'string' },
     'skill-path': { type: 'string' },
     'output-root': { type: 'string', default: 'eval-results' },
     vally: { type: 'string', default: 'npx --yes @microsoft/vally-cli@0.12.0' },
@@ -65,9 +66,10 @@ const splitCommand = (command) =>
 const compare = (baseline, skilled, output) => {
   const [binary, ...prefix] = splitCommand(options.vally)
   if (!binary) throw new Error('Vally command is empty')
+  const evalSpecArg = options['eval-spec'] ? ['--eval-spec', resolve(options['eval-spec'])] : []
   execFileSync(
     binary,
-    [...prefix, 'compare', '--baseline', baseline, '--treatment', skilled, '--judge-model', options['judge-model'], '--output', output],
+    [...prefix, 'compare', '--baseline', baseline, '--treatment', skilled, ...evalSpecArg, '--judge-model', options['judge-model'], '--output', output],
     { stdio: 'inherit' },
   )
   return parseJsonl(output)[0] ?? null

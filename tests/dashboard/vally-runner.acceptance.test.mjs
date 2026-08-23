@@ -260,6 +260,7 @@ describe('unified Vally runner', () => {
     const compare = calls.find((call) => call.startsWith('compare '))
     strictEqual(Boolean(compare), true)
     strictEqual(compare.includes('otel-spans.jsonl'), false)
+    strictEqual(compare.includes(`--eval-spec ${join(repoRoot, 'tests/skills/outside-in-tdd/eval.yaml')}`), true)
     strictEqual(
       calls.some((call) => call.startsWith('eval ') && call.includes('--runs 1')),
       true,
