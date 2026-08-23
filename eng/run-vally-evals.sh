@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # run-vally-evals.sh — Single entry point for every Vally evaluation.
-# Skills run as isolated baseline-versus-treatment comparisons. Agent suites run
-# once through their declared custom executor and grade the resulting trajectory.
+# Skills run as baseline-versus-treatment comparisons. Agent suites run once
+# through their declared custom executor and grade the resulting trajectory.
 #
 # Usage:
 #   ./eng/run-vally-evals.sh                         # every skill + agent suite
@@ -226,6 +226,24 @@ open_log_fd() {
   fi
 }
 
+load_skill_companions() {
+  local SIDE_CAR="$1"
+  [ -f "$SIDE_CAR" ] || return 0
+  awk '
+    BEGIN { in_skills=0 }
+    /^[[:space:]]*#/ { next }
+    /^[[:space:]]*skills:[[:space:]]*$/ { in_skills=1; next }
+    in_skills && /^[[:space:]]*-[[:space:]]*[A-Za-z0-9-]+[[:space:]]*$/ {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      sub(/[[:space:]]*$/, "", line)
+      print line
+      next
+    }
+    in_skills && /^[[:space:]]*[A-Za-z0-9_-]+:[[:space:]]*$/ { in_skills=0 }
+  ' "$SIDE_CAR"
+}
+
 run_agent_eval() {
   local EVAL_SPEC="$1"
   local EVAL_DIR="$(dirname "$EVAL_SPEC")"
@@ -293,10 +311,14 @@ run_one_eval() {
   local EVAL_PLUGIN="$(basename "$(dirname "$EVAL_DIR")")"
   # Multi-plugin layout first, single-plugin layout as the fallback: today
   # EVAL_PLUGIN is the literal `skills` segment of tests/skills/<skill>.
-  local SKILL_DIR="$SKRAFT_ROOT/plugins/$EVAL_PLUGIN/skills/$EVAL_NAME"
-  if [ ! -d "$SKILL_DIR" ]; then
-    SKILL_DIR="$SKRAFT_ROOT/plugins/skraft-framework/skills/$EVAL_NAME"
+  local TARGET_SKILL_DIR="$SKRAFT_ROOT/plugins/$EVAL_PLUGIN/skills/$EVAL_NAME"
+  if [ ! -d "$TARGET_SKILL_DIR" ]; then
+    TARGET_SKILL_DIR="$SKRAFT_ROOT/plugins/skraft-framework/skills/$EVAL_NAME"
   fi
+  local SKILLED_SKILL_DIR="$TARGET_SKILL_DIR"
+  local SCOPED_SKILLS_FILE="$EVAL_DIR/eval.skill-dir.yaml"
+  local SCOPED_SKILL_DIR=""
+  local -a COMPANION_SKILLS=()
   local BASELINE_DIR="$RESULTS_ROOT/$EVAL_NAME/baseline"
   local SKILLED_DIR="$RESULTS_ROOT/$EVAL_NAME/skilled"
   local LOG="$RESULTS_ROOT/$EVAL_NAME/eval.log"
@@ -318,13 +340,33 @@ run_one_eval() {
   rm -rf "$BASELINE_DIR" "$SKILLED_DIR"
   mkdir -p "$BASELINE_DIR" "$SKILLED_DIR"
 
-  if [ ! -d "$SKILL_DIR" ]; then
+  if [ ! -d "$TARGET_SKILL_DIR" ]; then
     # Skipped: the eval directory name does not resolve to a shipped skill, so
     # there is no isolated skill set to compare against a zero-skill baseline.
-    echo "SKIP: skill dir not found: $SKILL_DIR" > "$LOG"
+    echo "SKIP: skill dir not found: $TARGET_SKILL_DIR" > "$LOG"
     echo -e "  ${YELLOW}⚠${NC} $EVAL_NAME (skipped — no skill dir)"
     echo "skip" > "$STATUS_DIR/$EVAL_NAME"
     return
+  fi
+
+  if [ -f "$SCOPED_SKILLS_FILE" ]; then
+    while IFS= read -r companion; do
+      [ -n "$companion" ] && COMPANION_SKILLS+=("$companion")
+    done < <(load_skill_companions "$SCOPED_SKILLS_FILE")
+    if [ "${#COMPANION_SKILLS[@]}" -gt 0 ]; then
+      SCOPED_SKILL_DIR=$(mktemp -d -t vally-scoped-skills-XXXXXX)
+      ln -s "$TARGET_SKILL_DIR" "$SCOPED_SKILL_DIR/$EVAL_NAME"
+      for companion in "${COMPANION_SKILLS[@]}"; do
+        [ "$companion" = "$EVAL_NAME" ] && continue
+        local COMPANION_DIR="$SKRAFT_ROOT/plugins/skraft-framework/skills/$companion"
+        if [ -d "$COMPANION_DIR" ]; then
+          ln -s "$COMPANION_DIR" "$SCOPED_SKILL_DIR/$companion"
+        else
+          echo "WARNING: companion skill not found: $companion ($SCOPED_SKILLS_FILE)"
+        fi
+      done
+      SKILLED_SKILL_DIR="$SCOPED_SKILL_DIR"
+    fi
   fi
 
   # Empty dir used as `--skill-dir` for the baseline so vally discovers zero
@@ -334,7 +376,7 @@ run_one_eval() {
   local EMPTY_SKILL_DIR
   EMPTY_SKILL_DIR=$(mktemp -d -t vally-empty-skills-XXXXXX)
   local PILOT_SPEC=""
-  trap 'rm -rf "$EMPTY_SKILL_DIR"; [ -n "$PILOT_SPEC" ] && rm -f "$PILOT_SPEC"; rm -f "$(dirname "$EVAL_SPEC")/.baseline-cache.eval.yaml"; rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
+  trap 'rm -rf "$EMPTY_SKILL_DIR"; [ -n "$SCOPED_SKILL_DIR" ] && rm -rf "$SCOPED_SKILL_DIR"; [ -n "$PILOT_SPEC" ] && rm -f "$PILOT_SPEC"; rm -f "$(dirname "$EVAL_SPEC")/.baseline-cache.eval.yaml"; rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
 
   # Pilot: the same frozen spec with fewer stimuli, generated per run. The
   # committed instrument is never edited to make a cheaper measurement possible.
@@ -404,11 +446,11 @@ run_one_eval() {
 
     echo -e "  ${BOLD}▶${NC} $EVAL_NAME — skilled..." >&2
 
-    # Skilled: exactly the one skill under evaluation.
+    # Skilled: target skill, optionally scoped with declared companion skills.
     echo "--- Skilled run ---"
     $VALLY eval \
       --eval-spec "$EVAL_SPEC" \
-      --skill-dir "$SKILL_DIR" \
+      --skill-dir "$SKILLED_SKILL_DIR" \
       --model "$MODEL" \
       ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
       --skip-validate \
@@ -445,7 +487,7 @@ run_one_eval() {
         --baseline "$BASELINE_JSONL" \
         --skilled "$SKILLED_JSONL" \
         --skill "$EVAL_NAME" \
-        --skill-path "${SKILL_DIR#"$SKRAFT_ROOT/"}" \
+        --skill-path "${TARGET_SKILL_DIR#"$SKRAFT_ROOT/"}" \
         --output-root "$RESULTS_ROOT" \
         --vally "$VALLY" \
         --model "$MODEL" \

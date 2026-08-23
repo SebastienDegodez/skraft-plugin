@@ -1,12 +1,12 @@
 ---
 name: outside-in-tdd
-description: Use when an approved business example has to become working software — deciding what to deliver now and what to defer, what counts as done for the first route through a feature, and in what order to take the remaining examples and any wider integration work. Also use before writing implementation code for a behaviour whose expected result is already approved, when judging whether a failing suite is trustworthy evidence that a behavior is missing, and when handing a write-the-test-then-implement slice to a worker or subagent. Also use when the implementation contradicts an approved expectation, or when the suite is green but the running behavior is not.
+description: Use when an approved scenario, Gherkin example, worked example, or expected result has to become working software through outside-in / double-loop TDD: start from an acceptance or application-boundary test, get a trustworthy RED before implementation, let domain logic emerge only from failing behavior, and drive one walking skeleton or first delivery slice at a time. Also use to decide what belongs in first delivery and what stays out of scope, when checking whether a failing suite proves a missing approved behavior or is false evidence, when replacing fixture-provided or test-provided false greens with production behavior, when wider HTTP/DB/infrastructure tests should wait behind an inner failing behavior, and when splitting RED and GREEN across workers or subagents with inspection between them. Finish with post-GREEN wiring verification, mutation/coverage gates, and never commit on red.
 ---
 
 # Outside-In TDD
 
-Turns an **approved** expected result into working software. Start from observable behavior,
-let design emerge from failing tests.
+Turns an **approved** scenario into working software. Start from observable behavior at the
+application boundary, get trustworthy failure first, then let design emerge from failing tests.
 
 **Core rule:** real domain objects, mocked external boundaries, fast in-memory tests.
 **Hard rule:** no implementation code before RED is a clean behavior failure.
@@ -203,6 +203,8 @@ in policies and orchestrators.
 
 **Default:** Start with a Use Case test. Add Domain tests only if extracting a complex rule makes testing simpler.
 
+When a rule has meaningful edge-case combinations, cover those combinations explicitly in Domain tests.
+
 ## Outside-In Approach
 
 **Prerequisite:** Gherkin scenarios written and approved before this skill applies — for new
@@ -245,9 +247,10 @@ After the suite turns green and BEFORE commit:
 This skill owns **when** the gate runs and **what evidence closes it**. After both test streams are
 green and before merge, run the `mutation-testing` skill, which owns the mechanics:
 
-1. Mutation testing covers Application and Domain logic, and its result is recorded.
-2. Every surviving mutant is either killed or documented as equivalent with a justification.
-3. A test that kills no mutants is deleted, not kept for the count.
+1. Application and Domain logic must reach 100% code coverage before completion.
+2. Mutation testing covers Application and Domain logic, and its result is recorded.
+3. Every surviving mutant is either killed or documented as equivalent with a justification.
+4. A test that kills no mutants is deleted, not kept for the count.
 
 If the gate has not run, the work is not complete — that is sequence, and it holds for every change.
 

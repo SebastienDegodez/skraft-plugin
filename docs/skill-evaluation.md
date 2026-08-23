@@ -198,8 +198,18 @@ one-off `npx` download of the same pinned version.
 ```
 
 Each spec is run twice on its own: once with an empty `--skill-dir` (baseline),
-once with only the skill under test. Isolation is structural — the same spec goes
-to both sides, so there is no comparison contract left to drift.
+once with the skill under test. By default the skilled arm loads only that skill.
+To grant explicit companion access for one eval, add
+`tests/skills/<skill>/eval.skill-dir.yaml`:
+
+```yaml
+skills:
+  - bdd-methodology
+  - mutation-testing
+```
+
+The runner builds a temporary scoped `--skill-dir` with target + listed
+companions for the skilled arm; baseline stays empty.
 
 An evaluation drives a real agent, so it needs `COPILOT_GITHUB_TOKEN`: a
 fine-grained PAT with the **Account › Copilot Requests** permission. The

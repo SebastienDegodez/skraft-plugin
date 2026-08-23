@@ -121,6 +121,39 @@ describe('unified Vally runner', () => {
     )
   })
 
+  it('loads declared companion skills through a scoped skilled arm skill directory', () => {
+    writeFileSync(callsPath, '')
+    execFileSync('bash', [join(repoRoot, 'eng/run-vally-evals.sh'), 'outside-in-tdd'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        COPILOT_GITHUB_TOKEN: 'test-token',
+        VALLY: fakeVally,
+        FAKE_CALLS: callsPath,
+        RESULTS_DIR: resultsPath,
+        LIVE_LOGS: '0',
+        RUNS: '1',
+        WORKERS: '1',
+        PARALLEL: '1',
+      },
+    })
+
+    const evalCalls = readFileSync(callsPath, 'utf8')
+      .trim()
+      .split(/\r?\n/)
+      .filter((call) => call.startsWith('eval '))
+    strictEqual(evalCalls.length, 2)
+    strictEqual(
+      evalCalls.some((call) => call.includes('vally-empty-skills-')),
+      true,
+    )
+    strictEqual(
+      evalCalls.some((call) => call.includes('vally-scoped-skills-')),
+      true,
+    )
+  })
+
   it('narrows a run to the named stimuli without touching the committed spec', () => {
     writeFileSync(callsPath, '')
     const committedSpec = join(repoRoot, 'tests/skills/outside-in-tdd/eval.yaml')
