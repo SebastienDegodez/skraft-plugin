@@ -93,7 +93,7 @@ plugins/skraft-framework/src/
 │   ├── session-start-service.mjs # housekeeping (rétention audit + signaux)
 │   ├── health-check-service.mjs  # diagnostics (version/manifests/logs/config)
 │   ├── state-service.mjs     # init/get/applyEvent (write-through)
-│   ├── config-service.mjs    # init/get/set (depthTier, trackingLayout)
+│   ├── config-service.mjs    # init/get/set (trackingLayout)
 │   └── config-loader.mjs
 ├── ports/
 │   ├── api/                 # contrats entrants (appelés par la couche Api)
@@ -130,7 +130,7 @@ plugins/skraft-framework/src/
 └── cli/
     ├── hook.mjs               # ← appelé par hooks.json
     ├── state.mjs             # S7 bridge état (write-through) + migrate (S3)
-    ├── config.mjs            # S7 bridge config repo-wide (depthTier, trackingLayout)
+    ├── config.mjs            # S7 bridge config repo-wide (trackingLayout)
     ├── health-check.mjs      # US12 diagnostics (fail-open)
     ├── housekeeping.mjs      # US12 SessionStart auto-entretien
     ├── init-log.mjs

@@ -27,17 +27,17 @@ persona: tech-lead
 
 ## Exit contract
 
-- Mutation score (percentage)
+- The runner exit code, per scope: core first, then boundary
 - List of surviving mutants classified: **real** (missing test) or **equivalent** (no observable difference)
 - Boundary tests added for each real survivor
-- Verdict: ✅ Proceed to commit / ❌ BLOCK — return to step 4
+- Verdict: ✅ Proceed to commit / ❌ BLOCK — return to step 4 while any real survivor remains
 
 ## Invariants
 
 - **S7 — Deterministic execution** — Mutation testing MUST be executed via terminal tool calls. Do not assert results from prose
 - **A test that kills no mutant is noise** — delete it
-- **Scope exclusions** — Never mutate: DTOs, ViewModels, infrastructure adapters, `DependencyInjection.cs`, `Program.cs`, marker interfaces, generated code
-- **Mutation score 100%** on business logic to proceed to commit (or < 100% with only documented equivalent mutants)
+- **Scope exclusions** — Never mutate: `DependencyInjection.cs`, `Program.cs`, marker interfaces, generated code. Everything authored is in scope, DTOs and adapters included; API and Infrastructure run second, held to their own bar
+- **The runner decides** — `--break-at` fails the run below the bar, so the exit code is the verdict. `skraft-quality-bar` states the bar for each scope
 
 ## Why this shape
 

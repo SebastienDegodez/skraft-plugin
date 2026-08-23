@@ -32,6 +32,7 @@ metadata:
     - craft-discipline
     - test-refactoring-catalog
     - mutation-testing
+    - skraft-quality-bar
     - quality-gates-evidence-contract
     - quality-gates-dotnet
     - resolving-stack-commands
@@ -42,7 +43,7 @@ metadata:
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
         - docs/adr/adr-{NNN}-{slug}.md
-      - depthTier + difficulty (provided by the orchestrator in the dispatch payload)
+      - difficulty (provided by the orchestrator in the dispatch payload)
   outputs:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
@@ -73,16 +74,11 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions. If bloc
 ```
 
 ## Skill Loading -- MANDATORY
-Load each skill via its link using your read tool before ANY blocker check, DISTILL artefact validation, or code change. Missing inputs do NOT waive this startup read. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
+Load each skill via its link using your read tool. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup (before PREPARE)
 - [outside-in-tdd](../skills/outside-in-tdd/SKILL.md)
 - [craft-discipline](../skills/craft-discipline/SKILL.md)
-
-Startup order:
-1. Read `outside-in-tdd`.
-2. Read `craft-discipline`.
-3. Then inspect DISTILL artefacts and decide whether you must block.
 
 ### Load on demand (trigger-based)
 | Skill | Load when... |
@@ -131,7 +127,7 @@ These are owned by the skills — load them, do not inline rules here.
 ### 4. COMMIT & VERIFY
 - **Post-GREEN Wiring Verification — FIRST, before anything else in this phase.** Run `git diff --name-only`. Every production file the behavior required MUST appear. If only test files changed while the suite flipped RED → GREEN, that is **Fixture Theater**: BLOCK the commit, go back and write the production code. Then apply the deletion test — revert the production change mentally; if the tests still pass, they are exercising fixture state, not behavior. (`outside-in-tdd` → Post-GREEN Wiring Verification.)
 - Run static checks, formatting, and Mutation Testing.
-- **Gate**: Mutation score threshold depends on the `depthTier` provided in the dispatch payload (basic≅80%, standard≅90%, comprehensive=100% on business logic). If a test kills no mutants, DELETE IT.
+- **Gate**: run the stack adapter's mutation scripts — core first, then boundary. Their exit code is the verdict; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
 - Commit using conventional commits (`feat(<domain>): <behavior>`).
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
 - **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for the schema and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per the v2 schema. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
@@ -154,7 +150,7 @@ When a slice needs **test infrastructure** rather than business logic, fan out t
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:
 - [ ] Active acceptance and unit tests pass
 - [ ] Build and static analysis pass
-- [ ] 100% Mutation score on business logic proven
+- [ ] Mutation gate passed on both scopes (core, then boundary)
 - [ ] No mocks used inside Domain/Application core
 - [ ] Object Calisthenics — 9 rules verified on Domain (see craft-discipline C10)
 - [ ] Code committed using conventional commits
@@ -166,7 +162,7 @@ Always print a trace of your cycle directly into the chat/console output exclusi
 **PREPARE**: Target boundary `<Class/Method>`.
 **RED**: Wrote `<TestName>`. Failed because `<reason>`.
 **GREEN**: Implemented `<Classes/Files>`. All green.
-**COMMIT**: <Hash/Message>. Mutation score: 100%.
+**COMMIT**: <Hash/Message>. Mutation gate: <core exit> / <boundary exit>.
 ```
 
 ## Constraints

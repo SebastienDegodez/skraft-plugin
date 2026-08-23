@@ -21,8 +21,10 @@ or flags a risk (HIGH/MEDIUM) — never a vague feeling.
 
 Each phase has its own gate grid, checked by an **independent reviewer** organised
 into *lenses* (each lens groups the gates defending one quality). For every gate:
-its `Gxx` identifier, what it checks, its **pass condition** (binary) and its
-**severity**.
+its `Gxx` identifier, what it checks and its **pass condition** (binary).
+
+The four artefact-review phases — DISCOVER, DISCUSS, DESIGN, DISTILL — also carry a
+**severity**, which says how a failed gate lands in the reviewer's verdict:
 
 | Severity | Meaning | Effect on verdict |
 | --- | --- | --- |
@@ -31,7 +33,12 @@ its `Gxx` identifier, what it checks, its **pass condition** (binary) and its
 | **MEDIUM** | Design smell, sub-optimal choice. | Forces `changes_requested`. |
 | **LOW** | Style or consistency detail. | `approved` with a note. |
 
-Total: **47 gates** across the 5 phases. What follows is the full grid, exactly as
+DELIVER carries no such scale: **every quality gate blocks**. There is no advisory
+level, no warning level, no override and no rationale that buys an exemption — the
+`skraft-quality-bar` skill owns the enforcement level of every gate and the value of
+every threshold, and nothing downstream restates them.
+
+Total: **48 gates** across the 5 phases. What follows is the full grid, exactly as
 each reviewer applies it.
 
 ---
@@ -179,33 +186,51 @@ test plan and the implementation plan.
 
 ---
 
-## DELIVER — G1 to G10
+## DELIVER — G1 to G11
 
 Producer: `software-engineer`; verifier: `quality-gates-lens`. Every gate is attested
 by **falsifiable evidence** (git SHA, tool output written to disk) the reviewer
 re-resolves without ever re-running the build.
 
-| ID | What the gate attests | Pass condition | Severity |
-| --- | --- | --- | --- |
-| **G1** | Acceptance test(s) pass. | The active story's BDD scenario is green. | BLOCKER |
-| **G2** | All unit tests pass. | The full unit suite is green. | BLOCKER |
-| **G3** | The build passes. | Compilation / type-check succeeded. | BLOCKER |
-| **G4** | Static analysis passes. | Linter/analyzer reported no blocking issue. | HIGH |
-| **G5** | Architecture rules pass. | Dependency-direction tests (Clean Architecture) pass. | BLOCKER |
-| **G6** | Mutation score meets the threshold. | Mutation runner score ≥ *depthTier* threshold on business logic. | HIGH |
-| **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. | HIGH |
-| **G8** | Conventional commit format. | Every covered commit matches `<type>(<scope>): <subject>`. | MEDIUM |
-| **G9** | No test tampering (RED→GREEN integrity). | For each cycle, the test file changed only by **addition** between RED and GREEN snapshots. | BLOCKER |
-| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each cycle, a RED stdout captured at RED time and hashed by sha256, plus a recorded **non-zero** exit code. | BLOCKER |
+**Every gate below blocks**, on every repository and every work item. The framework
+once carried a repo-wide strictness dial that could lower this grid — fewer reviewer
+lenses, a smaller mutation threshold, the Gherkin gate switched off. That dial is gone,
+and it was also the framework's cost governor: every run now pays the full shape. The
+repository owner accepted that trade deliberately — quality is not negotiable.
+
+| ID | What the gate attests | Pass condition |
+| --- | --- | --- |
+| **G1** | Acceptance test(s) pass. | The active story's BDD scenario is green. |
+| **G2** | All unit tests pass. | The full unit suite is green. |
+| **G3** | The build passes. | Compilation / type-check succeeded. |
+| **G4** | Static analysis passes. | Linter/analyzer reported no blocking issue. |
+| **G5** | Architecture rules pass. | Dependency-direction tests (Clean Architecture) pass. |
+| **G6** | Mutation score meets the bar. | Both sequenced mutation scripts exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 90%). |
+| **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. |
+| **G8** | Conventional commit format. | Every covered commit matches `<type>(<scope>): <subject>`. |
+| **G9** | No test tampering (RED→GREEN integrity). | For each cycle, the test file changed only by **addition** between RED and GREEN snapshots. |
+| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each cycle, a RED stdout captured at RED time and hashed by sha256, plus a recorded **non-zero** exit code. |
+| **G11** | Line coverage meets the bar. | The coverage runner, invoked with the bar's threshold flags (100% line on Domain and Application), exited `0`. |
+
+> **G6 is an exit code, not a number.** Each `quality-gates-<tech>` adapter bundles two
+> sequenced mutation scripts — `mutation-core.sh` then `mutation-boundary.sh` on .NET.
+> Each script carries its own expected value and passes it to the runner's `--break-at`,
+> so the runner exits non-zero below the bar and **that exit code is the verdict**. Core
+> runs first and short-circuits: there is nothing to learn from mutating adapters while
+> the domain is unproven. A score read from a report and judged in prose is an opinion
+> about a gate, not a gate — and G11 is attested the same way, by the coverage runner's
+> own threshold flags.
 
 > A genuinely irrelevant gate is marked `not_applicable` **with a rationale** — never
-> as a substitute for `fail` or missing evidence.
+> as a substitute for `fail` or missing evidence. A gate that *cannot* run — no mutation
+> runner installed, no SDK — is `fail`, never `not_applicable`.
 
 ---
 
 ## Verdict logic
 
-The reviewer aggregates gates with a deterministic rule — no fuzzy weighting:
+On the four artefact-review phases, the reviewer aggregates gates with a deterministic
+rule — no fuzzy weighting:
 
 | Finding | Verdict |
 | --- | --- |
@@ -213,6 +238,17 @@ The reviewer aggregates gates with a deterministic rule — no fuzzy weighting:
 | ≥ 1 **HIGH** gate, no BLOCKER | `changes_requested` |
 | **MEDIUM** gates only | `changes_requested` |
 | **LOW** gates only, or everything passes | `approved` |
+
+On DELIVER the rule is flat, because every gate blocks:
+
+| Finding | Verdict |
+| --- | --- |
+| ≥ 1 gate is `fail` — whichever id | `fail` |
+| Log missing or malformed, referenced file unreachable, sha256 or snapshot mismatch | `inconclusive` |
+| Every applicable gate is `pass` and every reference resolves | `pass` |
+
+`inconclusive` is never equivalent to `pass`: absence of evidence is not evidence of
+success.
 
 ## Why this practice
 
@@ -230,6 +266,9 @@ Explicit entry/exit criteria are exactly what a gate materialises: the phase is 
   gate loses its power. SKRAFT mandates an *independent* reviewer.
 - **Short-circuit**: some gates (e.g. DESIGN G13) short-circuit the whole review if an
   unresolved human blocker remains — do not bypass them.
+- **Negotiated bar**: a DELIVER gate cannot be talked down. There is no strictness
+  setting, no advisory level and no rationale that grants an exemption — a gate that
+  did not pass has not passed.
 
 ## Going further
 

@@ -21,7 +21,7 @@ persona: tech-lead
 
 - User-approved Gherkin scenarios
 - Identified Clean Architecture (Domain / Application / Infrastructure / API)
-- `state.json::userPreferences.depthTier` for strictness level
+- The permanent quality bar (`skraft-quality-bar` skill) — the same bar on every story; there is no strictness setting to read
 
 ## Exit contract
 
@@ -37,6 +37,7 @@ persona: tech-lead
 - **M4 — Domain extraction forbidden by default** — no domain unit test unless gate (a) branch unreachable via AC or gate (b) combinatorial economy opens
 - **M5 — Visual/positional AC enforcement** — an AC in visual/positional/style terms (`@visual` tag) is closed only by a Playwright E2E test with a real measurement; a jsdom/unit test alone is not a valid closure
 - **TBU forbidden** — no production code unwired through the composition root; acceptance tests validate real wiring
+- **No reduced mode** — the five mandates apply to every story; nothing relaxes them, and no rationale buys an exemption
 
 ## Why this shape
 
@@ -47,9 +48,11 @@ Tests enter through a use case boundary and assert at the next visible boundary.
 
 Rule M4 prevents double coverage: two suites asserting the same behaviour drift together on every rule change with zero additional failure-discrimination value.
 
+M4 does not lower anything — it only decides where the tests live. Domain and Application still have to reach the mutation and line-coverage bar authored in `skraft-quality-bar`, so when neither extraction gate opens, the acceptance tests entering through the use case boundary are what must earn those figures. Design the matrix accordingly: a scenario set that leaves Domain mutants alive is an incomplete matrix, not a reason to relax the bar.
+
 ## Allowed customisation
 
-- M4 combinatorial threshold (indicative 10–15 scenarios, adjustable in `custom`) (L2)
+- M4 combinatorial threshold — the indicative 10–15 scenario count may be tuned per project; the two extraction gates themselves may not (L2)
 - Additional `Extraction Reason` codes for special infrastructure cases (L3, schema change)
 
 ## See also

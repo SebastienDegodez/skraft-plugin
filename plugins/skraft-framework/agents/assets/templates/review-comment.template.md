@@ -6,9 +6,9 @@
 {{/artefacts}}
 
 **Reviewer verdict:** {{verdictLabel}}
-{{#depthTier}}
-**Difficulty:** `{{difficulty}}` · **Depth tier:** {{depthTier}}
-{{/depthTier}}
+{{#difficulty}}
+**Difficulty:** `{{difficulty}}`
+{{/difficulty}}
 
 **Next phase:** {{nextPhase}}
 {{#evidence}}

@@ -36,12 +36,12 @@ const withTmp = async (fn) => {
 
 const readCfg = async (dir) => JSON.parse(await readFile(join(dir, 'skraft-config.json'), 'utf8'))
 
-test('config init: creates skraft-config.json with the comprehensive default', async () => {
+test('config init: creates skraft-config.json with the namespaced default', async () => {
   await withTmp(async (dir) => {
     const r = await configCli(['init'], { basePath: dir })
     assert.equal(r.exitCode, 0)
     assert.match(r.stdout, /"created":true/)
-    assert.equal((await readCfg(dir)).depthTier, 'comprehensive')
+    assert.equal((await readCfg(dir)).trackingLayout, 'namespaced')
   })
 })
 
@@ -54,12 +54,12 @@ test('config init: idempotent — second init reports created=false', async () =
   })
 })
 
-test('config get --key depthTier: prints the raw scalar', async () => {
+test('config get --key trackingLayout: prints the raw scalar', async () => {
   await withTmp(async (dir) => {
-    await configCli(['set', '--key', 'depthTier', '--value', 'standard'], { basePath: dir })
-    const r = await configCli(['get', '--key', 'depthTier'], { basePath: dir })
+    await configCli(['set', '--key', 'trackingLayout', '--value', 'bare'], { basePath: dir })
+    const r = await configCli(['get', '--key', 'trackingLayout'], { basePath: dir })
     assert.equal(r.exitCode, 0)
-    assert.equal(r.stdout.trim(), 'standard')
+    assert.equal(r.stdout.trim(), 'bare')
   })
 })
 
@@ -68,30 +68,30 @@ test('config get (no key): prints the whole config as JSON', async () => {
     await configCli(['init'], { basePath: dir })
     const r = await configCli(['get'], { basePath: dir })
     assert.equal(r.exitCode, 0)
-    assert.match(r.stdout, /"depthTier":"comprehensive"/)
+    assert.match(r.stdout, /"trackingLayout":"namespaced"/)
   })
 })
 
 test('config get on missing file: returns the default without writing', async () => {
   await withTmp(async (dir) => {
-    const r = await configCli(['get', '--key', 'depthTier'], { basePath: dir })
+    const r = await configCli(['get', '--key', 'trackingLayout'], { basePath: dir })
     assert.equal(r.exitCode, 0)
-    assert.equal(r.stdout.trim(), 'comprehensive')
+    assert.equal(r.stdout.trim(), 'namespaced')
     await assert.rejects(() => readCfg(dir))
   })
 })
 
-test('config set depthTier: persists a valid tier', async () => {
+test('config set trackingLayout: persists a valid layout', async () => {
   await withTmp(async (dir) => {
-    const r = await configCli(['set', '--key', 'depthTier', '--value', 'basic'], { basePath: dir })
+    const r = await configCli(['set', '--key', 'trackingLayout', '--value', 'bare'], { basePath: dir })
     assert.equal(r.exitCode, 0)
-    assert.equal((await readCfg(dir)).depthTier, 'basic')
+    assert.equal((await readCfg(dir)).trackingLayout, 'bare')
   })
 })
 
-test('config set depthTier: rejects an invalid tier with exit 3', async () => {
+test('config set trackingLayout: rejects an invalid layout with exit 3', async () => {
   await withTmp(async (dir) => {
-    const r = await configCli(['set', '--key', 'depthTier', '--value', 'turbo'], { basePath: dir })
+    const r = await configCli(['set', '--key', 'trackingLayout', '--value', 'sideways'], { basePath: dir })
     assert.equal(r.exitCode, 3)
     assert.match(r.stderr, /INVALID_VALUE/)
   })
@@ -107,10 +107,10 @@ test('config set: rejects an unknown key with exit 3', async () => {
 
 test('config set: preserves human-authored extra fields', async () => {
   await withTmp(async (dir) => {
-    await writeFile(join(dir, 'skraft-config.json'), JSON.stringify({ depthTier: 'comprehensive', teamOwner: 'platform' }), 'utf8')
-    await configCli(['set', '--key', 'depthTier', '--value', 'standard'], { basePath: dir })
+    await writeFile(join(dir, 'skraft-config.json'), JSON.stringify({ trackingLayout: 'namespaced', teamOwner: 'platform' }), 'utf8')
+    await configCli(['set', '--key', 'trackingLayout', '--value', 'bare'], { basePath: dir })
     const cfg = await readCfg(dir)
-    assert.equal(cfg.depthTier, 'standard')
+    assert.equal(cfg.trackingLayout, 'bare')
     assert.equal(cfg.teamOwner, 'platform')
   })
 })

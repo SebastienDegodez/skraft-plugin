@@ -45,6 +45,20 @@ La tranche la plus fine qui traverse **toutes** les couches du système de bout 
 > « A walking skeleton is a tiny implementation of the system that performs a small end-to-end function. »
 > — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
 
+### Barre qualité — seuils permanents
+
+Tous les seuils du framework sont écrits à un seul endroit — le skill [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}) — et s'appliquent à **tous** les dépôts, toutes les stories et toutes les phases. Il n'existe plus de molette de rigueur : le `depthTier` qui pouvait abaisser la barre a été supprimé, avec les niveaux `advisory` et `warning` et la rationale qui achetait une exemption.
+
+| Porte | Valeur | Périmètre |
+| --- | --- | --- |
+| Score de mutation | 100 % | Domain, Application |
+| Score de mutation | 90 % | API, Infrastructure |
+| Couverture de lignes | 100 % | Domain, Application |
+
+Toutes les portes sont **bloquantes** — frontières Clean Architecture, cycle TDD, intégrité des tests, mutation *core* et *boundary*, gate Gherkin, ADR pour toute décision non triviale, Object Calisthenics sur le Domain. Une porte qui ne peut pas s'exécuter n'est pas une porte franchie : c'est un échec, et le pipeline s'arrête. La variante TDD est Outside-In double boucle, toujours.
+
+**Conséquence sur le coût, assumée :** la molette supprimée était aussi le gouverneur de coût du framework (fan-out des reviewers à 1, 2 ou 4 lentilles, nombre de runs de mutation, gate Gherkin activable ou non). Chaque run paie désormais la forme complète. Le choix est délibéré : la qualité n'est pas négociable.
+
 ### HVE — Hypervelocity Engineering
 
 Le substrat d'exécution ([microsoft/hve-core](https://github.com/microsoft/hve-core)) : agents, instructions et skills pour GitHub Copilot autour de la méthodologie **RPI (Research → Plan → Implement)**. SKRAFT remplace le planner RPI tout en réutilisant les conventions HVE (`state.json`, arborescence `.copilot-tracking/`). Voir l'[accueil]({{ "/fr/" | relative_url }}) pour la synergie SKRAFT × HVE.
@@ -61,9 +75,14 @@ Assigner labels, priorité, estimation d'effort et détecter les doublons. Le `b
 
 Avant de créer une story, on cherche dans l'historique Git et les issues existantes pour éviter la redondance. Skill : [github-search-protocol]({{ "/fr/reference/skills/" | relative_url }}) (syntaxe de recherche GitHub, pagination, ranking).
 
-### Routing 3 axes (difficulté)
+### Routing 2 axes (entry point & difficulté)
 
-À la sortie de DISCOVER, SKRAFT évalue trois axes — **entry point**, **depth tier** (`basic | standard | comprehensive | custom`) et **difficulty tier** — puis persiste la décision dans `state.json`. Ce routing adapte la profondeur d'exécution de chaque phase. Skill : [skraft-difficulty-routing]({{ "/fr/reference/skills/" | relative_url }}).
+SKRAFT évalue **deux axes orthogonaux** autour de DISCOVER, puis persiste la décision dans `state.json`. Skill : [skraft-difficulty-routing]({{ "/fr/reference/skills/" | relative_url }}).
+
+- **Entry point** — évalué au démarrage du pipeline, *avant* DISCOVER. SKRAFT détecte un handoff HVE en amont (issues GitHub déjà triées **et** rattachées à un sprint, `sprint-plan.md` ADO, artefact de sprint Jira). Le handoff n'est retenu que s'il porte à la fois une hiérarchie de backlog et un périmètre de sprint ; la détection ne saute jamais rien d'elle-même, l'utilisateur confirme explicitement. En cas de skip, le handoff est ingéré tel quel dans `research/{date}/` — ni re-triage, ni seconde proposition de sprint — et `state.json::entryPoint.skipPhases` enregistre `DISCOVER`.
+- **Difficulty tier** — évalué à la sortie de DISCOVER (ou juste après l'ingestion quand DISCOVER est sauté), une seule fois, jamais réévalué en cours de pipeline. Persisté dans `state.json::difficulty` (`simple | medium | medium-hard | challenging`), il gouverne le **modèle d'exécution de DELIVER** : cycle TDD inline avec un commit par scénario (`simple`), inline multi-commits sur walking skeleton (`medium`), dispatch d'un sous-agent par scénario Gherkin avec plan intermédiaire (`medium-hard`), dispatch par scénario plus spike notes sous `details/{date}/` et passes de revue multiples (`challenging`).
+
+La difficulté module **le volume de travail, jamais le niveau d'exigence**. Les seuils et le caractère bloquant des portes sont fixés une fois pour toutes par [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}) : un `simple` et un `challenging` franchissent exactement la même barre.
 
 ---
 
@@ -156,7 +175,9 @@ Le rythme fondamental du TDD : écrire un test qui échoue, puis le faire passer
 
 ### Mutation Testing
 
-Le Mutation Score mesure l'**efficacité** des tests (pas seulement la couverture) en injectant des défauts et en vérifiant que les tests les détectent. Un score insuffisant bloque le verdict PASS. Skills : [mutation-testing]({{ "/fr/reference/skills/" | relative_url }}), [quality-gates-dotnet]({{ "/fr/reference/skills/" | relative_url }}).
+Le Mutation Score mesure l'**efficacité** des tests (pas seulement la couverture) en injectant des défauts et en vérifiant que les tests les détectent. Les seuils sont permanents : **100 % sur Domain et Application**, **90 % sur API et Infrastructure**.
+
+La mesure ne se lit pas dans un rapport. Chaque adaptateur `quality-gates-<tech>` embarque **deux scripts séquencés** — *core* d'abord (Domain, Application), *boundary* ensuite (API, Infrastructure) — qui portent leur propre valeur attendue et la passent au `--break-at` du runner : c'est le **code de sortie** du runner qui fait verdict. *Core* passe en premier et court-circuite la suite, car muter les adaptateurs tant que le domaine n'est pas prouvé n'apprend rien. Pour .NET : `mutation-core.sh` et `mutation-boundary.sh`. Skills : [mutation-testing]({{ "/fr/reference/skills/" | relative_url }}), [quality-gates-dotnet]({{ "/fr/reference/skills/" | relative_url }}), [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}).
 
 > « Mutation testing provides high-fidelity assessment of test suite effectiveness. »
 > — Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
@@ -175,7 +196,7 @@ Neuf règles de discipline qui améliorent le design objet au quotidien (un seul
 
 ### Quality Gates & Evidence Contract
 
-Un journal de preuves structuré atteste l'état des portes qualité (tests, build, mutation, intégrité RED/GREEN). L'engineer le **remplit** (writer), le reviewer le **lit** (reader). Skills : [quality-gates-evidence-contract]({{ "/fr/reference/skills/" | relative_url }}), [resolving-stack-commands]({{ "/fr/reference/skills/" | relative_url }}).
+Un journal de preuves structuré atteste l'état des portes qualité (tests, build, mutation, intégrité RED/GREEN). L'engineer le **remplit** (writer), le reviewer le **lit** (reader). Le journal enregistre des résultats, il ne fixe pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}). Skills : [quality-gates-evidence-contract]({{ "/fr/reference/skills/" | relative_url }}), [resolving-stack-commands]({{ "/fr/reference/skills/" | relative_url }}).
 
 ---
 
@@ -183,7 +204,7 @@ Un journal de preuves structuré atteste l'état des portes qualité (tests, bui
 
 ### Adversarial Review Lenses
 
-Chaque reviewer produit un verdict via **4 lentilles indépendantes** puis une synthèse pondérée. Les lentilles regardent le même artefact sous des angles différents (quality-gates, architecture-boundaries, test-integrity, cold-reader). Skill : [adversarial-review-lenses]({{ "/fr/reference/skills/" | relative_url }}).
+Chaque reviewer produit un verdict via **4 lentilles indépendantes** puis une synthèse pondérée. Les lentilles regardent le même artefact sous des angles différents (quality-gates, architecture-boundaries, test-integrity, cold-reader). Les quatre s'exécutent sur **chaque** revue : il n'y a pas de mode réduit ni de fan-out variable. Skill : [adversarial-review-lenses]({{ "/fr/reference/skills/" | relative_url }}).
 
 ### Review Criteria par phase
 

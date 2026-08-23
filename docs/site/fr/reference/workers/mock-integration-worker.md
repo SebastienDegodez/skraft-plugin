@@ -23,7 +23,7 @@ Dispatché par `software-engineer` pendant la phase DELIVER quand un test d'int�
 - Intention de test d'intégration pour la slice active
 
 **Contexte :**
-- `.copilot-tracking/skraft-plans/{slug}/state.json` (`depthTier` + `difficulty`)
+- `difficulty` de l'item de travail actif (modèle d'exécution DELIVER) — transmis par l'orchestrateur dans le payload de dispatch, persisté dans `.copilot-tracking/skraft-plans/{slug}/state.json::difficulty`
 - Prompt d'exécution (peut porter une surcharge de stratégie/bibliothèque)
 - `.github/instructions/skraft.instructions.md` — namespace `testing.mocking.*`
 

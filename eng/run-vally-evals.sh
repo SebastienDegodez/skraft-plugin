@@ -354,13 +354,19 @@ run_one_eval() {
       [ -n "$companion" ] && COMPANION_SKILLS+=("$companion")
     done < <(load_skill_companions "$SCOPED_SKILLS_FILE")
     if [ "${#COMPANION_SKILLS[@]}" -gt 0 ]; then
+      # Copies, not symlinks. Vally scans `--skill-dir` with
+      # readdir(withFileTypes) and keeps only entries that report as
+      # directories; a symlink to a directory reports as a symlink and is
+      # skipped, so a scoped arm built from symlinks discovers zero skills and
+      # the treatment runs skill-free while still looking like a valid arm.
+      # Skills are a megabyte of Markdown, so copying them costs nothing.
       SCOPED_SKILL_DIR=$(mktemp -d -t vally-scoped-skills-XXXXXX)
-      ln -s "$TARGET_SKILL_DIR" "$SCOPED_SKILL_DIR/$EVAL_NAME"
+      cp -R "$TARGET_SKILL_DIR" "$SCOPED_SKILL_DIR/$EVAL_NAME"
       for companion in "${COMPANION_SKILLS[@]}"; do
         [ "$companion" = "$EVAL_NAME" ] && continue
         local COMPANION_DIR="$SKRAFT_ROOT/plugins/skraft-framework/skills/$companion"
         if [ -d "$COMPANION_DIR" ]; then
-          ln -s "$COMPANION_DIR" "$SCOPED_SKILL_DIR/$companion"
+          cp -R "$COMPANION_DIR" "$SCOPED_SKILL_DIR/$companion"
         else
           echo "WARNING: companion skill not found: $companion ($SCOPED_SKILLS_FILE)"
         fi

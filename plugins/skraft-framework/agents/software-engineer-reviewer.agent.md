@@ -21,7 +21,7 @@ metadata:
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
-      - depthTier + difficulty (provided by the orchestrator in the dispatch payload)
+      - difficulty (provided by the orchestrator in the dispatch payload)
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md
   instructions:

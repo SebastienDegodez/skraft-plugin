@@ -209,7 +209,10 @@ skills:
 ```
 
 The runner builds a temporary scoped `--skill-dir` with target + listed
-companions for the skilled arm; baseline stays empty.
+companions for the skilled arm; baseline stays empty. Those entries are copied
+in, not symlinked: Vally skips directory symlinks while scanning a skill root,
+and a scoped arm it cannot read runs skill-free while still reporting as a
+valid treatment arm.
 
 An evaluation drives a real agent, so it needs `COPILOT_GITHUB_TOKEN`: a
 fine-grained PAT with the **Account › Copilot Requests** permission. The

@@ -41,7 +41,7 @@ read-only mode.
 
 ```json
 {
-  "$schema": "quality-gates-evidence/v2",
+  "$schema": "quality-gates-evidence/v3",
   "story": "string — story identifier (e.g. eligibilite-trottinette)",
   "produced_at": "ISO-8601 UTC timestamp",
   "producer": "software-engineer",
@@ -105,10 +105,11 @@ they do NOT invent new ones. Adding a gate id is a contract change (new schema v
 | G3 | Build passes | compilation / static type-check succeeded |
 | G4 | Static analysis pass | linter / analyzer reported no blocking issue |
 | G5 | Architecture rules pass | dependency-direction tests pass (Clean Architecture) |
-| G6 | Mutation score meets threshold | mutation runner score ≥ depthTier threshold on business logic |
+| G6 | Mutation score meets the bar | mutation runner invoked with the bar's `--break-at` flag for the scope under test, and exited 0 |
 | G7 | No mocks in Domain/Application core | grep-based attestation: zero mocking-framework symbols in those layers |
 | G8 | Conventional commit format | every commit in `commits_covered` matches `<type>(<scope>): <subject>` |
 | G9 | No test tampering (RED→GREEN integrity) | for every cycle, the test file changed only by ADDITION between RED and GREEN snapshots |
+| G11 | Line coverage meets the bar | coverage runner invoked with the bar's threshold flags for Domain and Application, and exited 0 |
 | G10 | RED observed | for every cycle, the test was actually RUN and FAILED before the implementation landed: captured RED stdout hashed by sha256, and a NON-zero exit code recorded — both captured at RED time |
 
 G10 is the one gate whose substrate does NOT live in its own `gates[]` entry: that entry carries
@@ -172,8 +173,9 @@ Every claim in the JSON resolves to something the lens can verify with `Read`,
 
 ## Schema versioning
 
-`$schema: "quality-gates-evidence/v2"` is part of the contract. Bump the version
+`$schema: "quality-gates-evidence/v3"` is part of the contract. Bump the version
 when adding/removing gates or fields; old logs MUST still be parseable with their
 declared version.
 
+- **v3** — adds gate `G11` (line coverage meets the bar) and restates `G6` as an exit-code attestation rather than a score comparison: the runner's `--break-at` decides, so a log no longer records a number a reader must judge. Removes the `depthTier` reference, which no longer exists.
 - **v2** — adds gate `G10` (RED observed) and the three per-cycle fields `red_stdout_ref`, `red_stdout_sha256`, `red_exit_code_ref`; everything a `v1` log declares is unchanged.

@@ -234,8 +234,8 @@ const REAL_STATE = {
   referencesProcessed: [],
   phaseHistory: { DISCOVER: { status: 'done', startedAt: 't0', completedAt: 't1' } },
   nextActions: [],
-  userPreferences: { autonomyTier: 'full', depthTier: 'comprehensive', maxRetriesPerPhase: 2 },
-  depthTierOverrides: [],
+  userPreferences: { autonomyTier: 'full', reviewCadence: 'weekly', maxRetriesPerPhase: 2 },
+  legacyOverrides: [],
   neighborPlanners: { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null },
 }
 
@@ -252,7 +252,7 @@ test('round-trip: preserves every orchestrator-owned field (no silent drop)', ()
   assert.deepEqual(v.phaseHistory, REAL_STATE.phaseHistory, 'phaseHistory preserved')
   assert.deepEqual(v.nextActions, [], 'nextActions preserved')
   assert.deepEqual(v.referencesProcessed, [], 'referencesProcessed preserved')
-  assert.deepEqual(v.depthTierOverrides, [], 'depthTierOverrides preserved')
+  assert.deepEqual(v.legacyOverrides, [], 'unknown top-level fields preserved')
   assert.deepEqual(v.neighborPlanners, REAL_STATE.neighborPlanners, 'neighborPlanners preserved')
 })
 

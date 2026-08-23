@@ -3,8 +3,8 @@ version: 0.1.0
 description: >-
   Verifies that the real SKRAFT Orchestrator dispatches the phase specialist AND its reviewer as
   independent agents rather than declaring the review done, keeps the review in place when a
-  developer asks to skip it, and honours the customisable settings the project made binding —
-  the entry point recorded in state and the depth tier recorded in configuration. It routes and
+  developer asks to skip it, and honours the entry point the project
+  recorded in state as binding. It routes and
   reviews only: the skills a later phase owns must stay unloaded, because loading them here would
   mean the orchestrator is doing a specialist's work.
 type: capability
@@ -116,10 +116,10 @@ stimuli:
         config:
           pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
 
-  - name: The recorded entry point and depth tier govern which phases run
+  - name: The recorded entry point governs which phases run
     prompt: |
       Take the loyalty tier pricing story through the next stage of our engineering process,
-      following whatever this project has already decided about how much ceremony it wants.
+      following whatever this project has already recorded about where it is starting from.
     tags:
       agent: skraft-orchestrator
       subagents:
@@ -133,9 +133,9 @@ stimuli:
       - skraft-agent-runner
     environment:
       files:
-        - src: fixtures/quick-depth-tier/skraft-config.json
+        - src: fixtures/entry-point-skips-research/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/quick-depth-tier/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/entry-point-skips-research/.copilot-tracking/skraft-plans/checkout-pricing/state.json
           dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
         - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
           dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
@@ -166,7 +166,7 @@ stimuli:
           expected_exit_code: 0
           timeout: 30s
       - type: custom-metrics
-        name: The reviewer runs even at the lowest ceremony the project allows
+        name: The reviewer always runs
         config:
           assertions:
             - metric: dispatchedSubagents

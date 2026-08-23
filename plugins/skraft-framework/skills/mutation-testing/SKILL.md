@@ -170,11 +170,15 @@ For each real survivor:
 
 ## Step 5: Gate Decision
 
-| Mutation score | Verdict |
+The runner's exit code is the verdict — `--break-at` fails the run below the bar, and
+`skraft-quality-bar` states the bar for each scope. This skill decides only what a
+survivor means:
+
+| Survivors | Verdict |
 |---------------|---------|
-| 100% on business logic | ✅ Proceed to commit |
-| < 100% with only equivalent mutants documented | ✅ Proceed |
-| < 100% with real survivors | ❌ BLOCK — return to Step 4 |
+| None | ✅ Proceed to commit |
+| Only equivalent mutants, each documented | ✅ Proceed |
+| Any real survivor | ❌ BLOCK — return to Step 4 |
 
 ## Mutation Categories Reference
 
@@ -190,7 +194,12 @@ For each real survivor:
 ## Scope Exclusions
 
 Never mutate:
-- DTOs, ViewModels, passive data structures
-- Infrastructure adapters (tested via integration tests)
 - `DependencyInjection.cs`, `Program.cs`, config
 - Marker interfaces, generated code
+
+Everything a developer authored is in scope, DTOs and ViewModels included. A mutant that
+survives in a "passive" type is telling you the type carries behaviour nothing asserts.
+
+API and Infrastructure ARE mutated, in a second run scoped to them and held to their
+own bar. The core runs first; there is nothing to learn from mutating an adapter while
+the domain is unproven. See `skraft-quality-bar` for both scopes and their runners.

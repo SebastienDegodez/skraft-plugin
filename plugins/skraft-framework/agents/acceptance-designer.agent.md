@@ -22,6 +22,8 @@ metadata:
     - bdd-methodology
     - test-design-mandates
     - outside-in-tdd
+    - skraft-quality-bar
+    - craft-discipline
     - resolving-stack-commands
   inputs:
     required:
@@ -67,6 +69,7 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 - [bdd-methodology](../skills/bdd-methodology/SKILL.md)
 - [test-design-mandates](../skills/test-design-mandates/SKILL.md)
 - [outside-in-tdd](../skills/outside-in-tdd/SKILL.md) — **scoped: PREPARE and RED only.** That skill describes the whole cycle, including SYNTHESIZE-GREEN and the mutation gate. Those phases belong to the software-engineer in DELIVER. You read it for the boundary rules, Step 2 (let the domain emerge), Concentric Circle Expansion, and One Acceptance Test at a Time. You stop at RED — Boundary #2 below overrides anything in that skill that reads as an instruction to implement.
+- [craft-discipline](../skills/craft-discipline/SKILL.md) — **scoped: C5 only.** Step 6 already holds you to it; this is where it is defined. C5 lists the placeholder assertions that make a test compile and fail while asserting nothing — `throw new NotImplementedException()` among them, which is the most tempting way to satisfy "stub only to compile". A stub that trips C5 gives you a RED that proves nothing, so read C5 before writing one. C1 and the rest of that skill are commit-time gates and belong to the software-engineer, who never sees your stub.
 
 ## Boundaries (Non-Negotiable)
 

@@ -10,17 +10,41 @@ const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 let workspace
 let fakeVally
 let callsPath
+let discoveryPath
 let resultsPath
 
 before(() => {
   workspace = mkdtempSync(join(tmpdir(), 'skraft-vally-runner-'))
   fakeVally = join(workspace, 'vally')
   callsPath = join(workspace, 'calls.log')
+  discoveryPath = `${callsPath}.discovery`
   resultsPath = join(workspace, 'results')
+  // Recording the path handed to --skill-dir only proves the runner named a
+  // directory. What matters is what Vally can discover inside it: it lists the
+  // directory with readdir(withFileTypes), where a symlinked directory reports
+  // as a symlink and is skipped, so an arm assembled from symlinks resolves to
+  // zero skills and the treatment silently runs skill-free. The `! -L` guard
+  // below reproduces that rule so the log records skills that are actually
+  // reachable, not skill names that merely appear in a listing.
   writeFileSync(fakeVally, `#!/usr/bin/env bash
 set -euo pipefail
 echo "$*" >> "$FAKE_CALLS"
 echo "fake vally progress"
+prev=""
+skill_dir=""
+for arg in "$@"; do
+  if [[ "$prev" == "--skill-dir" ]]; then skill_dir="$arg"; fi
+  prev="$arg"
+done
+if [[ -n "$skill_dir" ]]; then
+  found=""
+  for entry in "$skill_dir"/*; do
+    if [[ -d "$entry" ]] && ! [[ -L "$entry" ]] && [[ -f "$entry/SKILL.md" ]]; then
+      found="$found$(basename "$entry"),"
+    fi
+  done
+  echo "discovered $skill_dir -> $found" >> "$FAKE_CALLS.discovery"
+fi
 if [[ "$1" == "compare" ]]; then
   output=""
   while [[ $# -gt 0 ]]; do
@@ -123,6 +147,7 @@ describe('unified Vally runner', () => {
 
   it('loads declared companion skills through a scoped skilled arm skill directory', () => {
     writeFileSync(callsPath, '')
+    writeFileSync(discoveryPath, '')
     execFileSync('bash', [join(repoRoot, 'eng/run-vally-evals.sh'), 'outside-in-tdd'], {
       cwd: repoRoot,
       encoding: 'utf8',
@@ -152,6 +177,32 @@ describe('unified Vally runner', () => {
       evalCalls.some((call) => call.includes('vally-scoped-skills-')),
       true,
     )
+
+    // The skill under test and every companion it declares must be reachable
+    // inside that scoped directory. A treatment arm that discovers nothing
+    // scores as a skill that changed nothing, which reads as a flat or
+    // regressed skill rather than as a broken measurement.
+    const declared = readFileSync(join(repoRoot, 'tests/skills/outside-in-tdd/eval.skill-dir.yaml'), 'utf8')
+      .split(/\r?\n/)
+      .map((line) => /^\s*-\s*([A-Za-z0-9-]+)\s*$/.exec(line)?.[1])
+      .filter((name) => name && existsSync(join(repoRoot, 'plugins/skraft-framework/skills', name)))
+
+    const scopedArm = readFileSync(discoveryPath, 'utf8')
+      .trim()
+      .split(/\r?\n/)
+      .filter((line) => line.includes('vally-scoped-skills-'))
+    strictEqual(scopedArm.length, 1)
+
+    // An arm that discovers nothing logs an empty right-hand side, so read it
+    // defensively: the assertion below should name the missing skill rather
+    // than die while parsing the evidence of the failure.
+    const discovered = (scopedArm[0].split('->')[1] ?? '')
+      .split(',')
+      .map((name) => name.trim())
+      .filter(Boolean)
+    for (const name of ['outside-in-tdd', ...declared]) {
+      strictEqual(discovered.includes(name), true, `${name} is not discoverable in the scoped skilled arm`)
+    }
   })
 
   it('narrows a run to the named stimuli without touching the committed spec', () => {

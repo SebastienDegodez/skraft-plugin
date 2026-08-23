@@ -93,8 +93,8 @@ should_not_trigger:
     rationale: "Domain refactor."
   - id: T-N-08
     split: val
-    prompt: "set the repository depth tier to standard"
-    rationale: "Repo configuration — skraft-config's namespace."
+    prompt: "set the repository tracking layout"
+    rationale: "Repo configuration — the config CLI's namespace, not an evidence log."
   - id: T-N-09
     split: val
     prompt: "écris les scénarios Gherkin pour la remise fidélité"

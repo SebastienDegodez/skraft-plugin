@@ -48,6 +48,14 @@
         "policy": "verify"
       },
       {
+        "name": "skraft-quality-bar",
+        "policy": "verify"
+      },
+      {
+        "name": "craft-discipline",
+        "policy": "verify"
+      },
+      {
         "name": "resolving-stack-commands",
         "policy": "verify"
       }
@@ -169,6 +177,10 @@
       },
       {
         "name": "mutation-testing",
+        "policy": "verify"
+      },
+      {
+        "name": "skraft-quality-bar",
         "policy": "verify"
       },
       {

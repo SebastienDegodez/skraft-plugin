@@ -30,7 +30,7 @@ export default {
     'plugins/skraft-framework/src/application/state-service.mjs',
     // US8 — G4/G5 artifact + verdict + commit completion guard (#8)
     'plugins/skraft-framework/src/domain/artifact-policy.mjs',
-    // Repo-wide config bridge (depthTier) — skraft-config configurateur
+    // Repo-wide config bridge (tracking layout) — config CLI
     'plugins/skraft-framework/src/domain/config-schema.mjs',
     'plugins/skraft-framework/src/application/config-service.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/config/json-config-writer.mjs',

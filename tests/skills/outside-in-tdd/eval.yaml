@@ -586,7 +586,7 @@ stimuli:
       - The work is split into separate handoffs, with the failure coming back for inspection before any implementation is sent.
       - The confirmation stays with the person delegating rather than being requested from the unattended worker itself.
       - A written note inside a plan or inside the worker's own instruction is not treated as sufficient to create the stop.
-      - Ownership handoffs are explicit: business-outcome approval to `bdd-methodology`, mutation mechanics to `mutation-testing`, and commit-time self-check to `craft-discipline`.
+      - 'Ownership handoffs are explicit: business-outcome approval to `bdd-methodology`, mutation mechanics to `mutation-testing`, and commit-time self-check to `craft-discipline`.'
 
   - name: Tidy a green test class without inventing new work
     prompt: |

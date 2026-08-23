@@ -44,7 +44,6 @@ export const ARTIFACTS = {
       'date',
       'attempt',
       'verdict',
-      'depthTier',
       'lensCount',
       'score',
       'lenses',
@@ -56,7 +55,7 @@ export const ARTIFACTS = {
   'review-comment': {
     template: 'plugins/skraft-framework/agents/assets/templates/review-comment.template.md',
     required: ['phase', 'icon', 'status', 'artefacts', 'verdictLabel', 'nextPhase'],
-    optional: ['difficulty', 'depthTier', 'evidence', 'evidenceLinks'],
+    optional: ['difficulty', 'evidence', 'evidenceLinks'],
   },
 }
 

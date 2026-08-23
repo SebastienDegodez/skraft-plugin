@@ -118,15 +118,10 @@ shasum -a 256 "$EV/qg-mutation.stdout" | awk '{print $1}' > "$EV/qg-mutation.std
 cp "$EV/stryker/reports/mutation-report.json" "$EV/qg-mutation.json"
 ```
 
-Threshold by repo-wide depth tier (`config.mjs get --key depthTier`):
-
-| depthTier | min score on business logic |
-|-----------|----------------------------|
-| basic | 80 |
-| standard | 90 |
-| comprehensive | 100 |
-
-Read `mutationScore` from `qg-mutation.json` and compare. `status: "pass"` iff `score >= threshold`.
+The script's exit code is the verdict. Do NOT read `mutationScore` and judge it — a score
+read from a report and compared in prose is an opinion about a gate, not a gate.
+`--break-at` makes the runner fail below the bar, and the bar lives in
+`skraft-quality-bar`.
 
 ## G7 — No mocks in Domain/Application
 

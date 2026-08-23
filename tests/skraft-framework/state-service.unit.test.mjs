@@ -65,7 +65,6 @@ test('state-service init: fresh default carries the full documented field set', 
   assert.deepEqual(w.phaseHistory, {})
   assert.deepEqual(w.nextActions, [])
   assert.deepEqual(w.neighborPlanners, { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null })
-  assert.equal(w.depthTier, undefined, 'depthTier is NOT in state — it lives repo-wide in skraft-config.json')
 })
 
 test('state-service init: returns created=false when state exists', async () => {

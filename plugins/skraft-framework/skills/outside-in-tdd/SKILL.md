@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: Use when an approved scenario, Gherkin example, worked example, or expected result has to become working software through outside-in / double-loop TDD: start from an acceptance or application-boundary test, get a trustworthy RED before implementation, let domain logic emerge only from failing behavior, and drive one walking skeleton or first delivery slice at a time. Also use to decide what belongs in first delivery and what stays out of scope, when checking whether a failing suite proves a missing approved behavior or is false evidence, when replacing fixture-provided or test-provided false greens with production behavior, when wider HTTP/DB/infrastructure tests should wait behind an inner failing behavior, and when splitting RED and GREEN across workers or subagents with inspection between them. Finish with post-GREEN wiring verification, mutation/coverage gates, and never commit on red.
+description: Use when an approved scenario, Gherkin example, worked example, or expected result has to become working software through outside-in / double-loop TDD -- start from an acceptance or application-boundary test, get a trustworthy RED before implementation, let domain logic emerge only from failing behavior, and drive one walking skeleton or first delivery slice at a time. Also use to decide what belongs in first delivery and what stays out of scope, when checking whether a failing suite proves a missing approved behavior or is false evidence, when replacing fixture-provided or test-provided false greens with production behavior, when wider HTTP/DB/infrastructure tests should wait behind an inner failing behavior, and when splitting RED and GREEN across workers or subagents with inspection between them. Finish with post-GREEN wiring verification, mutation/coverage gates, and never commit on red.
 ---
 
 # Outside-In TDD
@@ -31,7 +31,7 @@ It owns **SEQUENCE**: what must be true before the next phase may start, and wha
 it. Everything else is delegated — load the owner rather than re-deriving its rules here.
 
 | Question | Owner |
-| --- | --- |
+|---|---|
 | What the observable behaviour IS, and whether it is approved | `bdd-methodology` |
 | Which test project, which layer, which double | `clean-architecture-testing` |
 | Whether a domain test is authorized; coverage matrix; walking-skeleton strategy A–D | `test-design-mandates` |
@@ -64,12 +64,9 @@ Identify the **input boundary** (use case / interactor the test enters through) 
 boundaries** (gateways the test observes: repositories, presenters, external services). Target
 exactly ONE scenario.
 
-Every test enters through an input boundary and asserts at an output boundary or on the return
-value. Internal classes (entities, value objects, domain services) are exercised **indirectly** —
-never instantiated directly in a test of Application behaviour. A unit test is not an "isolated
-object test": testing a pure domain function by calling it directly IS boundary-to-boundary, because
-the function's public signature is the contract under test. `clean-architecture-testing` maps each
-level to its project and doubles, and lists what must never be tested directly.
+*Boundary-to-Boundary Testing* below defines what counts as a boundary at each test level, and what
+must never be tested directly. `clean-architecture-testing` maps each level to its project and
+doubles.
 
 ### 2. RED (behavior failure only)
 
@@ -84,10 +81,10 @@ need. Stub just enough to compile, then confirm the test fails on behavior.
 
 #### Placeholder assertions are NOT wishful thinking
 
-`assert.fail()`, `Assert.Fail()`, `Assert.True(false)`, `Assert.False(true)`, `fail()`, `assert False`,
-`throw new NotImplementedException()`, `throw new Error('not implemented')` — any assertion designed
-to fail unconditionally — makes the test compile and fail, but asserts **nothing** about the API
-under test. It produces false RED evidence, in every language.
+Any assertion designed to fail unconditionally makes the test compile and fail, but asserts
+**nothing** about the API under test. It produces false RED evidence, in every language.
+`craft-discipline` C5 enumerates them; `throw new NotImplementedException()` is the one that
+matters here, because it is the most tempting way to satisfy step 2 below.
 
 A proper wishful-thinking test calls the function you WISH existed and lets the build or runtime
 surface the failure naturally:
@@ -95,8 +92,8 @@ surface the failure naturally:
 1. Reference the missing type/function → compile error or missing-symbol/module error
 2. Stub just enough to compile (empty return / minimal implementation) → test fails on the real business assertion
 
-NEVER insert a placeholder assertion. This list is the single reference for the whole framework —
-`craft-discipline` C5 enforces it at commit time.
+NEVER insert a placeholder assertion, including as the stub in step 2. `craft-discipline` C5 owns
+the list and enforces it at commit time.
 
 ### Between RED and GREEN: Architectural Guidance (MANDATORY)
 
@@ -134,8 +131,8 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 ### 4. COMMIT & VERIFY
 
 - Run the **Post-GREEN Wiring Verification** below to detect Fixture Theater.
-- Run the **Mutation Gate** below.
-- Commit using conventional commits (`feat(<domain>): <behavior>`). **Never commit on red.**
+- Run the **Coverage and Mutation Gate** below.
+- Commit. The message format is `craft-discipline` C9. **Never commit on red.**
 
 ## Quick Reference
 
@@ -154,7 +151,7 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 | "Compilation error IS red" | No. Compilation = wishful thinking. RED = behavior failure. |
 | "I'll write dirty code then refactor" | That's 3-step TDD. SYNTHESIZE GREEN produces clean code. |
 | "I can skip RED, I know it'll fail" | Run it. RED proves your test catches real failures. |
-| "The placeholder fails, so it's RED" | No. `assert.fail()` / `Assert.Fail()` / `Assert.True(false)` assert nothing about the API. Write the real call; let the missing symbol cause a compile error, then stub past it. |
+| "The placeholder fails, so it's RED" | No. A placeholder asserts nothing about the API (`craft-discipline` C5). Write the real call; let the missing symbol cause a compile error, then stub past it. |
 
 ## Red Flags — STOP and Restart
 
@@ -168,32 +165,6 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 - Refining code after SYNTHESIZE GREEN instead of revising RED
 
 **Any of these mean:** Delete the code, start over with a proper RED.
-
-## When Orchestrating Subagents (MANDATORY)
-
-If you dispatch subagents to carry out a TDD slice — whatever the orchestration
-mechanism:
-
-**NEVER put RED and SYNTHESIZE GREEN in the same subagent prompt.**
-
-Split every TDD task into **two separate dispatches**:
-
-1. **Dispatch 1 — RED only:** subagent writes the test, stubs to compile, runs to confirm behavior failure, reports the failing test output
-2. **YOU inspect** — the RED output comes back to you. In an interactive session you show it to the developer and wait for explicit confirmation ("ok, proceed"); running autonomously you inspect it yourself. Either way it is inspected before GREEN is dispatched.
-3. **Dispatch 2 — SYNTHESIZE GREEN:** only after that inspection
-
-The inspection checkpoint is the **orchestrator's responsibility**. It cannot be delegated to the subagent that will implement the result — that is the entire point of splitting the dispatch.
-
-**Red flags — you are violating this rule if:**
-- Your subagent prompt contains both "write the failing test" AND "implement the solution"
-- You wrote `PAUSE` in a plan comment but included all steps in one prompt
-- You assumed the developer would confirm via the plan document
-
-| Rationalization | Reality |
-|---|---|
-| "The pause is in the plan text" | Plans are documentation. Dispatch boundaries are enforcement. |
-| "The subagent will stop and ask" | Subagents execute what they receive. Split the prompt. |
-| "It's more efficient in one shot" | Efficiency that skips developer validation is not efficiency. |
 
 ## Iron Rule of Tests
 
@@ -268,21 +239,20 @@ After the suite turns green and BEFORE commit:
 3. Deletion test: mentally revert the production changes. If tests still pass, the test is exercising
    fixture state, not behavior.
 
-## Mutation Gate
+## Coverage and Mutation Gate
 
-This skill owns **when** the gate runs and **what evidence closes it**. After both test streams are
-green and before merge, run the `mutation-testing` skill, which owns the mechanics:
+This skill owns **when** the gate runs and **what evidence closes it**. `skraft-quality-bar` owns
+the numbers, and no setting lowers them.
 
-1. Application and Domain logic must reach 100% code coverage before completion.
-2. Mutation testing covers Application and Domain logic, and its result is recorded.
-3. Every surviving mutant is either killed or documented as equivalent with a justification.
-4. A test that kills no mutants is deleted, not kept for the count.
+Code you cannot cover is code no approved behavior asked for — delete it rather than lower the bar.
 
-If the gate has not run, the work is not complete — that is sequence, and it holds for every change.
+After both test streams are green and before merge, run the `mutation-testing` skill, which owns
+the mechanics: what the run covers, how a surviving mutant is classified, and what happens to a
+test that kills nothing.
 
-**The threshold itself is MODE and this skill does not set it.** The passing score is owned by
-`skraft-difficulty-routing` via the `depthTier` in the dispatch payload, and the descriptor applies
-it. Do not read a fixed percentage into this section.
+The gate is closed when coverage and both mutation runs meet the bar and every survivor is
+resolved. If the gate has not run, the work is not complete — that is sequence, and it holds for
+every change.
 
 ## Walking Skeleton (first slice of a feature)
 
@@ -363,7 +333,8 @@ worth taking.
 
 - Strategic rules in orchestrators instead of domain
 - Over-mocking that hides real business behavior
-- Treating coverage percentage as the quality target
+- Treating coverage as the quality signal — the bar is a floor, not evidence the tests assert
+  anything; mutation score is the signal
 - Duplicating acceptance test coverage with redundant domain tests
 
 ## Common Mistakes

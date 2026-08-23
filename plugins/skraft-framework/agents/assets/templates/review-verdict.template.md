@@ -3,7 +3,7 @@
 ## {{date}} · Attempt {{attempt}}
 
 **Verdict:** {{verdict}}
-**Depth tier:** {{depthTier}} | **Lenses:** {{lensCount}} | **Weighted score:** {{score}}
+**Lenses:** {{lensCount}} | **Weighted score:** {{score}}
 {{#lenses}}
 
 ### Lens {{index}} — {{name}} : {{lensScore}}
