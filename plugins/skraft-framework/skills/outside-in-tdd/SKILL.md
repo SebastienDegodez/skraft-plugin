@@ -31,7 +31,7 @@ It owns **SEQUENCE**: what must be true before the next phase may start, and wha
 it. Everything else is delegated — load the owner rather than re-deriving its rules here.
 
 | Question | Owner |
-|---|---|
+| --- | --- |
 | What the observable behaviour IS, and whether it is approved | `bdd-methodology` |
 | Which test project, which layer, which double | `clean-architecture-testing` |
 | Whether a domain test is authorized; coverage matrix; walking-skeleton strategy A–D | `test-design-mandates` |
