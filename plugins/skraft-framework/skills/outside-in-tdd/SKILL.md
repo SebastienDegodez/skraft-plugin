@@ -28,17 +28,18 @@ the code matches a guess.
 ## What this skill owns
 
 It owns **SEQUENCE**: what must be true before the next phase may start, and what evidence proves
-it. Everything else is delegated — load the owner rather than re-deriving its rules here.
+it, **and which production layer a business rule's code lands in**. Everything else is delegated
+— load the owner rather than re-deriving its rules here.
 
 | Question | Owner |
 |---|---|
 | What the observable behaviour IS, and whether it is approved | `bdd-methodology` |
-| Which test project, which layer, which double | `clean-architecture-testing` |
+| Which test project, which **test** layer, which double | `clean-architecture-testing` |
 | Whether a domain test is authorized; coverage matrix; walking-skeleton strategy A–D | `test-design-mandates` |
 | Mutation score, survivor classification, report parsing | `mutation-testing` |
 | Commit-time self-check | `craft-discipline` |
 | Cleaning up test code that already passes | `test-refactoring-catalog` |
-| **Phase order, entry evidence, and the outer→inner handoff** | **this skill** |
+| **Phase order, entry evidence, the outer→inner handoff, and which production layer a rule's code lands in** | **this skill** |
 
 A loading agent descriptor owns **MODE** — interactivity, thresholds, and what its dispatch payload
 carries. Where the two disagree, **the descriptor wins on mode and this skill wins on sequence.** A
@@ -112,6 +113,10 @@ failing test and stops there. Either way, no implementation is written until the
 Orient design before synthesis: which pattern (specification, factory, builder), which layer owns
 the logic, immutability and return values vs mutations.
 
+**Name the owner in writing, before the implementation is written.** State the type that will hold
+the rule and the layer it lives in, then check that answer against *When to Write Which* below.
+"The use case computes it" is valid only for orchestration or a simple rule.
+
 ### 3. SYNTHESIZE-GREEN (clean synthesis)
 
 Implement the smallest slice the failing test demands — and implement it clean the first time.
@@ -140,7 +145,7 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 |---|---|---|
 | **PREPARE** | Name the input and output boundaries, pick ONE scenario | The scenario under test is unambiguous |
 | **RED** | Write test, stub until it compiles, run | Test fails on **behavior** (assertion), not compilation |
-| **Guidance** (**MANDATORY**) | Orient the architectural approach + **the failing test is inspected** | Design direction clear, the RED output has been seen by someone other than its implementer |
+| **Guidance** (**MANDATORY**) | Orient the approach, **name the type and layer that will own the rule**, + **the failing test is inspected** | Owning type and layer stated before the implementation is written, the RED output has been seen by someone other than its implementer |
 | **SYNTHESIZE GREEN** | Synthesize the smallest slice the test demands, clean the first time | Tests green, architecture respected, nothing built the test did not force |
 | **COMMIT & VERIFY** | Wiring verification, mutation gate, commit | Production files in the diff, mutation gate run and its survivors resolved, never on red |
 
@@ -152,6 +157,7 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 | "I'll write dirty code then refactor" | That's 3-step TDD. SYNTHESIZE GREEN produces clean code. |
 | "I can skip RED, I know it'll fail" | Run it. RED proves your test catches real failures. |
 | "The placeholder fails, so it's RED" | No. A placeholder asserts nothing about the API (`craft-discipline` C5). Write the real call; let the missing symbol cause a compile error, then stub past it. |
+| "All the tests pass, so the design is fine" | Green proves behavior, never placement. A tier table living in the handler passes every test and is still in the wrong layer. |
 
 ## Red Flags — STOP and Restart
 
@@ -191,16 +197,31 @@ in policies and orchestrators.
 
 ## When to Write Which
 
-| Signal | Route to |
-|---|---|
-| Orchestration (load/save/publish) | Use Case test (Acceptance) |
-| Business rule inside an Aggregate | Use Case test (Acceptance) |
-| Complex invariants, large edge-case matrices, or reused rules | Extract to Policy + Domain test |
-| Simple rule | Already covered by primary Use Case test |
+Every row answers two questions. Answering only the test question is how a rule ends up living in
+an orchestrator.
+
+| Signal | Code lives in | Test that covers it |
+|---|---|---|
+| Orchestration (load/save/publish, no rule) | Application use case / handler | Use Case test (Acceptance) |
+| Simple rule: one condition, no edge-case matrix | Application use case / handler | Already covered by primary Use Case test |
+| Rule over an aggregate's own state | Method on the Domain entity / aggregate | Use Case test (Acceptance) |
+| Complex invariants, large edge-case matrices, or reused rules | A NEW named type in the Domain project (`architecture-patterns` picks Policy vs Domain Service vs Specification) | Use Case test (Acceptance); add a Domain test only if `test-design-mandates` Mandate 4 opens a gate |
+
+**"Complex" is not a judgement call:** tiers or bands, a cap or a floor, rounding, or three or more
+worked examples of one calculation put you on the last row. Classify the whole approved rule as the
+feature states it, not the delta of the slice you are on.
+
+**Whichever row you land on, the handler holds no arithmetic and no branch of the rule** beyond the
+simple-rule row: it passes the inputs to the Domain type and returns what comes back. A Domain type
+that carries the tier rate while the handler keeps the bands and the cap is the same failure, half
+done. Placement never depends on whether a Domain test is authorized: an unauthorized Domain test
+means the Use Case test covers the type, never that the rule moves back into the handler.
 
 **Default:** Start with a Use Case test. Add Domain tests only if extracting a complex rule makes testing simpler.
 
-When a rule has meaningful edge-case combinations, cover those combinations explicitly in Domain tests.
+Placement is not permission to design upfront: the Domain type still appears only when a failing
+test demands it (Step 2). When a rule has meaningful edge-case combinations, cover those
+combinations explicitly in Domain tests.
 
 ## Outside-In Approach
 
@@ -222,8 +243,15 @@ This includes adding 'just a new variant' of something that already exists: a ne
 rejection reason, a new value object field, or a new boundary value — even if similar ones already
 exist in the codebase. Wait for the test's compilation failure before creating the new type.
 
+The bar is a failing test, **not a failing test that already names the type**. For a last-row rule in
+*When to Write Which*, the RED you already have is the one that authorizes the Domain type.
+
 - Domain objects (policies, value objects, services) emerge from what the test demands
-- Orchestrators only coordinate — domain logic lives in the domain
+- Emergence decides WHEN a type appears, not WHERE. A test that only ever calls the handler can
+  never force a Domain type into existence, so for a last-row rule write the handler as a call to
+  the Domain type you wish existed, let that reference fail to compile, then create it
+- Orchestrators coordinate; every rule past the simple-rule row of *When to Write Which* lives in
+  the domain
 - Real domain objects, never mocked
 
 Placeholder test bodies are the same failure mode — see **Placeholder assertions are NOT wishful
@@ -238,6 +266,10 @@ After the suite turns green and BEFORE commit:
    setup implements the feature. BLOCK the commit, go back to GREEN, write the production code.
 3. Deletion test: mentally revert the production changes. If tests still pass, the test is exercising
    fixture state, not behavior.
+4. Placement check: run `git diff --name-only`. If an Application file gained a rate, threshold, cap,
+   or rounding computation and no Domain file was added or changed, the policy is in the orchestrator.
+   BLOCK the commit and move it. Moving misplaced code is not the forbidden post-GREEN iteration: the
+   acceptance test does not change and stays green throughout.
 
 ## Coverage and Mutation Gate
 

@@ -27,15 +27,9 @@ This testing strategy follows Martin Fowler's **sociable testing** approach:
 
 ## When Application vs Domain Tests
 
-| Signal | Route to |
-|---|---|
-| Orchestration (load/save/publish/map) | Acceptance test |
-| Complex business rules with edge-case matrices | Domain test (on domain service) |
-| Domain service with non-trivial policy logic | Domain test (on domain service) |
-| Aggregate / VO / entity logic | Acceptance test — exercised via handler, not tested directly |
-| Simple rule adequately covered by handler test | Don't duplicate — Acceptance test is enough |
-
-**Default:** Start with Acceptance test. Add Domain test only when complexity warrants it.
+See **When to Write Which** in `SKILL.md`. That table is the single copy, and it answers both
+questions this section used to answer only half of: which layer the code lands in, and which test
+covers it. A routing table that names only a test kind is what lets a policy stay in the handler.
 
 ## Decision Framework: 3 Questions
 

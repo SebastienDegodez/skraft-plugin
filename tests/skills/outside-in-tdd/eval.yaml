@@ -96,7 +96,7 @@ stimuli:
         That check is correct. Make it pass without adding anything beyond
         what was approved.
     constraints:
-      max_duration: 3m
+      max_duration: 6m
     environment:
       files:
         - src: fixtures/approved-discount-red/.gitignore
@@ -188,11 +188,18 @@ stimuli:
         name: Application delegates the emerged policy
         config:
           pattern: '(?m)^diff --git a/src/CheckoutPricing\.Application/(?!bin/|obj/).*\.cs '
+      # The rule is now a rate composed from a tier base, a band bonus and a ceiling,
+      # so no single percentage literal identifies it any more. What an
+      # Application-owned implementation cannot avoid is the arithmetic itself: the
+      # per-cent division, the two band thresholds, and the ceiling comparison. A
+      # delegating orchestrator contains none of those — it hands (tier, subtotal) to
+      # the policy and returns what comes back. Matching on the old `5%` literal would
+      # now pass an Application that hardcodes `9` and `20000`.
       - type: file-not-matches
-        name: Application does not own the discount percentage
+        name: Application does not own the discount rules
         config:
           path: src/CheckoutPricing.Application/**/*.cs
-          pattern: '(0\.0?5m?|0\.95m?|95m?\s*/\s*100m?|5m?\s*/\s*100m?|5\s*%)'
+          pattern: '(/\s*100\b|\b5000\b|\b20000\b|\bMath\.Min\s*\(|\b(?:49|199)\.99\b)'
       - type: file-not-contains
         name: Unapproved Green behavior was not invented
         config:
@@ -214,18 +221,23 @@ stimuli:
     rubric:
       - The recorded work turns the approved scenario into an executable failing behavior before implementing its production rule.
       - Domain concepts are introduced only after the executable behavior exposes their need.
-      - The completed change remains limited to the single approved Gold outcome.
+      - The completed change remains limited to the approved Bronze, Silver and Gold outcomes, and invents no tier and no band the feature does not state.
 
   - name: Replace a fixture-provided discount with production behavior
     prompt: |
-      Product approved that Gold customers pay 95% of their order subtotal. The checkout
-      suite is green, but calling the deployed calculation still returns the full
-      subtotal.
+      Product approved the loyalty discount. Each tier carries a base rate in percentage
+      points: Green 5, Gold 7, Platinum 9. A subtotal of 50.00 or more but below 200.00
+      adds 1 point, and a subtotal of 200.00 or more adds 3 points; each threshold belongs
+      to the band above it. The effective rate is never more than 10 points. The discount
+      is taken on the original subtotal and rounded DOWN to a whole cent.
+
+      The checkout suite is green, but calling the deployed calculation still returns the
+      full subtotal.
 
       Deliver the approved runtime outcome and leave the suite as trustworthy evidence
       of that behavior.
     constraints:
-      max_duration: 3m
+      max_duration: 6m
     environment:
       files:
         - src: fixtures/discount-fixture-theater/.gitignore
@@ -319,7 +331,7 @@ stimuli:
         name: Approved payable total remains asserted
         config:
           path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
-          value: '9_500'
+          value: '9_200'
       - type: prompt
         config:
           scoring: scale_1_10
@@ -348,7 +360,7 @@ stimuli:
         That is the right failure. Now make it pass without adding anything beyond
         what was approved, and leave the suite as trustworthy evidence of it.
     constraints:
-      max_duration: 5m
+      max_duration: 6m
     environment:
       files:
         - src: fixtures/placeholder-red-evidence/.gitignore
@@ -471,7 +483,7 @@ stimuli:
       missing today, then stop and report exactly what fails and why. Do not produce
       the approved outcome yet.
     constraints:
-      max_duration: 3m
+      max_duration: 6m
     environment:
       files:
         - src: fixtures/approved-gold-discount-missing/.gitignore
@@ -596,7 +608,7 @@ stimuli:
     tags:
       intent: non-activation
     constraints:
-      max_duration: 3m
+      max_duration: 6m
     environment:
       files:
         - src: fixtures/green-checkout-tests/.gitignore

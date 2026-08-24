@@ -3,5 +3,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- An enum switch expression that covers every declared member still warns, because an enum
+         can carry an unnamed value. The fallback arm the compiler then demands is unreachable by
+         construction, so the 100 percent line-coverage gate can never pass it: two gates of this
+         fixture would contradict each other and the stimulus would be unwinnable for a reason that
+         has nothing to do with outside-in TDD. Suppressing exactly these two lets an exhaustive
+         switch compile with no dead arm. Every other warning is still an error. -->
+    <NoWarn>$(NoWarn);CS8509;CS8524</NoWarn>
   </PropertyGroup>
 </Project>

@@ -27,17 +27,17 @@ persona: tech-lead
 
 ## Contrat de sortie
 
-- Score de mutation (pourcentage)
+- Le code de sortie du runner, par scope : le cœur d'abord, puis la frontière
 - Liste des mutants survivants classifiés : **réel** (test manquant) ou **équivalent** (aucun effet observable)
 - Tests de frontière ajoutés pour chaque survivant réel
-- Verdict : ✅ Continuer vers commit / ❌ BLOQUER — retourner à l'étape 4
+- Verdict : ✅ Continuer vers commit / ❌ BLOQUER — retourner à l'étape 4 tant qu'un survivant réel subsiste
 
 ## Invariants
 
 - **S7 — Exécution déterministe** — Les tests de mutation DOIVENT être exécutés via des appels d'outils terminal. Ne pas affirmer des résultats depuis de la prose
 - **Un test qui ne tue aucun mutant est du bruit** — le supprimer
-- **Exclusions de scope** — Ne jamais muter : DTOs, ViewModels, adaptateurs d'infrastructure, `DependencyInjection.cs`, `Program.cs`, interfaces marqueurs, code généré
-- **Score de mutation 100%** sur la logique métier pour continuer vers commit (ou < 100% avec uniquement des mutants équivalents documentés)
+- **Exclusions de scope** — Ne jamais muter : `DependencyInjection.cs`, `Program.cs`, interfaces marqueurs, code généré. Tout ce qu'un développeur a écrit est dans le scope, DTOs et adaptateurs inclus ; API et Infrastructure passent en second, tenus à leur propre barre
+- **C'est le runner qui tranche** — `--break-at` fait échouer le run sous la barre, donc le code de sortie est le verdict. `skraft-quality-bar` énonce la barre de chaque scope
 
 ## Pourquoi cette forme
 
