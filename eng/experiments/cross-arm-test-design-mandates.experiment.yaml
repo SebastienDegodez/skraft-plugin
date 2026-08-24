@@ -112,8 +112,8 @@ variants:
         - ../../plugins/skraft-framework/skills/quality-gates-dotnet
         - ../../plugins/skraft-framework/skills/quality-gates-evidence-contract
         - ../../plugins/skraft-framework/skills/resolving-stack-commands
-        - ../../plugins/skraft-framework/skills/skraft-config
         - ../../plugins/skraft-framework/skills/skraft-difficulty-routing
+        - ../../plugins/skraft-framework/skills/skraft-quality-bar
         - ../../plugins/skraft-framework/skills/sprint-planning
         - ../../plugins/skraft-framework/skills/strangler-fig-method
         - ../../plugins/skraft-framework/skills/test-design-mandates
