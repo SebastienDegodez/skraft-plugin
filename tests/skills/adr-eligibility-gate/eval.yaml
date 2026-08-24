@@ -4,6 +4,9 @@ type: capability
 defaults:
   timeout: 3m
   runs: 5
+  # Pinned away from the repository default. State the reason here whenever a
+  # spec pins a model, so a reader can tell a deliberate pin from a leftover.
+  model: gpt-5.6-luna
 scoring:
   threshold: 1
 stimuli:

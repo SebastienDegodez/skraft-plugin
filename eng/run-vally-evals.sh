@@ -22,8 +22,15 @@
 #                     the eval it belongs to. Set it only to override every spec.
 #   WORKERS=3         Concurrent stimuli within a skill eval (default: 3)
 #   AGENT_WORKERS=1   Concurrent stimuli within an agent eval (default: 1)
-#   MODEL             Agent model (default: gpt-5.6-luna)
-#   JUDGE_MODEL       Judge model (default: gpt-5.6-luna)
+#   MODEL             Agent model. Unset - the default - resolves per eval:
+#                     the spec's own `defaults.model` if it pins one, else
+#                     DEFAULT_MODEL below. Set it to force every eval onto one
+#                     model; that is what the CI comparison matrix does, and an
+#                     arm a spec could opt out of would not be an arm at all.
+#   JUDGE_MODEL       Judge model (default: gpt-5.6-luna). Deliberately NOT the
+#                     agent default: the judge is the yardstick, and a yardstick
+#                     that moves with the thing it measures makes every past run
+#                     incomparable. Change it only on purpose, for every eval.
 #   LIVE_LOGS=1       Stream Vally output while retaining eval.log (default: 1)
 #   SKIP_EVALS=""     Override skip list (default: reads skip-evals.txt)
 #   SKIP_AGENTS=1     Leave every agent suite out of an unnamed run (default: 0)
@@ -73,8 +80,18 @@ if [ -n "$STIMULI" ]; then
 else
   RESULTS_ROOT="${RESULTS_DIR:-$SKRAFT_ROOT/eval-results}"
 fi
-MODEL="${MODEL:-gpt-5.6-luna}"
+# The repository default, used by any eval whose spec does not pin its own
+# `defaults.model`. Sonnet 5 is what the shipped `software-engineer` descriptor
+# declares, so this is the model the framework is actually evaluated on.
+DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-5}"
+# Empty unless the caller forced one: resolution happens per eval, below.
+MODEL="${MODEL:-}"
 JUDGE_MODEL="${JUDGE_MODEL:-gpt-5.6-luna}"
+
+# Prints the model this eval must run on. See eng/resolve-eval-model.mjs.
+resolve_eval_model() {
+  node "$SKRAFT_ROOT/eng/resolve-eval-model.mjs" "$1" "$DEFAULT_MODEL" 2>/dev/null || printf '%s' "$DEFAULT_MODEL"
+}
 # Empty on purpose: `--runs` overrides whatever the spec declares, so passing it
 # unconditionally would silently reduce every spec to one trial per stimulus and
 # make almost every verdict underpowered.
@@ -210,7 +227,7 @@ if [ ${#EVAL_SPECS[@]} -eq 0 ]; then
   exit 1
 fi
 
-echo -e "${BOLD}Running ${#EVAL_SPECS[@]} eval(s) with PARALLEL=$PARALLEL RUNS=${RUNS:-per-spec}${NC}"
+echo -e "${BOLD}Running ${#EVAL_SPECS[@]} eval(s) with PARALLEL=$PARALLEL RUNS=${RUNS:-per-spec} MODEL=${MODEL:-per-spec (default $DEFAULT_MODEL)} JUDGE=$JUDGE_MODEL${NC}"
 echo ""
 
 # ---- Per-eval function (runs in background) --------------------------------
@@ -248,6 +265,11 @@ run_agent_eval() {
   local EVAL_SPEC="$1"
   local EVAL_DIR="$(dirname "$EVAL_SPEC")"
   local EVAL_NAME="$(basename "$EVAL_DIR")"
+  # Resolved here, not globally: each eval may pin its own model, and every
+  # downstream use - the vally call, the adapter, the baseline cache key -
+  # must see the same answer for this eval.
+  local MODEL
+  MODEL="$(resolve_eval_model "$EVAL_SPEC")"
   local LIVE_DIR="$RESULTS_ROOT/$EVAL_NAME/live"
   local LOG="$RESULTS_ROOT/$EVAL_NAME/eval.log"
   local STATUS_FILE="$STATUS_DIR/agent__$EVAL_NAME"
@@ -308,6 +330,11 @@ run_one_eval() {
   esac
   local EVAL_DIR="$(dirname "$EVAL_SPEC")"
   local EVAL_NAME="$(basename "$EVAL_DIR")"
+  # Resolved here, not globally: each eval may pin its own model, and every
+  # downstream use - the vally call, the adapter, the baseline cache key -
+  # must see the same answer for this eval.
+  local MODEL
+  MODEL="$(resolve_eval_model "$EVAL_SPEC")"
   local EVAL_PLUGIN="$(basename "$(dirname "$EVAL_DIR")")"
   # Multi-plugin layout first, single-plugin layout as the fallback: today
   # EVAL_PLUGIN is the literal `skills` segment of tests/skills/<skill>.
