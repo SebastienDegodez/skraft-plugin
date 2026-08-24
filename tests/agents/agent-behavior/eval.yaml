@@ -8,7 +8,12 @@ defaults:
   model: gpt-5.6-luna
   runs: 3
 scoring:
-  threshold: 1
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
 stimuli:
   - name: Missing DISTILL artifacts block implementation
     prompt: |

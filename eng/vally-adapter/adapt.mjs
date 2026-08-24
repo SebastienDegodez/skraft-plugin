@@ -16,6 +16,7 @@ import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
 import { comparisonVerdict } from '../lib/verdict.mjs'
+import { blockingGraders, renderBlockingGraders } from '../lib/blocking-graders.mjs'
 import { buildEvaluationMetrics } from '../lib/vally-metrics.mjs'
 
 let baselineProvenance = null
@@ -126,6 +127,14 @@ try {
     const verdict = {
       ...comparisonVerdict(report, evaluation, { baselineRecords, skilledRecords }),
       metrics: buildEvaluationMetrics(baselineRecords, skilledRecords, evaluation.name),
+      // Reporting only, never scoring. A pass mark says every grader passed and
+      // nothing more, so a trial that missed one grader and a trial that missed
+      // six look the same. Publishing which grader blocks, and how many trials
+      // it alone blocks, turns "0 passed" into something a reader can act on.
+      blocking: {
+        baseline: blockingGraders(baselineRecords),
+        skilled: blockingGraders(skilledRecords),
+      },
     }
     const result = {
       runner: 'vally',
@@ -146,6 +155,8 @@ try {
 
     const icon = verdict.passed ? '✅' : verdict.underpowered || !verdict.conclusive ? '⚠️' : '❌'
     console.log(`${icon} ${evaluation.name}: ${verdict.reason}`)
+    const blocking = renderBlockingGraders(verdict.blocking.skilled, 'skilled')
+    if (blocking) console.log(blocking)
   }
 } finally {
   rmSync(temporary, { recursive: true, force: true })
