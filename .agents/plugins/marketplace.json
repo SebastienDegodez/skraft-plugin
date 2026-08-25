@@ -3,6 +3,9 @@
   "owner": {
     "name": "SebastienDegodez"
   },
+  "metadata": {
+    "description": "skraft agentic SDLC pipeline — specialized phase agents, dedicated reviewers and implementation-discipline skills for the DISCOVER→DELIVER workflow."
+  },
   "interface": {
     "displayName": "SKRAFT SDLC Pipeline"
   },

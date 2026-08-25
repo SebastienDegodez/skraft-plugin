@@ -43,6 +43,18 @@ for (const { harness, path } of MARKETPLACES) {
       assert.equal(entry.name, manifest.name, `${path}: entry name must match the plugin manifest name`)
     }
   })
+
+  // `claude plugin validate` warns when the Claude marketplace declares no description,
+  // and a marketplace with no description tells a browsing user nothing. The other three
+  // harnesses render the same field, so hold all four to it rather than only the one the
+  // Claude CLI happens to check.
+  test(`marketplace-consistency: ${harness} declares a marketplace description`, () => {
+    const description = read(path).metadata?.description
+    assert.ok(
+      typeof description === "string" && description.trim() !== "",
+      `${path}: metadata.description is missing — a marketplace must say what it offers`,
+    )
+  })
 }
 
 test('marketplace-consistency: codex declares the source descriptor and install policy', () => {
