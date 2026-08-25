@@ -1,12 +1,8 @@
 name: Release
 
+# Release is on demand only: no push trigger. Run it from the Actions tab
+# (or `gh workflow run release.yml`) whenever the accumulated commits are worth shipping.
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'docs/site/**'
-      - 'docs/**/*.md'
   workflow_dispatch:
 
 concurrency:
