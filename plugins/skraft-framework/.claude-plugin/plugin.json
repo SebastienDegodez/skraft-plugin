@@ -4,5 +4,8 @@
   "version": "1.5.2",
   "author": {
     "name": "SebastienDegodez"
-  }
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "hooks": "./com.anthropic.claude-code/hooks/hooks.json"
 }

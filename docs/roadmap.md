@@ -109,7 +109,7 @@ n'a pas lu un skill obligatoire est relancé ; les lectures sont journalisées e
 **Gain :** `gain:reliability` — mêmes garde-fous sur les deux runtimes (Copilot CLI
 et Claude Code).
 
-**Modules livrés :** `plugins/skraft-framework/hooks/hooks.json` (Claude Code), `.github/hooks/skraft-framework.json`
+**Modules livrés :** `plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json` (Claude Code), `.github/hooks/skraft-framework.json`
 (Copilot), `cli/hook.mjs` routé via `service-factory`.
 
 **Dépend de :** US3, US4
@@ -239,7 +239,7 @@ housekeeping `SessionStart` (rétention audit, signaux périmés).
 **Modules livrés :** `domain/observability-policy.mjs` (seuils + `detectStalePhase`
 fail-open + `planAuditRetention` / `planStaleSignals`), `application/health-check-service.mjs`,
 `application/session-start-service.mjs`, `cli/health-check.mjs`, `cli/housekeeping.mjs`,
-entrées `SessionStart` dans `plugins/skraft-framework/hooks/hooks.json` + `.github/hooks/skraft-framework.json`.
+entrées `SessionStart` dans `plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json` + `.github/hooks/skraft-framework.json`.
 Seuils configurés via le bloc `observability` de `skraft-config.json`.
 
 **Dépend de :** US8, US9

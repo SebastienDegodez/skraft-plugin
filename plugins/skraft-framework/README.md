@@ -10,7 +10,7 @@
 Le framework vit dans `plugins/skraft-framework/src/`. Il est livré avec le plugin — aucune
 dépendance externe.
 
-Point d'entrée appelé par `hooks/hooks.json` (Claude Code) et `.github/hooks/skraft-framework.json` (Copilot) :
+Point d'entrée appelé par `com.anthropic.claude-code/hooks/hooks.json` (Claude Code) et `.github/hooks/skraft-framework.json` (Copilot) :
 ```
 $CLAUDE_PLUGIN_ROOT/src/cli/hook.mjs <Event> [matcher]
 ```
@@ -49,7 +49,7 @@ CWD = racine du projet consumer. Chaque entrée fournit `bash` **et** `powershel
 | 2 | Générateur de config data-driven | ✅ Livré | `domain/framework-config-policy.mjs` (pur), `cli/build-config.mjs` (+bin), `skraft-framework.config.json` généré, scripts npm `config:build`/`config:check` — `node --test` 100 % + mutation Stryker 100 % |
 | 3 | G1 garde d'ordre de dispatch | ✅ Livré | `domain/pipeline-policy.mjs`, `domain/state-schema.mjs`, `adapters/infrastructure/json-state-reader.mjs`, `application/pre-tool-use-service.mjs` — branché `PreToolUse(Agent)` fail-closed |
 | 4 | G2/G3 forçage skills + audit | ✅ Livré | `domain/skill-policy.mjs`, `application/subagent-start-service.mjs`, `application/subagent-stop-service.mjs` (block si skill manquant), `application/post-tool-use-service.mjs` G3 (fail-open) |
-| 5 | Manifests hooks Copilot + Claude | ✅ Livré | `hooks/hooks.json` (Claude Code — PreToolUse Agent+Bash, SubagentStart, SubagentStop, PostToolUse), `.github/hooks/skraft-framework.json` (Copilot) |
+| 5 | Manifests hooks Copilot + Claude | ✅ Livré | `com.anthropic.claude-code/hooks/hooks.json` (Claude Code — PreToolUse Agent+Bash, SubagentStart, SubagentStop, PostToolUse), `.github/hooks/skraft-framework.json` (Copilot) |
 | 6 | Tests boundary-to-boundary | 🔲 À faire | — |
 | 7 | Documentation + roadmap.md | ✅ Livré | `plugins/skraft-framework/README.md` (ancrage genesis A9/S4/S7, fail modes, guide « ajouter un garde-fou »), `docs/roadmap.md` (13 US avec gain + statut + milestone) |
 | 8 | G4/G5 artefacts + verdict + commit | ✅ Livré | `domain/artifact-policy.mjs` (artefacts attendus, parseur de verdict reviewer, `**Verdict:** APPROVED\|NEEDS_REWORK\|REJECTED`), `ports/infrastructure/commit-verifier.mjs` + `adapters/infrastructure/git-commit-verifier.mjs` (working tree propre), `subagent-stop-service` (complétion fail-closed : artefact manquant, verdict divergent du fichier écrit, DELIVER sans commit vérifié) — branché dans `cli/hook.mjs` |
@@ -185,7 +185,7 @@ Résolution (via `cli/state.mjs`/`cli/hook.mjs`) : `SKRAFT_TRACKING_ROOT` → `S
 
 ## Hooks déployés
 
-### Claude Code — `plugins/skraft-framework/hooks/hooks.json`
+### Claude Code — `plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json`
 
 | Event | Matcher | Garde activé |
 |---|---|---|
@@ -290,7 +290,7 @@ case 'PreToolUse':
 
 ### 4. Déclarer dans hooks.json
 
-Ajouter (ou vérifier) l'entrée dans `plugins/skraft-framework/hooks/hooks.json` :
+Ajouter (ou vérifier) l'entrée dans `plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json` :
 
 ```json
 { "event": "PreToolUse", "matcher": "Bash", "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse" }

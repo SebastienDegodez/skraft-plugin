@@ -6,7 +6,7 @@
 
 **Architecture :** Réalisation runtime des patterns `genesis` déjà cités par les agents. Le système hook = **A9 SUPERVISED EXECUTION (STRONG FORM)** : l'exécution sort de la couche LLM vers un post-stage déterministe **non contournable**. Chaque garde-fou = **S4 VALIDATION DECORATOR** qui **bloque** (anti-pattern S4 « wrapping without blocking » → on ne logge pas, on bloque). Lectures d'état déterministes = **S7 DETERMINISTIC TOOL BRIDGE** (corrige `TOOLLESS PRECONDITION` : l'ordre est lu depuis `state.json`, pas inféré). Trace JSONL append-only = **AUDIT_SURFACE** (sert aussi de seam de test boundary-to-boundary). Code en **Clean Architecture / hexagonal** (domain pur → application → ports → adapters), Result type sans exception aux frontières.
 
-**Tech Stack :** **Node.js ESM (`.mjs`)**, Node v22, **zéro dépendance** runtime (`node:fs`, `node:path`, `node:child_process`, `node:test`). Cross-platform Mac/Windows (un seul `node <script>`). Hooks **Copilot + Claude Code** via manifest **PascalCase** (`plugins/skraft-framework/hooks/hooks.json`, format VS Code + matchers Claude). Config `skraft-framework.config.json` **générée** depuis le frontmatter des agents (réutilise le parseur YAML maison `scripts/lib/`).
+**Tech Stack :** **Node.js ESM (`.mjs`)**, Node v22, **zéro dépendance** runtime (`node:fs`, `node:path`, `node:child_process`, `node:test`). Cross-platform Mac/Windows (un seul `node <script>`). Hooks **Copilot + Claude Code** via manifest **PascalCase** (`plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json`, format VS Code + matchers Claude). Config `skraft-framework.config.json` **générée** depuis le frontmatter des agents (réutilise le parseur YAML maison `scripts/lib/`).
 
 **Suivi :** 13 issues GitHub (milestones `skraft-framework Phase 1 — MVP` / `Phase 2 — Complétude`). Met à jour `docs/roadmap.md` (qui anticipe déjà « Hooks de gardiennage 🚧 À venir »).
 
@@ -132,7 +132,7 @@ tests/skraft-framework/
 
 ### Task 5 : #5 Manifests hooks Copilot + Claude (`fw:hooks-manifest` `gain:reliability`)
 
-- [ ] `plugins/skraft-framework/hooks/hooks.json` (PascalCase : `PreToolUse` matcher Agent+Bash, `SubagentStart`, `SubagentStop`, `PostToolUse` matcher Read+Agent) ; commande cross-platform `command: node plugins/skraft-framework/src/cli/hook.mjs <Event>`.
+- [ ] `plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json` (PascalCase : `PreToolUse` matcher Agent+Bash, `SubagentStart`, `SubagentStop`, `PostToolUse` matcher Read+Agent) ; commande cross-platform `command: node plugins/skraft-framework/src/cli/hook.mjs <Event>`.
 - [ ] `cli/hook.mjs` route via `service-factory`.
 - [ ] `.github/hooks/skraft-framework.json` (manifest dev repo). **Acceptation :** mêmes garde-fous sur les deux runtimes. **Dépend de #3, #4.**
 

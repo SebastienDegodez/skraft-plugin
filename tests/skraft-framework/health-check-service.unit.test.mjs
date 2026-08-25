@@ -9,7 +9,7 @@ const NOW = new Date('2026-01-01T00:00:00Z')
 const nowMs = NOW.getTime()
 
 const VERSION = '/plugin/.claude-plugin/plugin.json'
-const CLAUDE = '/plugin/hooks/hooks.json'
+const CLAUDE = '/plugin/com.anthropic.claude-code/hooks/hooks.json'
 const COPILOT = '/repo/.github/hooks/skraft-framework.json'
 const FRAMEWORK = '/plugin/skraft-framework.config.json'
 const AUDIT = '/plugin/logs/skill-audit.jsonl'

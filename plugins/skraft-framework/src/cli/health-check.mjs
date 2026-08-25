@@ -24,7 +24,7 @@ const service = createHealthCheckService({
   clock: createSystemTime(),
   versionPath: join(pluginRoot, '.claude-plugin', 'plugin.json'),
   manifestPaths: {
-    claudeHooks: join(pluginRoot, 'hooks', 'hooks.json'),
+    claudeHooks: join(pluginRoot, 'com.anthropic.claude-code', 'hooks', 'hooks.json'),
     copilotHooks: join(process.cwd(), '.github', 'hooks', 'skraft-framework.json'),
     frameworkConfig: process.env.SKRAFT_CONFIG ?? join(pluginRoot, 'skraft-framework.config.json'),
   },

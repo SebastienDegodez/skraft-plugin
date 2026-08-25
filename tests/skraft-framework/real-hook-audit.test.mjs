@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
-// Audits the REAL committed plugins/skraft-framework/hooks/hooks.json (not a fixture): guards against
+// Audits the REAL committed plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json (not a fixture): guards against
 // a hook wiring regression that unit tests on hook-router.mjs cannot catch, since those
 // exercise the router in isolation from the manifest that actually drives it in prod.
 const here = dirname(fileURLToPath(import.meta.url))
-const hooksJsonPath = join(here, '../../plugins/skraft-framework/hooks/hooks.json')
+const hooksJsonPath = join(here, '../../plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json')
 const hooksManifest = JSON.parse(readFileSync(hooksJsonPath, 'utf8'))
 
 // Every route the framework relies on (see hook.mjs / service-factory.mjs wiring).

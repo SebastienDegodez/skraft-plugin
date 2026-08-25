@@ -24,7 +24,7 @@ test('migrate-plugin-paths rewrites every relocated plugin root', () => {
   assert.match(migrated, new RegExp(`${frameworkRoot}src/cli/hook\\.mjs`))
   assert.match(migrated, new RegExp(`${frameworkRoot}agents/software-engineer\\.agent\\.md`))
   assert.match(migrated, new RegExp(`${frameworkRoot}skills/outside-in-tdd/SKILL\\.md`))
-  assert.match(migrated, new RegExp(`${frameworkRoot}hooks/hooks\\.json`))
+  assert.match(migrated, new RegExp(`${frameworkRoot}com\\.anthropic\\.claude-code/hooks/hooks\\.json`))
   assert.match(migrated, new RegExp(`${frameworkRoot}instructions/skraft-state\\.instructions\\.md`))
   assert.match(migrated, new RegExp(`${frameworkRoot}logs/audit\.jsonl`))
   assert.match(migrated, new RegExp(`${frameworkRoot}\.claude-plugin/plugin\\.json`))
