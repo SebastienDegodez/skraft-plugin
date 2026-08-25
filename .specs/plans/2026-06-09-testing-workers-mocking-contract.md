@@ -435,7 +435,7 @@ S — Edit to one existing skill (redirect note) + new adapter file; orchestrato
 **AC-01:** Template is shipped in the plugin's `assets/` directory
 Given the skraft-plugin repository
 When a developer looks for the configuration template
-Then `plugins/skraft-framework/agents/assets/skraft.instructions.template.md` is present
+Then `plugins/skraft-framework/assets/skraft.instructions.template.md` is present
 And it contains both `testing.mocking.*` and `testing.contract.*` sections with comments
 
 **AC-02:** Each roster reads only its own namespace
