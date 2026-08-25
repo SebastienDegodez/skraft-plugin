@@ -124,11 +124,13 @@ This project follows [**SemVer**](https://semver.org/) and publishes releases **
 [**semantic-release**](https://github.com/semantic-release/semantic-release).
 
 - Commit messages must follow [**Conventional Commits**](https://www.conventionalcommits.org/):
-  - `feat:` → **minor** bump; `fix:` / `perf:` / `refactor:` / `docs:` → **patch** bump;
+  - `feat:` → **minor** bump; `fix:` / `perf:` / `refactor:` → **patch** bump;
   - `feat!:` or a `BREAKING CHANGE:` footer → **major** bump.
-- Automatic online-documentation commits (`docs(sync):` / `docs(gaps):`) never trigger a release.
-- The [`release.yml`](./.github/workflows/release.yml) workflow runs **on demand only** — from the
-  Actions tab or `gh workflow run release.yml`, never automatically on push. When triggered, it:
+- **`docs:` never cuts a tag** — whatever the scope. Documentation lands without a version, and a
+  docs-only push does not even start the workflow (`paths-ignore`). A `docs:` commit riding along
+  with a `feat:` or `fix:` is released by that commit, as expected.
+- The [`release.yml`](./.github/workflows/release.yml) workflow runs **automatically on every push
+  to `main`**, and can also be started by hand from the Actions tab. When it runs, it:
   1. computes the next version from the commit history,
   2. updates [`CHANGELOG.md`](./CHANGELOG.md) and stamps the version into the four plugin manifests
      (`plugin.json`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) + `src/package.json`,
