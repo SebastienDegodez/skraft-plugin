@@ -8,6 +8,7 @@
   },
   "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
   "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
   "keywords": [
     "sdlc",
     "tdd",
@@ -31,6 +32,9 @@
   "extensions": {
     "com.anthropic.claude-code": {
       "hooks": "./com.anthropic.claude-code/hooks/hooks.json"
+    },
+    "com.github.copilot": {
+      "hooks": "./com.github.copilot/hooks/hooks.json"
     }
   }
 }

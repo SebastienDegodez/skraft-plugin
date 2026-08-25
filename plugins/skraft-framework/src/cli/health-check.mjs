@@ -25,7 +25,7 @@ const service = createHealthCheckService({
   versionPath: join(pluginRoot, '.claude-plugin', 'plugin.json'),
   manifestPaths: {
     claudeHooks: join(pluginRoot, 'com.anthropic.claude-code', 'hooks', 'hooks.json'),
-    copilotHooks: join(process.cwd(), '.github', 'hooks', 'skraft-framework.json'),
+    copilotHooks: join(pluginRoot, 'com.github.copilot', 'hooks', 'hooks.json'),
     frameworkConfig: process.env.SKRAFT_CONFIG ?? join(pluginRoot, 'skraft-framework.config.json'),
   },
   auditLogPath: process.env.SKRAFT_AUDIT_LOG ?? join(pluginRoot, 'logs', 'skill-audit.jsonl'),

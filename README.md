@@ -50,9 +50,21 @@ skraft ships as a **marketplace plugin**. The plugin source lives in [`plugins/`
 /plugin install skraft
 ```
 
-### GitHub Copilot / Cursor
+### GitHub Copilot, Codex, Cursor
 
-Equivalent manifests are provided (`.cursor-plugin/marketplace.json`, `.github/hooks/`).
+The plugin follows [**Agent Plugins 1.0**](https://agent-plugins.org/specification): the portable
+manifest lives at `plugins/skraft-framework/plugin.json` and each client that needs its own schema
+gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`). Skills, agents,
+instructions and the runtime are shared verbatim — nothing is duplicated.
+
+Harness-specific hooks live under their reverse-domain namespace:
+
+| Harness | Hook manifest |
+|---|---|
+| Claude Code, Codex | `com.anthropic.claude-code/hooks/hooks.json` |
+| Copilot (installed plugin) | `com.github.copilot/hooks/hooks.json` |
+| Copilot (repo checkout, cloud agent) | [`.github/hooks/skraft-framework.json`](./.github/hooks/skraft-framework.json) |
+
 See [`docs/architecture.md`](./docs/architecture.md) for the per-harness porting details.
 
 ## Quick start
@@ -115,9 +127,11 @@ This project follows [**SemVer**](https://semver.org/) and publishes releases **
   - `feat:` → **minor** bump; `fix:` / `perf:` / `refactor:` / `docs:` → **patch** bump;
   - `feat!:` or a `BREAKING CHANGE:` footer → **major** bump.
 - Automatic online-documentation commits (`docs(sync):` / `docs(gaps):`) never trigger a release.
-- On every push to `main`, the [`release.yml`](./.github/workflows/release.yml) workflow:
+- The [`release.yml`](./.github/workflows/release.yml) workflow runs **on demand only** — from the
+  Actions tab or `gh workflow run release.yml`, never automatically on push. When triggered, it:
   1. computes the next version from the commit history,
-  2. updates [`CHANGELOG.md`](./CHANGELOG.md) and the version in `plugins/skraft-framework/.claude-plugin/plugin.json` + `plugins/skraft-framework/src/package.json`,
+  2. updates [`CHANGELOG.md`](./CHANGELOG.md) and stamps the version into the four plugin manifests
+     (`plugin.json`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) + `src/package.json`,
   3. creates the **`vX.Y.Z` tag** and the **GitHub Release** with the release notes,
   4. commits everything with `chore(release): X.Y.Z [skip ci]`.
 
@@ -133,4 +147,11 @@ change history.
 
 ## License
 
-See the repository for licensing information.
+**GNU General Public License v3.0 or later** (`GPL-3.0-or-later`) — full text in [`LICENSE`](./LICENSE).
+
+Copyright (C) 2026 Degodez Sébastien
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. It is distributed WITHOUT ANY WARRANTY; without
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

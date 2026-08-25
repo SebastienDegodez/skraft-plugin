@@ -10,7 +10,7 @@ const nowMs = NOW.getTime()
 
 const VERSION = '/plugin/.claude-plugin/plugin.json'
 const CLAUDE = '/plugin/com.anthropic.claude-code/hooks/hooks.json'
-const COPILOT = '/repo/.github/hooks/skraft-framework.json'
+const COPILOT = '/plugin/com.github.copilot/hooks/hooks.json'
 const FRAMEWORK = '/plugin/skraft-framework.config.json'
 const AUDIT = '/plugin/logs/skill-audit.jsonl'
 const CONFIG = '/repo/skraft-config.json'

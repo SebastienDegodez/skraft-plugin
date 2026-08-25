@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/src/cli/housekeeping.mjs\"",
+        "powershell": "node \"${PLUGIN_ROOT}/src/cli/housekeeping.mjs\"",
+        "timeoutSec": 10
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse Agent",
+        "powershell": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse Agent",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse Bash",
+        "powershell": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse Bash",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStart": [
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" SubagentStart",
+        "powershell": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" SubagentStart",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStop": [
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" SubagentStop",
+        "powershell": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" SubagentStop",
+        "timeoutSec": 10
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse Agent",
+        "powershell": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse Agent",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse Read",
+        "powershell": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse Read",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
