@@ -20,7 +20,7 @@ const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 /** Registry of artifact types. Add a type by declaring its template + schema. */
 export const ARTIFACTS = {
   adr: {
-    template: 'plugins/skraft-framework/agents/assets/templates/adr.template.md',
+    template: 'plugins/skraft-framework/assets/templates/adr.template.md',
     required: [
       'adr',
       'adrLabel',
@@ -37,7 +37,7 @@ export const ARTIFACTS = {
     optional: ['ratifiedBy', 'supersedes', 'supersedesLink', 'alternatives'],
   },
   'review-verdict': {
-    template: 'plugins/skraft-framework/agents/assets/templates/review-verdict.template.md',
+    template: 'plugins/skraft-framework/assets/templates/review-verdict.template.md',
     required: [
       'phase',
       'projectSlug',
@@ -53,7 +53,7 @@ export const ARTIFACTS = {
     optional: [],
   },
   'review-comment': {
-    template: 'plugins/skraft-framework/agents/assets/templates/review-comment.template.md',
+    template: 'plugins/skraft-framework/assets/templates/review-comment.template.md',
     required: ['phase', 'icon', 'status', 'artefacts', 'verdictLabel', 'nextPhase'],
     optional: ['difficulty', 'evidence', 'evidenceLinks'],
   },
