@@ -1,8 +1,15 @@
 name: Release
 
-# Release is on demand only: no push trigger. Run it from the Actions tab
-# (or `gh workflow run release.yml`) whenever the accumulated commits are worth shipping.
+# Automatic on every push to main; also runnable on demand from the Actions tab.
+# Documentation-only pushes never reach it: paths-ignore skips the run, and the
+# commit-analyzer maps `docs` to no release, so a docs commit can never cut a tag.
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/site/**'
+      - 'docs/**/*.md'
   workflow_dispatch:
 
 concurrency:
