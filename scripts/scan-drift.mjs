@@ -136,8 +136,13 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
   const items = [];
 
   // Declared FR/EN basename exceptions (book.yml hard rule 5 carve-outs).
+  // Normalise to bare basenames (without .md) so the lookup at line 187 matches.
   const basenameExceptions = new Set(
-    (book.meta?.basename_exceptions || []).map((e) => `${e.fr}|${e.en}`)
+    (book.meta?.basename_exceptions || []).map((e) => {
+      const frBase = basename(e.fr).replace(/\.md$/, '');
+      const enBase = basename(e.en).replace(/\.md$/, '');
+      return `${frBase}|${enBase}`;
+    })
   );
 
   // ---- 1. Per-page structural drift (existence, emptiness, parity, ordering) ----
