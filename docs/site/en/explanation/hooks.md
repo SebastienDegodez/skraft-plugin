@@ -137,6 +137,30 @@ tool call, the prefix shifts and the cache misses.
 > The measured reduction ratios (cache, model class) are documented on the
 > [Token economy]({{ "/en/explanation/token-economy" | relative_url }}) page.
 
+## What hooks do not cover
+
+Hooks enforce **structural and behavioural invariants** — dispatch order, artifact
+presence, reviewer verdict format, state-file integrity. They are not a general
+anti-hallucination system, and two important limits must be stated explicitly.
+
+### G2 and G3 are not yet active
+
+Guardrail G2 (skill injection at `SubagentStart`) and G3 (skill audit at
+`PostToolUse`) are planned but not implemented. A sub-agent therefore starts
+without a guaranteed skill set today: the expected methodological constraints
+may not be injected, which is a blind spot for *hallucination of method* — the
+agent operates correctly from the runtime's perspective but without the discipline
+the skill would have imposed.
+
+### Structural violations vs. factual hallucinations
+
+Hooks detect **quality hallucinations**: a missing artifact, an out-of-order
+dispatch, a verdict that does not match the written file. They do not detect
+**factual hallucinations**: a business rule invented by the model, a non-existent
+API endpoint cited in the code, or incorrect domain knowledge embedded in a test.
+Factual correctness remains the responsibility of the human reviewer and of
+domain-specific acceptance tests.
+
 ## Further reading
 
 - [Token economy]({{ "/en/explanation/token-economy" | relative_url }}) — the Genesis levers and the measured reduction ratios

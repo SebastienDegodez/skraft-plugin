@@ -54,6 +54,37 @@ The Walking Skeleton validates end-to-end architecture before writing any busine
 > « If you only quantify one thing, quantify the cost of delay. »
 > — Reinertsen, D. G., *The Principles of Product Development Flow*, 2009.
 
+## Current limits and roadmap
+
+The DORA metrics table above is a qualitative projection — not a benchmark measured on
+SKRAFT itself. The causal chain is grounded in established literature (Forsgren et al.,
+Wiegers), but no controlled study has yet measured SKRAFT's impact on a production team.
+Treat those figures as direction, not guarantee.
+
+### Active guardrails (G1, G4, G5, G7, G8)
+
+Five guardrails are operational today. They enforce dispatch order, artifact structure,
+reviewer verdicts, and direct state-file writes at the runtime level — *before* the tool
+executes. These are mechanical, not advisory.
+
+### Planned guardrails (G2, G3) and infrastructure (US6, US13)
+
+Two guardrails are not yet active:
+
+- **G2 (skill injection)** and **G3 (skill audit)** — a sub-agent currently starts
+  without a guaranteed skill set. The expected constraints may not be injected, which
+  is a real blind spot for hallucination of method.
+- **Boundary-to-boundary tests (US6)** — guardrails are unit-tested but not tested
+  end-to-end; a silent regression remains possible.
+- **Recovery/rollback (US13)** — if state is corrupted, the pipeline may stall with
+  no clean exit path.
+
+### Next measurable ROI lever
+
+The largest unactivated cost lever is the **out-of-LLM verdict schema**: today the model
+formats reviewer verdicts, which represents a non-trivial token tax on reviewer output.
+When implemented, this lever will produce a quantifiable reduction in reviewer spend.
+
 ## What SKRAFT requires
 
 - **2–3 days of training** for the team on methodology and agents.

@@ -77,6 +77,17 @@ Second, **speed and stability are not a trade-off**: the highest-performing team
 
 SKRAFT materialises both principles: explicit gates, checked by an independent reviewer, that move defect detection upstream of human review.
 
+## Scope of adversarial review
+
+The adversarial lenses detect **structural and coverage violations**: architecture
+boundaries crossed, tests that verify nothing, a mutation score below threshold, code
+whose intent is opaque. They do not detect **factual hallucinations**: a business rule
+invented by the model, a non-existent external API cited as valid, or incorrect domain
+assumptions embedded in logic. Those errors are invisible to static structural analysis.
+
+Factual correctness requires domain-specific acceptance tests and human reviewer
+judgment — the guardrails keep the structure honest, not the facts.
+
 ## Sources
 
 > « Peer reviews are the single most effective quality practice a software organization can employ. »
