@@ -15,7 +15,6 @@ description: "Les skills SKRAFT : pratiques outillées, ce qu'elles font, quand 
 ### 0) Entrée unique — [skraft-orchestrator]({{ "/fr/reference/agents/skraft-orchestrator" | relative_url }})
 
 - **[skraft-difficulty-routing](skraft-difficulty-routing.html)** — routing 2-axes (entry point, difficulty tier).
-- **[skraft-quality-bar](skraft-quality-bar.html)** — le seul endroit où un seuil qualité est écrit ; tous les gates bloquent.
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — synthèse multi-lentilles pour verdict adverse.
 - **[contract-testing](contract-testing.html)** — capacité contrat API cross-phase (DESIGN → DISTILL → DELIVER).
 - **[playwright-evidence](playwright-evidence.html)** — capture des preuves E2E en fin de pipeline.

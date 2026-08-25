@@ -15,7 +15,6 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 ### 0) Single entry point — [skraft-orchestrator]({{ "/en/reference/agents/skraft-orchestrator" | relative_url }})
 
 - **[skraft-difficulty-routing](skraft-difficulty-routing.html)** — 2-axis routing (entry point, difficulty tier).
-- **[skraft-quality-bar](skraft-quality-bar.html)** — the one place a quality threshold is authored; every gate blocks.
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — multi-lens adversarial synthesis.
 - **[contract-testing](contract-testing.html)** — cross-phase API contract capability (DESIGN → DISTILL → DELIVER).
 - **[playwright-evidence](playwright-evidence.html)** — E2E evidence capture at pipeline end.
