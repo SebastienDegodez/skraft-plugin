@@ -1,0 +1,105 @@
+# Trigger evals — PRESERVED CORPUS, NOT EXECUTED.
+#
+# Vally grades whether a mounted skill was ACTIVATED (`skill-invocation`), not
+# whether an open user sentence would have matched its description against the
+# whole catalogue. That second question is what a trigger eval asks, and there is
+# no harness for it in this repository, so nothing here can be graded by
+# eval.yaml. `run-vally-evals.sh` discovers `eval.yaml` only, so this file is
+# inert for the runner.
+#
+# Materialized from the "Evals plan" section of the GENESIS handoff packet
+# .copilot-tracking/genesis/qg-evidence-toolchain/plan.md (last state fa4b9d0),
+# which specifies "~20, 60/40 train/val" and lists the seed phrasings. The
+# packet's own words are kept as the prompt wherever it gave one; the rest fill
+# the split it asked for. The French entries are deliberate — the packet calls
+# for fr variants because the handbook and the consumer repositories are
+# bilingual, and a description that only matches English silently stops working
+# for half the users.
+#
+# Ship gate (inherited from the sibling worker corpora): validation-split rate
+# >= 0.5 on should_trigger AND < 0.5 on should_not_trigger.
+skill: quality-gates-evidence-contract
+
+should_trigger:
+  - id: T-S-01
+    split: train
+    prompt: "deposit the evidence log for this story"
+    rationale: "The packet's canonical phrasing for producing the log."
+  - id: T-S-02
+    split: train
+    prompt: "attest the mutation score for the loyalty discount work"
+    rationale: "Attestation of a gate, which is what the contract exists to carry."
+  - id: T-S-03
+    split: train
+    prompt: "generate the quality gates report"
+    rationale: "The rendered summary side of the toolchain."
+  - id: T-S-04
+    split: train
+    prompt: "prove the tests passed"
+    rationale: "A falsifiable claim about a gate — prose cannot answer it."
+  - id: T-S-05
+    split: train
+    prompt: "produce the COMMIT phase evidence before I hand this over"
+    rationale: "Names the phase the producer is loaded at."
+  - id: T-S-06
+    split: train
+    prompt: "donne-moi la preuve de réussite des tests pour cette story"
+    rationale: "French variant of T-S-04 — the description must match it too."
+  - id: T-S-07
+    split: val
+    prompt: "assemble the quality gate evidence from what we captured in the evidence folder"
+    rationale: "Assembly from captured substrate, the core producer flow."
+  - id: T-S-08
+    split: val
+    prompt: "the reviewer needs something falsifiable for the gates, not my word for it"
+    rationale: "States the contract's reason for existing without naming it."
+  - id: T-S-09
+    split: val
+    prompt: "produis le rapport markdown des gates pour le relecteur"
+    rationale: "French variant of the render side."
+  - id: T-S-10
+    split: val
+    prompt: "record the build and test results so the quality-gates lens can check them later"
+    rationale: "Names the reader that consumes the contract."
+
+should_not_trigger:
+  - id: T-N-01
+    split: train
+    prompt: "write unit tests for this pricing rule"
+    rationale: "Authoring tests, not attesting that they ran."
+  - id: T-N-02
+    split: train
+    prompt: "run stryker and kill the surviving mutants"
+    rationale: "Running a gate is mutation-testing work; only its attestation is this skill."
+  - id: T-N-03
+    split: train
+    prompt: "review the code in this pull request"
+    rationale: "Review, not evidence production."
+  - id: T-N-04
+    split: train
+    prompt: "configure the CI workflow to run the test suite"
+    rationale: "Pipeline configuration, not an evidence log."
+  - id: T-N-05
+    split: train
+    prompt: "explain how outside-in TDD works"
+    rationale: "Teaching a method, no artefact to attest."
+  - id: T-N-06
+    split: train
+    prompt: "the build gate is failing, fix it"
+    rationale: "Repairing a gate, not recording its outcome."
+  - id: T-N-07
+    split: val
+    prompt: "refactor this aggregate to remove the primitive obsession"
+    rationale: "Domain refactor."
+  - id: T-N-08
+    split: val
+    prompt: "set the repository tracking layout"
+    rationale: "Repo configuration — the config CLI's namespace, not an evidence log."
+  - id: T-N-09
+    split: val
+    prompt: "écris les scénarios Gherkin pour la remise fidélité"
+    rationale: "BDD authoring, not evidence."
+  - id: T-N-10
+    split: val
+    prompt: "why did this test fail on the runner but not locally"
+    rationale: "Debugging a failure, not attesting a result."

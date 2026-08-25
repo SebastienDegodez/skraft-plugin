@@ -1,0 +1,182 @@
+name: test-design-mandates
+description: |
+  Verifies 5 mandatory test design rules guide pre-code coverage planning,
+  ensuring boundaries, layer assignment, domain test extraction gates work correctly.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 3
+scoring:
+  threshold: 1
+
+stimuli:
+  - name: A rule both scenarios already reach needs no test of its own
+    turns:
+      - |
+        My acceptance tests cover a discount calculation: prices under 100 get 10%,
+        100 and above get 15%. Two scenarios already exercise both sides.
+        Should I write a dedicated domain test for that rule?
+      - |
+        Why or why not? Walk me through how you decided.
+    tags:
+      # Regression guard: the baseline scored full marks here, so a tie is the
+      # expected result and a loss is the finding. Worth re-checking after the
+      # next run — that score was measured while the prompt still named the
+      # skill's own framework and its number of gates, which handed the
+      # no-skill arm the shape of the answer for free.
+      role: regression-guard
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-design-mandates
+    rubric:
+      - Concludes that no dedicated test for the rule is needed.
+      - Establishes that both outcomes of the rule are already reached by the planned scenarios.
+      - Notes that the number of cases is small enough for the scenarios to carry them without multiplying.
+      - Records the decision and its reason, so a later reader can see why the extra test was declined.
+
+  - name: A step that names a class is not a business step
+    turns:
+      - |
+        I wrote this step in our eligibility feature file:
+        "Given the EligibilityApplicationService is instantiated".
+        Is that a good step? If not, give me one that is.
+      - |
+        Now show the step definition behind it, and say what belongs in the step
+        and what does not.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-design-mandates
+    rubric:
+      - Rejects "EligibilityApplicationService is instantiated" as a technical detail
+      - Rewrites using business term (e.g. "Given a driver with a clean record")
+      - Explains Gherkin layer must express pure business, not technical wiring
+      - Has the step definition drive the eligibility use case rather than construct domain objects itself
+      - Does not hardcode primitives or DTOs directly in the step
+      - Assembles the request through a named factory or builder instead of inline raw values
+      - Maintains strict abstraction boundary between Gherkin (pure business) and Step (technical bridge)
+
+  - name: Plan the coverage a tiered rule needs before any code exists
+    turns:
+      - |
+        Product approved a three-tier loyalty discount for checkout:
+        - Gold: 95% payable
+        - Silver: 97% payable
+        - Invalid tier: rejection
+
+        Each tier behaves the same either side of a 100 price boundary. Plan the
+        tests this needs, laid out so the team can see, per scenario, which entry
+        point it goes through, which layer it sits in, and why anything below that
+        entry point earned a test of its own.
+      - |
+        Explain which rows need domain tests and why (or why not).
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-design-mandates
+    rubric:
+      - Creates separate scenario rows for Gold, Silver, and Invalid tier (distinct business outcomes)
+      - Consolidates price boundaries into parametrized acceptance tests (not separate scenarios)
+      - Names use case entry boundary (CalculatePayableTotal or equivalent)
+      - Assigns Application layer for each tier scenario
+      - Gives a reason on every row that places a test below the use case boundary, and leaves it empty where no such test is needed.
+      - Concludes that no separate rule-level test is needed, because each tier is covered and both price branches are reachable through the scenarios.
+      - Explains that the tier scenarios plus parametrised boundaries already cover the complete rule
+
+  - name: A rule that reddens five scenarios at once is not redundant coverage
+    prompt: |
+      Our minimum-driver-age rule is reached by five acceptance scenarios. When
+      someone broke it last sprint, all five went red at once. The team wants to
+      stop that happening again: pull the rule into its own unit test and trim the
+      acceptance scenarios back to one, so a break shows up in a single place.
+
+      Is that the right move? Tell me what you would do with the five scenarios.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-design-mandates
+    rubric:
+      - Keeps all five acceptance scenarios rather than trimming them back to one.
+      - Declines to add a dedicated unit test for a rule whose every outcome the scenarios already reach.
+      - Explains that five scenarios failing together shows the rule spans five user journeys, and is the signal rather than duplication.
+      - Names what would have to be true for a separate test to earn its place — an outcome no scenario can reach, or an input grid too large to express as scenarios.
+      - Does not settle for keeping both a dedicated test and the full set of scenarios asserting the same outcome.
+
+  - name: A layout promise is not closed by a test with no layout
+    prompt: |
+      Product approved this for our checkout page: the promotion banner spans the
+      full width of the viewport and sits directly above the order summary, never
+      overlapping it. A developer closed it with a component test that renders the
+      banner and asserts the wrapper carries the full-width class and comes before
+      the summary in the DOM.
+
+      Is that criterion covered? Say what would have to run for it to be.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-design-mandates
+    rubric:
+      - States plainly that the criterion is not covered by the component test.
+      - Explains that a class name and DOM order are proxies, not evidence that the banner was laid out full width or above the summary.
+      - Points out that the rendering environment used reports no real geometry, so a measurement taken there proves nothing.
+      - Requires a test driving a real browser and reading the rendered geometry of both elements.
+      - Keeps the component test for what it does prove instead of proposing to delete it.
+
+  # Advisory, not imperative, and deliberately so. This spec stages no workspace,
+  # so an order to edit a file lands in an empty temp directory: both arms search,
+  # find nothing, and report it. The two arms then differ only in how the judge
+  # scores the same non-answer — measured, it credited the baseline a partial for
+  # "incidental" preservation of tests it had not touched, and charged the skilled
+  # arm full marks for the identical non-answer. Asking for the shape of the fix
+  # keeps the near-miss guard intact and makes every criterion satisfiable without
+  # a filesystem. Do not "restore" the imperative without also staging a fixture.
+  - name: Tidying a green test class is not a coverage decision
+    prompt: |
+      Our refund acceptance tests all pass, but the test class has grown past four
+      hundred lines and the same six-line setup is copied into every one of them.
+      How would you tidy it up? Show me the shape of the result.
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard on the boundary with test-refactoring-catalog: the
+      # coverage is settled and passing, so there is no test left to place at a
+      # boundary or assign to a layer. Cleaning up test code is a sibling's job.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - test-design-mandates
+    rubric:
+      - Proposes hoisting the duplicated setup into one shared setup or fixture, without changing which behaviours the tests cover.
+      - Keeps every existing test case in the proposal rather than merging or dropping any of them.
+      - Does not reopen where each test should enter or which layer it belongs to.
+      - Does not ask for a coverage matrix for tests that already exist and pass.

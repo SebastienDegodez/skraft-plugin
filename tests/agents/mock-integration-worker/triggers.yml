@@ -1,0 +1,105 @@
+# Trigger evals — PRESERVED CORPUS, NOT EXECUTED.
+#
+# Vally has no trigger-routing harness: the agent executor selects the agent
+# deterministically from `tags.agent`, so nothing here can be graded by
+# eval.yaml. This file is carried forward verbatim from the GENESIS eval at
+# evals/mock-integration-worker/triggers.yml (removed by 97705d8) so the
+# dispatch corpus and its ship gate survive the migration. `run-vally-evals.sh`
+# discovers `eval.yaml` only, so this file is inert for the runner.
+#
+# The should_not_trigger half is worth more than the should half here: T-N-02,
+# T-N-06 and T-N-08 are the provider-side phrasings that must route to
+# contract-testing-worker instead, and they are the confusion this worker pair
+# exists to keep apart.
+#
+# ---- original file follows ----
+
+# Trigger evals for mock-integration-worker
+# Source of truth: .specs/specs/2026-06-09-testing-workers-mocking-contract-design.md (Plan d'evals)
+# Total: 20 triggers (10 should / 10 should-not) = 60/40 train/val split
+# Ship gate: validation-split rate >= 0.5 on should_trigger AND < 0.5 on should_not.
+agent: mock-integration-worker
+
+should_trigger:
+  - id: T-S-01
+    split: train
+    prompt: "mock the downstream Eligibility API for this integration test"
+    rationale: "Canonical consumer-side mock of a downstream dependency."
+  - id: T-S-02
+    split: train
+    prompt: "stub the payment service in the integration test"
+    rationale: "Stub a downstream the SUT calls."
+  - id: T-S-03
+    split: train
+    prompt: "I need a fake for the external HTTP dependency the API calls"
+    rationale: "Fake an external HTTP downstream."
+  - id: T-S-04
+    split: train
+    prompt: "set up Microcks for the downstream pastry API in this test"
+    rationale: "Microcks default strategy for a downstream mock."
+  - id: T-S-05
+    split: train
+    prompt: "use Moq instead of the container for the downstream client here"
+    rationale: "In-process override naming a library."
+  - id: T-S-06
+    split: train
+    prompt: "wire the test host against a mocked downstream service"
+    rationale: "Wire the test host to a mock."
+  - id: T-S-07
+    split: val
+    prompt: "replace the real catalog client with a test double in the integration test"
+    rationale: "In-process double for a downstream client."
+  - id: T-S-08
+    split: val
+    prompt: "mock the third-party shipping API so the test does not hit the network"
+    rationale: "Mock a third-party downstream, no real network."
+  - id: T-S-09
+    split: val
+    prompt: "spin up a Microcks mock for the inventory dependency"
+    rationale: "Microcks mock of a downstream dependency."
+  - id: T-S-10
+    split: val
+    prompt: "fake the downstream pricing service with FakeItEasy in this test"
+    rationale: "In-process override naming the preferred library."
+
+should_not_trigger:
+  - id: T-N-01
+    split: train
+    prompt: "write a unit test for this domain rule"
+    rationale: "Unit test, no downstream dependency to mock."
+  - id: T-N-02
+    split: train
+    prompt: "verify the contract with VerifyAsync"
+    rationale: "Provider contract verification — contract-testing-worker, not mocking."
+  - id: T-N-03
+    split: train
+    prompt: "refactor this aggregate to remove the primitive obsession"
+    rationale: "Domain refactor, unrelated to test wiring."
+  - id: T-N-04
+    split: train
+    prompt: "run the mutation suite and kill the surviving mutants"
+    rationale: "Mutation testing, not mock wiring."
+  - id: T-N-05
+    split: train
+    prompt: "add a Gherkin scenario for the eligibility feature"
+    rationale: "BDD authoring, not mock wiring."
+  - id: T-N-06
+    split: train
+    prompt: "write a contract test that our API matches its OpenAPI spec"
+    rationale: "Provider contract test — the other worker."
+  - id: T-N-07
+    split: val
+    prompt: "implement the discount calculation in the domain layer"
+    rationale: "Production domain code, no test double."
+  - id: T-N-08
+    split: val
+    prompt: "set up a Microcks mock so Microcks can call our service and check the contract"
+    rationale: "Provider-side verification phrased with Microcks — not consumer mocking."
+  - id: T-N-09
+    split: val
+    prompt: "review the architecture boundaries of the application layer"
+    rationale: "Architecture review, not mock wiring."
+  - id: T-N-10
+    split: val
+    prompt: "estimate the effort for the eligibility story"
+    rationale: "Planning, not delivery."

@@ -191,6 +191,14 @@ parts:
         purpose_fr: "Ce que SKRAFT permet de customiser ET le RISQUE de reduire les controles (gates, lens, reviewers)."
         purpose_en: "What SKRAFT lets you customize AND the RISK of reducing controls (gates, lenses, reviewers)."
         requires_risk_section: true
+      - id: evaluation
+        type: editorial
+        label_fr: "Évaluer un skill"
+        label_en: "Evaluate a skill"
+        fr: "fr/how-to/evaluation.md"
+        en: "en/how-to/evaluation.md"
+        purpose_fr: "Prouver qu'un skill ameliore la reponse de l'agent : spec d'evaluation, comparaison baseline/skilled, verdict et publication."
+        purpose_en: "Prove a skill improves the agent's answer: evaluation spec, baseline/skilled comparison, verdict and publication."
       - id: contributing
         type: editorial
         label_fr: "Genesis & contribution"
@@ -381,6 +389,14 @@ parts:
         en: "en/explanation/deep-dive/walking-skeleton.md"
         purpose_fr: "Le squelette ambulant : la plus fine tranche end-to-end qui marche."
         purpose_en: "The walking skeleton: the thinnest end-to-end slice that works."
+      - id: lire-un-verdict
+        type: editorial
+        label_fr: "Deep-dive : lire un verdict d'évaluation"
+        label_en: "Deep dive: reading an evaluation verdict"
+        fr: "fr/explanation/deep-dive/lire-un-verdict.md"
+        en: "en/explanation/deep-dive/reading-a-verdict.md"
+        purpose_fr: "Le test des signes, le test de rang et le plancher de six paires, sur des chiffres réels."
+        purpose_en: "The sign test, the rank test and the six-pair floor, on real numbers."
       - id: pourquoi-review-avant-review
         type: editorial
         label_fr: "La revue avant la revue"

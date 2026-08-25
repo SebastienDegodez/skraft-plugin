@@ -1,0 +1,152 @@
+name: software-engineer-delivery
+version: 0.1.0
+description: Verifies that the real SKRAFT Software Engineer drives an approved .NET Clean Architecture behavior through the human RED checkpoint to GREEN, preserves layer boundaries and the outer test, and deposits stack-specific quality evidence.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 8m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
+stimuli:
+  - name: Approved .NET loyalty discount reaches GREEN with Clean Architecture evidence
+    turns:
+      - I want to develop the `loyalty-discount` feature for the Checkout Pricing project.
+      - The test is correct, continue. Complete the feature.
+    tags:
+      agent: software-engineer
+      scenario: approved-dotnet-delivery
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_turns: 2
+      max_duration: 8m
+    environment:
+      files:
+        - src: fixtures/approved-loyalty-discount-red/.gitignore
+          dest: .gitignore
+        - src: fixtures/approved-loyalty-discount-red/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/approved-loyalty-discount-red/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/approved-loyalty-discount-red/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/approved-loyalty-discount-red/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+          dest: src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+          dest: src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+          dest: src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Api/Program.cs
+          dest: src/CheckoutPricing.Api/Program.cs
+        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests.cs
+        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+          dest: tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.IntegrationTest/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.IntegrationTest/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+        - src: fixtures/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md
+        - src: fixtures/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+      commands:
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: approved DISTILL fixture"'
+    graders:
+      - type: completed
+      - type: output-matches
+        name: RED checkpoint reported before implementation
+        turn: 0
+        config:
+          pattern: '(?is)(red|failing test).*(validat|approv)|(?:validat|approv).*(red|failing test)'
+      - type: run-command
+        name: Complete repository test suite is GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Solution build and analyzers are GREEN
+        config:
+          command: dotnet
+          args:
+            - build
+            - CheckoutPricing.slnx
+            - --no-restore
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Clean Architecture dependency tests are GREEN
+        config:
+          command: dotnet
+          args:
+            - test
+            - tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+            - --no-restore
+            - --filter
+            - FullyQualifiedName~Architecture
+          expected_exit_code: 0
+          timeout: 1m
+      - type: diff-contains
+        name: Production behavior changed
+        config:
+          pattern: 'src/CheckoutPricing\.(?:Domain|Application)/.*\.cs'
+      - type: diff-not-contains
+        name: Approved outer acceptance test stayed intact
+        config:
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests\.cs '
+      - type: diff-contains
+        name: Parameterized inner Domain test was added
+        config:
+          pattern: 'tests/CheckoutPricing\.UnitTest/.*\.cs'
+      - type: skill-invocation
+        config:
+          required:
+            - outside-in-tdd
+            - craft-discipline
+            - clean-architecture-testing
+            - mutation-testing
+            - quality-gates-evidence-contract
+            - quality-gates-dotnet
+      - type: file-exists
+        name: Quality-gate evidence contract exists
+        config:
+          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-07/qg-loyalty-discount.json'
+      - type: file-contains
+        name: Evidence identifies the .NET adapter
+        config:
+          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-07/qg-loyalty-discount.json'
+          value: '"tech_adapter": "quality-gates-dotnet"'
+      - type: output-not-matches
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'

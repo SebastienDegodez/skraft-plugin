@@ -14,18 +14,19 @@ import { join } from 'node:path'
 const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
 
-// Enumerate the framework test files ourselves (no shell glob expansion).
-const frameworkTestArgs = () => {
-  const dir = 'tests/skraft-framework'
+// Enumerate test files ourselves (no shell glob expansion).
+const testArgs = (dir, coverage = false) => {
   const files = readdirSync(dir)
     .filter((f) => f.endsWith('.test.mjs'))
     .map((f) => join(dir, f))
-  return ['--test', '--experimental-test-coverage', ...files]
+  return ['--test', ...(coverage ? ['--experimental-test-coverage'] : []), ...files]
 }
 
 // Fast gates — run on every push, fail the whole run if any fails.
 const fastGates = [
-  { name: 'Framework tests & coverage (node --test)', cmd: 'node', args: frameworkTestArgs() },
+  { name: 'Framework tests & coverage (node --test)', cmd: 'node', args: testArgs('tests/skraft-framework', true) },
+  { name: 'Dashboard tooling tests (node --test)', cmd: 'node', args: testArgs('tests/dashboard') },
+  { name: 'Plugin catalogue scan', cmd: 'node', args: ['eng/catalog/scan.mjs'] },
   { name: 'Guardrail config in sync (US2)', cmd: 'node', args: ['plugins/skraft-framework/src/cli/build-config-bin.mjs', '--check'] },
   { name: 'Agent model policy (B12)', cmd: 'node', args: ['plugins/skraft-framework/src/cli/resolve-model-bin.mjs', '--check'] },
 ]

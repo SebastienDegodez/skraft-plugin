@@ -1,6 +1,6 @@
 ---
 name: adversarial-review-lenses
-description: "Use when a reviewer agent must produce an adversarial verdict via 4 independent lenses and weighted synthesis (Genesis A7 pattern)"
+description: "Use when reviewing a phase artifact — a discovery brief, a plan, a design, an acceptance specification, or a slice reported as delivered — and the review has to end in a defensible pass-or-block verdict rather than a list of remarks. Covers judging whether the artifact covers everything that fed into it, whether it matches the business intent, whether it holds together internally, and what it puts at risk downstream, then weighing those into a single call. Not for routine code review of an ordinary change."
 ---
 
 # Adversarial Review Lenses
@@ -11,14 +11,8 @@ Reviewer agents use this procedure to produce an independent, defensible verdict
 
 Every SKRAFT phase reviewer (`backlog-discoverer-reviewer`, `backlog-planner-reviewer`, `solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`) invokes this skill once per review pass, after reading the upstream phase artifact(s) and the relevant `*-review-criteria` skill.
 
-The number of lenses actually executed is governed by the repo-wide depth tier (held in `skraft-config.json`; read with `config.mjs get --key depthTier`, or taken from the orchestrator's dispatch payload):
-
-| Depth tier | Lenses required |
-|---|---|
-| `basic` | 1 (Completeness only) |
-| `standard` | 2 (Completeness + Business Fit) |
-| `comprehensive` (default) | 4 (all lenses) |
-| `custom` | as configured in `userPreferences.customDepth.reviewerLenses`, minimum 1 |
+All four lenses run on every review. There is no reduced mode and no configuration that
+lowers the count.
 
 ## The four lenses
 
@@ -107,7 +101,6 @@ Write the review under `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md`. Begin th
 # {Phase} Review — {slug}
 
 **Verdict:** APPROVED | NEEDS_REWORK | REJECTED
-**Depth tier:** basic | standard | comprehensive | custom
 **Lenses executed:** N
 **Weighted score:** 0.XX
 **Reviewed artifacts:** {relative paths}

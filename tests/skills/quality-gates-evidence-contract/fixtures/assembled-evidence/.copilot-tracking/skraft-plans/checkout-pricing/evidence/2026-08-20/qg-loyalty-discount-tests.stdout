@@ -1,0 +1,6 @@
+Restore complete (0,4s)
+  CheckoutPricing.Domain succeeded (0,9s)
+  CheckoutPricing.Application succeeded (0,6s)
+  CheckoutPricing.UnitTest succeeded (1,2s)
+Test summary: total: 24; failed: 0; succeeded: 24; skipped: 0; duration: 2,1s
+Build succeeded in 5,8s

@@ -27,17 +27,17 @@ persona: tech-lead
 
 ## Exit contract
 
-- Mutation score (percentage)
+- The runner exit code, per scope: core first, then boundary
 - List of surviving mutants classified: **real** (missing test) or **equivalent** (no observable difference)
 - Boundary tests added for each real survivor
-- Verdict: ✅ Proceed to commit / ❌ BLOCK — return to step 4
+- Verdict: ✅ Proceed to commit / ❌ BLOCK — return to step 4 while any real survivor remains
 
 ## Invariants
 
 - **S7 — Deterministic execution** — Mutation testing MUST be executed via terminal tool calls. Do not assert results from prose
 - **A test that kills no mutant is noise** — delete it
-- **Scope exclusions** — Never mutate: DTOs, ViewModels, infrastructure adapters, `DependencyInjection.cs`, `Program.cs`, marker interfaces, generated code
-- **Mutation score 100%** on business logic to proceed to commit (or < 100% with only documented equivalent mutants)
+- **Scope exclusions** — Never mutate: `DependencyInjection.cs`, `Program.cs`, marker interfaces, generated code. Everything authored is in scope, DTOs and adapters included; API and Infrastructure run second, held to their own bar
+- **The runner decides** — `--break-at` fails the run below the bar, so the exit code is the verdict. `skraft-quality-bar` states the bar for each scope
 
 ## Why this shape
 
@@ -55,7 +55,7 @@ The deterministic 5-step flow (run → parse JSON → classify → kill → re-r
 
 ## See also
 
-- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle whose COMMIT phase uses this skill
+- [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — TDD cycle whose COMMIT & VERIFY phase uses this skill
 - [craft-discipline]({{ "/en/reference/skills/craft-discipline" | relative_url }}) — Self-discipline checkpoints before commit
 - [quality-gates-evidence-contract]({{ "/en/reference/skills/quality-gates-evidence-contract" | relative_url }}) — Evidence contract that consumes the mutation score
 - [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — DELIVER agent that runs this skill

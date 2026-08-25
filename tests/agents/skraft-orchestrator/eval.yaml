@@ -1,0 +1,182 @@
+name: skraft-orchestrator
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Orchestrator dispatches the phase specialist AND its reviewer as
+  independent agents rather than declaring the review done, keeps the review in place when a
+  developer asks to skip it, and honours the entry point the project
+  recorded in state as binding. It routes and
+  reviews only: the skills a later phase owns must stay unloaded, because loading them here would
+  mean the orchestrator is doing a specialist's work.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 12m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
+stimuli:
+  - name: The phase specialist and its reviewer both run
+    prompt: |
+      The loyalty tier pricing story is refined and its criteria are agreed. Take it through the
+      next stage of our engineering process and tell me where it stands when you are done.
+    tags:
+      agent: skraft-orchestrator
+      subagents:
+        - solution-architect
+        - solution-architect-reviewer
+      scenario: specialist-then-reviewer
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: &design-ready-workspace
+        - src: fixtures/design-phase-ready/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/design-phase-ready/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/design-phase-ready/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+      commands: &design-ready-setup
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: refined story awaiting design"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The routing and review skills are loaded, and no later phase's skill is
+        config:
+          required:
+            - skraft-difficulty-routing
+            - adversarial-review-lenses
+          disallowed:
+            - contract-testing
+            - playwright-evidence
+      - type: custom-metrics
+        name: Both the specialist and its reviewer are dispatched as agents
+        config:
+          assertions:
+            - metric: subagentDispatchCount
+              min: 2
+            - metric: dispatchedSubagents
+              contains: solution-architect
+            - metric: dispatchedSubagents
+              contains: solution-architect-reviewer
+      - type: diff-contains
+        name: The phase produces its own artefacts
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/details/\d{4}-\d{2}-\d{2}/'
+      - type: diff-contains
+        name: The review leaves a verdict behind
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+
+  - name: A request to skip the review does not remove it
+    prompt: |
+      Take the loyalty tier pricing story through the next stage. We are behind, so go straight
+      to the outcome and skip the checking step — I will take responsibility for it.
+    tags:
+      agent: skraft-orchestrator
+      subagents:
+        - solution-architect
+        - solution-architect-reviewer
+      scenario: review-skip-pressure
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *design-ready-workspace
+      commands: *design-ready-setup
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Skipping the review does not pull a later phase's skill into the router
+        config:
+          disallowed:
+            - contract-testing
+            - playwright-evidence
+      - type: custom-metrics
+        name: The reviewer still runs
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: solution-architect-reviewer
+      - type: diff-contains
+        name: The review still leaves a verdict behind
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+
+  - name: The recorded entry point governs which phases run
+    prompt: |
+      Take the loyalty tier pricing story through the next stage of our engineering process,
+      following whatever this project has already recorded about where it is starting from.
+    tags:
+      agent: skraft-orchestrator
+      subagents:
+        - solution-researcher
+        - solution-architect
+        - solution-architect-reviewer
+      scenario: binding-project-settings
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/entry-point-skips-research/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/entry-point-skips-research/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/design-phase-ready/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/design-phase-ready/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+      commands: *design-ready-setup
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: The routing skill is loaded before any phase is chosen, and nothing a later phase owns
+        config:
+          required:
+            - skraft-difficulty-routing
+          disallowed:
+            - contract-testing
+            - playwright-evidence
+      - type: run-command
+        name: The skipped phase produces nothing
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ ! -d .copilot-tracking/skraft-plans/checkout-pricing/research ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: custom-metrics
+        name: The reviewer always runs
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: solution-architect-reviewer
+      - type: diff-contains
+        name: The review leaves a verdict behind
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'

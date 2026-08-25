@@ -82,7 +82,6 @@ const fullVerdict = () => ({
   date: '2026-07-01',
   attempt: 1,
   verdict: 'APPROVED',
-  depthTier: 'comprehensive',
   lensCount: 4,
   score: 0.92,
   lenses: [
@@ -147,7 +146,7 @@ test('validate: review-comment reports missing required keys', () => {
   assert.deepEqual(result.missing, ['verdictLabel', 'nextPhase'])
 })
 
-test('renderArtifact: review-comment skips the optional depthTier/evidence blocks', () => {
+test('renderArtifact: review-comment skips the optional difficulty/evidence blocks', () => {
   const output = renderArtifact('review-comment', fullComment())
   assert.match(output, /## Phase DISCUSS ✅ APPROVED/)
   assert.match(output, /\*\*Reviewer verdict:\*\* APPROVED \(attempt 1\)/)
@@ -155,11 +154,15 @@ test('renderArtifact: review-comment skips the optional depthTier/evidence block
   assert.doesNotMatch(output, /Evidence:/)
 })
 
-test('renderArtifact: review-comment renders the difficulty block when depthTier is present', () => {
+test('renderArtifact: review-comment renders the difficulty block on its own gate', () => {
   const output = renderArtifact('review-comment', {
     ...fullComment(),
     difficulty: 'medium-hard',
-    depthTier: 'comprehensive',
   })
-  assert.match(output, /\*\*Difficulty:\*\* `medium-hard` · \*\*Depth tier:\*\* comprehensive/)
+  assert.match(output, /\*\*Difficulty:\*\* `medium-hard`/)
+})
+
+test('renderArtifact: review-comment omits the difficulty block when difficulty is absent', () => {
+  const output = renderArtifact('review-comment', fullComment())
+  assert.doesNotMatch(output, /\*\*Difficulty:\*\*/)
 })

@@ -1,0 +1,23 @@
+{
+  "story": "loyalty-discount",
+  "date": "2026-08-13",
+  "build": {
+    "command": "dotnet build CheckoutPricing.slnx --no-restore",
+    "exitCode": 0
+  },
+  "tests": {
+    "command": "dotnet test CheckoutPricing.slnx --no-restore",
+    "exitCode": 0,
+    "passed": 5,
+    "failed": 0
+  },
+  "mutation": {
+    "command": "dotnet stryker",
+    "score": 0.92,
+    "threshold": 0.8
+  },
+  "redGreen": {
+    "redObserved": true,
+    "greenObserved": true
+  }
+}

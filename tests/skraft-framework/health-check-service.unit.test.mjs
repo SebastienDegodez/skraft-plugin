@@ -57,19 +57,17 @@ test('health-check: absent audit log → present false, 0 entries', async () => 
   assert.equal(report.logs.entries, 0)
 })
 
-test('health-check: reports depthTier + resolved observability from config', async () => {
+test('health-check: reports the resolved observability from config', async () => {
   const report = await makeService({
-    [CONFIG]: JSON.stringify({ depthTier: 'standard', observability: { stalePhaseHours: 12 } }),
+    [CONFIG]: JSON.stringify({ observability: { stalePhaseHours: 12 } }),
   }).run()
   assert.equal(report.config.present, true)
-  assert.equal(report.config.depthTier, 'standard')
   assert.equal(report.config.observability.stalePhaseHours, 12)
 })
 
 test('health-check: absent config → defaults, present false', async () => {
   const report = await makeService({}).run()
   assert.equal(report.config.present, false)
-  assert.equal(report.config.depthTier, null)
   assert.deepEqual(report.config.observability, DEFAULT_OBSERVABILITY)
 })
 

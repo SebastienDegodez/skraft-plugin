@@ -47,7 +47,7 @@ async function run() {
         process.exitCode = domainExitCode(result.error.code)
         return
       }
-      writeSuccess({ created: result.value.created, depthTier: result.value.depthTier })
+      writeSuccess({ created: result.value.created, trackingLayout: result.value.trackingLayout })
       break
     }
 

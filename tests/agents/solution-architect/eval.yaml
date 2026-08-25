@@ -1,0 +1,234 @@
+name: solution-architect
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Solution Architect loads its mandatory architecture skills,
+  turns a refined story into decisions of record without writing code or tests, halts when the
+  acceptance criteria it depends on are absent, and surfaces a contradicted decision instead of
+  silently rewriting it.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 8m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
+stimuli:
+  - name: Refined story becomes decisions of record without touching code
+    prompt: |
+      The loyalty tier of a returning customer has to change what they pay at checkout. The
+      story and its acceptance criteria are agreed, and nothing has been built yet. Work out
+      how this service should be shaped to support it, and leave behind something the next
+      person can act on and argue with — including which choices are now settled for this
+      codebase and why.
+    tags:
+      agent: solution-architect
+      scenario: refined-story-to-decisions
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/refined-loyalty-story/README.md
+          dest: README.md
+        - src: fixtures/refined-loyalty-story/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/refined-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/refined-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/refined-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/refined-loyalty-story/docs/adr/adr-001-integer-cent-money.md
+          dest: docs/adr/adr-001-integer-cent-money.md
+        - src: fixtures/refined-loyalty-story/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/refined-loyalty-story/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+        - src: fixtures/refined-loyalty-story/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/refined-loyalty-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: refined loyalty story"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mandatory architecture skills are loaded
+        config:
+          required:
+            - architecture-patterns
+            - architecture-decisions
+      - type: output-not-matches
+        name: No mandatory skill is reported as unavailable
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+      - type: run-command
+        name: A new decision of record is added to the decision set
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ "$(ls docs/adr/adr-*.md | wc -l)" -ge 2 ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: Design artefacts land in the DESIGN artefact location
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/details/\d{4}-\d{2}-\d{2}/'
+      - type: run-command
+        name: No production or test code is written during design
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- src tests)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The already-ratified money decision is left alone
+        config:
+          command: git
+          args:
+            - 'diff'
+            - '--quiet'
+            - '--'
+            - 'docs/adr/adr-001-integer-cent-money.md'
+          expected_exit_code: 0
+          timeout: 30s
+
+  - name: Absent acceptance criteria halt the design pass
+    prompt: |
+      Design the loyalty tier pricing change for this service so the next phase can start
+      from it.
+    tags:
+      agent: solution-architect
+      scenario: missing-acceptance-criteria
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/refined-loyalty-story/README.md
+          dest: README.md
+        - src: fixtures/refined-loyalty-story/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/refined-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/refined-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/refined-loyalty-story/docs/adr/adr-001-integer-cent-money.md
+          dest: docs/adr/adr-001-integer-cent-money.md
+        - src: fixtures/refined-loyalty-story/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/refined-loyalty-story/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+        - src: fixtures/refined-loyalty-story/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/refined-loyalty-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+    graders:
+      - type: completed
+      - type: output-matches
+        name: The missing input is reported as a structured blocker
+        config:
+          pattern: '(?s)"status"\s*:\s*"blocked"'
+      - type: diff-empty
+      - type: skill-invocation
+        name: Mandatory design skills are loaded
+        config:
+          required:
+            - architecture-patterns
+            - architecture-decisions
+
+  - name: A contradicted decision is surfaced instead of quietly rewritten
+    prompt: |
+      Same loyalty tier pricing story, now against the decisions this service already carries.
+      One of them settled where reductions get computed, and it was taken for a very different
+      kind of reduction. Design this story properly and make sure nobody downstream inherits a
+      contradiction they cannot see.
+    tags:
+      agent: solution-architect
+      scenario: contradicted-decision
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/refined-loyalty-story/README.md
+          dest: README.md
+        - src: fixtures/refined-loyalty-story/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/refined-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/refined-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/refined-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/refined-loyalty-story/docs/adr/adr-001-integer-cent-money.md
+          dest: docs/adr/adr-001-integer-cent-money.md
+        - src: fixtures/refined-loyalty-story/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+        - src: fixtures/superseding-story/docs/adr/adr-002-reductions-in-api-layer.md
+          dest: docs/adr/adr-002-reductions-in-api-layer.md
+        - src: fixtures/superseding-story/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/refined-loyalty-story/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/refined-loyalty-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: story contradicting a ratified decision"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mandatory architecture skills are loaded
+        config:
+          required:
+            - architecture-patterns
+            - architecture-decisions
+      - type: run-command
+        name: The contradicted decision is not edited in place
+        config:
+          command: git
+          args:
+            - 'diff'
+            - '--quiet'
+            - '--'
+            - 'docs/adr/adr-002-reductions-in-api-layer.md'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The contradiction is recorded where a human can ratify it
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'git status --porcelain -- .copilot-tracking docs/adr | grep -qiE "supersession|decision-drift|blocker"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No production or test code is written during design
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- src tests)" ]'
+          expected_exit_code: 0
+          timeout: 30s

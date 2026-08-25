@@ -1,6 +1,6 @@
 ---
 name: craft-discipline
-description: Use when completing a TDD phase or before committing — self-discipline checkpoints the software-engineer runs against their own output. Not a review contract. The reviewer verifies artifacts independently.
+description: Use when a change looks finished and is about to be committed, or a phase has just turned green — the self-check the software-engineer runs before claiming the work is done. Not a review contract. The reviewer verifies artifacts independently.
 ---
 
 # Craft Discipline
@@ -66,19 +66,14 @@ Check UnitTest files:
 Test names, variables, and assertions use business vocabulary
 (see the project's FR→EN lexicon). No `test1`, `data`, `ProcessData`.
 
-### C8 — 100% mutation score on business logic
+### C8 — mutation score meets the bar
 
 **S7 DETERMINISTIC TOOL BRIDGE — execute via terminal, not prose.**
 
-1. Run Stryker via `runInTerminal`:
-```bash
-dotnet stryker \
-  --project <Domain-or-Application.csproj> \
-  -tp <UnitTests.csproj> \
-  --since:main \
-  --break-at 100 \
-  --reporter json --reporter cleartext
-```
+1. Resolve the stack's adapter (`resolving-stack-commands`) and run its mutation
+   scripts in order — core first, then boundary. Each script carries the threshold for
+   its scope and returns the verdict as an exit code; `skraft-quality-bar` states the
+   values. Never hand-assemble the runner invocation here.
 2. Parse output — extract survivors.
 3. For real survivors → write boundary test → re-run scoped.
 4. For equivalent mutants → document in code comment.

@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - "docs/site/**"
+      - "eng/**"
+      - "plugins/skills/**"
+      - "plugins/agents/**"
+      - "plugins/.claude-plugin/plugin.json"
+      - "tests/skills/**"
       - ".github/workflows/pages-deploy.yml"
   workflow_dispatch:
 
@@ -31,9 +36,21 @@ jobs:
           bundler-cache: true
           working-directory: docs/site
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
+
+      # The dashboard catalogue is derived from the plugin sources at build time,
+      # so the published page can never drift from what the plugin ships.
+      - name: Build the dashboard catalogue
+        run: |
+          node eng/catalog/scan.mjs
+          node eng/dashboard/build.mjs --repository "${{ github.repository }}"
 
       - name: Build with Jekyll
         working-directory: docs/site
@@ -43,6 +60,43 @@ jobs:
           bundle exec jekyll build \
             --baseurl "${{ steps.pages.outputs.base_path }}" \
             --destination ../../_site
+
+      # AGENTVIZ replays the raw agent trajectories the evaluation runs record.
+      # It is a third-party SPA, built from a pinned commit and never vendored.
+      - name: Resolve the AGENTVIZ commit
+        id: agentviz
+        run: |
+          sha="$(git ls-remote https://github.com/jayparikh/agentviz.git refs/heads/main | cut -f1)"
+          if [ -z "$sha" ]; then
+            echo "::error::Could not resolve the AGENTVIZ main branch"
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the AGENTVIZ build
+        id: agentviz-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/agentviz-dist
+          key: agentviz-dist-${{ steps.agentviz.outputs.sha }}
+
+      - name: Build AGENTVIZ
+        if: steps.agentviz-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          git clone https://github.com/jayparikh/agentviz.git /tmp/agentviz-src
+          cd /tmp/agentviz-src
+          git checkout "${{ steps.agentviz.outputs.sha }}"
+          npm ci
+          npm run build
+          mkdir -p /tmp/agentviz-dist
+          cp -r dist/* /tmp/agentviz-dist/
+
+      - name: Publish AGENTVIZ under the dashboard
+        run: |
+          mkdir -p _site/dashboard/replay
+          cp -r /tmp/agentviz-dist/* _site/dashboard/replay/
+          echo "${{ steps.agentviz.outputs.sha }}" > _site/dashboard/replay/.agentviz-commit
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

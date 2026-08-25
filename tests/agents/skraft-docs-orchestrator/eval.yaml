@@ -1,0 +1,362 @@
+name: skraft-docs-orchestrator
+version: 0.1.0
+description: >-
+  Verifies that the SKRAFT handbook reconciler repairs documentation drift the way its boundaries
+  say it must: detection is a deterministic tool call and never an assertion from recall, plugin
+  sources are read-only, a derived page lands in FR and EN with the same basename, and a
+  structural gap is fixed in the contract rather than papered over in prose.
+  Migrated from the GENESIS content evals at evals/skraft-docs-orchestrator/content.yml
+  (removed by 97705d8, "feat(evals): adopt vally evaluation pipeline"). The GENESIS
+  with_skill/without_skill delta has no equivalent here — an agent suite is single-arm — so each
+  fixture's `value_delta` became a grader on the behaviour it claimed. The 18 trigger evals have
+  no vally equivalent at all and are preserved verbatim in ./triggers.yml.
+  Every fixture in this suite was verified by running the real scripts/scan-drift.mjs and
+  scripts/lint-nav.mjs against it, so the drift each stimulus starts from is a fact, not a claim.
+  DISABLED: listed in eng/vally-adapter/skip-evals.txt. See ./README.md.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 10m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
+stimuli:
+  # C-01-orphan-agent-gets-individual-page.
+  # Verified: scan-drift.mjs on this fixture reports exactly one item —
+  # missing-page / workers-mock-integration-worker (high, lang "both").
+  - name: An orphan source becomes an individually listed page, mirrored FR and EN
+    prompt: |
+      Reconcile the handbook with the plugin sources.
+    tags:
+      agent: skraft-docs-orchestrator
+      subagents:
+        - skraft-docs-placement-architect
+        - skraft-docs-derived-writer
+        - skraft-docs-reviewer
+      scenario: orphan-source-missing-page
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 10m
+    environment:
+      files:
+        # The deterministic toolchain, taken from the repository itself rather than
+        # copied: a scanner that drifts from the shipped one would grade a fiction.
+        - src: ../../../scripts/scan-drift.mjs
+          dest: scripts/scan-drift.mjs
+        - src: ../../../scripts/lint-nav.mjs
+          dest: scripts/lint-nav.mjs
+        - src: ../../../scripts/check-citations.mjs
+          dest: scripts/check-citations.mjs
+        - src: ../../../scripts/lib/book.mjs
+          dest: scripts/lib/book.mjs
+        - src: ../../../plugins/skraft-framework/src/domain/yaml-parser.mjs
+          dest: plugins/skraft-framework/src/domain/yaml-parser.mjs
+        - src: fixtures/handbook-with-orphan-worker/docs/site/_data/book.yml
+          dest: docs/site/_data/book.yml
+        - src: fixtures/handbook-with-orphan-worker/docs/site/fr/reference/workers/contract-testing-worker.md
+          dest: docs/site/fr/reference/workers/contract-testing-worker.md
+        - src: fixtures/handbook-with-orphan-worker/docs/site/en/reference/workers/contract-testing-worker.md
+          dest: docs/site/en/reference/workers/contract-testing-worker.md
+        - src: fixtures/handbook-with-orphan-worker/plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md
+          dest: plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md
+        - src: fixtures/handbook-with-orphan-worker/plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md
+          dest: plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md
+      commandTimeout: 2m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "docs: handbook with one orphan worker source"'
+    graders:
+      - type: completed
+      - type: file-exists
+        name: The FR page for the orphan source exists
+        config:
+          path: 'docs/site/fr/reference/workers/mock-integration-worker.md'
+      - type: file-exists
+        name: The EN mirror exists under the same basename
+        config:
+          path: 'docs/site/en/reference/workers/mock-integration-worker.md'
+      - type: file-matches
+        name: The FR page declares its language and a position in the menu
+        config:
+          path: 'docs/site/fr/reference/workers/mock-integration-worker.md'
+          pattern: '(?m)^lang:\s*fr\s*$'
+      - type: file-matches
+        name: The EN page declares its language
+        config:
+          path: 'docs/site/en/reference/workers/mock-integration-worker.md'
+          pattern: '(?m)^lang:\s*en\s*$'
+      # The page is DERIVED: it must reuse the worker's own vocabulary rather
+      # than paraphrase it into something the source never says.
+      - type: file-matches
+        name: The page reuses the source's canonical vocabulary
+        config:
+          path: 'docs/site/en/reference/workers/mock-integration-worker.md'
+          pattern: '(?i)microcks'
+      - type: file-matches
+        name: The override the worker actually implements is named
+        config:
+          path: 'docs/site/en/reference/workers/mock-integration-worker.md'
+          pattern: '(?i)inprocess|in-process'
+      - type: diff-not-contains
+        name: The plugin source was read, never edited
+        config:
+          pattern: '(?m)^diff --git a/plugins/'
+      # Detection is a tool call. An orchestrator that asserted the drift list
+      # from recall leaves no ledger behind.
+      - type: run-command
+        name: The repaired handbook now scans clean
+        config:
+          command: node
+          args:
+            - 'scripts/scan-drift.mjs'
+            - '--root'
+            - '.'
+            - '--book'
+            - 'docs/site/_data/book.yml'
+            - '--site-root'
+            - 'docs/site'
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: Navigation still validates after the repair
+        config:
+          command: node
+          args:
+            - 'scripts/lint-nav.mjs'
+            - '--root'
+            - '.'
+            - '--book'
+            - 'docs/site/_data/book.yml'
+            - '--site-root'
+            - 'docs/site'
+          expected_exit_code: 0
+          timeout: 2m
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+
+  # C-02-missing-diataxis-mode-is-a-contract-fix.
+  # Verified: lint-nav.mjs on this fixture reports exactly one problem,
+  # NAV-MODE-MISSING on parts[0], and exits 1.
+  - name: A part missing its Diataxis mode is fixed in the contract, not in the prose
+    prompt: |
+      Reconcile the handbook with the plugin sources.
+    tags:
+      agent: skraft-docs-orchestrator
+      subagents:
+        - skraft-docs-placement-architect
+        - skraft-docs-reviewer
+      scenario: missing-diataxis-mode
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 8m
+    environment:
+      files:
+        - src: ../../../scripts/scan-drift.mjs
+          dest: scripts/scan-drift.mjs
+        - src: ../../../scripts/lint-nav.mjs
+          dest: scripts/lint-nav.mjs
+        - src: ../../../scripts/check-citations.mjs
+          dest: scripts/check-citations.mjs
+        - src: ../../../scripts/lib/book.mjs
+          dest: scripts/lib/book.mjs
+        - src: ../../../plugins/skraft-framework/src/domain/yaml-parser.mjs
+          dest: plugins/skraft-framework/src/domain/yaml-parser.mjs
+        - src: fixtures/handbook-missing-diataxis-mode/docs/site/_data/book.yml
+          dest: docs/site/_data/book.yml
+        - src: fixtures/handbook-missing-diataxis-mode/docs/site/fr/reference/workers/contract-testing-worker.md
+          dest: docs/site/fr/reference/workers/contract-testing-worker.md
+        - src: fixtures/handbook-missing-diataxis-mode/docs/site/en/reference/workers/contract-testing-worker.md
+          dest: docs/site/en/reference/workers/contract-testing-worker.md
+        - src: fixtures/handbook-missing-diataxis-mode/docs/site/fr/reference/workers/mock-integration-worker.md
+          dest: docs/site/fr/reference/workers/mock-integration-worker.md
+        - src: fixtures/handbook-missing-diataxis-mode/docs/site/en/reference/workers/mock-integration-worker.md
+          dest: docs/site/en/reference/workers/mock-integration-worker.md
+        - src: fixtures/handbook-missing-diataxis-mode/plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md
+          dest: plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md
+        - src: fixtures/handbook-missing-diataxis-mode/plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md
+          dest: plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md
+      commandTimeout: 2m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "docs: handbook whose reference part declares no mode"'
+    graders:
+      - type: completed
+      - type: run-command
+        name: Navigation validates — the structural gap was closed
+        config:
+          command: node
+          args:
+            - 'scripts/lint-nav.mjs'
+            - '--root'
+            - '.'
+            - '--book'
+            - 'docs/site/_data/book.yml'
+            - '--site-root'
+            - 'docs/site'
+          expected_exit_code: 0
+          timeout: 2m
+      - type: file-matches
+        name: The mode was declared on the part, in the contract
+        config:
+          path: 'docs/site/_data/book.yml'
+          pattern: '(?m)^\s*diataxis_mode:\s*reference\s*$'
+      - type: file-not-matches
+        name: No mode outside the four the contract allows was invented
+        config:
+          path: 'docs/site/_data/book.yml'
+          pattern: '(?m)^\s*diataxis_mode:\s*(?!tutorial|how-to|explanation|reference)\S'
+      # A structural fix is a one-line contract patch. Rewriting page bodies to
+      # "fix" a contract field is the miss this stimulus exists to catch.
+      - type: diff-not-contains
+        name: No page prose was rewritten for a contract-level gap
+        config:
+          pattern: '(?m)^diff --git a/docs/site/(?:fr|en)/'
+      - type: diff-not-contains
+        name: The plugin sources were read, never edited
+        config:
+          pattern: '(?m)^diff --git a/plugins/'
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+
+  # C-03-no-invented-metric-in-editorial.
+  # Verified: scan-drift.mjs on this fixture reports exactly one item —
+  # missing-page / for-executives, pageType editorial.
+  - name: An editorial gap is written complete, with untraceable figures marked as estimates
+    prompt: |
+      Reconcile the handbook with the plugin sources.
+    tags:
+      agent: skraft-docs-orchestrator
+      subagents:
+        - skraft-docs-placement-architect
+        - skraft-docs-editorial-writer
+        - skraft-docs-reviewer
+      scenario: editorial-gap
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 10m
+    environment:
+      files:
+        - src: ../../../scripts/scan-drift.mjs
+          dest: scripts/scan-drift.mjs
+        - src: ../../../scripts/lint-nav.mjs
+          dest: scripts/lint-nav.mjs
+        - src: ../../../scripts/check-citations.mjs
+          dest: scripts/check-citations.mjs
+        - src: ../../../scripts/lib/book.mjs
+          dest: scripts/lib/book.mjs
+        - src: ../../../plugins/skraft-framework/src/domain/yaml-parser.mjs
+          dest: plugins/skraft-framework/src/domain/yaml-parser.mjs
+        - src: fixtures/handbook-missing-editorial-page/docs/site/_data/book.yml
+          dest: docs/site/_data/book.yml
+        - src: fixtures/handbook-missing-editorial-page/docs/site/fr/reference/workers/contract-testing-worker.md
+          dest: docs/site/fr/reference/workers/contract-testing-worker.md
+        - src: fixtures/handbook-missing-editorial-page/docs/site/en/reference/workers/contract-testing-worker.md
+          dest: docs/site/en/reference/workers/contract-testing-worker.md
+        - src: fixtures/handbook-missing-editorial-page/docs/site/fr/reference/workers/mock-integration-worker.md
+          dest: docs/site/fr/reference/workers/mock-integration-worker.md
+        - src: fixtures/handbook-missing-editorial-page/docs/site/en/reference/workers/mock-integration-worker.md
+          dest: docs/site/en/reference/workers/mock-integration-worker.md
+        - src: fixtures/handbook-missing-editorial-page/plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md
+          dest: plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md
+        - src: fixtures/handbook-missing-editorial-page/plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md
+          dest: plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md
+      commandTimeout: 2m
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add -A'
+        - 'git commit --quiet -m "docs: handbook missing its executive page"'
+    graders:
+      - type: completed
+      - type: file-exists
+        name: The FR editorial page exists
+        config:
+          path: 'docs/site/fr/for-executives.md'
+      - type: file-exists
+        name: The EN editorial page exists under the same basename
+        config:
+          path: 'docs/site/en/for-executives.md'
+      - type: file-not-matches
+        name: The FR page was written complete, not left as a skeleton
+        config:
+          path: 'docs/site/fr/for-executives.md'
+          pattern: '(?i)\bTODO\b|\bTBD\b|à compléter|<!--\s*fill'
+      - type: file-not-matches
+        name: The EN page was written complete, not left as a skeleton
+        config:
+          path: 'docs/site/en/for-executives.md'
+          pattern: '(?i)\bTODO\b|\bTBD\b|to be completed|<!--\s*fill'
+      # The failure worth catching on an editorial page is a confident number:
+      # an ROI, a percentage or a timeline the code cannot back. Either the
+      # figure is hedged, or it should not be there at all.
+      - type: run-command
+        name: No quantitative claim is presented as a sourced fact
+        config:
+          command: node
+          args:
+            - '-e'
+            - |
+              const { readFileSync } = require('node:fs')
+              const hedge = /\((?:estimated|estimé|estime)\)/i
+              let failed = false
+              for (const page of ['docs/site/fr/for-executives.md', 'docs/site/en/for-executives.md']) {
+                for (const line of readFileSync(page, 'utf8').split('\n')) {
+                  if (/^\s*(?:[-*+]|\d+\.)?\s*(?:\||#)/.test(line)) continue
+                  const figure = /\b\d+(?:[.,]\d+)?\s*(?:%|x\b|×|weeks?|semaines?|months?|mois|days?|jours?)/i
+                  if (figure.test(line) && !hedge.test(line)) {
+                    console.error('Unhedged figure in ' + page + ': ' + line.trim())
+                    failed = true
+                  }
+                }
+              }
+              if (failed) process.exit(1)
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: The handbook scans clean once the gap is filled
+        config:
+          command: node
+          args:
+            - 'scripts/scan-drift.mjs'
+            - '--root'
+            - '.'
+            - '--book'
+            - 'docs/site/_data/book.yml'
+            - '--site-root'
+            - 'docs/site'
+          expected_exit_code: 0
+          timeout: 2m
+      - type: diff-not-contains
+        name: The plugin sources were read, never edited
+        config:
+          pattern: '(?m)^diff --git a/plugins/'
+      - type: output-not-matches
+        name: No skill failed to load
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'

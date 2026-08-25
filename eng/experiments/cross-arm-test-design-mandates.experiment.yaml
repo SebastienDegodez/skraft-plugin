@@ -1,0 +1,120 @@
+name: cross-arm-test-design-mandates
+
+# Does a sibling skill already pass this eval's exam?
+#
+# The two-arm design under eng/run-vally-evals.sh answers "does this skill help
+# against no skill at all", which cannot tell a skill that earns its place from
+# one whose sibling already does the same job. That distinction is the whole
+# merge-or-keep decision, and it needs a third arm: the same spec, the same
+# stimuli, the same everything — run with only the sibling mounted.
+#
+#   lift(under-test) ~= lift(sibling)  -> the sibling passes this exam too; merge
+#   lift(under-test)  > lift(sibling)  -> this skill carries something of its own
+#   lift(under-test) ~= 0 < lift(sibling) -> subsumed; delete
+#   both ~= 0                          -> the eval sees nothing; fix the eval
+#
+# `vary` is what makes this a controlled comparison rather than three unrelated
+# runs: any difference between the variants outside /environment/skills is a
+# hard error at resolve time, so the arms cannot drift apart by accident.
+#
+# Validate without spending a single trial:
+#   vally experiment run eng/experiments/cross-arm-test-design-mandates.experiment.yaml --dry-run
+#
+# `--dry-run` checks the structure and the `vary` invariant. It does NOT check
+# that the paths below resolve — a typo produces an arm with nothing mounted,
+# which reads downstream exactly like "the skill did not help". That gap is
+# closed by a separate check, which the lint job runs on every pull request:
+#
+#   node eng/check-experiment-paths.mjs
+#
+# Pair the variants afterwards with the adapter that already reads two JSONL
+# streams — no new statistics, just three invocations:
+#   node eng/vally-adapter/adapt.mjs --baseline <no-skill>/results.jsonl \
+#        --skilled <under-test>/results.jsonl --skill test-design-mandates
+
+evals:
+  - ../../tests/skills/test-design-mandates/eval.yaml
+
+vary:
+  - /environment/skills
+
+baseline: no-skill
+
+variants:
+  # The control. An explicit empty list rather than an omitted field: omitting it
+  # would inherit whatever the spec declares, which is exactly the drift `vary`
+  # exists to catch.
+  no-skill:
+    environment:
+      skills: []
+
+  under-test:
+    environment:
+      skills:
+        - ../../plugins/skraft-framework/skills/test-design-mandates
+
+  # The suspected overlap, from PLAN-differentiation-skills.md. Mounted alone,
+  # never alongside the skill under test: the question is whether it can pass
+  # this exam by itself, not whether the pair is better than either.
+  sibling-outside-in-tdd:
+    environment:
+      skills:
+        - ../../plugins/skraft-framework/skills/outside-in-tdd
+
+  # The configuration that actually ships. The isolated arm above measures
+  # this skill with its delegations dangling: it tells the agent to follow a
+  # sibling that is not mounted, so part of the method it describes cannot be
+  # reached. Its SKILL.md points the scenario layer at `bdd-methodology`.
+  as-shipped:
+    environment:
+      skills:
+        - ../../plugins/skraft-framework/skills/test-design-mandates
+        - ../../plugins/skraft-framework/skills/bdd-methodology
+
+  # The configuration a developer actually has: the whole plugin available,
+  # the agent free to reach for whatever it judges relevant. It answers a
+  # different question from the arms above — not "what does this skill add"
+  # but "does the shipped plugin help on this task at all" — and it buys
+  # something the declared arms cannot: `skillActivationBreakdown` records
+  # which skills the agent actually pulled in, so the dependency closure is
+  # measured rather than read out of prose. Availability is not activation:
+  # on the agent suites all 36 of these are mounted and three activate.
+  all-skills:
+    environment:
+      skills:
+        - ../../plugins/skraft-framework/skills/acceptance-review-criteria
+        - ../../plugins/skraft-framework/skills/adr-eligibility-gate
+        - ../../plugins/skraft-framework/skills/adversarial-review-lenses
+        - ../../plugins/skraft-framework/skills/architecture-decisions
+        - ../../plugins/skraft-framework/skills/architecture-patterns
+        - ../../plugins/skraft-framework/skills/architecture-review-criteria
+        - ../../plugins/skraft-framework/skills/bdd-methodology
+        - ../../plugins/skraft-framework/skills/characterize-brownfield
+        - ../../plugins/skraft-framework/skills/characterize-with-contracts
+        - ../../plugins/skraft-framework/skills/clean-architecture-testing
+        - ../../plugins/skraft-framework/skills/compose-brownfield-prd
+        - ../../plugins/skraft-framework/skills/contract-testing
+        - ../../plugins/skraft-framework/skills/contract-testing-dotnet
+        - ../../plugins/skraft-framework/skills/contract-testing-roster
+        - ../../plugins/skraft-framework/skills/craft-discipline
+        - ../../plugins/skraft-framework/skills/discovery-review-criteria
+        - ../../plugins/skraft-framework/skills/github-search-protocol
+        - ../../plugins/skraft-framework/skills/issue-refinement
+        - ../../plugins/skraft-framework/skills/issue-triage
+        - ../../plugins/skraft-framework/skills/mikado-method
+        - ../../plugins/skraft-framework/skills/mocking-inprocess-dotnet
+        - ../../plugins/skraft-framework/skills/mocking-microcks-dotnet
+        - ../../plugins/skraft-framework/skills/mocking-strategy-roster
+        - ../../plugins/skraft-framework/skills/mutation-testing
+        - ../../plugins/skraft-framework/skills/outside-in-tdd
+        - ../../plugins/skraft-framework/skills/planning-review-criteria
+        - ../../plugins/skraft-framework/skills/playwright-evidence
+        - ../../plugins/skraft-framework/skills/quality-gates-dotnet
+        - ../../plugins/skraft-framework/skills/quality-gates-evidence-contract
+        - ../../plugins/skraft-framework/skills/resolving-stack-commands
+        - ../../plugins/skraft-framework/skills/skraft-difficulty-routing
+        - ../../plugins/skraft-framework/skills/skraft-quality-bar
+        - ../../plugins/skraft-framework/skills/sprint-planning
+        - ../../plugins/skraft-framework/skills/strangler-fig-method
+        - ../../plugins/skraft-framework/skills/test-design-mandates
+        - ../../plugins/skraft-framework/skills/test-refactoring-catalog

@@ -1,0 +1,60 @@
+name: Compact dashboard data
+
+# Preventive housekeeping for the `dashboard-data` branch.
+#
+# `publish.sh` only appends, and the replay purge only removes files from the
+# tree — the blobs stay in the branch's history for ever, and every clone of this
+# repository pays for them. This restarts the branch from a single commit holding
+# exactly the tree already published.
+#
+# A force-push on this branch has wiped the evidence once before, so the job is
+# built to be unable to do it again:
+#   • eng/dashboard/compact-data-branch.sh aborts unless the rewritten tree is
+#     byte-for-byte the published one;
+#   • it is a no-op until the history crosses a threshold, so a normal month
+#     changes nothing;
+#   • it shares the `dashboard-data` concurrency group with the evaluation job,
+#     so it can never interleave with a publication.
+
+on:
+  schedule:
+    # First day of the month, 04:00 UTC — after the weekly evaluation.
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Report what would be dropped without touching the branch'
+        type: boolean
+        default: true
+      max-commits:
+        description: 'Compact above this many commits'
+        type: string
+        default: '100'
+      max-megabytes:
+        description: 'Compact above this packed size, in MB'
+        type: string
+        default: '50'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dashboard-data
+  cancel-in-progress: false
+
+jobs:
+  compact:
+    name: Compact the evidence branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAX_COMMITS: ${{ inputs.max-commits || '200' }}
+          MAX_MEGABYTES: ${{ inputs.max-megabytes || '100' }}
+        run: |
+          args=()
+          if [ "${{ inputs.dry-run }}" = "true" ]; then args+=(--dry-run); fi
+          ./eng/dashboard/compact-data-branch.sh "${args[@]}" | tee "$GITHUB_STEP_SUMMARY"

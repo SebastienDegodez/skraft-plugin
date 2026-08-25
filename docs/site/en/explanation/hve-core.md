@@ -27,12 +27,12 @@ State persists as JSON at
 ```json
 {
   "currentPhase": "DISCOVER | DISCUSS | DESIGN | DISTILL | DELIVER | DONE",
+  "difficulty": "simple | medium | medium-hard | challenging | null",
   "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
   "reviewerVerdicts": { "DESIGN": "APPROVED | REJECTED | NEEDS_REWORK | null" },
   "retryCount": { "DESIGN": 0 },
   "userPreferences": {
     "autonomyTier": "full | partial | manual",
-    "depthTier": "comprehensive",
     "maxRetriesPerPhase": 2
   },
   "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null }
@@ -43,6 +43,15 @@ State persists as JSON at
 - `phaseArtifacts`, `reviewerVerdicts`, `retryCount` trace what each phase produced and
   how it was judged.
 - `maxRetriesPerPhase` (default 2) bounds retries before human escalation.
+- `difficulty` is written once at the exit of DISCOVER and never reassessed. It selects
+  the **DELIVER execution model** — an inline TDD cycle, or one sub-agent dispatched per
+  Gherkin scenario. It routes *how* the work is executed, never *how strictly* it is
+  judged.
+
+The state carries **no quality dial**. Mutation and coverage thresholds, the four
+adversarial review lenses, the Gherkin gate and the Outside-In double-loop TDD variant
+are fixed once and for all by the `skraft-quality-bar` skill; they are the same on every
+run, and nothing written into `state.json` can lower them.
 
 ## The six-step per-turn protocol
 

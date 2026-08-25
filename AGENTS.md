@@ -18,12 +18,15 @@ Rules:
 - Framework architecture, genesis anchoring (A9/S4/S7), fail modes, guardrails G1–G8,
   and the guide for adding a new guardrail: **`plugins/skraft-framework/README.md`**.
 - Roadmap with all 13 US (gain + status + milestone): **`docs/roadmap.md`**.
+- Skill evaluation (Vally), the published quality dashboard and AGENTVIZ replay:
+  **`docs/skill-evaluation.md`**.
 
 ## Repository structure
 
 ```
-plugins/               ← Claude Code plugin (production source + Stryker config)
-  src/
+plugins/
+  skraft-framework/    ← Claude Code plugin (production source + Stryker config)
+   src/
     domain/            ← Pure functions, no IO (Clean Architecture: Domain layer)
     application/       ← Use cases, orchestrate domain + ports (Application layer)
     ports/
@@ -33,23 +36,81 @@ plugins/               ← Claude Code plugin (production source + Stryker confi
       api/hooks/       ← Hook router, service factory, entry, decision helpers
       infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
     cli/               ← Composition root: hook.mjs wires all services
-  hooks/               ← hooks.json manifest (Claude Code hook declarations)
-  stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
-  skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
+    hooks/               ← hooks.json manifest (Claude Code hook declarations)
+    stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
+    skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 
 tests/
-  skraft-framework/    ← ALL tests (unit + acceptance) — single flat directory
+  skraft-framework/    ← ALL framework tests (unit + acceptance) — single flat directory
+  dashboard/           ← Tests for the eng/ evaluation & dashboard tooling
+  skills/              ← Vally eval specs: tests/skills/<skill>/eval.yaml
+  agents/              ← Vally real-agent specs + suite-local fixtures
+  site/                ← Playwright smoke tests for docs/site (incl. the dashboard)
+
+eng/                   ← Skill evaluation & dashboard tooling (zero-dependency Node)
+  lib/                 ← Pure rules (front matter, skill profile, verdict, replay naming)
+  catalog/scan.mjs     ← Plugin sources → artifacts/catalog/report.json
+  vally-adapter/       ← Paired Vally runs → eval-results/<skill>/results.json
+  dashboard/           ← History, published data, AGENTVIZ manifest, retention, publish.sh
+  run-vally-evals.sh   ← One local runner: paired skill comparisons + real-agent suites
 ```
 
 ### Test placement rules
 
-- **All test files live in `tests/skraft-framework/`** — never inside `plugins/`.
+- **Framework test files live in `tests/skraft-framework/`** — never inside `plugins/`.
+- **Evaluation/dashboard tooling tests live in `tests/dashboard/`** and import from `../../eng/...`.
 - Naming convention:
   - Unit tests: `{module}.unit.test.mjs` (e.g. `skill-policy.unit.test.mjs`)
   - Acceptance tests: `{feature}.acceptance.test.mjs` (e.g. `skill-loading.acceptance.test.mjs`)
   - Integration/other: `{module}.test.mjs`
 - `stryker.config.mjs` uses the glob `tests/skraft-framework/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
 - Import paths from `tests/skraft-framework/` into plugin source: `../../plugins/skraft-framework/src/...`
+
+### Vally evaluation rules
+
+- One eval spec per skill at `tests/skills/<skill>/eval.yaml`; `<skill>` MUST match the
+  directory under `plugins/skraft-framework/skills/` — `eng/run-vally-evals.sh` resolves the skill from
+  that path, and reports the eval as skipped when it does not.
+- A prompt must **never name the skill** or copy its wording, and a rubric must judge the
+  outcome, not the technique. Otherwise the evaluation measures nothing.
+- **NEVER create tests for eval specs.** Do not add unit or acceptance tests that load,
+  parse, snapshot, or assert an `eval.yaml` file, its prompts, tags, fixtures, graders,
+  ordering, or scenario-specific behavior. Validate specs through Vally loading and live
+  eval runs. Tests may cover reusable evaluation tooling, but must not mirror spec contents.
+- Budget trials for **power, not for a floor**. The sign test needs at least 6 discordant
+  pairs before any tally can reach `p <= 0.05`, so 5 trials — or a flawless 5W/0L sweep —
+  is reported as inconclusive by design. Ties are common, so plan **12–15 trials** for a
+  verdict you can defend, and buy that power up front: adding runs to an already-noisy
+  comparison is the worst purchase in the protocol.
+- Spend the budget on **runs, not on breadth**. `3 stimuli × 5 runs` and `5 stimuli × 3 runs`
+  cost the same and only the first yields readable per-scenario cells. Each stimulus should
+  force **one** decision through the narrowest task that exposes it — a paired run executes
+  every trial twice plus judge work, and cost per trial is driven by how much work the prompt
+  asks for, not by fixture size.
+- Real-agent specs live under `tests/agents/<suite>/eval.yaml`. Their custom executor
+  selects an allowlisted `.agent.md`; use Vally's typed trajectory events and built-in
+  graders where available instead of duplicating event conversion or grading logic.
+- Agent application fixtures live under `tests/agents/<suite>/fixtures/<state>/` beside
+  their eval spec. Specs stage explicit files from a named state so local ignored build
+  outputs cannot leak into prepared workspaces.
+- `eng/run-vally-evals.sh` is the only eval entry point. Skill specs run baseline vs
+  treatment; agent specs run once through their declared executor.
+- `STIMULI=` on the runner narrows a run to named stimuli — the pilot signal check before
+  funding a full paired arm. It derives the pilot from the frozen spec and writes to
+  `eval-results-pilot/`, so a probe can never be published as a verdict. Never hand-edit a
+  committed spec to make a cheaper run possible.
+- `BASELINE_CACHE=1` on the runner reuses baseline records per `- name:` block, so only the
+  stimuli you actually edited are re-run. **ALWAYS ASK THE HUMAN before using it, every time,
+  and never enable it on your own initiative.** A cached arm is a frozen draw rather than a
+  fresh sample — two archived baseline arms of the same spec, same model, twelve minutes
+  apart, differ by 0.14 in contrast score — so it biases the paired tests in whichever
+  direction that draw happened to land. It answers "did my edit move anything" in the local
+  loop; it never produces a verdict. The runner refuses it under CI, and any result it
+  touches carries `baselineProvenance.publishable: false`. Never publish, commit, or quote
+  such a result as a measurement.
+- Generated output (`artifacts/`, `eval-results/`, `eval-results-pilot/`, `dashboard-data/`,
+  `docs/site/dashboard/data/`) is never committed. The local baseline cache
+  (`eval-baseline-cache/`) is likewise disposable and gitignored.
 
 ### stryker.config.mjs rules
 

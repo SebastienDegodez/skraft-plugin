@@ -27,12 +27,12 @@ L'état persiste en JSON à
 ```json
 {
   "currentPhase": "DISCOVER | DISCUSS | DESIGN | DISTILL | DELIVER | DONE",
+  "difficulty": "simple | medium | medium-hard | challenging | null",
   "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
   "reviewerVerdicts": { "DESIGN": "APPROVED | REJECTED | NEEDS_REWORK | null" },
   "retryCount": { "DESIGN": 0 },
   "userPreferences": {
     "autonomyTier": "full | partial | manual",
-    "depthTier": "comprehensive",
     "maxRetriesPerPhase": 2
   },
   "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null }
@@ -43,6 +43,16 @@ L'état persiste en JSON à
 - `phaseArtifacts`, `reviewerVerdicts`, `retryCount` tracent ce que chaque phase a
   produit et comment elle a été jugée.
 - `maxRetriesPerPhase` (défaut 2) borne les reprises avant escalade humaine.
+- `difficulty` est écrit une seule fois à la sortie de DISCOVER et n'est jamais réévalué.
+  Il choisit le **modèle d'exécution de DELIVER** — cycle TDD inline, ou un sous-agent
+  dispatché par scénario Gherkin. Il route *comment* le travail est exécuté, jamais *avec
+  quelle sévérité* il est jugé.
+
+L'état ne porte **aucun dial de qualité**. Les seuils de mutation et de couverture, les
+quatre lentilles de revue adverse, la porte Gherkin et la variante TDD Outside-In
+double-boucle sont fixés une fois pour toutes par la skill `skraft-quality-bar` ; ils
+sont identiques à chaque run, et rien de ce qui est écrit dans `state.json` ne peut les
+abaisser.
 
 ## Le protocole 6-étapes par tour
 

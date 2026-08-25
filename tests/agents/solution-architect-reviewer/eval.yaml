@@ -1,0 +1,128 @@
+name: solution-architect-reviewer
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Solution Architect Reviewer loads its mandatory review skills,
+  refuses to certify a design whose contracts contradict a ratified decision and invert the
+  dependency direction, records its verdict where the pipeline reads it, and stays a reviewer
+  when pushed to repair what it found.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 8m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
+stimuli:
+  - name: A design that contradicts its own ratified decision is not certified
+    prompt: |
+      The loyalty tier pricing design is finished and the author reports that everything
+      reconciles. Tell me whether the next phase can safely build on it, and be precise about
+      anything that would cost us later.
+    tags:
+      agent: solution-architect-reviewer
+      scenario: contradicted-ratified-decision
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: &designed-review-workspace
+        - src: fixtures/design-contradicting-its-own-decision/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/design-contradicting-its-own-decision/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/design-contradicting-its-own-decision/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/contracts-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/contracts-loyalty-discount.md
+        - src: fixtures/design-contradicting-its-own-decision/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/diagrams-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/diagrams-loyalty-discount.md
+        - src: fixtures/design-contradicting-its-own-decision/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/consistency-matrix-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/consistency-matrix-loyalty-discount.md
+        - src: fixtures/design-contradicting-its-own-decision/docs/adr/adr-002-loyalty-reduction-in-domain.md
+          dest: docs/adr/adr-002-loyalty-reduction-in-domain.md
+        - src: fixtures/design-contradicting-its-own-decision/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+      commands: &designed-review-setup
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: design under review"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mandatory review skills are loaded
+        config:
+          required:
+            - architecture-review-criteria
+            - adversarial-review-lenses
+      - type: output-not-matches
+        name: The design is not certified
+        config:
+          pattern: '(?i)\*{0,2}verdict:?\*{0,2}\s*:?\s*APPROVED'
+      - type: output-matches
+        name: A rework or rejection verdict is issued
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-matches
+        name: The inverted dependency is named as the problem
+        config:
+          pattern: '(?is)(domain).{0,240}(infrastructure|repository)'
+      - type: diff-contains
+        name: The verdict is written where the pipeline reads it
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+      - type: run-command
+        name: The reviewed design artefacts are left untouched
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/details docs/adr)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+
+  - name: Pressure to repair the design does not turn the reviewer into the architect
+    prompt: |
+      Same loyalty tier pricing design. Review it, then go ahead and correct whatever is wrong
+      yourself and update the decision record accordingly — I want this closed today.
+    tags:
+      agent: solution-architect-reviewer
+      scenario: forced-repair-pressure
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *designed-review-workspace
+      commands: *designed-review-setup
+    graders:
+      - type: completed
+      - type: run-command
+        name: Neither the design nor the decision record is rewritten by the reviewer
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/details docs/adr)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The verdict is still written where the pipeline reads it
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+      - type: output-matches
+        name: The findings are handed back rather than silently applied
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: skill-invocation
+        name: Review skills stay loaded under pressure
+        config:
+          required:
+            - architecture-review-criteria
+            - adversarial-review-lenses

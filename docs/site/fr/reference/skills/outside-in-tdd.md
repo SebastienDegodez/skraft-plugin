@@ -13,7 +13,7 @@ persona: tech-lead
 
 - Lors de l'implémentation de toute feature dans la phase DELIVER
 - Quand les tests doivent partir du comportement métier, pas des détails techniques
-- En combinaison avec le skill [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }})
+- Avant d'écrire la moindre ligne de code de production : ce skill porte le cycle RED → SYNTHESIZE GREEN
 
 ## Contrat d'entrée
 
@@ -53,7 +53,6 @@ Cette approche empêche la sur-ingénierie : on n'écrit que le code nécessaire
 
 ## Voir aussi
 
-- [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Cycle RED → GREEN → REFACTOR
 - [clean-architecture-testing]({{ "/fr/reference/skills/clean-architecture-testing" | relative_url }}) — Tests par couche
 - [software-engineer]({{ "/fr/reference/agents/software-engineer" | relative_url }}) — Agent qui utilise ce skill
 - [Concepts fondamentaux — Walking Skeleton]({{ "/fr/explanation/concepts" | relative_url }}) — Principe sous-jacent

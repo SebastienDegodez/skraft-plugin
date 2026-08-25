@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - 'docs/site/**'
+      - 'eng/**'
+      - 'plugins/skills/**'
+      - 'plugins/agents/**'
+      - 'plugins/.claude-plugin/plugin.json'
+      - 'tests/skills/**'
       - 'scripts/check-citations.mjs'
       - 'tests/site/**'
 
@@ -14,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Citation lint
         run: node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
 
@@ -30,7 +35,7 @@ jobs:
           working-directory: docs/site
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Install Node dependencies
         run: npm install
       - name: Install Playwright

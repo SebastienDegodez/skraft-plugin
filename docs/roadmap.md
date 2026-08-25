@@ -24,7 +24,7 @@ avec leur gain, statut et milestone.
 | [US12](#us12) | Observabilité | `gain:observability` | ✅ Livré | Phase 2 — Complétude |
 | [US13](#us13) | Recovery / rollback | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [S1](#s1) | State write-through (économie de tokens) | `gain:eco-tokens` | ✅ Livré | Phase 2 — Complétude |
-| [S2](#s2) | Config repo-wide (configurateur `depthTier`) | `gain:dx` | ✅ Livré | Phase 2 — Complétude |
+| [S2](#s2) | Config repo-wide (`skraft-config.json`) | `gain:dx` | ✅ Livré | Phase 2 — Complétude |
 | [S3](#s3) | Séparation des couches (produit / ingénierie, RPI-aligné) | `gain:dx` | ✅ Livré | Phase 3 — Alignement RPI |
 
 ---
@@ -307,22 +307,45 @@ Instructions : `skraft-state.instructions.md` (write-through) +
 
 ---
 
-### S2 — Config repo-wide (configurateur `depthTier`) <a id="s2"></a>
+### S2 — Config repo-wide (`skraft-config.json`) <a id="s2"></a>
 
-**Statut :** ✅ Livré
+**Statut :** ✅ Livré — périmètre réduit depuis (voir « Évolution »)
 **Milestone :** Phase 2 — Complétude
 
-**Gain :** `gain:dx` + `gain:eco-tokens` — `depthTier` (dial de rigueur = cost governor)
-est une propriété du **dépôt**, pas d'un work-item. Il quitte `state.json` pour un fichier
-repo-wide `skraft-config.json` géré par un configurateur ; `difficulty` reste per-work-item
+**Gain :** `gain:dx` — ce qui est une propriété du **dépôt** quitte `state.json` pour un
+fichier repo-wide `skraft-config.json` géré par un CLI ; `difficulty` reste per-work-item
 via `state.mjs`. Les agents n'appellent que des commandes (get/set délégués au script).
 
 **Modules livrés :** `domain/config-schema.mjs` (pur, round-trip),
-`application/config-service.mjs` (`init/get/set`, clés `depthTier` + `depthTierRationale`),
+`application/config-service.mjs` (`init/get/set`),
 `adapters/infrastructure/config/json-config-{reader,writer}.mjs` (atomique + backup ≤3),
 `cli/config.mjs` (S7 bridge : `init | get | set`, exit 0/1/2/3, `SKRAFT_CONFIG_ROOT`|cwd),
-`skills/skraft-config/SKILL.md` (configurateur, S7 + A9 init→set→verify),
-`skraft-config.json` (racine, versionné).
+`skraft-config.json` (racine, versionné). La version d'origine gouvernait deux clés —
+`depthTier` (+ `depthTierRationale`) et `trackingLayout` — et embarquait un skill
+configurateur `skraft-config`.
+
+**Évolution — le dial de rigueur a été supprimé :** `depthTier` n'existe plus (schéma,
+CLI, `skraft-config.json`, fixtures, tests), et le skill `skraft-config`, dont c'était
+le sujet, a été supprimé avec lui. `cli/config.mjs` subsiste et ne gouverne plus qu'**une
+seule clé**, `trackingLayout` (voir [S3](#s3)) ; une clé `depthTier` restée dans le fichier
+d'un dépôt ancien y passe désormais comme un champ inconnu quelconque, par fidélité de
+round-trip. Les seuils ne sont plus configurables : le skill `skraft-quality-bar` porte la
+barre unique et permanente — mutation 100 % sur Domain/Application et 90 % sur
+API/Infrastructure, couverture de lignes 100 % sur Domain/Application, les quatre lentilles
+adversariales à chaque revue, gate Gherkin obligatoire, ADR pour toute décision non
+triviale, Object Calisthenics sur le Domain, TDD Outside-In double boucle. Chaque gate est
+**bloquante** : les niveaux `advisory` et `warning`, et la rationale qui achetait une
+exemption, n'existent plus. La mutation tourne en deux scripts séquencés livrés par
+l'adaptateur `quality-gates-<tech>` (core Domain/Application, puis boundary
+API/Infrastructure) : chaque script porte sa valeur attendue et la passe au `--break-at` du
+runner, dont le **code de sortie** fait verdict.
+
+**Conséquence sur le coût :** `depthTier` était aussi le cost governor du framework
+(fan-out reviewer 1/2/4, nombre de runs de mutation, activation de la gate Gherkin). Sans
+lui, chaque run paie la forme complète. Le coût est assumé délibérément par le
+propriétaire du dépôt : la qualité n'est pas négociable. Cette fiche perd donc son tag
+`gain:eco-tokens` ; l'économie de tokens reste portée par [S1](#s1) (write-through) et
+[US10](#us10) (continuation).
 
 **Qualité :** `node --test` 100 % + mutation Stryker ≥ 80 % sur les fichiers config.
 

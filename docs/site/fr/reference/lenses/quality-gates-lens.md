@@ -24,10 +24,11 @@ graph LR
 
 ## Ce que la lentille vérifie
 
-- **Localisation du journal** : présence, JSON valide, `$schema` égal à `quality-gates-evidence/v1`.
+- **Localisation du journal** : présence, JSON valide, `$schema` égal à `quality-gates-evidence/v2`.
 - **Auto-cohérence (sans accès Git)** : `status: "pass"` implique `metrics.tests_failed == 0` ; `status: "not_applicable"` exige un `rationale` non vide ; `stdout_tail` doit être un suffixe strict du fichier référencé.
 - **Falsification contre l'arbre Git** : `repo_root_rev` correspond au SHA HEAD ; chaque `commits_covered[].sha` résout dans l'arbre ; `files_changed` liste exactement les chemins du diff ; `commits_covered[].subject` respecte la regex Conventional Commits (G8) ; les `stdout_ref` existent et leur `stdout_sha256` correspond au re-hachage ; les snapshots RED/GREEN correspondent à `git show {commit}:{fichier}`.
 - **G9 — Intégrité RED→GREEN** : tout retrait ou mutation d'une ligne présente dans le snapshot RED est une violation de la règle d'or des tests.
+- **G10 — RED constaté** : pour chaque cycle, le `red_stdout_ref` existe et son re-hachage correspond à `red_stdout_sha256`, et le `red_exit_code_ref` enregistré est non nul — un zéro signifie que le test n'a jamais échoué avant l'arrivée de l'implémentation.
 
 ## Verdict et seuils
 
@@ -40,6 +41,7 @@ graph LR
 | `commits_covered[].subject` ne respecte pas la regex G8 | `fail` | `high` |
 | SHA de commit qui ne résout pas, ou `files_changed` liste un chemin absent du diff | `fail` | `high` |
 | Snapshot RED→GREEN : retrait ou mutation d'une ligne (G9) | `fail` | `blocker` |
+| Un cycle enregistre un code de sortie nul pour son exécution RED (G10) | `fail` | `blocker` |
 | Toutes les gates applicables à `pass` et toutes les références résolvent | `pass` | — |
 
 `inconclusive` n'est **jamais** équivalent à `pass`. L'absence de preuve n'est pas une preuve de succès.
@@ -56,7 +58,7 @@ graph LR
 
 ## Sources
 
-- `quality-gates-evidence-contract` (skill chargé obligatoirement — schéma, surface de falsification, taxonomie G1..G9)
+- `quality-gates-evidence-contract` (skill chargé obligatoirement — schéma, surface de falsification, taxonomie G1..G10)
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.
 
 ## Voir aussi

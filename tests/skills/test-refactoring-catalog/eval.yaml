@@ -1,0 +1,166 @@
+name: test-refactoring-catalog
+description: |
+  Verifies 5 behavior-preserving refactoring patterns clean test code after GREEN
+  without changing coverage or behavior.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 3
+scoring:
+  threshold: 1
+
+stimuli:
+  - name: Apply R1 — Extract Arrange Helper
+    turns:
+      - |
+        I have 4 acceptance tests with identical 6-line arrange sections:
+        
+        ```csharp
+        var policy = new EligibilityPolicy();
+        var driver = new DriverInfo(Age: 25, LicenseYears: 5);
+        var vehicle = new VehicleInfo(Type: "sedan", Age: 2);
+        var request = new EligibilityRequest(driver, vehicle);
+        ```
+        
+        Extract this into a helper method. Show the helper method and one test using it.
+      - |
+        Now explain the naming convention for this helper and what parameters should be exposed.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-refactoring-catalog
+    rubric:
+      - Creates helper starting with A, An, or Create (e.g. ADriver, AEligibilityRequest, CreatePolicy)
+      - Removes repetition in all 4 tests
+      - Each test calls the helper instead of inline setup
+      - Tests remain readable and test logic is visible
+      - "Explains 'A' / 'An' pattern names helpers as test fixtures (e.g. ADriver, ARequest)"
+      - "Parameters only what VARIES across tests (e.g. age, years, vehicle type)"
+      - "Defaults for happy-path values (Age: 25, LicenseYears: 5, Type: sedan)"
+      - "Demonstrates one test using modified parameter (e.g. ADriver(age: 17))"
+
+  - name: Apply R2 — Rename for Business Intent
+    turns:
+      - |
+        Rename these test methods to express business behavior:
+        - Handle_ValidInput_ReturnsSuccess
+        - Handle_ValidInput_Returns_DTO
+        - Handle_AgeTooYoung_ReturnsFalse
+        - Validate_NoErrors_ReturnsOk
+      - |
+        Explain the renaming pattern and why technical words were removed.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-refactoring-catalog
+    rubric:
+      - Renames to When<BusinessCondition>_Should<BusinessOutcome> pattern
+      - 'Example: "WhenDriverMeetsAllCriteria_ShouldBeEligible"'
+      - 'Example: "WhenDriverIsTooYoung_ShouldBeRejected"'
+      - Removes all technical words (Handle, Returns, Validate, OK, DTO, etc.)
+      - Uses business vocabulary (eligible, rejected, approved, pending, etc.)
+      - Explains When_Should pattern expresses business scenario and outcome, not implementation
+      - Identifies removed technical terms and why they hide intent (Handler, Returns, DTO)
+      - Gives business terms for rejections (rejected, denied, failed-check, etc.)
+      - Notes that test readers instantly see business value, not implementation details
+
+  - name: Apply R4 — Extract Custom Assertion
+    turns:
+      - |
+        This assertion repeats in 6 tests:
+        
+        ```csharp
+        Assert.False(result.IsEligible);
+        Assert.Equal("driver_too_young", result.Reason.Code);
+        Assert.Contains("18", result.Reason.Message);
+        ```
+        
+        Extract a custom assertion helper. Show the before/after.
+      - |
+        Explain the naming convention and why hiding assertions inside helpers is risky.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-refactoring-catalog
+    rubric:
+      - Creates helper named ShouldBeRejectedWith(result, reasonCode) or similar
+      - Extracts all 3 assertions into one place
+      - Test bodies become single-line calls to the helper
+      - Each test is shorter and intent is clearer
+      - Helper name follows ShouldBe<State> or ShouldHave<Property> pattern
+      - "Explains danger of hiding assertions: can lose observability of actual vs expected"
+      - Confirms helper ONLY asserts (no arrange/act inside it)
+      - "Notes: assertions must fail loudly with clear message on mismatch"
+
+  - name: Preserve GREEN state during refactoring
+    turns:
+      - |
+        I've applied R1, R2, R3 to 8 tests. Before refactoring, all tests passed.
+        What steps should I take to ensure no regressions?
+      - |
+        What signals tell you a refactoring went wrong and you should revert?
+    tags:
+      # Regression guard: the baseline already scores full marks here, so a
+      # tie is the expected result and a loss is the finding. Kept out of the
+      # discriminating-pair budget for that reason.
+      role: regression-guard
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - test-refactoring-catalog
+    rubric:
+      - Run full test suite before refactoring (baseline green)
+      - Apply refactoring changes
+      - Run full test suite after refactoring (must still be green)
+      - Verify test count unchanged (no tests skipped or deleted)
+      - Confirm code coverage threshold maintained or improved
+      - Test turns red → stop, revert, investigate
+      - Test count decreased → accidental deletion or skip
+      - Code coverage drops below threshold → helper extracted behavior away
+      - Build breaks → refactoring introduced syntax error
+      - First regression signal → REVERT entire change and re-examine
+
+  - name: Cleaning up production code is not test refactoring
+    prompt: |
+      CalculatePayableTotal has grown to three hundred lines of nested conditionals
+      and nobody on the team wants to touch it. The tests around it are green.
+      Clean it up.
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: the tests are healthy and it is the production code
+      # that has gone bad, so a catalogue of test-code transformations has
+      # nothing to offer here.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - test-refactoring-catalog
+    rubric:
+      - Refactors the production class rather than the tests around it.
+      - Leans on the green tests as the safety net and keeps them passing throughout.
+      - Leaves the existing test names, structure, and helpers alone.
+      - Does not propose renaming or splitting tests that are not the problem.

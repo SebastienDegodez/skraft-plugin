@@ -20,7 +20,7 @@ test('resolveObservabilityConfig: null/undefined → all defaults', () => {
 
 test('resolveObservabilityConfig: reads the observability block', () => {
   const cfg = resolveObservabilityConfig({
-    depthTier: 'basic',
+    trackingLayout: 'bare',
     observability: { stalePhaseHours: 6, auditRetentionDays: 7, signalRetentionDays: 3 },
   })
   assert.equal(cfg.stalePhaseHours, 6)

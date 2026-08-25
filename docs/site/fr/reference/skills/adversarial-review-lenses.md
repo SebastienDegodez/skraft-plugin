@@ -13,30 +13,26 @@ persona: tech-lead
 ## Quand l'utiliser
 
 - Chaque reviewer SKRAFT invoque ce skill lors de chaque passe de revue, après avoir lu les artefacts de la phase amont
-- Le nombre de lenses exécutées dépend du `depthTier` enregistré dans `state.json`
-
-| Depth tier | Lenses requises |
-|---|---|
-| `basic` | 1 (Complétude uniquement) |
-| `standard` | 2 (Complétude + Alignement-métier) |
-| `comprehensive` (défaut) | 4 (toutes les lenses) |
-| `custom` | selon `userPreferences.customDepth.reviewerLenses`, minimum 1 |
+- Les quatre lenses sont exécutées à chaque revue — le nombre est fixe. Il n'existe ni mode réduit ni réglage qui l'abaisse
 
 ## Contrat d'entrée
 
 - Artefact(s) de la phase à reviewer (chemin relatif)
 - Skill `*-review-criteria` de la phase correspondante (lu avant d'exécuter les lenses)
-- `state.json::userPreferences.depthTier` pour connaître le nombre de lenses à exécuter
+
+Rien d'autre n'est lu : le nombre de lenses n'est cherché ni dans `state.json` ni dans un fichier de configuration.
 
 ## Contrat de sortie
 
 - Fichier de revue sous `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md`
 - Verdict : `APPROVED`, `NEEDS_REWORK`, ou `REJECTED`
+- `Lenses executed: 4` dans l'en-tête de la revue — toujours 4
 - Score pondéré calculé à partir des 4 lenses (poids fixes)
 - Liste de required actions lorsque le verdict est `NEEDS_REWORK` ou `REJECTED`
 
 ## Invariants
 
+- **Les quatre lenses sont toujours exécutées** — une passe qui en exécute moins de 4 n'est pas une revue
 - **Pas de contamination entre lenses** — les findings d'une lens ne doivent pas influencer une autre
 - **Un seul `INVARIANT_VIOLATION` dans Lens 4 force `REJECTED`** quelle que soit la somme pondérée
 - **Le reviewer ne modifie jamais les artefacts amont** — lecture seule
@@ -61,14 +57,16 @@ persona: tech-lead
 
 L'adversarial review s'inspire du pattern Genesis Step 7 : des panels de juges indépendants produisent des verdicts plus fiables que les revues collégiales où le biais de conformité nivelle les dissidences. La synthèse pondérée préserve la dominance des lenses métier (Complétude + Alignement-métier = 60 %) sur les lenses structurelles.
 
+Le fan-out des quatre lenses était autrefois réductible : un curseur de profondeur au niveau du dépôt pouvait ramener une revue à une ou deux lenses, et ce même curseur servait de gouverneur de coût du framework. Il a été supprimé. Chaque revue paie désormais le fan-out complet des quatre lenses, et le propriétaire du dépôt a assumé ce coût délibérément — un verdict rendu par un panel d'un seul juge n'est pas un verdict adversarial.
+
 > « Peer reviews consistently find more defects per hour than any other technique. »
 > — Wiegers, K., *Peer Reviews in Software*, 2002.
 
 ## Customisation autorisée
 
-- Depth tier (via `state.json` — L1)
-- Nombre minimal de lenses pour `custom` (minimum 1 — L2)
 - Format du fichier de sortie (L1)
+
+Le nombre de lenses n'y figure pas — quatre lenses, à chaque revue, sur chaque dépôt (L3).
 
 ## Voir aussi
 

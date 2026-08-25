@@ -51,11 +51,9 @@ export const createHealthCheckService = ({
   const probeConfig = async () => {
     const r = await readJson(configPath)
     const raw = r.ok ? r.value : null
-    const depthTier = raw && typeof raw.depthTier === 'string' ? raw.depthTier : null
     return {
       path: configPath,
       present: r.ok,
-      depthTier,
       observability: resolveObservabilityConfig(raw),
     }
   }

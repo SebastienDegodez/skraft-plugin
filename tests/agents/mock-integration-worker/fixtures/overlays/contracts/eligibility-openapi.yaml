@@ -1,0 +1,56 @@
+openapi: 3.0.3
+info:
+  title: Eligibility API
+  version: 1.0.0
+paths:
+  /eligibility/{age}:
+    get:
+      operationId: getEligibility
+      parameters:
+        - name: age
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The eligibility decision for the given age.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [age, eligible]
+                properties:
+                  age:
+                    type: integer
+                  eligible:
+                    type: boolean
+              examples:
+                adult:
+                  value:
+                    age: 21
+                    eligible: true
+                minor:
+                  value:
+                    age: 12
+                    eligible: false
+        '400':
+          description: The age is out of range.
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                required: [title, status]
+                properties:
+                  title:
+                    type: string
+                  detail:
+                    type: string
+                  status:
+                    type: integer
+              examples:
+                negative-age:
+                  value:
+                    title: Age is out of range
+                    detail: Age must be zero or greater.
+                    status: 400

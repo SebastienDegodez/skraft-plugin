@@ -26,6 +26,8 @@ If a field cannot be falsified from the Git tree alone, the field is mis-designe
 ├── qg-{story}-build.stdout
 ├── qg-{story}-build.exit
 ├── qg-{story}-mutation.json              # mutation runner native report
+├── qg-{story}-red-{cycle}.stdout         # captured stdout of the RED run (referenced by sha256)
+├── qg-{story}-red-{cycle}.exit           # captured exit code of the RED run (non-zero)
 └── snapshots/
     ├── red-{cycle}-{test-file-basename}  # test file at RED commit
     └── green-{cycle}-{test-file-basename} # same test file at GREEN commit
@@ -39,7 +41,7 @@ read-only mode.
 
 ```json
 {
-  "$schema": "quality-gates-evidence/v1",
+  "$schema": "quality-gates-evidence/v3",
   "story": "string — story identifier (e.g. eligibilite-trottinette)",
   "produced_at": "ISO-8601 UTC timestamp",
   "producer": "software-engineer",
@@ -81,7 +83,10 @@ read-only mode.
         "red_commit": "sha at which this test was committed RED",
         "green_commit": "sha at which production code made it GREEN",
         "red_snapshot_ref": "evidence/{date}/snapshots/red-1-SomeTests.ext",
-        "green_snapshot_ref": "evidence/{date}/snapshots/green-1-SomeTests.ext"
+        "green_snapshot_ref": "evidence/{date}/snapshots/green-1-SomeTests.ext",
+        "red_stdout_ref": "evidence/{date}/qg-{story}-red-1.stdout",
+        "red_stdout_sha256": "hex sha256 of the RED stdout file",
+        "red_exit_code_ref": "evidence/{date}/qg-{story}-red-1.exit"
       }
     ]
   }
@@ -100,10 +105,18 @@ they do NOT invent new ones. Adding a gate id is a contract change (new schema v
 | G3 | Build passes | compilation / static type-check succeeded |
 | G4 | Static analysis pass | linter / analyzer reported no blocking issue |
 | G5 | Architecture rules pass | dependency-direction tests pass (Clean Architecture) |
-| G6 | Mutation score meets threshold | mutation runner score ≥ depthTier threshold on business logic |
+| G6 | Mutation score meets the bar | mutation runner invoked with the bar's `--break-at` flag for the scope under test, and exited 0 |
 | G7 | No mocks in Domain/Application core | grep-based attestation: zero mocking-framework symbols in those layers |
 | G8 | Conventional commit format | every commit in `commits_covered` matches `<type>(<scope>): <subject>` |
 | G9 | No test tampering (RED→GREEN integrity) | for every cycle, the test file changed only by ADDITION between RED and GREEN snapshots |
+| G11 | Line coverage meets the bar | coverage runner invoked with the bar's threshold flags for Domain and Application, and exited 0 |
+| G10 | RED observed | for every cycle, the test was actually RUN and FAILED before the implementation landed: captured RED stdout hashed by sha256, and a NON-zero exit code recorded — both captured at RED time |
+
+G10 is the one gate whose substrate does NOT live in its own `gates[]` entry: that entry carries
+`status` (and `rationale`) only, while the evidence sits in the per-cycle
+`test_integrity.cycles[].red_*` fields — so the generic `gates[].exit_code_ref` rule
+(content MUST be `0` for `status: "pass"`) does not apply to G10, whose expectation is the
+exact inverse.
 
 A gate that is genuinely irrelevant for the story uses `status: "not_applicable"` and
 MUST include a `rationale` field explaining why. `not_applicable` is **never** a substitute
@@ -128,6 +141,8 @@ Every claim in the JSON resolves to something the lens can verify with `Read`,
 | `test_integrity.cycles[].red_snapshot_ref` | file MUST exist; content MUST equal `git show {red_commit}:{test_file}` |
 | `test_integrity.cycles[].green_snapshot_ref` | same against `green_commit` |
 | RED→GREEN diff | computed by the lens: any line REMOVED or MUTATED in an existing test → G9 violation; only ADDED lines are allowed |
+| `test_integrity.cycles[].red_stdout_ref` | file MUST exist; re-hash MUST equal `red_stdout_sha256` |
+| `test_integrity.cycles[].red_exit_code_ref` | file MUST exist; for G10 `status: "pass"` content MUST be NON-zero — a `0` means the test never failed |
 
 ## Producer rules (software-engineer side)
 
@@ -135,6 +150,7 @@ Every claim in the JSON resolves to something the lens can verify with `Read`,
 - Tool stdout/exit are captured by the SHELL (`> file 2>&1; echo $? > file.exit`), never transcribed.
 - `stdout_sha256` is computed via a tool call (`shasum -a 256 file`), never asserted from memory.
 - Snapshots are extracted via `git show <commit>:<path> > snapshot-file`, never copy-pasted.
+- The RED stdout and its exit code are captured **at RED**, before the implementation lands — they cannot be reconstructed afterwards (G10).
 - A failing gate yields `status: "fail"` AND the file is still written. Do NOT suppress the log to hide a failure — the lens treats a missing log as `inconclusive` (NEEDS_REWORK), so hiding fails harder than disclosing.
 
 ## Verifier rules (quality-gates-lens side)
@@ -151,11 +167,15 @@ Every claim in the JSON resolves to something the lens can verify with `Read`,
   - `metrics.tests_failed > 0` while `status: "pass"` (internal contradiction)
   - G8 regex fails on any `commits_covered` subject
   - G9 diff shows a line REMOVED or MUTATED in an existing test between RED and GREEN snapshots
+  - G10: a cycle records a zero exit code for its RED run
   - `commits_covered[].sha` does not resolve in Git
   - `files_changed` lists a path absent from the actual commit diff
 
 ## Schema versioning
 
-`$schema: "quality-gates-evidence/v1"` is part of the contract. Bump the version
+`$schema: "quality-gates-evidence/v3"` is part of the contract. Bump the version
 when adding/removing gates or fields; old logs MUST still be parseable with their
 declared version.
+
+- **v3** — adds gate `G11` (line coverage meets the bar) and restates `G6` as an exit-code attestation rather than a score comparison: the runner's `--break-at` decides, so a log no longer records a number a reader must judge. Removes the `depthTier` reference, which no longer exists.
+- **v2** — adds gate `G10` (RED observed) and the three per-cycle fields `red_stdout_ref`, `red_stdout_sha256`, `red_exit_code_ref`; everything a `v1` log declares is unchanged.

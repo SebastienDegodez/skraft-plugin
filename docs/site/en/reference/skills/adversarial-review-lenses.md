@@ -13,30 +13,26 @@ persona: tech-lead
 ## When to use
 
 - Every SKRAFT reviewer agent invokes this skill once per review pass, after reading the upstream phase artefact(s)
-- The number of lenses executed is governed by the `depthTier` recorded in `state.json`
-
-| Depth tier | Lenses required |
-|---|---|
-| `basic` | 1 (Completeness only) |
-| `standard` | 2 (Completeness + Business Fit) |
-| `comprehensive` (default) | 4 (all lenses) |
-| `custom` | as configured in `userPreferences.customDepth.reviewerLenses`, minimum 1 |
+- All four lenses run on every review — the count is fixed. There is no reduced mode and no setting that lowers it
 
 ## Entry contract
 
 - Artefact(s) of the phase under review (relative path)
 - The phase's `*-review-criteria` skill (read before executing lenses)
-- `state.json::userPreferences.depthTier` to determine the number of lenses to execute
+
+Nothing else is read: the number of lenses is neither looked up in `state.json` nor in any configuration file.
 
 ## Exit contract
 
 - Review file under `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md`
 - Verdict: `APPROVED`, `NEEDS_REWORK`, or `REJECTED`
+- `Lenses executed: 4` in the review header — always 4
 - Weighted score computed from the 4 lenses (fixed weights)
 - List of required actions when verdict is `NEEDS_REWORK` or `REJECTED`
 
 ## Invariants
 
+- **The four lenses always run** — a pass that executed fewer than 4 lenses is not a review
 - **No cross-lens contamination** — findings from one lens must not influence another
 - **A single `INVARIANT_VIOLATION` in Lens 4 forces `REJECTED`** regardless of weighted sum
 - **The reviewer never modifies upstream artefacts** — read-only
@@ -61,14 +57,16 @@ persona: tech-lead
 
 Adversarial review draws on the Genesis Step 7 pattern: independent judge panels produce more reliable verdicts than collegial reviews where conformity bias suppresses dissent. The weighted synthesis preserves the dominance of business lenses (Completeness + Business Fit = 60%) over structural ones.
 
+The four-lens fan-out used to be reducible: a repo-wide depth dial could cut a review down to one or two lenses, and that same dial acted as the framework's cost governor. It has been removed. Every review now pays the full four-lens fan-out, and the repository owner accepted that cost deliberately — a verdict handed down by a panel of one is not an adversarial verdict.
+
 > « Peer reviews consistently find more defects per hour than any other technique. »
 > — Wiegers, K., *Peer Reviews in Software*, 2002.
 
 ## Allowed customisation
 
-- Depth tier (via `state.json` — L1)
-- Minimum lenses for `custom` (minimum 1 — L2)
 - Output file format (L1)
+
+The lens count is not on that list — four lenses, on every review, in every repository (L3).
 
 ## See also
 

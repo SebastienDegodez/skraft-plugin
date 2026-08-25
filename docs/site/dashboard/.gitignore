@@ -1,2 +1,6 @@
-# Dashboard data is generated from harness runs (agent output) and must never be committed.
-dashboard-data.json
+# Dashboard data is derived from the plugin sources at site build time
+# (eng/catalog/scan.mjs + eng/dashboard/build.mjs) and must never be committed.
+data/
+
+# The AGENTVIZ replay SPA is built during the Pages deploy, never checked in.
+replay/

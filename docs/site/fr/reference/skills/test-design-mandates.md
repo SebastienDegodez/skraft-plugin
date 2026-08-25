@@ -21,7 +21,7 @@ persona: tech-lead
 
 - Scénarios Gherkin validés par l'utilisateur
 - Architecture Clean Architecture identifiée (Domain / Application / Infrastructure / API)
-- `state.json::userPreferences.depthTier` pour le niveau de rigueur
+- La barre qualité permanente (skill `skraft-quality-bar`) — la même barre sur chaque story ; aucun niveau de rigueur à lire
 
 ## Contrat de sortie
 
@@ -37,6 +37,7 @@ persona: tech-lead
 - **M4 — Extraction de domaine conditionnelle par défaut interdite** — pas de test unitaire de domaine sauf si la porte (a) branche inaccessible via AC ou (b) économie combinatoire s'ouvre
 - **M5 — Application de l'AC visuel/positionnel** — une AC en termes visuels/positionnels/de style (tag `@visual`) n'est close que par un test E2E Playwright avec mesure réelle ; un seul test unitaire jsdom ne suffit pas
 - **TBU interdit** — aucun code de production non câblé via le root de composition ; les tests d'acceptance valident le câblage réel
+- **Aucun mode réduit** — les cinq mandates s'appliquent à chaque story ; rien ne les relâche et aucune rationale n'achète d'exemption
 
 ## Pourquoi cette forme
 
@@ -47,9 +48,11 @@ Les tests entrent par une frontière de use case et assertent à la prochaine fr
 
 La règle M4 évite la double couverture : deux suites assertant le même comportement divergent à chaque changement de règle, sans valeur discriminante supplémentaire.
 
+M4 n'abaisse rien — elle décide seulement où vivent les tests. Domain et Application doivent toujours atteindre la barre de mutation et de couverture de lignes définie par `skraft-quality-bar` ; donc lorsque aucune porte d'extraction ne s'ouvre, ce sont les tests d'acceptance entrant par la frontière de use case qui doivent gagner ces chiffres. La matrice se conçoit en conséquence : un jeu de scénarios laissant survivre des mutants du Domain est une matrice incomplète, pas une raison de relâcher la barre.
+
 ## Customisation autorisée
 
-- Seuil combinatoire M4 (indicatif 10–15 scénarios, ajustable en `custom`) (L2)
+- Seuil combinatoire M4 — le compte indicatif de 10–15 scénarios peut être ajusté par projet ; les deux portes d'extraction, elles, ne le peuvent pas (L2)
 - Codes `Extraction Reason` additionnels pour des cas d'infrastructure spéciaux (L3, changement de schéma)
 
 ## Voir aussi

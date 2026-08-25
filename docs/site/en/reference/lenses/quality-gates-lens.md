@@ -24,10 +24,11 @@ graph LR
 
 ## What the lens checks
 
-- **Log location**: presence, valid JSON, `$schema` equal to `quality-gates-evidence/v1`.
+- **Log location**: presence, valid JSON, `$schema` equal to `quality-gates-evidence/v2`.
 - **Self-consistency (no Git access yet)**: `status: "pass"` implies `metrics.tests_failed == 0`; `status: "not_applicable"` requires a non-empty `rationale`; `stdout_tail` must be a strict suffix of the referenced file.
 - **Falsification against the Git tree**: `repo_root_rev` matches HEAD SHA; each `commits_covered[].sha` resolves in the tree; `files_changed` lists exactly the paths in the diff; `commits_covered[].subject` matches the Conventional Commits regex (G8); `stdout_ref` files exist and their `stdout_sha256` matches re-hashing; RED/GREEN snapshots match `git show {commit}:{file}`.
 - **G9 — RED→GREEN integrity**: any removal or mutation of a line present in the RED snapshot is an Iron Rule violation.
+- **G10 — RED observed**: for each cycle, `red_stdout_ref` exists and re-hashes to `red_stdout_sha256`, and the recorded `red_exit_code_ref` is non-zero — a zero means the test never failed before the implementation landed.
 
 ## Verdict and thresholds
 
@@ -40,6 +41,7 @@ graph LR
 | `commits_covered[].subject` fails G8 regex | `fail` | `high` |
 | Commit SHA does not resolve, or `files_changed` lists a path absent from the diff | `fail` | `high` |
 | RED→GREEN snapshot: removal or mutation of a line (G9) | `fail` | `blocker` |
+| A cycle records a zero exit code for its RED run (G10) | `fail` | `blocker` |
 | Every applicable gate at `pass` and every reference resolves | `pass` | — |
 
 `inconclusive` is **never** equivalent to `pass`. Absence of evidence is not evidence of success.
@@ -56,7 +58,7 @@ graph LR
 
 ## Sources
 
-- `quality-gates-evidence-contract` (skill loaded mandatory — schema, falsification surface, fixed gate taxonomy G1..G9)
+- `quality-gates-evidence-contract` (skill loaded mandatory — schema, falsification surface, fixed gate taxonomy G1..G10)
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009.
 
 ## See also

@@ -74,3 +74,15 @@ dependencies:
     .agents/skills/genesis/references/audience-boundary.md: sha256:85b1dbc98a0fc3115c6c6a92046a290167e1fcd90fe0ae035ec21026e2ec9387
     .agents/skills/genesis/references/cost-economics-process.md: sha256:e14f743132897132119b0711b252733e4804d55942fca97a2d12d1fc744285f5
   content_hash: sha256:56d0bc50fc92bca28618f717dfc8b5b8467d69967f7d2eab2c08f414f142feb3
+- repo_url: github/awesome-copilot
+  host: github.com
+  resolved_commit: ab7544d03d4c49fdd07f5958e1888ad39c4118e2
+  virtual_path: skills/autoresearch
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/autoresearch
+  - .agents/skills/autoresearch/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/autoresearch/SKILL.md: sha256:754179e987519dac86e01f79c1e015345d9b07c09f4bc34c324d89165d10fbd5
+  content_hash: sha256:8bfae087ef27eb37092d94caf1da3406b500aa908756772bb1349a1ac70823dd

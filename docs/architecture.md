@@ -28,8 +28,7 @@ skraft-plugin/
 │       ├── clean-architecture-testing.md
 │       ├── craft-discipline.md
 │       ├── create-custom-agent.md
-│       ├── outside-in-tdd.md
-│       └── red-synthesize-green.md
+│       └── outside-in-tdd.md
 ├── plugins/                               ← composants distribués par le plugin
 │   ├── agents/
 │   │   ├── skraft-orchestrator.agent.md
@@ -65,7 +64,6 @@ skraft-plugin/
 │       ├── outside-in-tdd/
 │       ├── planning-review-criteria/
 │       ├── playwright-evidence/
-│       ├── red-synthesize-green/
 │       ├── sprint-planning/
 │       ├── test-design-mandates/
 │       └── test-refactoring-catalog/

@@ -41,14 +41,15 @@ Chaque levier agit sur une dimension distincte de la dépense.
 | **Discipline de cache** | Les prompts-système et les instructions partagées sont conçus pour être *rechargés* entre les tours sans recalcul — tout ce qui peut être mis en cache KV l'est, et la structure des messages le garantit. |
 | **Classe par rôle** | Chaque agent porte une classe cible B12 — `implementer`, `planner` ou `reviewer`. Les producteurs d'artefacts (discoverer, planner, architect, engineer) reçoivent la classe la plus capable ; les reviewers de phase et les lentilles, dont la tâche est bornée, reçoivent la classe la moins chère qui tienne le travail. Deux rôles font exception et exigent une classe *Sonnet ou supérieure* quel que soit leur rôle : `software-engineer` et `software-engineer-reviewer` (arbitrage multi-contraintes). |
 | **Surface d'outils** | Aucun agent ne reçoit un catalogue MCP complet. Chaque agent ne voit que les outils dont il a besoin pour sa tâche précise. Chaque outil superflu est une invitation à raisonner inutilement. |
-| **Profondeur (`depthTier`)** | La profondeur de chaque run est gouvernée par `depthTier` (`basic` / `standard` / `comprehensive` / `custom`) : fan-out à 1, 2 ou 4 lentilles adversariales ; périmètre/seuil de mutation ; gate Gherkin activée ou non. Un run `basic` n'instancie pas les reviewers complets. |
+| **Modèle d'exécution par difficulté** | Chaque work item porte une `difficulty` dans `state.json` (`simple`, `medium`, `medium-hard`, `challenging`), évaluée une fois à la sortie de DISCOVER. Elle décide de la façon dont DELIVER s'exécute : cycle TDD inline pour les paliers les plus simples, sous-agent dispatché par scénario Gherkin et artefacts intermédiaires pour les plus durs. L'effort va là où le travail l'exige, et nulle part ailleurs. C'est une forme d'exécution, pas un réglage de rigueur — elle ne change jamais ce qu'il faut prouver. |
 | **Élagage structurel** | Sur un handoff HVE entrant, la phase DISCOVER est sautée : le backlog et la priorisation arrivent déjà formés. Le pipeline n'exécute pas ce qu'il n'a pas à recalculer. |
 
 Ces leviers ne sont pas indépendants. La discipline de cache et la classe par rôle se
 renforcent mutuellement : un modèle de classe basse rechargeable depuis le cache KV coûte une
-fraction de ce qu'un modèle de classe haute recalculé coûterait. La surface d'outils et la
-profondeur limitent la surface de décision à l'intérieur de chaque tour, ce qui
-raccourcit la réponse et réduit la fenêtre de contexte nécessaire.
+fraction de ce qu'un modèle de classe haute recalculé coûterait. La surface d'outils et le
+dispatch par scénario des paliers les plus durs bornent la surface de décision à
+l'intérieur de chaque tour, ce qui raccourcit la réponse et réduit la fenêtre de
+contexte nécessaire.
 
 ## Mesures réelles
 
@@ -91,15 +92,40 @@ L'économie décrite ici provient exclusivement de la **forme** : mise en cache,
 de modèle, volume de sortie, effort alloué. Elle ne touche jamais aux mécanismes qui
 garantissent la fiabilité des livrables.
 
-Les lentilles de revue adverse, leurs pondérations, leur protocole de synthèse et le
-score seuil d'acceptation sont hors périmètre de l'économie de tokens. Réduire le
-nombre de lentilles ou abaisser les seuils n'est pas un levier d'économie — c'est
-une dégradation de la qualité. Pour comprendre pourquoi ces gardes-fous ne se négocient
-pas, voir la page [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }}).
+Cette séparation relevait de la discipline ; elle relève désormais du fait. La barre
+tient dans une seule skill, `skraft-quality-bar`, et rien ne lit de réglage pour
+l'abaisser : score de mutation à 100 % sur Domain et Application et 90 % sur API et
+Infrastructure, couverture de lignes à 100 % sur Domain et Application, les quatre
+lentilles adversariales sur chaque revue, la gate Gherkin, un ADR pour toute décision
+non triviale, Object Calisthenics sur le Domain. Chaque gate bloque. Les niveaux
+*advisory* et *warning* n'existent plus, pas plus que la rationale qui achetait
+autrefois une dérogation.
 
-La distinction est importante en pratique : quand un run dépasse un budget de tokens
-estimé, la première question n'est pas « quels reviewers désactiver ? » mais
-« quel levier de forme n'est pas encore appliqué ? ».
+Les lentilles de revue adverse, leurs pondérations, leur protocole de synthèse et le
+score seuil d'acceptation sont donc hors périmètre de l'économie de tokens. Réduire le
+nombre de lentilles ou abaisser les seuils n'est pas un levier d'économie — c'est
+une dégradation de la qualité, et ce n'est plus exprimable. Pour comprendre pourquoi ces
+gardes-fous ne se négocient pas, voir la page [La revue avant la revue]({{ "/fr/explanation/why-review-before-review" | relative_url }}).
+
+### Ce que cela coûte
+
+Disons-le franchement : le framework n'échange plus de la rigueur contre des tokens. Le
+curseur de profondeur repo-wide qui faisait exactement cela — fan-out de la revue à 1, 2
+ou 4 lentilles, périmètre des runs de mutation, gate Gherkin activée ou non — a été
+supprimé, et il était aussi le gouverneur de coût du pipeline. Chaque run paie désormais
+la forme complète : quatre lentilles à chaque revue, les deux runs de mutation
+séquencés, la gate Gherkin toujours active. C'est une hausse réelle et permanente du
+coût plancher d'un run, que rien ne compense côté qualité. Le propriétaire du dépôt a
+accepté l'arbitrage délibérément : la qualité ne se négocie pas, et un curseur qui
+permet à un run d'acheter son passage sous la barre n'est pas une économie — c'est un
+défaut différé.
+
+Ce qui reste — et c'est la plus grosse moitié de la dépense — ce sont les leviers de
+forme : classe de modèle, discipline de cache, surface d'outils, volume de sortie,
+élagage structurel. La distinction est importante en pratique : quand un run dépasse un
+budget de tokens estimé, la première question n'est pas « quels reviewers
+désactiver ? » — cette question n'a plus de réponse — mais « quel levier de forme n'est
+pas encore appliqué ? ».
 
 ## Ce qui est en place — ce qui arrive
 
@@ -112,10 +138,15 @@ plancher `model_requirement` de chaque agent, puis **pinne le champ `model:`** d
 décrit la politique : `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
 `planner → claude-sonnet-5`, le plancher Sonnet relevant les deux exceptions
 (`software-engineer`, `software-engineer-reviewer`). Une seule source de vérité ; un
-linter CI (`resolve-model --check`) échoue si un agent dérive de la politique. Le champ
-`depthTier` dans `state.json` gouverne le fan-out des lentilles et l'activation des
-gates optionnelles. Ces deux mécanismes constituent le gouverneur principal de la
-dépense à l'heure actuelle.
+linter CI (`resolve-model --check`) échoue si un agent dérive de la politique. Avec la
+discipline de cache, ce résolveur constitue le gouverneur principal de la dépense à
+l'heure actuelle — et désormais le seul : le curseur de profondeur qui partageait ce
+rôle a été supprimé, si bien que le versant qualité d'un run est un coût fixe et non
+plus une variable. La gate de mutation l'illustre : chaque adaptateur
+`quality-gates-<tech>` embarque deux scripts séquencés, core (Domain, Application) puis
+boundary (API, Infrastructure), chacun portant sa valeur attendue jusqu'au `--break-at`
+du runner, de sorte que le code de sortie fait le verdict. Les deux tournent, à chaque
+fois.
 
 ### Conçu, pas encore implémenté
 

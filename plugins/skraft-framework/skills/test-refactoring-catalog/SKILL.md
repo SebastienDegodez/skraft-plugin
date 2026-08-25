@@ -1,6 +1,6 @@
 ---
 name: test-refactoring-catalog
-description: Use when refactoring tests — extracting helpers, renaming for business clarity, deduplicating fixtures, consolidating parametrized cases, or restructuring test classes after GREEN phase without changing behavior coverage
+description: Use when the tests pass but the test code itself has gone bad — the same setup copied into several tests, names that describe the method instead of the behavior, near-duplicate test methods, or a class grown too large to read. Use it to clean that up without losing a single case of coverage.
 ---
 
 # Test Refactoring Catalog

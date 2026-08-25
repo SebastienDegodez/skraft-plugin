@@ -48,6 +48,16 @@ Votre PR doit contenir :
 
 Incluez dans la description de PR : le problème identifié, la solution proposée, et la ou les références qui la justifient.
 
+### Étape 5 — Lire le verdict que la CI publie sur votre PR
+
+Si votre PR touche un skill doté d'une spec d'évaluation, la CI joue la comparaison appariée et poste un commentaire avec une ligne du type `9V/4E/2D (p=0,065)`.
+
+**Ne lisez pas ce verdict comme une note.** Un `➖ no improvement` n'est pas un rejet, et un `⚪ inconclusive` n'est presque jamais la faute du skill — c'est le plus souvent un budget d'essais qui ne pouvait pas conclure, ou un skill qui ne s'est pas chargé du tout.
+
+> 📐 Avant de réagir à un verdict, lisez [Lire un verdict d'évaluation]({{ "/fr/explanation/deep-dive/lire-un-verdict" | relative_url }}). Le deep-dive explique d'où sort le `p`, pourquoi les égalités sont jetées, pourquoi il faut au moins six paires décisives, et comment distinguer les quatre causes d'un verdict non concluant — dont trois ne se corrigent **pas** en ajoutant des essais.
+
+Seule une `🔴 regression` crédible bloque la fusion. Tout le reste est de l'information à interpréter.
+
 ## Ce que genesis interdit
 
 - **Inventer une métrique.** Si vous affirmez que le pattern réduit les bugs de 30 %, vous devez citer la source. Sans source, reformulez qualitativement : "réduit le nombre de bugs détectés tardivement (estimé)".

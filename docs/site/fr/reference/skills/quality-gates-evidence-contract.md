@@ -24,9 +24,10 @@ persona: tech-lead
 
 ## Contrat de sortie
 
-- Fichier `qg-{story}.json` conforme au schéma `quality-gates-evidence/v1`
+- Fichier `qg-{story}.json` conforme au schéma `quality-gates-evidence/v2`
 - Fichiers annexes dans `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/`
 - Chaque porte G1-G9 avec `status`, `command_executed`, `exit_code_ref`, `stdout_ref`, `stdout_sha256`, `stdout_tail`
+- La porte G10 avec `status` seul — ses preuves vivent dans les champs par cycle `red_stdout_ref`, `red_stdout_sha256` et `red_exit_code_ref`
 - Répertoire `snapshots/` contenant les paires `red-{n}-{file}` / `green-{n}-{file}`
 
 ## Invariants
@@ -35,7 +36,8 @@ persona: tech-lead
 - **Pas de transcription manuelle** — stdout et sha256 sont produits par des outils shell, jamais dictés
 - **`not_applicable` ≠ `fail`** — une porte inapplicable exige un champ `rationale` explicite
 - **Intégrité RED→GREEN (G9)** — seules les lignes ajoutées sont autorisées entre RED et GREEN ; toute suppression ou mutation de ligne existante est une violation G9
-- **Identifiants de portes fixes** — G1 à G9 uniquement ; l'ajout d'un identifiant est un changement de version de schéma
+- **RED constaté (G10)** — chaque cycle enregistre un stdout RED haché en sha256 et un code de sortie non nul, tous deux capturés au moment du RED ; un code de sortie à zéro signifie que le test n'a jamais échoué
+- **Identifiants de portes fixes** — G1 à G10 uniquement ; l'ajout d'un identifiant est un changement de version de schéma
 - **Porte masquée = `inconclusive`** — cacher un échec en omettant le log échoue encore plus durement côté lens
 
 ## Pourquoi cette forme
@@ -50,7 +52,7 @@ Un journal de preuves manquant ou incohérent est traité comme `inconclusive` (
 ## Customisation autorisée
 
 - Ajout de champs additionnels dans une porte existante (L2, rétrocompatible)
-- Bump de version (`evidence/v2`) pour ajouter ou supprimer une porte (L3)
+- Bump de version (`evidence/v3`) pour ajouter ou supprimer une porte (L3)
 - Adaptateurs techniques personnalisés (`quality-gates-<stack>`) (L2)
 
 ## Voir aussi

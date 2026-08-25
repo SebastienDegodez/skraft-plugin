@@ -80,7 +80,6 @@ Follow the write-through model and the once-per-session Rehydration sequence def
    ```
    Pipeline state loaded.
    Current phase: DESIGN
-   Depth tier: comprehensive
    Difficulty: medium
    Story: #42 — Add eligibility check
    Neighbor planners: security-plans/eligibility (read-only)
@@ -106,16 +105,16 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 - Story / issue: {issueNumber} — {title}
 - Output path (write here): .copilot-tracking/skraft-plans/{projectSlug}/{phaseDir}/{YYYY-MM-DD}/
 - Artifact conventions: follow `plugins/skraft-framework/instructions/skraft-artifacts.instructions.md` (dated subdirs + `<!-- markdownlint-disable-file -->` header). Read it if not already in context.
-- depthTier: {depthTier}   difficulty: {difficulty}
+- difficulty: {difficulty}
 - Upstream artefacts: {paths from previous phases}
 ```
 
-`depthTier` is repo-wide — read it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/config.mjs" get --key depthTier`. `difficulty` is per-work-item — read it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug} --field difficulty`. The sub-agent never touches `state.json` or `skraft-config.json`; it consumes these values from the payload and writes only its artefacts. The orchestrator records the resulting verdict/paths into state via the CLI after the sub-agent returns.
+`difficulty` is per-work-item — read it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug} --field difficulty`. The sub-agent never touches `state.json` or `skraft-config.json`; it consumes these values from the payload and writes only its artefacts. The orchestrator records the resulting verdict/paths into state via the CLI after the sub-agent returns.
 
 For each phase NOT in `entryPoint.skipPhases` (DESIGN, DISTILL):
 
 **Step 1 — Dispatch specialist agent**
-Consult the native todo working set for the current phase (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above (story, output path, artifact conventions, depthTier, difficulty, upstream artefacts). If a scalar not carried by the todo list is needed, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
+Consult the native todo working set for the current phase (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above (story, output path, artifact conventions, difficulty, upstream artefacts). If a scalar not carried by the todo list is needed, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
 
 **Step 2 — Collect output**
 Verify the expected artefacts exist at the dated HVE paths (see Dispatch table). If missing, count as implicit failure.
@@ -174,15 +173,13 @@ The routing runs at **pipeline start** (Phase 0, step 6), driven by `#file:plugi
 
 - **Difficulty Tier** is evaluated first (`set-difficulty`, write-once) so it is never `null`.
 - **Entry Point** = the RESEARCH gate: **Simple / Medium** difficulty skips RESEARCH (`entryPoint.skipPhases = ["RESEARCH"]`); **Medium-hard / Challenging** runs it. This mirrors the HVE-RPI rule that simple work produces no research artefacts.
-- **Depth Tier** is repo-wide (read-only here).
 
 Persist results:
 
 - `state.json::entryPoint` (`skipPhases`) — direct-edit on the snapshot at Phase 0.
 - `state.json::difficulty` — per-work-item, via `state.mjs set-difficulty --value {tier}` (write-once).
-- `skraft-config.json::depthTier` — repo-wide, NOT set per run. Managed once via the `skraft-config` configurateur (`config.mjs set --key depthTier --value {tier}`) and only READ here (`config.mjs get --key depthTier`). Default `comprehensive`.
 
-The selected difficulty drives the RESEARCH gate and the DELIVER execution model. The repo-wide depth tier drives strictness inside every phase (TDD variant, mutation thresholds, reviewer lens count, Gherkin gate).
+The selected difficulty drives the RESEARCH gate and the DELIVER execution model. Strictness is not configurable: `skraft-quality-bar` holds one permanent bar for every phase.
 
 ## Dispatch table
 
@@ -202,7 +199,7 @@ The refined story that RESEARCH and DESIGN consume (`plans/{date}/stories-*.md`)
 DELIVER runs the engineer↔reviewer loop directly:
 
 1. Read the implementation plan from `details/{date}/impl-plan-{story}.md` and the Gherkin features from `features/`.
-2. Dispatch `Skraft - Software Engineer` with the implementation plan. Include contract artefacts from `details/{date}/contracts-*.md` if present. Pass `difficulty` (from `state.mjs get --slug {slug} --field difficulty`) and `depthTier` (from `config.mjs get --key depthTier`) so the engineer chooses the right execution model (inline TDD vs. sub-agent per scenario) and the right TDD variant (Red-Green up to Outside-In double-loop).
+2. Dispatch `Skraft - Software Engineer` with the implementation plan. Include contract artefacts from `details/{date}/contracts-*.md` if present. Pass `difficulty` (from `state.mjs get --slug {slug} --field difficulty`) so the engineer chooses the right execution model (inline TDD vs. sub-agent per scenario). The TDD variant is not a choice: Outside-In double-loop, always.
 3. Dispatch `Skraft - Software Engineer Reviewer` on the produced code.
 4. Handle verdict using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED`: capture Playwright evidence if available, write `changes/{date}/change-log.md`, post final GitHub comment, mark pipeline complete.
@@ -222,12 +219,11 @@ After each phase transition (approved or rejected), post a structured comment on
      - "`details/{date}/contracts-{slug}.md` — component contracts"
    verdictLabel: APPROVED (attempt N)
    difficulty: medium-hard
-   depthTier: comprehensive
    nextPhase: "DESIGN → dispatch `Skraft - Solution Architect`"
    EOF
    ```
 
-   Omit `difficulty`/`depthTier` when not applicable (the block is skipped). For the final DELIVER comment add `evidence: true` and an `evidenceLinks` list referencing Playwright screenshots/reports from `changes/{date}/`.
+   Omit `difficulty` when not applicable (the block is skipped). For the final DELIVER comment add `evidence: true` and an `evidenceLinks` list referencing Playwright screenshots/reports from `changes/{date}/`.
 
 2. Post it:
 
@@ -288,7 +284,7 @@ The user never needs to specify a phase. The pipeline reads state, resumes, and 
 
 - Rehydrate `state.json` ONCE per session (Phase 0). Do NOT re-read the whole file each turn — drive turns from the native todo working set and fetch single fields with `state.mjs get --field X` when needed.
 - Apply every invariant-bearing mutation through the `state.mjs` CLI (verdict, transition, artifact, difficulty, retry). Direct-edit only `entryPoint` and `adrRatification`.
-- All agent dispatch instructions must include full context (story, milestone, depth tier, difficulty, previous artefact paths)
+- All agent dispatch instructions must include full context (story, milestone, difficulty, previous artefact paths)
 - Keep orchestrator body focused on routing logic — no business content generation
 - Write in imperative second-person ("Rehydrate state once", "Dispatch Skraft - Solution Researcher with...")
 
@@ -300,4 +296,4 @@ Before EACH dispatch, re-read this checklist:
 - [ ] Have I verified the expected artefact exists at the dated HVE path before dispatching the reviewer?
 - [ ] Will I record the verdict/artifact/transition through the `state.mjs` CLI (not a hand-edit)?
 - [ ] Is `state.json::phaseHistory` updated with `inProgress` (direct-edit) before dispatch?
-- [ ] Have I passed `depthTier` and `difficulty` in the dispatch payload?
+- [ ] Have I passed `difficulty` in the dispatch payload?

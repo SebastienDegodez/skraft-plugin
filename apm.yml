@@ -5,6 +5,7 @@ author: SebastienDegodez
 dependencies:
   apm:
   - danielmeppiel/genesis/skills/genesis
+  - github/awesome-copilot/skills/autoresearch
   mcp: []
 includes: auto
 scripts: {}

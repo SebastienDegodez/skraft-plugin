@@ -65,4 +65,3 @@ Le mutation testing vérifie que les tests détectent réellement les défauts, 
 - [software-engineer-and-reviewer]({{ "/fr/reference/agents/software-engineer-and-reviewer" | relative_url }}) — Cycle complet DELIVER
 - [Pipeline DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — Description de la phase
 - [outside-in-tdd]({{ "/fr/reference/skills/outside-in-tdd" | relative_url }}) — Skill TDD
-- [red-synthesize-green]({{ "/fr/reference/skills/red-synthesize-green" | relative_url }}) — Skill cycle TDD

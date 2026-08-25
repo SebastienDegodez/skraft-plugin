@@ -51,6 +51,6 @@ Self-discipline reduces noise in review cycles: the reviewer can focus on real p
 
 ## See also
 
-- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — TDD cycle
+- [outside-in-tdd]({{ "/en/reference/skills/outside-in-tdd" | relative_url }}) — RED → SYNTHESIZE GREEN cycle
 - [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Agent that uses this skill
 - [software-engineer-reviewer]({{ "/en/reference/agents/software-engineer-reviewer" | relative_url }}) — The reviewer that verifies independently

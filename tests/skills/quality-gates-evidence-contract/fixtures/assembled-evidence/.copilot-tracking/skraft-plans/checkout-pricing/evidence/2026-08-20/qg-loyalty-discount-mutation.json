@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.7",
+  "thresholds": { "high": 90, "low": 80 },
+  "files": {
+    "src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs": {
+      "language": "cs",
+      "mutants": [
+        { "id": "1", "mutatorName": "Equality", "status": "Killed" },
+        { "id": "2", "mutatorName": "Arithmetic", "status": "Killed" },
+        { "id": "3", "mutatorName": "Boolean", "status": "Killed" },
+        { "id": "4", "mutatorName": "Arithmetic", "status": "Killed" },
+        { "id": "5", "mutatorName": "Equality", "status": "Survived" }
+      ]
+    }
+  }
+}

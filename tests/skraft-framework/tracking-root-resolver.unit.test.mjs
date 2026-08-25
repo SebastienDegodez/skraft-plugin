@@ -36,7 +36,7 @@ test('resolveTrackingRoot: env layout overrides the config file', () => {
 
 test('resolveTrackingRoot: reads trackingLayout=bare from skraft-config.json', () => {
   withTempCwd((cwd) => {
-    writeConfig(cwd, { depthTier: 'comprehensive', trackingLayout: 'bare' })
+    writeConfig(cwd, { trackingLayout: 'bare' })
     const root = resolveTrackingRoot({ env: { SKRAFT_CONFIG_ROOT: cwd }, cwd })
     assert.equal(root, join(cwd, '.copilot-tracking', 'skraft'))
   })

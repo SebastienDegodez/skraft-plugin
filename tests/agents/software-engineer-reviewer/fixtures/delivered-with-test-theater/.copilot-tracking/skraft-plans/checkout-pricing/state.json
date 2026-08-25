@@ -1,0 +1,68 @@
+{
+  "projectSlug": "checkout-pricing",
+  "skraftPlanFile": ".copilot-tracking/skraft-plans/checkout-pricing/state.json",
+  "currentPhase": "DELIVER",
+  "entryMode": "capture",
+  "entryPoint": {
+    "skipPhases": [],
+    "handoffSource": null,
+    "handoffArtifacts": []
+  },
+  "issueNumber": null,
+  "difficulty": "medium",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": []
+  },
+  "phasesCompleted": [
+    "RESEARCH",
+    "DESIGN",
+    "DISTILL"
+  ],
+  "phaseArtifacts": {
+    "DISTILL": [
+      ".copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature",
+      ".copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md"
+    ],
+    "DELIVER": [
+      ".copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md",
+      ".copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json"
+    ]
+  },
+  "verdicts": {
+    "RESEARCH": "APPROVED",
+    "DESIGN": "APPROVED",
+    "DISTILL": "APPROVED"
+  },
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "referencesProcessed": [],
+  "phaseHistory": {
+    "DELIVER": {
+      "status": "inProgress",
+      "startedAt": "2026-08-13T09:00:00Z",
+      "completedAt": null
+    }
+  },
+  "nextActions": [
+    "Review the delivered loyalty-discount slice."
+  ],
+  "userPreferences": {
+    "autonomyTier": "full",
+    "maxRetriesPerPhase": 2,
+    "phaseOrder": [
+      "RESEARCH",
+      "DESIGN",
+      "DISTILL",
+      "DELIVER"
+    ]
+  },
+  "neighborPlanners": {
+    "securityPlanFile": null,
+    "raiPlanFile": null,
+    "ssscPlanFile": null
+  }
+}

@@ -5,6 +5,12 @@
   "scripts": {
     "prepare": "node scripts/install-git-hooks.mjs",
     "test:site": "playwright test",
+    "test:dashboard": "node --test tests/dashboard/*.test.mjs",
+    "catalog:scan": "node eng/catalog/scan.mjs",
+    "dashboard:build": "node eng/catalog/scan.mjs && node eng/dashboard/build.mjs",
+    "dashboard:serve": "node eng/dashboard/serve.mjs",
+    "dashboard:preview": "./eng/dashboard/preview.sh",
+    "evals": "./eng/run-vally-evals.sh",
     "lint:citations": "node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages \"docs/site/**/*.md\"",
     "ci:local": "node scripts/local-ci.mjs",
     "paths:check": "node scripts/migrate-plugin-paths.mjs --check",
@@ -14,6 +20,8 @@
     "release:dry": "semantic-release --dry-run --no-ci"
   },
   "devDependencies": {
+    "@github/copilot-sdk": "1.0.9",
+    "@microsoft/vally": "0.12.0",
     "@playwright/test": "^1.49.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/exec": "^6.0.3",

@@ -14,7 +14,8 @@ description: "SKRAFT skills: tooled practices, what they do, when to use them."
 
 ### 0) Single entry point — [skraft-orchestrator]({{ "/en/reference/agents/skraft-orchestrator" | relative_url }})
 
-- **[skraft-difficulty-routing](skraft-difficulty-routing.html)** — 3-axis routing (entry point, depth tier, difficulty tier).
+- **[skraft-difficulty-routing](skraft-difficulty-routing.html)** — 2-axis routing (entry point, difficulty tier).
+- **[skraft-quality-bar](skraft-quality-bar.html)** — the one place a quality threshold is authored; every gate blocks.
 - **[adversarial-review-lenses](adversarial-review-lenses.html)** — multi-lens adversarial synthesis.
 - **[contract-testing](contract-testing.html)** — cross-phase API contract capability (DESIGN → DISTILL → DELIVER).
 - **[playwright-evidence](playwright-evidence.html)** — E2E evidence capture at pipeline end.
@@ -68,7 +69,6 @@ No additional skills — relies on built-in tools (`read`, `search/codebase`, `g
 ### 10) DELIVER — [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }})
 
 - **[outside-in-tdd](outside-in-tdd.html)** — end-to-end outside-in TDD strategy.
-- **[red-synthesize-green](red-synthesize-green.html)** — RED → minimal implementation → GREEN cycle.
 - **[clean-architecture-testing](clean-architecture-testing.html)** — layer/boundary test strategy.
 - **[craft-discipline](craft-discipline.html)** — self-discipline checkpoints before commit.
 - **[test-refactoring-catalog](test-refactoring-catalog.html)** — post-GREEN test refactoring.

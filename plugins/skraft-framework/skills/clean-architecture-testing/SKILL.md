@@ -1,6 +1,6 @@
 ---
 name: clean-architecture-testing
-description: Use when deciding what to test at each Clean Architecture layer (Domain, Application, Infrastructure, API, Architecture), selecting test doubles per boundary, or enforcing layer boundaries through architecture tests. Language-agnostic principles with .NET, Java, Python, TypeScript examples.
+description: Use when it is unclear where a test belongs and what it is allowed to talk to — which test project and layer it goes in, whether it gets a real database, an in-memory fake, or no double at all, and whether a value object or a constructor is worth a test of its own. Also use when layer dependencies must be enforced by the build instead of by review.
 ---
 
 # Clean Architecture Testing

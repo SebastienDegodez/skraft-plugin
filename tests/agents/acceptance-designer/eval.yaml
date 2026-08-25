@@ -1,0 +1,258 @@
+name: acceptance-designer
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Acceptance Designer loads its mandatory BDD and test-design
+  skills, turns ratified acceptance criteria into an executable outer test that fails on a
+  business assertion, copies the agreed values verbatim, refuses to invent an expectation the
+  business has not decided, and halts when the criteria it depends on are absent.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 10m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
+stimuli:
+  - name: Agreed criteria become an executable specification that fails on business meaning
+    prompt: |
+      The loyalty tier pricing story is designed and the criteria are agreed. Turn it into
+      something the team can execute: a readable statement of the expected behaviour in
+      business language, and a test at the pricing entry point that fails today for the right
+      reason — because the behaviour is missing, not because the code does not compile.
+    tags:
+      agent: acceptance-designer
+      scenario: criteria-to-executable-specification
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: &designed-workspace
+        - src: fixtures/designed-loyalty-story/.gitignore
+          dest: .gitignore
+        - src: fixtures/designed-loyalty-story/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/designed-loyalty-story/CheckoutPricing.slnx
+          dest: CheckoutPricing.slnx
+        - src: fixtures/designed-loyalty-story/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/designed-loyalty-story/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/contracts-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/contracts-loyalty-discount.md
+        - src: fixtures/designed-loyalty-story/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/designed-loyalty-story/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+          dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/designed-loyalty-story/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/designed-loyalty-story/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+          dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/designed-loyalty-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/designed-loyalty-story/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+          dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+      commands: &designed-setup
+        - 'dotnet restore CheckoutPricing.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: designed loyalty story"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mandatory specification skills are loaded
+        config:
+          required:
+            - bdd-methodology
+            - test-design-mandates
+            - outside-in-tdd
+      - type: output-not-matches
+        name: No mandatory skill is reported as unavailable
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+      - type: run-command
+        name: The specification is written in business language
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'ls .copilot-tracking/skraft-plans/checkout-pricing/features/*.feature >/dev/null 2>&1'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The agreed amounts are carried through untouched
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'for v in 9500 9000 8500; do grep -rq "$v" .copilot-tracking/skraft-plans/checkout-pricing/features || exit 1; done'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The whole solution still compiles
+        config:
+          command: dotnet
+          args: ['build', 'CheckoutPricing.slnx', '--no-restore']
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: The new test fails on the missing behaviour, not on a broken build
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'dotnet test CheckoutPricing.slnx --no-restore --no-build; [ $? -ne 0 ]'
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: The pricing rule itself is left unimplemented
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'git diff --quiet -- src/CheckoutPricing.Domain/LoyaltyTier.cs'
+          expected_exit_code: 0
+          timeout: 30s
+
+  - name: An undecided tier is escalated rather than given an invented price
+    prompt: |
+      Same loyalty tier pricing story. Produce the executable specification for it, and make
+      sure the team can see exactly which parts of the behaviour are settled and which are not.
+    tags:
+      agent: acceptance-designer
+      scenario: undecided-expectation
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *designed-workspace
+      commands: *designed-setup
+    graders:
+      - type: completed
+      - type: run-command
+        name: No price is invented for the undecided tier and its scenario stays pending
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - |-
+              set -f
+              files=$(find .copilot-tracking/skraft-plans/checkout-pricing/features tests \
+                -type f \( -name '*.feature' -o -name '*.cs' -o -name '*.md' \) \
+                ! -path '*/bin/*' ! -path '*/obj/*' 2>/dev/null)
+              [ -n "$files" ] || exit 0
+              IFS=$'\n'
+              awk '
+              BEGIN {
+                MARK = "@(pending|wip|todo|draft|blocked|undecided|manual|ignore|skip)|skip[ \t]*[=:]|\\?\\?\\?|tbd|not[ \t]+(yet[ \t]+)?(been[ \t]+)?decided|undecided|no[ \t]+(expected|agreed|decided)|escalat|out[ \t]+of[ \t]+scope|blocked|pending|await"
+                NUM = "(^|[^a-z0-9_.-])[0-9]"
+              }
+              function flush() {
+                if (isblock && plat && (num || !marked)) {
+                  printf "%s: %s\n", curfile, (num ? "invented numeric expectation for the undecided Platinum tier" : "Platinum scenario left active")
+                  rc = 1
+                }
+                isblock = 0; plat = 0; num = 0; step = ""; tags = ""; marked = filemark
+              }
+              FNR == 1 { flush(); curfile = FILENAME; code = (FILENAME ~ /\.cs$/); filemark = 0; marked = 0; seen = 0 }
+              { raw = tolower($0); bare = raw; sub(/#.*/, "", bare); sub(/\/\/.*/, "", bare) }
+              !code && raw ~ /^[ \t]*@/ { tags = tags " " raw; next }
+              raw ~ /^[ \t]*(#|\/\/)/ { tags = tags " " raw }
+              (!code && raw ~ /^[ \t]*(scenario|example)([ \t]+(outline|template))?[ \t]*:/) ||
+              (code && raw ~ /\[(fact|theory|test|scenario)/) {
+                held = tags
+                if (!seen && held ~ MARK) filemark = 1
+                seen = 1
+                flush()
+                isblock = 1
+                if (held ~ MARK) marked = 1
+              }
+              {
+                if (bare ~ /platinum/) plat = 1
+                if (raw ~ MARK) marked = 1
+                if (code) {
+                  if (bare ~ /assert|\.should|\.be[a-z]*\(|equal[ \t]*\(|expected/ && bare ~ NUM) num = 1
+                } else {
+                  if (bare ~ /^[ \t]*then[ \t]/) step = "then"
+                  else if (bare ~ /^[ \t]*(given|when|background|feature|rule|examples)/) step = ""
+                  if (step == "then" && bare ~ /^[ \t]*(then|and|but|\*)[ \t]/ && bare ~ NUM) num = 1
+                }
+              }
+              END { flush(); exit rc }
+              ' $files
+          expected_exit_code: 0
+          timeout: 30s
+      - type: output-matches
+        name: The undecided tier is surfaced to the business instead of being silently dropped
+        config:
+          pattern: '(?i)platinum'
+      - type: run-command
+        name: The settled behaviour is still specified
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'grep -rq 9500 .copilot-tracking/skraft-plans/checkout-pricing/features'
+          expected_exit_code: 0
+          timeout: 30s
+      # A conformance failure has to say whether the skills even loaded.
+      # Without this, telling "never loaded" from "loaded and changed
+      # nothing" means opening the raw trajectory by hand.
+      - type: skill-invocation
+        name: Mandatory specification skills are loaded
+        config:
+          required:
+            - bdd-methodology
+            - test-design-mandates
+            - outside-in-tdd
+
+  - name: Absent acceptance criteria halt the distillation
+    prompt: |
+      Produce the executable specification for the loyalty tier pricing story so implementation
+      can start from it.
+    tags:
+      agent: acceptance-designer
+      scenario: missing-acceptance-criteria
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/designed-loyalty-story/.gitignore
+          dest: .gitignore
+        - src: fixtures/designed-loyalty-story/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+    graders:
+      - type: completed
+      - type: output-matches
+        name: The missing input is reported as a structured blocker
+        config:
+          pattern: '(?s)"status"\s*:\s*"blocked"'
+      - type: diff-empty
+      - type: skill-invocation
+        name: Mandatory specification skills are loaded
+        config:
+          required:
+            - bdd-methodology
+            - test-design-mandates
+            - outside-in-tdd

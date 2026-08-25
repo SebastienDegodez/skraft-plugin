@@ -35,16 +35,26 @@ results from prose. The flow is:
 
 ### Detect project paths first
 
-Before running, identify:
-- `--project` : the production `.csproj` being mutated (Domain or Application)
-- `-tp` : the test `.csproj` that exercises it
+Before running, identify them and bind them to shell variables — the commands
+below reference the variables, so they stay copy-paste runnable:
+
+```bash
+PROD_CSPROJ=$(find src -name '*.csproj' | grep -E '(Domain|Application)' | head -1)
+TEST_CSPROJ=$(find tests -name '*.csproj' | grep -E 'UnitTest' | head -1)
+```
+
+- `PROD_CSPROJ` : the production `.csproj` being mutated (Domain or Application)
+- `TEST_CSPROJ` : the test `.csproj` that exercises it
+
+Never paste `<Production.csproj>` literally: bash reads `<` and `>` as
+redirections, silently dropping the flag and creating stray files.
 
 ### During development (fast — changed code only)
 
 ```bash
 dotnet stryker \
-  --project <Production.csproj> \
-  -tp <Tests.csproj> \
+  --project "$PROD_CSPROJ" \
+  -tp "$TEST_CSPROJ" \
   --since:main \
   --break-at 100 \
   --reporter json --reporter cleartext
@@ -54,14 +64,13 @@ dotnet stryker \
 
 ```bash
 dotnet stryker \
-  --project <Production.csproj> \
-  -tp <Tests.csproj> \
+  --project "$PROD_CSPROJ" \
+  -tp "$TEST_CSPROJ" \
   --mutate "**/*.cs" \
   --mutate "!**/*Marker.cs" \
   --mutate "!**/DependencyInjection.cs" \
   --mutate "!**/obj/**" \
   --break-at 100 \
-  --threshold-high 90 --threshold-low 80 \
   --reporter json --reporter cleartext
 ```
 
@@ -152,8 +161,8 @@ For each real survivor:
 3. **Re-run scoped Stryker** to confirm the kill:
    ```bash
    dotnet stryker \
-     --project <Production.csproj> \
-     -tp <Tests.csproj> \
+     --project "$PROD_CSPROJ" \
+     -tp "$TEST_CSPROJ" \
      --mutate "**/<FileWithSurvivor>.cs" \
      --break-at 100 \
      --reporter cleartext
@@ -161,11 +170,15 @@ For each real survivor:
 
 ## Step 5: Gate Decision
 
-| Mutation score | Verdict |
+The runner's exit code is the verdict — `--break-at` fails the run below the bar, and
+`skraft-quality-bar` states the bar for each scope. This skill decides only what a
+survivor means:
+
+| Survivors | Verdict |
 |---------------|---------|
-| 100% on business logic | ✅ Proceed to commit |
-| < 100% with only equivalent mutants documented | ✅ Proceed |
-| < 100% with real survivors | ❌ BLOCK — return to Step 4 |
+| None | ✅ Proceed to commit |
+| Only equivalent mutants, each documented | ✅ Proceed |
+| Any real survivor | ❌ BLOCK — return to Step 4 |
 
 ## Mutation Categories Reference
 
@@ -181,7 +194,12 @@ For each real survivor:
 ## Scope Exclusions
 
 Never mutate:
-- DTOs, ViewModels, passive data structures
-- Infrastructure adapters (tested via integration tests)
 - `DependencyInjection.cs`, `Program.cs`, config
 - Marker interfaces, generated code
+
+Everything a developer authored is in scope, DTOs and ViewModels included. A mutant that
+survives in a "passive" type is telling you the type carries behaviour nothing asserts.
+
+API and Infrastructure ARE mutated, in a second run scoped to them and held to their
+own bar. The core runs first; there is nothing to learn from mutating an adapter while
+the domain is unproven. See `skraft-quality-bar` for both scopes and their runners.

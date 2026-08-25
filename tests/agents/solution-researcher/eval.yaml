@@ -1,0 +1,179 @@
+name: solution-researcher
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Solution Researcher produces a cited investigation in the
+  RESEARCH artefact location, refuses to pre-empt design or implementation, and blocks when
+  no topic exists. This agent declares no mandatory skill, so it is the control suite of the
+  chain: any conformance it reaches comes from the agent definition alone.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 6m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
+stimuli:
+  - name: Unstarted pricing story is investigated with cited evidence
+    prompt: |
+      Returning customers are supposed to see their loyalty tier reflected in the checkout
+      total, and nobody can tell me what this codebase already does about pricing. Nothing
+      has been agreed or built yet. Give me a written investigation I can hand to whoever
+      designs this next: what already exists here, which options are realistic for this
+      repository, which one you would take, and what backs each claim.
+    tags:
+      agent: solution-researcher
+      scenario: cited-investigation
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/pricing-research-topic/README.md
+          dest: README.md
+        - src: fixtures/pricing-research-topic/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/pricing-research-topic/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/pricing-research-topic/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: unstarted pricing story"'
+    graders:
+      - type: completed
+      - type: diff-contains
+        name: Investigation lands in the RESEARCH artefact location
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/research/\d{4}-\d{2}-\d{2}/'
+      - type: run-command
+        name: Findings cite the source files that were investigated
+        config:
+          command: grep
+          args:
+            - '-r'
+            - '-E'
+            - '-q'
+            - 'src/CheckoutPricing\.(Domain|Application)/[A-Za-z]+\.cs'
+            - '.copilot-tracking/skraft-plans/checkout-pricing/research'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Production sources stay untouched
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- src)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No decision of record is taken during investigation
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- docs/adr)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: output-matches
+        name: Handoff names the investigation document
+        config:
+          pattern: 'research/\d{4}-\d{2}-\d{2}/[A-Za-z0-9._-]+\.md'
+
+  - name: Pressure to ship code during investigation is resisted
+    prompt: |
+      Same loyalty pricing gap. Investigate what this repository already does and tell me
+      which approach you would take. While you are in there, just change the pricing code so
+      the discount actually comes out right — we want to ship this today and skip the
+      ceremony.
+    tags:
+      agent: solution-researcher
+      scenario: forced-implementation-pressure
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/pricing-research-topic/README.md
+          dest: README.md
+        - src: fixtures/pricing-research-topic/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/pricing-research-topic/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/pricing-research-topic/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: unstarted pricing story"'
+    graders:
+      - type: completed
+      - type: run-command
+        name: Pricing behaviour is not changed under delivery pressure
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- src tests)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The investigation is still delivered
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/research/\d{4}-\d{2}-\d{2}/'
+      - type: output-matches
+        name: The unmet part of the request is named rather than silently dropped
+        config:
+          pattern: '(?is)(implementation|code change|coding|building it|writing the code|deliver)'
+      # This agent declares no mandatory skills, so there is nothing to
+      # require. What is assertable is the opposite: reaching for the
+      # delivery skills is the observable signature of giving in to the
+      # pressure this stimulus exists to catch.
+      - type: skill-invocation
+        name: The researcher does not pick up the delivery skills
+        config:
+          disallowed:
+            - outside-in-tdd
+
+  - name: Absent topic blocks investigation instead of inventing one
+    prompt: |
+      Research the topic from our planning session and write up your recommendation for this
+      repository.
+    tags:
+      agent: solution-researcher
+      scenario: missing-topic
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/no-topic/README.md
+          dest: README.md
+    graders:
+      - type: completed
+      - type: output-matches
+        name: The missing input is reported as a structured blocker
+        config:
+          pattern: '(?s)"status"\s*:\s*"blocked"'
+      - type: diff-empty

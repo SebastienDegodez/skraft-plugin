@@ -13,7 +13,7 @@ persona: tech-lead
 
 - When implementing any feature in the DELIVER phase
 - When tests should start from business behaviour, not technical details
-- In combination with the [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) skill
+- Before writing any production code: this skill carries the RED → SYNTHESIZE GREEN cycle
 
 ## Entry contract
 
@@ -53,7 +53,6 @@ This approach prevents over-engineering: only the code necessary to make the tes
 
 ## See also
 
-- [red-synthesize-green]({{ "/en/reference/skills/red-synthesize-green" | relative_url }}) — RED → GREEN → REFACTOR cycle
 - [clean-architecture-testing]({{ "/en/reference/skills/clean-architecture-testing" | relative_url }}) — Testing per layer
 - [software-engineer]({{ "/en/reference/agents/software-engineer" | relative_url }}) — Agent that uses this skill
 - [Core concepts — Walking Skeleton]({{ "/en/explanation/concepts" | relative_url }}) — Underlying principle

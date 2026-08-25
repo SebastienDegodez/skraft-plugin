@@ -1,0 +1,376 @@
+name: architecture-decisions
+description: Evaluates whether a settled architectural choice is written down as a record that keeps its verdict, its lifecycle and the memory of what it replaced intact.
+type: capability
+defaults:
+  timeout: 3m
+  runs: 3
+scoring:
+  threshold: 1
+stimuli:
+  - name: Record a decision without taking the verdict
+    prompt: |
+      Our checkout work raised whether to put a dispatch pipeline in front of the
+      application handlers. I have the arguments on both sides and honestly I could live
+      with either. You have the repository — pick the side you think is right, put it on
+      the record, and treat it as settled. I do not want this coming back to me.
+    tags:
+      intent: forced-concept
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/decided-corpus/docs/adr/adr-001-hexagonal-layering.md
+          dest: docs/adr/adr-001-hexagonal-layering.md
+        - src: fixtures/decided-corpus/docs/adr/adr-002-result-type-for-domain-errors.md
+          dest: docs/adr/adr-002-result-type-for-domain-errors.md
+        - src: fixtures/decided-corpus/docs/adr/adr-003-single-model-for-quote-reads.md
+          dest: docs/adr/adr-003-single-model-for-quote-reads.md
+        - src: fixtures/decided-corpus/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/decided-corpus/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+      commandTimeout: 60s
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: ratified decision corpus"'
+    graders:
+      - type: run-command
+        name: Sentinel — the decision corpus is still machine-readable
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              n=$(find docs/adr -name 'adr-*.md' | wc -l | tr -d '[:space:]')
+              [ "$n" -ge 3 ]
+              for f in docs/adr/adr-*.md; do
+                awk '/^---$/{c++; if(c==1){f=1; next}} c==2{exit} f' "$f" | grep -qE '^status:' || exit 1
+              done
+              test -s docs/adr/decisions-index.md
+          expected_exit_code: 0
+          timeout: 30s
+      - type: file-matches
+        name: The new record leaves its outcome unsettled
+        config:
+          path: docs/adr/adr-004-*.md
+          pattern: '(?mi)^status:[ \t]*"?proposed\b'
+      - type: file-not-matches
+        name: The outcome was not settled on the agent's own authority
+        config:
+          path: docs/adr/adr-004-*.md
+          pattern: '(?mi)^status:[ \t]*"?(accepted|rejected)\b'
+      - type: file-matches
+        name: Nobody is recorded as having signed the decision off
+        config:
+          path: docs/adr/adr-004-*.md
+          pattern: '(?mi)^ratified_by:[ \t]*(null|~|-|—|""|''''|"—"|''—''|"-"|tbd|pending)?[ \t]*$'
+      - type: file-matches
+        name: The index gained a row for the new record
+        config:
+          path: docs/adr/decisions-index.md
+          pattern: '(?mi)^\|[ \t]*(adr-)?0*4[ \t]*\|'
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
+    rubric:
+      - Produces the record for the question that was raised, carrying its context, the consequences of each direction and the alternatives that were weighed.
+      - Leaves the outcome open and says that choosing between the two directions belongs to a person, despite being told to settle it.
+      - Does not stall the rest of the work behind that reservation — what is handed back is complete apart from the outcome itself.
+      - Does not present the record as if the matter were closed, and does not quietly adopt one direction while claiming to leave it open.
+
+  - name: Record a declined option without renaming the verdict
+    prompt: |
+      The team looked hard at event sourcing for the quote aggregate this sprint — a
+      story asked for it because of an audit question — and we are not going with it. We
+      are keeping current state in the table and leaning on the audit log we already
+      have. Put that outcome on the record so the question does not get argued from
+      scratch later.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/decided-corpus/docs/adr/adr-001-hexagonal-layering.md
+          dest: docs/adr/adr-001-hexagonal-layering.md
+        - src: fixtures/decided-corpus/docs/adr/adr-002-result-type-for-domain-errors.md
+          dest: docs/adr/adr-002-result-type-for-domain-errors.md
+        - src: fixtures/decided-corpus/docs/adr/adr-003-single-model-for-quote-reads.md
+          dest: docs/adr/adr-003-single-model-for-quote-reads.md
+        - src: fixtures/decided-corpus/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/decided-corpus/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+      commandTimeout: 60s
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: ratified decision corpus"'
+    graders:
+      - type: run-command
+        name: Sentinel — the decision corpus is still machine-readable
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              n=$(find docs/adr -name 'adr-*.md' | wc -l | tr -d '[:space:]')
+              [ "$n" -ge 3 ]
+              for f in docs/adr/adr-*.md; do
+                awk '/^---$/{c++; if(c==1){f=1; next}} c==2{exit} f' "$f" | grep -qE '^status:' || exit 1
+              done
+              test -s docs/adr/decisions-index.md
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No filename in the corpus carries the outcome instead of the subject
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              bad=$(ls docs/adr | grep -Ei '(^|[-_])(reject|rejects|rejected|rejecting|rejection|decline|declined|declining|not-adopt|not-adopted|not-adopting|accepted|approved|deprecated|superseded|abandon|abandoned)([-_.]|$)' || true)
+              if [ -n "$bad" ]; then
+                echo "outcome encoded in a filename: $bad"
+                exit 1
+              fi
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Record numbering continued without a gap or a reused number
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              found=$(ls docs/adr | sed -n 's/^adr-\([0-9][0-9][0-9]\)-.*\.md$/\1/p' | sort | tr '\n' ' ')
+              if [ "$found" != "001 002 003 004 " ]; then
+                echo "record numbers found: [$found]"
+                exit 1
+              fi
+          expected_exit_code: 0
+          timeout: 30s
+      - type: file-matches
+        name: The outcome is carried by the record's own status field
+        config:
+          path: docs/adr/adr-004-*.md
+          pattern: '(?mi)^status:[ \t]*"?(rejected|proposed)\b'
+      - type: diff-not-contains
+        name: The three existing records were left alone
+        config:
+          pattern: '(?m)^diff --git a/docs/adr/adr-00[123]-'
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
+    rubric:
+      - Names the record after the subject that was weighed rather than after the answer the team reached.
+      - Carries the outcome inside the record itself rather than in how the file is labelled or titled.
+      - States what the team is doing instead, so the reader is not left with a blank where the adopted approach should be.
+      - Gives a reason tied to this situation and this audit question, specific enough that a reader can tell whether it still holds.
+
+  - name: Replace an earlier decision without erasing it
+    prompt: |
+      Measured load on the quote read path has changed the picture: reads now run about
+      forty times the writes, and the read and write shapes have pulled apart. That is
+      the situation the earlier read-model call assumed would not arise, and we are going
+      the other way now. Record where we have landed, and make sure a reader a year from
+      now cannot mistake the earlier position for the current one.
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/decided-corpus/docs/adr/adr-001-hexagonal-layering.md
+          dest: docs/adr/adr-001-hexagonal-layering.md
+        - src: fixtures/decided-corpus/docs/adr/adr-002-result-type-for-domain-errors.md
+          dest: docs/adr/adr-002-result-type-for-domain-errors.md
+        - src: fixtures/decided-corpus/docs/adr/adr-003-single-model-for-quote-reads.md
+          dest: docs/adr/adr-003-single-model-for-quote-reads.md
+        - src: fixtures/decided-corpus/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/decided-corpus/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+      commandTimeout: 60s
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: ratified decision corpus"'
+    graders:
+      - type: run-command
+        name: Sentinel — the decision corpus is still machine-readable
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              n=$(find docs/adr -name 'adr-*.md' | wc -l | tr -d '[:space:]')
+              [ "$n" -ge 3 ]
+              for f in docs/adr/adr-*.md; do
+                awk '/^---$/{c++; if(c==1){f=1; next}} c==2{exit} f' "$f" | grep -qE '^status:' || exit 1
+              done
+              test -s docs/adr/decisions-index.md
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The earlier record survives and a new one stands beside it
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              test -f docs/adr/adr-003-single-model-for-quote-reads.md
+              n=$(find docs/adr -type f -name 'adr-004-*.md' | wc -l | tr -d '[:space:]')
+              [ "$n" -eq 1 ]
+          expected_exit_code: 0
+          timeout: 30s
+      - type: file-matches
+        name: The new record points back at the one it replaces
+        config:
+          path: docs/adr/adr-004-*.md
+          pattern: '(?i)adr[-_ ]?003\b'
+      - type: file-matches
+        name: The new record reads as the position now in force
+        config:
+          path: docs/adr/adr-004-*.md
+          pattern: '(?mi)^status:[ \t]*"?(proposed|accepted)\b'
+      - type: file-matches
+        name: The index gained a row for the new record
+        config:
+          path: docs/adr/decisions-index.md
+          pattern: '(?mi)^\|[ \t]*(adr-)?0*4[ \t]*\|'
+      - type: file-contains
+        name: The index still carries its first entry
+        config:
+          path: docs/adr/decisions-index.md
+          value: Hexagonal layering for the quoting platform
+      - type: file-contains
+        name: The index still carries its second entry
+        config:
+          path: docs/adr/decisions-index.md
+          value: Result type for expected domain errors
+      - type: file-contains
+        name: The index still carries the entry that is being replaced
+        config:
+          path: docs/adr/decisions-index.md
+          value: Single model for quote reads and writes
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
+    rubric:
+      - Adds a new record for the position the measurements now support instead of rewriting the earlier one to match.
+      - Leaves the earlier record where it was and still readable as the position that was held before.
+      - Ties the two together so a reader can tell at a glance which one is current and which it displaced.
+      - Grounds the change in the measured read-to-write ratio and the divergence of the two shapes rather than in preference.
+
+  - name: Choose a context relationship without opening a record
+    prompt: |
+      Billing is a legacy system we do not own. It publishes customer records in its own
+      shape and it is not going to change for us. Pricing is the part of the product we
+      actually compete on, and its language is nothing like billing's. How should pricing
+      consume billing, and what does that cost us either way?
+    tags:
+      intent: non-activation
+    constraints:
+      max_duration: 3m
+    environment:
+      files:
+        - src: fixtures/decided-corpus/docs/adr/adr-001-hexagonal-layering.md
+          dest: docs/adr/adr-001-hexagonal-layering.md
+        - src: fixtures/decided-corpus/docs/adr/adr-002-result-type-for-domain-errors.md
+          dest: docs/adr/adr-002-result-type-for-domain-errors.md
+        - src: fixtures/decided-corpus/docs/adr/adr-003-single-model-for-quote-reads.md
+          dest: docs/adr/adr-003-single-model-for-quote-reads.md
+        - src: fixtures/decided-corpus/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/decided-corpus/docs/adr/supersessions.md
+          dest: docs/adr/supersessions.md
+      commandTimeout: 60s
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: ratified decision corpus"'
+    graders:
+      - type: run-command
+        name: Sentinel — the decision corpus is still machine-readable
+        config:
+          command: bash
+          args:
+            - -c
+            - |-
+              set -e
+              n=$(find docs/adr -name 'adr-*.md' | wc -l | tr -d '[:space:]')
+              [ "$n" -ge 3 ]
+              for f in docs/adr/adr-*.md; do
+                awk '/^---$/{c++; if(c==1){f=1; next}} c==2{exit} f' "$f" | grep -qE '^status:' || exit 1
+              done
+              test -s docs/adr/decisions-index.md
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-not-contains
+        name: Nothing under the decision folder was written or changed
+        config:
+          pattern: '(?m)^diff --git a/docs/adr/'
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      # A near-miss guard: this stimulus is outside the skill's remit, so
+      # loading it is the false positive the guard exists to catch.
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - architecture-decisions
+    rubric:
+      - Answers which way pricing should take billing's shape, and names what each direction costs.
+      - Treats billing as fixed and pricing's own language as the thing worth protecting, without inventing leverage over the upstream team.
+      - Answers the question rather than converting it into a document to be filled in, and does not hold the answer behind an approval step.
+      - A passing remark that the choice would be worth writing down is acceptable, provided it stays a remark and the substance is still delivered.
+
+  - name: Write up a service-boundary call with its real cost
+    prompt: |
+      We are choosing between keeping quote pricing inside the existing order service and
+      splitting it into its own service. The pricing team wants to ship on its own cadence.
+      The order team says the split will slow down every change that crosses the two.
+      Write up where this should land and what it costs, so someone joining next year
+      understands the call.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - architecture-decisions
+    rubric:
+      - Lands on one of the two options and says plainly which one.
+      - Names at least one real cost the chosen option imposes, not only what it buys.
+      - Engages both teams' stated concerns — release cadence and the friction of changes that cross the boundary — on their merits.
+      - Explains the rejection of the other option from the specifics of this situation, so a later reader can tell whether the reasoning still holds.

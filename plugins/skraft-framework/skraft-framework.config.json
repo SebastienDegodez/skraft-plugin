@@ -48,6 +48,14 @@
         "policy": "verify"
       },
       {
+        "name": "skraft-quality-bar",
+        "policy": "verify"
+      },
+      {
+        "name": "craft-discipline",
+        "policy": "verify"
+      },
+      {
         "name": "resolving-stack-commands",
         "policy": "verify"
       }
@@ -152,11 +160,11 @@
         "policy": "verify"
       },
       {
-        "name": "red-synthesize-green",
+        "name": "clean-architecture-testing",
         "policy": "verify"
       },
       {
-        "name": "clean-architecture-testing",
+        "name": "test-design-mandates",
         "policy": "verify"
       },
       {
@@ -172,11 +180,19 @@
         "policy": "verify"
       },
       {
+        "name": "skraft-quality-bar",
+        "policy": "verify"
+      },
+      {
         "name": "quality-gates-evidence-contract",
         "policy": "verify"
       },
       {
         "name": "quality-gates-dotnet",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
         "policy": "verify"
       }
     ],

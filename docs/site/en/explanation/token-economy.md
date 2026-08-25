@@ -41,14 +41,14 @@ acts on a distinct dimension of spend.
 | **Cache discipline** | System prompts and shared instructions are designed to be *reloaded* between turns without recomputation — anything that can be KV-cached is, and message structure guarantees it. |
 | **Class by role** | Each agent carries a B12 target class — `implementer`, `planner`, or `reviewer`. Artifact producers (discoverer, planner, architect, engineer) receive the most capable class; phase reviewers and lenses, whose task is bounded, receive the cheapest class that holds the work. Two roles are an exception and require a *Sonnet-class or above* model regardless of role: `software-engineer` and `software-engineer-reviewer` (multi-constraint arbitration). |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
-| **Depth (`depthTier`)** | The depth of each run is governed by `depthTier` (shallow / standard / deep): fan-out to 1, 2, or 4 adversarial lenses; mutation score threshold; Gherkin gate enabled or not. A *shallow* run does not instantiate the full reviewers. |
+| **Execution model by difficulty** | Each work item carries a `difficulty` in `state.json` (`simple`, `medium`, `medium-hard`, `challenging`), assessed once at DISCOVER exit. It decides how DELIVER runs: an inline TDD cycle for the simpler tiers, a sub-agent dispatched per Gherkin scenario plus intermediate artifacts for the harder ones. Effort goes where the work demands it and nowhere else. This is an execution shape, not a strictness setting — it never changes what has to be proven. |
 | **Structural pruning** | On an incoming HVE handoff, the DISCOVER phase is skipped: the backlog and prioritisation arrive already formed. The pipeline does not re-execute what it has no reason to recompute. |
 
 These levers are not independent. Cache discipline and role-class allocation reinforce
 each other: a low-class model reloaded from the KV cache costs a fraction of what a
-high-class model recomputed from scratch would. Tool surface and depth together limit
-the decision surface inside each turn, which shortens responses and reduces the context
-window required.
+high-class model recomputed from scratch would. Tool surface and per-scenario dispatch
+both narrow the decision surface inside a single turn, which shortens responses and
+reduces the context window required.
 
 ## Measured results
 
@@ -90,15 +90,38 @@ The economy described here comes exclusively from **form**: caching, model class
 output volume, allocated effort. It never touches the mechanisms that guarantee the
 reliability of deliverables.
 
+That separation used to be a matter of discipline; it is now a matter of fact. The bar
+lives in a single skill, `skraft-quality-bar`, and nothing reads a setting to lower it:
+mutation score 100% on Domain and Application and 90% on API and Infrastructure, line
+coverage 100% on Domain and Application, all four adversarial lenses on every review,
+the Gherkin gate, an ADR for every non-trivial decision, Object Calisthenics on the
+Domain. Every gate blocks. The *advisory* and *warning* levels no longer exist, and
+neither does the rationale that used to buy an exemption.
+
 The adversarial review lenses, their weights, their synthesis protocol, and the
-acceptance score threshold are outside the scope of the token economy. Reducing the
-number of lenses or lowering thresholds is not a cost lever — it is a quality
-degradation. To understand why these safeguards are non-negotiable, see the page
+acceptance score threshold are therefore outside the scope of the token economy.
+Reducing the number of lenses or lowering thresholds is not a cost lever — it is a
+quality degradation, and it is no longer expressible. To understand why these
+safeguards are non-negotiable, see the page
 [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}).
 
-The distinction matters in practice: when a run exceeds an estimated token
-budget, the first question is not "which reviewers can we disable?" but "which form
-lever has not yet been applied?"
+### What that costs
+
+Stated plainly: the framework no longer trades strictness for tokens. The repo-wide
+depth dial that once did exactly that — fanning review out to 1, 2, or 4 lenses,
+scoping the mutation runs, switching the Gherkin gate on or off — has been removed, and
+it was also the pipeline's cost governor. Every run now pays the full shape: four
+lenses on every review, both sequenced mutation runs, the Gherkin gate always on. That
+is a real and permanent increase in the floor cost of a run, and nothing on the quality
+side offsets it. The repository owner accepted the trade deliberately: quality is not
+negotiable, and a dial that lets a run buy its way under the bar is not a saving — it
+is a deferred defect.
+
+What remains — and it is the larger half of the spend — is the form levers: model
+class, cache discipline, tool surface, output volume, structural pruning. The
+distinction matters in practice: when a run exceeds an estimated token budget, the first
+question is not "which reviewers can we disable?" — that question no longer has an
+answer — but "which form lever has not yet been applied?"
 
 ## What is in place — what is coming
 
@@ -111,9 +134,13 @@ resolved concrete model. The "Measured results" section states the policy:
 `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
 `planner → claude-sonnet-5`, with the Sonnet floor raising the two exceptions
 (`software-engineer`, `software-engineer-reviewer`). One source of truth; a CI linter
-(`resolve-model --check`) fails if an agent drifts from the policy. The `depthTier`
-field in `state.json` governs the lens fan-out and the activation of optional gates.
-These two mechanisms are the principal governor of spend at present.
+(`resolve-model --check`) fails if an agent drifts from the policy. Together with cache
+discipline, that resolver is the principal governor of spend at present — and now the
+only one: the depth dial that used to share the job is gone, so the quality side of a
+run is a fixed cost rather than a variable one. The mutation gate illustrates it: each
+`quality-gates-<tech>` adapter bundles two sequenced scripts, core (Domain,
+Application) then boundary (API, Infrastructure), each carrying its expected value into
+the runner's `--break-at` so that the exit code is the verdict. Both run, every time.
 
 ### Designed, not yet implemented
 
