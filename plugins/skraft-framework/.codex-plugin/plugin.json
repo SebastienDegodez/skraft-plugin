@@ -8,6 +8,7 @@
   },
   "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
   "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
   "keywords": [
     "sdlc",
     "tdd",
