@@ -29,6 +29,12 @@ meta:
   title_en: "SKRAFT — the book"
   langs: [fr, en]
 
+  # Declared basename exceptions: FR/EN pairs whose basenames intentionally differ
+  # (e.g. page titled in French with a translated EN slug).
+  basename_exceptions:
+    - fr: "fr/explanation/deep-dive/lire-un-verdict.md"
+      en: "en/explanation/deep-dive/reading-a-verdict.md"
+
   # Design : inspire du learning-path (sebastiendegodez) et du site principal.
   #   - Theme liquid-glass (deja present dans assets/css/site.css : .glass-*).
   #   - Mise en page "doc" : sidebar groupee par partie (comme les blocs
