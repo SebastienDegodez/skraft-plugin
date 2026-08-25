@@ -5,6 +5,7 @@ on:
     paths:
       - 'plugins/skraft-framework/src/**'
       - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/assets/**'
       - 'plugins/skraft-framework/instructions/**'
       - 'plugins/skraft-framework/skraft-framework.config.json'
       - 'tests/skraft-framework/**'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'plugins/skraft-framework/src/**'
       - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/assets/**'
       - 'plugins/skraft-framework/instructions/**'
       - 'plugins/skraft-framework/skraft-framework.config.json'
       - 'tests/skraft-framework/**'
