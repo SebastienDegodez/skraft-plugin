@@ -108,7 +108,7 @@ Format YAML frontmatter + tableau markdown ; voir template ci-dessous.
 >
 > **Slug par milestone (et non par story ou bc).** La matrice est agrégée par milestone (PANEL pattern : un seul reviewer-readable artefact par cycle DESIGN au lieu d'un par paire). Conforme HVE car le fichier reste sous `details/{date}/` ; seule la convention de slug change.
 
-- `plugins/skraft-framework/agents/assets/coupling-matrix.template.md` — squelette avec en-tête `<!-- markdownlint-disable-file -->`, frontmatter YAML (`milestone`, `date`, `consistency_matrix_ref`), tableau markdown avec colonnes `(bc_a, bc_b, strength, distance, volatility, balanced, rationale, mitigation_ref)`, et en pied une note rappelant que la lecture complète du modèle est dans la référence balanced-coupling, pas dans le template (anti-LEAKY ABSTRACTION).
+- `plugins/skraft-framework/assets/coupling-matrix.template.md` — squelette avec en-tête `<!-- markdownlint-disable-file -->`, frontmatter YAML (`milestone`, `date`, `consistency_matrix_ref`), tableau markdown avec colonnes `(bc_a, bc_b, strength, distance, volatility, balanced, rationale, mitigation_ref)`, et en pied une note rappelant que la lecture complète du modèle est dans la référence balanced-coupling, pas dans le template (anti-LEAKY ABSTRACTION).
 
 ### Nouvelle référence asset
 
