@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "skraft",
-      "source": "./plugins",
+      "source": "./plugins/skraft-framework",
       "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture and the DISCOVER→DELIVER workflow."
     }
   ]
