@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.5.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.5.1...v1.5.2) (2026-08-25)
+
+### 📝 Documentation
+
+* **gaps:** fix basename-exception scanner + declare lire-un-verdict exception ([#149](https://github.com/SebastienDegodez/skraft-plugin/issues/149)) ([709890c](https://github.com/SebastienDegodez/skraft-plugin/commit/709890c5ab47218ff395359de549b1751b876d08))
+
 ## [1.5.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.5.0...v1.5.1) (2026-08-06)
 
 ### ♻️ Refactoring
