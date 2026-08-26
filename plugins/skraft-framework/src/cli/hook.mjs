@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHookService } from '../adapters/api/hooks/service-factory.mjs'
 import { toHarnessOutput } from '../adapters/api/hooks/harness-output.mjs'
+import { fromHarnessInput } from '../adapters/api/hooks/harness-input.mjs'
 import { createJsonlAuditWriter } from '../adapters/infrastructure/jsonl-audit-writer.mjs'
 import { createSkillFileReader } from '../adapters/infrastructure/skill-file-reader.mjs'
 import { createJsonlTranscriptReader } from '../adapters/infrastructure/jsonl-transcript-reader.mjs'
@@ -69,7 +70,9 @@ let raw = ''
 process.stdin.setEncoding('utf8')
 for await (const chunk of process.stdin) raw += chunk
 
-const payload = raw ? JSON.parse(raw) : {}
+// Translate the harness wire vocabulary (lowercased tool names, JSON-encoded toolArgs)
+// into the framework vocabulary the services read — see adapters/api/hooks/harness-input.mjs.
+const payload = fromHarnessInput(raw ? JSON.parse(raw) : {})
 if (argEvent && payload.hookType == null && payload.hook_type == null && payload.type == null) {
   payload.hookType = argEvent
 }

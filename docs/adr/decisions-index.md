@@ -10,3 +10,4 @@
 | ADR-005 | Config as Published Language; dispatch guard as Conformist consumer | Accepted | sebastiendegodez (2026-06-28) | 2026-06-28 | #49 |
 | ADR-006 | Fail-open posture for skill-loading monitoring services | Accepted | sebastiendegodez (2026-06-30) | 2026-06-29 | #50 |
 | ADR-007 | Eager mode activation via per-skill policy field extension | Accepted | sebastiendegodez (2026-06-30) | 2026-06-29 | #50 |
+| ADR-008 | Ship the Copilot hooks manifest at the plugin root, outside the agent-plugin spec | Accepted | sebastiendegodez (2026-08-26) | 2026-08-26 | — |
