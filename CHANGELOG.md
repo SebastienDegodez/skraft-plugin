@@ -3,26 +3,6 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
-## [1.6.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.5.2...v1.6.0) (2026-08-25)
-
-### ✨ Features
-
-* **plugin:** adopt Agent Plugins 1.0 layout with per-client manifests ([3d16966](https://github.com/SebastienDegodez/skraft-plugin/commit/3d16966f4f88221e1829026f813f59dee248b079)), closes [#151](https://github.com/SebastienDegodez/skraft-plugin/issues/151)
-* **plugin:** ship the Copilot hook manifest inside the plugin ([48e14c7](https://github.com/SebastienDegodez/skraft-plugin/commit/48e14c76e80a7aef26a55584424fc50dc8d77cb0)), closes [#151](https://github.com/SebastienDegodez/skraft-plugin/issues/151)
-
-### 🐛 Bug Fixes
-
-* **marketplace:** point every harness at the plugin directory ([0f47c89](https://github.com/SebastienDegodez/skraft-plugin/commit/0f47c89c32b2d6217a0404251f32aaa3a43dfc6a)), closes [#151](https://github.com/SebastienDegodez/skraft-plugin/issues/151)
-* **plugin:** move agent assets out of the agent discovery root ([3bb6f18](https://github.com/SebastienDegodez/skraft-plugin/commit/3bb6f189d20c21530766f9ec129792222f7f9815))
-
-### 📝 Documentation
-
-* add anti-hallucination scope and ROI limits to 6 handbook pages (EN + FR) ([#144](https://github.com/SebastienDegodez/skraft-plugin/issues/144)) ([569e031](https://github.com/SebastienDegodez/skraft-plugin/commit/569e031073007e95cff9bb48faa575e1be3e2286))
-* document the release contract ([52ae6e1](https://github.com/SebastienDegodez/skraft-plugin/commit/52ae6e1dbed1b48a9ca8643ea0b979175223d4e5))
-* **specs:** align the config template AC with its own heading ([c264e1a](https://github.com/SebastienDegodez/skraft-plugin/commit/c264e1adb1b954aa6b6c9a8c2fa1ba64a010ec8d))
-* **specs:** repoint template paths to the plugin assets directory ([3fc6714](https://github.com/SebastienDegodez/skraft-plugin/commit/3fc67142bacc9e770d4b0ac8cc11aa2ada57b1e0))
-* **sync:** remove skraft-quality-bar from skraft-orchestrator skills index ([#148](https://github.com/SebastienDegodez/skraft-plugin/issues/148)) ([dbc97f5](https://github.com/SebastienDegodez/skraft-plugin/commit/dbc97f53211636302ab74789730d7d45d642086c))
-
 ## [1.5.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.5.1...v1.5.2) (2026-08-25)
 
 ### 📝 Documentation
