@@ -9,6 +9,10 @@ on:
       - 'plugins/skraft-framework/instructions/**'
       - 'plugins/skraft-framework/skraft-framework.config.json'
       - 'tests/skraft-framework/**'
+      - '.claude-plugin/marketplace.json'
+      - '.cursor-plugin/marketplace.json'
+      - '.github/plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
       - '.github/workflows/skraft-framework-ci.yml'
   pull_request:
     paths:
@@ -18,6 +22,10 @@ on:
       - 'plugins/skraft-framework/instructions/**'
       - 'plugins/skraft-framework/skraft-framework.config.json'
       - 'tests/skraft-framework/**'
+      - '.claude-plugin/marketplace.json'
+      - '.cursor-plugin/marketplace.json'
+      - '.github/plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
       - '.github/workflows/skraft-framework-ci.yml'
   workflow_dispatch:
 

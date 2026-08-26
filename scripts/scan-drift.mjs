@@ -18,7 +18,7 @@
 // Output: a JSON object { generatedAt, root, summary, items[] } on stdout (or --out).
 // Exit code: 0 when no drift, 1 when drift was found (so CI can branch), 2 on usage error.
 
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { resolve, join, basename, dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection, parseYaml } from './lib/book.mjs';
@@ -111,12 +111,35 @@ function sameOrder(expected, actual) {
   return expected.length === actual.length && expected.every((v, i) => v === actual[i]);
 }
 
+// An agent has two distinct namings, and they must not be conflated:
+//   * the descriptor filename stem (solution-researcher.agent.md) is the STABLE IDENTITY —
+//     it is what the handbook links point at and what `copilot --agent` takes;
+//   * the front-matter `name` ("Skraft - Solution Researcher") is a DISPLAY LABEL.
+// The orchestrator lists its chain by display label, so resolving one to the other means
+// reading the descriptors, never transforming the string: `Skraft - Orchestrator` is the
+// label of `skraft-orchestrator.agent.md`, which no prefix-stripping rule produces.
+function indexSlugsByDisplayName(agentsDir) {
+  const bySlug = new Map();
+  if (!existsSync(agentsDir)) return bySlug;
+
+  for (const entry of readdirSync(agentsDir)) {
+    if (!entry.endsWith('.agent.md')) continue;
+    const fm = readFrontmatter(join(agentsDir, entry));
+    if (fm?.name) bySlug.set(String(fm.name), entry.replace(/\.agent\.md$/, ''));
+  }
+  return bySlug;
+}
+
 function deriveAgentUsageOrder(root) {
   const orchestratorPath = join(root, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md');
   const orchestrator = readFrontmatter(orchestratorPath);
   if (!orchestrator) return null;
 
-  const chain = Array.isArray(orchestrator.agents) ? orchestrator.agents : [];
+  // An entry that is already a filename stem resolves to itself.
+  const slugOf = indexSlugsByDisplayName(join(root, 'plugins/skraft-framework/agents'));
+  const chain = (Array.isArray(orchestrator.agents) ? orchestrator.agents : []).map(
+    (entry) => slugOf.get(String(entry)) ?? String(entry),
+  );
   const orderedAgents = ['skraft-orchestrator', ...chain];
   const skillsByAgent = {};
 

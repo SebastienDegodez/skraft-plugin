@@ -5,12 +5,25 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { scanDrift } from '../../scripts/scan-drift.mjs'
 
-const orchestratorAgent = `---
-name: skraft-orchestrator
+// Every agent carries TWO namings and this fixture keeps them deliberately apart, because
+// conflating them is what made the scanner permanently wrong in production (issue #150):
+//   * the descriptor file stem (backlog-discoverer-reviewer.agent.md) is the identity the
+//     handbook links point at;
+//   * the front-matter `name` is a display label, and the orchestrator chains by label.
+// The earlier fixture wrote `agents:` in slugs, so it exercised a world that does not exist.
+const REVIEWER_LABEL = 'Skraft - Backlog Discoverer Reviewer'
+
+// A label that no prefix-stripping / lowercasing rule turns into its file stem. The real
+// orchestrator is exactly this shape — `Skraft - Orchestrator` labels
+// skraft-orchestrator.agent.md — so the resolver must READ descriptors, never derive.
+const UNDERIVABLE_REVIEWER_LABEL = 'Skraft - Backlog Discoverer (Review Lens)'
+
+const orchestratorAgent = (reviewerLabel) => `---
+name: Skraft - Orchestrator
 description: "x"
 agents:
-  - backlog-discoverer
-  - backlog-discoverer-reviewer
+  - Skraft - Backlog Discoverer
+  - ${reviewerLabel}
 metadata:
   phases:
     - DISCOVER
@@ -20,7 +33,7 @@ metadata:
 `
 
 const discovererAgent = `---
-name: backlog-discoverer
+name: Skraft - Backlog Discoverer
 description: "x"
 metadata:
   skills:
@@ -29,8 +42,8 @@ metadata:
 ---
 `
 
-const discovererReviewerAgent = `---
-name: backlog-discoverer-reviewer
+const discovererReviewerAgent = (reviewerLabel) => `---
+name: ${reviewerLabel}
 description: "x"
 metadata:
   skills:
@@ -112,7 +125,7 @@ sidebar_position: 1
 `
 }
 
-async function withFixture({ wrongOrder }) {
+async function withFixture({ wrongOrder, reviewerLabel = REVIEWER_LABEL }) {
   const root = await mkdtemp(join(tmpdir(), 'scan-drift-order-'))
   const siteRoot = join(root, 'docs/site')
   const paths = [
@@ -131,9 +144,9 @@ async function withFixture({ wrongOrder }) {
   await writeFile(join(root, 'docs/site/fr/reference/skills/index.md'), skillsIndex({ wrongOrder }))
   await writeFile(join(root, 'docs/site/en/reference/skills/index.md'), skillsIndex({ wrongOrder }))
 
-  await writeFile(join(root, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'), orchestratorAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'), orchestratorAgent(reviewerLabel))
   await writeFile(join(root, 'plugins/skraft-framework/agents/backlog-discoverer.agent.md'), discovererAgent)
-  await writeFile(join(root, 'plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md'), discovererReviewerAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md'), discovererReviewerAgent(reviewerLabel))
 
   return {
     root,
@@ -173,6 +186,26 @@ test('scan-drift emits no order-drift when agents and skills indexes match live 
       false,
       'did not expect an order-drift item'
     )
+  } finally {
+    await fixture.cleanup()
+  }
+})
+
+// Guards the naming distinction itself: the chain is resolved by reading each descriptor's
+// front-matter `name`, not by transforming the label into a slug. Under a derive-the-slug
+// scanner this label yields `backlog-discoverer-(review-lens)`, matches no page link, and
+// the false order-drift of issue #150 returns.
+test('scan-drift resolves the chain through the descriptors, not by slugifying the label', async () => {
+  const fixture = await withFixture({ wrongOrder: false, reviewerLabel: UNDERIVABLE_REVIEWER_LABEL })
+  try {
+    const ledger = scanDrift({
+      bookPath: join(fixture.root, 'docs/site/_data/book.yml'),
+      root: fixture.root,
+      siteRoot: fixture.siteRoot,
+      emptyThreshold: 1,
+    })
+    const drift = ledger.items.find((it) => it.type === 'order-drift')
+    assert.equal(drift, undefined, `did not expect an order-drift item, got: ${drift?.detail}`)
   } finally {
     await fixture.cleanup()
   }
