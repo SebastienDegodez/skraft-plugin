@@ -23,7 +23,10 @@ sidebar_position: 1
 `PreToolUse` and `SubagentStop` are the two events declared in
 `.github/hooks/skraft.json` (US1 scaffold). Business handlers are to be implemented (US2+).
 
-## Decision types
+## Decision types (internal vocabulary)
+
+Handlers return one of four decisions, built by
+`plugins/skraft-framework/src/adapters/api/hooks/decision.mjs`:
 
 | Decision | Effect | When to use |
 |----------|--------|-------------|
@@ -32,25 +35,61 @@ sidebar_position: 1
 | `block` | Immediate block — pipeline interrupted | Critical, unrecoverable violation |
 | `additionalContext` | Tool executes but agent receives extra context | Warning or audit info |
 
-### Response schema
-
-```json
-// allow
-{ "decision": "allow" }
-{ "decision": "allow", "message": "Payload valid" }
-
-// deny
-{ "decision": "deny", "message": "Reason for denial" }
-
-// block
-{ "decision": "block", "message": "Reason for block" }
-
-// additionalContext
-{ "decision": "additionalContext", "context": "Added information" }
+```js
+allow()                                  // { decision: 'allow' }
+deny('Reason for denial')                // { decision: 'deny', message: … }
+block('Reason for block')                // { decision: 'block', message: … }
+additionalContext('Added information')   // { decision: 'additionalContext', context: … }
 ```
 
-If the hook returns `undefined` (no response) or exits 0 without output, the runtime
-interprets it as `allow`.
+**This vocabulary never reaches the harness.** It is the framework's own language,
+translated at the CLI boundary by
+`plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs`.
+
+## Harness wire format (what is actually written to stdout)
+
+Both harnesses type the root `decision` key as `"approve" | "block"`. Writing
+`{"decision":"allow"}` or `{"decision":"deny"}` invalidates the **whole** payload — Claude
+Code logs `Hook JSON output validation failed — (root): Invalid input`, discards the output
+and lets the tool run. A guard emitting the internal vocabulary is therefore inert.
+
+A single envelope satisfies both runtimes: Claude Code reads `hookSpecificOutput` and drops
+unknown root keys, Copilot CLI reads the root keys and ignores `hookSpecificOutput`.
+
+| Decision | Event | stdout |
+|----------|-------|--------|
+| `allow` | any | *(nothing — empty stdout is never parsed, so it can never fail validation)* |
+| `deny` / `block` | `PreToolUse` | `permissionDecision` + `permissionDecisionReason`, at the root **and** inside `hookSpecificOutput` |
+| `deny` / `block` | any other | `{ "decision": "block", "reason": … }` |
+| `additionalContext` | any | `additionalContext` at the root **and** inside `hookSpecificOutput` |
+
+```json
+// deny / block on PreToolUse — the tool alone is refused, the session keeps going
+{
+  "permissionDecision": "deny",
+  "permissionDecisionReason": "Reason for denial",
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Reason for denial"
+  }
+}
+
+// deny / block on any other event
+{ "decision": "block", "reason": "Reason for block" }
+
+// additionalContext
+{
+  "additionalContext": "Added information",
+  "hookSpecificOutput": { "hookEventName": "PostToolUse", "additionalContext": "Added information" }
+}
+```
+
+`hookSpecificOutput.hookEventName` **must** match the event currently running, otherwise
+Claude Code drops the block. A `block` on `PreToolUse` maps onto `permissionDecision: "deny"`
+and never `continue: false`: a hook bug must not freeze the pipeline.
+
+If the hook writes nothing or exits 0 without output, both runtimes interpret it as `allow`.
 
 ## Payload normalisation
 
@@ -92,7 +131,8 @@ using the following cascade (last source wins):
 |------|------|
 | `plugins/skraft-framework/src/cli/hook.mjs` | CLI entry point (stdin → stdout) |
 | `plugins/skraft-framework/src/adapters/api/hooks/payload.mjs` | Payload normalisation |
-| `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Decision constructors |
+| `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Decision constructors (internal vocabulary) |
+| `plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs` | Decision → harness wire format |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Route by event type |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-entry.mjs` | Normalise then route |
 | `plugins/skraft-framework/src/adapters/api/hooks/service-factory.mjs` | Composition root |

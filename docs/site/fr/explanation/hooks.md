@@ -23,13 +23,13 @@ La revue adverse (G7) détecte *après* ; les hooks détectent *avant*.
 
 ## La solution — le harness de hooks
 
-SKRAFT introduit un harness de hooks branché sur les événements du runtime Copilot.
-Chaque hook intercepte un événement (`PreToolUse`, `SubagentStop`, …), évalue le
-payload normalisé, et retourne une décision (`allow`, `deny`, `block`,
-`additionalContext`).
+SKRAFT introduit un harness de hooks branché sur les événements des deux runtimes
+supportés (Claude Code et Copilot CLI). Chaque hook intercepte un événement
+(`PreToolUse`, `SubagentStop`, …), évalue le payload normalisé, et retourne une décision
+(`allow`, `deny`, `block`, `additionalContext`).
 
 ```
-Runtime Copilot
+Runtime du harness
       │
       ▼  PreToolUse (outil: bash, tool_input: …)
  hook.mjs ──► normalise(payload) ──► router ──► handler
@@ -37,8 +37,23 @@ Runtime Copilot
                                           ┌─────────┤
                                         allow     deny / block
                                           │             │
+                                          └──► toHarnessOutput(décision, événement)
+                                                    │
                                       exécution     bloqué
 ```
+
+Ce vocabulaire de décision appartient à SKRAFT — aucun harness ne le comprend. Il est
+traduit à la sortie par `harness-output.mjs` vers le JSON que les runtimes valident
+réellement : un refus avant un outil voyage en `permissionDecision: "deny"`, un refus sur
+tout autre événement en `decision: "block"`, et un `allow` en aucune sortie du tout. Une
+seule enveloppe porte à la fois les clés racine que lit Copilot et le bloc
+`hookSpecificOutput` que lit Claude Code.
+
+La traduction n'est pas cosmétique : une décision écrite dans le vocabulaire interne échoue
+à la validation du schéma harness à la racine, le payload entier est jeté, et la garde
+devient un no-op qui laisse passer la violation. Voir
+[Hooks — référence]({{ "/fr/reference/infrastructure/hooks" | relative_url }}) pour le format
+de fil exact.
 
 L'agent reçoit `deny` ou `block` avant que l'outil ne s'exécute — l'invariant ne
 peut pas être violé discrètement.

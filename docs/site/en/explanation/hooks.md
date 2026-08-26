@@ -22,12 +22,13 @@ Adversarial review (G7) detects violations *after* the fact; hooks detect them *
 
 ## The solution — the hooks harness
 
-SKRAFT introduces a hooks harness plugged into Copilot runtime events. Each hook
-intercepts an event (`PreToolUse`, `SubagentStop`, …), evaluates the normalised
-payload, and returns a decision (`allow`, `deny`, `block`, `additionalContext`).
+SKRAFT introduces a hooks harness plugged into the runtime events of both supported
+harnesses (Claude Code and Copilot CLI). Each hook intercepts an event (`PreToolUse`,
+`SubagentStop`, …), evaluates the normalised payload, and returns a decision (`allow`,
+`deny`, `block`, `additionalContext`).
 
 ```
-Copilot runtime
+harness runtime
       │
       ▼  PreToolUse (tool: bash, tool_input: …)
  hook.mjs ──► normalise(payload) ──► router ──► handler
@@ -35,8 +36,22 @@ Copilot runtime
                                           ┌─────────┤
                                         allow     deny / block
                                           │             │
+                                          └──► toHarnessOutput(decision, event)
+                                                    │
                                       execution     blocked
 ```
+
+That decision vocabulary is SKRAFT's own — no harness understands it. It is translated on
+the way out by `harness-output.mjs` into the JSON the runtimes actually validate: a refusal
+before a tool travels as `permissionDecision: "deny"`, a refusal on any other event as
+`decision: "block"`, and an allow as no output at all. One envelope carries both the root
+keys Copilot reads and the `hookSpecificOutput` block Claude Code reads.
+
+The translation is not cosmetic: a decision written in the internal vocabulary fails the
+harness schema at the root, the whole payload is discarded, and the guard becomes a no-op
+that lets the violation through. See
+[Hooks — reference]({{ "/en/reference/infrastructure/hooks" | relative_url }}) for the exact
+wire format.
 
 The agent receives `deny` or `block` before the tool executes — the invariant cannot
 be silently violated.
