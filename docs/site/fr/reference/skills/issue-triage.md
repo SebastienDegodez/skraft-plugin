@@ -16,7 +16,7 @@ persona: tech-lead
 - Assigner des labels de type, priorité, et effort à une issue
 - Détecter les doublons et les issues liées
 - Construire une proposition de sprint avec capacité calculée
-- Signaler les issues XL qui doivent être découpées avant d'entrer en DISCUSS
+- Signaler les issues au-delà de 8 points qui doivent être découpées avant d'entrer en DISCUSS
 
 ## Contrat d'entrée
 
@@ -28,15 +28,15 @@ persona: tech-lead
 - Tableau de triage avec : numéro, titre, type, priorité, effort, notes
 - Labels appliqués sur chaque issue : `type/*`, `priority/*`, `effort/*`, `status/ready` ou `status/duplicate`
 - Proposition de sprint avec capacité calculée
-- Notes « must split » pour chaque issue `effort/XL`
+- Notes « must split » pour chaque issue `effort/13` ou `effort/21`
 
 ## Invariants
 
 - **Le triage est une classification, pas un refinement** — On n'écrit pas de critères d'acceptation ici
 - **Toute issue triée doit avoir** un type, une priorité, et un effort avant d'être `status/ready`
 - **P0 requiert une justification écrite** — champ Notes obligatoire : raison, impact, date
-- **XL doit être signalé** — Toute issue `effort/XL` bloque l'entrée en DISCUSS sans plan de découpage
-- **Taxonomie de labels fixe** — `type/feature`, `type/bug`, `type/tech-debt`, `type/docs`, `type/question` pour les types ; `priority/P0–P3` pour la priorité ; `effort/XS–XL` pour l'effort
+- **Au-delà de 8 points doit être signalé** — Toute issue `effort/13` ou `effort/21` bloque l'entrée en DISCUSS sans plan de découpage
+- **Taxonomie de labels fixe** — `type/feature`, `type/bug`, `type/tech-debt`, `type/docs`, `type/question` pour les types ; `priority/P0–P3` pour la priorité ; `effort/1`, `effort/2`, `effort/3`, `effort/5`, `effort/8`, `effort/13`, `effort/21` pour l'effort
 
 ## Pourquoi cette forme
 

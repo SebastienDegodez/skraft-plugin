@@ -28,14 +28,14 @@ persona: tech-lead
 - User story au format `As a {persona}, I want {capability}, so that {benefit}`
 - ≥ 3 critères d'acceptation en Given/When/Then ou liste à puces
 - DoR 8 items validés
-- Effort estimé (XS, S, M, L — XL interdit sans découpage)
+- Effort estimé en points Fibonacci (1, 2, 3, 5, 8 — 13 et 21 interdits sans découpage)
 
 ## Invariants
 
 - **La story est une unité de valeur** — Une story N'EST PAS une tâche, un ticket, ou une instruction technique
 - **Persona spécifique** — jamais « un utilisateur », « quelqu'un » ou « le système »
 - **Capacité = comportement observable** — jamais `implement`, `create`, `call`, `build` en tant que capability
-- **XL = doit être découpée avant DoR** — Toute story estimée XL ne peut pas atteindre le statut `status/ready`
+- **Au-delà de 8 points = doit être découpée avant DoR** — Toute story estimée 13 ou 21 ne peut pas atteindre le statut `status/ready`
 - **6 critères INVEST** — Independent, Negotiable, Valuable, Estimable, Small, Testable — tous doivent passer
 
 ## Pourquoi cette forme
@@ -44,7 +44,7 @@ La phase DISCUSS produit des stories, pas des spécifications techniques. Une st
 
 > « The goal of refinement is shared understanding, not a perfect document. »
 
-Les 6 patterns de découpage (par étape de workflow, règle métier, variation de données, interface, AC, chemin happy/sad) permettent de réduire toute story XL en stories S/M indépendamment livrables.
+Les 6 patterns de découpage (par étape de workflow, règle métier, variation de données, interface, AC, chemin happy/sad) permettent de réduire toute story de 13 ou 21 points en stories de 2 à 5 points indépendamment livrables.
 
 ## Customisation autorisée
 

@@ -32,7 +32,7 @@ persona: tech-lead
 
 - **G2 est la seule gate BLOCKER** — une issue P0/P1 absente du triage est une faute grave
 - **Capacité effective = team-days × 0,7** pour les issues P1/P2/P3 (les P0 surchargent toujours)
-- **Les issues XL n'entrent jamais dans le sprint** — G4 échoue si une issue XL est incluse
+- **Les issues au-delà de 8 points n'entrent jamais dans le sprint** — G4 échoue si une issue de 13 ou 21 points est incluse
 - **Pas de P3 avant P1** — un P3 dans le sprint alors qu'un P1 est exclu est une inversion de priorité
 
 | Gate | Lens | Sévérité | Définition |
@@ -40,7 +40,7 @@ persona: tech-lead
 | G1 | Complétude | HIGH | Les 3 modes de découverte ont été appliqués ou leur absence est justifiée |
 | G2 | Complétude | BLOCKER | Aucune issue P0/P1 ouverte n'est absente du rapport (sample-check top 5) |
 | G3 | Priorisation | HIGH | Pas d'inversion de priorité ; tout P0 a une justification écrite |
-| G4 | Priorisation | HIGH | Capacité effective respectée ; aucune issue XL dans le sprint |
+| G4 | Priorisation | HIGH | Capacité effective respectée ; aucune issue au-delà de 8 points dans le sprint |
 | G5 | Doublons | HIGH | Aucune paire de doublons non détectée (similarité normalisée > 80 %) |
 | G6 | Doublons | MEDIUM | Toutes les paires 40–80 % sont signalées dans la section "Duplicates Detected" |
 

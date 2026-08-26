@@ -32,7 +32,7 @@ persona: tech-lead
 
 - **G2 is the only BLOCKER gate** — a P0/P1 issue missing from the triage is a critical failure
 - **Effective capacity = team-days × 0.7** for P1/P2/P3 issues (P0 always overrides capacity)
-- **XL issues never enter the sprint** — G4 fails if an XL issue is included
+- **Issues above 8 points never enter the sprint** — G4 fails if a 13- or 21-point issue is included
 - **No P3 before P1** — a P3 in the sprint while a P1 is excluded is a priority inversion
 
 | Gate | Lens | Severity | Definition |
@@ -40,7 +40,7 @@ persona: tech-lead
 | G1 | Completeness | HIGH | All 3 discovery modes applied, or skipped modes justified |
 | G2 | Completeness | BLOCKER | No open P0/P1 issue absent from the report (top-5 sample-check) |
 | G3 | Prioritization | HIGH | No priority inversions; every P0 has a written justification |
-| G4 | Prioritization | HIGH | Effective capacity respected; no XL issue in the sprint |
+| G4 | Prioritization | HIGH | Effective capacity respected; no issue above 8 points in the sprint |
 | G5 | Duplicates | HIGH | No undetected duplicate pair (normalised similarity > 80%) |
 | G6 | Duplicates | MEDIUM | All 40–80% pairs flagged in the "Duplicates Detected" section |
 

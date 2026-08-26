@@ -20,7 +20,7 @@ persona: tech-lead
 
 - Liste de stories approuvées DoR depuis DISCUSS
 - Taille d'équipe et durée de sprint connues
-- Estimations en taille de t-shirt par story (`XS`, `S`, `M`, `L`, `XL`)
+- Estimations en points Fibonacci par story (`1`, `2`, `3`, `5`, `8`)
 
 ## Contrat de sortie
 
@@ -33,7 +33,7 @@ persona: tech-lead
 
 - **Must-Haves ≤ 60 % de la capacité** — pas de sprint surchargé de Must
 - **Should-Haves ≤ 30 %** — les Could-Haves occupent le reliquat
-- **XL bloquée** — une story XL doit être découpée avant d'entrer dans le sprint
+- **Au-delà de 8 points bloqué** — une story de 13 ou 21 points doit être découpée avant d'entrer dans le sprint
 - **DAG sans cycle** — une dépendance circulaire bloque la planification et doit être résolue
 - **3 à 8 stories par milestone** — en dehors de cette fourchette, réviser le périmètre
 - **Capacité viable = équipe × durée × 0,7** — le facteur intègre réunions, revues PR et imprévus
@@ -49,7 +49,7 @@ Un sprint bien planifié protège la cadence : couper les Could-Haves est une d�
 
 ## Customisation autorisée
 
-- Mapping taille de t-shirt vers story-days (L1)
+- Mapping points vers story-days (L1)
 - Facteur de capacité viable (par défaut 0,7) (L2)
 - Convention de nommage des milestones (`v{major}.{minor}-{theme}`) (L1)
 

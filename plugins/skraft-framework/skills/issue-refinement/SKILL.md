@@ -124,13 +124,13 @@ Every story must satisfy all 6 INVEST criteria before leaving DISCUSS.
 
 **Definition:** Deliverable in 1-3 days by a single engineer, or 1-2 days pair-programming.
 
-**How to check:** Is the effort estimate L or XL? Does the story have 6+ ACs? Does it touch multiple personas?
+**How to check:** Is the effort estimate 8 or above? Does the story have 6+ ACs? Does it touch multiple personas?
 
 **Common violations:**
 - "As a driver, I want to complete the entire insurance application process" → covers 8+ user actions
 - Story with 10 ACs → split signal
 
-**How to fix:** Apply a story splitting pattern (see references/splitting-patterns.md). XL stories MUST be split before marking ready.
+**How to fix:** Apply a story splitting pattern (see references/splitting-patterns.md). Stories above 8 points MUST be split before marking ready.
 
 ---
 
@@ -150,7 +150,7 @@ Every story must satisfy all 6 INVEST criteria before leaving DISCUSS.
 
 ## Story Splitting Patterns
 
-When a story is too large (L/XL), use one of these patterns:
+When a story is too large (8 or above), use one of these patterns:
 
 ### 1. By Workflow Step
 Split each sequential user action into a separate story.
@@ -310,7 +310,7 @@ A story does NOT leave DISCUSS unless ALL 8 items pass. Any failing item → sto
 | 3 | 3+ domain examples | At least 3 concrete examples with real values (real ages, real accident counts, real policy types). |
 | 4 | UAT scenarios | Given/When/Then scenarios that a non-technical user could validate. |
 | 5 | AC derived from UAT | Each AC traces back to a UAT scenario. AC without a UAT source is a fabrication. |
-| 6 | Right-sized | Deliverable in 1-3 days solo, or 1-2 days pair. XL estimate → split first. |
+| 6 | Right-sized | Deliverable in 1-3 days solo, or 1-2 days pair. An estimate above 8 → split first. |
 | 7 | Technical notes | Known constraints, integrations (e.g., calls eligibility-service v2 API), performance requirements. |
 | 8 | Dependencies | Inter-story dependencies listed. Confirmed that dependency stories are in the same sprint or already done. "None" is a valid value if no dependencies exist. |
 
@@ -490,15 +490,19 @@ Dependencies:
 
 ## Effort Estimation
 
-### T-Shirt Sizes
+### Story Points
 
-| Size | Duration | AC count (guideline) | When to use |
+| Points | Duration | AC count (guideline) | When to use |
 |---|---|---|---|
-| XS | < 2 hours | 1 AC | Minor UI change, configuration update, copy change |
-| S | 2-4 hours | 2 ACs | Simple read-only feature, straightforward business rule |
-| M | 1 day | 3-4 ACs | Standard feature with happy path + 1-2 edge cases |
-| L | 2-3 days | 4-5 ACs | Complex business rule, integration, or multi-step flow |
-| XL | > 3 days | 6+ ACs | **Must split before continuing** |
+| 1 | < 2 hours | 1 AC | Minor UI change, configuration update, copy change |
+| 2 | 2-4 hours | 2 ACs | Simple read-only feature, straightforward business rule |
+| 3 | 1 day | 3-4 ACs | Standard feature with happy path + 1-2 edge cases |
+| 5 | 2 days | 4-5 ACs | Complex business rule, integration, or multi-step flow |
+| 8 | 3 days | 5-6 ACs | The ceiling of right-sized — acceptable, but nothing bigger is |
+| 13 · 21 | > 3 days | 6+ ACs | **Must split before continuing** |
+
+The gaps widen on purpose. Past 8 the scale stops offering a number you could
+defend, which is exactly the signal to split rather than to estimate harder.
 
 ### Estimation Heuristics
 

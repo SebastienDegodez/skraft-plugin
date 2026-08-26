@@ -160,15 +160,22 @@ The 0.7 factor accounts for: standups, PR reviews, team meetings, unplanned inci
 - Raw capacity: 3 × 5 = 15 engineer-days
 - Sustainable capacity: 15 × 0.7 = **10.5 story-days**
 
-### T-Shirt to Day Mapping
+### Story Points to Day Mapping
 
-| Size | Story-days |
+A plumbing convention, not a measurement. A point carries no duration; the bridge exists
+only because capacity arrives in days and the two units cannot be compared without one.
+
+| Points | Story-days |
 |---|---|
-| XS | 0.25 |
-| S | 0.5 |
-| M | 1.0 |
-| L | 2.0 |
-| XL | ⛔ Stop — must split before entering sprint |
+| 1 | 0.25 |
+| 2 | 0.5 |
+| 3 | 0.75 |
+| 5 | 1.5 |
+| 8 | 3.0 |
+| 13 · 21 | ⛔ Stop — must split before entering sprint |
+
+Cost per point never falls as the card grows: splitting an 8 into 3 + 5 costs 2.25 days
+instead of 3. Splitting is the cheaper arithmetic, never the more expensive one.
 
 ### Sprint Capacity Check
 
@@ -183,14 +190,14 @@ Sprint: v0.2-eligibility
 Team: 3 engineers, 1 week → sustainable capacity: 10.5 story-days
 
 Stories scheduled:
-  STORY-01 (Personal Details) — S → 0.5 days
-  STORY-02 (Licence Validation) — M → 1.0 day
-  STORY-03 (Eligibility Check) — M → 1.0 day
-  STORY-04 (Document Upload) — M → 1.0 day
-  STORY-05 (Payment) — L → 2.0 days
-  STORY-06 (Policy Confirmation) — S → 0.5 days
+  STORY-01 (Personal Details) — 2 → 0.5 days
+  STORY-02 (Licence Validation) — 3 → 0.75 days
+  STORY-03 (Eligibility Check) — 3 → 0.75 days
+  STORY-04 (Document Upload) — 3 → 0.75 days
+  STORY-05 (Payment) — 5 → 1.5 days
+  STORY-06 (Policy Confirmation) — 2 → 0.5 days
 
-Total: 0.5 + 1.0 + 1.0 + 1.0 + 2.0 + 0.5 = 6.0 story-days ✅ (under 10.5)
+Total: 0.5 + 0.75 + 0.75 + 0.75 + 1.5 + 0.5 = 4.75 story-days ✅ (under 10.5)
 ```
 
 ### Signs of Overloaded Sprint
@@ -218,13 +225,13 @@ Apply these labels to issues corresponding to stories:
 |---|---|
 | Status | `status/ready`, `status/in-progress`, `status/in-review`, `status/done`, `status/blocked` |
 | Priority | `priority/must`, `priority/should`, `priority/could`, `priority/wont` |
-| Effort | `effort/XS`, `effort/S`, `effort/M`, `effort/L` |
+| Effort | `effort/1`, `effort/2`, `effort/3`, `effort/5`, `effort/8` |
 | Phase | `phase/discuss`, `phase/design`, `phase/distill`, `phase/deliver` |
 
 ### Story Decomposition
 
 If a story is split during DISCUSS, use GitHub sub-issues:
-- Parent issue: the original story (labelled `effort/L` or `effort/XL` before splitting)
+- Parent issue: the original story (labelled `effort/13` or `effort/21` before splitting)
 - Child issues: the split stories (each labelled with their own effort and status)
 - Link parent to children using "Tracked by" relationship in GitHub Issues
 

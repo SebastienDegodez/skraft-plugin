@@ -225,7 +225,7 @@ label:priority/P0,priority/P1 no:assignee is:open is:issue sort:created-desc
   "owner": "org-or-user",
   "repo": "repository-name",
   "issue_number": 42,
-  "labels": ["type/feature", "priority/P1", "effort/M", "status/ready"],
+  "labels": ["type/feature", "priority/P1", "effort/3", "status/ready"],
   "milestone": 3
 }
 ```

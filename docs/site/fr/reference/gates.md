@@ -64,7 +64,7 @@ et la proposition de sprint.
 | ID | Ce que la gate vérifie | Condition de passage | Sévérité |
 | --- | --- | --- | --- |
 | **G3** | Toute P0 a une justification écrite ; P1→P3 suit l'ordre de valeur métier décroissante ; aucune inversion de priorité. | Aucune inversion, toutes les P0 justifiées. | HIGH |
-| **G4** | La proposition de sprint respecte la capacité déclarée (jours-équipe × 0,7) ; aucune P2/P3 ne prend une place pendant qu'une P0/P1 est exclue ; aucune issue XL dans le sprint. | Capacité respectée, XL exclues. | HIGH |
+| **G4** | La proposition de sprint respecte la capacité déclarée (jours-équipe × 0,7) ; aucune P2/P3 ne prend une place pendant qu'une P0/P1 est exclue ; aucune issue au-delà de 8 points dans le sprint. | Capacité respectée, issues au-delà de 8 points exclues. | HIGH |
 
 ### Lentille 3 — Détection de doublons
 

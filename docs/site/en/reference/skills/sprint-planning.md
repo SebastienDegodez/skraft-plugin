@@ -20,7 +20,7 @@ persona: tech-lead
 
 - DoR-approved stories list from DISCUSS
 - Known team size and sprint duration
-- T-shirt size estimates per story (`XS`, `S`, `M`, `L`, `XL`)
+- Fibonacci point estimates per story (`1`, `2`, `3`, `5`, `8`)
 
 ## Exit contract
 
@@ -33,7 +33,7 @@ persona: tech-lead
 
 - **Must-Haves ≤ 60% of capacity** — no sprint overloaded with Musts
 - **Should-Haves ≤ 30%** — Could-Haves fill the remainder
-- **XL blocked** — an XL story must be split before entering the sprint
+- **Above 8 points blocked** — a 13- or 21-point story must be split before entering the sprint
 - **Cycle-free DAG** — a circular dependency blocks planning and must be resolved
 - **3 to 8 stories per milestone** — outside this range, revisit scope
 - **Sustainable capacity = team × duration × 0.7** — the factor accounts for meetings, PR reviews, and incidents
@@ -49,7 +49,7 @@ A well-planned sprint protects the cadence: cutting Could-Haves is a predictable
 
 ## Allowed customisation
 
-- T-shirt size to story-days mapping (L1)
+- Point to story-days mapping (L1)
 - Sustainable capacity factor (default 0.7) (L2)
 - Milestone naming convention (`v{major}.{minor}-{theme}`) (L1)
 

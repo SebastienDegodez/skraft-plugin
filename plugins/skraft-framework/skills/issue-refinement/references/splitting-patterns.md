@@ -1,6 +1,6 @@
 # Story Splitting Patterns
 
-Six patterns for decomposing oversized user stories into independently deliverable units. Apply when effort estimate is L or XL, or when a story has more than 5 acceptance criteria.
+Six patterns for decomposing oversized user stories into independently deliverable units. Apply when the effort estimate is 8 or above, or when a story has more than 5 acceptance criteria.
 
 ---
 
@@ -27,7 +27,7 @@ As a driver,
 I want to submit an insurance application,
 so that I obtain my policy.
 ```
-*Effort: XL (8+ ACs, spans 6 user actions)*
+*Effort: 21 (8+ ACs, spans 6 user actions)*
 
 **After (split by workflow step):**
 

@@ -46,7 +46,7 @@ Write "None identified" if no constraints are known at story time.}
 Write "None" if the story is fully independent.}
 
 ### Effort
-{XS | S | M | L} — {one-sentence justification}
+{1 | 2 | 3 | 5 | 8} — {one-sentence justification}
 
 ### DoR Checklist
 - [ ] Problem statement articulates a user problem (not "implement X")

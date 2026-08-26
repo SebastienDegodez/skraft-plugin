@@ -28,14 +28,14 @@ persona: tech-lead
 - User story in the format `As a {persona}, I want {capability}, so that {benefit}`
 - ≥ 3 acceptance criteria in Given/When/Then or bullet-list format
 - DoR 8 items validated
-- Effort estimate (XS, S, M, L — XL forbidden without splitting)
+- Effort estimate in Fibonacci points (1, 2, 3, 5, 8 — 13 and 21 forbidden without splitting)
 
 ## Invariants
 
 - **Story is a unit of value** — A story is NOT a task, a ticket, or a technical instruction
 - **Specific persona** — never "a user", "someone", or "the system"
 - **Capability = observable behaviour** — never `implement`, `create`, `call`, `build` as the capability
-- **XL = must be split before DoR** — Any XL-estimated story cannot reach `status/ready`
+- **Above 8 points = must be split before DoR** — Any story estimated 13 or 21 cannot reach `status/ready`
 - **6 INVEST criteria** — Independent, Negotiable, Valuable, Estimable, Small, Testable — all must pass
 
 ## Why this shape
@@ -44,7 +44,7 @@ The DISCUSS phase produces stories, not technical specifications. A well-formed 
 
 > « The goal of refinement is shared understanding, not a perfect document. »
 
-The 6 splitting patterns (by workflow step, business rule, data variation, interface, AC, happy/sad path) allow any XL story to be reduced into independently deliverable S/M stories.
+The 6 splitting patterns (by workflow step, business rule, data variation, interface, AC, happy/sad path) allow any 13- or 21-point story to be reduced into independently deliverable 2- to 5-point stories.
 
 ## Allowed customisation
 

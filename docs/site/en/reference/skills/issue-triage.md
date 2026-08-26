@@ -16,7 +16,7 @@ persona: tech-lead
 - Assigning type, priority, and effort labels to an issue
 - Detecting duplicates and related issues
 - Building a sprint proposal with calculated capacity
-- Flagging XL issues that must be split before entering DISCUSS
+- Flagging issues above 8 points that must be split before entering DISCUSS
 
 ## Entry contract
 
@@ -28,15 +28,15 @@ persona: tech-lead
 - Triage table with: number, title, type, priority, effort, notes
 - Labels applied to each issue: `type/*`, `priority/*`, `effort/*`, `status/ready` or `status/duplicate`
 - Sprint proposal with calculated capacity
-- "Must split" notes for every `effort/XL` issue
+- "Must split" notes for every `effort/13` or `effort/21` issue
 
 ## Invariants
 
 - **Triage is classification, not refinement** — Acceptance criteria are not written here
 - **Every triaged issue must have** a type, a priority, and an effort before `status/ready`
 - **P0 requires written justification** — Notes field mandatory: reason, impact, date
-- **XL must be flagged** — Any `effort/XL` issue blocks entry to DISCUSS without a splitting plan
-- **Fixed label taxonomy** — `type/feature`, `type/bug`, `type/tech-debt`, `type/docs`, `type/question` for types; `priority/P0–P3` for priority; `effort/XS–XL` for effort
+- **Above 8 points must be flagged** — Any `effort/13` or `effort/21` issue blocks entry to DISCUSS without a splitting plan
+- **Fixed label taxonomy** — `type/feature`, `type/bug`, `type/tech-debt`, `type/docs`, `type/question` for types; `priority/P0–P3` for priority; `effort/1`, `effort/2`, `effort/3`, `effort/5`, `effort/8`, `effort/13`, `effort/21` for effort
 
 ## Why this shape
 

@@ -60,7 +60,7 @@ sprint proposal.
 | ID | What the gate checks | Pass condition | Severity |
 | --- | --- | --- | --- |
 | **G3** | Every P0 has a written justification; P1→P3 follows descending business value; no priority inversion. | No inversions, all P0 justified. | HIGH |
-| **G4** | The sprint proposal respects declared capacity (team-days × 0.7); no P2/P3 takes a slot while a P0/P1 is excluded; no XL issue in the sprint. | Capacity respected, XL excluded. | HIGH |
+| **G4** | The sprint proposal respects declared capacity (team-days × 0.7); no P2/P3 takes a slot while a P0/P1 is excluded; no issue above 8 points in the sprint. | Capacity respected, issues above 8 points excluded. | HIGH |
 
 ### Lens 3 — Duplicate detection
 
