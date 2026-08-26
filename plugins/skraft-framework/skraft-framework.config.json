@@ -128,6 +128,13 @@
     ],
     "architecture-boundaries-lens": [],
     "cold-reader-lens": [],
+    "discovery-completeness-lens": [],
+    "discovery-duplicate-lens": [],
+    "discovery-prioritization-lens": [],
+    "planning-ac-quality-lens": [],
+    "planning-coherence-lens": [],
+    "planning-dor-lens": [],
+    "planning-invest-lens": [],
     "quality-gates-lens": [],
     "test-integrity-lens": [],
     "Skraft - Orchestrator": [
@@ -342,6 +349,34 @@
       "outputs": []
     },
     "cold-reader-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "discovery-completeness-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "discovery-duplicate-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "discovery-prioritization-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "planning-ac-quality-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "planning-coherence-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "planning-dor-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "planning-invest-lens": {
       "inputs": [],
       "outputs": []
     },

@@ -11,24 +11,34 @@ Reviewer agents use this procedure to produce an independent, defensible verdict
 
 Every SKRAFT phase reviewer (`backlog-discoverer-reviewer`, `backlog-planner-reviewer`, `solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`) invokes this skill once per review pass, after reading the upstream phase artifact(s) and the relevant `*-review-criteria` skill.
 
-All four lenses run on every review. There is no reduced mode and no configuration that
-lowers the count.
+## Questions and lenses are not the same thing
 
-## The four lenses
+The four questions below are fixed. Every review answers all four, and a review that leaves
+one unanswered is not a review.
+
+The **lenses** that answer them are not fixed. Each phase's `*-review-criteria` skill defines
+its own lens set, named for what that phase actually inspects, and the sets differ in size:
+DISCOVER runs three, DISCUSS and DELIVER run four. That is by design — the lens is the
+instrument, the question is the obligation. Requiring exactly four instruments would force a
+phase to invent one it has no gates for, and an invented lens returns `OK` by construction.
+
+What is non-negotiable: **every question is covered by at least one lens**, each lens runs in
+isolation, and no lens count is chosen to make a review cheaper.
+
+## The four questions
 
 Each lens is executed **in isolation**. The reviewer must not let observations from one lens influence another. Run them in this order, recording each lens's findings independently before computing the synthesis.
 
-### Lens 1 — Completeness
+### Question 1 — Completeness
 
 Does the artifact cover every input that fed into the phase?
-
 - Are all referenced issues, requirements, or upstream artifacts addressed?
 - Are there obvious gaps (missing scenarios, missing components, missing acceptance criteria)?
 - Are the mandatory sections required by the phase's `*-review-criteria` skill all present and non-empty?
 
 Output: a list of completeness findings, each tagged `MISSING`, `THIN`, or `OK`.
 
-### Lens 2 — Business Fit
+### Question 2 — Business Fit
 
 Does the artifact correctly reflect the business intent?
 
@@ -38,7 +48,7 @@ Does the artifact correctly reflect the business intent?
 
 Output: a list of business-fit findings, each tagged `MISALIGNED`, `AMBIGUOUS`, or `OK`.
 
-### Lens 3 — Quality
+### Question 3 — Quality
 
 Is the artifact internally consistent and well-structured?
 
@@ -49,7 +59,7 @@ Is the artifact internally consistent and well-structured?
 
 Output: a list of quality findings, each tagged `BROKEN`, `INCONSISTENT`, or `OK`.
 
-### Lens 4 — Risk
+### Question 4 — Risk
 
 What could go wrong downstream because of this artifact?
 
@@ -66,16 +76,29 @@ While executing a lens, do not consult findings from another lens. Write the len
 
 ## Weighted synthesis
 
-After all required lenses have run, compute the verdict using fixed lens weights:
+The synthesis is computed **per question, not per lens**. That is what makes it work for a
+three-lens phase and a four-lens phase alike, and it is why the weights below never need
+renumbering when a phase gains or loses an instrument.
 
-| Lens | Weight |
+1. **Map.** For each lens that ran, record which question(s) it answers. When the phase's
+   `*-review-criteria` skill declares the mapping, use it verbatim. When it does not, derive
+   the mapping from what the lens actually checks and state the derivation in the synthesis —
+   an underived mapping is an assumption, and assumptions do not belong in a verdict.
+2. **Score each question** in `{0, 0.5, 1}` using the scale below. When several lenses answer
+   the same question, the question takes the **lowest** of their scores. The strictest
+   instrument wins, exactly as the dissent rule requires.
+3. **Halt on a gap.** A question that no lens answered is not scored `1.0` and is not skipped.
+   The verdict is `NEEDS_REWORK` with the uncovered question named, because an unasked
+   question cannot come back clean.
+
+| Question | Weight |
 |---|---|
 | Completeness | 0.30 |
 | Business Fit | 0.30 |
 | Quality | 0.15 |
 | Risk | 0.25 |
 
-Per-lens score in `{0, 0.5, 1}`:
+Per-question score in `{0, 0.5, 1}`:
 
 - `1.0` — all findings are `OK`.
 - `0.5` — at least one finding is non-OK but none are `INVARIANT_VIOLATION` or `BROKEN`.
@@ -85,15 +108,19 @@ Weighted sum maps to the verdict:
 
 | Weighted sum | Verdict |
 |---|---|
-| `>= 0.85` and no lens scored `0.0` | `APPROVED` |
+| `>= 0.85` and no question scored `0.0` | `APPROVED` |
 | `>= 0.55` | `NEEDS_REWORK` |
-| `< 0.55`, **or** any lens scored `0.0` on an invariant | `REJECTED` |
+| `< 0.55`, **or** any question scored `0.0` on an invariant | `REJECTED` |
 
-A single `INVARIANT_VIOLATION` finding in Lens 4 forces `REJECTED` regardless of the weighted sum.
+A single `INVARIANT_VIOLATION` finding under the Risk question forces `REJECTED` regardless of the weighted sum.
+
+In the emitted verdict, `lensCount` is the number of lenses that actually ran — the evidence
+of the fan-out. The `synthesis` rows are the four questions. The two numbers differ on
+purpose: one says how the work was done, the other says what was judged.
 
 ## Output format
 
-Write the review under `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md`. Begin the file with `<!-- markdownlint-disable-file -->`, then the following structure:
+Begin the review file with `<!-- markdownlint-disable-file -->`, then the following structure:
 
 ```markdown
 <!-- markdownlint-disable-file -->
@@ -105,18 +132,23 @@ Write the review under `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md`. Begin th
 **Weighted score:** 0.XX
 **Reviewed artifacts:** {relative paths}
 
-## Lens 1 — Completeness
+## {phase lens name}
 - finding 1 [TAG] — short description
 - ...
 
-## Lens 2 — Business Fit
+## {next phase lens name}
 - ...
 
-## Lens 3 — Quality
-- ...
+(one section per lens that ran, named as the phase's `*-review-criteria` names it)
 
-## Lens 4 — Risk
-- ...
+## Questions
+
+| Question | Answered by | Score | Weight | Contribution |
+|---|---|---|---|---|
+| Completeness | {lens name(s)} | 0.X | 0.30 | 0.XX |
+| Business Fit | {lens name(s)} | 0.X | 0.30 | 0.XX |
+| Quality | {lens name(s)} | 0.X | 0.15 | 0.XX |
+| Risk | {lens name(s)} | 0.X | 0.25 | 0.XX |
 
 ## Synthesis
 {2–4 sentences explaining the verdict, the dominant lens, and the required next actions if any}
@@ -127,6 +159,9 @@ Write the review under `reviews/{YYYY-MM-DD}/{phase}-{slug}-review.md`. Begin th
 
 The reviewer writes only this file. It never modifies upstream artifacts and never edits `state.json` — the orchestrator records `state.json::verdicts[phase]` from the verdict line above via `state.mjs record-verdict`.
 
-## HVE alignment
+## Where the review is written
 
-Review artifact location and naming follow the HVE convention documented in `.copilot-tracking/reviews/code-reviews/review-artifacts.instructions.md` (resolved via the HVE-Core fallback path when the file is absent locally). SKRAFT places its reviews under `.copilot-tracking/skraft-plans/{slug}/reviews/{YYYY-MM-DD}/` rather than `reviews/code-reviews/`, but the metadata schema and verdict normalization are identical.
+`.copilot-tracking/skraft-plans/{slug}/reviews/{YYYY-MM-DD}/`
+
+The filename comes from the dispatching reviewer's own declared `outputs`, not from here.
+That is the whole contract — there is no external convention file to fetch first.

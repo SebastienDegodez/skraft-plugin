@@ -11,7 +11,7 @@ Verdict derivation rules, confidence levels, dissent resolution, and three examp
 | G2 fails — a P0 or P1 issue is absent from triage | `rejected` |
 | G1 fails — discovery modes not covered or justified | `changes_requested` |
 | G3 fails — priority inversion or P0 without justification | `changes_requested` |
-| G4 fails — capacity violated or XL in sprint | `changes_requested` |
+| G4 fails — capacity violated or an estimate above 8 in sprint | `changes_requested` |
 | G5 fails — undetected near-duplicate issues (>80% similarity) | `changes_requested` |
 | G6 fails only — related issues (40–80%) not flagged | `changes_requested` |
 | All gates pass | `approved` |
@@ -73,7 +73,7 @@ lenses:
     findings:
       - "Issue #43 (P0) has justification: 'NullReferenceException on age < 0 — blocks all submissions'."
       - "Sprint totals 5.0d against effective capacity of 4.9d. P0 override documented for #43."
-      - "No XL issues in sprint. No P2 before P1."
+      - "No estimate above 8 points in sprint. No P2 before P1."
   duplicate-detection:
     status: pass
     gates:
@@ -137,9 +137,9 @@ lenses:
       G3: fail
       G4: pass
     findings:
-      - "G3 FAIL: Issue #89 (P3, tooltip cosmetic fix, effort/XS) is included in the sprint proposal."
-      - "Issue #67 (P1, incorrect premium calculation, effort/M) is excluded from the sprint."
-      - "Remaining capacity after P0/P1 issues = 0.9 days. #89 uses 0.25 days. #67 requires 1.0 day."
+      - "G3 FAIL: Issue #89 (P3, tooltip cosmetic fix, effort/1) is included in the sprint proposal."
+      - "Issue #67 (P1, incorrect premium calculation, effort/3) is excluded from the sprint."
+      - "Remaining capacity after P0/P1 issues = 0.6 days. #89 uses 0.25 days. #67 requires 0.75 day."
       - "P3 issue should not enter sprint while a P1 issue remains excluded — priority inversion."
   duplicate-detection:
     status: pass
@@ -170,7 +170,7 @@ Verdict: CHANGES REQUESTED
 
 ### What needs to change
 - Remove issue #89 (P3 tooltip) from the sprint proposal
-- Add issue #67 (P1 premium bug) — it has higher priority and the capacity difference is only 0.25 days
+- Add issue #67 (P1 premium bug) — it has higher priority and the capacity difference is only 0.5 days
 - A P3 issue cannot occupy a sprint slot while a P1 issue is excluded
 
 ### Recommended next step

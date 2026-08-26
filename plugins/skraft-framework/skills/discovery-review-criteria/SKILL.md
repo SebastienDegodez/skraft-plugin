@@ -15,6 +15,22 @@ Formal gate definitions and verdict rubric for the `backlog-discoverer-reviewer`
 | Prioritization | G3, G4 | Is prioritization coherent and the sprint realistic? |
 | Duplicate Detection | G5, G6 | Are duplicates correctly identified and linked? |
 
+## Lens-to-question mapping
+
+Three lenses, four questions — the synthesis in `adversarial-review-lenses` is computed per
+question, so this mapping is what makes it computable. It is declared here rather than
+derived at review time, because a mapping re-invented on each pass is a mapping that drifts.
+
+| Question | Answered by | Through |
+|---|---|---|
+| Completeness | Completeness lens | G1 mode coverage, G2 no hidden P0/P1 |
+| Business Fit | Prioritization lens | G3 — priority is a claim about business value, and an unjustified P0 is a claim without evidence |
+| Quality | Duplicate Detection lens | G5, G6 — two entries for one problem is the triage contradicting itself |
+| Risk | Prioritization lens | G4 — an XL admitted or a P1 deferred is a sprint that fails downstream, not one that reads badly |
+
+The Prioritization lens answers two questions. Its score therefore lands on both rows; it is
+not averaged and not counted once.
+
 ---
 
 ## Gate Definitions (G1–G6)
@@ -31,7 +47,7 @@ Formal gate definitions and verdict rubric for the `backlog-discoverer-reviewer`
 | ID | Definition | Pass Condition | Severity |
 |---|---|---|---|
 | G3 | All P0 issues have a written justification in the Notes field. P1–P3 follows descending business value order. No priority inversions (a P2 that is clearly more urgent than a P1 in the same domain). | No priority inversions. All P0 justified. | HIGH |
-| G4 | Sprint proposal respects declared capacity. Total effort ≤ effective capacity (team-days × 0.7) for non-P0 issues. No P2/P3 issue occupies a sprint slot while a P0/P1 issue is excluded. XL issues are not in the sprint. | Capacity respected; XL issues excluded. | HIGH |
+| G4 | Sprint proposal respects declared capacity. Total effort ≤ effective capacity (team-days × 0.7) for non-P0 issues. No P2/P3 issue occupies a sprint slot while a P0/P1 issue is excluded. No issue above 8 points is in the sprint. | Capacity respected; estimates above 8 excluded. | HIGH |
 
 ### Lens 3: Duplicate Detection
 
@@ -90,8 +106,9 @@ Discovery is considered **sufficient** when:
 |---|---|
 | P0 overrides capacity | P0 issues enter sprint regardless of effective capacity |
 | Effective capacity = team-days × 0.7 | Applies to P1/P2/P3 issues |
+| Points convert to days: 1=0.25, 2=0.5, 3=0.75, 5=1.5, 8=3 | The scale is Fibonacci; the capacity stays in team-days. Cost per point never falls as the card grows, so splitting is always the cheaper arithmetic |
 | Over-capacity P0 must be documented | Triage report must note "P0 override" |
-| XL exclusion is absolute | No XL issue enters sprint — G4 fail if present |
+| Above 8 points is an absolute exclusion | No 13 or 21 enters a sprint — G4 fail if present |
 | P2/P3 after all P1 | P2/P3 issues fill remaining capacity after all P1s |
 
 ---
