@@ -5,8 +5,8 @@ import { validateConfig, TRACKING_LAYOUTS, DEFAULT_TRACKING_LAYOUT } from '../..
 
 // ─── constants ─────────────────────────────────────────────────────────────────
 
-test('config-schema: exposes the two tracking layouts and namespaced default', () => {
-  assert.deepEqual([...TRACKING_LAYOUTS].sort(), ['bare', 'namespaced'])
+test('config-schema: exposes the namespaced tracking layout as the only layout and default', () => {
+  assert.deepEqual([...TRACKING_LAYOUTS], ['namespaced'])
   assert.equal(DEFAULT_TRACKING_LAYOUT, 'namespaced')
 })
 
@@ -24,7 +24,7 @@ test('validateConfig: coerces an unknown trackingLayout to the default', () => {
   assert.equal(r.value.trackingLayout, 'namespaced')
 })
 
-for (const layout of ['namespaced', 'bare']) {
+for (const layout of ['namespaced']) {
   test(`validateConfig: accepts trackingLayout '${layout}'`, () => {
     const r = validateConfig({ trackingLayout: layout })
     assert.ok(isOk(r))
@@ -41,9 +41,9 @@ test('validateConfig: a numeric trackingLayout coerces to default (type guard)',
 // ─── validateConfig ────────────────────────────────────────────────────────────
 
 test('validateConfig: accepts a well-formed config and freezes it', () => {
-  const r = validateConfig({ trackingLayout: 'bare' })
+  const r = validateConfig({ trackingLayout: 'namespaced' })
   assert.ok(isOk(r))
-  assert.equal(r.value.trackingLayout, 'bare')
+  assert.equal(r.value.trackingLayout, 'namespaced')
   assert.ok(Object.isFrozen(r.value))
 })
 
@@ -54,7 +54,7 @@ test('validateConfig: rejects a non-object input', () => {
 })
 
 test('validateConfig: round-trip fidelity — preserves unknown fields verbatim', () => {
-  const raw = { trackingLayout: 'bare', teamOwner: 'platform', nested: { a: 1 } }
+  const raw = { trackingLayout: 'namespaced', teamOwner: 'platform', nested: { a: 1 } }
   const r = validateConfig(raw)
   assert.ok(isOk(r))
   assert.equal(r.value.teamOwner, 'platform')

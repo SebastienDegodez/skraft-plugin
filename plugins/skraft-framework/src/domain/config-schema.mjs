@@ -6,12 +6,11 @@ import { Ok, Err } from './result.mjs'
 // `difficulty` is intentionally NOT here — it is a per-work-item value that lives in
 // state.json (accessed via the state CLI).
 
-// Where SKRAFT writes its tracking artefacts and state. `namespaced` (default, legacy)
-// nests everything under .copilot-tracking/skraft-plans/{slug}/. `bare` converges onto the
-// HVE-RPI substrate (.copilot-tracking/{research,plans,details,changes,reviews}/{date}/) so a
-// SKRAFT run and an HVE-RPI run are drop-in swappable on the same files; SKRAFT state then
-// lives under the dedicated control dir .copilot-tracking/skraft/{slug}/ which RPI ignores.
-export const TRACKING_LAYOUTS = Object.freeze(['namespaced', 'bare'])
+// SKRAFT writes state and artefacts under .copilot-tracking/skraft-plans/{slug}/.
+// There is one tracking layout. The `trackingLayout` config key is kept for
+// round-trip fidelity (existing skraft-config.json files that carry it are preserved
+// unchanged) but the value is always coerced to 'namespaced'.
+export const TRACKING_LAYOUTS = Object.freeze(['namespaced'])
 export const DEFAULT_TRACKING_LAYOUT = 'namespaced'
 
 const isKnownLayout = (value) => TRACKING_LAYOUTS.includes(value)
