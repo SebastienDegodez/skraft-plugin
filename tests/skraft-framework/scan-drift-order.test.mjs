@@ -5,12 +5,16 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { scanDrift } from '../../scripts/scan-drift.mjs'
 
+// The real orchestrator lists its chain as display names, not slugs — those strings are
+// the dispatch labels the harness registers. This fixture mirrors that, because a fixture
+// written in slugs made the scanner look correct while it was permanently wrong in
+// production (issue #150).
 const orchestratorAgent = `---
 name: skraft-orchestrator
 description: "x"
 agents:
-  - backlog-discoverer
-  - backlog-discoverer-reviewer
+  - Skraft - Backlog Discoverer
+  - Skraft - Backlog Discoverer Reviewer
 metadata:
   phases:
     - DISCOVER

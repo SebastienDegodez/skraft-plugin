@@ -111,12 +111,25 @@ function sameOrder(expected, actual) {
   return expected.length === actual.length && expected.every((v, i) => v === actual[i]);
 }
 
+// The orchestrator lists its chain as display names ("Skraft - Solution Researcher"),
+// because those strings are the dispatch labels the harness registers. Everything the
+// scanner compares them against is a slug: the descriptor filename
+// (solution-researcher.agent.md) and the page link the extractor reads. Normalise at this
+// single point where the two namings meet. Already-slugged names pass through unchanged.
+function toAgentSlug(name) {
+  return String(name)
+    .replace(/^\s*skraft\s*-\s*/i, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+}
+
 function deriveAgentUsageOrder(root) {
   const orchestratorPath = join(root, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md');
   const orchestrator = readFrontmatter(orchestratorPath);
   if (!orchestrator) return null;
 
-  const chain = Array.isArray(orchestrator.agents) ? orchestrator.agents : [];
+  const chain = (Array.isArray(orchestrator.agents) ? orchestrator.agents : []).map(toAgentSlug);
   const orderedAgents = ['skraft-orchestrator', ...chain];
   const skillsByAgent = {};
 
