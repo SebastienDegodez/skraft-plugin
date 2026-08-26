@@ -2,6 +2,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHookService } from '../adapters/api/hooks/service-factory.mjs'
+import { toHarnessOutput } from '../adapters/api/hooks/harness-output.mjs'
 import { createJsonlAuditWriter } from '../adapters/infrastructure/jsonl-audit-writer.mjs'
 import { createSkillFileReader } from '../adapters/infrastructure/skill-file-reader.mjs'
 import { createJsonlTranscriptReader } from '../adapters/infrastructure/jsonl-transcript-reader.mjs'
@@ -79,6 +80,11 @@ if (argMatcher && payload.toolName == null && payload.tool_name == null) {
 const hookService = createHookService({ preToolUse, subagentStart, subagentStop, postToolUse })
 const result = await hookService.handle(payload)
 
-if (result !== undefined) {
-  process.stdout.write(JSON.stringify(result))
+// The services speak the framework's decision vocabulary; the harnesses do not. Translate
+// at this boundary (see adapters/api/hooks/harness-output.mjs) — an allow writes nothing.
+const hookEventName = argEvent ?? payload.hookType ?? payload.hook_event_name ?? payload.type
+const output = toHarnessOutput(result, hookEventName)
+
+if (output !== undefined) {
+  process.stdout.write(JSON.stringify(output))
 }

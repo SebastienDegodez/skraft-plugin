@@ -36,12 +36,14 @@ test('PreToolUse/Bash: a shell command writing state.json is denied (G7 now acti
   const result = runHook(['PreToolUse', 'Bash'], {
     toolInput: { command: 'echo "{}" > .copilot-tracking/skraft/p/state.json' },
   })
-  assert.equal(result.decision, 'deny')
+  // The refusal must reach the harness in ITS vocabulary, not the framework's.
+  assert.equal(result.hookSpecificOutput.permissionDecision, 'deny')
+  assert.equal(result.permissionDecision, 'deny')
 })
 
 test('PreToolUse/Bash: a benign shell command is allowed', () => {
   const result = runHook(['PreToolUse', 'Bash'], { toolInput: { command: 'ls -la' } })
-  assert.equal(result.decision, 'allow')
+  assert.equal(result, undefined, 'an allow must write nothing on stdout')
 })
 
 test('PreToolUse/Agent: a standalone agent dispatch with no projectSlug is allowed (G1 skipped, not blocked)', () => {
@@ -49,5 +51,5 @@ test('PreToolUse/Agent: a standalone agent dispatch with no projectSlug is allow
   // product agent is not fail-closed blocked. The session guard fail-opens on the
   // unreadable state after its unconditional G7 check passes.
   const result = runHook(['PreToolUse', 'Agent'], { toolInput: { subagentType: 'backlog-planner' } })
-  assert.equal(result.decision, 'allow')
+  assert.equal(result, undefined)
 })
