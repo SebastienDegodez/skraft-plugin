@@ -34,14 +34,22 @@
 #   LIVE_LOGS=1       Stream Vally output while retaining eval.log (default: 1)
 #   SKIP_EVALS=""     Override skip list (default: reads skip-evals.txt)
 #   SKIP_AGENTS=1     Leave every agent suite out of an unnamed run (default: 0)
-#   STIMULI=""        Comma-separated stimulus name fragments. Runs the frozen
-#                     spec against only those stimuli — a cheap signal check
-#                     before committing the full portfolio to two paired arms.
-#                     Output goes to ./eval-results-pilot: a pilot is a budget
-#                     probe, never a publishable verdict.
-#   PILOT_RUNS=       Override defaults.runs for a pilot only. Keep it at the
-#                     depth the real run will use; a pilot that is shallow as
-#                     well as narrow measures nothing.
+#   STIMULI=""        SKILL EVALS ONLY. Comma-separated stimulus name fragments.
+#                     Runs the frozen spec against only those stimuli — a cheap
+#                     signal check before committing the full portfolio to two
+#                     paired arms. Output goes to ./eval-results-pilot: a pilot is
+#                     a budget probe, never a publishable verdict.
+#                     An AGENT SUITE IGNORES IT. Agent specs return from
+#                     run_agent_eval before the pilot spec is ever generated, so
+#                     `STIMULI=... ./run-vally-evals.sh agents <suite>` runs every
+#                     stimulus at the spec's own `defaults.runs` and bills the
+#                     whole portfolio. To make an agent suite cheaper, lower
+#                     `defaults.runs` in the spec or split the suite — there is no
+#                     per-stimulus dial.
+#   PILOT_RUNS=       SKILL EVALS ONLY, and only alongside STIMULI. Override
+#                     defaults.runs for a pilot. Keep it at the depth the real run
+#                     will use; a pilot that is shallow as well as narrow measures
+#                     nothing. Ignored by agent suites, for the reason above.
 #   BASELINE_CACHE=1  LOCAL LOOP ONLY. Reuse cached baseline records per stimulus
 #                     instead of re-running the baseline arm. The baseline runs
 #                     with an empty --skill-dir, so editing a skill cannot move
@@ -278,6 +286,14 @@ run_agent_eval() {
   mkdir -p "$RESULTS_ROOT/$EVAL_NAME"
   rm -rf "$LIVE_DIR"
   mkdir -p "$LIVE_DIR"
+
+  # The pilot dial belongs to the skill path, which this function returned before
+  # reaching. Saying so out loud costs one line and saves a full portfolio: the
+  # caller who set it was budgeting for a probe and is about to be billed for the
+  # whole spec.
+  if [ -n "$STIMULI" ] || [ -n "$PILOT_RUNS" ]; then
+    echo -e "  ${BOLD}!${NC} $EVAL_NAME — STIMULI/PILOT_RUNS do not narrow an agent suite; running every stimulus at defaults.runs." >&2
+  fi
 
   echo -e "  ${BOLD}▶${NC} $EVAL_NAME — real agent..." >&2
   local EVAL_EXIT=0

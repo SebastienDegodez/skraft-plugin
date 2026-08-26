@@ -6,6 +6,15 @@ import { readFrontMatter } from '../lib/front-matter.mjs'
 
 const AGENT_PATHS = new Map([
   ['skraft-orchestrator', 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'],
+  // Product-layer chain. These two are NOT dispatched by the orchestrator - the
+  // developer invokes the discoverer directly and it dispatches its own reviewer
+  // at its review gate. Both are allowlisted so a suite can name the reviewer in
+  // `tags.subagents` and grade the dispatch instead of a narrated one.
+  ['backlog-discoverer', 'plugins/skraft-framework/agents/backlog-discoverer.agent.md'],
+  ['backlog-discoverer-reviewer', 'plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md'],
+  ['discovery-completeness-lens', 'plugins/skraft-framework/agents/reviewer-lenses/discovery-completeness-lens.agent.md'],
+  ['discovery-prioritization-lens', 'plugins/skraft-framework/agents/reviewer-lenses/discovery-prioritization-lens.agent.md'],
+  ['discovery-duplicate-lens', 'plugins/skraft-framework/agents/reviewer-lenses/discovery-duplicate-lens.agent.md'],
   ['solution-researcher', 'plugins/skraft-framework/agents/solution-researcher.agent.md'],
   ['solution-architect', 'plugins/skraft-framework/agents/solution-architect.agent.md'],
   ['solution-architect-reviewer', 'plugins/skraft-framework/agents/solution-architect-reviewer.agent.md'],
