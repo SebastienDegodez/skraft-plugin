@@ -196,15 +196,16 @@ describe('replay sessions', () => {
     ok(manifest.sessions.every((session) => session.tags.includes('pr-134')))
   })
 
-  it('still separates baseline from skilled when the runner recorded no variant', () => {
-    // Two isolated `vally eval` runs leave no `variant` in the metadata; the
-    // only evidence left is the output directory each run was pointed at.
+  it('separates baseline from skilled when Vally records both as main', () => {
+    // Vally 0.12 writes each trajectory directly under its trial directory and
+    // stamps both isolated evals as `main`; the output directory still records
+    // which arm each trial belongs to.
     const runRoot = join(workspace, 'paired-run/demo-skill')
     for (const variant of ['baseline', 'skilled']) {
-      const sessionRoot = join(runRoot, variant, 'run/executor-session-logs/demo-skill/claude/first')
+      const sessionRoot = join(runRoot, variant, '2026-08-05T10-00-00-000Z/demo-skill/drive-the-demo/claude-sonnet-5/0')
       write(
         join(sessionRoot, 'metadata.json'),
-        JSON.stringify({ evalFilePath: 'tests/skills/demo-skill/eval.yaml', stimulusName: 'Drive the demo', trialIndex: 0 }),
+        JSON.stringify({ evalFilePath: 'tests/skills/demo-skill/eval.yaml', variant: 'main', stimulusName: 'Drive the demo', trialIndex: 0 }),
       )
       write(join(sessionRoot, 'events.jsonl'), '{"type":"start"}\n')
     }
@@ -224,6 +225,35 @@ describe('replay sessions', () => {
     ok(manifest.sessions.some((session) => session.tags.includes('baseline')))
     ok(manifest.sessions.some((session) => session.tags.includes('skilled')))
     ok(!manifest.sessions.some((session) => session.tags.includes('unknown')))
+  })
+
+  it('keeps prior scheduled dates when a later run is added', () => {
+    const runRoot = join(workspace, 'scheduled-run/demo-skill')
+    for (const variant of ['baseline', 'skilled']) {
+      const sessionRoot = join(runRoot, variant, '2026-08-05T10-00-00-000Z/demo-skill/drive-the-demo/claude-sonnet-5/0')
+      write(
+        join(sessionRoot, 'metadata.json'),
+        JSON.stringify({ evalFilePath: 'tests/skills/demo-skill/eval.yaml', variant: 'main', stimulusName: 'Drive the demo', trialIndex: 0 }),
+      )
+      write(join(sessionRoot, 'events.jsonl'), '{"type":"start"}\n')
+    }
+
+    const replayRoot = join(workspace, 'scheduled-replay')
+    for (const date of ['2026-08-05', '2026-08-12']) {
+      run('eng/dashboard/build-replay-sessions.mjs', [
+        '--results-dir',
+        join(workspace, 'scheduled-run'),
+        '--output-dir',
+        replayRoot,
+        '--date',
+        date,
+      ])
+    }
+
+    const manifest = JSON.parse(readFileSync(join(replayRoot, 'manifest.json'), 'utf8'))
+    strictEqual(manifest.sessions.length, 4)
+    ok(manifest.sessions.some((session) => session.url.startsWith('sessions/scheduled/2026-08-05/')))
+    ok(manifest.sessions.some((session) => session.url.startsWith('sessions/scheduled/2026-08-12/')))
   })
 
   it('drops sessions older than the retention window and never leaves a dangling entry', () => {

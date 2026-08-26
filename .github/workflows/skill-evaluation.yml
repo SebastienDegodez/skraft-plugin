@@ -8,6 +8,8 @@ name: Skill evaluation
 #                 Evaluates only what the PR touched and posts the verdict as a
 #                 PR comment; blocks merge only on a credible skill regression.
 #                 Skipped for fork PRs (no secrets available there anyway).
+#   A companion workflow publishes complete PR verdicts and trajectories from
+#   trusted default-branch code, then removes trajectories when the PR closes.
 #   evaluate    — scheduled or dispatched. Runs every skill twice (baseline vs
 #                 skilled), runs every agent suite once, judges the pairs, and
 #                 publishes verdicts and recorded agent sessions to the
@@ -22,6 +24,7 @@ name: Skill evaluation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - 'plugins/skraft-framework/skills/**'
       - 'plugins/skraft-framework/agents/**'
@@ -51,7 +54,7 @@ on:
         default: gpt-5.6-terra
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: skill-evaluation-${{ github.ref }}
@@ -59,7 +62,6 @@ concurrency:
 
 env:
   VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0'
-  MODEL: gpt-5.6-luna
   JUDGE_MODEL: gpt-5.6-luna
   DATA_BRANCH: dashboard-data
   RETENTION_DAYS: '14'
@@ -133,7 +135,7 @@ jobs:
   evaluate-pr:
     name: Pre-merge evaluation (changed skills and agent suites only)
     # Fork PRs have no access to COPILOT_GITHUB_TOKEN, so skip rather than fail.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     # A spec the linter rejects still runs, and still bills an hour of live model
     # time, to produce a verdict about an instrument that was never wired. The
     # `rubric` under `graders[].config` was exactly that: silently ignored by
@@ -143,6 +145,10 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    # Ordinary runs resolve MODEL from each eval spec. Keeping it explicitly
+    # blank here prevents a workflow-level default from overriding every spec.
+    env:
+      MODEL: ''
     permissions:
       contents: read
       pull-requests: write
@@ -251,6 +257,12 @@ jobs:
     # Each spec budgets its own trials, so the wall clock follows the specs, not
     # a flat one-trial-per-stimulus floor.
     timeout-minutes: 150
+    # Same invariant as evaluate-pr: ordinary runs use each spec's model. Only
+    # compare-models below is allowed to force MODEL.
+    env:
+      MODEL: ''
+    permissions:
+      contents: write
     # Shared with dashboard-data-compact.yml: a publication and a history
     # compaction must never interleave on the evidence branch.
     concurrency:
@@ -421,6 +433,9 @@ jobs:
     # Runs even when an arm failed: the arms that did finish are still evidence.
     if: always() && needs.compare-models.result != 'skipped'
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
     # Shared with dashboard-data-compact.yml and the `evaluate` job: a
     # publication and a history compaction must never interleave.
     concurrency:

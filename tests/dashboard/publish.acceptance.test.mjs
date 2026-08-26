@@ -2,7 +2,7 @@
 // share. That makes it the easiest place to break something quietly, so it is
 // exercised here against a local repository: does it create the branch, does it
 // accumulate rather than replace, and does it leave the manifest consistent?
-import { ok, strictEqual } from 'node:assert/strict'
+import { ok, strictEqual, throws } from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -24,8 +24,7 @@ const publish = (args) =>
     env: { ...process.env, DATA_REMOTE: remote },
   })
 
-const resultFile = (name, timestamp) => {
-  const path = join(workspace, `${name}-results.json`)
+const writeResult = (path, name, timestamp) => {
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(
     path,
@@ -51,12 +50,42 @@ const resultFile = (name, timestamp) => {
   return path
 }
 
+const resultFile = (name, timestamp) => writeResult(join(workspace, `${name}-results.json`), name, timestamp)
+
+const replayFixture = (name) => {
+  const root = join(workspace, `${name}-replay`)
+  const result = writeResult(join(root, name, 'results.json'), name, '2026-08-05T10:00:00.000Z')
+  for (const arm of ['baseline', 'skilled']) {
+    const trial = join(root, name, arm, '2026-08-05T10-00-00-000Z', name, 'drive-the-demo', 'claude-sonnet-5', '0')
+    mkdirSync(trial, { recursive: true })
+    writeFileSync(
+      join(trial, 'metadata.json'),
+      JSON.stringify({
+        evalFilePath: `tests/skills/${name}/eval.yaml`,
+        variant: 'main',
+        stimulusName: 'Drive the demo',
+        trialIndex: 0,
+      }),
+    )
+    writeFileSync(join(trial, 'events.jsonl'), `{"type":"${arm}"}\n`)
+  }
+  return { result, root }
+}
+
 /** The evidence branch as it stands on the remote, read from a fresh clone. */
 const readBranch = () => {
   const clone = mkdtempSync(join(tmpdir(), 'skraft-publish-read-'))
   git(clone, 'clone', '--branch', 'dashboard-data', '--single-branch', remote, '.')
   return JSON.parse(readFileSync(join(clone, 'data/history.json'), 'utf8'))
 }
+
+const readManifest = () => {
+  const clone = mkdtempSync(join(tmpdir(), 'skraft-replay-read-'))
+  git(clone, 'clone', '--branch', 'dashboard-data', '--single-branch', remote, '.')
+  return JSON.parse(readFileSync(join(clone, 'data/manifest.json'), 'utf8'))
+}
+
+const branchTip = () => git(workspace, 'ls-remote', remote, 'refs/heads/dashboard-data').split(/\s/)[0]
 
 before(() => {
   workspace = mkdtempSync(join(tmpdir(), 'skraft-publish-'))
@@ -126,6 +155,100 @@ describe('publishing evidence', () => {
     const output = publish([])
 
     ok(output.includes('No verdict to publish'))
+  })
+
+  it('publishes Vally 0.12 trajectories with their verdict', () => {
+    const fixture = replayFixture('replay-first')
+    publish([
+      '--results',
+      fixture.result,
+      '--replay-from',
+      fixture.root,
+      '--source',
+      'pr',
+      '--pr-number',
+      '41',
+      '--run',
+      '41',
+    ])
+
+    const sessions = readManifest().sessions
+    strictEqual(sessions.length, 2)
+    ok(sessions.some((session) => session.tags.includes('baseline')))
+    ok(sessions.some((session) => session.tags.includes('skilled')))
+    ok(sessions.every((session) => session.url.startsWith('sessions/pr/41/replay-first/')))
+  })
+
+  it('preserves earlier replay sessions when another PR publishes', () => {
+    const fixture = replayFixture('replay-second')
+    publish([
+      '--results',
+      fixture.result,
+      '--replay-from',
+      fixture.root,
+      '--source',
+      'pr',
+      '--pr-number',
+      '42',
+      '--run',
+      '42',
+    ])
+
+    const sessions = readManifest().sessions
+    strictEqual(sessions.length, 4)
+    ok(sessions.some((session) => session.url.startsWith('sessions/pr/41/')))
+    ok(sessions.some((session) => session.url.startsWith('sessions/pr/42/')))
+  })
+
+  it('fails atomically when verdicts have no replay trajectories', () => {
+    const emptyReplay = join(workspace, 'empty-replay')
+    mkdirSync(emptyReplay, { recursive: true })
+    const result = writeResult(join(emptyReplay, 'missing-replay', 'results.json'), 'missing-replay', '2026-08-06T10:00:00.000Z')
+    const before = branchTip()
+
+    throws(() =>
+      publish([
+        '--results',
+        result,
+        '--replay-from',
+        emptyReplay,
+        '--run',
+        '43',
+      ]),
+    )
+    strictEqual(branchTip(), before)
+    strictEqual(readBranch().skills['missing-replay'], undefined)
+  })
+
+  it('rejects a batch when any verdict file lacks trajectories', () => {
+    const covered = replayFixture('covered-replay')
+    const missing = writeResult(join(covered.root, 'uncovered-replay', 'results.json'), 'uncovered-replay', '2026-08-07T10:00:00.000Z')
+    const before = branchTip()
+
+    throws(() =>
+      publish([
+        '--results',
+        covered.result,
+        '--results',
+        missing,
+        '--replay-from',
+        covered.root,
+        '--run',
+        '44',
+      ]),
+    )
+    strictEqual(branchTip(), before)
+    strictEqual(readBranch().skills['covered-replay'], undefined)
+    strictEqual(readBranch().skills['uncovered-replay'], undefined)
+  })
+
+  it('drops closed-PR trajectories without deleting verdict history', () => {
+    publish(['--drop-pr', '41'])
+
+    const sessions = readManifest().sessions
+    strictEqual(sessions.length, 2)
+    ok(sessions.every((session) => session.url.startsWith('sessions/pr/42/')))
+    strictEqual(readBranch().skills['replay-first'].length, 1)
   })
 })
 

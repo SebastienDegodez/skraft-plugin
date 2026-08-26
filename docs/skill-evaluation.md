@@ -24,7 +24,7 @@ converged on. SKRAFT uses it rather than a bespoke evaluator.
 | Half | Source | Refreshed by | Can it be stale? |
 | --- | --- | --- | --- |
 | Catalogue — what the plugin ships, how heavy each skill is, what is evaluated | the plugin sources | the Pages deploy, at build time | no, it is re-derived every deploy |
-| Evidence — verdicts, trend, recorded sessions | the `dashboard-data` branch | the evaluation workflow | it is fetched by the browser, so a new run shows up without rebuilding the site |
+| Evidence — verdicts, trend, recorded sessions | the `dashboard-data` branch | the evaluation workflows | it is fetched by the browser, so a new run shows up without rebuilding the site |
 
 They are decoupled on purpose: publishing an evaluation run must never require a
 site rebuild, and a site rebuild must never invent evidence.
@@ -34,6 +34,9 @@ site rebuild, and a site rebuild must never invent evidence.
 ```text
 tests/skills/<skill>/eval.yaml     # what to ask, and how to judge the answer
 tests/agents/<suite>/eval.yaml     # which agent to dispatch, and what must hold
+.github/workflows/
+  skill-evaluation.yml             # read-only PR evaluation + scheduled runs
+  evaluation-evidence.yml          # trusted PR publication + close-time cleanup
 eng/
   run-vally-evals.sh               # local runner: two isolated runs + comparison
   detect-changed-skills.mjs        # PR diff        → changed skill / suite name(s)
@@ -55,15 +58,19 @@ tests/dashboard/                   # tests for all of the above
 Everything is Node with no dependency: the scripts run from a bare `node`, in any
 CI job, with no install step.
 
-## One workflow, split by cost
+## Two workflows, split by trust and cost
 
-`.github/workflows/skill-evaluation.yml` carries both halves, because the split
-that matters is not "lint versus run" but **what costs model quota**:
+`.github/workflows/skill-evaluation.yml` separates static checks from work that
+costs model quota. `.github/workflows/evaluation-evidence.yml` separately owns
+PR publication so pull-request-controlled code never receives repository write
+permission:
 
 | Job | Runs on | Blocking | Calls a model |
 | --- | --- | --- | --- |
 | `lint` | every pull request touching skills, specs or `eng/` | yes | no |
 | `evaluate-pr` | every pull request that changed a skill or an agent suite (same repo, not a fork) | only on a skill regression | yes |
+| `publish-pr` | after a PR evaluation produced evidence | yes, if verdicts and trajectories cannot be published together | no |
+| `cleanup-pr-replay` | when a pull request closes | no | no |
 | `evaluate` | schedule (Monday 03:00 UTC) and manual dispatch | no | yes |
 
 The `lint` job runs the dashboard tooling tests, scans the catalogue, lints every
@@ -78,8 +85,8 @@ deliberately — a roster's whole job is to point at its adapters.
 
 ## Pre-merge evaluation on a PR
 
-`evaluate-pr` gives a contributor evaluation evidence *before* merge, without a
-dashboard round-trip:
+`evaluate-pr` gives a contributor evaluation evidence *before* merge, without
+waiting for the next scheduled dashboard run:
 
 1. `eng/detect-changed-skills.mjs` diffs the PR against its base branch and
    prints the skill(s) touched under `plugins/skraft-framework/skills/<skill>/`
@@ -106,6 +113,11 @@ dashboard round-trip:
    proof of improvement on every single PR. Agent verdicts are advisory: a suite
    runs a single real agent session, so one flaky run must not block an
    unrelated merge.
+5. `publish-pr` downloads that same artifact and publishes verdicts plus
+  trajectories atomically. A format change that leaves a verdict but no
+  replayable session fails publication instead of silently replacing the
+  manifest with an empty one. Re-running a PR replaces only that PR's sessions;
+  sessions from other PRs remain available.
 
 Fork PRs skip this job entirely: `COPILOT_GITHUB_TOKEN` is a repo secret and is
 never available to a fork's workflow run.
@@ -327,7 +339,8 @@ so the baseline and skilled runs of the same scenario can be replayed side by
 side — that is where a verdict stops being a number and becomes an explanation.
 
 Scheduled recordings are kept for 14 days; pull-request recordings are dropped
-when the pull request closes.
+when the pull request closes. Verdict history remains: closing a PR removes its
+temporary trajectories, not the measurement it produced.
 
 ## Indicators at a glance
 

@@ -8,7 +8,7 @@
 # Usage:
 #   eng/dashboard/publish.sh --results <file> [--results <file> ...]
 #                            [--replay-from <vally-run-dir>] [--source scheduled|pr]
-#                            [--pr-number N] [--branch dashboard-data]
+#                            [--pr-number N] [--drop-pr N] [--branch dashboard-data]
 #                            [--retention-days 14] [--commit sha] [--run id] [--url link]
 set -euo pipefail
 
@@ -17,6 +17,7 @@ BRANCH="${DATA_BRANCH:-dashboard-data}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 SOURCE="scheduled"
 PR_NUMBER="0"
+DROP_PR=""
 REPLAY_FROM=""
 COMMIT=""
 RUN_ID=""
@@ -29,6 +30,7 @@ while (( $# > 0 )); do
     --replay-from) REPLAY_FROM="$2"; shift 2 ;;
     --source) SOURCE="$2"; shift 2 ;;
     --pr-number) PR_NUMBER="$2"; shift 2 ;;
+    --drop-pr) DROP_PR="$2"; shift 2 ;;
     --branch) BRANCH="$2"; shift 2 ;;
     --retention-days) RETENTION_DAYS="$2"; shift 2 ;;
     --commit) COMMIT="$2"; shift 2 ;;
@@ -39,7 +41,7 @@ while (( $# > 0 )); do
   esac
 done
 
-if (( ${#RESULTS[@]} == 0 )); then
+if (( ${#RESULTS[@]} == 0 )) && [[ -z "$DROP_PR" ]]; then
   echo "::warning::No verdict to publish."
   exit 0
 fi
@@ -57,6 +59,12 @@ else
 fi
 
 cd "$ROOT"
+
+if [[ -n "$REPLAY_FROM" && ! -d "$REPLAY_FROM" ]]; then
+  echo "Replay source does not exist: $REPLAY_FROM" >&2
+  exit 1
+fi
+
 CHECKOUT="$(mktemp -d)"
 
 # The branch accumulates evidence; it is never force-replaced. A fresh branch is
@@ -70,25 +78,34 @@ else
 fi
 mkdir -p "$CHECKOUT/data"
 
-HISTORY_ARGS=(--history "$CHECKOUT/data/history.json")
-[[ -n "$COMMIT" ]] && HISTORY_ARGS+=(--commit "$COMMIT")
-[[ -n "$RUN_ID" ]] && HISTORY_ARGS+=(--run "$RUN_ID")
-[[ -n "$RUN_URL" ]] && HISTORY_ARGS+=(--url "$RUN_URL")
-for result in "${RESULTS[@]}"; do HISTORY_ARGS+=(--results "$result"); done
+if (( ${#RESULTS[@]} > 0 )); then
+  HISTORY_ARGS=(--history "$CHECKOUT/data/history.json")
+  [[ -n "$COMMIT" ]] && HISTORY_ARGS+=(--commit "$COMMIT")
+  [[ -n "$RUN_ID" ]] && HISTORY_ARGS+=(--run "$RUN_ID")
+  [[ -n "$RUN_URL" ]] && HISTORY_ARGS+=(--url "$RUN_URL")
+  for result in "${RESULTS[@]}"; do HISTORY_ARGS+=(--results "$result"); done
 
-node eng/dashboard/update-history.mjs "${HISTORY_ARGS[@]}"
+  node eng/dashboard/update-history.mjs "${HISTORY_ARGS[@]}"
+fi
 
 # AGENTVIZ reads session URLs relative to the manifest, so both live side by side
 # under data/ on the branch.
 if [[ -n "$REPLAY_FROM" && -d "$REPLAY_FROM" ]]; then
-  node eng/dashboard/build-replay-sessions.mjs \
-    --results-dir "$REPLAY_FROM" \
-    --output-dir "$CHECKOUT/data" \
-    --source "$SOURCE" \
+  REPLAY_ARGS=(
+    --results-dir "$REPLAY_FROM"
+    --output-dir "$CHECKOUT/data"
+    --source "$SOURCE"
     --pr-number "$PR_NUMBER"
+    --strict
+  )
+  for result in "${RESULTS[@]}"; do REPLAY_ARGS+=(--expected-result "$result"); done
+  node eng/dashboard/build-replay-sessions.mjs \
+    "${REPLAY_ARGS[@]}"
 fi
 
-node eng/dashboard/purge-replay-sessions.mjs --root "$CHECKOUT/data" --retention-days "$RETENTION_DAYS"
+  PURGE_ARGS=(--root "$CHECKOUT/data" --retention-days "$RETENTION_DAYS")
+  [[ -n "$DROP_PR" ]] && PURGE_ARGS+=(--drop-pr "$DROP_PR")
+  node eng/dashboard/purge-replay-sessions.mjs "${PURGE_ARGS[@]}"
 
 cd "$CHECKOUT"
 git config user.name "github-actions[bot]"
@@ -98,6 +115,15 @@ if git diff --cached --quiet; then
   echo "Nothing changed on $BRANCH."
   exit 0
 fi
-git commit -q -m "chore(dashboard): publish evaluation run ${RUN_ID:-local}"
+if (( ${#RESULTS[@]} > 0 )); then
+  MESSAGE="chore(dashboard): publish evaluation run ${RUN_ID:-local}"
+else
+  MESSAGE="chore(dashboard): remove replay for PR $DROP_PR"
+fi
+git commit -q -m "$MESSAGE"
 git push origin "$BRANCH"
-echo "Published ${#RESULTS[@]} verdict file(s) to $BRANCH."
+if (( ${#RESULTS[@]} > 0 )); then
+  echo "Published ${#RESULTS[@]} verdict file(s) to $BRANCH."
+else
+  echo "Removed replay sessions for PR $DROP_PR from $BRANCH."
+fi
