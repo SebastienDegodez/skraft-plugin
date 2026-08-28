@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: 'en' }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="{{ page.description }}" />
+  <title>{{ page.title }} — SKRAFT</title>
+  <link rel="preconnect" href="https://fonts.bunny.net" />
+  <link href="https://fonts.bunny.net/css?family=Lato:400,700,900|Fira+Code:400,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <link rel="stylesheet" href="{{ '/assets/css/design-tokens.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/assets/css/doc.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/dashboard/styles.css' | relative_url }}" />
+  <link rel="icon" type="image/png" href="{{ '/assets/favicon.png' | relative_url }}" />
+</head>
+<body class="dashboard-page" data-lang="{{ page.lang | default: 'en' }}" data-dashboard-base="{{ '/dashboard/' | relative_url }}">
+  {% include site-nav.html %}
+  <div class="dashboard-layout">
+    <div class="dashboard-shell">
+      {% include dashboard-content.html %}
+    </div>
+  </div>
+  <footer class="dashboard-footer"><p>{% if page.lang == 'fr' %}Généré depuis les contrats du dépôt et les évaluations Vally approuvées.{% else %}Generated from repository contracts and maintainer-approved Vally evaluations.{% endif %}</p></footer>
+  <script type="module" src="{{ '/dashboard/app.js' | relative_url }}"></script>
+</body>
+</html>

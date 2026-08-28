@@ -27,6 +27,13 @@ body {
 }
 a { color: inherit; }
 
+.dashboard-layout {
+  width: 100%;
+  padding: 0 0 4rem;
+}
+.dashboard-shell { min-width: 0; }
+.dashboard-shell .hero-content { padding: 10rem 0 6.5rem; }
+
 .hero {
   overflow: hidden;
   border-bottom: 1px solid var(--line);
@@ -53,6 +60,7 @@ main { padding: 3.5rem 0 5rem; }
 .metric { min-height: 130px; padding: 1.4rem; background: var(--surface); }
 .metric strong { display: block; color: var(--lime); font-size: 2.4rem; line-height: 1; }
 .metric span { display: block; margin-top: .7rem; color: var(--muted); font-size: .85rem; }
+.metric small { display: block; margin-top: .55rem; color: var(--muted); font-size: .72rem; line-height: 1.35; }
 
 .callout { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1.25rem; border: 1px solid var(--line); border-radius: 18px; padding: 1.25rem 1.4rem; background: var(--surface); }
 /* `hidden` must win over the rule above, or the callout shows before there is
@@ -65,10 +73,45 @@ main { padding: 3.5rem 0 5rem; }
 .tab { appearance: none; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); padding: .85rem 1.25rem; cursor: pointer; font: inherit; font-size: .84rem; font-weight: 800; }
 .tab:hover { color: var(--text); }
 .tab.active { border-bottom-color: var(--mint); color: var(--mint); }
+.dashboard-filters { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(210px, .5fr) auto; align-items: end; gap: .8rem 1rem; margin: 1.25rem 0 0; border: 1px solid var(--line); border-radius: 18px; padding: 1rem 1.2rem; background: var(--surface); }
+.dashboard-filters > p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: .76rem; }
+.select-filter { display: grid; gap: .4rem; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.select-filter select { width: 100%; border: 1px solid var(--line); border-radius: 12px; outline: none; background: var(--surface-2); color: var(--text); padding: .9rem 2.4rem .9rem 1rem; font: inherit; }
+.select-filter select:focus { border-color: var(--mint); box-shadow: 0 0 0 3px rgb(78 213 138 / 14%); }
+.filter-clear { appearance: none; background: transparent; cursor: pointer; font: inherit; }
+.filter-clear:disabled { cursor: default; opacity: .45; }
 .panel { display: none; }
 .panel.active { display: block; }
 .view-heading { max-width: 760px; margin: 4rem 0 1.5rem; }
 .view-heading p:last-child { color: var(--muted); }
+.indicator-guide { margin: 0 0 1.5rem; border: 1px solid var(--line); border-radius: 18px; padding: 1.4rem; background: linear-gradient(115deg, rgb(126 226 184 / 8%), var(--surface)); }
+.indicator-guide h3 { font-size: 1.25rem; }
+.indicator-guide > p { max-width: 900px; margin: .65rem 0 1.1rem; color: var(--muted); }
+.indicator-definitions { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; margin: 0; }
+.indicator-definitions > div { border-left: 2px solid var(--mint); padding-left: .75rem; }
+.indicator-definitions dt { color: var(--text); font-size: .8rem; font-weight: 850; }
+.indicator-definitions dd { margin: .25rem 0 0; color: var(--muted); font-size: .76rem; line-height: 1.4; }
+
+.topology { display: grid; gap: 1.25rem; }
+.journey-card, .root-card, .phase-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.journey-card, .root-card { padding: 1.4rem; }
+.journey { display: flex; align-items: stretch; gap: .7rem; margin: 0; padding: 0; list-style: none; }
+.journey-step { flex: 1; display: grid; gap: .35rem; padding: 1rem; border: 1px solid var(--line); border-radius: 13px; background: var(--surface-2); }
+.journey-step span { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.journey-step a, .phase-card a, .root-card a { color: var(--mint); font-weight: 800; text-decoration: none; }
+.journey-arrow { align-self: center; color: var(--mint); font-weight: 900; }
+.phase-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
+.phase-card { padding: 1.1rem; }
+.phase-card > div { display: grid; gap: .15rem; margin-top: .8rem; }
+.phase-card strong { color: var(--muted); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; }
+.root-card ul { display: flex; flex-wrap: wrap; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+.root-card li { border: 1px solid var(--line); border-radius: 999px; padding: .4rem .7rem; }
+[id^="agent-"], [id^="worker-"], [id^="lens-"], [id^="skill-"] { scroll-margin-top: 6rem; }
 
 .catalog-heading { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin: 4rem 0 1.5rem; }
 h2 { font-size: clamp(1.9rem, 5vw, 3.2rem); }
@@ -108,9 +151,12 @@ h2 { font-size: clamp(1.9rem, 5vw, 3.2rem); }
 .spark i.inconclusive { background: var(--amber); }
 .spark i.no-improvement { background: var(--blue); }
 .evidence-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 1.25rem; }
+.evidence-cohort > .evidence-grid { padding: 1.25rem; }
 .evidence-card { overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
 .evidence-card > header { display: flex; justify-content: space-between; align-items: start; gap: 1rem; padding: 1.4rem; border-bottom: 1px solid var(--line); background: linear-gradient(105deg, var(--surface-2), var(--surface)); }
 .evidence-card h3 { font-size: 1.35rem; }
+.evidence-card .judge { margin: .45rem 0 0; color: var(--muted); font-size: .72rem; }
+.evidence-verdict { display: grid; justify-items: end; gap: .5rem; }
 .score-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
 .score-strip > div { padding: 1rem 1.2rem; background: var(--surface); }
 .score-strip span, .activation span { display: block; color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
@@ -129,6 +175,9 @@ h2 { font-size: clamp(1.9rem, 5vw, 3.2rem); }
 .card-note { margin: 0; padding: 1rem 1.3rem; color: var(--muted); font-size: .8rem; }
 .card-note.warning { color: var(--amber); }
 .pill { border: 1px solid currentColor; border-radius: 999px; padding: .1rem .4rem; color: var(--mint); font-size: .62rem; font-weight: 850; text-transform: uppercase; vertical-align: middle; }
+.zoom-actions { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .75rem; }
+.zoom-action { appearance: none; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--mint); padding: .3rem .55rem; cursor: pointer; font: inherit; font-size: .68rem; font-weight: 800; }
+.zoom-action:hover, .zoom-action:focus-visible { border-color: var(--mint); }
 .rows tr.best { background: rgb(126 226 184 / 7%); }
 .delta-stack { display: grid; justify-items: end; gap: .2rem; font-size: .78rem; font-weight: 800; }
 .positive { color: var(--mint) !important; }
@@ -139,7 +188,14 @@ footer { border-top: 1px solid var(--line); padding: 2rem 0 3rem; color: var(--m
 footer p { margin: .35rem 0; }
 
 @media (max-width: 820px) {
+  .dashboard-layout { padding: 0 0 3rem; }
+  .dashboard-shell .hero-content { padding: 8.5rem 0 5rem; }
   .summary { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-filters { grid-template-columns: 1fr 1fr; }
+  .filter-clear { justify-self: start; }
+  .journey { display: grid; }
+  .journey-arrow { justify-self: center; transform: rotate(90deg); }
+  .phase-grid { grid-template-columns: repeat(2, 1fr); }
   .catalog-heading, .family-header { display: grid; grid-template-columns: 1fr; align-items: start; }
   .activation { grid-template-columns: repeat(2, 1fr); }
   .search { width: 100%; }
@@ -152,8 +208,11 @@ footer p { margin: .35rem 0; }
 
 @media (max-width: 520px) {
   .tabs { overflow-x: auto; }
+  .dashboard-filters { grid-template-columns: 1fr; }
+  .dashboard-filters > p { grid-column: 1; }
   .score-strip { grid-template-columns: 1fr; }
   .bar-line { grid-template-columns: 58px minmax(50px, 1fr) 62px; }
+  .phase-grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
