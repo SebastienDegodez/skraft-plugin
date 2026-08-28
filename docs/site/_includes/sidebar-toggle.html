@@ -1,0 +1,11 @@
+<script>
+  (function () {
+    var toggle = document.querySelector('.doc-sidebar-toggle');
+    var sidebar = document.getElementById('doc-sidebar');
+    if (!toggle || !sidebar) return;
+    toggle.addEventListener('click', function () {
+      var open = sidebar.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  })();
+</script>

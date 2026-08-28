@@ -11,8 +11,9 @@
 #   2. Toute page `type: derived` DOIT citer source + annee (auteur, titre, annee).
 #   3. Toute page de la partie `reference` DOIT respecter le gabarit de page
 #      `reference_template` (blocs requis) — comprehensible sans maitrise du craft.
-#   4. Tout pattern / gate / lens / agent / skill present dans `sources` mais
-#      absent d'une page derivee declenche un ecart (gap).
+#   4. Tout pattern / gate present dans `sources` doit etre couvert par une page
+#      derivee. Agents, skills, workers et lentilles sont couverts exactement une
+#      fois par le catalogue dashboard et ses anchors stables.
 #   5. La page FR et la page EN d'une meme entree PARTAGENT le meme basename
 #      (nom de fichier anglais) ; seul le prefixe de dossier `fr/` vs `en/`
 #      change. Ex. `fr/for-executives.md` <-> `en/for-executives.md`. AUCUNE
@@ -122,10 +123,10 @@ meta:
 
 # Sources dérivables (plugin SKRAFT uniquement — HVE n'est PAS scanne ici).
 sources:
-  # Agents de phase, user-invocables (un par phase + leurs reviewers + l'orchestrateur).
-  # `*` ne descend PAS dans `workers/` : les subagents internes sont captes par `workers` ci-dessous.
+  # Agents autonomes, agents de phase, reviewers et orchestrateur.
+  # `*` ne descend PAS dans `workers/` : les subagents internes sont captes ci-dessous.
   agents: "plugins/skraft-framework/agents/*.agent.md"
-  # Les 4 lentilles de revue adverse CORE (utilisees par les reviewers de phase).
+  # Lentilles de revue adverse et conditionnelles.
   lenses: "plugins/skraft-framework/agents/reviewer-lenses/*.agent.md"
   # Subagents internes (user-invocable: false) groupes par capacite sous workers/<capacite>/.
   # Capte le bundle complet d'une capacite : les *-worker.agent.md ET leurs *-lens.agent.md
@@ -221,220 +222,285 @@ parts:
     sidebar_position: 3
     title_fr: "Explication — comprendre"
     title_en: "Explanation — understand"
-    intro_fr: "Le pourquoi : le pipeline et ses 5 phases (gates exactes comprises), la narration fil rouge, l'architecture et les principes."
-    intro_en: "The why: the pipeline and its 5 phases (exact gates included), the running-example narrative, the architecture and the principles."
-    pages:
-      - id: phases
-        type: derived
-        label_fr: "Le pipeline (vue d'ensemble)"
-        label_en: "The pipeline (overview)"
-        fr: "fr/explanation/pipeline/index.md"
-        en: "en/explanation/pipeline/index.md"
-        source: "plugins/skraft-framework/agents/*.agent.md"
-        purpose_fr: "Les 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, un agent par phase, un reviewer independant."
-        purpose_en: "The 5 phases DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER, one agent per phase, one independent reviewer."
-      - id: concepts
-        type: editorial
-        label_fr: "Concepts"
-        label_en: "Concepts"
-        fr: "fr/explanation/concepts.md"
-        en: "en/explanation/concepts.md"
-        purpose_fr: "Les concepts transverses : phase, agent, reviewer, gate, lens, artefact."
-        purpose_en: "Cross-cutting concepts: phase, agent, reviewer, gate, lens, artifact."
-      - id: fil-rouge
-        type: editorial
-        label_fr: "Le fil rouge (narration)"
-        label_en: "The running example (narrative)"
-        fr: "fr/explanation/pipeline/fil-rouge.md"
-        en: "en/explanation/pipeline/fil-rouge.md"
-        purpose_fr: "Narration : une commande Starbucks suivie de l'idee au code a travers les 5 phases (exemple illustratif)."
-        purpose_en: "Narrative: a Starbucks order followed from idea to code across the 5 phases (illustrative example)."
-      - id: discover
-        type: derived
-        label_fr: "DISCOVER"
-        label_en: "DISCOVER"
-        fr: "fr/explanation/pipeline/discover.md"
-        en: "en/explanation/pipeline/discover.md"
-        source: "plugins/skraft-framework/agents/backlog-discoverer.agent.md"
-        purpose_fr: "Phase DISCOVER : triage et priorisation du backlog."
-        purpose_en: "DISCOVER phase: backlog triage and prioritization."
-      - id: discuss
-        type: derived
-        label_fr: "DISCUSS"
-        label_en: "DISCUSS"
-        fr: "fr/explanation/pipeline/discuss.md"
-        en: "en/explanation/pipeline/discuss.md"
-        source: "plugins/skraft-framework/agents/backlog-planner.agent.md"
-        purpose_fr: "Phase DISCUSS : raffinage des stories (INVEST, DoR)."
-        purpose_en: "DISCUSS phase: story refinement (INVEST, DoR)."
-      - id: design
-        type: derived
-        label_fr: "DESIGN"
-        label_en: "DESIGN"
-        fr: "fr/explanation/pipeline/design.md"
-        en: "en/explanation/pipeline/design.md"
-        source: "plugins/skraft-framework/agents/solution-architect.agent.md"
-        purpose_fr: "Phase DESIGN : Event Modeling, DDD, ADRs, contrats d'interface."
-        purpose_en: "DESIGN phase: Event Modeling, DDD, ADRs, interface contracts."
-      - id: distill
-        type: derived
-        label_fr: "DISTILL"
-        label_en: "DISTILL"
-        fr: "fr/explanation/pipeline/distill.md"
-        en: "en/explanation/pipeline/distill.md"
-        source: "plugins/skraft-framework/agents/acceptance-designer.agent.md"
-        purpose_fr: "Phase DISTILL : scenarios BDD executables et plan de tests."
-        purpose_en: "DISTILL phase: executable BDD scenarios and test plan."
-      - id: deliver
-        type: derived
-        label_fr: "DELIVER"
-        label_en: "DELIVER"
-        fr: "fr/explanation/pipeline/deliver.md"
-        en: "en/explanation/pipeline/deliver.md"
-        source: "plugins/skraft-framework/agents/software-engineer.agent.md"
-        purpose_fr: "Phase DELIVER : Outside-In TDD, Clean Architecture, mutation testing."
-        purpose_en: "DELIVER phase: Outside-In TDD, Clean Architecture, mutation testing."
-      - id: team
-        type: editorial
-        label_fr: "L'équipe (le relais)"
-        label_en: "The team (relay)"
-        fr: "fr/explanation/pipeline/team.md"
-        en: "en/explanation/pipeline/team.md"
-        purpose_fr: "Les 5 agents executeurs, leurs reviewers et l'orchestrateur : qui fait quoi et comment chacun passe le relais."
-        purpose_en: "The 5 executor agents, their reviewers and the orchestrator: who does what and how each hands off."
-      - id: architecture
-        type: editorial
-        label_fr: "Architecture"
-        label_en: "Architecture"
-        fr: "fr/explanation/architecture.md"
-        en: "en/explanation/architecture.md"
-        purpose_fr: "Vue d'architecture : comment les phases, agents et reviewers s'assemblent."
-        purpose_en: "Architecture view: how phases, agents and reviewers assemble."
-      - id: zoom-mocking
-        type: derived
-        label_fr: "Zoom L3 : mocking (Microcks)"
-        label_en: "L3 zoom: mocking (Microcks)"
-        fr: "fr/explanation/deep-dive/mocking-microcks.md"
-        en: "en/explanation/deep-dive/mocking-microcks.md"
-        source: "plugins/skraft-framework/agents/workers/mocking/*.agent.md"
-        purpose_fr: "Zoom sur le fan-out L3 de DELIVER : mock-integration-worker, roster de strategie (Microcks par defaut, in-process en surcharge) et mock-fidelity-lens."
-        purpose_en: "Zoom on the DELIVER L3 fan-out: mock-integration-worker, strategy roster (Microcks by default, in-process override) and mock-fidelity-lens."
-      - id: zoom-contract
-        type: derived
-        label_fr: "Zoom L3 : contract testing"
-        label_en: "L3 zoom: contract testing"
-        fr: "fr/explanation/deep-dive/contract-testing.md"
-        en: "en/explanation/deep-dive/contract-testing.md"
-        source: "plugins/skraft-framework/agents/workers/contract-testing/*.agent.md"
-        purpose_fr: "Zoom sur le fan-out L3 de DELIVER : contract-testing-worker, roster (integration in-process + Microcks en opt-in) et contract-fidelity-lens."
-        purpose_en: "Zoom on the DELIVER L3 fan-out: contract-testing-worker, roster (in-process integration + Microcks opt-in) and contract-fidelity-lens."
-      - id: hve-core
-        type: derived
-        label_fr: "Le substrat HVE-Core"
-        label_en: "The HVE-Core substrate"
-        fr: "fr/explanation/hve-core.md"
-        en: "en/explanation/hve-core.md"
-        source: "plugins/skraft-framework/instructions/skraft-state.instructions.md"
-        purpose_fr: "Le substrat HVE-Core : state.json, protocole 6-etapes par tour, articulation des phases."
-        purpose_en: "The HVE-Core substrate: state.json, 6-step per-turn protocol, phase articulation."
-      - id: traces
-        type: derived
-        label_fr: "Traces & auditabilité"
-        label_en: "Traces & auditability"
-        fr: "fr/explanation/traces.md"
-        en: "en/explanation/traces.md"
-        source: "plugins/skraft-framework/instructions/skraft-artifacts.instructions.md"
-        purpose_fr: "Les traces laissees par le pipeline : artefacts dates, state.json, PR, verdicts. Auditabilite."
-        purpose_en: "The traces left by the pipeline: dated artifacts, state.json, PRs, verdicts. Auditability."
-      - id: token-economy
-        type: editorial
-        label_fr: "Économie de tokens"
-        label_en: "Token economy"
-        fr: "fr/explanation/token-economy.md"
-        en: "en/explanation/token-economy.md"
-        purpose_fr: "Pourquoi le coût d'un pipeline agentique est une forme décidée au design, pas un réglage runtime — et comment SKRAFT la tient via les leviers de la discipline Genesis."
-        purpose_en: "Why an agentic pipeline's cost is a design-time form, not a runtime setting — and how SKRAFT holds it via the Genesis discipline levers."
-      - id: hve-vs-skraft
-        type: editorial
-        label_fr: "HVE → SKRAFT"
-        label_en: "HVE → SKRAFT"
-        fr: "fr/explanation/hve-vs-skraft.md"
-        en: "en/explanation/hve-vs-skraft.md"
-        purpose_fr: "Continuite HVE -> SKRAFT. SKRAFT remplace le workflow RPI par un pipeline SDLC complet."
-        purpose_en: "HVE -> SKRAFT continuity. SKRAFT replaces the RPI workflow with a full SDLC pipeline."
-        requires_diagram: true
-      - id: hooks
-        type: editorial
-        label_fr: "Garde-fous (hooks)"
-        label_en: "Guardrails (hooks)"
-        fr: "fr/explanation/hooks.md"
-        en: "en/explanation/hooks.md"
-        purpose_fr: "Pourquoi les hooks rendent les invariants Engineer/Reviewer mécaniquement infranchissables."
-        purpose_en: "Why hooks make Engineer/Reviewer invariants mechanically unbreakable."
-      - id: clean-architecture
-        type: editorial
-        label_fr: "Clean Architecture"
-        label_en: "Clean Architecture"
-        fr: "fr/explanation/clean-architecture.md"
-        en: "en/explanation/clean-architecture.md"
-        purpose_fr: "Les couches et les frontieres qui guident la phase DELIVER."
-        purpose_en: "The layers and boundaries guiding the DELIVER phase."
-      - id: outside-in-tdd
-        type: editorial
-        label_fr: "Deep-dive : Outside-In TDD"
-        label_en: "Deep dive: Outside-In TDD"
-        fr: "fr/explanation/deep-dive/outside-in-tdd.md"
-        en: "en/explanation/deep-dive/outside-in-tdd.md"
-        purpose_fr: "Double boucle, boundary-to-boundary, walking skeleton — l'approche detaillee."
-        purpose_en: "Double loop, boundary-to-boundary, walking skeleton — the detailed approach."
-      - id: walking-skeleton
-        type: editorial
-        label_fr: "Deep-dive : Walking Skeleton"
-        label_en: "Deep dive: Walking Skeleton"
-        fr: "fr/explanation/deep-dive/walking-skeleton.md"
-        en: "en/explanation/deep-dive/walking-skeleton.md"
-        purpose_fr: "Le squelette ambulant : la plus fine tranche end-to-end qui marche."
-        purpose_en: "The walking skeleton: the thinnest end-to-end slice that works."
-      - id: lire-un-verdict
-        type: editorial
-        label_fr: "Deep-dive : lire un verdict d'évaluation"
-        label_en: "Deep dive: reading an evaluation verdict"
-        fr: "fr/explanation/deep-dive/lire-un-verdict.md"
-        en: "en/explanation/deep-dive/reading-a-verdict.md"
-        purpose_fr: "Le test des signes, le test de rang et le plancher de six paires, sur des chiffres réels."
-        purpose_en: "The sign test, the rank test and the six-pair floor, on real numbers."
-      - id: pourquoi-review-avant-review
-        type: editorial
-        label_fr: "La revue avant la revue"
-        label_en: "Review before review"
-        fr: "fr/explanation/why-review-before-review.md"
-        en: "en/explanation/why-review-before-review.md"
-        purpose_fr: "Le coeur de l'argument : la revue adverse assistee filtre AVANT l'humain. Moins de rework, TTM reduit."
-        purpose_en: "The core argument: assisted adversarial review filters BEFORE the human. Less rework, lower TTM."
-      - id: review-deep
-        type: editorial
-        label_fr: "Deep-dive : revue avant la revue"
-        label_en: "Deep dive: review before review"
-        fr: "fr/explanation/deep-dive/review-before-review.md"
-        en: "en/explanation/deep-dive/review-before-review.md"
-        purpose_fr: "Approfondissement : revue adverse a 4 lentilles, synthese ponderee, verdicts."
-        purpose_en: "Deep dive: 4-lens adversarial review, weighted synthesis, verdicts."
-      - id: for-executives
-        type: editorial
-        label_fr: "Pour décideurs"
-        label_en: "For executives"
-        fr: "fr/explanation/for-executives.md"
-        en: "en/explanation/for-executives.md"
-        purpose_fr: "Pourquoi la revue assistee AVANT la revue humaine reduit le TTM. Arguments qualitatifs."
-        purpose_en: "Why AI-assisted review BEFORE human review reduces TTM. Qualitative arguments."
-      - id: brownfield
-        type: editorial
-        label_fr: "Brownfield (amont du pipeline)"
-        label_en: "Brownfield (upstream of the pipeline)"
-        fr: "fr/explanation/brownfield.md"
-        en: "en/explanation/brownfield.md"
-        purpose_fr: "Les workflows brownfield standalone (hors orchestrateur, choisis par l'humain) : brownfield-analyst analyse un code existant et en derive un PRD au format HVE (repris par les agents HVE pour creer des issues) ; brownfield-harness-builder puis brownfield-refactorer securisent le legacy (filet de contrats + Microcks = golden master) puis le refactorent (Mikado in-place OU Strangler Fig au choix). Explique la procedure, comment ca marche, et comment le PRD alimente le pipeline en amont de DISCOVER."
-        purpose_en: "The standalone brownfield workflows (outside the orchestrator, human-chosen): brownfield-analyst analyzes an existing codebase into an HVE-format PRD (consumed by HVE agents to create issues); brownfield-harness-builder then brownfield-refactorer secure the legacy (contract + Microcks safety net = golden master) then refactor it (Mikado in-place OR Strangler Fig, human's choice). Explains the procedure, how it works, and how the PRD feeds the pipeline upstream of DISCOVER."
+    intro_fr: "Le pourquoi : choisir un parcours, suivre le flux d'artefacts, puis comprendre les mécanismes qui le protègent."
+    intro_en: "The why: choose a journey, follow the artifact flow, then understand the mechanisms that protect it."
+    sections:
+      - id: orientation
+        title_fr: "Orientation"
+        title_en: "Orientation"
+        sidebar_position: 1
+        pages:
+          - id: phases
+            type: derived
+            label_fr: "Vue d'ensemble"
+            label_en: "Overview"
+            sidebar_position: 1
+            fr: "fr/explanation/pipeline/index.md"
+            en: "en/explanation/pipeline/index.md"
+            source: "plugins/skraft-framework/agents/*.agent.md"
+            purpose_fr: "Choisir entre préparation produit, pipeline d'ingénierie et parcours Brownfield."
+            purpose_en: "Choose between product preparation, the engineering pipeline, and the Brownfield journey."
+      - id: core-journey
+        title_fr: "Parcours principal"
+        title_en: "Core journey"
+        sidebar_position: 2
+        pages:
+          - id: fil-rouge
+            type: editorial
+            label_fr: "Le fil rouge"
+            label_en: "The running example"
+            sidebar_position: 1
+            fr: "fr/explanation/pipeline/fil-rouge.md"
+            en: "en/explanation/pipeline/fil-rouge.md"
+            purpose_fr: "Une commande Starbucks suivie à travers deux workflows produit optionnels puis quatre phases d'ingénierie."
+            purpose_en: "A Starbucks order followed through two optional product workflows and then four engineering phases."
+          - id: discover
+            type: derived
+            label_fr: "DISCOVER"
+            label_en: "DISCOVER"
+            sidebar_position: 2
+            fr: "fr/explanation/pipeline/discover.md"
+            en: "en/explanation/pipeline/discover.md"
+            source: "plugins/skraft-framework/agents/backlog-discoverer.agent.md"
+            purpose_fr: "Workflow DISCOVER : triage et priorisation du backlog."
+            purpose_en: "DISCOVER workflow: backlog triage and prioritization."
+          - id: discuss
+            type: derived
+            label_fr: "DISCUSS"
+            label_en: "DISCUSS"
+            sidebar_position: 3
+            fr: "fr/explanation/pipeline/discuss.md"
+            en: "en/explanation/pipeline/discuss.md"
+            source: "plugins/skraft-framework/agents/backlog-planner.agent.md"
+            purpose_fr: "Workflow DISCUSS : raffinage des stories selon INVEST et la DoR."
+            purpose_en: "DISCUSS workflow: story refinement against INVEST and the DoR."
+          - id: research
+            type: derived
+            label_fr: "RESEARCH"
+            label_en: "RESEARCH"
+            sidebar_position: 4
+            fr: "fr/explanation/pipeline/research.md"
+            en: "en/explanation/pipeline/research.md"
+            source: "plugins/skraft-framework/agents/solution-researcher.agent.md"
+            purpose_fr: "Phase RESEARCH : investigation sourcée et recommandation avant la conception."
+            purpose_en: "RESEARCH phase: sourced investigation and recommendation before design."
+          - id: design
+            type: derived
+            label_fr: "DESIGN"
+            label_en: "DESIGN"
+            sidebar_position: 5
+            fr: "fr/explanation/pipeline/design.md"
+            en: "en/explanation/pipeline/design.md"
+            source: "plugins/skraft-framework/agents/solution-architect.agent.md"
+            purpose_fr: "Phase DESIGN : Event Modeling, DDD, ADR et contrats d'interface."
+            purpose_en: "DESIGN phase: Event Modeling, DDD, ADRs, and interface contracts."
+          - id: distill
+            type: derived
+            label_fr: "DISTILL"
+            label_en: "DISTILL"
+            sidebar_position: 6
+            fr: "fr/explanation/pipeline/distill.md"
+            en: "en/explanation/pipeline/distill.md"
+            source: "plugins/skraft-framework/agents/acceptance-designer.agent.md"
+            purpose_fr: "Phase DISTILL : scénarios BDD exécutables et plan de tests."
+            purpose_en: "DISTILL phase: executable BDD scenarios and test plan."
+          - id: deliver
+            type: derived
+            label_fr: "DELIVER"
+            label_en: "DELIVER"
+            sidebar_position: 7
+            fr: "fr/explanation/pipeline/deliver.md"
+            en: "en/explanation/pipeline/deliver.md"
+            source: "plugins/skraft-framework/agents/software-engineer.agent.md"
+            purpose_fr: "Phase DELIVER : Outside-In TDD, Clean Architecture et mutation testing."
+            purpose_en: "DELIVER phase: Outside-In TDD, Clean Architecture, and mutation testing."
+      - id: brownfield-journey
+        title_fr: "Parcours Brownfield"
+        title_en: "Brownfield journey"
+        sidebar_position: 3
+        pages:
+          - id: brownfield
+            type: editorial
+            label_fr: "Reprendre un existant"
+            label_en: "Take over an existing system"
+            sidebar_position: 1
+            fr: "fr/explanation/brownfield.md"
+            en: "en/explanation/brownfield.md"
+            purpose_fr: "Analyser un code existant, construire un filet de sécurité, le refactorer, puis rejoindre le parcours principal."
+            purpose_en: "Analyze existing code, build a safety net, refactor it, then join the core journey."
+      - id: system-understanding
+        title_fr: "Comprendre le système"
+        title_en: "Understand the system"
+        sidebar_position: 4
+        pages:
+          - id: concepts
+            type: editorial
+            label_fr: "Concepts"
+            label_en: "Concepts"
+            sidebar_position: 1
+            fr: "fr/explanation/concepts.md"
+            en: "en/explanation/concepts.md"
+            purpose_fr: "Les concepts transverses : phase, agent, reviewer, gate, lens et artefact."
+            purpose_en: "Cross-cutting concepts: phase, agent, reviewer, gate, lens, and artifact."
+          - id: team
+            type: editorial
+            label_fr: "L'équipe et les relais"
+            label_en: "The team and handoffs"
+            sidebar_position: 2
+            fr: "fr/explanation/pipeline/team.md"
+            en: "en/explanation/pipeline/team.md"
+            purpose_fr: "Les agents produit, les agents d'ingénierie, leurs reviewers et l'orchestrateur : qui fait quoi et comment chacun passe le relais."
+            purpose_en: "Product agents, engineering agents, their reviewers, and the orchestrator: who does what and how each hands off."
+          - id: architecture
+            type: editorial
+            label_fr: "Architecture"
+            label_en: "Architecture"
+            sidebar_position: 3
+            fr: "fr/explanation/architecture.md"
+            en: "en/explanation/architecture.md"
+            purpose_fr: "Vue d'architecture : comment racines, agents et reviewers s'assemblent."
+            purpose_en: "Architecture view: how roots, agents, and reviewers assemble."
+          - id: hve-core
+            type: derived
+            label_fr: "État et reprise"
+            label_en: "State and recovery"
+            sidebar_position: 4
+            fr: "fr/explanation/hve-core.md"
+            en: "en/explanation/hve-core.md"
+            source: "plugins/skraft-framework/instructions/skraft-state.instructions.md"
+            purpose_fr: "Le substrat d'état : state.json, reprise et transitions conditionnées par les verdicts."
+            purpose_en: "The state substrate: state.json, recovery, and transitions gated by verdicts."
+          - id: traces
+            type: derived
+            label_fr: "Traces et auditabilité"
+            label_en: "Traces and auditability"
+            sidebar_position: 5
+            fr: "fr/explanation/traces.md"
+            en: "en/explanation/traces.md"
+            source: "plugins/skraft-framework/instructions/skraft-artifacts.instructions.md"
+            purpose_fr: "Les traces laissées par le pipeline : artefacts datés, état, PR et verdicts."
+            purpose_en: "The traces left by the pipeline: dated artifacts, state, PRs, and verdicts."
+          - id: hooks
+            type: editorial
+            label_fr: "Garde-fous (hooks)"
+            label_en: "Guardrails (hooks)"
+            sidebar_position: 6
+            fr: "fr/explanation/hooks.md"
+            en: "en/explanation/hooks.md"
+            purpose_fr: "Pourquoi les hooks rendent les invariants Engineer/Reviewer mécaniquement infranchissables."
+            purpose_en: "Why hooks make Engineer/Reviewer invariants mechanically unbreakable."
+          - id: token-economy
+            type: editorial
+            label_fr: "Économie de tokens"
+            label_en: "Token economy"
+            sidebar_position: 7
+            fr: "fr/explanation/token-economy.md"
+            en: "en/explanation/token-economy.md"
+            purpose_fr: "Pourquoi le coût d'un pipeline agentique est décidé au design et comment SKRAFT le maîtrise."
+            purpose_en: "Why an agentic pipeline's cost is decided at design time and how SKRAFT controls it."
+      - id: deep-dives
+        title_fr: "Approfondissements"
+        title_en: "Deep dives"
+        sidebar_position: 5
+        pages:
+          - id: pourquoi-review-avant-review
+            type: editorial
+            label_fr: "La revue avant la revue"
+            label_en: "Review before review"
+            sidebar_position: 1
+            fr: "fr/explanation/why-review-before-review.md"
+            en: "en/explanation/why-review-before-review.md"
+            purpose_fr: "Pourquoi la revue adverse assistée filtre le bruit avant la revue humaine."
+            purpose_en: "Why assisted adversarial review filters noise before human review."
+          - id: review-deep
+            type: editorial
+            label_fr: "Revue adverse en détail"
+            label_en: "Adversarial review in depth"
+            sidebar_position: 2
+            fr: "fr/explanation/deep-dive/review-before-review.md"
+            en: "en/explanation/deep-dive/review-before-review.md"
+            purpose_fr: "Revue adverse à quatre lentilles, synthèse pondérée et verdicts."
+            purpose_en: "Four-lens adversarial review, weighted synthesis, and verdicts."
+          - id: clean-architecture
+            type: editorial
+            label_fr: "Clean Architecture"
+            label_en: "Clean Architecture"
+            sidebar_position: 3
+            fr: "fr/explanation/clean-architecture.md"
+            en: "en/explanation/clean-architecture.md"
+            purpose_fr: "Les couches et les frontières qui guident DELIVER."
+            purpose_en: "The layers and boundaries guiding DELIVER."
+          - id: outside-in-tdd
+            type: editorial
+            label_fr: "Outside-In TDD"
+            label_en: "Outside-In TDD"
+            sidebar_position: 4
+            fr: "fr/explanation/deep-dive/outside-in-tdd.md"
+            en: "en/explanation/deep-dive/outside-in-tdd.md"
+            purpose_fr: "Double boucle, boundary-to-boundary et walking skeleton."
+            purpose_en: "Double loop, boundary-to-boundary, and walking skeleton."
+          - id: walking-skeleton
+            type: editorial
+            label_fr: "Walking Skeleton"
+            label_en: "Walking Skeleton"
+            sidebar_position: 5
+            fr: "fr/explanation/deep-dive/walking-skeleton.md"
+            en: "en/explanation/deep-dive/walking-skeleton.md"
+            purpose_fr: "La plus fine tranche end-to-end qui fonctionne."
+            purpose_en: "The thinnest end-to-end slice that works."
+          - id: zoom-mocking
+            type: derived
+            label_fr: "Mocking avec Microcks"
+            label_en: "Mocking with Microcks"
+            sidebar_position: 6
+            fr: "fr/explanation/deep-dive/mocking-microcks.md"
+            en: "en/explanation/deep-dive/mocking-microcks.md"
+            source: "plugins/skraft-framework/agents/workers/mocking/*.agent.md"
+            purpose_fr: "Fan-out interne de DELIVER pour le mocking et sa lentille conditionnelle."
+            purpose_en: "DELIVER internal fan-out for mocking and its conditional lens."
+          - id: zoom-contract
+            type: derived
+            label_fr: "Contract testing"
+            label_en: "Contract testing"
+            sidebar_position: 7
+            fr: "fr/explanation/deep-dive/contract-testing.md"
+            en: "en/explanation/deep-dive/contract-testing.md"
+            source: "plugins/skraft-framework/agents/workers/contract-testing/*.agent.md"
+            purpose_fr: "Fan-out interne de DELIVER pour les tests de contrat et sa lentille conditionnelle."
+            purpose_en: "DELIVER internal fan-out for contract testing and its conditional lens."
+          - id: lire-un-verdict
+            type: editorial
+            label_fr: "Lire un verdict d'évaluation"
+            label_en: "Read an evaluation verdict"
+            sidebar_position: 8
+            fr: "fr/explanation/deep-dive/lire-un-verdict.md"
+            en: "en/explanation/deep-dive/reading-a-verdict.md"
+            purpose_fr: "Le test des signes, le test de rang et le plancher de six paires."
+            purpose_en: "The sign test, rank test, and six-pair floor."
+      - id: special-contexts
+        title_fr: "Contextes particuliers"
+        title_en: "Special contexts"
+        sidebar_position: 6
+        pages:
+          - id: hve-vs-skraft
+            type: editorial
+            label_fr: "HVE → SKRAFT"
+            label_en: "HVE → SKRAFT"
+            sidebar_position: 1
+            fr: "fr/explanation/hve-vs-skraft.md"
+            en: "en/explanation/hve-vs-skraft.md"
+            purpose_fr: "Continuité HVE vers SKRAFT et frontière entre leurs workflows."
+            purpose_en: "HVE to SKRAFT continuity and the boundary between their workflows."
+            requires_diagram: true
+          - id: for-executives
+            type: editorial
+            label_fr: "Pour décideurs"
+            label_en: "For executives"
+            sidebar_position: 2
+            fr: "fr/explanation/for-executives.md"
+            en: "en/explanation/for-executives.md"
+            purpose_fr: "Pourquoi la revue assistée avant la revue humaine réduit le délai de livraison."
+            purpose_en: "Why AI-assisted review before human review lowers time to delivery."
 
   # ---------------------------------------------------------------- REFERENCE
   - id: reference
@@ -443,101 +509,43 @@ parts:
     sidebar_position: 4
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
-    intro_fr: "Tout le factuel : agents, skills, les 46 gates, lentilles, patterns, citations, glossaire, changelog."
-    intro_en: "All the facts: agents, skills, the 46 gates, lenses, patterns, citations, glossary, changelog."
-    # Menu a 3 niveaux : partie -> section -> page. Chaque section porte une
-    # `sidebar_position` (ordre) ; les sections `generate` materialisent UNE page
-    # par fichier source (un agent, un skill, un worker, une lentille) via le chain
-    # docs-reconcile. doc.html liste les pages explicites (`pages`) PUIS les pages
-    # individuelles trouvees dans `folder_{fr,en}` (triees par sidebar_position du
-    # frontmatter). scan-drift.mjs detecte les sources orphelines via `generate`.
+    intro_fr: "Tout le factuel : agents, skills, les 48 gates, lentilles, patterns, citations, glossaire, changelog."
+    intro_en: "All the facts: agents, skills, the 48 gates, lenses, patterns, citations, glossary, changelog."
+    # Menu a 3 niveaux : partie -> section -> page. Le catalogue dashboard couvre
+    # agents, skills, workers et lentilles sans materialiser une page Markdown par
+    # source. Les autres sections conservent leurs pages handbook explicites.
     sections:
-      - id: agents
-        title_fr: "Agents"
-        title_en: "Agents"
+      - id: catalogue
+        title_fr: "Catalogue agentique"
+        title_en: "Agentic catalogue"
         sidebar_position: 1
-        folder_fr: "fr/reference/agents"
-        folder_en: "en/reference/agents"
-        generate:
-          from: agents
-          slug_from: basename
-          path_fr: "fr/reference/agents/{slug}.md"
-          path_en: "en/reference/agents/{slug}.md"
-          start_position: 2
+        ownership: dashboard
+        source_families: [agents, skills, workers, lenses]
+        retire:
+          - "docs/site/fr/reference/agents/*.md"
+          - "docs/site/en/reference/agents/*.md"
+          - "docs/site/fr/reference/skills/*.md"
+          - "docs/site/en/reference/skills/*.md"
+          - "docs/site/fr/reference/workers/*.md"
+          - "docs/site/en/reference/workers/*.md"
+          - "docs/site/fr/reference/lenses/*.md"
+          - "docs/site/en/reference/lenses/*.md"
+          - "docs/site/fr/reference/lens.md"
+          - "docs/site/en/reference/lens.md"
         pages:
-          - id: agents-index
-            type: derived
-            label_fr: "Vue d'ensemble"
-            label_en: "Overview"
+          - id: dashboard
+            type: dashboard
+            label_fr: "Agents, skills et chaînes"
+            label_en: "Agents, skills and chains"
             sidebar_position: 1
-            fr: "fr/reference/agents/index.md"
-            en: "en/reference/agents/index.md"
-            source: "plugins/skraft-framework/agents/*.agent.md"
-            purpose_fr: "Les agents du pipeline et leurs reviewers : role, phase, contribution aux pratiques."
-            purpose_en: "Pipeline agents and their reviewers: role, phase, contribution to practices."
-      - id: skills
-        title_fr: "Skills"
-        title_en: "Skills"
-        sidebar_position: 2
-        folder_fr: "fr/reference/skills"
-        folder_en: "en/reference/skills"
-        generate:
-          from: skills
-          slug_from: parent
-          path_fr: "fr/reference/skills/{slug}.md"
-          path_en: "en/reference/skills/{slug}.md"
-          start_position: 2
-        pages:
-          - id: skills-index
-            type: derived
-            label_fr: "Vue d'ensemble"
-            label_en: "Overview"
-            sidebar_position: 1
-            fr: "fr/reference/skills/index.md"
-            en: "en/reference/skills/index.md"
-            source: "plugins/skraft-framework/skills/*/SKILL.md"
-            purpose_fr: "Les skills (pratiques outillees) : ce qu'elles font, quand les utiliser."
-            purpose_en: "Skills (tooled practices): what they do, when to use them."
-      - id: workers
-        title_fr: "Workers (sous-agents)"
-        title_en: "Workers (sub-agents)"
-        sidebar_position: 3
-        folder_fr: "fr/reference/workers"
-        folder_en: "en/reference/workers"
-        generate:
-          from: workers
-          slug_from: basename
-          path_fr: "fr/reference/workers/{slug}.md"
-          path_en: "en/reference/workers/{slug}.md"
-          start_position: 1
-        pages: []
-      - id: lenses
-        title_fr: "Lentilles de revue"
-        title_en: "Review lenses"
-        sidebar_position: 4
-        folder_fr: "fr/reference/lenses"
-        folder_en: "en/reference/lenses"
-        generate:
-          from: lenses
-          slug_from: basename
-          path_fr: "fr/reference/lenses/{slug}.md"
-          path_en: "en/reference/lenses/{slug}.md"
-          start_position: 2
-        pages:
-          - id: lens-index
-            type: derived
-            label_fr: "Vue d'ensemble"
-            label_en: "Overview"
-            sidebar_position: 1
-            fr: "fr/reference/lens.md"
-            en: "en/reference/lens.md"
-            source: "plugins/skraft-framework/agents/reviewer-lenses/*.agent.md"
-            purpose_fr: "Les 4 lentilles de revue adverse : architecture-boundaries, cold-reader, quality-gates, test-integrity."
-            purpose_en: "The 4 adversarial review lenses: architecture-boundaries, cold-reader, quality-gates, test-integrity."
+            fr: "fr/dashboard/index.md"
+            en: "en/dashboard/index.md"
+            purpose_fr: "Catalogue factuel unique des agents, skills, workers, lentilles, racines et chaînes d'orchestration."
+            purpose_en: "Single factual catalogue of agents, skills, workers, lenses, roots and orchestration chains."
       - id: gates
         title_fr: "Gates"
         title_en: "Gates"
-        sidebar_position: 5
+        sidebar_position: 2
         pages:
           - id: gates
             type: derived
@@ -552,7 +560,7 @@ parts:
       - id: patterns
         title_fr: "Patterns"
         title_en: "Patterns"
-        sidebar_position: 6
+        sidebar_position: 3
         pages:
           - id: patterns
             type: derived
@@ -567,7 +575,7 @@ parts:
       - id: infrastructure
         title_fr: "Infrastructure"
         title_en: "Infrastructure"
-        sidebar_position: 7
+        sidebar_position: 4
         folder_fr: "fr/reference/infrastructure"
         folder_en: "en/reference/infrastructure"
         pages:
@@ -583,7 +591,7 @@ parts:
       - id: bibliography
         title_fr: "Bibliographie & annexes"
         title_en: "Bibliography & appendix"
-        sidebar_position: 8
+        sidebar_position: 5
         pages:
           - id: citations
             type: derived

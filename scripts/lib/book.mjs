@@ -44,8 +44,8 @@ export function slugFromPath(file, mode = 'basename') {
 /**
  * Resolve the concrete pages of a section. Beyond any explicit `pages:` entries,
  * a section may carry a `generate:` directive that materializes ONE derived page
- * per source file (so the Reference menu can list every agent / skill / lens
- * individually and in order). Generated pages are tagged `generated: true`.
+ * per source file. Dashboard-owned sections deliberately never expand sources:
+ * one localized dashboard route owns their full source families.
  *
  * `generate` shape (book.yml):
  *   generate:
@@ -58,6 +58,7 @@ export function slugFromPath(file, mode = 'basename') {
 export function pagesOfSection(section, { sources = {}, root = process.cwd() } = {}) {
   if (section == null) return [];
   const explicit = (section.pages || []).map((p) => ({ ...p, generated: false }));
+  if (section.ownership === 'dashboard') return explicit;
   const gen = section.generate;
   if (!gen || !gen.from || !sources[gen.from]) return explicit;
 
