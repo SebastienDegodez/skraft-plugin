@@ -42,7 +42,7 @@ SKRAFT prouve la qualité par trois couches, chacune répondant à une question 
 **Quoi ?** Les skills, le framework et l'agent travaillent-ils ensemble end-to-end ?
 
 - Tests Playwright dans `tests/site/` qui vérifient que le handbook s'affiche et que les liens sont vivants
-- Specs d'évaluation agent réel dans `tests/agents/` qui mesurent si des agents utilisant la suite complète prennent de meilleures décisions qu'un agent baseline
+- Specs d'évaluation agent réel dans `tests/agents/` qui vérifient qu'un agent dispatché sur une tâche réelle se conforme à ce qu'il déclare
 - Couvre les workflows multi-skills, l'ordre des skills, et les effets de bord cross-skills
 
 **État :** En place. Une suite agent est mono-bras — elle atteste une conformité (le bon agent, les skills requis chargés, la forme de handoff déclarée) plutôt qu'un gain — et son verdict est publié sur le tableau de bord et dans le commentaire de PR, à côté des skills. Elle reste indicative : une seule session d'agent réel ne doit pas bloquer un merge sans rapport.
@@ -171,7 +171,19 @@ Chaque essai enregistre aussi la trajectoire complète de l'agent. Quand des ses
 
 ## Couverture des agents
 
-Vally évalue les skills, pas les agents personnalisés. L'orchestration des agents est couverte par les tests déterministes du framework et les tests d'intégration ; aucun second harness piloté par modèle n'est maintenu.
+Les agents personnalisés sont couverts, mais pas de la même façon que les skills. Une comparaison de skill est **bi-bras** : baseline contre traitement. Une suite agent est **mono-bras** — il n'y a pas d'agent baseline à opposer à l'agent dispatché, donc rien à tester au sens statistique.
+
+`tests/agents/<suite>/eval.yaml` dispatche un vrai agent SKRAFT via `eng/vally-agent-executor/` et atteste une **conformité** avec des graders déterministes : le bon agent a été sélectionné, ses skills requis ont été chargés, le handoff a la forme déclarée. Pas de baseline, donc pas de test des signes : `eng/lib/agent-verdict.mjs` classe le run en tally de conformité.
+
+| Verdict | Ce qu'il signifie |
+|---|---|
+| `pass` | tous les essais ont tourné et scoré au niveau ou au-dessus du `scoring.threshold` de la suite |
+| `regression` | tous les essais ont tourné, et au moins un a scoré sous le seuil |
+| `inconclusive` | un essai est parti en erreur, donc il ne prouve rien sur l'agent |
+
+Ces verdicts sont publiés sur le tableau de bord et dans le commentaire de PR à côté des skills, mais ils restent **indicatifs** : une suite joue une seule session d'agent réel, et un run instable ne doit pas bloquer une fusion sans rapport.
+
+Une suite a besoin de `@github/copilot-sdk`, une devDependency — tout job qui en joue une doit passer par `npm install` d'abord.
 
 ## Ce qu'une évaluation ne couvre pas
 

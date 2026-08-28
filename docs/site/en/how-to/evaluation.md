@@ -44,7 +44,7 @@ SKRAFT proves quality through three layers, each answering a different question.
 **What?** Do the skills, framework, and agent work together end-to-end?
 
 - Playwright tests in `tests/site/` verify the handbook renders and links are live
-- Real-agent eval specs in `tests/agents/` measure whether agents using the full suite make better decisions than a baseline agent
+- Real-agent eval specs in `tests/agents/` check that an agent dispatched on a real task conforms to what it declares
 - Covers multi-skill workflows, skill sequencing, and cross-skill side effects
 
 **Status:** Working. An agent suite is single-arm — it asserts conformance (right agent, required skills loaded, declared handoff shape) rather than lift — and its verdict is published to the dashboard and to the PR comment alongside the skills. It stays advisory: one real agent session must not block an unrelated merge.
@@ -173,7 +173,19 @@ Every trial also records the agent's full trajectory. When sessions have been pu
 
 ## Agent coverage
 
-Vally evaluates skills, not custom agents. Agent orchestration is covered by the deterministic framework and integration tests; no second model-backed harness is maintained.
+Custom agents are covered, but not the way skills are. A skill comparison is **two-arm**: baseline against treatment. An agent suite is **single-arm** — there is no baseline agent to set against the dispatched one, so there is nothing to test in the statistical sense.
+
+`tests/agents/<suite>/eval.yaml` dispatches a real SKRAFT agent through `eng/vally-agent-executor/` and asserts **conformance** with deterministic graders: the right agent was selected, its required skills were loaded, the handoff has the declared shape. No baseline means no sign test: `eng/lib/agent-verdict.mjs` classifies the run as a conformance tally instead.
+
+| Verdict | Meaning |
+|---|---|
+| `pass` | every trial ran and scored at or above the suite's `scoring.threshold` |
+| `regression` | every trial ran, and at least one scored below the threshold |
+| `inconclusive` | a trial errored, so it proves nothing about the agent |
+
+Those verdicts are published to the dashboard and to the PR comment alongside the skills, but they stay **advisory**: a suite runs a single real agent session, and one flaky run must not block an unrelated merge.
+
+A suite needs `@github/copilot-sdk`, a devDependency, so any job that runs one must `npm install` first.
 
 ## What an evaluation does not cover
 
