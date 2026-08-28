@@ -15,6 +15,8 @@ import { parseArgs } from 'node:util'
 
 import { readFrontMatter } from '../lib/front-matter.mjs'
 import { profileSkill, summariseEvalSpec } from '../lib/skill-profile.mjs'
+import { buildCatalogueTopology } from '../lib/catalogue-topology.mjs'
+import { parseYaml } from '../../plugins/skraft-framework/src/domain/yaml-parser.mjs'
 
 const { values } = parseArgs({
   options: {
@@ -33,6 +35,11 @@ if (values.help) {
 const repoRoot = resolve(values.root ?? join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const posix = (value) => value.split('\\').join('/')
 const fromRoot = (path) => posix(relative(repoRoot, path))
+const asArray = (value) => (Array.isArray(value) ? value : value == null || value === '' ? [] : [value])
+const structuredFrontMatter = (content) => {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)
+  return match ? parseYaml(match[1]) : {}
+}
 
 const walk = (directory, matches, found = []) => {
   if (!existsSync(directory)) return found
@@ -86,7 +93,10 @@ const agentKind = (path) => {
 }
 
 const agents = walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((path) => {
-  const { data } = readFrontMatter(readFileSync(path, 'utf8'))
+  const content = readFileSync(path, 'utf8')
+  const { data } = readFrontMatter(content)
+  const structured = structuredFrontMatter(content)
+  const metadata = structured.metadata ?? {}
   const description = String(data.description ?? '')
   // The file stem is the stable identity: it is what `copilot --agent` takes and
   // what an evaluation result is keyed on. The front-matter name is a label.
@@ -100,6 +110,15 @@ const agents = walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((pat
     path: fromRoot(path),
     kind: agentKind(path),
     model: data.model ? String(data.model) : null,
+    userInvocable: structured['user-invocable'] === true || structured.userInvocable === true,
+    costRoleClass: metadata.cost_role_class ? String(metadata.cost_role_class) : null,
+    phase: metadata.phase ? String(metadata.phase) : null,
+    phases: asArray(metadata.phases).map(String),
+    skills: asArray(metadata.skills).map(String),
+    inputs: asArray(metadata.inputs?.required).map(String),
+    outputs: asArray(metadata.outputs).map(String),
+    childRefs: asArray(structured.agents).map(String),
+    dispatchedByRef: metadata.dispatched_by ? String(metadata.dispatched_by) : null,
   }
 })
 
@@ -114,8 +133,12 @@ if (existsSync(evalsRoot)) {
 }
 
 const manifest = JSON.parse(readFileSync(join(pluginRoot, '.claude-plugin/plugin.json'), 'utf8'))
+const frameworkConfigPath = join(pluginRoot, 'skraft-framework.config.json')
+const frameworkConfig = existsSync(frameworkConfigPath) ? JSON.parse(readFileSync(frameworkConfigPath, 'utf8')) : null
+const topology = buildCatalogueTopology({ skills, agents, frameworkConfig })
+findings.push(...topology.findings)
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedAt: new Date().toISOString(),
   plugin: {
     name: manifest.name,
@@ -131,8 +154,14 @@ const report = {
     evaluatedSkills: skills.filter((skill) => skill.evaluation.path).length,
     warnings: findings.length,
   },
-  skills,
-  agents,
+  skills: topology.skills,
+  agents: topology.agents,
+  topology: {
+    schemaVersion: topology.schemaVersion,
+    roots: topology.roots,
+    edges: topology.edges,
+    journeys: topology.journeys,
+  },
   findings,
 }
 

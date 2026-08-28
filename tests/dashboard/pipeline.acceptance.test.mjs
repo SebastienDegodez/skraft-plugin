@@ -35,8 +35,40 @@ before(() => {
     ['---', 'name: Demo Agent', 'description: Runs the demo.', 'model: Claude Sonnet 5', 'user-invocable: false', '---', '', '# Demo agent', ''].join('\n'),
   )
   write(
+    join(workspace, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'),
+    ['---', 'name: Skraft - Orchestrator', 'description: Runs engineering.', 'user-invocable: true', 'agents:', '  - Research Specialist', '  - Delivery Specialist', '  - Delivery Reviewer', 'metadata:', '  phases:', '    - RESEARCH', '    - DELIVER', '  skills:', '    - demo-skill', '  inputs:', '    required:', '      - refined-story', '  outputs:', '    - evidence', '---', ''].join('\n'),
+  )
+  write(
+    join(workspace, 'plugins/skraft-framework/agents/research-specialist.agent.md'),
+    ['---', 'name: Research Specialist', 'description: Researches.', 'userInvocable: false', 'metadata:', '  phase: RESEARCH', '  dispatched_by: Skraft - Orchestrator', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+  )
+  write(
+    join(workspace, 'plugins/skraft-framework/agents/delivery-specialist.agent.md'),
+    ['---', 'name: Delivery Specialist', 'description: Delivers.', 'metadata:', '  phase: DELIVER', '  dispatched_by: Skraft - Orchestrator', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+  )
+  write(
+    join(workspace, 'plugins/skraft-framework/agents/delivery-reviewer.agent.md'),
+    ['---', 'name: Delivery Reviewer', 'description: Reviews delivery.', 'agents:', '  - Demo Lens', 'metadata:', '  phase: DELIVER-REVIEW', '  dispatched_by: Skraft - Orchestrator', '---', ''].join('\n'),
+  )
+  write(
+    join(workspace, 'plugins/skraft-framework/agents/backlog-discoverer.agent.md'),
+    ['---', 'name: Backlog Discovery', 'description: Finds work.', 'userInvocable: true', 'metadata:', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+  )
+  write(
+    join(workspace, 'plugins/skraft-framework/agents/backlog-planner.agent.md'),
+    ['---', 'name: Backlog Planning', 'description: Refines work.', 'user-invocable: true', 'metadata:', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+  )
+  write(
+    join(workspace, 'plugins/skraft-framework/agents/workers/demo-worker.agent.md'),
+    ['---', 'name: Demo Worker', 'description: Supports delivery.', 'metadata:', '  dispatched_by: Delivery Specialist', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+  )
+  write(
     join(workspace, 'plugins/skraft-framework/agents/reviewer-lenses/demo-lens.agent.md'),
-    ['---', 'name: Demo Lens', 'description: Reviews the demo.', '---', '', '# Demo lens', ''].join('\n'),
+    ['---', 'name: Demo Lens', 'description: Reviews the demo.', 'metadata:', '  dispatched_by: Delivery Reviewer', '---', '', '# Demo lens', ''].join('\n'),
+  )
+  write(
+    join(workspace, 'plugins/skraft-framework/skraft-framework.config.json'),
+    JSON.stringify({ phaseOrder: ['RESEARCH', 'DELIVER'] }),
   )
   write(
     join(workspace, 'tests/skills/demo-skill/eval.yaml'),
@@ -55,7 +87,9 @@ describe('catalogue scan', () => {
     strictEqual(report.plugin.name, 'demo')
     strictEqual(report.plugin.version, '2.0.0')
     strictEqual(report.summary.skills, 2)
-    strictEqual(report.summary.agents, 1)
+    strictEqual(report.schemaVersion, 2)
+    strictEqual(report.summary.agents, 7)
+    strictEqual(report.summary.workers, 1)
     strictEqual(report.summary.lenses, 1)
     strictEqual(report.summary.evaluatedSkills, 1)
 
@@ -67,6 +101,27 @@ describe('catalogue scan', () => {
     const lens = report.agents.find((agent) => agent.kind === 'lens')
     strictEqual(lens.name, 'Demo Lens')
     strictEqual(lens.id, 'demo-lens')
+    strictEqual(lens.anchor, 'lens-demo-lens')
+
+    deepStrictEqual(report.topology.roots, ['backlog-discoverer', 'backlog-planner', 'skraft-orchestrator'])
+    deepStrictEqual(report.topology.journeys.engineering, {
+      entrypoint: 'skraft-orchestrator',
+      phases: [
+        { phase: 'RESEARCH', specialist: 'research-specialist', reviewer: null },
+        { phase: 'DELIVER', specialist: 'delivery-specialist', reviewer: 'delivery-reviewer' },
+      ],
+    })
+    deepStrictEqual(report.topology.journeys.productToEngineering.variants, [
+      ['skraft-orchestrator'],
+      ['backlog-planner', 'skraft-orchestrator'],
+      ['backlog-discoverer', 'backlog-planner', 'skraft-orchestrator'],
+    ])
+    ok(report.topology.edges.some((edge) => edge.type === 'dispatch' && edge.from === 'delivery-specialist' && edge.to === 'demo-worker'))
+    ok(report.topology.edges.some((edge) => edge.type === 'dispatch' && edge.from === 'delivery-reviewer' && edge.to === 'demo-lens'))
+    deepStrictEqual(report.topology.edges.filter((edge) => edge.type === 'dispatch' && edge.from === 'skraft-orchestrator').map((edge) => edge.order), [0, 1, 2])
+    strictEqual(report.agents.find((agent) => agent.id === 'backlog-discoverer').userInvocable, true)
+    strictEqual(report.agents.find((agent) => agent.id === 'backlog-planner').userInvocable, true)
+    deepStrictEqual(report.agents.find((agent) => agent.id === 'skraft-orchestrator').artifacts, { inputs: ['refined-story'], outputs: ['evidence'] })
   })
 
   it('warns about a skill with no description instead of failing silently', () => {
@@ -158,7 +213,12 @@ describe('dashboard data', () => {
     ])
     const dashboard = JSON.parse(readFileSync(outputPath, 'utf8'))
 
+    strictEqual(dashboard.schemaVersion, 2)
     strictEqual(dashboard.summary.skills, 2)
+    deepStrictEqual(dashboard.topology.journeys.engineering.phases, [
+      { phase: 'RESEARCH', specialist: 'research-specialist', reviewer: null },
+      { phase: 'DELIVER', specialist: 'delivery-specialist', reviewer: 'delivery-reviewer' },
+    ])
     strictEqual(dashboard.history['demo-skill'][0].state, 'pass')
     strictEqual(dashboard.sources.history, 'https://raw.githubusercontent.com/acme/demo/evidence/data/history.json')
     strictEqual(dashboard.sources.replayManifest, 'https://raw.githubusercontent.com/acme/demo/evidence/data/manifest.json')
