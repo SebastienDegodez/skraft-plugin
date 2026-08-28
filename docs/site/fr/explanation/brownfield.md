@@ -1,38 +1,50 @@
 ---
 layout: doc
 lang: fr
-title: "Brownfield (amont du pipeline)"
-description: "Les deux workflows brownfield standalone de SKRAFT : analyser un code existant pour en dériver un PRD au format HVE, et sécuriser un legacy par un filet de contrats avant de le refactorer (Mikado ou Strangler Fig). Choisis par l'humain, hors orchestrateur."
+title: "Parcours Brownfield"
+description: "Le parcours Brownfield de SKRAFT : comprendre un système existant ou le sécuriser avant de le transformer, avec trois agents directement sélectionnés par l'humain."
 ---
 
-# Brownfield (amont du pipeline)
+# Parcours Brownfield
 
-> Le pipeline SKRAFT suppose deux choses qu'un code hérité n'offre pas : un backlog
-> déjà trié et un code sûr à modifier. Les workflows brownfield fabriquent l'un et
-> l'autre — en amont, à la demande de l'humain.
+> Brownfield est un parcours de premier niveau, frère du parcours principal. Il
+> part du code existant plutôt que d'une story affinée.
 
-## Pourquoi — le pipeline suppose ce que le brownfield n'a pas
+## Quand choisir ce parcours
 
-Le pipeline DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER part d'un backlog
-d'issues priorisées et d'un code que la discipline de tests rend sûr à faire
-évoluer. Un système hérité (« brownfield ») arrive sans documentation produit et,
-souvent, sans filet de tests. Le poser tel quel dans le pipeline, c'est demander à
-DISCOVER de trier un backlog qui n'existe pas, ou à DELIVER de modifier un code dont
-personne ne connaît le comportement réel.
+Choisissez Brownfield lorsqu'au moins une de ces conditions est vraie :
 
-SKRAFT répond avec **deux workflows standalone**, distincts du pipeline : l'humain
-les invoque directement, ils ne sont pas des phases de l'orchestrateur et ne
-modifient jamais son état. Chacun couvre un besoin que le pipeline présuppose.
+- le code existe, mais son intention produit n'est pas documentée
+- ses comportements réels ou ses intégrations restent incertains
+- l'absence de tests rend chaque modification risquée
+- une transformation progressive doit préserver le service en production
 
-## Deux workflows, deux besoins
+Si une story est déjà affinée et le code suffisamment protégé, choisissez
+directement `skraft-orchestrator` dans le sélecteur d'agents.
+
+## Pourquoi ce parcours existe
+
+Le parcours principal part soit d'issues à préparer avec DISCOVER puis DISCUSS,
+soit directement d'une story affinée. `skraft-orchestrator` transforme ensuite
+cette story à travers RESEARCH → DESIGN → DISTILL → DELIVER. Un système hérité
+peut arriver sans issues, sans intention produit explicite et sans filet de tests.
+Il faut d'abord produire l'entrée manquante ou rendre le code sûr à changer.
+
+Brownfield répond avec **deux chemins et trois racines standalone**. L'humain
+sélectionne chaque agent directement. Aucun n'est une phase de
+`skraft-orchestrator` et aucun ne modifie son état.
+
+## Deux chemins, trois racines
 
 | Besoin | Workflow | Ce qu'il produit |
 |--------|----------|------------------|
-| **Comprendre** un code sans docs | [`brownfield-analyst`]({{ "/fr/reference/agents/brownfield-analyst" | relative_url }}) | un PRD au format HVE, repris par les agents HVE pour créer des issues |
-| **Sécuriser puis transformer** un legacy | [`brownfield-harness-builder`]({{ "/fr/reference/agents/brownfield-harness-builder" | relative_url }}) → [`brownfield-refactorer`]({{ "/fr/reference/agents/brownfield-refactorer" | relative_url }}) | un filet de tests de caractérisation, puis un refactoring qui garde ce filet vert |
+| **Comprendre** un code sans documentation produit | [`brownfield-analyst`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-analyst) | un PRD au format HVE, repris par les agents HVE pour créer des issues |
+| **Sécuriser puis transformer** un legacy | [`brownfield-harness-builder`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-harness-builder) → [`brownfield-refactorer`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-refactorer) | un filet de tests de caractérisation, puis un refactoring qui le garde vert |
 
-Les deux partent **de zéro** (aucun ne dépend de l'autre) et restent gouvernés par
-l'humain aux moments qui comptent.
+Les deux chemins peuvent être choisis indépendamment. Dans le second,
+`brownfield-harness-builder` précède toujours `brownfield-refactorer` afin que la
+transformation soit mesurée contre un comportement de référence. L'humain reste
+décideur aux moments qui comptent.
 
 ## Workflow 1 — de l'existant au PRD
 
@@ -46,10 +58,13 @@ flowchart LR
     CHK --> CP
     CP --> PRD[("docs/prds/name.md")]
     PRD -.-> HVE(["agents HVE<br/>GitHub Manager, prd-to-wit"])
-    HVE -.-> DISCOVER(["pipeline : DISCOVER"])
+    HVE -.-> ISSUES[("issues GitHub")]
+    ISSUES -.-> BD["backlog-discoverer"]
+    BD -.-> BP["backlog-planner"]
+    BP -.-> ORCH["skraft-orchestrator"]
 ```
 
-[`characterize-brownfield`]({{ "/fr/reference/skills/characterize-brownfield" | relative_url }})
+[`characterize-brownfield`]({{ "/fr/dashboard/" | relative_url }}#skill-characterize-brownfield)
 reconstruit ce que fait le système : stack, inventaire de fonctionnalités, carte
 d'intégration, contrats d'API existants, dette technique. La règle centrale est
 l'**honnêteté sur la confiance** : chaque affirmation est soit un **fait** vérifié
@@ -60,11 +75,12 @@ test-architecture) classe chaque comportement `FULL` / `PARTIAL` / `NONE` et nou
 un **gate `PASS` / `CONCERNS` / `FAIL`** ; sous le seuil, l'humain confirme ou
 corrige avant d'aller plus loin.
 
-[`compose-brownfield-prd`]({{ "/fr/reference/skills/compose-brownfield-prd" | relative_url }})
+[`compose-brownfield-prd`]({{ "/fr/dashboard/" | relative_url }}#skill-compose-brownfield-prd)
 mappe ensuite cette caractérisation vers le PRD **au format HVE exact** (17 sections,
 identifiants `FR-`/`NFR-`, traçabilité). Ce PRD n'est pas un cul-de-sac : il est le
 livrable que l'humain remet aux **agents HVE** (GitHub Backlog Manager, `prd-to-wit`)
-qui en dérivent issues et user-stories — le backlog que **DISCOVER** attend.
+qui en dérivent des issues. `backlog-discoverer` les trie, puis `backlog-planner`
+affine l'issue retenue en story pour `skraft-orchestrator`.
 
 ## Workflow 2 — sécuriser puis transformer
 
@@ -85,15 +101,15 @@ flowchart LR
 ```
 
 D'abord le filet.
-[`characterize-with-contracts`]({{ "/fr/reference/skills/characterize-with-contracts" | relative_url }})
+[`characterize-with-contracts`]({{ "/fr/dashboard/" | relative_url }}#skill-characterize-with-contracts)
 découvre (ou reconstruit) le contrat d'API du service, monte les mocks Microcks pour
 ses dépendances, et écrit des **tests de caractérisation** — un *golden master* qui
 verrouille le comportement **actuel**, bugs compris. Un bug capturé ici est un bug
 documenté, pas un test à réparer. Ce filet réutilise tel quel les skills existants
-[`contract-testing-roster`]({{ "/fr/reference/skills/contract-testing-roster" | relative_url }})
-et [`mocking-strategy-roster`]({{ "/fr/reference/skills/mocking-strategy-roster" | relative_url }})
-(v1 ciblée .NET, le roster garde la stack extensible). Le
-[`brownfield-harness-builder`]({{ "/fr/reference/agents/brownfield-harness-builder" | relative_url }})
+[`contract-testing-roster`]({{ "/fr/dashboard/" | relative_url }}#skill-contract-testing-roster)
+et [`mocking-strategy-roster`]({{ "/fr/dashboard/" | relative_url }}#skill-mocking-strategy-roster)
+(v1 ciblée .NET. Le roster garde la stack extensible). Le
+[`brownfield-harness-builder`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-harness-builder)
 ne franchit son gate que si le filet est **vert sur le code non modifié** : un test
 rouge avant tout refactoring signifie que le harnais est faux, pas le code.
 
@@ -101,51 +117,59 @@ rouge avant tout refactoring signifie que le harnais est faux, pas le code.
 > — Feathers, M., *Working Effectively with Legacy Code*, 2004.
 
 Une fois le filet vert, le
-[`brownfield-refactorer`]({{ "/fr/reference/agents/brownfield-refactorer" | relative_url }})
+[`brownfield-refactorer`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-refactorer)
 **recommande** une stratégie — jamais ne l'impose : un changement de structure aussi
 conséquent reste une décision humaine.
 
-- [`mikado-method`]({{ "/fr/reference/skills/mikado-method" | relative_url }}) —
+- [`mikado-method`]({{ "/fr/dashboard/" | relative_url }}#skill-mikado-method) —
   **modifier en place**. On tente le changement naïvement, on note ce qui casse
   comme prérequis dans un graphe, on **revert** tout, et on implémente en remontant
   des feuilles, chaque commit gardant le code vert. Le graphe est l'artefact ; le
   code de l'expérience est jetable.
-- [`strangler-fig-method`]({{ "/fr/reference/skills/strangler-fig-method" | relative_url }}) —
+- [`strangler-fig-method`]({{ "/fr/dashboard/" | relative_url }}#skill-strangler-fig-method) —
   **remplacer** derrière une façade. La nouvelle implémentation pousse à côté de
   l'ancienne, le trafic bascule tranche par tranche, et le même contrat rejoué sur
   l'ancien et le nouveau **prouve l'équivalence** avant chaque bascule. L'ancien
   meurt étranglé.
 
 Chaque feuille (Mikado) ou tranche (Strangler) est confiée à un
-[`refactoring-worker`]({{ "/fr/reference/workers/refactoring-worker" | relative_url }})
+[`refactoring-worker`]({{ "/fr/dashboard/" | relative_url }}#worker-refactoring-worker)
 en contexte frais, qui rend un signal terminal `ADVANCE` / `EXPAND` / `DONE` /
 `BLOCKED`. Le filet est le **capteur** : toute régression comportementale à la
 frontière de l'API devient un test rouge — un prérequis Mikado découvert, ou une
 tranche Strangler non basculable.
 
-## Comment ça alimente le pipeline
+## Comment le parcours rejoint l'ingénierie
 
-Les deux workflows sont **en amont** du pipeline, pas dedans : ils tournent hors de
-`skraft-orchestrator`, mais leur sortie **referme la boucle** vers lui.
+Les deux chemins Brownfield restent hors de `skraft-orchestrator`. Ils ne le
+déclenchent pas et ne créent aucune transition dans son état. Ils préparent soit
+son entrée produit, soit le code sur lequel il pourra travailler.
 
 ```mermaid
 flowchart LR
-    subgraph BF ["brownfield (standalone, hors orchestrateur)"]
+    subgraph BF ["parcours Brownfield — standalone"]
         BA[["brownfield-analyst"]] --> PRD[("docs/prds/name.md")]
+        HB[["brownfield-harness-builder"]] --> RF[["brownfield-refactorer"]]
+        RF --> CODE[("code sécurisé ou refactoré")]
     end
     PRD -->|"l'humain remet le PRD"| GHM(["GitHub Backlog Manager<br/>(agent HVE)"])
-    GHM -->|"crée issues / user-stories"| ISSUES[("backlog GitHub")]
-    ISSUES -->|"triage"| ORCH(["skraft-orchestrator"])
-    ORCH --> DISCOVER(["DISCOVER"]) --> DISCUSS(["DISCUSS"]) --> DESIGN(["DESIGN"]) --> DISTILL(["DISTILL"]) --> DELIVER(["DELIVER"])
+    GHM -->|"crée les issues"| ISSUES[("backlog GitHub")]
+    ISSUES --> BD["backlog-discoverer"]
+    BD --> BP["backlog-planner"]
+    BP --> STORY[("story affinée")]
+    STORY --> ORCH["skraft-orchestrator"]
+    CODE -.->|"socle sécurisé"| ORCH
+    ORCH --> RESEARCH["RESEARCH<br/>(si nécessaire)"] --> DESIGN["DESIGN"] --> DISTILL["DISTILL"] --> DELIVER["DELIVER"]
 ```
 
-- Le PRD du *workflow 1* franchit la frontière vers les agents HVE — **GitHub
-  Backlog Manager** en tête — qui remplissent le backlog que **DISCOVER** trie
-  ensuite. C'est la boucle qui reconnecte le brownfield au pipeline : sortie du
-  workflow standalone, entrée dans `skraft-orchestrator` via DISCOVER.
-- Le code sécurisé par le *workflow 2* redevient un terrain où la phase **DELIVER**
-  (Outside-In TDD, mutation) peut évoluer sans casse — le filet de caractérisation
-  reste le garde-fou sous les nouveaux tests.
+- Le chemin **comprendre** produit un PRD. Les agents HVE en dérivent des issues,
+  `backlog-discoverer` les trie et `backlog-planner` affine l'issue retenue. La
+  story obtenue peut alors être remise à `skraft-orchestrator`.
+- Le chemin **sécuriser puis transformer** agit sur le socle technique. Il ne
+  produit pas de story. Tout nouveau besoin doit encore être affiné avant de
+  sélectionner `skraft-orchestrator`.
+- Le filet de caractérisation reste actif sous les nouveaux tests de DELIVER. Il
+  détecte les régressions de comportement pendant les évolutions suivantes.
 
 ## Ce qui reste à l'humain
 
