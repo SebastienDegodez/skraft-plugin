@@ -1,5 +1,5 @@
 ---
-description: "Use when adding or changing an agent, sub-agent (worker), reviewer, skill or review lens under plugins/ and the SKRAFT handbook (docs/site/) must reflect the new orchestration chain. Enforces where each agent-chain must be surfaced, FR/EN parity, no dangling derived links, and the validation gate. Load before editing any docs/site page that describes agent orchestration, fan-out, or lenses."
+description: "Use when adding or changing an agent, worker, reviewer, skill or lens and reflecting its chain in the handbook/dashboard. Enforces source-derived catalogue coverage, factual narrative, FR/EN parity, and validation."
 applyTo: "docs/site/**/*.md"
 ---
 
@@ -10,7 +10,7 @@ a reviewer, a skill, or a review lens, the handbook must show the **new
 orchestration chain** — not just a new reference row. A chain that exists in
 `plugins/` but is invisible in `docs/site/` is a documentation gap.
 
-## 1. Surface every chain in all four places
+## 1. Surface every relevant chain without duplicating catalogue pages
 
 A new agent/worker/lens is only "documented" once it appears in **each** layer
 below (FR and EN). Do not stop at one page.
@@ -20,7 +20,11 @@ below (FR and EN). Do not stop at one page.
 | **Architecture** (Explanation) | `{fr,en}/explanation/architecture.md` | Keep the graph at **L1 (orchestrator) + L2 (phase agents + reviewers)**. Add an L2 node + arrow only if a new phase agent/reviewer appears; update the legend if a new L1/L2 arrow kind appears. Do NOT add L3 fan-out nodes here — link them to their zoom page instead. |
 | **Pipeline narrative** (Explanation) | `{fr,en}/explanation/pipeline/{team,<phase>}.md` | In the owning agent's section, state who it delegates to and who reviews the result. |
 | **Deep-dive / L3 zoom** (Explanation) | `{fr,en}/explanation/deep-dive/*` | For an internal fan-out (worker), update the matching **L3 zoom page** (`mocking-microcks`, `contract-testing`) or add a new one; describe when a conditional lens joins the panel. |
-| **Reference** (Reference) | `{fr,en}/reference/{agents,skills,lens}/...` | Add the terse factual row/table entry (name, role, when active). |
+| **Catalogue** (Reference) | `{fr,en}/dashboard/` | No manual row. Scanner reads descriptors and dashboard renders identity, role, roots, dispatch edges, skills and stable anchors. |
+
+Dashboard is sole exhaustive catalogue for agents, skills, workers and lenses.
+Never create or regenerate per-item Markdown pages or overview indexes for these
+families. Narrative pages explain only relationships readers need to understand.
 
 ## 2. Internal sub-agents are a fan-out, not a phase
 
@@ -41,21 +45,33 @@ A capability lens (e.g. `mock-fidelity-lens`, `contract-fidelity-lens`) is **not
 one of the CORE review lenses. Always frame it as joining the adversarial panel
 *only when its capability is active*, and keep it honouring the same BLOCKER rule.
 
-## 4. Never link to a page that does not exist
+## 4. Link to stable localized dashboard anchors
 
-Surface new agents/workers/lenses as **descriptive text or table rows** in an
-existing page. Do not create a markdown link to a per-item derived page unless
-that file already exists — a dangling `relative_url` 404s and breaks the build.
+Surface relationships as descriptive text or focused tables in existing pages.
+Entity links target `/{lang}/dashboard/#<kind>-<stable-id>` through
+`relative_url`. Never link to retired per-item catalogue routes.
 
-## 5. FR/EN parity is non-negotiable
+## 5. Preserve orchestration boundaries and order
+
+- Optional product preflight: `backlog-discoverer → backlog-planner` when both
+	are used; both remain directly invocable and precede engineering.
+- Engineering entrypoint: `skraft-orchestrator` only for
+	`RESEARCH → DESIGN → DISTILL → DELIVER`.
+- Never show backlog agents as orchestrator children or claim orchestrator is
+	global SKRAFT entrypoint.
+- Keep brownfield and other directly invocable roots visible outside this chain.
+
+## 6. FR/EN parity is non-negotiable
 
 Every edit lands in BOTH `fr/` and `en/` with the same structure, same diagram,
 same table. Do not let one language carry a chain the other lacks.
 
-## 6. Validate before considering it done
+## 7. Validate before considering it done
 
 ```bash
 node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
+node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
+node eng/catalog/scan.mjs
 export PATH="/opt/homebrew/opt/ruby/bin:/opt/homebrew/lib/ruby/gems/4.0.0/bin:$PATH"
 cd docs/site && bundle exec jekyll build
 ```

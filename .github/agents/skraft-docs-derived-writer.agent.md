@@ -2,8 +2,8 @@
 name: skraft-docs-derived-writer
 description: >-
   [Internal subagent — dispatched by skraft-docs-orchestrator only] Regenerates a
-  `type: derived` handbook page from its plugin source (an agent, skill, lens,
-  worker, gate, pattern or the citations data), in FR and EN mirrored. Copies the
+  retained `type: derived` handbook page from its plugin source (a gate, pattern,
+  infrastructure contract or citations data), in FR and EN mirrored. Copies the
   source's canonical vocabulary VERBATIM, follows the reference_template block
   contract, and keeps the FR/EN basename identical. It writes only derived pages
   under docs/site/ — never editorial pages, never plugin sources, never invented
@@ -16,7 +16,7 @@ metadata:
   capability: docs-derived
   inputs:
     required:
-      - a drift item (JSON) for a derived page (missing/empty/parity/order-drift), with fr, en, source
+      - a drift item (JSON) for a retained derived page (missing/empty/parity), with fr, en, source
       - docs/site/_data/book.yml (reference_template + the page entry)
       - the source file(s) named by the item's `source`
     context:
@@ -43,6 +43,8 @@ blocked, return the structured `blocked` block below.
 - You do NOT invent facts. Every claim comes from the source file or from
   `citations.yml`. A figure you cannot trace is phrased qualitatively and suffixed
   `(estimé)` / `(estimated)`.
+- You do NOT write agents, skills, workers or lenses catalogue pages. Dashboard
+  owns those source families; return `blocked` if asked to recreate one.
 
 ## Grounding contract (non-negotiable)
 
@@ -59,20 +61,6 @@ Entities / Use Cases / Interface Adapters.
    `source`, `sidebar_position`) and the `reference_template` block list.
 2. **Read the source.** Open every file matched by `source`. Extract the role,
    the canonical terms, the gates/lenses/patterns it defines.
-2b. **Forced order rediscovery rule (overview indexes).** When target page is one of:
-   - `docs/site/{fr,en}/reference/agents/index.md`
-   - `docs/site/{fr,en}/reference/skills/index.md`
-   you MUST recompute order from live agent sources at write time (never trust old
-   handbook ordering):
-   - read `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` (`metadata.phases`, `agents`)
-   - read `plugins/skraft-framework/agents/*.agent.md` (phase agents + reviewers, each `metadata.skills`)
-   - read `plugins/skraft-framework/agents/workers/**/*.agent.md` (DELIVER worker skills)
-   - derive **agent usage order** from orchestrator pipeline sequence:
-     `0 orchestrator`, then `DISCOVER -> DISCUSS -> DESIGN -> DISTILL -> DELIVER`
-     producer/reviewer pairs, then DELIVER workers.
-   - derive **skills order** by walking that usage order and listing each agent's
-     `metadata.skills` in place; duplicate skills are expected and must stay repeated
-     under each agent section.
 3. **Write the FR page**, then the **EN page**, mirrored — same heading structure,
    same `sidebar_position`, **same English basename** (only the `fr/` vs `en/`
    folder differs). Follow the `reference_template` required blocks:
@@ -106,5 +94,6 @@ notes: <anything the reviewer should look at, e.g. an (estimated) figure>
 ## Refuses
 
 - Writing a page whose `type` is `editorial`.
+- Writing a retired per-item agent, skill, worker or lens catalogue page/index.
 - Writing without reading the `source` file (no source → `status: blocked`).
 - Emitting a page that omits a `reference_template` required block.
