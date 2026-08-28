@@ -114,7 +114,7 @@ A badly written spec produces a reassuring number that measures nothing. These f
 1. **Never name the skill in a prompt**, and never copy its wording. A prompt that tells the agent which technique to use removes exactly what the evaluation is trying to observe.
 2. **Judge the outcome, not the technique.** "Identified the missing dependency as the cause of the failure" is an outcome. "Ran the diagnostic command with the verbose flag" is an implementation detail that a different, equally valid approach would fail.
 3. **Include a non-activation case.** Add a stimulus that *looks* like the skill's territory but falls outside it, and mark it `tags: { intent: non-activation }`. Restraint is part of the expected behaviour: a skill that fires everywhere costs context and returns nothing.
-4. **Budget at least 5 trials** (`stimuli × runs`). Below that no verdict is credible — and the dashboard will report it as inconclusive rather than as a pass.
+4. **Budget for power, not for the floor.** Five trials (`stimuli × runs`) is the hard minimum, but it is not the binding constraint. The sign test runs on the **discordant pairs** — ties are discarded — and below six discordant pairs no tally can reach `p <= 0.05`: a flawless 5W/0L sweep scores 0.0625, and 7W/1L scores 0.070. Ties eat pairs, so **plan 12–15 trials** for a defendable verdict. Buy that power up front: topping up runs on a noisy comparison is the worst-value spend in the protocol.
 
 ## Step 3 — Validate without spending quota
 
@@ -155,7 +155,7 @@ The judge reports a tally of wins, ties and losses. That tally becomes a verdict
 | `pass` | complete comparison, enough trials, significant advantage |
 | `regression` | same bar, but the advantage lies with the baseline — the skill degrades the answer |
 | `no-improvement` | sound comparison, but the margin is indistinguishable from chance |
-| `inconclusive` | a trial errored, a trial was unmatched, or there were fewer than 5 trials |
+| `inconclusive` | a trial errored, a trial was unmatched, there were fewer than 5 trials, or the tally held fewer than 6 discordant pairs — the condition that binds most often |
 
 A missing or fragile result is **never** rendered as a pass. No data is not a passing result.
 

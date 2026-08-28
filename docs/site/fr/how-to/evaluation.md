@@ -110,7 +110,7 @@ Une spec mal écrite produit un chiffre rassurant qui ne mesure rien. Ces quatre
 1. **Ne jamais nommer le skill dans un prompt**, et ne jamais recopier sa formulation. Un prompt qui dit à l'agent quelle technique employer supprime précisément ce que l'évaluation cherche à observer.
 2. **Juger le résultat, pas la technique.** « Identifie la dépendance manquante comme cause de l'échec » est un résultat. « Lance la commande de diagnostic avec l'option détaillée » est un détail d'implémentation qu'une autre approche, tout aussi valable, échouerait à satisfaire.
 3. **Inclure un cas de non-activation.** Ajoutez un stimulus qui *ressemble* au territoire du skill mais tombe en dehors, et marquez-le `tags: { intent: non-activation }`. La retenue fait partie du comportement attendu : un skill qui se déclenche partout coûte du contexte sans rien apporter.
-4. **Prévoir au moins 5 essais** (`stimuli × runs`). En dessous, aucun verdict n'est crédible — et le tableau de bord le signalera comme non concluant plutôt que comme un succès.
+4. **Budgéter pour la puissance, pas pour le plancher.** Cinq essais (`stimuli × runs`) est le minimum absolu, mais ce n'est pas la contrainte qui mord. Le test des signes tourne sur les **paires décisives** — les égalités sont jetées — et en dessous de six paires décisives, aucun décompte ne peut atteindre `p ≤ 0,05` : un sans-faute 5V/0D score 0,0625, et 7V/1D score 0,070. Les égalités mangeant des paires, **prévoyez 12 à 15 essais** pour un verdict défendable. Achetez cette puissance d'entrée : rajouter des essais sur une comparaison bruitée est la pire dépense du protocole.
 
 ## Étape 3 — Valider sans dépenser de quota
 
@@ -153,7 +153,7 @@ Le juge remonte un décompte de victoires, égalités et défaites. Ce décompte
 | `pass` | comparaison complète, suffisamment d'essais, avantage significatif |
 | `regression` | même exigence, mais l'avantage est du côté de la baseline — le skill dégrade la réponse |
 | `no-improvement` | comparaison saine, mais l'écart ne se distingue pas du hasard |
-| `inconclusive` | un essai en erreur, un essai non apparié, ou moins de 5 essais |
+| `inconclusive` | un essai en erreur, un essai non apparié, moins de 5 essais, ou moins de 6 paires décisives — la condition qui mord le plus souvent |
 
 Un résultat absent ou fragile n'est **jamais** affiché comme un succès. Une absence de donnée n'est pas un succès.
 
