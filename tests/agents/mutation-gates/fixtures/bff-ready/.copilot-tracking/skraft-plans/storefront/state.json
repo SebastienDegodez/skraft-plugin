@@ -1,0 +1,36 @@
+{
+  "projectSlug": "storefront",
+  "skraftPlanFile": ".copilot-tracking/skraft-plans/storefront/state.json",
+  "currentPhase": "DELIVER",
+  "entryMode": "capture",
+  "entryPoint": { "skipPhases": [], "handoffSource": null, "handoffArtifacts": [] },
+  "issueNumber": null,
+  "difficulty": "medium",
+  "adrRatification": { "checkpointStatus": "resolved", "pending": [], "ratified": [] },
+  "phasesCompleted": ["RESEARCH", "DESIGN", "DISTILL"],
+  "phaseArtifacts": {
+    "DISTILL": [
+      ".copilot-tracking/skraft-plans/storefront/features/basket-price.feature",
+      ".copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md"
+    ]
+  },
+  "verdicts": { "RESEARCH": "APPROVED", "DESIGN": "APPROVED", "DISTILL": "APPROVED" },
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "referencesProcessed": [],
+  "phaseHistory": {
+    "RESEARCH": { "status": "done", "startedAt": "2026-08-28T08:00:00Z", "completedAt": "2026-08-28T08:10:00Z" },
+    "DESIGN": { "status": "done", "startedAt": "2026-08-28T08:10:00Z", "completedAt": "2026-08-28T08:20:00Z" },
+    "DISTILL": { "status": "done", "startedAt": "2026-08-28T08:20:00Z", "completedAt": "2026-08-28T08:30:00Z" },
+    "DELIVER": { "status": "inProgress", "startedAt": "2026-08-28T08:30:00Z", "completedAt": null }
+  },
+  "nextActions": ["Verify the completed BFF implementation and close DELIVER only if every gate passes."],
+  "userPreferences": {
+    "autonomyTier": "full",
+    "maxRetriesPerPhase": 0,
+    "phaseOrder": ["RESEARCH", "DESIGN", "DISTILL", "DELIVER"]
+  },
+  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null, "ssscPlanFile": null }
+}

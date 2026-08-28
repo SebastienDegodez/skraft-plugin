@@ -1,0 +1,359 @@
+name: mutation-gates
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Orchestrator enters DELIVER through the Software Engineer,
+  configures Stryker at repository root for canonical Clean Architecture and non-standard BFF
+  layouts, executes core before boundary, preserves mandatory 100/80 thresholds, deposits dated
+  native evidence, and blocks boundary execution when core scores below 100.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 10m
+  model: claude-sonnet-5
+  runs: 1
+scoring:
+  threshold: 0.9
+stimuli:
+  - name: Canonical Clean Architecture mutation gates pass with root configuration and dated evidence
+    prompt: |
+      Implementation and ordinary tests are already green. Resume the Orders engineering pipeline
+      from its recorded state, complete its remaining verification, and report where delivery stands.
+    tags:
+      agent: skraft-orchestrator
+      subagents: &deliver-chain
+        - software-engineer
+        - software-engineer-reviewer
+        - quality-gates-lens
+        - architecture-boundaries-lens
+        - test-integrity-lens
+        - cold-reader-lens
+      scenario: canonical-clean-architecture-pass
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 10m
+    environment:
+      env:
+        PATH: ".eval-bin:$PATH"
+        SKRAFT_FAKE_CORE_SCORE: "100"
+        SKRAFT_FAKE_BOUNDARY_SCORE: "80"
+      files: &canonical-files
+        - src: fixtures/canonical-ready/.gitignore
+          dest: .gitignore
+        - src: fixtures/canonical-ready/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/canonical-ready/Orders.slnx
+          dest: Orders.slnx
+        - src: fixtures/canonical-ready/src/Orders.Domain/Orders.Domain.csproj
+          dest: src/Orders.Domain/Orders.Domain.csproj
+        - src: fixtures/canonical-ready/src/Orders.Domain/DiscountPolicy.cs
+          dest: src/Orders.Domain/DiscountPolicy.cs
+        - src: fixtures/canonical-ready/src/Orders.Application/Orders.Application.csproj
+          dest: src/Orders.Application/Orders.Application.csproj
+        - src: fixtures/canonical-ready/src/Orders.Application/QuoteOrder.cs
+          dest: src/Orders.Application/QuoteOrder.cs
+        - src: fixtures/canonical-ready/src/Orders.Infrastructure/Orders.Infrastructure.csproj
+          dest: src/Orders.Infrastructure/Orders.Infrastructure.csproj
+        - src: fixtures/canonical-ready/src/Orders.Infrastructure/OrderReceiptStore.cs
+          dest: src/Orders.Infrastructure/OrderReceiptStore.cs
+        - src: fixtures/canonical-ready/src/Orders.API/Orders.API.csproj
+          dest: src/Orders.API/Orders.API.csproj
+        - src: fixtures/canonical-ready/src/Orders.API/Program.cs
+          dest: src/Orders.API/Program.cs
+        - src: fixtures/canonical-ready/tests/Orders.UnitTests/Orders.UnitTests.csproj
+          dest: tests/Orders.UnitTests/Orders.UnitTests.csproj
+        - src: fixtures/canonical-ready/tests/Orders.UnitTests/QuoteOrderTests.cs
+          dest: tests/Orders.UnitTests/QuoteOrderTests.cs
+        - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/Orders.IntegrationTests.csproj
+          dest: tests/Orders.IntegrationTests/Orders.IntegrationTests.csproj
+        - src: fixtures/canonical-ready/tests/Orders.IntegrationTests/ReceiptStoreTests.cs
+          dest: tests/Orders.IntegrationTests/ReceiptStoreTests.cs
+        - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/features/order-discount.feature
+          dest: .copilot-tracking/skraft-plans/orders/features/order-discount.feature
+        - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+          dest: .copilot-tracking/skraft-plans/orders/details/2026-08-28/impl-plan-order-discount.md
+        - src: fixtures/canonical-ready/.copilot-tracking/skraft-plans/orders/state.json
+          dest: .copilot-tracking/skraft-plans/orders/state.json
+        - src: fixtures/toolchain/.eval-bin/dotnet
+          dest: .eval-bin/dotnet
+        - src: fixtures/toolchain/.eval/verify-mutation-gates.mjs
+          dest: .eval/verify-mutation-gates.mjs
+        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/configure-mutation.sh
+          dest: scripts/configure-mutation.sh
+        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/run-mutation-gate.sh
+          dest: scripts/run-mutation-gate.sh
+        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-core.sh
+          dest: scripts/mutation-core.sh
+        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-boundary.sh
+          dest: scripts/mutation-boundary.sh
+      commands: &baseline-setup
+        - 'chmod +x .eval-bin/dotnet scripts/*.sh'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: mutation gate fixture baseline"'
+        - 'git tag eval-baseline'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Orchestrator routing and mutation verification skills are loaded
+        config:
+          required:
+            - outside-in-tdd
+            - craft-discipline
+            - mutation-testing
+            - skraft-quality-bar
+            - quality-gates-evidence-contract
+            - quality-gates-dotnet
+            - resolving-stack-commands
+      - type: custom-metrics
+        name: DELIVER is delegated through the Software Engineer
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: software-engineer
+      - type: program
+        name: Root configs, 100/80 scores, gate order, and dated evidence are correct
+        config:
+          program: node
+          args: [.eval/verify-mutation-gates.mjs, canonical, pass]
+          timeout: 30s
+      - type: program
+        name: Sentinel - fixture and build infrastructure survived the trial
+        config:
+          program: node
+          args:
+            - .eval/verify-mutation-gates.mjs
+            - canonical
+            - pass
+          env:
+            SKRAFT_VERIFY_SENTINEL: "1"
+          timeout: 30s
+
+  - name: Non-standard BFF receives explicit mutation scopes without invented projects
+    prompt: |
+      Implementation and ordinary tests are already green. Resume the Storefront engineering
+      pipeline from its recorded state, complete its remaining verification, and report where
+      delivery stands.
+    tags:
+      agent: skraft-orchestrator
+      subagents: *deliver-chain
+      scenario: non-standard-bff-pass
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 10m
+    environment:
+      env:
+        PATH: ".eval-bin:$PATH"
+        SKRAFT_FAKE_CORE_SCORE: "100"
+        SKRAFT_FAKE_BOUNDARY_SCORE: "80"
+      files:
+        - src: fixtures/bff-ready/.gitignore
+          dest: .gitignore
+        - src: fixtures/bff-ready/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/bff-ready/Storefront.slnx
+          dest: Storefront.slnx
+        - src: fixtures/bff-ready/src/Storefront/Storefront.csproj
+          dest: src/Storefront/Storefront.csproj
+        - src: fixtures/bff-ready/src/Storefront/BusinessRules/BasketPricing.cs
+          dest: src/Storefront/BusinessRules/BasketPricing.cs
+        - src: fixtures/bff-ready/src/Storefront/DeliveryAdapters/PriceResponse.cs
+          dest: src/Storefront/DeliveryAdapters/PriceResponse.cs
+        - src: fixtures/bff-ready/src/Storefront/Program.cs
+          dest: src/Storefront/Program.cs
+        - src: fixtures/bff-ready/tests/Storefront.UnitTests/Storefront.UnitTests.csproj
+          dest: tests/Storefront.UnitTests/Storefront.UnitTests.csproj
+        - src: fixtures/bff-ready/tests/Storefront.UnitTests/BasketPricingTests.cs
+          dest: tests/Storefront.UnitTests/BasketPricingTests.cs
+        - src: fixtures/bff-ready/tests/Storefront.IntegrationTests/Storefront.IntegrationTests.csproj
+          dest: tests/Storefront.IntegrationTests/Storefront.IntegrationTests.csproj
+        - src: fixtures/bff-ready/tests/Storefront.IntegrationTests/PriceResponseTests.cs
+          dest: tests/Storefront.IntegrationTests/PriceResponseTests.cs
+        - src: fixtures/bff-ready/.copilot-tracking/skraft-plans/storefront/features/basket-price.feature
+          dest: .copilot-tracking/skraft-plans/storefront/features/basket-price.feature
+        - src: fixtures/bff-ready/.copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md
+          dest: .copilot-tracking/skraft-plans/storefront/details/2026-08-28/impl-plan-basket-price.md
+        - src: fixtures/bff-ready/.copilot-tracking/skraft-plans/storefront/state.json
+          dest: .copilot-tracking/skraft-plans/storefront/state.json
+        - src: fixtures/toolchain/.eval-bin/dotnet
+          dest: .eval-bin/dotnet
+        - src: fixtures/toolchain/.eval/verify-mutation-gates.mjs
+          dest: .eval/verify-mutation-gates.mjs
+        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/configure-mutation.sh
+          dest: scripts/configure-mutation.sh
+        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/run-mutation-gate.sh
+          dest: scripts/run-mutation-gate.sh
+        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-core.sh
+          dest: scripts/mutation-core.sh
+        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-boundary.sh
+          dest: scripts/mutation-boundary.sh
+      commands: *baseline-setup
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mutation and stack skills are loaded for the non-standard repository
+        config:
+          required:
+            - mutation-testing
+            - skraft-quality-bar
+            - quality-gates-evidence-contract
+            - quality-gates-dotnet
+            - resolving-stack-commands
+      - type: custom-metrics
+        name: DELIVER is delegated through the Software Engineer
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: software-engineer
+      - type: program
+        name: Explicit BFF scopes, 100/80 scores, order, and evidence are correct
+        config:
+          program: node
+          args: [.eval/verify-mutation-gates.mjs, bff, pass]
+          timeout: 30s
+      - type: program
+        name: Sentinel - fixture and build infrastructure survived the trial
+        config:
+          program: node
+          args:
+            - .eval/verify-mutation-gates.mjs
+            - bff
+            - pass
+          env:
+            SKRAFT_VERIFY_SENTINEL: "1"
+          timeout: 30s
+
+  - name: A core score below the mandatory bar blocks boundary verification
+    prompt: |
+      Implementation and ordinary tests are already green. Resume the Orders engineering pipeline
+      from its recorded state, complete its remaining verification, and report where delivery stands.
+    tags:
+      agent: skraft-orchestrator
+      subagents: *deliver-chain
+      scenario: core-mutation-failure
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 10m
+    environment:
+      env:
+        PATH: ".eval-bin:$PATH"
+        SKRAFT_FAKE_CORE_SCORE: "99"
+        SKRAFT_FAKE_BOUNDARY_SCORE: "80"
+      files: *canonical-files
+      commands: *baseline-setup
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mutation and stack skills stay loaded on gate failure
+        config:
+          required:
+            - mutation-testing
+            - skraft-quality-bar
+            - quality-gates-evidence-contract
+            - quality-gates-dotnet
+            - resolving-stack-commands
+      - type: custom-metrics
+        name: DELIVER is delegated through the Software Engineer
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: software-engineer
+      - type: program
+        name: Core records 99 against 100 and boundary is not run
+        config:
+          program: node
+          args: [.eval/verify-mutation-gates.mjs, canonical, core-failure]
+          timeout: 30s
+      - type: output-matches
+        name: The pipeline reports a blocked or rework outcome
+        config:
+          pattern: '(?i)\b(blocked|needs_rework|fail(?:ed|ure)?)\b'
+      - type: output-not-matches
+        name: The failed delivery is not approved
+        config:
+          pattern: '(?is)(?:DELIVER|delivery|pipeline).{0,40}\bAPPROVED\b|\bAPPROVED\b.{0,40}(?:DELIVER|delivery|pipeline)'
+      - type: program
+        name: Sentinel - fixture and build infrastructure survived the failed gate
+        config:
+          program: node
+          args:
+            - .eval/verify-mutation-gates.mjs
+            - canonical
+            - core-failure
+          env:
+            SKRAFT_VERIFY_SENTINEL: "1"
+          timeout: 30s
+
+  - name: A boundary score below its mandatory bar blocks delivery after core passes
+    prompt: |
+      Implementation and ordinary tests are already green. Resume the Orders engineering pipeline
+      from its recorded state, complete its remaining verification, and report where delivery stands.
+    tags:
+      agent: skraft-orchestrator
+      subagents: *deliver-chain
+      scenario: boundary-mutation-failure
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    constraints:
+      max_duration: 10m
+    environment:
+      env:
+        PATH: ".eval-bin:$PATH"
+        SKRAFT_FAKE_CORE_SCORE: "100"
+        SKRAFT_FAKE_BOUNDARY_SCORE: "79"
+      files: *canonical-files
+      commands: *baseline-setup
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mutation and stack skills stay loaded on boundary failure
+        config:
+          required:
+            - mutation-testing
+            - skraft-quality-bar
+            - quality-gates-evidence-contract
+            - quality-gates-dotnet
+            - resolving-stack-commands
+      - type: custom-metrics
+        name: DELIVER is delegated through the Software Engineer
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: software-engineer
+      - type: program
+        name: Core records 100, boundary records 79 against 80, and delivery stops
+        config:
+          program: node
+          args: [.eval/verify-mutation-gates.mjs, canonical, boundary-failure]
+          timeout: 30s
+      - type: output-matches
+        name: The pipeline reports a blocked or rework outcome
+        config:
+          pattern: '(?i)\b(blocked|needs_rework|fail(?:ed|ure)?)\b'
+      - type: output-not-matches
+        name: The failed delivery is not approved
+        config:
+          pattern: '(?is)(?:DELIVER|delivery|pipeline).{0,40}\bAPPROVED\b|\bAPPROVED\b.{0,40}(?:DELIVER|delivery|pipeline)'
+      - type: program
+        name: Sentinel - fixture and build infrastructure survived the failed boundary
+        config:
+          program: node
+          args:
+            - .eval/verify-mutation-gates.mjs
+            - canonical
+            - boundary-failure
+          env:
+            SKRAFT_VERIFY_SENTINEL: "1"
+          timeout: 30s
