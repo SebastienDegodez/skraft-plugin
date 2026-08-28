@@ -680,7 +680,69 @@ répertoires ne voit jamais.
 
 ---
 
-## Fin du design (step 6)
+## Step 7 — Décisions opérateur + file dérivée réelle
+
+### Décisions arbitrées (2026-08-26)
+
+- **D2 → D2a** : la primitive config est supprimée (« si inutile on supprime »).
+- **D4 → option 2** : le PRD brownfield est **conservé, débrandé**. Il entre donc
+  dans le périmètre du lot C.
+
+### Portabilité (step 7a)
+
+Cible `common-only` confirmée. Aucun module externe, aucun besoin per-harness :
+la migration édite des fichiers **existants** dont la syntaxe de harness est déjà
+figée. Aucun adaptateur n'est chargé au step 7b.
+
+### File dérivée du disque — et non de l'estimation du step 6
+
+> Le scan déterministe **contredit** le dimensionnement du step 6. Les chiffres
+> ci-dessous remplacent ceux du packet initial. C'est le comportement attendu
+> d'A11 : la file se redérive du disque, jamais du recall.
+
+| Lot | Contenu | Estimé step 6 | **Réel mesuré** |
+|---|---|---|---|
+| A | cadran config, layout policy, resolver, CLI, tests | ~10 | **43** |
+| B | chemins `skraft-plans` | 42 | **115** |
+| C | prose HVE / RPI | 15 | **38** |
+| D | `neighborPlanners` | — | **20** |
+| — | fixtures `skraft-config.json` (supprimées par D2a) | non vu | **20** |
+| — | **répertoires de fixtures à `git mv`** | **non vu** | **118** |
+| — | pages handbook dédiées HVE (FR + EN) | **non vu** | **4** + 17 refs nav |
+
+### Trois découvertes que le design n'avait pas anticipées
+
+**F1 — 118 répertoires de fixtures, pas du texte.** Les fixtures d'évaluation
+contiennent de vrais répertoires
+`tests/agents/*/fixtures/*/.copilot-tracking/skraft-plans/{slug}/`. Ce sont des
+**renommages de chemins** (`git mv`), pas des substitutions de chaîne. Un worker
+d'édition de texte ne les verra jamais. → **lot B est scindé** : B1 texte,
+B2 renommages.
+
+**F2 — lot A et lot B2 sont atomiques.** Le défaut actuel est `namespaced`.
+Supprimer le cadran fait basculer la résolution d'état de
+`skraft-plans/{slug}/` vers `skraft/{slug}/` **pour toutes les fixtures d'un
+coup**. Livrer A sans B2 laisse 118 fixtures pointant dans le vide. Les deux
+lots doivent atterrir dans **le même commit**.
+
+**F3 — le handbook a des pages HVE dédiées.** `hve-core` et `hve-vs-skraft`
+existent en FR et EN, avec 17 références de navigation dans le sommaire. Ce n'est
+pas de la prose incidente : ce sont des pages entières, soumises à la parité
+FR/EN, à l'intégrité du menu multi-niveaux et à une porte de validation propre.
+→ **hors du lot C**. Le handbook a son propre orchestrateur
+(`skraft-docs-orchestrator`) ; le lui court-circuiter produirait des liens morts
+et une rupture de parité. **Workstream séparé, après le collapse.**
+
+### Séquencement révisé (chaque étape réversible seule)
+
+| Vague | Contenu | Atomicité | Porte |
+|---|---|---|---|
+| **V1** | lot A (source + tests) **+** lot B2 (118 `git mv`) **+** 20 fixtures config supprimées | **un seul commit** | `node --test` vert |
+| **V2** | lot B1 (chemins dans la prose embarquée) | commit séparé | résidus `skraft-plans` == 0 dans `plugins/` |
+| **V3** | lot C (prose HVE + débranding PRD) + lot D (`neighborPlanners`) | commit séparé | reçus sans `unsure` |
+| **V4** | handbook `docs/site` — **via `skraft-docs-orchestrator`** | PR séparée | porte de validation du handbook |
+
+
 
 Le thread appelant reprend la main au **step 7a** (contrôle de portabilité).
 Cible déclarée `common-only`, aucun module externe, donc le step 7b n'a besoin
