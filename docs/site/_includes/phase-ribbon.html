@@ -19,7 +19,12 @@ separate; `current` selects the matching sequence.
   <span class="phase-ribbon__scope">{{ optional_label }}</span>
   {%- for p in phases -%}
     {%- assign label = labels[forloop.index0] -%}
-    {%- assign href = '/' | append: page.lang | append: '/explanation/pipeline/' | append: p -%}
+    {%- comment -%}
+      No `permalink` is configured, so Jekyll publishes each pipeline page as
+      `<phase>.html` — the same `.md` → `.html` mapping the sidebar applies.
+      Dropping the extension here would point every ribbon step at a 404.
+    {%- endcomment -%}
+    {%- assign href = '/' | append: page.lang | append: '/explanation/pipeline/' | append: p | append: '.html' -%}
     {%- if p == include.current -%}
       <span class="phase-ribbon__step phase-ribbon__step--active" aria-current="step">{{ label }}</span>
     {%- else -%}

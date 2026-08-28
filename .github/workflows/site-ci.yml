@@ -24,6 +24,12 @@ jobs:
       - name: Citation lint
         run: node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
 
+      # The dashboard tooling tests import @microsoft/vally and @github/copilot-sdk,
+      # both devDependencies: without them `node --test` cannot even resolve the
+      # module graph, and the step fails on an import error rather than on a finding.
+      - name: Install Node dependencies
+        run: npm ci
+
       - name: Catalogue and drift controls
         run: |
           node eng/catalog/scan.mjs

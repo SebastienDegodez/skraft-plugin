@@ -75,6 +75,18 @@ test('economy prefers Luna without forbidding Haiku', () => {
   assert.ok(accepted.includes('Claude Haiku 4.5'), 'a preference must not become an exclusion')
 })
 
+test('the Sonnet tiers accept every spelling a harness uses', () => {
+  // The shipped descriptors carry all three spellings, and an agent pinned to the
+  // Copilot one is compliant: rejecting it would make `--check` report drift and
+  // `--apply` rewrite an agent that already sits on the right model.
+  for (const tier of ['standard', 'frontier']) {
+    const accepted = modelsForTier(ModelTier(tier))
+    for (const model of ['Claude Sonnet 5', 'Claude Sonnet 5 (copilot)', 'claude-sonnet-5']) {
+      assert.ok(accepted.includes(model), `Sonnet spelling not accepted on ${tier}: ${model}`)
+    }
+  }
+})
+
 test('modelsForTier rejects a tier with no mapped model', () => {
   assert.throws(() => modelsForTier({ value: 'ghost' }), /No model for tier: ghost/)
 })

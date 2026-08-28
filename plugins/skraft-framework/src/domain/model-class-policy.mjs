@@ -26,8 +26,16 @@ const TIER_MODELS = Object.freeze({
     'Claude Haiku 4.5',
     'Claude Haiku 4.5 (copilot)',
   ]),
-  standard: Object.freeze(['Claude Sonnet 5']),
-  frontier: Object.freeze(['Claude Sonnet 5']),
+  standard: Object.freeze([
+    'Claude Sonnet 5',
+    'Claude Sonnet 5 (copilot)',
+    'claude-sonnet-5',
+  ]),
+  frontier: Object.freeze([
+    'Claude Sonnet 5',
+    'Claude Sonnet 5 (copilot)',
+    'claude-sonnet-5',
+  ]),
 })
 
 export const tierForClass = (cls) => {
