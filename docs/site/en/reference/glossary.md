@@ -95,7 +95,7 @@ A proven solution to a recurring problem. SKRAFT patterns (DDD, Clean Architectu
 → See [Patterns]({{ "/en/reference/patterns" | relative_url }})
 
 **Pipeline**
-The sequence of 5 SKRAFT phases: DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER. Each phase has an executor agent, a reviewer, and a gate.
+SKRAFT artifact flow: DISCOVER then DISCUSS are two optional standalone product workflows. `skraft-orchestrator` then sequences RESEARCH → DESIGN → DISTILL → DELIVER from a refined story.
 → See [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }})
 
 ## R

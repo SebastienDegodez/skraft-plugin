@@ -98,7 +98,7 @@ Solution éprouvée à un problème récurrent. Les patterns SKRAFT (DDD, Clean 
 → Voir [Patterns]({{ "/fr/reference/patterns" | relative_url }})
 
 **Pipeline**
-Enchaînement des 5 phases SKRAFT : DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER. Chaque phase a un agent, un reviewer et un gate.
+Flux d'artefacts SKRAFT : DISCOVER puis DISCUSS sont deux workflows produit autonomes et optionnels. `skraft-orchestrator` séquence ensuite RESEARCH → DESIGN → DISTILL → DELIVER à partir d'une story affinée.
 → Voir [Le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }})
 
 ## R

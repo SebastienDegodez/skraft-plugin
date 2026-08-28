@@ -89,4 +89,4 @@ pas les faits.
 
 - [Pour les décideurs]({{ "/fr/explanation/for-executives" | relative_url }}) — projection du TTM pour les décideurs
 - [Les lentilles]({{ "/fr/reference/lens" | relative_url }}) — les 4 lentilles de revue adverse
-- [Le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }}) — les 5 phases du cycle de vie
+- [Le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }}) — préparation produit puis ingénierie orchestrée
