@@ -13,9 +13,6 @@ const pluginRoot = join(here, '../../plugins/skraft-framework')
 
 const claude = JSON.parse(readFileSync(join(pluginRoot, 'com.anthropic.claude-code/hooks/hooks.json'), 'utf8'))
 const copilot = JSON.parse(readFileSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json'), 'utf8'))
-// The path the Copilot CLI actually reads (ADR-008): it ignores the
-// extensions."com.github.copilot".hooks pointer and only looks here.
-const copilotShipped = JSON.parse(readFileSync(join(pluginRoot, 'hooks/hooks.json'), 'utf8'))
 
 // Claude declares PascalCase events, Copilot the same events lower-camel-cased.
 const toCopilotEvent = (event) => event.charAt(0).toLowerCase() + event.slice(1)
@@ -43,16 +40,18 @@ test('hook-manifest-parity: both harnesses declare the same events', () => {
   assert.deepEqual(copilotEvents, claudeEvents)
 })
 
-// ADR-008: hook discovery is NOT part of the agent-plugin spec. The Copilot CLI reads
-// <pluginRoot>/hooks/hooks.json and ignores the extensions pointer, so the manifest ships
-// at both paths. If the shipped copy drifts, the plugin loads with ZERO hooks and the CLI
-// says nothing — no warning, no debug line. This test is the only cheap signal.
-test('hook-manifest-parity: the shipped copilot manifest matches the declared one', () => {
-  assert.deepEqual(
-    copilotShipped,
-    copilot,
-    'plugins/skraft-framework/hooks/hooks.json drifted from com.github.copilot/hooks/hooks.json — the Copilot CLI only reads the former, so the guardrails would silently stop running',
-  )
+// The Claude manifest is the one VS Code and Claude Code both load, and it is the only one
+// whose commands VS Code rewrites: the Claude adapter substitutes ${CLAUDE_PLUGIN_ROOT} in
+// `command` / `linux` / `osx` / `windows` and in no other field. A `bash`-only entry keeps
+// the token literal, the shell expands it to nothing, and node is handed /src/cli/hook.mjs.
+test('hook-manifest-parity: claude commands carry the field the adapter interpolates', () => {
+  const hooks = Object.values(claude.hooks).flat().flatMap((entry) => entry.hooks ?? [])
+  assert.ok(hooks.length > 0, 'claude manifest declares no hook entry')
+
+  for (const hook of hooks) {
+    assert.equal(typeof hook.command, 'string')
+    assert.match(hook.command, /\$\{CLAUDE_PLUGIN_ROOT\}/)
+  }
 })
 
 test('hook-manifest-parity: every event drives the same CLI routes on both harnesses', () => {

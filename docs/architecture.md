@@ -30,6 +30,7 @@ skraft-plugin/
 │       ├── create-custom-agent.md
 │       └── outside-in-tdd.md
 ├── plugins/skraft-framework/              ← composants distribués par le plugin
+│   ├── .claude-plugin/                    ← manifeste lu par Claude Code ET par VS Code
 │   ├── com.github.copilot/
 │   │   ├── agents/                        ← sources canoniques `.agent.md`
 │   │   ├── rules/                         ← règles path-scoped natives
@@ -68,6 +69,7 @@ skraft-plugin/
 
 | Dossier | Rôle | Source de vérité |
 |---|---|---|
+| `.claude-plugin/` | Manifeste de détection. Claude Code le lit nativement ; VS Code y tombe aussi, faute d'adaptateur Agent Plugins v1 capable de résoudre la racine du plugin dans une commande de hook. Il déclare les agents Claude, les règles Copilot et les hooks. | Oui, pour le routage. |
 | `com.github.copilot/agents/` | Agents Copilot natifs en `.agent.md`. | Oui. |
 | `com.anthropic.claude-code/agents/` | Agents Claude natifs en `.md`. | Non, miroir généré par `npm run agents:sync`. |
 | `com.github.copilot/rules/` | Règles Copilot path-scoped. | Oui. Claude reçoit seulement les règles déclarées par l'agent via `SubagentStart`. |

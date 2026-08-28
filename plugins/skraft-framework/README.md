@@ -139,6 +139,9 @@ Copilot sources are canonical. Claude files are a generated native projection:
 ```text
 plugins/skraft-framework/
 ├── plugin.json
+├── .plugin/                       VS Code compatibility before Agent Plugins v1 support
+│   ├── plugin.json
+│   └── hooks/hooks.json
 ├── .claude-plugin/plugin.json
 ├── com.github.copilot/
 │   ├── agents/                     canonical `.agent.md` files
@@ -155,6 +158,11 @@ Copilot loads path-scoped rules natively. Claude's `SubagentStart` hook resolves
 canonical agent identity and injects only rules declared by that agent. Catalogue,
 configuration, and evaluation scans read only canonical Copilot sources, preventing
 duplicate identities.
+
+VS Code builds predating Agent Plugins v1 inspect `.plugin/plugin.json` before
+`.claude-plugin/plugin.json`. The compatibility manifest therefore selects the canonical Copilot
+agents and rules explicitly; newer builds select the root Agent Plugins manifest first. Claude Code
+continues to consume `.claude-plugin/plugin.json` and its generated native projection.
 
 ## Maintainer workflow
 

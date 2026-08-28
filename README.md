@@ -53,10 +53,13 @@ Enter these commands in Claude Code:
 
 ### GitHub Copilot, Codex, Cursor
 
-The plugin follows [**Agent Plugins 1.0**](https://agent-plugins.org/specification): the portable
-manifest lives at `plugins/skraft-framework/plugin.json` and each client that needs its own schema
-gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`). Skills and runtime
-stay shared. Copilot `.agent.md` files are canonical; Claude receives a deterministic `.md` mirror.
+The portable manifest lives at `plugins/skraft-framework/plugin.json` and each client that needs its
+own schema gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`).
+The portable manifest deliberately omits the [Agent Plugins 1.0](https://agent-plugins.org/specification)
+`$schema` marker: VS Code's Agent Plugins v1 adapter substitutes no plugin-root token in hook
+commands, so a plugin recognized under it cannot locate its own CLI. Detection therefore falls
+through to `.claude-plugin/plugin.json`, whose adapter does expand `${CLAUDE_PLUGIN_ROOT}`.
+Skills and runtime stay shared. Copilot `.agent.md` files are canonical; Claude receives a deterministic `.md` mirror.
 Copilot loads path-scoped rules natively, while Claude receives only each agent's declared companion
 rules through `SubagentStart`.
 
@@ -64,7 +67,7 @@ Harness-specific hooks live under their reverse-domain namespace:
 
 | Harness | Hook manifest |
 |---|---|
-| Claude Code, Codex | `com.anthropic.claude-code/hooks/hooks.json` |
+| Claude Code, Codex, VS Code | `com.anthropic.claude-code/hooks/hooks.json` |
 | Copilot (installed plugin) | `com.github.copilot/hooks/hooks.json` |
 | Copilot (repo checkout, cloud agent) | [`.github/hooks/skraft-framework.json`](./.github/hooks/skraft-framework.json) |
 
@@ -132,8 +135,8 @@ This project follows [**SemVer**](https://semver.org/) and publishes releases **
 - The [`release.yml`](./.github/workflows/release.yml) workflow runs **automatically on every push
   to `main`**, and can also be started by hand from the Actions tab. When it runs, it:
   1. computes the next version from the commit history,
-  2. updates [`CHANGELOG.md`](./CHANGELOG.md) and stamps the version into the four plugin manifests
-     (`plugin.json`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) + `src/package.json`,
+    2. updates [`CHANGELOG.md`](./CHANGELOG.md) and stamps the version into the five plugin manifests
+      (`plugin.json`, `.plugin/`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) + `src/package.json`,
   3. creates the **`vX.Y.Z` tag** and the **GitHub Release** with the release notes,
   4. commits everything with `chore(release): X.Y.Z [skip ci]`.
 
