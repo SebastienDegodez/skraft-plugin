@@ -42,7 +42,7 @@ niveau advisory, pas de niveau warning, pas d'override, et aucune justification 
 d'exemption — le skill `skraft-quality-bar` détient le niveau d'application de chaque
 gate et la valeur de chaque seuil, et rien en aval ne les redéfinit.
 
-Total : **48 gates** réparties sur les 5 phases. Tout ce qui suit est la grille
+Total : **48 gates** réparties sur les workflows produit et les phases d'ingénierie. Tout ce qui suit est la grille
 intégrale, telle que chaque reviewer l'applique.
 
 ---
@@ -211,7 +211,7 @@ compromis délibérément — la qualité ne se négocie pas.
 | **G3** | Le build passe. | Compilation / vérification de types réussie. |
 | **G4** | L'analyse statique passe. | Linter/analyseur sans problème bloquant. |
 | **G5** | Les règles d'architecture passent. | Les tests de direction de dépendance (Clean Architecture) passent. |
-| **G6** | Le score de mutation atteint la barre. | Les deux scripts de mutation séquencés sortent en `0` : le cœur d'abord (Domain et Application, 100 %), puis la frontière (API et Infrastructure, 90 %). |
+| **G6** | Le score de mutation atteint la barre. | Les deux scripts de mutation séquencés sortent en `0` : le cœur d'abord (Domain et Application, 100 %), puis la frontière (API et Infrastructure, 80 %). |
 | **G7** | Aucun mock dans le cœur Domain/Application. | Attestation par grep : zéro symbole de framework de mock dans ces couches. |
 | **G8** | Format de commit conventionnel. | Chaque commit couvert suit `<type>(<scope>): <sujet>`. |
 | **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque cycle, le fichier de test n'a changé que par **ajout** entre les snapshots RED et GREEN. |

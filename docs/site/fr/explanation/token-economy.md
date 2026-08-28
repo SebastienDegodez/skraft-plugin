@@ -94,7 +94,7 @@ garantissent la fiabilité des livrables.
 
 Cette séparation relevait de la discipline ; elle relève désormais du fait. La barre
 tient dans une seule skill, `skraft-quality-bar`, et rien ne lit de réglage pour
-l'abaisser : score de mutation à 100 % sur Domain et Application et 90 % sur API et
+l'abaisser : score de mutation à 100 % sur Domain et Application et 80 % sur API et
 Infrastructure, couverture de lignes à 100 % sur Domain et Application, les quatre
 lentilles adversariales sur chaque revue, la gate Gherkin, un ADR pour toute décision
 non triviale, Object Calisthenics sur le Domain. Chaque gate bloque. Les niveaux

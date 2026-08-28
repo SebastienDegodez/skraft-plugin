@@ -92,7 +92,7 @@ reliability of deliverables.
 
 That separation used to be a matter of discipline; it is now a matter of fact. The bar
 lives in a single skill, `skraft-quality-bar`, and nothing reads a setting to lower it:
-mutation score 100% on Domain and Application and 90% on API and Infrastructure, line
+mutation score 100% on Domain and Application and 80% on API and Infrastructure, line
 coverage 100% on Domain and Application, all four adversarial lenses on every review,
 the Gherkin gate, an ADR for every non-trivial decision, Object Calisthenics on the
 Domain. Every gate blocks. The *advisory* and *warning* levels no longer exist, and

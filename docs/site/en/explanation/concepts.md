@@ -11,12 +11,21 @@ SKRAFT is built on six concepts from software engineering. Each concept is appli
 
 ## Use Case
 
-A Use Case captures a contract between stakeholders about expected system behavior. In SKRAFT, **one story = one Use Case = one full pipeline cycle** (DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER).
+A Use Case captures a contract between stakeholders about expected system behavior. In SKRAFT, **one refined story = one Use Case = one complete engineering cycle** (RESEARCH → DESIGN → DISTILL → DELIVER). Optional standalone DISCOVER then DISCUSS may prepare that story upstream.
 
 > « A use case captures a contract between the stakeholders of a system about its behavior. »
 > — Cockburn, A., *Writing Effective Use Cases*, 2001.
 
 Each pipeline pass handles exactly one Use Case. No batching, no shortcuts.
+
+## Engineering routing
+
+When the user selects `skraft-orchestrator` with a refined story, the orchestrator evaluates its difficulty once and persists it in `state.json::difficulty` (`simple | medium | medium-hard | challenging`). DISCOVER and DISCUSS are not part of this decision: they are standalone product workflows used upstream when needed.
+
+- **Engineering entry point** — `simple` or `medium` skips RESEARCH and records `RESEARCH` in `state.json::entryPoint.skipPhases`. `medium-hard` or `challenging` runs RESEARCH.
+- **DELIVER model** — `simple` stays inline with one commit per scenario; `medium` uses a multi-commit walking skeleton; `medium-hard` delegates each Gherkin scenario with an intermediate plan; `challenging` adds spike notes under `details/{date}/` and multiple review passes.
+
+Difficulty changes work volume, never the quality bar. [`skraft-difficulty-routing`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-difficulty-routing) chooses the route; [`skraft-quality-bar`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-quality-bar) keeps the same bar for every tier.
 
 ## CQS — Command-Query Separation
 

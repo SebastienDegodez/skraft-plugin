@@ -38,7 +38,7 @@ level, no warning level, no override and no rationale that buys an exemption —
 `skraft-quality-bar` skill owns the enforcement level of every gate and the value of
 every threshold, and nothing downstream restates them.
 
-Total: **48 gates** across the 5 phases. What follows is the full grid, exactly as
+Total: **48 gates** across product workflows and engineering phases. What follows is the full grid, exactly as
 each reviewer applies it.
 
 ---
@@ -205,7 +205,7 @@ repository owner accepted that trade deliberately — quality is not negotiable.
 | **G3** | The build passes. | Compilation / type-check succeeded. |
 | **G4** | Static analysis passes. | Linter/analyzer reported no blocking issue. |
 | **G5** | Architecture rules pass. | Dependency-direction tests (Clean Architecture) pass. |
-| **G6** | Mutation score meets the bar. | Both sequenced mutation scripts exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 90%). |
+| **G6** | Mutation score meets the bar. | Both sequenced mutation scripts exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 80%). |
 | **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. |
 | **G8** | Conventional commit format. | Every covered commit matches `<type>(<scope>): <subject>`. |
 | **G9** | No test tampering (RED→GREEN integrity). | For each cycle, the test file changed only by **addition** between RED and GREEN snapshots. |

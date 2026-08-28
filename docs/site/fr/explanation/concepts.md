@@ -9,7 +9,7 @@ persona: tech-lead
 
 SKRAFT n'invente rien : il **assemble** des concepts éprouvés d'ingénierie logicielle et les transforme en contraintes opérationnelles appliquées à chaque phase du pipeline. Cette page est le glossaire de référence du handbook. Chaque concept y est intégré et expliqué, puis relié à la phase et au skill qui l'opérationnalisent.
 
-> Repère de lecture : 🧭 = concept transverse · 🔎 DISCOVER · 💬 DISCUSS · 🏗️ DESIGN · 🧪 DISTILL · 🚀 DELIVER · 🛡️ Review.
+> Repère de lecture : 🧭 = concept transverse · 🔎/💬 = préparation produit optionnelle · 🔬 RESEARCH · 🏗️ DESIGN · 🧪 DISTILL · 🚀 DELIVER · 🛡️ Review.
 
 ---
 
@@ -17,7 +17,7 @@ SKRAFT n'invente rien : il **assemble** des concepts éprouvés d'ingénierie lo
 
 ### Use Case
 
-Un Use Case capture un contrat entre les parties prenantes sur le comportement attendu du système. Dans SKRAFT, **une story = un Use Case = un cycle complet du pipeline** (DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER). Pas de batching, pas de raccourcis.
+Un Use Case capture un contrat entre les parties prenantes sur le comportement attendu du système. Dans SKRAFT, **une story affinée = un Use Case = un cycle complet du pipeline d'ingénierie** (RESEARCH → DESIGN → DISTILL → DELIVER). DISCOVER puis DISCUSS peuvent préparer cette story en amont ; ils sont autonomes et optionnels. Pas de batching, pas de raccourcis.
 
 > « A use case captures a contract between the stakeholders of a system about its behavior. »
 > — Cockburn, A., *Writing Effective Use Cases*, 2001.
@@ -52,7 +52,7 @@ Tous les seuils du framework sont écrits à un seul endroit — le skill [skraf
 | Porte | Valeur | Périmètre |
 | --- | --- | --- |
 | Score de mutation | 100 % | Domain, Application |
-| Score de mutation | 90 % | API, Infrastructure |
+| Score de mutation | 80 % | API, Infrastructure |
 | Couverture de lignes | 100 % | Domain, Application |
 
 Toutes les portes sont **bloquantes** — frontières Clean Architecture, cycle TDD, intégrité des tests, mutation *core* et *boundary*, gate Gherkin, ADR pour toute décision non triviale, Object Calisthenics sur le Domain. Une porte qui ne peut pas s'exécuter n'est pas une porte franchie : c'est un échec, et le pipeline s'arrête. La variante TDD est Outside-In double boucle, toujours.
@@ -65,7 +65,7 @@ Le substrat d'exécution ([microsoft/hve-core](https://github.com/microsoft/hve-
 
 ---
 
-## 🔎 DISCOVER — Concepts de triage
+## 🔎 DISCOVER — Préparation produit optionnelle
 
 ### Triage d'issues
 
@@ -75,18 +75,9 @@ Assigner labels, priorité, estimation d'effort et détecter les doublons. Le `b
 
 Avant de créer une story, on cherche dans l'historique Git et les issues existantes pour éviter la redondance. Skill : [github-search-protocol]({{ "/fr/reference/skills/" | relative_url }}) (syntaxe de recherche GitHub, pagination, ranking).
 
-### Routing 2 axes (entry point & difficulté)
-
-SKRAFT évalue **deux axes orthogonaux** autour de DISCOVER, puis persiste la décision dans `state.json`. Skill : [skraft-difficulty-routing]({{ "/fr/reference/skills/" | relative_url }}).
-
-- **Entry point** — évalué au démarrage du pipeline, *avant* DISCOVER. SKRAFT détecte un handoff HVE en amont (issues GitHub déjà triées **et** rattachées à un sprint, `sprint-plan.md` ADO, artefact de sprint Jira). Le handoff n'est retenu que s'il porte à la fois une hiérarchie de backlog et un périmètre de sprint ; la détection ne saute jamais rien d'elle-même, l'utilisateur confirme explicitement. En cas de skip, le handoff est ingéré tel quel dans `research/{date}/` — ni re-triage, ni seconde proposition de sprint — et `state.json::entryPoint.skipPhases` enregistre `DISCOVER`.
-- **Difficulty tier** — évalué à la sortie de DISCOVER (ou juste après l'ingestion quand DISCOVER est sauté), une seule fois, jamais réévalué en cours de pipeline. Persisté dans `state.json::difficulty` (`simple | medium | medium-hard | challenging`), il gouverne le **modèle d'exécution de DELIVER** : cycle TDD inline avec un commit par scénario (`simple`), inline multi-commits sur walking skeleton (`medium`), dispatch d'un sous-agent par scénario Gherkin avec plan intermédiaire (`medium-hard`), dispatch par scénario plus spike notes sous `details/{date}/` et passes de revue multiples (`challenging`).
-
-La difficulté module **le volume de travail, jamais le niveau d'exigence**. Les seuils et le caractère bloquant des portes sont fixés une fois pour toutes par [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}) : un `simple` et un `challenging` franchissent exactement la même barre.
-
 ---
 
-## 💬 DISCUSS — Concepts d'affinage
+## 💬 DISCUSS — Préparation produit optionnelle
 
 ### User Story & critères d'acceptation
 
@@ -98,11 +89,30 @@ Une bonne story est **I**ndependent, **N**egotiable, **V**aluable, **E**stimable
 
 ### DoR — Definition of Ready
 
-Une grille de 8 points qui détermine si une story est prête à entrer en DESIGN. Tant que la DoR n'est pas verte, la story reste en DISCUSS. Vérifiée par [planning-review-criteria]({{ "/fr/reference/skills/" | relative_url }}).
+Une grille de 8 points qui détermine si une story est prête à être remise à `skraft-orchestrator`. Tant que la DoR n'est pas verte, la story reste en DISCUSS. Vérifiée par [planning-review-criteria]({{ "/fr/dashboard/" | relative_url }}#skill-planning-review-criteria).
 
 ### MoSCoW & Sprint Planning
 
 Priorisation **Mu**st / **Sh**ould / **C**ould / **W**on't, gestion des milestones, suivi de vélocité et résolution des graphes de dépendances entre stories. Skill : [sprint-planning]({{ "/fr/reference/skills/" | relative_url }}).
+
+---
+
+## 🔬 RESEARCH — Concepts d'investigation
+
+### Preuves avant conception
+
+Le `solution-researcher` vérifie les faits dans le code et les sources, compare
+les approches et transmet une recommandation à DESIGN. Il n'écrit pas de code et
+ne prend pas la décision d'architecture.
+
+### Routage au démarrage de l'ingénierie
+
+Quand l'utilisateur sélectionne `skraft-orchestrator` avec une story affinée, l'orchestrateur évalue sa difficulté une seule fois et la persiste dans `state.json::difficulty` (`simple | medium | medium-hard | challenging`). `DISCOVER` et `DISCUSS` ne font pas partie de cette décision : ce sont des workflows produit autonomes exécutés en amont si nécessaire.
+
+- **Point d'entrée d'ingénierie** — une difficulté `simple` ou `medium` saute RESEARCH et inscrit `RESEARCH` dans `state.json::entryPoint.skipPhases`. Une difficulté `medium-hard` ou `challenging` exécute RESEARCH.
+- **Modèle DELIVER** — `simple` reste inline avec un commit par scénario ; `medium` utilise un walking skeleton multi-commits ; `medium-hard` délègue chaque scénario Gherkin avec un plan intermédiaire ; `challenging` ajoute des notes de spike sous `details/{date}/` et plusieurs passes de revue.
+
+La difficulté module le volume de travail, jamais le niveau d'exigence. [`skraft-difficulty-routing`]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-difficulty-routing) choisit la route ; [`skraft-quality-bar`]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar) conserve la même barre pour chaque tier.
 
 ---
 
@@ -175,7 +185,7 @@ Le rythme fondamental du TDD : écrire un test qui échoue, puis le faire passer
 
 ### Mutation Testing
 
-Le Mutation Score mesure l'**efficacité** des tests (pas seulement la couverture) en injectant des défauts et en vérifiant que les tests les détectent. Les seuils sont permanents : **100 % sur Domain et Application**, **90 % sur API et Infrastructure**.
+Le Mutation Score mesure l'**efficacité** des tests (pas seulement la couverture) en injectant des défauts et en vérifiant que les tests les détectent. Les seuils sont permanents : **100 % sur Domain et Application**, **80 % sur API et Infrastructure**.
 
 La mesure ne se lit pas dans un rapport. Chaque adaptateur `quality-gates-<tech>` embarque **deux scripts séquencés** — *core* d'abord (Domain, Application), *boundary* ensuite (API, Infrastructure) — qui portent leur propre valeur attendue et la passent au `--break-at` du runner : c'est le **code de sortie** du runner qui fait verdict. *Core* passe en premier et court-circuite la suite, car muter les adaptateurs tant que le domaine n'est pas prouvé n'apprend rien. Pour .NET : `mutation-core.sh` et `mutation-boundary.sh`. Skills : [mutation-testing]({{ "/fr/reference/skills/" | relative_url }}), [quality-gates-dotnet]({{ "/fr/reference/skills/" | relative_url }}), [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}).
 
