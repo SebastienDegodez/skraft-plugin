@@ -139,16 +139,11 @@ Copilot sources are canonical. Claude files are a generated native projection:
 ```text
 plugins/skraft-framework/
 ├── plugin.json
-├── .plugin/                       VS Code compatibility before Agent Plugins v1 support
-│   ├── plugin.json
-│   └── hooks/hooks.json
 ├── .claude-plugin/plugin.json
 ├── com.github.copilot/
-│   ├── agents/                     canonical `.agent.md` files
-│   ├── rules/                      native path-scoped rules
-│   └── hooks/hooks.json
+│   └── rules/                       native path-scoped rules
 ├── com.anthropic.claude-code/
-│   ├── agents/                     generated `.md` mirror
+│   ├── agents/                      canonical `.md` files
 │   └── hooks/hooks.json
 ├── skills/                         shared skills
 └── src/                            shared zero-dependency runtime
@@ -156,23 +151,20 @@ plugins/skraft-framework/
 
 Copilot loads path-scoped rules natively. Claude's `SubagentStart` hook resolves the
 canonical agent identity and injects only rules declared by that agent. Catalogue,
-configuration, and evaluation scans read only canonical Copilot sources, preventing
-duplicate identities.
+configuration, and evaluation scans read the single canonical agent tree.
 
-VS Code builds predating Agent Plugins v1 inspect `.plugin/plugin.json` before
-`.claude-plugin/plugin.json`. The compatibility manifest therefore selects the canonical Copilot
-agents and rules explicitly; newer builds select the root Agent Plugins manifest first. Claude Code
-continues to consume `.claude-plugin/plugin.json` and its generated native projection.
+Detection deliberately lands on `.claude-plugin/plugin.json` in both Claude Code and VS Code:
+it is the only manifest whose adapter expands a plugin-root token in hook commands, so it is the
+only one under which the shipped hooks can locate their own CLI. No competing manifest ships.
 
 ## Maintainer workflow
 
 Run commands from repository root.
 
-After changing a canonical agent:
+After changing an agent, regenerate the guardrail config:
 
 ```bash
-npm run agents:sync
-npm run agents:check
+node plugins/skraft-framework/src/cli/build-config-bin.mjs
 ```
 
 Before opening a pull request:

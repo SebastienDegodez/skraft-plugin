@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - 'plugins/skraft-framework/src/**'
-      - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
       - 'plugins/skraft-framework/assets/**'
       - 'plugins/skraft-framework/com.github.copilot/rules/**'
@@ -20,7 +19,6 @@ on:
   pull_request:
     paths:
       - 'plugins/skraft-framework/src/**'
-      - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
       - 'plugins/skraft-framework/assets/**'
       - 'plugins/skraft-framework/com.github.copilot/rules/**'
@@ -69,7 +67,7 @@ jobs:
         run: node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check
 
   config-policy:
-    name: Agent mirrors and guardrail config in sync
+    name: Guardrail config in sync
     runs-on: ubuntu-latest
 
     steps:
@@ -79,9 +77,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Check Claude agents mirror Copilot sources
-        run: node scripts/sync-agent-mirrors.mjs --check
 
       - name: Check skraft-framework.config.json matches the agent descriptors
         run: node plugins/skraft-framework/src/cli/build-config-bin.mjs --check

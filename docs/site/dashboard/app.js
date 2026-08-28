@@ -411,7 +411,7 @@ const render = () => {
             <h3>${escapeHtml(t.agentsTitle)}</h3>
             <p>${escapeHtml(t.agentsDescription)}</p>
           </div>
-          <div class="family-actions"><a class="button" href="${escapeHtml(repositoryUrl())}/tree/main/plugins/skraft-framework/com.github.copilot/agents">${escapeHtml(t.browseSources)}</a></div>
+          <div class="family-actions"><a class="button" href="${escapeHtml(repositoryUrl())}/tree/main/plugins/skraft-framework/com.anthropic.claude-code/agents">${escapeHtml(t.browseSources)}</a></div>
         </header>
         <table class="rows">
           <thead><tr><th>${escapeHtml(t.agent)}</th><th>${escapeHtml(t.kind)}</th><th>${escapeHtml(t.model)}</th><th>${escapeHtml(t.evidenceColumn)}</th><th>${escapeHtml(t.trend)}</th></tr></thead>

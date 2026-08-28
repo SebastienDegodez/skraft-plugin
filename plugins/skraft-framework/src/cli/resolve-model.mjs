@@ -79,7 +79,7 @@ export const planAgent = (content, { allowList = DEFAULT_ALLOW_LIST } = {}) => {
 
 const findAgentFiles = (dir) =>
   readdirSync(dir, { recursive: true })
-    .filter((entry) => String(entry).endsWith('.agent.md'))
+    .filter((entry) => String(entry).endsWith('.md'))
     .map((entry) => join(dir, String(entry)))
 
 const plansFor = (dir, options) =>
@@ -94,7 +94,7 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       apply: { type: 'boolean', default: false },
       emit: { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
-      dir: { type: 'string', default: 'plugins/skraft-framework/com.github.copilot/agents' },
+      dir: { type: 'string', default: 'plugins/skraft-framework/com.anthropic.claude-code/agents' },
     },
   })
 
@@ -116,7 +116,7 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       log(`pinned ${p.name} → ${p.resolvedModel}`)
     }
     if (active.some((p) => p.changed)) {
-      log('agent model sources changed — run npm run agents:sync before committing')
+      log('agent model sources changed — regenerate the guardrail config before committing')
     }
     return 0
   }

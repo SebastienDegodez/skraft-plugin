@@ -46,7 +46,7 @@ Chemin attendu : `docs/agents/<nom-agent>.md`.
 # Agent `<nom>`
 
 **Statut :** ✅ Implémenté | 🚧 À venir | 📝 Partiel
-**Source :** `plugins/skraft-framework/com.github.copilot/agents/<nom>.agent.md` (ou `—` si à venir)
+**Source :** `plugins/skraft-framework/com.anthropic.claude-code/agents/<nom>.md` (ou `—` si à venir)
 
 ## Mission
 Une à deux phrases.

@@ -38,14 +38,10 @@ test('plugin packaging: portable manifest does not claim the Agent Plugins schem
   assert.deepEqual(portable.extensions, { 'com.github.copilot': {} })
 })
 
-test('plugin packaging: Copilot component directories remain shipped', () => {
-  for (const path of [
-    'com.github.copilot/agents',
-    'com.github.copilot/rules',
-    'com.github.copilot/hooks/hooks.json',
-  ]) {
-    assert.equal(existsSync(join(pluginRoot, path)), true, path)
-  }
+// The rules tree is the last Copilot-namespaced asset the plugin ships. It has no
+// Claude-native mirror, so it is kept where it is and reached through the Claude manifest.
+test('plugin packaging: the Copilot rules directory remains shipped', () => {
+  assert.equal(existsSync(join(pluginRoot, 'com.github.copilot/rules')), true)
 })
 
 // The Claude adapter carries no built-in component map, so every directory it must read is
@@ -65,7 +61,7 @@ test('plugin packaging: Claude manifest points at the agent, rule and hook adapt
 // hook path and is tried BEFORE the manifest pointer, so a Copilot-schema copy parked there
 // parses as valid, wins, and reintroduces the uninterpolated ${CLAUDE_PLUGIN_ROOT}.
 test('plugin packaging: no manifest shadows the Claude adapter', () => {
-  for (const path of ['.plugin/plugin.json', 'hooks/hooks.json']) {
+  for (const path of ['.plugin/plugin.json', 'hooks/hooks.json', 'com.github.copilot/hooks/hooks.json']) {
     assert.equal(existsSync(join(pluginRoot, path)), false, path)
   }
 })

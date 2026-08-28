@@ -43,13 +43,13 @@ You can add a step to an existing phase — for example, inserting a `security-r
 
 ### 1. Create the agent
 
-Create an `.agent.md` file by following the contracts visible in the [agentic catalogue]({{ "/en/dashboard/" | relative_url }}). Define clearly:
+Create an agent `.md` file by following the contracts visible in the [agentic catalogue]({{ "/en/dashboard/" | relative_url }}). Define clearly:
 - Its role (executor or reviewer)
 - Its entry/exit contract
 - Its invariants
 
-Author the canonical file under `plugins/skraft-framework/com.github.copilot/agents/`, then run
-`npm run agents:sync`. Never edit the generated Claude `.md` mirror directly. Put path-scoped
+Author the file under `plugins/skraft-framework/com.anthropic.claude-code/agents/`: it is the only
+agent tree the plugin ships, so there is no mirror to synchronise. Put path-scoped
 Copilot rules under `com.github.copilot/rules/`; list a rule in `metadata.instructions` only when
 the same agent must receive it through Claude's `SubagentStart` hook.
 

@@ -203,10 +203,10 @@ async function fixtureDir() {
   const dir = await mkdtemp(join(tmpdir(), 'skraft-agents-'))
   const agents = join(dir, 'agents')
   await mkdir(join(agents, 'nested'), { recursive: true })
-  await writeFile(join(agents, 'rev.agent.md'), agent({ name: 'rev', cls: 'reviewer' }))
-  await writeFile(join(agents, 'impl.agent.md'), agent({ name: 'impl', cls: 'implementer' }))
-  await writeFile(join(agents, 'nested', 'lens.agent.md'), agent({ name: 'lens', cls: 'reviewer' }))
-  await writeFile(join(agents, 'orch.agent.md'), agent({ name: 'skraft-orchestrator', cls: 'reviewer' }))
+  await writeFile(join(agents, 'rev.md'), agent({ name: 'rev', cls: 'reviewer' }))
+  await writeFile(join(agents, 'impl.md'), agent({ name: 'impl', cls: 'implementer' }))
+  await writeFile(join(agents, 'nested', 'lens.md'), agent({ name: 'lens', cls: 'reviewer' }))
+  await writeFile(join(agents, 'orch.md'), agent({ name: 'skraft-orchestrator', cls: 'reviewer' }))
   return { dir, agents }
 }
 
@@ -224,10 +224,10 @@ test('main --apply pins models, leaves the orchestrator on inherit, then --check
 
   assert.equal(main(['--apply', '--dir', agents], capture().io), 0)
 
-  assert.match(await readFile(join(agents, 'rev.agent.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
-  assert.match(await readFile(join(agents, 'impl.agent.md'), 'utf8'), /^model: Claude Sonnet 5$/m)
-  assert.match(await readFile(join(agents, 'nested', 'lens.agent.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
-  assert.match(await readFile(join(agents, 'orch.agent.md'), 'utf8'), /^model: inherit$/m)
+  assert.match(await readFile(join(agents, 'rev.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
+  assert.match(await readFile(join(agents, 'impl.md'), 'utf8'), /^model: Claude Sonnet 5$/m)
+  assert.match(await readFile(join(agents, 'nested', 'lens.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
+  assert.match(await readFile(join(agents, 'orch.md'), 'utf8'), /^model: inherit$/m)
 
   const { io, out } = capture()
   assert.equal(main(['--check', '--dir', agents], io), 0)
@@ -239,9 +239,9 @@ test('main --apply pins models, leaves the orchestrator on inherit, then --check
 test('main --apply is idempotent (second pass changes nothing)', async () => {
   const { dir, agents } = await fixtureDir()
   main(['--apply', '--dir', agents], capture().io)
-  const before = await readFile(join(agents, 'rev.agent.md'), 'utf8')
+  const before = await readFile(join(agents, 'rev.md'), 'utf8')
   main(['--apply', '--dir', agents], capture().io)
-  const after = await readFile(join(agents, 'rev.agent.md'), 'utf8')
+  const after = await readFile(join(agents, 'rev.md'), 'utf8')
   assert.equal(after, before)
   await rm(dir, { recursive: true, force: true })
 })

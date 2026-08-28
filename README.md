@@ -59,7 +59,8 @@ The portable manifest deliberately omits the [Agent Plugins 1.0](https://agent-p
 `$schema` marker: VS Code's Agent Plugins v1 adapter substitutes no plugin-root token in hook
 commands, so a plugin recognized under it cannot locate its own CLI. Detection therefore falls
 through to `.claude-plugin/plugin.json`, whose adapter does expand `${CLAUDE_PLUGIN_ROOT}`.
-Skills and runtime stay shared. Copilot `.agent.md` files are canonical; Claude receives a deterministic `.md` mirror.
+Skills and runtime stay shared. The `com.anthropic.claude-code/agents/*.md` tree is the single
+canonical agent source — there is no second tree to mirror.
 Copilot loads path-scoped rules natively, while Claude receives only each agent's declared companion
 rules through `SubagentStart`.
 

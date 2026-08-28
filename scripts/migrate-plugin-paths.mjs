@@ -14,7 +14,7 @@ export const obsoletePaths = Object.freeze([
   [`${legacyRoot}instructions`, `${frameworkRoot}instructions`],
   [`${legacyRoot}agents`, `${frameworkRoot}agents`],
   [`${frameworkRoot}instructions`, `${frameworkRoot}com.github.copilot/rules`],
-  [`${frameworkRoot}agents`, `${frameworkRoot}com.github.copilot/agents`],
+  [`${frameworkRoot}agents`, `${frameworkRoot}com.anthropic.claude-code/agents`],
   [`${legacyRoot}skills`, `${frameworkRoot}skills`],
   [`${legacyRoot}hooks`, `${frameworkRoot}com.anthropic.claude-code/hooks`],
   [runtimeLogsPath, `${frameworkRoot}logs`],

@@ -66,7 +66,7 @@ describe('agentSuiteVerdicts', () => {
     strictEqual(verdictState(result), 'pass')
     strictEqual(result.subject.kind, 'agent')
     strictEqual(result.subject.name, 'software-engineer')
-    strictEqual(result.subject.path, 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md')
+    strictEqual(result.subject.path, 'plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md')
     strictEqual(result.trialCount, 2)
     strictEqual(result.netWin, 1)
   })

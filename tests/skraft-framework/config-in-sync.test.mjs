@@ -5,12 +5,12 @@ import { dirname, join } from 'node:path'
 import { main } from '../../plugins/skraft-framework/src/cli/build-config.mjs'
 
 // Boundary-to-boundary against the REAL repo state (not a temp fixture): fails the
-// build if plugins/skraft-framework/skraft-framework.config.json drifts from plugins/skraft-framework/com.github.copilot/agents/**/*.agent.md
+// build if plugins/skraft-framework/skraft-framework.config.json drifts from plugins/skraft-framework/com.anthropic.claude-code/agents/**/*.md
 // frontmatter. Mirrors the `config-policy` CI job (build-config-bin.mjs --check) as an
 // executable test so drift is caught by `node --test` locally, not only in CI.
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '../..')
-const agentsDir = join(repoRoot, 'plugins/skraft-framework/com.github.copilot/agents')
+const agentsDir = join(repoRoot, 'plugins/skraft-framework/com.anthropic.claude-code/agents')
 const configPath = join(repoRoot, 'plugins/skraft-framework/skraft-framework.config.json')
 
 const capture = () => {
@@ -25,7 +25,7 @@ test('config-in-sync: committed skraft-framework.config.json matches the agent f
   assert.equal(
     code,
     0,
-    `plugins/skraft-framework/skraft-framework.config.json is out of sync with plugins/skraft-framework/com.github.copilot/agents/**/*.agent.md — run npm run config:build (plugins/skraft-framework/src). Details: ${errs.join('\n')}`
+    `plugins/skraft-framework/skraft-framework.config.json is out of sync with plugins/skraft-framework/com.anthropic.claude-code/agents/**/*.md — run npm run config:build (plugins/skraft-framework/src). Details: ${errs.join('\n')}`
   )
   assert.ok(out.some((l) => /in sync/.test(l)))
 })

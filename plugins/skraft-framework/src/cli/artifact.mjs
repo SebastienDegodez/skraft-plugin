@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SKRAFT artifact mini-command CLI — the shipped counterpart to the dev-only
 // scripts/artifact.mjs, resolvable at runtime as `${CLAUDE_PLUGIN_ROOT}/src/cli/artifact.mjs`
-// (see plugins/skraft-framework/com.github.copilot/agents/*.agent.md and plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md).
+// (see plugins/skraft-framework/com.anthropic.claude-code/agents/*.md and plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md).
 //
 // A dedicated subcommand per artifact type. The subcommand OWNS the template and
 // the required-field schema (see ../domain/artifact-registry.mjs), so an agent emits

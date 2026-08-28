@@ -7,7 +7,7 @@ const skill = (id) => ({ id, directory: id, name: id })
 const agent = (id, overrides = {}) => ({
   id,
   name: id,
-  path: `agents/${id}.agent.md`,
+  path: `agents/${id}.md`,
   kind: 'agent',
   userInvocable: false,
   phase: null,

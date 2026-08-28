@@ -155,7 +155,7 @@ describe('buildPrComment', () => {
 
   it('renders agent conformance in its own section, with no sign test', () => {
     const agentVerdict = {
-      subject: { kind: 'agent', name: 'software-engineer', path: 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md' },
+      subject: { kind: 'agent', name: 'software-engineer', path: 'plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md' },
       conclusive: true,
       underpowered: false,
       passed: true,

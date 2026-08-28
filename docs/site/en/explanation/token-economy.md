@@ -129,7 +129,7 @@ answer — but "which form lever has not yet been applied?"
 
 The model class is **actually applied**: a deterministic resolver (`plugins/skraft-framework/src/`,
 Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
-`model_requirement` floor, then **pins the `model:` field** of its `*.agent.md` to the
+`model_requirement` floor, then **pins the `model:` field** of its `.md` descriptor to the
 resolved concrete model. The "Measured results" section states the policy:
 `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
 `planner → claude-sonnet-5`, with the Sonnet floor raising the two exceptions

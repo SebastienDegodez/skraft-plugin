@@ -65,7 +65,7 @@ describe('changedAgentSuites', () => {
   })
 
   it('re-runs every suite when an agent descriptor changed, since no path links the two', () => {
-    const paths = ['plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md']
+    const paths = ['plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md']
     deepStrictEqual(changedAgentSuites(paths, { suites }), suites)
   })
 

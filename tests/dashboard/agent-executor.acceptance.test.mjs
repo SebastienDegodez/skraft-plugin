@@ -12,7 +12,7 @@ import { CopilotAdapter } from '@microsoft/vally/trajectory'
 import { createAgentExecutor } from '../../eng/vally-agent-executor/executor.mjs'
 
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
-const agentPath = join(repoRoot, 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md')
+const agentPath = join(repoRoot, 'plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md')
 const relativeAgentPath = relative(repoRoot, agentPath).split('\\').join('/')
 const expectedHash = createHash('sha256').update(readFileSync(agentPath)).digest('hex')
 const activatedSkills = ['outside-in-tdd', 'test-design-mandates', 'craft-discipline']

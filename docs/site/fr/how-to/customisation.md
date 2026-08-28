@@ -43,13 +43,13 @@ Vous pouvez ajouter une étape à une phase existante — par exemple, insérer 
 
 ### 1. Créer l'agent
 
-Créez un fichier `.agent.md` en suivant les contrats visibles dans le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }}). Définissez clairement :
+Créez un fichier d'agent `.md` en suivant les contrats visibles dans le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }}). Définissez clairement :
 - Son rôle (exécuteur ou reviewer)
 - Son contrat d'entrée/sortie
 - Ses invariants
 
-Écrivez le fichier canonique sous `plugins/skraft-framework/com.github.copilot/agents/`, puis
-exécutez `npm run agents:sync`. Ne modifiez jamais directement le miroir `.md` généré pour Claude.
+Écrivez le fichier sous `plugins/skraft-framework/com.anthropic.claude-code/agents/` : c'est
+l'unique arbre d'agents livré, il n'y a aucun miroir à synchroniser.
 Placez les règles Copilot path-scoped sous `com.github.copilot/rules/` ; listez une règle dans
 `metadata.instructions` seulement si le même agent doit la recevoir via le hook Claude
 `SubagentStart`.

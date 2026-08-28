@@ -89,14 +89,14 @@ async function fixtureDir() {
   const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-build-'))
   const agents = join(dir, 'agents')
   await mkdir(agents, { recursive: true })
-  await writeFile(join(agents, 'orch.agent.md'), orchestrator(['DESIGN', 'DELIVER']))
+  await writeFile(join(agents, 'orch.md'), orchestrator(['DESIGN', 'DELIVER']))
   await writeFile(
-    join(agents, 'arch.agent.md'),
+    join(agents, 'arch.md'),
     specialist({ name: 'solution-architect', phase: 'DESIGN', skills: ['architecture-patterns'] }),
   )
-  await writeFile(join(agents, 'arch-rev.agent.md'), specialist({ name: 'solution-architect-reviewer', phase: 'DESIGN' }))
-  await writeFile(join(agents, 'eng.agent.md'), specialist({ name: 'software-engineer', phase: 'DELIVER' }))
-  await writeFile(join(agents, 'eng-rev.agent.md'), specialist({ name: 'software-engineer-reviewer', phase: 'DELIVER' }))
+  await writeFile(join(agents, 'arch-rev.md'), specialist({ name: 'solution-architect-reviewer', phase: 'DESIGN' }))
+  await writeFile(join(agents, 'eng.md'), specialist({ name: 'software-engineer', phase: 'DELIVER' }))
+  await writeFile(join(agents, 'eng-rev.md'), specialist({ name: 'software-engineer-reviewer', phase: 'DELIVER' }))
   const out = join(dir, 'skraft-framework.config.json')
   return { dir, agents, out }
 }
@@ -147,7 +147,7 @@ test('main --check returns 1 when no committed config exists yet', async () => {
 test('main fails (exit 1) and names the orphan when an agent declares no parent', async () => {
   const { dir, agents, out } = await fixtureDir()
   await writeFile(
-    join(agents, 'orphan.agent.md'),
+    join(agents, 'orphan.md'),
     ['---', 'name: orphan-agent', 'description: "x"', 'metadata:', '  phase: DESIGN', '---', '', '# body'].join('\n'),
   )
   const { io, errs } = capture()

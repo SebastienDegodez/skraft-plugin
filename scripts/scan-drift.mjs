@@ -92,7 +92,7 @@ function catalogueTopology(root, book) {
         continue;
       }
 
-      const id = basename(abs).replace(/\.agent\.md$/, '');
+      const id = basename(abs).replace(/\.md$/, '');
       const metadata = fm.metadata || {};
       agents.push({
         id,

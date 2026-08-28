@@ -12,9 +12,9 @@ const RESEARCHER_LABEL = 'Agent 7 / Evidence Cartographer'
 const bookYml = ({ retire = false } = {}) => `meta:
   basename_exceptions: []
 sources:
-  agents: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
-  workers: "plugins/skraft-framework/com.github.copilot/agents/workers/*/*.agent.md"
-  lenses: "plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/*.agent.md"
+  agents: "plugins/skraft-framework/com.anthropic.claude-code/agents/*.md"
+  workers: "plugins/skraft-framework/com.anthropic.claude-code/agents/workers/*/*.md"
+  lenses: "plugins/skraft-framework/com.anthropic.claude-code/agents/reviewer-lenses/*.md"
   skills: "plugins/skraft-framework/skills/*/SKILL.md"
 parts:
   - id: reference
@@ -72,8 +72,8 @@ async function withFixture({ brokenParent = false, retire = false, enDashboardBo
     'docs/site/_data',
     'docs/site/fr/dashboard',
     'docs/site/en/dashboard',
-    'plugins/skraft-framework/com.github.copilot/agents/workers/demo',
-    'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses',
+    'plugins/skraft-framework/com.anthropic.claude-code/agents/workers/demo',
+    'plugins/skraft-framework/com.anthropic.claude-code/agents/reviewer-lenses',
     'plugins/skraft-framework/skills/routing',
   ]
   await Promise.all(directories.map((path) => mkdir(join(root, path), { recursive: true })))
@@ -82,10 +82,10 @@ async function withFixture({ brokenParent = false, retire = false, enDashboardBo
   await writeFile(join(root, 'docs/site/fr/dashboard/index.md'), `---\nlayout: dashboard\nlang: fr\n---\n${frDashboardBody}`)
   await writeFile(join(root, 'docs/site/en/dashboard/index.md'), `---\nlayout: dashboard\nlang: en\n---\n${enDashboardBody}`)
   await writeFile(join(root, 'plugins/skraft-framework/skills/routing/SKILL.md'), '---\nname: routing\n---\n')
-  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'), orchestratorAgent)
-  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'), brokenParent ? researcherAgent.replace('Engineering entry', 'Missing dispatcher') : researcherAgent)
-  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md'), productAgent('Product discovery'))
-  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/backlog-planner.agent.md'), productAgent('Product planning'))
+  await writeFile(join(root, 'plugins/skraft-framework/com.anthropic.claude-code/agents/skraft-orchestrator.md'), orchestratorAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/com.anthropic.claude-code/agents/solution-researcher.md'), brokenParent ? researcherAgent.replace('Engineering entry', 'Missing dispatcher') : researcherAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/com.anthropic.claude-code/agents/backlog-discoverer.md'), productAgent('Product discovery'))
+  await writeFile(join(root, 'plugins/skraft-framework/com.anthropic.claude-code/agents/backlog-planner.md'), productAgent('Product planning'))
 
   if (retire) {
     await mkdir(join(root, 'docs/site/fr/reference/agents'), { recursive: true })

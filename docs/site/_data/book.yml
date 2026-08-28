@@ -125,14 +125,14 @@ meta:
 sources:
   # Agents autonomes, agents de phase, reviewers et orchestrateur.
   # `*` ne descend PAS dans `workers/` : les subagents internes sont captes ci-dessous.
-  agents: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
+  agents: "plugins/skraft-framework/com.anthropic.claude-code/agents/*.md"
   # Lentilles de revue adverse et conditionnelles.
-  lenses: "plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/*.agent.md"
+  lenses: "plugins/skraft-framework/com.anthropic.claude-code/agents/reviewer-lenses/*.md"
   # Subagents internes (user-invocable: false) groupes par capacite sous workers/<capacite>/.
-  # Capte le bundle complet d'une capacite : les *-worker.agent.md ET leurs *-lens.agent.md
+  # Capte le bundle complet d'une capacite : les *-worker.md ET leurs *-lens.md
   # conditionnels (mock-fidelity, contract-fidelity). Le glob `*/*` exige le segment <capacite>,
-  # donc il ignore d'eventuels doublons a plat (workers/*.agent.md) -> pas de double comptage.
-  workers: "plugins/skraft-framework/com.github.copilot/agents/workers/*/*.agent.md"
+  # donc il ignore d'eventuels doublons a plat (workers/*.md) -> pas de double comptage.
+  workers: "plugins/skraft-framework/com.anthropic.claude-code/agents/workers/*/*.md"
   skills: "plugins/skraft-framework/skills/*/SKILL.md"
   gates: "plugins/skraft-framework/skills/*-review-criteria/SKILL.md"
   patterns: "plugins/skraft-framework/skills/architecture-patterns/SKILL.md"
@@ -237,7 +237,7 @@ parts:
             sidebar_position: 1
             fr: "fr/explanation/pipeline/index.md"
             en: "en/explanation/pipeline/index.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/*.md"
             purpose_fr: "Choisir entre préparation produit, pipeline d'ingénierie et parcours Brownfield."
             purpose_en: "Choose between product preparation, the engineering pipeline, and the Brownfield journey."
       - id: core-journey
@@ -261,7 +261,7 @@ parts:
             sidebar_position: 2
             fr: "fr/explanation/pipeline/discover.md"
             en: "en/explanation/pipeline/discover.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/backlog-discoverer.md"
             purpose_fr: "Workflow DISCOVER : triage et priorisation du backlog."
             purpose_en: "DISCOVER workflow: backlog triage and prioritization."
           - id: discuss
@@ -271,7 +271,7 @@ parts:
             sidebar_position: 3
             fr: "fr/explanation/pipeline/discuss.md"
             en: "en/explanation/pipeline/discuss.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/backlog-planner.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/backlog-planner.md"
             purpose_fr: "Workflow DISCUSS : raffinage des stories selon INVEST et la DoR."
             purpose_en: "DISCUSS workflow: story refinement against INVEST and the DoR."
           - id: research
@@ -281,7 +281,7 @@ parts:
             sidebar_position: 4
             fr: "fr/explanation/pipeline/research.md"
             en: "en/explanation/pipeline/research.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/solution-researcher.md"
             purpose_fr: "Phase RESEARCH : investigation sourcée et recommandation avant la conception."
             purpose_en: "RESEARCH phase: sourced investigation and recommendation before design."
           - id: design
@@ -291,7 +291,7 @@ parts:
             sidebar_position: 5
             fr: "fr/explanation/pipeline/design.md"
             en: "en/explanation/pipeline/design.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/solution-architect.md"
             purpose_fr: "Phase DESIGN : Event Modeling, DDD, ADR et contrats d'interface."
             purpose_en: "DESIGN phase: Event Modeling, DDD, ADRs, and interface contracts."
           - id: distill
@@ -301,7 +301,7 @@ parts:
             sidebar_position: 6
             fr: "fr/explanation/pipeline/distill.md"
             en: "en/explanation/pipeline/distill.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/acceptance-designer.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/acceptance-designer.md"
             purpose_fr: "Phase DISTILL : scénarios BDD exécutables et plan de tests."
             purpose_en: "DISTILL phase: executable BDD scenarios and test plan."
           - id: deliver
@@ -311,7 +311,7 @@ parts:
             sidebar_position: 7
             fr: "fr/explanation/pipeline/deliver.md"
             en: "en/explanation/pipeline/deliver.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md"
             purpose_fr: "Phase DELIVER : Outside-In TDD, Clean Architecture et mutation testing."
             purpose_en: "DELIVER phase: Outside-In TDD, Clean Architecture, and mutation testing."
       - id: brownfield-journey
@@ -455,7 +455,7 @@ parts:
             sidebar_position: 6
             fr: "fr/explanation/deep-dive/mocking-microcks.md"
             en: "en/explanation/deep-dive/mocking-microcks.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/workers/mocking/*.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/workers/mocking/*.md"
             purpose_fr: "Fan-out interne de DELIVER pour le mocking et sa lentille conditionnelle."
             purpose_en: "DELIVER internal fan-out for mocking and its conditional lens."
           - id: zoom-contract
@@ -465,7 +465,7 @@ parts:
             sidebar_position: 7
             fr: "fr/explanation/deep-dive/contract-testing.md"
             en: "en/explanation/deep-dive/contract-testing.md"
-            source: "plugins/skraft-framework/com.github.copilot/agents/workers/contract-testing/*.agent.md"
+            source: "plugins/skraft-framework/com.anthropic.claude-code/agents/workers/contract-testing/*.md"
             purpose_fr: "Fan-out interne de DELIVER pour les tests de contrat et sa lentille conditionnelle."
             purpose_en: "DELIVER internal fan-out for contract testing and its conditional lens."
           - id: lire-un-verdict

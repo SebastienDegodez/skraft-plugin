@@ -28,7 +28,7 @@ families. Narrative pages explain only relationships readers need to understand.
 
 ## 2. Internal sub-agents are a fan-out, not a phase
 
-Workers (`plugins/skraft-framework/com.github.copilot/agents/workers/<capability>/*.agent.md`, `user-invocable: false`)
+Workers (`plugins/skraft-framework/com.anthropic.claude-code/agents/workers/<capability>/*.md`, `user-invocable: false`)
 are dispatched **inside** a phase agent — they are never a 6th pipeline phase.
 Show them as an internal fan-out under their owning agent (today: the
 `software-engineer` in DELIVER), and state that the lead keeps the business TDD
