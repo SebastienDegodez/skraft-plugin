@@ -43,7 +43,7 @@ Vous pouvez ajouter une étape à une phase existante — par exemple, insérer 
 
 ### 1. Créer l'agent
 
-Créez un fichier `.agent.md` pour votre nouvel agent en utilisant le skill [create-custom-agent]({{ "/fr/reference/skills/create-custom-agent" | relative_url }}). Définissez clairement :
+Créez un fichier `.agent.md` en suivant les contrats visibles dans le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }}). Définissez clairement :
 - Son rôle (exécuteur ou reviewer)
 - Son contrat d'entrée/sortie
 - Ses invariants

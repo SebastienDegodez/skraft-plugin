@@ -56,7 +56,7 @@ Chaque worker n'émet que du câblage de test — le cycle TDD métier reste che
 qui vérifie le worker en **TIER-1** (le test échoue d'abord, puis passe). Quand une
 capacité est active, sa lentille de fidélité rejoint le panel adverse du
 `software-engineer-reviewer`. Le câblage concret est résolu par stack via un *roster*
-(voir les [skills]({{ "/fr/reference/skills/" | relative_url }})).
+(voir le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }})).
 
 ## Les gates franchies ici
 

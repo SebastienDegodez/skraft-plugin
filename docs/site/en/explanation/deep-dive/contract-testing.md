@@ -92,7 +92,7 @@ its shape without a live end-to-end environment.
 - [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — the L1 + L2 view this page zooms out of.
 - [L3 zoom: mocking (Microcks)]({{ "/en/explanation/deep-dive/mocking-microcks" | relative_url }}) — the sibling consumer-side fan-out.
 - [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — the phase that owns this fan-out.
-- [Agents reference]({{ "/en/reference/agents/" | relative_url }}) — every agent, worker and lens. Unsure about a term? See the [glossary]({{ "/en/reference/glossary" | relative_url }}).
+- [Agentic catalogue]({{ "/en/dashboard/" | relative_url }}) — every agent, worker and lens. Unsure about a term? See the [glossary]({{ "/en/reference/glossary" | relative_url }}).
 
 ## Sources
 

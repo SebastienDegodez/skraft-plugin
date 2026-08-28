@@ -92,7 +92,7 @@ déterministe tout en exerçant la vraie frontière dont le service dépend.
 - [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — la vue L1 + L2 d'où cette page zoome.
 - [Zoom L3 : contract testing]({{ "/fr/explanation/deep-dive/contract-testing" | relative_url }}) — le fan-out frère, côté fournisseur.
 - [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase qui possède ce fan-out.
-- [Référence des agents]({{ "/fr/reference/agents/" | relative_url }}) — chaque agent, worker et lentille. Un terme vous échappe ? Voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+- [Catalogue agentique]({{ "/fr/dashboard/" | relative_url }}) — chaque agent, worker et lentille. Un terme vous échappe ? Voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
 
 ## Sources
 

@@ -93,7 +93,7 @@ consommateur puisse se fier à sa forme sans environnement end-to-end vivant.
 - [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — la vue L1 + L2 d'où cette page zoome.
 - [Zoom L3 : mocking (Microcks)]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }}) — le fan-out frère, côté consommateur.
 - [DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) — la phase qui possède ce fan-out.
-- [Référence des agents]({{ "/fr/reference/agents/" | relative_url }}) — chaque agent, worker et lentille. Un terme vous échappe ? Voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
+- [Catalogue agentique]({{ "/fr/dashboard/" | relative_url }}) — chaque agent, worker et lentille. Un terme vous échappe ? Voir le [glossaire]({{ "/fr/reference/glossary" | relative_url }}).
 
 ## Sources
 
