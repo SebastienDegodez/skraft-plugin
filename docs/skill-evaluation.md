@@ -260,16 +260,49 @@ and `docs/site/dashboard/data/` are all ignored.
 
 ## How a verdict is decided
 
-Vally reports wins, ties and losses for the skilled variant. That tally becomes a
-verdict through an **exact two-sided binomial sign test** on the discordant pairs:
+Two instruments read the same pair of runs, and they are not interchangeable.
+The eval's own **deterministic graders** score each trial — that is the behaviour
+the eval author wrote down, and the thing the skill is supposed to change. Vally's
+**LLM judge** reads the two trajectories side by side and calls a winner without
+ever seeing a grader result.
+
+The graders decide the verdict. The judge is published beside them as a second
+opinion (`judgeTally`), so a disagreement between the two is visible instead of
+being resolved silently by whichever one happened to be wired in. When no
+per-trial records are available the judge's tally stands in, and the verdict
+records which one it used in `signTest.source`.
+
+That tally becomes a verdict through an **exact two-sided binomial sign test** on
+the discordant pairs:
 
 $$p = \min\left(1,\; 2 \cdot 2^{-d} \sum_{k=m}^{d} \binom{d}{k}\right)
 \quad\text{with } d = w + l,\; m = \max(w, l)$$
 
+A second test runs on the same pairs: the **Wilcoxon signed-rank test** on the
+score differences, which keeps the magnitudes the sign test throws away.
+`pass` and `regression` require **both** p-values at or under 0.05 — an
+intersection, not a union:
+
+- **Alpha control.** Two tests aimed at one question, each at 0.05, give roughly
+  two chances to clear the bar; a union rule quietly doubles the false-positive
+  rate. An intersection keeps it at or under 0.05 with no multiplicity correction.
+- **Complementary blind spots.** The sign test discards magnitude but assumes
+  nothing. Wilcoxon uses magnitude but assumes the differences are symmetric
+  around the null median, and on a coarse rubric with a handful of pairs it can be
+  carried by one or two large deltas. A result that survives both has survived
+  both weaknesses.
+- **Nothing is hidden by the conservatism.** The Wilcoxon p-value is published in
+  the verdict and named in `reason`, so the case the sign test is bad at — few
+  pairs, large deltas — stays visible to a reader even though it does not
+  auto-certify.
+
+A judge-only comparison has no magnitudes to rank, so the Wilcoxon clause is
+vacuous there and the sign test alone decides.
+
 | State | Meaning |
 | --- | --- |
-| `pass` | complete, powered, and $w > l$ with $p \le 0.05$ |
-| `regression` | complete, powered, and $l > w$ with $p \le 0.05$ |
+| `pass` | complete, powered, and $w > l$ with both $p \le 0.05$ |
+| `regression` | complete, powered, and $l > w$ with both $p \le 0.05$ |
 | `no-improvement` | complete and powered, but the margin is indistinguishable from chance |
 | `inconclusive` | a trial errored, a trial was unmatched, there were fewer than 5 trials, or the tally held fewer than 6 discordant pairs |
 
