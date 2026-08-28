@@ -124,10 +124,11 @@ Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après
 | Décisions (allow / deny / block / additionalContext) | ✅ Livré (US1) |
 | Audit-writer JSONL append-only | ✅ Livré (US1) |
 | Config-loader cascade | ✅ Livré (US1) |
-| Handlers métier G1–G8 (invariants par phase) | 🚧 À venir (US2+) |
+| Handlers métier G1–G8 (invariants par phase) | ✅ Livré |
 
-Les handlers métier (qui inspectent réellement le payload pour enforcer les
-invariants SKRAFT) sont planifiés dans les user stories suivantes.
+`SubagentStart` comble aussi les différences de packaging. Copilot découvre les règles
+path-scoped nativement. Claude reçoit seulement les règles compagnes déclarées par l'agent
+qui démarre, avec ses skills obligatoires ; aucune règle sans rapport n'est ajoutée au contexte.
 
 ## Économie de tokens — l'angle des hooks
 
@@ -161,14 +162,12 @@ dispatch, présence des artefacts, format du verdict reviewer, intégrité du fi
 d'état. Ils ne constituent pas un système anti-hallucination général, et deux limites
 importantes doivent être énoncées explicitement.
 
-### G2 et G3 ne sont pas encore actifs
+### G2 et G3 imposent la méthode déclarée, pas la vérité
 
-Le garde-fou G2 (injection de skills à `SubagentStart`) et G3 (audit de skills à
-`PostToolUse`) sont planifiés mais non implémentés. Un sous-agent démarre donc
-aujourd'hui sans ensemble de skills garanti : les contraintes méthodologiques attendues
-peuvent ne pas être injectées, ce qui constitue un angle mort pour les
-*hallucinations de méthode* — l'agent se comporte correctement du point de vue du
-runtime, mais sans la discipline que le skill aurait imposée.
+Le garde-fou G2 injecte les skills obligatoires à `SubagentStart` ; pour Claude, il injecte
+aussi les règles compagnes déclarées par l'agent qui démarre. G3 audite les lectures de
+skills. Tous deux sont fail-open si le hook échoue afin qu'une erreur interne du runtime ne
+fige pas le pipeline. Ils imposent la méthode déclarée, sans prouver que l'agent l'a bien appliquée.
 
 ### Violations structurelles vs. hallucinations factuelles
 

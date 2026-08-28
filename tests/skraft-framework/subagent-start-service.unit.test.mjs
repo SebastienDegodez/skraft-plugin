@@ -22,6 +22,25 @@ const EAGER_CONFIG = {
   }
 }
 
+const INSTRUCTION_CONFIG = {
+  agentAliases: {
+    'acceptance-designer': 'acceptance-designer',
+    'skraft-orchestrator': 'skraft-orchestrator',
+  },
+  agentSkills: {
+    'acceptance-designer': [],
+    'skraft-orchestrator': [],
+  },
+  agentInstructions: {
+    'acceptance-designer': ['plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md'],
+    'skraft-orchestrator': [
+      'plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md',
+      'plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md',
+      'plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md',
+    ],
+  },
+}
+
 const FIXED_NOW = '2026-06-29T12:00:00.000Z'
 const clock = { now: () => FIXED_NOW }
 
@@ -95,4 +114,70 @@ test('handle called with no arguments returns allow (no agentName → no skills)
   const service = createSubagentStartService({ config: CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
   const result = await service.handle()
   assert.equal(result.decision, 'allow')
+})
+
+test('Claude injects only the companion instructions declared by the started agent', async () => {
+  const read = []
+  const instructionFileReader = { read: async (path) => { read.push(path); return `content:${path}` } }
+  const service = createSubagentStartService({
+    config: INSTRUCTION_CONFIG,
+    skillFileReader: nullSkillFileReader,
+    instructionFileReader,
+    auditWriter: nullAuditWriter,
+    clock,
+  })
+
+  const result = await service.handle({ agentName: 'acceptance-designer', harness: 'claude-code' })
+  assert.equal(result.decision, 'additionalContext')
+  assert.deepEqual(read, ['plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md'])
+  assert.doesNotMatch(result.context, /skraft-state/)
+})
+
+test('Claude resolves a plugin-prefixed orchestrator id and injects all three declared rules', async () => {
+  const read = []
+  const instructionFileReader = { read: async (path) => { read.push(path); return `content:${path}` } }
+  const service = createSubagentStartService({
+    config: INSTRUCTION_CONFIG,
+    skillFileReader: nullSkillFileReader,
+    instructionFileReader,
+    auditWriter: nullAuditWriter,
+    clock,
+  })
+
+  const result = await service.handle({ agentName: 'skraft:skraft-orchestrator', harness: 'claude-code' })
+  assert.equal(result.decision, 'additionalContext')
+  assert.equal(read.length, 3)
+  assert.match(result.context, /skraft-state/)
+  assert.match(result.context, /skraft-todo-sync/)
+  assert.match(result.context, /skraft-artifacts/)
+})
+
+test('Copilot relies on native rules and receives no duplicate instruction context', async () => {
+  const instructionFileReader = { read: async () => { throw new Error('must not read') } }
+  const service = createSubagentStartService({
+    config: INSTRUCTION_CONFIG,
+    skillFileReader: nullSkillFileReader,
+    instructionFileReader,
+    auditWriter: nullAuditWriter,
+    clock,
+  })
+
+  const result = await service.handle({ agentName: 'skraft-orchestrator', harness: 'copilot' })
+  assert.equal(result.decision, 'allow')
+})
+
+test('an unreadable Claude instruction fails open and emits an audit warning', async () => {
+  const audit = collectingWriter()
+  const instructionFileReader = { read: async () => { throw new Error('unreadable') } }
+  const service = createSubagentStartService({
+    config: INSTRUCTION_CONFIG,
+    skillFileReader: nullSkillFileReader,
+    instructionFileReader,
+    auditWriter: audit,
+    clock,
+  })
+
+  const result = await service.handle({ agentName: 'acceptance-designer', harness: 'claude-code' })
+  assert.equal(result.decision, 'allow')
+  assert.equal(audit.entries[0].eventType, 'InstructionReadFailed')
 })

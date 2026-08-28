@@ -122,10 +122,11 @@ Without a hook, the call would pass silently; review would catch it *after*.
 | Decisions (allow / deny / block / additionalContext) | ✅ Delivered (US1) |
 | JSONL append-only audit-writer | ✅ Delivered (US1) |
 | Config-loader cascade | ✅ Delivered (US1) |
-| Business handlers G1–G8 (per-phase invariants) | 🚧 Coming (US2+) |
+| Business handlers G1–G8 (per-phase invariants) | ✅ Delivered |
 
-Business handlers (which actually inspect payloads to enforce SKRAFT invariants) are
-planned in subsequent user stories.
+`SubagentStart` also bridges packaging differences. Copilot discovers path-scoped rules
+natively. Claude receives only companion rules declared by the starting agent, alongside
+its mandatory skills; unrelated rules are not added to context.
 
 ## Token economy — the hook angle
 
@@ -158,14 +159,12 @@ Hooks enforce **structural and behavioural invariants** — dispatch order, arti
 presence, reviewer verdict format, state-file integrity. They are not a general
 anti-hallucination system, and two important limits must be stated explicitly.
 
-### G2 and G3 are not yet active
+### G2 and G3 enforce declared methodology, not truth
 
-Guardrail G2 (skill injection at `SubagentStart`) and G3 (skill audit at
-`PostToolUse`) are planned but not implemented. A sub-agent therefore starts
-without a guaranteed skill set today: the expected methodological constraints
-may not be injected, which is a blind spot for *hallucination of method* — the
-agent operates correctly from the runtime's perspective but without the discipline
-the skill would have imposed.
+Guardrail G2 injects mandatory skills at `SubagentStart`; for Claude it also injects
+the starting agent's declared companion rules. G3 audits skill reads. Both fail open
+on hook failure so an internal runtime error cannot freeze the pipeline. They enforce
+declared method, but cannot prove that an agent applied that method correctly.
 
 ### Structural violations vs. factual hallucinations
 

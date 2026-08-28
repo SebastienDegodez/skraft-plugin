@@ -23,6 +23,7 @@ export default {
     'plugins/skraft-framework/src/application/subagent-start-service.mjs',
     'plugins/skraft-framework/src/application/subagent-stop-service.mjs',
     'plugins/skraft-framework/src/application/post-tool-use-service.mjs',
+    'plugins/skraft-framework/src/domain/instruction-policy.mjs',
     // US5 — State Transition Bridge (#60)
     'plugins/skraft-framework/src/domain/state-machine.mjs',
     'plugins/skraft-framework/src/domain/state-schema.mjs',

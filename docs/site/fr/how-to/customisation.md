@@ -48,6 +48,12 @@ Créez un fichier `.agent.md` en suivant les contrats visibles dans le [catalogu
 - Son contrat d'entrée/sortie
 - Ses invariants
 
+Écrivez le fichier canonique sous `plugins/skraft-framework/com.github.copilot/agents/`, puis
+exécutez `npm run agents:sync`. Ne modifiez jamais directement le miroir `.md` généré pour Claude.
+Placez les règles Copilot path-scoped sous `com.github.copilot/rules/` ; listez une règle dans
+`metadata.instructions` seulement si le même agent doit la recevoir via le hook Claude
+`SubagentStart`.
+
 ### 2. Enregistrer dans l'orchestrateur
 
 Ajoutez l'agent dans la configuration de l'orchestrateur, en précisant :

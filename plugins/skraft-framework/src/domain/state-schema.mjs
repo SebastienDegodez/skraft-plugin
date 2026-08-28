@@ -2,7 +2,7 @@ import { Ok, Err } from './result.mjs'
 
 // SINGLE SOURCE OF TRUTH for the state.json document shape (SoC — genesis A9/S4/#15).
 // This descriptor is the authority for the field set of the pipeline state; the prose
-// in plugins/skraft-framework/instructions/skraft-state.instructions.md documents the SAME fields and
+// in plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md documents the SAME fields and
 // MUST NOT redefine them independently. The alignment test
 // tests/skraft-framework/state-schema-instructions.acceptance.test.mjs fails if the
 // instruction schema block and this descriptor diverge, so the two can never drift.

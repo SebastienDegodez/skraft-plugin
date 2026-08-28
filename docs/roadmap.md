@@ -3,8 +3,8 @@
 Cette page liste les **13 user stories** du framework de garde-fous déterministes,
 avec leur gain, statut et milestone.
 
-> **Mise à jour :** quand une US est livrée, passez son statut à ✅ Livré
-> **et** cochez la case dans `plugins/skraft-framework/README.md`.
+> **Mise à jour :** quand une US est livrée, passez son statut à ✅ Livré.
+> Le README du plugin reste centré sur les capacités effectivement distribuées.
 
 ## 1. Vue d'ensemble
 
@@ -142,9 +142,9 @@ mockés, driver-adapter (spy audit writer + MockStdin/Stdout, normalisation payl
 **Gain :** `gain:dx` — lecteur comprend chaque garde-fou, son ancrage genesis,
 et comment en ajouter un nouveau.
 
-**Livrables :** `plugins/skraft-framework/README.md` (architecture hexagonale, events, config, fail modes,
-ancrage genesis A9/S4/S7, G1..G8, guide « comment ajouter un garde-fou »),
-`docs/roadmap.md` (cette page).
+**Livrables :** `docs/site/fr/explanation/hooks.md` et
+`docs/site/en/explanation/hooks.md` (architecture, events, config et fail modes),
+`docs/roadmap.md` (cette page), plus le README utilisateur du plugin.
 
 **Dépend de :** US5
 

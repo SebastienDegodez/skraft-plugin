@@ -94,7 +94,7 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       apply: { type: 'boolean', default: false },
       emit: { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
-      dir: { type: 'string', default: 'plugins/skraft-framework/agents' },
+      dir: { type: 'string', default: 'plugins/skraft-framework/com.github.copilot/agents' },
     },
   })
 
@@ -114,6 +114,9 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
     for (const p of active.filter((p) => p.changed)) {
       writeFileSync(p.path, applyModel(readFileSync(p.path, 'utf8'), p.resolvedModel))
       log(`pinned ${p.name} → ${p.resolvedModel}`)
+    }
+    if (active.some((p) => p.changed)) {
+      log('agent model sources changed — run npm run agents:sync before committing')
     }
     return 0
   }

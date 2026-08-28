@@ -123,7 +123,7 @@ describe('publishing evidence', () => {
         timestamp: '2026-08-03T10:00:00.000Z',
         verdicts: [
           {
-            subject: { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md' },
+            subject: { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md' },
             conclusive: true,
             underpowered: false,
             passed: true,

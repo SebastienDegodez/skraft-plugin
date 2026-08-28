@@ -29,24 +29,15 @@ skraft-plugin/
 │       ├── craft-discipline.md
 │       ├── create-custom-agent.md
 │       └── outside-in-tdd.md
-├── plugins/                               ← composants distribués par le plugin
-│   ├── agents/
-│   │   ├── skraft-orchestrator.agent.md
-│   │   ├── backlog-discoverer.agent.md
-│   │   ├── backlog-discoverer-reviewer.agent.md
-│   │   ├── backlog-planner.agent.md
-│   │   ├── backlog-planner-reviewer.agent.md
-│   │   ├── solution-architect.agent.md
-│   │   ├── solution-architect-reviewer.agent.md
-│   │   ├── acceptance-designer.agent.md
-│   │   ├── acceptance-designer-reviewer.agent.md
-│   │   ├── software-engineer.agent.md
-│   │   ├── software-engineer-reviewer.agent.md
-│   │   └── reviewer-lenses/
-│   │       ├── quality-gates-lens.agent.md
-│   │       ├── architecture-boundaries-lens.agent.md
-│   │       ├── test-integrity-lens.agent.md
-│   │       └── cold-reader-lens.agent.md
+├── plugins/skraft-framework/              ← composants distribués par le plugin
+│   ├── com.github.copilot/
+│   │   ├── agents/                        ← sources canoniques `.agent.md`
+│   │   ├── rules/                         ← règles path-scoped natives
+│   │   └── hooks/
+│   ├── com.anthropic.claude-code/
+│   │   ├── agents/                        ← miroir généré `.md`
+│   │   └── hooks/
+│   ├── src/                               ← runtime partagé
 │   └── skills/
 │       ├── acceptance-review-criteria/
 │       ├── architecture-decisions/
@@ -73,11 +64,22 @@ skraft-plugin/
             └── SKILL.md
 ```
 
-### 1.1 Distinction `plugins/` vs `.agents/`
+### 1.1 Projection par harness
+
+| Dossier | Rôle | Source de vérité |
+|---|---|---|
+| `com.github.copilot/agents/` | Agents Copilot natifs en `.agent.md`. | Oui. |
+| `com.anthropic.claude-code/agents/` | Agents Claude natifs en `.md`. | Non, miroir généré par `npm run agents:sync`. |
+| `com.github.copilot/rules/` | Règles Copilot path-scoped. | Oui. Claude reçoit seulement les règles déclarées par l'agent via `SubagentStart`. |
+
+Le catalogue, la config et les évaluations scannent uniquement la source Copilot afin de
+ne pas compter deux fois chaque identité. `npm run agents:check` bloque toute dérive du miroir.
+
+### 1.2 Distinction `plugins/` vs `.agents/`
 
 | Dossier | Rôle | Public |
 |---|---|---|
-| `plugins/skraft-framework/agents/` | Agents distribués (personas opérationnels). | Utilisateur final du plugin. |
+| `plugins/skraft-framework/com.github.copilot/agents/` | Agents distribués (personas opérationnels). | Utilisateur final du plugin. |
 | `plugins/skraft-framework/skills/` | Skills opérationnels chargés par les agents. | Agents distribués. |
 | `.agents/skills/` | Skills **méta** — utilisés pour *créer* ou *maintenir* les agents/skills du plugin. | Mainteneur du plugin. |
 
@@ -176,9 +178,9 @@ pour la matrice complète des skills consommés.
 
 | Composant | Présence physique | Statut |
 |---|---|---|
-| Orchestrateur `skraft-orchestrator` | `plugins/skraft-framework/agents/skraft-orchestrator.agent.md` | ✅ |
-| Agents SDLC (10 sous-agents) | `plugins/skraft-framework/agents/*.agent.md` | ✅ |
-| Reviewer lenses (4) | `plugins/skraft-framework/agents/reviewer-lenses/*.agent.md` | ✅ |
+| Orchestrateur `skraft-orchestrator` | `plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md` | ✅ |
+| Agents SDLC (10 sous-agents) | `plugins/skraft-framework/com.github.copilot/agents/*.agent.md` | ✅ |
+| Reviewer lenses (4) | `plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/*.agent.md` | ✅ |
 | Skills opérationnels | `plugins/skraft-framework/skills/*/SKILL.md` | ✅ |
 | Skill méta `create-custom-agent` | `.agents/skills/create-custom-agent/` | ✅ |
 | Hooks de gardiennage | — | 🚧 [roadmap §2](./roadmap.md#hooks) |

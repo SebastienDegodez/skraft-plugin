@@ -12,16 +12,16 @@ sidebar_position: 1
 
 | Hook | Trigger | Associated SKRAFT invariant | Status |
 |------|---------|-----------------------------|--------|
-| `SessionStart` | Copilot session start | SKRAFT_* config check | 🚧 Coming |
-| `SubagentStart` (orchestrator) | Orchestrator launches a sub-agent | Phase in order (G1) | 🚧 Coming |
-| `SubagentStart` (worker) | Sub-agent launches a worker | Task scope bounded | 🚧 Coming |
-| `PreToolUse` (engineer) | Before an engineer tool executes | No domain import from Infra; no forbidden network call | 🚧 Coming |
-| `PreToolUse` (reviewer) | Before a reviewer tool executes | Reviewer is read-only (no writes) | 🚧 Coming |
-| `PostToolUse` | After a tool executes | Audit-writer logs in JSONL | 🚧 Coming |
-| `SubagentStop` | Sub-agent stops | Verdict emitted before stop | ✅ Scaffold |
+| `SessionStart` | Session starts | Housekeeping and stale-state signals | ✅ Delivered |
+| `SubagentStart` | Sub-agent starts | Mandatory skills; Claude companion rules (G2) | ✅ Delivered |
+| `PreToolUse` (`Agent`) | Before agent dispatch | Phase order and session guard (G1/G8) | ✅ Delivered |
+| `PreToolUse` (`Bash`) | Before a shell tool executes | State protection (G7) | ✅ Delivered |
+| `PostToolUse` (`Read`) | After a file read | Skill audit (G3) | ✅ Delivered |
+| `PostToolUse` (`Agent`) | After agent dispatch | Orchestrator continuation (G6) | ✅ Delivered |
+| `SubagentStop` | Sub-agent stops | Artifact, verdict, and commit checks (G4/G5) | ✅ Delivered |
 
-`PreToolUse` and `SubagentStop` are the two events declared in
-`.github/hooks/skraft.json` (US1 scaffold). Business handlers are to be implemented (US2+).
+Harness manifests expose the event subset each runtime supports. All entries route to the
+same `src/cli/hook.mjs` composition root.
 
 ## Decision types (internal vocabulary)
 

@@ -30,11 +30,6 @@
     "skills"
   ],
   "extensions": {
-    "com.anthropic.claude-code": {
-      "hooks": "./com.anthropic.claude-code/hooks/hooks.json"
-    },
-    "com.github.copilot": {
-      "hooks": "./com.github.copilot/hooks/hooks.json"
-    }
+    "com.github.copilot": {}
   }
 }

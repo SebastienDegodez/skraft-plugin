@@ -55,8 +55,10 @@ Enter these commands in Claude Code:
 
 The plugin follows [**Agent Plugins 1.0**](https://agent-plugins.org/specification): the portable
 manifest lives at `plugins/skraft-framework/plugin.json` and each client that needs its own schema
-gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`). Skills, agents,
-instructions and the runtime are shared verbatim — nothing is duplicated.
+gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`). Skills and runtime
+stay shared. Copilot `.agent.md` files are canonical; Claude receives a deterministic `.md` mirror.
+Copilot loads path-scoped rules natively, while Claude receives only each agent's declared companion
+rules through `SubagentStart`.
 
 Harness-specific hooks live under their reverse-domain namespace:
 
@@ -84,7 +86,7 @@ All documentation lives in [`docs/`](./docs/).
 |---|---|
 | 📑 Documentation index | [`docs/README.md`](./docs/README.md) |
 | 🏗️ Plugin architecture | [`docs/architecture.md`](./docs/architecture.md) |
-| 🛠️ Guardrail framework (hexagonal, G1–G8, genesis anchoring) | [`plugins/skraft-framework/README.md`](./plugins/skraft-framework/README.md) |
+| 🔌 Distributed plugin (install, pipeline, guardrails, packaging) | [`plugins/skraft-framework/README.md`](./plugins/skraft-framework/README.md) |
 | 🛣️ Roadmap (13 US + status) | [`docs/roadmap.md`](./docs/roadmap.md) |
 | 🤝 Engineer/Reviewer cross-cutting view | [`docs/agents/software-engineer-and-reviewer.md`](./docs/agents/software-engineer-and-reviewer.md) |
 | 🎨 Documentation conventions | [`docs/conventions.md`](./docs/conventions.md) |

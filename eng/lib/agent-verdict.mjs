@@ -8,7 +8,7 @@
 // same page as skill evidence without a second renderer.
 
 /** Default location of an agent descriptor, from its id. */
-export const agentSourcePath = (id) => `plugins/skraft-framework/agents/${id}.agent.md`
+export const agentSourcePath = (id) => `plugins/skraft-framework/com.github.copilot/agents/${id}.agent.md`
 
 const unquote = (value) =>
   String(value ?? '')

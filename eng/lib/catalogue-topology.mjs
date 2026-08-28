@@ -152,9 +152,9 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
   const enrichedById = new Map(enrichedAgents.map((agent) => [agent.id, agent]))
   const backlogDiscoverer = enrichedById.get('backlog-discoverer')
   const backlogPlanner = enrichedById.get('backlog-planner')
-  if (!backlogDiscoverer) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-framework/agents', "Required product preflight agent 'backlog-discoverer' is missing"))
-  if (!backlogPlanner) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-framework/agents', "Required product preflight agent 'backlog-planner' is missing"))
-  if (!orchestrator) findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_MISSING', 'plugins/skraft-framework/agents', 'No agent declares the engineering phase order'))
+  if (!backlogDiscoverer) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', "Required product preflight agent 'backlog-discoverer' is missing"))
+  if (!backlogPlanner) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', "Required product preflight agent 'backlog-planner' is missing"))
+  if (!orchestrator) findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', 'No agent declares the engineering phase order'))
   for (const agent of [backlogDiscoverer, backlogPlanner].filter(Boolean)) {
     if (!agent.userInvocable || !agent.root) {
       findings.push(finding('error', 'PRODUCT_PREFLIGHT_NOT_STANDALONE', agent.path, `${agent.name} must be a directly invocable root`))
@@ -170,7 +170,7 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
       const configuredSpecialist = configured?.specialist ? resolveAgent(configured.specialist)?.id ?? configured.specialist : null
       const configuredReviewer = configured?.reviewer ? resolveAgent(configured.reviewer)?.id ?? configured.reviewer : null
       if (!expected || expected.specialist !== configuredSpecialist || expected.reviewer !== configuredReviewer) {
-        findings.push(finding('error', 'ENGINEERING_PHASE_AGENT_MISMATCH', orchestrator?.path ?? 'plugins/skraft-framework/agents', `Generated config for '${phase}' does not match descriptor dispatch topology`))
+        findings.push(finding('error', 'ENGINEERING_PHASE_AGENT_MISMATCH', orchestrator?.path ?? 'plugins/skraft-framework/com.github.copilot/agents', `Generated config for '${phase}' does not match descriptor dispatch topology`))
       }
     }
 

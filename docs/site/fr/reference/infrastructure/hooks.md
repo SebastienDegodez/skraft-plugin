@@ -12,16 +12,16 @@ sidebar_position: 1
 
 | Hook | Déclencheur | Invariant SKRAFT associé | Statut |
 |------|-------------|--------------------------|--------|
-| `SessionStart` | Démarrage d'une session Copilot | Vérification de la config SKRAFT_* | 🚧 À venir |
-| `SubagentStart` (orchestrateur) | Lancement d'un sous-agent par l'orchestrateur | Phase en ordre (G1) | 🚧 À venir |
-| `SubagentStart` (worker) | Lancement d'un worker par un sous-agent | Périmètre de la tâche borné | 🚧 À venir |
-| `PreToolUse` (engineer) | Avant exécution d'un outil par l'engineer | Aucun import domaine depuis Infra ; pas d'appel réseau interdit | 🚧 À venir |
-| `PreToolUse` (reviewer) | Avant exécution d'un outil par le reviewer | Reviewer en lecture seule (pas de write) | 🚧 À venir |
-| `PostToolUse` | Après exécution d'un outil | Audit-writer consigne en JSONL | 🚧 À venir |
-| `SubagentStop` | Fin d'un sous-agent | Verdict émis avant arrêt | ✅ Scaffold |
+| `SessionStart` | Démarrage d'une session | Entretien et signaux d'état obsolète | ✅ Livré |
+| `SubagentStart` | Démarrage d'un sous-agent | Skills obligatoires ; règles compagnes Claude (G2) | ✅ Livré |
+| `PreToolUse` (`Agent`) | Avant un dispatch d'agent | Ordre des phases et garde de session (G1/G8) | ✅ Livré |
+| `PreToolUse` (`Bash`) | Avant exécution d'un shell | Protection de l'état (G7) | ✅ Livré |
+| `PostToolUse` (`Read`) | Après lecture d'un fichier | Audit des skills (G3) | ✅ Livré |
+| `PostToolUse` (`Agent`) | Après un dispatch d'agent | Continuation de l'orchestrateur (G6) | ✅ Livré |
+| `SubagentStop` | Fin d'un sous-agent | Contrôles artefact, verdict et commit (G4/G5) | ✅ Livré |
 
-`PreToolUse` et `SubagentStop` sont les deux événements déclarés dans
-`.github/hooks/skraft.json` (scaffold US1). Les handlers métier sont à implémenter (US2+).
+Les manifests exposent le sous-ensemble d'événements pris en charge par chaque runtime.
+Toutes les entrées convergent vers la même composition root `src/cli/hook.mjs`.
 
 ## Types de décision (vocabulaire interne)
 

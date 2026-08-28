@@ -135,7 +135,7 @@ describe('comparison verdict', () => {
   })
 
   it('judges an agent by exactly the same bar as a skill', () => {
-    const agent = { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md' }
+    const agent = { kind: 'agent', name: 'skraft-orchestrator', path: 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md' }
     const verdict = comparisonVerdict(report({ wins: 8, ties: 1, losses: 0, trialCount: 9 }), agent)
 
     strictEqual(verdict.passed, true)

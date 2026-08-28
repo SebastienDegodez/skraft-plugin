@@ -31,39 +31,39 @@ before(() => {
     ['---', 'name: undescribed-skill', '---', '', '# Undescribed', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/demo.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/demo.agent.md'),
     ['---', 'name: Demo Agent', 'description: Runs the demo.', 'model: Claude Sonnet 5', 'user-invocable: false', '---', '', '# Demo agent', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'),
     ['---', 'name: Skraft - Orchestrator', 'description: Runs engineering.', 'user-invocable: true', 'agents:', '  - Research Specialist', '  - Delivery Specialist', '  - Delivery Reviewer', 'metadata:', '  phases:', '    - RESEARCH', '    - DELIVER', '  skills:', '    - demo-skill', '  inputs:', '    required:', '      - refined-story', '  outputs:', '    - evidence', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/research-specialist.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/research-specialist.agent.md'),
     ['---', 'name: Research Specialist', 'description: Researches.', 'userInvocable: false', 'metadata:', '  phase: RESEARCH', '  dispatched_by: Skraft - Orchestrator', '  skills:', '    - demo-skill', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/delivery-specialist.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/delivery-specialist.agent.md'),
     ['---', 'name: Delivery Specialist', 'description: Delivers.', 'metadata:', '  phase: DELIVER', '  dispatched_by: Skraft - Orchestrator', '  skills:', '    - demo-skill', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/delivery-reviewer.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/delivery-reviewer.agent.md'),
     ['---', 'name: Delivery Reviewer', 'description: Reviews delivery.', 'agents:', '  - Demo Lens', 'metadata:', '  phase: DELIVER-REVIEW', '  dispatched_by: Skraft - Orchestrator', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/backlog-discoverer.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md'),
     ['---', 'name: Backlog Discovery', 'description: Finds work.', 'userInvocable: true', 'metadata:', '  skills:', '    - demo-skill', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/backlog-planner.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/backlog-planner.agent.md'),
     ['---', 'name: Backlog Planning', 'description: Refines work.', 'user-invocable: true', 'metadata:', '  skills:', '    - demo-skill', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/workers/demo-worker.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/workers/demo-worker.agent.md'),
     ['---', 'name: Demo Worker', 'description: Supports delivery.', 'metadata:', '  dispatched_by: Delivery Specialist', '  skills:', '    - demo-skill', '---', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/agents/reviewer-lenses/demo-lens.agent.md'),
+    join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/demo-lens.agent.md'),
     ['---', 'name: Demo Lens', 'description: Reviews the demo.', 'metadata:', '  dispatched_by: Delivery Reviewer', '---', '', '# Demo lens', ''].join('\n'),
   )
   write(

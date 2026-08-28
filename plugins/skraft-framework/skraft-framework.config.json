@@ -23,6 +23,54 @@
       "reviewer": "Skraft - Software Engineer Reviewer"
     }
   },
+  "agentAliases": {
+    "acceptance-designer-reviewer": "Skraft - Acceptance Designer Reviewer",
+    "Skraft - Acceptance Designer Reviewer": "Skraft - Acceptance Designer Reviewer",
+    "acceptance-designer": "Skraft - Acceptance Designer",
+    "Skraft - Acceptance Designer": "Skraft - Acceptance Designer",
+    "backlog-discoverer-reviewer": "Skraft - Backlog Discoverer Reviewer",
+    "Skraft - Backlog Discoverer Reviewer": "Skraft - Backlog Discoverer Reviewer",
+    "backlog-discoverer": "Skraft - Backlog Discoverer",
+    "Skraft - Backlog Discoverer": "Skraft - Backlog Discoverer",
+    "backlog-planner-reviewer": "Skraft - Backlog Planner Reviewer",
+    "Skraft - Backlog Planner Reviewer": "Skraft - Backlog Planner Reviewer",
+    "backlog-planner": "Skraft - Backlog Planner",
+    "Skraft - Backlog Planner": "Skraft - Backlog Planner",
+    "brownfield-analyst": "Skraft - Brownfield Analyst",
+    "Skraft - Brownfield Analyst": "Skraft - Brownfield Analyst",
+    "brownfield-harness-builder": "Skraft - Brownfield Harness Builder",
+    "Skraft - Brownfield Harness Builder": "Skraft - Brownfield Harness Builder",
+    "brownfield-refactorer": "Skraft - Brownfield Refactorer",
+    "Skraft - Brownfield Refactorer": "Skraft - Brownfield Refactorer",
+    "architecture-boundaries-lens": "architecture-boundaries-lens",
+    "cold-reader-lens": "cold-reader-lens",
+    "discovery-completeness-lens": "discovery-completeness-lens",
+    "discovery-duplicate-lens": "discovery-duplicate-lens",
+    "discovery-prioritization-lens": "discovery-prioritization-lens",
+    "planning-ac-quality-lens": "planning-ac-quality-lens",
+    "planning-coherence-lens": "planning-coherence-lens",
+    "planning-dor-lens": "planning-dor-lens",
+    "planning-invest-lens": "planning-invest-lens",
+    "quality-gates-lens": "quality-gates-lens",
+    "test-integrity-lens": "test-integrity-lens",
+    "skraft-orchestrator": "Skraft - Orchestrator",
+    "Skraft - Orchestrator": "Skraft - Orchestrator",
+    "software-engineer-reviewer": "Skraft - Software Engineer Reviewer",
+    "Skraft - Software Engineer Reviewer": "Skraft - Software Engineer Reviewer",
+    "software-engineer": "Skraft - Software Engineer",
+    "Skraft - Software Engineer": "Skraft - Software Engineer",
+    "solution-architect-reviewer": "Skraft - Solution Architect Reviewer",
+    "Skraft - Solution Architect Reviewer": "Skraft - Solution Architect Reviewer",
+    "solution-architect": "Skraft - Solution Architect",
+    "Skraft - Solution Architect": "Skraft - Solution Architect",
+    "solution-researcher": "Skraft - Solution Researcher",
+    "Skraft - Solution Researcher": "Skraft - Solution Researcher",
+    "contract-fidelity-lens": "contract-fidelity-lens",
+    "contract-testing-worker": "contract-testing-worker",
+    "mock-fidelity-lens": "mock-fidelity-lens",
+    "mock-integration-worker": "mock-integration-worker",
+    "refactoring-worker": "refactoring-worker"
+  },
   "agentSkills": {
     "Skraft - Acceptance Designer Reviewer": [
       {
@@ -250,6 +298,71 @@
         "policy": "verify"
       }
     ],
+    "refactoring-worker": []
+  },
+  "agentInstructions": {
+    "Skraft - Acceptance Designer Reviewer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Acceptance Designer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Backlog Discoverer Reviewer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Backlog Discoverer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Backlog Planner Reviewer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Backlog Planner": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Brownfield Analyst": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Brownfield Harness Builder": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Brownfield Refactorer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "architecture-boundaries-lens": [],
+    "cold-reader-lens": [],
+    "discovery-completeness-lens": [],
+    "discovery-duplicate-lens": [],
+    "discovery-prioritization-lens": [],
+    "planning-ac-quality-lens": [],
+    "planning-coherence-lens": [],
+    "planning-dor-lens": [],
+    "planning-invest-lens": [],
+    "quality-gates-lens": [],
+    "test-integrity-lens": [],
+    "Skraft - Orchestrator": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md",
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md",
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Software Engineer Reviewer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Software Engineer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Solution Architect Reviewer": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Solution Architect": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "Skraft - Solution Researcher": [
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+    ],
+    "contract-fidelity-lens": [],
+    "contract-testing-worker": [],
+    "mock-fidelity-lens": [],
+    "mock-integration-worker": [],
     "refactoring-worker": []
   },
   "agentArtifacts": {

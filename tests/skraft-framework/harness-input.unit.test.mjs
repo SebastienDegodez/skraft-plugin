@@ -104,3 +104,30 @@ test('harness-input: an absent payload is still a payload', () => {
   assert.deepEqual(fromHarnessInput(), {})
   assert.deepEqual(fromHarnessInput({}), {})
 })
+
+test('harness-input: Claude agent_type becomes the framework agentName', () => {
+  const payload = fromHarnessInput({ agent_type: 'skraft:skraft-orchestrator' }, { env: {} })
+
+  assert.equal(payload.agentName, 'skraft:skraft-orchestrator')
+  assert.equal(payload.harness, 'claude-code')
+})
+
+test('harness-input: PLUGIN_ROOT identifies a Copilot hook process', () => {
+  const payload = fromHarnessInput(
+    { agentName: 'skraft-orchestrator' },
+    { env: { PLUGIN_ROOT: '/plugin' } },
+  )
+
+  assert.equal(payload.agentName, 'skraft-orchestrator')
+  assert.equal(payload.harness, 'copilot')
+})
+
+test('harness-input: an explicit harness overrides environment detection', () => {
+  const payload = fromHarnessInput(
+    { agent_name: 'agent', harness: 'claude-code' },
+    { env: { PLUGIN_ROOT: '/plugin' } },
+  )
+
+  assert.equal(payload.agentName, 'agent')
+  assert.equal(payload.harness, 'claude-code')
+})

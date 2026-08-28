@@ -48,6 +48,11 @@ Create an `.agent.md` file by following the contracts visible in the [agentic ca
 - Its entry/exit contract
 - Its invariants
 
+Author the canonical file under `plugins/skraft-framework/com.github.copilot/agents/`, then run
+`npm run agents:sync`. Never edit the generated Claude `.md` mirror directly. Put path-scoped
+Copilot rules under `com.github.copilot/rules/`; list a rule in `metadata.instructions` only when
+the same agent must receive it through Claude's `SubagentStart` hook.
+
 ### 2. Register in the orchestrator
 
 Add the agent in the orchestrator configuration, specifying:

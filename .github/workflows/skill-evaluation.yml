@@ -27,7 +27,10 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'plugins/skraft-framework/skills/**'
-      - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/com.github.copilot/agents/**'
+      - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
+      - 'plugins/skraft-framework/com.github.copilot/rules/**'
+      - 'plugins/skraft-framework/plugin.json'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skills/**'
       - 'tests/agents/**'

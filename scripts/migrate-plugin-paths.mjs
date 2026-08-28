@@ -13,13 +13,35 @@ export const obsoletePaths = Object.freeze([
   [`${legacyRoot}.claude-plugin`, `${frameworkRoot}.claude-plugin`],
   [`${legacyRoot}instructions`, `${frameworkRoot}instructions`],
   [`${legacyRoot}agents`, `${frameworkRoot}agents`],
+  [`${frameworkRoot}instructions`, `${frameworkRoot}com.github.copilot/rules`],
+  [`${frameworkRoot}agents`, `${frameworkRoot}com.github.copilot/agents`],
   [`${legacyRoot}skills`, `${frameworkRoot}skills`],
   [`${legacyRoot}hooks`, `${frameworkRoot}com.anthropic.claude-code/hooks`],
-  [`${frameworkRoot}hooks`, `${frameworkRoot}com.anthropic.claude-code/hooks`],
   [runtimeLogsPath, `${frameworkRoot}logs`],
   [`${legacyRoot}stryker.config.mjs`, `${frameworkRoot}src/stryker.config.mjs`],
   [`${legacyRoot}src`, `${frameworkRoot}src`],
 ])
+
+// Historical design records and generated evidence preserve paths as they existed at
+// the time. Rewriting them would falsify the audit trail and make generated outputs
+// dirty. Only live source, tests, manifests and handbook metadata participate.
+const excludedPrefixes = Object.freeze([
+  '.copilot-tracking/',
+  '.specs/',
+  '_site/',
+  'artifacts/',
+  'dashboard-data/',
+  'docs/adr/',
+  'docs/site/dashboard/data/',
+  'docs/superpowers/plans/',
+  'docs/superpowers/specs/',
+  'eval-results/',
+  'eval-results-pilot/',
+  'graphify-out/',
+])
+
+export const isHistoricalOrGeneratedPath = (relativePath) =>
+  excludedPrefixes.some((prefix) => relativePath.startsWith(prefix))
 
 export const rewritePluginPaths = (content) => obsoletePaths.reduce(
   (updated, [obsolete, replacement]) => updated.replaceAll(obsolete, replacement),
@@ -39,6 +61,7 @@ const trackedFiles = (root) => execFileSync('git', ['-C', root, 'ls-files', '-z'
 
 const textFilesWithObsoletePaths = (root) => trackedFiles(root).flatMap((relativePath) => {
   const path = join(root, relativePath)
+  if (isHistoricalOrGeneratedPath(relativePath)) return []
   if (!statSync(path).isFile()) return []
 
   const buffer = readFileSync(path)

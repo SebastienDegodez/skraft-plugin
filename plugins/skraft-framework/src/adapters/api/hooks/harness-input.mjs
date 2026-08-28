@@ -45,13 +45,26 @@ const asToolInput = (value) => {
 
 // Normalises a raw harness payload into the framework payload the services expect.
 // Fields already in framework vocabulary win, so an in-process caller is untouched.
-export const fromHarnessInput = (raw = {}) => {
+const harnessOf = (raw, env) => {
+  const explicit = raw.harness ?? raw.skraftHarness ?? env?.SKRAFT_HARNESS
+  if (explicit) return explicit
+  if (raw.agent_type != null || raw.agentType != null) return 'claude-code'
+  if (env?.PLUGIN_ROOT && !env?.CLAUDE_PLUGIN_ROOT) return 'copilot'
+  if (env?.CLAUDE_PLUGIN_ROOT && !env?.PLUGIN_ROOT) return 'claude-code'
+  return undefined
+}
+
+export const fromHarnessInput = (raw = {}, { env = process.env } = {}) => {
   const toolName = canonicalToolName(raw.toolName ?? raw.tool_name)
   const toolInput = asToolInput(raw.toolInput ?? raw.tool_input ?? raw.toolArgs ?? raw.tool_args)
+  const agentName = raw.agentName ?? raw.agent_name ?? raw.agentType ?? raw.agent_type
+  const harness = harnessOf(raw, env)
 
   return {
     ...raw,
     ...(toolName === undefined ? {} : { toolName }),
-    ...(toolInput === undefined ? {} : { toolInput })
+    ...(toolInput === undefined ? {} : { toolInput }),
+    ...(agentName === undefined ? {} : { agentName }),
+    ...(harness === undefined ? {} : { harness }),
   }
 }

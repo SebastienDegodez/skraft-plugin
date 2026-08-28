@@ -10,7 +10,7 @@ const SKILL_PATH_PATTERN = /^(?:plugins\/skraft-framework\/skills|tests\/skills)
 
 const AGENT_SUITE_PATTERN = /^tests\/agents\/([^/]+)\//
 
-const AGENT_SOURCE_PATTERN = /^plugins\/skraft-framework\/agents\//
+const AGENT_SOURCE_PATTERN = /^plugins\/skraft-framework\/(?:com\.github\.copilot|com\.anthropic\.claude-code)\/agents\//
 
 const posix = (path) => String(path ?? '').split('\\').join('/')
 

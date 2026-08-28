@@ -5,32 +5,32 @@ import { readFileSync } from 'node:fs'
 import { readFrontMatter } from '../lib/front-matter.mjs'
 
 const AGENT_PATHS = new Map([
-  ['skraft-orchestrator', 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'],
+  ['skraft-orchestrator', 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'],
   // Product-layer chain. These two are NOT dispatched by the orchestrator - the
   // developer invokes the discoverer directly and it dispatches its own reviewer
   // at its review gate. Both are allowlisted so a suite can name the reviewer in
   // `tags.subagents` and grade the dispatch instead of a narrated one.
-  ['backlog-discoverer', 'plugins/skraft-framework/agents/backlog-discoverer.agent.md'],
-  ['backlog-discoverer-reviewer', 'plugins/skraft-framework/agents/backlog-discoverer-reviewer.agent.md'],
-  ['discovery-completeness-lens', 'plugins/skraft-framework/agents/reviewer-lenses/discovery-completeness-lens.agent.md'],
-  ['discovery-prioritization-lens', 'plugins/skraft-framework/agents/reviewer-lenses/discovery-prioritization-lens.agent.md'],
-  ['discovery-duplicate-lens', 'plugins/skraft-framework/agents/reviewer-lenses/discovery-duplicate-lens.agent.md'],
-  ['solution-researcher', 'plugins/skraft-framework/agents/solution-researcher.agent.md'],
-  ['solution-architect', 'plugins/skraft-framework/agents/solution-architect.agent.md'],
-  ['solution-architect-reviewer', 'plugins/skraft-framework/agents/solution-architect-reviewer.agent.md'],
-  ['acceptance-designer', 'plugins/skraft-framework/agents/acceptance-designer.agent.md'],
-  ['acceptance-designer-reviewer', 'plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md'],
-  ['software-engineer', 'plugins/skraft-framework/agents/software-engineer.agent.md'],
-  ['software-engineer-reviewer', 'plugins/skraft-framework/agents/software-engineer-reviewer.agent.md'],
-  ['architecture-boundaries-lens', 'plugins/skraft-framework/agents/reviewer-lenses/architecture-boundaries-lens.agent.md'],
-  ['cold-reader-lens', 'plugins/skraft-framework/agents/reviewer-lenses/cold-reader-lens.agent.md'],
-  ['quality-gates-lens', 'plugins/skraft-framework/agents/reviewer-lenses/quality-gates-lens.agent.md'],
-  ['test-integrity-lens', 'plugins/skraft-framework/agents/reviewer-lenses/test-integrity-lens.agent.md'],
+  ['backlog-discoverer', 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md'],
+  ['backlog-discoverer-reviewer', 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer-reviewer.agent.md'],
+  ['discovery-completeness-lens', 'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/discovery-completeness-lens.agent.md'],
+  ['discovery-prioritization-lens', 'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/discovery-prioritization-lens.agent.md'],
+  ['discovery-duplicate-lens', 'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/discovery-duplicate-lens.agent.md'],
+  ['solution-researcher', 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'],
+  ['solution-architect', 'plugins/skraft-framework/com.github.copilot/agents/solution-architect.agent.md'],
+  ['solution-architect-reviewer', 'plugins/skraft-framework/com.github.copilot/agents/solution-architect-reviewer.agent.md'],
+  ['acceptance-designer', 'plugins/skraft-framework/com.github.copilot/agents/acceptance-designer.agent.md'],
+  ['acceptance-designer-reviewer', 'plugins/skraft-framework/com.github.copilot/agents/acceptance-designer-reviewer.agent.md'],
+  ['software-engineer', 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md'],
+  ['software-engineer-reviewer', 'plugins/skraft-framework/com.github.copilot/agents/software-engineer-reviewer.agent.md'],
+  ['architecture-boundaries-lens', 'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/architecture-boundaries-lens.agent.md'],
+  ['cold-reader-lens', 'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/cold-reader-lens.agent.md'],
+  ['quality-gates-lens', 'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/quality-gates-lens.agent.md'],
+  ['test-integrity-lens', 'plugins/skraft-framework/com.github.copilot/agents/reviewer-lenses/test-integrity-lens.agent.md'],
   // DELIVER-phase workers. Internal subagents (`user-invocable: false`), dispatched
   // by software-engineer; a suite selects one directly to grade the wiring it emits
   // without paying for the lead's whole TDD loop around it.
-  ['contract-testing-worker', 'plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md'],
-  ['mock-integration-worker', 'plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md'],
+  ['contract-testing-worker', 'plugins/skraft-framework/com.github.copilot/agents/workers/contract-testing/contract-testing-worker.agent.md'],
+  ['mock-integration-worker', 'plugins/skraft-framework/com.github.copilot/agents/workers/mocking/mock-integration-worker.agent.md'],
   // The handbook reconciler chain. It lives under .github/agents/ rather than
   // plugins/: it maintains the documentation of the plugin and is not itself part
   // of what ships to a consumer repository. The four specialists are here so a

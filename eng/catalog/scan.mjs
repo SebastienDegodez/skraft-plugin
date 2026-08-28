@@ -84,7 +84,9 @@ const skills = readdirSync(skillsRoot)
   })
 
 // ── Agents, workers, review lenses ─────────────────────────────────────────
-const agentsRoot = join(pluginRoot, 'agents')
+// Copilot extension tree is the canonical authored source. Claude's native `.md`
+// mirror is generated from it and must never be scanned too, or every identity doubles.
+const agentsRoot = join(pluginRoot, 'com.github.copilot/agents')
 const agentKind = (path) => {
   const relativePath = posix(relative(agentsRoot, path))
   if (relativePath.startsWith('workers/')) return 'worker'

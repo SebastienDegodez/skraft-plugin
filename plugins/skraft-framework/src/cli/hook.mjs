@@ -6,6 +6,7 @@ import { toHarnessOutput } from '../adapters/api/hooks/harness-output.mjs'
 import { fromHarnessInput } from '../adapters/api/hooks/harness-input.mjs'
 import { createJsonlAuditWriter } from '../adapters/infrastructure/jsonl-audit-writer.mjs'
 import { createSkillFileReader } from '../adapters/infrastructure/skill-file-reader.mjs'
+import { createInstructionFileReader } from '../adapters/infrastructure/instruction-file-reader.mjs'
 import { createJsonlTranscriptReader } from '../adapters/infrastructure/jsonl-transcript-reader.mjs'
 import { createSubagentStartService } from '../application/subagent-start-service.mjs'
 import { createSubagentStopService } from '../application/subagent-stop-service.mjs'
@@ -32,6 +33,7 @@ const trackingRoot = resolveTrackingRoot()
 const clock = { now: () => new Date().toISOString() }
 const auditWriter = createJsonlAuditWriter(auditLogPath)
 const skillFileReader = createSkillFileReader({ pluginsRoot: pluginRoot })
+const instructionFileReader = createInstructionFileReader({ pluginRoot })
 const stateReader = createJsonStateReader(trackingRoot)
 const realFilesystem = createRealFilesystem()
 // G5: recorded artifact paths are relative to the project's own tracking directory.
@@ -43,7 +45,13 @@ let frameworkConfig = {}
 try { frameworkConfig = JSON.parse(await readFile(configPath, 'utf8')) }
 catch { /* fail-open: missing config means no mandatory skills, hooks still allow */ }
 
-const subagentStart = createSubagentStartService({ config: frameworkConfig, skillFileReader, auditWriter, clock })
+const subagentStart = createSubagentStartService({
+  config: frameworkConfig,
+  skillFileReader,
+  instructionFileReader,
+  auditWriter,
+  clock,
+})
 const subagentStop  = createSubagentStopService({
   config: frameworkConfig,
   transcriptReaderFactory: createJsonlTranscriptReader,
