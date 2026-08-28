@@ -27,6 +27,7 @@ build / test / mutation commands and their evidence mapping):
 | Stack | Detection markers | Adapter | Status |
 |---|---|---|---|
 | .NET | `*.sln`, `*.slnx`, `**/*.csproj`, `Directory.Packages.props` | [quality-gates-dotnet](../quality-gates-dotnet/SKILL.md) (`dotnet build` / `dotnet test` / `dotnet stryker`) | supported |
+| JavaScript/TypeScript, including frontend | `package.json` plus `stryker.config.*` or an `@stryker-mutator/*` dependency | `quality-gates-javascript` (planned; must own StrykerJS config, reporter lifecycle, report-freshness proof, and frontend scope mapping) | NOT SUPPORTED |
 | Java | `pom.xml`, `build.gradle`, `build.gradle.kts` | _(quality-gates-java not yet provided)_ | NOT SUPPORTED |
 
 If multiple stacks coexist, run each adapter and aggregate results.

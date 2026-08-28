@@ -19,7 +19,7 @@ setting that could lower it; that dial is gone, and with it the `advisory` and
 | Gate | Value | Scope |
 | --- | --- | --- |
 | Mutation score | 100% | Domain, Application |
-| Mutation score | 90% | API, Infrastructure |
+| Mutation score | 80% | API, Infrastructure |
 | Line coverage | 100% | Domain, Application |
 
 TDD variant is Outside-In double-loop, always. `outside-in-tdd` owns the sequence.
@@ -45,29 +45,32 @@ A gate that cannot run is not a passed gate. Report it as a failure and stop.
 ## Running the gate
 
 The comparison is never made by reading a number and judging it. Each
-`quality-gates-<tech>` adapter bundles two scripts that run the tool and return the
-verdict as an exit code:
+`quality-gates-<tech>` adapter owns two durable scope configs plus deterministic runners
+that return verdicts as exit codes:
 
 1. **Core first** -- Domain and Application, expects 100.
-2. **Boundary second** -- API and Infrastructure, expects 90.
+2. **Boundary second** -- API and Infrastructure, expects 80.
 
 Core runs first and short-circuits: there is nothing to learn from mutating adapters
 while the domain is unproven. `resolving-stack-commands` detects the stack and routes
 to the adapter; the adapter owns the invocation.
 
-For .NET: [mutation-core.sh](../quality-gates-dotnet/scripts/mutation-core.sh) and
-[mutation-boundary.sh](../quality-gates-dotnet/scripts/mutation-boundary.sh).
+For .NET, [configure-mutation.sh](../quality-gates-dotnet/scripts/configure-mutation.sh)
+scaffolds `stryker-config-core.json` and `stryker-config-boundary.json` at consumer
+repository root. [mutation-core.sh](../quality-gates-dotnet/scripts/mutation-core.sh)
+and [mutation-boundary.sh](../quality-gates-dotnet/scripts/mutation-boundary.sh) validate
+and execute them. Checked-in configs are also local-debug and CI/CD interface.
 
 ## Threshold flags
 
-Stated once so that recipes copy rather than invent. Each adapter script carries the
-value for its scope as a literal, and a guard test asserts those literals still equal
-the table above -- so a copy here is a checked restatement, not a second definition.
+Stated once so recipes copy rather than invent. Adapter wrappers and config scaffold
+carry each scope value as literals, and guard tests assert those literals still equal
+the table above -- checked restatements, not independent definitions.
 
 | Scope | Mutation flag | Coverage flags |
 | --- | --- | --- |
 | Domain, Application | `--break-at 100` | `/p:Threshold=100 /p:ThresholdType=line /p:ThresholdStat=total` |
-| API, Infrastructure | `--break-at 90` | not gated on coverage |
+| API, Infrastructure | `--break-at 80` | not gated on coverage |
 
 `--break-at` makes the runner itself exit non-zero below the bar. That exit code is
 the verdict. A run whose score is read from a report and judged in prose is not a

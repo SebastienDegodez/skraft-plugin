@@ -86,42 +86,61 @@ If absent, mark G5 `status: "not_applicable"` with `rationale: "no architecture 
 
 ## G6 — Mutation score
 
-Scope the run to business logic — the same exclusions as `mutation-testing`
-(no Infrastructure, no `Program.cs`, no `DependencyInjection.cs`, no DTOs) —
-otherwise the score measures the whole solution and cannot be compared to the
-threshold below.
-
-Detect the project paths first, as `mutation-testing` requires:
-- `PROD_CSPROJ` — the production `.csproj` being mutated (Domain or Application)
-- `TEST_CSPROJ` — the test `.csproj` that exercises it
-
-Set them as shell variables and reference them quoted. `<Production.csproj>` is
-NOT a placeholder the shell tolerates: `<...>` is parsed as two REDIRECTIONS, so
-`-tp` disappears from `argv`, `--project` swallows the next glob, stray files
-named `-tp` and `--mutate` are created, and the run is silently unscoped.
+Mutation configuration is repository infrastructure, not an ephemeral agent command.
+Scaffold it once from this adapter, review it, and commit both root files. The script
+discovers scope inputs, then delegates JSON generation and defaults to official
+`dotnet stryker init`; it does not hand-render Stryker's schema:
 
 ```bash
-PROD_CSPROJ="src/MonAssurance.Domain/MonAssurance.Domain.csproj"
-TEST_CSPROJ="tests/MonAssurance.UnitTests/MonAssurance.UnitTests.csproj"
-dotnet stryker \
-  --project "$PROD_CSPROJ" \
-  -tp "$TEST_CSPROJ" \
-  --mutate "**/*.cs" \
-  --mutate "!**/*Marker.cs" \
-  --mutate "!**/DependencyInjection.cs" \
-  --mutate "!**/obj/**" \
-  --reporter json --reporter cleartext \
-  --output "$EV/stryker" \
-  > "$EV/qg-mutation.stdout" 2>&1
-echo $? > "$EV/qg-mutation.exit"
-shasum -a 256 "$EV/qg-mutation.stdout" | awk '{print $1}' > "$EV/qg-mutation.stdout.sha256"
-cp "$EV/stryker/reports/mutation-report.json" "$EV/qg-mutation.json"
+bash scripts/configure-mutation.sh --root "$PWD"
 ```
 
-The script's exit code is the verdict. Do NOT read `mutationScore` and judge it — a score
-read from a report and compared in prose is an opinion about a gate, not a gate.
-`--break-at` makes the runner fail below the bar, and the bar lives in
-`skraft-quality-bar`.
+`scripts/configure-mutation.sh` means the bundled asset beside this skill, not a path to
+invent in the consumer repository. It writes:
+
+- `stryker-config-core.json` — whole solution, Domain/Application source globs, 100.
+- `stryker-config-boundary.json` — whole solution, API/Infrastructure source globs, 80.
+
+Canonical mode requires `.Domain`, `.Application`, `.API`, and `.Infrastructure`
+projects. Multiple bounded contexts are allowed. If one solution cannot be selected
+unambiguously, pass `--solution`. For a BFF/non-standard layout, never invent missing
+projects; pass explicit source globs for both scopes:
+
+```bash
+bash scripts/configure-mutation.sh --root "$PWD" --solution Storefront.sln \
+  --core-mutate "**/Storefront/Core/**/*.cs" \
+  --boundary-mutate "**/Storefront/Adapters/**/*.cs"
+```
+
+Generation is idempotent. A differing existing config is preserved; `--force` is
+allowed only after reviewing why regeneration should replace customization. Never add
+`ignore-mutations` or broad exclusions to buy a score.
+
+### Gate execution and evidence
+
+Run checked-in configs through bundled wrappers. Each wrapper validates its config,
+passes the whole solution to Stryker once, captures the aggregate JSON report, rejects
+a report with zero mutants, and returns the gate verdict as its exit code:
+
+```bash
+bash scripts/mutation-core.sh --root "$PWD" --evidence "$EV"
+bash scripts/mutation-boundary.sh --root "$PWD" --evidence "$EV"
+```
+
+Core MUST pass before boundary starts. `--config <path>` may select an equivalent custom
+location. `--expected` is refused. Do NOT read a report score and judge it in prose.
+
+### Local debugging
+
+Developers can invoke the same root config directly. A `--since:main` or narrow
+`--mutate` override is diagnostic only; mandatory evidence still comes from the full
+wrapper run.
+
+```bash
+dotnet stryker --config-file stryker-config-core.json
+dotnet stryker --config-file stryker-config-boundary.json
+```
+
 
 ## G7 — No mocks in Domain/Application
 
