@@ -1,14 +1,14 @@
 using CheckoutPricing.Application;
 using CheckoutPricing.Domain;
 
-namespace CheckoutPricing.UnitTests.Architecture;
+namespace CheckoutPricing.IntegrationTests.Architecture;
 
 public sealed class CleanArchitectureDependencyTests
 {
     [Fact]
     public void DomainHasNoDependencyOnOuterLayers()
     {
-        var references = typeof(DomainMarker).Assembly.GetReferencedAssemblies();
+        var references = typeof(LoyaltyTier).Assembly.GetReferencedAssemblies();
 
         Assert.DoesNotContain(references, reference => reference.Name is "CheckoutPricing.Application" or "CheckoutPricing.Infrastructure" or "CheckoutPricing.Api");
     }

@@ -51,13 +51,13 @@ Enseignements distinctifs de la skill, et à qui appartient quoi :
 « quelle règle mérite son propre test »). Le portfolio se concentre donc sur ce que cette skill
 possède seule : **où le test vit physiquement, et avec quoi il a le droit de parler**.
 
-> **Incohérence relevée dans le dépôt, hors périmètre de ce travail.** Les fixtures de
-> `tests/skills/outside-in-tdd/fixtures/*/` placent leurs tests d'architecture dans
+> **Incohérence relevée dans le dépôt, puis corrigée.** Les cinq fixtures de
+> `tests/skills/outside-in-tdd/fixtures/*/` plaçaient leurs tests d'architecture dans
 > `tests/CheckoutPricing.UnitTests/Architecture/` — exactement la combinaison que
 > `clean-architecture-testing` classe comme interdite (« Architecture scanner test in UnitTest »).
-> Aucune de ces fixtures n'est touchée ici : la règle 10 de `create-skraft-eval` interdit de
-> modifier autre chose que l'instrument approuvé. Le point est signalé pour arbitrage séparé.
-> Conséquence directe sur ce plan : la fixture de S1 ne réutilise pas cette structure, qui
+> Elles ont été déplacées vers un projet `CheckoutPricing.IntegrationTests`, et les graders de
+> `outside-in-tdd/eval.yaml` qui les visaient ont suivi. Détail et vérifications : §14.
+> Conséquence sur ce plan : la fixture de S1 ne réutilise pas l'ancienne structure, qui
 > amorcerait la mauvaise réponse.
 
 ---
@@ -417,3 +417,60 @@ d'habilitation Copilot sur ce chemin, et le compte Copilot d'entreprise
 
 Les étapes A, B et C du §8 restent donc **à dérouler**, dans cet ordre et avec leurs
 approbations séparées. Rien de ce qui figure ici ne doit être lu comme un verdict.
+
+---
+
+## 14. Correction des fixtures `outside-in-tdd`
+
+Les cinq fixtures de `tests/skills/outside-in-tdd/fixtures/` livraient
+`CleanArchitectureDependencyTests.cs` dans `tests/CheckoutPricing.UnitTests/Architecture/`. Le
+dépôt enseignait donc, par l'exemple, la combinaison que la skill ici évaluée interdit
+explicitement : un scanner d'architecture dans la suite que l'équipe lance à chaque sauvegarde.
+
+**Ce qui a été fait**, dans les cinq fixtures :
+
+1. `CleanArchitectureDependencyTests.cs` déplacé vers
+   `tests/CheckoutPricing.IntegrationTests/Architecture/`, namespace suivi ;
+2. création de `tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj`,
+   **sans `coverlet.msbuild`** — la porte de couverture à 100 % est mesurée sur la suite rapide,
+   et un second collecteur écrivant sur la même sortie la déplacerait ;
+3. le projet est déclaré dans `CheckoutPricing.slnx` sous le dossier `/tests/` ;
+4. dans `outside-in-tdd/eval.yaml` : les entrées `environment.files` montent désormais le csproj
+   d'intégration et le test à son nouvel emplacement, et les trois graders
+   « Clean Architecture dependency tests are GREEN » ciblent le projet qui possède la règle.
+
+**Ce qui n'a délibérément pas changé :**
+
+- Les patterns `(?!Architecture/|bin/|obj/)` des graders de diff sur `UnitTests` sont conservés.
+  L'exclusion est désormais sans objet puisque plus rien n'est monté là, mais la retirer
+  rendrait ces graders satisfiables par un agent qui recréerait un dossier `Architecture/` dans
+  le projet rapide — c'est-à-dire par le placement que cette correction vient d'éliminer.
+- Le nommage pluriel `UnitTests` / `IntegrationTests` de cette famille de fixtures est conservé.
+  La skill écrit `<Context>.UnitTest` / `<Context>.IntegrationTest` au singulier ; renommer
+  aurait touché des dizaines de références de graders pour un écart cosmétique, sans rapport avec
+  la règle enfreinte.
+
+**Vérifications** (les cinq fixtures, localement) :
+
+| Fixture | Build | Porte d'archi depuis `IntegrationTests` | `dotnet test` sur la solution |
+|---|---|---|---|
+| `approved-discount-red` | OK | GREEN | 0 — inchangé |
+| `approved-gold-discount-missing` | OK | GREEN | 0 — inchangé |
+| `discount-fixture-theater` | OK | GREEN | 0 — inchangé |
+| `green-checkout-tests` | OK | GREEN | 0 — inchangé |
+| `placeholder-red-evidence` | OK | GREEN | 1 — **état RED voulu, préservé** |
+
+Deux fixtures (`approved-discount-red`, `approved-gold-discount-missing`) n'avaient que le test
+d'architecture dans `UnitTests` : ce projet démarre donc maintenant sans aucun test, ce qui est
+l'état correct pour un squelette où l'agent doit écrire le premier test rouge. Vérifié : un
+projet de test sans test n'échoue pas la solution, il émet un avertissement et sort en 0.
+
+La commande de couverture des graders — `dotnet test … /p:Threshold=100
+/p:Include=[CheckoutPricing.Domain]*%2c[CheckoutPricing.Application]*` — a été rejouée sur
+`green-checkout-tests` : sortie 0, couverture toujours calculée depuis `UnitTests` seul.
+
+`vally lint --eval-spec … --strict` passe sur `outside-in-tdd/eval.yaml` après modification.
+
+> **Portée de la mesure.** Ce déplacement change l'environnement de départ de plusieurs stimuli
+> de `outside-in-tdd`. Son verdict publié a été obtenu sur l'ancienne fixture ; il faudra le
+> rejouer avant de comparer un futur résultat à celui-là.

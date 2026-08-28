@@ -1,7 +1,7 @@
 using CheckoutPricing.Application;
 using CheckoutPricing.Domain;
 
-namespace CheckoutPricing.UnitTests.Architecture;
+namespace CheckoutPricing.IntegrationTests.Architecture;
 
 public sealed class CleanArchitectureDependencyTests
 {
