@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj" />
+    <Project Path="src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj" />
+    <Project Path="src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj" />
+    <Project Path="tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj" />
+  </Folder>
+</Solution>
