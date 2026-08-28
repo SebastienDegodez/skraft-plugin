@@ -17,7 +17,7 @@ Un document court qui enregistre une décision d'architecture : le contexte, les
 
 **Agent**
 Dans SKRAFT, un programme IA spécialisé qui joue un rôle précis dans le pipeline (ex : `backlog-discoverer`, `solution-architect`). Un agent *exécuteur* produit des artefacts ; un agent *reviewer* émet des verdicts.
-→ Voir [Agents]({{ "/fr/reference/agents/" | relative_url }})
+→ Voir [Agents]({{ "/fr/dashboard/" | relative_url }})
 
 **Artefact**
 Tout fichier produit par le pipeline : stories raffinées, ADR, scénarios BDD, code, rapports de tests. Les artefacts constituent la trace auditable du travail.
@@ -75,7 +75,7 @@ Vocabulaire partagé entre développeurs et experts métier, utilisé aussi bien
 
 **Lentille (reviewer lens)**
 Dans SKRAFT, un point de vue spécialisé appliqué lors de la revue adverse. Les 4 lentilles sont : `architecture-boundaries`, `cold-reader`, `quality-gates`, `test-integrity`.
-→ Voir [Lentilles]({{ "/fr/reference/lens" | relative_url }})
+→ Voir [Lentilles]({{ "/fr/dashboard/" | relative_url }})
 
 ## M
 
@@ -89,7 +89,7 @@ Ensemble de 9 règles de conception appliquées au code orienté objet pour forc
 
 **Outside-In TDD**
 Variante du TDD où les tests commencent au niveau le plus externe (comportement observable) et descendent vers les détails internes. Aussi appelé "London School TDD".
-→ Voir [Skills]({{ "/fr/reference/skills/" | relative_url }})
+→ Voir [Skills]({{ "/fr/dashboard/" | relative_url }})
 
 ## P
 
@@ -113,7 +113,7 @@ Travail à refaire parce qu'il n'a pas passé la revue. SKRAFT vise à réduire 
 
 **Skill**
 Dans SKRAFT, une pratique outillée encapsulée dans un fichier `SKILL.md`. Une skill définit quoi faire, comment le faire et quelles références la justifient.
-→ Voir [Skills]({{ "/fr/reference/skills/" | relative_url }})
+→ Voir [Skills]({{ "/fr/dashboard/" | relative_url }})
 
 **State.json**
 Fichier de traçabilité produit par le pipeline SKRAFT. Il contient l'historique des phases, artefacts et verdicts pour une User Story.

@@ -47,7 +47,7 @@ La tranche la plus fine qui traverse **toutes** les couches du système de bout 
 
 ### Barre qualité — seuils permanents
 
-Tous les seuils du framework sont écrits à un seul endroit — le skill [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}) — et s'appliquent à **tous** les dépôts, toutes les stories et toutes les phases. Il n'existe plus de molette de rigueur : le `depthTier` qui pouvait abaisser la barre a été supprimé, avec les niveaux `advisory` et `warning` et la rationale qui achetait une exemption.
+Tous les seuils du framework sont écrits à un seul endroit — le skill [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar) — et s'appliquent à **tous** les dépôts, toutes les stories et toutes les phases. Il n'existe plus de molette de rigueur : le `depthTier` qui pouvait abaisser la barre a été supprimé, avec les niveaux `advisory` et `warning` et la rationale qui achetait une exemption.
 
 | Porte | Valeur | Périmètre |
 | --- | --- | --- |
@@ -69,11 +69,11 @@ Le substrat d'exécution ([microsoft/hve-core](https://github.com/microsoft/hve-
 
 ### Triage d'issues
 
-Assigner labels, priorité, estimation d'effort et détecter les doublons. Le `backlog-discoverer` produit un rapport de triage actionnable à partir du flux brut d'idées (issues, BRD, PRD). Skill : [issue-triage]({{ "/fr/reference/skills/" | relative_url }}).
+Assigner labels, priorité, estimation d'effort et détecter les doublons. Le `backlog-discoverer` produit un rapport de triage actionnable à partir du flux brut d'idées (issues, BRD, PRD). Skill : [issue-triage]({{ "/fr/dashboard/" | relative_url }}#skill-issue-triage).
 
 ### Détection de doublons & artifact-driven discovery
 
-Avant de créer une story, on cherche dans l'historique Git et les issues existantes pour éviter la redondance. Skill : [github-search-protocol]({{ "/fr/reference/skills/" | relative_url }}) (syntaxe de recherche GitHub, pagination, ranking).
+Avant de créer une story, on cherche dans l'historique Git et les issues existantes pour éviter la redondance. Skill : [github-search-protocol]({{ "/fr/dashboard/" | relative_url }}#skill-github-search-protocol) (syntaxe de recherche GitHub, pagination, ranking).
 
 ---
 
@@ -81,7 +81,7 @@ Avant de créer une story, on cherche dans l'historique Git et les issues exista
 
 ### User Story & critères d'acceptation
 
-Transformer une issue brute en story structurée avec des critères d'acceptation vérifiables. Skill : [issue-refinement]({{ "/fr/reference/skills/" | relative_url }}).
+Transformer une issue brute en story structurée avec des critères d'acceptation vérifiables. Skill : [issue-refinement]({{ "/fr/dashboard/" | relative_url }}#skill-issue-refinement).
 
 ### INVEST
 
@@ -93,7 +93,7 @@ Une grille de 8 points qui détermine si une story est prête à être remise à
 
 ### MoSCoW & Sprint Planning
 
-Priorisation **Mu**st / **Sh**ould / **C**ould / **W**on't, gestion des milestones, suivi de vélocité et résolution des graphes de dépendances entre stories. Skill : [sprint-planning]({{ "/fr/reference/skills/" | relative_url }}).
+Priorisation **Mu**st / **Sh**ould / **C**ould / **W**on't, gestion des milestones, suivi de vélocité et résolution des graphes de dépendances entre stories. Skill : [sprint-planning]({{ "/fr/dashboard/" | relative_url }}#skill-sprint-planning).
 
 ---
 
@@ -130,7 +130,7 @@ Méthode de modélisation qui décrit le système comme un flux **Command → Ev
 - **Stratégique** : découpage en **Bounded Contexts**, context mapping, langage ubiquitaire.
 - **Tactique** : **Aggregate**, **Entity**, **Value Object**, **Domain Event**, **Repository**.
 
-Le `solution-architect` modélise ces éléments ; le skill [architecture-patterns]({{ "/fr/reference/skills/" | relative_url }}) couvre leur composition.
+Le `solution-architect` modélise ces éléments ; le skill [architecture-patterns]({{ "/fr/dashboard/" | relative_url }}#skill-architecture-patterns) couvre leur composition.
 
 ### Clean Architecture
 
@@ -139,15 +139,15 @@ Isolation stricte du métier vis-à-vis de l'infrastructure via la **règle de d
 
 ### Event Sourcing
 
-Persister la suite des événements plutôt que l'état final, reconstruit par rejeu. Souvent combiné à CQRS pour les domaines à fort besoin d'auditabilité. Couvert par [architecture-patterns]({{ "/fr/reference/skills/" | relative_url }}).
+Persister la suite des événements plutôt que l'état final, reconstruit par rejeu. Souvent combiné à CQRS pour les domaines à fort besoin d'auditabilité. Couvert par [architecture-patterns]({{ "/fr/dashboard/" | relative_url }}#skill-architecture-patterns).
 
 ### ADR — Architecture Decision Record
 
-Chaque décision structurante est figée dans un ADR immuable capturant **contexte → options → décision → conséquences**, avec un cycle de statuts (proposed → accepted → superseded). Garantit que le *pourquoi* des choix reste traçable. Skill : [architecture-decisions]({{ "/fr/reference/skills/" | relative_url }}).
+Chaque décision structurante est figée dans un ADR immuable capturant **contexte → options → décision → conséquences**, avec un cycle de statuts (proposed → accepted → superseded). Garantit que le *pourquoi* des choix reste traçable. Skill : [architecture-decisions]({{ "/fr/dashboard/" | relative_url }}#skill-architecture-decisions).
 
 ### Fitness des patterns
 
-Choisir un pattern, c'est évaluer son adéquation au problème (pas un réflexe). Le reviewer vérifie cette fitness via [architecture-review-criteria]({{ "/fr/reference/skills/" | relative_url }}).
+Choisir un pattern, c'est évaluer son adéquation au problème (pas un réflexe). Le reviewer vérifie cette fitness via [architecture-review-criteria]({{ "/fr/dashboard/" | relative_url }}#skill-architecture-review-criteria).
 
 ---
 
@@ -155,15 +155,15 @@ Choisir un pattern, c'est évaluer son adéquation au problème (pas un réflexe
 
 ### BDD & Gherkin
 
-Décrire le comportement attendu en langage **Given / When / Then**, aligné sur le langage du domaine. L'`acceptance-designer` produit des scénarios exécutables. Skill : [bdd-methodology]({{ "/fr/reference/skills/" | relative_url }}).
+Décrire le comportement attendu en langage **Given / When / Then**, aligné sur le langage du domaine. L'`acceptance-designer` produit des scénarios exécutables. Skill : [bdd-methodology]({{ "/fr/dashboard/" | relative_url }}#skill-bdd-methodology).
 
 ### Test Design Mandates
 
-Matrice de couverture qui assigne **chaque comportement au bon niveau** de la Clean Architecture, sans redondance, et planifie l'ordre d'implémentation outside-in. Skill : [test-design-mandates]({{ "/fr/reference/skills/" | relative_url }}).
+Matrice de couverture qui assigne **chaque comportement au bon niveau** de la Clean Architecture, sans redondance, et planifie l'ordre d'implémentation outside-in. Skill : [test-design-mandates]({{ "/fr/dashboard/" | relative_url }}#skill-test-design-mandates).
 
 ### Contract Testing
 
-Vérifier que deux services respectent un contrat partagé (consumer/provider) sans test d'intégration complet. Skill : [contract-testing]({{ "/fr/reference/skills/" | relative_url }}).
+Vérifier que deux services respectent un contrat partagé (consumer/provider) sans test d'intégration complet. Skill : [contract-testing]({{ "/fr/dashboard/" | relative_url }}#skill-contract-testing).
 
 ---
 
@@ -171,14 +171,14 @@ Vérifier que deux services respectent un contrat partagé (consumer/provider) s
 
 ### Outside-In TDD (double boucle)
 
-On commence par le test d'acceptation (boucle externe, comportement observable) et on laisse le design interne émerger via la boucle TDD interne. Skill : [outside-in-tdd]({{ "/fr/reference/skills/" | relative_url }}).
+On commence par le test d'acceptation (boucle externe, comportement observable) et on laisse le design interne émerger via la boucle TDD interne. Skill : [outside-in-tdd]({{ "/fr/dashboard/" | relative_url }}#skill-outside-in-tdd).
 
 > « Start with an acceptance test that exercises the functionality you want to build. »
 > — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
 
 ### RED → GREEN → REFACTOR
 
-Le rythme fondamental du TDD : écrire un test qui échoue, puis le faire passer par une synthèse propre en un seul geste — pas de code sale suivi d'un refactoring. Skill : [outside-in-tdd]({{ "/fr/reference/skills/" | relative_url }}).
+Le rythme fondamental du TDD : écrire un test qui échoue, puis le faire passer par une synthèse propre en un seul geste — pas de code sale suivi d'un refactoring. Skill : [outside-in-tdd]({{ "/fr/dashboard/" | relative_url }}#skill-outside-in-tdd).
 
 > « Write new code only if an automated test has failed; eliminate duplication. »
 > — Beck, K., *Test-Driven Development by Example*, 2003.
@@ -187,7 +187,7 @@ Le rythme fondamental du TDD : écrire un test qui échoue, puis le faire passer
 
 Le Mutation Score mesure l'**efficacité** des tests (pas seulement la couverture) en injectant des défauts et en vérifiant que les tests les détectent. Les seuils sont permanents : **100 % sur Domain et Application**, **80 % sur API et Infrastructure**.
 
-La mesure ne se lit pas dans un rapport. Chaque adaptateur `quality-gates-<tech>` embarque **deux scripts séquencés** — *core* d'abord (Domain, Application), *boundary* ensuite (API, Infrastructure) — qui portent leur propre valeur attendue et la passent au `--break-at` du runner : c'est le **code de sortie** du runner qui fait verdict. *Core* passe en premier et court-circuite la suite, car muter les adaptateurs tant que le domaine n'est pas prouvé n'apprend rien. Pour .NET : `mutation-core.sh` et `mutation-boundary.sh`. Skills : [mutation-testing]({{ "/fr/reference/skills/" | relative_url }}), [quality-gates-dotnet]({{ "/fr/reference/skills/" | relative_url }}), [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}).
+La mesure ne se lit pas dans un rapport. Chaque adaptateur `quality-gates-<tech>` embarque **deux scripts séquencés** — *core* d'abord (Domain, Application), *boundary* ensuite (API, Infrastructure) — qui portent leur propre valeur attendue et la passent au `--break-at` du runner : c'est le **code de sortie** du runner qui fait verdict. *Core* passe en premier et court-circuite la suite, car muter les adaptateurs tant que le domaine n'est pas prouvé n'apprend rien. Pour .NET : `mutation-core.sh` et `mutation-boundary.sh`. Skills : [mutation-testing]({{ "/fr/dashboard/" | relative_url }}#skill-mutation-testing), [quality-gates-dotnet]({{ "/fr/dashboard/" | relative_url }}#skill-quality-gates-dotnet), [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar).
 
 > « Mutation testing provides high-fidelity assessment of test suite effectiveness. »
 > — Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
@@ -201,12 +201,12 @@ Neuf règles de discipline qui améliorent le design objet au quotidien (un seul
 
 ### Craft Discipline & Test Refactoring
 
-- [craft-discipline]({{ "/fr/reference/skills/" | relative_url }}) : checkpoints d'auto-discipline que le software-engineer applique à son propre travail avant commit.
-- [test-refactoring-catalog]({{ "/fr/reference/skills/" | relative_url }}) : refactorer les tests (extraction de helpers, renommage métier, déduplication) sans changer la couverture.
+- [craft-discipline]({{ "/fr/dashboard/" | relative_url }}#skill-craft-discipline) : checkpoints d'auto-discipline que le software-engineer applique à son propre travail avant commit.
+- [test-refactoring-catalog]({{ "/fr/dashboard/" | relative_url }}#skill-test-refactoring-catalog) : refactorer les tests (extraction de helpers, renommage métier, déduplication) sans changer la couverture.
 
 ### Quality Gates & Evidence Contract
 
-Un journal de preuves structuré atteste l'état des portes qualité (tests, build, mutation, intégrité RED/GREEN). L'engineer le **remplit** (writer), le reviewer le **lit** (reader). Le journal enregistre des résultats, il ne fixe pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/reference/skills/" | relative_url }}). Skills : [quality-gates-evidence-contract]({{ "/fr/reference/skills/" | relative_url }}), [resolving-stack-commands]({{ "/fr/reference/skills/" | relative_url }}).
+Un journal de preuves structuré atteste l'état des portes qualité (tests, build, mutation, intégrité RED/GREEN). L'engineer le **remplit** (writer), le reviewer le **lit** (reader). Le journal enregistre des résultats, il ne fixe pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar). Skills : [quality-gates-evidence-contract]({{ "/fr/dashboard/" | relative_url }}#skill-quality-gates-evidence-contract), [resolving-stack-commands]({{ "/fr/dashboard/" | relative_url }}#skill-resolving-stack-commands).
 
 ---
 
@@ -214,15 +214,15 @@ Un journal de preuves structuré atteste l'état des portes qualité (tests, bui
 
 ### Adversarial Review Lenses
 
-Chaque reviewer produit un verdict via **4 lentilles indépendantes** puis une synthèse pondérée. Les lentilles regardent le même artefact sous des angles différents (quality-gates, architecture-boundaries, test-integrity, cold-reader). Les quatre s'exécutent sur **chaque** revue : il n'y a pas de mode réduit ni de fan-out variable. Skill : [adversarial-review-lenses]({{ "/fr/reference/skills/" | relative_url }}).
+Chaque reviewer produit un verdict via **4 lentilles indépendantes** puis une synthèse pondérée. Les lentilles regardent le même artefact sous des angles différents (quality-gates, architecture-boundaries, test-integrity, cold-reader). Les quatre s'exécutent sur **chaque** revue : il n'y a pas de mode réduit ni de fan-out variable. Skill : [adversarial-review-lenses]({{ "/fr/dashboard/" | relative_url }}#skill-adversarial-review-lenses).
 
 ### Review Criteria par phase
 
-Chaque phase possède sa grille de gates et son barème : [discovery-review-criteria]({{ "/fr/reference/skills/" | relative_url }}), [planning-review-criteria]({{ "/fr/reference/skills/" | relative_url }}), [architecture-review-criteria]({{ "/fr/reference/skills/" | relative_url }}), [acceptance-review-criteria]({{ "/fr/reference/skills/" | relative_url }}).
+Chaque phase possède sa grille de gates et son barème : [discovery-review-criteria]({{ "/fr/dashboard/" | relative_url }}#skill-discovery-review-criteria), [planning-review-criteria]({{ "/fr/dashboard/" | relative_url }}#skill-planning-review-criteria), [architecture-review-criteria]({{ "/fr/dashboard/" | relative_url }}#skill-architecture-review-criteria), [acceptance-review-criteria]({{ "/fr/dashboard/" | relative_url }}#skill-acceptance-review-criteria).
 
 ### Preuves Playwright
 
-Pour les comportements UI, les captures et traces Playwright servent de preuve objective de fonctionnement. Skill : [playwright-evidence]({{ "/fr/reference/skills/" | relative_url }}).
+Pour les comportements UI, les captures et traces Playwright servent de preuve objective de fonctionnement. Skill : [playwright-evidence]({{ "/fr/dashboard/" | relative_url }}#skill-playwright-evidence).
 
 ---
 
@@ -231,4 +231,4 @@ Pour les comportements UI, les captures et traces Playwright servent de preuve o
 - [Le pipeline phase par phase]({{ "/fr/explanation/pipeline/" | relative_url }})
 - [Architecture du système]({{ "/fr/explanation/architecture" | relative_url }})
 - [Clean Architecture en détail]({{ "/fr/explanation/clean-architecture" | relative_url }})
-- [Référence des skills]({{ "/fr/reference/skills/" | relative_url }})
+- [Catalogue agentique]({{ "/fr/dashboard/" | relative_url }})

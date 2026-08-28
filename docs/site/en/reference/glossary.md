@@ -17,7 +17,7 @@ A short document that records an architectural decision: the context, the option
 
 **Agent**
 In SKRAFT, a specialised AI program that plays a precise role in the pipeline (e.g. `backlog-discoverer`, `solution-architect`). An *executor* agent produces artifacts; a *reviewer* agent emits verdicts.
-→ See [Agents]({{ "/en/reference/agents/" | relative_url }})
+→ See [Agents]({{ "/en/dashboard/" | relative_url }})
 
 **Artifact**
 Any file produced by the pipeline: refined stories, ADRs, BDD scenarios, code, test reports. Artifacts constitute the auditable trace of the work.
@@ -72,7 +72,7 @@ A structured language for writing BDD scenarios: `Given` (context), `When` (acti
 
 **Lens (reviewer lens)**
 In SKRAFT, a specialised viewpoint applied during adversarial review. The 4 lenses are: `architecture-boundaries`, `cold-reader`, `quality-gates`, `test-integrity`.
-→ See [Lenses]({{ "/en/reference/lens" | relative_url }})
+→ See [Lenses]({{ "/en/dashboard/" | relative_url }})
 
 ## M
 
@@ -86,7 +86,7 @@ A set of 9 design rules applied to object-oriented code to enforce structural qu
 
 **Outside-In TDD**
 A TDD variant where tests start at the outermost level (observable behaviour) and descend to internal details. Also called "London School TDD".
-→ See [Skills]({{ "/en/reference/skills/" | relative_url }})
+→ See [Skills]({{ "/en/dashboard/" | relative_url }})
 
 ## P
 
@@ -110,7 +110,7 @@ A read-only AI agent that emits a verdict (`APPROVE`, `CONDITIONAL_APPROVE`, `RE
 
 **Skill**
 In SKRAFT, a tooled practice encapsulated in a `SKILL.md` file. A skill defines what to do, how to do it, and which references justify it.
-→ See [Skills]({{ "/en/reference/skills/" | relative_url }})
+→ See [Skills]({{ "/en/dashboard/" | relative_url }})
 
 **State.json**
 A traceability file produced by the SKRAFT pipeline. It contains the history of phases, artifacts, and verdicts for a User Story.
