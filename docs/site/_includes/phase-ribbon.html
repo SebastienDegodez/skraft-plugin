@@ -1,11 +1,22 @@
 {%- comment -%}
 Phase ribbon — "vous êtes ici". Usage:
   {% include phase-ribbon.html current="discover" %}
-Reads page.lang for link localisation. Labels are language-neutral (DISCOVER…).
+Reads page.lang for link localisation. Product preflight and engineering remain
+separate; `current` selects the matching sequence.
 {%- endcomment -%}
-{%- assign phases = "discover,discuss,design,distill,deliver" | split: "," -%}
-{%- assign labels = "DISCOVER,DISCUSS,DESIGN,DISTILL,DELIVER" | split: "," -%}
+{%- if include.current == "discover" or include.current == "discuss" -%}
+  {%- assign phases = "discover,discuss" | split: "," -%}
+  {%- assign labels = "DISCOVER,DISCUSS" | split: "," -%}
+  {%- assign optional_label = "optional product preflight" -%}
+  {%- if page.lang == "fr" -%}{%- assign optional_label = "préparation produit optionnelle" -%}{%- endif -%}
+{%- else -%}
+  {%- assign phases = "research,design,distill,deliver" | split: "," -%}
+  {%- assign labels = "RESEARCH,DESIGN,DISTILL,DELIVER" | split: "," -%}
+  {%- assign optional_label = "engineering pipeline" -%}
+  {%- if page.lang == "fr" -%}{%- assign optional_label = "pipeline d'ingénierie" -%}{%- endif -%}
+{%- endif -%}
 <nav class="phase-ribbon" aria-label="{% if page.lang == 'en' %}Pipeline phases{% else %}Phases du pipeline{% endif %}">
+  <span class="phase-ribbon__scope">{{ optional_label }}</span>
   {%- for p in phases -%}
     {%- assign label = labels[forloop.index0] -%}
     {%- assign href = '/' | append: page.lang | append: '/explanation/pipeline/' | append: p -%}

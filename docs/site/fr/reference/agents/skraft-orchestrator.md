@@ -5,30 +5,30 @@ title: "skraft-orchestrator"
 persona: tech-lead
 ---
 
-# skraft-orchestrator
+# `skraft-orchestrator`
 
-> Orchestre l'intégralité du pipeline SDLC, de DISCOVER à DELIVER, en dispatchant les commandes vers les agents spécialisés.
+> Orchestre le pipeline d'ingénierie RESEARCH → DESIGN → DISTILL → DELIVER en dispatchant les travaux vers les agents spécialisés.
 
 ## Quand l'utiliser
 
-- Commande `/skraft` ou assignation d'un numéro d'issue
-- Point d'entrée unique du pipeline — toutes les phases
+- Sélection de l'agent `skraft-orchestrator` avec une story affinée
+- Point d'entrée unique du pipeline d'ingénierie
 - Persona : tech-lead
 
 ## Contrat d'entrée
 
-- Numéro d'issue GitHub ou commande `/skraft`
+- Story affinée ou numéro de son issue GitHub
 - Repository avec structure de projet initialisée
 
 ## Contrat de sortie
 
-- Toutes les phases complétées (DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER)
+- Phases requises complétées dans l'ordre RESEARCH → DESIGN → DISTILL → DELIVER
 - Artefacts commités sur la branche de travail
 - `state.json` mis à jour avec le statut final
 
 ## Invariants
 
-- **Ordre des phases** — DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER, jamais d'inversion
+- **Ordre des phases** — RESEARCH → DESIGN → DISTILL → DELIVER, jamais d'inversion
 - **CQS** — L'orchestrateur dispatche des commandes mais n'écrit jamais d'artefacts directement ; il lit `state.json` pour décider de la prochaine action
 - **Retry borné** — Chaque cycle exécuteur → reviewer a un nombre maximal de tentatives
 - Voir [Customisation]({{ "/fr/how-to/customisation" | relative_url }}) pour la liste complète
