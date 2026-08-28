@@ -126,8 +126,8 @@ node "<plugin-root>/src/cli/health-check.mjs"
 ```
 
 Run these from the consumer repository so SKRAFT resolves that repository's tracking
-state. Claude Code supplies `<plugin-root>` as `$CLAUDE_PLUGIN_ROOT`; Copilot supplies it
-as `$PLUGIN_ROOT`.
+state. Installed Claude Code and Copilot plugin hooks supply `<plugin-root>` as
+`$CLAUDE_PLUGIN_ROOT`.
 
 Repository configuration lives in `skraft-config.json`. The supported tracking layout is
 `namespaced`; quality thresholds and engineering invariants are deliberately not user-relaxable.

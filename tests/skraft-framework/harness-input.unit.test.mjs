@@ -101,8 +101,8 @@ test('harness-input: unrelated fields survive the translation', () => {
 })
 
 test('harness-input: an absent payload is still a payload', () => {
-  assert.deepEqual(fromHarnessInput(), {})
-  assert.deepEqual(fromHarnessInput({}), {})
+  assert.deepEqual(fromHarnessInput(undefined, { env: {} }), {})
+  assert.deepEqual(fromHarnessInput({}, { env: {} }), {})
 })
 
 test('harness-input: Claude agent_type becomes the framework agentName', () => {
@@ -119,6 +119,15 @@ test('harness-input: PLUGIN_ROOT identifies a Copilot hook process', () => {
   )
 
   assert.equal(payload.agentName, 'skraft-orchestrator')
+  assert.equal(payload.harness, 'copilot')
+})
+
+test('harness-input: installed Copilot wire shape wins over its shared Claude root variable', () => {
+  const payload = fromHarnessInput(
+    { toolName: 'read', toolArgs: '{"filePath":"README.md"}' },
+    { env: { CLAUDE_PLUGIN_ROOT: '/installed/plugin' } },
+  )
+
   assert.equal(payload.harness, 'copilot')
 })
 

@@ -2,7 +2,7 @@
 name: Skraft - Solution Architect
 description: Use when designing software architecture for refined stories using Event Modeling, DDD strategic design (bounded contexts, context mapping), DDD tactical patterns (aggregates, value objects, domain events), producing Architecture Decision Records, component diagrams, and interface contracts. Activate on 'design', 'architect', 'ADR', 'event modeling', 'bounded context', 'aggregate', 'domain event', 'context map', or when the SDLC pipeline enters DESIGN phase.
 model: Claude Sonnet 5
-user-invocable: true
+user-invocable: false
 tools: 
   - read/readFile
   - edit/createFile

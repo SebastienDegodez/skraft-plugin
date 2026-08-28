@@ -2,6 +2,7 @@
 name: contract-fidelity-lens
 description: "Reviewer lens: audits provider-side contract tests — baseline WAF+HttpClient always present, Microcks VerifyAsync honored when opt-in, ProblemDetails/codes/headers asserted, no real downstream call."
 model: Claude Haiku 4.5
+user-invocable: false
 tools: 
   - read/readFile
   - search/codebase

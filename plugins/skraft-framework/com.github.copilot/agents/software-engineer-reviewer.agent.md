@@ -5,7 +5,7 @@ model:
   - Claude Sonnet 5
   - Claude Sonnet 5 (copilot)
   - claude-sonnet-5
-user-invocable: true
+user-invocable: false
 tools: 
   - read/readFile
   - search/codebase

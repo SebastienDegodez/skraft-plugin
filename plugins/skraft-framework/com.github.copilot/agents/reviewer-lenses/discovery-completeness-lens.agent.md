@@ -2,6 +2,7 @@
 name: discovery-completeness-lens
 description: "Reviewer lens: judges whether a triage run was thorough enough that no critical issue stayed hidden."
 model: GPT-5.6 Luna
+user-invocable: false
 tools: 
   - read/readFile
   - search/codebase

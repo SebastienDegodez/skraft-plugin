@@ -2,7 +2,7 @@
 name: Skraft - Acceptance Designer Reviewer
 description: Use when reviewing BDD scenarios, test plans, or implementation plans for completeness, business alignment, and testability gaps. Dispatched after acceptance-designer produces DISTILL artefacts, or manually to audit existing Gherkin scenarios.
 model: Claude Haiku 4.5
-user-invocable: true
+user-invocable: false
 tools: 
   - read/readFile
   - search/codebase

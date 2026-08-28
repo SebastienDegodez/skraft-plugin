@@ -2,7 +2,7 @@
 name: Skraft - Solution Architect Reviewer
 description: Use when reviewing architecture decisions, component diagrams, or interface contracts for consistency, Clean Architecture compliance, and fitness for purpose. Dispatched after solution-architect produces DESIGN artefacts, or manually to audit existing architecture files.
 model: Claude Haiku 4.5
-user-invocable: true
+user-invocable: false
 tools: 
   - read/readFile
   - search/codebase

@@ -2,6 +2,7 @@
 name: planning-coherence-lens
 description: "Reviewer lens: judges whether the sprint is realistic, fits its milestone theme, and can be delivered in dependency order."
 model: GPT-5.6 Luna
+user-invocable: false
 tools: 
   - read/readFile
   - search/codebase

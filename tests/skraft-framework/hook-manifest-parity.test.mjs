@@ -73,8 +73,8 @@ test('hook-manifest-parity: copilot commands resolve from the plugin root, not t
     for (const shell of ['bash', 'powershell']) {
       assert.match(
         entry[shell],
-        /\$\{PLUGIN_ROOT\}/,
-        `${shell} command must resolve through \${PLUGIN_ROOT} so it works once installed, not only on a repo checkout`,
+        /\$\{CLAUDE_PLUGIN_ROOT\}/,
+        `${shell} command must use the plugin variable the installed Copilot runtime substitutes`,
       )
     }
     // Both shells must invoke the same route: a divergence would make the guardrail

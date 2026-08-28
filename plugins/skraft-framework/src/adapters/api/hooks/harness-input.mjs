@@ -49,7 +49,10 @@ const harnessOf = (raw, env) => {
   const explicit = raw.harness ?? raw.skraftHarness ?? env?.SKRAFT_HARNESS
   if (explicit) return explicit
   if (raw.agent_type != null || raw.agentType != null) return 'claude-code'
+  if (raw.toolArgs != null || raw.tool_args != null || raw.agentName != null) return 'copilot'
   if (env?.PLUGIN_ROOT && !env?.CLAUDE_PLUGIN_ROOT) return 'copilot'
+  // Installed Copilot plugin hooks also expose CLAUDE_PLUGIN_ROOT. Wire shape,
+  // not that shared variable, is the authoritative harness discriminator.
   if (env?.CLAUDE_PLUGIN_ROOT && !env?.PLUGIN_ROOT) return 'claude-code'
   return undefined
 }

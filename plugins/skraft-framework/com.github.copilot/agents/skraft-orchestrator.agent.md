@@ -27,7 +27,7 @@ agents:
   - Skraft - Acceptance Designer Reviewer
   - Skraft - Software Engineer
   - Skraft - Software Engineer Reviewer
-userInvocable: true
+user-invocable: true
 metadata:
   cost_role_class: reviewer  # B12 target class — routing only, never planner (genesis token-economy)
   genesis_patterns:

@@ -30,6 +30,14 @@ const copilotMarkdownFiles = walk(copilotAgentsRoot).filter((path) => path.endsW
 const claudeMarkdownFiles = walk(claudeAgentsRoot).filter((path) => path.endsWith('.md'))
 const fromRoot = (path) => relative(repoRoot, path).split('\\').join('/')
 const relativeTo = (root, path) => relative(root, path).split('\\').join('/')
+const userInvocableAgentIds = new Set([
+  'skraft-orchestrator',
+  'backlog-discoverer',
+  'backlog-planner',
+  'brownfield-analyst',
+  'brownfield-harness-builder',
+  'brownfield-refactorer',
+])
 
 test('agent-discovery: every Copilot markdown file uses the native .agent.md suffix', () => {
   const strays = copilotMarkdownFiles.filter((path) => !path.endsWith('.agent.md')).map(fromRoot)
@@ -69,6 +77,25 @@ test('agent-discovery: every agent descriptor declares a description', () => {
     const { data } = readFrontMatter(readFileSync(path, 'utf8'))
     const description = typeof data.description === 'string' ? data.description.trim() : ''
     assert.notEqual(description, '', `${fromRoot(path)}: agent declares no front-matter description`)
+  }
+})
+
+test('agent-discovery: only standalone roots are user-invocable', () => {
+  for (const path of copilotMarkdownFiles) {
+    const { data } = readFrontMatter(readFileSync(path, 'utf8'))
+    const id = path.split('/').at(-1).replace(/\.agent\.md$/, '')
+    const expected = userInvocableAgentIds.has(id)
+
+    assert.equal(
+      Object.hasOwn(data, 'userInvocable'),
+      false,
+      `${fromRoot(path)}: use native user-invocable front-matter spelling`,
+    )
+    assert.equal(
+      data['user-invocable'],
+      String(expected),
+      `${fromRoot(path)}: user-invocable must be ${expected}`,
+    )
   }
 })
 

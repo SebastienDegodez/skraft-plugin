@@ -2,7 +2,7 @@
 name: Skraft - Backlog Discoverer Reviewer
 description: "Use when reviewing issue triage results, sprint proposals, or discovery coverage for completeness, prioritization accuracy, and duplicate detection. Dispatched after backlog-discoverer produces DISCOVER artefacts, or manually to audit a triage report."
 model: GPT-5.6 Luna
-user-invocable: true
+user-invocable: false
 tools: 
   - agent
   - read/readFile
@@ -13,6 +13,7 @@ agents:
   - discovery-duplicate-lens
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
+  dispatched_by: Skraft - Backlog Discoverer
   genesis_patterns:
     - A7 ADVERSARIAL REVIEW
     - B1 FAN-OUT + SYNTHESIZER

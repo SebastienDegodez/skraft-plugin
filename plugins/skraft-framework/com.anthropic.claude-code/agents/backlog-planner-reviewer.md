@@ -2,7 +2,7 @@
 name: Skraft - Backlog Planner Reviewer
 description: Use when reviewing refined user stories, acceptance criteria drafts, and sprint plans for INVEST quality, completeness, and feasibility. Dispatched after backlog-planner produces DISCUSS artefacts, or manually to audit existing stories.
 model: GPT-5.6 Luna
-user-invocable: true
+user-invocable: false
 tools: 
   - agent
   - read/readFile
@@ -14,6 +14,7 @@ agents:
   - planning-dor-lens
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
+  dispatched_by: Skraft - Backlog Planner
   genesis_patterns:
     - A7 ADVERSARIAL REVIEW
     - B1 FAN-OUT + SYNTHESIZER

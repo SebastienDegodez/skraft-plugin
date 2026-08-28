@@ -2,6 +2,7 @@
 name: test-integrity-lens
 description: "Reviewer lens: detects test theater patterns and Iron Rule violations in test code."
 model: Claude Haiku 4.5
+user-invocable: false
 tools: 
   - read/readFile
   - search/codebase

@@ -2,6 +2,7 @@
 name: quality-gates-lens
 description: "Reviewer lens: verifies the structured quality-gates evidence log produced by the software-engineer. Read-only — falsifies the log against the Git tree."
 model: Claude Haiku 4.5
+user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
