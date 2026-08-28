@@ -106,6 +106,20 @@ describe('Vally executor plugin registration', () => {
       possibleUrls: [],
       fullCommandText: "grep -r 'Mock<' src",
     }, context), { kind: 'approve-once' })
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'bash', fullCommandText: 'bash scripts/configure-mutation.sh --root .' }],
+      possiblePaths: ['/tmp/work/scripts/configure-mutation.sh'],
+      possibleUrls: [],
+      fullCommandText: 'bash scripts/configure-mutation.sh --root .',
+    }, context), { kind: 'approve-once' })
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'bash', fullCommandText: 'bash arbitrary.sh' }],
+      possiblePaths: ['/tmp/work/arbitrary.sh'],
+      possibleUrls: [],
+      fullCommandText: 'bash arbitrary.sh',
+    }, context).kind, 'reject')
   })
 
   it('rejects a shell command that names an absolute path outside the workspace', () => {

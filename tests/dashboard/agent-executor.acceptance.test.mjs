@@ -115,7 +115,7 @@ describe('Vally real-agent executor', () => {
     strictEqual(calls.stopped, 1)
   })
   it('runs an approved delivery stimulus across the RED checkpoint with bounded write tools', async () => {
-    const calls = { sessions: [], prompts: [] }
+    const calls = { clientOptions: [], sessions: [], prompts: [] }
     const responses = ['{"status":"blocked","type":"clarification_needed","message":"RED ready for validation"}', 'GREEN']
     let eventHandler
     const session = {
@@ -137,7 +137,7 @@ describe('Vally real-agent executor', () => {
     const permissionCalls = []
     const executor = createAgentExecutor({
       repoRoot,
-      createClient: () => client,
+      createClient(options) { calls.clientOptions.push(options); return client },
       permissionHandler(request, context) { permissionCalls.push({ request, context }); return { kind: 'approve-once' } },
       adapterFactory: () => new CopilotAdapter(),
       computeMetrics,
@@ -161,9 +161,14 @@ describe('Vally real-agent executor', () => {
       timeout: 30_000,
       sessionLog: { rootDir: '/tmp/session-log' },
       skills: [],
+      env: { PATH: '.eval-bin:${PATH}', SKRAFT_GATE_FIXTURE: 'canonical' },
     })
 
     strictEqual(executor.supportsMultiTurn, true)
+    strictEqual(executor.supportsEnvVars, true)
+    strictEqual(calls.clientOptions[0].env.PATH.startsWith('/tmp/work/.eval-bin:'), true)
+    strictEqual(calls.clientOptions[0].env.PATH.endsWith(process.env.PATH), true)
+    strictEqual(calls.clientOptions[0].env.SKRAFT_GATE_FIXTURE, 'canonical')
     deepStrictEqual(calls.prompts, turns.map((prompt) => ({ prompt })))
     deepStrictEqual(calls.sessions[0].availableTools, [
       'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash',

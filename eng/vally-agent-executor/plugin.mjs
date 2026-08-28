@@ -13,6 +13,7 @@ const localCommands = new Set([
 	'cat', 'dotnet', 'echo', 'find', 'git', 'grep', 'head', 'ls', 'mkdir', 'node', 'npm',
 	'printf', 'pwd', 'shasum', 'sha256sum', 'tail', 'tee', 'touch',
 ])
+const mutationAdapterScript = /^bash\s+scripts\/(?:configure-mutation|mutation-core|mutation-boundary)\.sh(?:\s|$)/
 const forbiddenShell = /(?:^|\s)(?:restore|add\s+package|tool\s+(?:install|update)|nuget\s+push|git\s+(?:clean|reset\s+--hard))(?:\s|$)/i
 const commandName = ({ identifier = '' }) => identifier.trim().split(/\s+/, 1)[0]
 // A device node carries no repository evidence, so it stays reachable even
@@ -75,7 +76,10 @@ export const pilotPermissionHandler = (request, context) => {
 		const urls = request.possibleUrls ?? []
 		const commandText = request.fullCommandText ?? ''
 		const localOnly = urls.length === 0 && !request.requestSandboxBypass
-		const knownCommands = commands.length > 0 && commands.every((command) => localCommands.has(commandName(command)))
+		const knownCommands = commands.length > 0 && commands.every((command) => {
+			const name = commandName(command)
+			return localCommands.has(name) || (name === 'bash' && mutationAdapterScript.test(command.fullCommandText ?? command.identifier ?? ''))
+		})
 		const workspacePaths = paths.every((path) => insideWorkspace(context.workDir, path))
 			&& !escapesWorkspace(context.workDir, commandText)
 		const operationAllowed = !forbiddenShell.test(commandText)

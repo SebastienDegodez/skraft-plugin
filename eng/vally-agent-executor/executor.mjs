@@ -2,6 +2,8 @@ import { randomUUID as newRandomUUID } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
+import { mergeEnv } from '@microsoft/vally'
+
 import { loadAgentDescriptor } from './agent-descriptor.mjs'
 
 const agentTag = (stimulus) => {
@@ -84,6 +86,18 @@ const promptsFor = (stimulus) => Array.isArray(stimulus.turns) && stimulus.turns
 // built-in grader can assert on.
 const DELEGATION_METRICS_FILE = 'custom_metrics.json'
 
+const agentEnvironment = (env, workDir) => {
+  if (!env || Object.keys(env).length === 0) return undefined
+  const resolved = { ...env }
+  if (resolved.PATH) {
+    resolved.PATH = resolved.PATH
+      .replaceAll('${PATH}', process.env.PATH ?? '')
+      .replaceAll('$PATH', process.env.PATH ?? '')
+      .replace(/(^|:)\.eval-bin(?=:|$)/g, `$1${join(workDir, '.eval-bin')}`)
+  }
+  return mergeEnv(process.env, resolved)
+}
+
 const delegationMetrics = (events) => {
   const dispatches = events.filter(({ type, data }) => type === 'tool_call' && data?.toolName === 'agent')
   return {
@@ -117,12 +131,16 @@ export const createAgentExecutor = ({
     name: 'skraft-agent-runner',
     supportsPreparedWorkspace: true,
     supportsMultiTurn: true,
+    supportsEnvVars: true,
     async execute(stimulus, options) {
       const startedAt = clock.now()
       const agent = loadAgent(repoRoot, agentTag(stimulus))
       const subagents = subagentTags(stimulus).map((id) => loadAgent(repoRoot, id))
       const stateDir = options.sessionLog?.rootDir ?? join(options.workDir, '.copilot-sdk')
-      const client = createClient({ baseDirectory: stateDir })
+      const clientOptions = { baseDirectory: stateDir }
+      const env = agentEnvironment(options.env, options.workDir)
+      if (env) clientOptions.env = env
+      const client = createClient(clientOptions)
       const adapter = adapterFactory()
       let session
 
