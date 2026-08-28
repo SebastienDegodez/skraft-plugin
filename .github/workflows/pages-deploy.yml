@@ -6,9 +6,7 @@ on:
     paths:
       - "docs/site/**"
       - "eng/**"
-      - "plugins/skills/**"
-      - "plugins/agents/**"
-      - "plugins/.claude-plugin/plugin.json"
+      - "plugins/skraft-framework/**"
       - "tests/skills/**"
       - ".github/workflows/pages-deploy.yml"
   workflow_dispatch:
