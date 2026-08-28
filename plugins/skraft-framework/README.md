@@ -162,7 +162,7 @@ plugins/skraft-framework/src/
 
 ## Couches : produit vs ingénierie (S3)
 
-L'orchestrateur (`/skraft`) est l'équivalent SKRAFT du `rpi-agent` HVE : un pipeline
+L'agent `skraft-orchestrator` est l'équivalent SKRAFT du `rpi-agent` HVE : un pipeline
 d'**ingénierie** pur `RESEARCH → DESIGN → DISTILL → DELIVER`. La **découverte de backlog** et
 le **raffinement d'histoires** sont des agents **produit** autonomes (`Skraft - Backlog Discoverer`,
 `Skraft - Backlog Planner`), invoqués directement par le développeur — hors orchestrateur. SKRAFT et

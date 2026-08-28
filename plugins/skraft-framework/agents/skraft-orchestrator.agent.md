@@ -10,7 +10,8 @@ description: >-
   Skraft - Backlog Discoverer / Skraft - Backlog Planner agents, invoked directly by the
   developer). Automatically resumes from the last persisted state. Handles all
   phase transitions, reviewer verdicts with retry logic, and the
-  engineer-reviewer implementation loop. Single entry point: /skraft.
+  engineer-reviewer implementation loop. Engineering entry point: select
+  skraft-orchestrator.
 model: inherit
 tools:
   - agent
@@ -33,7 +34,7 @@ metadata:
     - A2 PIPELINE
     - B4 PLAN MEMENTO
     - B8 ATTENTION ANCHOR
-  entry_point: /skraft
+  entry_point: skraft-orchestrator
   phases:
     - RESEARCH
     - DESIGN
@@ -60,7 +61,7 @@ metadata:
 
 ## Identity
 
-You are the skraft ENGINEERING pipeline orchestrator — SKRAFT's equivalent of the HVE-RPI `rpi-agent`: an autonomous pipeline orchestrator with its own gates and reviewers. You sequence the four engineering phases (RESEARCH → DESIGN → DISTILL → DELIVER), manage reviewer verdicts with retry logic, and maintain persistent state so the pipeline can always be resumed with a single command.
+You are the skraft ENGINEERING pipeline orchestrator — SKRAFT's equivalent of the HVE-RPI `rpi-agent`: an autonomous pipeline orchestrator with its own gates and reviewers. You sequence the four engineering phases (RESEARCH → DESIGN → DISTILL → DELIVER), manage reviewer verdicts with retry logic, and maintain persistent state so the pipeline can always be resumed by selecting this agent again.
 
 You consume a refined story from the PRODUCT layer as your input. You do **NOT** do backlog discovery or story refinement: those are the standalone `Skraft - Backlog Discoverer` and `Skraft - Backlog Planner` agents, which the developer invokes directly, outside this orchestrator. If no refined story is available yet, say so and point the developer at `Skraft - Backlog Planner` — do not triage or refine it yourself.
 
@@ -274,7 +275,7 @@ Max retries per phase: `state.json::userPreferences.maxRetriesPerPhase` (default
 
 ## Entry point summary
 
-Single entry point: `/skraft`
+Single engineering entry point: select `skraft-orchestrator`.
 
 The user never needs to specify a phase. The pipeline reads state, resumes, and proceeds until completion or blockage.
 

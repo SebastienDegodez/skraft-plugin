@@ -44,8 +44,9 @@ skraft ships as a **marketplace plugin**. The plugin source lives in [`plugins/`
 
 ### Claude Code
 
-```bash
-# Add the marketplace, then install the "skraft" plugin
+Enter these commands in Claude Code:
+
+```text
 /plugin marketplace add SebastienDegodez/skraft-plugin
 /plugin install skraft
 ```
@@ -69,11 +70,8 @@ See [`docs/architecture.md`](./docs/architecture.md) for the per-harness porting
 
 ## Quick start
 
-Once the plugin is installed, run the full pipeline through the orchestrator:
-
-```
-/skraft
-```
+Once the plugin is installed, select `skraft-orchestrator` in the agent picker
+and give it a refined story.
 
 The orchestrator automatically resumes from the last persisted state, manages phase transitions,
 reviewer verdicts (with retry), and the engineer ↔ reviewer loop.
