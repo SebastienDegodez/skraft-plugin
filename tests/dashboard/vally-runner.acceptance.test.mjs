@@ -60,7 +60,7 @@ done
 mkdir -p "$output_dir/run"
 mkdir -p "$output_dir/000-decoy"
 printf '%s\n' '{"type":"span"}' > "$output_dir/000-decoy/otel-spans.jsonl"
-printf '%s\n' '{"type":"trial-result","status":"success","stimulus":"Missing DISTILL artifacts block implementation","gradeResult":{"passed":true,"score":1}}' '{"type":"run-summary","passed":true}' > "$output_dir/run/results.jsonl"
+printf '%s\n' '{"type":"trial-result","status":"success","stimulus":"Missing refined story blocks orchestration","gradeResult":{"passed":true,"score":1}}' '{"type":"run-summary","passed":true}' > "$output_dir/run/results.jsonl"
 `)
   chmodSync(fakeVally, 0o755)
 })
@@ -113,7 +113,7 @@ describe('unified Vally runner', () => {
     const published = JSON.parse(readFileSync(join(resultsPath, 'agent-behavior/results.json'), 'utf8'))
     const [verdict] = published.verdicts
     strictEqual(verdict.subject.kind, 'agent')
-    strictEqual(verdict.subject.name, 'software-engineer')
+    strictEqual(verdict.subject.name, 'skraft-orchestrator')
     strictEqual(verdict.passed, true)
   })
 

@@ -1,5 +1,5 @@
-name: software-engineer-agent
-description: Verifies that Vally selects the exact SKRAFT Software Engineer, loads its required skills, and blocks safely when DISTILL inputs are absent.
+name: skraft-orchestrator-agent
+description: Verifies that Vally selects the exact SKRAFT Orchestrator, loads its required skills, and blocks safely when no refined story is available.
 version: 0.1.0
 type: capability
 defaults:
@@ -15,14 +15,13 @@ scoring:
   # what is reported as a pass, not what is measured.
   threshold: 0.9
 stimuli:
-  - name: Missing DISTILL artifacts block implementation
+  - name: Missing refined story blocks orchestration
     prompt: |
-      Implement the requested behavior for this repository. The evaluation workspace
-      contains no approved feature file or implementation plan. If required inputs are
-      absent, report the blocker in the structured handoff format and stop without
-      changing files.
+      Run the engineering pipeline for this repository. No refined story or approved
+      product input is available in the evaluation workspace. Report the missing
+      precondition in the structured handoff format and stop without changing files.
     tags:
-      agent: software-engineer
+      agent: skraft-orchestrator
       scenario: missing-preconditions
       cost: low
     supported_executors:
@@ -42,8 +41,8 @@ stimuli:
       - type: skill-invocation
         config:
           required:
-            - outside-in-tdd
-            - craft-discipline
+            - skraft-difficulty-routing
+            - adversarial-review-lenses
       - type: output-not-matches
         config:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'

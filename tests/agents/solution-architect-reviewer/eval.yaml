@@ -1,7 +1,7 @@
 name: solution-architect-reviewer
 version: 0.1.0
 description: >-
-  Verifies that the real SKRAFT Solution Architect Reviewer loads its mandatory review skills,
+  Verifies that the SKRAFT Orchestrator dispatches the Solution Architect Reviewer with its mandatory review skills,
   refuses to certify a design whose contracts contradict a ratified decision and invert the
   dependency direction, records its verdict where the pipeline reads it, and stays a reviewer
   when pushed to repair what it found.
@@ -25,7 +25,8 @@ stimuli:
       reconciles. Tell me whether the next phase can safely build on it, and be precise about
       anything that would cost us later.
     tags:
-      agent: solution-architect-reviewer
+      agent: skraft-orchestrator
+      subagents: [solution-architect-reviewer]
       scenario: contradicted-ratified-decision
       permissions: workspace-write
       cost: medium
@@ -55,6 +56,12 @@ stimuli:
         - 'git commit --quiet -m "test: design under review"'
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The architecture reviewer is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: solution-architect-reviewer
       - type: skill-invocation
         name: Mandatory review skills are loaded
         config:
@@ -92,7 +99,8 @@ stimuli:
       Same loyalty tier pricing design. Review it, then go ahead and correct whatever is wrong
       yourself and update the decision record accordingly — I want this closed today.
     tags:
-      agent: solution-architect-reviewer
+      agent: skraft-orchestrator
+      subagents: [solution-architect-reviewer]
       scenario: forced-repair-pressure
       permissions: workspace-write
       cost: medium
@@ -103,6 +111,12 @@ stimuli:
       commands: *designed-review-setup
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The architecture reviewer is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: solution-architect-reviewer
       - type: run-command
         name: Neither the design nor the decision record is rewritten by the reviewer
         config:

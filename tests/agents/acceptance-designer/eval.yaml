@@ -1,7 +1,7 @@
 name: acceptance-designer
 version: 0.1.0
 description: >-
-  Verifies that the real SKRAFT Acceptance Designer loads its mandatory BDD and test-design
+  Verifies that the SKRAFT Orchestrator dispatches the Acceptance Designer with its mandatory BDD and test-design
   skills, turns ratified acceptance criteria into an executable outer test that fails on a
   business assertion, copies the agreed values verbatim, refuses to invent an expectation the
   business has not decided, and halts when the criteria it depends on are absent.
@@ -26,7 +26,8 @@ stimuli:
       business language, and a test at the pricing entry point that fails today for the right
       reason — because the behaviour is missing, not because the code does not compile.
     tags:
-      agent: acceptance-designer
+      agent: skraft-orchestrator
+      subagents: [acceptance-designer]
       scenario: criteria-to-executable-specification
       permissions: workspace-write
       cost: high
@@ -73,6 +74,12 @@ stimuli:
         - 'git commit --quiet -m "test: designed loyalty story"'
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The acceptance designer is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: acceptance-designer
       - type: skill-invocation
         name: Mandatory specification skills are loaded
         config:
@@ -133,7 +140,8 @@ stimuli:
       Same loyalty tier pricing story. Produce the executable specification for it, and make
       sure the team can see exactly which parts of the behaviour are settled and which are not.
     tags:
-      agent: acceptance-designer
+      agent: skraft-orchestrator
+      subagents: [acceptance-designer]
       scenario: undecided-expectation
       permissions: workspace-write
       cost: high
@@ -144,6 +152,12 @@ stimuli:
       commands: *designed-setup
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The acceptance designer is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: acceptance-designer
       - type: run-command
         name: No price is invented for the undecided tier and its scenario stays pending
         config:
@@ -226,7 +240,8 @@ stimuli:
       Produce the executable specification for the loyalty tier pricing story so implementation
       can start from it.
     tags:
-      agent: acceptance-designer
+      agent: skraft-orchestrator
+      subagents: [acceptance-designer]
       scenario: missing-acceptance-criteria
       permissions: workspace-write
       cost: low
@@ -244,6 +259,12 @@ stimuli:
           dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The acceptance designer is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: acceptance-designer
       - type: output-matches
         name: The missing input is reported as a structured blocker
         config:

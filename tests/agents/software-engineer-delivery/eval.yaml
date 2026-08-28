@@ -1,6 +1,6 @@
 name: software-engineer-delivery
 version: 0.1.0
-description: Verifies that the real SKRAFT Software Engineer drives an approved .NET Clean Architecture behavior through the human RED checkpoint to GREEN, preserves layer boundaries and the outer test, and deposits stack-specific quality evidence.
+description: Verifies that the SKRAFT Orchestrator dispatches the Software Engineer to drive an approved .NET Clean Architecture behavior through the human RED checkpoint to GREEN, preserve layer boundaries and the outer test, and deposit stack-specific quality evidence.
 type: capability
 defaults:
   executor: skraft-agent-runner
@@ -20,7 +20,8 @@ stimuli:
       - I want to develop the `loyalty-discount` feature for the Checkout Pricing project.
       - The test is correct, continue. Complete the feature.
     tags:
-      agent: software-engineer
+      agent: skraft-orchestrator
+      subagents: [software-engineer]
       scenario: approved-dotnet-delivery
       permissions: workspace-write
       cost: medium
@@ -80,6 +81,12 @@ stimuli:
         - 'git commit --quiet -m "test: approved DISTILL fixture"'
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The software engineer is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: software-engineer
       - type: output-matches
         name: RED checkpoint reported before implementation
         turn: 0

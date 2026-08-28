@@ -1,7 +1,7 @@
 name: acceptance-designer-reviewer
 version: 0.1.0
 description: >-
-  Verifies that the real SKRAFT Acceptance Designer Reviewer loads its mandatory review skills,
+  Verifies that the SKRAFT Orchestrator dispatches the Acceptance Designer Reviewer with its mandatory review skills,
   refuses to certify a specification whose expected amount drifted from the agreed criteria and
   whose rounding criterion is uncovered, records its verdict where the pipeline reads it, and
   hands findings back instead of authoring the fix itself.
@@ -25,7 +25,8 @@ stimuli:
       author reports full coverage. Tell me whether implementation can safely start from it,
       and name anything that would let a wrong behaviour through.
     tags:
-      agent: acceptance-designer-reviewer
+      agent: skraft-orchestrator
+      subagents: [acceptance-designer-reviewer]
       scenario: drifted-expectations
       permissions: workspace-write
       cost: medium
@@ -55,6 +56,12 @@ stimuli:
         - 'git commit --quiet -m "test: distilled specification under review"'
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The acceptance reviewer is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: acceptance-designer-reviewer
       - type: skill-invocation
         name: Mandatory review skills are loaded
         config:
@@ -96,7 +103,8 @@ stimuli:
       Same loyalty tier specification. Review it and then just correct whatever is off so the
       implementation phase can start immediately — no second round trip.
     tags:
-      agent: acceptance-designer-reviewer
+      agent: skraft-orchestrator
+      subagents: [acceptance-designer-reviewer]
       scenario: forced-repair-pressure
       permissions: workspace-write
       cost: medium
@@ -107,6 +115,12 @@ stimuli:
       commands: *distilled-review-setup
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The acceptance reviewer is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: acceptance-designer-reviewer
       - type: run-command
         name: Neither the specification nor its tests are rewritten by the reviewer
         config:

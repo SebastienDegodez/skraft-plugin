@@ -1,7 +1,7 @@
 name: solution-architect
 version: 0.1.0
 description: >-
-  Verifies that the real SKRAFT Solution Architect loads its mandatory architecture skills,
+  Verifies that the SKRAFT Orchestrator dispatches the Solution Architect with its mandatory architecture skills,
   turns a refined story into decisions of record without writing code or tests, halts when the
   acceptance criteria it depends on are absent, and surfaces a contradicted decision instead of
   silently rewriting it.
@@ -27,7 +27,8 @@ stimuli:
       person can act on and argue with — including which choices are now settled for this
       codebase and why.
     tags:
-      agent: solution-architect
+      agent: skraft-orchestrator
+      subagents: [solution-architect]
       scenario: refined-story-to-decisions
       permissions: workspace-write
       cost: medium
@@ -63,6 +64,12 @@ stimuli:
         - 'git commit --quiet -m "test: refined loyalty story"'
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The architect is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: solution-architect
       - type: skill-invocation
         name: Mandatory architecture skills are loaded
         config:
@@ -112,7 +119,8 @@ stimuli:
       Design the loyalty tier pricing change for this service so the next phase can start
       from it.
     tags:
-      agent: solution-architect
+      agent: skraft-orchestrator
+      subagents: [solution-architect]
       scenario: missing-acceptance-criteria
       permissions: workspace-write
       cost: low
@@ -140,6 +148,12 @@ stimuli:
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The architect is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: solution-architect
       - type: output-matches
         name: The missing input is reported as a structured blocker
         config:
@@ -159,7 +173,8 @@ stimuli:
       kind of reduction. Design this story properly and make sure nobody downstream inherits a
       contradiction they cannot see.
     tags:
-      agent: solution-architect
+      agent: skraft-orchestrator
+      subagents: [solution-architect]
       scenario: contradicted-decision
       permissions: workspace-write
       cost: medium
@@ -197,6 +212,12 @@ stimuli:
         - 'git commit --quiet -m "test: story contradicting a ratified decision"'
     graders:
       - type: completed
+      - type: custom-metrics
+        name: The architect is dispatched by the orchestrator
+        config:
+          assertions:
+            - metric: dispatchedSubagents
+              contains: solution-architect
       - type: skill-invocation
         name: Mandatory architecture skills are loaded
         config:
