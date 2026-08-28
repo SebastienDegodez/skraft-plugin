@@ -381,3 +381,39 @@ plainte de vitesse — qui est légitime — soit **redirigée** ailleurs. Un re
 - Budget : inchangé à 5 × 4. Les trois décideurs fournissent seuls la puissance ; le garde-fou et
   le near miss sont attendus à égalité et n'y contribuent pas.
 - Le garde-fou survit au classement par discrimination, comme l'exige la règle 8.
+
+---
+
+## 13. État d'exécution — mesure live non réalisée
+
+L'instrument est écrit, gelé et validé statiquement. **Aucune mesure live n'a été
+produite.** L'étape A a été tentée quatre fois ; les trois premiers échecs étaient des pannes
+d'outillage, corrigées et vérifiées (commit `fix(evals)`), le quatrième est un blocage
+d'environnement.
+
+| Tentative | Échec | Nature | Suite |
+|---|---|---|---|
+| 1 | `Could not resolve a @github/copilot platform package (tried @github/copilot-darwin-arm64)` | outillage | `@github/copilot-darwin-arm64@1.0.81` a supprimé l'export `./sdk` attendu par `@github/copilot-sdk@1.0.9` → épinglage à 1.0.78 |
+| 2 | `/Users/a239hz/OneDrive: No such file or directory` | outillage | `$VALLY` non quoté dans le runner → tableau bash |
+| 3 | idem 1, réapparu | outillage | `npm install --no-save` avait élagué le paquet épinglé ; réinstallé avec le CLI |
+| 4 | `ProxyResponseError: HTTP 403 response does not appear to originate from GitHub` | **environnement** | non contournable depuis cette machine |
+
+Diagnostic du blocage n° 4 : `GET https://api.github.com/copilot_internal/v2/token` avec le token
+`gh` actif renvoie une page 403 anti-scraping. Le compte actif (`fdescamps`) n'a pas
+d'habilitation Copilot sur ce chemin, et le compte Copilot d'entreprise
+(`francois-descamps_axaghcop`) est en échec d'authentification dans le trousseau
+(`gh auth status` : *Failed to log in*).
+
+**Pour débloquer**, au choix :
+
+1. `gh auth login` sur le compte habilité Copilot, puis
+   `VALLY=./node_modules/.bin/vally ./eng/run-vally-evals.sh clean-architecture-testing` ;
+2. exporter `COPILOT_GITHUB_TOKEN` (PAT fine-grained avec *Copilot Requests*) ;
+3. lancer la mesure côté CI. Le job `evaluate-pr` de `.github/workflows/skill-evaluation.yml`
+   couvre déjà `tests/skills/**`, mais il est **désactivé sur les PR issues d'un fork**
+   (`head.repo.full_name == github.repository`). Un mainteneur doit donc la déclencher via
+   `workflow_dispatch` avec `skill: clean-architecture-testing`, ou rejouer la branche depuis
+   le dépôt amont.
+
+Les étapes A, B et C du §8 restent donc **à dérouler**, dans cet ordre et avec leurs
+approbations séparées. Rien de ce qui figure ici ne doit être lu comme un verdict.
