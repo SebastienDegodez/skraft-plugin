@@ -28,7 +28,7 @@ jobs:
       # both devDependencies: without them `node --test` cannot even resolve the
       # module graph, and the step fails on an import error rather than on a finding.
       - name: Install Node dependencies
-        run: npm ci
+        run: npm install
 
       - name: Catalogue and drift controls
         run: |

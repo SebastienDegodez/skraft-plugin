@@ -193,6 +193,13 @@ jobs:
         if: steps.changed-agents.outputs.suites != ''
         run: npm install
 
+      # The SDK discovers the platform CLI through an optional dependency. npm
+      # can omit that package when installing without a lockfile, so install the
+      # Linux runner package explicitly for agent suites.
+      - name: Install the Copilot Linux runner
+        if: steps.changed-agents.outputs.suites != ''
+        run: npm install --no-save @github/copilot-linux-x64@1.0.78
+
       - name: Run each changed skill twice and judge the pair
         if: steps.changed.outputs.skills != ''
         env:
