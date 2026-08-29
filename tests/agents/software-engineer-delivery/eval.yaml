@@ -136,15 +136,27 @@ stimuli:
         name: Parameterized inner Domain test was added
         config:
           pattern: 'tests/CheckoutPricing\.UnitTest/.*\.cs'
-      - type: skill-invocation
+      # `skill-invocation` scans the whole trajectory with no agent scoping, so it
+      # passes whenever ANYONE loaded these — including the orchestrator, which
+      # never delivers code. The qualified `<agentId>/<skill>` metric is the only
+      # form that proves the dispatched engineer loaded its own mandatory skills,
+      # which is the claim this suite exists to make.
+      - type: custom-metrics
+        name: The dispatched engineer loads its own mandatory delivery skills
         config:
-          required:
-            - outside-in-tdd
-            - craft-discipline
-            - clean-architecture-testing
-            - mutation-testing
-            - quality-gates-evidence-contract
-            - quality-gates-dotnet
+          assertions:
+            - metric: subagentSkillsLoaded
+              contains: software-engineer/outside-in-tdd
+            - metric: subagentSkillsLoaded
+              contains: software-engineer/craft-discipline
+            - metric: subagentSkillsLoaded
+              contains: software-engineer/clean-architecture-testing
+            - metric: subagentSkillsLoaded
+              contains: software-engineer/mutation-testing
+            - metric: subagentSkillsLoaded
+              contains: software-engineer/quality-gates-evidence-contract
+            - metric: subagentSkillsLoaded
+              contains: software-engineer/quality-gates-dotnet
       - type: file-exists
         name: Quality-gate evidence contract exists
         config:

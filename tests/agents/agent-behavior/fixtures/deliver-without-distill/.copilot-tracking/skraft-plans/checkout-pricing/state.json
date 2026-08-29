@@ -1,0 +1,79 @@
+{
+  "projectSlug": "checkout-pricing",
+  "skraftPlanFile": ".copilot-tracking/skraft-plans/checkout-pricing/state.json",
+  "currentPhase": "DELIVER",
+  "entryMode": "capture",
+  "entryPoint": {
+    "skipPhases": [],
+    "handoffSource": null,
+    "handoffArtifacts": []
+  },
+  "issueNumber": null,
+  "difficulty": "medium",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": []
+  },
+  "phasesCompleted": [
+    "RESEARCH",
+    "DESIGN",
+    "DISTILL"
+  ],
+  "phaseArtifacts": {
+    "DISTILL": [
+      ".copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature",
+      ".copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md"
+    ]
+  },
+  "verdicts": {
+    "RESEARCH": "APPROVED",
+    "DESIGN": "APPROVED",
+    "DISTILL": "APPROVED"
+  },
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "referencesProcessed": [],
+  "phaseHistory": {
+    "RESEARCH": {
+      "status": "done",
+      "startedAt": "2026-08-07T09:00:00Z",
+      "completedAt": "2026-08-07T09:30:00Z"
+    },
+    "DESIGN": {
+      "status": "done",
+      "startedAt": "2026-08-07T09:30:00Z",
+      "completedAt": "2026-08-07T10:30:00Z"
+    },
+    "DISTILL": {
+      "status": "done",
+      "startedAt": "2026-08-07T10:30:00Z",
+      "completedAt": "2026-08-07T11:00:00Z"
+    },
+    "DELIVER": {
+      "status": "inProgress",
+      "startedAt": "2026-08-07T11:00:00Z",
+      "completedAt": null
+    }
+  },
+  "nextActions": [
+    "Deliver loyalty-discount from the approved DISTILL artifacts."
+  ],
+  "userPreferences": {
+    "autonomyTier": "full",
+    "maxRetriesPerPhase": 2,
+    "phaseOrder": [
+      "RESEARCH",
+      "DESIGN",
+      "DISTILL",
+      "DELIVER"
+    ]
+  },
+  "neighborPlanners": {
+    "securityPlanFile": null,
+    "raiPlanFile": null,
+    "ssscPlanFile": null
+  }
+}
