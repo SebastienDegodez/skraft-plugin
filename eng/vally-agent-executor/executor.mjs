@@ -98,11 +98,29 @@ const agentEnvironment = (env, workDir) => {
   return mergeEnv(process.env, resolved)
 }
 
+// A skill the ORCHESTRATOR loads and a skill its SPECIALIST loads are different
+// claims, and `skill-invocation` cannot tell them apart: it scans the whole
+// trajectory, so a chain passes "the designer loaded bdd-methodology" whenever
+// anyone did. The Copilot adapter stamps `agentId` on every event a sub-agent
+// produced (absent for the root agent), so the two buckets are published
+// separately and a spec can assert the one it means. Sub-agent entries are
+// qualified `<agentId>/<skill>`, which a `contains:` assertion can read either
+// precisely (`acceptance-designer/bdd-methodology`) or loosely (`bdd-methodology`).
+const skillMetrics = (events) => {
+  const activations = events.filter(({ type }) => type === 'skill_activation')
+  const named = (entries) => [...new Set(entries)].join(' ')
+  return {
+    rootSkillsLoaded: named(activations.filter(({ agentId }) => !agentId).map(({ data }) => data.name)),
+    subagentSkillsLoaded: named(activations.filter(({ agentId }) => agentId).map(({ agentId, data }) => `${agentId}/${data.name}`)),
+  }
+}
+
 const delegationMetrics = (events) => {
   const dispatches = events.filter(({ type, data }) => type === 'tool_call' && data?.toolName === 'agent')
   return {
     subagentDispatchCount: dispatches.length,
     dispatchedSubagents: dispatches.map(({ data }) => JSON.stringify(data?.arguments ?? {})).join(' '),
+    ...skillMetrics(events),
   }
 }
 

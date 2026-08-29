@@ -293,4 +293,55 @@ describe('Vally real-agent executor', () => {
     for (const agent of dispatched) strictEqual(published.dispatchedSubagents.includes(agent), true)
   })
 
+  it('separates the skills the dispatched sub-agent loaded from the ones the lead loaded', async () => {
+    const artifactDir = mkdtempSync(join(tmpdir(), 'skraft-agent-skill-metrics-'))
+    const rawEventsWithSubagentSkills = [
+      { type: 'skill.invoked', timestamp: '2026-08-29T10:00:00.000Z', data: { name: 'adversarial-review-lenses', path: '/tmp/work/.skills/adversarial-review-lenses/SKILL.md' } },
+      { type: 'tool.execution_start', timestamp: '2026-08-29T10:00:01.000Z', data: { toolName: 'agent', toolCallId: 'call-0', turnId: '0', arguments: { agent: 'software-engineer' } } },
+      { type: 'skill.invoked', agentId: 'software-engineer', timestamp: '2026-08-29T10:00:02.000Z', data: { name: 'outside-in-tdd', path: '/tmp/work/.skills/outside-in-tdd/SKILL.md' } },
+      { type: 'skill.invoked', agentId: 'software-engineer', timestamp: '2026-08-29T10:00:03.000Z', data: { name: 'craft-discipline', path: '/tmp/work/.skills/craft-discipline/SKILL.md' } },
+      { type: 'assistant.message', timestamp: '2026-08-29T10:00:04.000Z', data: { content: 'blocked' } },
+    ]
+    let eventHandler
+    const session = {
+      sessionId: 'session-5',
+      on(handler) { eventHandler = handler },
+      async sendAndWait() {
+        for (const event of rawEventsWithSubagentSkills) eventHandler(event)
+        return { data: { content: 'blocked' } }
+      },
+      async disconnect() {},
+    }
+    const executor = createAgentExecutor({
+      repoRoot,
+      createClient: () => ({
+        async start() {},
+        async createSession() { return session },
+        async stop() {},
+      }),
+      permissionHandler: () => ({ kind: 'approve-once' }),
+      adapterFactory: () => new CopilotAdapter(),
+      computeMetrics,
+      clock: { now: () => new Date('2026-08-29T10:00:05.000Z') },
+      randomUUID: () => 'trajectory-5',
+    })
+    const stimulus = {
+      name: 'missing-distill-inputs-block-the-engineer',
+      prompt: 'Resume the pipeline and report where delivery stands.',
+      tags: { agent: 'skraft-orchestrator', subagents: ['software-engineer'] },
+    }
+
+    await executor.execute(stimulus, {
+      workDir: '/tmp/work',
+      model: 'claude-sonnet-4.6',
+      timeout: 30_000,
+      sessionLog: { rootDir: artifactDir },
+      skills: [],
+    })
+
+    const published = JSON.parse(readFileSync(join(artifactDir, 'custom_metrics.json'), 'utf8'))
+    strictEqual(published.rootSkillsLoaded, 'adversarial-review-lenses')
+    strictEqual(published.subagentSkillsLoaded, 'software-engineer/outside-in-tdd software-engineer/craft-discipline')
+  })
+
 })
