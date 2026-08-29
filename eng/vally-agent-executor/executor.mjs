@@ -36,14 +36,30 @@ const publicIdentity = (agent) => ({
   declaredModel: agent.declaredModel,
 })
 
-const agentPrompt = (agent) => {
+// A SKRAFT descriptor spawns its chain through markdown links to sibling
+// `.agent.md` files. Those links resolve in the plugin tree and nowhere else: in
+// a prepared evaluation workspace the chain exists only as registered custom
+// agents reached through the runtime dispatch tool. An agent that cannot open
+// the link it was told to follow does the next best thing and narrates the
+// review it was supposed to delegate — which is precisely the failure the
+// dispatch metrics exist to catch, arriving as a harness artefact rather than a
+// finding. Naming the registered ids removes that excuse.
+const dispatchNotice = (dispatchable) => [
+  '## Evaluation runtime sub-agent dispatch',
+  'The agent definition links its sub-agents as source files. Those links do not resolve here.',
+  `Dispatch with the runtime ${DISPATCH_TOOL} tool, naming exactly one registered id per dispatch: ${dispatchable.join(', ')}.`,
+  'Narrating a sub-agent\'s analysis in your own context is not a dispatch.',
+].join('\n\n')
+
+const agentPrompt = (agent, dispatchable = []) => {
   const instructions = agent.instructions.map(({ path, content }) => `## Companion instruction: ${path}\n\n${content}`)
   const runtimeNotice = [
     '## Evaluation runtime skill loading',
     'Use the runtime skill tool whenever the agent definition requires a skill to be loaded.',
     'Do not read source-relative skill links from the agent definition; Vally stages the selected skills for the runtime.',
   ].join('\n\n')
-  return [agent.prompt.trim(), ...instructions, runtimeNotice].join('\n\n')
+  const notices = dispatchable.length ? [runtimeNotice, dispatchNotice(dispatchable)] : [runtimeNotice]
+  return [agent.prompt.trim(), ...instructions, ...notices].join('\n\n')
 }
 
 const selectedAgentEvent = (agent) => ({
@@ -58,21 +74,27 @@ const selectedAgentEvent = (agent) => ({
 
 const readOnlyTools = ['skill', 'glob', 'grep', 'view']
 const workspaceWriteTools = [...readOnlyTools, 'edit', 'bash']
+// The runtime spells its sub-agent dispatch built-in `task` (see BuiltInTools.
+// Isolated in @github/copilot-sdk). Enabling a name it does not know is silent:
+// the session starts, the agent is told to delegate, no dispatch tool exists, so
+// it narrates the fan-out instead — and every dispatch grader reads that as the
+// agent refusing to delegate rather than as a harness that never offered it.
+const DISPATCH_TOOL = 'task'
 const toolsFor = (stimulus, dispatches) => {
   const base = stimulus?.tags?.permissions === 'workspace-write' ? workspaceWriteTools : readOnlyTools
-  return dispatches ? [...base, 'agent'] : base
+  return dispatches ? [...base, DISPATCH_TOOL] : base
 }
 const qualifiedTools = (tools) => tools.map((tool) => `builtin:${tool}`)
 // The primary agent is selected explicitly, so it stays out of model inference.
 // A declared sub-agent is the opposite: the dispatch tool can only offer an agent
 // the runtime is allowed to infer, so `infer: false` would silently make the
 // chain undispatchable.
-const customAgent = (agent, tools, model, infer) => ({
+const customAgent = (agent, tools, model, infer, dispatchable = []) => ({
   name: agent.id,
   displayName: agent.name,
   description: agent.description,
   tools,
-  prompt: agentPrompt(agent),
+  prompt: agentPrompt(agent, dispatchable.filter((id) => id !== agent.id)),
   model,
   infer,
 })
@@ -116,7 +138,7 @@ const skillMetrics = (events) => {
 }
 
 const delegationMetrics = (events) => {
-  const dispatches = events.filter(({ type, data }) => type === 'tool_call' && data?.toolName === 'agent')
+  const dispatches = events.filter(({ type, data }) => type === 'tool_call' && data?.toolName === DISPATCH_TOOL)
   return {
     subagentDispatchCount: dispatches.length,
     dispatchedSubagents: dispatches.map(({ data }) => JSON.stringify(data?.arguments ?? {})).join(' '),
@@ -165,13 +187,14 @@ export const createAgentExecutor = ({
       try {
         await client.start()
         const tools = toolsFor(stimulus, subagents.length > 0)
+        const dispatchable = subagents.map(({ id }) => id)
         const skillDirectories = [...new Set((options.skills ?? []).flatMap((skill) => skill.path ? [dirname(skill.path)] : []))]
         session = await client.createSession({
           model: options.model,
           workingDirectory: options.workDir,
           customAgents: [
-            customAgent(agent, tools, options.model, false),
-            ...subagents.map((entry) => customAgent(entry, tools, options.model, true)),
+            customAgent(agent, tools, options.model, false, dispatchable),
+            ...subagents.map((entry) => customAgent(entry, tools, options.model, true, dispatchable)),
           ],
           agent: agent.id,
           skillDirectories,

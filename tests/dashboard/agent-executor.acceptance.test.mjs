@@ -230,13 +230,84 @@ describe('Vally real-agent executor', () => {
     strictEqual(config.agent, 'software-engineer-reviewer')
     deepStrictEqual(config.customAgents.map(({ name }) => name), ['software-engineer-reviewer', ...lenses])
     deepStrictEqual(config.customAgents.map(({ infer }) => infer), [false, true, true, true, true])
-    deepStrictEqual(config.customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash', 'agent'])
+    deepStrictEqual(config.customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash', 'task'])
     deepStrictEqual(config.availableTools, [
-      'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash', 'builtin:agent',
+      'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash', 'builtin:task',
     ])
     deepStrictEqual(trajectory.metadata.subagents.map(({ id }) => id), lenses)
     deepStrictEqual(trajectory.metadata.skillsConfigured, ['adversarial-review-lenses'])
     deepStrictEqual(trajectory.metadata.subagentSkillsConfigured, Object.fromEntries(lenses.map((id) => [id, []])))
+  })
+
+  it('names the registered chain in the prompt so a descriptor link is not the only route to a dispatch', async () => {
+    const calls = { sessions: [] }
+    const session = {
+      sessionId: 'session-4',
+      on() {},
+      async sendAndWait() { return { data: { content: 'NEEDS_REWORK' } } },
+      async disconnect() {},
+    }
+    const executor = createAgentExecutor({
+      repoRoot,
+      createClient: () => ({
+        async start() {},
+        async createSession(config) { calls.sessions.push(config); return session },
+        async stop() {},
+      }),
+      permissionHandler: () => ({ kind: 'approve-once' }),
+      adapterFactory: () => new CopilotAdapter(),
+      computeMetrics,
+      clock: { now: () => new Date('2026-08-12T10:00:00.000Z') },
+      randomUUID: () => 'trajectory-4',
+    })
+    const lenses = ['quality-gates-lens', 'test-integrity-lens']
+    const stimulus = {
+      name: 'delivery-review-fans-out',
+      prompt: 'Review the delivered change and report a verdict.',
+      tags: { agent: 'software-engineer-reviewer', subagents: lenses },
+    }
+
+    await executor.execute(stimulus, {
+      workDir: '/tmp/work',
+      model: 'claude-sonnet-4.6',
+      timeout: 30_000,
+      sessionLog: { rootDir: '/tmp/session-log' },
+      skills: [],
+    })
+
+    const [reviewer, firstLens] = calls.sessions[0].customAgents
+    strictEqual(reviewer.prompt.includes('quality-gates-lens, test-integrity-lens'), true)
+    strictEqual(reviewer.prompt.includes('Evaluation runtime sub-agent dispatch'), true)
+    // A lens is a leaf of the chain: it must not be told it can dispatch itself.
+    strictEqual(firstLens.prompt.includes('quality-gates-lens'), false)
+    strictEqual(firstLens.prompt.includes('test-integrity-lens'), true)
+  })
+
+  it('leaves a stimulus that delegates to nobody without a dispatch notice', async () => {
+    const calls = { sessions: [] }
+    const executor = createAgentExecutor({
+      repoRoot,
+      createClient: () => ({
+        async start() {},
+        async createSession(config) {
+          calls.sessions.push(config)
+          return { sessionId: 'session-5', on() {}, async sendAndWait() { return { data: { content: '' } } }, async disconnect() {} }
+        },
+        async stop() {},
+      }),
+      permissionHandler: () => ({ kind: 'approve-once' }),
+      adapterFactory: () => new CopilotAdapter(),
+      computeMetrics,
+      clock: { now: () => new Date('2026-08-12T10:00:00.000Z') },
+      randomUUID: () => 'trajectory-5',
+    })
+
+    await executor.execute(
+      { name: 'solo', prompt: 'Report the blocker.', tags: { agent: 'software-engineer' } },
+      { workDir: '/tmp/work', model: 'claude-sonnet-4.6', timeout: 30_000, sessionLog: { rootDir: '/tmp/session-log' }, skills: [] },
+    )
+
+    strictEqual(calls.sessions[0].customAgents[0].prompt.includes('Evaluation runtime sub-agent dispatch'), false)
   })
 
   it('publishes the dispatches that actually happened so a narrated fan-out cannot pass', async () => {
@@ -246,7 +317,7 @@ describe('Vally real-agent executor', () => {
       ...dispatched.map((agent, index) => ({
         type: 'tool.execution_start',
         timestamp: `2026-08-13T10:00:0${index}.000Z`,
-        data: { toolName: 'agent', toolCallId: `call-${index}`, turnId: '0', arguments: { agent } },
+        data: { toolName: 'task', toolCallId: `call-${index}`, turnId: '0', arguments: { agent } },
       })),
       { type: 'assistant.message', timestamp: '2026-08-13T10:00:09.000Z', data: { content: 'NEEDS_REWORK' } },
     ]
@@ -297,7 +368,7 @@ describe('Vally real-agent executor', () => {
     const artifactDir = mkdtempSync(join(tmpdir(), 'skraft-agent-skill-metrics-'))
     const rawEventsWithSubagentSkills = [
       { type: 'skill.invoked', timestamp: '2026-08-29T10:00:00.000Z', data: { name: 'adversarial-review-lenses', path: '/tmp/work/.skills/adversarial-review-lenses/SKILL.md' } },
-      { type: 'tool.execution_start', timestamp: '2026-08-29T10:00:01.000Z', data: { toolName: 'agent', toolCallId: 'call-0', turnId: '0', arguments: { agent: 'software-engineer' } } },
+      { type: 'tool.execution_start', timestamp: '2026-08-29T10:00:01.000Z', data: { toolName: 'task', toolCallId: 'call-0', turnId: '0', arguments: { agent: 'software-engineer' } } },
       { type: 'skill.invoked', agentId: 'software-engineer', timestamp: '2026-08-29T10:00:02.000Z', data: { name: 'outside-in-tdd', path: '/tmp/work/.skills/outside-in-tdd/SKILL.md' } },
       { type: 'skill.invoked', agentId: 'software-engineer', timestamp: '2026-08-29T10:00:03.000Z', data: { name: 'craft-discipline', path: '/tmp/work/.skills/craft-discipline/SKILL.md' } },
       { type: 'assistant.message', timestamp: '2026-08-29T10:00:04.000Z', data: { content: 'blocked' } },
