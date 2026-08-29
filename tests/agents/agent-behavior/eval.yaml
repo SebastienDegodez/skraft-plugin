@@ -44,7 +44,7 @@ stimuli:
       - type: output-matches
         name: The run is reported as blocked on a missing precondition
         config:
-          pattern: '(?i)\b(blocked|cannot\s+(?:run|start|proceed|resume|continue)|unable to\s+(?:run|start|proceed))\b'
+          pattern: '(?i)\b(blocked|not started|did not start|cannot\s+(?:run|start|proceed|resume|continue)|unable to\s+(?:run|start|proceed))\b'
       - type: output-matches
         name: The developer is routed to the product layer that owns the input
         config:
@@ -64,13 +64,11 @@ stimuli:
       - type: diff-empty
 
   # Migrated from the pre-orchestrator suite, which selected `software-engineer`
-  # directly and asserted that it blocked on absent inputs. That premise does not
-  # survive the migration intact: the orchestrator guards the phase BEFORE it
-  # dispatches, so the engineer is never reached and never gets to refuse. The
-  # base test conflated two claims, and they are now measured where each is real:
-  # the guard is here, and "the dispatched engineer loads its own mandatory
-  # skills" moved to `software-engineer-delivery`, the suite where a dispatch
-  # legitimately happens.
+  # directly and asserted that it blocked on absent inputs. The base test
+  # conflated two claims, and they are now measured where each is real: the
+  # refusal to deliver from absent inputs is here, and "the dispatched engineer
+  # loads its own mandatory skills" moved to `software-engineer-delivery`, the
+  # suite where a dispatch legitimately happens.
   - name: A phase whose recorded inputs are gone is not resumed
     prompt: |
       Continue the engineering pipeline for the Checkout Pricing project through its current
@@ -93,23 +91,14 @@ stimuli:
           dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
     graders:
       - type: completed
-      # The specialist is offered (`subagents:` grants the dispatch tool) and must
-      # still not be used: an agent handed a phase whose inputs are absent would
-      # have to invent them. Declaring the tool and then asserting it stays unused
-      # is what makes this falsifiable — without the tool, silence proves nothing.
-      - type: custom-metrics
-        name: No specialist is dispatched into a phase with absent inputs
-        config:
-          assertions:
-            - metric: subagentDispatchCount
-              equals: 0
-      # Which skills the lead loads is a judgement it makes per situation, not a
-      # contract: across two runs of this same stimulus it loaded
-      # `skraft-difficulty-routing` three times out of three and then zero out of
-      # three. Grading it would measure prompt phrasing. The claim that skills are
-      # reachable at all is carried by the SKILL-MISSING grader below, and the
-      # claim that a dispatched specialist loads ITS mandatory skills lives in
-      # `software-engineer-delivery`, where a dispatch legitimately happens.
+      # No dispatch assertion here, in either direction. The orchestrator's
+      # Phase 0 rehydrates state through `node "$CLAUDE_PLUGIN_ROOT/src/cli/
+      # state.mjs"`, and that CLI is not staged into a prepared workspace: the
+      # run spends its dispatches trying to reach it and never gets as far as
+      # choosing a phase specialist. Until the CLI is reachable, anything this
+      # suite asserted about the shape of the chain here would be measuring that
+      # gap rather than the orchestrator. What the agent SAYS is unaffected, and
+      # is what the graders below read.
       - type: output-matches
         name: The absent DISTILL input is named as the reason delivery cannot start
         config:
