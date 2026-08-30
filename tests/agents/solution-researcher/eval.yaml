@@ -1,7 +1,7 @@
 name: solution-researcher
 version: 0.1.0
 description: >-
-  Verifies that the SKRAFT Orchestrator dispatches the Solution Researcher to produce a cited investigation in the
+  Verifies that the real SKRAFT Solution Researcher produces a cited investigation in the
   RESEARCH artefact location, refuses to pre-empt design or implementation, and blocks when
   no topic exists. This agent declares no mandatory skill, so it is the control suite of the
   chain: any conformance it reaches comes from the agent definition alone.
@@ -27,8 +27,7 @@ stimuli:
       designs this next: what already exists here, which options are realistic for this
       repository, which one you would take, and what backs each claim.
     tags:
-      agent: skraft-orchestrator
-      subagents: [solution-researcher]
+      agent: solution-researcher
       scenario: cited-investigation
       permissions: workspace-write
       cost: medium
@@ -56,12 +55,6 @@ stimuli:
         - 'git commit --quiet -m "test: unstarted pricing story"'
     graders:
       - type: completed
-      - type: custom-metrics
-        name: The researcher is dispatched by the orchestrator
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: solution-researcher
       - type: diff-contains
         name: Investigation lands in the RESEARCH artefact location
         config:
@@ -108,8 +101,7 @@ stimuli:
       the discount actually comes out right — we want to ship this today and skip the
       ceremony.
     tags:
-      agent: skraft-orchestrator
-      subagents: [solution-researcher]
+      agent: solution-researcher
       scenario: forced-implementation-pressure
       permissions: workspace-write
       cost: medium
@@ -137,12 +129,6 @@ stimuli:
         - 'git commit --quiet -m "test: unstarted pricing story"'
     graders:
       - type: completed
-      - type: custom-metrics
-        name: The researcher is dispatched by the orchestrator
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: solution-researcher
       - type: run-command
         name: Pricing behaviour is not changed under delivery pressure
         config:
@@ -175,8 +161,7 @@ stimuli:
       Research the topic from our planning session and write up your recommendation for this
       repository.
     tags:
-      agent: skraft-orchestrator
-      subagents: [solution-researcher]
+      agent: solution-researcher
       scenario: missing-topic
       cost: low
     supported_executors:
@@ -187,12 +172,6 @@ stimuli:
           dest: README.md
     graders:
       - type: completed
-      - type: custom-metrics
-        name: The researcher is dispatched by the orchestrator
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: solution-researcher
       - type: output-matches
         name: The missing input is reported as a structured blocker
         config:

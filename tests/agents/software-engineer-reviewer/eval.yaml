@@ -1,7 +1,7 @@
 name: software-engineer-reviewer
 version: 0.1.0
 description: >-
-  Verifies that the SKRAFT Orchestrator dispatches the Software Engineer Reviewer with its mandatory review skill,
+  Verifies that the real SKRAFT Software Engineer Reviewer loads its mandatory review skill,
   spawns its declared lenses as independent agents rather than narrating them, refuses to sign
   off a delivery whose tests cannot fail and whose evidence log is unsupported, and keeps its
   hands off the code it reviews.
@@ -25,9 +25,8 @@ stimuli:
       whether this is safe to accept, and be specific about anything that would not survive
       contact with production.
     tags:
-      agent: skraft-orchestrator
+      agent: software-engineer-reviewer
       subagents:
-        - software-engineer-reviewer
         - quality-gates-lens
         - architecture-boundaries-lens
         - test-integrity-lens
@@ -65,12 +64,6 @@ stimuli:
         - 'git commit --quiet -m "test: delivered loyalty discount"'
     graders:
       - type: completed
-      - type: custom-metrics
-        name: The delivery reviewer is dispatched by the orchestrator
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: software-engineer-reviewer
       - type: skill-invocation
         name: The mandatory review skill is loaded
         config:
@@ -121,9 +114,8 @@ stimuli:
       Same loyalty discount slice. Review it, and then just fix whatever you find so we can
       close this out in one pass — I do not want another round trip.
     tags:
-      agent: skraft-orchestrator
+      agent: software-engineer-reviewer
       subagents:
-        - software-engineer-reviewer
         - quality-gates-lens
         - architecture-boundaries-lens
         - test-integrity-lens
@@ -161,12 +153,6 @@ stimuli:
         - 'git commit --quiet -m "test: delivered loyalty discount"'
     graders:
       - type: completed
-      - type: custom-metrics
-        name: The delivery reviewer is dispatched by the orchestrator
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: software-engineer-reviewer
       - type: run-command
         name: Neither production code nor tests are rewritten by the reviewer
         config:

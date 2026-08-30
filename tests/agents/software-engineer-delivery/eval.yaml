@@ -1,6 +1,6 @@
 name: software-engineer-delivery
 version: 0.1.0
-description: Verifies that the SKRAFT Orchestrator dispatches the Software Engineer to drive an approved .NET Clean Architecture behavior through the human RED checkpoint to GREEN, preserve layer boundaries and the outer test, and deposit stack-specific quality evidence.
+description: Verifies that the real SKRAFT Software Engineer drives an approved .NET Clean Architecture behavior through the human RED checkpoint to GREEN, preserves layer boundaries and the outer test, and deposits stack-specific quality evidence.
 type: capability
 defaults:
   executor: skraft-agent-runner
@@ -20,8 +20,7 @@ stimuli:
       - I want to develop the `loyalty-discount` feature for the Checkout Pricing project.
       - The test is correct, continue. Complete the feature.
     tags:
-      agent: skraft-orchestrator
-      subagents: [software-engineer]
+      agent: software-engineer
       scenario: approved-dotnet-delivery
       permissions: workspace-write
       cost: medium
@@ -81,12 +80,6 @@ stimuli:
         - 'git commit --quiet -m "test: approved DISTILL fixture"'
     graders:
       - type: completed
-      - type: custom-metrics
-        name: The software engineer is dispatched by the orchestrator
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: software-engineer
       - type: output-matches
         name: RED checkpoint reported before implementation
         turn: 0
@@ -136,27 +129,15 @@ stimuli:
         name: Parameterized inner Domain test was added
         config:
           pattern: 'tests/CheckoutPricing\.UnitTest/.*\.cs'
-      # `skill-invocation` scans the whole trajectory with no agent scoping, so it
-      # passes whenever ANYONE loaded these — including the orchestrator, which
-      # never delivers code. The qualified `<agentId>/<skill>` metric is the only
-      # form that proves the dispatched engineer loaded its own mandatory skills,
-      # which is the claim this suite exists to make.
-      - type: custom-metrics
-        name: The dispatched engineer loads its own mandatory delivery skills
+      - type: skill-invocation
         config:
-          assertions:
-            - metric: subagentSkillsLoaded
-              contains: software-engineer/outside-in-tdd
-            - metric: subagentSkillsLoaded
-              contains: software-engineer/craft-discipline
-            - metric: subagentSkillsLoaded
-              contains: software-engineer/clean-architecture-testing
-            - metric: subagentSkillsLoaded
-              contains: software-engineer/mutation-testing
-            - metric: subagentSkillsLoaded
-              contains: software-engineer/quality-gates-evidence-contract
-            - metric: subagentSkillsLoaded
-              contains: software-engineer/quality-gates-dotnet
+          required:
+            - outside-in-tdd
+            - craft-discipline
+            - clean-architecture-testing
+            - mutation-testing
+            - quality-gates-evidence-contract
+            - quality-gates-dotnet
       - type: file-exists
         name: Quality-gate evidence contract exists
         config:
