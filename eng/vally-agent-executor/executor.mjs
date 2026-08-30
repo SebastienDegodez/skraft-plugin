@@ -151,27 +151,13 @@ const toolsFor = (stimulus, dispatches) => {
   return dispatches ? [...base, DISPATCH_TOOL] : base
 }
 const qualifiedTools = (tools) => tools.map((tool) => `builtin:${tool}`)
-// The primary agent is selected explicitly, so it stays out of model inference.
-// A declared sub-agent is the opposite: the dispatch tool can only offer an agent
-// the runtime is allowed to infer, so `infer: false` would silently make the
-// chain undispatchable.
-const customAgent = (agent, { tools, model, infer, dispatchable = [], pluginRoot }) => ({
+const customAgent = (agent, { tools, model, dispatchable = [], pluginRoot }) => ({
   name: agent.id,
   displayName: agent.name,
   description: agent.description,
   tools,
   prompt: agentPrompt(agent, { dispatchable: dispatchable.filter((id) => id !== agent.id), pluginRoot }),
   model,
-  infer,
-  // The skills the descriptor declares mandatory. Naming them here is the only
-  // way a DISPATCHED agent gets them: `skillDirectories` is a session-level
-  // setting a sub-agent does not inherit, so the lead resolved
-  // `discovery-review-criteria` and the reviewer it dispatched got `Skill not
-  // found` for that same name seconds later, in the same trial. Whether a
-  // mandatory skill loaded came down to whether the agent worked before or after
-  // delegating. The runtime resolves these names from `skillDirectories` at
-  // registration, where the lookup does work, and injects the content at startup.
-  skills: agent.skills?.length ? agent.skills : undefined,
 })
 const promptsFor = (stimulus) => Array.isArray(stimulus.turns) && stimulus.turns.length
   ? stimulus.turns
@@ -274,8 +260,8 @@ export const createAgentExecutor = ({
           model: options.model,
           workingDirectory: options.workDir,
           customAgents: [
-            customAgent(agent, { tools, model: options.model, infer: false, dispatchable, pluginRoot }),
-            ...subagents.map((entry) => customAgent(entry, { tools, model: options.model, infer: true, dispatchable, pluginRoot })),
+            customAgent(agent, { tools, model: options.model, dispatchable, pluginRoot }),
+            ...subagents.map((entry) => customAgent(entry, { tools, model: options.model, dispatchable, pluginRoot })),
           ],
           agent: agent.id,
           skillDirectories,

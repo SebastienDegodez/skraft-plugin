@@ -9,8 +9,16 @@ import { createAgentExecutor } from './executor.mjs'
 const defaultRepoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const approved = { kind: 'approve-once' }
 const rejected = (feedback) => ({ kind: 'reject', feedback })
+// `cd` earns its place the same way the others do: the path guard below decides
+// where a command may reach, and it applies to `cd` exactly as it applies to
+// `find`. Leaving the name out did not bound anything — it only rejected the
+// segment, and with it the `&&` chain around it. An agent handed absolute paths
+// writes `cd <workspace> && node …`, so one missing name denied the whole
+// invocation: 15 refusals in a single orchestrator trial, including the command
+// that writes the review verdict, which then read as the agent declining to
+// produce it.
 const localCommands = new Set([
-	'cat', 'dotnet', 'echo', 'find', 'git', 'grep', 'head', 'ls', 'mkdir', 'node', 'npm',
+	'cat', 'cd', 'dotnet', 'echo', 'find', 'git', 'grep', 'head', 'ls', 'mkdir', 'node', 'npm',
 	'printf', 'pwd', 'shasum', 'sha256sum', 'tail', 'tee', 'touch',
 ])
 const mutationAdapterScript = /^bash\s+scripts\/(?:configure-mutation|mutation-core|mutation-boundary)\.sh(?:\s|$)/

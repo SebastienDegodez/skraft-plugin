@@ -10,7 +10,6 @@ import { computeMetrics } from '@microsoft/vally'
 import { CopilotAdapter } from '@microsoft/vally/trajectory'
 
 import { createAgentExecutor } from '../../eng/vally-agent-executor/executor.mjs'
-import { loadAgentDescriptor } from '../../eng/vally-agent-executor/agent-descriptor.mjs'
 
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const pluginSkills = join(repoRoot, 'plugins/skraft-framework/skills')
@@ -83,11 +82,7 @@ describe('Vally real-agent executor', () => {
     deepStrictEqual(config.skillDirectories, [...skillPaths.map(({ path }) => dirname(path)), pluginSkills])
     strictEqual(config.customAgents.length, 1)
     strictEqual(config.customAgents[0].name, 'software-engineer')
-    // The skills the descriptor declares mandatory. A dispatched agent has no
-    // other route to them, so registering the agent has to carry them.
-    const declaredSkills = (await loadAgentDescriptor(repoRoot, 'software-engineer')).skills
-    strictEqual(declaredSkills.length > 0, true)
-    deepStrictEqual(config.customAgents[0].skills, declaredSkills)
+    strictEqual(config.customAgents[0].skills, undefined)
     deepStrictEqual(config.customAgents[0].tools, ['skill', 'glob', 'grep', 'view'])
     strictEqual(config.customAgents[0].prompt.includes('Use the runtime skill tool'), true)
     strictEqual(config.customAgents[0].prompt.includes('already eagerly loaded'), false)
@@ -237,7 +232,7 @@ describe('Vally real-agent executor', () => {
     const config = calls.sessions[0]
     strictEqual(config.agent, 'software-engineer-reviewer')
     deepStrictEqual(config.customAgents.map(({ name }) => name), ['software-engineer-reviewer', ...lenses])
-    deepStrictEqual(config.customAgents.map(({ infer }) => infer), [false, true, true, true, true])
+    deepStrictEqual(config.customAgents.map(({ infer }) => infer), [undefined, undefined, undefined, undefined, undefined])
     deepStrictEqual(config.customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash', 'task'])
     deepStrictEqual(config.availableTools, [
       'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash', 'builtin:task',
