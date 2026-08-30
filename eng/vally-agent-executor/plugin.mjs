@@ -42,25 +42,31 @@ const requestedPaths = (request) => [
 // An allowlisted command is not evidence of a bounded command: `find /elsewhere`
 // and `cd /elsewhere && git log` both name an absolute path the caller never
 // declared. Reading the repository under evaluation would contaminate the trial,
-// so an absolute path outside the workspace disqualifies the whole invocation.
-// Only a token that starts with a slash counts — a relative path such as
-// `.copilot-tracking/evidence/result.json` is not an absolute path.
+// so an absolute path outside the readable roots disqualifies the whole
+// invocation. The roots are the prepared workspace, the staged skills, and the
+// assembled plugin CLI the descriptors invoke as `$CLAUDE_PLUGIN_ROOT` — which
+// holds the CLI and its templates only, never the descriptors or skills that are
+// themselves under test. Only a token that starts with a slash counts — a
+// relative path such as `.copilot-tracking/evidence/result.json` is not an
+// absolute path.
 const absolutePathTokens = (text) => [...text.matchAll(/(?:^|[\s'"`=(<>|&;])(\/[^\s'"`;|&()<>]*)/g)]
 	.map(([, candidate]) => candidate)
 
-const escapesWorkspace = (workDir, text) => absolutePathTokens(text)
+const insideAnyRoot = (roots, candidate) => roots.some((root) => insideWorkspace(root, candidate))
+
+const escapesWorkspace = (roots, text) => absolutePathTokens(text)
 	.filter((candidate) => !neutralAbsolutePath.test(candidate))
-	.some((candidate) => !insideWorkspace(workDir, candidate))
+	.some((candidate) => !insideAnyRoot(roots, candidate))
 
 const deliveryWriteAllowed = (context) => context?.stimulus?.tags?.permissions === 'workspace-write'
 
 export const pilotPermissionHandler = (request, context) => {
+	const roots = readableRootsOf(context)
 	if (request.kind === 'read') {
-		const roots = readableRootsOf(context)
 		const paths = requestedPaths(request)
-		return paths.length > 0 && paths.every((path) => roots.some((root) => insideWorkspace(root, path)))
+		return paths.length > 0 && paths.every((path) => insideAnyRoot(roots, path))
 			? approved
-			: rejected('Reads are limited to the prepared evaluation workspace and its staged skills.')
+			: rejected('Reads are limited to the prepared evaluation workspace, its staged skills and the plugin CLI.')
 	}
 	if (!deliveryWriteAllowed(context)) return rejected('The routing pilot permits read-only workspace access.')
 
@@ -80,8 +86,8 @@ export const pilotPermissionHandler = (request, context) => {
 			const name = commandName(command)
 			return localCommands.has(name) || (name === 'bash' && mutationAdapterScript.test(command.fullCommandText ?? command.identifier ?? ''))
 		})
-		const workspacePaths = paths.every((path) => insideWorkspace(context.workDir, path))
-			&& !escapesWorkspace(context.workDir, commandText)
+		const workspacePaths = paths.every((path) => insideAnyRoot(roots, path))
+			&& !escapesWorkspace(roots, commandText)
 		const operationAllowed = !forbiddenShell.test(commandText)
 		return localOnly && knownCommands && workspacePaths && operationAllowed
 			? approved

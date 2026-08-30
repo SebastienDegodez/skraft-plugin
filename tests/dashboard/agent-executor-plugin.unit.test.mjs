@@ -144,4 +144,42 @@ describe('Vally executor plugin registration', () => {
     }, context), { kind: 'approve-once' })
   })
 
+  // The executor assembles the CLI the descriptors invoke as `$CLAUDE_PLUGIN_ROOT`
+  // and passes it as a readable root, so the mandated `node .../state.mjs` is
+  // allowed. It stays a READ root: the CLI is not a place the agent may write, and
+  // the rest of the filesystem is no more reachable than before.
+  it('runs the assembled plugin CLI while keeping everything else out of reach', () => {
+    const pluginRoot = '/tmp/skraft-plugin-root-ab12'
+    const context = {
+      stimulus: { tags: { permissions: 'workspace-write' } },
+      workDir: '/tmp/work',
+      readableRoots: ['/tmp/work', pluginRoot],
+    }
+
+    deepStrictEqual(
+      pilotPermissionHandler({ kind: 'read', path: `${pluginRoot}/src/cli/state.mjs` }, context),
+      { kind: 'approve-once' },
+    )
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'node', fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project checkout-pricing` }],
+      possiblePaths: [`${pluginRoot}/src/cli/state.mjs`],
+      possibleUrls: [],
+      fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project checkout-pricing`,
+    }, context), { kind: 'approve-once' })
+
+    strictEqual(
+      pilotPermissionHandler({ kind: 'write', fileName: `${pluginRoot}/src/cli/state.mjs` }, context).kind,
+      'reject',
+    )
+    strictEqual(pilotPermissionHandler({ kind: 'read', path: '/repo/tests/agents' }, context).kind, 'reject')
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'cat', fullCommandText: 'cat /repo/tests/agents/backlog-discoverer/eval.yaml' }],
+      possiblePaths: [],
+      possibleUrls: [],
+      fullCommandText: 'cat /repo/tests/agents/backlog-discoverer/eval.yaml',
+    }, context).kind, 'reject')
+  })
+
 })

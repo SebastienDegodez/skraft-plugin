@@ -1,5 +1,6 @@
 import { randomUUID as newRandomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
 import { mergeEnv } from '@microsoft/vally'
@@ -54,26 +55,37 @@ const dispatchNotice = (dispatchable) => [
 // Every SKRAFT descriptor reaches its own tooling through `$CLAUDE_PLUGIN_ROOT`:
 // the orchestrator rehydrates state with `src/cli/state.mjs`, a reviewer renders
 // its verdict with `src/cli/artifact.mjs`. Nothing exports that variable here, so
-// the mandated command expands to `node "/src/cli/state.mjs"` and the agent
-// spends its turn hunting for the CLI instead of doing the phase — one trial
+// the mandated command expanded to `node "/src/cli/state.mjs"` and the agent
+// spent its turn hunting for the CLI instead of doing the phase — one trial
 // burned ten dispatches looking for it and never reached a phase specialist.
 //
-// A stimulus that needs the CLI stages it into the workspace under
-// `.skraft-plugin/` (the source is dependency-free, so the layer directories
-// copy as-is). Staging it INSIDE the workspace is the point: no permission is
-// widened and no environment is replaced. Only `src/` is staged, never `agents/`
-// or `skills/` — an agent given its own descriptors reads them instead of
-// working.
-const STAGED_PLUGIN_DIR = '.skraft-plugin'
-const stagedPluginRoot = (workDir) => {
-  const candidate = join(workDir, STAGED_PLUGIN_DIR)
-  return existsSync(candidate) ? candidate : undefined
+// The tree is assembled once per executor, outside the workspace: Vally captures
+// the diff baseline before `execute()` runs, so anything staged into the
+// workspace here would show up as work the agent did and break every
+// `diff-empty`.
+//
+// What is copied is what the CLI needs to run and nothing that is itself under
+// test. Never `skills/` — that is the treatment a paired run withholds from its
+// baseline arm, and on disk the baseline could simply read it. Never `agents/` —
+// the descriptors are already injected as prompts, and an agent that can open a
+// sibling's descriptor reads it instead of dispatching, which is the exact
+// behaviour the dispatch metrics exist to catch. Never `src/node_modules` — 67 MB
+// the dependency-free source never loads.
+const PLUGIN_SUBTREES = ['src/cli', 'src/domain', 'src/application', 'src/adapters', 'src/ports', 'assets']
+
+const copyPluginRoot = (repoRoot) => {
+  const root = mkdtempSync(join(tmpdir(), 'skraft-plugin-root-'))
+  for (const subtree of PLUGIN_SUBTREES) {
+    cpSync(join(repoRoot, 'plugins', 'skraft-framework', subtree), join(root, subtree), { recursive: true })
+  }
+  return root
 }
 
 const pluginRootNotice = (pluginRoot) => [
   '## Evaluation runtime plugin root',
   `$CLAUDE_PLUGIN_ROOT is not exported here. Wherever the agent definition writes it, use ${pluginRoot} instead.`,
   `A mandated command such as \`node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"\` is run as \`node "${pluginRoot}/src/cli/state.mjs"\`.`,
+  'It holds the CLI and its templates only. Read nothing else from it, and write nothing into it.',
 ].join('\n\n')
 
 const agentPrompt = (agent, { dispatchable = [], pluginRoot } = {}) => {
@@ -194,6 +206,8 @@ export const createAgentExecutor = ({
   if (!adapterFactory) throw new Error('adapterFactory is required')
   if (!computeMetrics) throw new Error('computeMetrics is required')
 
+  let pluginRoot
+
   return {
     name: 'skraft-agent-runner',
     supportsPreparedWorkspace: true,
@@ -215,7 +229,7 @@ export const createAgentExecutor = ({
         await client.start()
         const tools = toolsFor(stimulus, subagents.length > 0)
         const dispatchable = subagents.map(({ id }) => id)
-        const pluginRoot = stagedPluginRoot(options.workDir)
+        pluginRoot ??= copyPluginRoot(repoRoot)
         const skillDirectories = [...new Set((options.skills ?? []).flatMap((skill) => skill.path ? [dirname(skill.path)] : []))]
         session = await client.createSession({
           model: options.model,
@@ -289,6 +303,10 @@ export const createAgentExecutor = ({
         await client.stop()
       }
     },
-    async shutdown() {},
+    async shutdown() {
+      if (!pluginRoot) return
+      rmSync(pluginRoot, { recursive: true, force: true })
+      pluginRoot = undefined
+    },
   }
 }

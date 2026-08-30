@@ -80,8 +80,8 @@ stimuli:
       scenario: missing-distill-artifacts
       # Write access is granted precisely because the stimulus claims nothing is
       # written: `diff-empty` below is only evidence when the agent could have
-      # written and did not. It also brings `bash`, without which the staged
-      # rehydration CLI could not be run.
+      # written and did not. It also brings `bash`, without which the rehydration
+      # CLI the executor assembles could not be run.
       permissions: workspace-write
       cost: low
     supported_executors:
@@ -94,24 +94,6 @@ stimuli:
           dest: skraft-config.json
         - src: fixtures/deliver-without-distill/.copilot-tracking/skraft-plans/checkout-pricing/state.json
           dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        # Phase 0 rehydrates state through `node
-        # "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"`. Unstaged, that command cannot
-        # run and the orchestrator spends the turn hunting for it instead of
-        # judging the phase — one trial burned ten dispatches doing exactly that.
-        # The source is dependency-free, so the layer directories copy as-is; the
-        # executor points $CLAUDE_PLUGIN_ROOT at `.skraft-plugin` when it is here.
-        # `src/` only: an agent handed its own descriptors and skills reads them
-        # instead of working.
-        - src: ../../../plugins/skraft-framework/src/cli
-          dest: .skraft-plugin/src/cli
-        - src: ../../../plugins/skraft-framework/src/domain
-          dest: .skraft-plugin/src/domain
-        - src: ../../../plugins/skraft-framework/src/application
-          dest: .skraft-plugin/src/application
-        - src: ../../../plugins/skraft-framework/src/adapters
-          dest: .skraft-plugin/src/adapters
-        - src: ../../../plugins/skraft-framework/src/ports
-          dest: .skraft-plugin/src/ports
     graders:
       - type: completed
       # No dispatch assertion here, in either direction. The rehydration CLI is

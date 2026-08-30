@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { deepStrictEqual, strictEqual } from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -312,10 +312,11 @@ describe('Vally real-agent executor', () => {
 
   // `$CLAUDE_PLUGIN_ROOT` is exported by nobody here, so a descriptor's mandated
   // `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"` resolves to `/src/...` and the
-  // agent hunts for a CLI instead of running the phase. A stimulus that needs it
-  // stages the tree into the workspace; the notice appears only when it did, so a
-  // stimulus without it is never pointed at a path that does not exist.
-  it('names a staged plugin CLI as the plugin root, and stays silent when none was staged', async () => {
+  // agent hunts for a CLI instead of running the phase. The executor assembles
+  // one for every agent stimulus, outside the workspace so the diff baseline —
+  // captured before execute() — stays clean, and carrying the CLI and its
+  // templates only.
+  it('assembles the plugin CLI the descriptors invoke, without the skills and agents under test', async () => {
     const calls = { sessions: [] }
     const executor = createAgentExecutor({
       repoRoot,
@@ -334,19 +335,29 @@ describe('Vally real-agent executor', () => {
       randomUUID: () => 'trajectory-6',
     })
     const stimulus = { name: 'solo', prompt: 'Report the blocker.', tags: { agent: 'software-engineer' } }
-    const staged = mkdtempSync(join(tmpdir(), 'skraft-staged-workspace-'))
-    mkdirSync(join(staged, '.skraft-plugin', 'src', 'cli'), { recursive: true })
-    const bare = mkdtempSync(join(tmpdir(), 'skraft-bare-workspace-'))
+    const workDir = mkdtempSync(join(tmpdir(), 'skraft-workspace-'))
 
-    for (const workDir of [staged, bare]) {
-      await executor.execute(stimulus, {
-        workDir, model: 'claude-sonnet-4.6', timeout: 30_000, sessionLog: { rootDir: '/tmp/session-log' }, skills: [],
-      })
-    }
+    await executor.execute(stimulus, {
+      workDir, model: 'claude-sonnet-4.6', timeout: 30_000, sessionLog: { rootDir: join(workDir, '.log') }, skills: [],
+    })
 
-    const [withCli, withoutCli] = calls.sessions.map(({ customAgents }) => customAgents[0].prompt)
-    strictEqual(withCli.includes(`${join(staged, '.skraft-plugin')}/src/cli/state.mjs`), true)
-    strictEqual(withoutCli.includes('Evaluation runtime plugin root'), false)
+    const [{ prompt }] = calls.sessions[0].customAgents
+    const [pluginRoot] = /\/\S*skraft-plugin-root-\S+?(?=\/src\/cli\/state\.mjs)/.exec(prompt)
+    strictEqual(prompt.includes(`node "${pluginRoot}/src/cli/state.mjs"`), true)
+    // The CLI renders its artefacts from templates that live beside it.
+    strictEqual(existsSync(join(pluginRoot, 'assets', 'templates')), true)
+    strictEqual(existsSync(join(pluginRoot, 'src', 'cli', 'state.mjs')), true)
+    // A baseline arm must not be able to read the skill it was denied, and an
+    // agent must not be able to read a sibling descriptor instead of dispatching.
+    strictEqual(existsSync(join(pluginRoot, 'skills')), false)
+    strictEqual(existsSync(join(pluginRoot, 'com.anthropic.claude-code')), false)
+    // 67 MB the dependency-free source never loads.
+    strictEqual(existsSync(join(pluginRoot, 'src', 'node_modules')), false)
+    // The workspace is untouched: Vally captured its diff baseline before this ran.
+    deepStrictEqual(readdirSync(workDir), ['.log'])
+
+    await executor.shutdown()
+    strictEqual(existsSync(pluginRoot), false)
   })
 
   it('publishes the dispatches that actually happened so a narrated fan-out cannot pass', async () => {
