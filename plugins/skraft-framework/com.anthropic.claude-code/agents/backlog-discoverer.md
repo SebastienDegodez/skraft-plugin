@@ -178,8 +178,14 @@ Both files must include:
 
 Discovery is not finished when the artefacts are written. Dispatch [backlog-discoverer-reviewer](backlog-discoverer-reviewer.agent.md) and act on the verdict it returns.
 
-1. Dispatch the reviewer with both artefact paths and the current `attempt` number (starts at 1). Say in the dispatch that the reviewer writes its own verdict to `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{attempt}.md`, and never tell it to leave the workspace untouched. "Do not modify files" reads as a sensible constraint on a review and silently cancels the one artefact the next phase reads — the reviewer obeys the caller over its own output contract, and the verdict exists only in a message that dies with the dispatch.
-2. Read the verdict — `APPROVED`, `NEEDS_REWORK`, or `REJECTED`. Name that vocabulary in the dispatch as well: a reviewer asked to answer `CHANGES_REQUESTED` answers in a vocabulary this gate retired, and step 3 has no row for it.
+1. Dispatch the reviewer. The dispatch prompt carries four things, all of them:
+   - both artefact paths;
+   - the current `attempt` number (starts at 1);
+   - the verdict file the reviewer is to write — `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{attempt}.md`;
+   - the verdict vocabulary, `APPROVED` / `NEEDS_REWORK` / `REJECTED`.
+
+   Any restraint you put in that prompt is scoped to the artefacts under review — say "do not modify the triage report or the sprint proposal", never "do not modify files". The unscoped form reads as a sensible constraint on a review and revokes the one artefact the next phase reads: the reviewer obeys its caller over its own output contract, the verdict exists only in a message that dies with the dispatch, and `reviews/{date}/` stays empty.
+2. Read the verdict — `APPROVED`, `NEEDS_REWORK`, or `REJECTED`. A reviewer asked to answer `CHANGES_REQUESTED` answers in a vocabulary this gate retired, and step 3 has no row for it.
 3. Act:
 
 | Verdict | Attempt | Action |

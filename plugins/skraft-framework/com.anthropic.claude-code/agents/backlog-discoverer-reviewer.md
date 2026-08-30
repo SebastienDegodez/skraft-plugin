@@ -144,6 +144,16 @@ EOF
 
 The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout for the orchestrator.
 
+If the heredoc is awkward in your shell, write the YAML to a file and hand it over with `--data` instead — same command, same validation:
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
+  --data verdict.yaml \
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
+```
+
+Those two forms are the only ones. If a rendering attempt fails, fix the payload and re-run the command — do not reach for `base64`, `python`, or a hand-written patch. None of them are available here, every attempt is refused, and the review ends with nothing on disk.
+
 ```yaml
 verdict: APPROVED | NEEDS_REWORK | REJECTED
 confidence: high | medium | low
