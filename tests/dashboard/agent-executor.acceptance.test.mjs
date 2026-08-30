@@ -12,7 +12,6 @@ import { CopilotAdapter } from '@microsoft/vally/trajectory'
 import { createAgentExecutor } from '../../eng/vally-agent-executor/executor.mjs'
 
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
-const pluginSkills = join(repoRoot, 'plugins/skraft-framework/skills')
 const agentPath = join(repoRoot, 'plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md')
 const relativeAgentPath = relative(repoRoot, agentPath).split('\\').join('/')
 const expectedHash = createHash('sha256').update(readFileSync(agentPath)).digest('hex')
@@ -79,7 +78,11 @@ describe('Vally real-agent executor', () => {
     strictEqual(config.model, 'claude-sonnet-4.6')
     strictEqual(config.workingDirectory, '/tmp/work')
     deepStrictEqual(config.availableTools, ['builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view'])
-    deepStrictEqual(config.skillDirectories, [...skillPaths.map(({ path }) => dirname(path)), pluginSkills])
+    deepStrictEqual(config.skillDirectories, skillPaths.map(({ path }) => dirname(path)))
+    // A dispatched sub-agent does not inherit `skillDirectories`. The plugin's own
+    // skills come in as a plugin so the whole session can reach them.
+    const [stagedPluginRoot] = /\/\S*skraft-plugin-root-\S+?(?=\/src\/cli\/state\.mjs)/.exec(config.customAgents[0].prompt)
+    deepStrictEqual(config.pluginDirectories, [stagedPluginRoot])
     strictEqual(config.customAgents.length, 1)
     strictEqual(config.customAgents[0].name, 'software-engineer')
     strictEqual(config.customAgents[0].skills, undefined)
@@ -189,7 +192,7 @@ describe('Vally real-agent executor', () => {
 
     calls.sessions[0].onPermissionRequest({ kind: 'write', fileName: '/tmp/work/src/domain.mjs' })
     const [pluginRoot] = /\/\S*skraft-plugin-root-\S+?(?=\/src\/cli\/state\.mjs)/.exec(calls.sessions[0].customAgents[0].prompt)
-    deepStrictEqual(permissionCalls[0].context, { stimulus, workDir: '/tmp/work', readableRoots: ['/tmp/work', pluginRoot, pluginSkills] })
+    deepStrictEqual(permissionCalls[0].context, { stimulus, workDir: '/tmp/work', readableRoots: ['/tmp/work', pluginRoot] })
     await executor.shutdown()
   })
 
@@ -354,9 +357,10 @@ describe('Vally real-agent executor', () => {
     // The CLI renders its artefacts from templates that live beside it.
     strictEqual(existsSync(join(pluginRoot, 'assets', 'templates')), true)
     strictEqual(existsSync(join(pluginRoot, 'src', 'cli', 'state.mjs')), true)
-    // A baseline arm must not be able to read the skill it was denied, and an
-    // agent must not be able to read a sibling descriptor instead of dispatching.
-    strictEqual(existsSync(join(pluginRoot, 'skills')), false)
+    // The tree is loaded as a plugin, so it needs its skills and its manifest.
+    strictEqual(existsSync(join(pluginRoot, 'skills')), true)
+    strictEqual(existsSync(join(pluginRoot, 'plugin.json')), true)
+    // An agent must not be able to read a sibling descriptor instead of dispatching.
     strictEqual(existsSync(join(pluginRoot, 'com.anthropic.claude-code')), false)
     // 67 MB the dependency-free source never loads.
     strictEqual(existsSync(join(pluginRoot, 'src', 'node_modules')), false)
