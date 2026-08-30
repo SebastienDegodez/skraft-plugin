@@ -65,13 +65,23 @@ const dispatchNotice = (dispatchable) => [
 // `diff-empty`.
 //
 // What is copied is what the CLI needs to run and nothing that is itself under
-// test. Never `skills/` — that is the treatment a paired run withholds from its
-// baseline arm, and on disk the baseline could simply read it. Never `agents/` —
-// the descriptors are already injected as prompts, and an agent that can open a
-// sibling's descriptor reads it instead of dispatching, which is the exact
-// behaviour the dispatch metrics exist to catch. Never `src/node_modules` — 67 MB
-// the dependency-free source never loads.
+// test. Never `skills/` — a skill is loaded through the runtime skill tool, not
+// read off disk, and a copy here would only invite an agent to open the file
+// instead. Never `agents/` — the descriptors are already injected as prompts, and
+// an agent that can open a sibling's descriptor reads it instead of dispatching,
+// which is the exact behaviour the dispatch metrics exist to catch. Never
+// `src/node_modules` — 67 MB the dependency-free source never loads.
 const PLUGIN_SUBTREES = ['src/cli', 'src/domain', 'src/application', 'src/adapters', 'src/ports', 'assets']
+
+// Where `skill <name>` resolves from. Agent suites stage nothing of their own —
+// `options.skills` is empty for every stimulus under tests/agents — and left at
+// that the runtime falls back to ambient discovery: the same mandatory skill
+// loads in one trial and comes back `Skill not found` in the next, so a grader on
+// a skill the descriptor requires measures the weather. Naming the directory
+// makes the lookup deterministic. It withholds nothing that is under test: an
+// agent suite is scored on whether its graders hold, with no baseline arm to
+// compare against (see eng/lib/agent-verdict.mjs).
+const pluginSkillsDirectory = (repoRoot) => join(repoRoot, 'plugins', 'skraft-framework', 'skills')
 
 const copyPluginRoot = (repoRoot) => {
   const root = mkdtempSync(join(tmpdir(), 'skraft-plugin-root-'))
@@ -230,7 +240,10 @@ export const createAgentExecutor = ({
         const tools = toolsFor(stimulus, subagents.length > 0)
         const dispatchable = subagents.map(({ id }) => id)
         pluginRoot ??= copyPluginRoot(repoRoot)
-        const skillDirectories = [...new Set((options.skills ?? []).flatMap((skill) => skill.path ? [dirname(skill.path)] : []))]
+        const skillDirectories = [...new Set([
+          ...(options.skills ?? []).flatMap((skill) => (skill.path ? [dirname(skill.path)] : [])),
+          pluginSkillsDirectory(repoRoot),
+        ])]
         session = await client.createSession({
           model: options.model,
           workingDirectory: options.workDir,
