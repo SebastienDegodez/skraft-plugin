@@ -1,4 +1,7 @@
 import { deepStrictEqual, strictEqual } from 'node:assert/strict'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { createRegisterExecutors, pilotPermissionHandler, registerExecutors } from '../../eng/vally-agent-executor/plugin.mjs'
@@ -162,6 +165,35 @@ describe('Vally executor plugin registration', () => {
       possibleUrls: [],
       fullCommandText: 'git status --porcelain 2>/dev/null',
     }, context), { kind: 'approve-once' })
+  })
+
+  it('resolves filesystem aliases without letting a symlink escape the workspace', () => {
+    const actual = mkdtempSync(join(tmpdir(), 'skraft-permission-actual-'))
+    const alias = `${actual}-alias`
+    const outside = mkdtempSync(join(tmpdir(), 'skraft-permission-outside-'))
+    try {
+      mkdirSync(join(actual, 'src'))
+      symlinkSync(actual, alias)
+      symlinkSync(outside, join(actual, 'escape'))
+      const context = {
+        stimulus: { tags: { permissions: 'workspace-write' } },
+        workDir: alias,
+      }
+
+      deepStrictEqual(
+        pilotPermissionHandler({ kind: 'read', path: join(actual, 'src') }, context),
+        { kind: 'approve-once' },
+      )
+      deepStrictEqual(
+        pilotPermissionHandler({ kind: 'write', fileName: join(actual, 'new', 'result.json') }, context),
+        { kind: 'approve-once' },
+      )
+      strictEqual(pilotPermissionHandler({ kind: 'read', path: join(alias, 'escape') }, context).kind, 'reject')
+    } finally {
+      rmSync(alias, { force: true })
+      rmSync(actual, { recursive: true, force: true })
+      rmSync(outside, { recursive: true, force: true })
+    }
   })
 
   // The executor assembles the CLI the descriptors invoke as `$CLAUDE_PLUGIN_ROOT`

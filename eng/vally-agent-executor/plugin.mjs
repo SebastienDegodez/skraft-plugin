@@ -1,7 +1,8 @@
 import { CopilotClient } from '@github/copilot-sdk'
 import { computeMetrics } from '@microsoft/vally'
 import { CopilotAdapter } from '@microsoft/vally/trajectory'
-import { dirname, isAbsolute, relative, resolve } from 'node:path'
+import { realpathSync } from 'node:fs'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { createAgentExecutor } from './executor.mjs'
@@ -28,10 +29,34 @@ const commandName = ({ identifier = '' }) => identifier.trim().split(/\s+/, 1)[0
 // though it sits outside the prepared workspace.
 const neutralAbsolutePath = /^\/dev\//
 
+// Copilot reports the same macOS temporary directory in both of its valid
+// forms: Vally gives the executor `/var/folders/...`, while read requests name
+// `/private/var/folders/...`. Lexical `relative()` calls those different roots
+// and rejects an in-workspace read. Resolve filesystem aliases before comparing.
+// For a file that will be created, walk to the nearest existing parent and add
+// the missing suffix back after its aliases have been resolved.
+const canonicalPath = (path) => {
+	let cursor = resolve(path)
+	const missing = []
+	while (true) {
+		try {
+			return resolve(realpathSync.native(cursor), ...missing.reverse())
+		} catch (error) {
+			if (error?.code !== 'ENOENT') return null
+			const parent = dirname(cursor)
+			if (parent === cursor) return null
+			missing.push(basename(cursor))
+			cursor = parent
+		}
+	}
+}
+
 const insideWorkspace = (workDir, candidate) => {
 	if (!workDir || !candidate) return false
-	const target = isAbsolute(candidate) ? resolve(candidate) : resolve(workDir, candidate)
-	const path = relative(resolve(workDir), target)
+	const root = canonicalPath(workDir)
+	const target = canonicalPath(isAbsolute(candidate) ? candidate : join(workDir, candidate))
+	if (!root || !target) return false
+	const path = relative(root, target)
 	return path === '' || (!path.startsWith('..') && !isAbsolute(path))
 }
 
