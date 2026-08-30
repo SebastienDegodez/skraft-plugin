@@ -152,7 +152,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
 ```
 
-Those two forms are the only ones. If a rendering attempt fails, fix the payload and re-run the command — do not reach for `base64`, `python`, or a hand-written patch. None of them are available here, every attempt is refused, and the review ends with nothing on disk.
+Those two forms are the only ones. If a rendering attempt fails, fix the payload and re-run the command — do not reach for `base64`, `python`, or a hand-written patch. The command owns the template and validates the required keys; a file written around it is unvalidated, and in a restricted environment the improvised writer is refused outright and the review ends with nothing on disk.
 
 ```yaml
 verdict: APPROVED | NEEDS_REWORK | REJECTED
