@@ -178,9 +178,9 @@ stimuli:
 
   - name: A fresh simple story records the entry point before any phase runs
     prompt: |
-      Start the engineering pipeline for checkout-pricing. The refined change is documentation
-      only: correct one typo in README.md, with no source, API, dependency, or behaviour change.
-      Determine and record the entry point, then stop before executing the selected phase.
+      Initialize the engineering pipeline for checkout-pricing and persist its entry point. The
+      refined change is documentation only: correct one typo in README.md, with no source, API,
+      dependency, or behaviour change.
     tags:
       agent: skraft-orchestrator
       scenario: fresh-simple-routing
