@@ -8,6 +8,18 @@ const [layout, outcome] = process.argv.slice(2)
 const root = process.cwd()
 const excluded = ['!**/*Marker.cs', '!**/DependencyInjection.cs', '!**/Program.cs', '!**/obj/**']
 
+// Every check below throws on the first thing the run got wrong, and a thrown
+// assertion leaves no verdict on stdout — the report then reads `Grader output
+// did not match schema`, which says the grader is broken when what happened is
+// that the agent never wrote the file being read. Report the reason instead.
+const report = (score, evidence) => {
+  process.stdout.write(`${JSON.stringify({ score, evidence })}\n`)
+  process.exit(0)
+}
+const reportFailure = (error) => report(0, error?.message ?? String(error))
+process.on('uncaughtException', reportFailure)
+process.on('unhandledRejection', reportFailure)
+
 const json = async (path) => JSON.parse(await readFile(path, 'utf8'))
 const walk = async (directory) => {
   const entries = await readdir(directory, { withFileTypes: true })
