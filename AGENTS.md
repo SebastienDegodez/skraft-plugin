@@ -58,6 +58,26 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   run-vally-evals.sh   ← One local runner: paired skill comparisons + real-agent suites
 ```
 
+### Agent descriptor rules
+
+Descriptors under `plugins/skraft-framework/com.anthropic.claude-code/agents/` are
+prompts an agent pays for on every run, not documentation.
+
+- **Write for the agent, never for a human reader.** Every sentence must carry a
+  decision the agent has to make. No prose explaining why a rule exists, no gloss
+  on the descriptor's own wording, no justification clause. The reasoning belongs
+  in the commit message.
+- **Put a rule's scope inside the rule**, not in a paragraph after it. A
+  prohibition scoped too narrowly is an escape hatch: `You NEVER produce business
+  content yourself` left the orchestrator free to configure Stryker and run the
+  mutation gates, so it did DELIVER itself and dispatched nothing.
+- **Never argue from the evaluation sandbox.** `none of them are available here`
+  describes the harness command allowlist; on a developer's machine `base64` and
+  `python` work, so the claim is false everywhere else and the agent reads the
+  whole rule as stale. Argue from what holds in both.
+- **Required dispatch content goes in an explicit list.** Buried mid-paragraph it
+  lands about half the time.
+
 ### Test placement rules
 
 - **Framework test files live in `tests/skraft-framework/`** — never inside `plugins/`.
