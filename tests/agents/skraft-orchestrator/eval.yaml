@@ -58,11 +58,8 @@ stimuli:
     graders:
       - type: completed
       - type: skill-invocation
-        name: The routing and review skills are loaded, and no later phase's skill is
+        name: Resuming DESIGN does not pull a later phase's skill into the router
         config:
-          required:
-            - skraft-difficulty-routing
-            - adversarial-review-lenses
           disallowed:
             - contract-testing
             - playwright-evidence
@@ -154,10 +151,8 @@ stimuli:
     graders:
       - type: completed
       - type: skill-invocation
-        name: The routing skill is loaded before any phase is chosen, and nothing a later phase owns
+        name: Resuming from the recorded entry point loads nothing a later phase owns
         config:
-          required:
-            - skraft-difficulty-routing
           disallowed:
             - contract-testing
             - playwright-evidence
@@ -180,3 +175,60 @@ stimuli:
         name: The review leaves a verdict behind
         config:
           pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+
+  - name: A fresh simple story records the entry point before any phase runs
+    prompt: |
+      Start the engineering pipeline for checkout-pricing. The refined change is documentation
+      only: correct one typo in README.md, with no source, API, dependency, or behaviour change.
+      Determine and record the entry point, then stop before executing the selected phase.
+    tags:
+      agent: skraft-orchestrator
+      scenario: fresh-simple-routing
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/fresh-simple-routing/README.md
+          dest: README.md
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: simple documentation story"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: A fresh pipeline loads the routing skill and no phase-owned skill
+        config:
+          required:
+            - skraft-difficulty-routing
+          disallowed:
+            - adversarial-review-lenses
+            - contract-testing
+            - playwright-evidence
+      - type: run-command
+        name: Simple work records the skipped RESEARCH entry point
+        config:
+          command: node
+          args:
+            - '-e'
+            - >-
+              const s=require('./.copilot-tracking/skraft-plans/checkout-pricing/state.json');
+              if(!['simple','medium'].includes(String(s.difficulty).toLowerCase()) ||
+              !s.entryPoint?.skipPhases?.includes('RESEARCH') || s.currentPhase!=='DESIGN') process.exit(1)
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No phase work starts during entry-point selection
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - >-
+              [ ! -d .copilot-tracking/skraft-plans/checkout-pricing/research ] &&
+              [ ! -d .copilot-tracking/skraft-plans/checkout-pricing/details ]
+          expected_exit_code: 0
+          timeout: 30s
