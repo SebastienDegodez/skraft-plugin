@@ -131,7 +131,9 @@ A failing gate is mechanically correctable by the backlog-discoverer: the verdic
 
 ### Phase 4: OUTPUT
 
-Build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Pipe it straight into the `review-verdict` artifact command — the subcommand owns the template and validates the required top-level keys; a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run. Do **not** hand-format the tables, the template owns the structure:
+Writing the verdict file is not optional, and a caller cannot waive it. A dispatch that tells you to change nothing is about the artefacts under review — the triage report and the sprint proposal — never about this verdict. A verdict returned only as a message dies with the dispatch, and the next phase reads a directory that is still empty.
+
+Build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Pipe it straight into the `review-verdict` artifact command — the subcommand owns the template and validates the required top-level keys; a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run. Emptying `lenses` or `synthesis` to get past that error fails it again: an empty list counts as missing. Do **not** hand-format the tables, the template owns the structure:
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
