@@ -78,6 +78,11 @@ stimuli:
       agent: skraft-orchestrator
       subagents: [software-engineer]
       scenario: missing-distill-artifacts
+      # Write access is granted precisely because the stimulus claims nothing is
+      # written: `diff-empty` below is only evidence when the agent could have
+      # written and did not. It also brings `bash`, without which the staged
+      # rehydration CLI could not be run.
+      permissions: workspace-write
       cost: low
     supported_executors:
       - skraft-agent-runner
@@ -89,16 +94,31 @@ stimuli:
           dest: skraft-config.json
         - src: fixtures/deliver-without-distill/.copilot-tracking/skraft-plans/checkout-pricing/state.json
           dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        # Phase 0 rehydrates state through `node
+        # "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"`. Unstaged, that command cannot
+        # run and the orchestrator spends the turn hunting for it instead of
+        # judging the phase — one trial burned ten dispatches doing exactly that.
+        # The source is dependency-free, so the layer directories copy as-is; the
+        # executor points $CLAUDE_PLUGIN_ROOT at `.skraft-plugin` when it is here.
+        # `src/` only: an agent handed its own descriptors and skills reads them
+        # instead of working.
+        - src: ../../../plugins/skraft-framework/src/cli
+          dest: .skraft-plugin/src/cli
+        - src: ../../../plugins/skraft-framework/src/domain
+          dest: .skraft-plugin/src/domain
+        - src: ../../../plugins/skraft-framework/src/application
+          dest: .skraft-plugin/src/application
+        - src: ../../../plugins/skraft-framework/src/adapters
+          dest: .skraft-plugin/src/adapters
+        - src: ../../../plugins/skraft-framework/src/ports
+          dest: .skraft-plugin/src/ports
     graders:
       - type: completed
-      # No dispatch assertion here, in either direction. The orchestrator's
-      # Phase 0 rehydrates state through `node "$CLAUDE_PLUGIN_ROOT/src/cli/
-      # state.mjs"`, and that CLI is not staged into a prepared workspace: the
-      # run spends its dispatches trying to reach it and never gets as far as
-      # choosing a phase specialist. Until the CLI is reachable, anything this
-      # suite asserted about the shape of the chain here would be measuring that
-      # gap rather than the orchestrator. What the agent SAYS is unaffected, and
-      # is what the graders below read.
+      # No dispatch assertion here, in either direction. The rehydration CLI is
+      # staged, so the orchestrator can reach its own state — but how many
+      # specialists it consults before concluding the phase has no inputs is a
+      # judgement, not a contract. What it concludes is the contract, and that is
+      # what the graders below read.
       - type: output-matches
         name: The absent DISTILL input is named as the reason delivery cannot start
         config:

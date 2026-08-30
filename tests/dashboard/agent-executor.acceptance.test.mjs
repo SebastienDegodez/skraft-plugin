@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { deepStrictEqual, strictEqual } from 'node:assert/strict'
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -308,6 +308,45 @@ describe('Vally real-agent executor', () => {
     )
 
     strictEqual(calls.sessions[0].customAgents[0].prompt.includes('Evaluation runtime sub-agent dispatch'), false)
+  })
+
+  // `$CLAUDE_PLUGIN_ROOT` is exported by nobody here, so a descriptor's mandated
+  // `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"` resolves to `/src/...` and the
+  // agent hunts for a CLI instead of running the phase. A stimulus that needs it
+  // stages the tree into the workspace; the notice appears only when it did, so a
+  // stimulus without it is never pointed at a path that does not exist.
+  it('names a staged plugin CLI as the plugin root, and stays silent when none was staged', async () => {
+    const calls = { sessions: [] }
+    const executor = createAgentExecutor({
+      repoRoot,
+      createClient: () => ({
+        async start() {},
+        async createSession(config) {
+          calls.sessions.push(config)
+          return { sessionId: 'session-6', on() {}, async sendAndWait() { return { data: { content: '' } } }, async disconnect() {} }
+        },
+        async stop() {},
+      }),
+      permissionHandler: () => ({ kind: 'approve-once' }),
+      adapterFactory: () => new CopilotAdapter(),
+      computeMetrics,
+      clock: { now: () => new Date('2026-08-12T10:00:00.000Z') },
+      randomUUID: () => 'trajectory-6',
+    })
+    const stimulus = { name: 'solo', prompt: 'Report the blocker.', tags: { agent: 'software-engineer' } }
+    const staged = mkdtempSync(join(tmpdir(), 'skraft-staged-workspace-'))
+    mkdirSync(join(staged, '.skraft-plugin', 'src', 'cli'), { recursive: true })
+    const bare = mkdtempSync(join(tmpdir(), 'skraft-bare-workspace-'))
+
+    for (const workDir of [staged, bare]) {
+      await executor.execute(stimulus, {
+        workDir, model: 'claude-sonnet-4.6', timeout: 30_000, sessionLog: { rootDir: '/tmp/session-log' }, skills: [],
+      })
+    }
+
+    const [withCli, withoutCli] = calls.sessions.map(({ customAgents }) => customAgents[0].prompt)
+    strictEqual(withCli.includes(`${join(staged, '.skraft-plugin')}/src/cli/state.mjs`), true)
+    strictEqual(withoutCli.includes('Evaluation runtime plugin root'), false)
   })
 
   it('publishes the dispatches that actually happened so a narrated fan-out cannot pass', async () => {

@@ -1,5 +1,5 @@
 import { randomUUID as newRandomUUID } from 'node:crypto'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 import { mergeEnv } from '@microsoft/vally'
@@ -51,14 +51,41 @@ const dispatchNotice = (dispatchable) => [
   'Narrating a sub-agent\'s analysis in your own context is not a dispatch.',
 ].join('\n\n')
 
-const agentPrompt = (agent, dispatchable = []) => {
+// Every SKRAFT descriptor reaches its own tooling through `$CLAUDE_PLUGIN_ROOT`:
+// the orchestrator rehydrates state with `src/cli/state.mjs`, a reviewer renders
+// its verdict with `src/cli/artifact.mjs`. Nothing exports that variable here, so
+// the mandated command expands to `node "/src/cli/state.mjs"` and the agent
+// spends its turn hunting for the CLI instead of doing the phase — one trial
+// burned ten dispatches looking for it and never reached a phase specialist.
+//
+// A stimulus that needs the CLI stages it into the workspace under
+// `.skraft-plugin/` (the source is dependency-free, so the layer directories
+// copy as-is). Staging it INSIDE the workspace is the point: no permission is
+// widened and no environment is replaced. Only `src/` is staged, never `agents/`
+// or `skills/` — an agent given its own descriptors reads them instead of
+// working.
+const STAGED_PLUGIN_DIR = '.skraft-plugin'
+const stagedPluginRoot = (workDir) => {
+  const candidate = join(workDir, STAGED_PLUGIN_DIR)
+  return existsSync(candidate) ? candidate : undefined
+}
+
+const pluginRootNotice = (pluginRoot) => [
+  '## Evaluation runtime plugin root',
+  `$CLAUDE_PLUGIN_ROOT is not exported here. Wherever the agent definition writes it, use ${pluginRoot} instead.`,
+  `A mandated command such as \`node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"\` is run as \`node "${pluginRoot}/src/cli/state.mjs"\`.`,
+].join('\n\n')
+
+const agentPrompt = (agent, { dispatchable = [], pluginRoot } = {}) => {
   const instructions = agent.instructions.map(({ path, content }) => `## Companion instruction: ${path}\n\n${content}`)
   const runtimeNotice = [
     '## Evaluation runtime skill loading',
     'Use the runtime skill tool whenever the agent definition requires a skill to be loaded.',
     'Do not read source-relative skill links from the agent definition; Vally stages the selected skills for the runtime.',
   ].join('\n\n')
-  const notices = dispatchable.length ? [runtimeNotice, dispatchNotice(dispatchable)] : [runtimeNotice]
+  const notices = [runtimeNotice]
+  if (pluginRoot) notices.push(pluginRootNotice(pluginRoot))
+  if (dispatchable.length) notices.push(dispatchNotice(dispatchable))
   return [agent.prompt.trim(), ...instructions, ...notices].join('\n\n')
 }
 
@@ -89,12 +116,12 @@ const qualifiedTools = (tools) => tools.map((tool) => `builtin:${tool}`)
 // A declared sub-agent is the opposite: the dispatch tool can only offer an agent
 // the runtime is allowed to infer, so `infer: false` would silently make the
 // chain undispatchable.
-const customAgent = (agent, tools, model, infer, dispatchable = []) => ({
+const customAgent = (agent, { tools, model, infer, dispatchable = [], pluginRoot }) => ({
   name: agent.id,
   displayName: agent.name,
   description: agent.description,
   tools,
-  prompt: agentPrompt(agent, dispatchable.filter((id) => id !== agent.id)),
+  prompt: agentPrompt(agent, { dispatchable: dispatchable.filter((id) => id !== agent.id), pluginRoot }),
   model,
   infer,
 })
@@ -188,13 +215,14 @@ export const createAgentExecutor = ({
         await client.start()
         const tools = toolsFor(stimulus, subagents.length > 0)
         const dispatchable = subagents.map(({ id }) => id)
+        const pluginRoot = stagedPluginRoot(options.workDir)
         const skillDirectories = [...new Set((options.skills ?? []).flatMap((skill) => skill.path ? [dirname(skill.path)] : []))]
         session = await client.createSession({
           model: options.model,
           workingDirectory: options.workDir,
           customAgents: [
-            customAgent(agent, tools, options.model, false, dispatchable),
-            ...subagents.map((entry) => customAgent(entry, tools, options.model, true, dispatchable)),
+            customAgent(agent, { tools, model: options.model, infer: false, dispatchable, pluginRoot }),
+            ...subagents.map((entry) => customAgent(entry, { tools, model: options.model, infer: true, dispatchable, pluginRoot })),
           ],
           agent: agent.id,
           skillDirectories,
