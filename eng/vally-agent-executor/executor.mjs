@@ -54,10 +54,18 @@ const publicIdentity = (agent) => ({
 // the run is worthless — a suite that pins a model measures a different one. The
 // harness already gives every registered agent the pinned model, so the dispatch
 // only has to leave it alone.
-const dispatchNotice = (dispatchable) => [
+// The tool's own enum is wider than the chain: it offers the caller its own id
+// and a `general-purpose` agent the harness never registered. A lead that takes
+// either does not delegate a step, it restarts itself — one trial dispatched
+// `backlog-discoverer` from `backlog-discoverer` six times, replayed the whole
+// review chain three times over, and spent 21 sub-agents and 170 tool calls
+// before the trial timed out with no verdict written. So the notice has to say
+// which ids are not a delegation, not only which ones are.
+const dispatchNotice = (self, dispatchable) => [
   '## Evaluation runtime sub-agent dispatch',
   'The agent definition links its sub-agents as source files. Those links do not resolve here.',
   `Dispatch with the runtime ${DISPATCH_TOOL} tool, naming exactly one registered id per dispatch: ${dispatchable.join(', ')}.`,
+  `Those ids are the whole chain. You are \`${self}\`: dispatching \`${self}\` restarts you instead of advancing the work, and any other id — \`general-purpose\` included — is not registered here. Do that work yourself.`,
   'Narrating a sub-agent\'s analysis in your own context is not a dispatch.',
   `Pass only \`agent_type\`, \`name\`, \`description\` and \`prompt\`. Never pass \`model\`, \`reasoning_effort\` or \`context_tier\`: every registered agent is already on the model this run pins, and a dispatch that names its own risks a pairing the runtime rejects — the sub-agent fails to start and the work you delegated never happens.`,
 ].join('\n\n')
@@ -116,7 +124,7 @@ const agentPrompt = (agent, { dispatchable = [], pluginRoot } = {}) => {
   ].join('\n\n')
   const notices = [runtimeNotice]
   if (pluginRoot) notices.push(pluginRootNotice(pluginRoot))
-  if (dispatchable.length) notices.push(dispatchNotice(dispatchable))
+  if (dispatchable.length) notices.push(dispatchNotice(agent.id, dispatchable))
   return [agent.prompt.trim(), ...instructions, ...notices].join('\n\n')
 }
 

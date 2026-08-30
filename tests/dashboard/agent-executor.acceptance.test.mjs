@@ -290,9 +290,13 @@ describe('Vally real-agent executor', () => {
     // pins one must say so, or a lens starts on whatever the lead picked — at an
     // effort that model may refuse, which fails the dispatch outright.
     strictEqual(reviewer.prompt.includes('Never pass `model`, `reasoning_effort` or `context_tier`'), true)
-    // A lens is a leaf of the chain: it must not be told it can dispatch itself.
-    strictEqual(firstLens.prompt.includes('quality-gates-lens'), false)
-    strictEqual(firstLens.prompt.includes('test-integrity-lens'), true)
+    // Dispatching your own id restarts you instead of advancing the work. One lead
+    // did it six times and replayed the whole chain until the trial timed out.
+    strictEqual(reviewer.prompt.includes('You are `software-engineer-reviewer`'), true)
+    strictEqual(reviewer.prompt.includes('`general-purpose` included'), true)
+    // A lens is a leaf of the chain: it is never offered as its own target.
+    strictEqual(firstLens.prompt.includes('one registered id per dispatch: test-integrity-lens'), true)
+    strictEqual(firstLens.prompt.includes('You are `quality-gates-lens`'), true)
   })
 
   it('leaves a stimulus that delegates to nobody without a dispatch notice', async () => {
