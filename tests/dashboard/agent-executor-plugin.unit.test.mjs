@@ -108,6 +108,26 @@ describe('Vally executor plugin registration', () => {
     }, context), { kind: 'approve-once' })
     deepStrictEqual(pilotPermissionHandler({
       kind: 'shell',
+      commandSegments: [
+        { identifier: 'cd', fullCommandText: 'cd /tmp/work' },
+        { identifier: 'node', fullCommandText: 'node scripts/render.mjs' },
+      ],
+      possiblePaths: ['/tmp/work', '/tmp/work/scripts/render.mjs'],
+      possibleUrls: [],
+      fullCommandText: 'cd /tmp/work && node scripts/render.mjs',
+    }, context), { kind: 'approve-once' })
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [
+        { identifier: 'cd', fullCommandText: 'cd /tmp/outside' },
+        { identifier: 'node', fullCommandText: 'node scripts/render.mjs' },
+      ],
+      possiblePaths: ['/tmp/outside', '/tmp/outside/scripts/render.mjs'],
+      possibleUrls: [],
+      fullCommandText: 'cd /tmp/outside && node scripts/render.mjs',
+    }, context).kind, 'reject')
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
       commandSegments: [{ identifier: 'bash', fullCommandText: 'bash scripts/configure-mutation.sh --root .' }],
       possiblePaths: ['/tmp/work/scripts/configure-mutation.sh'],
       possibleUrls: [],
