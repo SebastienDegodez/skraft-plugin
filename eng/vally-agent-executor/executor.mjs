@@ -74,32 +74,29 @@ const dispatchNotice = (dispatchable) => [
 // workspace here would show up as work the agent did and break every
 // `diff-empty`.
 //
-// What is copied is what the chain needs to run and nothing that would answer a
-// question the run is asking. `skills/` and the manifest beside it are copied so
-// the tree is a loadable plugin (see below). Never `agents/` — the descriptors
-// are already injected as prompts, and an agent that can open a sibling's
-// descriptor reads it instead of dispatching, which is the exact behaviour the
-// dispatch metrics exist to catch. Never `src/node_modules` — 67 MB the
-// dependency-free source never loads.
-const PLUGIN_SUBTREES = ['src/cli', 'src/domain', 'src/application', 'src/adapters', 'src/ports', 'assets', 'skills']
-const PLUGIN_MANIFEST = 'plugin.json'
+// What is copied is what the CLI needs to run and nothing that is itself under
+// test. Never `skills/` — a skill reaches an agent through the runtime, not off
+// disk, and a copy here would only invite an agent to open the file instead.
+// Never `agents/` — the descriptors are already injected as prompts, and an agent
+// that can open a sibling's descriptor reads it instead of dispatching, which is
+// the exact behaviour the dispatch metrics exist to catch. Never
+// `src/node_modules` — 67 MB the dependency-free source never loads.
+const PLUGIN_SUBTREES = ['src/cli', 'src/domain', 'src/application', 'src/adapters', 'src/ports', 'assets']
 
-// `skillDirectories` is a session-level setting a dispatched sub-agent does not
-// inherit: the lead resolves `skill discovery-review-criteria` and the reviewer
-// it dispatches gets `Skill not found` for the same name in the same trial.
-// Whether a mandatory skill loads then depends on whether the work happened
-// before or after a dispatch, which is the weather, not the behaviour. A plugin
-// is the one entry point that is not attached to an agent: the copied tree keeps
-// the plugin layout and its manifest, so naming it here loads its skills for the
-// whole session, sub-agents included. It carries no agents and no rules, so
-// nothing the harness registers is shadowed.
+// Where a skill name resolves from. Agent suites stage nothing of their own —
+// `options.skills` is empty for every stimulus under tests/agents — so without
+// this the plugin's own skills are reachable only by whatever ambient discovery
+// happens to find. It withholds nothing that is under test: an agent suite is
+// scored on whether its graders hold, with no baseline arm to compare against
+// (see eng/lib/agent-verdict.mjs).
+const pluginSkillsDirectory = (repoRoot) => join(repoRoot, 'plugins', 'skraft-framework', 'skills')
+
 const copyPluginRoot = (repoRoot) => {
   const source = join(repoRoot, 'plugins', 'skraft-framework')
   const root = mkdtempSync(join(tmpdir(), 'skraft-plugin-root-'))
   for (const subtree of PLUGIN_SUBTREES) {
     cpSync(join(source, subtree), join(root, subtree), { recursive: true })
   }
-  cpSync(join(source, PLUGIN_MANIFEST), join(root, PLUGIN_MANIFEST))
   return root
 }
 
@@ -158,6 +155,15 @@ const customAgent = (agent, { tools, model, infer, dispatchable = [], pluginRoot
   prompt: agentPrompt(agent, { dispatchable: dispatchable.filter((id) => id !== agent.id), pluginRoot }),
   model,
   infer,
+  // The skills the descriptor declares mandatory. Naming them here is the only
+  // way a DISPATCHED agent gets them: `skillDirectories` is a session-level
+  // setting a sub-agent does not inherit, so the lead resolved
+  // `discovery-review-criteria` and the reviewer it dispatched got `Skill not
+  // found` for that same name seconds later, in the same trial. Whether a
+  // mandatory skill loaded came down to whether the agent worked before or after
+  // delegating. The runtime resolves these names from `skillDirectories` at
+  // registration, where the lookup does work, and injects the content at startup.
+  skills: agent.skills?.length ? agent.skills : undefined,
 })
 const promptsFor = (stimulus) => Array.isArray(stimulus.turns) && stimulus.turns.length
   ? stimulus.turns
@@ -252,7 +258,10 @@ export const createAgentExecutor = ({
         const tools = toolsFor(stimulus, subagents.length > 0)
         const dispatchable = subagents.map(({ id }) => id)
         pluginRoot ??= copyPluginRoot(repoRoot)
-        const skillDirectories = (options.skills ?? []).flatMap((skill) => (skill.path ? [dirname(skill.path)] : []))
+        const skillDirectories = [...new Set([
+          ...(options.skills ?? []).flatMap((skill) => (skill.path ? [dirname(skill.path)] : [])),
+          pluginSkillsDirectory(repoRoot),
+        ])]
         session = await client.createSession({
           model: options.model,
           workingDirectory: options.workDir,
@@ -262,7 +271,6 @@ export const createAgentExecutor = ({
           ],
           agent: agent.id,
           skillDirectories,
-          pluginDirectories: [pluginRoot],
           customAgentsLocalOnly: true,
           skipCustomInstructions: true,
           availableTools: qualifiedTools(tools),
