@@ -248,7 +248,12 @@ export const createAgentExecutor = ({
           onPermissionRequest: (request) => permissionHandler(request, {
             stimulus,
             workDir: options.workDir,
-            readableRoots: [options.workDir, ...skillDirectories],
+            // The root the prompt names has to be the root the handler admits.
+            // Telling an agent to run `node <pluginRoot>/src/cli/artifact.mjs`
+            // while the handler treats that absolute path as an escape denies
+            // the command it was just ordered to run, and the refusal reads as
+            // the agent declining to write its artefact.
+            readableRoots: [options.workDir, pluginRoot, ...skillDirectories],
           }),
         })
         session.on((event) => {

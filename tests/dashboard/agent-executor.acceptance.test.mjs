@@ -187,7 +187,9 @@ describe('Vally real-agent executor', () => {
     )
 
     calls.sessions[0].onPermissionRequest({ kind: 'write', fileName: '/tmp/work/src/domain.mjs' })
-    deepStrictEqual(permissionCalls[0].context, { stimulus, workDir: '/tmp/work', readableRoots: ['/tmp/work'] })
+    const [pluginRoot] = /\/\S*skraft-plugin-root-\S+?(?=\/src\/cli\/state\.mjs)/.exec(calls.sessions[0].customAgents[0].prompt)
+    deepStrictEqual(permissionCalls[0].context, { stimulus, workDir: '/tmp/work', readableRoots: ['/tmp/work', pluginRoot] })
+    await executor.shutdown()
   })
 
   it('registers the declared review chain and grants dispatch only to a delegating stimulus', async () => {
