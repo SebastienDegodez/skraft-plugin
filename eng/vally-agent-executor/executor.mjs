@@ -45,11 +45,21 @@ const publicIdentity = (agent) => ({
 // review it was supposed to delegate — which is precisely the failure the
 // dispatch metrics exist to catch, arriving as a harness artefact rather than a
 // finding. Naming the registered ids removes that excuse.
+// The dispatch tool also lets the caller pick the model and the reasoning effort
+// its sub-agent runs on. Left open, that hands the choice to whichever model
+// happens to be answering: one trial sent the review lenses to a small model at
+// `reasoning_effort: high`, the runtime refused a combination that model does not
+// support, all three lenses failed, and the lead spent the rest of its budget
+// re-dispatching them until the trial timed out. Even when the switch succeeds
+// the run is worthless — a suite that pins a model measures a different one. The
+// harness already gives every registered agent the pinned model, so the dispatch
+// only has to leave it alone.
 const dispatchNotice = (dispatchable) => [
   '## Evaluation runtime sub-agent dispatch',
   'The agent definition links its sub-agents as source files. Those links do not resolve here.',
   `Dispatch with the runtime ${DISPATCH_TOOL} tool, naming exactly one registered id per dispatch: ${dispatchable.join(', ')}.`,
   'Narrating a sub-agent\'s analysis in your own context is not a dispatch.',
+  `Pass only \`agent_type\`, \`name\`, \`description\` and \`prompt\`. Never pass \`model\`, \`reasoning_effort\` or \`context_tier\`: every registered agent is already on the model this run pins, and a dispatch that names its own risks a pairing the runtime rejects — the sub-agent fails to start and the work you delegated never happens.`,
 ].join('\n\n')
 
 // Every SKRAFT descriptor reaches its own tooling through `$CLAUDE_PLUGIN_ROOT`:

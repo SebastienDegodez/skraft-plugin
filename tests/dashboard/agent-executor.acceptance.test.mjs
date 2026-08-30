@@ -281,6 +281,10 @@ describe('Vally real-agent executor', () => {
     const [reviewer, firstLens] = calls.sessions[0].customAgents
     strictEqual(reviewer.prompt.includes('quality-gates-lens, test-integrity-lens'), true)
     strictEqual(reviewer.prompt.includes('Evaluation runtime sub-agent dispatch'), true)
+    // The dispatch tool lets the caller choose the sub-agent's model. A suite that
+    // pins one must say so, or a lens starts on whatever the lead picked — at an
+    // effort that model may refuse, which fails the dispatch outright.
+    strictEqual(reviewer.prompt.includes('Never pass `model`, `reasoning_effort` or `context_tier`'), true)
     // A lens is a leaf of the chain: it must not be told it can dispatch itself.
     strictEqual(firstLens.prompt.includes('quality-gates-lens'), false)
     strictEqual(firstLens.prompt.includes('test-integrity-lens'), true)
