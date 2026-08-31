@@ -24,8 +24,6 @@ metadata:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
   skills:
     - adversarial-review-lenses
   genesis_patterns:
@@ -99,11 +97,13 @@ Passing journal or checklist to cold-reader violates A7 and invalidates the revi
 
 **Dispatch instruction for each lens:**
 Include in the sub-agent prompt the relevant artifacts AND the instruction:
-"Return your analysis as a JSON object with keys: lens, verdict, defects[]."
+"Return your analysis as a YAML document with keys: lens, verdict, defects. Quote every free-text value."
 
 ### Phase 3: COLLECT
 
-Gather all 4 lens JSON results. Validate each has the expected structure.
+Gather all 4 lens YAML documents. Validate each has the expected structure. A document that
+does not parse is not an empty result: re-dispatch that lens once, then record it as
+`inconclusive` if it fails again.
 
 ### Phase 4: SYNTHESIZE + VERDICT
 
@@ -127,7 +127,7 @@ Apply the severity matrix in order — first matching row wins:
 
 ### Verdict Output
 
-Build one canonical review YAML with keys `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `lensCount`, `score`, `lenses`, `synthesis`, and `conclusion`. Each lens entry carries its name, verdict, and defects. Use this same YAML for persistence and the final response; never create a second JSON or prose schema.
+Build one canonical review YAML with keys `status`, `lens_results`, `synthesis`, `dissent_analysis`, and `summary`. Each lens result carries its name, verdict, and defects. Use this same YAML for persistence and the final response; never create a second JSON or prose schema.
 
 Preserve concrete defect wording from lens results. When a test assertion recomputes production logic and therefore cannot fail, the YAML and final response must say that the test or assertion `cannot fail`, `always passes`, is `tautological`, or `mirrors the implementation`; never reduce it to generic weak-coverage wording.
 
@@ -151,6 +151,42 @@ EOF
 ```
 
 Copy that output path literally after replacing only `{projectSlug}`, `{date}`, and `{N}`. Do not derive a filename from the story. Do not emit a final response until the command succeeds and that exact output file exists.
+
+```yaml
+status: APPROVED | NEEDS_REWORK | REJECTED
+lens_results:
+  - lens: quality-gates
+    verdict: pass | fail | inconclusive
+    defects: []
+  - lens: architecture-boundaries
+    verdict: pass | fail | inconclusive
+    defects: []
+  - lens: test-integrity
+    verdict: pass | fail | inconclusive
+    defects: []
+  - lens: cold-reader
+    verdict: pass | fail | inconclusive
+    defects: []
+synthesis:
+  completeness:
+    answered_by: [quality-gates, test-integrity]
+    weight: 0.30
+    contribution: 0.00
+  business-fit:
+    answered_by: [cold-reader]
+    weight: 0.30
+    contribution: 0.00
+  quality:
+    answered_by: [quality-gates, architecture-boundaries, test-integrity]
+    weight: 0.15
+    contribution: 0.00
+  risk:
+    answered_by: [quality-gates, architecture-boundaries, test-integrity, cold-reader]
+    weight: 0.25
+    contribution: 0.00
+dissent_analysis: "Explicit examination of minority findings, or 'no dissent' if unanimous."
+summary: "One-paragraph overall assessment."
+```
 
 ## What this agent NEVER does
 

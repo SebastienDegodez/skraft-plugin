@@ -33,19 +33,12 @@ export const ARTIFACTS = {
   },
   'review-verdict': {
     template: 'assets/templates/review-verdict.template.md',
-    required: [
-      'phase',
-      'projectSlug',
-      'date',
-      'attempt',
-      'verdict',
-      'lensCount',
-      'score',
-      'lenses',
-      'synthesis',
-      'conclusion',
+    requiredAny: [
+      ['verdict', 'status'],
+      ['lenses', 'lens_results'],
+      ['synthesis', 'summary'],
     ],
-    optional: [],
+    optional: ['confidence', 'reviewed_at', 'artefacts_reviewed', 'dissent_analysis'],
   },
   'review-comment': {
     template: 'assets/templates/review-comment.template.md',
@@ -70,6 +63,11 @@ function isMissing(value) {
 export function validate(type, data) {
   const spec = ARTIFACTS[type]
   if (!spec) return { ok: false, type, unknownType: true, missing: [] }
-  const missing = spec.required.filter((key) => isMissing(data ? data[key] : undefined))
+  const missing = [
+    ...(spec.required ?? []).filter((key) => isMissing(data ? data[key] : undefined)),
+    ...(spec.requiredAny ?? [])
+      .filter((keys) => keys.every((key) => isMissing(data ? data[key] : undefined)))
+      .map((keys) => keys.join('|')),
+  ]
   return { ok: missing.length === 0, type, unknownType: false, missing }
 }

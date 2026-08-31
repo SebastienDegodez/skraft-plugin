@@ -27,8 +27,6 @@ metadata:
   skills:
     - mikado-method
     - strangler-fig-method
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
   inputs:
     required:
       - a stated goal (what to modify, or what to replace)

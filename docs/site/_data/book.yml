@@ -377,7 +377,7 @@ parts:
             sidebar_position: 5
             fr: "fr/explanation/traces.md"
             en: "en/explanation/traces.md"
-            source: "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+            source: "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md"
             purpose_fr: "Les traces laissées par le pipeline : artefacts datés, état, PR et verdicts."
             purpose_en: "The traces left by the pipeline: dated artifacts, state, PRs, and verdicts."
           - id: hooks

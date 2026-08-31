@@ -30,8 +30,6 @@ metadata:
       - GitHub repository (to verify issue labels via MCP)
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
 ---
 
 # Backlog-Discoverer-Reviewer Agent
@@ -64,16 +62,14 @@ Load before starting:
 3. Confirm artefact pair is from the same discovery run (matching date/query)
 4. If either artefact is missing:
 
-```json
-{
-  "status": "blocked",
-  "type": "missing_artefact",
-  "message": "Cannot review: required artefact not found",
-  "context": {
-    "missing": ["path/to/missing.md"],
-    "phase": "DISCOVER review"
-  }
-}
+```yaml
+status: blocked
+type: missing_artefact
+message: "Cannot review: required artefact not found"
+context:
+  missing:
+    - "path/to/missing.md"
+  phase: "DISCOVER review"
 ```
 
 ### Phase 2: FAN-OUT (B1)
@@ -133,7 +129,7 @@ A failing gate is mechanically correctable by the backlog-discoverer: the verdic
 
 Writing the verdict file is not optional, and a caller cannot waive it. A dispatch that tells you to change nothing is about the artefacts under review — the triage report and the sprint proposal — never about this verdict. A verdict returned only as a message dies with the dispatch, and the next phase reads a directory that is still empty.
 
-Build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Pipe it straight into the `review-verdict` artifact command — the subcommand owns the template and validates the required top-level keys; a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run. Emptying `lenses` or `synthesis` to get past that error fails it again: an empty list counts as missing. Do **not** hand-format the tables, the template owns the structure:
+Build the verdict with the YAML contract below. Quote every free-text value. Pipe exactly that YAML into the `review-verdict` artifact command:
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
@@ -142,7 +138,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
 EOF
 ```
 
-The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout for the orchestrator.
+The review template already begins with `<!-- markdownlint-disable-file -->`. Then emit the same verdict YAML to stdout for the orchestrator.
 
 If the heredoc is awkward in your shell, write the YAML to a file and hand it over with `--data` instead — same command, same validation:
 
@@ -157,53 +153,53 @@ Those two forms are the only ones. If a rendering attempt fails, fix the payload
 ```yaml
 verdict: APPROVED | NEEDS_REWORK | REJECTED
 confidence: high | medium | low
-reviewed_at: {ISO-8601 date}
+reviewed_at: "{ISO-8601 date}"
 artefacts_reviewed:
-  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
-  - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
+  - ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md"
+  - ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md"
 lenses:
   completeness:
-    status: pass | fail
+    status: pass | fail | inconclusive
     gates:
       G1: pass | fail
       G2: pass | fail
     findings:
       - "Finding description"
   prioritization:
-    status: pass | fail
+    status: pass | fail | inconclusive
     gates:
       G3: pass | fail
       G4: pass | fail
     findings:
       - "Finding description"
   duplicate-detection:
-    status: pass | fail
+    status: pass | fail | inconclusive
     gates:
       G5: pass | fail
       G6: pass | fail
     findings:
       - "Finding description"
 synthesis:
+  questions:
+    completeness:
+      answered_by: [completeness]
+      weight: 0.30
+      contribution: 0.00
+    business-fit:
+      answered_by: [prioritization]
+      weight: 0.30
+      contribution: 0.00
+    quality:
+      answered_by: [duplicate-detection]
+      weight: 0.15
+      contribution: 0.00
+    risk:
+      answered_by: [completeness, prioritization, duplicate-detection]
+      weight: 0.25
+      contribution: 0.00
   blocking_findings:
-    - "G2: Issue #43 (P0 — driver age validation blocking submission) absent from triage"
+    - "G2: blocking finding"
   recommendations:
-    - "Re-run discovery with mode 2 (artifact-driven) to catch domain-specific P0s"
+    - "Actionable recommendation"
   dissent: "No lens disagreement."
-```
-
-**Human-readable summary** (after the YAML block):
-
-```
-## Review Summary
-
-Verdict: {VERDICT}
-
-### What passed
-- ...
-
-### What needs to change
-- ...
-
-### Recommended next step
-- {Re-run discovery | Fix prioritization | Merge duplicates | Approved — proceed to DISCUSS}
 ```

@@ -74,22 +74,20 @@ Output: a list of risk findings, each tagged `INVARIANT_VIOLATION`, `HIDDEN_COUP
 
 While executing a lens, do not consult findings from another lens. Write the lens's findings to its own section in the review file before starting the next lens. If a finding seems to apply to multiple lenses, record it under each lens independently with the appropriate tag — do not merge.
 
-## Weighted synthesis
-
-The synthesis is computed **per question, not per lens**. That is what makes it work for a
-three-lens phase and a four-lens phase alike, and it is why the weights below never need
-renumbering when a phase gains or loses an instrument.
+## Weighted semantic synthesis
 
 1. **Map.** For each lens that ran, record which question(s) it answers. When the phase's
    `*-review-criteria` skill declares the mapping, use it verbatim. When it does not, derive
-   the mapping from what the lens actually checks and state the derivation in the synthesis —
-   an underived mapping is an assumption, and assumptions do not belong in a verdict.
-2. **Score each question** in `{0, 0.5, 1}` using the scale below. When several lenses answer
-   the same question, the question takes the **lowest** of their scores. The strictest
-   instrument wins, exactly as the dissent rule requires.
-3. **Halt on a gap.** A question that no lens answered is not scored `1.0` and is not skipped.
-   The verdict is `NEEDS_REWORK` with the uncovered question named, because an unasked
-   question cannot come back clean.
+   the mapping from what the lens actually checks and state the derivation in the synthesis.
+2. **Rate each question internally** as `0`, `0.5`, or `1`. When several lenses answer the
+   same question, use the lowest rating. Multiply that rating by the fixed question weight
+   and emit only the resulting `contribution`; do not expose a separate `score` field.
+3. **Halt on a gap.** A question that no lens answered forces `NEEDS_REWORK` with the
+   uncovered question named. An unasked question cannot come back clean.
+4. **Preserve dissent.** When lenses disagree, record the disagreement in the semantic
+   `dissent` or `dissent_analysis` field defined by that reviewer's YAML contract.
+5. **Apply the phase severity matrix.** Contributions support the synthesis but never
+   override a phase gate, blocker, invariant, or explicit severity rule.
 
 | Question | Weight |
 |---|---|
@@ -98,64 +96,18 @@ renumbering when a phase gains or loses an instrument.
 | Quality | 0.15 |
 | Risk | 0.25 |
 
-Per-question score in `{0, 0.5, 1}`:
-
-- `1.0` — all findings are `OK`.
-- `0.5` — at least one finding is non-OK but none are `INVARIANT_VIOLATION` or `BROKEN`.
-- `0.0` — at least one finding is `INVARIANT_VIOLATION`, `BROKEN`, or `MISSING`.
-
-Weighted sum maps to the verdict:
-
-| Weighted sum | Verdict |
-|---|---|
-| `>= 0.85` and no question scored `0.0` | `APPROVED` |
-| `>= 0.55` | `NEEDS_REWORK` |
-| `< 0.55`, **or** any question scored `0.0` on an invariant | `REJECTED` |
-
-A single `INVARIANT_VIOLATION` finding under the Risk question forces `REJECTED` regardless of the weighted sum.
-
-In the emitted verdict, `lensCount` is the number of lenses that actually ran — the evidence
-of the fan-out. The `synthesis` rows are the four questions. The two numbers differ on
-purpose: one says how the work was done, the other says what was judged.
+Internal rating: `1` when all findings are clean; `0.5` when findings exist but none are
+`INVARIANT_VIOLATION`, `BROKEN`, or `MISSING`; `0` when any such finding exists. Emit each
+question as a named map with `answered_by`, `weight`, and `contribution`. Do not emit a total
+score: the named contributions remain auditable without collapsing gate semantics.
 
 ## Output format
 
-Begin the review file with `<!-- markdownlint-disable-file -->`, then the following structure:
-
-```markdown
-<!-- markdownlint-disable-file -->
-
-# {Phase} Review — {slug}
-
-**Verdict:** APPROVED | NEEDS_REWORK | REJECTED
-**Lenses executed:** N
-**Weighted score:** 0.XX
-**Reviewed artifacts:** {relative paths}
-
-## {phase lens name}
-- finding 1 [TAG] — short description
-- ...
-
-## {next phase lens name}
-- ...
-
-(one section per lens that ran, named as the phase's `*-review-criteria` names it)
-
-## Questions
-
-| Question | Answered by | Score | Weight | Contribution |
-|---|---|---|---|---|
-| Completeness | {lens name(s)} | 0.X | 0.30 | 0.XX |
-| Business Fit | {lens name(s)} | 0.X | 0.30 | 0.XX |
-| Quality | {lens name(s)} | 0.X | 0.15 | 0.XX |
-| Risk | {lens name(s)} | 0.X | 0.25 | 0.XX |
-
-## Synthesis
-{2–4 sentences explaining the verdict, the dominant lens, and the required next actions if any}
-
-## Required actions before next attempt
-- {bulleted list — present only when verdict is NEEDS_REWORK or REJECTED}
-```
+Emit the exact YAML contract declared by the phase reviewer. Preserve named lens maps,
+gate identifiers, severities, concrete findings, recommendations, dissent, question weights,
+and contributions. Do not add presentation metadata such as a lens count, numeric score,
+list index, or lens score.
+The same YAML payload is sent to the artifact command and returned to the caller.
 
 The reviewer writes only this file. It never modifies upstream artifacts and never edits `state.json` — the orchestrator records `state.json::verdicts[phase]` from the verdict line above via `state.mjs record-verdict`.
 

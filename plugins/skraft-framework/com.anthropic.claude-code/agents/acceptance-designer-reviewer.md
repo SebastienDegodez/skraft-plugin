@@ -29,8 +29,6 @@ metadata:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/distill-review-{N}.md
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
 ---
 
 # Acceptance-Designer Reviewer
@@ -133,7 +131,7 @@ A BLOCKER finding is mechanically correctable by the acceptance-designer: it ret
 
 ### Verdict Output
 
-Persistence is an exit gate. Before any final response, build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Pipe it straight into the `review-verdict` artifact command — the subcommand owns the template and validates the required top-level keys; a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run. Do **not** hand-format the tables, the template owns the structure:
+Build the verdict with the YAML contract below. Quote every free-text value. Pipe exactly that YAML into the `review-verdict` artifact command:
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
@@ -142,4 +140,47 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
 EOF
 ```
 
-Do not emit a final response until the command succeeds and the output file exists. The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`. Then emit exactly the same canonical verdict YAML sent to the command; do not translate it into another schema.
+Do not emit a final response until the command succeeds and the output file exists. The review template already begins with `<!-- markdownlint-disable-file -->`. Then emit exactly the same canonical verdict YAML sent to the command; do not translate it into another schema.
+
+```yaml
+verdict: APPROVED | NEEDS_REWORK | REJECTED
+confidence: high | medium | low
+lenses:
+  coverage:
+    status: pass | fail | inconclusive
+    findings:
+      - gate: G1
+        severity: BLOCKER | HIGH | MEDIUM | LOW
+        finding: "description of the problem"
+        location: "path/to/file.feature:line"
+  business-alignment:
+    status: pass | fail | inconclusive
+    findings: []
+  testability:
+    status: pass | fail | inconclusive
+    findings: []
+  boundary-enforcement:
+    status: pass | fail | inconclusive
+    findings: []
+synthesis:
+  questions:
+    completeness:
+      answered_by: [coverage]
+      weight: 0.30
+      contribution: 0.00
+    business-fit:
+      answered_by: [business-alignment]
+      weight: 0.30
+      contribution: 0.00
+    quality:
+      answered_by: [testability]
+      weight: 0.15
+      contribution: 0.00
+    risk:
+      answered_by: [boundary-enforcement]
+      weight: 0.25
+      contribution: 0.00
+  blocking_findings: []
+  recommendations: []
+  dissent: ""
+```

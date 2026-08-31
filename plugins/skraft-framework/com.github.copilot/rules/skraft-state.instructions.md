@@ -173,25 +173,34 @@ The `--artifact` file is a review artifact like any other, so render it from dat
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/manual-close.md <<'EOF'
-phase: {P}
-projectSlug: {projectSlug}
-date: {date}
-attempt: manual
 verdict: APPROVED
-lensCount: 1
-score: manual
+confidence: high
 lenses:
-  - index: 1
-    name: human-validation
-    lensScore: manual
+  human-validation:
+    status: pass
     findings:
       - "Closed after human-validated manual reworks; no reviewer sub-agent dispatched."
 synthesis:
-  - lens: human-validation
-    weight: "1.0"
-    lensScore: manual
-    contribution: manual
-conclusion: "Closed after human-validated manual reworks; no reviewer sub-agent verdict."
+  questions:
+    completeness:
+      answered_by: [human-validation]
+      weight: 0.30
+      contribution: 0.30
+    business-fit:
+      answered_by: [human-validation]
+      weight: 0.30
+      contribution: 0.30
+    quality:
+      answered_by: [human-validation]
+      weight: 0.15
+      contribution: 0.15
+    risk:
+      answered_by: [human-validation]
+      weight: 0.25
+      contribution: 0.25
+  blocking_findings: []
+  recommendations: []
+  dissent: "No reviewer sub-agent was dispatched."
 EOF
 
 node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" close-phase --slug {projectSlug} --phase {P} --verdict APPROVED --artifact reviews/{date}/manual-close.md

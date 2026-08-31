@@ -25,8 +25,6 @@ metadata:
       - existing codebase and instructions files
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
 ---
 
 # Solution-Researcher Agent
@@ -53,7 +51,7 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 
 ## Output path (layout-aware)
 
-Write the research document where the orchestrator's dispatch header tells you to. The path convention follows `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`:
+Write the research document where the orchestrator's dispatch header tells you to:
 
 - namespaced layout (default): `.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md`
 - bare layout (shared artifact root): `.copilot-tracking/research/{date}/{slug}-research.md`

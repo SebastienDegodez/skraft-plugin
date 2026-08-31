@@ -25,8 +25,6 @@ metadata:
     - B10 HUMAN CHECKPOINT
   skills:
     - characterize-with-contracts
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
   inputs:
     required:
       - target service path or project name

@@ -32,8 +32,6 @@ metadata:
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/triage-{YYYY-MM-DD}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/sprint-proposal.md
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
 ---
 
 # Backlog-Discoverer Agent
@@ -161,12 +159,12 @@ days fit the sprint.
 
 ### Phase 6: PERSIST
 
-Write both files under the DISCOVER subdirectory defined in `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md` — i.e. `.copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/`:
+Write both declared outputs under `.copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/`:
 
 1. **`triage-{YYYY-MM-DD}.md`** — full triage report (discovery mode, raw counts, triage table, duplicates, sprint proposal)
 2. **`sprint-proposal.md`** — standalone sprint proposal (latest run overwrites previous within the same dated subfolder)
 
-Markdown files under `.copilot-tracking/` must begin with `<!-- markdownlint-disable-file -->` per the artifacts instruction.
+Markdown files under `.copilot-tracking/` must begin with `<!-- markdownlint-disable-file -->`.
 
 Both files must include:
 - Discovery mode used

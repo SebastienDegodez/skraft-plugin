@@ -48,7 +48,6 @@ metadata:
   instructions:
     - plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md
     - plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
 ---
 
 # skraft Engineering Pipeline Orchestrator
@@ -56,7 +55,6 @@ metadata:
 > **Companion instructions (orchestrator-owned, portable load).** These convention files are the orchestrator's responsibility — sub-agents do NOT load them; the orchestrator provides sub-agents their context at dispatch time (see "Dispatch context header"). They are declared in this agent's frontmatter `instructions:` and carry an `applyTo:` scope for harnesses that auto-load path-scoped instructions (e.g. Copilot). Harnesses that do NOT auto-load them (e.g. Claude Code) require an explicit read: at session start / rehydration, read each file with your file-read tool and treat it as the source of truth. Read once, not every turn.
 > - `plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md` — pipeline state (write-through model, schema, rehydration)
 > - `plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md` — native todo working set projection
-> - `plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md` — artifact path conventions (also pointed to sub-agents via the dispatch header)
 
 ## Identity
 
@@ -103,7 +101,7 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 ## Working context (provided by orchestrator)
 - Story / issue: {issueNumber} — {title}
 - Output path (write here): .copilot-tracking/skraft-plans/{projectSlug}/{phaseDir}/{YYYY-MM-DD}/
-- Artifact conventions: follow `plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md` (dated subdirs + `<!-- markdownlint-disable-file -->` header). Read it if not already in context.
+- Artifact convention: write only to the exact path above; tracked Markdown starts with `<!-- markdownlint-disable-file -->`.
 - Upstream artefacts: {paths from previous phases}
 ```
 
@@ -171,7 +169,7 @@ At pipeline start, load `#file:plugins/skraft-framework/skills/skraft-entry-poin
 
 ## Dispatch table
 
-Paths are rooted at the resolved tracking layout — namespaced (default) under `.copilot-tracking/skraft-plans/{projectSlug}/`, or bare directly under `.copilot-tracking/`. Conventions are defined in `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`.
+Paths are rooted at the resolved tracking layout — namespaced (default) under `.copilot-tracking/skraft-plans/{projectSlug}/`, or bare directly under `.copilot-tracking/`. Each specialist and reviewer descriptor declares its exact outputs; the dispatch header supplies the resolved path.
 
 | Phase | Specialist | Reviewer | Expected artefacts |
 |---|---|---|---|

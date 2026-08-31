@@ -58,24 +58,22 @@ Compare test assertions between commits:
 
 ## Output
 
-Return EXACTLY this JSON structure:
+Return EXACTLY this YAML document:
 
-```json
-{
-  "lens": "test-integrity",
-  "verdict": "pass | fail",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G<N>",
-      "severity": "blocker | high | medium | low",
-      "location": "file:line",
-      "description": "what is wrong — name the specific anti-pattern",
-      "suggestion": "how to fix"
-    }
-  ]
-}
+```yaml
+lens: test-integrity
+verdict: pass | fail | inconclusive
+defects:
+  - id: D<N>
+    gate: G<N>
+    severity: blocker | high | medium | low
+    location: "file:line"
+    description: "what is wrong — name the specific anti-pattern"
+    suggestion: "how to fix"
 ```
+
+Quote every free-text value. Emit `defects: []` when none were found. Return
+`verdict: inconclusive` when required evidence cannot be inspected; never infer pass from silence.
 
 ## Rules
 

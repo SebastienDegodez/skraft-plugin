@@ -110,27 +110,23 @@ This is the mechanical check of the Iron Rule of Tests.
 
 ## Output
 
-Return EXACTLY this JSON:
+Return EXACTLY this YAML document:
 
-```json
-{
-  "lens": "quality-gates",
-  "verdict": "pass | fail | inconclusive",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G1..G10 | meta",
-      "severity": "blocker | high | medium | low",
-      "location": "evidence file path or git commit ref",
-      "description": "what is wrong, citing the field",
-      "suggestion": "what the engineer should add to make it falsifiable"
-    }
-  ]
-}
+```yaml
+lens: quality-gates
+verdict: pass | fail | inconclusive
+defects:
+  - id: D<N>
+    gate: G1..G10 | meta
+    severity: blocker | high | medium | low
+    location: "evidence file path or git commit ref"
+    description: "what is wrong, citing the field"
+    suggestion: "what the engineer should add to make it falsifiable"
 ```
 
 `severity` MUST be one of `blocker | high | medium | low`. Any other value is
 malformed and the parent reviewer will treat this lens as `inconclusive`.
+Quote every free-text value. Emit `defects: []` when none were found.
 
 ## Rules
 

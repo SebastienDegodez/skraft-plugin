@@ -38,8 +38,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/consistency-matrix-{story}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
 ---
 
 # Solution-Architect Agent
@@ -455,7 +453,7 @@ Also write the blocker file to `.copilot-tracking/skraft-plans/{projectSlug}/blo
 
 ### Phase 10: PERSIST
 
-Write all artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`. Every markdown file must begin with `<!-- markdownlint-disable-file -->`.
+Write only the declared artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/` and `docs/adr/`. Every markdown file must begin with `<!-- markdownlint-disable-file -->`.
 
 - `details/{date}/event-model-{story}.md` — event timeline per story
 - `docs/adr/adr-{NNN}-{slug}.md` — one file per ADR (append-only, sequential numbering across the whole project; each begins with the YAML decision header)

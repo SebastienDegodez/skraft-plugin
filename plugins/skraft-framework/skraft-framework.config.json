@@ -301,33 +301,15 @@
     "refactoring-worker": []
   },
   "agentInstructions": {
-    "Skraft - Acceptance Designer Reviewer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Acceptance Designer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Backlog Discoverer Reviewer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Backlog Discoverer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Backlog Planner Reviewer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Backlog Planner": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Brownfield Analyst": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Brownfield Harness Builder": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Brownfield Refactorer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
+    "Skraft - Acceptance Designer Reviewer": [],
+    "Skraft - Acceptance Designer": [],
+    "Skraft - Backlog Discoverer Reviewer": [],
+    "Skraft - Backlog Discoverer": [],
+    "Skraft - Backlog Planner Reviewer": [],
+    "Skraft - Backlog Planner": [],
+    "Skraft - Brownfield Analyst": [],
+    "Skraft - Brownfield Harness Builder": [],
+    "Skraft - Brownfield Refactorer": [],
     "architecture-boundaries-lens": [],
     "cold-reader-lens": [],
     "discovery-completeness-lens": [],
@@ -341,24 +323,13 @@
     "test-integrity-lens": [],
     "Skraft - Orchestrator": [
       "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md",
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md",
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md"
     ],
-    "Skraft - Software Engineer Reviewer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Software Engineer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Solution Architect Reviewer": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Solution Architect": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
-    "Skraft - Solution Researcher": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md"
-    ],
+    "Skraft - Software Engineer Reviewer": [],
+    "Skraft - Software Engineer": [],
+    "Skraft - Solution Architect Reviewer": [],
+    "Skraft - Solution Architect": [],
+    "Skraft - Solution Researcher": [],
     "contract-fidelity-lens": [],
     "contract-testing-worker": [],
     "mock-fidelity-lens": [],

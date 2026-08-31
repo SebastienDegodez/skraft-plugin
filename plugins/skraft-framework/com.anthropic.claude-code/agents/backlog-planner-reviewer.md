@@ -31,8 +31,6 @@ metadata:
       - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
 ---
 
 # Backlog-Planner Reviewer
@@ -54,7 +52,7 @@ Collect artefacts:
 - **AC drafts** — `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md` (one per story)
 - **Triage context** — `.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md` (reference only)
 
-READ-ONLY on every artefact listed above. The reviewer never writes to `research/`, `plans/`, `adrs/`, `details/`, `changes/`, or `features/`. The only output path is `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md` per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`.
+READ-ONLY on every artefact listed above. The reviewer never writes to `research/`, `plans/`, `adrs/`, `details/`, `changes/`, or `features/`. Its declared output `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md` is its only writable path.
 
 If artefacts are missing, note them and proceed with available inputs. Never block on context files.
 
@@ -114,7 +112,7 @@ A BLOCKER finding is mechanically correctable by the backlog-planner: the verdic
 
 ### Phase 4: VERDICT OUTPUT
 
-Build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Pipe it straight into the `review-verdict` artifact command — the subcommand owns the template and validates the required top-level keys; a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run. Do **not** hand-format the tables, the template owns the structure:
+Build the verdict with the YAML contract below. Quote every free-text value. Pipe exactly that YAML into the `review-verdict` artifact command:
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
@@ -123,7 +121,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
 EOF
 ```
 
-The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`. Then emit the same verdict YAML to stdout.
+The review template already begins with `<!-- markdownlint-disable-file -->`. Then emit the same verdict YAML to stdout.
 
 Emit a single machine-parseable YAML verdict block:
 
@@ -132,7 +130,7 @@ verdict: APPROVED | NEEDS_REWORK | REJECTED
 confidence: high | medium | low
 lenses:
   invest:
-    status: pass | fail
+    status: pass | fail | inconclusive
     findings:
       - gate: G1 | G2
         severity: BLOCKER | HIGH | MEDIUM | LOW
@@ -140,7 +138,7 @@ lenses:
         criterion: "{INVEST criterion that fails}"
         detail: "{specific description}"
   ac-quality:
-    status: pass | fail
+    status: pass | fail | inconclusive
     findings:
       - gate: G3 | G4
         severity: BLOCKER | HIGH | MEDIUM | LOW
@@ -148,26 +146,41 @@ lenses:
         ac: "AC-{n}"
         detail: "{specific description}"
   planning-coherence:
-    status: pass | fail
+    status: pass | fail | inconclusive
     findings:
       - gate: G5 | G6
         severity: BLOCKER | HIGH | MEDIUM | LOW
         detail: "{specific description}"
   dor-compliance:
-    status: pass | fail
+    status: pass | fail | inconclusive
     findings:
       - gate: G7 | G8
         severity: BLOCKER | HIGH | MEDIUM | LOW
         story: "{Story ID}"
-        dor_item: "{item number and name}" # for G7
-        antipattern: "{antipattern ID}" # for G8
+        dor_item: "{item number and name}"
+        antipattern: "{antipattern ID}"
         detail: "{specific description}"
 synthesis:
+  questions:
+    completeness:
+      answered_by: [invest, dor-compliance]
+      weight: 0.30
+      contribution: 0.00
+    business-fit:
+      answered_by: [ac-quality]
+      weight: 0.30
+      contribution: 0.00
+    quality:
+      answered_by: [invest, ac-quality, planning-coherence, dor-compliance]
+      weight: 0.15
+      contribution: 0.00
+    risk:
+      answered_by: [planning-coherence, dor-compliance]
+      weight: 0.25
+      contribution: 0.00
   blocking_findings:
     - "{story ID}: {finding summary}"
   recommendations:
     - "{actionable recommendation}"
   dissent: "{any conflicting lens assessments, or 'none'}"
 ```
-
-After the YAML, provide a plain-language **Review Summary** (3-5 sentences) stating: what was reviewed, which gates passed, what must be fixed, and what the next action is.

@@ -25,8 +25,6 @@ metadata:
   skills:
     - characterize-brownfield
     - compose-brownfield-prd
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
   inputs:
     required:
       - repository path

@@ -34,8 +34,6 @@ metadata:
       - .copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-*.md
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md
-  instructions:
-    - plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md
 ---
 
 # Solution-Architect-Reviewer Agent
@@ -204,7 +202,7 @@ Aggregate all findings from the three lenses.
 
 ### Phase 4: OUTPUT
 
-Persistence is an exit gate. Before any final response, build the verdict as YAML — keys: `phase`, `projectSlug`, `date`, `attempt`, `verdict`, `lensCount`, `score`, `lenses` (each with `index`, `name`, `lensScore`, `findings` list), `synthesis` (each with `lens`, `weight`, `lensScore`, `contribution`), `conclusion`. Quote any finding that contains a `:` or `#`. Pipe it straight into the `review-verdict` artifact command — the subcommand owns the template and validates the required top-level keys; a missing one prints a JSON error to stderr and exits `2`, so you fill it and re-run. Do **not** hand-format the tables, the template owns the structure:
+Build the verdict with the YAML contract below. Quote every free-text value. Pipe exactly that YAML into the `review-verdict` artifact command:
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
@@ -213,4 +211,54 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
 EOF
 ```
 
-Copy that output path literally after replacing only `{projectSlug}`, `{date}`, and `{N}`. Do not derive a filename from the story. Do not emit a final response until the command succeeds and that exact output file exists. The rendered file already begins with `<!-- markdownlint-disable-file -->` per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md`. Then emit exactly the same canonical verdict YAML sent to the command; do not translate it into another schema or append a separate narrative.
+Copy that output path literally after replacing only `{projectSlug}`, `{date}`, and `{N}`. Do not derive a filename from the story. Do not emit a final response until the command succeeds and that exact output file exists. The review template already begins with `<!-- markdownlint-disable-file -->`. Then emit exactly the same canonical verdict YAML sent to the command; do not translate it into another schema or append a separate narrative.
+
+```yaml
+verdict: APPROVED | NEEDS_REWORK | REJECTED
+confidence: high | medium | low
+lenses:
+  consistency:
+    status: pass | fail | inconclusive
+    findings:
+      - gate: G1
+        severity: BLOCKER | HIGH | MEDIUM | LOW
+        artefact: ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/diagrams-{story}.md"
+        description: "Evidence-backed finding."
+  architecture-compliance:
+    status: pass | fail | inconclusive
+    findings:
+      - gate: G3
+        severity: BLOCKER | HIGH | MEDIUM | LOW
+        artefact: ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md"
+        description: "Evidence-backed finding."
+  fitness:
+    status: pass | fail | inconclusive
+    findings:
+      - gate: G7
+        severity: BLOCKER | HIGH | MEDIUM | LOW
+        artefact: ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md"
+        description: "Evidence-backed finding."
+synthesis:
+  questions:
+    completeness:
+      answered_by: [consistency]
+      weight: 0.30
+      contribution: 0.00
+    business-fit:
+      answered_by: [fitness]
+      weight: 0.30
+      contribution: 0.00
+    quality:
+      answered_by: [consistency, architecture-compliance]
+      weight: 0.15
+      contribution: 0.00
+    risk:
+      answered_by: [architecture-compliance, fitness]
+      weight: 0.25
+      contribution: 0.00
+  blocking_findings:
+    - "Gate and severity: blocking finding."
+  recommendations:
+    - "Actionable recommendation."
+  dissent: ""
+```
