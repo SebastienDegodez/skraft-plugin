@@ -180,6 +180,41 @@ A suite needs `@github/copilot-sdk`, a devDependency, so any job that runs one m
    a paired run executes every trial twice plus judge work, and cost per trial
    tracks how much work the prompt demands, not how big the fixture is.
 
+## Recording why the instrument looks like that
+
+`eval.yaml` records **what** is measured. It cannot record what was considered and
+cut, which behaviours the portfolio deliberately leaves to a sibling skill, why a
+stimulus that looks executable had to become a judgement call, or why a rubric
+line is worded the way it is. That reasoning is what a reviewer needs in order to
+challenge the instrument rather than merely read it — and it is the first thing
+lost when the author moves on.
+
+`create-skraft-eval` already requires that reasoning as a **portfolio**, presented
+for approval before any file is written. Persist it next to the spec, as
+`tests/skills/<skill>/README.md`:
+
+| Section | What it settles |
+|---|---|
+| Scope | the behaviours this skill owns *alone*, and the neighbours deliberately excluded |
+| Stimuli | one line per stimulus: the single decision it forces, and its class (decider, regression guard, non-activation) |
+| Proof surface | for each stimulus, what actually proves the outcome — deterministic graders, or a judge against a rubric |
+| Cut | candidates ranked out, with the reason |
+| Power | why the trial budget clears the six-discordant-pair floor, given which stimuli are expected to tie |
+| Fixtures | what each fixture makes easy to get wrong — the failure the stimulus has to be able to observe |
+
+Two rules keep the record honest. **State the expected result of every regression
+guard and non-activation stimulus**, so a tie there reads as the design working
+rather than as a weak instrument. And **keep execution state out of it** — which
+run happened, what it scored, what blocked it — because that rots on the next run.
+Execution state belongs in the PR that ran it, or in a working `PLAN.md` beside
+the README; the dashboard and `dashboard-data` are the durable record of results.
+
+Existing examples: [`architecture-patterns`](../tests/skills/architecture-patterns/README.md)
+and [`quality-gates-evidence-contract`](../tests/skills/quality-gates-evidence-contract/README.md)
+document evals that are red by construction and explain *why they must stay red*;
+[`clean-architecture-testing`](../tests/skills/clean-architecture-testing/README.md)
+documents a live portfolio and keeps its planning log in a companion `PLAN.md`.
+
 ## Running an evaluation
 
 Install the CLI once, [the way Vally prescribes](https://microsoft.github.io/vally/get-started/install/):
