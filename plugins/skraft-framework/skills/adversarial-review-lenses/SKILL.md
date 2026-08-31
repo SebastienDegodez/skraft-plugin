@@ -63,7 +63,7 @@ Output: a list of quality findings, each tagged `BROKEN`, `INCONSISTENT`, or `OK
 
 What could go wrong downstream because of this artifact?
 
-- Are immutable invariants from `skraft-difficulty-routing` respected (TDD, Clean Architecture boundaries, test integrity, dated paths, reviewers read-only)?
+- Are immutable invariants from `skraft-entry-point-routing` respected (TDD, Clean Architecture boundaries, test integrity, dated paths, reviewers read-only)?
 - Are the assumptions explicit and bounded?
 - Are there hidden coupling points to neighbor planners (Security, RAI, SSSC) that the artifact silently violates?
 - Could a sub-agent dispatched on this artifact be misled into producing incorrect code or design?

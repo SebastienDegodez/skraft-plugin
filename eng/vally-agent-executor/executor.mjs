@@ -37,6 +37,9 @@ const publicIdentity = (agent) => ({
   declaredModel: agent.declaredModel,
 })
 
+const isSessionTimeout = (error) => error instanceof Error
+  && /^Timeout after \d+ms waiting for session\.idle$/.test(error.message)
+
 // A SKRAFT descriptor spawns its chain through markdown links to sibling
 // `.agent.md` files. Those links resolve in the plugin tree and nowhere else: in
 // a prepared evaluation workspace the chain exists only as registered custom
@@ -115,14 +118,21 @@ const pluginRootNotice = (pluginRoot) => [
   'It holds the CLI and its templates only. Read nothing else from it, and write nothing into it.',
 ].join('\n\n')
 
-const agentPrompt = (agent, { dispatchable = [], pluginRoot } = {}) => {
+const workspaceNotice = (workDir) => [
+  '## Evaluation runtime workspace',
+  `The prepared project workspace is ${workDir}. Treat it as the only project root.`,
+  'Read project artefacts there and run project commands there. Use workspace-relative paths; never change directory to, read from, or write to another repository path exposed by source metadata.',
+  'Write required review verdicts beneath this workspace with the relative path from the agent definition.',
+].join('\n\n')
+
+const agentPrompt = (agent, { dispatchable = [], pluginRoot, workDir } = {}) => {
   const instructions = agent.instructions.map(({ path, content }) => `## Companion instruction: ${path}\n\n${content}`)
   const runtimeNotice = [
     '## Evaluation runtime skill loading',
     'Use the runtime skill tool whenever the agent definition requires a skill to be loaded.',
     'Do not read source-relative skill links from the agent definition; Vally stages the selected skills for the runtime.',
   ].join('\n\n')
-  const notices = [runtimeNotice]
+  const notices = [runtimeNotice, workspaceNotice(workDir)]
   if (pluginRoot) notices.push(pluginRootNotice(pluginRoot))
   if (dispatchable.length) notices.push(dispatchNotice(agent.id, dispatchable))
   return [agent.prompt.trim(), ...instructions, ...notices].join('\n\n')
@@ -151,12 +161,12 @@ const toolsFor = (stimulus, dispatches) => {
   return dispatches ? [...base, DISPATCH_TOOL] : base
 }
 const qualifiedTools = (tools) => tools.map((tool) => `builtin:${tool}`)
-const customAgent = (agent, { tools, model, dispatchable = [], pluginRoot }) => ({
+const customAgent = (agent, { tools, model, dispatchable = [], pluginRoot, workDir }) => ({
   name: agent.id,
   displayName: agent.name,
   description: agent.description,
   tools,
-  prompt: agentPrompt(agent, { dispatchable: dispatchable.filter((id) => id !== agent.id), pluginRoot }),
+  prompt: agentPrompt(agent, { dispatchable: dispatchable.filter((id) => id !== agent.id), pluginRoot, workDir }),
   model,
 })
 const promptsFor = (stimulus) => Array.isArray(stimulus.turns) && stimulus.turns.length
@@ -260,8 +270,8 @@ export const createAgentExecutor = ({
           model: options.model,
           workingDirectory: options.workDir,
           customAgents: [
-            customAgent(agent, { tools, model: options.model, dispatchable, pluginRoot }),
-            ...subagents.map((entry) => customAgent(entry, { tools, model: options.model, dispatchable, pluginRoot })),
+            customAgent(agent, { tools, model: options.model, dispatchable, pluginRoot, workDir: options.workDir }),
+            ...subagents.map((entry) => customAgent(entry, { tools, model: options.model, dispatchable, pluginRoot, workDir: options.workDir })),
           ],
           agent: agent.id,
           skillDirectories,
@@ -289,13 +299,21 @@ export const createAgentExecutor = ({
         let response
         const turnOutputs = []
         let eventCursor = 0
+        let endReason = 'completed'
         for (const [turn, prompt] of promptsFor(stimulus).entries()) {
-          response = await session.sendAndWait({ prompt }, options.timeout)
-          turnOutputs.push(response?.data?.content ?? '')
-          for (let index = eventCursor; index < adapter.events.length; index += 1) {
-            adapter.events[index].turn = turn
+          try {
+            response = await session.sendAndWait({ prompt }, options.timeout)
+            turnOutputs.push(response?.data?.content ?? '')
+          } catch (error) {
+            if (!isSessionTimeout(error)) throw error
+            endReason = 'agent_timeout'
+          } finally {
+            for (let index = eventCursor; index < adapter.events.length; index += 1) {
+              adapter.events[index].turn = turn
+            }
+            eventCursor = adapter.events.length
           }
-          eventCursor = adapter.events.length
+          if (endReason === 'agent_timeout') break
         }
         const completedAt = clock.now()
         const events = [selectedAgentEvent(agent), ...adapter.events]
@@ -313,7 +331,7 @@ export const createAgentExecutor = ({
           output: turnOutputs.map((output, index) => `## Turn ${index + 1}\n${output}`).join('\n\n'),
           workDir: options.workDir,
           artifactDir: stateDir,
-          endReason: 'completed',
+          endReason,
           metadata: {
             model: adapter.model ?? options.model ?? agent.declaredModel,
             skillsLoaded,

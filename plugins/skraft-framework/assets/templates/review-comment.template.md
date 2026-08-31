@@ -6,9 +6,6 @@
 {{/artefacts}}
 
 **Reviewer verdict:** {{verdictLabel}}
-{{#difficulty}}
-**Difficulty:** `{{difficulty}}`
-{{/difficulty}}
 
 **Next phase:** {{nextPhase}}
 {{#evidence}}

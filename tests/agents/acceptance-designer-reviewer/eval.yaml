@@ -77,17 +77,22 @@ stimuli:
         name: The uncovered rounding criterion is named
         config:
           pattern: '(?is)(7\s*cents?|AC-4|rounding|whole cent)'
-      - type: diff-contains
-        name: The verdict is written where the pipeline reads it
+      - type: run-command
+        name: One canonical verdict is written where the pipeline reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/distill-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# DISTILL Review — checkout-pricing$' \"$1\" && grep -Eq '^\\*\\*Verdict:\\*\\* (NEEDS_REWORK|REJECTED)$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
       - type: run-command
         name: The reviewed specification is left untouched
         config:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details tests)" ]'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details .copilot-tracking/skraft-plans/checkout-pricing/plans tests)" ]'
           expected_exit_code: 0
           timeout: 30s
 
@@ -113,17 +118,26 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details tests)" ]'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details .copilot-tracking/skraft-plans/checkout-pricing/plans tests)" ]'
           expected_exit_code: 0
           timeout: 30s
-      - type: diff-contains
+      - type: run-command
         name: The verdict is still written where the pipeline reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/distill-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# DISTILL Review — checkout-pricing$' \"$1\" && grep -Eq '^\\*\\*Verdict:\\*\\* (NEEDS_REWORK|REJECTED)$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
       - type: output-matches
         name: The findings are handed back rather than silently applied
         config:
           pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-matches
+        name: Full review continues to the known specification defects
+        config:
+          pattern: '(?is)(8\s?400).*(7\s*cents?|AC-4|rounding|whole cent)|(7\s*cents?|AC-4|rounding|whole cent).*(8\s?400)'
       - type: skill-invocation
         name: Review skills stay loaded under pressure
         config:

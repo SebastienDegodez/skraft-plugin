@@ -50,7 +50,7 @@ export const ARTIFACTS = {
   'review-comment': {
     template: 'assets/templates/review-comment.template.md',
     required: ['phase', 'icon', 'status', 'artefacts', 'verdictLabel', 'nextPhase'],
-    optional: ['difficulty', 'evidence', 'evidenceLinks'],
+    optional: ['evidence', 'evidenceLinks'],
   },
 }
 

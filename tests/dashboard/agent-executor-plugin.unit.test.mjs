@@ -119,6 +119,19 @@ describe('Vally executor plugin registration', () => {
       possibleUrls: [],
       fullCommandText: 'cd /tmp/work && node scripts/render.mjs',
     }, context), { kind: 'approve-once' })
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [
+        { identifier: 'node', fullCommandText: 'node /tmp/plugin/src/cli/artifact.mjs review-verdict --out .copilot-tracking/reviews/design-review-1.md' },
+      ],
+      possiblePaths: ['/tmp/plugin/src/cli/artifact.mjs'],
+      possibleUrls: [],
+      fullCommandText: [
+        'node /tmp/plugin/src/cli/artifact.mjs review-verdict --out .copilot-tracking/reviews/design-review-1.md <<\'EOF\'',
+        'conclusion: "contract / ADR-002 / reconciled: no"',
+        'EOF',
+      ].join('\n'),
+    }, { ...context, readableRoots: ['/tmp/work', '/tmp/plugin'] }), { kind: 'approve-once' })
     strictEqual(pilotPermissionHandler({
       kind: 'shell',
       commandSegments: [

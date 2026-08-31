@@ -146,23 +146,9 @@ test('validate: review-comment reports missing required keys', () => {
   assert.deepEqual(result.missing, ['verdictLabel', 'nextPhase'])
 })
 
-test('renderArtifact: review-comment skips the optional difficulty/evidence blocks', () => {
+test('renderArtifact: review-comment skips the optional evidence block', () => {
   const output = renderArtifact('review-comment', fullComment())
   assert.match(output, /## Phase DISCUSS ✅ APPROVED/)
   assert.match(output, /\*\*Reviewer verdict:\*\* APPROVED \(attempt 1\)/)
-  assert.doesNotMatch(output, /Difficulty:/)
   assert.doesNotMatch(output, /Evidence:/)
-})
-
-test('renderArtifact: review-comment renders the difficulty block on its own gate', () => {
-  const output = renderArtifact('review-comment', {
-    ...fullComment(),
-    difficulty: 'medium-hard',
-  })
-  assert.match(output, /\*\*Difficulty:\*\* `medium-hard`/)
-})
-
-test('renderArtifact: review-comment omits the difficulty block when difficulty is absent', () => {
-  const output = renderArtifact('review-comment', fullComment())
-  assert.doesNotMatch(output, /\*\*Difficulty:\*\*/)
 })

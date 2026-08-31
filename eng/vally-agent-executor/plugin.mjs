@@ -85,9 +85,16 @@ const requestedPaths = (request) => [
 const absolutePathTokens = (text) => [...text.matchAll(/(?:^|[\s'"`=(<>|&;])(\/[^\s'"`;|&()<>]*)/g)]
 	.map(([, candidate]) => candidate)
 
+// Quoted heredoc bodies are stdin data, not shell syntax. Review payload prose
+// legitimately contains fragments such as `contract / ADR / reconciled`; path
+// scanning that body turns each slash into a fake filesystem escape and denies
+// the mandated artifact command. Keep the command and heredoc delimiters in the
+// scan, but remove each quoted payload body before extracting absolute paths.
+const shellSyntaxOnly = (text) => text.replace(/<<\s*(['"])([^\r\n]+)\1[^\r\n]*\r?\n[\s\S]*?\r?\n\2(?=\r?\n|$)/g, '<<$1$2$1\n$2')
+
 const insideAnyRoot = (roots, candidate) => roots.some((root) => insideWorkspace(root, candidate))
 
-const escapesWorkspace = (roots, text) => absolutePathTokens(text)
+const escapesWorkspace = (roots, text) => absolutePathTokens(shellSyntaxOnly(text))
 	.filter((candidate) => !neutralAbsolutePath.test(candidate))
 	.some((candidate) => !insideAnyRoot(roots, candidate))
 

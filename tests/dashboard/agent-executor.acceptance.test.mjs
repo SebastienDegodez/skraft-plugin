@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { deepStrictEqual, strictEqual } from 'node:assert/strict'
+import { deepStrictEqual, match, strictEqual } from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -33,6 +33,43 @@ const rawEvents = [
 ]
 
 describe('Vally real-agent executor', () => {
+  it('returns collected events with agent_timeout when the SDK session reaches its wait limit', async () => {
+    let eventHandler
+    const session = {
+      sessionId: 'session-timeout',
+      on(handler) { eventHandler = handler },
+      async sendAndWait() {
+        eventHandler(rawEvents[0])
+        eventHandler(rawEvents[1])
+        throw new Error('Timeout after 30000ms waiting for session.idle')
+      },
+      async disconnect() {},
+    }
+    const client = {
+      async start() {},
+      async createSession() { return session },
+      async stop() {},
+    }
+    const executor = createAgentExecutor({
+      repoRoot,
+      createClient: () => client,
+      permissionHandler: () => ({ kind: 'reject' }),
+      adapterFactory: () => new CopilotAdapter(),
+      computeMetrics,
+      clock: { now: () => new Date('2026-08-06T10:00:10.000Z') },
+      randomUUID: () => 'trajectory-timeout',
+    })
+
+    const trajectory = await executor.execute(
+      { name: 'timeout', prompt: 'Review this.', tags: { agent: 'software-engineer' } },
+      { workDir: '/tmp/work', model: 'claude-sonnet-4.6', timeout: 30_000, sessionLog: { rootDir: '/tmp/session-log' }, skills: [] },
+    )
+
+    strictEqual(trajectory.endReason, 'agent_timeout')
+    strictEqual(trajectory.id, 'trajectory-timeout')
+    strictEqual(trajectory.events.some(({ type }) => type === 'turn_start'), true)
+  })
+
   it('selects the exact agent and delegates event semantics to Vally CopilotAdapter', async () => {
     const calls = { clientOptions: [], sessions: [], prompts: [], disconnected: 0, stopped: 0 }
     let eventHandler
@@ -175,6 +212,8 @@ describe('Vally real-agent executor', () => {
       'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash',
     ])
     deepStrictEqual(calls.sessions[0].customAgents[0].tools, ['skill', 'glob', 'grep', 'view', 'edit', 'bash'])
+    match(calls.sessions[0].customAgents[0].prompt, /The prepared project workspace is \/tmp\/work/)
+    match(calls.sessions[0].customAgents[0].prompt, /Use workspace-relative paths/)
     strictEqual(trajectory.output, [
       '## Turn 1',
       responses[0],
