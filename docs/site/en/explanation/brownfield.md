@@ -38,7 +38,7 @@ state.
 
 | Need | Workflow | What it produces |
 |------|----------|------------------|
-| **Understand** code without product documentation | [`brownfield-analyst`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-analyst) | an HVE-format PRD, consumed by HVE agents to create issues |
+| **Understand** code without product documentation | [`brownfield-analyst`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-analyst) | a 17-section PRD, consumed by upstream backlog tooling to create issues |
 | **Secure then transform** a legacy | [`brownfield-harness-builder`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-harness-builder) → [`brownfield-refactorer`]({{ "/en/dashboard/" | relative_url }}#agent-brownfield-refactorer) | a characterization test safety net, then a refactor that keeps it green |
 
 The two paths can be chosen independently. In the second,
@@ -54,11 +54,11 @@ flowchart LR
     BA --> CB["characterize-brownfield<br/>(scan, confidence, coverage)"]
     CB --> G{"gate<br/>PASS / CONCERNS / FAIL"}
     G -->|CONCERNS/FAIL| CHK["human checkpoint<br/>(validation checklist)"]
-    G -->|PASS| CP["compose-brownfield-prd<br/>(HVE PRD, 17 sections)"]
+    G -->|PASS| CP["compose-brownfield-prd<br/>(PRD, 17 sections)"]
     CHK --> CP
     CP --> PRD[("docs/prds/name.md")]
-    PRD -.-> HVE(["HVE agents<br/>GitHub Manager, prd-to-wit"])
-    HVE -.-> ISSUES[("GitHub issues")]
+    PRD -.-> BLT(["backlog tooling<br/>GitHub Manager, prd-to-wit"])
+    BLT -.-> ISSUES[("GitHub issues")]
     ISSUES -.-> BD["backlog-discoverer"]
     BD -.-> BP["backlog-planner"]
     BP -.-> ORCH["skraft-orchestrator"]
@@ -75,9 +75,9 @@ traceability** facet (adapted from test-architecture practice) rates each behavi
 the threshold, the human confirms or corrects before proceeding.
 
 [`compose-brownfield-prd`]({{ "/en/dashboard/" | relative_url }}#skill-compose-brownfield-prd)
-then maps that characterization onto the **exact HVE PRD format** (17 sections,
-`FR-`/`NFR-` IDs, traceability). This PRD is not a dead end: it is the deliverable the
-human hands to the **HVE agents** (GitHub Backlog Manager, `prd-to-wit`) that turn it
+then maps that characterization onto the **17-section PRD format** (`FR-`/`NFR-`
+IDs, traceability). This PRD is not a dead end: it is the deliverable the
+human hands to the **upstream backlog tooling** (GitHub Backlog Manager, `prd-to-wit`) that turns it
 into issues. `backlog-discoverer` triages them, then `backlog-planner` refines the
 selected issue into a story for `skraft-orchestrator`.
 
@@ -149,7 +149,7 @@ flowchart LR
         HB[["brownfield-harness-builder"]] --> RF[["brownfield-refactorer"]]
         RF --> CODE[("secured or refactored code")]
     end
-    PRD -->|"human hands off the PRD"| GHM(["GitHub Backlog Manager<br/>(HVE agent)"])
+    PRD -->|"human hands off the PRD"| GHM(["GitHub Backlog Manager"])
     GHM -->|"creates issues"| ISSUES[("GitHub backlog")]
     ISSUES --> BD["backlog-discoverer"]
     BD --> BP["backlog-planner"]
@@ -159,7 +159,7 @@ flowchart LR
     ORCH --> RESEARCH["RESEARCH<br/>(when needed)"] --> DESIGN["DESIGN"] --> DISTILL["DISTILL"] --> DELIVER["DELIVER"]
 ```
 
-- The **understand** path produces a PRD. HVE agents derive issues from it,
+- The **understand** path produces a PRD. Upstream backlog tooling derives issues from it,
   `backlog-discoverer` triages them, and `backlog-planner` refines the selected
   issue. The resulting story can then be handed to `skraft-orchestrator`.
 - The **secure then transform** path acts on the technical substrate. It does not

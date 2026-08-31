@@ -36,7 +36,7 @@ dependency, tested boundary-to-boundary and hardened with mutation testing.
 - 📚 **Discipline skills**: Outside-In TDD, Clean Architecture testing, BDD/Gherkin, mutation testing, contract testing, ADR, issue refinement…
 - 🛡️ **Mechanical guardrails G1–G8** (fail-closed hooks): dispatch ordering, forced skill loading + JSONL audit, artifact/verdict/commit verification, state protection.
 - 🎯 **Multi-harness portability**: the same guardrails on Claude Code, Copilot CLI and Cursor.
-- 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, repo-wide `depthTier` configurator.
+- 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, structural phase pruning from confirmed upstream evidence.
 
 ## Installation
 

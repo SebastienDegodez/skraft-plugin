@@ -29,7 +29,7 @@ metadata:
       - GitHub issues with triage labels
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md
-      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-ingest-{date}.md (when DISCOVER was skipped via an HVE handoff)
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-ingest-{date}.md (when DISCOVER was skipped via an upstream handoff)
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
@@ -81,16 +81,16 @@ Load all available artefacts in this order:
 2. GitHub issues referenced in the triage report — read full issue body, labels, comments
 3. `sprint-proposal.md` (if available) — initial scope estimate from DISCOVER
 
-**Ingested handoff variant.** When DISCOVER was skipped (an HVE backlog/sprint handoff), the triage report is named `triage-ingest-{date}.md` and carries a header with `source: hve-*` and `ingested: true`. In that case the priorities and the sprint scope were **inherited from HVE, not computed by SKRAFT** — treat them as authoritative: do NOT re-prioritize, re-estimate capacity, or reorder the sprint. Refine the inherited items into stories exactly as you would a SKRAFT-produced triage.
+**Ingested handoff variant.** When DISCOVER was skipped through an upstream backlog/sprint handoff, the triage report is named `triage-ingest-{date}.md` and carries a non-empty `source` plus `ingested: true`. In that case priorities and sprint scope were **inherited from upstream planning, not computed by SKRAFT** — treat them as authoritative: do NOT re-prioritize, re-estimate capacity, or reorder the sprint. Refine inherited items into stories exactly as you would a SKRAFT-produced triage.
 
 ### Phase 2: PRIOR PHASE READING GATE
 
-Verify the DISCOVER artefacts directory (`.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/`) contains at least one `triage-*.md` (this includes the `triage-ingest-*.md` produced when DISCOVER was skipped via an HVE handoff). If missing, halt immediately:
+Verify the DISCOVER artefacts directory (`.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/`) contains at least one `triage-*.md` (this includes the `triage-ingest-*.md` produced when DISCOVER was skipped via an upstream handoff). If missing, halt immediately:
 
 ```
 PRIOR PHASE GATE FAILED
 Missing: .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md
-Action: Run DISCOVER phase before DISCUSS (or ingest an HVE handoff at pipeline start).
+Action: Run DISCOVER phase before DISCUSS (or ingest an upstream handoff at pipeline start).
 DISCUSS phase cannot start without a triage report.
 ```
 

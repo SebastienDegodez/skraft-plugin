@@ -26,7 +26,7 @@ L'état persiste en JSON à
 ```json
 {
   "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE",
-  "difficulty": "simple | medium | medium-hard | challenging | null",
+  "entryPoint": { "skipPhases": [] },
   "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
   "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
   "retryCount": { "DESIGN": 0 },
@@ -42,8 +42,8 @@ L'état persiste en JSON à
 - `phaseArtifacts`, `verdicts`, `retryCount` tracent ce que chaque phase a
   produit et comment elle a été jugée.
 - `maxRetriesPerPhase` (défaut 2) borne les reprises avant escalade humaine.
-- `difficulty` est écrit une seule fois à l'entrée de l'ingénierie et n'est jamais
-  réévalué. Il décide notamment si RESEARCH apporte assez de valeur pour être exécuté.
+- `entryPoint` enregistre les phases que confirme un handoff HVE amont (`skipPhases`).
+  Il est écrit une seule fois au démarrage du pipeline et n'est jamais révisé.
 
 L'état ne porte **aucun dial de qualité**. Les seuils de mutation et de couverture, les
 quatre lentilles de revue adverse, la porte Gherkin et la variante TDD Outside-In
@@ -64,8 +64,8 @@ abaisser.
 ## Comment les phases s'articulent
 
 `skraft-orchestrator` est sélectionné avec une story affinée. Il séquence uniquement
-RESEARCH → DESIGN → DISTILL → DELIVER. RESEARCH peut être sauté selon la difficulté
-et n'a pas de reviewer de phase déclaré. Les trois phases suivantes avancent selon
+RESEARCH → DESIGN → DISTILL → DELIVER. RESEARCH peut être sauté quand un handoff HVE
+amont confirmé prouve qu'il est déjà satisfait ; il n'a pas de reviewer de phase déclaré. Les trois phases suivantes avancent selon
 les verdicts de leurs reviewers dédiés.
 
 ```mermaid

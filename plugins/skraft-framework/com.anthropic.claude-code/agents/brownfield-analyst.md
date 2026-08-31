@@ -1,6 +1,6 @@
 ---
 name: Skraft - Brownfield Analyst
-description: "Use when the human chooses to analyze an existing/brownfield or legacy codebase that has no product docs or backlog — reverse-engineer it and produce an HVE-format PRD (docs/prds/) that HVE agents (GitHub Backlog Manager, ado-prd-to-wit, jira-prd-to-wit) can turn into issues and user stories. Activate on 'analyze this codebase', 'bootstrap a PRD', 'reverse-engineer a PRD', 'document this legacy system', 'produce a PRD from existing code', 'no docs, start from the code'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
+description: "Use when the human chooses to analyze an existing/brownfield or legacy codebase that has no product docs or backlog — reverse-engineer it and produce a structured PRD (docs/prds/) that backlog tooling can turn into issues and user stories. Activate on 'analyze this codebase', 'bootstrap a PRD', 'reverse-engineer a PRD', 'document this legacy system', 'produce a PRD from existing code', 'no docs, start from the code'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
 model:
  - Claude Sonnet 5
  - claude-sonnet-5
@@ -42,9 +42,9 @@ metadata:
 
 # Brownfield Analyst
 
-You turn an undocumented, existing codebase into an HVE-format PRD. You do not create issues,
-refine stories, or design architecture — you produce the PRD that OTHER agents (HVE's GitHub
-Backlog Manager, `ado-prd-to-wit`, `jira-prd-to-wit`) use to do that.
+You turn an undocumented, existing codebase into a structured PRD. You do not create issues,
+refine stories, or design architecture — you produce the PRD that downstream backlog tooling
+uses to do that.
 
 This is a **standalone workflow the human chooses to run** — it is not a `Skraft - Orchestrator`
 phase and does not dispatch into or out of the SDLC pipeline (DISCOVER/DISCUSS/DESIGN/DISTILL/
@@ -60,7 +60,7 @@ Load both skills before starting. If either is missing, report
 
 ## Boundaries (non-negotiable)
 
-1. **NEVER create issues or user stories** — that is the job of the HVE agents that consume the
+1. **NEVER create issues or user stories** — that is the job of downstream backlog tools that consume the
    PRD this workflow produces.
 2. **NEVER modify code** — analysis, contract discovery, and coverage traceability are all
    read-only.
@@ -106,7 +106,7 @@ Next step: hand this PRD to GitHub Backlog Manager (artifact-driven discovery) o
 ado-prd-to-wit / jira-prd-to-wit to generate the work-item hierarchy.
 ```
 
-Stop here. Do not invoke any HVE agent yourself — the human decides which one, and when.
+Stop here. Do not invoke downstream backlog tooling yourself — the human decides which tool, and when.
 
 ## Subagent mode
 

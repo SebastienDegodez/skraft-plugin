@@ -292,7 +292,7 @@ write-through supprime cette fréquence : réhydratation **1×/session**, workin
 natif, écritures déterministes via CLI aux checkpoints. Projection ~800 → ~50 tokens/tour.
 
 **Modules livrés :** `cli/state.mjs` (S7 bridge : `init | get | transition |
-record-verdict | record-artifact | record-review-artifact | set-difficulty |
+record-verdict | record-artifact | record-review-artifact |
 incr-retry`), `domain/state-machine.mjs` (invariants I1-I9, append-only, DONE terminal),
 `domain/state-schema.mjs` (`validatePipelineState` round-trip fidelity — préserve tous
 les champs orchestrator-owned, migration `reviewerVerdicts`→`verdicts`),
@@ -313,8 +313,8 @@ Instructions : `skraft-state.instructions.md` (write-through) +
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:dx` — ce qui est une propriété du **dépôt** quitte `state.json` pour un
-fichier repo-wide `skraft-config.json` géré par un CLI ; `difficulty` reste per-work-item
-via `state.mjs`. Les agents n'appellent que des commandes (get/set délégués au script).
+fichier repo-wide `skraft-config.json` géré par un CLI. Les agents n'appellent que des
+commandes (get/set délégués au script).
 
 **Modules livrés :** `domain/config-schema.mjs` (pur, round-trip),
 `application/config-service.mjs` (`init/get/set`),

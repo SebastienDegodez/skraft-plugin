@@ -105,14 +105,14 @@ Le `solution-researcher` vérifie les faits dans le code et les sources, compare
 les approches et transmet une recommandation à DESIGN. Il n'écrit pas de code et
 ne prend pas la décision d'architecture.
 
-### Routage au démarrage de l'ingénierie
+### Point d'entrée d'ingénierie
 
-Quand l'utilisateur sélectionne `skraft-orchestrator` avec une story affinée, l'orchestrateur évalue sa difficulté une seule fois et la persiste dans `state.json::difficulty` (`simple | medium | medium-hard | challenging`). `DISCOVER` et `DISCUSS` ne font pas partie de cette décision : ce sont des workflows produit autonomes exécutés en amont si nécessaire.
+Quand l'utilisateur sélectionne `skraft-orchestrator` avec une story affinée, l'orchestrateur vérifie au démarrage du pipeline l'existence d'un handoff de planification amont confirmé. `DISCOVER` et `DISCUSS` ne font pas partie de cette décision : ce sont des workflows produit autonomes exécutés en amont si nécessaire.
 
-- **Point d'entrée d'ingénierie** — une difficulté `simple` ou `medium` saute RESEARCH et inscrit `RESEARCH` dans `state.json::entryPoint.skipPhases`. Une difficulté `medium-hard` ou `challenging` exécute RESEARCH.
-- **Modèle DELIVER** — `simple` reste inline avec un commit par scénario ; `medium` utilise un walking skeleton multi-commits ; `medium-hard` délègue chaque scénario Gherkin avec un plan intermédiaire ; `challenging` ajoute des notes de spike sous `details/{date}/` et plusieurs passes de revue.
+- **Handoff amont détecté** — quand un handoff backlog-and-sprint amont complet est confirmé, les phases déjà satisfaites sont enregistrées dans `state.json::entryPoint.skipPhases` ; le pipeline avance jusqu'à la première phase non satisfaite.
+- **Sans handoff** — `skipPhases` est vide et toutes les phases d'ingénierie s'exécutent : RESEARCH → DESIGN → DISTILL → DELIVER.
 
-La difficulté module le volume de travail, jamais le niveau d'exigence. [`skraft-difficulty-routing`]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-difficulty-routing) choisit la route ; [`skraft-quality-bar`]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar) conserve la même barre pour chaque tier.
+La rigueur d'ingénierie est identique pour chaque story. [`skraft-entry-point-routing`]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-entry-point-routing) détecte le handoff ; [`skraft-quality-bar`]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar) conserve la même barre quel que soit le point d'entrée.
 
 ---
 

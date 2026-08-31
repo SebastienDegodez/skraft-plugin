@@ -18,6 +18,12 @@ const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '../..')
 const pluginRoot = join(repoRoot, 'plugins/skraft-framework')
 const agentsRoot = join(pluginRoot, 'com.anthropic.claude-code/agents')
+const agentRuntimeRoots = [
+  agentsRoot,
+  join(pluginRoot, 'skills'),
+  join(pluginRoot, 'com.github.copilot/rules'),
+  join(pluginRoot, 'assets'),
+]
 
 const walk = (dir) =>
   readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -78,4 +84,15 @@ test('agent-discovery: no second agent tree competes with the Claude one', () =>
   assert.equal(existsSync(join(pluginRoot, 'agents')), false)
   assert.equal(existsSync(join(pluginRoot, 'instructions')), false)
   assert.equal(existsSync(join(pluginRoot, 'com.github.copilot/agents')), false)
+})
+
+test('agent-discovery: runtime prompts contain no vendor-specific upstream label', () => {
+  const forbiddenLabel = new RegExp(['h', 'v', 'e'].join(''), 'i')
+  const offenders = agentRuntimeRoots
+    .flatMap(walk)
+    .filter((path) => /\.(md|json)$/.test(path))
+    .filter((path) => forbiddenLabel.test(readFileSync(path, 'utf8')))
+    .map(fromRoot)
+
+  assert.deepEqual(offenders, [])
 })

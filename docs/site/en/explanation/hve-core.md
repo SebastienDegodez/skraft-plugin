@@ -26,7 +26,7 @@ State persists as JSON at
 ```json
 {
   "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE",
-  "difficulty": "simple | medium | medium-hard | challenging | null",
+  "entryPoint": { "skipPhases": [] },
   "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
   "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
   "retryCount": { "DESIGN": 0 },
@@ -42,8 +42,8 @@ State persists as JSON at
 - `phaseArtifacts`, `verdicts`, `retryCount` trace what each phase produced and
   how it was judged.
 - `maxRetriesPerPhase` (default 2) bounds retries before human escalation.
-- `difficulty` is written once at engineering entry and never reassessed. It decides,
-  among other things, whether RESEARCH adds enough value to run.
+- `entryPoint` records which phases a confirmed upstream HVE handoff has already
+  satisfied (`skipPhases`). It is written once at pipeline start and never revised.
 
 The state carries **no quality dial**. Mutation and coverage thresholds, the four
 adversarial review lenses, the Gherkin gate and the Outside-In double-loop TDD variant
@@ -63,8 +63,8 @@ run, and nothing written into `state.json` can lower them.
 ## How the phases articulate
 
 `skraft-orchestrator` is selected with a refined story. It sequences only
-RESEARCH → DESIGN → DISTILL → DELIVER. RESEARCH may be skipped according to
-difficulty and has no declared phase reviewer. The next three phases advance
+RESEARCH → DESIGN → DISTILL → DELIVER. RESEARCH may be skipped when a confirmed
+upstream HVE handoff proves it already satisfied; it has no declared phase reviewer. The next three phases advance
 according to verdicts from their dedicated reviewers.
 
 ```mermaid

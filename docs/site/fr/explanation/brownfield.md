@@ -38,7 +38,7 @@ sélectionne chaque agent directement. Aucun n'est une phase de
 
 | Besoin | Workflow | Ce qu'il produit |
 |--------|----------|------------------|
-| **Comprendre** un code sans documentation produit | [`brownfield-analyst`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-analyst) | un PRD au format HVE, repris par les agents HVE pour créer des issues |
+| **Comprendre** un code sans documentation produit | [`brownfield-analyst`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-analyst) | un PRD 17 sections, repris par l'outillage backlog amont pour créer des issues |
 | **Sécuriser puis transformer** un legacy | [`brownfield-harness-builder`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-harness-builder) → [`brownfield-refactorer`]({{ "/fr/dashboard/" | relative_url }}#agent-brownfield-refactorer) | un filet de tests de caractérisation, puis un refactoring qui le garde vert |
 
 Les deux chemins peuvent être choisis indépendamment. Dans le second,
@@ -54,11 +54,11 @@ flowchart LR
     BA --> CB["characterize-brownfield<br/>(scan, confiance, couverture)"]
     CB --> G{"gate<br/>PASS / CONCERNS / FAIL"}
     G -->|CONCERNS/FAIL| CHK["checkpoint humain<br/>(validation checklist)"]
-    G -->|PASS| CP["compose-brownfield-prd<br/>(PRD HVE 17 sections)"]
+    G -->|PASS| CP["compose-brownfield-prd<br/>(PRD 17 sections)"]
     CHK --> CP
     CP --> PRD[("docs/prds/name.md")]
-    PRD -.-> HVE(["agents HVE<br/>GitHub Manager, prd-to-wit"])
-    HVE -.-> ISSUES[("issues GitHub")]
+    PRD -.-> BLT(["outillage backlog<br/>GitHub Manager, prd-to-wit"])
+    BLT -.-> ISSUES[("issues GitHub")]
     ISSUES -.-> BD["backlog-discoverer"]
     BD -.-> BP["backlog-planner"]
     BP -.-> ORCH["skraft-orchestrator"]
@@ -76,10 +76,10 @@ un **gate `PASS` / `CONCERNS` / `FAIL`** ; sous le seuil, l'humain confirme ou
 corrige avant d'aller plus loin.
 
 [`compose-brownfield-prd`]({{ "/fr/dashboard/" | relative_url }}#skill-compose-brownfield-prd)
-mappe ensuite cette caractérisation vers le PRD **au format HVE exact** (17 sections,
-identifiants `FR-`/`NFR-`, traçabilité). Ce PRD n'est pas un cul-de-sac : il est le
-livrable que l'humain remet aux **agents HVE** (GitHub Backlog Manager, `prd-to-wit`)
-qui en dérivent des issues. `backlog-discoverer` les trie, puis `backlog-planner`
+mappe ensuite cette caractérisation vers le **PRD 17 sections** (`FR-`/`NFR-`,
+traçabilité). Ce PRD n'est pas un cul-de-sac : il est le
+livrable que l'humain remet à l'**outillage backlog amont** (GitHub Backlog Manager, `prd-to-wit`)
+qui en dérive des issues. `backlog-discoverer` les trie, puis `backlog-planner`
 affine l'issue retenue en story pour `skraft-orchestrator`.
 
 ## Workflow 2 — sécuriser puis transformer
@@ -152,7 +152,7 @@ flowchart LR
         HB[["brownfield-harness-builder"]] --> RF[["brownfield-refactorer"]]
         RF --> CODE[("code sécurisé ou refactoré")]
     end
-    PRD -->|"l'humain remet le PRD"| GHM(["GitHub Backlog Manager<br/>(agent HVE)"])
+    PRD -->|"l'humain remet le PRD"| GHM(["GitHub Backlog Manager"])
     GHM -->|"crée les issues"| ISSUES[("backlog GitHub")]
     ISSUES --> BD["backlog-discoverer"]
     BD --> BP["backlog-planner"]
@@ -162,7 +162,7 @@ flowchart LR
     ORCH --> RESEARCH["RESEARCH<br/>(si nécessaire)"] --> DESIGN["DESIGN"] --> DISTILL["DISTILL"] --> DELIVER["DELIVER"]
 ```
 
-- Le chemin **comprendre** produit un PRD. Les agents HVE en dérivent des issues,
+- Le chemin **comprendre** produit un PRD. L'outillage backlog amont en dérive des issues,
   `backlog-discoverer` les trie et `backlog-planner` affine l'issue retenue. La
   story obtenue peut alors être remise à `skraft-orchestrator`.
 - Le chemin **sécuriser puis transformer** agit sur le socle technique. Il ne

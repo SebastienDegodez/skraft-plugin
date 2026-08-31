@@ -68,7 +68,7 @@ ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 
 ### 3. `solution-researcher` — le chercheur (RESEARCH)
 
-- **Mission :** réduire les inconnues par une investigation sourcée lorsque la difficulté le justifie.
+- **Mission :** réduire les inconnues par une investigation sourcée en l'absence d'artefacts de handoff amont.
 - **Reçoit :** la story affinée et le contexte du dépôt.
 - **Passe le relais :** une recommandation sourcée.
 - **Contrôlé par :** aucun reviewer de phase déclaré. `skraft-orchestrator` vérifie le contrat de sortie avant de fermer la phase.

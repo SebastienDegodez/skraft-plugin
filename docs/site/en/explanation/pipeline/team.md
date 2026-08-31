@@ -68,7 +68,7 @@ invokes declared reviewers, and applies their verdicts. It invokes neither
 
 ### 3. `solution-researcher` — the researcher (RESEARCH)
 
-- **Mission:** reduce unknowns through sourced investigation when difficulty justifies it.
+- **Mission:** reduce unknowns through sourced investigation when upstream handoff evidence is absent.
 - **Receives:** the refined story and repository context.
 - **Hands off:** a sourced recommendation.
 - **Checked by:** no declared phase reviewer. `skraft-orchestrator` verifies the output contract before closing the phase.

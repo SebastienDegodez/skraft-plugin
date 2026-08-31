@@ -43,7 +43,6 @@ metadata:
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
         - docs/adr/adr-{NNN}-{slug}.md
-      - difficulty (provided by the orchestrator in the dispatch payload)
   outputs:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md

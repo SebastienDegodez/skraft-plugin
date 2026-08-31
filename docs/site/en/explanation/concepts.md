@@ -18,14 +18,14 @@ A Use Case captures a contract between stakeholders about expected system behavi
 
 Each pipeline pass handles exactly one Use Case. No batching, no shortcuts.
 
-## Engineering routing
+## Engineering entry point
 
-When the user selects `skraft-orchestrator` with a refined story, the orchestrator evaluates its difficulty once and persists it in `state.json::difficulty` (`simple | medium | medium-hard | challenging`). DISCOVER and DISCUSS are not part of this decision: they are standalone product workflows used upstream when needed.
+When the user selects `skraft-orchestrator` with a refined story, the orchestrator checks for a confirmed upstream planning handoff at pipeline start. DISCOVER and DISCUSS are not part of this decision: they are standalone product workflows used upstream when needed.
 
-- **Engineering entry point** — `simple` or `medium` skips RESEARCH and records `RESEARCH` in `state.json::entryPoint.skipPhases`. `medium-hard` or `challenging` runs RESEARCH.
-- **DELIVER model** — `simple` stays inline with one commit per scenario; `medium` uses a multi-commit walking skeleton; `medium-hard` delegates each Gherkin scenario with an intermediate plan; `challenging` adds spike notes under `details/{date}/` and multiple review passes.
+- **Upstream planning handoff detected** — when a complete upstream backlog-and-sprint handoff is confirmed, the phases it already satisfies are recorded in `state.json::entryPoint.skipPhases`; the pipeline advances to the first unsatisfied phase.
+- **No handoff** — `skipPhases` is empty and every engineering phase runs: RESEARCH → DESIGN → DISTILL → DELIVER.
 
-Difficulty changes work volume, never the quality bar. [`skraft-difficulty-routing`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-difficulty-routing) chooses the route; [`skraft-quality-bar`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-quality-bar) keeps the same bar for every tier.
+Engineering rigor is identical for every story. [`skraft-entry-point-routing`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-entry-point-routing) detects the handoff; [`skraft-quality-bar`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-quality-bar) keeps the same bar regardless of entry point.
 
 ## CQS — Command-Query Separation
 
