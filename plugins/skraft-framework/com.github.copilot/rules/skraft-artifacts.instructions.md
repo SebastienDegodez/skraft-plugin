@@ -1,5 +1,5 @@
 ---
-description: "SKRAFT artifact path conventions aligned with HVE-Core dated subdirectories"
+description: "SKRAFT artifact path conventions for dated pipeline subdirectories"
 applyTo: '**/.copilot-tracking/**'
 ---
 <!-- markdownlint-disable-file -->
@@ -11,7 +11,7 @@ applyTo: '**/.copilot-tracking/**'
 
 # SKRAFT Artifact Path Conventions
 
-These conventions define where every SKRAFT phase agent and reviewer writes its output. They mirror the dated-subdirectory layout used by all HVE-Core planners.
+These conventions define where every SKRAFT phase agent and reviewer writes its output.
 
 ## Tracking layout (namespaced | bare)
 
@@ -19,10 +19,10 @@ Where artifacts land depends on the repo-wide `skraft-config.json::trackingLayou
 
 | Layout | Artifact root | State | Use |
 |---|---|---|---|
-| `namespaced` (default, legacy) | `.copilot-tracking/skraft-plans/{project-slug}/` | `.copilot-tracking/skraft-plans/{slug}/state.json` | multiple projects in one workspace; isolation from HVE-RPI |
-| `bare` (HVE-RPI convergence) | `.copilot-tracking/` (shared with HVE-RPI) | `.copilot-tracking/skraft/{slug}/state.json` | drop-in swappability: a SKRAFT run and an HVE-RPI run operate on the SAME `research/`, `plans/`, `details/`, `changes/`, `reviews/` files |
+| `namespaced` (default, legacy) | `.copilot-tracking/skraft-plans/{project-slug}/` | `.copilot-tracking/skraft-plans/{slug}/state.json` | multiple projects in one workspace with isolated run data |
+| `bare` (shared artifact root) | `.copilot-tracking/` | `.copilot-tracking/skraft/{slug}/state.json` | interoperability through common `research/`, `plans/`, `details/`, `changes/`, `reviews/` paths |
 
-Under `bare`, drop the `skraft-plans/{project-slug}/` prefix from every path below — e.g. `research/{date}/{slug}-research.md` instead of `skraft-plans/{slug}/research/{date}/{slug}-research.md`. SKRAFT and HVE-RPI never run concurrently on the same work (l'un ou l'autre), so sharing those dirs is safe. The orchestrator's dispatch header tells each sub-agent the exact output path for the active layout; a standalone agent reads the layout from `skraft-config.json`.
+Under `bare`, drop the `skraft-plans/{project-slug}/` prefix from every path below — e.g. `research/{date}/{slug}-research.md` instead of `skraft-plans/{slug}/research/{date}/{slug}-research.md`. Only one pipeline writer may operate on the same work, so sharing those directories remains safe. The orchestrator's dispatch header tells each sub-agent the exact output path for the active layout; a standalone agent reads the layout from `skraft-config.json`.
 
 ## Namespace root
 
@@ -97,8 +97,8 @@ Every markdown file written anywhere under `.copilot-tracking/skraft-plans/` mus
 <!-- markdownlint-disable-file -->
 ```
 
-This matches the HVE-Core convention for agent-generated tracked content.
+This keeps agent-generated tracked content lint-clean.
 
 ## Cross-references to neighbor planners
 
-When a SKRAFT pipeline interoperates with a sibling HVE planner (Security, RAI, SSSC), the linked plan file is recorded in `state.json::neighborPlanners.*`. SKRAFT artifacts referencing a neighbor's output use the path relative to the workspace root (for example `.copilot-tracking/security-plans/{slug}/security-plan.md`). SKRAFT never writes into a neighbor planner's directory.
+When a SKRAFT pipeline interoperates with a sibling planner (Security, RAI, SSSC), the linked plan file is recorded in `state.json::neighborPlanners.*`. SKRAFT artifacts referencing a neighbor's output use the path relative to the workspace root (for example `.copilot-tracking/security-plans/{slug}/security-plan.md`). SKRAFT never writes into a neighbor planner's directory.

@@ -38,7 +38,6 @@ const baseState = (overrides = {}) => ({
   retryCount: {},
   phaseArtifacts: {},
   reviewArtifacts: {},
-  difficulty: null,
   userPreferences: { maxRetriesPerPhase: 2 },
   ...overrides,
 })

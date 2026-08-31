@@ -5,7 +5,6 @@
   "entryMode": "capture",
   "entryPoint": { "skipPhases": [], "handoffSource": null, "handoffArtifacts": [] },
   "issueNumber": null,
-  "difficulty": "medium",
   "adrRatification": { "checkpointStatus": "resolved", "pending": [], "ratified": [] },
   "phasesCompleted": ["RESEARCH", "DESIGN", "DISTILL"],
   "phaseArtifacts": {

@@ -119,14 +119,6 @@ export const applyTransition = (currentState, event) => {
       }))
     }
 
-    case 'SET_DIFFICULTY': {
-      // I7: write-once
-      if (state.difficulty !== null) {
-        return Err({ code: 'IMMUTABLE_FIELD', reason: 'difficulty is already set and cannot be changed' })
-      }
-      return Ok(Object.freeze({ ...state, difficulty: event.value }))
-    }
-
     case 'INCR_RETRY': {
       // I3: capped at maxRetriesPerPhase
       const current = state.retryCount[event.phase] ?? 0

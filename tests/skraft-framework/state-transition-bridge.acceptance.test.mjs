@@ -55,7 +55,6 @@ const baseState = (overrides = {}) => ({
   retryCount: {},
   phaseArtifacts: {},
   reviewArtifacts: [],
-  difficulty: null,
   userPreferences: { maxRetriesPerPhase: 2 },
   ...overrides
 })
@@ -151,7 +150,6 @@ test('AC3a: state init creates state.json with defaults when file is absent', as
     assert.equal(state.currentPhase, 'DISCOVER')
     assert.deepEqual(state.retryCount, {})
     assert.deepEqual(state.phasesCompleted, [])
-    assert.equal(state.difficulty, null)
     const out = JSON.parse(result.stdout)
     assert.equal(out.created, true, 'stdout.created must be true on first init')
     assert.equal(out.currentPhase, 'DISCOVER')
@@ -166,7 +164,7 @@ test('AC3a: state init creates state.json with defaults when file is absent', as
 test('AC3b: state init is no-op (exit 0) when state.json already exists', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac3b-'))
   try {
-    const initial = baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'], difficulty: 'medium-hard' })
+    const initial = baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] })
     await writeState(basePath, 'us5', initial)
     const before = await readState(basePath, 'us5')
 
@@ -287,33 +285,6 @@ test('AC6: record-artifact appends path to phaseArtifacts (append-only)', async 
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AC7 — set-difficulty: write-once, IMMUTABLE_FIELD on second set
-// ─────────────────────────────────────────────────────────────────────────────
-test('AC7: set-difficulty succeeds once then rejects with IMMUTABLE_FIELD', async () => {
-  const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac7-'))
-  try {
-    await writeState(basePath, 'us5', baseState())
-
-    const first = await stateCli(
-      ['set-difficulty', '--value', 'medium-hard', '--slug', 'us5'],
-      { basePath }
-    )
-    assert.equal(first.exitCode, 0, `first set failed\nstderr: ${first.stderr}`)
-    assert.equal((await readState(basePath, 'us5')).difficulty, 'medium-hard')
-
-    const second = await stateCli(
-      ['set-difficulty', '--value', 'easy', '--slug', 'us5'],
-      { basePath }
-    )
-    assert.equal(second.exitCode, 1)
-    assert.ok(second.stderr.includes('IMMUTABLE_FIELD'), `stderr: ${second.stderr}`)
-    assert.equal((await readState(basePath, 'us5')).difficulty, 'medium-hard')
-  } finally {
-    await rm(basePath, { recursive: true, force: true })
-  }
-})
-
-// ─────────────────────────────────────────────────────────────────────────────
 // AC8 — get returns scalar value without modifying state or creating backups
 // ─────────────────────────────────────────────────────────────────────────────
 test('AC8: get --field currentPhase returns scalar without modifying state', async () => {
@@ -321,8 +292,7 @@ test('AC8: get --field currentPhase returns scalar without modifying state', asy
   try {
     await writeState(basePath, 'us5', baseState({
       currentPhase: 'DESIGN',
-      phasesCompleted: ['DISCOVER', 'DISCUSS'],
-      difficulty: 'medium-hard'
+      phasesCompleted: ['DISCOVER', 'DISCUSS']
     }))
     const before = await readState(basePath, 'us5')
 
@@ -446,7 +416,6 @@ const frozenState = (overrides = {}) => Object.freeze({
   retryCount: Object.freeze({}),
   phaseArtifacts: Object.freeze({ DISCUSS: Object.freeze(['plans/stories.md', 'plans/ac-draft.md']) }),
   reviewArtifacts: Object.freeze({ DISCOVER: Object.freeze(['reviews/2026-07-01/discover-review-1.md']) }),
-  difficulty: null,
   userPreferences: Object.freeze({ maxRetriesPerPhase: 2 }),
   ...overrides
 })
@@ -494,7 +463,6 @@ test('AC12: pre-existing state.json without retryCount/phasesCompleted is coerce
     await writeState(basePath, 'us5-legacy', {
       currentPhase: 'DISCOVER',
       verdicts: {},
-      difficulty: null,
       userPreferences: { maxRetriesPerPhase: 2 }
       // intentionally missing: retryCount, phasesCompleted, phaseArtifacts, reviewArtifacts
     })

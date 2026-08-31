@@ -22,7 +22,6 @@ Project the pipeline **structure** (phases, statuses, dependencies) into todos. 
 
 | Stays in `state.json` (never a todo) | Why |
 |---|---|
-| `difficulty` | write-once invariant, drives DELIVER model |
 | `entryPoint`, `adrRatification` | structured, gate-bearing, direct-edited |
 | `verdicts`, `retryCount` | invariant-bearing, CLI-owned |
 | `userPreferences`, `neighborPlanners` | configuration / interop |

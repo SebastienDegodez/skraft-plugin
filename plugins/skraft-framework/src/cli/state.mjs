@@ -128,18 +128,6 @@ async function run() {
       break
     }
 
-    case 'set-difficulty': {
-      const value = arg('value')
-      const result = await service.applyEvent(slug, { type: 'SET_DIFFICULTY', value })
-      if (!result.ok) {
-        writeError(result.error.code, result.error.reason)
-        process.exitCode = domainExitCode(result.error.code)
-        return
-      }
-      writeSuccess(result.value)
-      break
-    }
-
     case 'incr-retry': {
       const phase = arg('phase')
       const result = await service.applyEvent(slug, { type: 'INCR_RETRY', phase })

@@ -61,15 +61,11 @@ test('validateConfig: round-trip fidelity — preserves unknown fields verbatim'
   assert.deepEqual(r.value.nested, { a: 1 })
 })
 
-// The depth-tier dial was removed. A repo whose skraft-config.json still carries the
-// key is not corrupt and is not migrated: `depthTier` is now an ordinary unknown field,
-// so fidelity carries it through untouched rather than scrubbing someone's file. The
-// key governs nothing — it is no longer settable, no longer read, and no longer echoed.
-test('validateConfig: a legacy depthTier survives as an ordinary unknown field', () => {
+test('validateConfig: obsolete quality dials are removed during migration', () => {
   const r = validateConfig({ depthTier: 'basic', depthTierRationale: 'small repo' })
   assert.ok(isOk(r))
-  assert.equal(r.value.depthTier, 'basic')
-  assert.equal(r.value.depthTierRationale, 'small repo')
+  assert.equal(Object.hasOwn(r.value, 'depthTier'), false)
+  assert.equal(Object.hasOwn(r.value, 'depthTierRationale'), false)
   assert.equal(r.value.trackingLayout, 'namespaced')
 })
 

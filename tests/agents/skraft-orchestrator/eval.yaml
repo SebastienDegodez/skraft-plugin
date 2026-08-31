@@ -118,17 +118,16 @@ stimuli:
         config:
           pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
 
-  - name: The recorded entry point governs which phases run
+  - name: A valid upstream handoff starts the first unsatisfied engineering phase
     prompt: |
-      Take the loyalty tier pricing story through the next stage of our engineering process,
-      following whatever this project has already recorded about where it is starting from.
+      Continue the loyalty tier pricing story from the confirmed upstream planning handoff. Take
+      it through the first engineering phase that the handoff has not already satisfied and tell
+      me where it stands when you are done.
     tags:
       agent: skraft-orchestrator
       subagents:
         - solution-researcher
-        - solution-architect
-        - solution-architect-reviewer
-      scenario: binding-project-settings
+      scenario: confirmed-upstream-entry-point
       permissions: workspace-write
       cost: high
     supported_executors:
@@ -147,40 +146,65 @@ stimuli:
           dest: docs/adr/decisions-index.md
         - src: fixtures/design-phase-ready/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
-      commands: *design-ready-setup
+      commands:
+        - >-
+          mkdir -p .copilot-tracking/workitems/sprint/iteration-42 && printf '%s\n'
+          '# Sprint 42' '' 'Iteration: 42' '' 'Epic: Checkout' 'Feature: Loyalty pricing'
+          'Story: Loyalty discount' '' '| Item | Capacity | Dependency |' '| --- | ---: | --- |'
+          '| Loyalty discount | 5 | Customer profile |'
+          > .copilot-tracking/workitems/sprint/iteration-42/sprint-plan.md
+        - >-
+          node -e "const fs=require('fs'); const p='.copilot-tracking/skraft-plans/checkout-pricing/state.json';
+          const s=JSON.parse(fs.readFileSync(p)); s.currentPhase='RESEARCH'; s.phasesCompleted=[];
+          s.phaseHistory={RESEARCH:{status:'inProgress',startedAt:'2026-08-13T09:00:00Z',completedAt:null}};
+          s.entryPoint={skipPhases:['DISCOVER'],handoffSource:'ado',handoffArtifacts:
+          ['.copilot-tracking/workitems/sprint/iteration-42/sprint-plan.md']};
+          s.nextActions=['Research the loyalty-discount story.']; fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')"
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: confirmed upstream planning handoff"'
     graders:
       - type: completed
       - type: skill-invocation
-        name: Resuming from the recorded entry point loads nothing a later phase owns
+        name: Entry-point routing loads without pulling in later-phase skills
         config:
+          required:
+            - skraft-entry-point-routing
           disallowed:
             - contract-testing
             - playwright-evidence
       - type: run-command
-        name: The skipped phase produces nothing
+        name: The handoff evidence and only its satisfied phase remain persisted
         config:
-          command: bash
+          command: node
           args:
-            - '-lc'
-            - '[ ! -d .copilot-tracking/skraft-plans/checkout-pricing/research ]'
+            - '-e'
+            - >-
+              const s=require('./.copilot-tracking/skraft-plans/checkout-pricing/state.json');
+              const e=s.entryPoint;
+              if(e?.handoffSource!=='ado' || e?.skipPhases?.length!==1 ||
+              e.skipPhases[0]!=='DISCOVER' || e.handoffArtifacts?.length!==1 ||
+              !e.handoffArtifacts[0].endsWith('/sprint-plan.md')) process.exit(1)
           expected_exit_code: 0
           timeout: 30s
       - type: custom-metrics
-        name: The reviewer always runs
+        name: The first unsatisfied engineering phase is dispatched
         config:
           assertions:
             - metric: dispatchedSubagents
-              contains: solution-architect-reviewer
+              contains: solution-researcher
       - type: diff-contains
-        name: The review leaves a verdict behind
+        name: Research produces its phase artefact
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/research/\d{4}-\d{2}-\d{2}/'
 
-  - name: A fresh simple story records the entry point before any phase runs
+  - name: A fresh pipeline with no handoff remains at research
     prompt: |
-      Initialize the engineering pipeline for checkout-pricing and persist its entry point. The
-      refined change is documentation only: correct one typo in README.md, with no source, API,
-      dependency, or behaviour change.
+      Initialize the engineering pipeline for the refined checkout-pricing documentation change.
+      There is no upstream backlog or sprint handoff. Persist where the pipeline must begin, but
+      do not start phase work yet.
     tags:
       agent: skraft-orchestrator
       scenario: fresh-simple-routing
@@ -204,21 +228,21 @@ stimuli:
         name: A fresh pipeline loads the routing skill and no phase-owned skill
         config:
           required:
-            - skraft-difficulty-routing
+            - skraft-entry-point-routing
           disallowed:
             - adversarial-review-lenses
             - contract-testing
             - playwright-evidence
       - type: run-command
-        name: Simple work records the skipped RESEARCH entry point
+        name: No handoff leaves every phase required and research current
         config:
           command: node
           args:
             - '-e'
             - >-
               const s=require('./.copilot-tracking/skraft-plans/checkout-pricing/state.json');
-              if(!['simple','medium'].includes(String(s.difficulty).toLowerCase()) ||
-              !s.entryPoint?.skipPhases?.includes('RESEARCH') || s.currentPhase!=='DESIGN') process.exit(1)
+              if(!s.entryPoint || s.entryPoint.skipPhases?.length!==0 ||
+              s.entryPoint.handoffSource!=null || s.currentPhase!=='RESEARCH') process.exit(1)
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
