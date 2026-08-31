@@ -178,7 +178,7 @@ stimuli:
     rubric:
       - Adds an automated check that fails the build when the business code depends on a technical detail.
       - Places that check with the slower suite that runs on the way in, not in the suite developers run on every save.
-      - Leaves the number of test projects in the bounded context where it was rather than adding one for this check.
+      - Does not propose a dedicated new test project for the check; the existing slower suite hosts it.
       - Says when the check runs, so the team can see it is a gate and not part of the tight loop.
 
   # Regression guard. The baseline already answers this well, so a tie is the
