@@ -146,5 +146,34 @@
       }
     ]
   },
-  "agents": {}
+  "agents": {
+    "software-engineer": [
+      {
+        "id": "33375540675:agent:software-engineer:2026-08-31T09:01:46.235Z",
+        "timestamp": "2026-08-31T09:01:46.235Z",
+        "commit": "f2a11d9952bb8c4956326e1ea69e917b18648067",
+        "run": "33375540675",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/33375540675",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "inconclusive",
+        "reason": "incomplete run (3 of 3 trial(s) errored)",
+        "netWin": 0,
+        "trialCount": 3,
+        "meanScore": 0,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      }
+    ]
+  }
 }
