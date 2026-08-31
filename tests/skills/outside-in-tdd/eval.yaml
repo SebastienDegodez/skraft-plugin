@@ -123,8 +123,10 @@ stimuli:
           dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
         - src: fixtures/approved-discount-red/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/approved-discount-red/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/approved-discount-red/tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+          dest: tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+        - src: fixtures/approved-discount-red/tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
         - src: fixtures/approved-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
           dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
       commands:
@@ -156,7 +158,7 @@ stimuli:
           command: dotnet
           args:
             - test
-            - tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+            - tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
             - --no-restore
             - --filter
             - FullyQualifiedName~Architecture
@@ -268,8 +270,10 @@ stimuli:
           dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/DiscountFixture.cs
         - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
           dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
-        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+          dest: tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
         - 'git init --quiet'
@@ -294,7 +298,7 @@ stimuli:
           command: dotnet
           args:
             - test
-            - tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+            - tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
             - --no-restore
             - --filter
             - FullyQualifiedName~Architecture
@@ -387,8 +391,10 @@ stimuli:
           dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
         - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+          dest: tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+        - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
         - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/GoldCustomerDiscountTests.cs
           dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/GoldCustomerDiscountTests.cs
         - src: fixtures/placeholder-red-evidence/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
@@ -451,7 +457,7 @@ stimuli:
           command: dotnet
           args:
             - test
-            - tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+            - tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
             - --no-restore
             - --filter
             - FullyQualifiedName~Architecture
@@ -510,8 +516,10 @@ stimuli:
           dest: src/CheckoutPricing.Application/ApplicationMarker.cs
         - src: fixtures/approved-gold-discount-missing/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/approved-gold-discount-missing/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/approved-gold-discount-missing/tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+          dest: tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+        - src: fixtures/approved-gold-discount-missing/tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
         - src: fixtures/approved-gold-discount-missing/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
           dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
       commands:
@@ -637,8 +645,10 @@ stimuli:
           dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
         - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/green-checkout-tests/tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+          dest: tests/CheckoutPricing.IntegrationTests/CheckoutPricing.IntegrationTests.csproj
+        - src: fixtures/green-checkout-tests/tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
+          dest: tests/CheckoutPricing.IntegrationTests/Architecture/CleanArchitectureDependencyTests.cs
         - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalTests.cs
           dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalTests.cs
       commands:

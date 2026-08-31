@@ -1,0 +1,242 @@
+name: clean-architecture-testing
+description: |
+  Verifies the skill routes a test to the right project and the right doubles:
+  an adapter is covered where slow tests live and against its real client, a
+  layer guard is a CI gate rather than part of the tight loop, and an in-memory
+  substitute never stands in for the engine an adapter has to prove itself
+  against. Guards the Iron Rule against over-application, and the boundary with
+  the TDD cycle that outside-in-tdd owns.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 4
+scoring:
+  threshold: 1
+
+stimuli:
+  # Deterministic decider. The adapter takes its HttpClient by constructor, so
+  # replacing the transport and parking the test in the fast project is easy,
+  # natural, and exactly the failure this stimulus has to be able to observe.
+  # Both test projects already exist and are green, so the question asked is
+  # where the new test goes — never how to organise an empty repository.
+  - name: Cover the payment adapter that nothing tests yet
+    prompt: |
+      Our payment step goes out to the provider's REST API. Nothing covers that
+      part today, so if the provider changes the shape of its answer, or we send
+      it something it does not accept, we find out in production.
+
+      Cover it. The coverage has to prove that what we send and what we read back
+      are handled correctly, including when the provider refuses the payment.
+    constraints:
+      max_duration: 8m
+    environment:
+      files:
+        - src: fixtures/payment-authorization/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-authorization/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/payment-authorization/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/payment-authorization/PaymentAuthorization.slnx
+          dest: PaymentAuthorization.slnx
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+          dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Domain/Money.cs
+          dest: src/PaymentAuthorization.Domain/Money.cs
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+          dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Application/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Application/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Application/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+          dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: fixtures/payment-authorization/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment-authorization/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+          dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: fixtures/payment-authorization/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+          dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: fixtures/payment-authorization/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+          dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: fixtures/payment-authorization/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+          dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+      commands:
+        - 'dotnet restore PaymentAuthorization.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      # Build-infrastructure sentinel. An agent that wrecks the solution file or
+      # a csproj must surface as a harness failure, never as a quiet loss on
+      # architecture.
+      - type: run-command
+        name: The solution still builds
+        config:
+          command: dotnet
+          args:
+            - build
+            - PaymentAuthorization.slnx
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: Every test in the solution is green
+        config:
+          command: dotnet
+          args:
+            - test
+            - PaymentAuthorization.slnx
+          expected_exit_code: 0
+          timeout: 3m
+      # Structural sentinel: the bounded context keeps its two-speed suite
+      # instead of growing a third project to park the new test in.
+      - type: run-command
+        name: The bounded context still has exactly two test projects
+        config:
+          command: bash
+          args:
+            - -c
+            - 'test "$(ls -d tests/*/ | wc -l | tr -d " ")" = "2"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The new coverage landed in the slow suite
+        config:
+          pattern: '(?m)^diff --git a/tests/PaymentAuthorization\.IntegrationTest/(?!bin/|obj/).*\.cs '
+      - type: diff-not-contains
+        name: The fast suite did not take on the adapter
+        config:
+          pattern: '(?m)^diff --git a/tests/PaymentAuthorization\.UnitTest/(?!bin/|obj/).*\.cs '
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-testing
+    rubric:
+      - Exercises the adapter's own HTTP client against a stand-in server rather than replacing that client with something that answers in its place.
+      - Covers a refusal from the provider as well as an approval.
+      - Asserts what the adapter sends, not only what it hands back.
+      - Leaves the suite developers run on every save as fast as it was.
+
+  # Forced-concept decider. The developer names the substitution outright; that
+  # pressure is the behaviour under evaluation, which is the one case
+  # prompt-neutrality.md allows an implementation concept into a prompt. The
+  # speed complaint is genuine, so a bare refusal is not the winning answer —
+  # the rubric scores where the fast feedback is moved to instead.
+  - name: Swap the database engine out of the repository tests
+    turns:
+      - |
+        Our repository tests boot a real Postgres in a container and the suite has
+        crept up to two and a half minutes. I want to move them onto the in-memory
+        provider so they run in milliseconds instead. Walk me through the change.
+      - |
+        And what do we give up by doing that, if anything?
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-testing
+    rubric:
+      - Keeps the tests that exercise the database adapter running against the real database engine.
+      - Establishes that an in-process substitute stops those tests proving the queries the adapter issues are valid against the engine that will run them in production.
+      - Answers the speed complaint with somewhere else to get fast feedback, rather than only declining the change.
+      - Separates the tests that genuinely need a database from those that never did, instead of treating the suite as one block.
+      - Does not present the substitution as an acceptable default for adapter tests.
+
+  - name: Stop layer violations at the build without slowing the fast suite
+    prompt: |
+      Layer violations keep slipping through review here — someone reaches for a
+      technical detail from the middle of the business code and nobody catches it
+      until much later. I want the build to catch it instead of us.
+
+      Set that up. One thing I care about: the suite the team runs on every save
+      has to stay as quick as it is today.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-testing
+    rubric:
+      - Adds an automated check that fails the build when the business code depends on a technical detail.
+      - Places that check with the slower suite that runs on the way in, not in the suite developers run on every save.
+      - Does not propose a dedicated new test project for the check; the existing slower suite hosts it.
+      - Says when the check runs, so the team can see it is a gate and not part of the tight loop.
+
+  # Regression guard. The baseline already answers this well, so a tie is the
+  # expected result and a loss is the finding: it would mean the Iron Rule
+  # ("do not write Domain tests by default") got applied to the one case the
+  # skill deliberately exempts — a complex rule, extracted, shared by several
+  # use cases. Exempt from discrimination ranking.
+  - name: Forty validation cases for a rule three use cases share
+    tags:
+      role: regression-guard
+    prompt: |
+      We validate IBANs: the length expected per country, a checksum, and a list
+      of country-specific exceptions — around forty cases once you count them all.
+      Three different use cases call that validation.
+
+      Someone on the team wants all forty expressed through the acceptance tests
+      of those three use cases. Where should those forty cases live?
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-testing
+    rubric:
+      - Puts the forty cases in a test dedicated to the validation rule itself rather than spreading them across the three use cases.
+      - Keeps a small number of cases at the use-case level, so the rule is still proven to be wired in.
+      - Justifies the split on the size of the case matrix and on three use cases sharing the rule.
+      - Does not require every one of the forty cases to be reachable through a use case.
+
+  # Near-miss guard on the boundary the skill declares itself: outside-in-tdd
+  # owns the RED -> GREEN cycle. Every trigger noun is present (test, boundary,
+  # use case) but nothing is left to place — the test is written, it is red, and
+  # it is already where it belongs. What remains is the cycle, which is the
+  # sibling's job.
+  - name: The failing test is already in the right place
+    tags:
+      intent: non-activation
+    prompt: |
+      I have an approved scenario and I have already written the failing test for
+      it at the use-case boundary. It fails for the right reason — the behaviour
+      genuinely is not there yet.
+
+      What do I do next to get it passing without inventing anything nobody asked
+      for?
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - clean-architecture-testing
+    rubric:
+      - Moves straight to making the failing test pass with the smallest production change that satisfies it.
+      - Adds no behaviour beyond what the scenario states.
+      - Does not reopen where the test should live or which project it belongs in.
+      - Does not propose further layers of testing before the current one is green.

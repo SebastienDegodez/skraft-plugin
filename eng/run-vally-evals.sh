@@ -63,11 +63,22 @@ set -euo pipefail
 
 SKRAFT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
+# Two shapes have to survive here. The fallbacks are commands carrying their own
+# arguments (`npx --yes …`), which must word-split; a caller-supplied VALLY is a
+# path to one binary, which must NOT — and on a checkout under a directory whose
+# name contains a space ("OneDrive - AXA"), splitting it produced
+# `/Users/…/OneDrive: No such file or directory` on every arm. So: an array for
+# invoking, and the string only for the `--vally` flag the node adapters parse.
 if [ -n "${VALLY:-}" ]; then
-  VALLY="$VALLY"
+  VALLY_CMD=("$VALLY")
+  # adapt.mjs re-splits that string on whitespace, keeping double-quoted runs
+  # whole, so a path with spaces has to reach it already quoted.
+  case "$VALLY" in *[[:space:]]*) VALLY="\"$VALLY\"" ;; esac
 elif command -v vally >/dev/null 2>&1 && [ "$(vally --version)" = "0.12.0" ]; then
+  VALLY_CMD=(vally)
   VALLY="vally"
 else
+  VALLY_CMD=(npx --yes "$VALLY_PACKAGE")
   VALLY="npx --yes $VALLY_PACKAGE"
 fi
 STIMULI="${STIMULI:-}"
@@ -284,7 +295,7 @@ run_agent_eval() {
   open_log_fd "$LOG"
   {
     echo "=== $EVAL_NAME (agent) ==="
-    if $VALLY eval \
+    if "${VALLY_CMD[@]}" eval \
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$SKRAFT_ROOT/plugins/skraft-framework/skills" \
       --executor-plugin "$EXECUTOR" \
@@ -466,7 +477,7 @@ run_one_eval() {
     else
       echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline..." >&2
       echo "--- Baseline run ---"
-      $VALLY eval \
+      "${VALLY_CMD[@]}" eval \
         --eval-spec "$BASELINE_SPEC" \
         --skill-dir "$EMPTY_SKILL_DIR" \
         --model "$MODEL" \
@@ -481,7 +492,7 @@ run_one_eval() {
 
     # Skilled: target skill, optionally scoped with declared companion skills.
     echo "--- Skilled run ---"
-    $VALLY eval \
+    "${VALLY_CMD[@]}" eval \
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$SKILLED_SKILL_DIR" \
       --model "$MODEL" \
