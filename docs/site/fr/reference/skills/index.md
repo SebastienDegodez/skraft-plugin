@@ -58,6 +58,8 @@ Aucune skill additionnelle — s'appuie sur les outils natifs (`read`, `search/c
 - **[bdd-methodology](bdd-methodology.html)** — structuration Gherkin (Given/When/Then, outline, tags).
 - **[test-design-mandates](test-design-mandates.html)** — matrices de couverture + ordre outside-in.
 - **[outside-in-tdd](outside-in-tdd.html)** — double boucle TDD depuis comportement observable.
+- **[skraft-quality-bar](skraft-quality-bar.html)** — seuil permanent mutation score / couverture et niveau d'application de chaque gate.
+- **[craft-discipline](craft-discipline.html)** — checkpoints d'auto-discipline avant commit (C5 en scope DISTILL).
 - **[resolving-stack-commands](resolving-stack-commands.html)** — résolution commande concrète selon stack.
 
 ### 9) DISTILL review — [acceptance-designer-reviewer]({{ "/fr/reference/agents/acceptance-designer-reviewer" | relative_url }})
@@ -69,11 +71,14 @@ Aucune skill additionnelle — s'appuie sur les outils natifs (`read`, `search/c
 
 - **[outside-in-tdd](outside-in-tdd.html)** — stratégie TDD outside-in de bout en bout.
 - **[clean-architecture-testing](clean-architecture-testing.html)** — stratégie de tests par couche et frontière.
+- **[test-design-mandates](test-design-mandates.html)** — autorisation des tests Domain : matrices de couverture, Mandate 4.
 - **[craft-discipline](craft-discipline.html)** — checkpoints d'auto-discipline avant commit.
 - **[test-refactoring-catalog](test-refactoring-catalog.html)** — refactoring test après GREEN.
 - **[mutation-testing](mutation-testing.html)** — vérification via mutation score.
+- **[skraft-quality-bar](skraft-quality-bar.html)** — seuil permanent mutation score / couverture et niveau d'application de chaque gate.
 - **[quality-gates-evidence-contract](quality-gates-evidence-contract.html)** — contrat du journal d'évidence.
 - **[quality-gates-dotnet](quality-gates-dotnet.html)** — commandes quality gates pour stack .NET.
+- **[resolving-stack-commands](resolving-stack-commands.html)** — résolution commande test/build/mutation.
 
 ### 10b) DELIVER — workers internes (sous-agents du software-engineer)
 

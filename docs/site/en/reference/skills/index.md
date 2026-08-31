@@ -58,6 +58,8 @@ No additional skills — relies on built-in tools (`read`, `search/codebase`, `g
 - **[bdd-methodology](bdd-methodology.html)** — Gherkin structure (Given/When/Then, outline, tags).
 - **[test-design-mandates](test-design-mandates.html)** — coverage matrices + outside-in order.
 - **[outside-in-tdd](outside-in-tdd.html)** — outside-in TDD double loop from observable behaviour.
+- **[skraft-quality-bar](skraft-quality-bar.html)** — permanent mutation score / coverage threshold and enforcement level of every gate.
+- **[craft-discipline](craft-discipline.html)** — self-discipline checkpoints before commit (C5 scoped to DISTILL).
 - **[resolving-stack-commands](resolving-stack-commands.html)** — stack-based concrete command resolution.
 
 ### 9) DISTILL review — [acceptance-designer-reviewer]({{ "/en/reference/agents/acceptance-designer-reviewer" | relative_url }})
@@ -69,11 +71,14 @@ No additional skills — relies on built-in tools (`read`, `search/codebase`, `g
 
 - **[outside-in-tdd](outside-in-tdd.html)** — end-to-end outside-in TDD strategy.
 - **[clean-architecture-testing](clean-architecture-testing.html)** — layer/boundary test strategy.
+- **[test-design-mandates](test-design-mandates.html)** — Domain test authorisation: coverage matrices, Mandate 4.
 - **[craft-discipline](craft-discipline.html)** — self-discipline checkpoints before commit.
 - **[test-refactoring-catalog](test-refactoring-catalog.html)** — post-GREEN test refactoring.
 - **[mutation-testing](mutation-testing.html)** — mutation-score quality verification.
+- **[skraft-quality-bar](skraft-quality-bar.html)** — permanent mutation score / coverage threshold and enforcement level of every gate.
 - **[quality-gates-evidence-contract](quality-gates-evidence-contract.html)** — evidence-log schema contract.
 - **[quality-gates-dotnet](quality-gates-dotnet.html)** — quality-gate commands for .NET stack.
+- **[resolving-stack-commands](resolving-stack-commands.html)** — test/build/mutation command resolution.
 
 ### 10b) DELIVER — internal workers (software-engineer sub-agents)
 
