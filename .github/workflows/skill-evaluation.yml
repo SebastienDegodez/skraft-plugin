@@ -64,6 +64,15 @@ concurrency:
 
 env:
   VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0'
+  # vally-cli 0.12.0 depends on @github/copilot-sdk via a floating `^1.0.7`
+  # range. Installed on its own, npm resolves that to whatever is newest at
+  # install time, pulling in a @github/copilot-linux-x64 build that dropped
+  # the `./sdk` export the SDK needs (`Could not resolve a @github/copilot
+  # platform package`). Installing these two pins alongside the CLI in the
+  # same `npm install -g` command forces npm to hoist and dedupe onto them
+  # instead, matching the project's own pinned @github/copilot-sdk (below).
+  COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9'
+  COPILOT_LINUX_PACKAGE: '@github/copilot-linux-x64@1.0.78'
   JUDGE_MODEL: gpt-5.6-luna
   DATA_BRANCH: dashboard-data
   RETENTION_DAYS: '14'
@@ -185,7 +194,7 @@ jobs:
 
       - name: Install the Vally CLI
         if: steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != ''
-        run: npm install -g "$VALLY_PACKAGE"
+        run: npm install -g "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_LINUX_PACKAGE"
 
       # Skill and agent-suite executors drive a real agent through
       # @github/copilot-sdk; both need the local SDK dependency.
@@ -198,7 +207,7 @@ jobs:
       # live evaluation path.
       - name: Install the Copilot Linux runner
         if: steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != ''
-        run: npm install --no-save @github/copilot-linux-x64@1.0.78
+        run: npm install --no-save "$COPILOT_LINUX_PACKAGE"
 
       - name: Run each changed skill twice and judge the pair
         if: steps.changed.outputs.skills != ''
@@ -285,7 +294,7 @@ jobs:
           node-version: '22'
 
       - name: Install the Vally CLI
-        run: npm install -g "$VALLY_PACKAGE"
+        run: npm install -g "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_LINUX_PACKAGE"
 
       # The agent executor drives a real agent through @github/copilot-sdk, a
       # devDependency: without it an agent suite cannot start at all.
@@ -410,7 +419,7 @@ jobs:
           node-version: '22'
 
       - name: Install the Vally CLI
-        run: npm install -g "$VALLY_PACKAGE"
+        run: npm install -g "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_LINUX_PACKAGE"
 
       - name: Run the skill twice on ${{ matrix.model }} and judge the pair
         env:
