@@ -237,11 +237,22 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           SUITES: ${{ steps.changed-agents.outputs.suites }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # A suite scoring under its threshold makes the runner exit non-zero.
+          # Under `set -e` that aborted the loop at the first such suite and
+          # left every later suite unrun — one 79.9% reviewer suite silently
+          # cancelled twelve others, and skipped the skill regression gate
+          # below with it. Agent verdicts are advisory by contract, so record
+          # the failure and keep going; the comment reports every suite.
+          unrun=0
           while IFS= read -r suite; do
             [ -n "$suite" ] || continue
-            ./eng/run-vally-evals.sh agents "$suite"
+            ./eng/run-vally-evals.sh agents "$suite" || {
+              unrun=$((unrun + 1))
+              echo "::warning::Agent suite $suite did not meet its threshold or errored; see the PR comment."
+            }
           done <<< "$SUITES"
+          echo "$unrun suite(s) reported a non-zero exit."
 
       - name: Upload trajectories
         if: always() && (steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != '')

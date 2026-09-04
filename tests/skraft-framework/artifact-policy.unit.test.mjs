@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   isFileArtifactPattern,
   expectedArtifactsFor,
@@ -9,6 +10,7 @@ import {
   isApprovedVerdict,
   requiresVerifiedCommit
 } from '../../plugins/skraft-framework/src/domain/artifact-policy.mjs'
+import { renderArtifact } from '../../plugins/skraft-framework/src/application/render-artifact.mjs'
 
 // isFileArtifactPattern ————————————————————————————————————————————————
 
@@ -110,22 +112,52 @@ test('missingArtifacts: treats an absent recordedPaths argument as empty', () =>
 })
 
 // parseReviewVerdict ———————————————————————————————————————————————————
+//
+// Asserted against the RENDERED artifact, never a hand-written string. A literal
+// '**Verdict:** REJECTED\n' kept these tests green through the v1.6.0 template
+// rewrite while every real verdict file became unparseable — the parser was
+// never coupled to the template it exists to read. `renderVerdict` closes that
+// gap: change the template and these fail.
 
-test('parseReviewVerdict: extracts APPROVED from the review template', () => {
-  const content = '# DELIVER Review — us8\n\n**Verdict:** APPROVED\n**Depth tier:** deep\n'
+const renderVerdict = (payload) =>
+  renderArtifact('review-verdict', payload, {
+    readTemplate: (templatePath) =>
+      readFileSync(new URL(`../../plugins/skraft-framework/${templatePath}`, import.meta.url), 'utf8')
+  })
+
+const LENSES = { coverage: { status: 'fail', findings: [] } }
+
+test('parseReviewVerdict: extracts APPROVED from the rendered review artifact', () => {
+  const content = renderVerdict({ verdict: 'APPROVED', lenses: LENSES, synthesis: 'all lenses pass' })
   assert.equal(parseReviewVerdict(content), 'APPROVED')
 })
 
-test('parseReviewVerdict: extracts NEEDS_REWORK', () => {
-  assert.equal(parseReviewVerdict('**Verdict:** NEEDS_REWORK\n'), 'NEEDS_REWORK')
+test('parseReviewVerdict: extracts NEEDS_REWORK from the rendered review artifact', () => {
+  const content = renderVerdict({ verdict: 'NEEDS_REWORK', lenses: LENSES, synthesis: 'one blocker' })
+  assert.equal(parseReviewVerdict(content), 'NEEDS_REWORK')
 })
 
-test('parseReviewVerdict: extracts REJECTED', () => {
-  assert.equal(parseReviewVerdict('**Verdict:** REJECTED\n'), 'REJECTED')
+test('parseReviewVerdict: extracts REJECTED from the rendered review artifact', () => {
+  const content = renderVerdict({ verdict: 'REJECTED', lenses: LENSES, synthesis: 'unsalvageable' })
+  assert.equal(parseReviewVerdict(content), 'REJECTED')
+})
+
+test('parseReviewVerdict: reads the `status` alias the artifact registry accepts', () => {
+  const content = renderVerdict({ status: 'NEEDS_REWORK', lens_results: LENSES, summary: 'one blocker' })
+  assert.equal(parseReviewVerdict(content), 'NEEDS_REWORK')
+})
+
+test('parseReviewVerdict: ignores the status of a nested lens', () => {
+  const content = renderVerdict({
+    verdict: 'APPROVED',
+    lenses: { coverage: { status: 'REJECTED', findings: [] } },
+    synthesis: 'a lens status is not the verdict'
+  })
+  assert.equal(parseReviewVerdict(content), 'APPROVED')
 })
 
 test('parseReviewVerdict: returns null when no verdict line is present', () => {
-  assert.equal(parseReviewVerdict('# Review\nNo verdict here.'), null)
+  assert.equal(parseReviewVerdict('# Review verdict\nNo verdict here.'), null)
 })
 
 test('parseReviewVerdict: returns null for non-string content', () => {

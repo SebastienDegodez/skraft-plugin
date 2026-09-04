@@ -142,6 +142,7 @@ h2 { font-size: clamp(1.9rem, 5vw, 3.2rem); }
 .badge.inconclusive { color: var(--amber); }
 .badge.no-improvement { color: var(--blue); }
 .badge.no-data, .badge.no-eval, .badge.neutral { color: var(--muted); }
+.badge.stale { color: var(--amber); margin-left: .35rem; cursor: help; }
 .spark-wrap { display: flex; align-items: center; gap: .55rem; }
 .spark { display: flex; align-items: end; gap: 4px; height: 34px; }
 .spark-slot { display: flex; align-items: end; width: 16px; height: 100%; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2); }

@@ -21,6 +21,88 @@ const round = (value, precision = 3) => {
   return Math.round(value * factor) / factor
 }
 
+const median = (values) => {
+  const ordered = values.filter((value) => Number.isFinite(value)).sort((left, right) => left - right)
+  if (!ordered.length) return null
+  const middle = Math.floor(ordered.length / 2)
+  return ordered.length % 2 ? ordered[middle] : (ordered[middle - 1] + ordered[middle]) / 2
+}
+
+/**
+ * How each named grader fared across the suite's trials.
+ *
+ * `conforming/trialCount` says a trial fell short; it never says WHICH check
+ * gave way, so the reader is sent to the raw log to find out. Vally already
+ * decides that per grader in `gradeResult.details`, and one grader failing on
+ * every trial reads completely differently from every grader failing once. Only
+ * the top-level entries are counted — a grader's own sub-checks are its internal
+ * accounting, not separate assertions.
+ *
+ * @param {object[]} trials trial-result records for one agent
+ * @returns {{ name: string, passed: number, total: number, evidence: string|null }[]}
+ */
+function graderTally(trials) {
+  const byName = new Map()
+  for (const trial of trials) {
+    for (const detail of trial.gradeResult?.details ?? []) {
+      const name = detail?.name
+      if (!name) continue
+      const seen = byName.get(name) ?? { name, passed: 0, total: 0, evidence: null }
+      seen.total += 1
+      if (detail.passed === true) seen.passed += 1
+      // Keep the first failing evidence line: it is what names the actual defect.
+      else if (!seen.evidence && detail.evidence) seen.evidence = String(detail.evidence)
+      byName.set(name, seen)
+    }
+  }
+  return [...byName.values()]
+}
+
+/**
+ * The descriptor revision this run actually measured.
+ *
+ * Without it a verdict is undated evidence: `✅ pass` published in August still
+ * reads as true in September against a descriptor rewritten since, and nothing
+ * on the page distinguishes "measured and conforming" from "measured on a
+ * revision that no longer exists". Compared against the catalogue's current
+ * hash, staleness is detectable without paying for a run.
+ *
+ * Null when the trials disagree — a suite that dispatched two revisions of the
+ * same agent has no single subject, and naming either one would be a claim the
+ * run does not support.
+ *
+ * @param {object[]} trials trial-result records for one agent
+ * @returns {string|null}
+ */
+function descriptorShaOf(trials) {
+  const seen = new Set(
+    trials.map((trial) => trial.trajectory?.metadata?.agent?.sha256).filter(Boolean),
+  )
+  return seen.size === 1 ? [...seen][0] : null
+}
+
+/**
+ * What one conforming run of this agent costs.
+ *
+ * Absolute medians, never a delta: a single-arm suite has no baseline to price
+ * against. Errored trials are excluded — a session that died at two minutes is
+ * not a cheaper run of the same work. Median, not mean, so one runaway session
+ * does not redefine the typical cost.
+ *
+ * @param {object[]} trials trial-result records for one agent
+ */
+function efficiencyOf(trials) {
+  const ran = trials.filter((trial) => trial.status === 'success')
+  if (!ran.length) return null
+  const across = (pick) => median(ran.map((trial) => Number(pick(trial))))
+  return {
+    durationMs: round(across((trial) => trial.durationMs), 0),
+    tokens: round(across((trial) => trial.trajectory?.metrics?.tokenUsage?.totalTokens), 0),
+    turns: round(across((trial) => trial.trajectory?.metrics?.turnCount), 1),
+    toolCalls: round(across((trial) => trial.trajectory?.metrics?.toolCallCount), 1),
+  }
+}
+
 /**
  * Which agent each stimulus of an agent eval spec dispatches.
  *
@@ -112,9 +194,16 @@ function verdictFor(id, trials, threshold, sourcePath) {
 
   const scenarios = [...new Set(trials.map((trial) => trial.stimulus))].map((stimulus) => {
     const scenarioTrials = trials.filter((trial) => trial.stimulus === stimulus)
+    const scenarioRan = scenarioTrials.filter((trial) => trial.status === 'success')
     return {
       scenarioName: stimulus ?? 'Unnamed scenario',
       meanScore: round(average(scenarioTrials.map(scoreOf))) ?? 0,
+      // Which stimulus gave way, in the same terms as the suite total. A suite
+      // at 7/9 where one scenario failed all three of its trials is a broken
+      // behaviour; the same 7/9 spread across three scenarios is flakiness.
+      conforming: scenarioRan.filter(conforms).length,
+      trialCount: scenarioTrials.length,
+      graders: graderTally(scenarioTrials),
       trials: scenarioTrials.map((trial) => ({
         winner: conforms(trial) ? 'treatment' : 'baseline',
         magnitude: round(scoreOf(trial)),
@@ -125,6 +214,7 @@ function verdictFor(id, trials, threshold, sourcePath) {
 
   return {
     subject: { kind: 'agent', name: id, path: sourcePath(id) },
+    descriptorSha: descriptorShaOf(trials),
     conclusive,
     // No sign test, so power is not a property of this verdict: deterministic
     // graders on a single trial already say whether the agent conformed.
@@ -132,6 +222,8 @@ function verdictFor(id, trials, threshold, sourcePath) {
     passed,
     regressed,
     conformance: { threshold, conforming, breaking, trialCount },
+    graders: graderTally(trials),
+    efficiency: efficiencyOf(trials),
     netWin: trialCount ? (conforming - breaking) / trialCount : 0,
     meanScore: round(average(trials.map(scoreOf))),
     trialCount,

@@ -114,3 +114,79 @@ describe('agentSuiteVerdicts', () => {
     strictEqual(result.trialCount, 1)
   })
 })
+
+describe('agent verdict diagnostics', () => {
+  const agents = agentByStimulus(spec)
+  const graded = (details, overrides = {}) =>
+    trial({ gradeResult: { passed: false, score: 0.5, details }, ...overrides })
+
+  it('names which grader gave way, and on how many trials', () => {
+    const held = { name: 'completed', passed: true }
+    const gaveWay = { name: 'The verdict is written where the pipeline reads it', passed: false, evidence: 'exit code 1' }
+    const [result] = agentSuiteVerdicts([graded([held, gaveWay]), graded([held, { ...gaveWay, passed: true }])], { agents })
+
+    deepStrictEqual(result.graders, [
+      { name: 'completed', passed: 2, total: 2, evidence: null },
+      { name: 'The verdict is written where the pipeline reads it', passed: 1, total: 2, evidence: 'exit code 1' },
+    ])
+  })
+
+  it('counts only top-level graders, never a grader\'s own sub-checks', () => {
+    const nested = { name: 'completed', passed: true, details: [{ name: 'has-output', passed: true }] }
+    const [result] = agentSuiteVerdicts([graded([nested])], { agents })
+
+    deepStrictEqual(result.graders.map((grader) => grader.name), ['completed'])
+  })
+
+  it('localises the break to the scenario that produced it', () => {
+    const broke = trial({ gradeResult: { passed: false, score: 0 } })
+    const [result] = agentSuiteVerdicts([trial(), broke, trial()], { agents, threshold: 1 })
+    const [scenario] = result.scenarios
+
+    strictEqual(scenario.conforming, 2)
+    strictEqual(scenario.trialCount, 3)
+  })
+
+  it('prices a run from the median of the trials that ran', () => {
+    const priced = (totalTokens, durationMs) =>
+      trial({ durationMs, trajectory: { metrics: { tokenUsage: { totalTokens }, turnCount: 4, toolCallCount: 9 } } })
+    const [result] = agentSuiteVerdicts([priced(1000, 10), priced(3000, 30), priced(2000, 20)], { agents })
+
+    strictEqual(result.efficiency.tokens, 2000)
+    strictEqual(result.efficiency.durationMs, 20)
+    strictEqual(result.efficiency.turns, 4)
+    strictEqual(result.efficiency.toolCalls, 9)
+  })
+
+  it('leaves an errored trial out of the price, since it did not do the work', () => {
+    const ran = trial({ durationMs: 100, trajectory: { metrics: { tokenUsage: { totalTokens: 5000 } } } })
+    const died = trial({ status: 'error', durationMs: 1, gradeResult: null, trajectory: { metrics: { tokenUsage: { totalTokens: 10 } } } })
+    const [result] = agentSuiteVerdicts([ran, died], { agents })
+
+    strictEqual(result.efficiency.tokens, 5000)
+  })
+
+  it('reports no price at all when every trial errored', () => {
+    const died = trial({ status: 'error', gradeResult: null })
+
+    strictEqual(agentSuiteVerdicts([died], { agents })[0].efficiency, null)
+  })
+
+  it('records which descriptor revision the run measured', () => {
+    const dispatched = (sha256) => trial({ trajectory: { metadata: { agent: { sha256 } } } })
+    const [result] = agentSuiteVerdicts([dispatched('abc123'), dispatched('abc123')], { agents })
+
+    strictEqual(result.descriptorSha, 'abc123')
+  })
+
+  it('names no revision when the trials measured two different ones', () => {
+    const dispatched = (sha256) => trial({ trajectory: { metadata: { agent: { sha256 } } } })
+    const [result] = agentSuiteVerdicts([dispatched('abc123'), dispatched('def456')], { agents })
+
+    strictEqual(result.descriptorSha, null)
+  })
+
+  it('names no revision when the run recorded none', () => {
+    strictEqual(agentSuiteVerdicts([trial()], { agents })[0].descriptorSha, null)
+  })
+})

@@ -9,6 +9,7 @@
 //
 //   node eng/catalog/scan.mjs [--root dir] [--out artifacts/catalog/report.json]
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
@@ -110,6 +111,12 @@ const agents = walk(agentsRoot, (entry) => entry.endsWith('.md')).map((path) => 
     name: String(data.name || id),
     description,
     path: fromRoot(path),
+    // The descriptor as it stands right now. A published verdict carries the
+    // hash of the descriptor it actually measured, so the two together say
+    // whether the evidence still describes the shipped agent — without paying
+    // for a run. Same input as the executor's own hash (the whole file, utf8),
+    // or the two never compare equal.
+    sha256: createHash('sha256').update(content).digest('hex'),
     kind: agentKind(path),
     model: data.model ? String(data.model) : null,
     userInvocable: structured['user-invocable'] === true || structured.userInvocable === true,

@@ -83,7 +83,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/distill-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# DISTILL Review — checkout-pricing$' \"$1\" && grep -Eq '^\\*\\*Verdict:\\*\\* (NEEDS_REWORK|REJECTED)$' \"$1\""
+            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/distill-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -127,7 +127,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/distill-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# DISTILL Review — checkout-pricing$' \"$1\" && grep -Eq '^\\*\\*Verdict:\\*\\* (NEEDS_REWORK|REJECTED)$' \"$1\""
+            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/distill-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
           expected_exit_code: 0
           timeout: 30s
       - type: output-matches

@@ -40,6 +40,7 @@ const messages = {
     noQuality: 'No quality evidence matches these filters.', noEfficiency: 'No efficiency evidence matches these filters.',
     highestScore: 'highest score', judge: (model) => `Judged by ${model}`, pairedResult: (wins, ties, losses) => `${wins} wins · ${ties} ties · ${losses} losses`,
     noRuntimeData: 'No runtime data', notEvaluated: 'Not evaluated', openRun: 'Open the evaluation run', noDescription: 'No description available', inherited: 'inherited',
+    stale: 'stale', staleTitle: 'This verdict was measured on an earlier revision of the descriptor, which has changed since. Re-run the suite before trusting it.',
     skill: 'Skill', profile: 'Profile', evaluation: 'Evaluation', evidenceColumn: 'Evidence', trend: 'Trend', agent: 'Agent', kind: 'Kind',
     stimuliTrials: (stimuli, trials) => `${stimuli} stimuli · ${trials} trials`, profileValue: (tier, tokens, lines) => `${tier} · ~${tokens} tokens · ${lines} lines`,
     skillsTitle: 'Skills', skillsDescription: 'Craft knowledge an agent loads on demand. The profile is its context cost; the evidence is what controlled runs proved.',
@@ -63,6 +64,7 @@ const messages = {
     noQuality: 'Aucune preuve de qualité ne correspond à ces filtres.', noEfficiency: "Aucune preuve d'efficacité ne correspond à ces filtres.",
     highestScore: 'score le plus élevé', judge: (model) => `Évalué par ${model}`, pairedResult: (wins, ties, losses) => `${wins} victoires · ${ties} égalités · ${losses} défaites`,
     noRuntimeData: "Aucune donnée d'exécution", notEvaluated: 'Non évalué', openRun: "Ouvrir l'exécution d'évaluation", noDescription: 'Aucune description disponible', inherited: 'hérité',
+    stale: 'périmé', staleTitle: "Ce verdict a été mesuré sur une révision antérieure du descripteur, modifié depuis. Relancer la suite avant de s'y fier.",
     skill: 'Skill', profile: 'Profil', evaluation: 'Évaluation', evidenceColumn: 'Preuve', trend: 'Tendance', agent: 'Agent', kind: 'Type',
     stimuliTrials: (stimuli, trials) => `${stimuli} stimuli · ${trials} essais`, profileValue: (tier, tokens, lines) => `${tier} · ~${tokens} tokens · ${lines} lignes`,
     skillsTitle: 'Skills', skillsDescription: "Savoir-faire chargé à la demande par un agent. Le profil indique son coût de contexte ; les preuves montrent le résultat des essais contrôlés.",
@@ -360,9 +362,19 @@ const agentRow = (agent) => {
     </td>
     <td data-label="${escapeHtml(t.kind)}">${badge('neutral', agent.kind)}</td>
     <td data-label="${escapeHtml(t.model)}"><div class="profile">${escapeHtml(agent.model ?? t.inherited)}</div></td>
-    <td data-label="${escapeHtml(t.evidenceColumn)}">${evidenceCell(history, false)}</td>
+    <td data-label="${escapeHtml(t.evidenceColumn)}">${evidenceCell(history, false)}${staleMarker(agent, history)}</td>
     <td data-label="${escapeHtml(t.trend)}">${sparkline(history)}</td>
   </tr>`
+}
+
+// A verdict vouches for the descriptor it measured, not for whatever the file
+// says today. Both hashes must be known before anything is claimed: a run that
+// predates the hash, or a catalogue entry without one, is unknown rather than
+// stale, and dressing that up as a warning would train the reader to ignore it.
+const staleMarker = (agent, history) => {
+  const measured = history.at(-1)?.descriptorSha
+  if (!measured || !agent.sha256 || measured === agent.sha256) return ''
+  return `<span class="badge stale" title="${escapeHtml(t.staleTitle)}">${escapeHtml(t.stale)}</span>`
 }
 
 const matches = (query, ...fields) => fields.join(' ').toLowerCase().includes(query)

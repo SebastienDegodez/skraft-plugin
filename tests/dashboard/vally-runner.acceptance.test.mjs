@@ -75,6 +75,9 @@ describe('unified Vally runner', () => {
       env: {
         ...process.env,
         COPILOT_GITHUB_TOKEN: 'test-token',
+        // The skip list is a live-cost decision; these tests exercise runner
+        // mechanics against a fake Vally and must not follow it.
+        SKIP_EVALS: '',
         VALLY: fakeVally,
         FAKE_CALLS: callsPath,
         RESULTS_DIR: resultsPath,
@@ -103,6 +106,9 @@ describe('unified Vally runner', () => {
       env: {
         ...process.env,
         COPILOT_GITHUB_TOKEN: 'test-token',
+        // The skip list is a live-cost decision; these tests exercise runner
+        // mechanics against a fake Vally and must not follow it.
+        SKIP_EVALS: '',
         VALLY: fakeVally,
         FAKE_CALLS: callsPath,
         RESULTS_DIR: resultsPath,
@@ -125,6 +131,9 @@ describe('unified Vally runner', () => {
       env: {
         ...process.env,
         COPILOT_GITHUB_TOKEN: 'test-token',
+        // The skip list is a live-cost decision; these tests exercise runner
+        // mechanics against a fake Vally and must not follow it.
+        SKIP_EVALS: '',
         VALLY: fakeVally,
         FAKE_CALLS: callsPath,
         RESULTS_DIR: resultsPath,
@@ -154,6 +163,9 @@ describe('unified Vally runner', () => {
       env: {
         ...process.env,
         COPILOT_GITHUB_TOKEN: 'test-token',
+        // The skip list is a live-cost decision; these tests exercise runner
+        // mechanics against a fake Vally and must not follow it.
+        SKIP_EVALS: '',
         VALLY: fakeVally,
         FAKE_CALLS: callsPath,
         RESULTS_DIR: resultsPath,
@@ -223,6 +235,9 @@ describe('unified Vally runner', () => {
       env: {
         ...process.env,
         COPILOT_GITHUB_TOKEN: 'test-token',
+        // The skip list is a live-cost decision; these tests exercise runner
+        // mechanics against a fake Vally and must not follow it.
+        SKIP_EVALS: '',
         VALLY: fakeVally,
         FAKE_CALLS: callsPath,
         RESULTS_DIR: resultsPath,
@@ -269,6 +284,9 @@ describe('unified Vally runner', () => {
         env: {
           ...process.env,
           COPILOT_GITHUB_TOKEN: 'test-token',
+          // The skip list is a live-cost decision; these tests exercise runner
+          // mechanics against a fake Vally and must not follow it.
+          SKIP_EVALS: '',
           VALLY: fakeVally,
           FAKE_CALLS: callsPath,
           RESULTS_DIR: resultsPath,
@@ -294,6 +312,9 @@ describe('unified Vally runner', () => {
       env: {
         ...process.env,
         COPILOT_GITHUB_TOKEN: 'test-token',
+        // The skip list is a live-cost decision; these tests exercise runner
+        // mechanics against a fake Vally and must not follow it.
+        SKIP_EVALS: '',
         VALLY: fakeVally,
         FAKE_CALLS: callsPath,
         RESULTS_DIR: resultsPath,
