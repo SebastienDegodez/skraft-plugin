@@ -16,7 +16,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const pluginRoot = resolve(here, '../../plugins/skraft-framework')
 const HOOK_CLI = join(pluginRoot, 'src/cli/hook.mjs')
 const REAL_CONFIG = join(pluginRoot, 'skraft-framework.config.json')
-const manifest = JSON.parse(readFileSync(join(pluginRoot, 'com.anthropic.claude-code/hooks/hooks.json'), 'utf8'))
+const manifest = JSON.parse(readFileSync(join(pluginRoot, 'hooks/hooks.json'), 'utf8'))
 
 // Root `decision` is enum("approve","block") on Claude Code, and Copilot only ever reads
 // "block" there. Anything else invalidates the payload.

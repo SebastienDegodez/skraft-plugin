@@ -9,6 +9,5 @@
   "repository": "https://github.com/SebastienDegodez/skraft-plugin",
   "license": "GPL-3.0-or-later",
   "agents": "./com.anthropic.claude-code/agents",
-  "rules": "./com.github.copilot/rules",
-  "hooks": "./com.anthropic.claude-code/hooks/hooks.json"
+  "rules": "./com.github.copilot/rules"
 }

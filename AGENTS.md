@@ -39,7 +39,7 @@ plugins/
       api/hooks/       ← Hook router, service factory, entry, decision helpers
       infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
     cli/               ← Composition root: hook.mjs wires all services
-    hooks/               ← hooks.json manifest (Claude Code hook declarations)
+    hooks/hooks.json     ← The one hook manifest, at the path every harness auto-loads
     stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
     skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 

@@ -30,7 +30,6 @@
     "skills"
   ],
   "skills": "./skills/",
-  "hooks": "./com.anthropic.claude-code/hooks/hooks.json",
   "interface": {
     "displayName": "SKRAFT SDLC Pipeline",
     "shortDescription": "Deterministic agentic SDLC pipeline with adversarial reviewers and fail-closed guardrails.",

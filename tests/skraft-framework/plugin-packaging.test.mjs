@@ -47,21 +47,30 @@ test('plugin packaging: the Copilot rules directory remains shipped', () => {
 // The Claude adapter carries no built-in component map, so every directory it must read is
 // named by this manifest. Rules have no Claude-native mirror: the manifest is the only thing
 // that keeps the instruction files loading once detection lands on Claude.
-test('plugin packaging: Claude manifest points at the agent, rule and hook adapters', () => {
+test('plugin packaging: Claude manifest points at the agent and rule adapters', () => {
   assert.equal(claude.agents, './com.anthropic.claude-code/agents')
   assert.equal(claude.rules, './com.github.copilot/rules')
-  assert.equal(claude.hooks, './com.anthropic.claude-code/hooks/hooks.json')
   assert.equal(existsSync(join(pluginRoot, claude.agents)), true)
   assert.equal(existsSync(join(pluginRoot, claude.rules)), true)
-  assert.equal(existsSync(join(pluginRoot, claude.hooks)), true)
 })
 
-// Two files would silently re-route detection away from Claude. .plugin/plugin.json outranks
-// .claude-plugin/plugin.json outright. hooks/hooks.json is the Claude adapter's own default
-// hook path and is tried BEFORE the manifest pointer, so a Copilot-schema copy parked there
-// parses as valid, wins, and reintroduces the uninterpolated ${CLAUDE_PLUGIN_ROOT}.
-test('plugin packaging: no manifest shadows the Claude adapter', () => {
-  for (const path of ['.plugin/plugin.json', 'hooks/hooks.json', 'com.github.copilot/hooks/hooks.json']) {
+// Hooks are the one component that is NOT pointed at. hooks/hooks.json is loaded on its own
+// by every harness — the Claude adapter tries it before any pointer, and the Copilot CLI reads
+// that path and nothing else — so `hooks` in a manifest names an ADDITIONAL file. Declaring the
+// standard path there is how the same guardrail gets registered twice and fires twice.
+test('plugin packaging: no manifest declares a hooks pointer', () => {
+  assert.equal(existsSync(join(pluginRoot, 'hooks/hooks.json')), true)
+  for (const manifest of ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json', 'plugin.json']) {
+    const declared = JSON.parse(readFileSync(join(pluginRoot, manifest), 'utf8')).hooks
+    assert.equal(declared, undefined, `${manifest} declares a hooks pointer`)
+  }
+})
+
+// A second manifest anywhere else is a silent double-registration on the harnesses that read
+// it, and dead weight on the ones that do not: the Copilot CLI ignores both of these paths —
+// measured against CLI 1.0.80, hooks under com.github.copilot/ never fire.
+test('plugin packaging: no second hook manifest ships', () => {
+  for (const path of ['.plugin/plugin.json', 'com.github.copilot/hooks/hooks.json', 'com.anthropic.claude-code/hooks/hooks.json']) {
     assert.equal(existsSync(join(pluginRoot, path)), false, path)
   }
 })

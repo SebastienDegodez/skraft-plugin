@@ -143,8 +143,8 @@ plugins/skraft-framework/
 ├── com.github.copilot/
 │   └── rules/                       native path-scoped rules
 ├── com.anthropic.claude-code/
-│   ├── agents/                      canonical `.md` files
-│   └── hooks/hooks.json
+│   └── agents/                      canonical `.md` files
+├── hooks/hooks.json                 the one manifest every harness loads
 ├── skills/                         shared skills
 └── src/                            shared zero-dependency runtime
 ```
@@ -156,6 +156,10 @@ configuration, and evaluation scans read the single canonical agent tree.
 Detection deliberately lands on `.claude-plugin/plugin.json` in both Claude Code and VS Code:
 it is the only manifest whose adapter expands a plugin-root token in hook commands, so it is the
 only one under which the shipped hooks can locate their own CLI. No competing manifest ships.
+
+No manifest declares a `hooks` pointer. A pointer names an *additional* hook file, on top of the
+`hooks/hooks.json` every adapter already loads, so declaring the standard path there registers the
+same guardrails twice.
 
 ## Maintainer workflow
 

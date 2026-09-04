@@ -4,14 +4,15 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
-// The plugin ships a single hook manifest, the Claude one, because it is the only manifest
-// both Claude Code and VS Code load and interpolate. There is no second harness to stay in
-// parity with any more, so what has to be guarded here is the manifest's own integrity:
-// the route inventory, and the one field the adapter rewrites.
+// The plugin ships a single hook manifest, at hooks/hooks.json, because that is the one
+// path all three harnesses load on their own: Claude Code and VS Code try it before any
+// manifest pointer, and the Copilot CLI reads it and nothing else. What has to be guarded
+// here is the manifest's own integrity: the route inventory, and the one field the
+// adapters rewrite.
 const here = dirname(fileURLToPath(import.meta.url))
 const pluginRoot = join(here, '../../plugins/skraft-framework')
 
-const claude = JSON.parse(readFileSync(join(pluginRoot, 'com.anthropic.claude-code/hooks/hooks.json'), 'utf8'))
+const claude = JSON.parse(readFileSync(join(pluginRoot, 'hooks/hooks.json'), 'utf8'))
 
 // A route is what actually reaches the CLI: the script plus its forwarded args, with the
 // plugin-root variable stripped so it reads as a stable identity.

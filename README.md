@@ -64,12 +64,13 @@ canonical agent source — there is no second tree to mirror.
 Copilot loads path-scoped rules natively, while Claude receives only each agent's declared companion
 rules through `SubagentStart`.
 
-Harness-specific hooks live under their reverse-domain namespace:
+Hooks are the exception to the namespace split: one manifest serves every harness, because
+`hooks/hooks.json` is the path they all load on their own — Claude Code and VS Code try it
+before any manifest pointer, and the Copilot CLI reads it and nothing else.
 
 | Harness | Hook manifest |
 |---|---|
-| Claude Code, Codex, VS Code | `com.anthropic.claude-code/hooks/hooks.json` |
-| Copilot (installed plugin) | `com.github.copilot/hooks/hooks.json` |
+| Claude Code, Codex, VS Code, Copilot CLI (installed plugin) | `hooks/hooks.json` |
 | Copilot (repo checkout, cloud agent) | [`.github/hooks/skraft-framework.json`](./.github/hooks/skraft-framework.json) |
 
 See [`docs/architecture.md`](./docs/architecture.md) for the per-harness porting details.

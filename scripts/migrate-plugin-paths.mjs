@@ -16,7 +16,7 @@ export const obsoletePaths = Object.freeze([
   [`${frameworkRoot}instructions`, `${frameworkRoot}com.github.copilot/rules`],
   [`${frameworkRoot}agents`, `${frameworkRoot}com.anthropic.claude-code/agents`],
   [`${legacyRoot}skills`, `${frameworkRoot}skills`],
-  [`${legacyRoot}hooks`, `${frameworkRoot}com.anthropic.claude-code/hooks`],
+  [`${legacyRoot}hooks`, `${frameworkRoot}hooks`],
   [runtimeLogsPath, `${frameworkRoot}logs`],
   [`${legacyRoot}stryker.config.mjs`, `${frameworkRoot}src/stryker.config.mjs`],
   [`${legacyRoot}src`, `${frameworkRoot}src`],
