@@ -41,8 +41,7 @@ acts on a distinct dimension of spend.
 | **Cache discipline** | System prompts and shared instructions are designed to be *reloaded* between turns without recomputation — anything that can be KV-cached is, and message structure guarantees it. |
 | **Class by role** | Each agent carries a B12 target class — `implementer`, `planner`, or `reviewer`. Artifact producers (discoverer, planner, architect, engineer) receive the most capable class; phase reviewers and lenses, whose task is bounded, receive the cheapest class that holds the work. Two roles are an exception and require a *Sonnet-class or above* model regardless of role: `software-engineer` and `software-engineer-reviewer` (multi-constraint arbitration). |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
-| **Execution model by difficulty** | Each work item carries a `difficulty` in `state.json` (`simple`, `medium`, `medium-hard`, `challenging`), assessed once at DISCOVER exit. It decides how DELIVER runs: an inline TDD cycle for the simpler tiers, a sub-agent dispatched per Gherkin scenario plus intermediate artifacts for the harder ones. Effort goes where the work demands it and nowhere else. This is an execution shape, not a strictness setting — it never changes what has to be proven. |
-| **Structural pruning** | On an incoming HVE handoff, the DISCOVER phase is skipped: the backlog and prioritisation arrive already formed. The pipeline does not re-execute what it has no reason to recompute. |
+| **Structural pruning** | On a confirmed upstream planning handoff, `state.json::entryPoint.skipPhases` records which engineering phases are already satisfied; the pipeline advances to the first required phase. The pipeline does not re-execute what it has no reason to recompute. |
 
 These levers are not independent. Cache discipline and role-class allocation reinforce
 each other: a low-class model reloaded from the KV cache costs a fraction of what a
@@ -92,7 +91,7 @@ reliability of deliverables.
 
 That separation used to be a matter of discipline; it is now a matter of fact. The bar
 lives in a single skill, `skraft-quality-bar`, and nothing reads a setting to lower it:
-mutation score 100% on Domain and Application and 90% on API and Infrastructure, line
+mutation score 100% on Domain and Application and 80% on API and Infrastructure, line
 coverage 100% on Domain and Application, all four adversarial lenses on every review,
 the Gherkin gate, an ADR for every non-trivial decision, Object Calisthenics on the
 Domain. Every gate blocks. The *advisory* and *warning* levels no longer exist, and
@@ -129,7 +128,7 @@ answer — but "which form lever has not yet been applied?"
 
 The model class is **actually applied**: a deterministic resolver (`plugins/skraft-framework/src/`,
 Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
-`model_requirement` floor, then **pins the `model:` field** of its `*.agent.md` to the
+`model_requirement` floor, then **pins the `model:` field** of its `.md` descriptor to the
 resolved concrete model. The "Measured results" section states the policy:
 `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
 `planner → claude-sonnet-5`, with the Sonnet floor raising the two exceptions

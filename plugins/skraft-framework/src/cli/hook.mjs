@@ -2,8 +2,11 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHookService } from '../adapters/api/hooks/service-factory.mjs'
+import { toHarnessOutput } from '../adapters/api/hooks/harness-output.mjs'
+import { fromHarnessInput } from '../adapters/api/hooks/harness-input.mjs'
 import { createJsonlAuditWriter } from '../adapters/infrastructure/jsonl-audit-writer.mjs'
 import { createSkillFileReader } from '../adapters/infrastructure/skill-file-reader.mjs'
+import { createInstructionFileReader } from '../adapters/infrastructure/instruction-file-reader.mjs'
 import { createJsonlTranscriptReader } from '../adapters/infrastructure/jsonl-transcript-reader.mjs'
 import { createSubagentStartService } from '../application/subagent-start-service.mjs'
 import { createSubagentStopService } from '../application/subagent-stop-service.mjs'
@@ -30,6 +33,7 @@ const trackingRoot = resolveTrackingRoot()
 const clock = { now: () => new Date().toISOString() }
 const auditWriter = createJsonlAuditWriter(auditLogPath)
 const skillFileReader = createSkillFileReader({ pluginsRoot: pluginRoot })
+const instructionFileReader = createInstructionFileReader({ pluginRoot })
 const stateReader = createJsonStateReader(trackingRoot)
 const realFilesystem = createRealFilesystem()
 // G5: recorded artifact paths are relative to the project's own tracking directory.
@@ -41,7 +45,13 @@ let frameworkConfig = {}
 try { frameworkConfig = JSON.parse(await readFile(configPath, 'utf8')) }
 catch { /* fail-open: missing config means no mandatory skills, hooks still allow */ }
 
-const subagentStart = createSubagentStartService({ config: frameworkConfig, skillFileReader, auditWriter, clock })
+const subagentStart = createSubagentStartService({
+  config: frameworkConfig,
+  skillFileReader,
+  instructionFileReader,
+  auditWriter,
+  clock,
+})
 const subagentStop  = createSubagentStopService({
   config: frameworkConfig,
   transcriptReaderFactory: createJsonlTranscriptReader,
@@ -68,7 +78,9 @@ let raw = ''
 process.stdin.setEncoding('utf8')
 for await (const chunk of process.stdin) raw += chunk
 
-const payload = raw ? JSON.parse(raw) : {}
+// Translate the harness wire vocabulary (lowercased tool names, JSON-encoded toolArgs)
+// into the framework vocabulary the services read — see adapters/api/hooks/harness-input.mjs.
+const payload = fromHarnessInput(raw ? JSON.parse(raw) : {})
 if (argEvent && payload.hookType == null && payload.hook_type == null && payload.type == null) {
   payload.hookType = argEvent
 }
@@ -79,6 +91,11 @@ if (argMatcher && payload.toolName == null && payload.tool_name == null) {
 const hookService = createHookService({ preToolUse, subagentStart, subagentStop, postToolUse })
 const result = await hookService.handle(payload)
 
-if (result !== undefined) {
-  process.stdout.write(JSON.stringify(result))
+// The services speak the framework's decision vocabulary; the harnesses do not. Translate
+// at this boundary (see adapters/api/hooks/harness-output.mjs) — an allow writes nothing.
+const hookEventName = argEvent ?? payload.hookType ?? payload.hook_event_name ?? payload.type
+const output = toHarnessOutput(result, hookEventName)
+
+if (output !== undefined) {
+  process.stdout.write(JSON.stringify(output))
 }

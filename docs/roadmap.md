@@ -3,8 +3,8 @@
 Cette page liste les **13 user stories** du framework de garde-fous déterministes,
 avec leur gain, statut et milestone.
 
-> **Mise à jour :** quand une US est livrée, passez son statut à ✅ Livré
-> **et** cochez la case dans `plugins/skraft-framework/README.md`.
+> **Mise à jour :** quand une US est livrée, passez son statut à ✅ Livré.
+> Le README du plugin reste centré sur les capacités effectivement distribuées.
 
 ## 1. Vue d'ensemble
 
@@ -142,9 +142,9 @@ mockés, driver-adapter (spy audit writer + MockStdin/Stdout, normalisation payl
 **Gain :** `gain:dx` — lecteur comprend chaque garde-fou, son ancrage genesis,
 et comment en ajouter un nouveau.
 
-**Livrables :** `plugins/skraft-framework/README.md` (architecture hexagonale, events, config, fail modes,
-ancrage genesis A9/S4/S7, G1..G8, guide « comment ajouter un garde-fou »),
-`docs/roadmap.md` (cette page).
+**Livrables :** `docs/site/fr/explanation/hooks.md` et
+`docs/site/en/explanation/hooks.md` (architecture, events, config et fail modes),
+`docs/roadmap.md` (cette page), plus le README utilisateur du plugin.
 
 **Dépend de :** US5
 
@@ -292,7 +292,7 @@ write-through supprime cette fréquence : réhydratation **1×/session**, workin
 natif, écritures déterministes via CLI aux checkpoints. Projection ~800 → ~50 tokens/tour.
 
 **Modules livrés :** `cli/state.mjs` (S7 bridge : `init | get | transition |
-record-verdict | record-artifact | record-review-artifact | set-difficulty |
+record-verdict | record-artifact | record-review-artifact |
 incr-retry`), `domain/state-machine.mjs` (invariants I1-I9, append-only, DONE terminal),
 `domain/state-schema.mjs` (`validatePipelineState` round-trip fidelity — préserve tous
 les champs orchestrator-owned, migration `reviewerVerdicts`→`verdicts`),
@@ -313,8 +313,8 @@ Instructions : `skraft-state.instructions.md` (write-through) +
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:dx` — ce qui est une propriété du **dépôt** quitte `state.json` pour un
-fichier repo-wide `skraft-config.json` géré par un CLI ; `difficulty` reste per-work-item
-via `state.mjs`. Les agents n'appellent que des commandes (get/set délégués au script).
+fichier repo-wide `skraft-config.json` géré par un CLI. Les agents n'appellent que des
+commandes (get/set délégués au script).
 
 **Modules livrés :** `domain/config-schema.mjs` (pur, round-trip),
 `application/config-service.mjs` (`init/get/set`),

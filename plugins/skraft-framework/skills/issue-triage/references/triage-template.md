@@ -23,7 +23,7 @@ Run timestamp: {ISO-8601}
 
 | # | Title | Type | Priority | Effort | Notes |
 |---|---|---|---|---|---|
-| {id} | {title} | {feature\|bug\|tech-debt\|docs\|question} | {P0\|P1\|P2\|P3} | {XS\|S\|M\|L\|XL} | {notes — include P0 justification here} |
+| {id} | {title} | {feature\|bug\|tech-debt\|docs\|question} | {P0\|P1\|P2\|P3} | {1\|2\|3\|5\|8\|13\|21} | {notes — include P0 justification here} |
 
 ---
 
@@ -37,13 +37,13 @@ Run timestamp: {ISO-8601}
 
 ---
 
-## XL Issues — Must Split Before DISCUSS
+## Oversize Issues (above 8 points) — Must Split Before DISCUSS
 
-| # | Title | Why XL | Split suggestion |
+| # | Title | Why above 8 | Split suggestion |
 |---|---|---|---|
 | {id} | {title} | {reason} | {proposed sub-issues} |
 
-*If no XL issues: "No XL issues identified."*
+*If no issue is estimated above 8 points: "No issues above 8 points identified."*
 
 ---
 
@@ -76,7 +76,7 @@ Effective capacity: {N × 0.7} days
 - [ ] All issues labeled (type + priority + effort + status)
 - [ ] P0 issues have written justification in Notes
 - [ ] Duplicates detected and handled
-- [ ] XL issues flagged and excluded from sprint
+- [ ] Issues above 8 points flagged and excluded from sprint
 - [ ] Sprint proposal within capacity (P0 overrides documented)
 - [ ] Reviewer (backlog-discoverer-reviewer) approved
 ```
@@ -102,14 +102,14 @@ Run timestamp: 2026-05-14T10:30:00Z
 
 | # | Title | Type | Priority | Effort | Notes |
 |---|---|---|---|---|---|
-| 43 | Fix validation error on driver age field | bug | P0 | S | P0: Age < 0 throws NullReferenceException — blocks all application submissions |
-| 42 | Add eligibility check for young drivers | feature | P1 | M | Core flow for v0.2 sprint goal |
-| 58 | Driver profile missing secondary driver support | feature | P1 | L | Required for multi-driver policies in v0.2 milestone |
-| 67 | Premium calculation incorrect for multi-vehicle policies | bug | P1 | M | Returns wrong amount — impacts user decisions |
-| 71 | Add pagination to driver list endpoint | feature | P2 | S | Performance improvement — list is slow beyond 50 drivers |
-| 75 | Add reason codes to eligibility API response | feature | P2 | S | Enhancement for partner integrations |
-| 82 | Improve validation error messages on eligibility form | feature | P2 | XS | UX improvement — currently too generic |
-| 89 | Add tooltip to eligibility form fields | feature | P3 | XS | Cosmetic — form is usable without tooltips |
+| 43 | Fix validation error on driver age field | bug | P0 | 2 | P0: Age < 0 throws NullReferenceException — blocks all application submissions |
+| 42 | Add eligibility check for young drivers | feature | P1 | 3 | Core flow for v0.2 sprint goal |
+| 58 | Driver profile missing secondary driver support | feature | P1 | 8 | Required for multi-driver policies in v0.2 milestone |
+| 67 | Premium calculation incorrect for multi-vehicle policies | bug | P1 | 3 | Returns wrong amount — impacts user decisions |
+| 71 | Add pagination to driver list endpoint | feature | P2 | 2 | Performance improvement — list is slow beyond 50 drivers |
+| 75 | Add reason codes to eligibility API response | feature | P2 | 2 | Enhancement for partner integrations |
+| 82 | Improve validation error messages on eligibility form | feature | P2 | 1 | UX improvement — currently too generic |
+| 89 | Add tooltip to eligibility form fields | feature | P3 | 1 | Cosmetic — form is usable without tooltips |
 
 ---
 
@@ -123,9 +123,9 @@ Run timestamp: 2026-05-14T10:30:00Z
 
 ---
 
-## XL Issues — Must Split Before DISCUSS
+## Oversize Issues (above 8 points) — Must Split Before DISCUSS
 
-No XL issues identified in this triage run.
+No issues above 8 points identified in this triage run.
 
 ---
 
@@ -135,10 +135,10 @@ Effective capacity: 7 × 0.7 = 4.9 days
 
 | # | Title | Priority | Effort | Days | Justification |
 |---|---|---|---|---|---|
-| 43 | Fix validation error on driver age field | P0 | S | 0.5 | Blocking — must fix immediately |
-| 42 | Add eligibility check for young drivers | P1 | M | 1.0 | Sprint goal |
-| 67 | Premium calculation incorrect for multi-vehicle | P1 | M | 1.0 | Wrong output impacts user decisions |
-| 58 | Driver profile missing secondary driver support | P1 | L | 2.5 | Required for v0.2 milestone |
+| 43 | Fix validation error on driver age field | P0 | 2 | 0.5 | Blocking — must fix immediately |
+| 42 | Add eligibility check for young drivers | P1 | 3 | 0.75 | Sprint goal |
+| 67 | Premium calculation incorrect for multi-vehicle | P1 | 3 | 0.75 | Wrong output impacts user decisions |
+| 58 | Driver profile missing secondary driver support | P1 | 8 | 3.0 | Required for v0.2 milestone |
 
 **Total effort**: 5.0 days
 **Effective capacity**: 4.9 days
@@ -150,7 +150,7 @@ Effective capacity: 7 × 0.7 = 4.9 days
 
 | # | Title | Priority | Effort | Days |
 |---|---|---|---|---|
-| 43 | Fix validation error on driver age field | P0 | S | 0.5 |
+| 43 | Fix validation error on driver age field | P0 | 2 | 0.5 |
 
 *Issue #43 enters sprint despite capacity being at 4.9 days. P0 override applied.*
 
@@ -161,7 +161,7 @@ Effective capacity: 7 × 0.7 = 4.9 days
 - [x] All issues labeled (type + priority + effort + status)
 - [x] P0 issues have written justification in Notes (#43)
 - [x] Duplicates detected and handled (#75 related to #42, documented)
-- [x] XL issues flagged and excluded from sprint (none this run)
+- [x] Issues above 8 points flagged and excluded from sprint (none this run)
 - [x] Sprint proposal within capacity (P0 override documented)
 - [ ] Reviewer (backlog-discoverer-reviewer) approved
 ```
@@ -183,11 +183,13 @@ Examples:
 
 | Effort | Days |
 |---|---|
-| XS | 0.25 |
-| S | 0.5 |
-| M | 1.0 |
-| L | 2.5 |
-| XL | excluded |
+| 1 | 0.25 |
+| 2 | 0.5 |
+| 3 | 0.75 |
+| 5 | 1.5 |
+| 8 | 3.0 |
+| 13 | excluded |
+| 21 | excluded |
 
 ### Capacity Formula
 

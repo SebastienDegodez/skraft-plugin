@@ -1,7 +1,6 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "skraft",
-  "version": "1.5.2",
+  "version": "1.6.0-hooks.1",
   "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture and the DISCOVER→DELIVER workflow.",
   "author": {
     "name": "SebastienDegodez"
@@ -30,11 +29,6 @@
     "skills"
   ],
   "extensions": {
-    "com.anthropic.claude-code": {
-      "hooks": "./com.anthropic.claude-code/hooks/hooks.json"
-    },
-    "com.github.copilot": {
-      "hooks": "./com.github.copilot/hooks/hooks.json"
-    }
+    "com.github.copilot": {}
   }
 }

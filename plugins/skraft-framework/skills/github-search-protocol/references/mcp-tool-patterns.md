@@ -126,7 +126,7 @@ Practical usage patterns for the two GitHub MCP tools used during DISCOVER phase
     "labels": [
       "type/feature",
       "priority/P1",
-      "effort/M",
+      "effort/3",
       "status/ready"
     ]
   }

@@ -17,7 +17,6 @@ const DEFAULT = {
   retryCount: {},
   phaseArtifacts: {},
   reviewArtifacts: {},
-  difficulty: null,
   userPreferences: { maxRetriesPerPhase: 2 },
 }
 

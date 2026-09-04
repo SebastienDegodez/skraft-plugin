@@ -2,7 +2,7 @@ import { Ok, Err } from './result.mjs'
 
 // SINGLE SOURCE OF TRUTH for the state.json document shape (SoC — genesis A9/S4/#15).
 // This descriptor is the authority for the field set of the pipeline state; the prose
-// in plugins/skraft-framework/instructions/skraft-state.instructions.md documents the SAME fields and
+// in plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md documents the SAME fields and
 // MUST NOT redefine them independently. The alignment test
 // tests/skraft-framework/state-schema-instructions.acceptance.test.mjs fails if the
 // instruction schema block and this descriptor diverge, so the two can never drift.
@@ -17,7 +17,6 @@ export const STATE_SCHEMA = Object.freeze({
   entryMode: Object.freeze({ owner: 'orchestrator' }),
   entryPoint: Object.freeze({ owner: 'orchestrator' }),
   issueNumber: Object.freeze({ owner: 'orchestrator' }),
-  difficulty: Object.freeze({ owner: 'invariant' }),
   phasesCompleted: Object.freeze({ owner: 'invariant' }),
   phaseArtifacts: Object.freeze({ owner: 'invariant' }),
   verdicts: Object.freeze({ owner: 'invariant' }),
@@ -106,8 +105,9 @@ export const validatePipelineState = (raw) => {
   // only when the canonical is absent, then drop the alias to avoid split-brain.
   const rawVerdicts = (raw.verdicts !== undefined) ? raw.verdicts : raw.reviewerVerdicts
 
+  const { difficulty: _obsoleteDifficulty, ...currentRaw } = raw
   const coerced = {
-    ...raw,
+    ...currentRaw,
     currentPhase: raw.currentPhase,
     phasesCompleted: Array.isArray(raw.phasesCompleted) ? [...raw.phasesCompleted] : [],
     verdicts: (rawVerdicts && !Array.isArray(rawVerdicts) && typeof rawVerdicts === 'object')
@@ -120,7 +120,6 @@ export const validatePipelineState = (raw) => {
       ? { ...raw.findingsResolved } : {},
     phaseArtifacts: coercePhaseMap(raw.phaseArtifacts),
     reviewArtifacts: coercePhaseMap(raw.reviewArtifacts),
-    difficulty: (typeof raw.difficulty === 'string') ? raw.difficulty : null,
     userPreferences: (raw.userPreferences && typeof raw.userPreferences === 'object' && !Array.isArray(raw.userPreferences))
       ? { ...raw.userPreferences } : {},
   }

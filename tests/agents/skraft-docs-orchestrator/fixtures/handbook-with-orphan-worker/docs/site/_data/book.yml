@@ -9,7 +9,7 @@ meta:
   langs: [fr, en]
 
 sources:
-  workers: "plugins/skraft-framework/agents/workers/*/*.agent.md"
+  workers: "plugins/skraft-framework/com.anthropic.claude-code/agents/workers/*/*.md"
 
 parts:
   - id: reference

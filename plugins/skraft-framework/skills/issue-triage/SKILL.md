@@ -38,13 +38,17 @@ All GitHub issues passing through DISCOVER must receive labels from the followin
 
 ### Effort Labels
 
+Story points on the Fibonacci scale: **1, 2, 3, 5, 8, 13, 21**. No intermediate values.
+
 | Label | Duration |
 |---|---|
-| `effort/XS` | < 2 hours — a one-liner, config change, or text correction |
-| `effort/S` | 2–4 hours — a small validation, DTO field, or targeted bug fix |
-| `effort/M` | ~1 day — a new use case, new endpoint, or feature with 2–3 ACs |
-| `effort/L` | 2–3 days — a new aggregate, complex business rule, subsystem refactor |
-| `effort/XL` | > 3 days — a new bounded context or major architectural change. **Must be split before DISCUSS.** |
+| `effort/1` | < 2 hours — a one-liner, config change, or text correction (1 AC) |
+| `effort/2` | 2–4 hours — a small validation, DTO field, or targeted bug fix (2 ACs) |
+| `effort/3` | ~1 day — a new use case, new endpoint, or feature with 3–4 ACs |
+| `effort/5` | 2 days — a new aggregate, complex business rule, subsystem refactor (4–5 ACs) |
+| `effort/8` | 3 days — a large aggregate or cross-cutting change (5–6 ACs). Ceiling of the right-sized 1–3 days band. |
+| `effort/13` | > 3 days — a new bounded context or major architectural change (6+ ACs). **Must be split before DISCUSS.** |
+| `effort/21` | > 3 days — an epic spanning several subsystems (6+ ACs). **Must be split before DISCUSS.** |
 
 ### Status Labels
 
@@ -174,25 +178,29 @@ Default → P3
 
 | Signal | Implication |
 |---|---|
-| Number of acceptance criteria (ACs) | 1 AC = XS/S, 2-3 ACs = M, 4+ ACs = L or XL |
-| Number of architecture layers touched | 1 layer = S/M, 2-3 layers = M/L, 4+ layers = L/XL |
-| External dependencies changed | +1 size level per external dependency |
-| New concept or aggregate introduced | +L minimum |
-| Refactoring existing code | Depends on scope — targeted = S, cross-cutting = XL |
+| Number of acceptance criteria (ACs) | 1 AC = 1, 2 ACs = 2, 3-4 ACs = 3, 4-5 ACs = 5, 5-6 ACs = 8, 6+ ACs = 13 or 21 |
+| Number of architecture layers touched | 1 layer = 2 or 3, 2-3 layers = 3 or 5, 4+ layers = 8 or above |
+| External dependencies changed | +1 step up the scale per external dependency |
+| New concept or aggregate introduced | 5 points minimum |
+| Refactoring existing code | Depends on scope — targeted = 2, cross-cutting = 13 or 21 |
 
 ### Estimation by Label
 
 | Label | Example tasks in auto-insurance domain |
 |---|---|
-| `effort/XS` | Fix a typo in a validation message, update a config value, add a missing null check |
-| `effort/S` | Add a `driverAge` field validation, fix a bug in a single use case, add a DTO property |
-| `effort/M` | Implement `CheckEligibilityUseCase`, add a new API endpoint with request/response, fix a multi-step bug |
-| `effort/L` | Build the `DriverProfile` aggregate with value objects, refactor the eligibility module, add audit logging across the domain |
-| `effort/XL` | Introduce a new bounded context (Claims), major architectural change (CQRS migration), full subsystem rebuild |
+| `effort/1` | Fix a typo in a validation message, update a config value, add a missing null check |
+| `effort/2` | Add a `driverAge` field validation, fix a bug in a single use case, add a DTO property |
+| `effort/3` | Implement `CheckEligibilityUseCase`, add a new API endpoint with request/response, fix a multi-step bug |
+| `effort/5` | Build the `DriverProfile` aggregate with value objects, refactor the eligibility module, add audit logging across the domain |
+| `effort/8` | Extend the driver subsystem end-to-end (domain + API + persistence), migrate a module to a new contract |
+| `effort/13` | Introduce a new bounded context (Claims), major architectural change (CQRS migration) |
+| `effort/21` | Full subsystem rebuild, multi-context re-platforming |
 
-### XL Warning
+### Oversize Warning
 
-Any issue estimated as `effort/XL` **must be flagged before entering DISCUSS**. XL issues are too large to write meaningful ACs for without splitting. The triage report must include a "must split" note for every XL issue.
+Any issue estimated **above 8 points** — that is, `effort/13` or `effort/21` — **must be flagged before entering DISCUSS**. Estimates above 8 points are too large to write meaningful ACs for without splitting. The triage report must include a "must split" note for every 13- or 21-point issue.
+
+8 points (3 days) is the ceiling of the right-sized 1–3 days band: anything larger is not an issue, it is a batch of issues.
 
 ---
 
@@ -238,21 +246,23 @@ Link rather than merge. Merging issues loses context. If similarity is ambiguous
 ```markdown
 | # | Title | Type | Priority | Effort | Notes |
 |---|---|---|---|---|---|
-| 42 | Add eligibility check for young drivers | feature | P1 | M | Core feature for v0.2 |
-| 43 | Fix validation error on driver age field | bug | P0 | S | Blocking form submission — crashes on age < 0 |
-| 58 | Driver profile missing secondary driver | feature | P1 | L | Required for multi-driver policies |
-| 71 | Add pagination to driver list endpoint | feature | P2 | S | UX improvement, not blocking |
-| 89 | Add tooltip to eligibility form | feature | P3 | XS | Cosmetic, low priority |
+| 42 | Add eligibility check for young drivers | feature | P1 | 3 | Core feature for v0.2 |
+| 43 | Fix validation error on driver age field | bug | P0 | 2 | Blocking form submission — crashes on age < 0 |
+| 58 | Driver profile missing secondary driver | feature | P1 | 5 | Required for multi-driver policies |
+| 71 | Add pagination to driver list endpoint | feature | P2 | 2 | UX improvement, not blocking |
+| 89 | Add tooltip to eligibility form | feature | P3 | 1 | Cosmetic, low priority |
 ```
 
 ### Sprint Proposal Capacity Calculation
 
 Effort-to-days conversion:
-- XS = 0.25 day
-- S = 0.5 day
-- M = 1 day
-- L = 2.5 days
-- XL = excluded (must split)
+- 1 = 0.25 day
+- 2 = 0.5 day
+- 3 = 0.75 day
+- 5 = 1.5 days
+- 8 = 3 days
+- 13 = excluded (must split)
+- 21 = excluded (must split)
 
 Effective capacity = team-days × 0.7 (accounts for meetings, reviews, incidents)
 
@@ -264,7 +274,7 @@ Effective capacity = team-days × 0.7 (accounts for meetings, reviews, incidents
 2. **Apply capacity constraint**: effective capacity = declared team-days × 0.7
 3. **Fill greedily**: add issues until effective capacity is reached
 4. **Override for P0**: all P0 issues enter the sprint regardless of capacity (mark "over capacity" if needed)
-5. **Enforce XL exclusion**: no XL issue enters the sprint — must be split first
+5. **Enforce the above-8 exclusion**: no 13- or 21-point issue enters the sprint — must be split first
 6. **Note over-capacity**: if total effort > effective capacity, mark sprint as "over capacity" with explanation
 
 ### Sprint Proposal Table
@@ -272,12 +282,12 @@ Effective capacity = team-days × 0.7 (accounts for meetings, reviews, incidents
 ```markdown
 | # | Title | Priority | Effort | Days | Justification |
 |---|---|---|---|---|---|
-| 43 | Fix validation error on driver age field | P0 | S | 0.5 | Blocking — must fix |
-| 42 | Add eligibility check for young drivers | P1 | M | 1.0 | Sprint goal |
-| 58 | Driver profile missing secondary driver | P1 | L | 2.5 | Sprint goal |
-| 71 | Add pagination to driver list endpoint | P2 | S | 0.5 | Capacity available |
+| 43 | Fix validation error on driver age field | P0 | 2 | 0.5 | Blocking — must fix |
+| 42 | Add eligibility check for young drivers | P1 | 3 | 0.75 | Sprint goal |
+| 58 | Driver profile missing secondary driver | P1 | 5 | 1.5 | Sprint goal |
+| 71 | Add pagination to driver list endpoint | P2 | 2 | 0.5 | Capacity available |
 
-Total: 4.5 days | Effective capacity: 5.0 days (7 team-days × 0.7)
+Total: 3.25 days | Effective capacity: 4.9 days (7 team-days × 0.7)
 Status: within capacity
 ```
 

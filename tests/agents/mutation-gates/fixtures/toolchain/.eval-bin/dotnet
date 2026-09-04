@@ -1,0 +1,82 @@
+#!/usr/bin/env node
+
+const fs = require('node:fs')
+const path = require('node:path')
+
+const args = process.argv.slice(2)
+const root = process.cwd()
+const logPath = path.join(root, '.eval', 'mutation-invocations.jsonl')
+
+const values = (flag) => args.flatMap((value, index) => value === flag ? [args[index + 1]] : [])
+const value = (flag) => values(flag).at(-1)
+const append = (entry) => {
+  fs.mkdirSync(path.dirname(logPath), { recursive: true })
+  fs.appendFileSync(logPath, `${JSON.stringify(entry)}\n`)
+}
+
+if (args[0] !== 'stryker') {
+  if (['build', 'restore', 'test'].includes(args[0])) {
+    process.stdout.write(`${args[0]} succeeded\n`)
+    process.exit(0)
+  }
+  if (args[0] === '--info' || args[0] === '--version') {
+    process.stdout.write('10.0.100\n')
+    process.exit(0)
+  }
+  process.stderr.write(`unsupported fake dotnet command: ${args.join(' ')}\n`)
+  process.exit(90)
+}
+
+if (args[1] === '--version') {
+  process.stdout.write('4.8.0\n')
+  process.exit(0)
+}
+
+if (args[1] === 'init') {
+  const configPath = path.resolve(root, value('--config-file'))
+  const config = {
+    'stryker-config': {
+      solution: value('--solution'),
+      mutate: values('--mutate'),
+      thresholds: {
+        high: Number(value('--threshold-high')),
+        low: Number(value('--threshold-low')),
+        break: Number(value('--break-at')),
+      },
+      reporters: values('--reporter'),
+      'report-file-name': 'mutation-report',
+      'break-on-initial-test-failure': args.includes('--break-on-initial-test-failure'),
+    },
+  }
+  fs.mkdirSync(path.dirname(configPath), { recursive: true })
+  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`)
+  append({ event: 'init', scope: path.basename(configPath).includes('boundary') ? 'boundary' : 'core' })
+  process.exit(0)
+}
+
+const configPath = path.resolve(root, value('--config-file'))
+const outputPath = path.resolve(root, value('--output'))
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))['stryker-config']
+const scope = path.basename(configPath).includes('boundary') ? 'boundary' : 'core'
+const score = Number(process.env[scope === 'core' ? 'SKRAFT_FAKE_CORE_SCORE' : 'SKRAFT_FAKE_BOUNDARY_SCORE'])
+const total = 100
+const mutants = Array.from({ length: total }, (_, index) => ({
+  id: String(index + 1),
+  mutatorName: 'Evaluation mutation',
+  status: index < score ? 'Killed' : 'Survived',
+  location: { start: { line: index + 1, column: 1 }, end: { line: index + 1, column: 2 } },
+  replacement: index < score ? 'killed' : 'survived',
+}))
+const report = {
+  schemaVersion: '2',
+  thresholds: { high: config.thresholds.high, low: config.thresholds.low },
+  projectRoot: root,
+  files: { [`src/${scope}/MutationProbe.cs`]: { language: 'cs', source: '', mutants } },
+}
+const reportPath = path.join(outputPath, 'reports', `${config['report-file-name']}.json`)
+fs.mkdirSync(path.dirname(reportPath), { recursive: true })
+fs.writeFileSync(reportPath, `${JSON.stringify(report)}\n`)
+const exit = score < config.thresholds.break ? 2 : 0
+append({ event: 'run', scope, score, threshold: config.thresholds.break, exit })
+process.stdout.write(`Mutation score: ${score}%\n`)
+process.exit(exit)

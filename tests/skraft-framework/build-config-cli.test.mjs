@@ -12,7 +12,7 @@ const capture = () => {
   return { io: { log: (...a) => out.push(a.join(' ')), error: (...a) => errs.push(a.join(' ')) }, out, errs }
 }
 
-const specialist = ({ name, phase, skills = [], inputs = [], outputs = [] }) =>
+const specialist = ({ name, phase, skills = [], instructions = [], inputs = [], outputs = [] }) =>
   [
     '---',
     `name: ${name}`,
@@ -21,6 +21,7 @@ const specialist = ({ name, phase, skills = [], inputs = [], outputs = [] }) =>
     `  dispatched_by: skraft-orchestrator`,
     `  phase: ${phase}`,
     ...(skills.length ? ['  skills:', ...skills.map((s) => `    - ${s}`)] : []),
+    ...(instructions.length ? ['  instructions:', ...instructions.map((path) => `    - ${path}`)] : []),
     '  inputs:',
     '    required:',
     ...inputs.map((i) => `      - ${i}`),
@@ -46,20 +47,24 @@ const orchestrator = (phases) =>
 
 // --- pure: parseAgentDescriptor ---
 
-test('parseAgentDescriptor extracts name, phase, dispatched_by, skills, inputs and outputs', () => {
+test('parseAgentDescriptor extracts identity, phase, dispatch, skills, instructions and artifacts', () => {
   const d = parseAgentDescriptor(
     specialist({
       name: 'solution-architect',
       phase: 'DESIGN',
       skills: ['architecture-patterns', 'architecture-decisions'],
+      instructions: ['plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md'],
       inputs: ['stories.md'],
       outputs: ['adr.md', 'diagrams.md'],
     }),
+    { id: 'solution-architect' },
   )
+  assert.equal(d.id, 'solution-architect')
   assert.equal(d.name, 'solution-architect')
   assert.equal(d.phase, 'DESIGN')
   assert.equal(d.dispatchedBy, 'skraft-orchestrator')
   assert.deepEqual(d.skills, ['architecture-patterns', 'architecture-decisions'])
+  assert.deepEqual(d.instructions, ['plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md'])
   assert.deepEqual(d.inputs, ['stories.md'])
   assert.deepEqual(d.outputs, ['adr.md', 'diagrams.md'])
 })
@@ -73,6 +78,7 @@ test('parseAgentDescriptor yields empty collections when frontmatter is absent',
   const d = parseAgentDescriptor('# no fences')
   assert.equal(d.name, undefined)
   assert.deepEqual(d.skills, [])
+  assert.deepEqual(d.instructions, [])
   assert.deepEqual(d.inputs, [])
   assert.deepEqual(d.outputs, [])
 })
@@ -83,14 +89,14 @@ async function fixtureDir() {
   const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-build-'))
   const agents = join(dir, 'agents')
   await mkdir(agents, { recursive: true })
-  await writeFile(join(agents, 'orch.agent.md'), orchestrator(['DESIGN', 'DELIVER']))
+  await writeFile(join(agents, 'orch.md'), orchestrator(['DESIGN', 'DELIVER']))
   await writeFile(
-    join(agents, 'arch.agent.md'),
+    join(agents, 'arch.md'),
     specialist({ name: 'solution-architect', phase: 'DESIGN', skills: ['architecture-patterns'] }),
   )
-  await writeFile(join(agents, 'arch-rev.agent.md'), specialist({ name: 'solution-architect-reviewer', phase: 'DESIGN' }))
-  await writeFile(join(agents, 'eng.agent.md'), specialist({ name: 'software-engineer', phase: 'DELIVER' }))
-  await writeFile(join(agents, 'eng-rev.agent.md'), specialist({ name: 'software-engineer-reviewer', phase: 'DELIVER' }))
+  await writeFile(join(agents, 'arch-rev.md'), specialist({ name: 'solution-architect-reviewer', phase: 'DESIGN' }))
+  await writeFile(join(agents, 'eng.md'), specialist({ name: 'software-engineer', phase: 'DELIVER' }))
+  await writeFile(join(agents, 'eng-rev.md'), specialist({ name: 'software-engineer-reviewer', phase: 'DELIVER' }))
   const out = join(dir, 'skraft-framework.config.json')
   return { dir, agents, out }
 }
@@ -141,7 +147,7 @@ test('main --check returns 1 when no committed config exists yet', async () => {
 test('main fails (exit 1) and names the orphan when an agent declares no parent', async () => {
   const { dir, agents, out } = await fixtureDir()
   await writeFile(
-    join(agents, 'orphan.agent.md'),
+    join(agents, 'orphan.md'),
     ['---', 'name: orphan-agent', 'description: "x"', 'metadata:', '  phase: DESIGN', '---', '', '# body'].join('\n'),
   )
   const { io, errs } = capture()

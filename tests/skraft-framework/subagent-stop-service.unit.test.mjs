@@ -1,6 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { createSubagentStopService } from '../../plugins/skraft-framework/src/application/subagent-stop-service.mjs'
+import { renderArtifact } from '../../plugins/skraft-framework/src/application/render-artifact.mjs'
+
+// G5 reads a real review artifact off disk, so the double must be one. A literal
+// verdict line here would keep these green while the template moves under them.
+const renderedVerdict = (verdict) =>
+  renderArtifact('review-verdict', { verdict, lenses: { coverage: { status: 'pass', findings: [] } }, synthesis: 'unit test' }, {
+    readTemplate: (templatePath) =>
+      readFileSync(new URL(`../../plugins/skraft-framework/${templatePath}`, import.meta.url), 'utf8')
+  })
 
 const CONFIG = {
   agentSkills: {
@@ -204,7 +214,7 @@ test('G5: blocks when the reviewer verdict recorded in state does not match the 
       reviewArtifacts: { DISCOVER: ['reviews/2026-07-02/discover-review-1.md'] }
     })
   }
-  const filesystem = { readFile: async () => '**Verdict:** NEEDS_REWORK\n' }
+  const filesystem = { readFile: async () => renderedVerdict('NEEDS_REWORK') }
   const service = createSubagentStopService({
     config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader, filesystem
   })
@@ -222,7 +232,7 @@ test('G5: allows when the reviewer verdict on disk matches the recorded verdict'
       reviewArtifacts: { DISCOVER: ['reviews/2026-07-02/discover-review-1.md'] }
     })
   }
-  const filesystem = { readFile: async () => '**Verdict:** APPROVED\n' }
+  const filesystem = { readFile: async () => renderedVerdict('APPROVED') }
   const service = createSubagentStopService({
     config: FW_CONFIG, transcriptReaderFactory: noSkillTranscriptFactory, auditWriter: audit, clock, stateReader, filesystem
   })

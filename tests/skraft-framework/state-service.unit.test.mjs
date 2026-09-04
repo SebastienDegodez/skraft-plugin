@@ -31,7 +31,6 @@ const DEFAULT_PIPELINE = {
   retryCount: {},
   phaseArtifacts: {},
   reviewArtifacts: {},
-  difficulty: null,
   userPreferences: { maxRetriesPerPhase: 2 },
 }
 
@@ -206,11 +205,11 @@ test('state-service get: returns full state when field is undefined', async () =
 })
 
 test('state-service get: returns scalar when field is specified', async () => {
-  const state = { ...DEFAULT_PIPELINE, currentPhase: 'DESIGN', difficulty: 'medium-hard' }
+  const state = { ...DEFAULT_PIPELINE, currentPhase: 'DESIGN', issueNumber: 42 }
   const svc = createStateService({ stateReader: readerOk(state), stateWriter: writerOk() })
-  const r = await svc.get('slug', 'difficulty')
+  const r = await svc.get('slug', 'issueNumber')
   assert.equal(r.ok, true)
-  assert.equal(r.value, 'medium-hard')
+  assert.equal(r.value, 42)
 })
 
 test('state-service get: propagates IO_ERROR from reader', async () => {

@@ -2,7 +2,7 @@
 // The consumer's hooks.json calls `node "${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs"`.
 // The Claude Code harness injects CLAUDE_PLUGIN_ROOT = the installed plugin path.
 // When that env var is absent, the runtime resolves its own root deterministically:
-//   1. CLAUDE_PLUGIN_ROOT (harness-injected) — authoritative.
+//   1. PLUGIN_ROOT or CLAUDE_PLUGIN_ROOT (harness-injected) — authoritative.
 //   2. Cache glob match — `~/.claude/plugins/cache/*/skraft/*` discovered on disk.
 //   3. Module-relative root — where the running hook.mjs actually lives.
 // The IO (home dir, glob) is supplied by the caller so this stays pure & testable.

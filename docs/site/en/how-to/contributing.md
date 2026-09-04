@@ -41,7 +41,7 @@ Examples of valid references: Evans (DDD, 2003), Freeman & Pryce (GOOS, 2009), M
 ### Step 4 — Open a Pull Request
 
 Your PR must contain:
-- The `SKILL.md` (or `.agent.md`) file describing the pattern,
+- The `SKILL.md` (or agent `.md` descriptor) file describing the pattern,
 - An entry in `docs/site/_data/citations.yml` for each new reference,
 - The FR and EN pages in `docs/site/`,
 - The update to `docs/site/_data/book.yml` to declare the new pages.

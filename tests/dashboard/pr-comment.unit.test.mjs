@@ -155,7 +155,7 @@ describe('buildPrComment', () => {
 
   it('renders agent conformance in its own section, with no sign test', () => {
     const agentVerdict = {
-      subject: { kind: 'agent', name: 'software-engineer', path: 'plugins/skraft-framework/agents/software-engineer.agent.md' },
+      subject: { kind: 'agent', name: 'software-engineer', path: 'plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md' },
       conclusive: true,
       underpowered: false,
       passed: true,
@@ -186,5 +186,72 @@ describe('buildPrComment', () => {
 
     ok(comment.includes('Skill evaluation'))
     ok(comment.includes('Agent conformance'))
+  })
+
+  it('names the grader that gave way, which the conformance tally alone hides', () => {
+    const agentVerdict = {
+      subject: { kind: 'agent', name: 'acceptance-designer-reviewer' },
+      conclusive: true,
+      regressed: true,
+      conformance: { threshold: 0.9, conforming: 0, breaking: 3, trialCount: 3 },
+      trialCount: 3,
+      graders: [
+        { name: 'Mandatory review skills are loaded', passed: 3, total: 3, evidence: null },
+        { name: 'The verdict is written where the pipeline reads it', passed: 0, total: 3, evidence: 'exit 1' },
+      ],
+      reason: 'broke conformance on 3 of 3 trial(s) (threshold 0.9)',
+    }
+    const comment = buildPrComment(results(agentVerdict))
+
+    ok(comment.includes('The verdict is written where the pipeline reads it` 0/3'))
+    ok(!comment.includes('Mandatory review skills are loaded` 3/3'))
+  })
+
+  it('shows which scenario broke, so one bad behaviour is not read as flakiness', () => {
+    const agentVerdict = {
+      subject: { kind: 'agent', name: 'acceptance-designer' },
+      conclusive: true,
+      regressed: true,
+      conformance: { threshold: 0.9, conforming: 4, breaking: 2, trialCount: 6 },
+      trialCount: 6,
+      scenarios: [
+        { scenarioName: 'Absent criteria halt the distillation', conforming: 1, trialCount: 3, meanScore: 0.83, trials: [] },
+        { scenarioName: 'Agreed criteria become an executable specification', conforming: 3, trialCount: 3, meanScore: 1, trials: [] },
+      ],
+      reason: 'broke conformance on 2 of 6 trial(s) (threshold 0.9)',
+    }
+    const comment = buildPrComment(results(agentVerdict))
+
+    ok(comment.includes('Per-scenario breakdown'))
+    ok(comment.includes('| Absent criteria halt the distillation | 1/3 | 0.83 |'))
+  })
+
+  it('prices an agent run in absolute terms, never as a delta', () => {
+    const agentVerdict = {
+      subject: { kind: 'agent', name: 'solution-architect' },
+      conclusive: true,
+      passed: true,
+      conformance: { threshold: 1, conforming: 2, breaking: 0, trialCount: 2 },
+      trialCount: 2,
+      efficiency: { tokens: 128400, durationMs: 194000, turns: 12, toolCalls: 30 },
+      reason: 'conforms on every trial (2/2 at or above 1)',
+    }
+    const comment = buildPrComment(results(agentVerdict))
+
+    ok(comment.includes('128.4k tok · 3m14s'))
+  })
+
+  it('reports no price rather than a zero when the run carried no metrics', () => {
+    const agentVerdict = {
+      subject: { kind: 'agent', name: 'solution-researcher' },
+      conclusive: true,
+      passed: true,
+      conformance: { threshold: 1, conforming: 1, breaking: 0, trialCount: 1 },
+      trialCount: 1,
+      efficiency: null,
+      reason: 'conforms on every trial (1/1 at or above 1)',
+    }
+
+    ok(buildPrComment(results(agentVerdict)).includes('| — |'))
   })
 })

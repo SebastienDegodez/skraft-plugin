@@ -1,6 +1,6 @@
 ---
 name: mutation-testing
-description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing Stryker reports after the test baseline is green
+description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing Stryker.NET or frontend StrykerJS reports after the test baseline is green
 ---
 
 # Mutation Testing
@@ -21,121 +21,41 @@ A test that kills no mutant is noise. DELETE IT.
 
 ## S7 — Deterministic Execution (Non-Negotiable)
 
-Mutation testing MUST be executed via terminal tool calls. Do NOT assert
-results from prose. The flow is:
+Mutation testing MUST cross the matching `quality-gates-<tech>` adapter. Do not embed,
+reconstruct, or improvise runner commands here. Load `skraft-quality-bar`, then use
+`resolving-stack-commands` to select the adapter.
 
 ```
-1. runInTerminal → dotnet stryker (with correct args)
-2. Parse JSON output → extract survivors
-3. Decide: kill (write test) or document (equivalent mutant)
-4. Re-run scoped stryker → confirm kill
+1. Confirm ordinary tests are green
+2. Adapter → validate durable configs and run core gate
+3. Parse adapter-owned JSON report → extract survivors
+4. Decide: kill with a test, or suppress a proven equivalent narrowly
+5. Adapter → rerun core until green
+6. Repeat for boundary
 ```
 
-## Step 1: Run Stryker (via terminal)
+## Frontend JavaScript/TypeScript Continuity
 
-### Detect project paths first
+Frontend mutation testing remains part of this workflow. Survivor classification,
+kill-or-prove-equivalent reasoning, and core-before-boundary ordering do not change with
+language. Runner semantics do: StrykerJS and Stryker.NET reporter flags and report
+lifecycles are not interchangeable. Never translate one stack's invocation into the
+other.
 
-Before running, identify them and bind them to shell variables — the commands
-below reference the variables, so they stay copy-paste runnable:
+The future `quality-gates-javascript` adapter must own checked-in configuration,
+explicit frontend core/boundary source mapping, runner-native reporter syntax, and
+evidence capture. It must also prove that `reports/mutation/mutation.json` belongs to
+the current invocation before parsing it because a fixed-path frontend report can be
+overwritten or left stale. Until that adapter exists, `resolving-stack-commands` returns
+`unsupported_stack`. That block is not permission to improvise a raw `npx stryker`
+command or analyze an old report.
 
-```bash
-PROD_CSPROJ=$(find src -name '*.csproj' | grep -E '(Domain|Application)' | head -1)
-TEST_CSPROJ=$(find tests -name '*.csproj' | grep -E 'UnitTest' | head -1)
-```
-
-- `PROD_CSPROJ` : the production `.csproj` being mutated (Domain or Application)
-- `TEST_CSPROJ` : the test `.csproj` that exercises it
-
-Never paste `<Production.csproj>` literally: bash reads `<` and `>` as
-redirections, silently dropping the flag and creating stray files.
-
-### During development (fast — changed code only)
-
-```bash
-dotnet stryker \
-  --project "$PROD_CSPROJ" \
-  -tp "$TEST_CSPROJ" \
-  --since:main \
-  --break-at 100 \
-  --reporter json --reporter cleartext
-```
-
-### Before merge (full business logic)
-
-```bash
-dotnet stryker \
-  --project "$PROD_CSPROJ" \
-  -tp "$TEST_CSPROJ" \
-  --mutate "**/*.cs" \
-  --mutate "!**/*Marker.cs" \
-  --mutate "!**/DependencyInjection.cs" \
-  --mutate "!**/obj/**" \
-  --break-at 100 \
-  --reporter json --reporter cleartext
-```
-
-### Tool availability check
-
-```bash
-dotnet stryker --version
-# If fails: dotnet tool install -g dotnet-stryker
-```
-
-### Frontend (`npx stryker run`) — different flag syntax
-
-⚠️ **`dotnet stryker` and `npx stryker run` do NOT share the same reporter
-flag.** Do not copy `-r`/`--reporter` between stacks:
-
-| Stack | Flag | Syntax |
-|-------|------|--------|
-| `dotnet stryker` (.NET) | `-r` / `--reporter` | repeatable, one value each: `-r json -r cleartext` |
-| `npx stryker run` (JS/TS) | `--reporters` | single flag, comma-separated: `--reporters clear-text,json` |
-
-```bash
-npx stryker run --reporters clear-text,json --mutate "src/path/to/changed-file.ts"
-```
-
-The frontend JSON reporter always writes to the **same fixed path**
-(`reports/mutation/mutation.json`), overwriting it on every run — unlike
-`dotnet stryker`, which creates a fresh timestamped `StrykerOutput/<run>/`
-directory each time. **Before parsing `reports/mutation/mutation.json`,
-verify it was written by the run you just triggered** (e.g. compare its
-mtime to the time the command started), otherwise a scoped run may be
-analyzed against a stale, wider report from a previous full run:
-
-```bash
-date +%s > /tmp/run-start.txt
-npx stryker run --reporters clear-text,json --mutate "src/path/to/changed-file.ts"
-node -e '
-  const fs = require("fs");
-  const start = Number(fs.readFileSync("/tmp/run-start.txt", "utf8").trim());
-  const mtime = fs.statSync("reports/mutation/mutation.json").mtimeMs / 1000;
-  if (mtime < start) { console.error("STALE REPORT — do not parse"); process.exit(1); }
-'
-```
-
-For scoped/fast runs, prefer parsing the `clear-text` reporter's stdout
-output directly instead of the JSON file — it always reflects the current
-run and avoids the staleness risk entirely.
-
-## Step 2: Parse Results (via terminal)
-
-Extract survivors from the JSON report:
-
-```bash
-jq '[.files | to_entries[] | {file: .key, survivors: [.value.mutants[] | select(.status == "Survived") | {mutator: .mutatorName, line: .location.start.line, replacement: .replacement}]}] | map(select(.survivors | length > 0))' \
-  StrykerOutput/$(ls -t StrykerOutput | head -1)/reports/mutation-report.json
-```
-
-If `jq` is unavailable, or you are running a scoped frontend run, use the
-`cleartext`/`clear-text` reporter output directly.
-
-## Step 3: Classify Survivors
+## Classify Survivors
 
 | Category | Action |
 |----------|--------|
 | **Real gap** — behavior change not caught | Write a boundary test to kill it |
-| **Equivalent mutant** — no observable difference | Document in code comment + accept |
+| **Equivalent mutant** — no observable difference | Add narrow runner-supported source suppression with rationale, then rerun |
 
 ### Equivalent mutant examples (do NOT write tests for these)
 
@@ -144,7 +64,7 @@ If `jq` is unavailable, or you are running a scoped frontend run, use the
 - Defensive null check when type guarantees non-null
 - Arithmetic on unused intermediate variable
 
-## Step 4: Kill Real Survivors
+## Kill Real Survivors
 
 For each real survivor:
 
@@ -158,17 +78,25 @@ For each real survivor:
        // ... test the boundary value age=18
    }
    ```
-3. **Re-run scoped Stryker** to confirm the kill:
-   ```bash
-   dotnet stryker \
-     --project "$PROD_CSPROJ" \
-     -tp "$TEST_CSPROJ" \
-     --mutate "**/<FileWithSurvivor>.cs" \
-     --break-at 100 \
-     --reporter cleartext
-   ```
+   Frontend example: for `age >= 18` mutated to `age > 18`, assert observable UI or
+   state behavior at exactly `18`; do not assert the implementation expression.
+3. **Re-run the applicable adapter gate** to confirm the kill.
 
-## Step 5: Gate Decision
+## Accept Proven Equivalent Mutants
+
+Use only runner-supported, source-level, single-construct suppression. For Stryker.NET:
+
+```csharp
+// Stryker disable once Arithmetic: equivalent because normalized value is never observed
+var normalized = value + 0;
+```
+
+Name only relevant mutator; use `all` only when every mutation in next syntax construct
+is proven equivalent. Reason is mandatory. Never use global `ignore-mutations`, broad
+file exclusions, threshold changes, or prose-only waivers. Rerun full applicable gate;
+an ignored mutant remains visible in JSON evidence.
+
+## Gate Decision
 
 The runner's exit code is the verdict — `--break-at` fails the run below the bar, and
 `skraft-quality-bar` states the bar for each scope. This skill decides only what a
@@ -177,7 +105,7 @@ survivor means:
 | Survivors | Verdict |
 |---------------|---------|
 | None | ✅ Proceed to commit |
-| Only equivalent mutants, each documented | ✅ Proceed |
+| Only equivalent mutants, each narrowly suppressed with rationale; rerun green | ✅ Proceed |
 | Any real survivor | ❌ BLOCK — return to Step 4 |
 
 ## Mutation Categories Reference
@@ -191,15 +119,8 @@ survivor means:
 | Return value | `return true` → `return false` |
 | LINQ | `.Any()` ↔ `.All()`, `.First()` ↔ `.Last()` |
 
-## Scope Exclusions
-
-Never mutate:
-- `DependencyInjection.cs`, `Program.cs`, config
-- Marker interfaces, generated code
-
-Everything a developer authored is in scope, DTOs and ViewModels included. A mutant that
-survives in a "passive" type is telling you the type carries behaviour nothing asserts.
-
-API and Infrastructure ARE mutated, in a second run scoped to them and held to their
-own bar. The core runs first; there is nothing to learn from mutating an adapter while
-the domain is unproven. See `skraft-quality-bar` for both scopes and their runners.
+Scope and exclusions belong to durable adapter configuration. Everything developer
+authored remains in scope unless deterministic adapter policy excludes it. DTO or
+ViewModel survivor still signals unasserted behavior. Core runs first; boundary never
+runs while core is red. Unsupported stack or missing adapter is failure, not permission
+to invent commands.

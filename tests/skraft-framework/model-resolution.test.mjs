@@ -4,6 +4,7 @@ import { ModelTier, maxTier } from '../../plugins/skraft-framework/src/domain/mo
 import {
   tierForClass,
   modelForTier,
+  modelsForTier,
   floorForRequirement,
 } from '../../plugins/skraft-framework/src/domain/model-class-policy.mjs'
 import { resolveModel } from '../../plugins/skraft-framework/src/application/resolve-model.mjs'
@@ -52,10 +53,42 @@ test('tierForClass rejects an unknown class', () => {
   assert.throws(() => tierForClass('architect'), /Unknown cost_role_class: architect/)
 })
 
-test('modelForTier maps each tier to its concrete model', () => {
-  assert.equal(modelForTier(ModelTier('economy')), 'Claude Haiku 4.5')
+test('modelForTier returns the preferred model of each tier', () => {
+  assert.equal(modelForTier(ModelTier('economy')), 'GPT-5.6 Luna')
   assert.equal(modelForTier(ModelTier('standard')), 'Claude Sonnet 5')
   assert.equal(modelForTier(ModelTier('frontier')), 'Claude Sonnet 5')
+})
+
+test('economy accepts either Luna or Haiku, under any spelling a harness uses', () => {
+  const accepted = modelsForTier(ModelTier('economy'))
+  for (const model of ['GPT-5.6 Luna', 'GPT-5.6 Luna (copilot)', 'gpt-5.6-luna']) {
+    assert.ok(accepted.includes(model), `Luna spelling not accepted: ${model}`)
+  }
+  for (const model of ['Claude Haiku 4.5', 'Claude Haiku 4.5 (copilot)']) {
+    assert.ok(accepted.includes(model), `Haiku spelling not accepted: ${model}`)
+  }
+})
+
+test('economy prefers Luna without forbidding Haiku', () => {
+  const accepted = modelsForTier(ModelTier('economy'))
+  assert.equal(accepted[0], 'GPT-5.6 Luna', 'the preferred entry is what --apply pins')
+  assert.ok(accepted.includes('Claude Haiku 4.5'), 'a preference must not become an exclusion')
+})
+
+test('the Sonnet tiers accept every spelling a harness uses', () => {
+  // The shipped descriptors carry all three spellings, and an agent pinned to the
+  // Copilot one is compliant: rejecting it would make `--check` report drift and
+  // `--apply` rewrite an agent that already sits on the right model.
+  for (const tier of ['standard', 'frontier']) {
+    const accepted = modelsForTier(ModelTier(tier))
+    for (const model of ['Claude Sonnet 5', 'Claude Sonnet 5 (copilot)', 'claude-sonnet-5']) {
+      assert.ok(accepted.includes(model), `Sonnet spelling not accepted on ${tier}: ${model}`)
+    }
+  }
+})
+
+test('modelsForTier rejects a tier with no mapped model', () => {
+  assert.throws(() => modelsForTier({ value: 'ghost' }), /No model for tier: ghost/)
 })
 
 test('modelForTier rejects a tier with no mapped model', () => {
@@ -82,50 +115,45 @@ test('floorForRequirement ignores non-string inputs even if they stringify to a 
 // --- application: resolveModel ---
 
 test('resolveModel maps a plain reviewer to economy', () => {
-  assert.deepEqual(resolveModel({ costRoleClass: 'reviewer' }), {
-    tier: 'economy',
-    model: 'Claude Haiku 4.5',
-  })
+  const resolved = resolveModel({ costRoleClass: 'reviewer' })
+  assert.equal(resolved.tier, 'economy')
+  assert.equal(resolved.model, 'GPT-5.6 Luna')
+  assert.deepEqual([...resolved.accepted], [...modelsForTier(ModelTier('economy'))])
 })
 
 test('resolveModel maps an implementer to standard', () => {
-  assert.deepEqual(resolveModel({ costRoleClass: 'implementer' }), {
-    tier: 'standard',
-    model: 'Claude Sonnet 5',
-  })
+  const resolved = resolveModel({ costRoleClass: 'implementer' })
+  assert.equal(resolved.tier, 'standard')
+  assert.equal(resolved.model, 'Claude Sonnet 5')
 })
 
 test('resolveModel maps a researcher to standard', () => {
-  assert.deepEqual(resolveModel({ costRoleClass: 'researcher' }), {
-    tier: 'standard',
-    model: 'Claude Sonnet 5',
-  })
+  const resolved = resolveModel({ costRoleClass: 'researcher' })
+  assert.equal(resolved.tier, 'standard')
+  assert.equal(resolved.model, 'Claude Sonnet 5')
 })
 
 test('resolveModel maps a planner to frontier', () => {
-  assert.deepEqual(resolveModel({ costRoleClass: 'planner' }), {
-    tier: 'frontier',
-    model: 'Claude Sonnet 5',
-  })
+  const resolved = resolveModel({ costRoleClass: 'planner' })
+  assert.equal(resolved.tier, 'frontier')
+  assert.equal(resolved.model, 'Claude Sonnet 5')
 })
 
 test('resolveModel raises a reviewer to standard when a Sonnet floor applies (override branch)', () => {
-  assert.deepEqual(
-    resolveModel({ costRoleClass: 'reviewer', modelRequirement: 'Sonnet-class or above.' }),
-    { tier: 'standard', model: 'Claude Sonnet 5' },
-  )
+  const resolved = resolveModel({ costRoleClass: 'reviewer', modelRequirement: 'Sonnet-class or above.' })
+  assert.equal(resolved.tier, 'standard')
+  assert.equal(resolved.model, 'Claude Sonnet 5')
+  assert.ok(!resolved.accepted.includes('GPT-5.6 Luna'), 'the floor must exclude the economy models')
 })
 
 test('resolveModel keeps an implementer at standard when a Sonnet floor applies (no downgrade)', () => {
-  assert.deepEqual(
-    resolveModel({ costRoleClass: 'implementer', modelRequirement: 'Sonnet-class or above.' }),
-    { tier: 'standard', model: 'Claude Sonnet 5' },
-  )
+  const resolved = resolveModel({ costRoleClass: 'implementer', modelRequirement: 'Sonnet-class or above.' })
+  assert.equal(resolved.tier, 'standard')
+  assert.equal(resolved.model, 'Claude Sonnet 5')
 })
 
 test('resolveModel does not lower a planner below frontier despite a Sonnet floor', () => {
-  assert.deepEqual(
-    resolveModel({ costRoleClass: 'planner', modelRequirement: 'Sonnet-class or above.' }),
-    { tier: 'frontier', model: 'Claude Sonnet 5' },
-  )
+  const resolved = resolveModel({ costRoleClass: 'planner', modelRequirement: 'Sonnet-class or above.' })
+  assert.equal(resolved.tier, 'frontier')
+  assert.equal(resolved.model, 'Claude Sonnet 5')
 })

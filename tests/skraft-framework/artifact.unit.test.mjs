@@ -77,20 +77,19 @@ test('renderArtifact: throws on unknown artifact type', () => {
 })
 
 const fullVerdict = () => ({
-  phase: 'DISCOVER',
-  projectSlug: 'demo',
-  date: '2026-07-01',
-  attempt: 1,
   verdict: 'APPROVED',
-  lensCount: 4,
-  score: 0.92,
-  lenses: [
-    { index: 1, name: 'completeness', lensScore: 0.9, findings: ['All gates pass'] },
-  ],
-  synthesis: [
-    { lens: 'completeness', weight: 0.4, lensScore: 0.9, contribution: 0.36 },
-  ],
-  conclusion: 'Ready for the next phase.',
+  confidence: 'high',
+  lenses: {
+    completeness: { status: 'pass', findings: [] },
+  },
+  synthesis: {
+    questions: {
+      completeness: { answered_by: ['completeness'], weight: 0.3, contribution: 0.3 },
+    },
+    blocking_findings: [],
+    recommendations: [],
+    dissent: 'No lens disagreement.',
+  },
 })
 
 test('validate: full review-verdict payload passes', () => {
@@ -102,24 +101,38 @@ test('validate: full review-verdict payload passes', () => {
 test('validate: review-verdict reports missing top-level keys', () => {
   const data = fullVerdict()
   delete data.lenses
-  delete data.conclusion
+  delete data.synthesis
   const result = validate('review-verdict', data)
   assert.equal(result.ok, false)
-  assert.deepEqual(result.missing, ['lenses', 'conclusion'])
+  assert.deepEqual(result.missing, ['lenses|lens_results', 'synthesis|summary'])
 })
 
 test('validate: review-verdict empty lenses list counts as missing', () => {
   const result = validate('review-verdict', { ...fullVerdict(), lenses: [] })
   assert.equal(result.ok, false)
-  assert.ok(result.missing.includes('lenses'))
+  assert.ok(result.missing.includes('lenses|lens_results'))
 })
 
-test('renderArtifact: renders the review-verdict template with the weighted table', () => {
+test('validate: delivery review-verdict semantic YAML shape passes', () => {
+  const result = validate('review-verdict', {
+    status: 'APPROVED',
+    lens_results: [{ lens: 'quality-gates', verdict: 'pass', defects: [] }],
+    dissent_analysis: 'No dissent.',
+    summary: 'Quality gates pass.',
+  })
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.missing, [])
+})
+
+test('renderArtifact: renders the semantic review-verdict payload as YAML', () => {
   const output = renderArtifact('review-verdict', fullVerdict())
-  assert.match(output, /# DISCOVER Review — demo/)
-  assert.match(output, /Lens 1 — completeness : 0\.9/)
-  assert.match(output, /\| completeness \| 0\.4 \| 0\.9 \| 0\.36 \|/)
-  assert.match(output, /Final verdict: `APPROVED`/)
+  assert.match(output, /# Review verdict/)
+  assert.match(output, /verdict: "APPROVED"/)
+  assert.match(output, /completeness:/)
+  assert.match(output, /weight: 0\.3/)
+  assert.match(output, /contribution: 0\.3/)
+  assert.match(output, /dissent: "No lens disagreement\."/)
+  assert.doesNotMatch(output, /lensCount|lensScore|score:|index:/)
 })
 
 const fullComment = () => ({
@@ -146,23 +159,9 @@ test('validate: review-comment reports missing required keys', () => {
   assert.deepEqual(result.missing, ['verdictLabel', 'nextPhase'])
 })
 
-test('renderArtifact: review-comment skips the optional difficulty/evidence blocks', () => {
+test('renderArtifact: review-comment skips the optional evidence block', () => {
   const output = renderArtifact('review-comment', fullComment())
   assert.match(output, /## Phase DISCUSS ✅ APPROVED/)
   assert.match(output, /\*\*Reviewer verdict:\*\* APPROVED \(attempt 1\)/)
-  assert.doesNotMatch(output, /Difficulty:/)
   assert.doesNotMatch(output, /Evidence:/)
-})
-
-test('renderArtifact: review-comment renders the difficulty block on its own gate', () => {
-  const output = renderArtifact('review-comment', {
-    ...fullComment(),
-    difficulty: 'medium-hard',
-  })
-  assert.match(output, /\*\*Difficulty:\*\* `medium-hard`/)
-})
-
-test('renderArtifact: review-comment omits the difficulty block when difficulty is absent', () => {
-  const output = renderArtifact('review-comment', fullComment())
-  assert.doesNotMatch(output, /\*\*Difficulty:\*\*/)
 })

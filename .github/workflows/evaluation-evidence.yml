@@ -1,0 +1,116 @@
+name: Publish evaluation evidence
+
+# Never grant a pull-request workflow write access to the repository. This
+# workflow starts from the trusted default-branch definition after Skill
+# evaluation finishes, downloads only its data artifact, and runs only the
+# publisher checked out from the default branch.
+on:
+  workflow_run:
+    workflows: [Skill evaluation]
+    types: [completed]
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  publish-pr:
+    name: Publish pre-merge evidence
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: dashboard-data
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Find this run's evaluation artifact
+        id: artifact
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pullRequests = context.payload.workflow_run.pull_requests ?? []
+            if (pullRequests.length !== 1) {
+              core.notice(`Expected one associated pull request, found ${pullRequests.length}; nothing to publish.`)
+              core.setOutput('found', 'false')
+              return
+            }
+            const prNumber = pullRequests[0].number
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+              per_page: 100,
+            })
+            const expectedName = `eval-results-pr-${prNumber}`
+            const matches = artifacts.filter(({ expired, name }) => !expired && name === expectedName)
+            if (matches.length > 1) core.setFailed(`Expected at most one PR evaluation artifact, found ${matches.length}.`)
+            if (matches.length === 1) {
+              core.setOutput('found', 'true')
+              core.setOutput('name', matches[0].name)
+              core.setOutput('pr-number', String(prNumber))
+            } else {
+              core.setOutput('found', 'false')
+            }
+
+      - name: Download verdicts and trajectories
+        if: steps.artifact.outputs.found == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: eval-results
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Publish verdicts and trajectories together
+        if: steps.artifact.outputs.found == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          results=(eval-results/*/results.json)
+          if [ ${#results[@]} -eq 0 ]; then
+            echo '::error::The PR evaluation produced no verdict file to publish.'
+            exit 1
+          fi
+
+          args=()
+          for result in "${results[@]}"; do args+=(--results "$result"); done
+
+          ./eng/dashboard/publish.sh "${args[@]}" \
+            --replay-from eval-results \
+            --source pr \
+            --pr-number "${{ steps.artifact.outputs.pr-number }}" \
+            --commit "${{ github.event.workflow_run.head_sha }}" \
+            --run "${{ github.event.workflow_run.id }}" \
+            --url "${{ github.event.workflow_run.html_url }}"
+
+  cleanup-pr-replay:
+    name: Remove closed-PR trajectories
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: dashboard-data
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Remove this PR from replay data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./eng/dashboard/publish.sh --drop-pr "${{ github.event.pull_request.number }}"

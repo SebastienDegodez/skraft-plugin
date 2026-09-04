@@ -45,7 +45,6 @@ const VALID_PIPELINE = {
   retryCount: {},
   phaseArtifacts: {},
   reviewArtifacts: {},
-  difficulty: null,
   userPreferences: { maxRetriesPerPhase: 2 },
 }
 
@@ -86,7 +85,7 @@ test('validatePipelineState: rejects when currentPhase is not a string', () => {
 })
 
 test('validatePipelineState: coerces missing phasesCompleted to []', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', verdicts: {}, difficulty: null })
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', verdicts: {} })
   assert.ok(isOk(r))
   assert.deepEqual(r.value.phasesCompleted, [])
 })
@@ -131,18 +130,6 @@ test('validatePipelineState: preserves existing reviewArtifacts object', () => {
   const r = validatePipelineState({ currentPhase: 'DISCOVER', reviewArtifacts: { DISCOVER: ['r.md'] } })
   assert.ok(isOk(r))
   assert.deepEqual(r.value.reviewArtifacts.DISCOVER, ['r.md'])
-})
-
-test('validatePipelineState: coerces missing difficulty to null', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
-  assert.ok(isOk(r))
-  assert.equal(r.value.difficulty, null)
-})
-
-test('validatePipelineState: preserves string difficulty', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', difficulty: 'medium-hard' })
-  assert.ok(isOk(r))
-  assert.equal(r.value.difficulty, 'medium-hard')
 })
 
 test('validatePipelineState: coerces missing userPreferences to {}', () => {
@@ -215,7 +202,7 @@ test('validatePipelineState: preserves existing findingsResolved object', () => 
 // Regression: validatePipelineState must NOT drop orchestrator-owned fields it does
 // not normalize. Prior behaviour silently coerced to 8 keys, destroying 10 fields on
 // every CLI write (proven empirically). These fields drive the DESIGN human checkpoint
-// (adrRatification), HVE handoff (entryPoint), and traceability (issueNumber, ...).
+// (adrRatification), upstream handoff (entryPoint), and traceability (issueNumber, ...).
 
 const REAL_STATE = {
   projectSlug: 'us1-clean-arch-foundation',
@@ -224,7 +211,6 @@ const REAL_STATE = {
   entryMode: 'from-issue',
   entryPoint: { skipPhases: [], handoffSource: null, handoffArtifacts: [] },
   issueNumber: 47,
-  difficulty: 'medium',
   adrRatification: { checkpointStatus: 'pending', pending: ['adr-001'], ratified: [] },
   phasesCompleted: ['DISCOVER', 'DISCUSS'],
   phaseArtifacts: { DISCOVER: ['research/triage.md'] },
@@ -254,6 +240,12 @@ test('round-trip: preserves every orchestrator-owned field (no silent drop)', ()
   assert.deepEqual(v.referencesProcessed, [], 'referencesProcessed preserved')
   assert.deepEqual(v.legacyOverrides, [], 'unknown top-level fields preserved')
   assert.deepEqual(v.neighborPlanners, REAL_STATE.neighborPlanners, 'neighborPlanners preserved')
+})
+
+test('round-trip: removes obsolete difficulty field', () => {
+  const r = validatePipelineState({ currentPhase: 'RESEARCH', difficulty: 'simple' })
+  assert.ok(isOk(r))
+  assert.equal(Object.hasOwn(r.value, 'difficulty'), false)
 })
 
 test('round-trip: migrates reviewerVerdicts -> verdicts and drops the alias', () => {

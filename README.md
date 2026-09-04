@@ -36,7 +36,7 @@ dependency, tested boundary-to-boundary and hardened with mutation testing.
 - 📚 **Discipline skills**: Outside-In TDD, Clean Architecture testing, BDD/Gherkin, mutation testing, contract testing, ADR, issue refinement…
 - 🛡️ **Mechanical guardrails G1–G8** (fail-closed hooks): dispatch ordering, forced skill loading + JSONL audit, artifact/verdict/commit verification, state protection.
 - 🎯 **Multi-harness portability**: the same guardrails on Claude Code, Copilot CLI and Cursor.
-- 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, repo-wide `depthTier` configurator.
+- 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, structural phase pruning from confirmed upstream evidence.
 
 ## Installation
 
@@ -44,36 +44,41 @@ skraft ships as a **marketplace plugin**. The plugin source lives in [`plugins/`
 
 ### Claude Code
 
-```bash
-# Add the marketplace, then install the "skraft" plugin
+Enter these commands in Claude Code:
+
+```text
 /plugin marketplace add SebastienDegodez/skraft-plugin
 /plugin install skraft
 ```
 
 ### GitHub Copilot, Codex, Cursor
 
-The plugin follows [**Agent Plugins 1.0**](https://agent-plugins.org/specification): the portable
-manifest lives at `plugins/skraft-framework/plugin.json` and each client that needs its own schema
-gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`). Skills, agents,
-instructions and the runtime are shared verbatim — nothing is duplicated.
+The portable manifest lives at `plugins/skraft-framework/plugin.json` and each client that needs its
+own schema gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`).
+The portable manifest deliberately omits the [Agent Plugins 1.0](https://agent-plugins.org/specification)
+`$schema` marker: VS Code's Agent Plugins v1 adapter substitutes no plugin-root token in hook
+commands, so a plugin recognized under it cannot locate its own CLI. Detection therefore falls
+through to `.claude-plugin/plugin.json`, whose adapter does expand `${CLAUDE_PLUGIN_ROOT}`.
+Skills and runtime stay shared. The `com.anthropic.claude-code/agents/*.md` tree is the single
+canonical agent source — there is no second tree to mirror.
+Copilot loads path-scoped rules natively, while Claude receives only each agent's declared companion
+rules through `SubagentStart`.
 
-Harness-specific hooks live under their reverse-domain namespace:
+Hooks are the exception to the namespace split: one manifest serves every harness, because
+`hooks/hooks.json` is the path they all load on their own — Claude Code and VS Code try it
+before any manifest pointer, and the Copilot CLI reads it and nothing else.
 
 | Harness | Hook manifest |
 |---|---|
-| Claude Code, Codex | `com.anthropic.claude-code/hooks/hooks.json` |
-| Copilot (installed plugin) | `com.github.copilot/hooks/hooks.json` |
+| Claude Code, Codex, VS Code, Copilot CLI (installed plugin) | `hooks/hooks.json` |
 | Copilot (repo checkout, cloud agent) | [`.github/hooks/skraft-framework.json`](./.github/hooks/skraft-framework.json) |
 
 See [`docs/architecture.md`](./docs/architecture.md) for the per-harness porting details.
 
 ## Quick start
 
-Once the plugin is installed, run the full pipeline through the orchestrator:
-
-```
-/skraft
-```
+Once the plugin is installed, select `skraft-orchestrator` in the agent picker
+and give it a refined story.
 
 The orchestrator automatically resumes from the last persisted state, manages phase transitions,
 reviewer verdicts (with retry), and the engineer ↔ reviewer loop.
@@ -86,7 +91,7 @@ All documentation lives in [`docs/`](./docs/).
 |---|---|
 | 📑 Documentation index | [`docs/README.md`](./docs/README.md) |
 | 🏗️ Plugin architecture | [`docs/architecture.md`](./docs/architecture.md) |
-| 🛠️ Guardrail framework (hexagonal, G1–G8, genesis anchoring) | [`plugins/skraft-framework/README.md`](./plugins/skraft-framework/README.md) |
+| 🔌 Distributed plugin (install, pipeline, guardrails, packaging) | [`plugins/skraft-framework/README.md`](./plugins/skraft-framework/README.md) |
 | 🛣️ Roadmap (13 US + status) | [`docs/roadmap.md`](./docs/roadmap.md) |
 | 🤝 Engineer/Reviewer cross-cutting view | [`docs/agents/software-engineer-and-reviewer.md`](./docs/agents/software-engineer-and-reviewer.md) |
 | 🎨 Documentation conventions | [`docs/conventions.md`](./docs/conventions.md) |
@@ -132,8 +137,8 @@ This project follows [**SemVer**](https://semver.org/) and publishes releases **
 - The [`release.yml`](./.github/workflows/release.yml) workflow runs **automatically on every push
   to `main`**, and can also be started by hand from the Actions tab. When it runs, it:
   1. computes the next version from the commit history,
-  2. updates [`CHANGELOG.md`](./CHANGELOG.md) and stamps the version into the four plugin manifests
-     (`plugin.json`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) + `src/package.json`,
+    2. updates [`CHANGELOG.md`](./CHANGELOG.md) and stamps the version into the five plugin manifests
+      (`plugin.json`, `.plugin/`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) + `src/package.json`,
   3. creates the **`vX.Y.Z` tag** and the **GitHub Release** with the release notes,
   4. commits everything with `chore(release): X.Y.Z [skip ci]`.
 

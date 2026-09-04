@@ -62,23 +62,24 @@ export const applyModel = (content, model) => {
   return lines.join('\n')
 }
 
-// Compliant when the scalar equals the resolved canonical model, OR — for the prioritized
-// list form — when the resolved canonical model appears anywhere in the fallback chain.
-const modelMatches = (model, resolvedModel) =>
-  Array.isArray(model) ? model.includes(resolvedModel) : model === resolvedModel
+// Compliant when the declared model is one the tier accepts — and, for the prioritized list
+// form, when any entry in the chain is accepted. A tier that accepts several models never
+// forces a rewrite of an agent already sitting on one of them.
+const modelAccepted = (model, accepted) =>
+  Array.isArray(model) ? model.some((entry) => accepted.includes(entry)) : accepted.includes(model)
 
 // Decide what should happen to one agent file, purely from its content.
 export const planAgent = (content, { allowList = DEFAULT_ALLOW_LIST } = {}) => {
   const { name, model, costRoleClass, modelRequirement } = parseAgentFrontmatter(content)
   if (allowList.has(name)) return { name, skipped: true, reason: 'allow-list' }
   if (costRoleClass === undefined) return { name, skipped: true, reason: 'no cost_role_class' }
-  const { model: resolvedModel } = resolveModel({ costRoleClass, modelRequirement })
-  return { name, skipped: false, currentModel: model, resolvedModel, changed: !modelMatches(model, resolvedModel) }
+  const { model: resolvedModel, accepted } = resolveModel({ costRoleClass, modelRequirement })
+  return { name, skipped: false, currentModel: model, resolvedModel, accepted, changed: !modelAccepted(model, accepted) }
 }
 
 const findAgentFiles = (dir) =>
   readdirSync(dir, { recursive: true })
-    .filter((entry) => String(entry).endsWith('.agent.md'))
+    .filter((entry) => String(entry).endsWith('.md'))
     .map((entry) => join(dir, String(entry)))
 
 const plansFor = (dir, options) =>
@@ -93,7 +94,7 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       apply: { type: 'boolean', default: false },
       emit: { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
-      dir: { type: 'string', default: 'plugins/skraft-framework/agents' },
+      dir: { type: 'string', default: 'plugins/skraft-framework/com.anthropic.claude-code/agents' },
     },
   })
 
@@ -114,6 +115,9 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       writeFileSync(p.path, applyModel(readFileSync(p.path, 'utf8'), p.resolvedModel))
       log(`pinned ${p.name} → ${p.resolvedModel}`)
     }
+    if (active.some((p) => p.changed)) {
+      log('agent model sources changed — regenerate the guardrail config before committing')
+    }
     return 0
   }
 
@@ -121,7 +125,7 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
   if (drift.length > 0) {
     for (const p of drift) {
       const shown = Array.isArray(p.currentModel) ? p.currentModel.join(', ') : p.currentModel
-      error(`drift: ${p.name} has '${shown}', expected '${p.resolvedModel}'`)
+      error(`drift: ${p.name} has '${shown}', expected one of: ${p.accepted.join(' | ')}`)
     }
     return 1
   }

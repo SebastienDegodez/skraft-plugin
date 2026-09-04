@@ -66,6 +66,27 @@ const efficiencyCell = (verdict) => {
   return `${percent(efficiency.tokenDeltaPercent)} tokens, ${percent(efficiency.durationDeltaPercent)} time`
 }
 
+const compactTokens = (value) => {
+  if (value == null) return null
+  return value >= 1000 ? `${(value / 1000).toFixed(1)}k tok` : `${value} tok`
+}
+
+const compactDuration = (ms) => {
+  if (ms == null) return null
+  const seconds = Math.round(ms / 1000)
+  return seconds >= 60 ? `${Math.floor(seconds / 60)}m${String(seconds % 60).padStart(2, '0')}s` : `${seconds}s`
+}
+
+// Absolute medians, not a delta: a single-arm suite has nothing to price
+// against. What this answers is "what does one run of this agent cost" — the
+// number that decides whether a suite fits the pre-merge budget at all.
+const agentCostCell = (verdict) => {
+  const efficiency = verdict.efficiency
+  if (!efficiency) return '—'
+  const parts = [compactTokens(efficiency.tokens), compactDuration(efficiency.durationMs)].filter(Boolean)
+  return parts.length ? parts.join(' · ') : '—'
+}
+
 // The two tables report different instruments, and the difference is easy to
 // miss: one is a paired comparison with a p-value, the other a single-arm
 // conformance tally with no comparison in it at all. Collapsed so the comment
@@ -139,6 +160,12 @@ const AGENT_LEGEND = [
   '| **Verdict** | Whether the suite met its own `scoring.threshold` |',
   '| **Score** | Mean trial score, with a 95% interval when one is available |',
   '| **Conforming trials** | How many trials met the threshold, out of how many ran. `2/3` with one trial *erroring* is not the same finding as `2/3` with three completing — the Reason column says which. |',
+  '| **Cost (median)** | Tokens and wall time for one run of this agent. Absolute, not a delta — there is no baseline to price against. It is what decides whether a suite fits the pre-merge budget. |',
+  '',
+  '**Which check gave way.** `2/3` says a trial fell short, never *what* broke. The notes under the',
+  'table name the graders that did not hold and on how many trials, and the per-scenario breakdown',
+  'says whether one behaviour is broken (a scenario failing all its trials) or the agent is merely',
+  'flaky (the same count spread across scenarios). Those two need opposite responses.',
   '',
   '**Advisory by design.** An agent verdict never blocks a merge: a suite runs a real agent making real',
   'tool calls, so one flaky or timed-out session would block an unrelated PR. Read it, do not gate on it.',
@@ -318,7 +345,7 @@ function agentSection(verdicts) {
   const rows = verdicts.map((verdict) => {
     const state = verdictState(verdict)
     const conformance = verdict.conformance ?? {}
-    return `| ${dash(verdict.subject?.name)} | ${BADGE[state] ?? state} | ${scoreCell(verdict)} | ${dash(conformance.conforming)}/${dash(verdict.trialCount)} | ${dash(verdict.reason)} |`
+    return `| ${dash(verdict.subject?.name)} | ${BADGE[state] ?? state} | ${scoreCell(verdict)} | ${dash(conformance.conforming)}/${dash(verdict.trialCount)} | ${agentCostCell(verdict)} | ${dash(verdict.reason)} |`
   })
 
   return [
@@ -329,8 +356,61 @@ function agentSection(verdicts) {
     '',
     ...AGENT_LEGEND,
     '',
-    '| Agent | Verdict | Score | Conforming trials | Reason |',
-    '| --- | --- | --- | --- | --- |',
+    '| Agent | Verdict | Score | Conforming trials | Cost (median) | Reason |',
+    '| --- | --- | --- | --- | --- | --- |',
     ...rows,
+    ...failingGraderNotes(verdicts),
+    ...scenarioBreakdown(verdicts),
   ]
+}
+
+/**
+ * The graders that did not hold, named, with how often.
+ *
+ * The single most useful line the run produces and the one the tally hides: a
+ * suite reported at 79.9% because one path assertion moved is a stale test,
+ * while the same 79.9% spread over six different graders is a broken agent.
+ * A grader that held on every trial is left out — only what gave way is news.
+ */
+function failingGraderNotes(verdicts) {
+  const notes = verdicts.flatMap((verdict) => {
+    const broke = (verdict.graders ?? []).filter((grader) => grader.passed < grader.total)
+    if (!broke.length) return []
+    const described = broke
+      .sort((left, right) => left.passed / left.total - right.passed / right.total)
+      .map((grader) => `\`${grader.name}\` ${grader.passed}/${grader.total}`)
+    return [`- **${dash(verdict.subject?.name)}** — did not hold: ${described.join(', ')}.`]
+  })
+
+  return notes.length ? ['', 'Which checks gave way:', '', ...notes] : []
+}
+
+/**
+ * Per-stimulus conformance, collapsed.
+ *
+ * Complete rather than selective — a scenario at full marks is what proves the
+ * failure is localised — but folded away so the summary table stays skimmable.
+ */
+function scenarioBreakdown(verdicts) {
+  const sections = verdicts.flatMap((verdict) => {
+    const scenarios = verdict.scenarios ?? []
+    if (!scenarios.length) return []
+    const rows = scenarios.map((scenario) => {
+      const score = scenario.meanScore == null ? '—' : scenario.meanScore.toFixed(2)
+      const errored = scenario.trials?.filter((trial) => trial.errored).length ?? 0
+      const note = errored ? `${errored} errored` : ''
+      return `| ${dash(scenario.scenarioName)} | ${dash(scenario.conforming)}/${dash(scenario.trialCount)} | ${score} | ${note} |`
+    })
+    return [
+      `**${dash(verdict.subject?.name)}**`,
+      '',
+      '| Scenario | Conforming | Mean score | |',
+      '| --- | --- | --- | --- |',
+      ...rows,
+      '',
+    ]
+  })
+
+  if (!sections.length) return []
+  return ['', '<details>', '<summary><b>Per-scenario breakdown</b></summary>', '', ...sections, '</details>']
 }

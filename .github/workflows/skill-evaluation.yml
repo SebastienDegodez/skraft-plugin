@@ -8,6 +8,8 @@ name: Skill evaluation
 #                 Evaluates only what the PR touched and posts the verdict as a
 #                 PR comment; blocks merge only on a credible skill regression.
 #                 Skipped for fork PRs (no secrets available there anyway).
+#   A companion workflow publishes complete PR verdicts and trajectories from
+#   trusted default-branch code, then removes trajectories when the PR closes.
 #   evaluate    — scheduled or dispatched. Runs every skill twice (baseline vs
 #                 skilled), runs every agent suite once, judges the pairs, and
 #                 publishes verdicts and recorded agent sessions to the
@@ -22,9 +24,12 @@ name: Skill evaluation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - 'plugins/skraft-framework/skills/**'
-      - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
+      - 'plugins/skraft-framework/com.github.copilot/rules/**'
+      - 'plugins/skraft-framework/plugin.json'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'tests/skills/**'
       - 'tests/agents/**'
@@ -51,7 +56,7 @@ on:
         default: gpt-5.6-terra
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: skill-evaluation-${{ github.ref }}
@@ -59,7 +64,31 @@ concurrency:
 
 env:
   VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0'
-  MODEL: gpt-5.6-luna
+  # vally-cli 0.12.0 depends on @github/copilot-sdk via a floating `^1.0.7`
+  # range, and @github/copilot-sdk@1.0.9 in turn depends on @github/copilot via
+  # a floating `^1.0.78`. Both must be pinned, and the pin must be on
+  # @github/copilot itself — never on one of its platform binaries. Each
+  # @github/copilot release locks its optionalDependencies to its own exact
+  # version, so pinning `@github/copilot-linux-x64@1.0.78` next to a floating
+  # @github/copilot that resolves to 1.0.83 puts the two in conflict: the
+  # optional 1.0.83 binary is silently skipped and the SDK fails at run time
+  # with `Could not resolve a @github/copilot platform package`. Pinning
+  # @github/copilot lets npm install the matching platform binary for whatever
+  # runner the job lands on, Linux or otherwise.
+  #
+  # WHERE the three are installed matters as much as the pins. The SDK finds
+  # the CLI with `import.meta.resolve('@github/copilot-<platform>-<arch>/sdk')`
+  # from its OWN file, so the platform binary has to sit in a `node_modules`
+  # on the SDK's parent chain. `npm install -g` does not put it there: it
+  # leaves the binary nested at
+  # `lib/node_modules/@github/copilot/node_modules/@github/copilot-linux-x64`,
+  # invisible from the sibling `lib/node_modules/@github/copilot-sdk`, and
+  # every run dies with `Could not resolve a @github/copilot platform package`.
+  # A project-tree install hoists all three flat under `node_modules/@github/`,
+  # where resolution succeeds — so these are installed with `npm install
+  # --no-save` and reached through `node_modules/.bin`, never with `-g`.
+  COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9'
+  COPILOT_CLI_PACKAGE: '@github/copilot@1.0.78'
   JUDGE_MODEL: gpt-5.6-luna
   DATA_BRANCH: dashboard-data
   RETENTION_DAYS: '14'
@@ -133,7 +162,7 @@ jobs:
   evaluate-pr:
     name: Pre-merge evaluation (changed skills and agent suites only)
     # Fork PRs have no access to COPILOT_GITHUB_TOKEN, so skip rather than fail.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     # A spec the linter rejects still runs, and still bills an hour of live model
     # time, to produce a verdict about an instrument that was never wired. The
     # `rubric` under `graders[].config` was exactly that: silently ignored by
@@ -143,6 +172,10 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    # Ordinary runs resolve MODEL from each eval spec. Keeping it explicitly
+    # blank here prevents a workflow-level default from overriding every spec.
+    env:
+      MODEL: ''
     permissions:
       contents: read
       pull-requests: write
@@ -175,15 +208,15 @@ jobs:
             echo 'PR_SUITES_EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Install the Vally CLI
+      # Skill and agent-suite executors drive a real agent through
+      # @github/copilot-sdk, so the CLI, the SDK and Vally must share one
+      # resolution root. See the `env` block for why that root is the project
+      # tree and never the global prefix.
+      - name: Install the evaluation toolchain
         if: steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != ''
-        run: npm install -g "$VALLY_PACKAGE"
-
-      # The agent executor drives a real agent through @github/copilot-sdk, a
-      # devDependency: without it an agent suite cannot start at all.
-      - name: Install project dependencies
-        if: steps.changed-agents.outputs.suites != ''
-        run: npm install
+        run: |
+          npm install --no-save "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run each changed skill twice and judge the pair
         if: steps.changed.outputs.skills != ''
@@ -204,11 +237,22 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           SUITES: ${{ steps.changed-agents.outputs.suites }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # A suite scoring under its threshold makes the runner exit non-zero.
+          # Under `set -e` that aborted the loop at the first such suite and
+          # left every later suite unrun — one 79.9% reviewer suite silently
+          # cancelled twelve others, and skipped the skill regression gate
+          # below with it. Agent verdicts are advisory by contract, so record
+          # the failure and keep going; the comment reports every suite.
+          unrun=0
           while IFS= read -r suite; do
             [ -n "$suite" ] || continue
-            ./eng/run-vally-evals.sh agents "$suite"
+            ./eng/run-vally-evals.sh agents "$suite" || {
+              unrun=$((unrun + 1))
+              echo "::warning::Agent suite $suite did not meet its threshold or errored; see the PR comment."
+            }
           done <<< "$SUITES"
+          echo "$unrun suite(s) reported a non-zero exit."
 
       - name: Upload trajectories
         if: always() && (steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != '')
@@ -251,6 +295,12 @@ jobs:
     # Each spec budgets its own trials, so the wall clock follows the specs, not
     # a flat one-trial-per-stimulus floor.
     timeout-minutes: 150
+    # Same invariant as evaluate-pr: ordinary runs use each spec's model. Only
+    # compare-models below is allowed to force MODEL.
+    env:
+      MODEL: ''
+    permissions:
+      contents: write
     # Shared with dashboard-data-compact.yml: a publication and a history
     # compaction must never interleave on the evidence branch.
     concurrency:
@@ -263,13 +313,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install the Vally CLI
-        run: npm install -g "$VALLY_PACKAGE"
-
       # The agent executor drives a real agent through @github/copilot-sdk, a
-      # devDependency: without it an agent suite cannot start at all.
-      - name: Install project dependencies
-        run: npm install
+      # devDependency: without it an agent suite cannot start at all. See the
+      # `env` block for why the toolchain goes in the project tree, not `-g`.
+      - name: Install the evaluation toolchain
+        run: |
+          npm install --no-save "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run every eval and judge the pairs
         env:
@@ -388,8 +438,12 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install the Vally CLI
-        run: npm install -g "$VALLY_PACKAGE"
+      # See the `env` block: the project tree is the only layout where the SDK
+      # can resolve the @github/copilot platform binary.
+      - name: Install the evaluation toolchain
+        run: |
+          npm install --no-save "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run the skill twice on ${{ matrix.model }} and judge the pair
         env:
@@ -421,6 +475,9 @@ jobs:
     # Runs even when an arm failed: the arms that did finish are still evidence.
     if: always() && needs.compare-models.result != 'skipped'
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
     # Shared with dashboard-data-compact.yml and the `evaluate` job: a
     # publication and a history compaction must never interleave.
     concurrency:

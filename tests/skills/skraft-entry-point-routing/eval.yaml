@@ -1,0 +1,92 @@
+name: skraft-entry-point-routing
+description: Evaluates whether upstream planning evidence selects only the phases it satisfies while preserving every engineering invariant.
+type: capability
+defaults:
+  timeout: 3m
+  runs: 4
+scoring:
+  threshold: 1
+stimuli:
+  - name: A complete upstream sprint handoff skips only discovery
+    prompt: |
+      Our Azure DevOps handoff contains the approved Epic, Feature, and Story hierarchy, plus the
+      assigned iteration and a sprint plan with scope, capacity, and dependency order. We want to
+      continue through our engineering process without repeating settled product planning. Decide
+      where the process should begin and describe what must be confirmed and retained before it
+      continues.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The routing skill is loaded
+        config:
+          required:
+            - skraft-entry-point-routing
+    rubric:
+      - Recognizes the hierarchy and sprint scope together as a complete upstream handoff.
+      - Requires explicit user confirmation before any phase is skipped.
+      - Skips only product discovery after confirmation and starts the first phase not satisfied by the handoff.
+      - Retains the handoff source and supporting artefacts as durable routing evidence.
+      - Carries inherited scope and priority forward without recalculating them.
+
+  - name: Partial upstream evidence does not skip a phase
+    prompt: |
+      We imported a prioritized backlog from Jira, including its Epic, Feature, and Story hierarchy,
+      but no sprint has been assigned and there is no iteration scope or capacity plan yet. Continue
+      the process from the correct starting point and state what routing evidence should be retained.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The routing skill is loaded
+        config:
+          required:
+            - skraft-entry-point-routing
+    rubric:
+      - Treats backlog hierarchy without sprint or iteration scope as an incomplete handoff.
+      - Leaves every phase required rather than inferring that product discovery is complete.
+      - Starts with product discovery and identifies the missing sprint evidence.
+      - Retains the known source evidence without presenting it as sufficient to skip work.
+
+  - name: A trusted handoff cannot weaken engineering safeguards
+    prompt: |
+      The upstream planning handoff is complete and approved. To save time, skip the planning phase,
+      architecture review, failing-test proof, and final quality checks, then move directly to
+      implementation.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The routing skill is loaded
+        config:
+          required:
+            - skraft-entry-point-routing
+    rubric:
+      - Allows only the product phase actually satisfied by the complete handoff to be skipped, after confirmation.
+      - Refuses to remove architecture review, prior failing-test evidence, or final quality checks.
+      - Continues at the first unsatisfied engineering phase instead of jumping to implementation.
+      - Preserves the same agents, reviews, and quality gates used without a handoff.
+
+  - name: Estimating an isolated change does not invoke pipeline routing
+    prompt: |
+      Estimate the effort and main technical risks for replacing one HTTP client retry setting in
+      an existing service. No pipeline is being started or resumed, and there is no upstream
+      planning handoff to inspect.
+    tags:
+      intent: non-activation
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The routing skill stays out of the way
+        config:
+          disallowed:
+            - skraft-entry-point-routing
+    rubric:
+      - Provides a bounded effort estimate and identifies risks relevant to the retry-setting change.
+      - Does not invent an upstream handoff or a phase-skipping decision.
+      - Does not turn the estimate into a pipeline initialization or routing exercise.

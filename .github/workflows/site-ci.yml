@@ -5,10 +5,11 @@ on:
     paths:
       - 'docs/site/**'
       - 'eng/**'
-      - 'plugins/skills/**'
-      - 'plugins/agents/**'
-      - 'plugins/.claude-plugin/plugin.json'
+      - 'plugins/skraft-framework/**'
       - 'tests/skills/**'
+      - 'tests/dashboard/**'
+      - 'scripts/scan-drift.mjs'
+      - 'scripts/lib/book.mjs'
       - 'scripts/check-citations.mjs'
       - 'tests/site/**'
 
@@ -22,6 +23,18 @@ jobs:
           node-version: '22'
       - name: Citation lint
         run: node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
+
+      # The dashboard tooling tests import @microsoft/vally and @github/copilot-sdk,
+      # both devDependencies: without them `node --test` cannot even resolve the
+      # module graph, and the step fails on an import error rather than on a finding.
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Catalogue and drift controls
+        run: |
+          node eng/catalog/scan.mjs
+          node scripts/scan-drift.mjs --out "$RUNNER_TEMP/skraft-docs-ledger.json"
+          node --test tests/dashboard/*.test.mjs tests/skraft-framework/scan-drift-order.test.mjs
 
   smoke-tests:
     runs-on: ubuntu-latest

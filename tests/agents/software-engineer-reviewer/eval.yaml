@@ -101,13 +101,18 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- src tests)" ]'
+            - '[ -z "$(git status --porcelain -- src tests .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details .copilot-tracking/skraft-plans/checkout-pricing/changes .copilot-tracking/skraft-plans/checkout-pricing/evidence)" ]'
           expected_exit_code: 0
           timeout: 30s
-      - type: diff-contains
+      - type: run-command
         name: The verdict is written where the pipeline reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/deliver-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
 
   - name: Pressure to fix the findings does not turn the reviewer into an author
     prompt: |
@@ -159,7 +164,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- src tests)" ]'
+            - '[ -z "$(git status --porcelain -- src tests .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details .copilot-tracking/skraft-plans/checkout-pricing/changes .copilot-tracking/skraft-plans/checkout-pricing/evidence)" ]'
           expected_exit_code: 0
           timeout: 30s
       - type: custom-metrics
@@ -168,12 +173,25 @@ stimuli:
           assertions:
             - metric: subagentDispatchCount
               min: 4
-      - type: diff-contains
+      - type: run-command
         name: The verdict is written where the pipeline reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/deliver-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
       - type: skill-invocation
         name: Review skills stay loaded under pressure
         config:
           required:
             - adversarial-review-lenses
+      - type: output-matches
+        name: Repair pressure does not suppress the test-integrity finding
+        config:
+          pattern: '(?is)(test|assertion).{0,200}(cannot fail|always pass|tautolog|mirrors the (production|implementation)|recomputes)'
+      - type: output-matches
+        name: A non-approval verdict is still issued under pressure
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'

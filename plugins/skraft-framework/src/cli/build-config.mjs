@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { parseYaml } from '../domain/yaml-parser.mjs'
 import { buildFrameworkConfig } from '../domain/framework-config-policy.mjs'
@@ -15,17 +15,19 @@ const asArray = (value) => (Array.isArray(value) ? value : value == null ? [] : 
 
 // Map one agent file's frontmatter to the descriptor the domain policy expects.
 // Reuses the repo's hand-rolled YAML parser — no runtime dependency.
-export const parseAgentDescriptor = (content) => {
+export const parseAgentDescriptor = (content, { id } = {}) => {
   const block = frontmatterOf(content)
   const fm = block === '' ? {} : parseYaml(block)
   const meta = fm.metadata ?? {}
   return {
+    id,
     name: fm.name,
     phase: meta.phase,
     dispatchedBy: meta.dispatched_by,
     phases: asArray(meta.phases),
     userInvocable: fm['user-invocable'] === true,
     skills: asArray(meta.skills).map(String),
+    instructions: asArray(meta.instructions).map(String),
     inputs: asArray(meta.inputs?.required).map(String),
     outputs: asArray(meta.outputs).map(String),
   }
@@ -33,12 +35,14 @@ export const parseAgentDescriptor = (content) => {
 
 const findAgentFiles = (dir) =>
   readdirSync(dir, { recursive: true })
-    .filter((entry) => String(entry).endsWith('.agent.md'))
+    .filter((entry) => String(entry).endsWith('.md'))
     .map((entry) => join(dir, String(entry)))
     .sort()
 
 const descriptorsFrom = (dir) =>
-  findAgentFiles(dir).map((path) => parseAgentDescriptor(readFileSync(path, 'utf8')))
+  findAgentFiles(dir).map((path) => parseAgentDescriptor(readFileSync(path, 'utf8'), {
+    id: basename(path, '.md'),
+  }))
 
 const serialize = (config) => JSON.stringify(config, null, 2) + '\n'
 
@@ -51,7 +55,7 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       apply: { type: 'boolean', default: false },
       emit: { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
-      dir: { type: 'string', default: 'plugins/skraft-framework/agents' },
+      dir: { type: 'string', default: 'plugins/skraft-framework/com.anthropic.claude-code/agents' },
       out: { type: 'string', default: 'plugins/skraft-framework/skraft-framework.config.json' },
     },
   })

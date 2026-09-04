@@ -11,6 +11,24 @@ Formal gate definitions and verdict rubric for the `backlog-planner-reviewer`. A
 
 A story that passes all 8 gates is approved to enter DESIGN. A story with any blocking finding is rejected and must return to DISCUSS.
 
+## Lens-to-question mapping
+
+The synthesis in `adversarial-review-lenses` is computed per question, not per lens. This
+mapping is declared here rather than derived at review time, because a mapping re-invented on
+each pass is a mapping that drifts.
+
+Four lenses and four questions here, but the correspondence is not positional — read it:
+
+| Question | Answered by | Through |
+|---|---|---|
+| Completeness | dor-compliance lens | G7 — a story missing DoR items is a story DESIGN would have to guess at |
+| Business Fit | ac-quality lens | G3, G4 — a criterion naming a Repository has stopped describing the business |
+| Quality | invest lens | G1, G2 — INVEST is whether the story holds together as a unit of work |
+| Risk | planning-coherence lens | G5, G6 — a cycle or a story spanning sprints is a delivery that fails downstream |
+
+G8 (antipatterns) is checked by the dor-compliance lens but scores against **Business Fit**:
+Implement-X and Vague Persona are failures of business expression, not of readiness paperwork.
+
 ---
 
 ## Gate Definitions (G1–G8)

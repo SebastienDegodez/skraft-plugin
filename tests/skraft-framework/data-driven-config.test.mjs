@@ -8,22 +8,26 @@ import {
 // --- descriptor factories (the pure function's input boundary) ---
 
 const orchestrator = (phases) => ({
+  id: 'skraft-orchestrator',
   name: 'skraft-orchestrator',
   dispatchedBy: null,
   phases,
   skills: [],
+  instructions: [],
   inputs: [],
   outputs: [],
 })
 
 const agent = ({
+  id,
   name,
   phase,
   dispatchedBy = 'skraft-orchestrator',
   skills = [],
+  instructions = [],
   inputs = [],
   outputs = [],
-}) => ({ name, phase, dispatchedBy, skills, inputs, outputs })
+}) => ({ id: id ?? name, name, phase, dispatchedBy, skills, instructions, inputs, outputs })
 
 const PHASES = ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']
 
@@ -122,6 +126,17 @@ test('mandatory skills are carried with the default verification policy', () => 
 test('an agent that declares no skills carries an empty skill set', () => {
   const config = buildFrameworkConfig(pipeline())
   assert.deepEqual(config.agentSkills['software-engineer'], [])
+})
+
+test('agent aliases and companion instructions are projected deterministically', () => {
+  const descriptors = pipeline()
+  descriptors[1].instructions = ['com.github.copilot/rules/skraft-artifacts.instructions.md']
+  const config = buildFrameworkConfig(descriptors)
+
+  assert.equal(config.agentAliases['backlog-discoverer'], 'backlog-discoverer')
+  assert.deepEqual(config.agentInstructions['backlog-discoverer'], [
+    'com.github.copilot/rules/skraft-artifacts.instructions.md',
+  ])
 })
 
 test('expected artifacts are collected from required inputs and produced outputs', () => {

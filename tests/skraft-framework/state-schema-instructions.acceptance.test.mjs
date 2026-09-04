@@ -16,7 +16,7 @@ import { isOk } from '../../plugins/skraft-framework/src/domain/result.mjs'
 // this test fails the build if the two diverge, so drift is impossible.
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '../..')
-const instructionsPath = join(repoRoot, 'plugins/skraft-framework/instructions/skraft-state.instructions.md')
+const instructionsPath = join(repoRoot, 'plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md')
 
 // Extract the top-level field names from the ```json``` block under the `## Schema` heading.
 const instructionSchemaFields = () => {
@@ -32,7 +32,7 @@ test('SoC: instructions schema block lists exactly the STATE_SCHEMA fields', () 
   assert.deepEqual(
     documented,
     canonical,
-    'plugins/skraft-framework/instructions/skraft-state.instructions.md schema block has drifted from STATE_SCHEMA ' +
+    'plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md schema block has drifted from STATE_SCHEMA ' +
       '(plugins/skraft-framework/src/domain/state-schema.mjs). Update the instruction JSON block or STATE_SCHEMA so the ' +
       'two agree — the code descriptor is the single source of truth.'
   )

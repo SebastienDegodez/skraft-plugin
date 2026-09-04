@@ -15,8 +15,11 @@ Rules:
 
 ## skraft-framework documentation
 
-- Framework architecture, genesis anchoring (A9/S4/S7), fail modes, guardrails G1–G8,
-  and the guide for adding a new guardrail: **`plugins/skraft-framework/README.md`**.
+- Plugin install, use, pipeline, guardrails and harness packaging:
+  **`plugins/skraft-framework/README.md`**.
+- Framework internals and physical architecture: **`docs/architecture.md`**.
+- Runtime hook rationale, fail modes and guardrails G1–G8:
+  **`docs/site/en/explanation/hooks.md`** and **`docs/site/fr/explanation/hooks.md`**.
 - Roadmap with all 13 US (gain + status + milestone): **`docs/roadmap.md`**.
 - Skill evaluation (Vally), the published quality dashboard and AGENTVIZ replay:
   **`docs/skill-evaluation.md`**.
@@ -36,7 +39,7 @@ plugins/
       api/hooks/       ← Hook router, service factory, entry, decision helpers
       infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
     cli/               ← Composition root: hook.mjs wires all services
-    hooks/               ← hooks.json manifest (Claude Code hook declarations)
+    hooks/hooks.json     ← The one hook manifest, at the path every harness auto-loads
     stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
     skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 
@@ -54,6 +57,26 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   dashboard/           ← History, published data, AGENTVIZ manifest, retention, publish.sh
   run-vally-evals.sh   ← One local runner: paired skill comparisons + real-agent suites
 ```
+
+### Agent descriptor rules
+
+Descriptors under `plugins/skraft-framework/com.anthropic.claude-code/agents/` are
+prompts an agent pays for on every run, not documentation.
+
+- **Write for the agent, never for a human reader.** Every sentence must carry a
+  decision the agent has to make. No prose explaining why a rule exists, no gloss
+  on the descriptor's own wording, no justification clause. The reasoning belongs
+  in the commit message.
+- **Put a rule's scope inside the rule**, not in a paragraph after it. A
+  prohibition scoped too narrowly is an escape hatch: `You NEVER produce business
+  content yourself` left the orchestrator free to configure Stryker and run the
+  mutation gates, so it did DELIVER itself and dispatched nothing.
+- **Never argue from the evaluation sandbox.** `none of them are available here`
+  describes the harness command allowlist; on a developer's machine `base64` and
+  `python` work, so the claim is false everywhere else and the agent reads the
+  whole rule as stale. Argue from what holds in both.
+- **Required dispatch content goes in an explicit list.** Buried mid-paragraph it
+  lands about half the time.
 
 ### Test placement rules
 

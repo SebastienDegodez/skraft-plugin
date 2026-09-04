@@ -4,24 +4,35 @@ import { readFileSync } from 'node:fs'
 
 import { readFrontMatter } from '../lib/front-matter.mjs'
 
+const pluginAgent = (relativePath) => `plugins/skraft-framework/com.anthropic.claude-code/agents/${relativePath}.md`
+
 const AGENT_PATHS = new Map([
-  ['skraft-orchestrator', 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md'],
-  ['solution-researcher', 'plugins/skraft-framework/agents/solution-researcher.agent.md'],
-  ['solution-architect', 'plugins/skraft-framework/agents/solution-architect.agent.md'],
-  ['solution-architect-reviewer', 'plugins/skraft-framework/agents/solution-architect-reviewer.agent.md'],
-  ['acceptance-designer', 'plugins/skraft-framework/agents/acceptance-designer.agent.md'],
-  ['acceptance-designer-reviewer', 'plugins/skraft-framework/agents/acceptance-designer-reviewer.agent.md'],
-  ['software-engineer', 'plugins/skraft-framework/agents/software-engineer.agent.md'],
-  ['software-engineer-reviewer', 'plugins/skraft-framework/agents/software-engineer-reviewer.agent.md'],
-  ['architecture-boundaries-lens', 'plugins/skraft-framework/agents/reviewer-lenses/architecture-boundaries-lens.agent.md'],
-  ['cold-reader-lens', 'plugins/skraft-framework/agents/reviewer-lenses/cold-reader-lens.agent.md'],
-  ['quality-gates-lens', 'plugins/skraft-framework/agents/reviewer-lenses/quality-gates-lens.agent.md'],
-  ['test-integrity-lens', 'plugins/skraft-framework/agents/reviewer-lenses/test-integrity-lens.agent.md'],
+  ['skraft-orchestrator', pluginAgent('skraft-orchestrator')],
+  // Product-layer chain. These two are NOT dispatched by the orchestrator - the
+  // developer invokes the discoverer directly and it dispatches its own reviewer
+  // at its review gate. Both are allowlisted so a suite can name the reviewer in
+  // `tags.subagents` and grade the dispatch instead of a narrated one.
+  ['backlog-discoverer', pluginAgent('backlog-discoverer')],
+  ['backlog-discoverer-reviewer', pluginAgent('backlog-discoverer-reviewer')],
+  ['discovery-completeness-lens', pluginAgent('reviewer-lenses/discovery-completeness-lens')],
+  ['discovery-prioritization-lens', pluginAgent('reviewer-lenses/discovery-prioritization-lens')],
+  ['discovery-duplicate-lens', pluginAgent('reviewer-lenses/discovery-duplicate-lens')],
+  ['solution-researcher', pluginAgent('solution-researcher')],
+  ['solution-architect', pluginAgent('solution-architect')],
+  ['solution-architect-reviewer', pluginAgent('solution-architect-reviewer')],
+  ['acceptance-designer', pluginAgent('acceptance-designer')],
+  ['acceptance-designer-reviewer', pluginAgent('acceptance-designer-reviewer')],
+  ['software-engineer', pluginAgent('software-engineer')],
+  ['software-engineer-reviewer', pluginAgent('software-engineer-reviewer')],
+  ['architecture-boundaries-lens', pluginAgent('reviewer-lenses/architecture-boundaries-lens')],
+  ['cold-reader-lens', pluginAgent('reviewer-lenses/cold-reader-lens')],
+  ['quality-gates-lens', pluginAgent('reviewer-lenses/quality-gates-lens')],
+  ['test-integrity-lens', pluginAgent('reviewer-lenses/test-integrity-lens')],
   // DELIVER-phase workers. Internal subagents (`user-invocable: false`), dispatched
   // by software-engineer; a suite selects one directly to grade the wiring it emits
   // without paying for the lead's whole TDD loop around it.
-  ['contract-testing-worker', 'plugins/skraft-framework/agents/workers/contract-testing/contract-testing-worker.agent.md'],
-  ['mock-integration-worker', 'plugins/skraft-framework/agents/workers/mocking/mock-integration-worker.agent.md'],
+  ['contract-testing-worker', pluginAgent('workers/contract-testing/contract-testing-worker')],
+  ['mock-integration-worker', pluginAgent('workers/mocking/mock-integration-worker')],
   // The handbook reconciler chain. It lives under .github/agents/ rather than
   // plugins/: it maintains the documentation of the plugin and is not itself part
   // of what ships to a consumer repository. The four specialists are here so a

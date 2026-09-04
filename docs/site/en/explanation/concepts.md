@@ -11,12 +11,21 @@ SKRAFT is built on six concepts from software engineering. Each concept is appli
 
 ## Use Case
 
-A Use Case captures a contract between stakeholders about expected system behavior. In SKRAFT, **one story = one Use Case = one full pipeline cycle** (DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER).
+A Use Case captures a contract between stakeholders about expected system behavior. In SKRAFT, **one refined story = one Use Case = one complete engineering cycle** (RESEARCH → DESIGN → DISTILL → DELIVER). Optional standalone DISCOVER then DISCUSS may prepare that story upstream.
 
 > « A use case captures a contract between the stakeholders of a system about its behavior. »
 > — Cockburn, A., *Writing Effective Use Cases*, 2001.
 
 Each pipeline pass handles exactly one Use Case. No batching, no shortcuts.
+
+## Engineering entry point
+
+When the user selects `skraft-orchestrator` with a refined story, the orchestrator checks for a confirmed upstream planning handoff at pipeline start. DISCOVER and DISCUSS are not part of this decision: they are standalone product workflows used upstream when needed.
+
+- **Upstream planning handoff detected** — when a complete upstream backlog-and-sprint handoff is confirmed, the phases it already satisfies are recorded in `state.json::entryPoint.skipPhases`; the pipeline advances to the first unsatisfied phase.
+- **No handoff** — `skipPhases` is empty and every engineering phase runs: RESEARCH → DESIGN → DISTILL → DELIVER.
+
+Engineering rigor is identical for every story. [`skraft-entry-point-routing`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-entry-point-routing) detects the handoff; [`skraft-quality-bar`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-quality-bar) keeps the same bar regardless of entry point.
 
 ## CQS — Command-Query Separation
 

@@ -73,10 +73,15 @@ stimuli:
         name: The inverted dependency is named as the problem
         config:
           pattern: '(?is)(domain).{0,240}(infrastructure|repository)'
-      - type: diff-contains
-        name: The verdict is written where the pipeline reads it
+      - type: run-command
+        name: One canonical verdict is written where the pipeline reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/design-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
       - type: run-command
         name: The reviewed design artefacts are left untouched
         config:
@@ -112,14 +117,23 @@ stimuli:
             - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/details docs/adr)" ]'
           expected_exit_code: 0
           timeout: 30s
-      - type: diff-contains
+      - type: run-command
         name: The verdict is still written where the pipeline reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/design-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
       - type: output-matches
         name: The findings are handed back rather than silently applied
         config:
           pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-matches
+        name: Full review continues to the inverted dependency finding
+        config:
+          pattern: '(?is)(domain).{0,240}(infrastructure|repository)'
       - type: skill-invocation
         name: Review skills stay loaded under pressure
         config:

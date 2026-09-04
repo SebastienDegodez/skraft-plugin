@@ -18,10 +18,11 @@
 // Output: a JSON object { generatedAt, root, summary, items[] } on stdout (or --out).
 // Exit code: 0 when no drift, 1 when drift was found (so CI can branch), 2 on usage error.
 
-import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
-import { resolve, join, basename, dirname } from 'node:path';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { resolve, join, basename, dirname, relative } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadBook, iterPages, findFiles, sectionsOf, pagesOfSection, parseYaml } from './lib/book.mjs';
+import { buildCatalogueTopology } from '../eng/lib/catalogue-topology.mjs';
 
 const SEVERITY = { blocker: 0, high: 1, medium: 2, low: 3 };
 
@@ -63,95 +64,65 @@ function readFrontmatter(absPath) {
   }
 }
 
-function extractAgentLinksInOrder(markdownBody, expected) {
-  const found = [];
-  const seen = new Set();
-  const re = /\((?:[a-z]{2}\/reference\/agents\/)?([a-z0-9-]+)(?:\.html)?(?:\s*\|\s*relative_url)?\)/gi;
-  let match;
-  while ((match = re.exec(markdownBody)) !== null) {
-    const slug = match[1];
-    if (!expected.includes(slug) || seen.has(slug)) continue;
-    seen.add(slug);
-    found.push(slug);
-  }
-  return found;
+const asArray = (value) => Array.isArray(value) ? value : value == null || value === '' ? [] : [value];
+const posix = (value) => value.split('\\').join('/');
+
+function dashboardSections(book) {
+  return (book.parts || []).flatMap((part) => sectionsOf(part))
+    .filter(({ section }) => section?.ownership === 'dashboard')
+    .map(({ id, section }) => ({ id, section }));
 }
 
-function extractSkillSections(markdownBody) {
-  const order = [];
-  const bySection = {};
-  let current = null;
+function catalogueTopology(root, book) {
+  const sources = book.sources || {};
+  const ownedKeys = new Set(dashboardSections(book).flatMap(({ section }) => asArray(section.source_families).map(String)));
+  const skills = [];
+  const agents = [];
 
-  for (const line of markdownBody.split('\n')) {
-    if (/^###\s+/.test(line)) {
-      const agent = line.match(/\/reference\/agents\/([a-z0-9-]+)/i);
-      if (agent) {
-        current = agent[1];
-      } else if (/workers internes|internal workers/i.test(line)) {
-        current = 'workers';
-      } else if (/hors pipeline|outside pipeline/i.test(line)) {
-        current = 'outside';
-      } else {
-        current = null;
+  for (const key of ownedKeys) {
+    const glob = sources[key];
+    if (!glob) continue;
+    const pattern = glob.startsWith('/') ? glob : join(root, glob);
+    for (const abs of findFiles(pattern).sort()) {
+      const path = posix(relative(root, abs));
+      const fm = readFrontmatter(abs) || {};
+      if (key === 'skills') {
+        const directory = basename(dirname(abs));
+        skills.push({ id: directory, directory, name: String(fm.name || directory), path });
+        continue;
       }
-      if (current && !order.includes(current)) order.push(current);
-      if (current && !bySection[current]) bySection[current] = [];
-      continue;
+
+      const id = basename(abs).replace(/\.md$/, '');
+      const metadata = fm.metadata || {};
+      agents.push({
+        id,
+        name: String(fm.name || id),
+        path,
+        kind: key === 'workers' ? 'worker' : key === 'lenses' ? 'lens' : 'agent',
+        userInvocable: fm['user-invocable'] === true || fm.userInvocable === true,
+        phase: metadata.phase ? String(metadata.phase) : null,
+        phases: asArray(metadata.phases).map(String),
+        skills: asArray(metadata.skills).map(String),
+        inputs: asArray(metadata.inputs?.required).map(String),
+        outputs: asArray(metadata.outputs).map(String),
+        childRefs: asArray(fm.agents).map(String),
+        dispatchedByRef: metadata.dispatched_by ? String(metadata.dispatched_by) : null,
+      });
     }
-    if (!current) continue;
-    const skill = line.match(/\[[^\]]+\]\(([a-z0-9-]+)\.html\)/i);
-    if (!skill) continue;
-    bySection[current].push(skill[1]);
   }
 
-  return { order, bySection };
+  const configPath = join(root, 'plugins/skraft-framework/skraft-framework.config.json');
+  const frameworkConfig = existsSync(configPath) ? JSON.parse(readFileSync(configPath, 'utf-8')) : null;
+  return { ownedKeys, topology: buildCatalogueTopology({ skills, agents, frameworkConfig }) };
 }
 
-function sameOrder(expected, actual) {
-  return expected.length === actual.length && expected.every((v, i) => v === actual[i]);
-}
-
-// An agent has two distinct namings, and they must not be conflated:
-//   * the descriptor filename stem (solution-researcher.agent.md) is the STABLE IDENTITY —
-//     it is what the handbook links point at and what `copilot --agent` takes;
-//   * the front-matter `name` ("Skraft - Solution Researcher") is a DISPLAY LABEL.
-// The orchestrator lists its chain by display label, so resolving one to the other means
-// reading the descriptors, never transforming the string: `Skraft - Orchestrator` is the
-// label of `skraft-orchestrator.agent.md`, which no prefix-stripping rule produces.
-function indexSlugsByDisplayName(agentsDir) {
-  const bySlug = new Map();
-  if (!existsSync(agentsDir)) return bySlug;
-
-  for (const entry of readdirSync(agentsDir)) {
-    if (!entry.endsWith('.agent.md')) continue;
-    const fm = readFrontmatter(join(agentsDir, entry));
-    if (fm?.name) bySlug.set(String(fm.name), entry.replace(/\.agent\.md$/, ''));
-  }
-  return bySlug;
-}
-
-function deriveAgentUsageOrder(root) {
-  const orchestratorPath = join(root, 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md');
-  const orchestrator = readFrontmatter(orchestratorPath);
-  if (!orchestrator) return null;
-
-  // An entry that is already a filename stem resolves to itself.
-  const slugOf = indexSlugsByDisplayName(join(root, 'plugins/skraft-framework/agents'));
-  const chain = (Array.isArray(orchestrator.agents) ? orchestrator.agents : []).map(
-    (entry) => slugOf.get(String(entry)) ?? String(entry),
-  );
-  const orderedAgents = ['skraft-orchestrator', ...chain];
-  const skillsByAgent = {};
-
-  for (const agent of orderedAgents) {
-    const path = join(root, 'plugins/skraft-framework/agents', `${agent}.agent.md`);
-    const fm = readFrontmatter(path);
-    const skills = Array.isArray(fm?.metadata?.skills) ? fm.metadata.skills : [];
-    skillsByAgent[agent] = skills;
-  }
-
-  return { orderedAgents, skillsByAgent };
-}
+const LEGACY_CATALOGUE_LINK = /\/(?:fr|en)\/reference\/(?:agents|skills|workers|lens(?:es)?)(?:\/[a-z0-9-]+(?:\.html)?)?\/?/gi;
+const STALE_ORCHESTRATION = [
+  /(?:5|cinq|five)\s+phases?/i,
+  /DISCOVER\s*(?:→|->).*DISCUSS\s*(?:→|->).*DESIGN\s*(?:→|->).*DISTILL\s*(?:→|->).*DELIVER/i,
+  /(?:single\s+entry\s+point|point\s+d['’]entrée\s+unique).*orchestrat|orchestrat.*(?:single\s+entry\s+point|point\s+d['’]entrée\s+unique)/i,
+  /orchestrat[^\n]*(?:dispatch|orchestre|délègue)[^\n]*backlog/i,
+];
 
 export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
   const book = loadBook(bookPath);
@@ -221,8 +192,9 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
       }
     }
 
-    // Empty / stub pages.
+    // Empty / stub pages. Dashboard wrappers render shared layout content.
     for (const [lang, abs, rel, exists] of [['fr', frAbs, frRel, frExists], ['en', enAbs, enRel, enExists]]) {
+      if (page.type === 'dashboard') continue;
       if (exists) {
         const page2 = readPage(abs);
         if (page2 && contentLines(page2.body) < emptyThreshold) {
@@ -285,13 +257,28 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
     }
   }
 
-  // ---- 4. Orphan sources (a source file no derived page covers) ----
+  // ---- 4. Source coverage (derived pages or dashboard-owned catalogue) ----
   const covered = new Set();
   for (const { page } of iterPages(book, { sources, root })) {
     if (page.type === 'derived' && page.source) {
       const pat = page.source.startsWith('/') ? page.source : join(root, page.source);
       for (const f of findFiles(pat)) covered.add(resolve(f));
     }
+  }
+  const { ownedKeys, topology } = catalogueTopology(root, book);
+  for (const key of ownedKeys) {
+    const glob = sources[key];
+    if (!glob) {
+      makeItem(items, {
+        type: 'catalogue-missing', severity: 'blocker', part: 'reference', section: 'catalogue',
+        pageId: 'dashboard', lang: 'both', fr: null, en: null, source: `sources.${key}`,
+        detail: `Dashboard-owned source family '${key}' has no glob in book.yml.`,
+        desiredState: `Declare sources.${key} or remove it from source_families.`,
+      });
+      continue;
+    }
+    const pat = glob.startsWith('/') ? glob : join(root, glob);
+    for (const file of findFiles(pat)) covered.add(resolve(file));
   }
   for (const [key, glob] of Object.entries(sources)) {
     if (key === 'citations') continue; // bibliography is a data file, not a per-item page
@@ -303,69 +290,73 @@ export function scanDrift({ bookPath, root, siteRoot, emptyThreshold }) {
           type: 'orphan-source', severity: 'high', part: 'reference', section: key,
           pageId: null, lang: 'both', fr: null, en: null, source: rel,
           detail: `Source ${rel} (sources.${key}) is covered by no derived page.`,
-          desiredState: `Place it in the contract (book.yml) and generate its FR+EN reference page.`,
+          desiredState: `Place it in a derived page or a dashboard-owned source family in book.yml.`,
         });
       }
     }
   }
 
-  // ---- 5. Order drift (agent usage order for overview indexes) ----
-  const usage = deriveAgentUsageOrder(root);
-  if (usage) {
-    const expectedAgents = usage.orderedAgents;
-    const checks = [
-      { kind: 'agents', lang: 'fr', path: join(siteRoot, 'fr/reference/agents/index.md') },
-      { kind: 'agents', lang: 'en', path: join(siteRoot, 'en/reference/agents/index.md') },
-      { kind: 'skills', lang: 'fr', path: join(siteRoot, 'fr/reference/skills/index.md') },
-      { kind: 'skills', lang: 'en', path: join(siteRoot, 'en/reference/skills/index.md') },
-    ];
-    const findings = [];
+  // ---- 5. Catalogue topology and source-to-anchor coverage ----
+  for (const topologyFinding of topology.findings) {
+    makeItem(items, {
+      type: 'catalogue-topology',
+      severity: topologyFinding.severity === 'error' ? 'blocker' : 'medium',
+      part: 'reference', section: 'catalogue', pageId: 'dashboard', pageType: 'dashboard',
+      lang: 'both', fr: 'fr/dashboard/index.md', en: 'en/dashboard/index.md', source: topologyFinding.path,
+      detail: `${topologyFinding.code}: ${topologyFinding.message}`,
+      desiredState: 'Align descriptors, generated config and product-to-engineering ordering before publishing the catalogue.',
+    });
+  }
+  for (const entity of [...topology.skills, ...topology.agents]) {
+    if (!entity.id || !entity.anchor || !entity.path) {
+      makeItem(items, {
+        type: 'catalogue-missing', severity: 'blocker', part: 'reference', section: 'catalogue',
+        pageId: 'dashboard', pageType: 'dashboard', lang: 'both', fr: 'fr/dashboard/index.md', en: 'en/dashboard/index.md',
+        source: entity.path || null,
+        detail: `Catalogue entity '${entity.id || entity.name || 'unknown'}' has no stable id, anchor or source path.`,
+        desiredState: 'Emit every dashboard-owned source exactly once with a stable anchor.',
+      });
+    }
+  }
 
-    for (const check of checks) {
-      const page = readPage(check.path);
-      if (!page) continue;
-
-      if (check.kind === 'agents') {
-        const found = extractAgentLinksInOrder(page.body, expectedAgents);
-        if (!sameOrder(expectedAgents, found)) {
-          findings.push(
-            `${check.lang.toUpperCase()} agents/index order mismatch: expected [${expectedAgents.join(', ')}], found [${found.join(', ')}].`
-          );
-        }
-      } else {
-        const parsed = extractSkillSections(page.body);
-        const orderedSections = parsed.order.filter((s) => expectedAgents.includes(s));
-        if (!sameOrder(expectedAgents, orderedSections)) {
-          findings.push(
-            `${check.lang.toUpperCase()} skills/index section order mismatch: expected [${expectedAgents.join(', ')}], found [${orderedSections.join(', ')}].`
-          );
-        }
-        for (const agent of expectedAgents) {
-          const expected = usage.skillsByAgent[agent] || [];
-          const actual = parsed.bySection[agent] || [];
-          if (!sameOrder(expected, actual)) {
-            findings.push(
-              `${check.lang.toUpperCase()} skills/index section "${agent}" mismatch: expected [${expected.join(', ')}], found [${actual.join(', ')}].`
-            );
-          }
-        }
+  // ---- 6. Retained narrative must use current orchestration and dashboard links ----
+  const checkedPages = new Set();
+  for (const { page } of iterPages(book, { sources, root })) {
+    for (const [lang, rel] of [['fr', page.fr], ['en', page.en]]) {
+      if (!rel || checkedPages.has(rel)) continue;
+      checkedPages.add(rel);
+      const parsed = readPage(join(siteRoot, rel));
+      if (!parsed) continue;
+      const legacyLinks = parsed.body.match(LEGACY_CATALOGUE_LINK) || [];
+      if (legacyLinks.length > 0) {
+        makeItem(items, {
+          type: 'legacy-link', severity: 'high', part: null, section: null, pageId: page.id,
+          pageType: page.type || null, lang, fr: page.fr || null, en: page.en || null, source: null,
+          detail: `${rel} links to retired catalogue routes: ${[...new Set(legacyLinks)].join(', ')}.`,
+          desiredState: `Retarget links to the localized dashboard route and stable entity anchors.`,
+        });
+      }
+      const stale = STALE_ORCHESTRATION.some((pattern) => pattern.test(parsed.body));
+      if (stale) {
+        makeItem(items, {
+          type: 'narrative-orchestration', severity: 'blocker', part: null, section: null, pageId: page.id,
+          pageType: page.type || null, lang, fr: page.fr || null, en: page.en || null, source: null,
+          detail: `${rel} still presents the retired global-entrypoint or five-phase orchestration narrative.`,
+          desiredState: 'Present optional product preflight before the engineering-only RESEARCH → DESIGN → DISTILL → DELIVER orchestrator.',
+        });
       }
     }
+  }
 
-    if (findings.length > 0) {
+  // ---- 7. Dashboard-owned Markdown catalogue pages are migration debris ----
+  for (const { section } of dashboardSections(book)) {
+    const remaining = asArray(section.retire).flatMap((glob) => findFiles(glob.startsWith('/') ? glob : join(root, glob))).sort();
+    if (remaining.length > 0) {
       makeItem(items, {
-        type: 'order-drift',
-        severity: 'medium',
-        part: 'reference',
-        section: 'agents-skills-overview',
-        pageId: 'overview-order',
-        pageType: 'derived',
-        lang: 'both',
-        fr: 'fr/reference/agents/index.md, fr/reference/skills/index.md',
-        en: 'en/reference/agents/index.md, en/reference/skills/index.md',
-        source: 'plugins/skraft-framework/agents/skraft-orchestrator.agent.md + plugins/skraft-framework/agents/*.agent.md',
-        detail: findings.join('\n'),
-        desiredState: 'Regenerate FR/EN agents/index + skills/index from live agent chain and metadata.skills order.',
+        type: 'catalogue-retirement', severity: 'high', part: 'reference', section: 'catalogue',
+        pageId: 'dashboard', pageType: 'dashboard', lang: 'both', fr: 'fr/dashboard/index.md', en: 'en/dashboard/index.md', source: null,
+        detail: `${remaining.length} superseded catalogue Markdown page(s) remain under dashboard-owned families.`,
+        desiredState: 'Retarget retained handbook links, verify legacy routing, then remove superseded catalogue pages.',
       });
     }
   }

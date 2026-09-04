@@ -39,8 +39,26 @@ L'idée « permettre la commande mobile dans l'app » entre ici comme **issue br
 
 - Classification par priorité (MoSCoW).
 - Détection de doublons et d'issues liées.
-- Estimation d'effort initiale.
+- Estimation d'effort initiale, en points Fibonacci (1, 2, 3, 5, 8).
 - Proposition de sprint.
+
+Les points ne sont pas des jours. Un point mesure une complexité relative, pas une durée.
+SKRAFT les convertit en jours-équipe pour une seule raison : la capacité arrive en jours,
+et deux unités ne se comparent pas sans passerelle. La conversion est une convention
+locale du dépôt — jamais une mesure, jamais une prévision, jamais une date.
+
+| Points | Jours-équipe |
+|---|---|
+| 1 | 0,25 |
+| 2 | 0,5 |
+| 3 | 0,75 |
+| 5 | 1,5 |
+| 8 | 3 |
+| 13 et 21 | à découper avant le sprint |
+
+Le coût par point ne redescend jamais quand la carte grossit. Découper une carte de
+8 points en 3 + 5 coûte 2,25 jours au lieu de 3 : le découpage est arithmétiquement
+moins cher que le report.
 
 ## Les gates franchies ici
 

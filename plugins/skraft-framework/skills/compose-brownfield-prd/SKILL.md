@@ -1,13 +1,13 @@
 ---
 name: compose-brownfield-prd
-description: "Use to compose an HVE-format PRD (17 sections, docs/prds/<name>.md) from brownfield characterization artifacts produced by characterize-brownfield. Maps as-is features, constraints, integrations, coverage and tech debt into HVE PRD sections with FR/NFR IDs and full traceability. Activate on 'write the PRD', 'compose PRD from characterization', 'produce an HVE PRD for this system'."
+description: "Use to compose a structured 17-section PRD at docs/prds/<name>.md from brownfield characterization artifacts produced by characterize-brownfield. Maps as-is features, constraints, integrations, coverage and tech debt into PRD sections with FR/NFR IDs and full traceability. Activate on 'write the PRD', 'compose PRD from characterization', 'produce a PRD for this system'."
 disable-model-invocation: true
 ---
 
 # Compose Brownfield PRD
 
-Maps `characterize-brownfield` output into a PRD matching the exact HVE format so downstream
-HVE agents (GitHub Backlog Manager, `ado-prd-to-wit`, `jira-prd-to-wit`) can consume it directly.
+Maps `characterize-brownfield` output into the repository's 17-section PRD contract so downstream
+backlog tooling can consume it directly.
 Loaded internally by `brownfield-analyst` after characterization completes — not designed for
 standalone dispatch (hence `disable-model-invocation`), but callable directly if characterization
 artifacts already exist from a prior run.
@@ -22,9 +22,9 @@ persisted artifacts — B4 — rather than re-deriving). Never creates issues. N
 - Goals (optional — if the human states explicit modernization goals, fold them into Section 1;
   otherwise derive draft goals from the "Modernization Opportunities" signal in tech-debt.md).
 
-## Mapping table (characterization -> HVE PRD section)
+## Mapping table (characterization -> PRD section)
 
-| Characterization source | HVE section |
+| Characterization source | PRD section |
 |---|---|
 | structure.md, index.md summary | S5 Product Overview, S1 context |
 | features.md (Core/Secondary) | S6 Functional Requirements (`FR-NNN`) |
@@ -75,6 +75,6 @@ persisted artifacts — B4 — rather than re-deriving). Never creates issues. N
 ## Handoff
 
 Report to the human: the PRD path, the gate verdict, and the count of Open Questions. The human
-decides when to hand the PRD to an HVE agent (GitHub Backlog Manager for artifact-driven issue
-discovery, or `ado-prd-to-wit` / `jira-prd-to-wit` for a full work-item hierarchy) — this skill
+decides when to hand the PRD to downstream backlog tooling for artifact-driven issue discovery
+or full work-item hierarchy generation — this skill
 does not invoke them.

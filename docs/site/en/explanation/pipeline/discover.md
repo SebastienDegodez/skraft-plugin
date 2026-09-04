@@ -39,8 +39,25 @@ The idea “enable mobile ordering in the app” enters here as a **raw issue**.
 
 - MoSCoW priority classification.
 - Duplicate and related-issue detection.
-- Initial effort estimation.
+- Initial effort estimation, in Fibonacci points (1, 2, 3, 5, 8).
 - Sprint proposal.
+
+Points are not days. A point measures relative complexity, not duration. SKRAFT converts
+them into team-days for one reason only: capacity arrives in days, and the two units
+cannot be compared without a bridge. The conversion is a local convention of this
+repository — never a measurement, never a forecast, never a date.
+
+| Points | Team-days |
+|---|---|
+| 1 | 0.25 |
+| 2 | 0.5 |
+| 3 | 0.75 |
+| 5 | 1.5 |
+| 8 | 3 |
+| 13 and 21 | must be split before the sprint |
+
+Cost per point never falls as the card grows. Splitting an 8-point card into 3 + 5 costs
+2.25 days instead of 3: splitting is the cheaper arithmetic, never the more expensive one.
 
 ## Gates crossed here
 

@@ -56,7 +56,7 @@ Each worker emits test wiring only — the business TDD cycle stays with the lea
 verifies the worker in **TIER-1** (the test fails first, then passes). When a
 capability is active, its fidelity lens joins the adversarial panel of the
 `software-engineer-reviewer`. The concrete wiring is resolved per stack through a
-*roster* (see the [skills]({{ "/en/reference/skills/" | relative_url }})).
+*roster* (see the [agentic catalogue]({{ "/en/dashboard/" | relative_url }})).
 
 ## Gates crossed here
 

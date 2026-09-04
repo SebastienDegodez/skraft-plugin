@@ -1,0 +1,93 @@
+{% assign english = false %}{% if page.lang == 'en' %}{% assign english = true %}{% endif %}
+<header class="hero">
+  <div class="hero-content">
+    <p class="eyebrow">{% if english %}Plugin quality dashboard{% else %}Dashboard qualité du plugin{% endif %}</p>
+    <h1>{% if english %}Skills that make delivery <em>disciplined.</em>{% else %}Des skills pour une livraison <em>disciplinée.</em>{% endif %}</h1>
+    <p class="lead">
+      {% if english %}Everything the SKRAFT plugin ships — skills, agents, workers, review lenses — with its context profile, its evaluation coverage, and the evidence from controlled skill-versus-baseline runs.{% else %}Tout ce que livre le plugin SKRAFT — skills, agents, workers et lentilles de revue — avec son profil de contexte, sa couverture d'évaluation et les preuves issues de comparaisons contrôlées skill versus baseline.{% endif %}
+    </p>
+  </div>
+</header>
+
+<main class="dashboard-main">
+  <section id="summary" class="summary" aria-label="{% if english %}Plugin summary{% else %}Résumé du plugin{% endif %}"></section>
+
+  <section class="callout" id="replay-callout" hidden>
+    <p><strong>{% if english %}Session replay.{% else %}Replay de session.{% endif %}</strong> {% if english %}Compare recorded skilled and baseline trajectories side by side.{% else %}Comparer côte à côte les trajectoires enregistrées avec et sans skill.{% endif %}</p>
+    <a class="button primary" id="replay-link" href="#">{% if english %}Open session replay{% else %}Ouvrir le replay{% endif %}</a>
+  </section>
+
+  <nav class="tabs" aria-label="{% if english %}Dashboard views{% else %}Vues du dashboard{% endif %}">
+    <button class="tab active" id="tab-overview" type="button" data-panel="overview" aria-controls="panel-overview" aria-selected="true">{% if english %}Catalogue{% else %}Catalogue{% endif %}</button>
+    <button class="tab" id="tab-quality" type="button" data-panel="quality" aria-controls="panel-quality" aria-selected="false">{% if english %}Quality{% else %}Qualité{% endif %}</button>
+    <button class="tab" id="tab-efficiency" type="button" data-panel="efficiency" aria-controls="panel-efficiency" aria-selected="false">{% if english %}Efficiency{% else %}Efficacité{% endif %}</button>
+    <button class="tab" id="tab-models" type="button" data-panel="models" aria-controls="panel-models" aria-selected="false">{% if english %}Models{% else %}Modèles{% endif %}</button>
+  </nav>
+
+  <section class="dashboard-filters" aria-label="{% if english %}Dashboard filters{% else %}Filtres du dashboard{% endif %}">
+    <label class="search"><span>{% if english %}Search every view{% else %}Rechercher dans toutes les vues{% endif %}</span><input id="search" type="search" placeholder="{% if english %}Skill, agent, model, description…{% else %}Skill, agent, modèle, description…{% endif %}" autocomplete="off"></label>
+    <label class="select-filter"><span>{% if english %}Agent model{% else %}Modèle agent{% endif %}</span><select id="model-filter"><option value="">{% if english %}All evaluated models{% else %}Tous les modèles évalués{% endif %}</option></select></label>
+    <button class="button filter-clear" id="clear-filters" type="button">{% if english %}Clear filters{% else %}Effacer les filtres{% endif %}</button>
+    <p>{% if english %}These filters apply to catalogue, quality, efficiency and model comparison.{% else %}Ces filtres s'appliquent au catalogue, à la qualité, à l'efficacité et à la comparaison des modèles.{% endif %}</p>
+  </section>
+
+  <section class="panel active" id="panel-overview" aria-labelledby="tab-overview">
+    <section id="chains" class="view-heading">
+      <p class="eyebrow">{% if english %}Usage order{% else %}Ordre d'usage{% endif %}</p>
+      <h2>{% if english %}Product preflight, then engineering{% else %}Préparation produit, puis ingénierie{% endif %}</h2>
+      <p>{% if english %}Optional standalone product workflows precede the single engineering entrypoint. Brownfield and other roots stay independent.{% else %}Les workflows produit autonomes et optionnels précèdent l'unique point d'entrée d'ingénierie. Brownfield et les autres racines restent indépendants.{% endif %}</p>
+    </section>
+    <section id="topology" class="topology" aria-live="polite"></section>
+
+    <section class="catalog-heading">
+      <div><p class="eyebrow">{% if english %}Source-derived catalogue{% else %}Catalogue dérivé des sources{% endif %}</p><h2>{% if english %}Agents, workers, lenses and skills{% else %}Agents, workers, lentilles et skills{% endif %}</h2></div>
+    </section>
+    <div id="status" class="status" role="status">{% if english %}Loading catalogue…{% else %}Chargement du catalogue…{% endif %}</div>
+    <section id="catalog" class="catalog" aria-live="polite"></section>
+  </section>
+
+  <section class="panel" id="panel-quality" aria-labelledby="tab-quality">
+    <div class="view-heading"><p class="eyebrow">{% if english %}Controlled comparison{% else %}Comparaison contrôlée{% endif %}</p><h2>{% if english %}Quality and activation{% else %}Qualité et activation{% endif %}</h2></div>
+    <section class="indicator-guide" aria-labelledby="quality-guide-title">
+      <h3 id="quality-guide-title">{% if english %}How to read quality{% else %}Comment lire la qualité{% endif %}</h3>
+      <p>{% if english %}Each model is compared with and without the skill. Models appear together only when the same judge scored them; “highest score” applies to this skill and judge, not to every task.{% else %}Chaque modèle est comparé avec et sans le skill. Les modèles apparaissent ensemble uniquement quand le même juge les a évalués ; « score le plus élevé » vaut pour ce skill et ce juge, pas pour toutes les tâches.{% endif %}</p>
+      <dl class="indicator-definitions">
+        <div><dt>{% if english %}Baseline{% else %}Baseline{% endif %}</dt><dd>{% if english %}Score without the skill.{% else %}Score sans le skill.{% endif %}</dd></div>
+        <div><dt>{% if english %}Skilled{% else %}Avec skill{% endif %}</dt><dd>{% if english %}Score from the same model with the skill available.{% else %}Score du même modèle avec le skill disponible.{% endif %}</dd></div>
+        <div><dt>{% if english %}Lift{% else %}Gain{% endif %}</dt><dd>{% if english %}Skilled minus baseline. Positive means the skill helped on this run set.{% else %}Score avec skill moins baseline. Positif signifie que le skill a aidé sur ce jeu d'essais.{% endif %}</dd></div>
+        <div><dt>{% if english %}Activation rate{% else %}Taux d'activation{% endif %}</dt><dd>{% if english %}How often the skill loaded when expected.{% else %}Fréquence de chargement du skill quand il était attendu.{% endif %}</dd></div>
+        <div><dt>{% if english %}Unexpected{% else %}Inattendues{% endif %}</dt><dd>{% if english %}Loads on prompts where the skill should have stayed inactive. Zero is the target.{% else %}Chargements sur des prompts où le skill devait rester inactif. Zéro est la cible.{% endif %}</dd></div>
+        <div><dt>{% if english %}Verdict{% else %}Verdict{% endif %}</dt><dd>{% if english %}Statistical conclusion across paired trials, not a single success or failure.{% else %}Conclusion statistique sur des essais appariés, pas un succès ou un échec isolé.{% endif %}</dd></div>
+      </dl>
+    </section>
+    <section id="quality-grid" class="catalog" aria-live="polite"></section>
+  </section>
+  <section class="panel" id="panel-efficiency" aria-labelledby="tab-efficiency">
+    <div class="view-heading"><p class="eyebrow">{% if english %}Runtime profile{% else %}Profil d'exécution{% endif %}</p><h2>{% if english %}Efficiency{% else %}Efficacité{% endif %}</h2></div>
+    <section class="indicator-guide" aria-labelledby="efficiency-guide-title">
+      <h3 id="efficiency-guide-title">{% if english %}How to read efficiency{% else %}Comment lire l'efficacité{% endif %}</h3>
+      <p>{% if english %}Compare each model with its own baseline. Lower resource use is useful only when quality remains acceptable; efficiency alone does not identify the best model.{% else %}Comparez chaque modèle à sa propre baseline. Une consommation plus faible n'est utile que si la qualité reste acceptable ; l'efficacité seule ne désigne pas le meilleur modèle.{% endif %}</p>
+      <dl class="indicator-definitions">
+        <div><dt>{% if english %}Duration{% else %}Durée{% endif %}</dt><dd>{% if english %}Median elapsed time per trial.{% else %}Temps écoulé médian par essai.{% endif %}</dd></div>
+        <div><dt>{% if english %}Tokens{% else %}Tokens{% endif %}</dt><dd>{% if english %}Median model input and output volume per trial.{% else %}Volume médian d'entrée et de sortie du modèle par essai.{% endif %}</dd></div>
+        <div><dt>{% if english %}Turns{% else %}Tours{% endif %}</dt><dd>{% if english %}Median number of agent reasoning cycles.{% else %}Nombre médian de cycles de raisonnement de l'agent.{% endif %}</dd></div>
+        <div><dt>{% if english %}Tool calls{% else %}Appels d'outils{% endif %}</dt><dd>{% if english %}Median number of external actions taken by the agent.{% else %}Nombre médian d'actions externes réalisées par l'agent.{% endif %}</dd></div>
+        <div><dt>{% if english %}Delta{% else %}Écart{% endif %}</dt><dd>{% if english %}Change from baseline. A negative percentage means the skilled run used less.{% else %}Évolution par rapport à la baseline. Un pourcentage négatif signifie que l'essai avec skill a consommé moins.{% endif %}</dd></div>
+      </dl>
+    </section>
+    <section id="efficiency-grid" class="catalog" aria-live="polite"></section>
+  </section>
+  <section class="panel" id="panel-models" aria-labelledby="tab-models">
+    <div class="view-heading"><p class="eyebrow">{% if english %}One arm per agent model{% else %}Un bras par modèle agent{% endif %}</p><h2>{% if english %}Model comparison{% else %}Comparaison des modèles{% endif %}</h2></div>
+    <section class="indicator-guide" aria-labelledby="models-guide-title">
+      <h3 id="models-guide-title">{% if english %}How to compare models{% else %}Comment comparer les modèles{% endif %}</h3>
+      <p>{% if english %}One row is one agent model. Compare rows only inside the same table: they used the same skill and were scored by the same judge. “Highest score” is local evidence, never a universal model ranking.{% else %}Une ligne correspond à un modèle agent. Comparez uniquement les lignes d'un même tableau : elles utilisent le même skill et le même juge. « Score le plus élevé » est une preuve locale, jamais un classement universel des modèles.{% endif %}</p>
+      <dl class="indicator-definitions">
+        <div><dt>{% if english %}Agent model{% else %}Modèle agent{% endif %}</dt><dd>{% if english %}Model that performed the task.{% else %}Modèle qui a réalisé la tâche.{% endif %}</dd></div>
+        <div><dt>{% if english %}Judge{% else %}Juge{% endif %}</dt><dd>{% if english %}Model that scored the outputs against the rubric.{% else %}Modèle qui a évalué les sorties selon la grille.{% endif %}</dd></div>
+        <div><dt>{% if english %}Highest score{% else %}Score le plus élevé{% endif %}</dt><dd>{% if english %}Largest skilled score in this table; inspect lift and efficiency before deciding.{% else %}Meilleur score avec skill dans ce tableau ; examinez aussi le gain et l'efficacité avant de décider.{% endif %}</dd></div>
+      </dl>
+    </section>
+    <section id="model-grid" class="catalog" aria-live="polite"></section>
+  </section>
+</main>

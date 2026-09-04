@@ -4,7 +4,7 @@ description: Verifies that the real SKRAFT Software Engineer drives an approved 
 type: capability
 defaults:
   executor: skraft-agent-runner
-  timeout: 8m
+  timeout: 15m
   model: claude-sonnet-5
   runs: 3
 scoring:
@@ -28,7 +28,7 @@ stimuli:
       - skraft-agent-runner
     constraints:
       max_turns: 2
-      max_duration: 8m
+      max_duration: 15m
     environment:
       files:
         - src: fixtures/approved-loyalty-discount-red/.gitignore

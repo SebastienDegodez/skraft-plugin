@@ -1,4 +1,7 @@
 import { deepStrictEqual, strictEqual } from 'node:assert/strict'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { createRegisterExecutors, pilotPermissionHandler, registerExecutors } from '../../eng/vally-agent-executor/plugin.mjs'
@@ -106,6 +109,53 @@ describe('Vally executor plugin registration', () => {
       possibleUrls: [],
       fullCommandText: "grep -r 'Mock<' src",
     }, context), { kind: 'approve-once' })
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [
+        { identifier: 'cd', fullCommandText: 'cd /tmp/work' },
+        { identifier: 'node', fullCommandText: 'node scripts/render.mjs' },
+      ],
+      possiblePaths: ['/tmp/work', '/tmp/work/scripts/render.mjs'],
+      possibleUrls: [],
+      fullCommandText: 'cd /tmp/work && node scripts/render.mjs',
+    }, context), { kind: 'approve-once' })
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [
+        { identifier: 'node', fullCommandText: 'node /tmp/plugin/src/cli/artifact.mjs review-verdict --out .copilot-tracking/reviews/design-review-1.md' },
+      ],
+      possiblePaths: ['/tmp/plugin/src/cli/artifact.mjs'],
+      possibleUrls: [],
+      fullCommandText: [
+        'node /tmp/plugin/src/cli/artifact.mjs review-verdict --out .copilot-tracking/reviews/design-review-1.md <<\'EOF\'',
+        'conclusion: "contract / ADR-002 / reconciled: no"',
+        'EOF',
+      ].join('\n'),
+    }, { ...context, readableRoots: ['/tmp/work', '/tmp/plugin'] }), { kind: 'approve-once' })
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [
+        { identifier: 'cd', fullCommandText: 'cd /tmp/outside' },
+        { identifier: 'node', fullCommandText: 'node scripts/render.mjs' },
+      ],
+      possiblePaths: ['/tmp/outside', '/tmp/outside/scripts/render.mjs'],
+      possibleUrls: [],
+      fullCommandText: 'cd /tmp/outside && node scripts/render.mjs',
+    }, context).kind, 'reject')
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'bash', fullCommandText: 'bash scripts/configure-mutation.sh --root .' }],
+      possiblePaths: ['/tmp/work/scripts/configure-mutation.sh'],
+      possibleUrls: [],
+      fullCommandText: 'bash scripts/configure-mutation.sh --root .',
+    }, context), { kind: 'approve-once' })
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'bash', fullCommandText: 'bash arbitrary.sh' }],
+      possiblePaths: ['/tmp/work/arbitrary.sh'],
+      possibleUrls: [],
+      fullCommandText: 'bash arbitrary.sh',
+    }, context).kind, 'reject')
   })
 
   it('rejects a shell command that names an absolute path outside the workspace', () => {
@@ -128,6 +178,73 @@ describe('Vally executor plugin registration', () => {
       possibleUrls: [],
       fullCommandText: 'git status --porcelain 2>/dev/null',
     }, context), { kind: 'approve-once' })
+  })
+
+  it('resolves filesystem aliases without letting a symlink escape the workspace', () => {
+    const actual = mkdtempSync(join(tmpdir(), 'skraft-permission-actual-'))
+    const alias = `${actual}-alias`
+    const outside = mkdtempSync(join(tmpdir(), 'skraft-permission-outside-'))
+    try {
+      mkdirSync(join(actual, 'src'))
+      symlinkSync(actual, alias)
+      symlinkSync(outside, join(actual, 'escape'))
+      const context = {
+        stimulus: { tags: { permissions: 'workspace-write' } },
+        workDir: alias,
+      }
+
+      deepStrictEqual(
+        pilotPermissionHandler({ kind: 'read', path: join(actual, 'src') }, context),
+        { kind: 'approve-once' },
+      )
+      deepStrictEqual(
+        pilotPermissionHandler({ kind: 'write', fileName: join(actual, 'new', 'result.json') }, context),
+        { kind: 'approve-once' },
+      )
+      strictEqual(pilotPermissionHandler({ kind: 'read', path: join(alias, 'escape') }, context).kind, 'reject')
+    } finally {
+      rmSync(alias, { force: true })
+      rmSync(actual, { recursive: true, force: true })
+      rmSync(outside, { recursive: true, force: true })
+    }
+  })
+
+  // The executor assembles the CLI the descriptors invoke as `$CLAUDE_PLUGIN_ROOT`
+  // and passes it as a readable root, so the mandated `node .../state.mjs` is
+  // allowed. It stays a READ root: the CLI is not a place the agent may write, and
+  // the rest of the filesystem is no more reachable than before.
+  it('runs the assembled plugin CLI while keeping everything else out of reach', () => {
+    const pluginRoot = '/tmp/skraft-plugin-root-ab12'
+    const context = {
+      stimulus: { tags: { permissions: 'workspace-write' } },
+      workDir: '/tmp/work',
+      readableRoots: ['/tmp/work', pluginRoot],
+    }
+
+    deepStrictEqual(
+      pilotPermissionHandler({ kind: 'read', path: `${pluginRoot}/src/cli/state.mjs` }, context),
+      { kind: 'approve-once' },
+    )
+    deepStrictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'node', fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project checkout-pricing` }],
+      possiblePaths: [`${pluginRoot}/src/cli/state.mjs`],
+      possibleUrls: [],
+      fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project checkout-pricing`,
+    }, context), { kind: 'approve-once' })
+
+    strictEqual(
+      pilotPermissionHandler({ kind: 'write', fileName: `${pluginRoot}/src/cli/state.mjs` }, context).kind,
+      'reject',
+    )
+    strictEqual(pilotPermissionHandler({ kind: 'read', path: '/repo/tests/agents' }, context).kind, 'reject')
+    strictEqual(pilotPermissionHandler({
+      kind: 'shell',
+      commandSegments: [{ identifier: 'cat', fullCommandText: 'cat /repo/tests/agents/backlog-discoverer/eval.yaml' }],
+      possiblePaths: [],
+      possibleUrls: [],
+      fullCommandText: 'cat /repo/tests/agents/backlog-discoverer/eval.yaml',
+    }, context).kind, 'reject')
   })
 
 })

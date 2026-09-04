@@ -23,7 +23,7 @@ describe('replay session naming', () => {
 })
 
 describe('variant recovered from the output path', () => {
-  it('reads the variant an isolated eval run did not stamp', () => {
+  it('reads the arm from an isolated eval output path', () => {
     strictEqual(variantFromPath('eval-results/outside-in-tdd/baseline/run/executor-session-logs/a/metadata.json'), 'baseline')
     strictEqual(variantFromPath('eval-results\\outside-in-tdd\\skilled\\run\\metadata.json'), 'skilled')
   })

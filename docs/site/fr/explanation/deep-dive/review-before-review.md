@@ -73,7 +73,7 @@ si `contract-testing-worker` a posé un test de contrat, c'est `contract-fidelit
 Chacune attaque la **fidélité** du câblage (le mock/contrat reflète-t-il vraiment le
 dépendant ?) et honore la même règle de BLOCKER. Voir le
 [fan-out DELIVER]({{ "/fr/explanation/pipeline/deliver" | relative_url }}) et la
-[référence des lentilles]({{ "/fr/reference/lens" | relative_url }}).
+[catalogue agentique]({{ "/fr/dashboard/" | relative_url }}).
 
 ## Pièges & anti-patterns
 
@@ -88,6 +88,6 @@ dépendant ?) et honore la même règle de BLOCKER. Voir le
 
 - Wiegers, K. *Peer Reviews in Software*, 2002.
 
-Pour aller plus loin : [Les lentilles de revue]({{ "/fr/reference/lens" | relative_url }}),
+Pour aller plus loin : [Les lentilles de revue]({{ "/fr/dashboard/" | relative_url }}),
 [Les gates]({{ "/fr/reference/gates" | relative_url }}),
 [La revue avant la revue (principe)]({{ "/fr/explanation/why-review-before-review" | relative_url }}).

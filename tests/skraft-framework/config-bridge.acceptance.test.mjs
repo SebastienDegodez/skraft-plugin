@@ -56,10 +56,10 @@ test('config init: idempotent — second init reports created=false', async () =
 
 test('config get --key trackingLayout: prints the raw scalar', async () => {
   await withTmp(async (dir) => {
-    await configCli(['set', '--key', 'trackingLayout', '--value', 'bare'], { basePath: dir })
+    await configCli(['set', '--key', 'trackingLayout', '--value', 'namespaced'], { basePath: dir })
     const r = await configCli(['get', '--key', 'trackingLayout'], { basePath: dir })
     assert.equal(r.exitCode, 0)
-    assert.equal(r.stdout.trim(), 'bare')
+    assert.equal(r.stdout.trim(), 'namespaced')
   })
 })
 
@@ -83,9 +83,9 @@ test('config get on missing file: returns the default without writing', async ()
 
 test('config set trackingLayout: persists a valid layout', async () => {
   await withTmp(async (dir) => {
-    const r = await configCli(['set', '--key', 'trackingLayout', '--value', 'bare'], { basePath: dir })
+    const r = await configCli(['set', '--key', 'trackingLayout', '--value', 'namespaced'], { basePath: dir })
     assert.equal(r.exitCode, 0)
-    assert.equal((await readCfg(dir)).trackingLayout, 'bare')
+    assert.equal((await readCfg(dir)).trackingLayout, 'namespaced')
   })
 })
 
@@ -108,9 +108,9 @@ test('config set: rejects an unknown key with exit 3', async () => {
 test('config set: preserves human-authored extra fields', async () => {
   await withTmp(async (dir) => {
     await writeFile(join(dir, 'skraft-config.json'), JSON.stringify({ trackingLayout: 'namespaced', teamOwner: 'platform' }), 'utf8')
-    await configCli(['set', '--key', 'trackingLayout', '--value', 'bare'], { basePath: dir })
+    await configCli(['set', '--key', 'trackingLayout', '--value', 'namespaced'], { basePath: dir })
     const cfg = await readCfg(dir)
-    assert.equal(cfg.trackingLayout, 'bare')
+    assert.equal(cfg.trackingLayout, 'namespaced')
     assert.equal(cfg.teamOwner, 'platform')
   })
 })

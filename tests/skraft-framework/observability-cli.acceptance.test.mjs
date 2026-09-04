@@ -58,7 +58,7 @@ test('health-check: exit 0 and reports version/manifests/config for a healthy re
     const report = JSON.parse(res.stdout)
     assert.equal(report.status, 'ok')
     assert.equal(report.version, PACKAGED_VERSION, 'reads the real packaged plugin.json version')
-    assert.equal(report.manifests.claudeHooks.present, true)
+    assert.equal(report.manifests.hooks.present, true)
     assert.equal(report.manifests.frameworkConfig.present, true)
     assert.ok(report.config.observability.stalePhaseHours > 0)
   } finally {

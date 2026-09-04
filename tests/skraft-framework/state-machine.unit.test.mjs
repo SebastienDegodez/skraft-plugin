@@ -10,7 +10,6 @@ const mkState = (overrides = {}) => ({
   retryCount: {},
   phaseArtifacts: {},
   reviewArtifacts: {},
-  difficulty: null,
   userPreferences: { maxRetriesPerPhase: 2 },
   ...overrides,
 })
@@ -37,7 +36,7 @@ test('state-machine: INVALID_STATE for unknown event type', () => {
 
 // ─── TERMINAL_STATE ───────────────────────────────────────────────────────────
 test('state-machine: TERMINAL_STATE on any event when currentPhase is DONE', () => {
-  for (const type of ['ADVANCE', 'RECORD_VERDICT', 'RECORD_ARTIFACT', 'SET_DIFFICULTY', 'INCR_RETRY', 'INCR_REWORK', 'CLOSE_PHASE']) {
+  for (const type of ['ADVANCE', 'RECORD_VERDICT', 'RECORD_ARTIFACT', 'INCR_RETRY', 'INCR_REWORK', 'CLOSE_PHASE']) {
     const r = applyTransition(mkState({ currentPhase: 'DONE' }), { type, targetPhase: 'DISCOVER', phase: 'X', verdict: 'APPROVED', value: 'easy', path: 'p' })
     assert.equal(r.ok, false, `${type} must be rejected`)
     assert.equal(r.error.code, 'TERMINAL_STATE', `${type} must yield TERMINAL_STATE`)
@@ -273,23 +272,6 @@ test('state-machine CLOSE_PHASE: VERDICT_NOT_APPROVED when verdict is not APPROV
   assert.equal(r.value, undefined)
 })
 
-// ─── SET_DIFFICULTY ───────────────────────────────────────────────────────────
-test('state-machine SET_DIFFICULTY: sets difficulty on null state', () => {
-  const r = applyTransition(mkState(), { type: 'SET_DIFFICULTY', value: 'medium-hard' })
-  assert.equal(r.ok, true)
-  assert.equal(r.value.difficulty, 'medium-hard')
-})
-
-test('state-machine SET_DIFFICULTY: IMMUTABLE_FIELD when difficulty already set', () => {
-  const r = applyTransition(
-    mkState({ difficulty: 'easy' }),
-    { type: 'SET_DIFFICULTY', value: 'hard' }
-  )
-  assert.equal(r.ok, false)
-  assert.equal(r.error.code, 'IMMUTABLE_FIELD')
-  assert.ok(r.error.reason.length > 0, 'IMMUTABLE_FIELD reason must not be empty')
-})
-
 // ─── INCR_RETRY ───────────────────────────────────────────────────────────────
 test('state-machine INCR_RETRY: increments retryCount from zero', () => {
   const r = applyTransition(
@@ -327,7 +309,6 @@ test('state-machine INCR_RETRY: uses default maxRetries=2 when userPreferences a
     retryCount: { DISCOVER: 2 },
     phaseArtifacts: {},
     reviewArtifacts: {},
-    difficulty: null,
     // no userPreferences
   }
   const r = applyTransition(s, { type: 'INCR_RETRY', phase: 'DISCOVER' })

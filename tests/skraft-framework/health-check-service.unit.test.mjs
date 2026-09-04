@@ -9,8 +9,7 @@ const NOW = new Date('2026-01-01T00:00:00Z')
 const nowMs = NOW.getTime()
 
 const VERSION = '/plugin/.claude-plugin/plugin.json'
-const CLAUDE = '/plugin/com.anthropic.claude-code/hooks/hooks.json'
-const COPILOT = '/plugin/com.github.copilot/hooks/hooks.json'
+const HOOKS = '/plugin/hooks/hooks.json'
 const FRAMEWORK = '/plugin/skraft-framework.config.json'
 const AUDIT = '/plugin/logs/skill-audit.jsonl'
 const CONFIG = '/repo/skraft-config.json'
@@ -20,7 +19,7 @@ const makeService = (files) => createHealthCheckService({
   filesystem: createInMemoryFilesystem(files),
   clock: createFixedTime(NOW),
   versionPath: VERSION,
-  manifestPaths: { claudeHooks: CLAUDE, copilotHooks: COPILOT, frameworkConfig: FRAMEWORK },
+  manifestPaths: { hooks: HOOKS, frameworkConfig: FRAMEWORK },
   auditLogPath: AUDIT,
   configPath: CONFIG,
   trackingRoot: TRACKING,
@@ -37,10 +36,9 @@ test('health-check: missing version manifest → null (fail-open)', async () => 
 })
 
 test('health-check: reports manifest presence per path', async () => {
-  const report = await makeService({ [CLAUDE]: '{}', [FRAMEWORK]: '{}' }).run()
-  assert.equal(report.manifests.claudeHooks.present, true)
-  assert.equal(report.manifests.frameworkConfig.present, true)
-  assert.equal(report.manifests.copilotHooks.present, false)
+  const report = await makeService({ [HOOKS]: '{}' }).run()
+  assert.equal(report.manifests.hooks.present, true)
+  assert.equal(report.manifests.frameworkConfig.present, false)
 })
 
 test('health-check: reports audit log presence and entry count', async () => {

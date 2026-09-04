@@ -27,13 +27,17 @@ Full label definitions, color conventions, creation instructions, and conflict r
 
 ### Effort Labels
 
+Story points on the Fibonacci scale: **1, 2, 3, 5, 8, 13, 21**. No intermediate values.
+
 | Label | Color (hex) | Approximate Duration |
 |---|---|---|
-| `effort/XS` | `#daeefe` (very light blue) | < 2 hours |
-| `effort/S` | `#b3d9f7` (light blue) | 2–4 hours |
-| `effort/M` | `#7bc8f6` (medium blue) | ~1 day |
-| `effort/L` | `#3fa8e0` (blue) | 2–3 days |
-| `effort/XL` | `#1a6fa8` (dark blue) | > 3 days — must split before DISCUSS |
+| `effort/1` | `#daeefe` (very light blue) | < 2 hours |
+| `effort/2` | `#b3d9f7` (light blue) | 2–4 hours |
+| `effort/3` | `#7bc8f6` (medium blue) | ~1 day |
+| `effort/5` | `#3fa8e0` (blue) | 2 days |
+| `effort/8` | `#1a6fa8` (dark blue) | 3 days — ceiling of the right-sized 1–3 days band |
+| `effort/13` | `#12537a` (darker blue) | > 3 days — must split before DISCUSS |
+| `effort/21` | `#0b3554` (deepest blue) | > 3 days — must split before DISCUSS |
 
 ### Status Labels
 
@@ -74,10 +78,10 @@ gh label create "priority/P0" \
   --color "b60205" \
   --description "Blocking users or legal/compliance/data-loss risk. Mandatory written justification."
 
-# Example: create effort/M label
-gh label create "effort/M" \
+# Example: create effort/3 label
+gh label create "effort/3" \
   --color "7bc8f6" \
-  --description "~1 day — a new use case, endpoint, or feature with 2-3 ACs"
+  --description "~1 day — a new use case, endpoint, or feature with 3-4 ACs"
 ```
 
 ### Bulk Creation Script (bash)
@@ -96,11 +100,13 @@ declare -A labels=(
   ["priority/P1"]="e4811b:High value — next sprint"
   ["priority/P2"]="fbca04:Medium value — next 2-3 sprints"
   ["priority/P3"]="fef2c0:Nice-to-have"
-  ["effort/XS"]="daeefe:Under 2 hours"
-  ["effort/S"]="b3d9f7:2-4 hours"
-  ["effort/M"]="7bc8f6:About 1 day"
-  ["effort/L"]="3fa8e0:2-3 days"
-  ["effort/XL"]="1a6fa8:Over 3 days — must split"
+  ["effort/1"]="daeefe:Under 2 hours"
+  ["effort/2"]="b3d9f7:2-4 hours"
+  ["effort/3"]="7bc8f6:About 1 day"
+  ["effort/5"]="3fa8e0:2 days"
+  ["effort/8"]="1a6fa8:3 days — ceiling of the right-sized band"
+  ["effort/13"]="12537a:Over 3 days — must split"
+  ["effort/21"]="0b3554:Over 3 days — must split"
   ["status/needs-triage"]="ededed:Not yet classified"
   ["status/ready"]="0e8a16:Ready for DISCUSS"
   ["status/duplicate"]="cfd3d7:Confirmed duplicate"
@@ -129,12 +135,12 @@ Every triaged issue should receive exactly **one label from each required group*
 
 **Example — complete label set for a triaged issue**:
 ```
-type/bug, priority/P0, effort/S, status/ready, area/domain
+type/bug, priority/P0, effort/2, status/ready, area/domain
 ```
 
 **Example — area label stacking** (allowed):
 ```
-type/feature, priority/P1, effort/M, status/ready, area/domain, area/api
+type/feature, priority/P1, effort/3, status/ready, area/domain, area/api
 ```
 (A feature that touches both domain and API layers)
 
@@ -150,7 +156,7 @@ The following label combinations are **mutually exclusive** — never apply both
 | `status/duplicate` + `status/ready` | Duplicates are not eligible for DISCUSS |
 | `status/wontfix` + any `priority/*` | A won't-fix issue should not have a priority |
 | `priority/P0` + `priority/P1` | One priority per issue |
-| `effort/XS` + `effort/XL` | One effort estimate per issue |
+| `effort/1` + `effort/13` | One effort estimate per issue |
 | `type/bug` + `type/feature` | One type per issue; if ambiguous, classify by primary intent |
 
 **Conflicting status resolution**: when transitioning between statuses, always **replace** the old label, never accumulate:

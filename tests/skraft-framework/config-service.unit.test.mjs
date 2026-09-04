@@ -33,11 +33,11 @@ test('config-service init: creates default config on ENOENT, created=true', asyn
 })
 
 test('config-service init: idempotent — returns existing config with created=false', async () => {
-  const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'bare' }), configWriter: writerOk() })
+  const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'namespaced' }), configWriter: writerOk() })
   const r = await svc.init()
   assert.equal(r.ok, true)
   assert.equal(r.value.created, false)
-  assert.equal(r.value.trackingLayout, 'bare')
+  assert.equal(r.value.trackingLayout, 'namespaced')
 })
 
 test('config-service init: propagates CORRUPTED_CONFIG', async () => {
@@ -57,17 +57,17 @@ test('config-service init: propagates write failure on ENOENT', async () => {
 // ─── get ──────────────────────────────────────────────────────────────────────
 
 test('config-service get: returns the whole config when no key', async () => {
-  const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'bare' }), configWriter: writerOk() })
+  const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'namespaced' }), configWriter: writerOk() })
   const r = await svc.get()
   assert.equal(r.ok, true)
-  assert.equal(r.value.trackingLayout, 'bare')
+  assert.equal(r.value.trackingLayout, 'namespaced')
 })
 
 test('config-service get: returns one field when key given', async () => {
-  const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'bare' }), configWriter: writerOk() })
+  const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'namespaced' }), configWriter: writerOk() })
   const r = await svc.get('trackingLayout')
   assert.equal(r.ok, true)
-  assert.equal(r.value, 'bare')
+  assert.equal(r.value, 'namespaced')
 })
 
 test('config-service get: on ENOENT returns validated default (no write)', async () => {
@@ -109,21 +109,21 @@ test('config-service get (no key) on ENOENT returns the whole default config', a
 
 test('config-service set: returns CORRUPTED_CONFIG when stored value is not an object', async () => {
   const svc = createConfigService({ configReader: readerOk([]), configWriter: writerOk() })
-  const r = await svc.set('trackingLayout', 'bare')
+  const r = await svc.set('trackingLayout', 'namespaced')
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'CORRUPTED_CONFIG')
 })
 
 test('config-service set: propagates write failure', async () => {
   const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'namespaced' }), configWriter: writerFail() })
-  const r = await svc.set('trackingLayout', 'bare')
+  const r = await svc.set('trackingLayout', 'namespaced')
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'IO_ERROR')
 })
 
 test('config-service set: propagates IO_ERROR from reader', async () => {
   const svc = createConfigService({ configReader: readerIoError(), configWriter: writerOk() })
-  const r = await svc.set('trackingLayout', 'bare')
+  const r = await svc.set('trackingLayout', 'namespaced')
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'IO_ERROR')
 })
@@ -133,27 +133,27 @@ test('config-service set: propagates IO_ERROR from reader', async () => {
 test('config-service set: preserves other fields when setting one key', async () => {
   const writer = writerOk()
   const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'namespaced', teamOwner: 'platform' }), configWriter: writer })
-  const r = await svc.set('trackingLayout', 'bare')
+  const r = await svc.set('trackingLayout', 'namespaced')
   assert.equal(r.ok, true)
   assert.equal(writer._written.teamOwner, 'platform')
-  assert.equal(writer._written.trackingLayout, 'bare')
+  assert.equal(writer._written.trackingLayout, 'namespaced')
 })
 
 test('config-service set: on ENOENT starts from default then applies the set', async () => {
   const writer = writerOk()
   const svc = createConfigService({ configReader: readerEnoent(), configWriter: writer })
-  const r = await svc.set('trackingLayout', 'bare')
+  const r = await svc.set('trackingLayout', 'namespaced')
   assert.equal(r.ok, true)
-  assert.equal(writer._written.trackingLayout, 'bare')
+  assert.equal(writer._written.trackingLayout, 'namespaced')
 })
 
 test('config-service set: writes a valid trackingLayout and returns the new config', async () => {
   const writer = writerOk()
   const svc = createConfigService({ configReader: readerOk({ trackingLayout: 'namespaced' }), configWriter: writer })
-  const r = await svc.set('trackingLayout', 'bare')
+  const r = await svc.set('trackingLayout', 'namespaced')
   assert.equal(r.ok, true)
-  assert.equal(r.value.trackingLayout, 'bare')
-  assert.equal(writer._written.trackingLayout, 'bare')
+  assert.equal(r.value.trackingLayout, 'namespaced')
+  assert.equal(writer._written.trackingLayout, 'namespaced')
 })
 
 test('config-service set: rejects an invalid trackingLayout value', async () => {
