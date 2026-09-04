@@ -75,6 +75,18 @@ env:
   # with `Could not resolve a @github/copilot platform package`. Pinning
   # @github/copilot lets npm install the matching platform binary for whatever
   # runner the job lands on, Linux or otherwise.
+  #
+  # WHERE the three are installed matters as much as the pins. The SDK finds
+  # the CLI with `import.meta.resolve('@github/copilot-<platform>-<arch>/sdk')`
+  # from its OWN file, so the platform binary has to sit in a `node_modules`
+  # on the SDK's parent chain. `npm install -g` does not put it there: it
+  # leaves the binary nested at
+  # `lib/node_modules/@github/copilot/node_modules/@github/copilot-linux-x64`,
+  # invisible from the sibling `lib/node_modules/@github/copilot-sdk`, and
+  # every run dies with `Could not resolve a @github/copilot platform package`.
+  # A project-tree install hoists all three flat under `node_modules/@github/`,
+  # where resolution succeeds — so these are installed with `npm install
+  # --no-save` and reached through `node_modules/.bin`, never with `-g`.
   COPILOT_SDK_PACKAGE: '@github/copilot-sdk@1.0.9'
   COPILOT_CLI_PACKAGE: '@github/copilot@1.0.78'
   JUDGE_MODEL: gpt-5.6-luna
@@ -196,23 +208,15 @@ jobs:
             echo 'PR_SUITES_EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Install the Vally CLI
-        if: steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != ''
-        run: npm install -g "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
-
       # Skill and agent-suite executors drive a real agent through
-      # @github/copilot-sdk; both need the local SDK dependency.
-      - name: Install project dependencies
+      # @github/copilot-sdk, so the CLI, the SDK and Vally must share one
+      # resolution root. See the `env` block for why that root is the project
+      # tree and never the global prefix.
+      - name: Install the evaluation toolchain
         if: steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != ''
-        run: npm install
-
-      # The SDK discovers the platform CLI through @github/copilot's optional
-      # dependencies, and the project's own @github/copilot-sdk devDependency
-      # would otherwise float. Pin the same CLI version in the project tree so
-      # both resolution roots agree.
-      - name: Pin the Copilot CLI in the project tree
-        if: steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != ''
-        run: npm install --no-save "$COPILOT_CLI_PACKAGE"
+        run: |
+          npm install --no-save "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run each changed skill twice and judge the pair
         if: steps.changed.outputs.skills != ''
@@ -298,16 +302,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install the Vally CLI
-        run: npm install -g "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
-
       # The agent executor drives a real agent through @github/copilot-sdk, a
-      # devDependency: without it an agent suite cannot start at all.
-      - name: Install project dependencies
-        run: npm install
-
-      - name: Pin the Copilot CLI in the project tree
-        run: npm install --no-save "$COPILOT_CLI_PACKAGE"
+      # devDependency: without it an agent suite cannot start at all. See the
+      # `env` block for why the toolchain goes in the project tree, not `-g`.
+      - name: Install the evaluation toolchain
+        run: |
+          npm install --no-save "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run every eval and judge the pairs
         env:
@@ -426,8 +427,12 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install the Vally CLI
-        run: npm install -g "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
+      # See the `env` block: the project tree is the only layout where the SDK
+      # can resolve the @github/copilot platform binary.
+      - name: Install the evaluation toolchain
+        run: |
+          npm install --no-save "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run the skill twice on ${{ matrix.model }} and judge the pair
         env:
