@@ -143,6 +143,77 @@
             "tokenDeltaPercent": -16.2
           }
         }
+      },
+      {
+        "id": "34821607907:skill:outside-in-tdd:2026-09-14T08:39:26.121Z",
+        "timestamp": "2026-09-14T08:39:26.121Z",
+        "commit": "f2a11d9952bb8c4956326e1ea69e917b18648067",
+        "run": "34821607907",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/34821607907",
+        "runner": "vally",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "gpt-5.6-luna",
+        "state": "inconclusive",
+        "reason": "incomplete comparison (23 errored, 20 unmatched trial(s))",
+        "netWin": 0.3076923076923077,
+        "trialCount": 13,
+        "meanScore": 0.12307692307692308,
+        "confidenceInterval": {
+          "low": -0.029321014962729097,
+          "high": 0.27547486111657526
+        },
+        "signTest": {
+          "wins": 6,
+          "ties": 5,
+          "losses": 2,
+          "pValue": 0.2890625
+        },
+        "metrics": {
+          "quality": {
+            "baseline": 0.694,
+            "skilled": 0.337,
+            "delta": -0.357
+          },
+          "activation": {
+            "expected": 32,
+            "actual": 9,
+            "unexpected": 0,
+            "rate": 0.281
+          },
+          "efficiency": {
+            "baseline": {
+              "durationMs": 45887,
+              "tokens": 121379,
+              "turns": 7.5,
+              "toolCalls": 19
+            },
+            "skilled": {
+              "durationMs": 1719,
+              "tokens": 0,
+              "turns": 0,
+              "toolCalls": 0
+            },
+            "durationDeltaPercent": -96.3,
+            "tokenDeltaPercent": -100
+          },
+          "efficiencyPaired": {
+            "pairCount": 9,
+            "baseline": {
+              "durationMs": 101672,
+              "tokens": 448651,
+              "turns": 21,
+              "toolCalls": 35
+            },
+            "skilled": {
+              "durationMs": 113451,
+              "tokens": 652937,
+              "turns": 24,
+              "toolCalls": 34
+            },
+            "durationDeltaPercent": 11.6,
+            "tokenDeltaPercent": 45.5
+          }
+        }
       }
     ]
   },
@@ -180,6 +251,32 @@
         "commit": "f2a11d9952bb8c4956326e1ea69e917b18648067",
         "run": "34096438353",
         "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/34096438353",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "inconclusive",
+        "reason": "incomplete run (3 of 3 trial(s) errored)",
+        "netWin": 0,
+        "trialCount": 3,
+        "meanScore": 0,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "34821607907:agent:software-engineer:2026-09-14T08:14:52.090Z",
+        "timestamp": "2026-09-14T08:14:52.090Z",
+        "commit": "f2a11d9952bb8c4956326e1ea69e917b18648067",
+        "run": "34821607907",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/34821607907",
         "runner": "vally-agent",
         "model": "gpt-5.6-luna",
         "judgeModel": "none",
