@@ -32,3 +32,12 @@ test('instruction policy is empty for missing identities or declarations', () =>
   assert.deepEqual(companionInstructionsFor(undefined, CONFIG), [])
   assert.deepEqual(companionInstructionsFor('unknown', CONFIG), [])
 })
+
+test('instruction policy never borrows SKRAFT aliases from foreign namespaces', () => {
+  for (const identity of ['other:skraft-orchestrator', 'other:skraft:skraft-orchestrator', 'skraft:other:skraft-orchestrator']) {
+    assert.deepEqual(companionInstructionsFor(identity, CONFIG), [])
+  }
+  assert.equal(canonicalAgentName('other:skraft-orchestrator', CONFIG), 'other:skraft-orchestrator')
+  assert.equal(canonicalAgentName('skraft:Skraft - Orchestrator', CONFIG), 'Skraft - Orchestrator')
+  assert.equal(canonicalAgentName('skraft:software-engineer', {}), 'software-engineer')
+})

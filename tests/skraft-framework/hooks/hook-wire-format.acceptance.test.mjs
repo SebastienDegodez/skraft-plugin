@@ -83,6 +83,9 @@ const ROUTES = [
     label: 'denied write',
   },
   { args: ['PreToolUse', 'Agent'], payload: { toolInput: { subagentType: 'backlog-planner' } } },
+  { args: ['PreToolUse', 'Agent'], matcher: 'Task', label: 'legacy Task alias', payload: { tool_name: 'Task', tool_input: { subagent_type: 'backlog-planner' } } },
+  { args: ['PreToolUse', 'Write'], payload: { tool_name: 'Write', tool_input: { file_path: 'state.json', content: '{}' } } },
+  { args: ['PreToolUse', 'Edit'], payload: { tool_name: 'Edit', tool_input: { file_path: 'state.json', old_string: '{}', new_string: '{"updated":true}' } } },
   { args: ['SubagentStart'], payload: { agentName: 'Skraft - Software Engineer' } },
   { args: ['SubagentStop'], payload: { agentName: 'Skraft - Software Engineer' } },
   { args: ['PostToolUse', 'Agent'], payload: { agentName: 'Skraft - Solution Researcher' } },
@@ -101,7 +104,8 @@ test('hook wire format: every manifest route is covered here', () => {
     .filter(([event]) => event !== 'SessionStart') // housekeeping CLI, not hook.mjs
     .flatMap(([event, entries]) => entries.map((entry) => [event, entry.matcher].filter(Boolean).join('/')))
     .sort()
-  const covered = [...new Set(ROUTES.map(({ args }) => args.join('/')))].sort()
+  const covered = [...new Set(ROUTES.map(({ args, matcher }) =>
+    matcher ? [args[0], matcher].join('/') : args.join('/')))].sort()
 
   assert.deepEqual(covered, declared, 'a manifest route with no wire-format test can regress unnoticed')
 })

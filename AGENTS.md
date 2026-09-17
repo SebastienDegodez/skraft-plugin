@@ -39,7 +39,10 @@ plugins/
       api/hooks/       ← Hook router, service factory, entry, decision helpers
       infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
     cli/               ← Composition root: hook.mjs wires all services
-    hooks/hooks.json     ← The one hook manifest, at the path every harness auto-loads
+    hooks/hooks.json     ← Canonical hook source; Claude compatibility surface
+    com.github.copilot/hooks/hooks.json  ← Generated exact copy for Copilot v1
+    com.github.copilot/agents/           ← 31 flat editable `.agent.md` descriptors
+    com.anthropic.claude-code/agents/    ← 31 flat editable native `.md` descriptors
     stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
     skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 
@@ -60,9 +63,28 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
 
 ### Agent descriptor rules
 
-Descriptors under `plugins/skraft-framework/com.anthropic.claude-code/agents/` are
+Descriptors under `plugins/skraft-framework/com.github.copilot/agents/` are
 prompts an agent pays for on every run, not documentation.
 
+- Edit agents in either of the two flat runtime trees; author hooks only in
+  [plugins/skraft-framework/hooks/hooks.json](plugins/skraft-framework/hooks/hooks.json).
+  Run `npm run plugin:sync` then `npm run plugin:check` to synchronize shared content with
+  [scripts/project-plugin-adapters.mjs](scripts/project-plugin-adapters.mjs) (`--apply` / `--check`).
+  Sync body and description only; preserve every client-specific header.
+  Keep stable basename IDs and per-side shared fields in `.agent-sync.json` v2.
+  Never introduce a third descriptor tree or header/template surrogate.
+  New agents require both explicitly authored client versions; never inherit tools blindly.
+  Commit both runtime surfaces and baseline together; marketplace Git installs do not build.
+- Keep root [plugins/skraft-framework/plugin.json](plugins/skraft-framework/plugin.json)
+  on the canonical v1 schema with no root `agents` list. Keep all 31 agents registered in
+  [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json),
+  including internal workers and lenses. Never delete internal registrations to hide them.
+  Preserve `user-invocable: false`; it is not documented for Claude subagents and does not
+  guarantee picker hiding. Six standalone roots are intended public Copilot entry points.
+- Keep one canonical hook source and two physical plugin surfaces: root compatibility hooks
+  plus generated Copilot namespace. Do not add extra manifest `hooks` pointers.
+  See [docs/architecture.md](docs/architecture.md#compatibility) for current compatibility limits;
+  preserve ADR-008 as historical evidence, not current packaging guidance.
 - **Write for the agent, never for a human reader.** Every sentence must carry a
   decision the agent has to make. No prose explaining why a rule exists, no gloss
   on the descriptor's own wording, no justification clause. The reasoning belongs

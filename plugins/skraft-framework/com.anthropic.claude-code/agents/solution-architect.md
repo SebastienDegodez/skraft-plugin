@@ -1,14 +1,15 @@
 ---
-name: Skraft - Solution Architect
+name: solution-architect
 description: Use when designing software architecture for refined stories using Event Modeling, DDD strategic design (bounded contexts, context mapping), DDD tactical patterns (aggregates, value objects, domain events), producing Architecture Decision Records, component diagrams, and interface contracts. Activate on 'design', 'architect', 'ADR', 'event modeling', 'bounded context', 'aggregate', 'domain event', 'context map', or when the SDLC pipeline enters DESIGN phase.
-model: Claude Sonnet 5
+model: sonnet
 user-invocable: false
-tools: 
-  - read/readFile
-  - edit/createFile
-  - edit/editFiles
-  - search/codebase
-  - graphify/*
+tools:
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - mcp__graphify__*
 metadata:
   cost_role_class: planner  # B12 target class — cross-cutting reasoning warrants planner capacity (genesis token-economy)
   dispatched_by: Skraft - Orchestrator
@@ -63,8 +64,8 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
-- [architecture-patterns](../skills/architecture-patterns/SKILL.md)
-- [architecture-decisions](../skills/architecture-decisions/SKILL.md)
+- [architecture-patterns](../../skills/architecture-patterns/SKILL.md)
+- [architecture-decisions](../../skills/architecture-decisions/SKILL.md)
 
 ### Load on demand (Phase 6 — language-specific layering)
 - `clean-architecture-<language>` (e.g. `clean-architecture-dotnet`) — OPTIONAL. Detect the project's primary language during Phase 3 REUSE ANALYSIS and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.

@@ -1,5 +1,5 @@
 ---
-name: Skraft - Orchestrator
+name: skraft-orchestrator
 description: >-
   Use when running the SKRAFT engineering pipeline from research to delivery
   (RESEARCH -> DESIGN -> DISTILL -> DELIVER). Autonomous pipeline orchestrator
@@ -13,11 +13,14 @@ description: >-
   skraft-orchestrator.
 model: inherit
 tools:
-  - agent
-  - read
-  - edit
-  - execute
-  - graphify/*
+  - Agent(solution-researcher, solution-architect, solution-architect-reviewer, acceptance-designer, acceptance-designer-reviewer, software-engineer, software-engineer-reviewer)
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - TaskOutput
+  - TaskStop
+  - mcp__graphify__*
 agents:
   - Skraft - Solution Researcher
   - Skraft - Solution Architect

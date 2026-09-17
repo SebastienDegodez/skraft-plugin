@@ -1,20 +1,16 @@
 ---
-name: Skraft - Brownfield Harness Builder
+name: brownfield-harness-builder
 description: "Use when the human wants to make an existing/brownfield service SAFE TO CHANGE before refactoring it — discover or reconstruct its API contracts, stand up Microcks mocks, and produce characterization (golden-master) tests that lock in CURRENT behavior, bugs included. Activate on 'build a safety net for this service', 'characterize this API before refactoring', 'lock in current behavior', 'set up contract tests for this legacy service'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
-model:
- - Claude Sonnet 5
- - claude-sonnet-5
- - Claude Sonnet 4.6
- - claude-sonnet-4.6
+model: sonnet
 user-invocable: true
 tools:
-  - read/readFile
-  - edit/createFile
-  - edit/createDirectory
-  - edit/editFiles
-  - search/codebase
-  - execute/runInTerminal
-  - execute/getTerminalOutput
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - Bash
+  - TaskOutput
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
@@ -49,7 +45,7 @@ This is a **standalone workflow the human chooses to run** — not a `Skraft - O
 
 Load before starting. If missing, report `[SKILL MISSING] characterize-with-contracts` and stop.
 
-- [characterize-with-contracts](../skills/characterize-with-contracts/SKILL.md)
+- [characterize-with-contracts](../../skills/characterize-with-contracts/SKILL.md)
 
 ## Boundaries (non-negotiable)
 

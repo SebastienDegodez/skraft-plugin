@@ -1,12 +1,13 @@
 ---
-name: Skraft - Backlog Planner Reviewer
+name: backlog-planner-reviewer
 description: Use when reviewing refined user stories, acceptance criteria drafts, and sprint plans for INVEST quality, completeness, and feasibility. Dispatched after backlog-planner produces DISCUSS artefacts, or manually to audit existing stories.
-model: GPT-5.6 Luna
+model: haiku
 user-invocable: false
-tools: 
-  - agent
-  - read/readFile
-  - search/codebase
+tools:
+  - Agent(planning-invest-lens, planning-ac-quality-lens, planning-coherence-lens, planning-dor-lens)
+  - Read
+  - Grep
+  - Glob
 agents:
   - planning-invest-lens
   - planning-ac-quality-lens
@@ -40,8 +41,8 @@ You are an adversarial reviewer of DISCUSS artefacts. You audit stories, accepta
 ## Skill Loading — MANDATORY
 
 Load before starting:
-- [planning-review-criteria](../skills/planning-review-criteria/SKILL.md)
-- [adversarial-review-lenses](../skills/adversarial-review-lenses/SKILL.md)
+- [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md)
+- [adversarial-review-lenses](../../skills/adversarial-review-lenses/SKILL.md)
 
 ## Protocol
 
@@ -63,10 +64,10 @@ Each lens receives ONLY the inputs specified below — no more.
 
 | Lens | Sub-agent | Input | Gates |
 |------|-----------|-------|-------|
-| planning-invest | [planning-invest-lens](reviewer-lenses/planning-invest-lens.agent.md) | `stories-{milestone}.md` ONLY | G1, G2 |
-| planning-ac-quality | [planning-ac-quality-lens](reviewer-lenses/planning-ac-quality-lens.agent.md) | `ac-draft-{story}.md` files ONLY | G3, G4 |
-| planning-coherence | [planning-coherence-lens](reviewer-lenses/planning-coherence-lens.agent.md) | sprint plan section + AC drafts for sizing | G5, G6 |
-| planning-dor | [planning-dor-lens](reviewer-lenses/planning-dor-lens.agent.md) | `stories-{milestone}.md` + AC drafts | G7, G8 |
+| planning-invest | [planning-invest-lens](planning-invest-lens.md) | `stories-{milestone}.md` ONLY | G1, G2 |
+| planning-ac-quality | [planning-ac-quality-lens](planning-ac-quality-lens.md) | `ac-draft-{story}.md` files ONLY | G3, G4 |
+| planning-coherence | [planning-coherence-lens](planning-coherence-lens.md) | sprint plan section + AC drafts for sizing | G5, G6 |
+| planning-dor | [planning-dor-lens](planning-dor-lens.md) | `stories-{milestone}.md` + AC drafts | G7, G8 |
 
 **CRITICAL:** the ac-quality lens must NOT receive the stories file. A lens that already
 knows the story's intent supplies the missing context itself and stops seeing the ambiguity

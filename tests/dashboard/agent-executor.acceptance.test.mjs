@@ -13,7 +13,7 @@ import { createAgentExecutor } from '../../eng/vally-agent-executor/executor.mjs
 
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const pluginSkills = join(repoRoot, 'plugins/skraft-framework/skills')
-const agentPath = join(repoRoot, 'plugins/skraft-framework/com.anthropic.claude-code/agents/software-engineer.md')
+const agentPath = join(repoRoot, 'plugins/skraft-framework/com.github.copilot/agents/software-engineer.agent.md')
 const relativeAgentPath = relative(repoRoot, agentPath).split('\\').join('/')
 const expectedHash = createHash('sha256').update(readFileSync(agentPath)).digest('hex')
 const activatedSkills = ['outside-in-tdd', 'test-design-mandates', 'craft-discipline']
@@ -138,7 +138,7 @@ describe('Vally real-agent executor', () => {
       name: 'Skraft - Software Engineer',
       path: relativeAgentPath,
       sha256: expectedHash,
-      declaredModel: 'Claude Sonnet 5,Claude Sonnet 5 (copilot),claude-sonnet-5',
+      declaredModel: 'claude-sonnet-5',
     })
     deepStrictEqual(trajectory.events[0], {
       type: 'custom',

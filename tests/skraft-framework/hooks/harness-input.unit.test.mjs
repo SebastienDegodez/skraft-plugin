@@ -140,3 +140,26 @@ test('harness-input: an explicit harness overrides environment detection', () =>
   assert.equal(payload.agentName, 'agent')
   assert.equal(payload.harness, 'claude-code')
 })
+
+test('harness-input: native argument aliases expose guard signals without changing tool arguments', () => {
+  const toolInput = { subagent_type: 'skraft:software-engineer', file_path: 'state.json' }
+  const payload = fromHarnessInput({ tool_name: 'Task', tool_input: toolInput }, { env: {} })
+  assert.equal(payload.toolName, 'Agent')
+  assert.equal(payload.toolInput, toolInput)
+  assert.equal(payload.requestedAgent, 'skraft:software-engineer')
+  assert.equal(payload.filePath, 'state.json')
+  assert.equal(payload.projectSlug, undefined)
+})
+
+test('harness-input: explicit guard signals and camelCase arguments win over native aliases', () => {
+  const toolInput = {
+    subagentType: 'canonical-agent', subagent_type: 'native-agent',
+    filePath: 'canonical-path', file_path: 'native-path', path: 'legacy-path'
+  }
+  const argumentsOnly = fromHarnessInput({ toolInput }, { env: {} })
+  assert.equal(argumentsOnly.requestedAgent, 'canonical-agent')
+  assert.equal(argumentsOnly.filePath, 'canonical-path')
+  const explicit = fromHarnessInput({ requestedAgent: 'explicit-agent', filePath: 'explicit-path', toolInput }, { env: {} })
+  assert.equal(explicit.requestedAgent, 'explicit-agent')
+  assert.equal(explicit.filePath, 'explicit-path')
+})

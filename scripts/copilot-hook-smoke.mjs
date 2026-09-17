@@ -37,6 +37,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const { values: opts } = parseArgs({
   options: {
+    cli: { type: 'string' },
     keep: { type: 'boolean', default: false },
     model: { type: 'string' },
     'setup-only': { type: 'boolean', default: false },
@@ -46,12 +47,14 @@ const { values: opts } = parseArgs({
 
 const USAGE = `usage: node scripts/copilot-hook-smoke.mjs [--keep] [--setup-only] [--model <id>]
 
+  --cli <path>  pin the CLI executable (recommended with an isolated home)
   --keep        keep the throwaway COPILOT_HOME and debug logs on success
   --setup-only  build the throwaway home and exit, without calling the model
   --model <id>  model for the probe sessions (default: the CLI's own)
 `
 
 if (opts.help) { process.stdout.write(USAGE); process.exit(0) }
+const cli = opts.cli ? resolve(opts.cli) : 'copilot'
 
 // The plugin's own audit JSONL is the receipt that a hook process actually ran: the
 // harness never reports "I spawned your hook", but every guard evaluation appends a line.
@@ -78,7 +81,7 @@ const log = (msg) => process.stdout.write(`${msg}\n`)
 // agents and skills but NOT its hooks, so a bespoke seam would silently under-report.
 const installPlugin = (home, workspace) => {
   const run = (args) => {
-    const result = spawnSync('copilot', args, {
+    const result = spawnSync(cli, args, {
       cwd: workspace,
       encoding: 'utf8',
       env: { ...process.env, COPILOT_HOME: home },
@@ -88,7 +91,7 @@ const installPlugin = (home, workspace) => {
     }
   }
 
-  run(['plugin', 'marketplace', 'add', repoRoot, '--name', 'skraft'])
+  run(['plugin', 'marketplace', 'add', repoRoot])
   run(['plugin', 'install', 'skraft@skraft'])
 
   return join(home, 'installed-plugins', 'skraft', 'skraft')
@@ -130,7 +133,7 @@ const runProbe = ({ name, prompt, env: ctx }) => {
   const args = ['-p', prompt, '--allow-all-tools', '--log-level', 'debug', '--log-dir', logDir]
   if (opts.model) args.push('--model', opts.model)
 
-  const result = spawnSync('copilot', args, {
+  const result = spawnSync(cli, args, {
     cwd: ctx.workspace,
     encoding: 'utf8',
     env: {
@@ -185,7 +188,7 @@ const probes = [
 
 // --- main -------------------------------------------------------------------------
 
-if (!spawnSync('copilot', ['--version'], { encoding: 'utf8' }).stdout) {
+if (!spawnSync(cli, ['--version'], { encoding: 'utf8' }).stdout) {
   log('the `copilot` CLI is not on PATH — install it or skip this check')
   process.exit(2)
 }
@@ -206,6 +209,7 @@ try {
   for (const probe of probes) {
     const result = runProbe({ ...probe, env: ctx })
     const failures = probe.check(result, ctx)
+    if (result.status !== 0) failures.push(`CLI exited ${result.status}`)
 
     if (failures.length === 0) {
       log(`  PASS  ${probe.name} — ${result.audit.length} hook evaluation(s) recorded`)

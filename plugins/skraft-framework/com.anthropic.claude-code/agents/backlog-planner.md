@@ -1,15 +1,15 @@
 ---
-name: Skraft - Backlog Planner
+name: backlog-planner
 description: Use when refining raw GitHub issues into well-structured user stories with acceptance criteria, effort estimation, and milestone assignment. Activate on "refine", "plan sprint", "write stories", "split issue", "milestone planning", or when preparing a refined story before handing off to the skraft engineering orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline.
-model: Claude Sonnet 5
+model: sonnet
 user-invocable: true
-tools: 
-  - agent
-  - read/readFile
-  - edit/createFile
-  - edit/editFiles
-  - edit/createDirectory
-  - search/codebase
+tools:
+  - Agent(backlog-planner-reviewer)
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
 agents:
   - Skraft - Backlog Planner Reviewer
 metadata:
@@ -58,8 +58,8 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
-- [issue-refinement](../skills/issue-refinement/SKILL.md)
-- [sprint-planning](../skills/sprint-planning/SKILL.md)
+- [issue-refinement](../../skills/issue-refinement/SKILL.md)
+- [sprint-planning](../../skills/sprint-planning/SKILL.md)
 
 ## Boundaries (Non-Negotiable)
 
@@ -196,7 +196,7 @@ After writing artefacts: update GitHub issues with:
 
 ### Phase 7: ADVERSARIAL REVIEW GATE
 
-Refinement is not finished when the artefacts are written. Dispatch [backlog-planner-reviewer](backlog-planner-reviewer.agent.md) and act on the verdict it returns.
+Refinement is not finished when the artefacts are written. Dispatch [backlog-planner-reviewer](backlog-planner-reviewer.md) and act on the verdict it returns.
 
 1. Dispatch the reviewer with the stories file, every AC draft, and the current `attempt` number (starts at 1).
 2. Read the verdict — `APPROVED`, `NEEDS_REWORK`, or `REJECTED`.

@@ -48,8 +48,13 @@ Créez un fichier d'agent `.md` en suivant les contrats visibles dans le [catalo
 - Son contrat d'entrée/sortie
 - Ses invariants
 
-Écrivez le fichier sous `plugins/skraft-framework/com.anthropic.claude-code/agents/` : c'est
-l'unique arbre d'agents livré, il n'y a aucun miroir à synchroniser.
+Créez les deux versions d'exécution à plat sous `plugins/skraft-framework/` :
+`com.github.copilot/agents/<id>.agent.md` et `com.anthropic.claude-code/agents/<id>.md`.
+Déclarez explicitement les outils et le modèle natifs de chaque client. Ce sont les seuls deux arbres éditables.
+Lancez `npm run plugin:sync` puis `npm run plugin:check` : corps et description se synchronisent
+dans les deux sens contre un baseline par client, avec traduction des destinations Markdown.
+Les en-têtes natifs restent intacts ; les éditions contradictoires bloquent toute écriture.
+Enregistrez le fichier natif dans le manifeste Claude ; gardez les flags de visibilité internes.
 Placez les règles Copilot path-scoped sous `com.github.copilot/rules/` ; listez une règle dans
 `metadata.instructions` seulement si le même agent doit la recevoir via le hook Claude
 `SubagentStart`.

@@ -1,4 +1,5 @@
 import { Ok, Err, isOk } from './result.mjs'
+import { canonicalAgentName } from './instruction-policy.mjs'
 
 // Pure pipeline state machine. Derives the single agent the run expects next and the
 // deny-by-default dispatch decision (ADR-004). No IO. Assumes state already passed
@@ -24,9 +25,11 @@ export const nextPhaseAfter = (currentPhase, config, skipPhases) => {
 // top-level, DELIVER workers, arbitrary sub-agents) is UNGOVERNED — the phase-order
 // invariant does not apply to it, so it must not be denied for being "out of order".
 export const isPipelineAgent = (agent, config) => {
+  const canonical = canonicalAgentName(agent, config)
   for (const phase of config.phaseOrder ?? []) {
     const phaseAgents = config.phaseAgents?.[phase]
-    if (phaseAgents?.specialist === agent || phaseAgents?.reviewer === agent) return true
+    if (canonical && (canonicalAgentName(phaseAgents?.specialist, config) === canonical
+      || canonicalAgentName(phaseAgents?.reviewer, config) === canonical)) return true
   }
   return false
 }
@@ -96,7 +99,7 @@ export const evaluateDispatch = (requestedAgent, state, config) => {
     return Err({ code: expected.error.code, requestedAgent, expectedAgent: null, reason: expected.error.reason })
   }
   const { agent: expectedAgent, stage, reason } = expected.value
-  if (requestedAgent === expectedAgent) {
+  if (canonicalAgentName(requestedAgent, config) === canonicalAgentName(expectedAgent, config)) {
     return Ok({ requestedAgent, expectedAgent, stage, reason })
   }
   return Err({

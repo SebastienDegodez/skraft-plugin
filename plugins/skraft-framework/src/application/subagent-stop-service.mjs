@@ -1,4 +1,5 @@
 import { mandatorySkillsFor, missingSkills, extractReadSkills } from '../domain/skill-policy.mjs'
+import { canonicalAgentName } from '../domain/instruction-policy.mjs'
 import { expectedArtifactsFor, missingArtifacts, parseReviewVerdict, requiresVerifiedCommit } from '../domain/artifact-policy.mjs'
 import { validatePipelineState } from '../domain/state-schema.mjs'
 import { isOk } from '../domain/result.mjs'
@@ -122,8 +123,9 @@ const checkCompletion = async ({ config, agentName, projectSlug, stateReader, fi
 // - G4/G5 completion guard: fail-closed artifact + verdict + commit check before
 //   the phase is allowed to advance (never progress on a simple LLM assertion).
 export const createSubagentStopService = ({ config, transcriptReaderFactory, auditWriter, clock, stateReader, filesystem, commitVerifier }) => ({
-  handle: async ({ agentName, transcript, projectSlug } = {}) => {
+  handle: async ({ agentName, transcript, agent_transcript_path, agentTranscriptPath, projectSlug } = {}) => {
     try {
+      agentName = canonicalAgentName(agentName, config)
       const skillEntries = mandatorySkillsFor(agentName, config)
       if (skillEntries.length > 0) {
         const requiredNames = skillEntries.map((s) => s.name)
@@ -131,7 +133,10 @@ export const createSubagentStopService = ({ config, transcriptReaderFactory, aud
 
         let readSkills
         try {
-          const content = await transcriptReaderFactory({ transcript }).read()
+          const content = await transcriptReaderFactory({
+            transcript,
+            agentTranscriptPath: agentTranscriptPath ?? agent_transcript_path
+          }).read()
           readSkills = extractReadSkills(content)
         } catch {
           // ADR-006: transcript unavailable is a monitoring failure, not a compliance signal
@@ -143,23 +148,24 @@ export const createSubagentStopService = ({ config, transcriptReaderFactory, aud
             missingSkills: [],
             timestamp: now
           }).catch(() => {})
-          return allow()
         }
 
-        const missing = missingSkills(readSkills, requiredNames)
-        const decision = missing.length > 0 ? 'BLOCK' : 'ALLOW'
+        if (readSkills !== undefined) {
+          const missing = missingSkills(readSkills, requiredNames)
+          const decision = missing.length > 0 ? 'BLOCK' : 'ALLOW'
 
-        await auditWriter.write({
-          eventType: 'SkillComplianceChecked',
-          agentName,
-          decision,
-          missingSkills: missing,
-          reason: missing.length === 0 ? 'all_present' : 'skill_absent',
-          timestamp: now
-        }).catch(() => {})
+          await auditWriter.write({
+            eventType: 'SkillComplianceChecked',
+            agentName,
+            decision,
+            missingSkills: missing,
+            reason: missing.length === 0 ? 'all_present' : 'skill_absent',
+            timestamp: now
+          }).catch(() => {})
 
-        if (missing.length > 0) {
-          return block(`Mandatory skill not loaded: ${missing[0]}`)
+          if (missing.length > 0) {
+            return block(`Mandatory skill not loaded: ${missing[0]}`)
+          }
         }
       }
 

@@ -1,12 +1,13 @@
 ---
-name: Skraft - Backlog Discoverer Reviewer
+name: backlog-discoverer-reviewer
 description: "Use when reviewing issue triage results, sprint proposals, or discovery coverage for completeness, prioritization accuracy, and duplicate detection. Dispatched after backlog-discoverer produces DISCOVER artefacts, or manually to audit a triage report."
-model: GPT-5.6 Luna
+model: haiku
 user-invocable: false
-tools: 
-  - agent
-  - read/readFile
-  - search/codebase
+tools:
+  - Agent(discovery-completeness-lens, discovery-prioritization-lens, discovery-duplicate-lens)
+  - Read
+  - Grep
+  - Glob
 agents:
   - discovery-completeness-lens
   - discovery-prioritization-lens
@@ -41,8 +42,8 @@ Subagent Mode: Skip pleasantries. Load artefacts. Apply gates. Deliver verdict. 
 ## Skill Loading — MANDATORY
 
 Load before starting:
-- [discovery-review-criteria](../skills/discovery-review-criteria/SKILL.md)
-- [adversarial-review-lenses](../skills/adversarial-review-lenses/SKILL.md)
+- [discovery-review-criteria](../../skills/discovery-review-criteria/SKILL.md)
+- [adversarial-review-lenses](../../skills/adversarial-review-lenses/SKILL.md)
 
 ## Boundaries (Non-Negotiable)
 
@@ -79,9 +80,9 @@ Each lens receives ONLY the inputs specified below — no more.
 
 | Lens | Sub-agent | Input | Gates |
 |------|-----------|-------|-------|
-| discovery-completeness | [discovery-completeness-lens](reviewer-lenses/discovery-completeness-lens.agent.md) | Triage report ONLY | G1, G2 |
-| discovery-prioritization | [discovery-prioritization-lens](reviewer-lenses/discovery-prioritization-lens.agent.md) | Triage report + sprint proposal | G3, G4 |
-| discovery-duplicate | [discovery-duplicate-lens](reviewer-lenses/discovery-duplicate-lens.agent.md) | Full triage report | G5, G6 |
+| discovery-completeness | [discovery-completeness-lens](discovery-completeness-lens.md) | Triage report ONLY | G1, G2 |
+| discovery-prioritization | [discovery-prioritization-lens](discovery-prioritization-lens.md) | Triage report + sprint proposal | G3, G4 |
+| discovery-duplicate | [discovery-duplicate-lens](discovery-duplicate-lens.md) | Full triage report | G5, G6 |
 
 **CRITICAL:** the completeness lens must NOT receive the sprint proposal. A lens that
 already knows what made the sprint reads the triage looking for confirmation, and its

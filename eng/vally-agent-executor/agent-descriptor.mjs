@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 
 import { readFrontMatter } from '../lib/front-matter.mjs'
 
-const pluginAgent = (relativePath) => `plugins/skraft-framework/com.anthropic.claude-code/agents/${relativePath}.md`
+const pluginAgent = (relativePath) => `plugins/skraft-framework/com.github.copilot/agents/${relativePath.split('/').at(-1)}.agent.md`
 
 const AGENT_PATHS = new Map([
   ['skraft-orchestrator', pluginAgent('skraft-orchestrator')],

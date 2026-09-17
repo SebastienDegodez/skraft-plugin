@@ -41,7 +41,7 @@ const findAgentFiles = (dir) =>
 
 const descriptorsFrom = (dir) =>
   findAgentFiles(dir).map((path) => parseAgentDescriptor(readFileSync(path, 'utf8'), {
-    id: basename(path, '.md'),
+    id: basename(path).replace(/(?:\.agent)?\.md$/, ''),
   }))
 
 const serialize = (config) => JSON.stringify(config, null, 2) + '\n'
@@ -55,7 +55,7 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       apply: { type: 'boolean', default: false },
       emit: { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
-      dir: { type: 'string', default: 'plugins/skraft-framework/com.anthropic.claude-code/agents' },
+      dir: { type: 'string', default: 'plugins/skraft-framework/com.github.copilot/agents' },
       out: { type: 'string', default: 'plugins/skraft-framework/skraft-framework.config.json' },
     },
   })

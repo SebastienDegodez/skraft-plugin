@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseAgentFrontmatter } from '../../../plugins/skraft-framework/src/cli/resolve-model.mjs'
+import { buildProjection, projectPluginAdapters } from '../../../scripts/project-plugin-adapters.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const pluginRoot = join(here, '../../../plugins/skraft-framework')
@@ -10,6 +12,7 @@ const portable = JSON.parse(readFileSync(join(pluginRoot, 'plugin.json'), 'utf8'
 const claude = JSON.parse(readFileSync(join(pluginRoot, '.claude-plugin/plugin.json'), 'utf8'))
 
 const PORTABLE_FIELDS = new Set([
+  '$schema',
   'name',
   'version',
   'description',
@@ -21,43 +24,63 @@ const PORTABLE_FIELDS = new Set([
   'extensions',
 ])
 
-// VS Code resolves a plugin format in a fixed order: Agent Plugins v1 (root plugin.json
-// carrying the agent-plugins.org $schema) wins over .plugin/plugin.json, which wins over
-// .claude-plugin/plugin.json. The Agent Plugins v1 adapter declares no plugin-root token
-// and injects no plugin-root env var, so a hook command can never locate its own package —
-// it resolves against the workspace and the CLI is invoked on a path that does not exist.
-// Until that adapter substitutes a root, the portable manifest must stay unrecognized so
-// detection falls through to Claude, which does interpolate ${CLAUDE_PLUGIN_ROOT}.
-test('plugin packaging: portable manifest does not claim the Agent Plugins schema', () => {
+// Agent Plugins v1 has a closed top-level schema; agents and hooks are namespaced assets.
+test('plugin packaging: portable manifest declares the exact v1 schema and only permitted fields', () => {
   assert.equal(
     portable.$schema,
-    undefined,
-    'an agent-plugins.org $schema promotes the package to the Agent Plugins v1 adapter, which resolves hook commands without a plugin root',
+    'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
   )
+  assert.equal(typeof portable.name, 'string')
+  assert.ok(portable.name.length > 0)
   assert.deepEqual(Object.keys(portable).filter((key) => !PORTABLE_FIELDS.has(key)), [])
+  assert.equal(Object.hasOwn(portable, 'agents'), false)
   assert.deepEqual(portable.extensions, { 'com.github.copilot': {} })
 })
 
-// The rules tree is the last Copilot-namespaced asset the plugin ships. It has no
-// Claude-native mirror, so it is kept where it is and reached through the Claude manifest.
+// Rules retain their Copilot namespace alongside the generated agents and hooks.
 test('plugin packaging: the Copilot rules directory remains shipped', () => {
   assert.equal(existsSync(join(pluginRoot, 'com.github.copilot/rules')), true)
 })
 
-// The Claude adapter carries no built-in component map, so every directory it must read is
-// named by this manifest. Rules have no Claude-native mirror: the manifest is the only thing
-// that keeps the instruction files loading once detection lands on Claude.
+// Claude's agents field accepts Markdown file paths, not a directory. Enumerate every
+// native descriptor, including workers and lenses regardless of visibility metadata.
+test('plugin packaging: Claude manifest enumerates every native agent exactly once', () => {
+  const agentsRoot = 'com.anthropic.claude-code/agents'
+  const expected = readdirSync(join(pluginRoot, agentsRoot), { recursive: true })
+    .filter((path) => path.endsWith('.md'))
+    .map((path) => `./com.anthropic.claude-code/agents/${path.replaceAll('\\', '/').split('/').at(-1)}`)
+    .sort()
+  assert.equal(expected.length, 31)
+  assert.ok(Array.isArray(claude.agents), 'agents must be an array of Markdown file paths')
+  assert.deepEqual([...claude.agents].sort(), expected)
+})
+
+test('plugin packaging: namespaced adapters match the generator byte for byte', () => {
+  const result = projectPluginAdapters({ pluginRoot, mode: 'check' })
+  assert.equal(result.ok, true, JSON.stringify(result))
+  for (const { source, target, content } of buildProjection(pluginRoot).files) {
+    assert.deepEqual(readFileSync(join(pluginRoot, target)), content, `${target}: differs from ${source}`)
+  }
+})
+
+// CLI discovery rejects the VS Code-only model fallback-array syntax.
+test('plugin packaging: shared agents use scalar models accepted by CLI discovery', () => {
+  for (const path of claude.agents) {
+    const { model } = parseAgentFrontmatter(readFileSync(join(pluginRoot, path), 'utf8'))
+    assert.equal(typeof model, 'string', `${path}: model fallback arrays are VS Code-only`)
+    assert.ok(model.trim().length > 0, `${path}: model must not be empty`)
+  }
+})
+
+// VS Code reads rules through its Claude-format adapter; Claude Code ignores this field.
 test('plugin packaging: Claude manifest points at the agent and rule adapters', () => {
-  assert.equal(claude.agents, './com.anthropic.claude-code/agents')
   assert.equal(claude.rules, './com.github.copilot/rules')
-  assert.equal(existsSync(join(pluginRoot, claude.agents)), true)
+  for (const path of claude.agents) assert.equal(existsSync(join(pluginRoot, path)), true)
   assert.equal(existsSync(join(pluginRoot, claude.rules)), true)
 })
 
-// Hooks are the one component that is NOT pointed at. hooks/hooks.json is loaded on its own
-// by every harness — the Claude adapter tries it before any pointer, and the Copilot CLI reads
-// that path and nothing else — so `hooks` in a manifest names an ADDITIONAL file. Declaring the
-// standard path there is how the same guardrail gets registered twice and fires twice.
+// Claude loads root hooks by convention; Copilot v1 loads the namespaced copy.
+// Neither manifest needs an additional hooks pointer.
 test('plugin packaging: no manifest declares a hooks pointer', () => {
   assert.equal(existsSync(join(pluginRoot, 'hooks/hooks.json')), true)
   for (const manifest of ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json', 'plugin.json']) {
@@ -66,11 +89,28 @@ test('plugin packaging: no manifest declares a hooks pointer', () => {
   }
 })
 
-// A second manifest anywhere else is a silent double-registration on the harnesses that read
-// it, and dead weight on the ones that do not: the Copilot CLI ignores both of these paths —
-// measured against CLI 1.0.80, hooks under com.github.copilot/ never fire.
-test('plugin packaging: no second hook manifest ships', () => {
-  for (const path of ['.plugin/plugin.json', 'com.github.copilot/hooks/hooks.json', 'com.anthropic.claude-code/hooks/hooks.json']) {
+test('plugin packaging: namespaced hooks preserve Claude shape and plugin-root commands', () => {
+  const source = readFileSync(join(pluginRoot, 'hooks/hooks.json'))
+  assert.deepEqual(readFileSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json')), source)
+  const manifest = JSON.parse(source.toString('utf8'))
+  assert.deepEqual(Object.keys(manifest), ['hooks'])
+  assert.ok(manifest.hooks.SessionStart?.length > 0)
+  assert.ok(manifest.hooks.PreToolUse?.length > 0)
+  for (const [event, groups] of Object.entries(manifest.hooks)) {
+    assert.match(event, /^[A-Z]/)
+    assert.ok(Array.isArray(groups) && groups.length > 0)
+    for (const group of groups) {
+      assert.ok(Array.isArray(group.hooks) && group.hooks.length > 0)
+      for (const hook of group.hooks) {
+        assert.equal(hook.type, 'command')
+        assert.match(hook.command, /\$\{CLAUDE_PLUGIN_ROOT\}/)
+      }
+    }
+  }
+})
+
+test('plugin packaging: no legacy fallback or extra Claude hook manifest ships', () => {
+  for (const path of ['.plugin/plugin.json', 'com.anthropic.claude-code/hooks/hooks.json']) {
     assert.equal(existsSync(join(pluginRoot, path)), false, path)
   }
 })

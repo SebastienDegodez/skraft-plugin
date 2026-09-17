@@ -28,6 +28,7 @@
     "Skraft - Acceptance Designer Reviewer": "Skraft - Acceptance Designer Reviewer",
     "acceptance-designer": "Skraft - Acceptance Designer",
     "Skraft - Acceptance Designer": "Skraft - Acceptance Designer",
+    "architecture-boundaries-lens": "architecture-boundaries-lens",
     "backlog-discoverer-reviewer": "Skraft - Backlog Discoverer Reviewer",
     "Skraft - Backlog Discoverer Reviewer": "Skraft - Backlog Discoverer Reviewer",
     "backlog-discoverer": "Skraft - Backlog Discoverer",
@@ -42,17 +43,20 @@
     "Skraft - Brownfield Harness Builder": "Skraft - Brownfield Harness Builder",
     "brownfield-refactorer": "Skraft - Brownfield Refactorer",
     "Skraft - Brownfield Refactorer": "Skraft - Brownfield Refactorer",
-    "architecture-boundaries-lens": "architecture-boundaries-lens",
     "cold-reader-lens": "cold-reader-lens",
+    "contract-fidelity-lens": "contract-fidelity-lens",
+    "contract-testing-worker": "contract-testing-worker",
     "discovery-completeness-lens": "discovery-completeness-lens",
     "discovery-duplicate-lens": "discovery-duplicate-lens",
     "discovery-prioritization-lens": "discovery-prioritization-lens",
+    "mock-fidelity-lens": "mock-fidelity-lens",
+    "mock-integration-worker": "mock-integration-worker",
     "planning-ac-quality-lens": "planning-ac-quality-lens",
     "planning-coherence-lens": "planning-coherence-lens",
     "planning-dor-lens": "planning-dor-lens",
     "planning-invest-lens": "planning-invest-lens",
     "quality-gates-lens": "quality-gates-lens",
-    "test-integrity-lens": "test-integrity-lens",
+    "refactoring-worker": "refactoring-worker",
     "skraft-orchestrator": "Skraft - Orchestrator",
     "Skraft - Orchestrator": "Skraft - Orchestrator",
     "software-engineer-reviewer": "Skraft - Software Engineer Reviewer",
@@ -65,11 +69,7 @@
     "Skraft - Solution Architect": "Skraft - Solution Architect",
     "solution-researcher": "Skraft - Solution Researcher",
     "Skraft - Solution Researcher": "Skraft - Solution Researcher",
-    "contract-fidelity-lens": "contract-fidelity-lens",
-    "contract-testing-worker": "contract-testing-worker",
-    "mock-fidelity-lens": "mock-fidelity-lens",
-    "mock-integration-worker": "mock-integration-worker",
-    "refactoring-worker": "refactoring-worker"
+    "test-integrity-lens": "test-integrity-lens"
   },
   "agentSkills": {
     "Skraft - Acceptance Designer Reviewer": [
@@ -108,6 +108,7 @@
         "policy": "verify"
       }
     ],
+    "architecture-boundaries-lens": [],
     "Skraft - Backlog Discoverer Reviewer": [
       {
         "name": "discovery-review-criteria",
@@ -174,17 +175,42 @@
         "policy": "verify"
       }
     ],
-    "architecture-boundaries-lens": [],
     "cold-reader-lens": [],
+    "contract-fidelity-lens": [],
+    "contract-testing-worker": [
+      {
+        "name": "contract-testing-roster",
+        "policy": "verify"
+      },
+      {
+        "name": "contract-testing",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
+        "policy": "verify"
+      }
+    ],
     "discovery-completeness-lens": [],
     "discovery-duplicate-lens": [],
     "discovery-prioritization-lens": [],
+    "mock-fidelity-lens": [],
+    "mock-integration-worker": [
+      {
+        "name": "mocking-strategy-roster",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
+        "policy": "verify"
+      }
+    ],
     "planning-ac-quality-lens": [],
     "planning-coherence-lens": [],
     "planning-dor-lens": [],
     "planning-invest-lens": [],
     "quality-gates-lens": [],
-    "test-integrity-lens": [],
+    "refactoring-worker": [],
     "Skraft - Orchestrator": [
       {
         "name": "skraft-entry-point-routing",
@@ -272,37 +298,12 @@
       }
     ],
     "Skraft - Solution Researcher": [],
-    "contract-fidelity-lens": [],
-    "contract-testing-worker": [
-      {
-        "name": "contract-testing-roster",
-        "policy": "verify"
-      },
-      {
-        "name": "contract-testing",
-        "policy": "verify"
-      },
-      {
-        "name": "resolving-stack-commands",
-        "policy": "verify"
-      }
-    ],
-    "mock-fidelity-lens": [],
-    "mock-integration-worker": [
-      {
-        "name": "mocking-strategy-roster",
-        "policy": "verify"
-      },
-      {
-        "name": "resolving-stack-commands",
-        "policy": "verify"
-      }
-    ],
-    "refactoring-worker": []
+    "test-integrity-lens": []
   },
   "agentInstructions": {
     "Skraft - Acceptance Designer Reviewer": [],
     "Skraft - Acceptance Designer": [],
+    "architecture-boundaries-lens": [],
     "Skraft - Backlog Discoverer Reviewer": [],
     "Skraft - Backlog Discoverer": [],
     "Skraft - Backlog Planner Reviewer": [],
@@ -310,17 +311,20 @@
     "Skraft - Brownfield Analyst": [],
     "Skraft - Brownfield Harness Builder": [],
     "Skraft - Brownfield Refactorer": [],
-    "architecture-boundaries-lens": [],
     "cold-reader-lens": [],
+    "contract-fidelity-lens": [],
+    "contract-testing-worker": [],
     "discovery-completeness-lens": [],
     "discovery-duplicate-lens": [],
     "discovery-prioritization-lens": [],
+    "mock-fidelity-lens": [],
+    "mock-integration-worker": [],
     "planning-ac-quality-lens": [],
     "planning-coherence-lens": [],
     "planning-dor-lens": [],
     "planning-invest-lens": [],
     "quality-gates-lens": [],
-    "test-integrity-lens": [],
+    "refactoring-worker": [],
     "Skraft - Orchestrator": [
       "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md",
       "plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md"
@@ -330,11 +334,7 @@
     "Skraft - Solution Architect Reviewer": [],
     "Skraft - Solution Architect": [],
     "Skraft - Solution Researcher": [],
-    "contract-fidelity-lens": [],
-    "contract-testing-worker": [],
-    "mock-fidelity-lens": [],
-    "mock-integration-worker": [],
-    "refactoring-worker": []
+    "test-integrity-lens": []
   },
   "agentArtifacts": {
     "Skraft - Acceptance Designer Reviewer": {
@@ -359,6 +359,10 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md",
         "tests/**/{Feature}AcceptanceTests.cs"
       ]
+    },
+    "architecture-boundaries-lens": {
+      "inputs": [],
+      "outputs": []
     },
     "Skraft - Backlog Discoverer Reviewer": {
       "inputs": [
@@ -428,13 +432,21 @@
         "a sequence of green commits (one per completed leaf/slice)"
       ]
     },
-    "architecture-boundaries-lens": {
-      "inputs": [],
-      "outputs": []
-    },
     "cold-reader-lens": {
       "inputs": [],
       "outputs": []
+    },
+    "contract-fidelity-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "contract-testing-worker": {
+      "inputs": [
+        "the API (provider) descriptor for the active slice"
+      ],
+      "outputs": [
+        "structured result block (stack, microcks, files[], testCommand) — NO commit"
+      ]
     },
     "discovery-completeness-lens": {
       "inputs": [],
@@ -447,6 +459,19 @@
     "discovery-prioritization-lens": {
       "inputs": [],
       "outputs": []
+    },
+    "mock-fidelity-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "mock-integration-worker": {
+      "inputs": [
+        "downstream dependency descriptor (the client the SUT calls)",
+        "the integration-test intent for the active slice"
+      ],
+      "outputs": [
+        "structured result block (strategy, stack, files[], testCommand) — NO commit"
+      ]
     },
     "planning-ac-quality-lens": {
       "inputs": [],
@@ -468,9 +493,15 @@
       "inputs": [],
       "outputs": []
     },
-    "test-integrity-lens": {
-      "inputs": [],
-      "outputs": []
+    "refactoring-worker": {
+      "inputs": [
+        "full current graph/slice-plan artifact content",
+        "the specific leaf/slice to implement, verbatim",
+        "acceptance criteria (from mikado-method or strangler-fig-method, verbatim)"
+      ],
+      "outputs": [
+        "one of ADVANCE / EXPAND / DONE / BLOCKED (structured result) — no commit on EXPAND/BLOCKED"
+      ]
     },
     "Skraft - Orchestrator": {
       "inputs": [],
@@ -532,40 +563,9 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md"
       ]
     },
-    "contract-fidelity-lens": {
+    "test-integrity-lens": {
       "inputs": [],
       "outputs": []
-    },
-    "contract-testing-worker": {
-      "inputs": [
-        "the API (provider) descriptor for the active slice"
-      ],
-      "outputs": [
-        "structured result block (stack, microcks, files[], testCommand) — NO commit"
-      ]
-    },
-    "mock-fidelity-lens": {
-      "inputs": [],
-      "outputs": []
-    },
-    "mock-integration-worker": {
-      "inputs": [
-        "downstream dependency descriptor (the client the SUT calls)",
-        "the integration-test intent for the active slice"
-      ],
-      "outputs": [
-        "structured result block (strategy, stack, files[], testCommand) — NO commit"
-      ]
-    },
-    "refactoring-worker": {
-      "inputs": [
-        "full current graph/slice-plan artifact content",
-        "the specific leaf/slice to implement, verbatim",
-        "acceptance criteria (from mikado-method or strangler-fig-method, verbatim)"
-      ],
-      "outputs": [
-        "one of ADVANCE / EXPAND / DONE / BLOCKED (structured result) — no commit on EXPAND/BLOCKED"
-      ]
     }
   }
 }

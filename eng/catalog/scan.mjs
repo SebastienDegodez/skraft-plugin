@@ -85,17 +85,17 @@ const skills = readdirSync(skillsRoot)
   })
 
 // ── Agents, workers, review lenses ─────────────────────────────────────────
-// The Claude extension tree is the canonical authored source; it is the only agent
-// tree the plugin ships, so there is nothing to mirror and no identity to double.
-const agentsRoot = join(pluginRoot, 'com.anthropic.claude-code/agents')
+// Read one runtime tree only: Copilot retains original provenance metadata.
+// Classification preserves former worker-family membership, including fidelity lenses.
+const agentsRoot = join(pluginRoot, 'com.github.copilot/agents')
 const agentKind = (path) => {
   const relativePath = posix(relative(agentsRoot, path))
-  if (relativePath.startsWith('workers/')) return 'worker'
-  if (relativePath.startsWith('reviewer-lenses/')) return 'lens'
+  if (/(?:-worker|^(?:contract|mock)-fidelity-lens)\.agent\.md$/.test(relativePath)) return 'worker'
+  if (relativePath.endsWith('-lens.agent.md')) return 'lens'
   return 'agent'
 }
 
-const agents = walk(agentsRoot, (entry) => entry.endsWith('.md')).map((path) => {
+const agents = walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((path) => {
   const content = readFileSync(path, 'utf8')
   const { data } = readFrontMatter(content)
   const structured = structuredFrontMatter(content)
@@ -103,7 +103,7 @@ const agents = walk(agentsRoot, (entry) => entry.endsWith('.md')).map((path) => 
   const description = String(data.description ?? '')
   // The file stem is the stable identity: it is what `copilot --agent` takes and
   // what an evaluation result is keyed on. The front-matter name is a label.
-  const id = posix(relative(agentsRoot, path)).replace(/\.md$/, '').split('/').at(-1)
+  const id = posix(relative(agentsRoot, path)).replace(/\.agent\.md$/, '').split('/').at(-1)
   if (!description) warn('AGENT_DESCRIPTION_MISSING', fromRoot(path), 'Agent has no description in its front matter')
 
   return {

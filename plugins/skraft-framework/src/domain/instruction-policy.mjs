@@ -2,14 +2,14 @@
 
 const unqualified = (agentName) => {
   const value = String(agentName ?? '').trim()
-  return value.includes(':') ? value.split(':').at(-1) : value
+  return value.startsWith('skraft:') ? value.slice('skraft:'.length) : value
 }
 
 export const canonicalAgentName = (agentName, config) => {
   const value = String(agentName ?? '').trim()
   if (!value) return undefined
   const aliases = config?.agentAliases ?? {}
-  return aliases[value] ?? aliases[unqualified(value)] ?? value
+  return aliases[value] ?? aliases[unqualified(value)] ?? unqualified(value)
 }
 
 export const companionInstructionsFor = (agentName, config) => {

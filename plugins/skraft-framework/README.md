@@ -1,3 +1,4 @@
+│   ├── agents/                      31 flat `.agent.md` synchronized descriptors
 # SKRAFT plugin
 
 Deterministic agentic software delivery for Claude Code and GitHub Copilot.
@@ -32,9 +33,15 @@ Run these commands inside Claude Code:
 
 ### GitHub Copilot
 
-Install the `plugins/skraft-framework` directory with an Agent Plugins 1.0-compatible
-plugin client. Copilot discovers its agents, rules, and hooks from the
-`com.github.copilot` namespace.
+For Copilot CLI, install `skraft` from this repository's marketplace, or load the
+`plugins/skraft-framework` directory with `--plugin-dir` for local development.
+The root [plugin.json](plugin.json) declares Agent Plugins v1 with no root `agents` list;
+Copilot discovers the generated namespaced agents. In the CLI, select `skraft:skraft-orchestrator`.
+
+Copilot CLI 1.0.74 introduced Open Plugin Spec v1 support. That does not imply
+identical discovery or hook behavior across Copilot CLI, VS Code, and Claude Code.
+This package declares the v1 schema and retains native compatibility manifests;
+see the measured scope and pending checks below.
 
 Codex and Cursor manifests expose the shared plugin skills. The complete guarded
 agent pipeline currently targets Claude Code and GitHub Copilot.
@@ -126,44 +133,87 @@ node "<plugin-root>/src/cli/health-check.mjs"
 ```
 
 Run these from the consumer repository so SKRAFT resolves that repository's tracking
-state. Installed Claude Code and Copilot plugin hooks supply `<plugin-root>` as
-`$CLAUDE_PLUGIN_ROOT`.
+state. Hook commands use `CLAUDE_PLUGIN_ROOT`; actual Copilot CLI 1.0.83 fixtures verified
+its expansion, including paths with spaces. Full live VS Code v1 validation remains unverified.
 
 Repository configuration lives in `skraft-config.json`. The supported tracking layout is
 `namespaced`; quality thresholds and engineering invariants are deliberately not user-relaxable.
 
 ## Harness packaging
 
-Copilot sources are canonical. Claude files are a generated native projection:
+One canonical source set feeds native packaging surfaces:
 
 ```text
 plugins/skraft-framework/
-├── plugin.json
-├── .claude-plugin/plugin.json
+├── plugin.json                      canonical v1 schema; no root agents list
+├── .claude-plugin/plugin.json        explicit registration of all 31 agents
 ├── com.github.copilot/
+│   ├── agents/                      31 flat `.agent.md` synchronized descriptors
+│   ├── hooks/hooks.json             generated exact copy of root hooks
 │   └── rules/                       native path-scoped rules
 ├── com.anthropic.claude-code/
-│   └── agents/                      canonical `.md` files
-├── hooks/hooks.json                 the one manifest every harness loads
+│   └── agents/                      31 flat editable native Claude `.md` descriptors
+├── hooks/hooks.json                 canonical source; Claude compatibility
 ├── skills/                         shared skills
 └── src/                            shared zero-dependency runtime
 ```
 
 Copilot loads path-scoped rules natively. Claude's `SubagentStart` hook resolves the
 canonical agent identity and injects only rules declared by that agent. Catalogue,
-configuration, and evaluation scans read the single canonical agent tree.
+configuration, and evaluation scans read the Copilot runtime tree only, preserving
+original provenance metadata without counting a logical agent twice.
 
-Detection deliberately lands on `.claude-plugin/plugin.json` in both Claude Code and VS Code:
-it is the only manifest whose adapter expands a plugin-root token in hook commands, so it is the
-only one under which the shipped hooks can locate their own CLI. No competing manifest ships.
+The Claude [manifest](.claude-plugin/plugin.json) must enumerate **all 31** individual
+native runtime agents, including workers and reviewer lenses, for registration and delegation.
+Claude rejects directory paths in `agents`. Never delete internal agents from this list to hide
+them. Internal `user-invocable: false` flags remain byte-preserved, but that field is not
+documented for Claude **subagents**; it does not promise hiding in Claude's picker.
 
-No manifest declares a `hooks` pointer. A pointer names an *additional* hook file, on top of the
-`hooks/hooks.json` every adapter already loads, so declaring the standard path there registers the
-same guardrails twice.
+Six standalone roots are intended public Copilot entry points: `skraft-orchestrator`,
+`backlog-discoverer`, `backlog-planner`, `brownfield-analyst`, `brownfield-harness-builder`,
+and `brownfield-refactorer`. Internal agents remain available for delegation.
+
+Shared agents use a scalar `model` value. VS Code's fallback-array syntax is not
+portable to Copilot CLI and can silently remove an agent from discovery.
+
+VS Code **1.126** actual source currently falls back through `.plugin` then `.claude-plugin`.
+Full live v1 validation is unverified; this is not a reason to omit the root `$schema`.
+The `rules` field is retained for VS Code; Claude Code ignores it and reports a
+validation warning. Claude rule injection remains the responsibility of the hooks.
+
+Actual Copilot CLI **1.0.83** fixture tests **passed** namespaced agent discovery and
+`SessionStart` / `PreToolUse` with `CLAUDE_PLUGIN_ROOT`, including paths with spaces.
+[scripts/copilot-hook-smoke.mjs](../../scripts/copilot-hook-smoke.mjs) also **passed** against
+the current migrated plugin installed from the local marketplace checkout, with exact CLI
+**1.0.83** pinned via `--cli` and an isolated `COPILOT_HOME`: **PASS allowed** (1 hook audit
+entry), **PASS denied** (1 hook audit entry), forbidden write absent. This verifies the probed
+SKRAFT refusal, not the full six-root picker, hidden-subagent invocation, model IDs, general
+tool permissions, or the full engineering pipeline. Full live VS Code validation remains unverified.
+
+Hooks have one source and two physical surfaces: canonical [hooks/hooks.json](hooks/hooks.json)
+for Claude compatibility and generated [com.github.copilot/hooks/hooks.json](com.github.copilot/hooks/hooks.json)
+for Copilot v1. No extra manifest `hooks` pointers: do not register either auto-loaded surface twice.
+These are current packaging facts; [ADR-008](../../docs/adr/adr-008-single-hook-manifest.md)
+retains its measured legacy record, not a current cross-client guarantee.
 
 ## Maintainer workflow
 
 Run commands from repository root.
+
+Edit either `com.github.copilot/agents/<id>.agent.md` or
+`com.anthropic.claude-code/agents/<id>.md`. These are the only two editable runtime trees.
+`plugin:sync` merges body and description against `.agent-sync.json` v2 using stable basename IDs
+and per-side normalized shared fields. It translates Markdown destinations for the receiving
+client, preserves native name/model/tools/agents and all other header bytes, and rejects
+conflicting edits before writing anything. Unchanged differential prose stays client-local.
+Never reset a baseline to accept unexplained drift. New IDs require both explicitly authored
+client versions; sync does not invent native tools or clone broad permissions.
+Edit hooks in the root source. Run `npm run plugin:sync` and `npm run plugin:check`, which invoke
+[scripts/project-plugin-adapters.mjs](../../scripts/project-plugin-adapters.mjs) with `--apply`
+and `--check`. `plugin:build` is an alias for the same synchronization, not native generation.
+Commit both runtime descriptors, shared baseline and generated hook copy together:
+marketplace Git installs do not run a build.
+Keep the Claude manifest's full agent list synchronized when adding or removing agents.
 
 After changing an agent, regenerate the guardrail config:
 
@@ -181,8 +231,8 @@ node --test "tests/skraft-framework/**/*.test.mjs"
 npm run ci:local
 ```
 
-Tests live in `tests/skraft-framework/<feature>/`, with unit tests, acceptance tests and fixtures grouped by feature. Generated Claude agents must never be edited
-directly. Generated catalogue, evaluation, dashboard, and graph outputs must not be committed.
+Tests live in `tests/skraft-framework/<feature>/`, with unit tests, acceptance tests and fixtures grouped by feature. Agent sources are the two runtime trees above.
+Generated catalogue, evaluation, dashboard, and graph outputs must not be committed.
 
 ## Documentation
 

@@ -1,20 +1,16 @@
 ---
-name: Skraft - Brownfield Refactorer
+name: brownfield-refactorer
 description: "Use when the human wants to refactor or replace part of an existing brownfield codebase that already has a safety net (characterization/contract tests) — recommend Mikado (in-place restructuring) or Strangler Fig (incremental replacement behind a facade), let the human choose, then drive the work leaf-by-leaf or slice-by-slice, keeping the safety net green at every commit. Activate on 'refactor this module safely', 'apply Mikado to this change', 'strangle this component', 'replace this service incrementally'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
-model:
- - Claude Sonnet 5
- - claude-sonnet-5
- - Claude Sonnet 4.6
- - claude-sonnet-4.6
+model: sonnet
 user-invocable: true
 tools:
-  - read/readFile
-  - edit/createFile
-  - edit/createDirectory
-  - edit/editFiles
-  - search/codebase
-  - execute/runInTerminal
-  - execute/getTerminalOutput
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - Bash
+  - TaskOutput
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
@@ -50,8 +46,8 @@ This is a **standalone workflow the human chooses to run** — not a `Skraft - O
 
 Load both before starting. If either is missing, report `[SKILL MISSING] {name}` and stop.
 
-- [mikado-method](../skills/mikado-method/SKILL.md)
-- [strangler-fig-method](../skills/strangler-fig-method/SKILL.md)
+- [mikado-method](../../skills/mikado-method/SKILL.md)
+- [strangler-fig-method](../../skills/strangler-fig-method/SKILL.md)
 
 ## Boundaries (non-negotiable)
 

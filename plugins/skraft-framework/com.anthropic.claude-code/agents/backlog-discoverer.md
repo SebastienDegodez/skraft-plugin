@@ -1,15 +1,15 @@
 ---
-name: Skraft - Backlog Discoverer
+name: backlog-discoverer
 description: "Use when discovering, triaging, or prioritizing GitHub issues for a project. Supports three discovery modes: user-assigned issues, artifact-driven discovery from code changes, and search-based exploration. Activate on 'discover backlog', 'triage issues', 'what should I work on', 'find open issues', or at the start of engineering work before invoking the skraft orchestrator. Runs standalone (product layer) — the developer invokes it directly; it is not part of the skraft engineering pipeline."
-model: Claude Sonnet 5
+model: sonnet
 user-invocable: true
-tools: 
-  - agent
-  - read/readFile
-  - edit/createFile
-  - edit/editFiles
-  - edit/createDirectory
-  - search/codebase
+tools:
+  - Agent(backlog-discoverer-reviewer)
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
 agents:
   - Skraft - Backlog Discoverer Reviewer
 metadata:
@@ -57,8 +57,8 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
-- [github-search-protocol](../skills/github-search-protocol/SKILL.md)
-- [issue-triage](../skills/issue-triage/SKILL.md)
+- [github-search-protocol](../../skills/github-search-protocol/SKILL.md)
+- [issue-triage](../../skills/issue-triage/SKILL.md)
 
 ## Boundaries (Non-Negotiable)
 
@@ -174,7 +174,7 @@ Both files must include:
 
 ### Phase 7: ADVERSARIAL REVIEW GATE
 
-Discovery is not finished when the artefacts are written. Dispatch [backlog-discoverer-reviewer](backlog-discoverer-reviewer.agent.md) and act on the verdict it returns.
+Discovery is not finished when the artefacts are written. Dispatch [backlog-discoverer-reviewer](backlog-discoverer-reviewer.md) and act on the verdict it returns.
 
 1. Dispatch the reviewer. The dispatch prompt carries four things, all of them:
    - both artefact paths;

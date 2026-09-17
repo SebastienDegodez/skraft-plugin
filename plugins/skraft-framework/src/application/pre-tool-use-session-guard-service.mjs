@@ -1,5 +1,6 @@
 import { isErr } from '../domain/result.mjs'
 import { guardProtectedArtifact, guardWorkspaceWrite } from '../domain/session-guard-policy.mjs'
+import { canonicalAgentName } from '../domain/instruction-policy.mjs'
 import { allow, deny } from '../adapters/api/hooks/decision.mjs'
 
 // PreToolUse session guard (G7/G8). Wires the pure session-guard policy to the
@@ -12,16 +13,18 @@ import { allow, deny } from '../adapters/api/hooks/decision.mjs'
 
 const deliverAgentsFrom = (config) => {
   const deliver = config?.phaseAgents?.DELIVER ?? {}
-  return [deliver.specialist, deliver.reviewer].filter((a) => typeof a === 'string')
+  return [deliver.specialist, deliver.reviewer]
+    .filter((a) => typeof a === 'string')
+    .map((a) => canonicalAgentName(a, config))
 }
 
 // Extract the write signals from a normalised PreToolUse payload. Bash carries the
-// command; Write/Edit tools carry the file path (filePath or path).
+// command; Write/Edit tools carry the adapter's filePath signal or legacy arguments.
 const writeSignals = (payload) => {
   const toolName = payload.toolName
   const toolInput = payload.toolInput ?? {}
   const command = toolName === 'Bash' && typeof toolInput.command === 'string' ? toolInput.command : undefined
-  const filePath = (toolName === 'Write' || toolName === 'Edit') ? (toolInput.filePath ?? toolInput.path ?? undefined) : undefined
+  const filePath = (toolName === 'Write' || toolName === 'Edit') ? (payload.filePath ?? toolInput.filePath ?? toolInput.path ?? undefined) : undefined
   return { command, filePath }
 }
 
@@ -73,7 +76,11 @@ export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, 
       await record({ decision: 'ALLOW', code: 'UNCONFIGURED_DELIVER_AGENTS', reason: 'no monitored DELIVER agents configured; session guard fail-open' })
       return allow()
     }
-    const workspaceResult = guardWorkspaceWrite({ command, filePath, phase, agentName, deliverAgents })
+    const workspaceResult = guardWorkspaceWrite({
+      command, filePath, phase,
+      agentName: canonicalAgentName(agentName, config) ?? null,
+      deliverAgents
+    })
     if (isErr(workspaceResult)) {
       await record({ decision: 'DENY', code: workspaceResult.error.code, reason: workspaceResult.error.reason })
       return deny(workspaceResult.error.reason)

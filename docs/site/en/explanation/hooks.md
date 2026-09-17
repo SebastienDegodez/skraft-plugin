@@ -22,8 +22,8 @@ Adversarial review (G7) detects violations *after* the fact; hooks detect them *
 
 ## The solution — the hooks harness
 
-SKRAFT introduces a hooks harness plugged into the runtime events of both supported
-harnesses (Claude Code and Copilot CLI). Each hook intercepts an event (`PreToolUse`,
+SKRAFT targets runtime events in Claude Code and Copilot CLI; client validation limits
+are stated below. Each hook intercepts an event (`PreToolUse`,
 `SubagentStop`, …), evaluates the normalised payload, and returns a decision (`allow`,
 `deny`, `block`, `additionalContext`).
 
@@ -53,8 +53,8 @@ that lets the violation through. See
 [Hooks — reference]({{ "/en/reference/infrastructure/hooks" | relative_url }}) for the exact
 wire format.
 
-The agent receives `deny` or `block` before the tool executes — the invariant cannot
-be silently violated.
+Enforcement requires the host to load the hook and honor its decision. A translated
+`deny` or `block` response alone does not prove that the host blocked execution.
 
 ## Framework structure
 
@@ -94,8 +94,43 @@ plugins/skraft-framework/src/
     hook.mjs             CLI: stdin JSON → router → stdout JSON
 ```
 
-The Copilot runtime calls `node plugins/skraft-framework/src/cli/hook.mjs <HookType>` for each event
-declared in `.github/hooks/skraft.json`.
+## Current packaging and validation limits
+
+Installed plugin hooks share one canonical source but ship on two physical surfaces:
+
+| Surface | Role |
+|---|---|
+| [Root hooks](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/hooks/hooks.json) | Canonical source and Claude compatibility |
+| [Copilot namespace hooks](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Generated exact byte copy for Copilot v1 |
+
+No extra manifest `hooks` pointers are needed. Both surfaces invoke the shared runtime
+through `CLAUDE_PLUGIN_ROOT`; they are distribution adapters, not separate guardrail logic.
+The canonical root manifest declares Agent Plugins v1 with no root `agents` list.
+Exactly two editable runtime trees ship: 31 flat Copilot `.agent.md` files in
+`com.github.copilot/agents/` and 31 flat native Claude `.md` files in
+`com.anthropic.claude-code/agents/`. Body and description synchronize bidirectionally
+against a per-side baseline; Markdown destinations translate without changing native headers.
+`npm run plugin:sync` (`--apply`) and `npm run plugin:check` (`--check`) synchronize and verify
+the pair. Conflicting prose edits block all writes. Both runtime trees, baseline and generated
+hook copy are committed because marketplace Git installs do not run a build.
+
+Actual **Copilot CLI 1.0.83** fixture tests **passed** namespaced agent discovery,
+`SessionStart` and `PreToolUse` with `CLAUDE_PLUGIN_ROOT`, including paths with spaces.
+[scripts/copilot-hook-smoke.mjs](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/copilot-hook-smoke.mjs)
+also **passed** against the current migrated plugin installed from the local marketplace
+checkout, with exact CLI **1.0.83** pinned via `--cli` and an isolated `COPILOT_HOME`:
+**PASS allowed** (1 hook audit entry), **PASS denied** (1 hook audit entry), forbidden write
+absent. This verifies the probed SKRAFT refusal, not the full six-root picker or
+hidden-subagent invocation. **VS Code 1.126** actual source
+currently falls back through `.plugin` then `.claude-plugin`; full live v1 validation is
+**unverified**. These results do not support a blanket compatibility claim or the obsolete
+no-schema workaround.
+
+Sources: [adapter generator](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/project-plugin-adapters.mjs),
+[CLI compatibility probe](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/copilot-plugin-compat-smoke.mjs)
+and [current packaging notes](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/README.md#harness-packaging).
+[ADR-008](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-008-single-hook-manifest.md)
+preserves measured legacy evidence; it is not current cross-client packaging guidance.
 
 ## Starbucks example (illustrative)
 

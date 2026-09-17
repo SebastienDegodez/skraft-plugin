@@ -1,16 +1,14 @@
 ---
-name: Skraft - Software Engineer Reviewer
+name: software-engineer-reviewer
 description: "[Internal subagent — dispatched by Skraft - Orchestrator only] Adversarial peer reviewer (Genesis A7): spawns 4 independent lenses, synthesizes a weighted verdict. Read-only — never modifies code."
-model:
-  - Claude Sonnet 5
-  - Claude Sonnet 5 (copilot)
-  - claude-sonnet-5
+model: sonnet
 user-invocable: false
-tools: 
-  - read/readFile
-  - search/codebase
-  - agent
-  - execute/runInTerminal
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Agent
+  - Bash
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
   dispatched_by: Skraft - Orchestrator
@@ -55,7 +53,7 @@ Repair pressure never changes ownership. Never use edit, write, or shell file-wr
 
 Before reading artefacts or dispatching a lens, load each skill. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
-- [adversarial-review-lenses](../skills/adversarial-review-lenses/SKILL.md)
+- [adversarial-review-lenses](../../skills/adversarial-review-lenses/SKILL.md)
 
 ## Protocol
 
@@ -78,10 +76,10 @@ Dispatch exactly these four registered ids before synthesis: `quality-gates-lens
 
 | Lens | Sub-agent | Input |
 |------|-----------|-------|
-| quality-gates | [quality-gates-lens](reviewer-lenses/quality-gates-lens.agent.md) | Code + tests + journal + checklist |
-| architecture-boundaries | [architecture-boundaries-lens](reviewer-lenses/architecture-boundaries-lens.agent.md) | Code ONLY |
-| test-integrity | [test-integrity-lens](reviewer-lenses/test-integrity-lens.agent.md) | Tests + code |
-| cold-reader | [cold-reader-lens](reviewer-lenses/cold-reader-lens.agent.md) | Code + tests ONLY (NO journal, NO checklist) |
+| quality-gates | [quality-gates-lens](quality-gates-lens.md) | Code + tests + journal + checklist |
+| architecture-boundaries | [architecture-boundaries-lens](architecture-boundaries-lens.md) | Code ONLY |
+| test-integrity | [test-integrity-lens](test-integrity-lens.md) | Tests + code |
+| cold-reader | [cold-reader-lens](cold-reader-lens.md) | Code + tests ONLY (NO journal, NO checklist) |
 
 **Conditional lenses (spawn ONLY when the diff matches).** These cover the
 test-wiring workers' output. Spawn in the same parallel fan-out when their trigger
@@ -89,8 +87,8 @@ fires; otherwise omit them entirely.
 
 | Lens | Spawn when the diff touches... | Sub-agent | Input |
 |------|-------------------------------|-----------|-------|
-| mock-fidelity | a downstream mock / an integration test using one | [mock-fidelity-lens](workers/mocking/mock-fidelity-lens.agent.md) | Code + tests ONLY |
-| contract-fidelity | a contract / `VerifyAsync` / provider contract-test scaffold | [contract-fidelity-lens](workers/contract-testing/contract-fidelity-lens.agent.md) | Code + tests ONLY |
+| mock-fidelity | a downstream mock / an integration test using one | [mock-fidelity-lens](mock-fidelity-lens.md) | Code + tests ONLY |
+| contract-fidelity | a contract / `VerifyAsync` / provider contract-test scaffold | [contract-fidelity-lens](contract-fidelity-lens.md) | Code + tests ONLY |
 
 **CRITICAL:** The cold-reader lens must receive ZERO producer context.
 Passing journal or checklist to cold-reader violates A7 and invalidates the review.

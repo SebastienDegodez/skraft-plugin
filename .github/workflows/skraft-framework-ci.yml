@@ -4,9 +4,16 @@ on:
   push:
     paths:
       - 'plugins/skraft-framework/src/**'
+      - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
       - 'plugins/skraft-framework/assets/**'
       - 'plugins/skraft-framework/com.github.copilot/rules/**'
+      - 'plugins/skraft-framework/com.github.copilot/hooks/**'
+      - 'plugins/skraft-framework/hooks/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      - 'scripts/lib/native-claude-agent.mjs'
+      - 'plugins/skraft-framework/.agent-sync.json'
       - 'plugins/skraft-framework/plugin.json'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'plugins/skraft-framework/skraft-framework.config.json'
@@ -19,9 +26,16 @@ on:
   pull_request:
     paths:
       - 'plugins/skraft-framework/src/**'
+      - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
       - 'plugins/skraft-framework/assets/**'
       - 'plugins/skraft-framework/com.github.copilot/rules/**'
+      - 'plugins/skraft-framework/com.github.copilot/hooks/**'
+      - 'plugins/skraft-framework/hooks/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      - 'scripts/lib/native-claude-agent.mjs'
+      - 'plugins/skraft-framework/.agent-sync.json'
       - 'plugins/skraft-framework/plugin.json'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'plugins/skraft-framework/skraft-framework.config.json'
@@ -45,6 +59,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Check generated plugin adapters
+        run: node scripts/project-plugin-adapters.mjs --check
 
       - name: Run tests with coverage
         run: |

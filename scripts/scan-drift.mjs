@@ -92,13 +92,14 @@ function catalogueTopology(root, book) {
         continue;
       }
 
-      const id = basename(abs).replace(/\.md$/, '');
+      const id = basename(abs).replace(/(?:\.agent)?\.md$/, '');
+      if (agents.some((agent) => agent.path === path)) continue;
       const metadata = fm.metadata || {};
       agents.push({
         id,
         name: String(fm.name || id),
         path,
-        kind: key === 'workers' ? 'worker' : key === 'lenses' ? 'lens' : 'agent',
+        kind: /(?:-worker|^(?:contract|mock)-fidelity-lens)$/.test(id) ? 'worker' : id.endsWith('-lens') ? 'lens' : 'agent',
         userInvocable: fm['user-invocable'] === true || fm.userInvocable === true,
         phase: metadata.phase ? String(metadata.phase) : null,
         phases: asArray(metadata.phases).map(String),

@@ -23,8 +23,8 @@ La revue adverse (G7) détecte *après* ; les hooks détectent *avant*.
 
 ## La solution — le harness de hooks
 
-SKRAFT introduit un harness de hooks branché sur les événements des deux runtimes
-supportés (Claude Code et Copilot CLI). Chaque hook intercepte un événement
+SKRAFT cible les événements de Claude Code et Copilot CLI ; les limites de validation
+par client figurent ci-dessous. Chaque hook intercepte un événement
 (`PreToolUse`, `SubagentStop`, …), évalue le payload normalisé, et retourne une décision
 (`allow`, `deny`, `block`, `additionalContext`).
 
@@ -55,8 +55,8 @@ devient un no-op qui laisse passer la violation. Voir
 [Hooks — référence]({{ "/fr/reference/infrastructure/hooks" | relative_url }}) pour le format
 de fil exact.
 
-L'agent reçoit `deny` ou `block` avant que l'outil ne s'exécute — l'invariant ne
-peut pas être violé discrètement.
+L'application du garde-fou exige que l'hôte charge le hook et respecte sa décision.
+Une réponse traduite `deny` ou `block` ne prouve pas à elle seule le blocage par l'hôte.
 
 ## Structure du framework
 
@@ -96,8 +96,43 @@ plugins/skraft-framework/src/
     hook.mjs             CLI : stdin JSON → router → stdout JSON
 ```
 
-Le runtime Copilot invoque `node plugins/skraft-framework/src/cli/hook.mjs <HookType>` à chaque
-événement déclaré dans `.github/hooks/skraft.json`.
+## Packaging courant et limites de validation
+
+Les hooks du plugin installé partagent une source canonique, livrée sur deux surfaces physiques :
+
+| Surface | Rôle |
+|---|---|
+| [Hooks racine](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/hooks/hooks.json) | Source canonique et compatibilité Claude |
+| [Hooks du namespace Copilot](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Copie générée exacte octet pour octet pour Copilot v1 |
+
+Aucun pointeur `hooks` supplémentaire dans les manifestes n'est nécessaire. Les deux surfaces
+invoquent le runtime partagé via `CLAUDE_PLUGIN_ROOT` ; ce sont des adaptateurs de distribution,
+pas des logiques de garde-fous distinctes. Le manifeste racine canonique déclare Agent Plugins v1
+sans liste `agents` racine. Exactement deux arbres d'exécution éditables sont distribués :
+31 fichiers Copilot `.agent.md` à plat dans `com.github.copilot/agents/` et 31 fichiers Claude
+natifs `.md` à plat dans `com.anthropic.claude-code/agents/`. Corps et description se synchronisent
+dans les deux sens contre un baseline par client ; les destinations Markdown sont traduites sans modifier les en-têtes natifs.
+`npm run plugin:sync` (`--apply`) et `npm run plugin:check` (`--check`) synchronisent et vérifient
+la paire. Les éditions contradictoires bloquent toute écriture. Les deux arbres, le baseline et
+la copie générée des hooks sont commités car les installations marketplace depuis Git ne lancent aucun build.
+
+Les fixtures sur **Copilot CLI 1.0.83 réel** ont **réussi** la découverte des agents namespacés,
+`SessionStart` et `PreToolUse` avec `CLAUDE_PLUGIN_ROOT`, y compris des chemins contenant des espaces.
+[scripts/copilot-hook-smoke.mjs](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/copilot-hook-smoke.mjs)
+a aussi **réussi** sur le plugin migré courant installé depuis le checkout marketplace local,
+avec la CLI exacte **1.0.83** épinglée via `--cli` et un `COPILOT_HOME` isolé :
+**PASS allowed** (1 entrée d'audit de hook), **PASS denied** (1 entrée d'audit de hook), écriture
+interdite absente. Ce refus SKRAFT observé ne valide ni le sélecteur complet des six racines
+ni l'invocation de sous-agents masqués. Le code source
+réel de **VS Code 1.126** utilise actuellement le repli `.plugin` puis `.claude-plugin` ; la
+validation v1 complète en session réelle reste **non vérifiée**. Aucun de ces résultats ne justifie
+une garantie globale de compatibilité ni l'ancien contournement sans schéma.
+
+Sources : [générateur d'adaptateurs](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/project-plugin-adapters.mjs),
+[sonde de compatibilité CLI](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/copilot-plugin-compat-smoke.mjs)
+et [notes de packaging courant](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/README.md#harness-packaging).
+[ADR-008](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-008-single-hook-manifest.md)
+conserve les mesures historiques ; ce n'est pas une référence du packaging actuel entre clients.
 
 ## Exemple Starbucks (illustratif)
 

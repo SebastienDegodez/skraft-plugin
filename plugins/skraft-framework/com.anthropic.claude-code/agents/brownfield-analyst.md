@@ -1,19 +1,15 @@
 ---
-name: Skraft - Brownfield Analyst
+name: brownfield-analyst
 description: "Use when the human chooses to analyze an existing/brownfield or legacy codebase that has no product docs or backlog — reverse-engineer it and produce a structured PRD (docs/prds/) that backlog tooling can turn into issues and user stories. Activate on 'analyze this codebase', 'bootstrap a PRD', 'reverse-engineer a PRD', 'document this legacy system', 'produce a PRD from existing code', 'no docs, start from the code'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
-model:
- - Claude Sonnet 5
- - claude-sonnet-5
- - Claude Sonnet 4.6
- - claude-sonnet-4.6
+model: sonnet
 user-invocable: true
 tools:
-  - read/readFile
-  - edit/createFile
-  - edit/createDirectory
-  - edit/editFiles
-  - search/codebase
-  - execute/runInTerminal
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - Bash
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
@@ -53,8 +49,8 @@ DELIVER). Nothing here modifies `Skraft - Orchestrator` state.
 Load both skills before starting. If either is missing, report
 `[SKILL MISSING] {skill-name}` and stop — do not proceed with a degraded procedure.
 
-- [characterize-brownfield](../skills/characterize-brownfield/SKILL.md)
-- [compose-brownfield-prd](../skills/compose-brownfield-prd/SKILL.md)
+- [characterize-brownfield](../../skills/characterize-brownfield/SKILL.md)
+- [compose-brownfield-prd](../../skills/compose-brownfield-prd/SKILL.md)
 
 ## Boundaries (non-negotiable)
 

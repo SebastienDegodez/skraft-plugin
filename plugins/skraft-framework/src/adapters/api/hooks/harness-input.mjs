@@ -61,6 +61,10 @@ export const fromHarnessInput = (raw = {}, { env = process.env } = {}) => {
   const toolName = canonicalToolName(raw.toolName ?? raw.tool_name)
   const toolInput = asToolInput(raw.toolInput ?? raw.tool_input ?? raw.toolArgs ?? raw.tool_args)
   const agentName = raw.agentName ?? raw.agent_name ?? raw.agentType ?? raw.agent_type
+  const requestedAgent = raw.requestedAgent ?? raw.requested_agent
+    ?? toolInput?.subagentType ?? toolInput?.subagent_type
+  const filePath = raw.filePath ?? raw.file_path
+    ?? toolInput?.filePath ?? toolInput?.file_path ?? toolInput?.path
   const harness = harnessOf(raw, env)
 
   return {
@@ -68,6 +72,8 @@ export const fromHarnessInput = (raw = {}, { env = process.env } = {}) => {
     ...(toolName === undefined ? {} : { toolName }),
     ...(toolInput === undefined ? {} : { toolInput }),
     ...(agentName === undefined ? {} : { agentName }),
+    ...(requestedAgent === undefined ? {} : { requestedAgent }),
+    ...(filePath === undefined ? {} : { filePath }),
     ...(harness === undefined ? {} : { harness }),
   }
 }

@@ -35,7 +35,7 @@ dependency, tested boundary-to-boundary and hardened with mutation testing.
 - 🔬 **Independent reviewer lenses** (quality-gates, architecture-boundaries, test-integrity, cold-reader) synthesized into a weighted verdict.
 - 📚 **Discipline skills**: Outside-In TDD, Clean Architecture testing, BDD/Gherkin, mutation testing, contract testing, ADR, issue refinement…
 - 🛡️ **Mechanical guardrails G1–G8** (fail-closed hooks): dispatch ordering, forced skill loading + JSONL audit, artifact/verdict/commit verification, state protection.
-- 🎯 **Multi-harness portability**: the same guardrails on Claude Code, Copilot CLI and Cursor.
+- 🎯 **Harness-specific packaging**: shared sources with native adapters; validation limits in [docs/architecture.md](docs/architecture.md#compatibility).
 - 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, structural phase pruning from confirmed upstream evidence.
 
 ## Installation
@@ -53,27 +53,34 @@ Enter these commands in Claude Code:
 
 ### GitHub Copilot, Codex, Cursor
 
-The portable manifest lives at `plugins/skraft-framework/plugin.json` and each client that needs its
-own schema gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`).
-The portable manifest deliberately omits the [Agent Plugins 1.0](https://agent-plugins.org/specification)
-`$schema` marker: VS Code's Agent Plugins v1 adapter substitutes no plugin-root token in hook
-commands, so a plugin recognized under it cannot locate its own CLI. Detection therefore falls
-through to `.claude-plugin/plugin.json`, whose adapter does expand `${CLAUDE_PLUGIN_ROOT}`.
-Skills and runtime stay shared. The `com.anthropic.claude-code/agents/*.md` tree is the single
-canonical agent source — there is no second tree to mirror.
-Copilot loads path-scoped rules natively, while Claude receives only each agent's declared companion
-rules through `SubagentStart`.
+[plugins/skraft-framework/plugin.json](plugins/skraft-framework/plugin.json) is the canonical
+[Agent Plugins v1](https://agent-plugins.org/specification) manifest, with `$schema` and no root
+`agents` list. Exactly two editable runtime trees ship: 31 flat Copilot `.agent.md`
+descriptors in `com.github.copilot/agents/`, and 31 flat native Claude `.md` descriptors
+in `com.anthropic.claude-code/agents/`. Body and description sync bidirectionally;
+Markdown destinations adapt to each client while native headers remain untouched.
+Shared-field baseline v2 records stable IDs, not a third descriptor source.
+Skills and runtime stay shared.
 
-Hooks are the exception to the namespace split: one manifest serves every harness, because
-`hooks/hooks.json` is the path they all load on their own — Claude Code and VS Code try it
-before any manifest pointer, and the Copilot CLI reads it and nothing else.
+Hooks have **one canonical source, two physical plugin surfaces**, with no extra manifest pointers:
 
-| Harness | Hook manifest |
+| Surface | Hook manifest |
 |---|---|
-| Claude Code, Codex, VS Code, Copilot CLI (installed plugin) | `hooks/hooks.json` |
-| Copilot (repo checkout, cloud agent) | [`.github/hooks/skraft-framework.json`](./.github/hooks/skraft-framework.json) |
+| Canonical source; Claude compatibility | [plugins/skraft-framework/hooks/hooks.json](plugins/skraft-framework/hooks/hooks.json) |
+| Generated Copilot namespace; exact byte copy | [plugins/skraft-framework/com.github.copilot/hooks/hooks.json](plugins/skraft-framework/com.github.copilot/hooks/hooks.json) |
+| Separate repository-checkout integration | [.github/hooks/skraft-framework.json](.github/hooks/skraft-framework.json) |
 
-See [`docs/architecture.md`](./docs/architecture.md) for the per-harness porting details.
+Actual Copilot CLI **1.0.83** fixture tests passed namespaced agent discovery and `SessionStart` /
+`PreToolUse` with `CLAUDE_PLUGIN_ROOT`, including paths with spaces.
+[scripts/copilot-hook-smoke.mjs](scripts/copilot-hook-smoke.mjs), run with exact CLI **1.0.83**
+pinned via `--cli` and an isolated `COPILOT_HOME`, also passed against the current migrated
+plugin installed from the local marketplace checkout: **PASS allowed** (1 hook audit entry),
+**PASS denied** (1 hook audit entry), forbidden write absent. This does not verify the full
+six-root picker or hidden-subagent invocation.
+VS Code **1.126** source currently falls back through `.plugin` then
+`.claude-plugin`; full live v1 validation remains unverified. These results are not a blanket
+compatibility claim. See [docs/architecture.md](docs/architecture.md#11-projection-par-harness)
+for current packaging, Claude registration requirements and validation limits.
 
 ## Quick start
 
@@ -109,6 +116,10 @@ All documentation lives in [`docs/`](./docs/).
 
 ## Development
 
+Edit only canonical agent and hook sources, then run `npm run plugin:build` and
+`npm run plugin:check` to generate and verify Copilot adapters. Commit generated adapters:
+marketplace Git installs do not run a build.
+
 ```bash
 # Tests (boundary-to-boundary, 0 runtime dependency)
 node --test "tests/skraft-framework/**/*.test.mjs"
@@ -137,8 +148,8 @@ This project follows [**SemVer**](https://semver.org/) and publishes releases **
 - The [`release.yml`](./.github/workflows/release.yml) workflow runs **automatically on every push
   to `main`**, and can also be started by hand from the Actions tab. When it runs, it:
   1. computes the next version from the commit history,
-    2. updates [`CHANGELOG.md`](./CHANGELOG.md) and stamps the version into the five plugin manifests
-      (`plugin.json`, `.plugin/`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) + `src/package.json`,
+  2. updates [CHANGELOG.md](CHANGELOG.md) and stamps plugin manifests and runtime package metadata
+     through [scripts/set-version.mjs](scripts/set-version.mjs),
   3. creates the **`vX.Y.Z` tag** and the **GitHub Release** with the release notes,
   4. commits everything with `chore(release): X.Y.Z [skip ci]`.
 

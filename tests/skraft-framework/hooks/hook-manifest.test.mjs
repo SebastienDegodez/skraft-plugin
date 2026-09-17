@@ -40,7 +40,10 @@ test('hook-manifest: the declared routes cover every guardrail event', () => {
   assert.deepEqual(routes('SessionStart'), ['node <pluginRoot>/src/cli/housekeeping.mjs'])
   assert.deepEqual(routes('PreToolUse'), [
     'node <pluginRoot>/src/cli/hook.mjs PreToolUse Agent',
+    'node <pluginRoot>/src/cli/hook.mjs PreToolUse Agent',
     'node <pluginRoot>/src/cli/hook.mjs PreToolUse Bash',
+    'node <pluginRoot>/src/cli/hook.mjs PreToolUse Edit',
+    'node <pluginRoot>/src/cli/hook.mjs PreToolUse Write',
   ])
   assert.deepEqual(routes('PostToolUse'), [
     'node <pluginRoot>/src/cli/hook.mjs PostToolUse Agent',
@@ -48,6 +51,16 @@ test('hook-manifest: the declared routes cover every guardrail event', () => {
   ])
   assert.deepEqual(routes('SubagentStart'), ['node <pluginRoot>/src/cli/hook.mjs SubagentStart'])
   assert.deepEqual(routes('SubagentStop'), ['node <pluginRoot>/src/cli/hook.mjs SubagentStop'])
+})
+
+test('hook-manifest: native tools and legacy Task each reach the guard with canonical CLI arguments', () => {
+  for (const [matcher, argument] of [['Agent', 'Agent'], ['Task', 'Agent'], ['Bash', 'Bash'], ['Write', 'Write'], ['Edit', 'Edit']]) {
+    const entries = claude.hooks.PreToolUse.filter((entry) => entry.matcher === matcher)
+    assert.equal(entries.length, 1, `${matcher} must have one guard route`)
+    assert.deepEqual(entries[0].hooks.map((hook) => routeOf(hook.command)), [
+      `node <pluginRoot>/src/cli/hook.mjs PreToolUse ${argument}`,
+    ])
+  }
 })
 
 // The Claude manifest is the one VS Code and Claude Code both load, and it is the only one
