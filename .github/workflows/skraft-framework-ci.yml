@@ -49,7 +49,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           node --test --experimental-test-coverage \
-            tests/skraft-framework/*.test.mjs
+            "tests/skraft-framework/**/*.test.mjs"
 
   model-policy:
     name: Agent model policy (B12)

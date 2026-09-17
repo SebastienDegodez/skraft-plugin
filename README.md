@@ -111,7 +111,7 @@ All documentation lives in [`docs/`](./docs/).
 
 ```bash
 # Tests (boundary-to-boundary, 0 runtime dependency)
-node --test tests/skraft-framework/*.test.mjs
+node --test "tests/skraft-framework/**/*.test.mjs"
 
 # Mutation testing (Stryker)
 npm --prefix plugins/skraft-framework/src ci && node plugins/skraft-framework/src/node_modules/.bin/stryker run plugins/skraft-framework/src/stryker.config.mjs
@@ -149,7 +149,7 @@ change history.
 
 1. Branch off `main`.
 2. Use **Conventional Commits** (required for automatic versioning).
-3. `node --test tests/skraft-framework/*.test.mjs` must pass.
+3. `node --test "tests/skraft-framework/**/*.test.mjs"` must pass.
 4. Open a Pull Request — CI checks tests, config policy and models.
 
 ## License

@@ -4,7 +4,7 @@ import { Ok, Err } from './result.mjs'
 // This descriptor is the authority for the field set of the pipeline state; the prose
 // in plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md documents the SAME fields and
 // MUST NOT redefine them independently. The alignment test
-// tests/skraft-framework/state-schema-instructions.acceptance.test.mjs fails if the
+// tests/skraft-framework/state/state-schema-instructions.acceptance.test.mjs fails if the
 // instruction schema block and this descriptor diverge, so the two can never drift.
 //
 // owner:

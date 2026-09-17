@@ -16,7 +16,7 @@ const withMutation = flags.has('--mutation') || flags.has('-m')
 
 // Enumerate test files ourselves (no shell glob expansion).
 const testArgs = (dir, coverage = false) => {
-  const files = readdirSync(dir)
+  const files = readdirSync(dir, { recursive: true })
     .filter((f) => f.endsWith('.test.mjs'))
     .map((f) => join(dir, f))
   return ['--test', ...(coverage ? ['--experimental-test-coverage'] : []), ...files]

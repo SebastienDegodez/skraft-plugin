@@ -44,7 +44,7 @@ plugins/
     skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 
 tests/
-  skraft-framework/    ← ALL framework tests (unit + acceptance) — single flat directory
+  skraft-framework/    ← ALL framework tests, grouped by feature (unit + acceptance + fixtures)
   dashboard/           ← Tests for the eng/ evaluation & dashboard tooling
   skills/              ← Vally eval specs: tests/skills/<skill>/eval.yaml
   agents/              ← Vally real-agent specs + suite-local fixtures
@@ -80,14 +80,14 @@ prompts an agent pays for on every run, not documentation.
 
 ### Test placement rules
 
-- **Framework test files live in `tests/skraft-framework/`** — never inside `plugins/`.
+- **Framework test files live in `tests/skraft-framework/<feature>/`** — never inside `plugins/`. Colocate unit tests, acceptance tests and fixtures for the same feature.
 - **Evaluation/dashboard tooling tests live in `tests/dashboard/`** and import from `../../eng/...`.
 - Naming convention:
   - Unit tests: `{module}.unit.test.mjs` (e.g. `skill-policy.unit.test.mjs`)
   - Acceptance tests: `{feature}.acceptance.test.mjs` (e.g. `skill-loading.acceptance.test.mjs`)
   - Integration/other: `{module}.test.mjs`
-- `stryker.config.mjs` uses the glob `tests/skraft-framework/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
-- Import paths from `tests/skraft-framework/` into plugin source: `../../plugins/skraft-framework/src/...`
+- `stryker.config.mjs` uses the recursive glob `tests/skraft-framework/**/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
+- Import paths from `tests/skraft-framework/<feature>/` into plugin source: `../../../plugins/skraft-framework/src/...`
 
 ### Vally evaluation rules
 
@@ -138,7 +138,7 @@ prompts an agent pays for on every run, not documentation.
 ### stryker.config.mjs rules
 
 - The `mutate` array is **additive**: when adding new modules, append to the existing list — never replace it.
-- The `testFiles` glob must stay `['tests/skraft-framework/*.test.mjs']` — never enumerate files explicitly.
+- The `testFiles` glob must stay `['tests/skraft-framework/**/*.test.mjs']` — never enumerate files explicitly.
 - The existing `thresholds` are set per-story; do not change them without an explicit instruction.
 
 ### gh-aw workflow frontmatter rules

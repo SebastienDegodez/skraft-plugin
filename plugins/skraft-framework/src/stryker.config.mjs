@@ -2,7 +2,7 @@
 export default {
   testRunner: 'tap',
   tap: {
-    testFiles: ['tests/skraft-framework/*.test.mjs'],
+    testFiles: ['tests/skraft-framework/**/*.test.mjs'],
     nodeArgs: ['--test-reporter=tap', '--test-reporter-destination=stdout'],
   },
   mutate: [

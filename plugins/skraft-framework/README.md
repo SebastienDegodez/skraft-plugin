@@ -177,11 +177,11 @@ Before opening a pull request:
 npm run paths:check
 node plugins/skraft-framework/src/cli/build-config-bin.mjs --check
 node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check
-node --test tests/skraft-framework/*.test.mjs
+node --test "tests/skraft-framework/**/*.test.mjs"
 npm run ci:local
 ```
 
-Tests live in `tests/skraft-framework/`. Generated Claude agents must never be edited
+Tests live in `tests/skraft-framework/<feature>/`, with unit tests, acceptance tests and fixtures grouped by feature. Generated Claude agents must never be edited
 directly. Generated catalogue, evaluation, dashboard, and graph outputs must not be committed.
 
 ## Documentation

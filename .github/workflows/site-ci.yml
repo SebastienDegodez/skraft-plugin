@@ -34,7 +34,7 @@ jobs:
         run: |
           node eng/catalog/scan.mjs
           node scripts/scan-drift.mjs --out "$RUNNER_TEMP/skraft-docs-ledger.json"
-          node --test tests/dashboard/*.test.mjs tests/skraft-framework/scan-drift-order.test.mjs
+          node --test tests/dashboard/*.test.mjs tests/skraft-framework/documentation/scan-drift-order.test.mjs
 
   smoke-tests:
     runs-on: ubuntu-latest
