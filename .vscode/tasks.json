@@ -12,6 +12,30 @@
 			"isBackground": true,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Validate plugin sync",
+			"type": "process",
+			"command": "node",
+			"args": ["scripts/project-plugin-adapters.mjs", "--check"],
+			"options": { "cwd": "${workspaceFolder}" },
+			"problemMatcher": []
+		},
+		{
+			"label": "Check native regressions",
+			"type": "process",
+			"command": "node",
+			"args": ["--test", "tests/skraft-framework/native-compatibility/*.test.mjs"],
+			"options": { "cwd": "${workspaceFolder}" },
+			"problemMatcher": []
+		},
+		{
+			"label": "Test site on isolated server",
+			"type": "shell",
+			"command": "npx",
+			"args": ["playwright", "test", "--config", "playwright.isolated.config.mjs"],
+			"options": { "cwd": "${workspaceFolder}" },
+			"problemMatcher": []
 		}
 	]
 }
