@@ -11,23 +11,27 @@ description: >
 
 ## Overview
 
-This skill captures evidence and stores it under `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/`,
-keeping the story key consistent with all other SDLC phase artefacts. Agents read the
-manifest and decide what to publish.
+For frontend stories, engineer captures evidence under the exact dispatched
+story directory (normally `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/`).
+Use the resolved tracking root and return actual repository-root-relative paths;
+never infer today's directory or read pipeline state. Backend-only work does not
+load browser capture.
 
 ```
-E2E Test Run  →  Capture Evidence  →  Write Manifest       →  Agent publishes
-Playwright       screenshots           .copilot-tracking/skraft-plans/{projectSlug}/           (orchestrator
-(on failure)     videos                deliver/{story}/        or other agent)
-                 traces                evidence/
-                 report                manifest.md
+Approved real E2E run → Engineer captures → Local manifest → Reviewed report refs
+                       bounded success     all evidence     remote URLs or
+                       + failure proof     retained         explicit local-only
 ```
 
 `{story}` is the story slug passed as `SKRAFT_STORY_ID` env var (e.g. `42-add-eligibility-check`).
-All other phases follow the same convention: `discuss/ac-draft-{story}.md`, `design/diagrams-{story}.md`,
-`distill/impl-plan-{story}.md` — evidence is no exception.
+Use returned plan and evidence refs, not legacy phase-path conventions.
 
-**Scope of this skill:** capture, name, store, and list evidence. Publishing is the agent's responsibility.
+**Scope:** capture, name, store and list evidence. Engineer owns capture/manifest;
+router consumes refs only. For report media selection load
+[reporting contract](../../assets/reporting/report-contract.md). No hosting or
+automatic upload/push. Existing remote URLs must be verified; local paths are
+local-only, never published attachments. Upload mechanism and consent require
+separate agreement; warn that traces/screenshots may expose private data.
 
 ## Docker Dependency Freshness (MANDATORY)
 
@@ -61,6 +65,16 @@ Configure via `playwright.config.ts` at project root. Reference `references/play
 for full configuration options, parallel settings, and browser lifecycle management.
 
 ## Screenshot Capture
+
+For an approved frontend journey, capture a bounded representative success
+screenshot at its asserted outcome during the existing approved real test run.
+Agree the optional success selection count; do not invent a default. Associate
+each capture with AC, test, source revision and actual run result in the manifest.
+Screenshot alone never proves correctness. Do not rerun tests for report cosmetics;
+any additional reporting-only run needs explicit approval and cost warning.
+
+Success-selection and report `maxMedia` limits never truncate correctness-gate
+captures, failure diagnostics or reviewer inputs. Retain full local evidence.
 
 Wire an `afterEach` hook to capture on failure:
 
@@ -144,7 +158,9 @@ npx playwright test --reporter=junit
 npx playwright show-report
 ```
 
-The HTML report is uploaded as a CI artifact. The JUnit XML is consumed by CI status checks.
+Retain HTML/JUnit locally. Existing approved CI may expose artifacts/status checks;
+without a verified remote URL, report them as local-only. Do not add uploads or
+change CI solely to publish a report.
 
 ## Evidence Manifest
 
@@ -169,12 +185,14 @@ The story key makes the manifest unambiguous when multiple stories run in sequen
 | junit | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/results.xml | — |
 ```
 
-The orchestrator reads this manifest by looking up the active story from `state.md` and resolving
-`.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/manifest.md`.
+Engineer returns the manifest's exact repository-root-relative path to router and
+reviewer. Include AC/test mapping, revision, success/failure run status, verified
+remote URL if already available, local-only status otherwise, and selection
+omissions. Router never guesses the date or produces the manifest.
 
 ## CI Configuration
 
-Structure the GitHub Actions job:
+Only when CI setup/upload is separately authorized, adapt the existing job:
 
 1. `actions/setup-node@v4` with Node 20
 2. `npm ci`
@@ -182,7 +200,7 @@ Structure the GitHub Actions job:
 4. `npx playwright test --reporter=html,junit`
 5. `actions/upload-artifact@v4` — upload `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/` on failure
 
-Agents that consume the manifest handle publishing (GitHub comment, PR annotation, etc.).
+Manifest consumption alone never authorizes a binary upload.
 Reference `references/ci-configuration.md` for the full workflow YAML.
 
 ## Evidence Retention Policy
@@ -195,9 +213,10 @@ playwright-report/
 test-results/
 ```
 
-In CI, set `retention-days: 7` on `upload-artifact` for failure evidence. In test code, skip
-writing evidence files when `testInfo.status === testInfo.expectedStatus` (test passed) to
-avoid accumulating passing-run artifacts.
+Preserve full local failure evidence and correctness proof; publication selection
+never deletes it. Retain only agreed optional representative success captures,
+without changing required gate capture. CI retention follows separately approved
+policy; neither report `maxMedia` nor missing upload consent limits local proof.
 
 ## References
 

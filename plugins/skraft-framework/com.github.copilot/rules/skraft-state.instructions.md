@@ -14,14 +14,14 @@ applyTo: '**/.copilot-tracking/**'
 
 These conventions govern every SKRAFT agent (orchestrator, phase agents, reviewers) that reads or writes pipeline state. State persists under the resolved **tracking layout** (see below). JSON only — never markdown.
 
-### Tracking layout (namespaced | bare)
+### Tracking root
 
-The state location depends on the repo-wide `skraft-config.json::trackingLayout` dial (read it with `config.mjs get --key trackingLayout`; default `namespaced`):
-
-- **`namespaced`** (default, legacy): `.copilot-tracking/skraft-plans/{project-slug}/state.json`.
-- **`bare`** (shared artifact root): `.copilot-tracking/skraft/{project-slug}/state.json` — a dedicated SKRAFT control dir while phase artefacts use bare directories (`research/`, `plans/`, `details/`, `changes/`, `reviews/`) for interoperability with upstream planning tools.
-
-Never hand-build the path — the `state.mjs` CLI resolves it (precedence: `SKRAFT_TRACKING_ROOT` → `SKRAFT_TRACKING_LAYOUT` env → `skraft-config.json::trackingLayout` → `namespaced`). Switch an existing repo with `state.mjs migrate --slug {slug} [--apply]`.
+Use `state.mjs` resolution, backed by `resolveTrackingRoot` and
+`tracking-layout-policy.stateDirSegments`: the current layout is
+`.copilot-tracking/skraft-plans/{project-slug}/state.json`; explicit
+`SKRAFT_TRACKING_ROOT` overrides the root. Do not infer bare paths from legacy
+layout settings. Carry returned artifact paths forward; report source refs are
+repository-root-relative, never reconstructed from the current date.
 
 ## Write-through model (token economy)
 
@@ -42,7 +42,7 @@ Invoke the state CLI for every invariant-bearing mutation. Portable invocation (
 node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [flags]
 ```
 
-`basePath` is resolved from the tracking layout (see "Tracking layout" above): `.copilot-tracking/skraft-plans` for `namespaced`, `.copilot-tracking/skraft` for `bare`; an explicit `SKRAFT_TRACKING_ROOT` overrides both. The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`) · `2` IO/corrupted · `3` invalid state.
+`basePath` is resolved by the tracking-root policy above. The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`) · `2` IO/corrupted · `3` invalid state.
 
 | Subcommand | Flags | Effect (domain event) |
 |---|---|---|
@@ -61,6 +61,37 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` (written once at Phase 0), `adrRatification` (written at the DESIGN human checkpoint), and `phaseHistory` / `neighborPlanners` / `nextActions` / `referencesProcessed` — is edited directly on the snapshot. This is safe: the CLI's validator preserves every field on rewrite (round-trip fidelity), so a later CLI write never drops a hand-edited field. Everything invariant-bearing (verdicts, phase advance, artifacts, retry) goes through the CLI.
 
 ## Schema
+
+### Reporting preferences and receipts
+
+At startup/resume, load [reporting contract](../../assets/reporting/report-contract.md)
+for confirmed preference shape and publication protocol. Persist
+`userPreferences.reporting` only with
+`node "$CLAUDE_PLUGIN_ROOT/src/cli/report.mjs" setup --slug {slug} --data {prefs.json}`;
+setup uses state service validation and atomic writes, preserving unrelated
+preferences. No `state.mjs` reporting setter and no direct edits.
+
+Reuse unchanged explicit consent; reconfirm changed provider/host/organization/
+project/repo/branch/targets or destination/media choices. Optional provider scope
+and PR/MR/issue/work-item wire aliases follow the reporting contract. After
+separately authorized host MCP draft creation, persist the returned PR/MR number
+through setup. Missing consent/target/tools or failed publication stays pending;
+never changes an engineering verdict.
+
+Load [MCP publication](../../assets/reporting/mcp-publication.md). The orchestrator
+discovers and invokes actual host MCP tools; scripts never invoke registered
+tools. Retry existing Markdown with local `prepare --slug {slug} --story {story}
+--kind {forecast|outcome} --body {report.md} --destination {pr|issue}`, host reads,
+local `decide --slug {slug} --data {snapshot.json}`, authorized host create/update,
+fresh host readback, then local `record --slug {slug} --data {readback.json}`.
+These are `report.mjs` commands. No `gh` fallback or duplicate creation when
+update is unavailable. Packet/decision/receipt are CLI-owned; host writes only
+observation inputs and retains actual server/tool raw-response provenance.
+
+`report.mjs status --slug {slug}` reads separate publication receipts, including
+at DONE. `record` validates matching host-supplied readback locally, not through
+independent network verification. Reporting setup/receipts do not reopen terminal
+pipeline state or trigger phase transitions, gate reruns or reviewer dispatch.
 
 State is a JSON document. The state machine owns the invariant-bearing subset; all other fields are orchestrator-owned and preserved verbatim on every CLI write.
 
@@ -104,7 +135,8 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
   "nextActions": ["string"],
   "userPreferences": {
     "autonomyTier": "full | partial | manual",
-    "maxRetriesPerPhase": "number"
+    "maxRetriesPerPhase": "number",
+    "reporting": "optional; confirmed preferences per assets/reporting/report-contract.md; written via report.mjs setup"
   },
   "neighborPlanners": {
     "securityPlanFile": "string | null",
@@ -160,7 +192,7 @@ On a turn that changes pipeline state:
 * `currentPhase` transitions only on `APPROVED` reviewer verdict — enforced by `transition` (rejects with `VERDICT_NOT_APPROVED`).
 * **DESIGN is the one phase with a second gate after `APPROVED`:** it advances to `DISTILL` only when `adrRatification.checkpointStatus == "resolved"` (zero `Proposed` ADRs remain in `docs/adr/decisions-index.md`). A DESIGN reviewer `APPROVED` with `Proposed` ADRs still open keeps `currentPhase == "DESIGN"` and sets `adrRatification.checkpointStatus = "awaiting_human"`.
 * On `CHANGES_REQUESTED`: the same phase agent is re-dispatched, `incr-retry --phase {P}` is called, `currentPhase` does not change.
-* The terminal state `DONE` is reached by a final `transition --to DONE` after DELIVER's verdict is `APPROVED` and `phasesCompleted` contains all five phase names. `DONE` is terminal — the CLI rejects further mutations with `TERMINAL_STATE`.
+* The terminal state `DONE` is reached by a final `transition --to DONE` after DELIVER's verdict is `APPROVED` and `phasesCompleted` contains all five phase names. `DONE` is terminal for phase mutations (`TERMINAL_STATE`); reporting setup and separate publication receipts remain available without changing phase state.
 
 ### Manual phase closure (no reviewer sub-agent verdict)
 
@@ -227,6 +259,7 @@ When a session starts or resumes, rehydrate exactly once:
 1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount` (the full phase-keyed map, not only the current phase), `reviewArtifacts`, `entryPoint`, `adrRatification`.
 2. **Project** the pipeline into the native todo working set per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
 3. **Identify** pending work from the todo list: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
+  Reuse `userPreferences.reporting` from this snapshot and inspect `report.mjs status --slug {slug}` for pending publication, independently of engineering work, even at DONE.
 4. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).
 5. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions), plus a **rework-cost line per phase with nonzero cost** (issue #115): `{phase}: {retryCount} retries + {reworkCount} manual reworks, {findingsResolved} findings resolved`. This is the objective signal for whether a phase is a recurring rework hotspot across epics — read it before deciding whether to strengthen that phase's exit gate.
 

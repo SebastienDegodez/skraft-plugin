@@ -227,6 +227,10 @@
       {
         "name": "playwright-evidence",
         "policy": "verify"
+      },
+      {
+        "name": "github-search-protocol",
+        "policy": "verify"
       }
     ],
     "Skraft - Software Engineer Reviewer": [

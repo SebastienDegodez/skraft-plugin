@@ -2,6 +2,12 @@
 
 Practical usage patterns for the two GitHub MCP tools used during DISCOVER phase: `mcp_github_search_issues` and `mcp_github_issue_write`.
 
+These are example bindings, not guaranteed installed tool names. Inspect the host's
+actual catalog (including deferred discovery when available) and schemas before calls.
+Map examples to exposed search/issue-update operations and required selectors;
+never construct a namespace or assume these parameters fit another server/version.
+Missing exposure or access is a blocker, not permission to invent a tool call.
+
 ---
 
 ## Available Tools
@@ -149,20 +155,29 @@ Practical usage patterns for the two GitHub MCP tools used during DISCOVER phase
 }
 ```
 
-### What Can and Cannot Be Updated
+### Allowed Issue Metadata Updates
+
+Apply the [existing-issue content rule](../SKILL.md#existing-issue-content-is-read-only).
+This table states agent policy, not the installed tool's technical capabilities.
 
 | Field | Can Update | Notes |
 |---|---|---|
 | `labels` | Yes | Full replacement — include all desired labels |
 | `milestone` | Yes | Use milestone `number` (integer ID), not title string |
 | `assignees` | Yes | Full replacement |
-| `title` | No | Cannot update via this tool |
-| `body` | No | Cannot update via this tool |
-| `state` (open/close) | No | Cannot update via this tool |
+| `title` | No | Omit from issue-update payloads under the linked content rule |
+| `body` | No | Omit from issue-update payloads; comment publication is a different operation |
+| `state` (open/close) | Schema-dependent | Only if exposed by installed issue-update operation and authorized |
+
+For prepared Markdown comment publication, use [GitHub publication](github-publication.md),
+not issue metadata/body updates.
 
 ---
 
 ## Pagination Pattern
+
+DISCOVER caps below apply to issue triage only. Publication reconciliation must
+read all relevant comment pages without this page/result cap or ranking filter.
 
 ```
 def paginated_search(query, owner, repo, cap=20):

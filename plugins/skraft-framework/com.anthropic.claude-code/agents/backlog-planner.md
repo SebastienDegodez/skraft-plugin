@@ -99,7 +99,7 @@ If the triage report exists but references issues that cannot be loaded, list th
 For each issue in the sprint proposal (ordered by triage priority):
 
 **a. Story Format Transform**
-Rewrite the issue as a user story:
+Draft the user story in the local planning artefact, using the issue as input:
 - Template: "As a {specific persona}, I want {capability}, so that {concrete benefit}"
 - Persona rule: NEVER use "user" — identify the specific role (driver, underwriter, claims adjuster)
 - Capability rule: observable behaviour, not implementation
@@ -188,8 +188,10 @@ Write only the declared output artefacts under `.copilot-tracking/skraft-plans/{
 - Technical notes
 - DoR checklist (all items marked ✅)
 
-After writing artefacts: update GitHub issues with:
-- Refined issue body (story statement + ACs)
+Before any GitHub write, load [github-search-protocol](../../skills/github-search-protocol/SKILL.md)
+and apply its existing-issue content rule. Publish the refined story statement and
+ACs as a comment using its publication route; if publication is unavailable, retain
+the local artefacts and report pending publication. Update only issue metadata:
 - Label: `status/ready` (if DoR passed), `status/needs-refinement` (if DoR failed)
 - Milestone assignment
 - Effort label: `effort/1`, `effort/2`, `effort/3`, `effort/5`, `effort/8`

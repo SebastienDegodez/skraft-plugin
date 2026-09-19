@@ -119,7 +119,24 @@ These are owned by the skills — load them, do not inline rules here.
 - **Gate**: run the stack adapter's mutation scripts — core first, then boundary. Their exit code is the verdict; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
 - Commit using conventional commits (`feat(<domain>): <behavior>`).
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for the schema and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per the v2 schema. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
+- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for its current schema and full gate taxonomy (including G11), and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per that contract. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
+
+### Outcome handoff (success or blockage)
+
+Load [reporting contract](../../assets/reporting/report-contract.md) when preparing
+delivery data. You own quality evidence, change log, actual-impact outcome JSON
+and media manifest; never delegate their production to the orchestrator. Reuse
+approved forecast/plan Markdown and captured gate outputs, not raw full logs or
+new verdict prose. Source actual impact to tests/changes; disclose missing proofs
+and blockers even when delivery stops. Leave `reviewRef` for router binding.
+
+For frontend stories only, load [playwright-evidence](../../skills/playwright-evidence/SKILL.md):
+capture a bounded approved success screenshot during the existing real test run,
+retain all local failure/correctness evidence, and honor report media selection
+without uploads. Never rerun gates solely for reporting. Return exact
+repository-root-relative outcome, forecast, quality-evidence, change-log and
+manifest refs plus full source revision and limitations; use dispatched paths,
+not current-date guesses. No publication or pipeline-state writes.
 
 ## Test-wiring workers (fan-out, B1)
 When a slice needs **test infrastructure** rather than business logic, fan out to an internal worker, then verify its output yourself. The worker returns a structured result; it never commits. YOU integrate the returned files into your TDD loop and commit.

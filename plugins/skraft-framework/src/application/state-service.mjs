@@ -1,6 +1,7 @@
 import { Ok, Err, isOk } from '../domain/result.mjs'
 import { applyTransition } from '../domain/state-machine.mjs'
 import { validatePipelineState } from '../domain/state-schema.mjs'
+import { validateReportingPreferences } from '../domain/reporting-preferences.mjs'
 
 // Fresh pipeline shape. Carries the full documented field set so a newly-initialized
 // state.json is self-describing and no downstream reader has to guess a missing field.
@@ -103,5 +104,24 @@ export const createStateService = ({ stateReader, stateWriter }) => {
     return Ok(readResult.value)
   }
 
-  return { init, applyEvent, get }
+  const configureReporting = async (projectSlug, prefs) => {
+    const preferencesResult = validateReportingPreferences(prefs)
+    if (!isOk(preferencesResult)) return preferencesResult
+
+    const reporting = { ...preferencesResult.value, destinations: { ...preferencesResult.value.destinations } }
+    const readResult = await readState(projectSlug)
+    if (!isOk(readResult)) return Err(readResult.error)
+
+    const raw = readResult.value
+    const validation = validatePipelineState(raw)
+    if (!isOk(validation)) return validation
+
+    // Validate intrinsic state without persisting unrelated coercions or transitions.
+    const updated = { ...raw, userPreferences: { ...raw.userPreferences, reporting } }
+    const writeResult = await stateWriter.write(projectSlug, updated)
+    if (!isOk(writeResult)) return writeResult
+    return Ok(updated)
+  }
+
+  return { init, applyEvent, get, configureReporting }
 }

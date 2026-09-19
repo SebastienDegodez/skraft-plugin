@@ -64,6 +64,7 @@ Collect the following artifacts from the engineer's output:
 - **Test diff** — changed test files
 - **TDD journal** — engineer's log of phases (if available)
 - **Checklist** — engineer's self-assessment (if available)
+- **Reporting inputs** — exact returned repository-root-relative outcome, approved forecast, quality-evidence, change-log and frontend-manifest refs. Load [reporting contract](../../assets/reporting/report-contract.md) when these are handed off; never reconstruct dated paths.
 
 If artifacts are missing, note them but proceed with available inputs.
 
@@ -76,7 +77,7 @@ Dispatch exactly these four registered ids before synthesis: `quality-gates-lens
 
 | Lens | Sub-agent | Input |
 |------|-----------|-------|
-| quality-gates | [quality-gates-lens](quality-gates-lens.md) | Code + tests + journal + checklist |
+| quality-gates | [quality-gates-lens](quality-gates-lens.md) | Code + tests + journal + checklist + raw quality-evidence, outcome, forecast, change-log and manifest refs + reporting-contract ref |
 | architecture-boundaries | [architecture-boundaries-lens](architecture-boundaries-lens.md) | Code ONLY |
 | test-integrity | [test-integrity-lens](test-integrity-lens.md) | Tests + code |
 | cold-reader | [cold-reader-lens](cold-reader-lens.md) | Code + tests ONLY (NO journal, NO checklist) |
@@ -104,6 +105,11 @@ does not parse is not an empty result: re-dispatch that lens once, then record i
 `inconclusive` if it fails again.
 
 ### Phase 4: SYNTHESIZE + VERDICT
+
+Include report/evidence contradictions in this existing verdict, not a second
+report approval. Renderer local proof checks never replace this review. Do not
+require `reviewRef` before persistence: router binds this review's exact path
+afterward. Publication-only errors do not invalidate engineering evidence.
 
 Apply the severity matrix in order — first matching row wins:
 

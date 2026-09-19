@@ -183,3 +183,13 @@ Write only the declared artefacts under `.copilot-tracking/skraft-plans/{project
 - `details/{date}/impl-plan-{story}.md` — sequenced implementation plan (outside-in order)
 
 The outer acceptance test file lives under `tests/**` (committed alongside the plan), not under `.copilot-tracking/`.
+
+### 8. FORECAST HANDOFF
+
+Load [reporting contract](../../assets/reporting/report-contract.md) when preparing
+DISTILL reporting data. Write forecast JSON in the dispatched output directory,
+projecting the existing test/implementation plans: AC-to-test mapping and expected
+impact cited to approved sources. Label tests planned, never passed; no new plan,
+raw log dump, publication or state write. Leave `reviewRef` for router binding
+after review. Return exact repository-root-relative plan, forecast-data and RED
+evidence refs, full source revision and limitations; never guess a current-date path.
