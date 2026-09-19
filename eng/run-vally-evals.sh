@@ -21,6 +21,10 @@
 #                     own `defaults.runs` decide, so the trial budget lives with
 #                     the eval it belongs to. Set it only to override every spec.
 #   WORKERS=3         Concurrent stimuli within a skill eval (default: 3)
+#   SKILL_MAX_RETRIES Optional nonnegative integer; 0 disables stimulus retries
+#                     for both skill arms, including fresh cache misses. Unset
+#                     preserves Vally's default (2 in 0.12.0). Agent suites use
+#                     AGENT_MAX_RETRIES instead. Invalid values fail before launch.
 #   AGENT_WORKERS=1   Concurrent stimuli within an agent eval (default: 1)
 #   MODEL             Agent model. Unset - the default - resolves per eval:
 #                     the spec's own `defaults.model` if it pins one, else
@@ -68,6 +72,14 @@
 # Agent verdicts go to ./eval-results/<suite>/results.json, raw trials to <suite>/live/.
 
 set -euo pipefail
+
+SKILL_RETRY_ARGS=()
+if [ "${SKILL_MAX_RETRIES+x}" = "x" ]; then
+  case "$SKILL_MAX_RETRIES" in
+    ''|*[!0-9]*) echo "SKILL_MAX_RETRIES must be a nonnegative integer." >&2; exit 2 ;;
+  esac
+  SKILL_RETRY_ARGS=(--max-retries "$SKILL_MAX_RETRIES")
+fi
 
 SKRAFT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
@@ -487,6 +499,7 @@ run_one_eval() {
         --skill-dir "$EMPTY_SKILL_DIR" \
         --model "$MODEL" \
         ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
+        ${SKILL_RETRY_ARGS[@]+"${SKILL_RETRY_ARGS[@]}"} \
         --skip-validate \
         --judge-model "$JUDGE_MODEL" \
         --output-dir "$BASELINE_DIR" \
@@ -502,6 +515,7 @@ run_one_eval() {
       --skill-dir "$SKILLED_SKILL_DIR" \
       --model "$MODEL" \
       ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
+      ${SKILL_RETRY_ARGS[@]+"${SKILL_RETRY_ARGS[@]}"} \
       --skip-validate \
       --judge-model "$JUDGE_MODEL" \
       --output-dir "$SKILLED_DIR" \

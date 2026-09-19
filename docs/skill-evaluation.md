@@ -253,6 +253,14 @@ leave out. Each eval keeps its own `eval-results/<skill>/eval.log`.
 spec declares, so passing it would silently reduce every spec to one trial per
 stimulus. Set it locally to cut a run short while iterating — never in CI.
 
+`SKILL_MAX_RETRIES` optionally sets Vally's `--max-retries` for both skill arms,
+including fresh baseline cache misses. Set `SKILL_MAX_RETRIES=0` to disable
+stimulus retries on timeout/rate-limit; leave it unset to retain Vally 0.12.0's
+default of 2. Only decimal nonnegative integers are accepted; an empty, negative
+or non-integer value fails before any model launch. Agent suites continue using
+`AGENT_MAX_RETRIES`. This setting does not cap comparison-judge work or create a
+publishable verdict from a pilot.
+
 ## Reading the result on a local dashboard
 
 One command turns the verdicts under `eval-results/` into the page the project
