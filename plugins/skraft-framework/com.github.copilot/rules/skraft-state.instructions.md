@@ -64,7 +64,7 @@ Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` 
 
 ### Reporting preferences and receipts
 
-At startup/resume, load [reporting contract](../../assets/reporting/report-contract.md)
+At startup/resume, load [reporting contract](../../skills/qa-reporting/references/report-contract.md)
 for confirmed preference shape and publication protocol. Persist
 `userPreferences.reporting` only with
 `node "$CLAUDE_PLUGIN_ROOT/src/cli/report.mjs" setup --slug {slug} --data {prefs.json}`;
@@ -136,7 +136,7 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
   "userPreferences": {
     "autonomyTier": "full | partial | manual",
     "maxRetriesPerPhase": "number",
-    "reporting": "optional; confirmed preferences per assets/reporting/report-contract.md; written via report.mjs setup"
+    "reporting": "optional; confirmed preferences per skills/qa-reporting/references/report-contract.md; written via report.mjs setup"
   },
   "neighborPlanners": {
     "securityPlanFile": "string | null",

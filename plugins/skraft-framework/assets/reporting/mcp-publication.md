@@ -2,7 +2,9 @@
 
 Load in the orchestrator at reporting startup, report boundaries and publication-only
 resume. Keep producer/reviewer ownership and renderer data in
-[reporting contract](report-contract.md) unchanged. This protocol covers reporting
+[reporting contract](../../skills/qa-reporting/references/report-contract.md) unchanged.
+Before preparing, checking or rendering report data, load
+[qa-reporting](../../skills/qa-reporting/SKILL.md). This protocol covers reporting
 to GitHub, Azure DevOps and GitLab, not portability of the whole engineering pipeline.
 
 ## Execution boundary

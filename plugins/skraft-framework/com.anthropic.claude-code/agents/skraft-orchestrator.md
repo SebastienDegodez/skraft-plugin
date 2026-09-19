@@ -52,6 +52,7 @@ metadata:
     - contract-testing
     - playwright-evidence
     - github-search-protocol
+    - qa-reporting
   instructions:
     - plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md
     - plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md
@@ -90,7 +91,7 @@ Follow the write-through model and the once-per-session Rehydration sequence def
   Entry point: DISCOVER skipped (confirmed upstream handoff: github)
    Pending: DESIGN → DISTILL → DELIVER
    ```
-8. Load [reporting contract](../../assets/reporting/report-contract.md) and [host publication lifecycle](../../assets/reporting/mcp-publication.md). Apply its startup consent checkpoint; recommend PR reports + issue link + chat summary without preselecting them. Persist confirmed choices with `report.mjs setup`; inspect `report.mjs status` on resume, even at DONE.
+8. Load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json). Apply its startup consent checkpoint; recommend PR reports + issue link + chat summary without preselecting them. Persist confirmed choices with `report.mjs setup`; inspect `report.mjs status` on resume, even at DONE.
 9. When the selected provider is `github`, load [github-search-protocol](../../skills/github-search-protocol/SKILL.md) and use its publication route, not issue discovery. Apply the lifecycle's capability checkpoint with that provider procedure; surface unresolved gaps and required user customization.
 10. Proceed to the current phase independently of pending publication; publication-only retries reuse existing Markdown without dispatching engineering. Provider choices affect reporting only, not engineering pipeline support.
 
@@ -194,18 +195,18 @@ The refined story that RESEARCH and DESIGN consume (`plans/{date}/stories-*.md`)
 DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from here.
 
 1. Read the implementation plan, features and approved forecast from their recorded refs.
-2. Dispatch `Skraft - Software Engineer` with those refs and existing contract artefacts. Include exact reporting output directory, confirmed media policy, and reporting-contract ref. Require engineer-owned quality evidence, change log, actual-impact outcome data and frontend manifest on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
+2. Dispatch `Skraft - Software Engineer` with those refs and existing contract artefacts. Include exact reporting output directory, confirmed media policy, and [qa-reporting entry](../../skills/qa-reporting/SKILL.md). Require engineer-owned quality evidence, change log, actual-impact outcome data and frontend manifest on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
 3. Dispatch `Skraft - Software Engineer Reviewer` with produced code/tests and raw outcome, forecast, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
 4. Handle verdict using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED` or blocked DELIVER, record the persisted review and route the outcome below. Engineer owns capture and change-log production, never you. Mark pipeline complete only on engineering approval; publication failure does not change that verdict.
 
 ## Report feedback
 
-At report boundaries and publication-only resume, load [reporting contract](../../assets/reporting/report-contract.md) for data ownership and [host publication lifecycle](../../assets/reporting/mcp-publication.md) for execution. Apply Phase 0's conditional provider-skill load before remote operations.
+At report boundaries, load [qa-reporting](../../skills/qa-reporting/SKILL.md) before handling producer data or rendering. For publication and publication-only resume, load [host publication lifecycle](../../assets/reporting/mcp-publication.md). Apply Phase 0's conditional provider-skill load before remote operations.
 
-- DISTILL dispatch: require designer-owned forecast data from existing test/implementation plans and sourced expected impact; pass raw data and source refs to acceptance reviewer. After `APPROVED`, record review and render forecast before DELIVER.
+- DISTILL dispatch: pass [qa-reporting entry](../../skills/qa-reporting/SKILL.md); require designer-owned forecast data from existing test/implementation plans and sourced expected impact; pass raw data and source refs to acceptance reviewer. After `APPROVED`, record review and render forecast before DELIVER.
 - DELIVER approval or blockage: use engineer-owned outcome data and actual gates; record existing reviewer verdict. Missing engineering evidence stays blocking, never hidden by a report.
-- Bind only the persisted `reviewRef` into producer data; render once through the lifecycle CLI using exact returned data/output paths. Do not synthesize impact or a verdict.
+- Bind only the persisted `reviewRef` into producer data; render once through qa-reporting's existing CLI using exact returned data/output paths. Do not synthesize impact or a verdict.
 - Hand the existing Markdown, story/kind and confirmed destinations to the lifecycle. Follow its local decision and receipt checkpoints; use the selected provider procedure for remote operations. Return invalid content to its producer.
 - No PR/MR: route the lifecycle's draft-creation human checkpoint or retain pending status.
 - Use returned receipt URLs/statuses for requested chat feedback. On publication failure, retain Markdown and route publication-only resume, including at DONE; never dispatch engineering merely to retry transport.
@@ -251,6 +252,7 @@ Max retries per phase: `state.json::userPreferences.maxRetriesPerPhase` (default
 - `contract-testing` — DESIGN (API contracts) and DISTILL (Microcks samples).
 - `playwright-evidence` — engineer loads for frontend DELIVER capture; router passes policy and consumes returned refs only.
 - `github-search-protocol` — load only for selected GitHub reporting provider; use publication route for prepared Markdown.
+- `qa-reporting` — load before report data handoff or rendering; producers/reviewers retain data and verdict ownership.
 
 ## Entry point summary
 

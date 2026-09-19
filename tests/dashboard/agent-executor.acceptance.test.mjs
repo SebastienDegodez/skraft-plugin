@@ -277,8 +277,9 @@ describe('Vally real-agent executor', () => {
       'builtin:skill', 'builtin:glob', 'builtin:grep', 'builtin:view', 'builtin:edit', 'builtin:bash', 'builtin:task',
     ])
     deepStrictEqual(trajectory.metadata.subagents.map(({ id }) => id), lenses)
-    deepStrictEqual(trajectory.metadata.skillsConfigured, ['adversarial-review-lenses'])
-    deepStrictEqual(trajectory.metadata.subagentSkillsConfigured, Object.fromEntries(lenses.map((id) => [id, []])))
+    deepStrictEqual(trajectory.metadata.skillsConfigured, ['adversarial-review-lenses', 'qa-reporting'])
+    deepStrictEqual(trajectory.metadata.subagentSkillsConfigured,
+      Object.fromEntries(lenses.map((id) => [id, id === 'quality-gates-lens' ? ['qa-reporting'] : []])))
   })
 
   it('names the registered chain in the prompt so a descriptor link is not the only route to a dispatch', async () => {

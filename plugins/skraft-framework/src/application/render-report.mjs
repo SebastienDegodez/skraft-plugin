@@ -1,19 +1,25 @@
 import {
-  validateReportData, parseQualityEvidence, qualityProofs, presentReport,
+  validateReportData, parseQualityEvidence, qualityProofs, buildReportView,
 } from '../domain/reporting-presentation.mjs'
+import { render } from '../domain/template-renderer.mjs'
 
 /**
  * Synchronous report boundary. readText resolves repository-root references and
  * returns UTF-8 text (undefined or ENOENT for a missing file). hashText returns
  * lowercase SHA-256 hex for UTF-8 text; outcome evidence verification needs it.
+ * readTemplate loads the fixed plugin-relative bundled Markdown template.
  * @param {object} data
- * @param {{readText: (ref: string) => string | undefined, hashText?: (text: string) => string}} deps
+ * @param {{readText: (ref: string) => string | undefined, hashText?: (text: string) => string, readTemplate: (ref: string) => string | undefined}} deps
  * @returns {string} Markdown
  */
-export function renderReport(data, { readText, hashText }) {
+export function renderReport(data, { readText, hashText, readTemplate }) {
   validateReportData(data)
   if (typeof readText !== 'function') throw new TypeError('readText port is required')
   if (data.kind === 'outcome' && typeof hashText !== 'function') throw new TypeError('hashText port is required for outcome proofs')
+  if (typeof readTemplate !== 'function') throw new TypeError('readTemplate port is required')
+  const templatePath = `skills/qa-reporting/assets/templates/${data.kind}.md`
+  const template = readTemplate(templatePath)
+  if (typeof template !== 'string') throw new TypeError(`Missing report template: ${templatePath}`)
   const documents = new Map()
   const read = (ref) => {
     if (!ref) return undefined
@@ -27,7 +33,7 @@ export function renderReport(data, { readText, hashText }) {
   }
   if (data.kind === 'forecast') {
     read(data.testPlanRef)
-    return presentReport(data, documents, {}, new Map())
+    return render(template, buildReportView(data, documents, {}, new Map()))
   }
   const parsed = parseQualityEvidence(read(data.qualityEvidenceRef), data)
   read(data.reviewRef)
@@ -37,5 +43,5 @@ export function renderReport(data, { readText, hashText }) {
     const content = read(ref)
     if (content !== undefined) proofs.set(ref, { text: content, hash: hashText(content) })
   }
-  return presentReport(data, documents, parsed, proofs)
+  return render(template, buildReportView(data, documents, parsed, proofs))
 }

@@ -53,6 +53,16 @@ et ses lentilles existantes valident ces artefacts et possèdent le verdict cano
 L'orchestrateur coordonne le rendu et la publication, pas la capture des preuves ni
 la synthèse de revue. Aucun agent de reporting ni panel supplémentaire n'est ajouté.
 
+Dans l'extraction approuvée, [qa-reporting]({{ "/fr/dashboard/#skill-qa-reporting" | relative_url }})
+possède les consignes de préparation, le contrat canonique des données de rapport et
+les modèles Markdown prévisionnel/résultat livrés avec le skill. Les scripts rendent
+le modèle de résultat à partir des preuves consignées et des références de revue ;
+le skill ne remplace pas les règles de preuve et ne possède pas le transport.
+Données de rapport, Markdown et reçus générés restent dans les répertoires de suivi
+résolus du projet consommateur, jamais dans le skill installé. Aucune surcharge
+entreprise, aucun profil ni nouvelle clé de configuration n'est introduit.
+L'intégration des modèles et la parité du rendu par défaut restent à valider.
+
 Le résultat projette les tests, build, contrôles statiques, couverture, mutation,
 revue, commits/fichiers et limites consignés dans du Markdown. Une preuve absente ou
 périmée reste non vérifiée ; les mesures ne sont pas inventées. Un résultat bloqué

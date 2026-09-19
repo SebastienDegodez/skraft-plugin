@@ -90,8 +90,8 @@ Example outcome (illustrative refs; replace with actual returned paths):
 ```
 
 Missing refs remain missing, never fabricated to satisfy rendering. Keep canonical
-[quality evidence](../../skills/quality-gates-evidence-contract/SKILL.md) and
-[quality bar](../../skills/skraft-quality-bar/SKILL.md) authoritative: current v3
+[quality evidence](../../quality-gates-evidence-contract/SKILL.md) and
+[quality bar](../../skraft-quality-bar/SKILL.md) authoritative: current v3
 includes G11; legacy v1/v2 stay readable, missing gates never pass. Renderer local
 proof checks are distinct from recorded reviewer verdict, particularly Git checks
 G8/G9. A final report has no verdict of its own and cannot overrule review.
@@ -103,10 +103,10 @@ receipts; the host supplies observations, not replacement authority. Producers a
 reviewers consume the data interfaces above, not transport procedures.
 
 At startup, report boundaries or publication-only resume, the router loads
-[host publication lifecycle](mcp-publication.md) for consent, CLI commands,
+[host publication lifecycle](../../../assets/reporting/mcp-publication.md) for consent, CLI commands,
 observation/readback schemas, reconciliation and receipt semantics. When the selected
 provider is `github`, also load
-[github-search-protocol](../../skills/github-search-protocol/SKILL.md) for its
+[github-search-protocol](../../github-search-protocol/SKILL.md) for its
 publication route; do not run issue discovery to publish prepared Markdown.
 
 Publication status is separate from engineering approval. Approved DISTILL supplies

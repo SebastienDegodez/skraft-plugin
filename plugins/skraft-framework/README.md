@@ -101,6 +101,15 @@ per retry. Forecast means planned tests and expected impact, not passing tests.
 Outcome compares expected and actual impact, with recorded checks, metrics, changes
 and limitations. Missing proof is not success; delivery is not deployment.
 
+The approved extraction gives [qa-reporting](skills/qa-reporting/SKILL.md) ownership of
+report preparation guidance, the canonical [report data contract](skills/qa-reporting/references/report-contract.md)
+and bundled `forecast` / `outcome` Markdown templates.
+Scripts render those templates from reviewed inputs; the skill does not run tests,
+decide gates or publish comments. Generated data, reports and receipts stay in the
+consumer project's resolved tracking directories, never in the installed skill.
+No company override, profiles, new configuration key or reporting agent is introduced.
+Template integration and default-output parity remain pending validation.
+
 At startup, the user selects full PR reports, issue `link` / `full` / `none`, and
 whether to receive a chat summary. PR full + issue link + chat summary is recommended,
 not silently enabled. Confirmed repository, branch, targets and `maxMedia` persist
@@ -147,8 +156,10 @@ No new reporting agent or review panel is added. Existing specialists own plans,
 impact interpretation and evidence; the orchestrator routes local commands and host
 calls. Body reuse avoids per-destination synthesis, not transmission or readback work;
 no measured token savings or price is claimed. See the maintainer-only
-[Genesis handoff](../../docs/superpowers/plans/2026-09-17-pr-markdown-reporting.md)
-for interfaces, design rationale and pending validation.
+[QA skill Genesis handoff](../../docs/superpowers/plans/2026-09-19-qa-reporting-skill.md)
+for definitive reduced scope, interfaces and pending validation; the
+[earlier reporting plan](../../docs/superpowers/plans/2026-09-17-pr-markdown-reporting.md)
+retains publication history.
 
 ## Runtime guardrails
 

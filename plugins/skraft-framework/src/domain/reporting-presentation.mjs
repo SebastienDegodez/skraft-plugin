@@ -1,5 +1,3 @@
-import { render } from './template-renderer.mjs'
-
 // Fixed identifiers from quality-gates-evidence-contract (v3); no score policy.
 const gateIds = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11']
 const statuses = ['pass', 'fail', 'not_applicable']
@@ -204,9 +202,9 @@ function sourceMarkdown(content) {
   return output.join('\n')
 }
 
-function documentSection(label, ref, documents) {
+function documentContent(ref, documents) {
   const content = documents.get(ref)
-  return `## ${label}\n\n${cell(ref || '(missing reference)')} (local source reference; not remotely verified)\n\n${typeof content === 'string'
+  return `${cell(ref || '(missing reference)')} (local source reference; not remotely verified)\n\n${typeof content === 'string'
     ? sourceMarkdown(content)
     : 'UNVERIFIED: missing or unavailable document'}`
 }
@@ -241,7 +239,7 @@ function mediaSection(data, french) {
   return lines.join('\n')
 }
 
-export function presentReport(data, documents, parsed, proofs) {
+export function buildReportView(data, documents, parsed, proofs) {
   const french = data.language === 'fr'
   const forecast = data.kind === 'forecast'
   const { quality, error } = parsed
@@ -258,17 +256,34 @@ export function presentReport(data, documents, parsed, proofs) {
     return [criterion.id, criterion.description, criterion.test, forecast ? 'PLANNED' : 'UNVERIFIED',
       forecast ? data.testPlanRef : evidence || criterion.evidence]
   })
-  const sections = [
-    `## ${french ? 'Impact attendu' : 'Expected impact'}\n\n${cell(data.impact.expected)}`,
-    ...(!forecast ? [`## ${french ? 'Impact constaté' : 'Actual impact'}\n\n${cell(data.impact.actual || 'UNVERIFIED')}`] : []),
-    `## ${french ? 'Traçabilité' : 'Traceability'}\n\n${table(french
-      ? ['Critère', 'Description', 'Test', 'Statut', 'Preuve'] : ['Criterion', 'Description', 'Test', 'Status', 'Evidence'], criteria)}`,
-    french
+  const view = {
+    kind: forecast ? (french ? 'Rapport prévisionnel' : 'Forecast report') : (french ? 'Rapport de résultat' : 'Outcome report'),
+    title: cell(data.title), identity: `${cell(data.story)} | ${cell(data.revision)}`,
+    labels: {
+      expectedImpact: french ? 'Impact attendu' : 'Expected impact',
+      actualImpact: french ? 'Impact constaté' : 'Actual impact',
+      traceability: french ? 'Traçabilité' : 'Traceability',
+      testPlan: french ? 'Plan de tests prévisionnel' : 'Test plan',
+      gates: french ? 'Preuves des contrôles' : 'Gate evidence',
+      review: french ? 'Revue persistée' : 'Persisted review',
+      changes: french ? 'Journal des changements' : 'Change log',
+      limitations: french ? 'Limites' : 'Limitations',
+      media: french ? 'Médias' : 'Media',
+    },
+    expectedImpact: cell(data.impact.expected),
+    actualImpact: forecast ? '' : cell(data.impact.actual || 'UNVERIFIED'),
+    traceability: table(french
+      ? ['Critère', 'Description', 'Test', 'Statut', 'Preuve'] : ['Criterion', 'Description', 'Test', 'Status', 'Evidence'], criteria),
+    traceabilityNote: french
       ? 'La traçabilité associe les critères aux tests et références déclarés, sans prouver leur exécution ni leur résultat. Les références locales ne sont pas des preuves accessibles à distance.'
       : 'Traceability maps criteria to declared tests and references; it does not prove execution or outcomes. Local references are not remotely accessible proof.',
-  ]
+    testPlan: '', gates: '', review: '', changes: '',
+    aggregateNote: '', reviewNote: '',
+    limitations: data.limitations.map((item) => `- ${cell(item)}`).join('\n'),
+    media: mediaSection(data, french),
+  }
   if (forecast) {
-    sections.push(documentSection(french ? 'Plan de tests prévisionnel' : 'Test plan', data.testPlanRef, documents))
+    view.testPlan = documentContent(data.testPlanRef, documents)
   } else {
     const rows = gates.map(({ id, gate, status, reason }) => {
       const refs = id === 'G10' && gate ? quality.test_integrity.cycles.flatMap((cycle) => [cycle.red_stdout_ref, cycle.red_exit_code_ref])
@@ -279,21 +294,15 @@ export function presentReport(data, documents, parsed, proofs) {
       return [id, gate?.label, status, gate?.command_executed, refs.filter(Boolean)
         .map((ref) => resolveQualityReference(ref, data.qualityEvidenceRef) || ref).join('; '), metrics, reason]
     })
-    sections.push(`## ${french ? 'Preuves des contrôles' : 'Gate evidence'}\n\n${cell(data.qualityEvidenceRef || '(missing reference)')}\n\n${table(
-      ['ID', 'Gate', 'Status', 'Command', 'References', 'Reported metrics', 'Evidence check'], rows)}`)
-    sections.push(documentSection(french ? 'Revue persistée' : 'Persisted review', data.reviewRef, documents))
-    sections.push(documentSection(french ? 'Journal des changements' : 'Change log', data.changeLogRef, documents))
-    sections.push(french
+    view.gates = `${cell(data.qualityEvidenceRef || '(missing reference)')}\n\n${table(
+      ['ID', 'Gate', 'Status', 'Command', 'References', 'Reported metrics', 'Evidence check'], rows)}`
+    view.review = documentContent(data.reviewRef, documents)
+    view.changes = documentContent(data.changeLogRef, documents)
+    view.aggregateNote = french
       ? 'Les contrôles agrégés, y compris G1, restent distincts des résultats par critère. Sans preuve individuelle liée au test et au critère, le résultat reste UNVERIFIED.'
-      : 'Aggregate gates, including G1, remain separate from criterion outcomes. Without individual evidence bound to the test and criterion, the outcome remains UNVERIFIED.')
-    sections.push(french ? 'Le rendu vérifie les preuves locales, pas les objets Git ni le déploiement. La décision globale appartient à la revue.'
-      : 'Rendering checks local proofs, not Git objects or deployment. The overall decision belongs to the reviewer.')
+      : 'Aggregate gates, including G1, remain separate from criterion outcomes. Without individual evidence bound to the test and criterion, the outcome remains UNVERIFIED.'
+    view.reviewNote = french ? 'Le rendu vérifie les preuves locales, pas les objets Git ni le déploiement. La décision globale appartient à la revue.'
+      : 'Rendering checks local proofs, not Git objects or deployment. The overall decision belongs to the reviewer.'
   }
-  sections.push(`## ${french ? 'Limites' : 'Limitations'}\n\n${data.limitations.map((item) => `- ${cell(item)}`).join('\n')}`)
-  sections.push(`## ${french ? 'Médias' : 'Media'}\n\n${mediaSection(data, french)}`)
-  // A single substitution pass keeps source text out of template evaluation.
-  return render('# {{kind}}: {{title}}\n\n{{identity}}\n\n{{sections}}\n', {
-    kind: forecast ? (french ? 'Rapport prévisionnel' : 'Forecast report') : (french ? 'Rapport de résultat' : 'Outcome report'),
-    title: cell(data.title), identity: `${cell(data.story)} | ${cell(data.revision)}`, sections: sections.join('\n\n'),
-  })
+  return view
 }

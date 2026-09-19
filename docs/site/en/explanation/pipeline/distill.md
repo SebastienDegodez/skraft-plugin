@@ -56,6 +56,15 @@ This keeps the artifact chain explicit: **DESIGN decisions → reviewed scenario
 test plan → forecast → DELIVER evidence → outcome**. The orchestrator coordinates
 publication; neither a reporting agent nor another review panel is introduced.
 
+In the approved extraction, [qa-reporting]({{ "/en/dashboard/#skill-qa-reporting" | relative_url }})
+owns report preparation guidance, the canonical report data contract and bundled
+forecast/outcome Markdown templates. Scripts render the forecast template from the
+reviewed plan; the skill does not execute tests, decide gates or own transport.
+Generated report data, Markdown and receipts remain in the consumer project's resolved
+tracking directories, never in the installed skill. No company override, profiles or
+new configuration key is introduced. Template integration and default-output parity
+remain pending validation.
+
 Startup choices select full PR reports, an issue link, full report or no issue report,
 a chat summary, and an explicit media cap with no hard default. PR full + issue link +
 chat summary is recommended, not automatic. Confirmed targets and choices persist for resume.

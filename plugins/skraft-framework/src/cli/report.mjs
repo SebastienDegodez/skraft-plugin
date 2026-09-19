@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { createStateService } from '../application/state-service.mjs'
@@ -246,6 +247,7 @@ async function run() {
 		const markdown = renderReport(data, {
 			readText: (ref) => files.readText(ref, { reference: true }),
 			hashText,
+			readTemplate: (ref) => readFileSync(new URL(ref, new URL('../../', import.meta.url)), 'utf8'),
 		})
 		files.writeAtomic(options.out, markdown)
 		return { rendered: true, kind: data.kind, story: data.story, path: options.out }

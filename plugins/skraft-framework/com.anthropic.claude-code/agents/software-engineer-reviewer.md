@@ -24,6 +24,7 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md
   skills:
     - adversarial-review-lenses
+    - qa-reporting
   genesis_patterns:
     - A7 ADVERSARIAL REVIEW
     - B1 FAN-OUT + SYNTHESIZER
@@ -64,7 +65,7 @@ Collect the following artifacts from the engineer's output:
 - **Test diff** — changed test files
 - **TDD journal** — engineer's log of phases (if available)
 - **Checklist** — engineer's self-assessment (if available)
-- **Reporting inputs** — exact returned repository-root-relative outcome, approved forecast, quality-evidence, change-log and frontend-manifest refs. Load [reporting contract](../../assets/reporting/report-contract.md) when these are handed off; never reconstruct dated paths.
+- **Reporting inputs** — exact returned repository-root-relative outcome, approved forecast, quality-evidence, change-log and frontend-manifest refs. Load [qa-reporting](../../skills/qa-reporting/SKILL.md) before checking these data; never reconstruct dated paths.
 
 If artifacts are missing, note them but proceed with available inputs.
 
@@ -77,7 +78,7 @@ Dispatch exactly these four registered ids before synthesis: `quality-gates-lens
 
 | Lens | Sub-agent | Input |
 |------|-----------|-------|
-| quality-gates | [quality-gates-lens](quality-gates-lens.md) | Code + tests + journal + checklist + raw quality-evidence, outcome, forecast, change-log and manifest refs + reporting-contract ref |
+| quality-gates | [quality-gates-lens](quality-gates-lens.md) | Code + tests + journal + checklist + raw quality-evidence, outcome, forecast, change-log and manifest refs + [qa-reporting entry](../../skills/qa-reporting/SKILL.md) |
 | architecture-boundaries | [architecture-boundaries-lens](architecture-boundaries-lens.md) | Code ONLY |
 | test-integrity | [test-integrity-lens](test-integrity-lens.md) | Tests + code |
 | cold-reader | [cold-reader-lens](cold-reader-lens.md) | Code + tests ONLY (NO journal, NO checklist) |

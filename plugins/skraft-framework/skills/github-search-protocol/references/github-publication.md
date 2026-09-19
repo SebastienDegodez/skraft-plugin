@@ -5,7 +5,7 @@ including publication-only retry. `github-search-protocol` owns GitHub transport
 mapping and host `gh` fallback; no companion skill or external discovery dependency.
 Load [shared publication lifecycle](../../../assets/reporting/mcp-publication.md)
 for consent, local prepare/decide/record commands, normalized observations, receipts
-and reconciliation; [report contract](../../../assets/reporting/report-contract.md)
+and reconciliation; [report contract](../../qa-reporting/references/report-contract.md)
 retains producer/reviewer ownership. Apply the
 [existing-issue content rule](../SKILL.md#existing-issue-content-is-read-only).
 Do not author or regenerate report content here.

@@ -25,6 +25,7 @@ metadata:
     - skraft-quality-bar
     - craft-discipline
     - resolving-stack-commands
+    - qa-reporting
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
@@ -188,7 +189,7 @@ The outer acceptance test file lives under `tests/**` (committed alongside the p
 
 ### 8. FORECAST HANDOFF
 
-Load [reporting contract](../../assets/reporting/report-contract.md) when preparing
+Load [qa-reporting](../../skills/qa-reporting/SKILL.md) before preparing
 DISTILL reporting data. Write forecast JSON in the dispatched output directory,
 projecting the existing test/implementation plans: AC-to-test mapping and expected
 impact cited to approved sources. Label tests planned, never passed; no new plan,

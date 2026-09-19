@@ -53,6 +53,15 @@ and its existing lenses validate those artifacts and own the canonical verdict.
 The orchestrator coordinates rendering and publication, not evidence capture or
 review synthesis. There is no extra reporting agent or panel.
 
+In the approved extraction, [qa-reporting]({{ "/en/dashboard/#skill-qa-reporting" | relative_url }})
+owns report preparation guidance, the canonical report data contract and bundled
+forecast/outcome Markdown templates. Scripts render the outcome template from recorded
+evidence and review references; the skill neither replaces evidence rules nor owns
+transport. Generated report data, Markdown and receipts remain in the consumer project's
+resolved tracking directories, never in the installed skill. No company override,
+profiles or new configuration key is introduced. Template integration and default-output
+parity remain pending validation.
+
 The outcome projects recorded tests, build, static checks, coverage, mutation, review,
 commits/files and limitations into Markdown. Missing or stale proof stays unverified;
 metrics are not invented. A blocked outcome states what remains incomplete. Local

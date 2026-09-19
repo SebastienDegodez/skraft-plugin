@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { renderReport } from '../../../plugins/skraft-framework/src/application/render-report.mjs'
 
 // Boundary: synchronous report data + repository-root text/hash ports -> Markdown.
@@ -18,6 +19,7 @@ const refs = {
 }
 const revision = 'e8b963a1f70c4d229e10b348a69f5c71d231809e'
 const hashText = (text) => createHash('sha256').update(text, 'utf8').digest('hex')
+const readTemplate = (ref) => readFileSync(new URL(ref, new URL('../../../plugins/skraft-framework/', import.meta.url)), 'utf8')
 
 function reportData(overrides = {}) {
   return {
@@ -87,6 +89,7 @@ function ports(files, missing = 'undefined') {
       return undefined
     },
     hashText,
+    readTemplate,
   }
 }
 
@@ -160,7 +163,7 @@ function includesText(markdown, text) {
 test('forecast shows the approved plan, expected impact and PLANNED traceability, never execution success', () => {
   const data = reportData()
   // Deliberately supply an optimistic criterion and outcome refs: forecast is prospective.
-  const markdown = renderReport(data, { readText: (ref) => sourceDocuments().get(ref) })
+  const markdown = renderReport(data, { readText: (ref) => sourceDocuments().get(ref), readTemplate })
 
   includesText(markdown, data.title)
   includesText(markdown, data.story)

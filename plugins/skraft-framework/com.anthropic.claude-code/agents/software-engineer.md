@@ -28,6 +28,7 @@ metadata:
     - quality-gates-evidence-contract
     - quality-gates-dotnet
     - resolving-stack-commands
+    - qa-reporting
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
@@ -123,7 +124,7 @@ These are owned by the skills — load them, do not inline rules here.
 
 ### Outcome handoff (success or blockage)
 
-Load [reporting contract](../../assets/reporting/report-contract.md) when preparing
+Load [qa-reporting](../../skills/qa-reporting/SKILL.md) before preparing
 delivery data. You own quality evidence, change log, actual-impact outcome JSON
 and media manifest; never delegate their production to the orchestrator. Reuse
 approved forecast/plan Markdown and captured gate outputs, not raw full logs or

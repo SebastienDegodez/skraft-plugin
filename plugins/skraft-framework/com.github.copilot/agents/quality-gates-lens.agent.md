@@ -9,6 +9,8 @@ tools:
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer
+  skills:
+    - qa-reporting
 ---
 
 # Quality Gates Lens
@@ -34,7 +36,7 @@ Load before any review work. If missing, announce `[SKILL MISSING] {name}` and c
 - The evidence log: `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json`
 - The Git tree (read-only via `Read` / `Glob` / `Grep`).
 - Code + tests + change log (already in the parent reviewer's hand-off; you may search them but not modify).
-- Outcome/forecast data and frontend manifest when supplied: load [reporting contract](../../assets/reporting/report-contract.md); use exact returned repository-root-relative refs, not current-date paths.
+- Outcome/forecast data and frontend manifest when supplied: load [qa-reporting](../../skills/qa-reporting/SKILL.md) before checking data; use exact returned repository-root-relative refs, not current-date paths.
 
 You DO NOT receive the cold-reader's output, nor do you receive any other lens's findings.
 

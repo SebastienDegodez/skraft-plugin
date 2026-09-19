@@ -58,6 +58,16 @@ revus → rapport prévisionnel → preuves DELIVER → rapport de résultat**. 
 coordonne la publication ; aucun agent de reporting ni panel de revue supplémentaire
 n'est introduit.
 
+Dans l'extraction approuvée, [qa-reporting]({{ "/fr/dashboard/#skill-qa-reporting" | relative_url }})
+possède les consignes de préparation, le contrat canonique des données de rapport et
+les modèles Markdown prévisionnel/résultat livrés avec le skill. Les scripts rendent
+le modèle prévisionnel à partir du plan revu ; le skill n'exécute pas les tests, ne
+décide pas des gates et ne possède pas le transport. Données de rapport, Markdown et
+reçus générés restent dans les répertoires de suivi résolus du projet consommateur,
+jamais dans le skill installé. Aucune surcharge entreprise, aucun profil ni nouvelle
+clé de configuration n'est introduit. L'intégration des modèles et la parité du rendu
+par défaut restent à valider.
+
 Au démarrage, les choix portent sur les rapports complets dans la PR, l'issue en mode
 lien, rapport complet ou aucun rapport, le résumé chat et un plafond de médias explicite,
 sans valeur par défaut imposée. PR complète + lien dans l'issue + résumé chat est une

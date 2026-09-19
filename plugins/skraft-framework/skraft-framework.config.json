@@ -80,6 +80,10 @@
       {
         "name": "adversarial-review-lenses",
         "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
+        "policy": "verify"
       }
     ],
     "Skraft - Acceptance Designer": [
@@ -105,6 +109,10 @@
       },
       {
         "name": "resolving-stack-commands",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
         "policy": "verify"
       }
     ],
@@ -209,7 +217,12 @@
     "planning-coherence-lens": [],
     "planning-dor-lens": [],
     "planning-invest-lens": [],
-    "quality-gates-lens": [],
+    "quality-gates-lens": [
+      {
+        "name": "qa-reporting",
+        "policy": "verify"
+      }
+    ],
     "refactoring-worker": [],
     "Skraft - Orchestrator": [
       {
@@ -231,11 +244,19 @@
       {
         "name": "github-search-protocol",
         "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
+        "policy": "verify"
       }
     ],
     "Skraft - Software Engineer Reviewer": [
       {
         "name": "adversarial-review-lenses",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
         "policy": "verify"
       }
     ],
@@ -278,6 +299,10 @@
       },
       {
         "name": "resolving-stack-commands",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
         "policy": "verify"
       }
     ],
