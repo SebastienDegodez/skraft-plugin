@@ -1,6 +1,6 @@
 ---
 name: mutation-testing
-description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing Stryker.NET or frontend StrykerJS reports after the test baseline is green
+description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing supported Stryker.NET or Node TAP StrykerJS reports after the test baseline is green
 ---
 
 # Mutation Testing
@@ -34,21 +34,19 @@ reconstruct, or improvise runner commands here. Load `skraft-quality-bar`, then 
 6. Repeat for boundary
 ```
 
-## Frontend JavaScript/TypeScript Continuity
+## Node JavaScript / TAP
 
-Frontend mutation testing remains part of this workflow. Survivor classification,
-kill-or-prove-equivalent reasoning, and core-before-boundary ordering do not change with
-language. Runner semantics do: StrykerJS and Stryker.NET reporter flags and report
-lifecycles are not interchangeable. Never translate one stack's invocation into the
-other.
+For installed StrykerJS core + TAP 9.6.1, load
+[quality-gates-javascript](../quality-gates-javascript/SKILL.md). Its single runner
+validates both durable configs, runs core then boundary, and captures fresh reports.
+Core-only runs diagnose failures but never prove combined G6. Full reruns start
+with core again; never reuse an earlier core receipt to unlock boundary.
 
-The future `quality-gates-javascript` adapter must own checked-in configuration,
-explicit frontend core/boundary source mapping, runner-native reporter syntax, and
-evidence capture. It must also prove that `reports/mutation/mutation.json` belongs to
-the current invocation before parsing it because a fixed-path frontend report can be
-overwritten or left stale. Until that adapter exists, `resolving-stack-commands` returns
-`unsupported_stack`. That block is not permission to improvise a raw `npx stryker`
-command or analyze an old report.
+Frontend, TypeScript and other runners remain unsupported. No coverage gate is
+claimed. Do not improvise raw Stryker commands, install tooling, or analyze stale
+reports as gate evidence. StrykerJS uses native `thresholds.break`; do not translate
+.NET flags. This narrow adapter rejects source suppressions and ignored/error
+mutants; equivalent-mutant suppression below applies only when adapter supports it.
 
 ## Classify Survivors
 
@@ -98,8 +96,9 @@ an ignored mutant remains visible in JSON evidence.
 
 ## Gate Decision
 
-The runner's exit code is the verdict — `--break-at` fails the run below the bar, and
-`skraft-quality-bar` states the bar for each scope. This skill decides only what a
+The adapter's exit code is the verdict — .NET uses `--break-at`, StrykerJS uses
+`thresholds.break` plus fresh-report validation. `skraft-quality-bar` states the bar
+for each scope. This skill decides only what a
 survivor means:
 
 | Survivors | Verdict |
