@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
+import { spawnSync } from 'node:child_process'
 import { deepStrictEqual, match, strictEqual } from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, existsSync, readFileSync, readdirSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -367,7 +368,7 @@ describe('Vally real-agent executor', () => {
   // one for every agent stimulus, outside the workspace so the diff baseline —
   // captured before execute() — stays clean, and carrying the CLI and its
   // templates only.
-  it('assembles the plugin CLI the descriptors invoke, without the skills and agents under test', async () => {
+  it('assembles a runnable plugin CLI without skill entrypoints or agents under test', async t => {
     const calls = { sessions: [] }
     const executor = createAgentExecutor({
       repoRoot,
@@ -387,6 +388,8 @@ describe('Vally real-agent executor', () => {
     })
     const stimulus = { name: 'solo', prompt: 'Report the blocker.', tags: { agent: 'software-engineer' } }
     const workDir = mkdtempSync(join(tmpdir(), 'skraft-workspace-'))
+    t.after(() => rmSync(workDir, { recursive: true, force: true }))
+    t.after(() => executor.shutdown())
 
     await executor.execute(stimulus, {
       workDir, model: 'claude-sonnet-4.6', timeout: 30_000, sessionLog: { rootDir: join(workDir, '.log') }, skills: [],
@@ -398,15 +401,24 @@ describe('Vally real-agent executor', () => {
     // The CLI renders its artefacts from templates that live beside it.
     strictEqual(existsSync(join(pluginRoot, 'assets', 'templates')), true)
     strictEqual(existsSync(join(pluginRoot, 'src', 'cli', 'state.mjs')), true)
-    // The tree holds the CLI and its templates. A skill reaches an agent through
-    // the runtime, and a sibling descriptor must not be readable at all.
+    // The standalone CLI must not bring skill prompts or scripts into the workspace.
     strictEqual(existsSync(join(pluginRoot, 'skills')), false)
+    strictEqual(readdirSync(pluginRoot, { recursive: true }).some(path => path.endsWith('SKILL.md')), false)
     strictEqual(existsSync(join(pluginRoot, 'com.anthropic.claude-code')), false)
+    strictEqual(existsSync(join(pluginRoot, 'com.github.copilot')), false)
+    strictEqual(existsSync(join(pluginRoot, 'docs')), false)
     // 67 MB the dependency-free source never loads.
     strictEqual(existsSync(join(pluginRoot, 'src', 'node_modules')), false)
     // The workspace is untouched: Vally captured its diff baseline before this ran.
     deepStrictEqual(readdirSync(workDir), ['.log'])
 
+    const initialized = spawnSync('git', ['init', '-q'], { cwd: workDir, encoding: 'utf8' })
+    strictEqual(initialized.status, 0, initialized.stderr)
+    const scanned = spawnSync(process.execPath, [join(pluginRoot, 'src/cli/state.mjs'), 'scan-commits', '--count', '1'], {
+      cwd: workDir, encoding: 'utf8',
+    })
+    strictEqual(scanned.status, 0, scanned.stderr)
+    deepStrictEqual(JSON.parse(scanned.stdout), { total: 0, nonConventional: [] })
     await executor.shutdown()
     strictEqual(existsSync(pluginRoot), false)
   })

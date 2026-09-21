@@ -213,10 +213,25 @@ compromis délibérément — la qualité ne se négocie pas.
 | **G5** | Les règles d'architecture passent. | Les tests de direction de dépendance (Clean Architecture) passent. |
 | **G6** | Le score de mutation atteint la barre. | Les deux scripts de mutation séquencés sortent en `0` : le cœur d'abord (Domain et Application, 100 %), puis la frontière (API et Infrastructure, 80 %). |
 | **G7** | Aucun mock dans le cœur Domain/Application. | Attestation par grep : zéro symbole de framework de mock dans ces couches. |
-| **G8** | Format de commit conventionnel. | Chaque commit couvert suit `<type>(<scope>): <sujet>`. |
+| **G8** | Message complet du commit conventionnel. | Chaque commit couvert utilise le scope fonctionnel, le sign-off et l'issue connue ; la cloture exige un travail reellement termine et toutes les gates requises passees. |
 | **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque cycle, le fichier de test n'a changé que par **ajout** entre les snapshots RED et GREEN. |
 | **G10** | RED constaté : le test a bien été exécuté et a **échoué** avant l'arrivée de l'implémentation. | Pour chaque cycle, un stdout RED capturé au moment du RED et haché en sha256, plus un code de sortie **non nul** enregistré. |
 | **G11** | La couverture de lignes atteint la barre. | Le runner de couverture, invoqué avec les drapeaux de seuil de la barre (100 % de lignes sur Domain et Application), sort en `0`. |
+
+**Politique G8 :** consignes de commit directement dans les agents existants,
+sur les deux clients natifs (Copilot et Claude Code). Aucun skill, validateur
+ou recu de completion supplementaire.
+
+- **Message :** `type(feature): sujet` (`!` optionnel avant `:`), avec le scope
+  fonctionnel approuve. Utiliser `git commit -s` pour le trailer `Signed-off-by`.
+- **Issue :** pour une issue connue, terminer le corps par `Refs: #N` pour le
+  travail intermediaire ou `Closes #N` uniquement lorsque toute l'issue est
+  reellement terminee et toutes les gates requises passent. Une tranche verte
+  ou DESIGN seul ne cloture pas la livraison. Omettre la ligne si l'issue est inconnue.
+- **Verification :** G8 controle les messages Git couverts et les preuves de
+  gates existantes. Une preuve non verifiable donne `inconclusive`. Le schema
+  de preuves v3 reste inchange ; l'audit autonome des sujets reste un controle
+  syntaxique, pas une preuve de completion.
 
 > **G6 est un code de sortie, pas un nombre.** Chaque adaptateur `quality-gates-<tech>`
 > embarque deux scripts de mutation séquencés — `mutation-core.sh` puis

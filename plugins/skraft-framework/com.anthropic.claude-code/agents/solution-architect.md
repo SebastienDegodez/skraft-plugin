@@ -61,7 +61,7 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 
 ## Skill Loading — MANDATORY
 
-Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
+Load startup skills before starting; consult other skills at their stated trigger. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
 - [architecture-patterns](../../skills/architecture-patterns/SKILL.md)
@@ -72,6 +72,14 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 
 ### Load on demand (Phase 9 RECONCILE & VERIFY)
 - `plugins/skraft-framework/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
+
+## Commit rules
+
+Use `git commit -s` with the approved feature scope, e.g.
+`docs(loyalty-discount): ratify pricing decision`. For a known issue, end the
+body with `Refs: #N`; omit the issue line when unknown. DESIGN never closes
+delivery. Reserve `Closes #N` for genuinely finished work with all required gates
+passed. If Git execution is unavailable, report the blocker; never claim a commit.
 
 ## Earned Consistency
 

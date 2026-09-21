@@ -35,7 +35,8 @@ Load before any review work. If missing, announce `[SKILL MISSING] {name}` and c
 ## Inputs (handed by `software-engineer-reviewer`)
 
 - The evidence log: `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json`
-- The Git tree (read-only via `Read` / `Glob` / `Grep`).
+- Accessible Git-derived evidence bound to exact SHAs; working-copy reads alone are not historical Git access.
+- Approved feature scope and linked issue when known; never infer them from a producer's commit subject.
 - Code + tests + change log (already in the parent reviewer's hand-off; you may search them but not modify).
 - Outcome/forecast data and frontend manifest when supplied: load [qa-reporting](../../skills/qa-reporting/SKILL.md) before checking data; use exact returned repository-root-relative refs, not current-date paths.
 
@@ -77,7 +78,7 @@ For each gate, run the verification rule from the contract's *Falsification surf
 | `repo_root_rev` | matches the current `HEAD` SHA |
 | `commits_covered[].sha` | resolves in the Git tree |
 | `commits_covered[].files_changed` | every entry appears in the actual commit diff |
-| `commits_covered[].subject` | matches `^(feat\|fix\|chore\|refactor\|test\|docs\|build\|perf\|style\|ci)(\([^)]+\))?: .+$` (G8) |
+| `commits_covered[].subject` | equals the actual message's first line for that exact SHA; apply the contract's shared G8 full-message policy, including feature, reference and sign-off |
 | `gates[].stdout_ref` | file exists at the declared path |
 | `gates[].stdout_sha256` | re-hashing the file equals the declared value |
 | `gates[].exit_code_ref` | file exists; for `status: "pass"` content equals `0` |
@@ -87,8 +88,13 @@ For each gate, run the verification rule from the contract's *Falsification surf
 | `test_integrity.cycles[].red_stdout_sha256` | re-hashing the RED stdout file equals the declared value (G10) |
 | `test_integrity.cycles[].red_exit_code_ref` | file exists; content is NON-zero — a `0` means the test never failed (G10) |
 
-You access the Git tree via `Read` on the working copy (HEAD) and via `Glob`
-to enumerate commit-bound paths. You DO NOT call `git` as a shell tool.
+These are required observations, not extra tool permissions. Working-copy
+reads do not resolve Git messages, historical snapshots, SHAs or diffs. Missing
+independently verifiable evidence means `inconclusive`; use only granted tools.
+For G8, check `type(feature): subject` and the `Signed-off-by` trailer from
+`git commit -s`. Known issue: final body line `Refs: #N` for intermediate work;
+`Closes #N` only when the whole issue is genuinely finished and all required
+gates pass. Unknown issue: no issue line. Preserve the v3 evidence schema.
 
 ### 4. G9 — Test integrity (RED→GREEN diff)
 
@@ -117,7 +123,8 @@ or publication retry. Report contradictions in existing defects; absent
 | any referenced file unreachable, or `stdout_sha256` / `red_stdout_sha256` mismatches, or snapshot does not match `git show` | `inconclusive` |
 | any `gates[].status == "fail"` | `fail` |
 | internal contradiction (`status: "pass"` with `tests_failed > 0`) | `fail` |
-| G8 regex fails on any `commits_covered[].subject` | `fail` |
+| actual covered Git message violates shared G8 policy | `fail` |
+| G8 actual message or completion claim cannot be independently verified | `inconclusive` |
 | G9 RED→GREEN diff shows removal/mutation | `fail` |
 | G10 any cycle's `red_exit_code_ref` content is `0` — the RED run never failed | `fail` |
 | `commits_covered[].sha` does not resolve, or `files_changed` lists a path absent from the diff | `fail` |

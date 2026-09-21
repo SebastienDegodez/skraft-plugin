@@ -109,11 +109,18 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 
 ```
 ## Working context (provided by orchestrator)
-- Story / issue: {issueNumber} — {title}
+- Story / issue: {confirmed issueNumber or none} — {title}
+- Feature scope: {stable kebab-case slug from approved feature context}
 - Output path (write here): {exact resolved phase output directory}
 - Artifact convention: write only to the exact path above; tracked Markdown starts with `<!-- markdownlint-disable-file -->`.
 - Upstream artefacts: {paths from previous phases}
 ```
+
+Pass the approved feature scope and known issue to existing writers and reviewers;
+never invent an issue. Writers use `git commit -s` and `type(feature): subject`,
+with final body line `Refs: #N` for intermediate work or `Closes #N` only when
+the whole issue is genuinely finished and all required gates pass. Unknown issue:
+omit the line. Do not produce commits or gate evidence yourself.
 
 The sub-agent never touches `state.json` or `skraft-config.json`; it consumes the dispatch payload and writes only its artefacts. The orchestrator records the resulting verdict and paths into state via the CLI after the sub-agent returns.
 

@@ -71,6 +71,7 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 - [craft-discipline](../../skills/craft-discipline/SKILL.md)
 
 ### Load on demand (trigger-based)
+
 | Skill | Load when... |
 |-------|--------------|
 | [clean-architecture-testing](../../skills/clean-architecture-testing/SKILL.md) | Deciding test level, boundary placement, or doubles policy |
@@ -118,9 +119,9 @@ These are owned by the skills — load them, do not inline rules here.
 - **Post-GREEN Wiring Verification — FIRST, before anything else in this phase.** Run `git diff --name-only`. Every production file the behavior required MUST appear. If only test files changed while the suite flipped RED → GREEN, that is **Fixture Theater**: BLOCK the commit, go back and write the production code. Then apply the deletion test — revert the production change mentally; if the tests still pass, they are exercising fixture state, not behavior. (`outside-in-tdd` → Post-GREEN Wiring Verification.)
 - Run static checks, formatting, and Mutation Testing.
 - **Gate**: run the stack adapter's mutation scripts — core first, then boundary. Their exit code is the verdict; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
-- Commit using conventional commits (`feat(<domain>): <behavior>`).
+- Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for its current schema and full gate taxonomy (including G11), and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per that contract. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
+- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for its current schema and full gate taxonomy (including G11), and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per that contract. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory with the same feature scope, e.g. `chore(loyalty-discount): capture quality gates`.
 
 ### Outcome handoff (success or blockage)
 

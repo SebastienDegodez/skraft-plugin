@@ -107,7 +107,7 @@ they do NOT invent new ones. Adding a gate id is a contract change (new schema v
 | G5 | Architecture rules pass | dependency-direction tests pass (Clean Architecture) |
 | G6 | Mutation score meets the bar | mutation runner invoked with the bar's `--break-at` flag for the scope under test, and exited 0 |
 | G7 | No mocks in Domain/Application core | grep-based attestation: zero mocking-framework symbols in those layers |
-| G8 | Conventional commit format | every commit in `commits_covered` matches `<type>(<scope>): <subject>` |
+| G8 | Conventional commit policy | each exact covered commit's full Git message satisfies feature scope, optional issue reference and sign-off under the shared policy below |
 | G9 | No test tampering (RED→GREEN integrity) | for every cycle, the test file changed only by ADDITION between RED and GREEN snapshots |
 | G11 | Line coverage meets the bar | coverage runner invoked with the bar's threshold flags for Domain and Application, and exited 0 |
 | G10 | RED observed | for every cycle, the test was actually RUN and FAILED before the implementation landed: captured RED stdout hashed by sha256, and a NON-zero exit code recorded — both captured at RED time |
@@ -124,15 +124,18 @@ for `fail` or for missing evidence.
 
 ## Falsification surface (what the lens checks)
 
-Every claim in the JSON resolves to something the lens can verify with `Read`,
-`Glob`, `Grep`, or `git` (via the Git tree as a read-only file system):
+The table defines required observations, not additional tool permissions. A
+working-copy read cannot resolve a commit message, historical tree or diff.
+Use accessible, independently verifiable Git-derived evidence; if the lens's
+read-only tools cannot obtain it, report `inconclusive`. Do not pretend that
+`Read`/`Glob`/`Grep` can decode loose or packed Git objects.
 
 | Field | How the lens falsifies it |
 |-------|---------------------------|
-| `repo_root_rev` | reads `.git/HEAD` or asks `git rev-parse HEAD`; must match |
-| `commits_covered[].sha` | resolves via Git tree; missing SHA → contradiction |
-| `commits_covered[].files_changed` | reads commit object; if a listed file is absent from the diff → contradiction |
-| `commits_covered[].subject` | matches `^(feat\|fix\|chore\|refactor\|test\|docs\|build)(\([^)]+\))?: .+$` for G8 |
+| `repo_root_rev` | independently accessible current `HEAD` SHA must match; unavailable SHA evidence → inconclusive |
+| `commits_covered[].sha` | independent Git-derived evidence resolves this exact SHA; proven missing SHA → contradiction, inaccessible evidence → inconclusive |
+| `commits_covered[].files_changed` | compare with independently accessible actual commit diff; listed file absent → contradiction, unavailable diff → inconclusive |
+| `commits_covered[].subject` | equals the first line of the actual full message for that exact SHA; apply G8 below to the full message, not this producer-supplied summary |
 | `gates[].stdout_ref` | file MUST exist at the declared path |
 | `gates[].stdout_sha256` | re-hash of the file MUST equal declared value |
 | `gates[].stdout_tail` | MUST be a strict suffix of the file content |
@@ -143,6 +146,20 @@ Every claim in the JSON resolves to something the lens can verify with `Read`,
 | RED→GREEN diff | computed by the lens: any line REMOVED or MUTATED in an existing test → G9 violation; only ADDED lines are allowed |
 | `test_integrity.cycles[].red_stdout_ref` | file MUST exist; re-hash MUST equal `red_stdout_sha256` |
 | `test_integrity.cycles[].red_exit_code_ref` | file MUST exist; for G10 `status: "pass"` content MUST be NON-zero — a `0` means the test never failed |
+
+## G8 — Full-message verification (schema unchanged)
+
+Check each covered commit's actual Git message: `type(feature): subject`, with
+the approved feature scope and `Signed-off-by` trailer from `git commit -s`.
+For a known issue, the final body line is `Refs: #N` for intermediate work or
+`Closes #N` only when the whole issue is genuinely finished and all required
+gates pass. Omit the issue line when unknown.
+
+Compare the declared subject with the actual message for its SHA. Missing
+verifiable message or completion evidence is `inconclusive`; a verified
+violation is `fail`. Use existing Git and gate evidence, without an additional
+checker or receipt. Keep the v3 schema and SHA bindings unchanged. The existing
+standalone subject scan remains a syntax audit, not proof of completion.
 
 ## Producer rules (software-engineer side)
 
@@ -155,17 +172,18 @@ Every claim in the JSON resolves to something the lens can verify with `Read`,
 
 ## Verifier rules (quality-gates-lens side)
 
-- Read-only. No tool execution beyond `Read`, `Glob`, `Grep`, and Git tree reads.
+- Read-only. Use only granted file/search capabilities; no Git execution.
 - Any of the following → `verdict: inconclusive` (never `pass`):
   - the JSON is missing
   - a required field is absent or malformed
   - a referenced file does not exist
   - a `stdout_sha256` does not match the file content
   - a snapshot does not match `git show {commit}:{path}`
+  - G8 actual message or completion claim cannot be independently verified with available tools
 - Any of the following → `verdict: fail`:
   - a gate has `status: "fail"`
   - `metrics.tests_failed > 0` while `status: "pass"` (internal contradiction)
-  - G8 regex fails on any `commits_covered` subject
+  - an actual covered commit message violates the shared G8 policy
   - G9 diff shows a line REMOVED or MUTATED in an existing test between RED and GREEN snapshots
   - G10: a cycle records a zero exit code for its RED run
   - `commits_covered[].sha` does not resolve in Git

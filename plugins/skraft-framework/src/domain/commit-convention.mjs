@@ -1,7 +1,5 @@
-// Pure predicate for the conventional-commit subject format skraft's TDD workflow
-// requires (G8): `type(scope): subject`. Same type set as the quality-gates-lens
-// falsification rule (plugins/skraft-framework/com.github.copilot/agents/quality-gates-lens.agent.md).
-const CONVENTIONAL_COMMIT_RE = /^(feat|fix|chore|refactor|test|docs|build|perf|style|ci)(\([^)]+\))?: .+$/
+// Pure subject-only audit: type(feature-scope): subject, with optional breaking !.
+const CONVENTIONAL_COMMIT_RE = /^(feat|fix|chore|refactor|test|docs|build|perf|style|ci)\([a-z][a-z0-9]*(?:-[a-z0-9]+)*\)!?: \S[^\r\n]*$/
 
 export const isConventionalCommitSubject = (subject) =>
   typeof subject === 'string' && CONVENTIONAL_COMMIT_RE.test(subject)

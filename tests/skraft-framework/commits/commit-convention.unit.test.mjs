@@ -6,8 +6,12 @@ test('isConventionalCommitSubject: true for a well-formed type(scope): subject',
   assert.equal(isConventionalCommitSubject('test(harness): assert OverfittingJudge detects keyword stuffing'), true)
 })
 
-test('isConventionalCommitSubject: true for a type without scope', () => {
-  assert.equal(isConventionalCommitSubject('fix: correct off-by-one error'), true)
+test('isConventionalCommitSubject: rejects missing feature scope', () => {
+  assert.equal(isConventionalCommitSubject('fix: correct off-by-one error'), false)
+})
+
+test('isConventionalCommitSubject: accepts breaking change with feature scope', () => {
+  assert.equal(isConventionalCommitSubject('feat(loyalty-discount)!: change reward rules'), true)
 })
 
 test('isConventionalCommitSubject: false for a generic auto-commit-hook message', () => {
