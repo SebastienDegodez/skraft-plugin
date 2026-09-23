@@ -68,6 +68,19 @@ test('commandMutatesProtectedArtifact flags removing, moving or overwriting trac
   }
 })
 
+test('commandMutatesProtectedArtifact reads quoted paths, relative targets and perl in-place edits', () => {
+  for (const command of [
+    `echo "{}" > "/Users/me/My Projects/${STATE}"`,
+    `echo "{}" > '/Users/me/My Projects/${STATE}'`,
+    `cp /tmp/forged.json "${STATE}"`,
+    'cd .copilot-tracking && echo "{}" > skraft-plans/us11/state.json',
+    `perl -i -pe 's/DELIVER/DONE/' ${STATE}`,
+  ]) {
+    assert.equal(commandMutatesProtectedArtifact(command), true, command)
+  }
+  assert.equal(commandMutatesProtectedArtifact(`perl -ne 'print if /DELIVER/' ${STATE}`), false, 'perl without -i or an inline -e only reads')
+})
+
 test('commandMutatesProtectedArtifact allows reads and unrelated commands on the same line', () => {
   for (const command of [
     `cat ${STATE}`,
@@ -112,12 +125,21 @@ test('guardProtectedArtifact denies a Write to state.json', () => {
   const result = guardProtectedArtifact({ filePath: STATE })
   assert.equal(result.ok, false)
   assert.equal(result.error.code, STATE_WRITE_FORBIDDEN)
+  assert.equal(result.error.reason, `direct edit of ${STATE} is forbidden; mutate recorded state only through the state CLI`)
 })
 
 test('guardProtectedArtifact denies a shell mutation of state.json', () => {
   const result = guardProtectedArtifact({ command: `echo "{}" > ${STATE}` })
   assert.equal(result.ok, false)
   assert.equal(result.error.code, STATE_WRITE_FORBIDDEN)
+  assert.match(result.error.reason, /^direct edit of a tracked state\.json.*only through the state CLI$/)
+})
+
+test('guardProtectedArtifact follows a custom tracking directory, for a file tool and a shell command', () => {
+  const custom = '/tmp/root-x/us11/state.json'
+  assert.equal(guardProtectedArtifact({ filePath: custom, trackingDir: 'root-x' }).ok, false)
+  assert.equal(guardProtectedArtifact({ command: `rm ${custom}`, trackingDir: 'root-x' }).ok, false)
+  assert.equal(guardProtectedArtifact({ command: `rm ${custom}` }).ok, true)
 })
 
 test('guardProtectedArtifact allows a read of state.json', () => {
@@ -129,25 +151,32 @@ test('guardProtectedArtifact allows a read of state.json', () => {
 // G8 — guardWorkspaceWrite
 // ───────────────────────────────────────────────────────────────────────────
 
-test('guardWorkspaceWrite blocks a src/ write outside a monitored DELIVER agent', () => {
+test('guardWorkspaceWrite blocks a src/ write outside a monitored DELIVER agent, naming the writer', () => {
   const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
   assert.equal(result.ok, false)
   assert.equal(result.error.code, UNMONITORED_WRITE)
+  assert.equal(result.error.reason, 'src/ or tests/ write during DELIVER must run inside the monitored DELIVER sub-agent, not the orchestrator session')
+  const byArchitect = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: 'solution-architect', deliverAgents: DELIVER_AGENTS })
+  assert.match(byArchitect.error.reason, /, not solution-architect$/)
 })
 
+// The Ok reasons are what the audit log records for a conforming write.
 test('guardWorkspaceWrite allows a src/ write by the monitored DELIVER specialist', () => {
   const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: 'software-engineer', deliverAgents: DELIVER_AGENTS })
   assert.equal(result.ok, true)
+  assert.equal(result.value.reason, 'workspace write by monitored DELIVER agent software-engineer')
 })
 
 test('guardWorkspaceWrite is inactive outside DELIVER', () => {
   const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DESIGN', agentName: null, deliverAgents: DELIVER_AGENTS })
   assert.equal(result.ok, true)
+  assert.equal(result.value.reason, 'session guard inactive outside DELIVER (phase DESIGN)')
 })
 
 test('guardWorkspaceWrite ignores non-workspace writes during DELIVER', () => {
   const result = guardWorkspaceWrite({ filePath: 'docs/notes.md', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
   assert.equal(result.ok, true)
+  assert.equal(result.value.reason, 'no src/ or tests/ write')
 })
 
 test('guardWorkspaceWrite blocks a shell write into tests/ outside a monitored agent', () => {
@@ -166,6 +195,12 @@ test('evaluateSessionGuard enforces G7 before G8', () => {
   assert.equal(result.error.code, STATE_WRITE_FORBIDDEN)
 })
 
+test('evaluateSessionGuard enforces G8 when G7 passes', () => {
+  const result = evaluateSessionGuard({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
+  assert.equal(result.ok, false)
+  assert.equal(result.error.code, UNMONITORED_WRITE)
+})
+
 test('evaluateSessionGuard returns Ok when neither guard trips', () => {
   const result = evaluateSessionGuard({ command: 'cat state.json', phase: 'DESIGN', agentName: 'solution-architect', deliverAgents: DELIVER_AGENTS })
   assert.equal(result.ok, true)
@@ -178,6 +213,7 @@ test('commandWritesWorkspace: every write form into src/ or tests/, and nothing 
     "echo x > 'apps/web/src/x.ts'",
     'printf x | tee src/a.mjs',
     'printf x | tee -a -i tests/a.mjs',
+    'printf x | tee --append src/a.mjs',
     'truncate -s0 src/a.mjs',
     'cp /tmp/x src/a.mjs',
     'mv old.mjs tests/a.mjs',
