@@ -1,6 +1,6 @@
 ---
 name: quality-gates-dotnet
-description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Most gates are captured at the end of the COMMIT phase; the G10 RED capture is taken **at RED**, before any production code, and cannot be reconstructed later. Provides the concrete `dotnet` / `stryker` commands and how their outputs map onto the tech-agnostic schema.
+description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Most gates are captured once, after the story's last work commit; the G10 RED capture is taken **at RED**, before any production code, and cannot be reconstructed later. Provides the concrete `dotnet` / `stryker` commands and how their outputs map onto the tech-agnostic schema.
 ---
 
 # Quality Gates — .NET Adapter
@@ -20,10 +20,12 @@ If multiple stacks coexist, run each adapter and concatenate gate entries.
 ## Output paths (relative to repo root)
 
 ```
-.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/
+.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/
 ```
 
-Throughout this file, `$EV` is shorthand for that directory. Create it before any redirect.
+Throughout this file, `$EV` is shorthand for that directory — one per story, never shared.
+Create it before any redirect. Log references drop the `.copilot-tracking/skraft-plans/{projectSlug}/`
+prefix: `evidence/{date}/{story}/qg-tests.stdout`.
 
 ## G1 / G2 — Tests pass
 
@@ -44,8 +46,8 @@ shasum -a 256 "$EV/qg-tests.stdout" | awk '{print $1}' > "$EV/qg-tests.stdout.sh
 Populate the contract:
 
 - `command_executed` = the verbatim line above
-- `exit_code_ref` = `evidence/{date}/qg-tests.exit`
-- `stdout_ref` = `evidence/{date}/qg-tests.stdout`
+- `exit_code_ref` = `evidence/{date}/{story}/qg-tests.exit`
+- `stdout_ref` = `evidence/{date}/{story}/qg-tests.stdout`
 - `stdout_sha256` = contents of `qg-tests.stdout.sha256`
 - `stdout_tail` = `tail -n 40 "$EV/qg-tests.stdout"`
 - `metrics.tests_total` / `_passed` / `_failed` parsed from the TRX `<ResultSummary outcome="..." />`
@@ -131,11 +133,28 @@ bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-boundary.
 Core MUST pass before boundary starts. `--config <path>` may select an equivalent custom
 location. `--expected` is refused. Do NOT read a report score and judge it in prose.
 
+Populate two G6 entries, one per scope:
+
+- `{ "id": "G6", "scope": "core", … }` — `command_executed` the core line above,
+  `stdout_ref` / `exit_code_ref` = `evidence/{date}/{story}/qg-mutation.stdout` / `.exit`,
+  `stdout_sha256` = contents of `qg-mutation.stdout.sha256`;
+- `{ "id": "G6", "scope": "boundary", … }` — same with `qg-mutation-boundary.*`.
+  A solution without API/Infrastructure projects records the boundary entry
+  `not_applicable` with its rationale.
+
+### Cadence
+
+- In each TDD cycle's COMMIT & VERIFY, run the core wrapper with `--since "$BASE"`
+  (`BASE` = `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`):
+  it mutates only what changed since DELIVER started. Its evidence is a checkpoint,
+  never the G6 entry — write it to a scratch directory, not `$EV`.
+- Once, after the story's last work commit: the full core then boundary wrapper runs
+  into `$EV`. Those two runs are the G6 evidence.
+
 ### Local debugging
 
-Developers can invoke the same root config directly. A `--since:main` or narrow
-`--mutate` override is diagnostic only; mandatory evidence still comes from the full
-wrapper run.
+Developers can invoke the same root config directly; a narrow `--mutate` override is
+diagnostic only.
 
 ```bash
 dotnet stryker --config-file stryker-config-core.json
@@ -146,18 +165,28 @@ dotnet stryker --config-file stryker-config-boundary.json
 ## G7 — No mocks in Domain/Application
 
 ```bash
-grep -r --include='*.cs' -nE \
-  'using\s+(Moq|FakeItEasy|NSubstitute|AutoFixture\.AutoMoq);' \
-  src/*.Domain src/*.Application 2>/dev/null \
-  > "$EV/qg-mocks.stdout"
-echo $? > "$EV/qg-mocks.exit"   # 0 = matches found (FAIL), 1 = none (PASS) — invert
-shasum -a 256 "$EV/qg-mocks.stdout" | awk '{print $1}' > "$EV/qg-mocks.stdout.sha256"
+bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/no-mocks-in-core.sh" --root "$PWD" --evidence "$EV"
 ```
 
-Note the inversion: `grep` exit `1` (no match) is the success case for G7.
-Set `gates[G7].status` accordingly:
-- `status: "pass"` when `qg-mocks.stdout` is empty
-- `status: "fail"` otherwise, with the matching lines visible in `stdout_tail`
+The script scans every `*.Domain` and `*.Application` project at any depth, plus the
+`*.Domain.*Tests`, `*.Application.*Tests` and `*.UnitTests` projects, for mocking
+frameworks (Moq, NSubstitute, FakeItEasy, AutoMoq). It writes `qg-mocks.stdout` (one hit
+per line, empty when clean), `.exit` and `.stdout.sha256`; its exit is the verdict.
+Populate G7 with `status: "pass"` only on exit 0; `stdout_ref` = `evidence/{date}/{story}/qg-mocks.stdout`.
+
+## G11 — Line coverage of Domain and Application
+
+```bash
+bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/coverage-core.sh" --root "$PWD" --evidence "$EV"
+```
+
+The script runs the solution's tests once with the XPlat Code Coverage collector
+(`coverlet.collector`, present in the `dotnet new xunit` template; add it to a test project
+that lacks it), sums the Cobertura line counts of every `*.Domain` and `*.Application`
+package, and exits non-zero below 100%, when a test fails, or when no core package was
+measured. The bar lives in the script; `--threshold` is refused. Populate G11 with its
+`command_executed`, `stdout_ref` / `exit_code_ref` = `evidence/{date}/{story}/qg-coverage.stdout` /
+`.exit` and `stdout_sha256` from `qg-coverage.stdout.sha256`.
 
 ## G8 — Conventional commits
 
@@ -194,10 +223,10 @@ mkdir -p "$EV"
 # at RED, for cycle {cycle} of story {story} — BEFORE writing the implementation:
 dotnet test --nologo \
   --filter "FullyQualifiedName~SomeTests" \
-  > "$EV/qg-{story}-red-{cycle}.stdout" 2>&1
-echo $? > "$EV/qg-{story}-red-{cycle}.exit"
-shasum -a 256 "$EV/qg-{story}-red-{cycle}.stdout" | awk '{print $1}' \
-  > "$EV/qg-{story}-red-{cycle}.stdout.sha256"
+  > "$EV/qg-red-{cycle}.stdout" 2>&1
+echo $? > "$EV/qg-red-{cycle}.exit"
+shasum -a 256 "$EV/qg-red-{cycle}.stdout" | awk '{print $1}' \
+  > "$EV/qg-red-{cycle}.stdout.sha256"
 ```
 
 This capture CANNOT be reconstructed afterwards: once the implementation is in,
@@ -206,9 +235,9 @@ does not exist.
 
 Populate the matching entry of `test_integrity.cycles[]`:
 
-- `red_stdout_ref` = `evidence/{date}/qg-{story}-red-{cycle}.stdout`
-- `red_stdout_sha256` = contents of `qg-{story}-red-{cycle}.stdout.sha256`
-- `red_exit_code_ref` = `evidence/{date}/qg-{story}-red-{cycle}.exit`
+- `red_stdout_ref` = `evidence/{date}/{story}/qg-red-{cycle}.stdout`
+- `red_stdout_sha256` = contents of `qg-red-{cycle}.stdout.sha256`
+- `red_exit_code_ref` = `evidence/{date}/{story}/qg-red-{cycle}.exit`
 
 G10's `gates[]` entry carries `status` (and `rationale`) **only** — no
 `command_executed`, no `exit_code_ref`. One story runs N RED commands but has a
@@ -219,21 +248,22 @@ The recorded exit code MUST be NON-zero: a `0` means the test never failed and
 G10 is `status: "fail"`. G10 attests the RED *run*, nothing about commit SHAs —
 G9 keeps the commit/snapshot job unchanged.
 
-## Producer flow at end of COMMIT phase
+## Producer flow at the end of the story
 
-1. `mkdir -p "$EV"` and `mkdir -p "$EV/snapshots"`.
-2. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6, G7 — each redirecting
-   stdout + exit code to disk.
-3. For each cycle in this story, dump RED + GREEN snapshots from `git show`.
-4. For each cycle, check the G10 RED captures taken at RED time are present in
-   `$EV` (`qg-{story}-red-{cycle}.stdout` / `.exit` / `.stdout.sha256`) and that
-   every recorded exit code is non-zero. They are NOT re-runnable here — a
-   missing capture is `status: "fail"`, never `not_applicable`.
-5. Compute `repo_root_rev = git rev-parse HEAD`.
-6. Build `commits_covered[]` from `git log --format='%H%x09%s' <range>` and
-   `git show --stat --name-only <sha>` per commit.
-7. Assemble `qg-{story}.json` per `quality-gates-evidence-contract`.
-8. Commit the evidence directory in a final `chore(evidence): quality gates for {story}` commit.
+1. `mkdir -p "$EV/snapshots"`.
+2. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 core then boundary, G7, G11 —
+   each through its command or script, redirecting stdout and exit code into `$EV`.
+3. For each cycle, dump RED + GREEN snapshots from `git show`.
+4. For each cycle, check the G10 RED captures taken at RED time are present in `$EV`
+   (`qg-red-{cycle}.stdout` / `.exit` / `.stdout.sha256`) with a non-zero exit. They are
+   NOT re-runnable here — a missing capture is `status: "fail"`, never `not_applicable`.
+5. `repo_root_rev = git rev-parse HEAD` — the last work commit.
+6. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
+   `git show --name-only --format= <sha>` per commit: every commit since DELIVER started.
+7. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v4).
+8. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
+9. `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
+   `"verdict": "pass"`; otherwise fix the gate or the log, never the verifier's input.
 
 If a tool is unavailable in the environment (no Stryker installed, no SDK), the
 gate is `status: "fail"` with the captured stderr — NOT `not_applicable`. The
