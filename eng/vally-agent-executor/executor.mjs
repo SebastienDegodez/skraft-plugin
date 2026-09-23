@@ -1,11 +1,12 @@
 import { randomUUID as newRandomUUID } from 'node:crypto'
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
 import { mergeEnv } from '@microsoft/vally'
 
 import { loadAgentDescriptor } from './agent-descriptor.mjs'
+import { sessionContext } from '../../plugins/skraft-framework/src/domain/session-context-policy.mjs'
 
 const agentTag = (stimulus) => {
   const value = stimulus?.tags?.agent
@@ -73,12 +74,14 @@ const dispatchNotice = (self, dispatchable) => [
   `Pass only \`agent_type\`, \`name\`, \`description\` and \`prompt\`. Never pass \`model\`, \`reasoning_effort\` or \`context_tier\`: every registered agent is already on the model this run pins, and a dispatch that names its own risks a pairing the runtime rejects — the sub-agent fails to start and the work you delegated never happens.`,
 ].join('\n\n')
 
-// Every SKRAFT descriptor reaches its own tooling through `$CLAUDE_PLUGIN_ROOT`:
+// Every SKRAFT descriptor reaches its own tooling through `$SKRAFT_PLUGIN_ROOT`:
 // the orchestrator rehydrates state with `src/cli/state.mjs`, a reviewer renders
-// its verdict with `src/cli/artifact.mjs`. Nothing exports that variable here, so
-// the mandated command expanded to `node "/src/cli/state.mjs"` and the agent
-// spent its turn hunting for the CLI instead of doing the phase — one trial
-// burned ten dispatches looking for it and never reached a phase specialist.
+// its verdict with `src/cli/artifact.mjs`, the engineer runs the quality-gate
+// scripts under `skills/<skill>/scripts`. In a real session the plugin's
+// SessionStart hook exports that variable and injects the same context this
+// executor injects (sessionContext): the evaluation runs what ships, not a
+// harness-only notice. Before that export existed, the mandated command expanded
+// to `node "/src/cli/state.mjs"` and one trial burned ten dispatches hunting for it.
 //
 // The tree is assembled once per executor, outside the workspace: Vally captures
 // the diff baseline before `execute()` runs, so anything staged into the
@@ -86,8 +89,9 @@ const dispatchNotice = (self, dispatchable) => [
 // `diff-empty`.
 //
 // What is copied is what the CLI needs to run and nothing that is itself under
-// test. Never `skills/` — a skill reaches an agent through the runtime, not off
-// disk, and a copy here would only invite an agent to open the file instead.
+// test. Never a skill's text — a skill reaches an agent through the runtime, not
+// off disk, and a copy here would only invite an agent to open the file instead;
+// only the scripts a skill bundles, which the skill tells the agent to run.
 // Never `agents/` — the descriptors are already injected as prompts, and an agent
 // that can open a sibling's descriptor reads it instead of dispatching, which is
 // the exact behaviour the dispatch metrics exist to catch. Never
@@ -102,20 +106,23 @@ const PLUGIN_SUBTREES = ['src/cli', 'src/domain', 'src/application', 'src/adapte
 // (see eng/lib/agent-verdict.mjs).
 const pluginSkillsDirectory = (repoRoot) => join(repoRoot, 'plugins', 'skraft-framework', 'skills')
 
+const skillScriptSubtrees = (source) => readdirSync(join(source, 'skills'))
+  .map((skill) => join('skills', skill, 'scripts'))
+  .filter((subtree) => existsSync(join(source, subtree)) && readdirSync(join(source, subtree)).length > 0)
+
 const copyPluginRoot = (repoRoot) => {
   const source = join(repoRoot, 'plugins', 'skraft-framework')
   const root = mkdtempSync(join(tmpdir(), 'skraft-plugin-root-'))
-  for (const subtree of PLUGIN_SUBTREES) {
+  for (const subtree of [...PLUGIN_SUBTREES, ...skillScriptSubtrees(source)]) {
     cpSync(join(source, subtree), join(root, subtree), { recursive: true })
   }
   return root
 }
 
-const pluginRootNotice = (pluginRoot) => [
-  '## Evaluation runtime plugin root',
-  `$CLAUDE_PLUGIN_ROOT is not exported here. Wherever the agent definition writes it, use ${pluginRoot} instead.`,
-  `A mandated command such as \`node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"\` is run as \`node "${pluginRoot}/src/cli/state.mjs"\`.`,
-  'It holds the CLI and its templates only. Read nothing else from it, and write nothing into it.',
+// The context the plugin's SessionStart hook injects in a real session.
+const pluginRootContext = (pluginRoot) => [
+  '## Session context',
+  sessionContext({ pluginRoot }),
 ].join('\n\n')
 
 const workspaceNotice = (workDir) => [
@@ -133,7 +140,7 @@ const agentPrompt = (agent, { dispatchable = [], pluginRoot, workDir } = {}) => 
     'Do not read source-relative skill links from the agent definition; Vally stages the selected skills for the runtime.',
   ].join('\n\n')
   const notices = [runtimeNotice, workspaceNotice(workDir)]
-  if (pluginRoot) notices.push(pluginRootNotice(pluginRoot))
+  if (pluginRoot) notices.push(pluginRootContext(pluginRoot))
   if (dispatchable.length) notices.push(dispatchNotice(agent.id, dispatchable))
   return [agent.prompt.trim(), ...instructions, ...notices].join('\n\n')
 }
@@ -179,9 +186,10 @@ const promptsFor = (stimulus) => Array.isArray(stimulus.turns) && stimulus.turns
 // built-in grader can assert on.
 const DELEGATION_METRICS_FILE = 'custom_metrics.json'
 
-const agentEnvironment = (env, workDir) => {
-  if (!env || Object.keys(env).length === 0) return undefined
-  const resolved = { ...env }
+// The stimulus environment, plus what the plugin's SessionStart exports in a real session.
+const agentEnvironment = (env, workDir, sessionExports = {}) => {
+  const resolved = { ...(env ?? {}), ...sessionExports }
+  if (Object.keys(resolved).length === 0) return undefined
   if (resolved.PATH) {
     resolved.PATH = resolved.PATH
       .replaceAll('${PATH}', process.env.PATH ?? '')
@@ -251,7 +259,8 @@ export const createAgentExecutor = ({
       const subagents = subagentTags(stimulus).map((id) => loadAgent(repoRoot, id))
       const stateDir = options.sessionLog?.rootDir ?? join(options.workDir, '.copilot-sdk')
       const clientOptions = { baseDirectory: stateDir }
-      const env = agentEnvironment(options.env, options.workDir)
+      pluginRoot ??= copyPluginRoot(repoRoot)
+      const env = agentEnvironment(options.env, options.workDir, { SKRAFT_PLUGIN_ROOT: pluginRoot })
       if (env) clientOptions.env = env
       const client = createClient(clientOptions)
       const adapter = adapterFactory()
@@ -261,7 +270,6 @@ export const createAgentExecutor = ({
         await client.start()
         const tools = toolsFor(stimulus, subagents.length > 0)
         const dispatchable = subagents.map(({ id }) => id)
-        pluginRoot ??= copyPluginRoot(repoRoot)
         const skillDirectories = [...new Set([
           ...(options.skills ?? []).flatMap((skill) => (skill.path ? [dirname(skill.path)] : [])),
           pluginSkillsDirectory(repoRoot),

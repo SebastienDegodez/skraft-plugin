@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { deepStrictEqual, match, strictEqual } from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
@@ -110,7 +110,10 @@ describe('Vally real-agent executor', () => {
       skills: skillPaths,
     })
 
-    deepStrictEqual(calls.clientOptions, [{ baseDirectory: '/tmp/session-log' }])
+    strictEqual(calls.clientOptions.length, 1)
+    strictEqual(calls.clientOptions[0].baseDirectory, '/tmp/session-log')
+    // What the plugin's SessionStart exports in a real session, and nothing the stimulus did not ask for.
+    match(calls.clientOptions[0].env.SKRAFT_PLUGIN_ROOT, /skraft-plugin-root-/)
     strictEqual(calls.sessions.length, 1)
     const config = calls.sessions[0]
     strictEqual(config.agent, 'software-engineer')
@@ -401,9 +404,10 @@ describe('Vally real-agent executor', () => {
     // The CLI renders its artefacts from templates that live beside it.
     strictEqual(existsSync(join(pluginRoot, 'assets', 'templates')), true)
     strictEqual(existsSync(join(pluginRoot, 'src', 'cli', 'state.mjs')), true)
-    // The standalone CLI must not bring skill prompts or scripts into the workspace.
-    strictEqual(existsSync(join(pluginRoot, 'skills')), false)
-    strictEqual(readdirSync(pluginRoot, { recursive: true }).some(path => path.endsWith('SKILL.md')), false)
+    // A skill's scripts ship under the plugin root, as in an install; its text never does.
+    strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-dotnet', 'scripts', 'configure-mutation.sh')), true)
+    strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-javascript', 'scripts', 'run-gates.mjs')), true)
+    strictEqual(readdirSync(pluginRoot, { recursive: true }).some(path => path.endsWith('SKILL.md') || path.split(sep).includes('references')), false)
     strictEqual(existsSync(join(pluginRoot, 'com.anthropic.claude-code')), false)
     strictEqual(existsSync(join(pluginRoot, 'com.github.copilot')), false)
     strictEqual(existsSync(join(pluginRoot, 'docs')), false)

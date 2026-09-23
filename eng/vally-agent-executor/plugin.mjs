@@ -77,9 +77,9 @@ const requestedPaths = (request) => [
 // declared. Reading the repository under evaluation would contaminate the trial,
 // so an absolute path outside the readable roots disqualifies the whole
 // invocation. The roots are the prepared workspace, the staged skills, and the
-// assembled plugin CLI the descriptors invoke as `$CLAUDE_PLUGIN_ROOT` — which
-// holds the CLI and its templates only, never the descriptors or skills that are
-// themselves under test. Only a token that starts with a slash counts — a
+// assembled plugin root the descriptors invoke as `$SKRAFT_PLUGIN_ROOT` — which
+// holds the CLI, its templates and the skills' bundled scripts only, never the
+// descriptors or skill text that are themselves under test. Only a token that starts with a slash counts — a
 // relative path such as `.copilot-tracking/evidence/result.json` is not an
 // absolute path.
 const absolutePathTokens = (text) => [...text.matchAll(/(?:^|[\s'"`=(<>|&;])(\/[^\s'"`;|&()<>]*)/g)]
