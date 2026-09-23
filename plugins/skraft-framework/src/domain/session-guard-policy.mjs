@@ -31,8 +31,10 @@ const INLINE_INTERPRETERS = /^(?:node|nodejs|deno|bun|python[0-9.]*|perl|ruby|ph
 const INLINE_SCRIPT_FLAGS = new Set(['-e', '--eval', '-c', '-p', '--print', '-r'])
 const COMMAND_PREFIXES = new Set(['sudo', 'command', 'env', 'exec', 'nohup', 'time', 'xargs'])
 
-// Split a command line into simple commands at ; & && || | and newlines.
-const segmentsOf = (command) => command.split(/\|\||&&|[;&|\n]/).map((s) => s.trim()).filter(Boolean)
+// Split a command line into simple commands at ; & && || | and newlines — never inside
+// a redirection operator (>|, &>, >&, 2>&1).
+const segmentsOf = (command) =>
+  command.split(/\|\||&&|;|\n|(?<![>&])&(?![>&])|(?<!>)\|/).map((s) => s.trim()).filter(Boolean)
 
 // Words of a simple command, quotes stripped, leading VAR=value assignments and
 // wrapper commands (sudo, env…) removed so the first word is the verb.
