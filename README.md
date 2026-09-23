@@ -111,8 +111,8 @@ All documentation lives in [`docs/`](./docs/).
 | Specialized phase agents (`backlog-*`, `solution-architect*`, `acceptance-designer*`, `software-engineer*`) | ✅ Implemented |
 | Reviewer lenses (`quality-gates`, `architecture-boundaries`, `test-integrity`, `cold-reader`) | ✅ Implemented |
 | Operational skills (`plugins/skraft-framework/skills/*`) | ✅ Implemented |
-| Hook guardrails G1–G5 + G4/G5 (artifact/verdict/commit) | ✅ Implemented |
-| Guardrails G6–G8, observability, recovery | 🚧 [Roadmap](./docs/roadmap.md) |
+| Runtime guardrails G1–G8 (hooks; G4/G5 in the state CLI) | ✅ Implemented and tested; live harness receipt for G7 only |
+| Observability (health check, housekeeping) and recovery (`diagnose`, `rollback`, `resolve-stale`) | ✅ Implemented — see the [roadmap](./docs/roadmap.md) |
 
 ## Development
 

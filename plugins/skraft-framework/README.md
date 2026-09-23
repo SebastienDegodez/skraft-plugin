@@ -166,16 +166,20 @@ retains publication history.
 | Guard | What the user gets | Failure mode |
 |---|---|---|
 | G1 | Out-of-order phase dispatch blocked before execution | Fail closed |
-| G2 | Mandatory skills and declared companion rules injected on agent start | Fail open on hook error |
-| G3 | Skill reads recorded in the audit trail | Fail open on hook error |
-| G4 | Phase completion blocked until required artifacts exist | Fail closed |
-| G5 | Reviewer verdict, persisted state, and DELIVER commit must agree | Fail closed |
+| Provenance | An agent never dispatches itself, nor an agent another agent owns | Fail open on hook error |
+| G2 | Mandatory skills injected on agent start | Fail open on hook error |
+| G3 | Skill reads recorded; a subagent that never loaded a mandatory skill is sent back | Fail open on hook error |
+| G4 | A phase does not close until its required artifacts exist (state CLI) | Fail closed |
+| G5 | A phase does not close unless the review artifact, the recorded verdict and, for DELIVER, a new commit agree (state CLI) | Fail closed |
 | G6 | Next-phase or retry context injected after a dispatch | Fail open on hook error |
-| G7 | Direct mutation of state and execution logs blocked | Fail closed |
-| G8 | Source and test writes restricted to monitored DELIVER work | Fail open on hook error |
+| G7 | Direct writes to state, execution logs and the active-pipeline pointer blocked | Fail closed |
+| G8 | Source and test writes during DELIVER restricted to the DELIVER agents and the agents they dispatch | Fail open on hook error |
 
 Off-pipeline agents and internal workers are intentionally not subject to G1 phase ordering.
 Missing or corrupt pipeline state still blocks a governed phase.
+
+Every guard is covered by unit and acceptance tests; only the G7 shell refusal has a live
+harness receipt so far. See the [hooks reference](../../docs/site/en/reference/infrastructure/hooks.md#verification-status).
 
 ## State and artifacts
 
