@@ -103,7 +103,12 @@ const prepare = () => {
   const workspace = join(root, 'workspace')
   for (const dir of [home, workspace]) mkdirSync(dir, { recursive: true })
   const cachePath = installPlugin(home, workspace)
-  return { root, home, workspace, cachePath }
+  // An active pipeline, so the session guard has a phase to evaluate and audits every
+  // tool call; without one it stays silent and the `allowed` probe would prove nothing.
+  const init = spawnSync(process.execPath, [join(repoRoot, 'plugins', 'skraft-framework', 'src', 'cli', 'state.mjs'), 'init', '--slug', 'smoke'], { cwd: workspace, encoding: 'utf8' })
+  if (init.status !== 0) throw new Error(`state.mjs init failed: ${init.stderr}`)
+  const initialState = readFileSync(join(workspace, FORBIDDEN_PATH), 'utf8')
+  return { root, home, workspace, cachePath, initialState }
 }
 
 // --- running one probe ------------------------------------------------------------
@@ -161,8 +166,8 @@ const probes = [
     prompt: 'Use the bash tool to run exactly this command: echo skraft-hook-smoke. Then stop.',
     check: ({ audit, debugLog }) => {
       const failures = []
-      if (audit.length === 0) {
-        failures.push('no audit entry — the harness never spawned the hook command')
+      if (!audit.some((entry) => entry.event === 'SessionGuardEvaluated')) {
+        failures.push('no session guard audit entry — the harness never spawned the PreToolUse hook command')
       }
       for (const pattern of HOOK_FAILURE_PATTERNS) {
         const hit = debugLog.match(new RegExp(`.*${pattern.source}.*`, 'i'))
@@ -178,7 +183,7 @@ const probes = [
       const failures = []
       const denied = audit.some((entry) => entry.decision === 'DENY')
       if (!denied) failures.push('the G7 guard recorded no DENY — the forbidden write was not refused')
-      if (existsSync(join(ctx.workspace, FORBIDDEN_PATH))) {
+      if (readFileSync(join(ctx.workspace, FORBIDDEN_PATH), 'utf8') !== ctx.initialState) {
         failures.push(`${FORBIDDEN_PATH} was written — the harness did not honor the refusal`)
       }
       return failures

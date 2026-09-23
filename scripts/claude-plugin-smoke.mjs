@@ -18,8 +18,12 @@ const version = spawnSync('claude', ['--version'], { encoding: 'utf8', timeout: 
 if (version.status !== 0) throw new Error(version.stderr || 'Claude unavailable')
 console.log(version.stdout.trim())
 const forbidden = '.copilot-tracking/skraft-plans/smoke/state.json'
-// Ensure a failed shell redirection cannot masquerade as hook enforcement.
-mkdirSync(join(workspace, '.copilot-tracking/skraft-plans/smoke'), { recursive: true })
+// An active pipeline: the session guard then audits every tool call (it stays silent
+// without one), and the forbidden target exists, so a failed redirection cannot
+// masquerade as hook enforcement.
+const init = spawnSync(process.execPath, [join(plugin, 'src/cli/state.mjs'), 'init', '--slug', 'smoke'], { cwd: workspace, encoding: 'utf8' })
+if (init.status !== 0) throw new Error(`state.mjs init failed: ${init.stderr}`)
+const initialState = readFileSync(join(workspace, forbidden), 'utf8')
 const results = []
 for (const [name, command] of [
   ['allowed', 'echo skraft-claude-smoke'],
@@ -51,9 +55,9 @@ for (const [name, command] of [
   if (run.error || run.status !== 0 || outcome?.is_error) errors.push(run.error?.message ?? outcome?.result ?? `exit ${run.status}`)
   if (!init) errors.push('No initialization event')
   if (!toolCalls.some((call) => call.input?.command === command)) errors.push('Exact Bash command not attempted')
-  if (!audit.length) errors.push('No hook audit receipt')
+  if (!audit.some((entry) => entry.event === 'SessionGuardEvaluated')) errors.push('No PreToolUse hook audit receipt')
   if (name === 'denied' && !audit.some((entry) => entry.decision === 'DENY')) errors.push('No DENY receipt')
-  if (existsSync(join(workspace, forbidden))) errors.push('Forbidden write landed')
+  if (readFileSync(join(workspace, forbidden), 'utf8') !== initialState) errors.push('Forbidden write landed')
   const result = { name, agents: init?.agents, plugins: init?.plugins, skills: init?.skills,
     audit, errors, status: errors.length ? 'FAIL' : 'PASS' }
   results.push(result)
