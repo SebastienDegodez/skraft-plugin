@@ -34,7 +34,7 @@ metadata:
       - docs/adr/decisions-index.md
       - docs/adr/adr-{NNN}-{slug}.md
   outputs:
-    - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
+    - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
     - tests/**/{Feature}AcceptanceTests.cs
@@ -179,7 +179,7 @@ Author the executable Application-layer acceptance test (Step 1 of the impl-plan
 
 Write only the declared artefacts under `.copilot-tracking/skraft-plans/{projectSlug}/`. Markdown files require the `<!-- markdownlint-disable-file -->` header.
 
-- `features/{feature}.feature` — Gherkin scenarios (one file per bounded context feature)
+- `features/{bounded-context}-{feature}.feature` — Gherkin scenarios (one file per bounded context feature)
 - `details/{date}/test-plan-{story}.md` — coverage matrix with layer assignment
 - `details/{date}/impl-plan-{story}.md` — sequenced implementation plan (outside-in order)
 

@@ -18,7 +18,7 @@ metadata:
       - Source code commits produced by software-engineer
       - Test files referenced in the commits
     context:
-      - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
+      - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md

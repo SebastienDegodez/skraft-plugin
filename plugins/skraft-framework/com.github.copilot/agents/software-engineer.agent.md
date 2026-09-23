@@ -36,7 +36,7 @@ metadata:
     - qa-reporting
   inputs:
     required:
-      - .copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature
+      - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
