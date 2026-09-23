@@ -122,7 +122,8 @@ fi
 
 EXCLUSIONS=("!**/*Marker.cs" "!**/DependencyInjection.cs" "!**/Program.cs" "!**/obj/**")
 command -v dotnet >/dev/null 2>&1 || { echo "dotnet is not on PATH" >&2; exit 3; }
-dotnet stryker --version >/dev/null 2>&1 || { echo "dotnet stryker is not available" >&2; exit 3; }
+# Stryker.NET reads --version as a project-version option, so probe with --help.
+dotnet stryker --help >/dev/null 2>&1 || { echo "dotnet stryker is not available" >&2; exit 3; }
 
 TEMP_DIR=$(mktemp -d "$ROOT/.stryker-config.XXXXXX") || exit 2
 CORE_TEMP="$TEMP_DIR/$CORE_CONFIG"

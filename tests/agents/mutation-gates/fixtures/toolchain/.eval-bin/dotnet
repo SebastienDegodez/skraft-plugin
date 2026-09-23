@@ -27,8 +27,14 @@ if (args[0] !== 'stryker') {
   process.exit(90)
 }
 
+// Like Stryker.NET 4.14: --version expects a value (the dashboard project version).
 if (args[1] === '--version') {
-  process.stdout.write('4.8.0\n')
+  process.stderr.write("Missing value for option 'version'\n")
+  process.exit(1)
+}
+
+if (args[1] === '--help') {
+  process.stdout.write('Stryker.NET\n')
   process.exit(0)
 }
 

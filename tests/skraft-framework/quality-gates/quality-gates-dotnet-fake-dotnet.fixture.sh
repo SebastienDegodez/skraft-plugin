@@ -2,7 +2,9 @@
 set -u
 
 [ "${1:-}" = "stryker" ] || exit 90
-[ "${2:-}" = "--version" ] && { echo "4.8.0"; exit 0; }
+# Like Stryker.NET 4.14: --version expects a value (the dashboard project version).
+[ "${2:-}" = "--version" ] && { echo "Missing value for option 'version'" >&2; exit 1; }
+[ "${2:-}" = "--help" ] && { echo "Stryker.NET"; exit 0; }
 
 if [ "${2:-}" = "init" ]; then
   printf '%s\n' "$*" >> "$FAKE_DOTNET_INIT_LOG"

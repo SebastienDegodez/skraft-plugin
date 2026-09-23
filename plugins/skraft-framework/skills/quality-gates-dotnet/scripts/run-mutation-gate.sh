@@ -110,7 +110,8 @@ trap cleanup EXIT
 
 command -v node >/dev/null 2>&1 || { echo "node is not on PATH" >&2; exit 3; }
 command -v dotnet >/dev/null 2>&1 || { echo "dotnet is not on PATH" >&2; exit 3; }
-dotnet stryker --version >/dev/null 2>&1 || { echo "dotnet stryker is not available" >&2; exit 3; }
+# Stryker.NET reads --version as a project-version option, so probe with --help.
+dotnet stryker --help >/dev/null 2>&1 || { echo "dotnet stryker is not available" >&2; exit 3; }
 
 SOLUTION=$(node - "$EFFECTIVE_CONFIG" "$EXPECTED" "$REPORT_NAME" "$ROOT" <<'NODE'
 const fs = require('node:fs')
