@@ -176,3 +176,30 @@ for (const toolName of ['Write', 'Edit']) {
     })
   }
 }
+for (const agentName of ['skraft:contract-testing-worker', 'mock-integration-worker', 'skraft:software-engineer-reviewer']) {
+  test(`a DELIVER write by ${agentName}, dispatched from DELIVER, is monitored`, async () => {
+    const guard = createPreToolUseSessionGuardService({
+      config, clock,
+      stateReader: { read: async () => ({ currentPhase: 'DELIVER' }) },
+      auditWriter: { write: async () => {} }
+    })
+    const result = await guard.handle(fromHarnessInput({
+      tool_name: 'Write', agent_type: agentName, projectSlug,
+      tool_input: { file_path: 'tests/Orders.ContractTests/OrdersContractTests.cs', content: '// test' }
+    }, { env: {} }))
+    assert.equal(result.decision, 'allow')
+  })
+}
+
+test('a DELIVER write by an agent outside the DELIVER dispatch tree is still refused', async () => {
+  const guard = createPreToolUseSessionGuardService({
+    config, clock,
+    stateReader: { read: async () => ({ currentPhase: 'DELIVER' }) },
+    auditWriter: { write: async () => {} }
+  })
+  const result = await guard.handle(fromHarnessInput({
+    tool_name: 'Write', agent_type: 'skraft:solution-architect', projectSlug,
+    tool_input: { file_path: 'src/Orders/Order.cs', content: '// code' }
+  }, { env: {} }))
+  assert.equal(result.decision, 'deny')
+})

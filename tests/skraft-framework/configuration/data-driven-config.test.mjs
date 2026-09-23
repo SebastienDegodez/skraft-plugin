@@ -161,3 +161,17 @@ test('the produced configuration is deterministic and frozen', () => {
     a.phaseOrder.push('TAMPER')
   })
 })
+
+test('each dispatched agent records its dispatcher by display name', () => {
+  const config = buildFrameworkConfig([
+    orchestrator(['DELIVER']),
+    agent({ id: 'software-engineer', name: 'Skraft - Software Engineer', phase: 'DELIVER' }),
+    agent({ id: 'contract-testing-worker', name: 'contract-testing-worker', dispatchedBy: 'software-engineer' }),
+    agent({ id: 'cold-reader-lens', name: 'cold-reader-lens', dispatchedBy: 'unknown-parent' }),
+  ])
+  assert.deepEqual({ ...config.agentDispatchers }, {
+    'Skraft - Software Engineer': 'skraft-orchestrator',
+    'contract-testing-worker': 'Skraft - Software Engineer',
+    'cold-reader-lens': 'unknown-parent',
+  })
+})

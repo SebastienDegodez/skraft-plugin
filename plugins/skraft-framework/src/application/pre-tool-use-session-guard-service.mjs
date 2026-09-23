@@ -11,11 +11,26 @@ import { allow, deny } from '../adapters/api/hooks/decision.mjs'
 // state cannot be read we fail-open on that guard alone (a hook bug must never freeze
 // the pipeline — README fail-mode rule), G7 having already run.
 
+// The DELIVER specialist and reviewer, plus every agent they dispatch, transitively
+// (the engineer's workers, the reviewer's lenses) — all run inside the monitored phase.
 const deliverAgentsFrom = (config) => {
   const deliver = config?.phaseAgents?.DELIVER ?? {}
-  return [deliver.specialist, deliver.reviewer]
+  const monitored = new Set([deliver.specialist, deliver.reviewer]
     .filter((a) => typeof a === 'string')
-    .map((a) => canonicalAgentName(a, config))
+    .map((a) => canonicalAgentName(a, config)))
+  const dispatchers = Object.entries(config?.agentDispatchers ?? {})
+  let grew = monitored.size > 0
+  while (grew) {
+    grew = false
+    for (const [agent, dispatcher] of dispatchers) {
+      const name = canonicalAgentName(agent, config)
+      if (!monitored.has(name) && monitored.has(canonicalAgentName(dispatcher, config))) {
+        monitored.add(name)
+        grew = true
+      }
+    }
+  }
+  return [...monitored]
 }
 
 // Tools that write the file they name.

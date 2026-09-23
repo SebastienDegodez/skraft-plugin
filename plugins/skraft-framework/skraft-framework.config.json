@@ -71,6 +71,33 @@
     "Skraft - Solution Researcher": "Skraft - Solution Researcher",
     "test-integrity-lens": "test-integrity-lens"
   },
+  "agentDispatchers": {
+    "Skraft - Acceptance Designer Reviewer": "Skraft - Orchestrator",
+    "Skraft - Acceptance Designer": "Skraft - Orchestrator",
+    "architecture-boundaries-lens": "Skraft - Software Engineer Reviewer",
+    "Skraft - Backlog Discoverer Reviewer": "Skraft - Backlog Discoverer",
+    "Skraft - Backlog Planner Reviewer": "Skraft - Backlog Planner",
+    "cold-reader-lens": "Skraft - Software Engineer Reviewer",
+    "contract-fidelity-lens": "Skraft - Software Engineer Reviewer",
+    "contract-testing-worker": "Skraft - Software Engineer",
+    "discovery-completeness-lens": "Skraft - Backlog Discoverer Reviewer",
+    "discovery-duplicate-lens": "Skraft - Backlog Discoverer Reviewer",
+    "discovery-prioritization-lens": "Skraft - Backlog Discoverer Reviewer",
+    "mock-fidelity-lens": "Skraft - Software Engineer Reviewer",
+    "mock-integration-worker": "Skraft - Software Engineer",
+    "planning-ac-quality-lens": "Skraft - Backlog Planner Reviewer",
+    "planning-coherence-lens": "Skraft - Backlog Planner Reviewer",
+    "planning-dor-lens": "Skraft - Backlog Planner Reviewer",
+    "planning-invest-lens": "Skraft - Backlog Planner Reviewer",
+    "quality-gates-lens": "Skraft - Software Engineer Reviewer",
+    "refactoring-worker": "Skraft - Brownfield Refactorer",
+    "Skraft - Software Engineer Reviewer": "Skraft - Orchestrator",
+    "Skraft - Software Engineer": "Skraft - Orchestrator",
+    "Skraft - Solution Architect Reviewer": "Skraft - Orchestrator",
+    "Skraft - Solution Architect": "Skraft - Orchestrator",
+    "Skraft - Solution Researcher": "Skraft - Orchestrator",
+    "test-integrity-lens": "Skraft - Software Engineer Reviewer"
+  },
   "agentSkills": {
     "Skraft - Acceptance Designer Reviewer": [
       {

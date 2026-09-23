@@ -84,12 +84,21 @@ const agentInstructionsOf = (descriptors) => Object.fromEntries(
   descriptors.map((descriptor) => [descriptor.name, [...(descriptor.instructions ?? [])]]),
 )
 
+// Who dispatches each agent, by display name (dispatched_by may name an id).
+const agentDispatchersOf = (descriptors, aliases) => Object.fromEntries(
+  descriptors
+    .filter((descriptor) => typeof descriptor.dispatchedBy === 'string' && descriptor.dispatchedBy.length > 0)
+    .map((descriptor) => [descriptor.name, aliases[descriptor.dispatchedBy] ?? descriptor.dispatchedBy]),
+)
+
 export const buildFrameworkConfig = (descriptors) => {
   const phaseOrder = phaseOrderOf(descriptors)
+  const agentAliases = agentAliasesOf(descriptors)
   return deepFreeze({
     phaseOrder,
     phaseAgents: phaseAgentsOf(descriptors, phaseOrder),
-    agentAliases: agentAliasesOf(descriptors),
+    agentAliases,
+    agentDispatchers: agentDispatchersOf(descriptors, agentAliases),
     agentSkills: agentSkillsOf(descriptors),
     agentInstructions: agentInstructionsOf(descriptors),
     agentArtifacts: agentArtifactsOf(descriptors),
