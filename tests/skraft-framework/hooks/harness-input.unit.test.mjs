@@ -13,9 +13,12 @@ test('harness-input: Copilot lowercased names map onto the framework vocabulary'
     ['bash', 'Bash'],
     ['shell', 'Bash'],
     ['write', 'Write'],
+    ['create', 'Write'],
     ['create_file', 'Write'],
     ['edit', 'Edit'],
     ['str_replace', 'Edit'],
+    ['multiedit', 'MultiEdit'],
+    ['notebookedit', 'NotebookEdit'],
     ['agent', 'Agent'],
     ['task', 'Agent'],
     ['read', 'Read'],
@@ -110,6 +113,20 @@ test('harness-input: Claude agent_type becomes the framework agentName', () => {
 
   assert.equal(payload.agentName, 'skraft:skraft-orchestrator')
   assert.equal(payload.harness, 'claude-code')
+})
+
+test('harness-input: each wire field names its harness', () => {
+  assert.equal(fromHarnessInput({ agentType: 'software-engineer' }, { env: {} }).harness, 'claude-code')
+  assert.equal(fromHarnessInput({ tool_args: '{}' }, { env: {} }).harness, 'copilot')
+  assert.equal(fromHarnessInput({ agentName: 'software-engineer' }, { env: {} }).harness, 'copilot')
+})
+
+test('harness-input: without a wire field, the one plugin root variable set names the harness', () => {
+  const harnessIn = (env) => fromHarnessInput({ tool_name: 'Bash' }, { env }).harness
+  assert.equal(harnessIn({ PLUGIN_ROOT: '/plugin' }), 'copilot')
+  assert.equal(harnessIn({ CLAUDE_PLUGIN_ROOT: '/plugin' }), 'claude-code')
+  assert.equal(harnessIn({ PLUGIN_ROOT: '/plugin', CLAUDE_PLUGIN_ROOT: '/plugin' }), undefined, 'both set: undecided')
+  assert.equal(harnessIn({}), undefined)
 })
 
 test('harness-input: PLUGIN_ROOT identifies a Copilot hook process', () => {
