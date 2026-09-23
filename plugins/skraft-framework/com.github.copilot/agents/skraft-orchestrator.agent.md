@@ -124,7 +124,7 @@ For DESIGN and DISTILL:
 Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slug} --phase {P}`: it records `startedAt` and the `baseSha` that bounds the phase's commits (retries keep the first). Consult the native todo working set for the current phase (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above (story, output path, artifact conventions, upstream artefacts). If a scalar not carried by the todo list is needed, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
 
 **Step 2 — Collect output**
-Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure.
+Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
 
 **Step 3 — Dispatch reviewer**
 Pass the produced artefact paths to the reviewer agent. Do NOT summarize or interpret — pass raw paths only. The reviewer applies `#file:plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md` and writes its verdict file to `reviews/{date}/`.
@@ -142,7 +142,7 @@ Pass the produced artefact paths to the reviewer agent. Do NOT summarize or inte
 RESEARCH has no reviewer: findings are grounded in citations the human can verify directly, not an adversarial gate.
 
 1. Run `state.mjs mark-phase-started --slug {projectSlug} --phase RESEARCH`, then dispatch `Skraft - Solution Researcher` with the Dispatch context header above.
-2. Verify the research document exists at `research/{date}/{slug}-research.md`. If missing, re-dispatch once; otherwise surface to user.
+2. Verify the research document exists at `research/{date}/{slug}-research.md`. If missing, re-dispatch once; otherwise surface to user. Record it with `state.mjs record-artifact --slug {projectSlug} --phase RESEARCH --path research/{date}/{slug}-research.md`.
 3. Close the phase with the manual-closure command (`#file:plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md` § Manual phase closure) — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
 4. Reflect closure into the todo list and surface progress; no unsolicited remote phase comment.
 
