@@ -6,8 +6,8 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, writeFile, mkdir, readFile, utimes, readdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdtemp, rm, writeFile, mkdir, readFile, utimes, readdir, realpath } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
@@ -90,6 +90,21 @@ test('health-check: exit 1 and status warn when a phase is IN_PROGRESS too long'
     const phase = report.phases.find((p) => p.project === 'proj')
     assert.equal(phase.level, 'warn')
     assert.match(phase.message, /DELIVER/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('health-check: reports the audit log the hooks write, in the project git directory', async () => {
+  const { dir, env } = await setup()
+  try {
+    await execFileAsync('git', ['init', '-q'], { cwd: dir })
+    const hookLog = join(await realpath(dir), '.git', 'skraft', 'skill-audit.jsonl')
+    await mkdir(dirname(hookLog), { recursive: true })
+    await writeFile(hookLog, '{"eventType":"SessionGuardEvaluated"}\n{"eventType":"SkillRead"}\n')
+
+    const res = await runCli(HEALTH_CLI, { cwd: dir, env: { ...env, SKRAFT_AUDIT_LOG: '' } })
+    assert.deepEqual(JSON.parse(res.stdout).logs, { path: hookLog, present: true, entries: 2 })
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

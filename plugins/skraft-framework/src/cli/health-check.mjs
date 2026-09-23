@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url'
 import { createRealFilesystem } from '../adapters/infrastructure/real-filesystem.mjs'
 import { createSystemTime } from '../adapters/infrastructure/system-time.mjs'
 import { createHealthCheckService } from '../application/health-check-service.mjs'
+import { resolveAuditLogPath } from '../adapters/infrastructure/audit-log-resolver.mjs'
 
 // This file lives at {pluginRoot}/src/cli/health-check.mjs.
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT ?? fileURLToPath(new URL('../..', import.meta.url))
@@ -29,7 +30,7 @@ const service = createHealthCheckService({
     hooks: join(pluginRoot, 'hooks', 'hooks.json'),
     frameworkConfig: process.env.SKRAFT_CONFIG ?? join(pluginRoot, 'skraft-framework.config.json'),
   },
-  auditLogPath: process.env.SKRAFT_AUDIT_LOG ?? join(pluginRoot, 'logs', 'skill-audit.jsonl'),
+  auditLogPath: resolveAuditLogPath({ cwd: process.cwd(), pluginRoot }),
   configPath: join(configRoot, 'skraft-config.json'),
   trackingRoot,
 })
