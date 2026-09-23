@@ -25,13 +25,13 @@ function barRows(markdown) {
   return rows
 }
 
-function breakAtFlags(markdown) {
-  const flags = new Map()
+function documentedBreakThresholds(markdown) {
+  const thresholds = new Map()
   for (const line of markdown.split(/\r?\n/)) {
-    const cells = /^\|\s*([^|]+?)\s*\|\s*`--break-at\s+(\d+)`\s*\|/.exec(line)
-    if (cells) flags.set(cells[1].replace(/\s+/g, ''), Number(cells[2]))
+    const cells = /^\|\s*([^|]+?)\s*\|\s*`thresholds\.break\s*=\s*(\d+)`/.exec(line)
+    if (cells) thresholds.set(cells[1].replace(/\s+/g, ''), Number(cells[2]))
   }
-  return flags
+  return thresholds
 }
 
 function scriptConstant(source, name) {
@@ -88,13 +88,13 @@ describe('quality bar parity', () => {
     strictEqual(/--break-at "\$expected"/.test(scaffold), true)
   })
 
-  it('keeps the documented --break-at flags equal to the bar', () => {
+  it('keeps the documented config break thresholds equal to the bar', () => {
     const markdown = readFileSync(barPath, 'utf8')
     const rows = barRows(markdown)
-    const flags = breakAtFlags(markdown)
+    const thresholds = documentedBreakThresholds(markdown)
 
     for (const { scope } of SCRIPTS) {
-      strictEqual(flags.get(scope), rows.get(scope), `the --break-at flag documented for ${scope} disagrees with the bar row above it`)
+      strictEqual(thresholds.get(scope), rows.get(scope), `the thresholds.break documented for ${scope} disagrees with the bar row above it`)
     }
   })
 
