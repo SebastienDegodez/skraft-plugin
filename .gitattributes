@@ -1,1 +1,4 @@
 .github/workflows/*.lock.yml linguist-generated=true
+# Shell scripts run under bash on every platform, Git Bash included: a Windows
+# checkout must not turn their line endings into CRLF.
+*.sh text eol=lf
