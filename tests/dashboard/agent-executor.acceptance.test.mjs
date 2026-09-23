@@ -409,7 +409,9 @@ describe('Vally real-agent executor', () => {
     strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-javascript', 'scripts', 'run-gates.mjs')), true)
     strictEqual(readdirSync(pluginRoot, { recursive: true }).some(path => path.endsWith('SKILL.md') || path.split(sep).includes('references')), false)
     strictEqual(existsSync(join(pluginRoot, 'com.anthropic.claude-code')), false)
-    strictEqual(existsSync(join(pluginRoot, 'com.github.copilot')), false)
+    // The orchestrator's companion rules ship as in an install; the descriptors never do.
+    strictEqual(existsSync(join(pluginRoot, 'com.github.copilot', 'rules', 'skraft-state.instructions.md')), true)
+    strictEqual(existsSync(join(pluginRoot, 'com.github.copilot', 'agents')), false)
     strictEqual(existsSync(join(pluginRoot, 'docs')), false)
     // 67 MB the dependency-free source never loads.
     strictEqual(existsSync(join(pluginRoot, 'src', 'node_modules')), false)

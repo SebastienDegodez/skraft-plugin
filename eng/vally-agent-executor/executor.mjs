@@ -96,7 +96,7 @@ const dispatchNotice = (self, dispatchable) => [
 // that can open a sibling's descriptor reads it instead of dispatching, which is
 // the exact behaviour the dispatch metrics exist to catch. Never
 // `src/node_modules` — 67 MB the dependency-free source never loads.
-const PLUGIN_SUBTREES = ['src/cli', 'src/domain', 'src/application', 'src/adapters', 'src/ports', 'assets']
+const PLUGIN_SUBTREES = ['src/cli', 'src/domain', 'src/application', 'src/adapters', 'src/ports', 'assets', 'com.github.copilot/rules']
 
 // Where a skill name resolves from. Agent suites stage nothing of their own —
 // `options.skills` is empty for every stimulus under tests/agents — so without
@@ -132,8 +132,9 @@ const workspaceNotice = (workDir) => [
   'Write required review verdicts beneath this workspace with the relative path from the agent definition.',
 ].join('\n\n')
 
+// Companion rules are not injected: the orchestrator reads them under $SKRAFT_PLUGIN_ROOT,
+// as it does in an install, and the plugin copy carries com.github.copilot/rules.
 const agentPrompt = (agent, { dispatchable = [], pluginRoot, workDir } = {}) => {
-  const instructions = agent.instructions.map(({ path, content }) => `## Companion instruction: ${path}\n\n${content}`)
   const runtimeNotice = [
     '## Evaluation runtime skill loading',
     'Use the runtime skill tool whenever the agent definition requires a skill to be loaded.',
@@ -142,7 +143,7 @@ const agentPrompt = (agent, { dispatchable = [], pluginRoot, workDir } = {}) => 
   const notices = [runtimeNotice, workspaceNotice(workDir)]
   if (pluginRoot) notices.push(pluginRootContext(pluginRoot))
   if (dispatchable.length) notices.push(dispatchNotice(agent.id, dispatchable))
-  return [agent.prompt.trim(), ...instructions, ...notices].join('\n\n')
+  return [agent.prompt.trim(), ...notices].join('\n\n')
 }
 
 const selectedAgentEvent = (agent) => ({
