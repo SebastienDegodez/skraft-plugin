@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { chmod, copyFile, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -133,6 +133,12 @@ test('canonical scaffold writes two root configs for one whole-solution run per 
     await readFile(coreManifest.report, 'utf8')
     await readFile(boundaryManifest.report, 'utf8')
     await readFile(join(evidence, 'qg-mutation.stdout.sha256'), 'utf8')
+    // Evidence keeps the referenced files only; Stryker's run folder never lands there.
+    assert.deepEqual((await readdir(evidence)).sort(), [
+      'qg-mutation-boundary-report.json', 'qg-mutation-boundary.exit', 'qg-mutation-boundary.json',
+      'qg-mutation-boundary.stdout', 'qg-mutation-boundary.stdout.sha256',
+      'qg-mutation-report.json', 'qg-mutation.exit', 'qg-mutation.json', 'qg-mutation.stdout', 'qg-mutation.stdout.sha256',
+    ])
   } finally {
     await rm(root, { recursive: true, force: true })
   }

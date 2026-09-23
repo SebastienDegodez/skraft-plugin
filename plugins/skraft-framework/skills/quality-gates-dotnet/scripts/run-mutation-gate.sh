@@ -101,7 +101,11 @@ NODE
   [ "$?" -eq 0 ] || { rm -f "$TEMP_CONFIG"; exit 2; }
   EFFECTIVE_CONFIG="$TEMP_CONFIG"
 fi
-cleanup() { [ -z "$TEMP_CONFIG" ] || rm -f "$TEMP_CONFIG"; }
+RUN_DIR=""
+cleanup() {
+  [ -z "$TEMP_CONFIG" ] || rm -f "$TEMP_CONFIG"
+  [ -z "$RUN_DIR" ] || rm -rf "$RUN_DIR"
+}
 trap cleanup EXIT
 
 command -v node >/dev/null 2>&1 || { echo "node is not on PATH" >&2; exit 3; }
@@ -155,12 +159,13 @@ NODE
 CONFIG_STATUS=$?
 [ "$CONFIG_STATUS" -eq 0 ] || exit "$CONFIG_STATUS"
 
-RUN_DIR="$EV/$PREFIX-stryker"
+# Stryker's own run folder (HTML, logs, native report) is private to this run and
+# never lands in the evidence: only the referenced report, stdout, exit and manifest do.
+RUN_DIR=$(mktemp -d "${TMPDIR:-/tmp}/skraft-$PREFIX.XXXXXX") || exit 2
 STDOUT="$EV/$PREFIX.stdout"
 REPORT="$EV/$PREFIX-report.json"
 MANIFEST="$EV/$PREFIX.json"
-rm -rf "$RUN_DIR"
-mkdir -p "$RUN_DIR" "$EV"
+mkdir -p "$EV"
 
 (
   cd "$ROOT" || exit 2
