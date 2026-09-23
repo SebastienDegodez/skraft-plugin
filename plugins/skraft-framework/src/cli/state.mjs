@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
@@ -47,6 +48,17 @@ function arg(name) {
   return idx !== -1 ? rest[idx + 1] : undefined
 }
 
+const now = () => new Date().toISOString()
+
+// HEAD of the repository the CLI runs in; null outside a git work tree.
+const headSha = () => {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null
+  } catch {
+    return null
+  }
+}
+
 function domainExitCode(code) {
   if (code === 'IO_ERROR' || code === 'CORRUPTED_STATE') return 2
   if (code === 'INVALID_STATE') return 3
@@ -82,7 +94,7 @@ async function run() {
 
     case 'transition': {
       const to = arg('to')
-      const result = await service.applyEvent(slug, { type: 'ADVANCE', targetPhase: to })
+      const result = await service.applyEvent(slug, { type: 'ADVANCE', targetPhase: to, at: now() })
       if (!result.ok) {
         writeError(result.error.code, result.error.reason)
         process.exitCode = domainExitCode(result.error.code)
@@ -135,7 +147,40 @@ async function run() {
       const phase = arg('phase')
       const verdict = arg('verdict')
       const path = arg('artifact')
-      const result = await service.applyEvent(slug, { type: 'CLOSE_PHASE', phase, verdict, path })
+      const result = await service.applyEvent(slug, { type: 'CLOSE_PHASE', phase, verdict, path, at: now() })
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
+      break
+    }
+
+    case 'set': {
+      const field = arg('field')
+      const data = arg('data')
+      let value
+      try {
+        value = JSON.parse(data)
+      } catch {
+        writeError('INVALID_ARGUMENT', `--data must be JSON, got: ${data}`)
+        process.exitCode = 1
+        return
+      }
+      const result = await service.applyEvent(slug, { type: 'SET_METADATA', field, value })
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
+      break
+    }
+
+    case 'mark-phase-started': {
+      const phase = arg('phase')
+      const result = await service.applyEvent(slug, { type: 'MARK_PHASE_STARTED', phase, at: now(), baseSha: headSha() })
       if (!result.ok) {
         writeError(result.error.code, result.error.reason)
         process.exitCode = domainExitCode(result.error.code)

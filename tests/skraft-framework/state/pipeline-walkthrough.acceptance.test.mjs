@@ -87,3 +87,55 @@ test('the phase order comes from the framework config the CLI is pointed at', as
     assert.equal(closed.out.currentPhase, 'OMEGA')
   })
 })
+
+const git = (cwd, ...args) => execFileAsync('git', args, { cwd })
+
+test('set writes an orchestrator-owned field and rejects invariant fields', async () => {
+  await withTrackingRoot(async (root) => {
+    const env = { SKRAFT_TRACKING_ROOT: root }
+    await stateCli(['init', '--slug', 'demo'], env)
+
+    const entryPoint = { skipPhases: [], handoffSource: null, handoffArtifacts: [] }
+    const set = await stateCli(['set', '--slug', 'demo', '--field', 'entryPoint', '--data', JSON.stringify(entryPoint)], env)
+    assert.equal(set.exitCode, 0, set.stderr)
+    const state = JSON.parse(await readFile(join(root, 'demo', 'state.json'), 'utf8'))
+    assert.deepEqual(state.entryPoint, entryPoint)
+
+    const refused = await stateCli(['set', '--slug', 'demo', '--field', 'currentPhase', '--data', '"DONE"'], env)
+    assert.equal(refused.exitCode, 1)
+    assert.match(refused.stderr, /IMMUTABLE_FIELD/)
+
+    const malformed = await stateCli(['set', '--slug', 'demo', '--field', 'nextActions', '--data', '[oops'], env)
+    assert.equal(malformed.exitCode, 1)
+    assert.match(malformed.stderr, /INVALID_ARGUMENT/)
+  })
+})
+
+test('mark-phase-started records the base commit, and closing the phase records its completion', async () => {
+  await withTrackingRoot(async (root) => {
+    const repo = join(root, 'repo')
+    await execFileAsync('mkdir', ['-p', repo])
+    await git(repo, 'init', '-q')
+    await git(repo, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'chore: base')
+    const { stdout: head } = await git(repo, 'rev-parse', 'HEAD')
+
+    const env = { SKRAFT_TRACKING_ROOT: root }
+    const inRepo = async (args) => {
+      try {
+        const { stdout } = await execFileAsync('node', [CLI, ...args], { cwd: repo, env: { ...process.env, ...env } })
+        return { exitCode: 0, out: JSON.parse(stdout) }
+      } catch (err) {
+        return { exitCode: err.code ?? 1, stderr: err.stderr }
+      }
+    }
+    await inRepo(['init', '--slug', 'demo'])
+    const started = await inRepo(['mark-phase-started', '--slug', 'demo', '--phase', 'RESEARCH'])
+    assert.equal(started.exitCode, 0, started.stderr)
+    assert.equal(started.out.phaseHistory.RESEARCH.status, 'inProgress')
+    assert.equal(started.out.phaseHistory.RESEARCH.baseSha, head.trim())
+
+    const closed = await inRepo(['close-phase', '--slug', 'demo', '--phase', 'RESEARCH', '--verdict', 'APPROVED'])
+    assert.equal(closed.out.phaseHistory.RESEARCH.status, 'done')
+    assert.ok(closed.out.phaseHistory.RESEARCH.completedAt)
+  })
+})

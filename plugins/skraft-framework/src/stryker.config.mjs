@@ -64,6 +64,8 @@ export default {
     'plugins/skraft-framework/src/domain/reporting-presentation.mjs',
     'plugins/skraft-framework/src/domain/reporting-preferences.mjs',
     'plugins/skraft-framework/src/domain/report-mcp-policy.mjs',
+    // State CLI writes for orchestrator-owned metadata
+    'plugins/skraft-framework/src/domain/orchestrator-metadata-policy.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

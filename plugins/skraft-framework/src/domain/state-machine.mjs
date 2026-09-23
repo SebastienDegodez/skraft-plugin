@@ -1,10 +1,18 @@
 import { Ok, Err, isOk } from './result.mjs'
 import { validatePipelineState } from './state-schema.mjs'
 import { nextPhaseAfter } from './pipeline-policy.mjs'
+import { validateMetadataField } from './orchestrator-metadata-policy.mjs'
 
 // Fallback phase order when the caller supplies none. The published order lives in
 // skraft-framework.config.json::phaseOrder and is injected by the application layer.
 export const DEFAULT_PHASE_ORDER = Object.freeze(['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+
+// A closure given a time marks the closed phase done in phaseHistory.
+const completedHistory = (state, phase, at) => {
+  if (!at) return {}
+  const entry = state.phaseHistory?.[phase] ?? {}
+  return { phaseHistory: Object.freeze({ ...state.phaseHistory, [phase]: Object.freeze({ ...entry, status: 'done', completedAt: at }) }) }
+}
 
 // Pure domain state machine. No IO. No side effects.
 // @param {object} currentState — raw state (will be validated+coerced)
@@ -42,6 +50,7 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
         ...state,
         currentPhase: event.targetPhase,
         phasesCompleted: Object.freeze([...state.phasesCompleted, state.currentPhase]),
+        ...completedHistory(state, state.currentPhase, event.at),
       }))
     }
 
@@ -118,6 +127,31 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
         reviewArtifacts,
         currentPhase: expectedNext,
         phasesCompleted: Object.freeze([...state.phasesCompleted, state.currentPhase]),
+        ...completedHistory(state, state.currentPhase, event.at),
+      }))
+    }
+
+    case 'SET_METADATA': {
+      const validated = validateMetadataField(event.field, event.value, { phaseOrder })
+      if (!isOk(validated)) return validated
+      return Ok(Object.freeze({ ...state, [event.field]: validated.value }))
+    }
+
+    case 'MARK_PHASE_STARTED': {
+      if (event.phase !== state.currentPhase) {
+        return Err({
+          code: 'PHASE_MISMATCH',
+          reason: `mark-phase-started target ${event.phase} does not match currentPhase ${state.currentPhase}`,
+        })
+      }
+      // A retry re-dispatches the same phase: the first start and base commit stand.
+      if (state.phaseHistory?.[event.phase]?.startedAt) return Ok(Object.freeze({ ...state }))
+      return Ok(Object.freeze({
+        ...state,
+        phaseHistory: Object.freeze({
+          ...state.phaseHistory,
+          [event.phase]: Object.freeze({ status: 'inProgress', startedAt: event.at, baseSha: event.baseSha ?? null }),
+        }),
       }))
     }
 
