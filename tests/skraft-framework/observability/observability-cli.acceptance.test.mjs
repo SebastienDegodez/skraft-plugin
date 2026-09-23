@@ -35,6 +35,11 @@ const runCli = async (cli, { cwd, env, input }) => {
   }
 }
 
+// SessionStart audits its housekeeping summary instead of printing it into the session.
+const housekeepingSummary = async (auditLog) => (await readFile(auditLog, 'utf8'))
+  .trim().split('\n').map((line) => JSON.parse(line))
+  .find((entry) => entry.eventType === 'HousekeepingRan')
+
 const setup = async () => {
   const dir = await mkdtemp(join(tmpdir(), 'skraft-obs-'))
   const tracking = join(dir, '.copilot-tracking', 'skraft-plans')
@@ -111,13 +116,13 @@ test('housekeeping: trims old audit lines and purges stale signals, always exit 
 
     const res = await runCli(HOUSEKEEP_CLI, { cwd: dir, env, input: '{"hookType":"SessionStart"}' })
     assert.equal(res.exitCode, 0, 'housekeeping is fail-open — always exit 0')
-    const summary = JSON.parse(res.stdout).skraftHousekeeping
+    const summary = await housekeepingSummary(auditLog)
     assert.equal(summary.auditPurged, 1)
     assert.equal(summary.signalsPurged, 1)
 
     const rewritten = await readFile(auditLog, 'utf8')
-    assert.equal(rewritten.includes('old'), false)
-    assert.equal(rewritten.includes('fresh'), true)
+    assert.equal(rewritten.includes('"old"'), false)
+    assert.equal(rewritten.includes('"fresh"'), true)
     const remaining = await readdir(projDir)
     assert.equal(remaining.includes('state.json.bak.111'), false)
   } finally {
@@ -126,11 +131,11 @@ test('housekeeping: trims old audit lines and purges stale signals, always exit 
 })
 
 test('housekeeping: no config / empty repo → exit 0 with zero counters', async () => {
-  const { dir, env } = await setup()
+  const { dir, auditLog, env } = await setup()
   try {
     const res = await runCli(HOUSEKEEP_CLI, { cwd: dir, env, input: '' })
     assert.equal(res.exitCode, 0)
-    const summary = JSON.parse(res.stdout).skraftHousekeeping
+    const summary = await housekeepingSummary(auditLog)
     assert.equal(summary.auditPurged, 0)
     assert.equal(summary.signalsPurged, 0)
   } finally {
