@@ -75,7 +75,7 @@ You consume a refined story from the PRODUCT layer as your input. You do **NOT**
 
 Follow the write-through model and the once-per-session Rehydration sequence defined in `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md`. Read the snapshot ONE time here; every later turn uses the native todo working set, not a whole-file re-read.
 
-1. Determine the project slug from the user request or the active issue. Let `state.mjs` resolve the tracking root (`SKRAFT_TRACKING_ROOT` override, otherwise `.copilot-tracking/skraft-plans/{projectSlug}/`); never infer a bare layout or hand-build source references.
+1. Determine the project slug from the user request or the active issue. Let `state.mjs` resolve the tracking root (`SKRAFT_TRACKING_ROOT` override, otherwise `.copilot-tracking/skraft-plans/{projectSlug}/`); never hand-build source references.
 2. If the state does not exist, create it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" init --slug {projectSlug}` and start at RESEARCH.
 3. If it exists, rehydrate in one call — `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`.
 4. **Project the pipeline into the native todo working set** per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies + statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`). This list — not the JSON file — drives every subsequent turn.

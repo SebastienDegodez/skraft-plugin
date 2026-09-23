@@ -50,14 +50,9 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 3. **Evidence over assertion** — every finding cites a source: a workspace-relative file path with a line range, or an external URL. Unverifiable claims are removed, not hedged.
 4. **Follow repository conventions** — read `.github/copilot-instructions.md` and relevant instructions files; document the conventions you will hand to DESIGN.
 
-## Output path (layout-aware)
+## Output path
 
-Write the research document where the orchestrator's dispatch header tells you to:
-
-- namespaced layout (default): `.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md`
-- bare layout (shared artifact root): `.copilot-tracking/research/{date}/{slug}-research.md`
-
-When invoked standalone (no orchestrator), default to the layout recorded in `skraft-config.json::trackingLayout`. Begin the file with `<!-- markdownlint-disable-file -->`. Use plain-text workspace-relative paths inside the document — never markdown links or `#file:` directives (VS Code flags missing targets and floods the Problems tab).
+Write the research document where the orchestrator's dispatch header tells you to. Invoked standalone (no orchestrator), write it to `.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md`. Begin the file with `<!-- markdownlint-disable-file -->`. Use plain-text workspace-relative paths inside the document — never markdown links or `#file:` directives (VS Code flags missing targets and floods the Problems tab).
 
 ## Required phases
 

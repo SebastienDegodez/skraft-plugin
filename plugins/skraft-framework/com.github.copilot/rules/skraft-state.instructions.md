@@ -19,8 +19,7 @@ These conventions govern every SKRAFT agent (orchestrator, phase agents, reviewe
 Use `state.mjs` resolution, backed by `resolveTrackingRoot` and
 `tracking-layout-policy.stateDirSegments`: the current layout is
 `.copilot-tracking/skraft-plans/{project-slug}/state.json`; explicit
-`SKRAFT_TRACKING_ROOT` overrides the root. Do not infer bare paths from legacy
-layout settings. Carry returned artifact paths forward; report source refs are
+`SKRAFT_TRACKING_ROOT` overrides the root. Carry returned artifact paths forward; report source refs are
 repository-root-relative, never reconstructed from the current date.
 
 ## Write-through model (token economy)
