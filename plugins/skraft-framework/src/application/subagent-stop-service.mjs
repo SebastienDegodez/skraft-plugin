@@ -122,10 +122,22 @@ const checkCompletion = async ({ config, agentName, projectSlug, stateReader, fi
 //   (ADR-006): monitoring failure ≠ compliance signal.
 // - G4/G5 completion guard: fail-closed artifact + verdict + commit check before
 //   the phase is allowed to advance (never progress on a simple LLM assertion).
+// A subagent already continuing from a previous block (stop_hook_active) is let go:
+// a block it cannot satisfy would otherwise relaunch it until the token budget runs out.
 export const createSubagentStopService = ({ config, transcriptReaderFactory, auditWriter, clock, stateReader, filesystem, commitVerifier }) => ({
-  handle: async ({ agentName, transcript, agent_transcript_path, agentTranscriptPath, projectSlug } = {}) => {
+  handle: async ({ agentName, transcript, agent_transcript_path, agentTranscriptPath, projectSlug, stop_hook_active, stopHookActive } = {}) => {
     try {
       agentName = canonicalAgentName(agentName, config)
+      if ((stopHookActive ?? stop_hook_active) === true) {
+        await auditWriter.write({
+          eventType: 'SubagentStopLoopBroken',
+          agentName,
+          decision: 'ALLOW',
+          reason: 'stop_hook_active',
+          timestamp: clock.now()
+        }).catch(() => {})
+        return allow()
+      }
       const skillEntries = mandatorySkillsFor(agentName, config)
       if (skillEntries.length > 0) {
         const requiredNames = skillEntries.map((s) => s.name)

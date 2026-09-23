@@ -337,3 +337,34 @@ test('G2 skill block takes priority over G4/G5: a missing skill still blocks eve
   assert.ok(result.message.startsWith('Mandatory skill not loaded'))
 })
 
+
+// loop breaker — stop_hook_active ————————————————————————————————————
+
+test('allows a subagent already continuing from a previous SubagentStop block', async () => {
+  const audit = collectingWriter()
+  const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: audit, clock })
+  const result = await service.handle({ agentName: 'acceptance-designer', transcript: 'no skill read', stop_hook_active: true })
+  assert.equal(result.decision, 'allow')
+  assert.deepEqual(audit.entries, [{
+    eventType: 'SubagentStopLoopBroken',
+    agentName: 'acceptance-designer',
+    decision: 'ALLOW',
+    reason: 'stop_hook_active',
+    timestamp: FIXED_NOW
+  }])
+})
+
+test('accepts the camelCase stopHookActive flag', async () => {
+  const audit = collectingWriter()
+  const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: audit, clock })
+  const result = await service.handle({ agentName: 'acceptance-designer', transcript: 'no skill read', stopHookActive: true })
+  assert.equal(result.decision, 'allow')
+  assert.equal(audit.entries[0].reason, 'stop_hook_active')
+})
+
+test('still blocks on the first stop when stop_hook_active is false', async () => {
+  const audit = collectingWriter()
+  const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: audit, clock })
+  const result = await service.handle({ agentName: 'acceptance-designer', transcript: 'no skill read', stop_hook_active: false })
+  assert.equal(result.decision, 'block')
+})
