@@ -63,15 +63,16 @@ and execute them. Checked-in configs are also local-debug and CI/CD interface.
 
 ## Threshold flags
 
-Stated once so recipes copy rather than invent. Adapter wrappers and config scaffold
-carry each scope value as literals, and guard tests assert those literals still equal
-the table above -- checked restatements, not independent definitions.
+Stated once so recipes copy rather than invent. Adapter scripts and the config scaffold
+carry each value as a literal, and guard tests assert those literals still equal the
+table above — checked restatements, not independent definitions.
 
-| Scope | Mutation flag | Coverage flags |
+| Scope | Mutation | Coverage |
 | --- | --- | --- |
-| Domain, Application | `--break-at 100` | `/p:Threshold=100 /p:ThresholdType=line /p:ThresholdStat=total` |
-| API, Infrastructure | `--break-at 80` | not gated on coverage |
+| Domain, Application | `thresholds.break = 100` in the checked-in core Stryker config (written by the adapter's scaffold) | 100% line coverage, enforced by the adapter's coverage script |
+| API, Infrastructure | `thresholds.break = 80` in the checked-in boundary config | not gated on coverage |
 
-`--break-at` makes the runner itself exit non-zero below the bar. That exit code is
-the verdict. A run whose score is read from a report and judged in prose is not a
-gate -- it is an opinion about a gate.
+The runner reads the threshold from its config and exits non-zero below it; the
+coverage script exits non-zero below the bar. That exit code is the verdict. A run
+whose score is read from a report and judged in prose is not a gate — it is an
+opinion about a gate. No caller argument sets a threshold: the scripts refuse one.
