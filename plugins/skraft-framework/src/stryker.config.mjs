@@ -71,6 +71,8 @@ export default {
     // Phase closure gate (G4/G5) run by the state CLI
     'plugins/skraft-framework/src/domain/phase-gate-policy.mjs',
     'plugins/skraft-framework/src/application/phase-gate-service.mjs',
+    // SessionStart context handed to the session
+    'plugins/skraft-framework/src/domain/session-context-policy.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

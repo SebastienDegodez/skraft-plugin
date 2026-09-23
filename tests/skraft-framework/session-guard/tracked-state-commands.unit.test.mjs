@@ -74,6 +74,21 @@ test('each simple command of a line is judged on its own', () => {
   assert.equal(mutates('"" ""'), false, 'blank words')
 })
 
+test('an -i flag means in-place only for sed and perl', () => {
+  assert.equal(mutates(`grep -i phase ${STATE}`), false)
+  assert.equal(mutates(`diff -i ${STATE} /tmp/x.json`), false)
+})
+
+test('a copy destination is found past trailing options', () => {
+  assert.equal(mutates(`cp /tmp/forged.json ${STATE} -v`), true)
+  assert.equal(mutates(`cp -- /tmp/forged.json ${STATE}`), true)
+})
+
+test('a redirection at the start of a command truncates its target', () => {
+  assert.equal(mutates(`> ${STATE}`), true)
+  assert.equal(mutates(`>>${STATE}`), true)
+})
+
 test('quoted operands are read without their quotes', () => {
   assert.equal(mutates(`rm "${STATE}"`), true)
   assert.equal(mutates(`rm '${STATE}'`), true)

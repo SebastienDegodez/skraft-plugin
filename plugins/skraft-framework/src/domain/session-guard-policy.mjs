@@ -54,8 +54,7 @@ const segmentMutatesProtected = (segment, isProtected) => {
   const [verb, ...operands] = wordsOf(segment)
   if (!verb) return false
   const name = verb.split(/[/\\]/).pop()
-  const namesProtected = operands.some(isProtected) || isProtected(segment)
-  if (!namesProtected) return false
+  if (!isProtected(segment)) return false
   if (REWRITING_VERBS.has(name)) return true
   const inPlace = operands.some((w) => /^-[A-Za-z]*i/.test(w) || w.startsWith('--in-place'))
   if (name === 'sed' || (name === 'perl' && inPlace)) return inPlace

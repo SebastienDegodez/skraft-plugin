@@ -170,3 +170,23 @@ test('evaluateSessionGuard returns Ok when neither guard trips', () => {
   const result = evaluateSessionGuard({ command: 'cat state.json', phase: 'DESIGN', agentName: 'solution-architect', deliverAgents: DELIVER_AGENTS })
   assert.equal(result.ok, true)
 })
+
+test('commandWritesWorkspace: every write form into src/ or tests/, and nothing else', () => {
+  for (const command of [
+    'echo x >src/app.mjs',
+    'echo x >> "tests/a.test.mjs"',
+    "echo x > 'apps/web/src/x.ts'",
+    'printf x | tee src/a.mjs',
+    'printf x | tee -a -i tests/a.mjs',
+    'truncate -s0 src/a.mjs',
+    'cp /tmp/x src/a.mjs',
+    'mv old.mjs tests/a.mjs',
+    'vim src/a.mjs',
+    'dd if=/dev/zero of=src/blob',
+  ]) {
+    assert.equal(commandWritesWorkspace(command), true, command)
+  }
+  for (const command of ['echo x > srcfoo/a.mjs', 'echo x > docs/src.md', 'cat src/a.mjs | grep x', 'ls tests', 'rm -rf dist', '']) {
+    assert.equal(commandWritesWorkspace(command), false, command)
+  }
+})
