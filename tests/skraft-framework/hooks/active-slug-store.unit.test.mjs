@@ -23,12 +23,12 @@ test('firstValidProjectSlug: the first valid candidate wins, invalid ones are sk
 test('active slug store: writes the pointer, reads it back trimmed, ignores anything malformed', () => {
   const root = mkdtempSync(join(tmpdir(), 'skraft-store-'))
   try {
-    const store = createActiveSlugStore(join(root, 'nested'))
+    const store = createActiveSlugStore(join(root, 'nested', 'deeper'))
     assert.equal(store.read(), null, 'no pointer yet')
     store.write('checkout-pricing')
-    assert.equal(readFileSync(join(root, 'nested', ACTIVE_SLUG_FILE), 'utf8'), 'checkout-pricing\n')
+    assert.equal(readFileSync(join(root, 'nested', 'deeper', ACTIVE_SLUG_FILE), 'utf8'), 'checkout-pricing\n')
     assert.equal(store.read(), 'checkout-pricing')
-    writeFileSync(join(root, 'nested', ACTIVE_SLUG_FILE), '../../etc\n')
+    writeFileSync(join(root, 'nested', 'deeper', ACTIVE_SLUG_FILE), '../../etc\n')
     assert.equal(store.read(), null)
   } finally {
     rmSync(root, { recursive: true, force: true })

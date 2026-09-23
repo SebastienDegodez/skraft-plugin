@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import {
   mandatorySkillsFor,
   missingSkills,
-  extractLoadedSkills
+  extractLoadedSkills,
+  isEagerSkill
 } from '../../../plugins/skraft-framework/src/domain/skill-policy.mjs'
 
 const CONFIG = {
@@ -108,4 +109,52 @@ test('extractLoadedSkills: an inline array transcript and malformed lines are to
   assert.deepEqual(extractLoadedSkills(`{ not json\n${JSON.stringify(toolUse('Skill', { skill: 'x-y' }))}\n`), ['x-y'])
   assert.deepEqual(extractLoadedSkills(null), [])
   assert.deepEqual(extractLoadedSkills(''), [])
+})
+
+test('extractLoadedSkills: every read tool name and every Skill input field', () => {
+  for (const tool of ['Read', 'view', 'read_file', 'ReadFile']) {
+    assert.deepEqual(extractLoadedSkills(jsonl(toolUse(tool, { path: 'skills/a-b/SKILL.md' }))), ['a-b'], tool)
+  }
+  for (const field of ['skill', 'name', 'command']) {
+    assert.deepEqual(extractLoadedSkills(jsonl(toolUse('skill', { [field]: 'plugin:skraft:c-d' }))), ['c-d'], field)
+  }
+  assert.deepEqual(extractLoadedSkills(jsonl(toolUse('Read', { filePath: 'x\\skills\\e-f\\SKILL.md' }))), ['e-f'])
+})
+
+test('extractLoadedSkills: a tool call without a usable skill or path loads nothing', () => {
+  const calls = [
+    toolUse('Skill', { skill: '' }),
+    toolUse('Skill', { skill: 7 }),
+    toolUse('Skill', {}),
+    toolUse('Read', { file_path: 7 }),
+    toolUse('Read', {}),
+    toolUse('Skill', 'bdd-methodology'),
+    { type: 'tool_use', name: 7, input: { skill: 'x-y' } },
+    { type: 'tool_use', name: 'Skill', arguments: { skill: 'x-y' } },
+    { type: 'tool_result', content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'x-y' } }] },
+    { toolName: 'Skill' },
+    { name: 'Skill', input: { skill: 'x-y' } },
+  ]
+  assert.deepEqual(extractLoadedSkills(jsonl(...calls)), [])
+})
+
+test('extractLoadedSkills: a single JSON object, blank lines and whitespace-only transcripts', () => {
+  assert.deepEqual(extractLoadedSkills(JSON.stringify(toolUse('Skill', { skill: 'solo' }))), ['solo'])
+  assert.deepEqual(extractLoadedSkills(`\n  \n${JSON.stringify(toolUse('Skill', { skill: 'after-blank' }))}\n\n`), ['after-blank'])
+  assert.deepEqual(extractLoadedSkills('   \n  '), [])
+  assert.deepEqual(extractLoadedSkills(42), [])
+})
+
+test('extractLoadedSkills: a harness event names its call with toolName or name plus arguments', () => {
+  const events = [
+    { type: 'tool.execution_start', data: { toolName: 'skill', arguments: { skill: 'from-event' } } },
+    { type: 'call', name: 'view', arguments: { path: 'skills/by-name/SKILL.md' } },
+  ]
+  assert.deepEqual(extractLoadedSkills(jsonl(...events)).sort(), ['by-name', 'from-event'])
+})
+
+test('isEagerSkill: only an eager policy, tolerating a missing entry', () => {
+  assert.equal(isEagerSkill({ name: 'x', policy: 'eager' }), true)
+  assert.equal(isEagerSkill({ name: 'x', policy: 'verify' }), false)
+  assert.equal(isEagerSkill(undefined), false)
 })
