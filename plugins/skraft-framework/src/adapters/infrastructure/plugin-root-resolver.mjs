@@ -17,18 +17,43 @@ const globSync = fs.globSync
 // <root>/skraft/<version>/src/cli/hook.mjs → <root>/skraft/<version>.
 const rootFromHookPath = (hookPath) => dirname(dirname(dirname(hookPath)))
 
-// Extract the semver string from a hook path (.../skraft/<version>/...).
+// Extract the semver string from a hook path (.../<version>/src/cli/hook.mjs).
+// Anchored on the entrypoint suffix: the marketplace directory is often named
+// `skraft` too (cache/skraft/skraft/<version>).
 const versionFromHookPath = (hookPath) => {
-  const m = hookPath.match(/\/skraft\/([^/]+)\//)
+  const m = hookPath.replace(/\\/g, '/').match(/\/([^/]+)\/src\/cli\/hook\.mjs$/)
   return m ? m[1] : ''
 }
 
-// Compare two semver strings numerically (returns negative / 0 / positive).
+const compareIdentifiers = (a, b) => {
+  const na = /^\d+$/.test(a) ? Number(a) : null
+  const nb = /^\d+$/.test(b) ? Number(b) : null
+  if (na !== null && nb !== null) return na - nb
+  if (na !== null) return -1
+  if (nb !== null) return 1
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+// Semver precedence (returns negative / 0 / positive). A prerelease ranks below
+// its own release: 1.5.2 < 1.6.0-hooks.2 < 1.6.0-hooks.10 < 1.6.0.
 const semverCompare = (a, b) => {
-  const pa = a.split('.').map(Number)
-  const pb = b.split('.').map(Number)
+  const [coreA, preA] = a.split(/-(.*)/s)
+  const [coreB, preB] = b.split(/-(.*)/s)
+  const pa = coreA.split('.').map((n) => Number(n) || 0)
+  const pb = coreB.split('.').map((n) => Number(n) || 0)
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
     const d = (pa[i] ?? 0) - (pb[i] ?? 0)
+    if (d !== 0) return d
+  }
+  if (!preA && !preB) return 0
+  if (!preA) return 1
+  if (!preB) return -1
+  const ia = preA.split('.')
+  const ib = preB.split('.')
+  for (let i = 0; i < Math.max(ia.length, ib.length); i++) {
+    if (ia[i] === undefined) return -1
+    if (ib[i] === undefined) return 1
+    const d = compareIdentifiers(ia[i], ib[i])
     if (d !== 0) return d
   }
   return 0
