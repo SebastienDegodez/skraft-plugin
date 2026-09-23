@@ -1,5 +1,10 @@
 // Fixed identifiers from quality-gates-evidence-contract (v3); no score policy.
 const gateIds = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11']
+const MUTATION_SCOPES = ['core', 'boundary']
+// v4 records one G6 entry per mutation scope; earlier schemas carry a single G6.
+const scoped = (quality) => quality?.$schema === 'quality-gates-evidence/v4'
+const gateKey = (gate, quality) => (scoped(quality) && gate.id === 'G6' ? `G6/${gate.scope}` : gate.id)
+const rowIds = (quality) => gateIds.flatMap((id) => (id === 'G6' && scoped(quality) ? MUTATION_SCOPES.map((scope) => `G6/${scope}`) : [id]))
 const statuses = ['pass', 'fail', 'not_applicable']
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 const text = (value) => typeof value === 'string' && value.trim().length > 0
@@ -58,7 +63,7 @@ export function parseQualityEvidence(raw, data) {
   if (typeof raw !== 'string') return { error: 'Missing quality evidence document' }
   let quality
   try { quality = JSON.parse(raw) } catch { return { error: 'Malformed quality evidence JSON' } }
-  if (!object(quality) || !/^quality-gates-evidence\/v[123]$/.test(quality.$schema)) {
+  if (!object(quality) || !/^quality-gates-evidence\/v[1234]$/.test(quality.$schema)) {
     return { error: 'Unknown or missing quality evidence schema' }
   }
   if (quality.repo_root_rev !== data.revision || quality.story !== data.story) {
@@ -75,10 +80,10 @@ export function parseQualityEvidence(raw, data) {
   }
   const ids = new Set()
   for (const gate of quality.gates) {
-    if (!object(gate) || !gateIds.includes(gate.id) || ids.has(gate.id) || !text(gate.label)) {
+    if (!object(gate) || !gateIds.includes(gate.id) || ids.has(gateKey(gate, quality)) || !text(gate.label)) {
       return { error: 'Malformed or duplicate quality gate identifier/label' }
     }
-    ids.add(gate.id)
+    ids.add(gateKey(gate, quality))
   }
   return { quality }
 }
@@ -243,8 +248,8 @@ export function buildReportView(data, documents, parsed, proofs) {
   const french = data.language === 'fr'
   const forecast = data.kind === 'forecast'
   const { quality, error } = parsed
-  const gates = gateIds.map((id) => {
-    const gate = quality?.gates.find((entry) => entry.id === id)
+  const gates = rowIds(quality).map((id) => {
+    const gate = quality?.gates.find((entry) => gateKey(entry, quality) === id)
     const result = gate ? gateStatus(gate, quality, proofs, data.qualityEvidenceRef)
       : unverified(error || 'Missing gate evidence')
     return { gate, id, ...result }

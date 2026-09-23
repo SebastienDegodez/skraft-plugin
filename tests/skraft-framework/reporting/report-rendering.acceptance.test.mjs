@@ -477,3 +477,30 @@ test('French forecast preserves user text while escaping pipes, newlines and HTM
   includesText(row, '&lt;strong&gt;sans perte&lt;/strong&gt;')
   assert.doesNotMatch(markdown, /<strong>|\n<strong>|\bPASS\b/)
 })
+test('a v4 log reports each mutation scope on its own row', () => {
+  const fixture = outcomeFixture()
+  fixture.quality.$schema = 'quality-gates-evidence/v4'
+  const core = fixture.quality.gates.find(({ id }) => id === 'G6')
+  core.scope = 'core'
+  const boundary = { ...gate(fixture.files, 'G6', 'Mutation score meets the bar', { command: './mutation-boundary.sh' }), scope: 'boundary' }
+  boundary.stdout_ref = boundary.stdout_ref.replace('-g6.', '-g6-boundary.')
+  boundary.exit_code_ref = boundary.exit_code_ref.replace('-g6.', '-g6-boundary.')
+  fixture.files.set(boundary.stdout_ref, 'G6: runner completed\n')
+  fixture.files.set(boundary.exit_code_ref, '1\n')
+  fixture.quality.gates.push(boundary)
+
+  const markdown = renderOutcome(fixture)
+  hasStatus(tableRow(markdown, 'G6/core'), 'pass')
+  const boundaryRow = tableRow(markdown, 'G6/boundary')
+  hasStatus(boundaryRow, 'fail')
+  includesText(boundaryRow, './mutation-boundary.sh')
+})
+
+test('a v4 log with the same mutation scope twice is refused', () => {
+  const fixture = outcomeFixture()
+  fixture.quality.$schema = 'quality-gates-evidence/v4'
+  const core = fixture.quality.gates.find(({ id }) => id === 'G6')
+  core.scope = 'core'
+  fixture.quality.gates.push({ ...core })
+  assert.match(renderOutcome(fixture), /duplicate quality gate/i)
+})
