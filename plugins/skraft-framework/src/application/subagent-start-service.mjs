@@ -24,8 +24,7 @@ export const createSubagentStartService = ({
     const skillEntries = mandatorySkillsFor(canonicalName, config)
     if (skillEntries.length === 0) return allow()
 
-    const parts = []
-    if (skillEntries.length > 0) parts.push(buildDirective(skillEntries))
+    const parts = [buildDirective(skillEntries)]
 
     const eagerSkills = skillEntries.filter(isEagerSkill)
     for (const skill of eagerSkills) {
@@ -46,6 +45,6 @@ export const createSubagentStartService = ({
       }
     }
 
-    return parts.length > 0 ? additionalContext(parts.join('\n\n')) : allow()
+    return additionalContext(parts.join('\n\n'))
   }
 })
