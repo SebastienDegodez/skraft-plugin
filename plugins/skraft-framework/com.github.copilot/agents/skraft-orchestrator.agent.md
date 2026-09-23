@@ -133,9 +133,9 @@ Pass the produced artefact paths to the reviewer agent. Do NOT summarize or inte
 
 | Verdict | Action |
 |---|---|
-| `APPROVED` | `state.mjs record-verdict --phase {P} --verdict APPROVED`, append review artefact with `record-review-artifact`, route any report due under Report feedback, then `state.mjs transition --to {NEXT}`. Reflect into the todo list. **DESIGN only:** before `transition`, run the ADR ratification checkpoint below — DESIGN does not advance to DISTILL on `APPROVED` alone. |
-| `NEEDS_REWORK` | `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED` then `state.mjs incr-retry --phase {P}`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch agent with reviewer findings attached. Else: stop, surface to user. |
-| `REJECTED` | `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Stop pipeline immediately. Surface blockage to user; no unsolicited remote phase comment. |
+| `APPROVED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict APPROVED`, route any report due under Report feedback, then `state.mjs transition --to {NEXT}` (refused with `PHASE_GATE` while a required artefact is unrecorded or the review does not record APPROVED; for DELIVER, while no commit exists since the phase started). Reflect into the todo list. **DESIGN only:** before `transition`, run the ADR ratification checkpoint below — DESIGN does not advance to DISTILL on `APPROVED` alone. |
+| `NEEDS_REWORK` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`, then `state.mjs incr-retry --phase {P}`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch agent with reviewer findings attached. Else: stop, surface to user. |
+| `REJECTED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Stop pipeline immediately. Surface blockage to user; no unsolicited remote phase comment. |
 
 ### RESEARCH (reviewer-less phase — specialist-only)
 

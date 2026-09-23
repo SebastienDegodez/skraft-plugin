@@ -41,22 +41,30 @@ Invoke the state CLI for every invariant-bearing mutation. Portable invocation (
 node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [flags]
 ```
 
-`basePath` is resolved by the tracking-root policy above. `--slug` is optional after `init`: without it, a subcommand acts on the active pipeline (`SKRAFT_PROJECT_SLUG`, else the one `init`/`select` recorded in `{basePath}/.active-slug`). The hooks enforce their guards on that same active pipeline; run `select` before working on another one. The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`) · `2` IO/corrupted · `3` invalid state.
+`basePath` is resolved by the tracking-root policy above. `--slug` is optional after `init`: without it, a subcommand acts on the active pipeline (`SKRAFT_PROJECT_SLUG`, else the one `init`/`select` recorded in `{basePath}/.active-slug`). The hooks enforce their guards on that same active pipeline; run `select` before working on another one. The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`, `INVALID_VERDICT`, `INVALID_PATH`, `PHASE_GATE`) · `2` IO/corrupted · `3` invalid state. Every recorded path is relative to the project's tracking directory (`reviews/{date}/design-review-1.md`); a repository-relative `.copilot-tracking/skraft-plans/{slug}/…` path is stored without that prefix.
 
 | Subcommand | Flags | Effect (domain event) |
 |---|---|---|
 | `init` | `--slug` | Create default `state.json` if absent (idempotent), opening the first phase of `phaseOrder`, and make it the active pipeline. |
 | `select` | `--slug` | Make an existing pipeline the active one (`NO_STATE` when it was never initialized). |
 | `get` | `--slug` `[--field X]` | Read-only. Full state, or one field. Safe; never writes. |
-| `transition` | `--slug --to {PHASE}` | Advance `currentPhase` (requires APPROVED verdict + legal next phase); marks the closed phase `done` in `phaseHistory`. |
+| `transition` | `--slug --to {PHASE}` | Advance `currentPhase` (requires APPROVED verdict + legal next phase + the phase gate below); marks the closed phase `done` in `phaseHistory`. |
 | `mark-phase-started` | `--slug --phase {P}` | Record `phaseHistory[P]` as `inProgress` with `startedAt` and `baseSha` (HEAD). `--phase` must equal `currentPhase`; a retry keeps the first start. |
 | `set` | `--slug --field {F} --data {JSON}` | Validate and replace one orchestrator-owned field: `adrRatification`, `neighborPlanners`, `nextActions`, `referencesProcessed`, `entryMode`, `issueNumber`, `skraftPlanFile`. Any other field → `IMMUTABLE_FIELD`. |
-| `record-verdict` | `--slug --phase {P} --verdict {APPROVED\|CHANGES_REQUESTED}` | Set `verdicts[phase]`. |
+| `record-verdict` | `--slug --phase {P} --verdict {APPROVED\|CHANGES_REQUESTED}` | Set `verdicts[phase]`. A review's `NEEDS_REWORK` and `REJECTED` record as `CHANGES_REQUESTED`; any other value → `INVALID_VERDICT`. |
 | `record-artifact` | `--slug --phase {P} --path {rel}` | Append to `phaseArtifacts[phase]` (append-only). |
 | `record-review-artifact` | `--slug --phase {P} --path {rel}` | Append to `reviewArtifacts[phase]` (append-only). |
 | `incr-retry` | `--slug --phase {P}` | Increment `retryCount[phase]` (capped at `maxRetriesPerPhase`). |
 | `incr-rework` | `--slug --phase {P} [--findings N]` | Increment `reworkCount[phase]` (uncapped — manual, human-initiated) and add `N` (default `1`) findings resolved to `findingsResolved[phase]`. Call once per manual rework pass (e.g. `rework-5`, `rework-6`). |
-| `close-phase` | `--slug --phase {P} --verdict APPROVED [--artifact {rel}]` | Composite: record `verdicts[phase]`, append `reviewArtifacts[phase]` (if `--artifact` given), and advance `currentPhase` — one call, one write. |
+| `close-phase` | `--slug --phase {P} --verdict APPROVED [--artifact {rel}]` | Composite: record `verdicts[phase]`, append `reviewArtifacts[phase]` (if `--artifact` given), and advance `currentPhase` — one call, one write. Subject to the phase gate below; a reviewed phase needs `--artifact` or a recorded review. |
+
+**Phase gate (G4/G5).** `transition` and `close-phase` refuse with `PHASE_GATE`, listing each violation, and leave the state untouched unless:
+
+* every required output the phase specialist declares under `.copilot-tracking/skraft-plans/{projectSlug}/` (outputs marked `(optional, …)` excepted) matches a path recorded with `record-artifact`, and every recorded path exists (`ARTIFACT_MISSING`, `ARTIFACT_NOT_FOUND`);
+* a phase with a reviewer has a deciding review — the `--artifact` given to `close-phase`, else the latest `record-review-artifact` — that exists and records `APPROVED` (`REVIEW_MISSING`, `REVIEW_NOT_FOUND`, `VERDICT_MISMATCH`);
+* DELIVER has a commit since the `baseSha` that `mark-phase-started --phase DELIVER` recorded (`BASE_UNRECORDED`, `NO_COMMIT`).
+
+On `PHASE_GATE`, treat each violation as a missing artefact: re-dispatch the agent that owns it, or record the artefact it already produced; never edit `state.json` to get past it.
 | `scan-commits` | `[--count N]` (default `20`) | No `--slug`. Read-only; never writes. Lists the N most recent HEAD commits and flags subjects that don't match `type(scope): subject` (G8). Exit `0` when all conventional, `1` otherwise. |
 
 Every field of `state.json` is written through the CLI: invariant-bearing fields by the event subcommands, orchestrator-owned metadata by `set`, `phaseHistory` by `mark-phase-started` and phase closure. Never edit `state.json` with a file or shell write.
@@ -268,7 +276,7 @@ When `state.json` is missing, malformed, or fails schema validation (the CLI exi
 
 1. **Rollback of schema (repeated failures).** When the guidance `action` is `state.mjs rollback --slug {slug}`, run it: the recovery service restores the most recent **healthy** backup (`state.json.bak.*`, kept rotating ≤3 by the writer of #60 — this service only reads and restores them; it never creates or rotates backups). Corrupt or schema-invalid backups are skipped; if none is healthy it exits with `NO_BACKUP`. The restore goes through the atomic writer, so the corrupted file is itself snapshotted first.
 2. **Stale execution.** When `diagnose` reports `STALE` (the current phase's retry budget is exhausted while the verdict is not `APPROVED`, so the pipeline can neither advance nor retry), run `state.mjs resolve-stale --slug {slug} [--phase {P}]` to reset that phase's `retryCount` to `0` so the phase agent can be relaunched. A non-stale phase is rejected with `NOT_STALE`.
-3. **No recoverable backup.** When the `action` is `state.mjs init --slug {slug}` (no healthy backup exists): scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`), then reconstruct with conservative defaults: `init`, then `close-phase --phase {P} --verdict APPROVED` for each phase the on-disk evidence shows completed, in `phaseOrder`, stopping at the inferred current phase (its verdict stays `null`).
+3. **No recoverable backup.** When the `action` is `state.mjs init --slug {slug}` (no healthy backup exists): scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`), then reconstruct with conservative defaults: `init`, then, for each phase the on-disk evidence shows completed, in `phaseOrder`, `record-artifact` each artefact found and `close-phase --phase {P} --verdict APPROVED --artifact {its approved review}`; stop at the inferred current phase (its verdict stays `null`). A phase whose evidence does not pass the phase gate is the current phase.
 4. Surface the reconstruction to the user with a checklist of inferred values and request confirmation before resuming.
 5. The corrupted file is preserved as `state.json.corrupted.{timestamp}` by the reader before any overwrite.
 
