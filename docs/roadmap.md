@@ -330,15 +330,15 @@ le sujet, a été supprimé avec lui. `cli/config.mjs` subsiste et ne gouverne p
 seule clé**, `trackingLayout` (voir [S3](#s3)) ; une clé `depthTier` restée dans le fichier
 d'un dépôt ancien y passe désormais comme un champ inconnu quelconque, par fidélité de
 round-trip. Les seuils ne sont plus configurables : le skill `skraft-quality-bar` porte la
-barre unique et permanente — mutation 100 % sur Domain/Application et 90 % sur
+barre unique et permanente — mutation 100 % sur Domain/Application et 80 % sur
 API/Infrastructure, couverture de lignes 100 % sur Domain/Application, les quatre lentilles
 adversariales à chaque revue, gate Gherkin obligatoire, ADR pour toute décision non
 triviale, Object Calisthenics sur le Domain, TDD Outside-In double boucle. Chaque gate est
 **bloquante** : les niveaux `advisory` et `warning`, et la rationale qui achetait une
 exemption, n'existent plus. La mutation tourne en deux scripts séquencés livrés par
 l'adaptateur `quality-gates-<tech>` (core Domain/Application, puis boundary
-API/Infrastructure) : chaque script porte sa valeur attendue et la passe au `--break-at` du
-runner, dont le **code de sortie** fait verdict.
+API/Infrastructure) : chaque script porte sa valeur attendue, inscrite comme seuil `break` de sa
+configuration Stryker, et le **code de sortie** du runner fait verdict.
 
 **Conséquence sur le coût :** `depthTier` était aussi le cost governor du framework
 (fan-out reviewer 1/2/4, nombre de runs de mutation, activation de la gate Gherkin). Sans
