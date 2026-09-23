@@ -10,6 +10,8 @@ import { createRecoveryService } from '../application/recovery-service.mjs'
 import { createGitCommitLogReader } from '../adapters/infrastructure/git-commit-log-reader.mjs'
 import { createCommitScanService } from '../application/commit-scan-service.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
+import { createActiveSlugStore } from '../adapters/infrastructure/active-slug-store.mjs'
+import { firstValidProjectSlug, isValidProjectSlug } from '../domain/value-objects.mjs'
 
 // basePath: resolved from SKRAFT_TRACKING_ROOT (explicit) → SKRAFT_TRACKING_LAYOUT env →
 // skraft-config.json::trackingLayout → default namespaced. State lives at {basePath}/{slug}/.
@@ -18,6 +20,7 @@ const basePath = resolveTrackingRoot()
 const stateReader = createJsonStateReader(basePath)
 const stateWriter = createJsonStateWriter(basePath)
 const backupReader = createJsonStateBackupReader(basePath)
+const activeSlug = createActiveSlugStore(basePath)
 // Phase order: skraft-framework.config.json beside this runtime (SKRAFT_CONFIG overrides).
 // An unreadable config leaves the state machine on its own default order.
 const readPhaseOrder = () => {
@@ -78,17 +81,48 @@ function writeSuccess(data) {
 }
 
 async function run() {
-  const slug = arg('slug')
+  const explicitSlug = arg('slug')
+  if (explicitSlug !== undefined && !isValidProjectSlug(explicitSlug)) {
+    writeError('INVALID_ARGUMENT', `--slug must be a kebab-case project slug, got: ${explicitSlug}`)
+    process.exitCode = 1
+    return
+  }
+  // Without --slug, act on the active pipeline (SKRAFT_PROJECT_SLUG, then the recorded pointer).
+  const slug = firstValidProjectSlug(explicitSlug, process.env.SKRAFT_PROJECT_SLUG, activeSlug.read()) ?? undefined
 
   switch (subcommand) {
     case 'init': {
+      if (explicitSlug === undefined) {
+        writeError('INVALID_ARGUMENT', 'init requires --slug')
+        process.exitCode = 1
+        return
+      }
       const result = await service.init(slug)
       if (!result.ok) {
         writeError(result.error.code, result.error.reason)
         process.exitCode = domainExitCode(result.error.code)
         return
       }
+      activeSlug.write(slug)
       writeSuccess({ created: result.value.created, currentPhase: result.value.currentPhase })
+      break
+    }
+
+    case 'select': {
+      if (explicitSlug === undefined) {
+        writeError('INVALID_ARGUMENT', 'select requires --slug')
+        process.exitCode = 1
+        return
+      }
+      const result = await service.get(slug, 'currentPhase')
+      if (!result.ok) {
+        const code = result.error.code === 'ENOENT' ? 'NO_STATE' : result.error.code
+        writeError(code, `no pipeline state for ${slug}; run init first`)
+        process.exitCode = domainExitCode(code)
+        return
+      }
+      activeSlug.write(slug)
+      writeSuccess({ selected: slug, currentPhase: result.value })
       break
     }
 

@@ -66,6 +66,8 @@ export default {
     'plugins/skraft-framework/src/domain/report-mcp-policy.mjs',
     // State CLI writes for orchestrator-owned metadata
     'plugins/skraft-framework/src/domain/orchestrator-metadata-policy.mjs',
+    // Active pipeline pointer read by the hooks
+    'plugins/skraft-framework/src/adapters/infrastructure/active-slug-store.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

@@ -19,6 +19,8 @@ import { createRealFilesystem } from '../adapters/infrastructure/real-filesystem
 import { createGitCommitVerifier } from '../adapters/infrastructure/git-commit-verifier.mjs'
 import { resolvePluginRootFromEnv } from '../adapters/infrastructure/plugin-root-resolver.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
+import { createActiveSlugStore } from '../adapters/infrastructure/active-slug-store.mjs'
+import { firstValidProjectSlug } from '../domain/value-objects.mjs'
 
 // Resolve the plugin root (US16): CLAUDE_PLUGIN_ROOT (harness-injected) →
 // cache glob (~/.claude/plugins/cache/*/skraft/*) → module-relative fallback.
@@ -87,6 +89,13 @@ if (argEvent && payload.hookType == null && payload.hook_type == null && payload
 if (argMatcher && payload.toolName == null && payload.tool_name == null) {
   payload.toolName = argMatcher
 }
+// No harness sends a project slug: take the active pipeline the state CLI recorded,
+// unless SKRAFT_PROJECT_SLUG pins one. An invalid candidate is never joined into a path.
+payload.projectSlug = firstValidProjectSlug(
+  payload.projectSlug,
+  process.env.SKRAFT_PROJECT_SLUG,
+  createActiveSlugStore(trackingRoot).read()
+) ?? undefined
 
 const hookService = createHookService({ preToolUse, subagentStart, subagentStop, postToolUse })
 const result = await hookService.handle(payload)

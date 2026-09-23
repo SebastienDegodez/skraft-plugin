@@ -41,11 +41,12 @@ Invoke the state CLI for every invariant-bearing mutation. Portable invocation (
 node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [flags]
 ```
 
-`basePath` is resolved by the tracking-root policy above. The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`) · `2` IO/corrupted · `3` invalid state.
+`basePath` is resolved by the tracking-root policy above. `--slug` is optional after `init`: without it, a subcommand acts on the active pipeline (`SKRAFT_PROJECT_SLUG`, else the one `init`/`select` recorded in `{basePath}/.active-slug`). The hooks enforce their guards on that same active pipeline; run `select` before working on another one. The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`) · `2` IO/corrupted · `3` invalid state.
 
 | Subcommand | Flags | Effect (domain event) |
 |---|---|---|
-| `init` | `--slug` | Create default `state.json` if absent (idempotent), opening the first phase of `phaseOrder`. |
+| `init` | `--slug` | Create default `state.json` if absent (idempotent), opening the first phase of `phaseOrder`, and make it the active pipeline. |
+| `select` | `--slug` | Make an existing pipeline the active one (`NO_STATE` when it was never initialized). |
 | `get` | `--slug` `[--field X]` | Read-only. Full state, or one field. Safe; never writes. |
 | `transition` | `--slug --to {PHASE}` | Advance `currentPhase` (requires APPROVED verdict + legal next phase); marks the closed phase `done` in `phaseHistory`. |
 | `mark-phase-started` | `--slug --phase {P}` | Record `phaseHistory[P]` as `inProgress` with `startedAt` and `baseSha` (HEAD). `--phase` must equal `currentPhase`; a retry keeps the first start. |
