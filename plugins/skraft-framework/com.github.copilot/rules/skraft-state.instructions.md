@@ -46,9 +46,11 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 
 | Subcommand | Flags | Effect (domain event) |
 |---|---|---|
-| `init` | `--slug` | Create default `state.json` if absent (idempotent). |
+| `init` | `--slug` | Create default `state.json` if absent (idempotent), opening the first phase of `phaseOrder`. |
 | `get` | `--slug` `[--field X]` | Read-only. Full state, or one field. Safe; never writes. |
-| `transition` | `--slug --to {PHASE}` | Advance `currentPhase` (requires APPROVED verdict + legal next phase). |
+| `transition` | `--slug --to {PHASE}` | Advance `currentPhase` (requires APPROVED verdict + legal next phase); marks the closed phase `done` in `phaseHistory`. |
+| `mark-phase-started` | `--slug --phase {P}` | Record `phaseHistory[P]` as `inProgress` with `startedAt` and `baseSha` (HEAD). `--phase` must equal `currentPhase`; a retry keeps the first start. |
+| `set` | `--slug --field {F} --data {JSON}` | Validate and replace one orchestrator-owned field: `entryPoint`, `adrRatification`, `neighborPlanners`, `nextActions`, `referencesProcessed`, `entryMode`, `issueNumber`, `skraftPlanFile`. Any other field → `IMMUTABLE_FIELD`. |
 | `record-verdict` | `--slug --phase {P} --verdict {APPROVED\|CHANGES_REQUESTED}` | Set `verdicts[phase]`. |
 | `record-artifact` | `--slug --phase {P} --path {rel}` | Append to `phaseArtifacts[phase]` (append-only). |
 | `record-review-artifact` | `--slug --phase {P} --path {rel}` | Append to `reviewArtifacts[phase]` (append-only). |
@@ -56,9 +58,8 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 | `incr-rework` | `--slug --phase {P} [--findings N]` | Increment `reworkCount[phase]` (uncapped — manual, human-initiated) and add `N` (default `1`) findings resolved to `findingsResolved[phase]`. Call once per manual rework pass (e.g. `rework-5`, `rework-6`). |
 | `close-phase` | `--slug --phase {P} --verdict APPROVED [--artifact {rel}]` | Composite: record `verdicts[phase]`, append `reviewArtifacts[phase]` (if `--artifact` given), and advance `currentPhase` — one call, one write. |
 | `scan-commits` | `[--count N]` (default `20`) | No `--slug`. Read-only; never writes. Lists the N most recent HEAD commits and flags subjects that don't match `type(scope): subject` (G8). Exit `0` when all conventional, `1` otherwise. |
-| `migrate` | `--slug [--apply]` | Relocate a project's `state.json` (+ backups) from the `namespaced` layout to the `bare` layout. Dry-run by default; `--apply` performs the move. Refuses to overwrite an existing bare state (`TARGET_EXISTS`, exit `3`). Artefacts are left in place. |
 
-Orchestrator-owned metadata that the CLI has no subcommand for — `entryPoint` (written once at Phase 0), `adrRatification` (written at the DESIGN human checkpoint), and `phaseHistory` / `neighborPlanners` / `nextActions` / `referencesProcessed` — is edited directly on the snapshot. This is safe: the CLI's validator preserves every field on rewrite (round-trip fidelity), so a later CLI write never drops a hand-edited field. Everything invariant-bearing (verdicts, phase advance, artifacts, retry) goes through the CLI.
+Every field of `state.json` is written through the CLI: invariant-bearing fields by the event subcommands, orchestrator-owned metadata by `set`, `phaseHistory` by `mark-phase-started` and phase closure. Never edit `state.json` with a file or shell write.
 
 ## Schema
 
@@ -101,36 +102,36 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 {
   "projectSlug": "string",
   "skraftPlanFile": "string (relative path to plan instructions file)",
-  "currentPhase": "DISCOVER | DISCUSS | DESIGN | DISTILL | DELIVER | DONE",
+  "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE (phaseOrder of skraft-framework.config.json)",
   "entryMode": "capture | from-issue | from-prd | null",
   "entryPoint": {
-    "skipPhases": ["string (phase names skipped because an upstream artefact already satisfies them)"],
+    "skipPhases": ["string (phaseOrder names skipped because an upstream artefact already satisfies them)"],
     "handoffSource": "ado | jira | github | null",
     "handoffArtifacts": ["string (relative paths to detected upstream backlog/sprint artefacts)"]
   },
   "issueNumber": "number | null",
   "phasesCompleted": ["string (phase names)"],
   "phaseArtifacts": {
-    "DISCOVER": ["string (relative paths)"]
+    "RESEARCH": ["string (relative paths)"]
   },
   "verdicts": {
-    "DISCOVER": "APPROVED | CHANGES_REQUESTED | null"
+    "RESEARCH": "APPROVED | CHANGES_REQUESTED | null"
   },
   "reviewArtifacts": {
-    "DISCOVER": ["string (relative paths under reviews/)"]
+    "RESEARCH": ["string (relative paths under reviews/)"]
   },
   "retryCount": {
-    "DISCOVER": "number"
+    "RESEARCH": "number"
   },
   "reworkCount": {
-    "DISCOVER": "number (manual, human-initiated rework passes — distinct from automated reviewer retries)"
+    "RESEARCH": "number (manual, human-initiated rework passes — distinct from automated reviewer retries)"
   },
   "findingsResolved": {
-    "DISCOVER": "number (cumulative count of review findings resolved across all rework passes for this phase)"
+    "RESEARCH": "number (cumulative count of review findings resolved across all rework passes for this phase)"
   },
   "referencesProcessed": ["string (file paths)"],
   "phaseHistory": {
-    "DISCOVER": { "status": "done | inProgress", "startedAt": "string", "completedAt": "string" }
+    "RESEARCH": { "status": "done | inProgress", "startedAt": "string", "baseSha": "string | null (HEAD when the phase started)", "completedAt": "string" }
   },
   "nextActions": ["string"],
   "userPreferences": {
@@ -165,12 +166,12 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 * `projectSlug` — kebab-case identifier derived from the originating issue title or user-provided project name.
 * `currentPhase` — single phase the pipeline is currently executing. Advances only when the reviewer verdict for that phase is `APPROVED`. `DONE` indicates the full pipeline has completed.
 * `entryMode` — how the pipeline was started. `from-issue` requires `issueNumber`; `from-prd` requires entries in `referencesProcessed`; `capture` requires neither.
-* `entryPoint` — records which phases the orchestrator skips because a confirmed upstream planning handoff already satisfies their checklist, evaluated at pipeline start (Phase 0) by `skraft-entry-point-routing`. `skipPhases` is empty by default (every phase runs). `handoffSource` names the detected producer (`ado`, `jira`, `github`) or `null`. `handoffArtifacts` lists relative paths of ingested backlog/sprint artefacts. When `skipPhases` contains `"DISCOVER"`, ingestion writes substitute DISCOVER artefacts (`research/{date}/triage-ingest-{date}.md`, `research/{date}/sprint-proposal.md`) so DISCUSS can start without re-triaging. Written directly on the snapshot once, at Phase 0.
+* `entryPoint` — records which phases the orchestrator skips because a confirmed upstream planning handoff already satisfies their checklist, evaluated at pipeline start (Phase 0) by `skraft-entry-point-routing`. `skipPhases` is empty by default (every phase runs) and may only name phases of `phaseOrder`. `handoffSource` names the detected producer (`ado`, `jira`, `github`) or `null`. `handoffArtifacts` lists relative paths of ingested backlog/sprint artefacts. Written once at Phase 0 with `state.mjs set --field entryPoint`.
 * `userPreferences.maxRetriesPerPhase` — default `2`. When `retryCount[phase] >= maxRetriesPerPhase` and the verdict is not `APPROVED`, the orchestrator escalates to the user.
 * `reworkCount` / `findingsResolved` — **rework-cost tracking** (issue #115). `retryCount[phase]` already counts automated reviewer retries (re-dispatch of the same phase agent on `CHANGES_REQUESTED`); these two fields additionally count **manual** rework — the human-validated fix cycles that happen *after* a reviewer verdict, outside its retry loop (e.g. addressing BLOCKER/HIGH findings in one pass, then remaining findings in a second pass). Call `state.mjs incr-rework --phase {P} [--findings N]` once per manual rework pass; `N` (default `1`) is the count of findings that pass resolved, accumulating into `findingsResolved[phase]`. Together, `retryCount[phase] + reworkCount[phase]` is the phase's total iteration count, and `findingsResolved[phase]` is its total finding volume — the objective signal the resume summary surfaces (see Rehydration) to track whether upstream gates are improving epic over epic.
 * `reviewArtifacts` — append-only map of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers append here exclusively, through `record-review-artifact`.
 * `neighborPlanners` — interoperability with sibling planners (Security, RAI, SSSC). `null` when no plan exists.
-* `adrRatification` — persists the DESIGN human-ratification gate (genesis B10 HUMAN CHECKPOINT + B4 PLAN MEMENTO) so it survives turns and session resumes. `checkpointStatus` is `none` until DESIGN produces `Proposed` ADRs, `awaiting_human` while the orchestrator has HALTed for a verdict, `resolved` once every ADR is `Accepted`/`Rejected`. `pending` mirrors the `docs/adr/decisions-index.md` rows still `Proposed`; `ratified` accumulates the verdicts. The orchestrator reads the decision index (NOT full ADR bodies) to populate this block. Written directly on the snapshot at the DESIGN checkpoint. Defaults to `{ "checkpointStatus": "none", "pending": [], "ratified": [] }`.
+* `adrRatification` — persists the DESIGN human-ratification gate (genesis B10 HUMAN CHECKPOINT + B4 PLAN MEMENTO) so it survives turns and session resumes. `checkpointStatus` is `none` until DESIGN produces `Proposed` ADRs, `awaiting_human` while the orchestrator has HALTed for a verdict, `resolved` once every ADR is `Accepted`/`Rejected`. `pending` mirrors the `docs/adr/decisions-index.md` rows still `Proposed`; `ratified` accumulates the verdicts. The orchestrator reads the decision index (NOT full ADR bodies) to populate this block. Written at the DESIGN checkpoint with `state.mjs set --field adrRatification`. Defaults to `{ "checkpointStatus": "none", "pending": [], "ratified": [] }`.
 
 ## Per-turn protocol (write-through)
 
@@ -184,7 +185,9 @@ On a turn that changes pipeline state:
    * phase advance → `transition --to {NEXT}` (only after an APPROVED verdict for the current phase)
    * phase re-dispatched after a non-APPROVED verdict → `incr-retry --phase {P}`
    * a manual, human-validated rework pass is applied to a phase's artefacts (outside the reviewer retry loop) → `incr-rework --phase {P} [--findings N]`
-   The CLI persists the snapshot atomically. `entryPoint` / `adrRatification` are the only direct-edit exceptions.
+   * phase about to be dispatched for the first time → `mark-phase-started --phase {P}`
+   * orchestrator metadata changed → `set --field {F} --data {JSON}`
+   The CLI persists the snapshot atomically.
 4. **REFLECT** the change into the native todo list (mark a todo done / in-progress, add the next). The todo list and the snapshot now agree; no whole-file re-read occurs.
 
 ### Transition rules
@@ -192,7 +195,7 @@ On a turn that changes pipeline state:
 * `currentPhase` transitions only on `APPROVED` reviewer verdict — enforced by `transition` (rejects with `VERDICT_NOT_APPROVED`).
 * **DESIGN is the one phase with a second gate after `APPROVED`:** it advances to `DISTILL` only when `adrRatification.checkpointStatus == "resolved"` (zero `Proposed` ADRs remain in `docs/adr/decisions-index.md`). A DESIGN reviewer `APPROVED` with `Proposed` ADRs still open keeps `currentPhase == "DESIGN"` and sets `adrRatification.checkpointStatus = "awaiting_human"`.
 * On `CHANGES_REQUESTED`: the same phase agent is re-dispatched, `incr-retry --phase {P}` is called, `currentPhase` does not change.
-* The terminal state `DONE` is reached by a final `transition --to DONE` after DELIVER's verdict is `APPROVED` and `phasesCompleted` contains all five phase names. `DONE` is terminal for phase mutations (`TERMINAL_STATE`); reporting setup and separate publication receipts remain available without changing phase state.
+* The terminal state `DONE` is reached by a final `transition --to DONE` after DELIVER's verdict is `APPROVED` and `phasesCompleted` contains every phase of `phaseOrder`. `DONE` is terminal for phase mutations (`TERMINAL_STATE`); reporting setup and separate publication receipts remain available without changing phase state.
 
 ### Manual phase closure (no reviewer sub-agent verdict)
 
@@ -250,7 +253,7 @@ Exits `0` (all recent commits conventional) or `1` with a `nonConventional` list
 
 ### State creation
 
-On first invocation, create the state with `state.mjs init --slug {projectSlug}`. This writes a default snapshot (`currentPhase="DISCOVER"`, `userPreferences.maxRetriesPerPhase=2`, all maps empty, `entryPoint=null`, `adrRatification` defaulted). Then, at Phase 0, the orchestrator evaluates and direct-edits `entryPoint`.
+On first invocation, create the state with `state.mjs init --slug {projectSlug}`. This writes a default snapshot (`projectSlug`, `currentPhase` = first phase of `phaseOrder`, `userPreferences.maxRetriesPerPhase=2`, all maps empty, `entryPoint=null`, `adrRatification` defaulted). Then, at Phase 0, the orchestrator evaluates the entry point and records it with `state.mjs set --field entryPoint`.
 
 ## Rehydration (once per session)
 
@@ -271,7 +274,7 @@ When `state.json` is missing, malformed, or fails schema validation (the CLI exi
 
 1. **Rollback of schema (repeated failures).** When the guidance `action` is `state.mjs rollback --slug {slug}`, run it: the recovery service restores the most recent **healthy** backup (`state.json.bak.*`, kept rotating ≤3 by the writer of #60 — this service only reads and restores them; it never creates or rotates backups). Corrupt or schema-invalid backups are skipped; if none is healthy it exits with `NO_BACKUP`. The restore goes through the atomic writer, so the corrupted file is itself snapshotted first.
 2. **Stale execution.** When `diagnose` reports `STALE` (the current phase's retry budget is exhausted while the verdict is not `APPROVED`, so the pipeline can neither advance nor retry), run `state.mjs resolve-stale --slug {slug} [--phase {P}]` to reset that phase's `retryCount` to `0` so the phase agent can be relaunched. A non-stale phase is rejected with `NOT_STALE`.
-3. **No recoverable backup.** When the `action` is `state.mjs init --slug {slug}` (no healthy backup exists): scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`), then reconstruct with conservative defaults (`init`, then direct-edit `currentPhase` to the inferred phase, `phasesCompleted` from on-disk evidence, `verdicts[currentPhase]` to `null`).
+3. **No recoverable backup.** When the `action` is `state.mjs init --slug {slug}` (no healthy backup exists): scan `research/`, `plans/`, `details/`, `changes/`, and `reviews/` to infer the highest phase with completed artifacts (DESIGN completion is evidenced by `details/{date}/` contracts and consistency matrices; ADRs live project-global in `docs/adr/`), then reconstruct with conservative defaults: `init`, then `close-phase --phase {P} --verdict APPROVED` for each phase the on-disk evidence shows completed, in `phaseOrder`, stopping at the inferred current phase (its verdict stays `null`).
 4. Surface the reconstruction to the user with a checklist of inferred values and request confirmation before resuming.
 5. The corrupted file is preserved as `state.json.corrupted.{timestamp}` by the reader before any overwrite.
 

@@ -77,15 +77,15 @@ Follow the write-through model and the once-per-session Rehydration sequence def
 2. If the state does not exist, create it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" init --slug {projectSlug}` and start at RESEARCH.
 3. If it exists, rehydrate in one call — `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`.
 4. **Project the pipeline into the native todo working set** per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies + statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`). This list — not the JSON file — drives every subsequent turn.
-5. Scan for neighbor planners under `.copilot-tracking/security-plans/{slug}/`, `.copilot-tracking/rai-plans/{slug}/`, `.copilot-tracking/sssc-plans/{slug}/`. If found, direct-edit their paths into `state.json::neighborPlanners` and add an advisory line to `nextActions` (read-only, no coupling).
-6. **Evaluate the upstream entry point.** Only on a fresh pipeline (`phasesCompleted` empty). Load `#file:plugins/skraft-framework/skills/skraft-entry-point-routing/SKILL.md`. Detect a complete upstream backlog-and-sprint handoff, require user confirmation, ingest its evidence, and direct-edit `state.json::entryPoint`. Without confirmed evidence, persist empty `skipPhases` and run every phase.
+5. Scan for neighbor planners under `.copilot-tracking/security-plans/{slug}/`, `.copilot-tracking/rai-plans/{slug}/`, `.copilot-tracking/sssc-plans/{slug}/`. If found, record their paths with `state.mjs set --slug {projectSlug} --field neighborPlanners --data '{"securityPlanFile":…,"raiPlanFile":…,"ssscPlanFile":…}'` and an advisory line with `state.mjs set --field nextActions` (read-only, no coupling).
+6. **Evaluate the upstream entry point.** Only on a fresh pipeline (`phasesCompleted` empty). Load `#file:plugins/skraft-framework/skills/skraft-entry-point-routing/SKILL.md`. Detect a complete upstream backlog-and-sprint handoff, require user confirmation, ingest its evidence, and record it with `state.mjs set --slug {projectSlug} --field entryPoint --data '{"skipPhases":[…],"handoffSource":…,"handoffArtifacts":[…]}'`. Without confirmed evidence, record empty `skipPhases` and run every phase.
 7. Print the resume summary:
    ```
    Pipeline state loaded.
    Current phase: DESIGN
    Story: #42 — Add eligibility check
    Neighbor planners: security-plans/eligibility (read-only)
-  Entry point: DISCOVER skipped (confirmed upstream handoff: github)
+   Entry point: every phase runs (no confirmed upstream handoff)
    Pending: DESIGN → DISTILL → DELIVER
    ```
 8. Load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json). Apply its startup consent checkpoint; recommend PR reports + issue link + chat summary without preselecting them. Persist confirmed choices with `report.mjs setup`; inspect `report.mjs status` on resume, even at DONE.
@@ -94,7 +94,7 @@ Follow the write-through model and the once-per-session Rehydration sequence def
 
 ## State file
 
-The state file is **JSON only**, never markdown. It is a durable safety snapshot, not a per-turn scratchpad. The full schema, the write-through model (native todo working set + deterministic `state.mjs` CLI writes), and the once-per-session rehydration are defined in `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md`. Every mutation goes through the CLI (or the two documented direct-edit scalars, `entryPoint` / `adrRatification`); the whole file is never re-read mid-session.
+The state file is **JSON only**, never markdown. It is a durable safety snapshot, not a per-turn scratchpad. The full schema, the write-through model (native todo working set + deterministic `state.mjs` CLI writes), and the once-per-session rehydration are defined in `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md`. Every mutation goes through the CLI — never edit `state.json` with a file or shell write; the whole file is never re-read mid-session.
 
 ## Phase execution protocol
 
@@ -124,7 +124,7 @@ The sub-agent never touches `state.json` or `skraft-config.json`; it consumes th
 For each phase NOT in `entryPoint.skipPhases` (DESIGN, DISTILL):
 
 **Step 1 — Dispatch specialist agent**
-Consult the native todo working set for the current phase (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above (story, output path, artifact conventions, upstream artefacts). If a scalar not carried by the todo list is needed, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
+Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slug} --phase {P}`: it records `startedAt` and the `baseSha` that bounds the phase's commits (retries keep the first). Consult the native todo working set for the current phase (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above (story, output path, artifact conventions, upstream artefacts). If a scalar not carried by the todo list is needed, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
 
 **Step 2 — Collect output**
 Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure.
@@ -144,7 +144,7 @@ Pass the produced artefact paths to the reviewer agent. Do NOT summarize or inte
 
 RESEARCH has no reviewer: findings are grounded in citations the human can verify directly, not an adversarial gate. If RESEARCH is not in `entryPoint.skipPhases`:
 
-1. Dispatch `Skraft - Solution Researcher` with the Dispatch context header above.
+1. Run `state.mjs mark-phase-started --slug {projectSlug} --phase RESEARCH`, then dispatch `Skraft - Solution Researcher` with the Dispatch context header above.
 2. Verify the research document exists at `research/{date}/{slug}-research.md`. If missing, re-dispatch once; otherwise surface to user.
 3. Close the phase with the manual-closure command (`#file:plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md` § Manual phase closure) — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
 4. Reflect closure into the todo list and surface progress; no unsolicited remote phase comment.
@@ -154,10 +154,10 @@ RESEARCH has no reviewer: findings are grounded in citations the human can verif
 ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in `#file:plugins/skraft-framework/skills/architecture-decisions/SKILL.md` (Ratification Contract); this is its wiring.
 
 1. **Read the digest, not the bodies.** Read `docs/adr/decisions-index.md` (the cheap verdict surface) — `cat docs/adr/decisions-index.md`. Do NOT load full ADR bodies. To inspect one ADR's header without its body, use the S7 extraction command in `architecture-decisions` ("Reading the digest cheaply"); fall back to `read_file` on the first ~12 lines only if the command is unavailable. Collect every row whose `Status == Proposed`.
-2. **No Proposed rows →** ratification is a no-op; direct-edit `adrRatification.checkpointStatus = "resolved"` on the snapshot, then `state.mjs transition --to DISTILL`.
-3. **One or more Proposed rows → HALT.** Keep `currentPhase == "DESIGN"`. Direct-edit those rows into `adrRatification.pending` and set `adrRatification.checkpointStatus = "awaiting_human"` on the snapshot, then emit the checkpoint prompt (template below) and STOP. Nothing advances until the human responds.
+2. **No Proposed rows →** ratification is a no-op; `state.mjs set --field adrRatification --data '{"checkpointStatus":"resolved","pending":[],"ratified":[…]}'`, then `state.mjs transition --to DISTILL`.
+3. **One or more Proposed rows → HALT.** Keep `currentPhase == "DESIGN"`. Record those rows with `state.mjs set --field adrRatification --data '{"checkpointStatus":"awaiting_human","pending":[{"adr":"NNN","title":…,"recommended":…,"status":"Proposed"}],"ratified":[…]}'`, then emit the checkpoint prompt (template below) and STOP. Nothing advances until the human responds.
 4. **On the human verdict (next turn)** — re-dispatch `Skraft - Solution Architect` in **ratify-mode** with the per-ADR verdicts (`accept` | `reject` | `amend "<note>"`). The architect flips each `Status`, sets `ratified_by`, updates the index rows, and commits the `Proposed` and final revisions. An `amend` verdict is treated as `NEEDS_REWORK` for that ADR (re-draft, re-review, re-gate).
-5. **Move `pending → ratified`.** Only when zero `Proposed` rows remain, direct-edit `adrRatification.checkpointStatus = "resolved"` on the snapshot, then `state.mjs transition --to DISTILL`.
+5. **Move `pending → ratified`.** Only when zero `Proposed` rows remain, `state.mjs set --field adrRatification` with `checkpointStatus: "resolved"`, empty `pending` and the verdicts in `ratified`, then `state.mjs transition --to DISTILL`.
 
 On session resume, `adrRatification.checkpointStatus == "awaiting_human"` means re-enter this checkpoint (re-emit the prompt) — never advance to DISTILL.
 
@@ -269,7 +269,7 @@ The user never needs to specify a phase. The pipeline reads state, resumes, and 
 ## Style and quality rules
 
 - Rehydrate `state.json` ONCE per session (Phase 0). Do NOT re-read the whole file each turn — drive turns from the native todo working set and fetch single fields with `state.mjs get --field X` when needed.
-- Apply invariant-bearing pipeline mutations through `state.mjs`; reporting preferences through `report.mjs setup`. Never hand-edit either invariant-bearing subset. Direct-edit metadata only as allowed by state instructions.
+- Write every `state.json` field through `state.mjs` (orchestrator metadata with `state.mjs set`) and reporting preferences through `report.mjs setup`. Never edit `state.json` with a file or shell write.
 - All agent dispatch instructions must include full context (story, milestone, previous artefact paths)
 - Keep orchestrator body focused on routing logic — no business content generation
 - Write in imperative second-person ("Rehydrate state once", "Dispatch Skraft - Solution Researcher with...")
@@ -281,5 +281,5 @@ Before EACH dispatch, re-read this checklist:
 - [ ] Am I about to produce business content myself? → STOP. Dispatch the specialist.
 - [ ] Have I verified the expected artefact exists at the dated pipeline path before dispatching the reviewer?
 - [ ] Will I record the verdict/artifact/transition through the `state.mjs` CLI (not a hand-edit)?
-- [ ] Is `state.json::phaseHistory` updated with `inProgress` (direct-edit) before dispatch?
+- [ ] Did I run `state.mjs mark-phase-started --phase {P}` before the phase's first dispatch?
 - [ ] Have I passed all upstream artefact paths in the dispatch payload?
