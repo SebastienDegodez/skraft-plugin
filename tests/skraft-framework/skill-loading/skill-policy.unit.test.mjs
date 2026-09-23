@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   mandatorySkillsFor,
   missingSkills,
-  extractReadSkills
+  extractLoadedSkills
 } from '../../../plugins/skraft-framework/src/domain/skill-policy.mjs'
 
 const CONFIG = {
@@ -72,36 +72,40 @@ test('missingSkills preserves order of missing skills', () => {
   assert.deepEqual(result, ['a', 'b', 'c'])
 })
 
-// extractReadSkills ———————————————————————————————————————————————————
+// extractLoadedSkills ——————————————————————————————————————————————————
+// A skill counts as loaded only through a tool call in the transcript: the Skill tool,
+// or a read of the skill's SKILL.md. A mention in text or in a prompt proves nothing.
 
-test('extractReadSkills finds a skill from a string transcript', () => {
-  const result = extractReadSkills('read plugins/skraft-framework/skills/bdd-methodology/SKILL.md for the session')
-  assert.ok(result.includes('bdd-methodology'))
+const toolUse = (name, input) => ({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 't', name, input }] } })
+const jsonl = (...entries) => entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
+
+test('extractLoadedSkills: the Skill tool loads a skill, plugin prefix removed', () => {
+  const transcript = jsonl(toolUse('Skill', { skill: 'skraft:outside-in-tdd' }), toolUse('Skill', { skill: 'bdd-methodology' }))
+  assert.deepEqual(extractLoadedSkills(transcript).sort(), ['bdd-methodology', 'outside-in-tdd'])
 })
 
-test('extractReadSkills finds multiple skills from a string', () => {
-  const transcript = 'loaded outside-in-tdd/SKILL.md and bdd-methodology/SKILL.md'
-  const result = extractReadSkills(transcript)
-  assert.ok(result.includes('outside-in-tdd'))
-  assert.ok(result.includes('bdd-methodology'))
+test('extractLoadedSkills: a read of SKILL.md loads a skill, whatever the read tool', () => {
+  const transcript = jsonl(
+    toolUse('Read', { file_path: '/p/plugins/skraft-framework/skills/bdd-methodology/SKILL.md' }),
+    { type: 'tool.execution_start', data: { toolName: 'view', arguments: { path: 'skills/outside-in-tdd/SKILL.md' } } },
+  )
+  assert.deepEqual(extractLoadedSkills(transcript).sort(), ['bdd-methodology', 'outside-in-tdd'])
 })
 
-test('extractReadSkills deduplicates repeated reads', () => {
-  const transcript = 'bdd-methodology/SKILL.md bdd-methodology/SKILL.md'
-  const result = extractReadSkills(transcript)
-  assert.equal(result.filter((s) => s === 'bdd-methodology').length, 1)
+test('extractLoadedSkills: a mention in text, a prompt or a tool result loads nothing', () => {
+  const transcript = jsonl(
+    { type: 'user', message: { role: 'user', content: 'Load outside-in-tdd/SKILL.md before coding' } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'I read bdd-methodology/SKILL.md' }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', content: 'see skills/mutation-testing/SKILL.md' }] } },
+    toolUse('Read', { file_path: 'docs/skills/outside-in-tdd/SKILL.md.bak' }),
+    toolUse('Grep', { pattern: 'x', path: 'skills/craft-discipline/SKILL.md' }),
+  )
+  assert.deepEqual(extractLoadedSkills(transcript), [])
 })
 
-test('extractReadSkills handles array transcript (serialises to JSON)', () => {
-  const transcript = [{ content: 'reading bdd-methodology/SKILL.md' }]
-  const result = extractReadSkills(transcript)
-  assert.ok(result.includes('bdd-methodology'))
-})
-
-test('extractReadSkills returns empty array when no SKILL.md present', () => {
-  assert.deepEqual(extractReadSkills('no skills here'), [])
-})
-
-test('extractReadSkills handles null transcript without throwing', () => {
-  assert.deepEqual(extractReadSkills(null), [])
+test('extractLoadedSkills: an inline array transcript and malformed lines are tolerated', () => {
+  assert.deepEqual(extractLoadedSkills(JSON.stringify([toolUse('Skill', { skill: 'bdd-methodology' })])), ['bdd-methodology'])
+  assert.deepEqual(extractLoadedSkills(`{ not json\n${JSON.stringify(toolUse('Skill', { skill: 'x-y' }))}\n`), ['x-y'])
+  assert.deepEqual(extractLoadedSkills(null), [])
+  assert.deepEqual(extractLoadedSkills(''), [])
 })

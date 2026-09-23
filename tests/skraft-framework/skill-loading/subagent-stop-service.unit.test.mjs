@@ -40,12 +40,18 @@ const stringTranscriptReaderFactory = ({ transcript }) => ({
   }
 })
 
+// A transcript that loaded each named skill through the Skill tool.
+const loaded = (...names) => JSON.stringify(names.map((skill, i) => ({
+  type: 'assistant',
+  message: { role: 'assistant', content: [{ type: 'tool_use', id: `s${i}`, name: 'Skill', input: { skill } }] }
+})))
+
 // happy path — all skills present ————————————————————————————————————
 
 test('allows when all mandatory skills were read', async () => {
   const audit = collectingWriter()
   const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: audit, clock })
-  const transcript = 'read bdd-methodology/SKILL.md and outside-in-tdd/SKILL.md'
+  const transcript = loaded('bdd-methodology', 'outside-in-tdd')
   const result = await service.handle({ agentName: 'acceptance-designer', transcript })
   assert.equal(result.decision, 'allow')
   assert.equal(audit.entries[0].decision, 'ALLOW')
@@ -59,7 +65,7 @@ test('blocks when a mandatory skill was not read', async () => {
   const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: audit, clock })
   const result = await service.handle({
     agentName: 'acceptance-designer',
-    transcript: 'read bdd-methodology/SKILL.md only'
+    transcript: loaded('bdd-methodology')
   })
   assert.equal(result.decision, 'block')
   assert.ok(result.message.includes('outside-in-tdd'))
@@ -91,7 +97,7 @@ test('allows when agent has no mandatory skills without consulting transcript or
 test('writes SkillComplianceChecked audit entry', async () => {
   const audit = collectingWriter()
   const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: audit, clock })
-  await service.handle({ agentName: 'acceptance-designer', transcript: 'bdd-methodology/SKILL.md' })
+  await service.handle({ agentName: 'acceptance-designer', transcript: loaded('bdd-methodology') })
   assert.equal(audit.entries.length, 1)
   assert.equal(audit.entries[0].eventType, 'SkillComplianceChecked')
   assert.equal(audit.entries[0].agentName, 'acceptance-designer')
@@ -103,13 +109,13 @@ test('block audit entry has reason skill_absent; allow audit entry has reason al
   // (mutant cannot set both to all_present since block path must produce skill_absent)
   const blockAudit = collectingWriter()
   const blockService = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: blockAudit, clock })
-  await blockService.handle({ agentName: 'acceptance-designer', transcript: 'bdd-methodology/SKILL.md only' })
+  await blockService.handle({ agentName: 'acceptance-designer', transcript: loaded('bdd-methodology') })
   assert.equal(blockAudit.entries[0].reason, 'skill_absent',
     `block audit must have reason skill_absent; got: ${JSON.stringify(blockAudit.entries[0].reason)}`)
 
   const allowAudit = collectingWriter()
   const allowService = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: allowAudit, clock })
-  await allowService.handle({ agentName: 'acceptance-designer', transcript: 'bdd-methodology/SKILL.md outside-in-tdd/SKILL.md' })
+  await allowService.handle({ agentName: 'acceptance-designer', transcript: loaded('bdd-methodology', 'outside-in-tdd') })
   assert.equal(allowAudit.entries[0].reason, 'all_present',
     `allow audit must have reason all_present; got: ${JSON.stringify(allowAudit.entries[0].reason)}`)
 })
@@ -119,7 +125,7 @@ test('block audit entry has reason skill_absent; allow audit entry has reason al
 test('allows (fail-open) when auditWriter throws', async () => {
   const throwingWriter = { write: async () => { throw new Error('disk full') } }
   const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: throwingWriter, clock })
-  const result = await service.handle({ agentName: 'acceptance-designer', transcript: 'bdd-methodology/SKILL.md outside-in-tdd/SKILL.md' })
+  const result = await service.handle({ agentName: 'acceptance-designer', transcript: loaded('bdd-methodology', 'outside-in-tdd') })
   assert.equal(result.decision, 'allow')
 })
 
@@ -127,7 +133,7 @@ test('allows (fail-open) when clock throws', async () => {
   const throwingClock = { now: () => { throw new Error('clock error') } }
   const audit = collectingWriter()
   const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: stringTranscriptReaderFactory, auditWriter: audit, clock: throwingClock })
-  const result = await service.handle({ agentName: 'acceptance-designer', transcript: 'bdd-methodology/SKILL.md' })
+  const result = await service.handle({ agentName: 'acceptance-designer', transcript: loaded('bdd-methodology') })
   assert.equal(result.decision, 'allow')
 })
 
@@ -139,7 +145,7 @@ test('extracts skills from array transcript', async () => {
     read: async () => JSON.stringify(transcript)
   })
   const service = createSubagentStopService({ config: CONFIG, transcriptReaderFactory: arrayTranscriptReaderFactory, auditWriter: audit, clock })
-  const transcript = [{ text: 'bdd-methodology/SKILL.md' }, { text: 'outside-in-tdd/SKILL.md' }]
+  const transcript = JSON.parse(loaded('bdd-methodology', 'outside-in-tdd'))
   const result = await service.handle({ agentName: 'acceptance-designer', transcript })
   assert.equal(result.decision, 'allow')
 })

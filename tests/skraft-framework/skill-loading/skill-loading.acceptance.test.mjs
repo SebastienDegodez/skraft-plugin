@@ -83,11 +83,14 @@ const transcriptReaderFactory = ({ transcript }) => ({
   }
 })
 
-// Transcript helpers — build minimal arrays that contain the right SKILL.md path strings
+// Transcript helpers — each named skill read through a Read tool call on its SKILL.md
 const transcriptWith = (...skillNames) =>
-  skillNames.map((name) => ({
-    role: 'tool_result',
-    content: `plugins/skraft-framework/skills/${name}/SKILL.md`
+  skillNames.map((name, i) => ({
+    type: 'assistant',
+    message: {
+      role: 'assistant',
+      content: [{ type: 'tool_use', id: `r${i}`, name: 'Read', input: { file_path: `plugins/skraft-framework/skills/${name}/SKILL.md` } }]
+    }
   }))
 
 // ─────────────────────────────────────────────────────────────────────────────

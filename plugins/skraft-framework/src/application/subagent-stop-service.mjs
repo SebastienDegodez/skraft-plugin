@@ -1,4 +1,4 @@
-import { mandatorySkillsFor, missingSkills, extractReadSkills } from '../domain/skill-policy.mjs'
+import { mandatorySkillsFor, missingSkills, extractLoadedSkills } from '../domain/skill-policy.mjs'
 import { canonicalAgentName } from '../domain/instruction-policy.mjs'
 import { allow, block } from '../adapters/api/hooks/decision.mjs'
 
@@ -34,7 +34,7 @@ export const createSubagentStopService = ({ config, transcriptReaderFactory, aud
             transcript,
             agentTranscriptPath: agentTranscriptPath ?? agent_transcript_path
           }).read()
-          readSkills = extractReadSkills(content)
+          readSkills = extractLoadedSkills(content)
         } catch {
           // ADR-006: transcript unavailable is a monitoring failure, not a compliance signal
           await auditWriter.write({
