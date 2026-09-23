@@ -18,7 +18,7 @@ append-only audit-writer, normalised payload) are documented in skills and ADRs.
 an agent can ignore them: nothing in the runtime enforces them mechanically.
 
 Without guardrails, each pipeline phase exposes the invariant to silent drift.
-Adversarial review (G7) detects violations *after* the fact; hooks detect them *before*.
+Adversarial review detects violations *after* the fact; hooks detect them *before*.
 
 ## The solution — the hooks harness
 
@@ -62,36 +62,40 @@ The framework lives under `plugins/skraft-framework/src/` at the repo root:
 
 ```
 plugins/skraft-framework/src/
-  domain/                ← pure invariants (zero dependencies)
-    result.mjs           Ok/Err discriminated union
-    value-objects.mjs    Phase, AgentName, ProjectSlug, Verdict
-    specifications.mjs   andSpec / orSpec / notSpec
-    error-codes.mjs      error code string constants
+  domain/                ← pure policies (no IO)
+    pipeline-policy.mjs        dispatch order, provenance, continuation (G1, G6)
+    skill-policy.mjs           mandatory skills, loads read from a transcript (G2, G3)
+    phase-gate-policy.mjs      phase closure rules (G4, G5)
+    session-guard-policy.mjs   tracked-state protection, DELIVER writes (G7, G8)
+    state-machine.mjs          transitions the state CLI applies
+    result.mjs, value-objects.mjs, …
 
   ports/                 ← JSDoc contracts (duck-typed)
-    api/                 inbound interfaces (PreToolUse, SubagentStop)
-    infrastructure/      outbound interfaces (AuditWriter, Filesystem…)
+    api/                 inbound hook interfaces
+    infrastructure/      outbound interfaces (audit writer, state, transcript…)
+
+  application/           ← one service per hook concern
+    pre-tool-use-composite.mjs   G1, provenance and G7/G8, combined fail-closed
+    subagent-start-service.mjs   G2
+    subagent-stop-service.mjs    G3
+    post-tool-use-service.mjs    G3 trace, G6
+    state-service.mjs, phase-gate-service.mjs   the state CLI and its gate
 
   adapters/
-    api/hooks/           ← Api entry point
-      payload.mjs        normalise camelCase / PascalCase / snake_case
-      decision.mjs       allow / deny / block / additionalContext
-      hook-entry.mjs     normalise + route
-      hook-router.mjs    switchboard PreToolUse / SubagentStop
-      service-factory.mjs composition root
+    api/hooks/           ← harness boundary
+      harness-input.mjs  harness payload → framework payload
+      harness-output.mjs decision → harness wire format
+      hook-router.mjs    routes by event
     infrastructure/      ← outbound implementations
       jsonl-audit-writer.mjs   append-only, never truncates
-      null-audit-writer.mjs    no-op for tests
-      json-state-reader.mjs    reads/writes state.json
-      real-filesystem.mjs      node:fs/promises wrapper
-      in-memory-filesystem.mjs  test double
-      system-time.mjs / fixed-time.mjs
-
-  application/
-    config-loader.mjs    cascade: env → ~/.skraft/config.json → .skraftrc.json
+      audit-log-resolver.mjs   one audit log per project, in its git directory
+      json-state-reader.mjs, state/json-state-writer.mjs
+      …
 
   cli/
-    hook.mjs             CLI: stdin JSON → router → stdout JSON
+    hook.mjs             hook entry: stdin JSON → router → stdout JSON
+    housekeeping.mjs     SessionStart entry
+    state.mjs            the only writer of state.json
 ```
 
 ## Current packaging and validation limits
@@ -150,18 +154,25 @@ Without a hook, the call would pass silently; review would catch it *after*.
 
 ## Implementation status
 
-| Layer | Status |
-|-------|--------|
-| CA scaffold (`domain/`, `ports/`, `adapters/`, `application/`) | ✅ Delivered (US1) |
-| Payload normalisation (camelCase / PascalCase / snake_case) | ✅ Delivered (US1) |
-| Decisions (allow / deny / block / additionalContext) | ✅ Delivered (US1) |
-| JSONL append-only audit-writer | ✅ Delivered (US1) |
-| Config-loader cascade | ✅ Delivered (US1) |
-| Business handlers G1–G8 (per-phase invariants) | ✅ Delivered |
+| Guard | Enforced by | Failure mode | Live harness receipt |
+|-------|-------------|--------------|----------------------|
+| G1 dispatch order | `PreToolUse` hook | Fail closed for a phase agent | None |
+| Dispatch provenance | `PreToolUse` hook | Fail open | None |
+| G2 mandatory skills | `SubagentStart` hook | Fail open | None |
+| G3 skill loads | `PostToolUse` and `SubagentStop` hooks | Fail open | None |
+| G4 phase artifacts | State CLI, when a phase closes | Fail closed | Not a hook |
+| G5 verdict and DELIVER commit | State CLI, when a phase closes | Fail closed | Not a hook |
+| G6 continuation | `PostToolUse` hook | Fail open | None |
+| G7 tracked state | `PreToolUse` hook | Fail closed | Last recorded run: Copilot CLI 1.0.83 refused a shell write |
+| G8 DELIVER writes | `PreToolUse` hook | Fail open on unreadable state | None |
 
-`SubagentStart` also bridges packaging differences. Copilot discovers path-scoped rules
-natively. Claude receives only companion rules declared by the starting agent, alongside
-its mandatory skills; unrelated rules are not added to context.
+Every guard is covered by unit and acceptance tests. A live receipt comes only from a real
+session (`scripts/copilot-hook-smoke.mjs`, `scripts/claude-plugin-smoke.mjs`); Vally
+evaluations do not load plugin hooks.
+
+`SubagentStart` injects the starting agent's mandatory skills only. Rules are not injected:
+Copilot discovers path-scoped rules natively, and the orchestrator, the rules' only reader,
+loads them itself.
 
 ## Token economy — the hook angle
 
@@ -190,16 +201,17 @@ tool call, the prefix shifts and the cache misses.
 
 ## What hooks do not cover
 
-Hooks enforce **structural and behavioural invariants** — dispatch order, artifact
-presence, reviewer verdict format, state-file integrity. They are not a general
+Hooks and the state CLI enforce **structural and behavioural invariants** — dispatch
+order, artifact presence, reviewer verdict, state-file integrity. They are not a general
 anti-hallucination system, and two important limits must be stated explicitly.
 
 ### G2 and G3 enforce declared methodology, not truth
 
-Guardrail G2 injects mandatory skills at `SubagentStart`; for Claude it also injects
-the starting agent's declared companion rules. G3 audits skill reads. Both fail open
-on hook failure so an internal runtime error cannot freeze the pipeline. They enforce
-declared method, but cannot prove that an agent applied that method correctly.
+Guardrail G2 injects mandatory skills at `SubagentStart`. G3 records skill reads and
+sends a subagent back when its transcript shows no load of a mandatory skill: a skill tool
+call or a read of its `SKILL.md`, never a mention. Both fail open on hook failure so an
+internal runtime error cannot freeze the pipeline. They prove a skill was loaded, not that
+the agent applied it correctly.
 
 ### Structural violations vs. factual hallucinations
 
@@ -214,5 +226,5 @@ domain-specific acceptance tests.
 
 - [Token economy]({{ "/en/explanation/token-economy" | relative_url }}) — the Genesis levers and the measured reduction ratios
 
-- [Hooks reference]({{ "/en/reference/infrastructure/hooks" | relative_url }}) — 7 events, 4 decisions, SKRAFT_* config
+- [Hooks reference]({{ "/en/reference/infrastructure/hooks" | relative_url }}) — events and guards, the phase gate, decisions, environment variables
 - [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}) — Api → Infra → Application → Domain layers
