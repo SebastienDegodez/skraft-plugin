@@ -27,6 +27,7 @@ metadata:
     - skraft-quality-bar
     - quality-gates-evidence-contract
     - quality-gates-dotnet
+    - quality-gates-javascript
     - resolving-stack-commands
     - qa-reporting
   inputs:
@@ -39,8 +40,8 @@ metadata:
   outputs:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)
-    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (optional, captured stdout, exit codes and RED/GREEN snapshots the evidence log references)
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json (quality-gates evidence log)
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/* (optional, captured stdout, exit codes and RED/GREEN snapshots the evidence log references)
   model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + Iron Rule + Mutation score). Low-tier models (Haiku, Flash, mini) are NOT supported."
 ---
 
@@ -80,6 +81,7 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 | [mutation-testing](../../skills/mutation-testing/SKILL.md) | Entering phase 4 (COMMIT & VERIFY) |
 | [quality-gates-evidence-contract](../../skills/quality-gates-evidence-contract/SKILL.md) | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
 | [quality-gates-dotnet](../../skills/quality-gates-dotnet/SKILL.md) | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
+| [quality-gates-javascript](../../skills/quality-gates-javascript/SKILL.md) | Repo has a Node package (`package.json`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
 | [resolving-stack-commands](../../skills/resolving-stack-commands/SKILL.md) | Needing any build or test command — never hardcode one |
 
 ## Core Principles (Non-Negotiable)
@@ -118,10 +120,10 @@ These are owned by the skills — load them, do not inline rules here.
 ### 4. COMMIT & VERIFY
 - **Post-GREEN Wiring Verification — FIRST, before anything else in this phase.** Run `git diff --name-only`. Every production file the behavior required MUST appear. If only test files changed while the suite flipped RED → GREEN, that is **Fixture Theater**: BLOCK the commit, go back and write the production code. Then apply the deletion test — revert the production change mentally; if the tests still pass, they are exercising fixture state, not behavior. (`outside-in-tdd` → Post-GREEN Wiring Verification.)
 - Run static checks, formatting, and Mutation Testing.
-- **Gate**: run the stack adapter's mutation scripts — core first, then boundary. Their exit code is the verdict; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
+- **Gate**: inside the cycle, run the stack adapter's core mutation script in differential mode since `phaseHistory.DELIVER.baseSha` — feedback, not evidence. After the story's last work commit, run the full core then boundary scripts: their exit code is the verdict; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
 - Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log.** Load `quality-gates-evidence-contract` for its current schema and full gate taxonomy (including G11), and the matching `quality-gates-<tech>` adapter for your stack (`quality-gates-dotnet` for .NET). Run each gate command via the terminal with stdout / exit-code / sha256 redirected to disk; capture RED→GREEN snapshots via `git show <commit>:<path>`; then assemble `evidence/{date}/qg-{story}.json` per that contract. The reviewer's quality-gates lens treats a missing or malformed log as `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one. Commit the evidence directory with the same feature scope, e.g. `chore(loyalty-discount): capture quality gates`.
+- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v4) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`). Run each gate command or script into `evidence/{date}/{story}/`, capture RED→GREEN snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
 
 ### Outcome handoff (success or blockage)
 
