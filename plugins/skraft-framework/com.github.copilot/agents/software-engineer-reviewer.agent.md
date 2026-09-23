@@ -70,6 +70,17 @@ If artifacts are missing, note them but proceed with available inputs.
 
 ### Phase 2: FAN-OUT (B1)
 
+Before the fan-out, verify the evidence log deterministically and keep both outputs for the quality-gates lens:
+
+```bash
+node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {evidence log path} \
+  > .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/qg-verify-{story}.json
+git log --format='commit %H%n%B' {DELIVER baseSha}..HEAD \
+  > .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/commits-{story}.txt
+```
+
+`{DELIVER baseSha}` is `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`. A non-zero exit from `qg-verify` is its verdict (1 fail, 2 inconclusive), not an error to retry.
+
 Spawn 4 lens sub-agents in parallel. Each lens runs in a FRESH context (C3 THREAD SPAWN).
 Each lens receives ONLY the inputs specified below — no more.
 
@@ -77,7 +88,7 @@ Dispatch exactly these four registered ids before synthesis: `quality-gates-lens
 
 | Lens | Sub-agent | Input |
 |------|-----------|-------|
-| quality-gates | [quality-gates-lens](quality-gates-lens.agent.md) | Code + tests + journal + checklist + raw quality-evidence, outcome, forecast, change-log and manifest refs + [qa-reporting entry](../../skills/qa-reporting/SKILL.md) |
+| quality-gates | [quality-gates-lens](quality-gates-lens.agent.md) | The `qg-verify` result and the commit messages written above + code + tests + journal + checklist + raw quality-evidence, outcome, forecast, change-log and manifest refs + [qa-reporting entry](../../skills/qa-reporting/SKILL.md) |
 | architecture-boundaries | [architecture-boundaries-lens](architecture-boundaries-lens.agent.md) | Code ONLY |
 | test-integrity | [test-integrity-lens](test-integrity-lens.agent.md) | Tests + code |
 | cold-reader | [cold-reader-lens](cold-reader-lens.agent.md) | Code + tests ONLY (NO journal, NO checklist) |
