@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { applyTransition } from '../../../plugins/skraft-framework/src/domain/state-machine.mjs'
+import { validateMetadataField } from '../../../plugins/skraft-framework/src/domain/orchestrator-metadata-policy.mjs'
 
 const mkState = (overrides = {}) => ({
   currentPhase: 'RESEARCH',
@@ -120,4 +121,75 @@ test('ADVANCE and CLOSE_PHASE mark the closed phase done when given a time', () 
     { type: 'CLOSE_PHASE', phase: 'RESEARCH', verdict: 'APPROVED', at: 't2' },
   )
   assert.deepEqual(closed.value.phaseHistory.RESEARCH, { status: 'done', startedAt: 't0', baseSha: null, completedAt: 't2' })
+})
+
+// ─── validateMetadataField: shapes and reasons ─────────────────────────────────
+
+const PHASES = { phaseOrder: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'] }
+const reasonOf = (field, value) => validateMetadataField(field, value, PHASES).error?.reason
+
+test('validateMetadataField: accepts every documented enum value', () => {
+  for (const handoffSource of ['ado', 'jira', 'github', null]) {
+    assert.equal(validateMetadataField('entryPoint', { skipPhases: [], handoffSource, handoffArtifacts: [] }, PHASES).ok, true, handoffSource)
+  }
+  for (const checkpointStatus of ['none', 'awaiting_human', 'resolved', null]) {
+    assert.equal(validateMetadataField('adrRatification', { checkpointStatus, pending: [], ratified: [] }, PHASES).ok, true, checkpointStatus)
+  }
+  for (const entryMode of ['capture', 'from-issue', 'from-prd', null]) {
+    assert.equal(validateMetadataField('entryMode', entryMode, PHASES).ok, true, entryMode)
+  }
+  assert.equal(validateMetadataField('issueNumber', null, PHASES).ok, true)
+  assert.equal(validateMetadataField('skraftPlanFile', null, PHASES).ok, true)
+  assert.equal(validateMetadataField('neighborPlanners', {}, PHASES).ok, true)
+})
+
+test('validateMetadataField: rejects values that are not the documented shape, naming the problem', () => {
+  const cases = [
+    ['entryPoint', null, 'entryPoint: must be an object'],
+    ['entryPoint', [], 'entryPoint: must be an object'],
+    ['entryPoint', 'RESEARCH', 'entryPoint: must be an object'],
+    ['entryPoint', { skipPhases: 'RESEARCH', handoffArtifacts: [] }, 'entryPoint: skipPhases must be a list of phase names'],
+    ['entryPoint', { skipPhases: [''], handoffArtifacts: [] }, 'entryPoint: skipPhases must be a list of phase names'],
+    ['entryPoint', { skipPhases: [], handoffSource: 'trello', handoffArtifacts: [] }, 'entryPoint: handoffSource must be ado, jira, github or null'],
+    ['entryPoint', { skipPhases: [], handoffArtifacts: [3] }, 'entryPoint: handoffArtifacts must be a list of relative paths'],
+    ['entryPoint', { skipPhases: [] }, 'entryPoint: handoffArtifacts must be a list of relative paths'],
+    ['adrRatification', null, 'adrRatification: must be an object'],
+    ['adrRatification', { checkpointStatus: 'none', pending: {}, ratified: [] }, 'adrRatification: pending must be a list of ADR rows'],
+    ['adrRatification', { checkpointStatus: 'none', pending: ['012'], ratified: [] }, 'adrRatification: pending must be a list of ADR rows'],
+    ['adrRatification', { checkpointStatus: 'none', pending: [null], ratified: [] }, 'adrRatification: pending must be a list of ADR rows'],
+    ['adrRatification', { checkpointStatus: 'none', pending: [], ratified: [[]] }, 'adrRatification: ratified must be a list of ADR verdicts'],
+    ['nextActions', [''], 'nextActions: must be a list of strings'],
+    ['referencesProcessed', 'docs/prd.md', 'referencesProcessed: must be a list of file paths'],
+    ['neighborPlanners', null, 'neighborPlanners: must be an object'],
+    ['neighborPlanners', { raiPlanFile: 7 }, 'neighborPlanners: raiPlanFile must be a path or null'],
+    ['neighborPlanners', { ssscPlanFile: '' }, 'neighborPlanners: ssscPlanFile must be a path or null'],
+    ['entryMode', 'guess', 'entryMode: must be capture, from-issue, from-prd or null'],
+    ['issueNumber', 0, 'issueNumber: must be a positive integer or null'],
+    ['issueNumber', 1.5, 'issueNumber: must be a positive integer or null'],
+    ['skraftPlanFile', '', 'skraftPlanFile: must be a relative path or null'],
+    ['skraftPlanFile', 3, 'skraftPlanFile: must be a relative path or null'],
+  ]
+  for (const [field, value, reason] of cases) {
+    const r = validateMetadataField(field, value, PHASES)
+    assert.equal(r.ok, false, `${field} ${JSON.stringify(value)}`)
+    assert.equal(r.error.code, 'INVALID_METADATA')
+    assert.equal(r.error.field, field)
+    assert.equal(r.error.reason, reason)
+  }
+})
+
+test('validateMetadataField: names the unknown skipped phases', () => {
+  assert.equal(
+    reasonOf('entryPoint', { skipPhases: ['DISCOVER', 'DESIGN', 'DISCUSS'], handoffArtifacts: [] }),
+    'entryPoint: skipPhases names phase(s) outside the published order: DISCOVER, DISCUSS',
+  )
+})
+
+test('validateMetadataField: lists the settable fields when a field is refused', () => {
+  const r = validateMetadataField('verdicts', {}, PHASES)
+  assert.equal(r.error.field, 'verdicts')
+  assert.equal(
+    r.error.reason,
+    'verdicts is not settable; settable fields: entryPoint, adrRatification, nextActions, referencesProcessed, neighborPlanners, entryMode, issueNumber, skraftPlanFile',
+  )
 })
