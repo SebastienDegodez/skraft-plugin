@@ -57,9 +57,41 @@ test('references resolve under the tracking directory, hashes are computed from 
 })
 
 test('a log outside any evidence directory resolves its references as given', async () => {
-  const log = { $schema: 'quality-gates-evidence/v1', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'aaaaaaa', commits_covered: [], gates: [{ id: 'G1', label: 'x', status: 'pass', stdout_ref: 'out.txt', stdout_sha256: sha256('x'), exit_code_ref: 'exit.txt' }], test_integrity: { cycles: [] } }
-  const result = await verifyEvidenceLog({ logPath: 'qg.json', files: filesOf({ 'qg.json': JSON.stringify(log), 'out.txt': 'x', 'exit.txt': '0' }), git: gitOf() })
+  const log = { $schema: 'quality-gates-evidence/v1', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'aaaaaaa', commits_covered: [], gates: [{ id: 'G1', label: 'x', status: 'pass', stdout_ref: 'out.txt', stdout_sha256: sha256('x'), exit_code_ref: 'evidence/d/s/exit.txt' }], test_integrity: { cycles: [] } }
+  const result = await verifyEvidenceLog({ logPath: 'qg.json', files: filesOf({ 'qg.json': JSON.stringify(log), 'out.txt': 'x', 'evidence/d/s/exit.txt': '0' }), git: gitOf() })
   assert.equal(result.findings.some((f) => f.gate === 'G1'), false)
+})
+
+test('a JSON log that is not an object is inconclusive, never a crash', async () => {
+  for (const text of ['null', '42', '[]']) {
+    const result = await verifyEvidenceLog({ logPath: LOG, base: 'ccccccc', files: filesOf({ [LOG]: text }), git: gitOf() })
+    assert.deepEqual({ verdict: result.verdict, codes: result.findings.map((f) => f.code) }, { verdict: 'inconclusive', codes: ['SCHEMA_UNSUPPORTED'] }, text)
+  }
+})
+
+test('each commit the log cites is looked up once; a log without cycles asks git for no file', async () => {
+  const commitCalls = []
+  const showCalls = []
+  const git = gitOf({
+    commit: (sha) => { commitCalls.push(sha); return { exists: true, subject: 'feat(s): x', message: '', files: [] } },
+    show: (...args) => { showCalls.push(args); return null },
+  })
+  const log = { $schema: 'quality-gates-evidence/v1', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'eeeeeee', commits_covered: [{ sha: 'aaaaaaa' }, { sha: 'ddddddd' }, { sha: 'aaaaaaa' }], gates: [] }
+  await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(log) }), git })
+  assert.deepEqual(commitCalls.sort(), ['aaaaaaa', 'ddddddd', 'eeeeeee'])
+  assert.deepEqual(showCalls, [])
+
+  commitCalls.length = 0
+  const { commits_covered: _, ...uncovered } = log
+  await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(uncovered) }), git })
+  assert.deepEqual(commitCalls, ['eeeeeee'], 'without covered commits, only the recorded revision')
+  assert.deepEqual(showCalls, [])
+})
+
+test('a cycle that names no test file is judged on its snapshots, not a crash', async () => {
+  const log = { $schema: 'quality-gates-evidence/v1', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'aaaaaaa', commits_covered: [], gates: [], test_integrity: { cycles: [{ cycle: 1, red_commit: 'bbbbbbb', green_commit: 'aaaaaaa' }] } }
+  const result = await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(log) }), git: gitOf() })
+  assert.equal(result.findings.some((f) => f.code === 'SNAPSHOT_MISSING'), true)
 })
 
 test('log problems are reported with the path', async () => {
