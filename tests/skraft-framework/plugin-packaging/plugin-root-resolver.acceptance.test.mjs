@@ -100,3 +100,23 @@ test('discoverCacheRoots: prerelease identifiers compare numerically', () => {
   const roots = discoverCacheRoots({ homeDir: HOME, glob })
   assert.equal(roots[roots.length - 1], `${HOME}/.claude/plugins/cache/hash/skraft/1.6.0-hooks.10`)
 })
+
+test('resolvePluginRootFromEnv: CLAUDE_PLUGIN_ROOT wins over a generic PLUGIN_ROOT', () => {
+  const root = resolvePluginRootFromEnv({
+    env: { PLUGIN_ROOT: '/some/other/tool', CLAUDE_PLUGIN_ROOT: '/injected/skraft' },
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
+    homeDir: HOME,
+    glob: () => [],
+  })
+  assert.equal(root, '/injected/skraft')
+})
+
+test('resolvePluginRootFromEnv: PLUGIN_ROOT applies when CLAUDE_PLUGIN_ROOT is absent', () => {
+  const root = resolvePluginRootFromEnv({
+    env: { PLUGIN_ROOT: '/copilot/skraft' },
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
+    homeDir: HOME,
+    glob: () => [],
+  })
+  assert.equal(root, '/copilot/skraft')
+})

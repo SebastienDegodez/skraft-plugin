@@ -82,7 +82,7 @@ export const resolvePluginRootFromEnv = ({
 } = {}) => {
   const moduleRoot = moduleUrl ? fileURLToPath(new URL('../..', moduleUrl)) : undefined
   return resolvePluginRoot({
-    envRoot: env?.PLUGIN_ROOT ?? env?.CLAUDE_PLUGIN_ROOT,
+    envRoot: env?.CLAUDE_PLUGIN_ROOT || env?.PLUGIN_ROOT,
     cacheRoots: discoverCacheRoots({ homeDir, glob }),
     moduleRoot,
   })
