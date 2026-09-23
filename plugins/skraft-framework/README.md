@@ -43,8 +43,9 @@ identical discovery or hook behavior across Copilot CLI, VS Code, and Claude Cod
 This package declares the v1 schema and retains native compatibility manifests;
 see the measured scope and pending checks below.
 
-Codex and Cursor manifests expose the shared plugin skills. The complete guarded
-agent pipeline currently targets Claude Code and GitHub Copilot.
+A Codex manifest exposes the shared plugin skills. Cursor has a marketplace entry but no
+plugin manifest and no hooks in its format; it is unverified. The complete guarded agent
+pipeline targets Claude Code and GitHub Copilot.
 
 ## Run the engineering pipeline
 

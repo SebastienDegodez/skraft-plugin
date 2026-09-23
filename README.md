@@ -2,10 +2,10 @@
 
 # skraft
 
-**Deterministic agentic SDLC pipeline — DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER**
+**Deterministic agentic SDLC pipeline — backlog discovery and planning, then RESEARCH → DESIGN → DISTILL → DELIVER**
 
 Specialized agents, adversarial reviewers, discipline skills (Outside-In TDD, Clean Architecture)
-and mechanical guardrails (hooks) ported to **Claude Code**, **GitHub Copilot** and **Cursor**.
+and mechanical guardrails (hooks) for **Claude Code** and **GitHub Copilot**.
 
 [![skraft-framework CI](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/skraft-framework-ci.yml/badge.svg)](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/skraft-framework-ci.yml)
 [![Release](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/release.yml/badge.svg)](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/release.yml)
