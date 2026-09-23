@@ -68,6 +68,17 @@ test('commandMutatesProtectedArtifact flags removing, moving or overwriting trac
   }
 })
 
+test('commandMutatesProtectedArtifact finds the verb behind an assignment whose quoted value holds a space', () => {
+  for (const command of [
+    `MSG="close the phase" rm ${STATE}`,
+    `env REASON='manual fix' rm -f ${STATE}`,
+    `A="x y" B='z w' mv /tmp/forged.json ${STATE}`,
+  ]) {
+    assert.equal(commandMutatesProtectedArtifact(command), true, command)
+  }
+  assert.equal(commandMutatesProtectedArtifact(`MSG="read it" cat ${STATE}`), false)
+})
+
 test('commandMutatesProtectedArtifact reads quoted paths, relative targets and perl in-place edits', () => {
   for (const command of [
     `echo "{}" > "/Users/me/My Projects/${STATE}"`,

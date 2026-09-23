@@ -37,9 +37,10 @@ const segmentsOf = (command) =>
   command.split(/\|\||&&|;|\n|(?<![>&])&(?![>&])|(?<!>)\|/).map((s) => s.trim()).filter(Boolean)
 
 // Words of a simple command, quotes stripped, leading VAR=value assignments and
-// wrapper commands (sudo, env…) removed so the first word is the verb.
+// wrapper commands (sudo, env…) removed so the first word is the verb. A word joins
+// quoted and unquoted parts, as the shell does: VAR="a b" is one word.
 const wordsOf = (segment) => {
-  const words = (segment.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((w) => w.replace(/^["']|["']$/g, ''))
+  const words = (segment.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? []).map((w) => w.replace(/^["']|["']$/g, ''))
   let start = 0
   while (start < words.length && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[start]) || COMMAND_PREFIXES.has(words[start]))) start++
   return words.slice(start)
