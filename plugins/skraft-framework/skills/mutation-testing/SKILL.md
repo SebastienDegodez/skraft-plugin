@@ -27,7 +27,7 @@ reconstruct, or improvise runner commands here. Load `skraft-quality-bar`, then 
 
 ```
 1. Confirm ordinary tests are green
-2. Select full mode on `main`, or differential `--since <base-ref>` mode on PR; local diagnostic may add repeatable `--overlay <config>`
+2. Select differential `--since <DELIVER baseSha>` mode inside a TDD cycle (a checkpoint, never evidence), full mode once after the story's last work commit (the G6 evidence); local diagnostic may add repeatable `--overlay <config>`
 3. Adapter → validate durable configs, merge protected overlays, and run core gate
 4. Parse adapter-owned JSON report → extract survivors
 5. Decide: kill with a test, or suppress a proven equivalent narrowly
