@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -94,5 +94,50 @@ test('SKRAFT_PROJECT_SLUG overrides the recorded pointer; a malformed pointer is
 
     writeFileSync(join(root, '.active-slug'), '../../etc\n')
     assert.equal(hook(env, ['PreToolUse', 'Agent'], agentDispatch('software-engineer')), undefined, 'no valid slug: G1 stays out')
+  })
+})
+
+// ─── The hook runs where the harness says the session is ───────────────────────
+
+const inProject = (fn) => {
+  const project = mkdtempSync(join(tmpdir(), 'skraft-project-'))
+  const env = { ...process.env, SKRAFT_AUDIT_LOG: join(project, 'audit.jsonl'), SKRAFT_TRACKING_ROOT: '' }
+  delete env.SKRAFT_TRACKING_ROOT
+  delete env.SKRAFT_PROJECT_SLUG
+  try { fn({ project, env }) } finally { rmSync(project, { recursive: true, force: true }) }
+}
+
+test('the hook resolves the tracking root from the payload cwd, not its own working directory', () => {
+  inProject(({ project, env }) => {
+    execFileSync('node', [STATE_CLI, 'init', '--slug', 'checkout-pricing'], { cwd: project, env, stdio: 'ignore' })
+    const payload = { ...agentDispatch('software-engineer'), cwd: project }
+    const denied = hook(env, ['PreToolUse', 'Agent'], payload)
+    assert.equal(denied?.hookSpecificOutput?.permissionDecision, 'deny')
+  })
+})
+
+test('a corrupted state blocks a phase dispatch without leaving a snapshot per hook call', () => {
+  inProject(({ project, env }) => {
+    execFileSync('node', [STATE_CLI, 'init', '--slug', 'checkout-pricing'], { cwd: project, env, stdio: 'ignore' })
+    const dir = join(project, '.copilot-tracking', 'skraft-plans', 'checkout-pricing')
+    writeFileSync(join(dir, 'state.json'), '{ truncated')
+    const payload = { ...agentDispatch('solution-researcher'), cwd: project }
+    hook(env, ['PreToolUse', 'Agent'], payload)
+    const blocked = hook(env, ['PreToolUse', 'Agent'], payload)
+    assert.equal(blocked.hookSpecificOutput.permissionDecision, 'deny')
+    const snapshots = readdirSync(dir).filter((f) => f.includes('.corrupted.'))
+    assert.deepEqual(snapshots, [])
+  })
+})
+
+test('malformed stdin never crashes the hook', () => {
+  const out = execFileSync('node', [HOOK_CLI, 'PreToolUse', 'Bash'], { input: '{ not json', encoding: 'utf8', env: { ...process.env, SKRAFT_AUDIT_LOG: join(tmpdir(), 'skraft-malformed-audit.jsonl') } })
+  assert.equal(out, '')
+})
+
+test('a Bash tool call outside any pipeline writes no audit line', () => {
+  inProject(({ project, env }) => {
+    hook(env, ['PreToolUse', 'Bash'], { tool_name: 'Bash', tool_input: { command: 'ls' }, cwd: project })
+    assert.equal(existsSync(join(project, 'audit.jsonl')), false)
   })
 })

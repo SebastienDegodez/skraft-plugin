@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -125,6 +125,11 @@ for (const toolName of ['Write', 'Edit']) {
       const cwd = await mkdtemp(join(tmpdir(), 'skraft-native-guard-'))
       t.after(() => rm(cwd, { recursive: true, force: true }))
       const auditLog = join(cwd, 'audit.jsonl')
+      // An active pipeline, so the session guard has a phase to evaluate and audits it.
+      const trackingRoot = join(cwd, '.copilot-tracking', 'skraft-plans')
+      await mkdir(join(trackingRoot, projectSlug), { recursive: true })
+      await writeFile(join(trackingRoot, '.active-slug'), `${projectSlug}\n`)
+      await writeFile(join(trackingRoot, projectSlug, 'state.json'), JSON.stringify({ currentPhase: 'DESIGN' }))
       const filePath = protectedWrite
         ? join(cwd, '.copilot-tracking', 'skraft-plans', projectSlug, 'state.json')
         : join(cwd, 'src', 'ordinary.mjs')

@@ -60,7 +60,9 @@ export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, 
       return deny(protectedResult.error.reason)
     }
 
-    // G8 — workspace write must run inside the monitored DELIVER sub-agent.
+    // G8 — workspace write must run inside the monitored DELIVER sub-agent. Without an
+    // active pipeline there is no phase to guard, and nothing worth an audit line.
+    if (!projectSlug) return allow()
     let phase = null
     try {
       const raw = await stateReader.read(projectSlug)
