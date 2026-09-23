@@ -60,10 +60,19 @@ test('resolvePluginRootFromEnv: CLAUDE_PLUGIN_ROOT wins over cache + module', ()
   assert.equal(root, '/injected/skraft')
 })
 
-test('resolvePluginRootFromEnv: no env → newest cache match', () => {
+test('resolvePluginRootFromEnv: no env → the running module, never a stale installed copy', () => {
   const root = resolvePluginRootFromEnv({
     env: {},
     moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
+    homeDir: HOME,
+    glob: () => [cacheHook('1.1.0'), cacheHook('1.2.0')],
+  })
+  assert.equal(root, '/local/plugins/skraft-framework/')
+})
+
+test('resolvePluginRootFromEnv: no env and no module → newest cache match', () => {
+  const root = resolvePluginRootFromEnv({
+    env: {},
     homeDir: HOME,
     glob: () => [cacheHook('1.1.0'), cacheHook('1.2.0')],
   })

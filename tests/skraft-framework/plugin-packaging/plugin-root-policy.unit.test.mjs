@@ -42,29 +42,26 @@ test('resolvePluginRoot: trims whitespace around the env root', () => {
   assert.equal(resolvePluginRoot({ envRoot: '  /cache/x  ' }), '/cache/x')
 })
 
-test('resolvePluginRoot: blank env root falls through to the cache glob match', () => {
+test('resolvePluginRoot: blank env root falls through to the running module', () => {
   const root = resolvePluginRoot({
     envRoot: '   ',
     cacheRoots: ['/cache/a/skraft/1.0.0', '/cache/b/skraft/1.2.0'],
     moduleRoot: '/local/plugins',
   })
-  assert.equal(root, '/cache/b/skraft/1.2.0')
+  assert.equal(root, '/local/plugins')
 })
 
-test('resolvePluginRoot: picks the last (newest) cache root', () => {
+test('resolvePluginRoot: the running module wins over any installed copy', () => {
   const root = resolvePluginRoot({
-    cacheRoots: ['/cache/skraft/1.0.0', '/cache/skraft/1.1.0', '/cache/skraft/2.0.0'],
+    cacheRoots: ['/cache/skraft/1.0.0', '/cache/skraft/2.0.0'],
     moduleRoot: '/local/plugins',
   })
-  assert.equal(root, '/cache/skraft/2.0.0')
+  assert.equal(root, '/local/plugins')
 })
 
-test('resolvePluginRoot: ignores blank entries in cacheRoots', () => {
-  const root = resolvePluginRoot({
-    cacheRoots: ['', '   ', '/cache/skraft/1.0.0'],
-    moduleRoot: '/local/plugins',
-  })
-  assert.equal(root, '/cache/skraft/1.0.0')
+test('resolvePluginRoot: without a module root, picks the last (newest) non-blank cache root', () => {
+  assert.equal(resolvePluginRoot({ cacheRoots: ['/cache/skraft/1.0.0', '/cache/skraft/1.1.0', '/cache/skraft/2.0.0'] }), '/cache/skraft/2.0.0')
+  assert.equal(resolvePluginRoot({ cacheRoots: ['/cache/skraft/1.0.0', '', '   '], moduleRoot: '  ' }), '/cache/skraft/1.0.0')
 })
 
 test('resolvePluginRoot: no env and no cache match → module-relative fallback', () => {

@@ -3,8 +3,9 @@
 // The Claude Code harness injects CLAUDE_PLUGIN_ROOT = the installed plugin path.
 // When that env var is absent, the runtime resolves its own root deterministically:
 //   1. CLAUDE_PLUGIN_ROOT, then PLUGIN_ROOT (harness-injected) — authoritative.
-//   2. Cache glob match — `~/.claude/plugins/cache/*/skraft/*` discovered on disk.
-//   3. Module-relative root — where the running hook.mjs actually lives.
+//   2. Module-relative root — where the running code actually lives.
+//   3. Cache glob match — `~/.claude/plugins/cache/*/skraft/*`, only when the caller
+//      cannot name its own module (a stale install must never shadow the running code).
 // The IO (home dir, glob) is supplied by the caller so this stays pure & testable.
 
 // Glob suffix, relative to the user home dir, that locates an installed skraft
@@ -27,6 +28,7 @@ export const pluginCacheGlobPattern = (homeDir) => {
 //   moduleRoot  — final fallback: where the running module resolves to.
 export const resolvePluginRoot = ({ envRoot, cacheRoots = [], moduleRoot } = {}) => {
   if (isNonEmptyString(envRoot)) return envRoot.trim()
+  if (isNonEmptyString(moduleRoot)) return moduleRoot
   const valid = (Array.isArray(cacheRoots) ? cacheRoots : []).filter(isNonEmptyString)
   if (valid.length > 0) return valid[valid.length - 1]
   return moduleRoot
