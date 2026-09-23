@@ -87,6 +87,33 @@ test('eager mode inlines SKILL.md content alongside the directive', async () => 
   assert.ok(result.context.includes('content of bdd-methodology'))
 })
 
+test('eager mode puts each inlined SKILL.md in its own paragraph after the directive', async () => {
+  const skillFileReader = { read: async (name) => `# ${name}` }
+  const service = createSubagentStartService({ config: EAGER_CONFIG, skillFileReader, auditWriter: nullAuditWriter, clock })
+  const { context } = await service.handle({ agentName: 'acceptance-designer' })
+  const [directive, inlined, ...rest] = context.split('\n\n')
+  assert.match(directive, /^The following skills are MANDATORY: bdd-methodology, outside-in-tdd\. /)
+  assert.equal(inlined, '# bdd-methodology')
+  assert.deepEqual(rest, [])
+})
+
+test('eager mode records an unreadable SKILL.md with the reader error and the clock time', async () => {
+  const failing = (thrown) => ({ read: async () => { throw thrown } })
+  for (const [thrown, reason] of [[new Error('EACCES: permission denied'), 'EACCES: permission denied'], [undefined, 'unknown']]) {
+    const audit = collectingWriter()
+    const service = createSubagentStartService({ config: EAGER_CONFIG, skillFileReader: failing(thrown), auditWriter: audit, clock })
+    await service.handle({ agentName: 'acceptance-designer' })
+    assert.deepEqual(audit.entries, [{
+      eventType: 'EagerReadFailed', agentName: 'acceptance-designer', skillName: 'bdd-methodology', decision: 'WARN', reason, timestamp: FIXED_NOW,
+    }])
+  }
+  const audit = collectingWriter()
+  const brokenClock = { now: () => { throw new Error('no clock') } }
+  await createSubagentStartService({ config: EAGER_CONFIG, skillFileReader: nullSkillFileReader, auditWriter: audit, clock: brokenClock })
+    .handle({ agentName: 'acceptance-designer' })
+  assert.match(audit.entries[0].timestamp, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+})
+
 test('eager mode reads only skills with policy eager, not verify-policy skills', async () => {
   // Kills MethodExpression mutant: filter(isEagerSkill) → skillEntries (reads all skills eagerly)
   // Also kills ConditionalExpression mutant: isEagerSkill → true
