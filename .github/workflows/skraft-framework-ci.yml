@@ -79,6 +79,25 @@ jobs:
             --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=93 \
             "tests/skraft-framework/**/*.test.mjs"
 
+  test-windows:
+    name: Tests (Windows, not yet blocking)
+    runs-on: windows-latest
+    # The hooks run on Windows machines, but the suite has never run there: this job
+    # reports what breaks without blocking a merge. Drop continue-on-error once green.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run tests
+        shell: bash
+        run: node --test "tests/skraft-framework/**/*.test.mjs"
+
   model-policy:
     name: Agent model policy (B12)
     runs-on: ubuntu-latest
