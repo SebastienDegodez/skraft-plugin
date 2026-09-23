@@ -25,7 +25,7 @@ const writerOk = () => {
 const writerFail = () => ({ write: async () => Err({ code: 'IO_ERROR', reason: 'disk full' }) })
 
 const DEFAULT_PIPELINE = {
-  currentPhase: 'DISCOVER',
+  currentPhase: 'RESEARCH',
   phasesCompleted: [],
   verdicts: {},
   retryCount: {},
@@ -41,10 +41,10 @@ test('state-service init: creates default state on ENOENT, returns created=true'
   const r = await svc.init('my-slug')
   assert.equal(r.ok, true)
   assert.equal(r.value.created, true)
-  assert.equal(r.value.currentPhase, 'DISCOVER')
+  assert.equal(r.value.currentPhase, 'RESEARCH')
   assert.deepEqual(r.value.phasesCompleted, [], 'default phasesCompleted must be []')
   assert.equal(r.value.userPreferences.maxRetriesPerPhase, 2, 'default maxRetriesPerPhase must be 2')
-  assert.equal(writer._written['my-slug'].currentPhase, 'DISCOVER')
+  assert.equal(writer._written['my-slug'].currentPhase, 'RESEARCH')
 })
 
 test('state-service init: fresh default carries the full documented field set', async () => {
@@ -67,12 +67,12 @@ test('state-service init: fresh default carries the full documented field set', 
 })
 
 test('state-service init: returns created=false when state exists', async () => {
-  const existing = { ...DEFAULT_PIPELINE, currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }
+  const existing = { ...DEFAULT_PIPELINE, currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] }
   const svc = createStateService({ stateReader: readerOk(existing), stateWriter: writerOk() })
   const r = await svc.init('slug')
   assert.equal(r.ok, true)
   assert.equal(r.value.created, false)
-  assert.equal(r.value.currentPhase, 'DISCUSS')
+  assert.equal(r.value.currentPhase, 'DESIGN')
 })
 
 test('state-service init: propagates CORRUPTED_STATE from reader', async () => {
@@ -106,12 +106,12 @@ test('state-service init: returns CORRUPTED_STATE when state fails validatePipel
 // ─── applyEvent ───────────────────────────────────────────────────────────────
 test('state-service applyEvent: applies RECORD_VERDICT and writes result', async () => {
   const writer = writerOk()
-  const state = { ...DEFAULT_PIPELINE, currentPhase: 'DISCOVER' }
+  const state = { ...DEFAULT_PIPELINE, currentPhase: 'RESEARCH' }
   const svc = createStateService({ stateReader: readerOk(state), stateWriter: writer })
-  const r = await svc.applyEvent('slug', { type: 'RECORD_VERDICT', phase: 'DISCOVER', verdict: 'APPROVED' })
+  const r = await svc.applyEvent('slug', { type: 'RECORD_VERDICT', phase: 'RESEARCH', verdict: 'APPROVED' })
   assert.equal(r.ok, true)
-  assert.equal(r.value.verdicts.DISCOVER, 'APPROVED')
-  assert.equal(writer._written['slug'].verdicts.DISCOVER, 'APPROVED')
+  assert.equal(r.value.verdicts.RESEARCH, 'APPROVED')
+  assert.equal(writer._written['slug'].verdicts.RESEARCH, 'APPROVED')
 })
 
 test('state-service applyEvent: auto-init on ENOENT then replays event', async () => {
@@ -124,9 +124,9 @@ test('state-service applyEvent: auto-init on ENOENT then replays event', async (
   }
   const writer = writerOk()
   const svc = createStateService({ stateReader: reader, stateWriter: writer })
-  const r = await svc.applyEvent('slug', { type: 'RECORD_VERDICT', phase: 'DISCOVER', verdict: 'APPROVED' })
+  const r = await svc.applyEvent('slug', { type: 'RECORD_VERDICT', phase: 'RESEARCH', verdict: 'APPROVED' })
   assert.equal(r.ok, true)
-  assert.equal(r.value.verdicts.DISCOVER, 'APPROVED')
+  assert.equal(r.value.verdicts.RESEARCH, 'APPROVED')
 })
 
 test('state-service applyEvent: propagates CORRUPTED_STATE from reader', async () => {
@@ -145,18 +145,18 @@ test('state-service applyEvent: propagates IO_ERROR from reader', async () => {
 
 test('state-service applyEvent: propagates domain error (VERDICT_NOT_APPROVED) without writing', async () => {
   const writer = writerOk()
-  const state = { ...DEFAULT_PIPELINE, currentPhase: 'DISCOVER', verdicts: {} }
+  const state = { ...DEFAULT_PIPELINE, currentPhase: 'RESEARCH', verdicts: {} }
   const svc = createStateService({ stateReader: readerOk(state), stateWriter: writer })
-  const r = await svc.applyEvent('slug', { type: 'ADVANCE', targetPhase: 'DISCUSS' })
+  const r = await svc.applyEvent('slug', { type: 'ADVANCE', targetPhase: 'DESIGN' })
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'VERDICT_NOT_APPROVED')
   assert.equal(writer._written['slug'], undefined, 'must not write on domain error')
 })
 
 test('state-service applyEvent: propagates write failure after successful transition', async () => {
-  const state = { ...DEFAULT_PIPELINE, currentPhase: 'DISCOVER', verdicts: { DISCOVER: 'APPROVED' } }
+  const state = { ...DEFAULT_PIPELINE, currentPhase: 'RESEARCH', verdicts: { RESEARCH: 'APPROVED' } }
   const svc = createStateService({ stateReader: readerOk(state), stateWriter: writerFail() })
-  const r = await svc.applyEvent('slug', { type: 'ADVANCE', targetPhase: 'DISCUSS' })
+  const r = await svc.applyEvent('slug', { type: 'ADVANCE', targetPhase: 'DESIGN' })
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'IO_ERROR')
 })
@@ -183,7 +183,7 @@ test('state-service applyEvent: ENOENT auto-init write failure returns early (do
     _written: written,
   }
   const svc = createStateService({ stateReader: readerEnoent(), stateWriter: firstFailWriter })
-  const r = await svc.applyEvent('slug', { type: 'RECORD_VERDICT', phase: 'DISCOVER', verdict: 'APPROVED' })
+  const r = await svc.applyEvent('slug', { type: 'RECORD_VERDICT', phase: 'RESEARCH', verdict: 'APPROVED' })
   assert.equal(r.ok, false, 'must return Err when init write fails')
   assert.equal(firstFailWriter._written['slug'], undefined, 'must not attempt event write when init write fails')
 })
@@ -231,4 +231,20 @@ test('state-service get: propagates ENOENT from reader', async () => {
   const r = await svc.get('slug', 'currentPhase')
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'ENOENT')
+})
+
+test('state-service init: a fresh pipeline opens the first phase of the published order', async () => {
+  const writer = writerOk()
+  const svc = createStateService({ stateReader: readerEnoent(), stateWriter: writer, phaseOrder: ['ALPHA', 'OMEGA'] })
+  const r = await svc.init('slug')
+  assert.equal(r.value.currentPhase, 'ALPHA')
+})
+
+test('state-service applyEvent: transitions follow the published phase order', async () => {
+  const state = { ...DEFAULT_PIPELINE, currentPhase: 'ALPHA', verdicts: { ALPHA: 'APPROVED' } }
+  const writer = writerOk()
+  const svc = createStateService({ stateReader: readerOk(state), stateWriter: writer, phaseOrder: ['ALPHA', 'OMEGA'] })
+  const r = await svc.applyEvent('slug', { type: 'ADVANCE', targetPhase: 'OMEGA' })
+  assert.equal(r.ok, true)
+  assert.equal(r.value.currentPhase, 'OMEGA')
 })

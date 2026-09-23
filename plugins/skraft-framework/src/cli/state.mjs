@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
 import { createJsonStateBackupReader } from '../adapters/infrastructure/state/json-state-backup-reader.mjs'
@@ -15,7 +17,22 @@ const basePath = resolveTrackingRoot()
 const stateReader = createJsonStateReader(basePath)
 const stateWriter = createJsonStateWriter(basePath)
 const backupReader = createJsonStateBackupReader(basePath)
-const service = createStateService({ stateReader, stateWriter })
+// Phase order: skraft-framework.config.json beside this runtime (SKRAFT_CONFIG overrides).
+// An unreadable config leaves the state machine on its own default order.
+const readPhaseOrder = () => {
+  const configPath = process.env.SKRAFT_CONFIG
+    ?? fileURLToPath(new URL('../../skraft-framework.config.json', import.meta.url))
+  try {
+    const { phaseOrder } = JSON.parse(readFileSync(configPath, 'utf8'))
+    const valid = Array.isArray(phaseOrder) && phaseOrder.length > 0
+      && phaseOrder.every((phase) => typeof phase === 'string' && phase.length > 0)
+    return valid ? phaseOrder : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const service = createStateService({ stateReader, stateWriter, phaseOrder: readPhaseOrder() })
 const recoveryService = createRecoveryService({ stateReader, stateWriter, backupReader, stateService: service })
 const commitScanService = createCommitScanService({
   commitLogReader: createGitCommitLogReader({ cwd: process.cwd() })

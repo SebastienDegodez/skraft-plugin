@@ -2,14 +2,16 @@ import { Ok, Err, isOk } from './result.mjs'
 import { validatePipelineState } from './state-schema.mjs'
 import { nextPhaseAfter } from './pipeline-policy.mjs'
 
-// Default phase order — matches skraft-framework.config.json (no IO, derived constant).
-const PHASE_ORDER = ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']
+// Fallback phase order when the caller supplies none. The published order lives in
+// skraft-framework.config.json::phaseOrder and is injected by the application layer.
+export const DEFAULT_PHASE_ORDER = Object.freeze(['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
 
 // Pure domain state machine. No IO. No side effects.
 // @param {object} currentState — raw state (will be validated+coerced)
 // @param {object} event        — typed event (see contracts-state-transition-bridge.md)
+// @param {object} context      — { phaseOrder } published by the framework config
 // @returns {Result<FrozenState>}
-export const applyTransition = (currentState, event) => {
+export const applyTransition = (currentState, event, { phaseOrder: publishedOrder } = {}) => {
   const validation = validatePipelineState(currentState)
   if (!isOk(validation)) {
     return Err({ code: 'INVALID_STATE', reason: validation.error.reason })
@@ -23,7 +25,7 @@ export const applyTransition = (currentState, event) => {
   }
 
   const maxRetries = state.userPreferences?.maxRetriesPerPhase ?? 2
-  const phaseOrder = state.userPreferences?.phaseOrder ?? PHASE_ORDER
+  const phaseOrder = state.userPreferences?.phaseOrder ?? publishedOrder ?? DEFAULT_PHASE_ORDER
 
   switch (event.type) {
     case 'ADVANCE': {

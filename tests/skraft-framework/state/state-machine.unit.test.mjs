@@ -4,7 +4,7 @@ import { applyTransition } from '../../../plugins/skraft-framework/src/domain/st
 
 // Minimal valid pipeline state builder
 const mkState = (overrides = {}) => ({
-  currentPhase: 'DISCOVER',
+  currentPhase: 'RESEARCH',
   phasesCompleted: [],
   verdicts: {},
   retryCount: {},
@@ -16,7 +16,7 @@ const mkState = (overrides = {}) => ({
 
 // ─── INVALID_STATE ────────────────────────────────────────────────────────────
 test('state-machine: INVALID_STATE when input is null', () => {
-  const r = applyTransition(null, { type: 'ADVANCE', targetPhase: 'DISCUSS' })
+  const r = applyTransition(null, { type: 'ADVANCE', targetPhase: 'DESIGN' })
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'INVALID_STATE')
 })
@@ -37,7 +37,7 @@ test('state-machine: INVALID_STATE for unknown event type', () => {
 // ─── TERMINAL_STATE ───────────────────────────────────────────────────────────
 test('state-machine: TERMINAL_STATE on any event when currentPhase is DONE', () => {
   for (const type of ['ADVANCE', 'RECORD_VERDICT', 'RECORD_ARTIFACT', 'INCR_RETRY', 'INCR_REWORK', 'CLOSE_PHASE']) {
-    const r = applyTransition(mkState({ currentPhase: 'DONE' }), { type, targetPhase: 'DISCOVER', phase: 'X', verdict: 'APPROVED', value: 'easy', path: 'p' })
+    const r = applyTransition(mkState({ currentPhase: 'DONE' }), { type, targetPhase: 'RESEARCH', phase: 'X', verdict: 'APPROVED', value: 'easy', path: 'p' })
     assert.equal(r.ok, false, `${type} must be rejected`)
     assert.equal(r.error.code, 'TERMINAL_STATE', `${type} must yield TERMINAL_STATE`)
     assert.ok(r.error.reason.length > 0, `TERMINAL_STATE reason must not be empty for ${type}`)
@@ -46,54 +46,45 @@ test('state-machine: TERMINAL_STATE on any event when currentPhase is DONE', () 
 
 // ─── ADVANCE ──────────────────────────────────────────────────────────────────
 test('state-machine ADVANCE: VERDICT_NOT_APPROVED when no verdict for currentPhase', () => {
-  const r = applyTransition(mkState(), { type: 'ADVANCE', targetPhase: 'DISCUSS' })
+  const r = applyTransition(mkState(), { type: 'ADVANCE', targetPhase: 'DESIGN' })
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'VERDICT_NOT_APPROVED')
 })
 
 test('state-machine ADVANCE: VERDICT_NOT_APPROVED when verdict is CHANGES_REQUESTED', () => {
   const r = applyTransition(
-    mkState({ verdicts: { DISCOVER: 'CHANGES_REQUESTED' } }),
-    { type: 'ADVANCE', targetPhase: 'DISCUSS' }
-  )
-  assert.equal(r.ok, false)
-  assert.equal(r.error.code, 'VERDICT_NOT_APPROVED')
-  assert.ok(r.error.reason.includes('DISCOVER'), `reason must name the phase: ${r.error.reason}`)
-})
-
-test('state-machine ADVANCE: ILLEGAL_PHASE_SKIP (DISCOVER → DESIGN, expects DISCUSS)', () => {
-  const r = applyTransition(
-    mkState({ verdicts: { DISCOVER: 'APPROVED' } }),
+    mkState({ verdicts: { RESEARCH: 'CHANGES_REQUESTED' } }),
     { type: 'ADVANCE', targetPhase: 'DESIGN' }
   )
   assert.equal(r.ok, false)
-  assert.equal(r.error.code, 'ILLEGAL_PHASE_SKIP')
-  assert.ok(r.error.reason.includes('expected DISCUSS'), `reason: ${r.error.reason}`)
-  assert.ok(r.error.reason.includes('got DESIGN'), `reason: ${r.error.reason}`)
+  assert.equal(r.error.code, 'VERDICT_NOT_APPROVED')
+  assert.ok(r.error.reason.includes('RESEARCH'), `reason must name the phase: ${r.error.reason}`)
 })
 
-test('state-machine ADVANCE: DISCOVER → DISCUSS sets currentPhase and appends phasesCompleted', () => {
+test('state-machine ADVANCE: ILLEGAL_PHASE_SKIP (RESEARCH → DISTILL, expects DESIGN)', () => {
   const r = applyTransition(
-    mkState({ verdicts: { DISCOVER: 'APPROVED' } }),
-    { type: 'ADVANCE', targetPhase: 'DISCUSS' }
+    mkState({ verdicts: { RESEARCH: 'APPROVED' } }),
+    { type: 'ADVANCE', targetPhase: 'DISTILL' }
   )
-  assert.equal(r.ok, true)
-  assert.equal(r.value.currentPhase, 'DISCUSS')
-  assert.deepEqual([...r.value.phasesCompleted], ['DISCOVER'])
+  assert.equal(r.ok, false)
+  assert.equal(r.error.code, 'ILLEGAL_PHASE_SKIP')
+  assert.ok(r.error.reason.includes('expected DESIGN'), `reason: ${r.error.reason}`)
+  assert.ok(r.error.reason.includes('got DISTILL'), `reason: ${r.error.reason}`)
 })
 
-test('state-machine ADVANCE: DISCUSS → DESIGN (covers DESIGN in PHASE_ORDER)', () => {
+test('state-machine ADVANCE: RESEARCH → DESIGN sets currentPhase and appends phasesCompleted', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'], verdicts: { DISCUSS: 'APPROVED' } }),
+    mkState({ verdicts: { RESEARCH: 'APPROVED' } }),
     { type: 'ADVANCE', targetPhase: 'DESIGN' }
   )
   assert.equal(r.ok, true)
   assert.equal(r.value.currentPhase, 'DESIGN')
+  assert.deepEqual([...r.value.phasesCompleted], ['RESEARCH'])
 })
 
 test('state-machine ADVANCE: DESIGN → DISTILL (covers DISTILL in PHASE_ORDER)', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DESIGN', phasesCompleted: ['DISCOVER', 'DISCUSS'], verdicts: { DESIGN: 'APPROVED' } }),
+    mkState({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'], verdicts: { DESIGN: 'APPROVED' } }),
     { type: 'ADVANCE', targetPhase: 'DISTILL' }
   )
   assert.equal(r.ok, true)
@@ -102,7 +93,7 @@ test('state-machine ADVANCE: DESIGN → DISTILL (covers DISTILL in PHASE_ORDER)'
 
 test('state-machine ADVANCE: DISTILL → DELIVER (covers DELIVER in PHASE_ORDER)', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISTILL', phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN'], verdicts: { DISTILL: 'APPROVED' } }),
+    mkState({ currentPhase: 'DISTILL', phasesCompleted: ['RESEARCH', 'DESIGN'], verdicts: { DISTILL: 'APPROVED' } }),
     { type: 'ADVANCE', targetPhase: 'DELIVER' }
   )
   assert.equal(r.ok, true)
@@ -113,7 +104,7 @@ test('state-machine ADVANCE: DELIVER → DONE (last phase → terminal state)', 
   const r = applyTransition(
     mkState({
       currentPhase: 'DELIVER',
-      phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL'],
+      phasesCompleted: ['RESEARCH', 'DESIGN', 'DISTILL'],
       verdicts: { DELIVER: 'APPROVED' },
     }),
     { type: 'ADVANCE', targetPhase: 'DONE' }
@@ -139,46 +130,46 @@ test('state-machine ADVANCE: uses custom phaseOrder from userPreferences', () =>
 // ─── RECORD_VERDICT ───────────────────────────────────────────────────────────
 test('state-machine RECORD_VERDICT: sets verdict without advancing currentPhase', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }),
-    { type: 'RECORD_VERDICT', phase: 'DISCUSS', verdict: 'APPROVED' }
+    mkState({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] }),
+    { type: 'RECORD_VERDICT', phase: 'DESIGN', verdict: 'APPROVED' }
   )
   assert.equal(r.ok, true)
-  assert.equal(r.value.verdicts.DISCUSS, 'APPROVED')
-  assert.equal(r.value.currentPhase, 'DISCUSS')
+  assert.equal(r.value.verdicts.DESIGN, 'APPROVED')
+  assert.equal(r.value.currentPhase, 'DESIGN')
 })
 
 test('state-machine RECORD_VERDICT: sets CHANGES_REQUESTED verdict', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCOVER' }),
-    { type: 'RECORD_VERDICT', phase: 'DISCOVER', verdict: 'CHANGES_REQUESTED' }
+    mkState({ currentPhase: 'RESEARCH' }),
+    { type: 'RECORD_VERDICT', phase: 'RESEARCH', verdict: 'CHANGES_REQUESTED' }
   )
   assert.equal(r.ok, true)
-  assert.equal(r.value.verdicts.DISCOVER, 'CHANGES_REQUESTED')
+  assert.equal(r.value.verdicts.RESEARCH, 'CHANGES_REQUESTED')
 })
 
 // ─── RECORD_ARTIFACT ──────────────────────────────────────────────────────────
 test('state-machine RECORD_ARTIFACT: appends to empty phaseArtifacts[phase]', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS' }),
-    { type: 'RECORD_ARTIFACT', phase: 'DISCUSS', path: 'plans/story.md' }
+    mkState({ currentPhase: 'DESIGN' }),
+    { type: 'RECORD_ARTIFACT', phase: 'DESIGN', path: 'plans/story.md' }
   )
   assert.equal(r.ok, true)
-  assert.deepEqual([...r.value.phaseArtifacts.DISCUSS], ['plans/story.md'])
+  assert.deepEqual([...r.value.phaseArtifacts.DESIGN], ['plans/story.md'])
 })
 
 test('state-machine RECORD_ARTIFACT: appends to existing phaseArtifacts[phase]', () => {
   const r = applyTransition(
-    mkState({ phaseArtifacts: { DISCUSS: ['plans/story.md'] } }),
-    { type: 'RECORD_ARTIFACT', phase: 'DISCUSS', path: 'plans/ac.md' }
+    mkState({ phaseArtifacts: { DESIGN: ['plans/story.md'] } }),
+    { type: 'RECORD_ARTIFACT', phase: 'DESIGN', path: 'plans/ac.md' }
   )
   assert.equal(r.ok, true)
-  assert.deepEqual([...r.value.phaseArtifacts.DISCUSS], ['plans/story.md', 'plans/ac.md'])
+  assert.deepEqual([...r.value.phaseArtifacts.DESIGN], ['plans/story.md', 'plans/ac.md'])
 })
 
 test('state-machine RECORD_ARTIFACT: APPEND_ONLY_VIOLATION when _testForcePhasesCompleted is shorter', () => {
   const r = applyTransition(
-    mkState({ phasesCompleted: ['DISCOVER', 'DISCUSS'] }),
-    { type: 'RECORD_ARTIFACT', phase: 'DISCUSS', path: 'p.md', _testForcePhasesCompleted: ['DISCOVER'] }
+    mkState({ phasesCompleted: ['RESEARCH', 'DESIGN'] }),
+    { type: 'RECORD_ARTIFACT', phase: 'DESIGN', path: 'p.md', _testForcePhasesCompleted: ['RESEARCH'] }
   )
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'APPEND_ONLY_VIOLATION')
@@ -187,8 +178,8 @@ test('state-machine RECORD_ARTIFACT: APPEND_ONLY_VIOLATION when _testForcePhases
 
 test('state-machine RECORD_ARTIFACT: _testForcePhasesCompleted equal length does NOT reject', () => {
   const r = applyTransition(
-    mkState({ phasesCompleted: ['DISCOVER', 'DISCUSS'] }),
-    { type: 'RECORD_ARTIFACT', phase: 'DISCUSS', path: 'p.md', _testForcePhasesCompleted: ['DISCOVER', 'DISCUSS'] }
+    mkState({ phasesCompleted: ['RESEARCH', 'DESIGN'] }),
+    { type: 'RECORD_ARTIFACT', phase: 'DESIGN', path: 'p.md', _testForcePhasesCompleted: ['RESEARCH', 'DESIGN'] }
   )
   assert.equal(r.ok, true)
 })
@@ -196,17 +187,17 @@ test('state-machine RECORD_ARTIFACT: _testForcePhasesCompleted equal length does
 // ─── RECORD_REVIEW_ARTIFACT ───────────────────────────────────────────────────
 test('state-machine RECORD_REVIEW_ARTIFACT: appends to empty reviewArtifacts[phase]', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCOVER' }),
-    { type: 'RECORD_REVIEW_ARTIFACT', phase: 'DISCOVER', path: 'reviews/r1.md' }
+    mkState({ currentPhase: 'RESEARCH' }),
+    { type: 'RECORD_REVIEW_ARTIFACT', phase: 'RESEARCH', path: 'reviews/r1.md' }
   )
   assert.equal(r.ok, true)
-  assert.deepEqual([...r.value.reviewArtifacts.DISCOVER], ['reviews/r1.md'])
+  assert.deepEqual([...r.value.reviewArtifacts.RESEARCH], ['reviews/r1.md'])
 })
 
 test('state-machine RECORD_REVIEW_ARTIFACT: APPEND_ONLY_VIOLATION when _testForceReviewArtifacts is shorter', () => {
   const r = applyTransition(
-    mkState({ reviewArtifacts: { DISCOVER: ['r1.md'] } }),
-    { type: 'RECORD_REVIEW_ARTIFACT', phase: 'DISCOVER', path: 'r2.md', _testForceReviewArtifacts: [] }
+    mkState({ reviewArtifacts: { RESEARCH: ['r1.md'] } }),
+    { type: 'RECORD_REVIEW_ARTIFACT', phase: 'RESEARCH', path: 'r2.md', _testForceReviewArtifacts: [] }
   )
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'APPEND_ONLY_VIOLATION')
@@ -214,8 +205,8 @@ test('state-machine RECORD_REVIEW_ARTIFACT: APPEND_ONLY_VIOLATION when _testForc
 
 test('state-machine RECORD_REVIEW_ARTIFACT: _testForceReviewArtifacts equal length does NOT reject', () => {
   const r = applyTransition(
-    mkState({ reviewArtifacts: { DISCOVER: ['r1.md'] } }),
-    { type: 'RECORD_REVIEW_ARTIFACT', phase: 'DISCOVER', path: 'r2.md', _testForceReviewArtifacts: ['r1.md'] }
+    mkState({ reviewArtifacts: { RESEARCH: ['r1.md'] } }),
+    { type: 'RECORD_REVIEW_ARTIFACT', phase: 'RESEARCH', path: 'r2.md', _testForceReviewArtifacts: ['r1.md'] }
   )
   assert.equal(r.ok, true)
 })
@@ -223,19 +214,19 @@ test('state-machine RECORD_REVIEW_ARTIFACT: _testForceReviewArtifacts equal leng
 // ─── CLOSE_PHASE ──────────────────────────────────────────────────────────────
 test('state-machine CLOSE_PHASE: records verdict, appends review artifact, and advances in one write', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }),
-    { type: 'CLOSE_PHASE', phase: 'DISCUSS', verdict: 'APPROVED', path: 'reviews/manual-close.md' }
+    mkState({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] }),
+    { type: 'CLOSE_PHASE', phase: 'DESIGN', verdict: 'APPROVED', path: 'reviews/manual-close.md' }
   )
   assert.equal(r.ok, true)
-  assert.equal(r.value.verdicts.DISCUSS, 'APPROVED')
-  assert.deepEqual([...r.value.reviewArtifacts.DISCUSS], ['reviews/manual-close.md'])
-  assert.equal(r.value.currentPhase, 'DESIGN')
-  assert.deepEqual([...r.value.phasesCompleted], ['DISCOVER', 'DISCUSS'])
+  assert.equal(r.value.verdicts.DESIGN, 'APPROVED')
+  assert.deepEqual([...r.value.reviewArtifacts.DESIGN], ['reviews/manual-close.md'])
+  assert.equal(r.value.currentPhase, 'DISTILL')
+  assert.deepEqual([...r.value.phasesCompleted], ['RESEARCH', 'DESIGN'])
 })
 
 test('state-machine CLOSE_PHASE: DELIVER closure advances to DONE', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DELIVER', phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL'] }),
+    mkState({ currentPhase: 'DELIVER', phasesCompleted: ['RESEARCH', 'DESIGN', 'DISTILL'] }),
     { type: 'CLOSE_PHASE', phase: 'DELIVER', verdict: 'APPROVED', path: 'reviews/manual-close.md' }
   )
   assert.equal(r.ok, true)
@@ -244,28 +235,28 @@ test('state-machine CLOSE_PHASE: DELIVER closure advances to DONE', () => {
 
 test('state-machine CLOSE_PHASE: omitted path skips the review artifact append', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }),
-    { type: 'CLOSE_PHASE', phase: 'DISCUSS', verdict: 'APPROVED' }
+    mkState({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] }),
+    { type: 'CLOSE_PHASE', phase: 'DESIGN', verdict: 'APPROVED' }
   )
   assert.equal(r.ok, true)
   assert.deepEqual(r.value.reviewArtifacts, {})
-  assert.equal(r.value.currentPhase, 'DESIGN')
+  assert.equal(r.value.currentPhase, 'DISTILL')
 })
 
 test('state-machine CLOSE_PHASE: PHASE_MISMATCH when phase differs from currentPhase', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS' }),
-    { type: 'CLOSE_PHASE', phase: 'DESIGN', verdict: 'APPROVED', path: 'reviews/manual-close.md' }
+    mkState({ currentPhase: 'DESIGN' }),
+    { type: 'CLOSE_PHASE', phase: 'DISTILL', verdict: 'APPROVED', path: 'reviews/manual-close.md' }
   )
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'PHASE_MISMATCH')
-  assert.ok(r.error.reason.includes('DESIGN') && r.error.reason.includes('DISCUSS'), `reason: ${r.error.reason}`)
+  assert.ok(r.error.reason.includes('DISTILL') && r.error.reason.includes('DESIGN'), `reason: ${r.error.reason}`)
 })
 
 test('state-machine CLOSE_PHASE: VERDICT_NOT_APPROVED when verdict is not APPROVED', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS' }),
-    { type: 'CLOSE_PHASE', phase: 'DISCUSS', verdict: 'CHANGES_REQUESTED', path: 'reviews/manual-close.md' }
+    mkState({ currentPhase: 'DESIGN' }),
+    { type: 'CLOSE_PHASE', phase: 'DESIGN', verdict: 'CHANGES_REQUESTED', path: 'reviews/manual-close.md' }
   )
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'VERDICT_NOT_APPROVED')
@@ -275,43 +266,43 @@ test('state-machine CLOSE_PHASE: VERDICT_NOT_APPROVED when verdict is not APPROV
 // ─── INCR_RETRY ───────────────────────────────────────────────────────────────
 test('state-machine INCR_RETRY: increments retryCount from zero', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS' }),
-    { type: 'INCR_RETRY', phase: 'DISCUSS' }
+    mkState({ currentPhase: 'DESIGN' }),
+    { type: 'INCR_RETRY', phase: 'DESIGN' }
   )
   assert.equal(r.ok, true)
-  assert.equal(r.value.retryCount.DISCUSS, 1)
+  assert.equal(r.value.retryCount.DESIGN, 1)
 })
 
 test('state-machine INCR_RETRY: increments retryCount from 1', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS', retryCount: { DISCUSS: 1 } }),
-    { type: 'INCR_RETRY', phase: 'DISCUSS' }
+    mkState({ currentPhase: 'DESIGN', retryCount: { DESIGN: 1 } }),
+    { type: 'INCR_RETRY', phase: 'DESIGN' }
   )
   assert.equal(r.ok, true)
-  assert.equal(r.value.retryCount.DISCUSS, 2)
+  assert.equal(r.value.retryCount.DESIGN, 2)
 })
 
 test('state-machine INCR_RETRY: RETRY_EXHAUSTED at ceiling (maxRetriesPerPhase=2)', () => {
   const r = applyTransition(
-    mkState({ currentPhase: 'DISCUSS', retryCount: { DISCUSS: 2 } }),
-    { type: 'INCR_RETRY', phase: 'DISCUSS' }
+    mkState({ currentPhase: 'DESIGN', retryCount: { DESIGN: 2 } }),
+    { type: 'INCR_RETRY', phase: 'DESIGN' }
   )
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'RETRY_EXHAUSTED')
-  assert.ok(r.error.reason.includes('DISCUSS'), `reason must name the phase: ${r.error.reason}`)
+  assert.ok(r.error.reason.includes('DESIGN'), `reason must name the phase: ${r.error.reason}`)
 })
 
 test('state-machine INCR_RETRY: uses default maxRetries=2 when userPreferences absent', () => {
   const s = {
-    currentPhase: 'DISCOVER',
+    currentPhase: 'RESEARCH',
     phasesCompleted: [],
     verdicts: {},
-    retryCount: { DISCOVER: 2 },
+    retryCount: { RESEARCH: 2 },
     phaseArtifacts: {},
     reviewArtifacts: {},
     // no userPreferences
   }
-  const r = applyTransition(s, { type: 'INCR_RETRY', phase: 'DISCOVER' })
+  const r = applyTransition(s, { type: 'INCR_RETRY', phase: 'RESEARCH' })
   assert.equal(r.ok, false)
   assert.equal(r.error.code, 'RETRY_EXHAUSTED')
 })
@@ -376,24 +367,24 @@ const assertRichPreserved = (value) => {
 }
 
 test('passthrough: RECORD_VERDICT preserves orchestrator-owned fields', () => {
-  const r = applyTransition(mkRichState(), { type: 'RECORD_VERDICT', phase: 'DISCOVER', verdict: 'APPROVED' })
+  const r = applyTransition(mkRichState(), { type: 'RECORD_VERDICT', phase: 'RESEARCH', verdict: 'APPROVED' })
   assert.equal(r.ok, true)
   assertRichPreserved(r.value)
-  assert.equal(r.value.verdicts.DISCOVER, 'APPROVED')
+  assert.equal(r.value.verdicts.RESEARCH, 'APPROVED')
 })
 
 test('passthrough: ADVANCE preserves orchestrator-owned fields', () => {
-  const r = applyTransition(mkRichState({ verdicts: { DISCOVER: 'APPROVED' } }), { type: 'ADVANCE', targetPhase: 'DISCUSS' })
+  const r = applyTransition(mkRichState({ verdicts: { RESEARCH: 'APPROVED' } }), { type: 'ADVANCE', targetPhase: 'DESIGN' })
   assert.equal(r.ok, true)
   assertRichPreserved(r.value)
-  assert.equal(r.value.currentPhase, 'DISCUSS')
+  assert.equal(r.value.currentPhase, 'DESIGN')
 })
 
 test('passthrough: INCR_RETRY preserves orchestrator-owned fields', () => {
-  const r = applyTransition(mkRichState(), { type: 'INCR_RETRY', phase: 'DISCOVER' })
+  const r = applyTransition(mkRichState(), { type: 'INCR_RETRY', phase: 'RESEARCH' })
   assert.equal(r.ok, true)
   assertRichPreserved(r.value)
-  assert.equal(r.value.retryCount.DISCOVER, 1)
+  assert.equal(r.value.retryCount.RESEARCH, 1)
 })
 
 // ─── RESOLVE_STALE (US13 recovery) ─────────────────────────────────────────────
@@ -405,10 +396,10 @@ test('state-machine: RESOLVE_STALE resets stuck currentPhase retryCount to 0', (
 })
 
 test('state-machine: RESOLVE_STALE targets an explicit phase', () => {
-  const state = mkState({ currentPhase: 'DESIGN', retryCount: { DISCUSS: 2 }, verdicts: { DISCUSS: 'CHANGES_REQUESTED' } })
-  const r = applyTransition(state, { type: 'RESOLVE_STALE', phase: 'DISCUSS' })
+  const state = mkState({ currentPhase: 'DESIGN', retryCount: { RESEARCH: 2 }, verdicts: { RESEARCH: 'CHANGES_REQUESTED' } })
+  const r = applyTransition(state, { type: 'RESOLVE_STALE', phase: 'RESEARCH' })
   assert.equal(r.ok, true)
-  assert.equal(r.value.retryCount.DISCUSS, 0)
+  assert.equal(r.value.retryCount.RESEARCH, 0)
 })
 
 test('state-machine: RESOLVE_STALE rejects a non-stale phase (retries below cap)', () => {
@@ -426,9 +417,9 @@ test('state-machine: RESOLVE_STALE rejects an APPROVED phase even if retries exh
 })
 
 test('passthrough: INCR_REWORK preserves orchestrator-owned fields', () => {
-  const r = applyTransition(mkRichState(), { type: 'INCR_REWORK', phase: 'DISCOVER' })
+  const r = applyTransition(mkRichState(), { type: 'INCR_REWORK', phase: 'RESEARCH' })
   assert.equal(r.ok, true)
   assertRichPreserved(r.value)
-  assert.equal(r.value.reworkCount.DISCOVER, 1)
-  assert.equal(r.value.findingsResolved.DISCOVER, 1)
+  assert.equal(r.value.reworkCount.RESEARCH, 1)
+  assert.equal(r.value.findingsResolved.RESEARCH, 1)
 })

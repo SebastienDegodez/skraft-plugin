@@ -1,5 +1,5 @@
 import { Ok, Err, isOk } from '../domain/result.mjs'
-import { applyTransition } from '../domain/state-machine.mjs'
+import { applyTransition, DEFAULT_PHASE_ORDER } from '../domain/state-machine.mjs'
 import { validatePipelineState } from '../domain/state-schema.mjs'
 import { validateReportingPreferences } from '../domain/reporting-preferences.mjs'
 
@@ -9,10 +9,10 @@ import { validateReportingPreferences } from '../domain/reporting-preferences.mj
 // reworkCount, findingsResolved, phaseArtifacts, reviewArtifacts, userPreferences) is
 // owned by the state machine; the remaining scalars are populated
 // by the orchestrator (Phase 0 / DESIGN checkpoint) and only preserved here.
-const DEFAULT_STATE = () => ({
+const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
   projectSlug: null,
   skraftPlanFile: null,
-  currentPhase: 'DISCOVER',
+  currentPhase: phaseOrder[0],
   entryMode: null,
   entryPoint: null,
   issueNumber: null,
@@ -32,8 +32,9 @@ const DEFAULT_STATE = () => ({
 })
 
 // Application use case: orchestrates stateReader port + stateMachine domain + stateWriter port.
-// No direct filesystem access — all IO delegated to injected ports.
-export const createStateService = ({ stateReader, stateWriter }) => {
+// No direct filesystem access — all IO delegated to injected ports. `phaseOrder` is the
+// published skraft-framework.config.json::phaseOrder; a fresh pipeline opens its first phase.
+export const createStateService = ({ stateReader, stateWriter, phaseOrder = DEFAULT_PHASE_ORDER }) => {
   // Reads state, coerces on parse errors into specific error codes.
   const readState = async (projectSlug) => {
     try {
@@ -50,7 +51,7 @@ export const createStateService = ({ stateReader, stateWriter }) => {
     const readResult = await readState(projectSlug)
     if (!readResult.ok) {
       if (readResult.error.code === 'ENOENT') {
-        const defaults = DEFAULT_STATE()
+        const defaults = DEFAULT_STATE({ projectSlug, phaseOrder })
         const writeResult = await stateWriter.write(projectSlug, defaults)
         if (!isOk(writeResult)) return writeResult
         return Ok({ ...defaults, created: true })
@@ -71,7 +72,7 @@ export const createStateService = ({ stateReader, stateWriter }) => {
 
     if (!readResult.ok) {
       if (readResult.error.code === 'ENOENT') {
-        const defaults = DEFAULT_STATE()
+        const defaults = DEFAULT_STATE({ projectSlug, phaseOrder })
         const writeResult = await stateWriter.write(projectSlug, defaults)
         if (!isOk(writeResult)) return writeResult
         raw = defaults
@@ -87,7 +88,7 @@ export const createStateService = ({ stateReader, stateWriter }) => {
       return Err({ code: 'INVALID_STATE', reason: validation.error.reason })
     }
 
-    const transitionResult = applyTransition(validation.value, event)
+    const transitionResult = applyTransition(validation.value, event, { phaseOrder })
     if (!isOk(transitionResult)) return transitionResult
 
     const writeResult = await stateWriter.write(projectSlug, transitionResult.value)

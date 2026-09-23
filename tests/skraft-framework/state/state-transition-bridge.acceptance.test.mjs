@@ -49,7 +49,7 @@ async function readState(basePath, slug) {
 }
 
 const baseState = (overrides = {}) => ({
-  currentPhase: 'DISCOVER',
+  currentPhase: 'RESEARCH',
   phasesCompleted: [],
   verdicts: {},
   retryCount: {},
@@ -60,22 +60,22 @@ const baseState = (overrides = {}) => ({
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AC1 — Legal phase transition (DISCOVER → DISCUSS)
+// AC1 — Legal phase transition (RESEARCH → DESIGN)
 // ─────────────────────────────────────────────────────────────────────────────
-test('AC1: state CLI advances phase to DISCUSS when DISCOVER verdict is APPROVED', async () => {
+test('AC1: state CLI advances phase to DESIGN when RESEARCH verdict is APPROVED', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac1-'))
   try {
-    await writeState(basePath, 'us5', baseState({ verdicts: { DISCOVER: 'APPROVED' } }))
+    await writeState(basePath, 'us5', baseState({ verdicts: { RESEARCH: 'APPROVED' } }))
 
     const result = await stateCli(
-      ['transition', '--to', 'DISCUSS', '--slug', 'us5'],
+      ['transition', '--to', 'DESIGN', '--slug', 'us5'],
       { basePath }
     )
 
     assert.equal(result.exitCode, 0, `expected exit 0\nstderr: ${result.stderr}`)
     const state = await readState(basePath, 'us5')
-    assert.equal(state.currentPhase, 'DISCUSS')
-    assert.ok(state.phasesCompleted.includes('DISCOVER'))
+    assert.equal(state.currentPhase, 'DESIGN')
+    assert.ok(state.phasesCompleted.includes('RESEARCH'))
     const out = JSON.parse(result.stdout)
     assert.ok('currentPhase' in out, 'stdout must contain modified fields JSON')
     const files = await readdir(join(basePath, 'us5'))
@@ -86,24 +86,24 @@ test('AC1: state CLI advances phase to DISCUSS when DISCOVER verdict is APPROVED
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AC2a — ILLEGAL_PHASE_SKIP (DISCOVER → DESIGN skips DISCUSS)
+// AC2a — ILLEGAL_PHASE_SKIP (RESEARCH → DISTILL skips DESIGN)
 // ─────────────────────────────────────────────────────────────────────────────
 test('AC2a: state CLI rejects phase skip with ILLEGAL_PHASE_SKIP', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac2a-'))
   try {
-    await writeState(basePath, 'us5', baseState({ verdicts: { DISCOVER: 'APPROVED' } }))
+    await writeState(basePath, 'us5', baseState({ verdicts: { RESEARCH: 'APPROVED' } }))
     const before = await readState(basePath, 'us5')
 
     const result = await stateCli(
-      ['transition', '--to', 'DESIGN', '--slug', 'us5'],
+      ['transition', '--to', 'DISTILL', '--slug', 'us5'],
       { basePath }
     )
 
     assert.equal(result.exitCode, 1)
     assert.ok(result.stderr.includes('ILLEGAL_PHASE_SKIP'), `stderr: ${result.stderr}`)
     assert.ok(
-      result.stderr.includes('expected DISCUSS') && result.stderr.includes('got DESIGN'),
-      `stderr must contain "expected DISCUSS, got DESIGN"\n${result.stderr}`
+      result.stderr.includes('expected DESIGN') && result.stderr.includes('got DISTILL'),
+      `stderr must contain "expected DESIGN, got DISTILL"\n${result.stderr}`
     )
     const after = await readState(basePath, 'us5')
     assert.equal(after.currentPhase, before.currentPhase, 'state.json must be unchanged')
@@ -117,14 +117,14 @@ test('AC2a: state CLI rejects phase skip with ILLEGAL_PHASE_SKIP', async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // AC2b — VERDICT_NOT_APPROVED
 // ─────────────────────────────────────────────────────────────────────────────
-test('AC2b: state CLI rejects advance when DISCOVER verdict is REJECTED', async () => {
+test('AC2b: state CLI rejects advance when RESEARCH verdict is REJECTED', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac2b-'))
   try {
-    await writeState(basePath, 'us5', baseState({ verdicts: { DISCOVER: 'REJECTED' } }))
+    await writeState(basePath, 'us5', baseState({ verdicts: { RESEARCH: 'REJECTED' } }))
     const before = await readState(basePath, 'us5')
 
     const result = await stateCli(
-      ['transition', '--to', 'DISCUSS', '--slug', 'us5'],
+      ['transition', '--to', 'DESIGN', '--slug', 'us5'],
       { basePath }
     )
 
@@ -147,12 +147,12 @@ test('AC3a: state init creates state.json with defaults when file is absent', as
 
     assert.equal(result.exitCode, 0, `expected exit 0\nstderr: ${result.stderr}`)
     const state = await readState(basePath, 'skraft-demo')
-    assert.equal(state.currentPhase, 'DISCOVER')
+    assert.equal(state.currentPhase, 'RESEARCH')
     assert.deepEqual(state.retryCount, {})
     assert.deepEqual(state.phasesCompleted, [])
     const out = JSON.parse(result.stdout)
     assert.equal(out.created, true, 'stdout.created must be true on first init')
-    assert.equal(out.currentPhase, 'DISCOVER')
+    assert.equal(out.currentPhase, 'RESEARCH')
   } finally {
     await rm(basePath, { recursive: true, force: true })
   }
@@ -164,7 +164,7 @@ test('AC3a: state init creates state.json with defaults when file is absent', as
 test('AC3b: state init is no-op (exit 0) when state.json already exists', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac3b-'))
   try {
-    const initial = baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] })
+    const initial = baseState({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] })
     await writeState(basePath, 'us5', initial)
     const before = await readState(basePath, 'us5')
 
@@ -175,7 +175,7 @@ test('AC3b: state init is no-op (exit 0) when state.json already exists', async 
     assert.deepEqual(after, before, 'state.json must be unchanged')
     const out = JSON.parse(result.stdout)
     assert.equal(out.created, false, 'stdout.created must be false on no-op init')
-    assert.equal(out.currentPhase, 'DISCUSS')
+    assert.equal(out.currentPhase, 'DESIGN')
   } finally {
     await rm(basePath, { recursive: true, force: true })
   }
@@ -195,7 +195,7 @@ test('AC4: write rotates backups keeping ≤3, oldest deleted, no residual tmp',
     await writeFile(join(dir, 'state.json.bak.300'), '{}', 'utf8')
 
     await stateCli(
-      ['record-verdict', '--phase', 'DISCOVER', '--verdict', 'APPROVED', '--slug', 'us5'],
+      ['record-verdict', '--phase', 'RESEARCH', '--verdict', 'APPROVED', '--slug', 'us5'],
       { basePath }
     )
 
@@ -221,7 +221,7 @@ test('AC4b: corrupted state.json is snapshotted and CLI exits 2 with CORRUPTED_S
     await writeFile(join(dir, 'state.json'), '{ invalid json :::}', 'utf8')
 
     const result = await stateCli(
-      ['transition', '--to', 'DISCUSS', '--slug', 'skraft-demo'],
+      ['transition', '--to', 'DESIGN', '--slug', 'skraft-demo'],
       { basePath }
     )
 
@@ -237,20 +237,20 @@ test('AC4b: corrupted state.json is snapshotted and CLI exits 2 with CORRUPTED_S
 // ─────────────────────────────────────────────────────────────────────────────
 // AC5 — record-verdict stores verdict without advancing phase
 // ─────────────────────────────────────────────────────────────────────────────
-test('AC5: record-verdict stores APPROVED for DISCUSS without advancing currentPhase', async () => {
+test('AC5: record-verdict stores APPROVED for DESIGN without advancing currentPhase', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac5-'))
   try {
-    await writeState(basePath, 'us5', baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }))
+    await writeState(basePath, 'us5', baseState({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] }))
 
     const result = await stateCli(
-      ['record-verdict', '--phase', 'DISCUSS', '--verdict', 'APPROVED', '--slug', 'us5'],
+      ['record-verdict', '--phase', 'DESIGN', '--verdict', 'APPROVED', '--slug', 'us5'],
       { basePath }
     )
 
     assert.equal(result.exitCode, 0)
     const state = await readState(basePath, 'us5')
-    assert.equal(state.verdicts['DISCUSS'], 'APPROVED')
-    assert.equal(state.currentPhase, 'DISCUSS', 'record-verdict must NOT advance phase')
+    assert.equal(state.verdicts['DESIGN'], 'APPROVED')
+    assert.equal(state.currentPhase, 'DESIGN', 'record-verdict must NOT advance phase')
   } finally {
     await rm(basePath, { recursive: true, force: true })
   }
@@ -263,19 +263,19 @@ test('AC6: record-artifact appends path to phaseArtifacts (append-only)', async 
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac6-'))
   try {
     await writeState(basePath, 'us5', baseState({
-      currentPhase: 'DISCUSS',
-      phasesCompleted: ['DISCOVER'],
-      phaseArtifacts: { DISCUSS: ['plans/2026-07-01/stories.md'] }
+      currentPhase: 'DESIGN',
+      phasesCompleted: ['RESEARCH'],
+      phaseArtifacts: { DESIGN: ['plans/2026-07-01/stories.md'] }
     }))
 
     const result = await stateCli(
-      ['record-artifact', '--phase', 'DISCUSS', '--path', 'plans/2026-07-01/ac-draft.md', '--slug', 'us5'],
+      ['record-artifact', '--phase', 'DESIGN', '--path', 'plans/2026-07-01/ac-draft.md', '--slug', 'us5'],
       { basePath }
     )
 
     assert.equal(result.exitCode, 0)
     const state = await readState(basePath, 'us5')
-    assert.deepEqual(state.phaseArtifacts.DISCUSS, [
+    assert.deepEqual(state.phaseArtifacts.DESIGN, [
       'plans/2026-07-01/stories.md',
       'plans/2026-07-01/ac-draft.md'
     ])
@@ -292,7 +292,7 @@ test('AC8: get --field currentPhase returns scalar without modifying state', asy
   try {
     await writeState(basePath, 'us5', baseState({
       currentPhase: 'DESIGN',
-      phasesCompleted: ['DISCOVER', 'DISCUSS']
+      phasesCompleted: ['RESEARCH', 'DESIGN']
     }))
     const before = await readState(basePath, 'us5')
 
@@ -318,19 +318,19 @@ test('AC9a: incr-retry rejects with RETRY_EXHAUSTED when retryCount equals maxRe
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac9a-'))
   try {
     await writeState(basePath, 'us5', baseState({
-      currentPhase: 'DISCUSS',
-      phasesCompleted: ['DISCOVER'],
-      retryCount: { DISCUSS: 2 }
+      currentPhase: 'DESIGN',
+      phasesCompleted: ['RESEARCH'],
+      retryCount: { DESIGN: 2 }
     }))
 
     const result = await stateCli(
-      ['incr-retry', '--phase', 'DISCUSS', '--slug', 'us5'],
+      ['incr-retry', '--phase', 'DESIGN', '--slug', 'us5'],
       { basePath }
     )
 
     assert.equal(result.exitCode, 1)
     assert.ok(result.stderr.includes('RETRY_EXHAUSTED'), `stderr: ${result.stderr}`)
-    assert.equal((await readState(basePath, 'us5')).retryCount.DISCUSS, 2)
+    assert.equal((await readState(basePath, 'us5')).retryCount.DESIGN, 2)
   } finally {
     await rm(basePath, { recursive: true, force: true })
   }
@@ -340,18 +340,18 @@ test('AC9b: incr-retry increments retryCount when below maxRetriesPerPhase', asy
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac9b-'))
   try {
     await writeState(basePath, 'us5', baseState({
-      currentPhase: 'DISCUSS',
-      phasesCompleted: ['DISCOVER'],
-      retryCount: { DISCUSS: 1 }
+      currentPhase: 'DESIGN',
+      phasesCompleted: ['RESEARCH'],
+      retryCount: { DESIGN: 1 }
     }))
 
     const result = await stateCli(
-      ['incr-retry', '--phase', 'DISCUSS', '--slug', 'us5'],
+      ['incr-retry', '--phase', 'DESIGN', '--slug', 'us5'],
       { basePath }
     )
 
     assert.equal(result.exitCode, 0)
-    assert.equal((await readState(basePath, 'us5')).retryCount.DISCUSS, 2)
+    assert.equal((await readState(basePath, 'us5')).retryCount.DESIGN, 2)
   } finally {
     await rm(basePath, { recursive: true, force: true })
   }
@@ -365,11 +365,11 @@ test('AC10a: transition is rejected with TERMINAL_STATE when currentPhase is DON
   try {
     await writeState(basePath, 'us5', baseState({
       currentPhase: 'DONE',
-      phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']
+      phasesCompleted: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']
     }))
 
     const result = await stateCli(
-      ['transition', '--to', 'DISCOVER', '--slug', 'us5'],
+      ['transition', '--to', 'RESEARCH', '--slug', 'us5'],
       { basePath }
     )
 
@@ -386,7 +386,7 @@ test('AC10b: record-verdict is rejected with TERMINAL_STATE when currentPhase is
   try {
     await writeState(basePath, 'us5', baseState({
       currentPhase: 'DONE',
-      phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']
+      phasesCompleted: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']
     }))
 
     const result = await stateCli(
@@ -410,27 +410,27 @@ const { applyTransition } = await import('../../../plugins/skraft-framework/src/
   .catch(() => ({ applyTransition: null }))
 
 const frozenState = (overrides = {}) => Object.freeze({
-  currentPhase: 'DISCUSS',
-  phasesCompleted: Object.freeze(['DISCOVER', 'DISCUSS']),
+  currentPhase: 'DESIGN',
+  phasesCompleted: Object.freeze(['RESEARCH', 'DESIGN']),
   verdicts: Object.freeze({}),
   retryCount: Object.freeze({}),
-  phaseArtifacts: Object.freeze({ DISCUSS: Object.freeze(['plans/stories.md', 'plans/ac-draft.md']) }),
-  reviewArtifacts: Object.freeze({ DISCOVER: Object.freeze(['reviews/2026-07-01/discover-review-1.md']) }),
+  phaseArtifacts: Object.freeze({ DESIGN: Object.freeze(['plans/stories.md', 'plans/ac-draft.md']) }),
+  reviewArtifacts: Object.freeze({ RESEARCH: Object.freeze(['reviews/2026-07-01/discover-review-1.md']) }),
   userPreferences: Object.freeze({ maxRetriesPerPhase: 2 }),
   ...overrides
 })
 
 test('AC11a [domain]: state machine rejects event that reduces phasesCompleted (APPEND_ONLY_VIOLATION)', () => {
   assert.ok(applyTransition !== null, 'domain/state-machine.mjs must export applyTransition')
-  // frozenState has phasesCompleted: ['DISCOVER', 'DISCUSS'] (2 entries)
-  // An ADVANCE with APPROVED verdict would APPEND 'DESIGN' (correct: grows to 3)
+  // frozenState has phasesCompleted: ['RESEARCH', 'DESIGN'] (2 entries)
+  // An ADVANCE with APPROVED verdict would APPEND 'DISTILL' (correct: grows to 3)
   // We test the guard by attempting a RECORD_ARTIFACT that signals replacement with fewer phasesCompleted
   const state = frozenState()
   const result = applyTransition(state, {
     type: 'RECORD_ARTIFACT',
-    phase: 'DISCUSS',
+    phase: 'DESIGN',
     path: 'plans/new.md',
-    _testForcePhasesCompleted: ['DISCOVER'] // smaller than current ['DISCOVER', 'DISCUSS'] — machine must reject
+    _testForcePhasesCompleted: ['RESEARCH'] // smaller than current ['RESEARCH', 'DESIGN'] — machine must reject
   })
   assert.equal(result.ok, false, `expected Err, got Ok: ${JSON.stringify(result)}`)
   assert.equal(result.error?.code, 'APPEND_ONLY_VIOLATION',
@@ -439,12 +439,12 @@ test('AC11a [domain]: state machine rejects event that reduces phasesCompleted (
 
 test('AC11b [domain]: state machine rejects RECORD_REVIEW_ARTIFACT event that shortens reviewArtifacts', () => {
   assert.ok(applyTransition !== null, 'domain/state-machine.mjs must export applyTransition')
-  // frozenState has reviewArtifacts: { DISCOVER: ['reviews/2026-07-01/discover-review-1.md'] } (1 entry)
-  // Attempt to replace reviewArtifacts.DISCOVER with [] (0 entries) → APPEND_ONLY_VIOLATION
+  // frozenState has reviewArtifacts: { RESEARCH: ['reviews/2026-07-01/discover-review-1.md'] } (1 entry)
+  // Attempt to replace reviewArtifacts.RESEARCH with [] (0 entries) → APPEND_ONLY_VIOLATION
   const state = frozenState()
   const result = applyTransition(state, {
     type: 'RECORD_REVIEW_ARTIFACT',
-    phase: 'DISCOVER',
+    phase: 'RESEARCH',
     path: null,
     _testForceReviewArtifacts: [] // empty — smaller than current 1-entry array — machine must reject
   })
@@ -461,14 +461,14 @@ test('AC12: pre-existing state.json without retryCount/phasesCompleted is coerce
   try {
     // Legacy state.json (before issue #60) — missing retryCount and phasesCompleted
     await writeState(basePath, 'us5-legacy', {
-      currentPhase: 'DISCOVER',
+      currentPhase: 'RESEARCH',
       verdicts: {},
       userPreferences: { maxRetriesPerPhase: 2 }
       // intentionally missing: retryCount, phasesCompleted, phaseArtifacts, reviewArtifacts
     })
 
     const result = await stateCli(
-      ['record-verdict', '--phase', 'DISCOVER', '--verdict', 'APPROVED', '--slug', 'us5-legacy'],
+      ['record-verdict', '--phase', 'RESEARCH', '--verdict', 'APPROVED', '--slug', 'us5-legacy'],
       { basePath }
     )
 
@@ -478,7 +478,7 @@ test('AC12: pre-existing state.json without retryCount/phasesCompleted is coerce
     assert.deepEqual(state.retryCount, {}, 'retryCount must be coerced to {}')
     assert.ok('phasesCompleted' in state, 'phasesCompleted must be coerced into state')
     assert.deepEqual(state.phasesCompleted, [], 'phasesCompleted must be coerced to []')
-    assert.equal(state.verdicts['DISCOVER'], 'APPROVED')
+    assert.equal(state.verdicts['RESEARCH'], 'APPROVED')
   } finally {
     await rm(basePath, { recursive: true, force: true })
   }
@@ -490,7 +490,7 @@ test('AC12: pre-existing state.json without retryCount/phasesCompleted is coerce
 test('AC13a: close-phase records verdict, appends review artifact, and advances currentPhase', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac13a-'))
   try {
-    await writeState(basePath, 'us5', baseState({ currentPhase: 'DELIVER', phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL'] }))
+    await writeState(basePath, 'us5', baseState({ currentPhase: 'DELIVER', phasesCompleted: ['RESEARCH', 'DESIGN', 'DISTILL'] }))
 
     const result = await stateCli(
       ['close-phase', '--phase', 'DELIVER', '--verdict', 'APPROVED', '--artifact', 'reviews/2026-07-12/manual-close.md', '--slug', 'us5'],
@@ -511,11 +511,11 @@ test('AC13a: close-phase records verdict, appends review artifact, and advances 
 test('AC13b: close-phase rejects with PHASE_MISMATCH when --phase differs from currentPhase', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac13b-'))
   try {
-    await writeState(basePath, 'us5', baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }))
+    await writeState(basePath, 'us5', baseState({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] }))
     const before = await readState(basePath, 'us5')
 
     const result = await stateCli(
-      ['close-phase', '--phase', 'DESIGN', '--verdict', 'APPROVED', '--artifact', 'reviews/manual-close.md', '--slug', 'us5'],
+      ['close-phase', '--phase', 'DISTILL', '--verdict', 'APPROVED', '--artifact', 'reviews/manual-close.md', '--slug', 'us5'],
       { basePath }
     )
 
@@ -531,11 +531,11 @@ test('AC13b: close-phase rejects with PHASE_MISMATCH when --phase differs from c
 test('AC13c: close-phase rejects with VERDICT_NOT_APPROVED when verdict is CHANGES_REQUESTED', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac13c-'))
   try {
-    await writeState(basePath, 'us5', baseState({ currentPhase: 'DISCUSS', phasesCompleted: ['DISCOVER'] }))
+    await writeState(basePath, 'us5', baseState({ currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] }))
     const before = await readState(basePath, 'us5')
 
     const result = await stateCli(
-      ['close-phase', '--phase', 'DISCUSS', '--verdict', 'CHANGES_REQUESTED', '--artifact', 'reviews/manual-close.md', '--slug', 'us5'],
+      ['close-phase', '--phase', 'DESIGN', '--verdict', 'CHANGES_REQUESTED', '--artifact', 'reviews/manual-close.md', '--slug', 'us5'],
       { basePath }
     )
 
