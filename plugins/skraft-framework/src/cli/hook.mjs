@@ -6,7 +6,6 @@ import { toHarnessOutput } from '../adapters/api/hooks/harness-output.mjs'
 import { fromHarnessInput } from '../adapters/api/hooks/harness-input.mjs'
 import { createJsonlAuditWriter } from '../adapters/infrastructure/jsonl-audit-writer.mjs'
 import { createSkillFileReader } from '../adapters/infrastructure/skill-file-reader.mjs'
-import { createInstructionFileReader } from '../adapters/infrastructure/instruction-file-reader.mjs'
 import { createJsonlTranscriptReader } from '../adapters/infrastructure/jsonl-transcript-reader.mjs'
 import { createSubagentStartService } from '../application/subagent-start-service.mjs'
 import { createSubagentStopService } from '../application/subagent-stop-service.mjs'
@@ -54,7 +53,6 @@ const compose = async (cwd) => {
   // default namespaced), anchored on the harness session directory.
   const trackingRoot = resolveTrackingRoot({ cwd })
   const skillFileReader = createSkillFileReader({ pluginsRoot: pluginRoot })
-  const instructionFileReader = createInstructionFileReader({ pluginRoot })
   // Hooks never snapshot a corrupted state: the state CLI does, once, when it recovers.
   const stateReader = createJsonStateReader(trackingRoot, { snapshotCorrupted: false })
 
@@ -63,7 +61,7 @@ const compose = async (cwd) => {
   try { config = JSON.parse(await readFile(configPath, 'utf8')) }
   catch { /* fail-open: missing config means no mandatory skills, hooks still allow */ }
 
-  const subagentStart = createSubagentStartService({ config, skillFileReader, instructionFileReader, auditWriter, clock })
+  const subagentStart = createSubagentStartService({ config, skillFileReader, auditWriter, clock })
   const subagentStop = createSubagentStopService({ config, transcriptReaderFactory: createJsonlTranscriptReader, auditWriter, clock })
   const postToolUse = createPostToolUseService({ auditWriter, clock, stateReader, config })
   // PreToolUse composite: G1 dispatch-order guard + G7/G8 session guard (see composite).

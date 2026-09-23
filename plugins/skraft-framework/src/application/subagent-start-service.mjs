@@ -1,5 +1,5 @@
 import { mandatorySkillsFor, isEagerSkill } from '../domain/skill-policy.mjs'
-import { canonicalAgentName, companionInstructionsFor } from '../domain/instruction-policy.mjs'
+import { canonicalAgentName } from '../domain/instruction-policy.mjs'
 import { allow, additionalContext } from '../adapters/api/hooks/decision.mjs'
 
 // Builds the directive listing all mandatory skills by name, and how G3 counts a load:
@@ -11,21 +11,18 @@ const buildDirective = (skillEntries) => {
 
 // SubagentStart guard (G2). Injects the mandatory-skill directive into the subagent's
 // context so skills are loaded up-front. Skills with policy 'eager' have their SKILL.md
-// content inlined. Fail-open on read errors (ADR-006).
+// content inlined. Fail-open on read errors (ADR-006). Companion rules are not injected:
+// the orchestrator, their only reader, loads them itself on every harness.
 export const createSubagentStartService = ({
   config,
   skillFileReader,
-  instructionFileReader,
   auditWriter,
   clock,
 }) => ({
-  handle: async ({ agentName, harness } = {}) => {
+  handle: async ({ agentName } = {}) => {
     const canonicalName = canonicalAgentName(agentName, config)
     const skillEntries = mandatorySkillsFor(canonicalName, config)
-    const instructionPaths = harness === 'claude-code'
-      ? companionInstructionsFor(canonicalName, config)
-      : []
-    if (skillEntries.length === 0 && instructionPaths.length === 0) return allow()
+    if (skillEntries.length === 0) return allow()
 
     const parts = []
     if (skillEntries.length > 0) parts.push(buildDirective(skillEntries))
@@ -45,25 +42,6 @@ export const createSubagentStartService = ({
           decision: 'WARN',
           reason: err?.message ?? 'unknown',
           timestamp: ts
-        }).catch(() => {})
-      }
-    }
-
-    for (const instructionPath of instructionPaths) {
-      try {
-        const content = await instructionFileReader.read(instructionPath)
-        parts.push(`Companion instruction: ${instructionPath}\n\n${content}`)
-      } catch (err) {
-        // Context injection is guidance, not a session gate. Preserve fail-open behavior
-        // while making missing packaged rules visible in the audit stream.
-        const ts = (() => { try { return clock.now() } catch { return new Date().toISOString() } })()
-        await auditWriter.write({
-          eventType: 'InstructionReadFailed',
-          agentName: canonicalName,
-          instructionPath,
-          decision: 'WARN',
-          reason: err?.message ?? 'unknown',
-          timestamp: ts,
         }).catch(() => {})
       }
     }

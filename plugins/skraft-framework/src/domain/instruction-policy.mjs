@@ -1,4 +1,4 @@
-// Pure domain: resolve harness agent identities and companion-instruction policy.
+// Pure domain: resolve the agent identities harnesses report to one canonical name.
 
 // Claude Code reports a plugin subagent as `skraft:<id>` or `plugin:skraft:<id>`;
 // only this plugin's namespace is unwrapped, never a foreign one.
@@ -11,11 +11,4 @@ export const canonicalAgentName = (agentName, config) => {
   if (!value) return undefined
   const aliases = config?.agentAliases ?? {}
   return aliases[value] ?? aliases[unqualified(value)] ?? unqualified(value)
-}
-
-export const companionInstructionsFor = (agentName, config) => {
-  const canonical = canonicalAgentName(agentName, config)
-  if (!canonical) return []
-  const instructions = config?.agentInstructions?.[canonical] ?? []
-  return Array.isArray(instructions) ? [...instructions] : []
 }
