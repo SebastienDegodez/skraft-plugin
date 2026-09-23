@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   continuationAfter,
   evaluateDispatch,
+  evaluateDispatchProvenance,
   isPipelineAgent,
   nextPhaseAfter,
   phaseRoleOf,
@@ -149,4 +150,37 @@ test('continuationAfter: an exhausted retry budget turns the rework path into an
 test('continuationAfter: nothing to say for a non-phase agent or an agent of another phase', () => {
   assert.equal(continuationAfter('cold-reader-lens', at('DELIVER'), CONFIG), null)
   assert.equal(continuationAfter('solution-architect', at('DELIVER'), CONFIG), null)
+})
+
+// ─── evaluateDispatchProvenance ─────────────────────────────────────────────────
+
+const TREE = {
+  agentAliases: { lead: 'Lead', 'lead-reviewer': 'Lead Reviewer', lens: 'lens', Lead: 'Lead', 'Lead Reviewer': 'Lead Reviewer' },
+  agentDispatchers: { 'Lead Reviewer': 'Lead', lens: 'lead-reviewer' },
+}
+
+test('evaluateDispatchProvenance: the declared tree passes, by id or display name', () => {
+  assert.equal(evaluateDispatchProvenance('lead', 'lead-reviewer', TREE).ok, true)
+  assert.equal(evaluateDispatchProvenance('Lead Reviewer', 'skraft:lens', TREE).ok, true)
+})
+
+test('evaluateDispatchProvenance: a known agent dispatching itself is refused', () => {
+  const r = evaluateDispatchProvenance('skraft:lead', 'Lead', TREE)
+  assert.equal(r.error.code, 'SELF_DISPATCH')
+  assert.equal(r.error.reason, 'Lead dispatches itself; do the work, or dispatch the agent that owns it')
+})
+
+test('evaluateDispatchProvenance: a dispatch outside the declared tree names the declared dispatcher', () => {
+  const r = evaluateDispatchProvenance('lead', 'lens', TREE)
+  assert.equal(r.error.code, 'FOREIGN_DISPATCHER')
+  assert.equal(r.error.reason, 'lens is dispatched by Lead Reviewer, not Lead')
+})
+
+test('evaluateDispatchProvenance: an unknown or absent caller, or an undeclared agent, is not judged', () => {
+  assert.equal(evaluateDispatchProvenance(undefined, 'lens', TREE).ok, true)
+  assert.equal(evaluateDispatchProvenance('general-purpose', 'lens', TREE).ok, true)
+  assert.equal(evaluateDispatchProvenance('general-purpose', 'general-purpose', TREE).ok, true)
+  assert.equal(evaluateDispatchProvenance('lens', 'Explore', TREE).ok, true)
+  assert.equal(evaluateDispatchProvenance('lead', undefined, TREE).ok, true)
+  assert.equal(evaluateDispatchProvenance('lead', 'lens', {}).ok, true)
 })

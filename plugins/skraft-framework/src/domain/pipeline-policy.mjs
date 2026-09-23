@@ -109,3 +109,24 @@ export const continuationAfter = (finishedAgent, dispatchState, config) => {
     context: `SKRAFT G6 — ${finishedAgent} returned for ${currentPhase}. Record its review file with \`${cli} record-review-artifact --phase ${currentPhase} --path <tracking-relative path>\`, then its verdict: APPROVED → \`record-verdict --verdict APPROVED\` and \`transition --to ${next}\`; NEEDS_REWORK → \`record-verdict --verdict CHANGES_REQUESTED\`, ${exhausted ? `retry budget exhausted (${dispatchState.retries}/${dispatchState.maxRetries}): stop and escalate to the user` : `\`incr-retry\` and re-dispatch ${phaseAgents.specialist} with the findings`}; REJECTED → \`record-verdict --verdict CHANGES_REQUESTED\` and stop.`
   }
 }
+
+// Who may dispatch whom, from the dispatch tree the descriptors declare (dispatched_by,
+// published as config.agentDispatchers). Claude Code ignores a subagent definition's
+// Agent(...) allowlist, so this is where the tree is enforced. Judged only when the
+// caller is one of this plugin's agents: an unknown caller or an agent without a
+// declared dispatcher is left alone.
+export const evaluateDispatchProvenance = (callerAgent, requestedAgent, config) => {
+  const known = new Set(Object.values(config?.agentAliases ?? {}))
+  const caller = canonicalAgentName(callerAgent, config)
+  const requested = canonicalAgentName(requestedAgent, config)
+  if (!caller || !requested || !known.has(caller)) return Ok({ reason: 'caller not judged' })
+  if (caller === requested) {
+    return Err({ code: 'SELF_DISPATCH', reason: `${caller} dispatches itself; do the work, or dispatch the agent that owns it` })
+  }
+  const dispatcher = config.agentDispatchers?.[requested]
+  if (!dispatcher || canonicalAgentName(dispatcher, config) === caller) return Ok({ reason: 'declared dispatch' })
+  return Err({
+    code: 'FOREIGN_DISPATCHER',
+    reason: `${requested} is dispatched by ${canonicalAgentName(dispatcher, config)}, not ${caller}`,
+  })
+}

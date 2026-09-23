@@ -73,6 +73,8 @@ export default {
     'plugins/skraft-framework/src/application/phase-gate-service.mjs',
     // SessionStart context handed to the session
     'plugins/skraft-framework/src/domain/session-context-policy.mjs',
+    // Dispatch tree enforced on every agent dispatch
+    'plugins/skraft-framework/src/application/dispatch-provenance-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

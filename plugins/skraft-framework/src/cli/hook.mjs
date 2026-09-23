@@ -14,6 +14,7 @@ import { createPostToolUseService } from '../application/post-tool-use-service.m
 import { createPreToolUseService } from '../application/pre-tool-use-service.mjs'
 import { createPreToolUseSessionGuardService } from '../application/pre-tool-use-session-guard-service.mjs'
 import { createPreToolUseCompositeService } from '../application/pre-tool-use-composite.mjs'
+import { createDispatchProvenanceService } from '../application/dispatch-provenance-service.mjs'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { resolvePluginRootFromEnv } from '../adapters/infrastructure/plugin-root-resolver.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
@@ -68,7 +69,8 @@ const compose = async (cwd) => {
   // PreToolUse composite: G1 dispatch-order guard + G7/G8 session guard (see composite).
   const preToolUse = createPreToolUseCompositeService({
     dispatchGuard: createPreToolUseService({ stateReader, auditWriter, config, clock }),
-    sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) })
+    sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
+    provenanceGuard: createDispatchProvenanceService({ config, auditWriter, clock })
   })
   return { trackingRoot, hookService: createHookService({ preToolUse, subagentStart, subagentStop, postToolUse }) }
 }
