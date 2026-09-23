@@ -53,8 +53,8 @@ test('state-service init: fresh default carries the full documented field set', 
   const r = await svc.init('slug')
   assert.equal(r.ok, true)
   const w = writer._written['slug']
+  assert.equal(w.projectSlug, 'slug')
   // scalars orchestrator populates later — present (null/empty) so no reader guesses
-  assert.equal(w.projectSlug, null)
   assert.equal(w.skraftPlanFile, null)
   assert.equal(w.entryMode, null)
   assert.equal(w.entryPoint, null)

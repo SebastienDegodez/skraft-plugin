@@ -28,13 +28,14 @@ const withTrackingRoot = async (fn) => {
   try { await fn(root) } finally { await rm(root, { recursive: true, force: true }) }
 }
 
-test('a fresh pipeline starts at the first published phase', async () => {
+test('a fresh pipeline starts at the first published phase and records its slug', async () => {
   await withTrackingRoot(async (root) => {
     const { phaseOrder } = JSON.parse(await readFile(PUBLISHED_CONFIG, 'utf8'))
     const init = await stateCli(['init', '--slug', 'demo'], { SKRAFT_TRACKING_ROOT: root })
     assert.equal(init.exitCode, 0, init.stderr)
     const state = JSON.parse(await readFile(join(root, 'demo', 'state.json'), 'utf8'))
     assert.equal(state.currentPhase, phaseOrder[0])
+    assert.equal(state.projectSlug, 'demo')
   })
 })
 

@@ -10,7 +10,7 @@ import { validateReportingPreferences } from '../domain/reporting-preferences.mj
 // owned by the state machine; the remaining scalars are populated
 // by the orchestrator (Phase 0 / DESIGN checkpoint) and only preserved here.
 const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
-  projectSlug: null,
+  projectSlug: projectSlug ?? null,
   skraftPlanFile: null,
   currentPhase: phaseOrder[0],
   entryMode: null,
