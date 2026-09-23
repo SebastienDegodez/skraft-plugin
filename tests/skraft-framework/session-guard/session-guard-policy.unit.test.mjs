@@ -226,6 +226,8 @@ test('commandWritesWorkspace: the in-place and scripted edits G7 recognises, and
     `node -e "require('fs').writeFileSync('tests/a.test.mjs', '')"`,
     'touch tests/Orders.Tests/NewTests.cs',
     'ln -sf /tmp/forged.cs src/Orders/Discount.cs',
+    'git rm -q src/Orders/Legacy.cs',
+    'git mv tests/Old.cs "tests/New Name.cs"',
   ]) {
     assert.equal(commandWritesWorkspace(command), true, command)
   }
