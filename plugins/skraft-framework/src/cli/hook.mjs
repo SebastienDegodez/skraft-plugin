@@ -15,8 +15,6 @@ import { createPreToolUseService } from '../application/pre-tool-use-service.mjs
 import { createPreToolUseSessionGuardService } from '../application/pre-tool-use-session-guard-service.mjs'
 import { createPreToolUseCompositeService } from '../application/pre-tool-use-composite.mjs'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
-import { createRealFilesystem } from '../adapters/infrastructure/real-filesystem.mjs'
-import { createGitCommitVerifier } from '../adapters/infrastructure/git-commit-verifier.mjs'
 import { resolvePluginRootFromEnv } from '../adapters/infrastructure/plugin-root-resolver.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
 import { createActiveSlugStore } from '../adapters/infrastructure/active-slug-store.mjs'
@@ -55,10 +53,6 @@ const compose = async (cwd) => {
   const instructionFileReader = createInstructionFileReader({ pluginRoot })
   // Hooks never snapshot a corrupted state: the state CLI does, once, when it recovers.
   const stateReader = createJsonStateReader(trackingRoot, { snapshotCorrupted: false })
-  const realFilesystem = createRealFilesystem()
-  // G5: recorded artifact paths are relative to the project's own tracking directory.
-  const filesystem = { readFile: (relPath) => realFilesystem.readFile(join(trackingRoot, relPath)) }
-  const commitVerifier = createGitCommitVerifier({ cwd })
 
   // Load the pre-built framework config; fall back to empty config on error.
   let config = {}
@@ -66,15 +60,7 @@ const compose = async (cwd) => {
   catch { /* fail-open: missing config means no mandatory skills, hooks still allow */ }
 
   const subagentStart = createSubagentStartService({ config, skillFileReader, instructionFileReader, auditWriter, clock })
-  const subagentStop = createSubagentStopService({
-    config,
-    transcriptReaderFactory: createJsonlTranscriptReader,
-    auditWriter,
-    clock,
-    stateReader,
-    filesystem,
-    commitVerifier
-  })
+  const subagentStop = createSubagentStopService({ config, transcriptReaderFactory: createJsonlTranscriptReader, auditWriter, clock })
   const postToolUse = createPostToolUseService({ auditWriter, clock, stateReader, config })
   // PreToolUse composite: G1 dispatch-order guard + G7/G8 session guard (see composite).
   const preToolUse = createPreToolUseCompositeService({

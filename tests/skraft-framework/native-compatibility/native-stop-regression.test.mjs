@@ -35,24 +35,15 @@ const skillReads = (names = requiredSkills) => names.map((name, index) => ({
 }))
 const noSkills = [{ type: 'assistant', message: { role: 'assistant', content: 'Work complete.' } }]
 const jsonl = (entries) => entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n'
-const deliverState = () => ({
-  currentPhase: 'DELIVER', phasesCompleted: [], verdicts: {}, retryCount: {},
-  phaseArtifacts: {}, reviewArtifacts: {}
-})
-
-const harness = ({ readState = async () => deliverState(), completion = true } = {}) => {
+const harness = () => {
   const audits = []
-  const stateReads = []
   const service = createSubagentStopService({
     config,
     transcriptReaderFactory: createJsonlTranscriptReader,
     auditWriter: { write: async (entry) => { audits.push(entry) } },
-    clock: { now: () => '2026-09-16T00:00:00.000Z' },
-    stateReader: completion ? {
-      read: async (slug) => { stateReads.push(slug); return readState(slug) }
-    } : undefined
+    clock: { now: () => '2026-09-16T00:00:00.000Z' }
   })
-  return { service, audits, stateReads }
+  return { service, audits }
 }
 
 const auditFor = (h, eventType) => h.audits.find((entry) => entry.eventType === eventType)
@@ -60,12 +51,6 @@ const assertUnavailable = (h) => {
   const audit = auditFor(h, 'SkillComplianceChecked')
   assert.equal(audit?.reason, 'transcript_unavailable')
   assert.equal(audit.decision, 'ALLOW', 'only transcript monitoring fails open')
-}
-const assertCompletionBlock = (h, result, reason) => {
-  assert.deepEqual(h.stateReads, [projectSlug], 'completion must read state despite unavailable transcript')
-  assert.equal(result.decision, 'block', 'monitoring failure must not bypass completion')
-  assert.equal(auditFor(h, 'CompletionChecked')?.reason, reason)
-  assert.equal(auditFor(h, 'CompletionChecked')?.decision, 'BLOCK')
 }
 
 const temporaryDirectory = async (t) => {
@@ -91,44 +76,20 @@ const readableTranscript = async (payload) => {
   return content
 }
 
-for (const [label, readState, reason] of [
-  ['missing', async () => { throw Object.assign(new Error('fixture state missing'), { code: 'ENOENT' }) }, 'state_unreadable'],
-  ['invalid', async () => ({ currentPhase: '' }), 'state_invalid']
-]) {
-  test(`native stop: canonical engineer with unavailable transcript blocks ${label} state`, async () => {
-    assert.equal(engineer, 'Skraft - Software Engineer', 'use current configured canonical identity')
-    assert.ok(requiredSkills.includes('outside-in-tdd'), 'fixture must exercise an agent with required skills')
-    const h = harness({ readState })
-    const result = await h.service.handle({ agentName: engineer, projectSlug })
-    assertUnavailable(h)
-    assertCompletionBlock(h, result, reason)
-  })
-}
-
 for (const agentName of identities) {
   test(`native stop: ${agentName} enforces configured required skills`, async () => {
-    const h = harness({ completion: false })
+    const h = harness()
     const result = await h.service.handle({ agentName, transcript: noSkills })
     assert.equal(result.decision, 'block')
     assert.deepEqual(auditFor(h, 'SkillComplianceChecked')?.missingSkills, requiredSkills)
     assert.equal(auditFor(h, 'SkillComplianceChecked')?.reason, 'skill_absent')
   })
 
-  test(`native stop: ${agentName} has DELIVER specialist completion role`, async () => {
-    const h = harness()
-    const result = await h.service.handle({ agentName, transcript: skillReads(), projectSlug })
-    assert.deepEqual(h.stateReads, [projectSlug])
-    assert.equal(result.decision, 'block', 'DELIVER without recorded change log is incomplete')
-    const completion = auditFor(h, 'CompletionChecked')
-    assert.equal(completion?.reason, 'artifact_missing')
-    assert.equal(completion.role, 'specialist')
-    assert.equal(completion.phase, 'DELIVER')
-    assert.ok(completion.missing.some((path) => path.endsWith('/change-log.md')))
-  })
+
 }
 
 test('native stop: inline transcript still supports required-skill compliance', async () => {
-  const h = harness({ completion: false })
+  const h = harness()
   const result = await h.service.handle({ agentName: engineer, transcript: skillReads() })
   assert.equal(result.decision, 'allow')
   assert.equal(auditFor(h, 'SkillComplianceChecked')?.reason, 'all_present')
@@ -154,7 +115,7 @@ for (const childHasSkills of [true, false]) {
     const root = await temporaryDirectory(t)
     const child = await transcriptFile(root, 'child.jsonl', childHasSkills ? skillReads() : noSkills)
     const parent = await transcriptFile(root, 'parent.jsonl', childHasSkills ? noSkills : skillReads())
-    const h = harness({ completion: false })
+    const h = harness()
     const result = await h.service.handle({
       agentName: engineer, agent_transcript_path: child, transcript_path: parent
     })
@@ -165,17 +126,17 @@ for (const childHasSkills of [true, false]) {
   })
 }
 
-test('native stop: readable child transcript still reaches invalid-state completion guard', async (t) => {
+test('native stop: a readable child transcript with every skill read lets the agent stop', async (t) => {
   const root = await temporaryDirectory(t)
   const child = await transcriptFile(root, 'child.jsonl', skillReads())
-  const h = harness({ readState: async () => ({ currentPhase: '' }) })
+  const h = harness()
   const result = await h.service.handle({ agentName: engineer, agent_transcript_path: child, projectSlug })
   assert.equal(auditFor(h, 'SkillComplianceChecked')?.reason, 'all_present')
-  assertCompletionBlock(h, result, 'state_invalid')
+  assert.equal(result.decision, 'allow')
 })
 
 for (const kind of ['absent', 'missing-file', 'directory', 'symlink']) {
-  test(`native stop: ${kind} child path is unavailable; parent cannot bypass completion`, async (t) => {
+  test(`native stop: ${kind} child path is unavailable and never falls back to the parent`, async (t) => {
     const root = await temporaryDirectory(t)
     const parent = await transcriptFile(root, 'parent.jsonl', skillReads())
     let child
@@ -191,10 +152,10 @@ for (const kind of ['absent', 'missing-file', 'directory', 'symlink']) {
     const payload = { agent_transcript_path: child, transcript_path: parent }
     await assert.rejects(() => createJsonlTranscriptReader(payload).read(),
       'absent or unsafe child paths must not fall back to the parent')
-    const h = harness({ readState: async () => ({ currentPhase: '' }) })
+    const h = harness()
     const result = await h.service.handle({ agentName: engineer, projectSlug, ...payload })
     assertUnavailable(h)
-    assertCompletionBlock(h, result, 'state_invalid')
+    assert.equal(result.decision, 'allow', 'an unavailable transcript is a monitoring failure, not a verdict')
   })
 }
 
