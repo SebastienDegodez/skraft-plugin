@@ -80,16 +80,8 @@ stimuli:
           dest: .eval-bin/dotnet
         - src: fixtures/toolchain/.eval/verify-mutation-gates.mjs
           dest: .eval/verify-mutation-gates.mjs
-        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/configure-mutation.sh
-          dest: scripts/configure-mutation.sh
-        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/run-mutation-gate.sh
-          dest: scripts/run-mutation-gate.sh
-        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-core.sh
-          dest: scripts/mutation-core.sh
-        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-boundary.sh
-          dest: scripts/mutation-boundary.sh
       commands: &baseline-setup
-        - 'chmod +x .eval-bin/dotnet scripts/*.sh'
+        - 'chmod +x .eval-bin/dotnet'
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Evaluation"'
@@ -186,14 +178,6 @@ stimuli:
           dest: .eval-bin/dotnet
         - src: fixtures/toolchain/.eval/verify-mutation-gates.mjs
           dest: .eval/verify-mutation-gates.mjs
-        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/configure-mutation.sh
-          dest: scripts/configure-mutation.sh
-        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/run-mutation-gate.sh
-          dest: scripts/run-mutation-gate.sh
-        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-core.sh
-          dest: scripts/mutation-core.sh
-        - src: ../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/mutation-boundary.sh
-          dest: scripts/mutation-boundary.sh
       commands: *baseline-setup
     graders:
       - type: completed
