@@ -69,6 +69,11 @@ jobs:
       - name: Check generated plugin adapters
         run: node scripts/project-plugin-adapters.mjs --check
 
+      # The JavaScript quality-gates runner tests resolve the pinned Stryker packages.
+      - name: Install the framework's dev dependencies
+        working-directory: plugins/skraft-framework/src
+        run: npm ci
+
       # Floor on the framework runtime's coverage, a little under the measured level:
       # a change that leaves new code untested fails here.
       - name: Run tests with coverage
@@ -93,6 +98,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Install the framework's dev dependencies
+        working-directory: plugins/skraft-framework/src
+        run: npm ci
 
       - name: Run tests
         shell: bash
