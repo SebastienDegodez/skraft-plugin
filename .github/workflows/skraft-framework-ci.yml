@@ -69,9 +69,14 @@ jobs:
       - name: Check generated plugin adapters
         run: node scripts/project-plugin-adapters.mjs --check
 
+      # Floor on the framework runtime's coverage, a little under the measured level:
+      # a change that leaves new code untested fails here.
       - name: Run tests with coverage
         run: |
           node --test --experimental-test-coverage \
+            '--test-coverage-include=plugins/skraft-framework/src/**' \
+            '--test-coverage-exclude=plugins/skraft-framework/src/node_modules/**' \
+            --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=93 \
             "tests/skraft-framework/**/*.test.mjs"
 
   model-policy:

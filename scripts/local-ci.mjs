@@ -16,13 +16,21 @@ const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
 const withDotnet = flags.has('--dotnet')
 
+// Same coverage floor as CI, on the framework runtime only.
+const coverageArgs = [
+  '--experimental-test-coverage',
+  '--test-coverage-include=plugins/skraft-framework/src/**',
+  '--test-coverage-exclude=plugins/skraft-framework/src/node_modules/**',
+  '--test-coverage-lines=95', '--test-coverage-branches=90', '--test-coverage-functions=93',
+]
+
 // Enumerate test files ourselves (no shell glob expansion).
 const testArgs = (dir, coverage = false) => {
   const files = readdirSync(dir, { recursive: true })
     .filter((f) => f.endsWith('.test.mjs'))
     .sort()
     .map((f) => join(dir, f))
-  return ['--test', ...(coverage ? ['--experimental-test-coverage'] : []), ...files]
+  return ['--test', ...(coverage ? coverageArgs : []), ...files]
 }
 
 // Fast gates — run on every push, fail the whole run if any fails.
