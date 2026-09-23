@@ -62,6 +62,13 @@ Run bundled [runner](scripts/run-gates.mjs) with:
 node <skillDir>/scripts/run-gates.mjs --root <repo> --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence <directory>
 ```
 
+For a PR differential run, add `--since <base-ref>`. The runner resolves the Git
+merge-base, records it in the manifest, and mutates changed files that belong to each
+durable scope. A differential score is not a full-repository score. For local diagnosis,
+add one or more `--overlay <json-config>` arguments; overlays apply in order and cannot
+change `mutate`, test selection, thresholds, reporters, or report paths. CI must use the
+checked-in configs without overlays.
+
 Paths resolve from `--root`, except `--root` itself. Core executes before boundary;
 core failure stops sequence. A full rerun always reruns core. Never invoke raw
 Stryker as a substitute. No previous report or receipt is an input.

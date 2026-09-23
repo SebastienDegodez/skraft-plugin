@@ -27,11 +27,12 @@ reconstruct, or improvise runner commands here. Load `skraft-quality-bar`, then 
 
 ```
 1. Confirm ordinary tests are green
-2. Adapter → validate durable configs and run core gate
-3. Parse adapter-owned JSON report → extract survivors
-4. Decide: kill with a test, or suppress a proven equivalent narrowly
-5. Adapter → rerun core until green
-6. Repeat for boundary
+2. Select full mode on `main`, or differential `--since <base-ref>` mode on PR; local diagnostic may add repeatable `--overlay <config>`
+3. Adapter → validate durable configs, merge protected overlays, and run core gate
+4. Parse adapter-owned JSON report → extract survivors
+5. Decide: kill with a test, or suppress a proven equivalent narrowly
+6. Adapter → rerun core until green
+7. Repeat for boundary
 ```
 
 ## Node JavaScript / TAP
@@ -47,6 +48,11 @@ claimed. Do not improvise raw Stryker commands, install tooling, or analyze stal
 reports as gate evidence. StrykerJS uses native `thresholds.break`; do not translate
 .NET flags. This narrow adapter rejects source suppressions and ignored/error
 mutants; equivalent-mutant suppression below applies only when adapter supports it.
+
+`--since` selects changed files from the Git merge-base through `HEAD`; it is a
+differential result, not a full-repository score. `--overlay` is repeatable and
+diagnostic-only. Overlays cannot change thresholds, source scopes, reporters, or
+report paths. CI evidence uses checked-in configuration without overlays.
 
 ## Classify Survivors
 
@@ -105,7 +111,7 @@ survivor means:
 |---------------|---------|
 | None | ✅ Proceed to commit |
 | Only equivalent mutants, each narrowly suppressed with rationale; rerun green | ✅ Proceed |
-| Any real survivor | ❌ BLOCK — return to Step 4 |
+| Core below 100%, boundary below 80%, or any real core survivor | ❌ BLOCK — return to Step 4 |
 
 ## Mutation Categories Reference
 

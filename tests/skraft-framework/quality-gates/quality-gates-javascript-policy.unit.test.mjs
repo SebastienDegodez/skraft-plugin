@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { validateConfig, validateReport, effectiveOptions, parseArgs } from '../../../plugins/skraft-framework/skills/quality-gates-javascript/scripts/gate-policy.mjs'
+import { applyOverlays, validateConfig, validateReport, effectiveOptions, parseArgs } from '../../../plugins/skraft-framework/skills/quality-gates-javascript/scripts/gate-policy.mjs'
 import { config, report, source } from './quality-gates-javascript.fixture.mjs'
 
 test('core and boundary preserve the permanent thresholds', () => {
@@ -120,4 +120,26 @@ test('explicit supported tuning survives config snapshot and native report defau
   const value = report(options, '/repo')
   value.config = { ...options, ignorePatterns: [], appendPlugins: [], mutator: { excludedMutations: [] } }
   assert.equal(validateReport(value, { root: '/repo', options, sources: { 'src/core.mjs': source } }).passed, true)
+})
+
+test('overlays merge supported options while preserving protected gate settings', () => {
+  const result = applyOverlays(config(), [
+    { concurrency: 1, tap: { forceBail: false } },
+    { timeoutMS: 1000, tap: { forceBail: true } },
+  ])
+  assert.equal(result.concurrency, 1)
+  assert.equal(result.timeoutMS, 1000)
+  assert.equal(result.tap.forceBail, true)
+  assert.deepEqual(result.thresholds, config().thresholds)
+  assert.throws(() => applyOverlays(config(), [{ thresholds: { high: 99, low: 99, break: 99 } }]), /protected option/)
+  assert.throws(() => applyOverlays(config(), [{ mutate: ['src/other.mjs'] }]), /protected option/)
+})
+
+test('differential arguments and repeated overlays are parsed', () => {
+  const args = parseArgs([
+    '--root', '/repo', '--package', 'pkg', '--core', 'core.json', '--boundary', 'boundary.json', '--evidence', 'ev',
+    '--since', 'origin/main', '--overlay', 'one.json', '--overlay', 'two.json',
+  ])
+  assert.equal(args.since, 'origin/main')
+  assert.deepEqual(args.overlays, ['one.json', 'two.json'])
 })

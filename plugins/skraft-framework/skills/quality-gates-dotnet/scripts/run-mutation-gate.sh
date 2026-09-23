@@ -6,7 +6,7 @@ set -uo pipefail
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") --root <dir> --evidence <dir> [--config <json>] [--help]
+Usage: $(basename "$0") --root <dir> --evidence <dir> [--config <json>] [--since <git-ref>] [--overlay <json> ...] [--help]
 
 Runs one Stryker.NET solution-context mutation gate from a checked-in root config.
 EOF
@@ -46,11 +46,15 @@ sha256() {
 ROOT=""
 EV=""
 CONFIG=""
+SINCE=""
+OVERLAYS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --root)     require_value "$@"; ROOT="$2"; shift 2 ;;
     --evidence) require_value "$@"; EV="$2"; shift 2 ;;
     --config)   require_value "$@"; CONFIG="$2"; shift 2 ;;
+    --since)    require_value "$@"; SINCE="$2"; shift 2 ;;
+    --overlay)  require_value "$@"; OVERLAYS+=("$2"); shift 2 ;;
     --expected) fail_usage "refusing --expected: the bar is not a runtime argument" ;;
     --help|-h)  usage; exit 0 ;;
     *)          echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
@@ -64,11 +68,47 @@ case "$EV" in /*) ;; *) EV="$ROOT/$EV" ;; esac
 [ -n "$CONFIG" ] || CONFIG="$CONFIG_NAME"
 CONFIG=$(absolute_file "$CONFIG") || fail_usage "mutation config not found: $CONFIG. Run configure-mutation.sh first"
 
+EFFECTIVE_CONFIG="$CONFIG"
+TEMP_CONFIG=""
+if [ "${#OVERLAYS[@]}" -gt 0 ]; then
+  TEMP_CONFIG=$(mktemp "$ROOT/.stryker-overlay.XXXXXX.json") || exit 2
+  node - "$CONFIG" "$TEMP_CONFIG" "${OVERLAYS[@]}" <<'NODE'
+const fs = require('node:fs')
+const [basePath, outputPath, ...overlayPaths] = process.argv.slice(2)
+const protectedKeys = new Set(['solution', 'mutate', 'thresholds', 'reporters', 'report-file-name'])
+const object = value => value !== null && typeof value === 'object' && !Array.isArray(value)
+const equal = (left, right) => JSON.stringify(left) === JSON.stringify(right)
+const merge = (base, overlay, path = '') => {
+  if (!object(overlay)) throw new Error(`overlay ${path || '<root>'} must be an object`)
+  const result = structuredClone(base)
+  for (const [key, value] of Object.entries(overlay)) {
+    if (['__proto__', 'constructor', 'prototype'].includes(key)) throw new Error(`unsafe overlay key: ${key}`)
+    const current = path ? `${path}.${key}` : key
+    if (protectedKeys.has(key)) {
+      if (!equal(result[key], value)) throw new Error(`overlay cannot change protected option: ${current}`)
+    } else if (object(result[key]) && object(value)) result[key] = merge(result[key], value, current)
+    else result[key] = structuredClone(value)
+  }
+  return result
+}
+let result = JSON.parse(fs.readFileSync(basePath, 'utf8'))
+for (const path of overlayPaths) {
+  const overlay = JSON.parse(fs.readFileSync(path, 'utf8'))
+  result['stryker-config'] = merge(result['stryker-config'], overlay['stryker-config'] ?? overlay)
+}
+fs.writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`)
+NODE
+  [ "$?" -eq 0 ] || { rm -f "$TEMP_CONFIG"; exit 2; }
+  EFFECTIVE_CONFIG="$TEMP_CONFIG"
+fi
+cleanup() { [ -z "$TEMP_CONFIG" ] || rm -f "$TEMP_CONFIG"; }
+trap cleanup EXIT
+
 command -v node >/dev/null 2>&1 || { echo "node is not on PATH" >&2; exit 3; }
 command -v dotnet >/dev/null 2>&1 || { echo "dotnet is not on PATH" >&2; exit 3; }
 dotnet stryker --version >/dev/null 2>&1 || { echo "dotnet stryker is not available" >&2; exit 3; }
 
-SOLUTION=$(node - "$CONFIG" "$EXPECTED" "$REPORT_NAME" "$ROOT" <<'NODE'
+SOLUTION=$(node - "$EFFECTIVE_CONFIG" "$EXPECTED" "$REPORT_NAME" "$ROOT" <<'NODE'
 const fs = require('node:fs')
 const path = require('node:path')
 const [configPath, expectedText, reportName, root] = process.argv.slice(2)
@@ -124,7 +164,9 @@ mkdir -p "$RUN_DIR" "$EV"
 
 (
   cd "$ROOT" || exit 2
-  dotnet stryker --config-file "$CONFIG" --output "$RUN_DIR"
+  args=(--config-file "$EFFECTIVE_CONFIG" --output "$RUN_DIR")
+  [ -z "$SINCE" ] || args+=(--since:"$SINCE")
+  dotnet stryker "${args[@]}"
 ) > "$STDOUT" 2>&1
 STATUS=$?
 

@@ -4,7 +4,7 @@ import { lstat, mkdir, mkdtemp, open, readFile, realpath, writeFile } from 'node
 import { createRequire } from 'node:module'
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { effectiveOptions, parseArgs, validateConfig, validateReport } from './gate-policy.mjs'
+import { applyOverlays, effectiveOptions, parseArgs, validateConfig, validateReport } from './gate-policy.mjs'
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex')
 const json = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
@@ -62,6 +62,19 @@ async function loadConfig(root, name, scope) {
 	return { path, sha256: sha256(bytes), config, scope }
 }
 
+async function loadOverlays(root, names) {
+	return Promise.all(names.map(async (name) => {
+		const path = await rootFile(root, name)
+		return JSON.parse(await readFile(path, 'utf8'))
+	}))
+}
+
+function changedFiles(root, since) {
+	const mergeBase = git(root, ['merge-base', since, 'HEAD'])
+	const files = git(root, ['diff', '--name-only', '-z', mergeBase, 'HEAD', '--']).split('\0').filter(Boolean)
+	return { mergeBase, files }
+}
+
 async function expand(root, patterns, glob) {
 	const names = new Set()
 	for (const pattern of patterns) {
@@ -95,11 +108,25 @@ async function prepare(input) {
 	const toolchain = await resolveToolchain(packagePath)
 	const { glob } = await import(pathToFileURL(toolchain.globModule))
 	const names = input.coreOnly ? ['core'] : ['core', 'boundary']
+	const overlays = await loadOverlays(root, input.overlays ?? [])
+	const differential = input.since ? changedFiles(root, input.since) : null
 	const scopes = []
-	for (const scope of names) scopes.push(await prepareScope(root, await loadConfig(root, input[scope], scope), glob))
+	for (const scope of names) {
+		const loaded = await loadConfig(root, input[scope], scope)
+		const config = applyOverlays(loaded.config, overlays)
+		validateConfig(config, scope)
+		const prepared = await prepareScope(root, { ...loaded, config }, glob)
+		if (differential) {
+			const selected = prepared.files.filter((file) => differential.files.includes(file))
+			ensure(selected.length > 0, `--since selected no ${scope} source files`)
+			prepared.files = selected
+			prepared.sources = await sourceSnapshot(root, selected)
+		}
+		scopes.push(prepared)
+	}
 	const allFiles = scopes.flatMap((scope) => scope.files)
 	ensure(new Set(allFiles).size === allFiles.length, 'Core and boundary sources overlap')
-	return { root, toolchain, scopes, revision: git(root, ['rev-parse', 'HEAD']) }
+	return { root, toolchain, scopes, revision: git(root, ['rev-parse', 'HEAD']), since: input.since ?? null, mergeBase: differential?.mergeBase ?? null, overlays: input.overlays ?? [] }
 }
 
 export async function executeChild(command, args, { cwd, stdout, stderr }) {
@@ -185,6 +212,9 @@ export async function runGates(input, { execute = executeChild } = {}) {
 		result.directory = await mkdtemp(join(await realpath(evidence), 'qg-js-'))
 		result.manifest = join(result.directory, 'manifest.json')
 		result.repo_root_rev = context.revision
+		result.requested_since = context.since
+		result.merge_base = context.mergeBase
+		result.overlays = context.overlays
 		result.toolchain = context.toolchain
 		result.node_version = process.versions.node
 		result.status = 'fail'

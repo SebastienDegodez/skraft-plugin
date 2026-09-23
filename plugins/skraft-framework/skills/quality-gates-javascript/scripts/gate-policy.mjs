@@ -3,6 +3,7 @@ const configKeys = ['$schema', 'testRunner', 'tap', 'mutate', 'thresholds', 'rep
 	'coverageAnalysis', 'concurrency', 'timeoutMS', 'timeoutFactor', 'dryRunTimeoutMinutes',
 	'maxTestRunnerReuse', 'disableBail', 'logLevel']
 const nodeArgs = ['--test-reporter=tap', '--test-reporter-destination=stdout']
+const immutable = new Set(['testRunner', 'thresholds', 'reporters', 'mutate', 'tap.testFiles', 'tap.nodeArgs'])
 
 function requireValue(condition, message) {
 	if (!condition) throw new Error(message)
@@ -28,6 +29,29 @@ function patterns(values) {
 function thresholds(value, expected) {
 	keys(value, ['high', 'low', 'break'])
 	requireValue(['high', 'low', 'break'].every((key) => value[key] === expected), `Thresholds must all equal ${expected}`)
+}
+
+function sameValue(left, right) {
+	if (Array.isArray(left) || Array.isArray(right)) return JSON.stringify(left) === JSON.stringify(right)
+	if (object(left) && object(right)) return JSON.stringify(left) === JSON.stringify(right)
+	return left === right
+}
+
+function merge(base, overlay, path = '') {
+	requireValue(object(overlay), `Overlay ${path || '<root>'} must be an options object`)
+	const result = structuredClone(base)
+	for (const [key, value] of Object.entries(overlay)) {
+		const currentPath = path ? `${path}.${key}` : key
+		requireValue(!['__proto__', 'constructor', 'prototype'].includes(key), `Unsafe overlay key: ${currentPath}`)
+		if (immutable.has(currentPath)) requireValue(sameValue(result[key], value), `Overlay cannot change protected option: ${currentPath}`)
+		else if (object(result[key]) && object(value)) result[key] = merge(result[key], value, currentPath)
+		else result[key] = structuredClone(value)
+	}
+	return result
+}
+
+export function applyOverlays(config, overlays = []) {
+	return overlays.reduce((value, overlay) => merge(value, overlay), structuredClone(config))
 }
 
 export function validateConfig(config, scope) {
@@ -115,13 +139,20 @@ export function parseArgs(args) {
 	const seen = new Set()
 	for (let index = 0; index < args.length; index++) {
 		const flag = args[index]
-		requireValue(!seen.has(flag), `Duplicate argument ${flag}`)
+		requireValue(flag === '--overlay' || !seen.has(flag), `Duplicate argument ${flag}`)
 		seen.add(flag)
 		if (flag === '--core-only') {
 			values.coreOnly = true
 			continue
 		}
-		requireValue(['--root', '--package', '--core', '--boundary', '--evidence'].includes(flag), `Unknown argument ${flag}`)
+		if (flag === '--overlay') {
+			const value = args[++index]
+			requireValue(typeof value === 'string' && value.length > 0 && !value.startsWith('--'), 'Missing value for --overlay')
+			values.overlays ??= []
+			values.overlays.push(value)
+			continue
+		}
+		requireValue(['--root', '--package', '--core', '--boundary', '--evidence', '--since'].includes(flag), `Unknown argument ${flag}`)
 		const value = args[++index]
 		requireValue(typeof value === 'string' && value.length > 0 && !value.startsWith('--'), `Missing value for ${flag}`)
 		values[flag.slice(2)] = value
