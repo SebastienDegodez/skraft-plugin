@@ -18,9 +18,12 @@ const TOOL_NAMES = new Map([
   ['bash', 'Bash'],
   ['shell', 'Bash'],
   ['write', 'Write'],
+  ['create', 'Write'],
   ['create_file', 'Write'],
   ['edit', 'Edit'],
   ['str_replace', 'Edit'],
+  ['multiedit', 'MultiEdit'],
+  ['notebookedit', 'NotebookEdit'],
   ['agent', 'Agent'],
   ['task', 'Agent'],
   ['read', 'Read'],
@@ -64,7 +67,7 @@ export const fromHarnessInput = (raw = {}, { env = process.env } = {}) => {
   const requestedAgent = raw.requestedAgent ?? raw.requested_agent
     ?? toolInput?.subagentType ?? toolInput?.subagent_type
   const filePath = raw.filePath ?? raw.file_path
-    ?? toolInput?.filePath ?? toolInput?.file_path ?? toolInput?.path
+    ?? toolInput?.filePath ?? toolInput?.file_path ?? toolInput?.path ?? toolInput?.notebook_path
   const harness = harnessOf(raw, env)
 
   return {

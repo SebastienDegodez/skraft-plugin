@@ -34,7 +34,7 @@ const runHook = (args, payload) => {
 
 test('PreToolUse/Bash: a shell command writing state.json is denied (G7 now active)', () => {
   const result = runHook(['PreToolUse', 'Bash'], {
-    toolInput: { command: 'echo "{}" > .copilot-tracking/skraft/p/state.json' },
+    toolInput: { command: 'echo "{}" > .copilot-tracking/skraft-plans/p/state.json' },
   })
   // The refusal must reach the harness in ITS vocabulary, not the framework's.
   assert.equal(result.hookSpecificOutput.permissionDecision, 'deny')

@@ -43,9 +43,12 @@ test('hook-manifest: the declared routes cover every guardrail event', () => {
     'node <pluginRoot>/src/cli/hook.mjs PreToolUse Agent',
     'node <pluginRoot>/src/cli/hook.mjs PreToolUse Bash',
     'node <pluginRoot>/src/cli/hook.mjs PreToolUse Edit',
+    'node <pluginRoot>/src/cli/hook.mjs PreToolUse MultiEdit',
+    'node <pluginRoot>/src/cli/hook.mjs PreToolUse NotebookEdit',
     'node <pluginRoot>/src/cli/hook.mjs PreToolUse Write',
   ])
   assert.deepEqual(routes('PostToolUse'), [
+    'node <pluginRoot>/src/cli/hook.mjs PostToolUse Agent',
     'node <pluginRoot>/src/cli/hook.mjs PostToolUse Agent',
     'node <pluginRoot>/src/cli/hook.mjs PostToolUse Read',
   ])

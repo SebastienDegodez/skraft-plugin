@@ -17,40 +17,73 @@ const DELIVER_AGENTS = ['software-engineer', 'software-engineer-reviewer']
 // G7 — protected-artifact detection primitives
 // ───────────────────────────────────────────────────────────────────────────
 
-test('isProtectedArtifactPath matches state.json and execution-log paths', () => {
-  assert.equal(isProtectedArtifactPath('.copilot-tracking/skraft-plans/us11/state.json'), true)
-  assert.equal(isProtectedArtifactPath('state.json'), true)
-  assert.equal(isProtectedArtifactPath('logs/execution-log.jsonl'), true)
-  assert.equal(isProtectedArtifactPath('logs/execution-log.json'), true)
+const STATE = '.copilot-tracking/skraft-plans/us11/state.json'
+const LOG = '.copilot-tracking/skraft-plans/us11/execution-log.json'
+const POINTER = '.copilot-tracking/skraft-plans/.active-slug'
+
+test('isProtectedArtifactPath matches the tracked state, execution log and active pointer only', () => {
+  for (const path of [STATE, `/repo/${STATE}`, 'C:\\repo\\.copilot-tracking\\skraft-plans\\us11\\state.json', LOG, `${LOG}l`, POINTER]) {
+    assert.equal(isProtectedArtifactPath(path), true, path)
+  }
 })
 
-test('isProtectedArtifactPath ignores unrelated files and non-strings', () => {
-  assert.equal(isProtectedArtifactPath('src/state.json.md'), false)
-  assert.equal(isProtectedArtifactPath('src/app.mjs'), false)
-  assert.equal(isProtectedArtifactPath(undefined), false)
-  assert.equal(isProtectedArtifactPath(''), false)
+test('isProtectedArtifactPath ignores every other state.json and non-strings', () => {
+  for (const path of ['state.json', 'us11/state.json', 'web/src/store/state.json', 'logs/execution-log.jsonl',
+    '.copilot-tracking/skraft-plans/us11/state.json.md', '.copilot-tracking/skraft-plans/us11/reviews/state.json',
+    'src/app.mjs', undefined, '']) {
+    assert.equal(isProtectedArtifactPath(path), false, String(path))
+  }
 })
 
-test('commandMutatesProtectedArtifact flags redirections into state.json', () => {
-  assert.equal(commandMutatesProtectedArtifact('echo "{}" > .copilot-tracking/skraft-plans/us11/state.json'), true)
-  assert.equal(commandMutatesProtectedArtifact('cat foo.json >> state.json'), true)
-  assert.equal(commandMutatesProtectedArtifact('printf "{}" | tee state.json'), true)
+test('isProtectedArtifactPath follows a custom tracking directory name', () => {
+  assert.equal(isProtectedArtifactPath('/tmp/root-x/us11/state.json', { trackingDir: 'root-x' }), true)
+  assert.equal(isProtectedArtifactPath('/tmp/root-x/us11/state.json'), false)
 })
 
-test('commandMutatesProtectedArtifact flags mutating verbs on protected artifacts', () => {
-  assert.equal(commandMutatesProtectedArtifact("sed -i 's/a/b/' state.json"), true)
-  assert.equal(commandMutatesProtectedArtifact('rm state.json'), true)
-  assert.equal(commandMutatesProtectedArtifact('mv other.json state.json'), true)
-  assert.equal(commandMutatesProtectedArtifact('truncate -s0 logs/execution-log.jsonl'), true)
+test('commandMutatesProtectedArtifact flags redirections, tee and in-place edits of tracked state', () => {
+  for (const command of [
+    `echo "{}" > ${STATE}`,
+    `cat foo.json >> ${STATE}`,
+    `printf "{}" | tee -a ${STATE}`,
+    `sed -i 's/a/b/' ${STATE}`,
+    `sed -i.bak 's/a/b/' ${LOG}`,
+    `echo other > ${POINTER}`,
+    `cd /repo && jq '.currentPhase="DONE"' x.json > ${STATE}`,
+  ]) {
+    assert.equal(commandMutatesProtectedArtifact(command), true, command)
+  }
 })
 
-test('commandMutatesProtectedArtifact allows reads of protected artifacts', () => {
-  assert.equal(commandMutatesProtectedArtifact('cat state.json'), false)
-  assert.equal(commandMutatesProtectedArtifact('jq . state.json'), false)
-  assert.equal(commandMutatesProtectedArtifact('grep currentPhase state.json'), false)
-  assert.equal(commandMutatesProtectedArtifact('cat state.json > /tmp/copy.json'), false)
-  assert.equal(commandMutatesProtectedArtifact('node plugins/skraft-framework/src/cli/state.mjs get us11'), false)
-  assert.equal(commandMutatesProtectedArtifact(undefined), false)
+test('commandMutatesProtectedArtifact flags removing, moving or overwriting tracked state', () => {
+  for (const command of [
+    `rm -f ${STATE}`,
+    `mv ${STATE} /tmp/away.json`,
+    `mv /tmp/forged.json ${STATE}`,
+    `cp /tmp/forged.json ${STATE}`,
+    `FOO=1 sudo truncate -s0 ${LOG}`,
+    `node -e "require('fs').writeFileSync('${STATE}', '{}')"`,
+    `python3 -c "open('${STATE}','w').write('{}')"`,
+  ]) {
+    assert.equal(commandMutatesProtectedArtifact(command), true, command)
+  }
+})
+
+test('commandMutatesProtectedArtifact allows reads and unrelated commands on the same line', () => {
+  for (const command of [
+    `cat ${STATE}`,
+    `jq . ${STATE}`,
+    `grep currentPhase ${STATE}`,
+    `cat ${STATE} > /tmp/copy.json`,
+    `cp ${STATE} /tmp/backup.json`,
+    `rm -rf dist; cat ${STATE}`,
+    'git mv lib/state.json lib/app-state.json',
+    'echo "{}" > web/src/store/state.json',
+    'echo "<root>/null/state.json and never ran"',
+    'node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" set --field nextActions --data \'["x"]\'',
+    undefined,
+  ]) {
+    assert.equal(commandMutatesProtectedArtifact(command), false, String(command))
+  }
 })
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -76,19 +109,19 @@ test('commandWritesWorkspace flags shell writes into src/ or tests/', () => {
 // ───────────────────────────────────────────────────────────────────────────
 
 test('guardProtectedArtifact denies a Write to state.json', () => {
-  const result = guardProtectedArtifact({ filePath: 'us11/state.json' })
+  const result = guardProtectedArtifact({ filePath: STATE })
   assert.equal(result.ok, false)
   assert.equal(result.error.code, STATE_WRITE_FORBIDDEN)
 })
 
 test('guardProtectedArtifact denies a shell mutation of state.json', () => {
-  const result = guardProtectedArtifact({ command: 'echo "{}" > us11/state.json' })
+  const result = guardProtectedArtifact({ command: `echo "{}" > ${STATE}` })
   assert.equal(result.ok, false)
   assert.equal(result.error.code, STATE_WRITE_FORBIDDEN)
 })
 
 test('guardProtectedArtifact allows a read of state.json', () => {
-  const result = guardProtectedArtifact({ command: 'cat us11/state.json' })
+  const result = guardProtectedArtifact({ command: `cat ${STATE}` })
   assert.equal(result.ok, true)
 })
 
@@ -128,7 +161,7 @@ test('guardWorkspaceWrite blocks a shell write into tests/ outside a monitored a
 // ───────────────────────────────────────────────────────────────────────────
 
 test('evaluateSessionGuard enforces G7 before G8', () => {
-  const result = evaluateSessionGuard({ filePath: 'us11/state.json', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
+  const result = evaluateSessionGuard({ filePath: STATE, phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
   assert.equal(result.ok, false)
   assert.equal(result.error.code, STATE_WRITE_FORBIDDEN)
 })

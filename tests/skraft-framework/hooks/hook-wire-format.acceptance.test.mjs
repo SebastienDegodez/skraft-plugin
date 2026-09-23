@@ -79,16 +79,19 @@ const ROUTES = [
   { args: ['PreToolUse', 'Bash'], payload: { toolInput: { command: 'ls -la' } } },
   {
     args: ['PreToolUse', 'Bash'],
-    payload: { toolInput: { command: 'echo "{}" > .copilot-tracking/skraft/p/state.json' } },
+    payload: { toolInput: { command: 'echo "{}" > .copilot-tracking/skraft-plans/p/state.json' } },
     label: 'denied write',
   },
   { args: ['PreToolUse', 'Agent'], payload: { toolInput: { subagentType: 'backlog-planner' } } },
   { args: ['PreToolUse', 'Agent'], matcher: 'Task', label: 'legacy Task alias', payload: { tool_name: 'Task', tool_input: { subagent_type: 'backlog-planner' } } },
-  { args: ['PreToolUse', 'Write'], payload: { tool_name: 'Write', tool_input: { file_path: 'state.json', content: '{}' } } },
-  { args: ['PreToolUse', 'Edit'], payload: { tool_name: 'Edit', tool_input: { file_path: 'state.json', old_string: '{}', new_string: '{"updated":true}' } } },
+  { args: ['PreToolUse', 'Write'], payload: { tool_name: 'Write', tool_input: { file_path: '.copilot-tracking/skraft-plans/p/state.json', content: '{}' } } },
+  { args: ['PreToolUse', 'Edit'], payload: { tool_name: 'Edit', tool_input: { file_path: '.copilot-tracking/skraft-plans/p/state.json', old_string: '{}', new_string: '{"updated":true}' } } },
+  { args: ['PreToolUse', 'MultiEdit'], payload: { tool_name: 'MultiEdit', tool_input: { file_path: '.copilot-tracking/skraft-plans/p/state.json', edits: [{ old_string: '{}', new_string: '{"x":1}' }] } } },
+  { args: ['PreToolUse', 'NotebookEdit'], payload: { tool_name: 'NotebookEdit', tool_input: { notebook_path: 'analysis.ipynb', new_source: 'x = 1' } } },
   { args: ['SubagentStart'], payload: { agentName: 'Skraft - Software Engineer' } },
   { args: ['SubagentStop'], payload: { agentName: 'Skraft - Software Engineer' } },
   { args: ['PostToolUse', 'Agent'], payload: { agentName: 'Skraft - Solution Researcher' } },
+  { args: ['PostToolUse', 'Agent'], matcher: 'Task', label: 'legacy Task alias', payload: { tool_name: 'Task', tool_input: { subagent_type: 'solution-researcher' } } },
   { args: ['PostToolUse', 'Read'], payload: { toolInput: { path: '/x/skills/outside-in-tdd/SKILL.md' } } },
 ]
 
@@ -112,7 +115,7 @@ test('hook wire format: every manifest route is covered here', () => {
 
 test('hook wire format: a PreToolUse refusal reaches BOTH harnesses', () => {
   const stdout = runHook(['PreToolUse', 'Bash'], {
-    toolInput: { command: 'echo "{}" > .copilot-tracking/skraft/p/state.json' },
+    toolInput: { command: 'echo "{}" > .copilot-tracking/skraft-plans/p/state.json' },
   })
   const output = assertHarnessValid(stdout, 'PreToolUse', 'G7 deny')
 

@@ -18,13 +18,18 @@ const deliverAgentsFrom = (config) => {
     .map((a) => canonicalAgentName(a, config))
 }
 
+// Tools that write the file they name.
+const FILE_WRITING_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
+
 // Extract the write signals from a normalised PreToolUse payload. Bash carries the
-// command; Write/Edit tools carry the adapter's filePath signal or legacy arguments.
+// command; file-writing tools carry the adapter's filePath signal or legacy arguments.
 const writeSignals = (payload) => {
   const toolName = payload.toolName
   const toolInput = payload.toolInput ?? {}
   const command = toolName === 'Bash' && typeof toolInput.command === 'string' ? toolInput.command : undefined
-  const filePath = (toolName === 'Write' || toolName === 'Edit') ? (payload.filePath ?? toolInput.filePath ?? toolInput.path ?? undefined) : undefined
+  const filePath = FILE_WRITING_TOOLS.has(toolName)
+    ? (payload.filePath ?? toolInput.filePath ?? toolInput.path ?? toolInput.notebook_path ?? undefined)
+    : undefined
   return { command, filePath }
 }
 
@@ -36,7 +41,7 @@ const audit = async (auditWriter, entry) => {
   try { await auditWriter.write(entry) } catch { /* audit failure must never change the decision */ }
 }
 
-export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, config, clock }) => ({
+export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, config, clock, trackingDir }) => ({
   handle: async (payload = {}) => {
     const { command, filePath } = writeSignals(payload)
     const agentName = payload.agentName ?? null
@@ -54,7 +59,7 @@ export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, 
     })
 
     // G7 — protected-artifact write ban (always enforced, state-independent).
-    const protectedResult = guardProtectedArtifact({ command, filePath })
+    const protectedResult = guardProtectedArtifact({ command, filePath, trackingDir })
     if (isErr(protectedResult)) {
       await record({ decision: 'DENY', code: protectedResult.error.code, reason: protectedResult.error.reason })
       return deny(protectedResult.error.reason)

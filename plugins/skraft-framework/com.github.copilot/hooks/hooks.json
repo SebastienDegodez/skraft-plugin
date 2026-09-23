@@ -55,6 +55,24 @@
           }
         ],
         "matcher": "Edit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse MultiEdit"
+          }
+        ],
+        "matcher": "MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse NotebookEdit"
+          }
+        ],
+        "matcher": "NotebookEdit"
       }
     ],
     "SubagentStart": [
@@ -86,6 +104,15 @@
           }
         ],
         "matcher": "Agent"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse Agent"
+          }
+        ],
+        "matcher": "Task"
       },
       {
         "hooks": [

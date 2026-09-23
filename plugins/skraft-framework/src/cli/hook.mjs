@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { createHookService } from '../adapters/api/hooks/service-factory.mjs'
 import { toHarnessOutput } from '../adapters/api/hooks/harness-output.mjs'
 import { fromHarnessInput } from '../adapters/api/hooks/harness-input.mjs'
@@ -79,7 +79,7 @@ const compose = async (cwd) => {
   // PreToolUse composite: G1 dispatch-order guard + G7/G8 session guard (see composite).
   const preToolUse = createPreToolUseCompositeService({
     dispatchGuard: createPreToolUseService({ stateReader, auditWriter, config, clock }),
-    sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock })
+    sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) })
   })
   return { trackingRoot, hookService: createHookService({ preToolUse, subagentStart, subagentStop, postToolUse }) }
 }

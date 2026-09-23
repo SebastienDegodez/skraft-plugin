@@ -57,7 +57,7 @@ test('AC-01: reading state.json stays allowed', async () => {
 
 test('AC-01: a Write tool targeting state.json is denied', async () => {
   const { result } = await runGuard({
-    payload: { toolName: 'Write', toolInput: { filePath: 'us11/state.json', content: '{}' } }
+    payload: { toolName: 'Write', toolInput: { filePath: '.copilot-tracking/skraft-plans/us11/state.json', content: '{}' } }
   })
   assert.equal(result.decision, 'deny')
 })
@@ -100,7 +100,7 @@ test('unreadable state fails open (allow) after G7 has run', async () => {
 test('G7 still denies a protected-artifact write even when state is unreadable', async () => {
   const { result } = await runGuard({
     reader: stateReaderThrowing(new Error('missing state')),
-    payload: { toolName: 'Bash', toolInput: { command: 'rm us11/state.json' } }
+    payload: { toolName: 'Bash', toolInput: { command: 'rm .copilot-tracking/skraft-plans/us11/state.json' } }
   })
   assert.equal(result.decision, 'deny')
 })
