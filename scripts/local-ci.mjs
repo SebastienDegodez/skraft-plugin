@@ -5,6 +5,7 @@
 //
 //   node scripts/local-ci.mjs            # fast gates: tests + drift guards
 //   node scripts/local-ci.mjs --mutation # also run Stryker (slow, like CI)
+//   node scripts/local-ci.mjs --dotnet   # also run the .NET gate scripts on real Stryker.NET
 //
 // Cross-platform: spawns `node` directly, no shell globbing, no dependency.
 import { spawnSync } from 'node:child_process'
@@ -13,6 +14,7 @@ import { join } from 'node:path'
 
 const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
+const withDotnet = flags.has('--dotnet')
 
 // Enumerate test files ourselves (no shell glob expansion).
 const testArgs = (dir, coverage = false) => {
@@ -52,6 +54,11 @@ if (withMutation && results.every((r) => r.ok)) {
   )
 } else if (withMutation) {
   process.stdout.write('\n⏭  Mutation skipped — fast gates failed\n')
+}
+
+// Needs the .NET 10 SDK and NuGet access, which the fast gates never do.
+if (withDotnet) {
+  results.push(run({ name: '.NET quality-gate scripts (real Stryker.NET)', cmd: 'node', args: ['scripts/dotnet-quality-gates-smoke.mjs'] }))
 }
 
 process.stdout.write('\n── local CI summary ──\n')

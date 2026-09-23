@@ -13,6 +13,7 @@ on:
       - 'plugins/skraft-framework/skills/**'
       - 'plugins/skraft-framework/.codex-plugin/**'
       - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/dotnet-quality-gates-smoke.mjs'
       - 'scripts/lib/agent-*.mjs'
       - 'scripts/lib/native-claude-agent.mjs'
       - 'plugins/skraft-framework/.agent-sync.json'
@@ -37,6 +38,7 @@ on:
       - 'plugins/skraft-framework/skills/**'
       - 'plugins/skraft-framework/.codex-plugin/**'
       - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/dotnet-quality-gates-smoke.mjs'
       - 'scripts/lib/agent-*.mjs'
       - 'scripts/lib/native-claude-agent.mjs'
       - 'plugins/skraft-framework/.agent-sync.json'
@@ -101,6 +103,26 @@ jobs:
 
       - name: Check skraft-framework.config.json matches the agent descriptors
         run: node plugins/skraft-framework/src/cli/build-config-bin.mjs --check
+
+  dotnet-gates:
+    name: .NET quality-gate scripts (real Stryker.NET)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Run the gate scripts on a real solution
+        run: node scripts/dotnet-quality-gates-smoke.mjs
 
   mutation:
     name: Mutation Testing
