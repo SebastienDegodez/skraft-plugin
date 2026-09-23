@@ -1,20 +1,15 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, readFile } from 'node:fs/promises'
+import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { fileURLToPath } from 'node:url'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
 
 // Outer-loop boundary for G1. The gate reads the state.json the state CLI writes and the
 // published framework config — no hand-shaped runtime state, no copied config.
 import { createPreToolUseService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-service.mjs'
 import { createJsonStateReader } from '../../../plugins/skraft-framework/src/adapters/infrastructure/json-state-reader.mjs'
+import { CONFIG, closeAllPhases, gitRepo, producePhase, stateCli } from '../state/phase-closure-fixture.mjs'
 
-const execFileAsync = promisify(execFile)
-const CLI = fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/state.mjs', import.meta.url))
-const CONFIG = JSON.parse(await readFile(new URL('../../../plugins/skraft-framework/skraft-framework.config.json', import.meta.url), 'utf8'))
 const SLUG = 'checkout-pricing'
 const FIXED_NOW = '2026-09-23T12:00:00.000Z'
 
@@ -26,7 +21,9 @@ const collectingAuditWriter = () => {
 // A tracking root driven only through the state CLI, as the orchestrator drives it.
 const pipeline = async () => {
   const root = await mkdtemp(join(tmpdir(), 'skraft-g1-'))
-  const cli = (...args) => execFileAsync('node', [CLI, ...args, '--slug', SLUG], { env: { ...process.env, SKRAFT_TRACKING_ROOT: root } })
+  const repo = gitRepo(join(root, 'repo'))
+  const run = stateCli({ root, cwd: join(root, 'repo') })
+  const cli = async (...args) => run(...args, '--slug', SLUG)
   await cli('init')
   const audit = collectingAuditWriter()
   const gate = createPreToolUseService({
@@ -40,7 +37,7 @@ const pipeline = async () => {
     const result = await gate.handle({ requestedAgent, projectSlug: SLUG })
     return { result, audit: audit.entries.slice(before) }
   }
-  return { cli, dispatch, cleanup: () => rm(root, { recursive: true, force: true }) }
+  return { root, repo, run, cli, dispatch, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
 const withPipeline = async (fn) => {
@@ -48,10 +45,11 @@ const withPipeline = async (fn) => {
   try { await fn(p) } finally { await p.cleanup() }
 }
 
-const toDesign = async (cli) => {
-  await cli('record-artifact', '--phase', 'RESEARCH', '--path', 'research/2026-09-23/checkout-pricing-research.md')
+const toDesign = async ({ root, run, cli }) => {
+  producePhase({ root, slug: SLUG, phase: 'RESEARCH', cli: run })
   await cli('close-phase', '--phase', 'RESEARCH', '--verdict', 'APPROVED')
 }
+const approveDesign = ({ root, run }) => producePhase({ root, slug: SLUG, phase: 'DESIGN', cli: run })
 
 // ─── Conforming dispatches are allowed and audited once ────────────────────────
 
@@ -69,8 +67,9 @@ test('a fresh pipeline dispatches the research specialist', async () => {
 })
 
 test('the reviewer runs once its specialist recorded an artefact, and again after a retry', async () => {
-  await withPipeline(async ({ cli, dispatch }) => {
-    await toDesign(cli)
+  await withPipeline(async (p) => {
+    const { cli, dispatch } = p
+    await toDesign(p)
     await cli('record-artifact', '--phase', 'DESIGN', '--path', 'details/2026-09-23/contracts-loyalty.md')
     assert.equal((await dispatch('solution-architect-reviewer')).result.decision, 'allow')
 
@@ -82,20 +81,19 @@ test('the reviewer runs once its specialist recorded an artefact, and again afte
 })
 
 test('an approved DESIGN still accepts its architect for ADR ratification', async () => {
-  await withPipeline(async ({ cli, dispatch }) => {
-    await toDesign(cli)
-    await cli('record-artifact', '--phase', 'DESIGN', '--path', 'details/2026-09-23/contracts-loyalty.md')
-    await cli('record-verdict', '--phase', 'DESIGN', '--verdict', 'APPROVED')
-    assert.equal((await dispatch('solution-architect')).result.decision, 'allow')
+  await withPipeline(async (p) => {
+    await toDesign(p)
+    approveDesign(p)
+    assert.equal((await p.dispatch('solution-architect')).result.decision, 'allow')
   })
 })
 
 // ─── Out-of-order dispatches are denied and name what must run first ───────────
 
 test('a reviewer before its specialist is denied and names the specialist', async () => {
-  await withPipeline(async ({ cli, dispatch }) => {
-    await toDesign(cli)
-    const { result, audit } = await dispatch('solution-architect-reviewer')
+  await withPipeline(async (p) => {
+    await toDesign(p)
+    const { result, audit } = await p.dispatch('solution-architect-reviewer')
     assert.equal(result.decision, 'deny')
     assert.match(result.message, /Skraft - Solution Architect\b/)
     assert.equal(audit[0].decision, 'DENY')
@@ -105,10 +103,10 @@ test('a reviewer before its specialist is denied and names the specialist', asyn
 })
 
 test('the next phase waits for its transition, even after an approved verdict', async () => {
-  await withPipeline(async ({ cli, dispatch }) => {
-    await toDesign(cli)
-    await cli('record-artifact', '--phase', 'DESIGN', '--path', 'details/2026-09-23/contracts-loyalty.md')
-    await cli('record-verdict', '--phase', 'DESIGN', '--verdict', 'APPROVED')
+  await withPipeline(async (p) => {
+    const { cli, dispatch } = p
+    await toDesign(p)
+    approveDesign(p)
 
     const { result, audit } = await dispatch('acceptance-designer')
     assert.equal(result.decision, 'deny')
@@ -130,8 +128,8 @@ test('a phase skipped ahead is denied', async () => {
 })
 
 test('a completed pipeline dispatches no phase agent', async () => {
-  await withPipeline(async ({ cli, dispatch }) => {
-    for (const phase of CONFIG.phaseOrder) await cli('close-phase', '--phase', phase, '--verdict', 'APPROVED')
+  await withPipeline(async ({ root, repo, run, dispatch }) => {
+    closeAllPhases({ root, slug: SLUG, cli: run, repo })
     const { result, audit } = await dispatch('software-engineer')
     assert.equal(result.decision, 'block')
     assert.equal(audit[0].code, 'PIPELINE_COMPLETE')

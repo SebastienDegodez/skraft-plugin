@@ -8,6 +8,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { producePhase, stateCli as fixtureCli } from '../state/phase-closure-fixture.mjs'
 
 const PLUGIN = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
 const STATE_CLI = join(PLUGIN, 'src/cli/state.mjs')
@@ -88,6 +89,7 @@ test('SKRAFT_PROJECT_SLUG overrides the recorded pointer; a malformed pointer is
     state(env, 'init', '--slug', 'other')
     state(env, 'init', '--slug', 'checkout-pricing')
     const pinned = { ...env, SKRAFT_PROJECT_SLUG: 'other' }
+    producePhase({ root, slug: 'other', phase: 'RESEARCH', cli: fixtureCli({ root }) })
     state(pinned, 'close-phase', '--phase', 'RESEARCH', '--verdict', 'APPROVED')
     assert.equal(state(env, 'get', '--slug', 'other', '--field', 'currentPhase').out.trim(), 'DESIGN')
     assert.equal(hook(pinned, ['PreToolUse', 'Agent'], agentDispatch('solution-architect')), undefined)

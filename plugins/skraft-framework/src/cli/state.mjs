@@ -6,6 +6,8 @@ import { createJsonStateReader } from '../adapters/infrastructure/json-state-rea
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
 import { createJsonStateBackupReader } from '../adapters/infrastructure/state/json-state-backup-reader.mjs'
 import { createStateService } from '../application/state-service.mjs'
+import { createPhaseGate } from '../application/phase-gate-service.mjs'
+import { createTrackingFiles } from '../adapters/infrastructure/tracking-files.mjs'
 import { createRecoveryService } from '../application/recovery-service.mjs'
 import { createGitCommitLogReader } from '../adapters/infrastructure/git-commit-log-reader.mjs'
 import { createCommitScanService } from '../application/commit-scan-service.mjs'
@@ -21,22 +23,40 @@ const stateReader = createJsonStateReader(basePath)
 const stateWriter = createJsonStateWriter(basePath)
 const backupReader = createJsonStateBackupReader(basePath)
 const activeSlug = createActiveSlugStore(basePath)
-// Phase order: skraft-framework.config.json beside this runtime (SKRAFT_CONFIG overrides).
-// An unreadable config leaves the state machine on its own default order.
-const readPhaseOrder = () => {
+// Framework config: skraft-framework.config.json beside this runtime (SKRAFT_CONFIG
+// overrides). An unreadable config leaves the state machine on its default order and
+// the phase closures ungated.
+const readFrameworkConfig = () => {
   const configPath = process.env.SKRAFT_CONFIG
     ?? fileURLToPath(new URL('../../skraft-framework.config.json', import.meta.url))
   try {
-    const { phaseOrder } = JSON.parse(readFileSync(configPath, 'utf8'))
-    const valid = Array.isArray(phaseOrder) && phaseOrder.length > 0
-      && phaseOrder.every((phase) => typeof phase === 'string' && phase.length > 0)
-    return valid ? phaseOrder : undefined
+    return JSON.parse(readFileSync(configPath, 'utf8'))
   } catch {
-    return undefined
+    return null
+  }
+}
+const frameworkConfig = readFrameworkConfig()
+const publishedOrder = frameworkConfig?.phaseOrder
+const phaseOrder = Array.isArray(publishedOrder) && publishedOrder.length > 0
+  && publishedOrder.every((phase) => typeof phase === 'string' && phase.length > 0)
+  ? publishedOrder : undefined
+
+const now = () => new Date().toISOString()
+
+// HEAD of the repository the CLI runs in; null outside a git work tree.
+const headSha = () => {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null
+  } catch {
+    return null
   }
 }
 
-const service = createStateService({ stateReader, stateWriter, phaseOrder: readPhaseOrder() })
+const phaseGate = frameworkConfig?.phaseAgents
+  ? createPhaseGate({ config: frameworkConfig, trackingFiles: createTrackingFiles(basePath), git: { headSha: async () => headSha() } })
+  : undefined
+
+const service = createStateService({ stateReader, stateWriter, phaseOrder, phaseGate })
 const recoveryService = createRecoveryService({ stateReader, stateWriter, backupReader, stateService: service })
 const commitScanService = createCommitScanService({
   commitLogReader: createGitCommitLogReader({ cwd: process.cwd() })
@@ -49,17 +69,6 @@ const rest = argv.slice(1)
 function arg(name) {
   const idx = rest.indexOf(`--${name}`)
   return idx !== -1 ? rest[idx + 1] : undefined
-}
-
-const now = () => new Date().toISOString()
-
-// HEAD of the repository the CLI runs in; null outside a git work tree.
-const headSha = () => {
-  try {
-    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null
-  } catch {
-    return null
-  }
 }
 
 function domainExitCode(code) {

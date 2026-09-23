@@ -68,6 +68,9 @@ export default {
     'plugins/skraft-framework/src/domain/orchestrator-metadata-policy.mjs',
     // Active pipeline pointer read by the hooks
     'plugins/skraft-framework/src/adapters/infrastructure/active-slug-store.mjs',
+    // Phase closure gate (G4/G5) run by the state CLI
+    'plugins/skraft-framework/src/domain/phase-gate-policy.mjs',
+    'plugins/skraft-framework/src/application/phase-gate-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

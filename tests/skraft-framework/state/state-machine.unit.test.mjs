@@ -423,3 +423,42 @@ test('passthrough: INCR_REWORK preserves orchestrator-owned fields', () => {
   assert.equal(r.value.reworkCount.RESEARCH, 1)
   assert.equal(r.value.findingsResolved.RESEARCH, 1)
 })
+
+// ─── One vocabulary, one path convention ───────────────────────────────────────
+
+test('state-machine RECORD_VERDICT: accepts only the state vocabulary and names the mapping', () => {
+  for (const verdict of ['APPROVED', 'CHANGES_REQUESTED']) {
+    assert.equal(applyTransition(mkState(), { type: 'RECORD_VERDICT', phase: 'RESEARCH', verdict }).ok, true, verdict)
+  }
+  for (const verdict of ['NEEDS_REWORK', 'REJECTED', 'approved', undefined]) {
+    const r = applyTransition(mkState(), { type: 'RECORD_VERDICT', phase: 'RESEARCH', verdict })
+    assert.equal(r.ok, false, String(verdict))
+    assert.equal(r.error.code, 'INVALID_VERDICT')
+    assert.match(r.error.reason, /NEEDS_REWORK and REJECTED record as CHANGES_REQUESTED/)
+  }
+})
+
+test('state-machine: recorded paths must be relative to the tracking directory', () => {
+  const events = (path) => [
+    { type: 'RECORD_ARTIFACT', phase: 'RESEARCH', path },
+    { type: 'RECORD_REVIEW_ARTIFACT', phase: 'RESEARCH', path },
+    { type: 'CLOSE_PHASE', phase: 'RESEARCH', verdict: 'APPROVED', path },
+  ]
+  for (const path of ['.copilot-tracking/skraft-plans/x/research/r.md', 'research/r.md']) {
+    for (const event of events(path)) assert.equal(applyTransition(mkState(), event).ok, true, `${event.type} ${path}`)
+  }
+  for (const path of ['/abs/r.md', '../x/r.md', '']) {
+    for (const event of events(path)) {
+      const r = applyTransition(mkState(), event)
+      assert.equal(r.ok, false, `${event.type} ${path}`)
+      assert.equal(r.error.code, 'INVALID_PATH')
+    }
+  }
+})
+
+test('state-machine: a repository-relative tracking path is recorded relative to the tracking directory', () => {
+  const r = applyTransition(mkState(), { type: 'RECORD_ARTIFACT', phase: 'RESEARCH', path: '.copilot-tracking/skraft-plans/x/research/r.md' })
+  assert.deepEqual([...r.value.phaseArtifacts.RESEARCH], ['research/r.md'])
+  const c = applyTransition(mkState(), { type: 'CLOSE_PHASE', phase: 'RESEARCH', verdict: 'APPROVED', path: '.copilot-tracking/skraft-plans/x/reviews/d/manual-close.md' })
+  assert.deepEqual([...c.value.reviewArtifacts.RESEARCH], ['reviews/d/manual-close.md'])
+})

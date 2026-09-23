@@ -33,7 +33,11 @@ const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
 // Application use case: orchestrates stateReader port + stateMachine domain + stateWriter port.
 // No direct filesystem access — all IO delegated to injected ports. `phaseOrder` is the
 // published skraft-framework.config.json::phaseOrder; a fresh pipeline opens its first phase.
-export const createStateService = ({ stateReader, stateWriter, phaseOrder = DEFAULT_PHASE_ORDER }) => {
+// A phase closure (transition, close-phase) is also judged by `phaseGate`, when wired:
+// its violations refuse the closure with PHASE_GATE and leave the state untouched.
+const CLOSING_EVENTS = new Set(['ADVANCE', 'CLOSE_PHASE'])
+
+export const createStateService = ({ stateReader, stateWriter, phaseOrder = DEFAULT_PHASE_ORDER, phaseGate }) => {
   // Reads state, coerces on parse errors into specific error codes.
   const readState = async (projectSlug) => {
     try {
@@ -89,6 +93,18 @@ export const createStateService = ({ stateReader, stateWriter, phaseOrder = DEFA
 
     const transitionResult = applyTransition(validation.value, event, { phaseOrder })
     if (!isOk(transitionResult)) return transitionResult
+
+    if (phaseGate && CLOSING_EVENTS.has(event.type)) {
+      const phase = validation.value.currentPhase
+      const violations = await phaseGate.check(projectSlug, validation.value, phase, { closingArtifact: event.path })
+      if (violations.length > 0) {
+        return Err({
+          code: 'PHASE_GATE',
+          reason: `${phase} cannot close: ${violations.map((v) => `${v.code} — ${v.reason}`).join('; ')}`,
+          violations,
+        })
+      }
+    }
 
     const writeResult = await stateWriter.write(projectSlug, transitionResult.value)
     if (!isOk(writeResult)) return writeResult

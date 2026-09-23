@@ -26,8 +26,15 @@ const CLI = fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/sta
 // ─── CLI runner ───────────────────────────────────────────────────────────────
 // Spawns cli/state.mjs with SKRAFT_TRACKING_ROOT pointing to the isolated tmpdir.
 // Returns { exitCode, stdout, stderr } — never throws.
+// These tests pin the bridge mechanics (events, exit codes, atomic writes). The phase
+// closure gate needs a config's phaseAgents; this one publishes only the phase order,
+// so closures here are judged on the state machine alone. The gate has its own suite
+// (pipeline-walkthrough.acceptance.test.mjs).
+const BRIDGE_CONFIG = join(await mkdtemp(join(tmpdir(), 'skraft-bridge-config-')), 'skraft-framework.config.json')
+await writeFile(BRIDGE_CONFIG, JSON.stringify({ phaseOrder: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'] }), 'utf8')
+
 async function stateCli(args, { basePath }) {
-  const env = { ...process.env, SKRAFT_TRACKING_ROOT: basePath }
+  const env = { ...process.env, SKRAFT_TRACKING_ROOT: basePath, SKRAFT_CONFIG: BRIDGE_CONFIG }
   try {
     const { stdout, stderr } = await execFileAsync('node', [CLI, ...args], { env })
     return { exitCode: 0, stdout, stderr }

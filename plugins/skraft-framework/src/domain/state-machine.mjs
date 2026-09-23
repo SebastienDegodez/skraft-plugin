@@ -2,10 +2,22 @@ import { Ok, Err, isOk } from './result.mjs'
 import { validatePipelineState } from './state-schema.mjs'
 import { nextPhaseAfter } from './pipeline-policy.mjs'
 import { validateMetadataField } from './orchestrator-metadata-policy.mjs'
+import { toTrackingPath } from './phase-gate-policy.mjs'
 
 // Fallback phase order when the caller supplies none. The published order lives in
 // skraft-framework.config.json::phaseOrder and is injected by the application layer.
 export const DEFAULT_PHASE_ORDER = Object.freeze(['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+
+const STATE_VERDICTS = new Set(['APPROVED', 'CHANGES_REQUESTED'])
+
+// One path convention: recorded paths are relative to the project's tracking directory
+// (a repository-relative tracking path is recorded without its prefix).
+const trackingPath = (path) => {
+  const relative = toTrackingPath(path)
+  return relative !== null
+    ? Ok(relative)
+    : Err({ code: 'INVALID_PATH', reason: `${path} must be relative to the project's tracking directory (e.g. reviews/{date}/design-review-1.md)` })
+}
 
 // A closure given a time marks the closed phase done in phaseHistory.
 const completedHistory = (state, phase, at) => {
@@ -55,6 +67,12 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
     }
 
     case 'RECORD_VERDICT': {
+      if (!STATE_VERDICTS.has(event.verdict)) {
+        return Err({
+          code: 'INVALID_VERDICT',
+          reason: `verdict must be APPROVED or CHANGES_REQUESTED, got ${event.verdict}; a review's NEEDS_REWORK and REJECTED record as CHANGES_REQUESTED`,
+        })
+      }
       return Ok(Object.freeze({
         ...state,
         verdicts: Object.freeze({ ...state.verdicts, [event.phase]: event.verdict }),
@@ -68,13 +86,15 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
           return Err({ code: 'APPEND_ONLY_VIOLATION', reason: 'phasesCompleted is append-only; replacement with fewer entries rejected' })
         }
       }
+      const artifactPath = trackingPath(event.path)
+      if (!isOk(artifactPath)) return artifactPath
       // I5: phaseArtifacts[phase] is append-only
       const existingArtifacts = state.phaseArtifacts[event.phase] ?? []
       return Ok(Object.freeze({
         ...state,
         phaseArtifacts: Object.freeze({
           ...state.phaseArtifacts,
-          [event.phase]: Object.freeze([...existingArtifacts, event.path]),
+          [event.phase]: Object.freeze([...existingArtifacts, artifactPath.value]),
         }),
       }))
     }
@@ -88,11 +108,13 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
           return Err({ code: 'APPEND_ONLY_VIOLATION', reason: 'reviewArtifacts is append-only; replacement with fewer entries rejected' })
         }
       }
+      const reviewPath = trackingPath(event.path)
+      if (!isOk(reviewPath)) return reviewPath
       return Ok(Object.freeze({
         ...state,
         reviewArtifacts: Object.freeze({
           ...state.reviewArtifacts,
-          [event.phase]: Object.freeze([...existingReview, event.path]),
+          [event.phase]: Object.freeze([...existingReview, reviewPath.value]),
         }),
       }))
     }
@@ -114,9 +136,15 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
         })
       }
 
+      let closingReview = null
+      if (event.path !== undefined) {
+        const reviewPath = trackingPath(event.path)
+        if (!isOk(reviewPath)) return reviewPath
+        closingReview = reviewPath.value
+      }
       const existingReview = state.reviewArtifacts[event.phase] ?? []
-      const reviewArtifacts = event.path
-        ? Object.freeze({ ...state.reviewArtifacts, [event.phase]: Object.freeze([...existingReview, event.path]) })
+      const reviewArtifacts = closingReview
+        ? Object.freeze({ ...state.reviewArtifacts, [event.phase]: Object.freeze([...existingReview, closingReview]) })
         : state.reviewArtifacts
 
       const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }) ?? 'DONE'
