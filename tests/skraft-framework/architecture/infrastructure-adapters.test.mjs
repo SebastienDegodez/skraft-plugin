@@ -5,7 +5,7 @@ import { createFixedTime } from '../../../plugins/skraft-framework/src/adapters/
 import { createInMemoryFilesystem } from '../../../plugins/skraft-framework/src/adapters/infrastructure/in-memory-filesystem.mjs'
 import { createRealFilesystem } from '../../../plugins/skraft-framework/src/adapters/infrastructure/real-filesystem.mjs'
 import { createJsonStateReader } from '../../../plugins/skraft-framework/src/adapters/infrastructure/json-state-reader.mjs'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -151,4 +151,33 @@ test('json-state-reader: ENOENT message contains project slug', async () => {
   const err = await reader.read('missing-slug').catch(e => e)
   assert.ok(err instanceof Error, 'throws an Error')
   await rm(base, { recursive: true, force: true })
+})
+
+test('json-state-reader: reads {base}/{slug}/state.json back as an object', async () => {
+  const base = await mkdtemp(join(tmpdir(), 'skraft-sr-'))
+  try {
+    await mkdir(join(base, 'checkout'))
+    await writeFile(join(base, 'checkout', 'state.json'), '{"currentPhase":"DESIGN"}')
+    assert.deepEqual(await createJsonStateReader(base).read('checkout'), { currentPhase: 'DESIGN' })
+  } finally {
+    await rm(base, { recursive: true, force: true })
+  }
+})
+
+test('json-state-reader: a corrupted state.json throws CORRUPTED_STATE and is snapshotted, unless the reader is a hook', async () => {
+  for (const [options, snapshots] of [[undefined, 1], [{ snapshotCorrupted: false }, 0]]) {
+    const base = await mkdtemp(join(tmpdir(), 'skraft-sr-'))
+    try {
+      await mkdir(join(base, 'checkout'))
+      await writeFile(join(base, 'checkout', 'state.json'), '{"currentPhase":')
+      const err = await createJsonStateReader(base, options).read('checkout').catch((e) => e)
+      assert.equal(err.code, 'CORRUPTED_STATE')
+      assert.match(err.message, /^Corrupted state\.json for checkout: /)
+      const copies = (await readdir(join(base, 'checkout'))).filter((name) => /^state\.json\.corrupted\.\d+$/.test(name))
+      assert.equal(copies.length, snapshots, JSON.stringify(options))
+      if (snapshots) assert.equal(await readFile(join(base, 'checkout', copies[0]), 'utf8'), '{"currentPhase":')
+    } finally {
+      await rm(base, { recursive: true, force: true })
+    }
+  }
 })
