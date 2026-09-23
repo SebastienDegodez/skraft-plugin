@@ -248,6 +248,42 @@ test('runner exit code, missing report, and mutant-free report all fail the gate
   }
 })
 
+const reportWith = async (root, statuses) => {
+  const path = join(root, 'native-report.json')
+  const mutants = statuses.map((status, index) => ({ id: String(index + 1), status }))
+  await writeFile(path, JSON.stringify({ files: { 'Source.cs': { mutants } } }))
+  return path
+}
+
+// Stryker exits 0 when it cannot compute a score, e.g. when no test ran and every mutant
+// stayed Pending: the fake exits 0 in every case below.
+test('the gate is judged on the tested mutants, not on Stryker exit code alone', async () => {
+  for (const [statuses, extraArgs, exitCode, evidenceLine] of [
+    [['Pending', 'Pending', 'Ignored'], [], 1, /^2 mutant\(s\) were never tested/m],
+    [['Ignored', 'CompileError'], [], 1, /^no Domain,Application mutant was tested/m],
+    [['Ignored', 'CompileError'], ['--since', 'abc123'], 0, /^No Domain,Application mutant changed since abc123/m],
+    [['Killed', 'Survived', 'Ignored'], [], 1, /^Mutation score \(Domain,Application\): 1\/2 tested mutants detected = 50%, bar 100%$/m],
+    [['Killed', 'Timeout', 'CompileError'], [], 0, /^Mutation score \(Domain,Application\): 2\/2 tested mutants detected = 100%, bar 100%$/m],
+  ]) {
+    const { root, env } = await setup()
+    try {
+      await canonicalSolution(root)
+      await run(CONFIGURE, ['--root', root], { cwd: root, env })
+      const evidence = join(root, 'evidence')
+      const result = await run(CORE, ['--root', root, '--evidence', evidence, ...extraArgs], {
+        cwd: root,
+        env: { ...env, FAKE_DOTNET_REPORT_FIXTURE: await reportWith(root, statuses) },
+      })
+      assert.equal(result.exitCode, exitCode, `${statuses}: ${result.stderr}`)
+      assert.equal(JSON.parse(result.stdout).passed, exitCode === 0)
+      assert.match(await readFile(join(evidence, 'qg-mutation.stdout'), 'utf8'), evidenceLine)
+      assert.equal(await readFile(join(evidence, 'qg-mutation.exit'), 'utf8'), `${exitCode}\n`)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+})
+
 test('runner rejects threshold drift before invoking Stryker', async () => {
   const { root, log, env } = await setup()
   try {

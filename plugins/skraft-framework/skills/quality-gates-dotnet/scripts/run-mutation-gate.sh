@@ -179,27 +179,47 @@ STATUS=$?
 NATIVE_REPORT="$RUN_DIR/reports/$REPORT_NAME.json"
 if [ -f "$NATIVE_REPORT" ]; then
   cp "$NATIVE_REPORT" "$REPORT"
-  node - "$REPORT" <<'NODE'
+  # The score is recomputed from the tested mutants: Stryker exits 0 when it could not
+  # compute one, e.g. when no test ran and every mutant stayed Pending.
+  node - "$REPORT" "$STDOUT" "$EXPECTED" "$SCOPE" "$SINCE" <<'NODE'
 const fs = require('node:fs')
-const reportPath = process.argv[2]
+const [reportPath, stdoutPath, expected, scope, since] = process.argv.slice(2)
+const record = (message) => {
+  fs.appendFileSync(stdoutPath, `${message}\n`)
+  console.error(message)
+}
+const fail = (message) => {
+  record(message)
+  process.exit(1)
+}
 let report
 try {
   report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 } catch (error) {
-  console.error(`invalid native mutation report ${reportPath}: ${error.message}`)
-  process.exit(1)
+  fail(`invalid native mutation report ${reportPath}: ${error.message}`)
 }
 const files = report.files && typeof report.files === 'object' ? Object.values(report.files) : []
 const mutants = files.flatMap((file) => Array.isArray(file?.mutants) ? file.mutants : [])
-if (mutants.length === 0) {
-  console.error(`native mutation report contains no mutants: ${reportPath}`)
-  process.exit(1)
+if (mutants.length === 0) fail(`native mutation report contains no mutants: ${reportPath}`)
+const count = (...statuses) => mutants.filter((mutant) => statuses.includes(mutant.status)).length
+const pending = count('Pending')
+if (pending > 0) fail(`${pending} mutant(s) were never tested: no test ran against them`)
+const detected = count('Killed', 'Timeout')
+const tested = detected + count('Survived', 'NoCoverage')
+if (tested === 0 && since) {
+  record(`No ${scope} mutant changed since ${since}: nothing to test`)
+  process.exit(0)
 }
+if (tested === 0) fail(`no ${scope} mutant was tested: the mutation score cannot be computed`)
+const score = (detected / tested) * 100
+const summary = `Mutation score (${scope}): ${detected}/${tested} tested mutants detected = ${Math.floor(score * 100) / 100}%, bar ${expected}%`
+if (score < Number(expected)) fail(summary)
+record(summary)
 NODE
   REPORT_STATUS=$?
   [ "$REPORT_STATUS" -eq 0 ] || STATUS=1
 else
-  echo "native mutation report missing: $NATIVE_REPORT" >&2
+  echo "native mutation report missing: $NATIVE_REPORT" | tee -a "$STDOUT" >&2
   STATUS=1
 fi
 

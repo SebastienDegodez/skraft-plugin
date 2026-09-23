@@ -122,8 +122,10 @@ allowed only after reviewing why regeneration should replace customization. Neve
 ### Gate execution and evidence
 
 Run checked-in configs through bundled wrappers. Each wrapper validates its config,
-passes the whole solution to Stryker once, captures the aggregate JSON report, rejects
-a report with zero mutants, and returns the gate verdict as its exit code:
+passes the whole solution to Stryker once, captures the aggregate JSON report, and
+returns the gate verdict as its exit code. The verdict is the score recomputed from the
+tested mutants: a report with zero mutants, a mutant no test ran against, or a full run
+with no tested mutant fails. The last stdout line states the score or the failure:
 
 ```bash
 bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-core.sh" --root "$PWD" --evidence "$EV"
@@ -146,8 +148,9 @@ Populate two G6 entries, one per scope:
 
 - In each TDD cycle's COMMIT & VERIFY, run the core wrapper with `--since "$BASE"`
   (`BASE` = `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`):
-  it mutates only what changed since DELIVER started. Its evidence is a checkpoint,
-  never the G6 entry — write it to a scratch directory, not `$EV`.
+  it mutates only what changed since DELIVER started, and passes when no core mutant
+  changed. Its evidence is a checkpoint, never the G6 entry — write it to a scratch
+  directory, not `$EV`.
 - Once, after the story's last work commit: the full core then boundary wrapper runs
   into `$EV`. Those two runs are the G6 evidence.
 
