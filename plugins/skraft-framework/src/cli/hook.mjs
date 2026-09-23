@@ -19,14 +19,16 @@ import { resolvePluginRootFromEnv } from '../adapters/infrastructure/plugin-root
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
 import { createActiveSlugStore } from '../adapters/infrastructure/active-slug-store.mjs'
 import { firstValidProjectSlug } from '../domain/value-objects.mjs'
+import { resolveAuditLogPath } from '../adapters/infrastructure/audit-log-resolver.mjs'
 
 // Resolve the plugin root (US16): CLAUDE_PLUGIN_ROOT (harness-injected) →
 // cache glob (~/.claude/plugins/cache/*/skraft/*) → module-relative fallback.
 const pluginRoot = resolvePluginRootFromEnv({ moduleUrl: import.meta.url })
-const auditLogPath = process.env.SKRAFT_AUDIT_LOG ?? join(pluginRoot, 'logs', 'skill-audit.jsonl')
 const configPath = process.env.SKRAFT_CONFIG ?? join(pluginRoot, 'skraft-framework.config.json')
 const clock = { now: () => new Date().toISOString() }
-const auditWriter = createJsonlAuditWriter(auditLogPath)
+// One audit log per project (SKRAFT_AUDIT_LOG, else the project's git directory), bound
+// once the payload says where the session runs; the plugin's logs until then.
+let auditWriter = createJsonlAuditWriter(resolveAuditLogPath({ cwd: process.cwd(), pluginRoot }))
 
 // A write through a tool to a tracked pipeline state. When the hook itself fails, this
 // is the one call it still refuses: every other tool call passes (a hook bug must never
@@ -46,6 +48,7 @@ const sessionCwd = (payload) =>
   typeof payload.cwd === 'string' && payload.cwd.length > 0 ? payload.cwd : process.cwd()
 
 const compose = async (cwd) => {
+  auditWriter = createJsonlAuditWriter(resolveAuditLogPath({ cwd, pluginRoot }))
   // Same tracking-root resolution as cli/state.mjs (SKRAFT_TRACKING_ROOT → layout →
   // default namespaced), anchored on the harness session directory.
   const trackingRoot = resolveTrackingRoot({ cwd })
