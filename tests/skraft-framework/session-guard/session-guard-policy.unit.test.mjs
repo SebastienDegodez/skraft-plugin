@@ -85,6 +85,8 @@ test('commandMutatesProtectedArtifact reads quoted paths, relative targets and p
     `echo "{}" > '/Users/me/My Projects/${STATE}'`,
     `cp /tmp/forged.json "${STATE}"`,
     'cd .copilot-tracking && echo "{}" > skraft-plans/us11/state.json',
+    'cd .copilot-tracking && rm skraft-plans/us11/state.json',
+    "cd .copilot-tracking && sed -i 's/a/b/' skraft-plans/us11/execution-log.jsonl",
     `perl -i -pe 's/DELIVER/DONE/' ${STATE}`,
   ]) {
     assert.equal(commandMutatesProtectedArtifact(command), true, command)
