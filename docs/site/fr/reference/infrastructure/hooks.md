@@ -27,6 +27,11 @@ Les deux manifestes du plugin portent les mêmes entrées, et chaque entrée ex�
 propres noms d'outils (`bash`, `create`, `str_replace`, `view`, …) ;
 `adapters/api/hooks/harness-input.mjs` les traduit vers les noms ci-dessus avant toute garde.
 
+G7 et G8 lisent une commande shell à sa forme : redirections, `tee`, verbes qui réécrivent
+ou copient, `sed` et `perl` en place, scripts en ligne `node -e` ou `python -c`, derrière
+des affectations `VAR=valeur` et des enveloppes comme `sudo` ou `env`. Une écriture cachée
+derrière `bash -c`, une variable, un sous-shell ou `find -delete` n'est pas reconnue.
+
 ## Porte de phase (CLI d'état, G4/G5)
 
 La complétude d'une phase n'est pas un hook. L'orchestrateur enregistre artefacts et

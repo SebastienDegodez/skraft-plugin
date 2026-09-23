@@ -27,6 +27,11 @@ Both plugin manifests carry the same entries, and every entry runs `src/cli/hook
 (`bash`, `create`, `str_replace`, `view`, …); `adapters/api/hooks/harness-input.mjs` maps
 them to the names above before any guard runs.
 
+G7 and G8 read a shell command by its form: redirections, `tee`, rewriting and copying
+verbs, in-place `sed` and `perl`, inline `node -e` or `python -c` scripts, behind
+`VAR=value` assignments and wrappers such as `sudo` or `env`. A write hidden behind
+`bash -c`, a variable, a subshell or `find -delete` is not recognised.
+
 ## Phase gate (state CLI, G4/G5)
 
 Phase completion is not a hook. The orchestrator records artifacts and verdicts after a
