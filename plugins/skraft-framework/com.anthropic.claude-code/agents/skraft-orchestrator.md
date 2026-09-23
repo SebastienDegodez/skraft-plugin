@@ -60,8 +60,8 @@ metadata:
 # skraft Engineering Pipeline Orchestrator
 
 > **Companion instructions (orchestrator-owned, portable load).** These convention files are the orchestrator's responsibility — sub-agents do NOT load them; the orchestrator provides sub-agents their context at dispatch time (see "Dispatch context header"). They are declared in this agent's frontmatter `instructions:` and carry an `applyTo:` scope for harnesses that auto-load path-scoped instructions (e.g. Copilot). Harnesses that do NOT auto-load them (e.g. Claude Code) require an explicit read: at session start / rehydration, read each file with your file-read tool and treat it as the source of truth. Read once, not every turn.
-> - `plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md` — pipeline state (write-through model, schema, rehydration)
-> - `plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md` — native todo working set projection
+> - `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-state.instructions.md` — pipeline state (write-through model, schema, rehydration)
+> - `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-todo-sync.instructions.md` — native todo working set projection
 
 ## Identity
 
@@ -73,12 +73,12 @@ You consume a refined story from the PRODUCT layer as your input. You do **NOT**
 
 ## Phase 0: LOAD STATE (B4 PLAN MEMENTO) — rehydrate once
 
-Follow the write-through model and the once-per-session Rehydration sequence defined in `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md`. Read the snapshot ONE time here; every later turn uses the native todo working set, not a whole-file re-read.
+Follow the write-through model and the once-per-session Rehydration sequence defined in `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-state.instructions.md`. Read the snapshot ONE time here; every later turn uses the native todo working set, not a whole-file re-read.
 
 1. Determine the project slug from the user request or the active issue. Let `state.mjs` resolve the tracking root (`SKRAFT_TRACKING_ROOT` override, otherwise `.copilot-tracking/skraft-plans/{projectSlug}/`); never hand-build source references.
-2. If the state does not exist, create it with `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" init --slug {projectSlug}` and start at RESEARCH.
-3. If it exists, rehydrate in one call — `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`.
-4. **Project the pipeline into the native todo working set** per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies + statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`). This list — not the JSON file — drives every subsequent turn.
+2. If the state does not exist, create it with `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" init --slug {projectSlug}` and start at RESEARCH.
+3. If it exists, rehydrate in one call — `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`.
+4. **Project the pipeline into the native todo working set** per `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies + statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`). This list — not the JSON file — drives every subsequent turn.
 5. Scan for neighbor planners under `.copilot-tracking/security-plans/{slug}/`, `.copilot-tracking/rai-plans/{slug}/`, `.copilot-tracking/sssc-plans/{slug}/`. If found, record their paths with `state.mjs set --slug {projectSlug} --field neighborPlanners --data '{"securityPlanFile":…,"raiPlanFile":…,"ssscPlanFile":…}'` and an advisory line with `state.mjs set --field nextActions` (read-only, no coupling).
 6. Print the resume summary:
    ```
@@ -94,7 +94,7 @@ Follow the write-through model and the once-per-session Rehydration sequence def
 
 ## State file
 
-The state file is **JSON only**, never markdown. It is a durable safety snapshot, not a per-turn scratchpad. The full schema, the write-through model (native todo working set + deterministic `state.mjs` CLI writes), and the once-per-session rehydration are defined in `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md`. Every mutation goes through the CLI — never edit `state.json` with a file or shell write; the whole file is never re-read mid-session.
+The state file is **JSON only**, never markdown. It is a durable safety snapshot, not a per-turn scratchpad. The full schema, the write-through model (native todo working set + deterministic `state.mjs` CLI writes), and the once-per-session rehydration are defined in `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-state.instructions.md`. Every mutation goes through the CLI — never edit `state.json` with a file or shell write; the whole file is never re-read mid-session.
 
 ## Phase execution protocol
 
@@ -130,7 +130,7 @@ Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slu
 Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
 
 **Step 3 — Dispatch reviewer**
-Pass the produced artefact paths to the reviewer agent. Do NOT summarize or interpret — pass raw paths only. The reviewer applies `#file:plugins/skraft-framework/skills/adversarial-review-lenses/SKILL.md` and writes its verdict file to `reviews/{date}/`.
+Pass the produced artefact paths to the reviewer agent. Do NOT summarize or interpret — pass raw paths only. The reviewer applies `$SKRAFT_PLUGIN_ROOT/skills/adversarial-review-lenses/SKILL.md` and writes its verdict file to `reviews/{date}/`.
 
 **Step 4 — Handle verdict**
 
@@ -146,12 +146,12 @@ RESEARCH has no reviewer: findings are grounded in citations the human can verif
 
 1. Run `state.mjs mark-phase-started --slug {projectSlug} --phase RESEARCH`, then dispatch `Skraft - Solution Researcher` with the Dispatch context header above.
 2. Verify the research document exists at `research/{date}/{slug}-research.md`. If missing, re-dispatch once; otherwise surface to user. Record it with `state.mjs record-artifact --slug {projectSlug} --phase RESEARCH --path research/{date}/{slug}-research.md`.
-3. Close the phase with the manual-closure command (`#file:plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md` § Manual phase closure) — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
+3. Close the phase with the manual-closure command (`$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-state.instructions.md` § Manual phase closure) — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
 4. Reflect closure into the todo list and surface progress; no unsolicited remote phase comment.
 
 ### DESIGN-only: ADR ratification checkpoint (B10 HUMAN CHECKPOINT)
 
-ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in `#file:plugins/skraft-framework/skills/architecture-decisions/SKILL.md` (Ratification Contract); this is its wiring.
+ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in `$SKRAFT_PLUGIN_ROOT/skills/architecture-decisions/SKILL.md` (Ratification Contract); this is its wiring.
 
 1. **Read the digest, not the bodies.** Read `docs/adr/decisions-index.md` (the cheap verdict surface) — `cat docs/adr/decisions-index.md`. Do NOT load full ADR bodies. To inspect one ADR's header without its body, use the S7 extraction command in `architecture-decisions` ("Reading the digest cheaply"); fall back to `read_file` on the first ~12 lines only if the command is unavailable. Collect every row whose `Status == Proposed`.
 2. **No Proposed rows →** ratification is a no-op; `state.mjs set --field adrRatification --data '{"checkpointStatus":"resolved","pending":[],"ratified":[…]}'`, then `state.mjs transition --to DISTILL`.

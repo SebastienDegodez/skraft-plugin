@@ -111,7 +111,7 @@ evidence of official support. Never synthesize a comment URL for any provider.
 
 ## Local CLI and host procedure
 
-Run `node "$CLAUDE_PLUGIN_ROOT/src/cli/report.mjs"` with the following arguments.
+Run `node "$SKRAFT_PLUGIN_ROOT/src/cli/report.mjs"` with the following arguments.
 Use actual returned artifact paths under the resolved tracking root, not guessed
 dated paths. If the installed CLI lacks this handoff, report a version/interface
 mismatch and keep publication pending; do not invoke a legacy network publisher.

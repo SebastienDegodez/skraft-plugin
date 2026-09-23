@@ -115,7 +115,7 @@ A BLOCKER finding is mechanically correctable by the backlog-planner: the verdic
 Build the verdict with the YAML contract below. Quote every free-text value. Pipe exactly that YAML into the `review-verdict` artifact command:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
+node "$SKRAFT_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md <<'EOF'
 {the verdict YAML built above}
 EOF

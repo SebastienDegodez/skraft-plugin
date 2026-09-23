@@ -88,7 +88,7 @@ export const continuationAfter = (finishedAgent, dispatchState, config) => {
   if (!target || target.phase !== currentPhase) return null
   const phaseAgents = config.phaseAgents[currentPhase]
   const next = nextPhaseAfter(currentPhase, config) ?? 'DONE'
-  const cli = 'node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"'
+  const cli = 'node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs"'
 
   if (target.role === 'specialist') {
     if (!phaseAgents.reviewer) {

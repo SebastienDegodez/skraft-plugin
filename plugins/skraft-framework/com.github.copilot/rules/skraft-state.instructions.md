@@ -27,7 +27,7 @@ repository-root-relative, never reconstructed from the current date.
 The durable `state.json` is a **safety snapshot**, not a per-turn scratchpad. The token cost of state is driven by *frequency* (re-reading and re-writing the whole file every turn), not by file size. This model eliminates that frequency:
 
 1. **Rehydrate ONCE per session.** Read `state.json` a single time when a session starts or resumes (Phase 0). Do NOT re-read the whole file on every turn.
-2. **Native todo list is the in-session working set.** After rehydration, the orchestrator projects the pipeline into the harness-native todo list (see `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md`). Every turn consults the todo list (near-zero token), never the JSON file.
+2. **Native todo list is the in-session working set.** After rehydration, the orchestrator projects the pipeline into the harness-native todo list (see `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-todo-sync.instructions.md`). Every turn consults the todo list (near-zero token), never the JSON file.
 3. **Writes are deterministic and go through the CLI.** Every invariant-bearing mutation (verdict, phase advance, artifact append, retry) is applied by the `state.mjs` CLI, which validates, preserves ALL fields, backs up, and writes atomically. The agent never hand-edits those fields.
 4. **The file is the reconciliation point, never the hot path.** The native todo list does not persist across sessions or harnesses; the snapshot does. It is written at checkpoints and read once at the next rehydration.
 
@@ -35,10 +35,10 @@ The snapshot remains authoritative on disk; the todo list is a disposable in-ses
 
 ## State CLI (deterministic writes — S7 bridge)
 
-Invoke the state CLI for every invariant-bearing mutation. Portable invocation (same env var on Claude Code and Copilot CLI; falls back to the plugin cache glob when unset):
+Invoke the state CLI for every invariant-bearing mutation. `$SKRAFT_PLUGIN_ROOT` is the plugin root the SessionStart hook exports to Bash and states in the session context; where the variable is empty, use that absolute path:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [flags]
+node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [flags]
 ```
 
 `basePath` is resolved by the tracking-root policy above. `--slug` is optional after `init`: without it, a subcommand acts on the active pipeline (`SKRAFT_PROJECT_SLUG`, else the one `init`/`select` recorded in `{basePath}/.active-slug`). The hooks enforce their guards on that same active pipeline; run `select` before working on another one. The CLI prints the updated state (or a scalar for `get --field`) as JSON to stdout, and a `{ "code", "reason" }` object to stderr on failure. Exit codes: `0` success · `1` domain rejection (e.g. `VERDICT_NOT_APPROVED`, `ILLEGAL_PHASE_SKIP`, `RETRY_EXHAUSTED`, `IMMUTABLE_FIELD`, `INVALID_VERDICT`, `INVALID_PATH`, `PHASE_GATE`) · `2` IO/corrupted · `3` invalid state. Every recorded path is relative to the project's tracking directory (`reviews/{date}/design-review-1.md`); a repository-relative `.copilot-tracking/skraft-plans/{slug}/…` path is stored without that prefix.
@@ -76,7 +76,7 @@ Every field of `state.json` is written through the CLI: invariant-bearing fields
 At startup/resume, load [reporting contract](../../skills/qa-reporting/references/report-contract.md)
 for confirmed preference shape and publication protocol. Persist
 `userPreferences.reporting` only with
-`node "$CLAUDE_PLUGIN_ROOT/src/cli/report.mjs" setup --slug {slug} --data {prefs.json}`;
+`node "$SKRAFT_PLUGIN_ROOT/src/cli/report.mjs" setup --slug {slug} --data {prefs.json}`;
 setup uses state service validation and atomic writes, preserving unrelated
 preferences. No `state.mjs` reporting setter and no direct edits.
 
@@ -208,7 +208,7 @@ When a phase — most commonly DELIVER — ends through a series of human-valida
 The `--artifact` file is a review artifact like any other, so render it from data through the `review-verdict` artifact command — never hand-write the markdown (same convention reviewer sub-agents follow). Then pass the rendered path to `close-phase`:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
+node "$SKRAFT_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/manual-close.md <<'EOF'
 verdict: APPROVED
 confidence: high
@@ -240,7 +240,7 @@ synthesis:
   dissent: "No reviewer sub-agent was dispatched."
 EOF
 
-node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" close-phase --slug {projectSlug} --phase {P} --verdict APPROVED --artifact reviews/{date}/manual-close.md
+node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" close-phase --slug {projectSlug} --phase {P} --verdict APPROVED --artifact reviews/{date}/manual-close.md
 ```
 
 `close-phase` atomically performs, in one write: `record-verdict --verdict APPROVED` for `{P}`, `record-review-artifact` (only when `--artifact` is given), then advances `currentPhase` to the next phase in order (`DONE` after DELIVER). `--phase` must equal the current `currentPhase` (rejected with `PHASE_MISMATCH` otherwise) and `--verdict` must be `APPROVED` (rejected with `VERDICT_NOT_APPROVED` otherwise) — `close-phase` only ever closes forward, never records a `CHANGES_REQUESTED` disposition. Use `record-verdict` + `incr-retry` for that case instead.
@@ -248,7 +248,7 @@ node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" close-phase --slug {projectSlug} --
 **Before closing DELIVER manually, scan for stray auto-commit-hook messages.** Some environments run an external commit hook that auto-commits at session end with a generic non-conventional message (e.g. `Copilot CLI session ... changes`) instead of the `type(scope): subject` format the TDD workflow expects — even when the commit's actual content is a real RED/GREEN step. Run `scan-commits` first and amend/rebase any flagged commit before calling `close-phase`:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" scan-commits --count 20
+node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" scan-commits --count 20
 ```
 
 Exits `0` (all recent commits conventional) or `1` with a `nonConventional` list of `{ sha, subject }` pairs. For each flagged commit, rename it in place (`git commit --amend -m 'type(scope): subject'` for HEAD, or a targeted interactive rebase for older commits) before proceeding to `close-phase`.
@@ -262,7 +262,7 @@ On first invocation, create the state with `state.mjs init --slug {projectSlug}`
 When a session starts or resumes, rehydrate exactly once:
 
 1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount` (the full phase-keyed map, not only the current phase), `reviewArtifacts`, `adrRatification`.
-2. **Project** the pipeline into the native todo working set per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
+2. **Project** the pipeline into the native todo working set per `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
 3. **Identify** pending work from the todo list: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
   Reuse `userPreferences.reporting` from this snapshot and inspect `report.mjs status --slug {slug}` for pending publication, independently of engineering work, even at DONE.
 4. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).

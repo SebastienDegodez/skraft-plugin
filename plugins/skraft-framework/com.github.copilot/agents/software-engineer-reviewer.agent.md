@@ -148,7 +148,7 @@ absence is not `inconclusive`.
 Persistence is an exit gate. Pipe the canonical review YAML into the artifact command through the quoted heredoc shown below. Never create a temporary YAML file or redirect stdin from one. A validation error is work remaining: fill the reported keys and re-run. Do not emit the final YAML until the command succeeds and the output file exists. Never return a prose-only verdict.
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
+node "$SKRAFT_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md <<'EOF'
 {the canonical verdict YAML}
 EOF

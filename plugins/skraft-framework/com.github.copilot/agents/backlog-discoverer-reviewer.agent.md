@@ -132,7 +132,7 @@ Writing the verdict file is not optional, and a caller cannot waive it. A dispat
 Build the verdict with the YAML contract below. Quote every free-text value. Pipe exactly that YAML into the `review-verdict` artifact command:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
+node "$SKRAFT_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md <<'EOF'
 {the verdict YAML built above}
 EOF
@@ -143,7 +143,7 @@ The review template already begins with `<!-- markdownlint-disable-file -->`. Th
 If the heredoc is awkward in your shell, write the YAML to a file and hand it over with `--data` instead — same command, same validation:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
+node "$SKRAFT_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --data verdict.yaml \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md
 ```
