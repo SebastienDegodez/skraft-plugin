@@ -59,7 +59,7 @@ I/O runner in boundary when validating changes to this adapter itself.
 Run bundled [runner](scripts/run-gates.mjs) with:
 
 ```text
-node <skillDir>/scripts/run-gates.mjs --root <repo> --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence <directory>
+node "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-javascript/scripts/run-gates.mjs" --root <repo> --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence <directory>
 ```
 
 For a PR differential run, add `--since <base-ref>`. The runner resolves the Git

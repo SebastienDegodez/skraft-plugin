@@ -92,11 +92,12 @@ discovers scope inputs, then delegates JSON generation and defaults to official
 `dotnet stryker init`; it does not hand-render Stryker's schema:
 
 ```bash
-bash scripts/configure-mutation.sh --root "$PWD"
+bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/configure-mutation.sh" --root "$PWD"
 ```
 
-`scripts/configure-mutation.sh` means the bundled asset beside this skill, not a path to
-invent in the consumer repository. It writes:
+The scripts ship with the plugin, never in the consumer repository: `$SKRAFT_PLUGIN_ROOT`
+is the plugin root the SessionStart hook exports and states in the session context; where
+the variable is empty, use that absolute path. The configure script writes:
 
 - `stryker-config-core.json` — whole solution, Domain/Application source globs, 100.
 - `stryker-config-boundary.json` — whole solution, API/Infrastructure source globs, 80.
@@ -107,7 +108,7 @@ unambiguously, pass `--solution`. For a BFF/non-standard layout, never invent mi
 projects; pass explicit source globs for both scopes:
 
 ```bash
-bash scripts/configure-mutation.sh --root "$PWD" --solution Storefront.sln \
+bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/configure-mutation.sh" --root "$PWD" --solution Storefront.sln \
   --core-mutate "**/Storefront/Core/**/*.cs" \
   --boundary-mutate "**/Storefront/Adapters/**/*.cs"
 ```
@@ -123,8 +124,8 @@ passes the whole solution to Stryker once, captures the aggregate JSON report, r
 a report with zero mutants, and returns the gate verdict as its exit code:
 
 ```bash
-bash scripts/mutation-core.sh --root "$PWD" --evidence "$EV"
-bash scripts/mutation-boundary.sh --root "$PWD" --evidence "$EV"
+bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-core.sh" --root "$PWD" --evidence "$EV"
+bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-boundary.sh" --root "$PWD" --evidence "$EV"
 ```
 
 Core MUST pass before boundary starts. `--config <path>` may select an equivalent custom
