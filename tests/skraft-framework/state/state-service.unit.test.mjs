@@ -248,3 +248,55 @@ test('state-service applyEvent: transitions follow the published phase order', a
   assert.equal(r.ok, true)
   assert.equal(r.value.currentPhase, 'OMEGA')
 })
+
+// ─── phase gate (G4/G5) ───────────────────────────────────────────────────────
+const gateFinding = (...violations) => {
+  const calls = []
+  return { calls, check: async (...args) => { calls.push(args); return violations } }
+}
+const CLOSABLE = { ...DEFAULT_PIPELINE, currentPhase: 'ALPHA', verdicts: { ALPHA: 'APPROVED' } }
+const CLOSURES = [
+  { type: 'ADVANCE', targetPhase: 'OMEGA' },
+  { type: 'CLOSE_PHASE', phase: 'ALPHA', verdict: 'APPROVED', path: 'alpha/review.md' },
+]
+
+test('state-service applyEvent: a closure the phase gate refuses fails with PHASE_GATE and writes nothing', async () => {
+  for (const event of CLOSURES) {
+    const writer = writerOk()
+    const phaseGate = gateFinding(
+      { code: 'ARTIFACT_MISSING', reason: 'alpha/findings.md is not on disk' },
+      { code: 'VERDICT_MISMATCH', reason: 'the review says CHANGES_REQUESTED' },
+    )
+    const svc = createStateService({ stateReader: readerOk(CLOSABLE), stateWriter: writer, phaseOrder: ['ALPHA', 'OMEGA'], phaseGate })
+    const r = await svc.applyEvent('slug', event)
+    assert.equal(r.ok, false, event.type)
+    assert.equal(r.error.code, 'PHASE_GATE')
+    assert.equal(r.error.reason, 'ALPHA cannot close: ARTIFACT_MISSING — alpha/findings.md is not on disk; VERDICT_MISMATCH — the review says CHANGES_REQUESTED')
+    assert.equal(r.error.violations.length, 2)
+    assert.deepEqual(writer._written, {}, 'a refused closure leaves the state untouched')
+  }
+})
+
+test('state-service applyEvent: the gate judges the open phase on the state before the closure', async () => {
+  for (const event of CLOSURES) {
+    const writer = writerOk()
+    const phaseGate = gateFinding()
+    const svc = createStateService({ stateReader: readerOk(CLOSABLE), stateWriter: writer, phaseOrder: ['ALPHA', 'OMEGA'], phaseGate })
+    const r = await svc.applyEvent('slug', event)
+    assert.equal(r.ok, true, event.type)
+    assert.equal(writer._written.slug.currentPhase, 'OMEGA')
+    const [[slug, state, phase, options]] = phaseGate.calls
+    assert.equal(slug, 'slug')
+    assert.equal(state.currentPhase, 'ALPHA')
+    assert.equal(phase, 'ALPHA')
+    assert.deepEqual(options, { closingArtifact: event.path }, 'close-phase hands over its closing review')
+  }
+})
+
+test('state-service applyEvent: only a closure consults the phase gate', async () => {
+  const phaseGate = gateFinding({ code: 'ARTIFACT_MISSING', reason: 'never asked' })
+  const svc = createStateService({ stateReader: readerOk(CLOSABLE), stateWriter: writerOk(), phaseOrder: ['ALPHA', 'OMEGA'], phaseGate })
+  const r = await svc.applyEvent('slug', { type: 'RECORD_VERDICT', phase: 'ALPHA', verdict: 'APPROVED' })
+  assert.equal(r.ok, true)
+  assert.deepEqual(phaseGate.calls, [])
+})
