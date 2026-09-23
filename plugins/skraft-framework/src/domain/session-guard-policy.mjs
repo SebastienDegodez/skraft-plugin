@@ -50,21 +50,23 @@ const wordsOf = (segment) => {
 const redirectTargetsOf = (segment) =>
   [...segment.matchAll(/(?:^|[^<>&0-9])[0-9&]?>>?\|?\s*("[^"]*"|'[^']*'|[^\s|;&<>]+)/g)].map((m) => m[1].replace(/^["']|["']$/g, ''))
 
-const segmentMutatesProtected = (segment, isProtected) => {
-  if (redirectTargetsOf(segment).some(isProtected)) return true
+// True when a simple command writes a path `isTarget` accepts: G7's tracked state, G8's
+// workspace.
+const segmentWrites = (segment, isTarget) => {
+  if (redirectTargetsOf(segment).some(isTarget)) return true
   const [verb, ...operands] = wordsOf(segment)
   if (!verb) return false
   const name = verb.split(/[/\\]/).pop()
-  if (!isProtected(segment)) return false
+  if (!isTarget(segment)) return false
   if (REWRITING_VERBS.has(name)) return true
   const inPlace = operands.some((w) => /^-[A-Za-z]*i/.test(w) || w.startsWith('--in-place'))
   if (name === 'sed' || (name === 'perl' && inPlace)) return inPlace
   if (COPYING_VERBS.has(name)) {
     const paths = operands.filter((w) => !w.startsWith('-'))
-    return paths.length > 1 && isProtected(paths[paths.length - 1])
+    return paths.length > 1 && isTarget(paths[paths.length - 1])
   }
-  // An inline script naming a tracked artifact (node -e, python -c…) may write it: refuse,
-  // reads have state.mjs get, cat and jq.
+  // An inline script naming a target (node -e, python -c…) may write it: refuse, reads
+  // have cat, grep and jq.
   if (INLINE_INTERPRETERS.test(name)) return operands.some((w) => INLINE_SCRIPT_FLAGS.has(w))
   return false
 }
@@ -89,17 +91,21 @@ export const isProtectedArtifactPath = (filePath, { trackingDir } = {}) =>
 export const commandMutatesProtectedArtifact = (command, { trackingDir } = {}) => {
   if (!isString(command)) return false
   const re = protectedPathRe(trackingDir)
-  const isProtected = (text) => re.test(text)
-  return segmentsOf(command).some((segment) => segmentMutatesProtected(segment, isProtected))
+  return segmentsOf(command).some((segment) => segmentWrites(segment, (text) => re.test(text)))
 }
 
 // True when a Write/Edit file path targets the src/ or tests/ workspace.
 export const isWorkspacePath = (filePath) =>
   isString(filePath) && WORKSPACE_PATH_RE.test(filePath)
 
-// True when a shell command writes into the src/ or tests/ workspace.
+// A src/ or tests/ path segment inside a command line or a path.
+const NAMES_WORKSPACE_RE = /(?:^|[\s"'=([{/\\])(?:src|tests)[/\\]/i
+
+// True when a shell command writes into the src/ or tests/ workspace: the forms G7 reads
+// (in-place sed, inline scripts…), plus a mutating verb anywhere on the line (git rm…).
 export const commandWritesWorkspace = (command) =>
-  isString(command) && (REDIRECT_TO_WORKSPACE_RE.test(command) || MUTATING_WORKSPACE_RE.test(command))
+  isString(command) && (REDIRECT_TO_WORKSPACE_RE.test(command) || MUTATING_WORKSPACE_RE.test(command)
+    || segmentsOf(command).some((segment) => segmentWrites(segment, (text) => NAMES_WORKSPACE_RE.test(text))))
 
 // G7 — deny direct writes to state.json / execution-log; reads pass through.
 export const guardProtectedArtifact = ({ command, filePath, trackingDir } = {}) => {

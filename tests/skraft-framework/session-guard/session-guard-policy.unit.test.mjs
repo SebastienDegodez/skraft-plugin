@@ -217,6 +217,21 @@ test('evaluateSessionGuard returns Ok when neither guard trips', () => {
   assert.equal(result.ok, true)
 })
 
+test('commandWritesWorkspace: the in-place and scripted edits G7 recognises, and their reads', () => {
+  for (const command of [
+    "sed -i 's/Gold/Platinum/' src/Orders/Discount.cs",
+    "perl -i -pe 's/0.10m/0.15m/' src/Orders/Discount.cs",
+    `node -e "require('fs').writeFileSync('tests/a.test.mjs', '')"`,
+    'touch tests/Orders.Tests/NewTests.cs',
+    'ln -sf /tmp/forged.cs src/Orders/Discount.cs',
+  ]) {
+    assert.equal(commandWritesWorkspace(command), true, command)
+  }
+  for (const command of ["sed -n '1,20p' src/Orders/Discount.cs", 'node --test tests/a.test.mjs', 'grep -ri discount src/', 'dotnet test tests/Orders.Tests']) {
+    assert.equal(commandWritesWorkspace(command), false, command)
+  }
+})
+
 test('commandWritesWorkspace: every write form into src/ or tests/, and nothing else', () => {
   for (const command of [
     'echo x >src/app.mjs',
