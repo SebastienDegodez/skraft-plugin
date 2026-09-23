@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 // Read-only Git facts for evidence verification. Every call is fail-soft (null or empty)
 // and every revision is validated as a hex SHA before it reaches git, so a log can never
 // smuggle an option into the command line.
-const SHA = /^[0-9a-f]{7,40}$/i
+const SHA = /^[0-9a-f]{7,64}$/i
 
 export const createGitRepository = ({ cwd }) => {
   const git = (args) => {

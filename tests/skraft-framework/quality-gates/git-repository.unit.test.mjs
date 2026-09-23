@@ -89,6 +89,26 @@ test('range: the non-merge commits reachable from rev and not from base', () => 
   assert.deepEqual(repo.range(sha.root, 'release-1234567'), [], 'rev must be a SHA')
 })
 
+test('a SHA-256 repository: its 64-digit commit ids are SHAs too', () => {
+  const sha256Root = realpathSync(mkdtempSync(join(tmpdir(), 'skraft-git-sha256-')))
+  try {
+    const git = (...args) => execFileSync('git', ['-c', 'user.email=e@x', '-c', 'user.name=E', ...args], { cwd: sha256Root, encoding: 'utf8' }).trim()
+    git('init', '-q', '--object-format=sha256')
+    writeFileSync(join(sha256Root, 'README.md'), 'base\n')
+    git('add', '.')
+    git('commit', '-q', '-m', 'chore(orders): base')
+    const head = git('rev-parse', 'HEAD')
+    assert.match(head, /^[0-9a-f]{64}$/)
+
+    const sha256Repo = createGitRepository({ cwd: sha256Root })
+    assert.deepEqual(sha256Repo.commit(head), { exists: true, subject: 'chore(orders): base', message: 'chore(orders): base\n\n', files: ['README.md'] })
+    assert.equal(sha256Repo.show(head, 'README.md'), 'base\n')
+    assert.deepEqual(sha256Repo.commit(`${head}0`), { exists: false }, 'no id is longer than 64 digits')
+  } finally {
+    rmSync(sha256Root, { recursive: true, force: true })
+  }
+})
+
 test('show: a file as a commit holds it, null when absent or unaddressable', () => {
   assert.equal(repo.show(sha.nested, 'src/Orders/Discount.cs'), 'class Discount {}\n')
   assert.equal(repo.show(sha.root, 'side.txt'), null)
