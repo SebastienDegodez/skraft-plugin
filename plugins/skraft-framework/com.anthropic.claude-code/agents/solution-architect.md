@@ -37,8 +37,8 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/consistency-matrix-{story}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md (optional, only when an accepted decision is superseded)
+    - .copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md (optional, only when a decision drifts and the architect halts)
 ---
 
 # Solution-Architect Agent

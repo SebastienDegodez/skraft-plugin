@@ -577,7 +577,7 @@
         "Source code commits (conventional commits)",
         ".copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)",
-        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)"
+        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (optional, captured stdout, exit codes and RED/GREEN snapshots the evidence log references)"
       ]
     },
     "Skraft - Solution Architect Reviewer": {
@@ -605,8 +605,8 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/consistency-matrix-{story}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md"
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md (optional, only when an accepted decision is superseded)",
+        ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md (optional, only when a decision drifts and the architect halts)"
       ]
     },
     "Skraft - Solution Researcher": {
