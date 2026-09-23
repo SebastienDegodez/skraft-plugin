@@ -34,6 +34,10 @@ if [ "${2:-}" = "init" ]; then
   mkdir -p "$(dirname "$config")"
   {
     printf '{\n  "stryker-config": {\n'
+    # Like Stryker.NET 4.14 init: unset options come out as "" and null.
+    printf '    "project-info": { "name": "", "module": "", "version": "" },\n'
+    printf '    "project": "",\n'
+    printf '    "test-runner": null,\n'
     printf '    "solution": "%s",\n' "$solution"
     printf '    "mutate": ['
     for index in "${!mutate[@]}"; do
@@ -65,6 +69,8 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 printf '%s\t%s\t%s\n' "$PWD" "$config" "$output" >> "$FAKE_DOTNET_LOG"
+# Like Stryker.NET 4.14: an empty project or module name aborts the run.
+grep -Eq '"(project|module)": *""' "$config" && { echo "Project file cannot be empty." >&2; exit 1; }
 report_name=$(sed -n 's/.*"report-file-name": "\([^"]*\)".*/\1/p' "$config")
 mkdir -p "$output/reports"
 if [ "$(basename "$config")" != "${FAKE_DOTNET_NO_REPORT_CONFIG:-}" ]; then

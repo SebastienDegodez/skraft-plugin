@@ -60,7 +60,27 @@ init_config() {
       --reporter cleartext \
       --break-on-initial-test-failure \
       "${args[@]}"
-  ) >/dev/null
+  ) >/dev/null || return 1
+  prune_empty "$path"
+}
+# Stryker.NET 4.14 init writes "" and null for unset options, then rejects its own
+# output at run time ("Project file cannot be empty."): drop them so defaults apply.
+prune_empty() {
+  node - "$1" <<'NODE'
+const fs = require('node:fs')
+const path = process.argv[2]
+const prune = (object) => {
+  for (const [key, value] of Object.entries(object)) {
+    if (value === '' || value === null) delete object[key]
+    else if (typeof value === 'object' && !Array.isArray(value)) {
+      prune(value)
+      if (Object.keys(value).length === 0) delete object[key]
+    }
+  }
+  return object
+}
+fs.writeFileSync(path, `${JSON.stringify(prune(JSON.parse(fs.readFileSync(path, 'utf8'))), null, 2)}\n`)
+NODE
 }
 install_config() {
   local target="$1" temp="$2"
@@ -121,6 +141,7 @@ elif [ "${#CORE_PATTERNS[@]}" -eq 0 ] || [ "${#BOUNDARY_PATTERNS[@]}" -eq 0 ]; t
 fi
 
 EXCLUSIONS=("!**/*Marker.cs" "!**/DependencyInjection.cs" "!**/Program.cs" "!**/obj/**")
+command -v node >/dev/null 2>&1 || { echo "node is not on PATH" >&2; exit 3; }
 command -v dotnet >/dev/null 2>&1 || { echo "dotnet is not on PATH" >&2; exit 3; }
 # Stryker.NET reads --version as a project-version option, so probe with --help.
 dotnet stryker --help >/dev/null 2>&1 || { echo "dotnet stryker is not available" >&2; exit 3; }

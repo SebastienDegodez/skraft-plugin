@@ -109,6 +109,9 @@ test('canonical scaffold writes two root configs for one whole-solution run per 
     assert.deepEqual(boundaryConfig.mutate.slice(0, 2), ['**/*.API/**/*.cs', '**/*.Infrastructure/**/*.cs'])
     assert.deepEqual(coreConfig.reporters, ['json', 'cleartext'])
     assert.equal(coreConfig['break-on-initial-test-failure'], true)
+    for (const config of [coreConfig, boundaryConfig]) {
+      assert.deepEqual(['project', 'project-info', 'test-runner'].filter((key) => key in config), [])
+    }
 
     const evidence = join(root, 'evidence')
     const core = await run(CORE, ['--root', root, '--evidence', evidence], { cwd: root, env })
