@@ -104,7 +104,7 @@ pipeline state or trigger phase transitions, gate reruns or reviewer dispatch.
 
 State is a JSON document. The state machine owns the invariant-bearing subset; all other fields are orchestrator-owned and preserved verbatim on every CLI write.
 
-> **Single source of truth (SoC).** The authoritative field set of `state.json` lives in code, in `STATE_SCHEMA` (`plugins/skraft-framework/src/domain/state-schema.mjs`). The JSON block below documents those fields and their prose semantics only — it must not diverge from `STATE_SCHEMA`. The alignment test `tests/skraft-framework/state/state-schema-instructions.acceptance.test.mjs` fails if this block and `STATE_SCHEMA` list different top-level fields, so the two can never drift.
+> **Single source of truth (SoC).** The authoritative field set of `state.json` lives in code, in `STATE_SCHEMA` (`$SKRAFT_PLUGIN_ROOT/src/domain/state-schema.mjs`). The JSON block below documents those fields and their prose semantics only — it must not diverge from `STATE_SCHEMA`. The alignment test `tests/skraft-framework/state/state-schema-instructions.acceptance.test.mjs` fails if this block and `STATE_SCHEMA` list different top-level fields, so the two can never drift.
 
 ```json
 {

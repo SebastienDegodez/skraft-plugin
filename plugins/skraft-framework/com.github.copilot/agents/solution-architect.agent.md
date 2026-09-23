@@ -70,7 +70,7 @@ Load startup skills before starting; consult other skills at their stated trigge
 - `clean-architecture-<language>` (e.g. `clean-architecture-dotnet`) — OPTIONAL. Detect the project's primary language during Phase 3 REUSE ANALYSIS and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.
 
 ### Load on demand (Phase 9 RECONCILE & VERIFY)
-- `plugins/skraft-framework/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
+- `$SKRAFT_PLUGIN_ROOT/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
 
 ## Commit rules
 
@@ -408,7 +408,7 @@ Produce `contracts-{story}.md` with the full interface inventory.
 
 ### Phase 9: RECONCILE & VERIFY (cross-artefact consistency gate)
 
-*Loads asset: `plugins/skraft-framework/assets/consistency-matrix.template.md`.*
+*Loads asset: `$SKRAFT_PLUGIN_ROOT/assets/consistency-matrix.template.md`.*
 
 This phase is the **supervised-execution gate** between the design draft and PERSIST. ADRs are the source of truth; every descriptive artefact must align. Drift is classified by cause and either back-propagated once OR halted as a `decision_drift` BLOCKER. **The orchestrator MUST NOT advance to DISTILL if any open blocker exists.**
 
