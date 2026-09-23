@@ -18,25 +18,6 @@ const set = (field, value, state = mkState()) => applyTransition(state, { type: 
 
 // ─── SET_METADATA: orchestrator-owned fields ───────────────────────────────────
 
-test('SET_METADATA: records a confirmed entry point', () => {
-  const entryPoint = { skipPhases: ['RESEARCH'], handoffSource: 'github', handoffArtifacts: ['research/handoff.md'] }
-  const r = set('entryPoint', entryPoint)
-  assert.equal(r.ok, true)
-  assert.deepEqual(r.value.entryPoint, entryPoint)
-})
-
-test('SET_METADATA: rejects an entry point skipping a phase outside the published order', () => {
-  const r = set('entryPoint', { skipPhases: ['DISCOVER'], handoffSource: null, handoffArtifacts: [] })
-  assert.equal(r.ok, false)
-  assert.equal(r.error.code, 'INVALID_METADATA')
-  assert.match(r.error.reason, /DISCOVER/)
-})
-
-test('SET_METADATA: rejects an unknown handoff source', () => {
-  const r = set('entryPoint', { skipPhases: [], handoffSource: 'trello', handoffArtifacts: [] })
-  assert.equal(r.error.code, 'INVALID_METADATA')
-})
-
 test('SET_METADATA: records the ADR ratification checkpoint', () => {
   const adrRatification = {
     checkpointStatus: 'awaiting_human',
@@ -70,7 +51,7 @@ test('SET_METADATA: records neighbor planners, entry mode, issue number and plan
 })
 
 test('SET_METADATA: refuses invariant-bearing fields', () => {
-  for (const field of ['currentPhase', 'verdicts', 'phaseArtifacts', 'retryCount', 'projectSlug', 'phaseHistory']) {
+  for (const field of ['currentPhase', 'verdicts', 'phaseArtifacts', 'retryCount', 'projectSlug', 'phaseHistory', 'entryPoint']) {
     const r = set(field, {})
     assert.equal(r.ok, false, field)
     assert.equal(r.error.code, 'IMMUTABLE_FIELD', field)
@@ -125,34 +106,21 @@ test('ADVANCE and CLOSE_PHASE mark the closed phase done when given a time', () 
 
 // ─── validateMetadataField: shapes and reasons ─────────────────────────────────
 
-const PHASES = { phaseOrder: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'] }
-const reasonOf = (field, value) => validateMetadataField(field, value, PHASES).error?.reason
 
 test('validateMetadataField: accepts every documented enum value', () => {
-  for (const handoffSource of ['ado', 'jira', 'github', null]) {
-    assert.equal(validateMetadataField('entryPoint', { skipPhases: [], handoffSource, handoffArtifacts: [] }, PHASES).ok, true, handoffSource)
-  }
   for (const checkpointStatus of ['none', 'awaiting_human', 'resolved', null]) {
-    assert.equal(validateMetadataField('adrRatification', { checkpointStatus, pending: [], ratified: [] }, PHASES).ok, true, checkpointStatus)
+    assert.equal(validateMetadataField('adrRatification', { checkpointStatus, pending: [], ratified: [] }).ok, true, checkpointStatus)
   }
   for (const entryMode of ['capture', 'from-issue', 'from-prd', null]) {
-    assert.equal(validateMetadataField('entryMode', entryMode, PHASES).ok, true, entryMode)
+    assert.equal(validateMetadataField('entryMode', entryMode).ok, true, entryMode)
   }
-  assert.equal(validateMetadataField('issueNumber', null, PHASES).ok, true)
-  assert.equal(validateMetadataField('skraftPlanFile', null, PHASES).ok, true)
-  assert.equal(validateMetadataField('neighborPlanners', {}, PHASES).ok, true)
+  assert.equal(validateMetadataField('issueNumber', null).ok, true)
+  assert.equal(validateMetadataField('skraftPlanFile', null).ok, true)
+  assert.equal(validateMetadataField('neighborPlanners', {}).ok, true)
 })
 
 test('validateMetadataField: rejects values that are not the documented shape, naming the problem', () => {
   const cases = [
-    ['entryPoint', null, 'entryPoint: must be an object'],
-    ['entryPoint', [], 'entryPoint: must be an object'],
-    ['entryPoint', 'RESEARCH', 'entryPoint: must be an object'],
-    ['entryPoint', { skipPhases: 'RESEARCH', handoffArtifacts: [] }, 'entryPoint: skipPhases must be a list of phase names'],
-    ['entryPoint', { skipPhases: [''], handoffArtifacts: [] }, 'entryPoint: skipPhases must be a list of phase names'],
-    ['entryPoint', { skipPhases: [], handoffSource: 'trello', handoffArtifacts: [] }, 'entryPoint: handoffSource must be ado, jira, github or null'],
-    ['entryPoint', { skipPhases: [], handoffArtifacts: [3] }, 'entryPoint: handoffArtifacts must be a list of relative paths'],
-    ['entryPoint', { skipPhases: [] }, 'entryPoint: handoffArtifacts must be a list of relative paths'],
     ['adrRatification', null, 'adrRatification: must be an object'],
     ['adrRatification', { checkpointStatus: 'none', pending: {}, ratified: [] }, 'adrRatification: pending must be a list of ADR rows'],
     ['adrRatification', { checkpointStatus: 'none', pending: ['012'], ratified: [] }, 'adrRatification: pending must be a list of ADR rows'],
@@ -170,7 +138,7 @@ test('validateMetadataField: rejects values that are not the documented shape, n
     ['skraftPlanFile', 3, 'skraftPlanFile: must be a relative path or null'],
   ]
   for (const [field, value, reason] of cases) {
-    const r = validateMetadataField(field, value, PHASES)
+    const r = validateMetadataField(field, value)
     assert.equal(r.ok, false, `${field} ${JSON.stringify(value)}`)
     assert.equal(r.error.code, 'INVALID_METADATA')
     assert.equal(r.error.field, field)
@@ -178,18 +146,11 @@ test('validateMetadataField: rejects values that are not the documented shape, n
   }
 })
 
-test('validateMetadataField: names the unknown skipped phases', () => {
-  assert.equal(
-    reasonOf('entryPoint', { skipPhases: ['DISCOVER', 'DESIGN', 'DISCUSS'], handoffArtifacts: [] }),
-    'entryPoint: skipPhases names phase(s) outside the published order: DISCOVER, DISCUSS',
-  )
-})
-
 test('validateMetadataField: lists the settable fields when a field is refused', () => {
-  const r = validateMetadataField('verdicts', {}, PHASES)
+  const r = validateMetadataField('verdicts', {})
   assert.equal(r.error.field, 'verdicts')
   assert.equal(
     r.error.reason,
-    'verdicts is not settable; settable fields: entryPoint, adrRatification, nextActions, referencesProcessed, neighborPlanners, entryMode, issueNumber, skraftPlanFile',
+    'verdicts is not settable; settable fields: adrRatification, nextActions, referencesProcessed, neighborPlanners, entryMode, issueNumber, skraftPlanFile',
   )
 })

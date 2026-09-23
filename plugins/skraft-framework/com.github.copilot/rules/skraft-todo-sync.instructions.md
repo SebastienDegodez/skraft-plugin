@@ -22,7 +22,7 @@ Project the pipeline **structure** (phases, statuses, dependencies) into todos. 
 
 | Stays in `state.json` (never a todo) | Why |
 |---|---|
-| `entryPoint`, `adrRatification` | structured, gate-bearing, direct-edited |
+| `adrRatification` | structured, gate-bearing, written with `state.mjs set` |
 | `verdicts`, `retryCount` | invariant-bearing, CLI-owned |
 | `userPreferences`, `neighborPlanners` | configuration / interop |
 
@@ -30,17 +30,16 @@ The todo list carries only: one todo per phase, its status, and the phase orderi
 
 ## Projection rules (snapshot → todos)
 
-Build one todo per pipeline phase, in canonical order `DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER`:
+Build one todo per pipeline phase, in canonical order `RESEARCH → DESIGN → DISTILL → DELIVER` (`phaseOrder` of `skraft-framework.config.json`):
 
 1. **Status** from the snapshot:
    * phase in `phasesCompleted` → **done**
    * phase == `currentPhase` → **in_progress**
    * otherwise → **pending**
-   * a phase listed in `entryPoint.skipPhases` → **done** (satisfied by an upstream handoff), annotated `(skipped: handoff)`.
 2. **Dependencies**: each phase depends on the previous one (linear chain). A phase cannot start until its predecessor is done.
 3. **Current-phase detail (optional sub-todos)**: for `currentPhase` only, you may expand three ordered sub-todos — `dispatch specialist`, `dispatch reviewer`, `handle verdict` — to track the intra-phase loop. Collapse them again once the phase is done.
 4. **DESIGN gate**: when `currentPhase == "DESIGN"` and `adrRatification.checkpointStatus == "awaiting_human"`, keep the DESIGN todo **in_progress** and add a blocking sub-todo `await ADR ratification (human)`; DISTILL stays **pending** regardless of the DESIGN reviewer verdict.
-5. **Terminal**: when `currentPhase == "DONE"`, all five phase todos are **done**.
+5. **Terminal**: when `currentPhase == "DONE"`, every phase todo is **done**.
 
 Regenerate this projection at every rehydration (Phase 0). Do not mutate the todo list from stale memory — always derive it from the snapshot just read.
 
@@ -54,9 +53,8 @@ Emit the full list in one `TodoWrite` call. Encode ordering by listing phases in
 
 ```
 TodoWrite todos=[
-  { "content": "DISCOVER", "status": "completed",   "activeForm": "Running DISCOVER" },
-  { "content": "DISCUSS",  "status": "in_progress", "activeForm": "Running DISCUSS" },
-  { "content": "DESIGN",   "status": "pending",     "activeForm": "Running DESIGN" },
+  { "content": "RESEARCH", "status": "completed",   "activeForm": "Running RESEARCH" },
+  { "content": "DESIGN",   "status": "in_progress", "activeForm": "Running DESIGN" },
   { "content": "DISTILL",  "status": "pending",     "activeForm": "Running DISTILL" },
   { "content": "DELIVER",  "status": "pending",     "activeForm": "Running DELIVER" }
 ]
@@ -70,15 +68,13 @@ Use the native SQL-backed tables. Insert one row per phase with a kebab-case id,
 
 ```sql
 INSERT OR REPLACE INTO todos (id, title, description, status) VALUES
-  ('discover', 'DISCOVER', 'SKRAFT phase DISCOVER', 'done'),
-  ('discuss',  'DISCUSS',  'SKRAFT phase DISCUSS',  'in_progress'),
-  ('design',   'DESIGN',   'SKRAFT phase DESIGN',   'pending'),
+  ('research', 'RESEARCH', 'SKRAFT phase RESEARCH', 'done'),
+  ('design',   'DESIGN',   'SKRAFT phase DESIGN',   'in_progress'),
   ('distill',  'DISTILL',  'SKRAFT phase DISTILL',  'pending'),
   ('deliver',  'DELIVER',  'SKRAFT phase DELIVER',  'pending');
 
 INSERT OR IGNORE INTO todo_deps (todo_id, depends_on) VALUES
-  ('discuss', 'discover'),
-  ('design',  'discuss'),
+  ('design',  'research'),
   ('distill', 'design'),
   ('deliver', 'distill');
 ```

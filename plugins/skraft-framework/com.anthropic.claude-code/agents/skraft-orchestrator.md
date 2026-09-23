@@ -47,7 +47,6 @@ metadata:
     - DELIVER
   state_file: .copilot-tracking/skraft-plans/{projectSlug}/state.json
   skills:
-    - skraft-entry-point-routing
     - adversarial-review-lenses
     - contract-testing
     - playwright-evidence
@@ -81,19 +80,17 @@ Follow the write-through model and the once-per-session Rehydration sequence def
 3. If it exists, rehydrate in one call — `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`.
 4. **Project the pipeline into the native todo working set** per `#file:plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies + statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`). This list — not the JSON file — drives every subsequent turn.
 5. Scan for neighbor planners under `.copilot-tracking/security-plans/{slug}/`, `.copilot-tracking/rai-plans/{slug}/`, `.copilot-tracking/sssc-plans/{slug}/`. If found, record their paths with `state.mjs set --slug {projectSlug} --field neighborPlanners --data '{"securityPlanFile":…,"raiPlanFile":…,"ssscPlanFile":…}'` and an advisory line with `state.mjs set --field nextActions` (read-only, no coupling).
-6. **Evaluate the upstream entry point.** Only on a fresh pipeline (`phasesCompleted` empty). Load `#file:plugins/skraft-framework/skills/skraft-entry-point-routing/SKILL.md`. Detect a complete upstream backlog-and-sprint handoff, require user confirmation, ingest its evidence, and record it with `state.mjs set --slug {projectSlug} --field entryPoint --data '{"skipPhases":[…],"handoffSource":…,"handoffArtifacts":[…]}'`. Without confirmed evidence, record empty `skipPhases` and run every phase.
-7. Print the resume summary:
+6. Print the resume summary:
    ```
    Pipeline state loaded.
    Current phase: DESIGN
    Story: #42 — Add eligibility check
    Neighbor planners: security-plans/eligibility (read-only)
-   Entry point: every phase runs (no confirmed upstream handoff)
    Pending: DESIGN → DISTILL → DELIVER
    ```
-8. Load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json). Apply its startup consent checkpoint; recommend PR reports + issue link + chat summary without preselecting them. Persist confirmed choices with `report.mjs setup`; inspect `report.mjs status` on resume, even at DONE.
-9. When the selected provider is `github`, load [github-search-protocol](../../skills/github-search-protocol/SKILL.md) and use its publication route, not issue discovery. Apply the lifecycle's capability checkpoint with that provider procedure; surface unresolved gaps and required user customization.
-10. Proceed to the current phase independently of pending publication; publication-only retries reuse existing Markdown without dispatching engineering. Provider choices affect reporting only, not engineering pipeline support.
+7. Load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json). Apply its startup consent checkpoint; recommend PR reports + issue link + chat summary without preselecting them. Persist confirmed choices with `report.mjs setup`; inspect `report.mjs status` on resume, even at DONE.
+8. When the selected provider is `github`, load [github-search-protocol](../../skills/github-search-protocol/SKILL.md) and use its publication route, not issue discovery. Apply the lifecycle's capability checkpoint with that provider procedure; surface unresolved gaps and required user customization.
+9. Proceed to the current phase independently of pending publication; publication-only retries reuse existing Markdown without dispatching engineering. Provider choices affect reporting only, not engineering pipeline support.
 
 ## State file
 
@@ -101,7 +98,7 @@ The state file is **JSON only**, never markdown. It is a durable safety snapshot
 
 ## Phase execution protocol
 
-Before dispatching any phase, check `state.json::entryPoint.skipPhases`. If a confirmed upstream planning handoff satisfies the phase, do NOT dispatch its specialist or reviewer; advance directly to the next phase.
+Every phase of RESEARCH → DESIGN → DISTILL → DELIVER runs for every story; never skip one.
 
 ### Dispatch context header (the orchestrator provides context; sub-agents load nothing)
 
@@ -124,7 +121,7 @@ omit the line. Do not produce commits or gate evidence yourself.
 
 The sub-agent never touches `state.json` or `skraft-config.json`; it consumes the dispatch payload and writes only its artefacts. The orchestrator records the resulting verdict and paths into state via the CLI after the sub-agent returns.
 
-For each phase NOT in `entryPoint.skipPhases` (DESIGN, DISTILL):
+For DESIGN and DISTILL:
 
 **Step 1 — Dispatch specialist agent**
 Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slug} --phase {P}`: it records `startedAt` and the `baseSha` that bounds the phase's commits (retries keep the first). Consult the native todo working set for the current phase (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above (story, output path, artifact conventions, upstream artefacts). If a scalar not carried by the todo list is needed, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
@@ -145,7 +142,7 @@ Pass the produced artefact paths to the reviewer agent. Do NOT summarize or inte
 
 ### RESEARCH (reviewer-less phase — specialist-only)
 
-RESEARCH has no reviewer: findings are grounded in citations the human can verify directly, not an adversarial gate. If RESEARCH is not in `entryPoint.skipPhases`:
+RESEARCH has no reviewer: findings are grounded in citations the human can verify directly, not an adversarial gate.
 
 1. Run `state.mjs mark-phase-started --slug {projectSlug} --phase RESEARCH`, then dispatch `Skraft - Solution Researcher` with the Dispatch context header above.
 2. Verify the research document exists at `research/{date}/{slug}-research.md`. If missing, re-dispatch once; otherwise surface to user.
@@ -179,10 +176,6 @@ Reviewer verdict: APPROVED. The trajectory below is YOUR call — reply per ADR:
 Escape hatches: "accept all" · "reject all" · "pause — I'll read the bodies first".
 Nothing advances to DISTILL until every ADR is Accepted or Rejected.
 ```
-
-## Upstream entry-point routing
-
-At pipeline start, load `#file:plugins/skraft-framework/skills/skraft-entry-point-routing/SKILL.md`. Skip a phase only when a confirmed upstream planning handoff proves that phase's obligations are already satisfied. Persist that evidence in `state.json::entryPoint`; otherwise keep `skipPhases` empty. Routing never changes engineering rigor, agents, or quality gates.
 
 ## Dispatch table
 
@@ -254,7 +247,6 @@ Max retries per phase: `state.json::userPreferences.maxRetriesPerPhase` (default
 
 ## Skill usage
 
-- `skraft-entry-point-routing` — loaded at pipeline start to detect and confirm an upstream planning handoff.
 - `adversarial-review-lenses` — referenced by every reviewer dispatch.
 - `contract-testing` — DESIGN (API contracts) and DISTILL (Microcks samples).
 - `playwright-evidence` — engineer loads for frontend DELIVER capture; router passes policy and consumes returned refs only.

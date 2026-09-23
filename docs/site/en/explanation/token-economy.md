@@ -33,7 +33,7 @@ not a hope.
 
 ## The levers
 
-SKRAFT applies five levers from the Genesis discipline to hold that budget. Each lever
+SKRAFT applies four levers from the Genesis discipline to hold that budget. Each lever
 acts on a distinct dimension of spend.
 
 | Lever | What it does |
@@ -41,7 +41,6 @@ acts on a distinct dimension of spend.
 | **Cache discipline** | System prompts and shared instructions are designed to be *reloaded* between turns without recomputation — anything that can be KV-cached is, and message structure guarantees it. |
 | **Class by role** | Each agent carries a B12 target class — `implementer`, `planner`, or `reviewer`. Artifact producers (discoverer, planner, architect, engineer) receive the most capable class; phase reviewers and lenses, whose task is bounded, receive the cheapest class that holds the work. Two roles are an exception and require a *Sonnet-class or above* model regardless of role: `software-engineer` and `software-engineer-reviewer` (multi-constraint arbitration). |
 | **Tool surface** | No agent receives a full MCP catalogue. Each agent sees only the tools it needs for its specific task. Every superfluous tool is an invitation to reason unnecessarily. |
-| **Structural pruning** | On a confirmed upstream planning handoff, `state.json::entryPoint.skipPhases` records which engineering phases are already satisfied; the pipeline advances to the first required phase. The pipeline does not re-execute what it has no reason to recompute. |
 
 These levers are not independent. Cache discipline and role-class allocation reinforce
 each other: a low-class model reloaded from the KV cache costs a fraction of what a
@@ -117,7 +116,7 @@ negotiable, and a dial that lets a run buy its way under the bar is not a saving
 is a deferred defect.
 
 What remains — and it is the larger half of the spend — is the form levers: model
-class, cache discipline, tool surface, output volume, structural pruning. The
+class, cache discipline, tool surface, output volume. The
 distinction matters in practice: when a run exceeds an estimated token budget, the first
 question is not "which reviewers can we disable?" — that question no longer has an
 answer — but "which form lever has not yet been applied?"

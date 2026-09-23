@@ -4,7 +4,6 @@ import { Ok, Err } from './result.mjs'
 // through `set --field`. Invariant-bearing fields, projectSlug (written by init) and
 // phaseHistory (written by mark-phase-started / phase closure) are not settable here.
 
-const HANDOFF_SOURCES = new Set(['ado', 'jira', 'github', null])
 const RATIFICATION_STATUSES = new Set(['none', 'awaiting_human', 'resolved', null])
 const ENTRY_MODES = new Set(['capture', 'from-issue', 'from-prd', null])
 
@@ -16,15 +15,6 @@ const isNullableString = (value) => value === null || (typeof value === 'string'
 const invalid = (field, reason) => Err({ code: 'INVALID_METADATA', field, reason: `${field}: ${reason}` })
 
 const VALIDATORS = {
-  entryPoint: (value, { phaseOrder }) => {
-    if (!isPlainObject(value)) return 'must be an object'
-    if (!isStringList(value.skipPhases)) return 'skipPhases must be a list of phase names'
-    const unknown = value.skipPhases.filter((phase) => !phaseOrder.includes(phase))
-    if (unknown.length > 0) return `skipPhases names phase(s) outside the published order: ${unknown.join(', ')}`
-    if (!HANDOFF_SOURCES.has(value.handoffSource ?? null)) return 'handoffSource must be ado, jira, github or null'
-    if (!isStringList(value.handoffArtifacts)) return 'handoffArtifacts must be a list of relative paths'
-    return null
-  },
   adrRatification: (value) => {
     if (!isPlainObject(value)) return 'must be an object'
     if (!RATIFICATION_STATUSES.has(value.checkpointStatus ?? null)) return 'checkpointStatus must be none, awaiting_human or resolved'
@@ -48,7 +38,7 @@ const VALIDATORS = {
 
 export const SETTABLE_METADATA_FIELDS = Object.freeze(Object.keys(VALIDATORS))
 
-export const validateMetadataField = (field, value, { phaseOrder }) => {
+export const validateMetadataField = (field, value) => {
   const validator = VALIDATORS[field]
   if (!validator) {
     return Err({
@@ -57,6 +47,6 @@ export const validateMetadataField = (field, value, { phaseOrder }) => {
       reason: `${field} is not settable; settable fields: ${SETTABLE_METADATA_FIELDS.join(', ')}`,
     })
   }
-  const problem = validator(value, { phaseOrder })
+  const problem = validator(value)
   return problem ? invalid(field, problem) : Ok(value)
 }

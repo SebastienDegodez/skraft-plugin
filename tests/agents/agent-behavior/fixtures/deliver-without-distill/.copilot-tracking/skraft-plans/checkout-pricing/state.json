@@ -3,11 +3,6 @@
   "skraftPlanFile": ".copilot-tracking/skraft-plans/checkout-pricing/state.json",
   "currentPhase": "DELIVER",
   "entryMode": "capture",
-  "entryPoint": {
-    "skipPhases": [],
-    "handoffSource": null,
-    "handoffArtifacts": []
-  },
   "issueNumber": null,
   "adrRatification": {
     "checkpointStatus": "resolved",

@@ -15,7 +15,6 @@ export const STATE_SCHEMA = Object.freeze({
   skraftPlanFile: Object.freeze({ owner: 'orchestrator' }),
   currentPhase: Object.freeze({ owner: 'invariant' }),
   entryMode: Object.freeze({ owner: 'orchestrator' }),
-  entryPoint: Object.freeze({ owner: 'orchestrator' }),
   issueNumber: Object.freeze({ owner: 'orchestrator' }),
   phasesCompleted: Object.freeze({ owner: 'invariant' }),
   phaseArtifacts: Object.freeze({ owner: 'invariant' }),
@@ -87,7 +86,7 @@ const coercePhaseMap = (val) => {
 // Validates (and coerces) the full orchestrator state.json shape used by the pipeline.
 // FIDELITY (round-trip): every field on the raw object is preserved. The state machine
 // only owns the invariant-bearing subset normalized below; all other fields the
-// orchestrator depends on (entryPoint, adrRatification, issueNumber, projectSlug,
+// orchestrator depends on (adrRatification, issueNumber, projectSlug,
 // skraftPlanFile, phaseHistory, neighborPlanners, nextActions, referencesProcessed,
 // entryMode, ...) pass straight through instead of being silently
 // dropped on rewrite. Missing optional invariant fields are coerced to safe defaults.

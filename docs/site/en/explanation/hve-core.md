@@ -26,7 +26,6 @@ State persists as JSON at
 ```json
 {
   "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE",
-  "entryPoint": { "skipPhases": [] },
   "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
   "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
   "retryCount": { "DESIGN": 0 },
@@ -42,8 +41,6 @@ State persists as JSON at
 - `phaseArtifacts`, `verdicts`, `retryCount` trace what each phase produced and
   how it was judged.
 - `maxRetriesPerPhase` (default 2) bounds retries before human escalation.
-- `entryPoint` records which phases a confirmed upstream HVE handoff has already
-  satisfied (`skipPhases`). It is written once at pipeline start and never revised.
 
 The state carries **no quality dial**. Mutation and coverage thresholds, the four
 adversarial review lenses, the Gherkin gate and the Outside-In double-loop TDD variant

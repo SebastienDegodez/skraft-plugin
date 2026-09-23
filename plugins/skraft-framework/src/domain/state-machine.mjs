@@ -132,7 +132,7 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
     }
 
     case 'SET_METADATA': {
-      const validated = validateMetadataField(event.field, event.value, { phaseOrder })
+      const validated = validateMetadataField(event.field, event.value)
       if (!isOk(validated)) return validated
       return Ok(Object.freeze({ ...state, [event.field]: validated.value }))
     }

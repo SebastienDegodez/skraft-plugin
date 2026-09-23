@@ -226,10 +226,6 @@
     "refactoring-worker": [],
     "Skraft - Orchestrator": [
       {
-        "name": "skraft-entry-point-routing",
-        "policy": "verify"
-      },
-      {
         "name": "adversarial-review-lenses",
         "policy": "verify"
       },

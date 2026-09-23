@@ -14,7 +14,6 @@ const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
   skraftPlanFile: null,
   currentPhase: phaseOrder[0],
   entryMode: null,
-  entryPoint: null,
   issueNumber: null,
   adrRatification: { checkpointStatus: null, pending: [], ratified: [] },
   phasesCompleted: [],

@@ -3,7 +3,6 @@
   "skraftPlanFile": ".copilot-tracking/skraft-plans/orders/state.json",
   "currentPhase": "DELIVER",
   "entryMode": "capture",
-  "entryPoint": { "skipPhases": [], "handoffSource": null, "handoffArtifacts": [] },
   "issueNumber": null,
   "adrRatification": { "checkpointStatus": "resolved", "pending": [], "ratified": [] },
   "phasesCompleted": ["RESEARCH", "DESIGN", "DISTILL"],

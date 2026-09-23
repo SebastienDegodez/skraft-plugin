@@ -33,7 +33,7 @@ invariant de conception — un budget, pas un espoir.
 
 ## Les leviers
 
-SKRAFT applique cinq leviers issus de la discipline Genesis pour tenir ce budget.
+SKRAFT applique quatre leviers issus de la discipline Genesis pour tenir ce budget.
 Chaque levier agit sur une dimension distincte de la dépense.
 
 | Levier | Ce que ça fait |
@@ -41,7 +41,6 @@ Chaque levier agit sur une dimension distincte de la dépense.
 | **Discipline de cache** | Les prompts-système et les instructions partagées sont conçus pour être *rechargés* entre les tours sans recalcul — tout ce qui peut être mis en cache KV l'est, et la structure des messages le garantit. |
 | **Classe par rôle** | Chaque agent porte une classe cible B12 — `implementer`, `planner` ou `reviewer`. Les producteurs d'artefacts (discoverer, planner, architect, engineer) reçoivent la classe la plus capable ; les reviewers de phase et les lentilles, dont la tâche est bornée, reçoivent la classe la moins chère qui tienne le travail. Deux rôles font exception et exigent une classe *Sonnet ou supérieure* quel que soit leur rôle : `software-engineer` et `software-engineer-reviewer` (arbitrage multi-contraintes). |
 | **Surface d'outils** | Aucun agent ne reçoit un catalogue MCP complet. Chaque agent ne voit que les outils dont il a besoin pour sa tâche précise. Chaque outil superflu est une invitation à raisonner inutilement. |
-| **Élagage structurel** | Sur un handoff de planification amont confirmé, `state.json::entryPoint.skipPhases` enregistre les phases d'ingénierie déjà satisfaites ; le pipeline avance jusqu'à la première phase requise. Le pipeline n'exécute pas ce qu'il n'a pas à recalculer. |
 
 Ces leviers ne sont pas indépendants. La discipline de cache et la classe par rôle se
 renforcent mutuellement : un modèle de classe basse rechargeable depuis le cache KV coûte une
@@ -120,8 +119,8 @@ permet à un run d'acheter son passage sous la barre n'est pas une économie —
 défaut différé.
 
 Ce qui reste — et c'est la plus grosse moitié de la dépense — ce sont les leviers de
-forme : classe de modèle, discipline de cache, surface d'outils, volume de sortie,
-élagage structurel. La distinction est importante en pratique : quand un run dépasse un
+forme : classe de modèle, discipline de cache, surface d'outils, volume de sortie.
+La distinction est importante en pratique : quand un run dépasse un
 budget de tokens estimé, la première question n'est pas « quels reviewers
 désactiver ? » — cette question n'a plus de réponse — mais « quel levier de forme n'est
 pas encore appliqué ? ».

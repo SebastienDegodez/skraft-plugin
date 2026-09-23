@@ -95,11 +95,10 @@ test('set writes an orchestrator-owned field and rejects invariant fields', asyn
     const env = { SKRAFT_TRACKING_ROOT: root }
     await stateCli(['init', '--slug', 'demo'], env)
 
-    const entryPoint = { skipPhases: [], handoffSource: null, handoffArtifacts: [] }
-    const set = await stateCli(['set', '--slug', 'demo', '--field', 'entryPoint', '--data', JSON.stringify(entryPoint)], env)
+    const set = await stateCli(['set', '--slug', 'demo', '--field', 'nextActions', '--data', '["confirm the story"]'], env)
     assert.equal(set.exitCode, 0, set.stderr)
     const state = JSON.parse(await readFile(join(root, 'demo', 'state.json'), 'utf8'))
-    assert.deepEqual(state.entryPoint, entryPoint)
+    assert.deepEqual(state.nextActions, ['confirm the story'])
 
     const refused = await stateCli(['set', '--slug', 'demo', '--field', 'currentPhase', '--data', '"DONE"'], env)
     assert.equal(refused.exitCode, 1)

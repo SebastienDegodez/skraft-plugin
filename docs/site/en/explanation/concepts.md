@@ -20,12 +20,9 @@ Each pipeline pass handles exactly one Use Case. No batching, no shortcuts.
 
 ## Engineering entry point
 
-When the user selects `skraft-orchestrator` with a refined story, the orchestrator checks for a confirmed upstream planning handoff at pipeline start. DISCOVER and DISCUSS are not part of this decision: they are standalone product workflows used upstream when needed.
+When the user selects `skraft-orchestrator` with a refined story, every engineering phase runs: RESEARCH → DESIGN → DISTILL → DELIVER. DISCOVER and DISCUSS are standalone product workflows used upstream when needed; the refined story they produce is the pipeline's input, never a reason to skip an engineering phase.
 
-- **Upstream planning handoff detected** — when a complete upstream backlog-and-sprint handoff is confirmed, the phases it already satisfies are recorded in `state.json::entryPoint.skipPhases`; the pipeline advances to the first unsatisfied phase.
-- **No handoff** — `skipPhases` is empty and every engineering phase runs: RESEARCH → DESIGN → DISTILL → DELIVER.
-
-Engineering rigor is identical for every story. [`skraft-entry-point-routing`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-entry-point-routing) detects the handoff; [`skraft-quality-bar`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-quality-bar) keeps the same bar regardless of entry point.
+Engineering rigor is identical for every story: [`skraft-quality-bar`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-quality-bar) keeps the same bar for all of them.
 
 ## CQS — Command-Query Separation
 
