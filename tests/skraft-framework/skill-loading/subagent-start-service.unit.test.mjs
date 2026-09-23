@@ -181,3 +181,15 @@ test('an unreadable Claude instruction fails open and emits an audit warning', a
   assert.equal(result.decision, 'allow')
   assert.equal(audit.entries[0].eventType, 'InstructionReadFailed')
 })
+
+test('the directive tells the subagent to load each skill with its skill tool', async () => {
+  const service = createSubagentStartService({
+    config: { agentSkills: { a: [{ name: 'bdd-methodology', policy: 'verify' }, { name: 'outside-in-tdd', policy: 'verify' }] } },
+    skillFileReader: { read: async () => '' },
+    instructionFileReader: { read: async () => '' },
+    auditWriter: { write: async () => {} },
+    clock: { now: () => '2026-09-23T00:00:00.000Z' },
+  })
+  const result = await service.handle({ agentName: 'a' })
+  assert.equal(result.context, 'The following skills are MANDATORY: bdd-methodology, outside-in-tdd. Load each with your skill tool, by name, before any other work; a skill you only name or read about is not loaded, and the agent cannot stop until it is.')
+})

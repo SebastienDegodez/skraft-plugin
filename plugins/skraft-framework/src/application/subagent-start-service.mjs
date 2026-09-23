@@ -2,10 +2,11 @@ import { mandatorySkillsFor, isEagerSkill } from '../domain/skill-policy.mjs'
 import { canonicalAgentName, companionInstructionsFor } from '../domain/instruction-policy.mjs'
 import { allow, additionalContext } from '../adapters/api/hooks/decision.mjs'
 
-// Builds the directive listing all mandatory skills by name.
+// Builds the directive listing all mandatory skills by name, and how G3 counts a load:
+// only a skill tool call (or a read of the skill's SKILL.md) — never a mention.
 const buildDirective = (skillEntries) => {
   const names = skillEntries.map((s) => s.name).join(', ')
-  return `The following skills are MANDATORY: ${names}`
+  return `The following skills are MANDATORY: ${names}. Load each with your skill tool, by name, before any other work; a skill you only name or read about is not loaded, and the agent cannot stop until it is.`
 }
 
 // SubagentStart guard (G2). Injects the mandatory-skill directive into the subagent's
