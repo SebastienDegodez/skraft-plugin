@@ -181,7 +181,7 @@ Paths use the resolved tracking root, normally `.copilot-tracking/skraft-plans/{
 | Phase | Specialist | Reviewer | Expected artefacts |
 |---|---|---|---|
 | RESEARCH | `Skraft - Solution Researcher` | — (none; closed via manual `close-phase`) | `research/{date}/{slug}-research.md` |
-| DESIGN | `Skraft - Solution Architect` | `Skraft - Solution Architect Reviewer` | `adrs/adr-*.md`, `details/{date}/contracts-*.md` |
+| DESIGN | `Skraft - Solution Architect` | `Skraft - Solution Architect Reviewer` | `details/{date}/event-model-*.md`, `details/{date}/contracts-*.md`. ADRs live in repository `docs/adr/` and exist only for decisions the eligibility gate admits; their absence is not a missing artefact. |
 | DISTILL | `Skraft - Acceptance Designer` | `Skraft - Acceptance Designer Reviewer` | `features/*.feature`, `details/{date}/impl-plan-*.md`, `tests/**/{Feature}AcceptanceTests.cs` (RED) |
 | DELIVER | `Skraft - Software Engineer` | `Skraft - Software Engineer Reviewer` | Committed code + passing tests + `changes/{date}/change-log.md` |
 
