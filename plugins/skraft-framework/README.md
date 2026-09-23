@@ -267,8 +267,9 @@ tool permissions, or the full engineering pipeline. Full live VS Code validation
 Hooks have one source and two physical surfaces: canonical [hooks/hooks.json](hooks/hooks.json)
 for Claude compatibility and generated [com.github.copilot/hooks/hooks.json](com.github.copilot/hooks/hooks.json)
 for Copilot v1. No extra manifest `hooks` pointers: do not register either auto-loaded surface twice.
-These are current packaging facts; [ADR-008](../../docs/adr/adr-008-single-hook-manifest.md)
-retains its measured legacy record, not a current cross-client guarantee.
+These are current packaging facts, recorded in [ADR-009](../../docs/adr/adr-009-generated-copilot-hook-copy.md);
+[ADR-008](../../docs/adr/adr-008-single-hook-manifest.md), which it supersedes, retains its measured
+legacy record, not a current cross-client guarantee.
 
 ## Maintainer workflow
 

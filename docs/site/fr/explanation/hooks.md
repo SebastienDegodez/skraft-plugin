@@ -135,8 +135,9 @@ une garantie globale de compatibilité ni l'ancien contournement sans schéma.
 Sources : [générateur d'adaptateurs](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/project-plugin-adapters.mjs),
 [sonde de compatibilité CLI](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/copilot-plugin-compat-smoke.mjs)
 et [notes de packaging courant](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/README.md#harness-packaging).
-[ADR-008](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-008-single-hook-manifest.md)
-conserve les mesures historiques ; ce n'est pas une référence du packaging actuel entre clients.
+[ADR-009](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-009-generated-copilot-hook-copy.md)
+consigne le packaging courant. [ADR-008](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-008-single-hook-manifest.md),
+qu'il remplace, conserve les mesures historiques ; ce n'est pas une référence du packaging actuel entre clients.
 
 ## Exemple Starbucks (illustratif)
 

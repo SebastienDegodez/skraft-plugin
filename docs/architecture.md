@@ -126,8 +126,9 @@ Copilot sont `skraft-orchestrator`, `backlog-discoverer`, `backlog-planner`, `br
   l'exécution complète du pipeline. Aucune garantie globale de compatibilité entre clients.
 
 Ces notes et le [README distribué](../plugins/skraft-framework/README.md#harness-packaging)
-décrivent le packaging courant. [ADR-008](adr/adr-008-single-hook-manifest.md) conserve ses
-mesures historiques sur l'ancien packaging ; ce n'est pas une preuve pour les versions actuelles.
+décrivent le packaging courant, que consigne [ADR-009](adr/adr-009-generated-copilot-hook-copy.md).
+[ADR-008](adr/adr-008-single-hook-manifest.md), qu'il remplace, conserve ses mesures historiques
+sur l'ancien packaging ; ce n'est pas une preuve pour les versions actuelles.
 
 ---
 
