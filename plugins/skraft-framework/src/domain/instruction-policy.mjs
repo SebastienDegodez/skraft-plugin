@@ -1,9 +1,10 @@
 // Pure domain: resolve harness agent identities and companion-instruction policy.
 
-const unqualified = (agentName) => {
-  const value = String(agentName ?? '').trim()
-  return value.startsWith('skraft:') ? value.slice('skraft:'.length) : value
-}
+// Claude Code reports a plugin subagent as `skraft:<id>` or `plugin:skraft:<id>`;
+// only this plugin's namespace is unwrapped, never a foreign one.
+const SKRAFT_NAMESPACE = /^(?:plugin:)?skraft:/
+
+const unqualified = (agentName) => String(agentName ?? '').trim().replace(SKRAFT_NAMESPACE, '')
 
 export const canonicalAgentName = (agentName, config) => {
   const value = String(agentName ?? '').trim()

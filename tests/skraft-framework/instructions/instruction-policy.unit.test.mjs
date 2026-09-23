@@ -41,3 +41,10 @@ test('instruction policy never borrows SKRAFT aliases from foreign namespaces', 
   assert.equal(canonicalAgentName('skraft:Skraft - Orchestrator', CONFIG), 'Skraft - Orchestrator')
   assert.equal(canonicalAgentName('skraft:software-engineer', {}), 'software-engineer')
 })
+
+test('canonicalAgentName: resolves the plugin-scoped agent_type Claude Code reports', () => {
+  const config = { agentAliases: { 'software-engineer': 'Skraft - Software Engineer' } }
+  assert.equal(canonicalAgentName('plugin:skraft:software-engineer', config), 'Skraft - Software Engineer')
+  assert.equal(canonicalAgentName('skraft:software-engineer', config), 'Skraft - Software Engineer')
+  assert.equal(canonicalAgentName('plugin:other:software-engineer', config), 'plugin:other:software-engineer')
+})
