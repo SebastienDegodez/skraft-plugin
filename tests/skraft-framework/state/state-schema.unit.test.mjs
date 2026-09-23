@@ -1,39 +1,38 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { isOk, isErr } from '../../../plugins/skraft-framework/src/domain/result.mjs'
-import { validateState, validatePipelineState } from '../../../plugins/skraft-framework/src/domain/state-schema.mjs'
+import { projectDispatchState, validatePipelineState } from '../../../plugins/skraft-framework/src/domain/state-schema.mjs'
 
-const VALID = { currentPhase: 'DISCUSS', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: ['DESIGN'] }
+// ─── projectDispatchState ─────────────────────────────────────────────────────
 
-test('D3: a well-formed state is accepted and frozen', () => {
-  const result = validateState(VALID)
-  assert.ok(isOk(result))
-  assert.ok(Object.isFrozen(result.value), 'returned pipeline state is frozen')
-  assert.ok(Object.isFrozen(result.value.skipPhases), 'skipPhases is frozen')
+test('projectDispatchState: projects the current phase of the state the CLI writes', () => {
+  const r = projectDispatchState({
+    currentPhase: 'DESIGN',
+    phaseArtifacts: { RESEARCH: ['research/r.md'], DESIGN: ['details/d/contracts-x.md'] },
+    verdicts: { RESEARCH: 'APPROVED', DESIGN: 'CHANGES_REQUESTED' },
+    retryCount: { DESIGN: 1 },
+    userPreferences: { maxRetriesPerPhase: 3 },
+  })
+  assert.ok(isOk(r))
+  assert.deepEqual({ ...r.value }, { currentPhase: 'DESIGN', specialistDone: true, reviewerVerdict: 'CHANGES_REQUESTED', retries: 1, maxRetries: 3 })
+  assert.ok(Object.isFrozen(r.value))
 })
 
-// D3 — invalid-field grid: one reject branch per field (combinatorial_economy).
-const INVALID_ROWS = [
-  { field: 'currentPhase', raw: { ...VALID, currentPhase: '' } },
-  { field: 'specialistDone', raw: { ...VALID, specialistDone: 'yes' } },
-  { field: 'reviewerVerdict', raw: { ...VALID, reviewerVerdict: 'MAYBE' } },
-  { field: 'retries', raw: { ...VALID, retries: 1.5 } },
-  { field: 'retries', raw: { ...VALID, retries: -1 } },
-  { field: 'skipPhases', raw: { ...VALID, skipPhases: 'DESIGN' } },
-  { field: 'skipPhases', raw: { ...VALID, skipPhases: [42] } }
-]
-for (const { field, raw } of INVALID_ROWS) {
-  test(`D3: invalid ${field} (${JSON.stringify(raw[field])}) is rejected as INVALID_STATE`, () => {
-    const result = validateState(raw)
-    assert.ok(isErr(result))
-    assert.equal(result.error.code, 'INVALID_STATE')
-    assert.ok(result.error.fields.includes(field), `fields names ${field}`)
-  })
-}
+test('projectDispatchState: a fresh phase has no artefact, no verdict and the default budget', () => {
+  const r = projectDispatchState({ currentPhase: 'RESEARCH', phaseArtifacts: { DESIGN: ['x'] } })
+  assert.deepEqual({ ...r.value }, { currentPhase: 'RESEARCH', specialistDone: false, reviewerVerdict: null, retries: 0, maxRetries: 2 })
+})
 
-test('D3: a non-object state is rejected', () => {
-  assert.ok(isErr(validateState(null)))
-  assert.ok(isErr(validateState([])))
+test('projectDispatchState: an empty artefact list is not a done specialist', () => {
+  assert.equal(projectDispatchState({ currentPhase: 'DESIGN', phaseArtifacts: { DESIGN: [] } }).value.specialistDone, false)
+})
+
+test('projectDispatchState: rejects what validatePipelineState rejects', () => {
+  for (const raw of [null, [], {}, { currentPhase: '' }]) {
+    const r = projectDispatchState(raw)
+    assert.ok(isErr(r), JSON.stringify(raw))
+    assert.equal(r.error.code, 'INVALID_STATE')
+  }
 })
 
 // ─── validatePipelineState ────────────────────────────────────────────────────

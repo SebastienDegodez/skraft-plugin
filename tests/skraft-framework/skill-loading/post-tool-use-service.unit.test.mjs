@@ -93,99 +93,60 @@ test('handle with no arguments returns allow without throwing', async () => {
 // G6 orchestrator continuation on PostToolUse(Agent) ————————————————————
 
 const PIPELINE_CONFIG = {
-  phaseOrder: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER'],
-  retryBudget: 3,
+  phaseOrder: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'],
   phaseAgents: {
-    DISCOVER: { specialist: 'backlog-discoverer', reviewer: 'backlog-discoverer-reviewer' },
-    DISCUSS: { specialist: 'backlog-planner', reviewer: 'backlog-planner-reviewer' },
+    RESEARCH: { specialist: 'solution-researcher', reviewer: null },
     DESIGN: { specialist: 'solution-architect', reviewer: 'solution-architect-reviewer' },
     DISTILL: { specialist: 'acceptance-designer', reviewer: 'acceptance-designer-reviewer' },
     DELIVER: { specialist: 'software-engineer', reviewer: 'software-engineer-reviewer' }
   }
 }
 
+// The state.json shape the state CLI writes.
+const pipelineState = (currentPhase, overrides = {}) => ({
+  currentPhase, phasesCompleted: [], phaseArtifacts: {}, verdicts: {}, retryCount: {},
+  userPreferences: { maxRetriesPerPhase: 2 }, ...overrides
+})
 const stateReaderReturning = (state) => ({ read: async () => state })
 
-test('G6: injects next-step continuation after a successful sub-agent (ADVANCE)', async () => {
+// The returning sub-agent is the tool's subagent_type; agentName is the hook's caller.
+const agentReturned = (subagentType) => ({
+  toolName: 'Agent', agentName: 'skraft-orchestrator', projectSlug: 'my-project', toolInput: { subagentType }
+})
+
+test('G6: a returning specialist is told to record its artefacts and dispatch its reviewer', async () => {
   const audit = collectingWriter()
-  const stateReader = stateReaderReturning({ currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'backlog-discoverer-reviewer', projectSlug: 'my-project' })
+  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader: stateReaderReturning(pipelineState('DESIGN')), config: PIPELINE_CONFIG })
+  const result = await service.handle(agentReturned('solution-architect'))
   assert.equal(result?.decision, 'additionalContext')
-  assert.match(result.context, /next/i)
-  assert.match(result.context, /backlog-planner/)
-  assert.equal(audit.entries.length, 1)
-  assert.equal(audit.entries[0].eventType, 'ContinuationInjected')
-  assert.equal(audit.entries[0].kind, 'NEXT_STEP')
-  assert.equal(audit.entries[0].stage, 'ADVANCE')
-  assert.equal(audit.entries[0].expectedAgent, 'backlog-planner')
-  assert.equal(audit.entries[0].timestamp, FIXED_NOW)
+  assert.match(result.context, /record-artifact --phase DESIGN/)
+  assert.match(result.context, /dispatch solution-architect-reviewer/)
+  assert.deepEqual(audit.entries, [{ eventType: 'ContinuationInjected', agentName: 'solution-architect', phase: 'DESIGN', kind: 'REVIEW', timestamp: FIXED_NOW }])
 })
 
-test('G6: injects re-dispatch continuation after a rejected sub-agent (CHANGES_REQUESTED)', async () => {
+test('G6: a returning reviewer is told how to record its verdict, escalating once the budget is spent', async () => {
   const audit = collectingWriter()
-  const stateReader = stateReaderReturning({ currentPhase: 'DESIGN', specialistDone: true, reviewerVerdict: 'CHANGES_REQUESTED', retries: 0, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'solution-architect-reviewer', projectSlug: 'my-project' })
-  assert.equal(result?.decision, 'additionalContext')
-  assert.match(result.context, /requested changes/i)
-  assert.match(result.context, /re-dispatch/i)
-  assert.match(result.context, /solution-architect/)
-  assert.match(result.context, /gaps/i)
-  assert.equal(audit.entries[0].eventType, 'ContinuationInjected')
-  assert.equal(audit.entries[0].kind, 'REDISPATCH')
-  assert.equal(audit.entries[0].stage, 'RETRY')
+  const exhausted = pipelineState('DESIGN', { retryCount: { DESIGN: 2 } })
+  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader: stateReaderReturning(exhausted), config: PIPELINE_CONFIG })
+  const result = await service.handle({ ...agentReturned(undefined), requestedAgent: 'solution-architect-reviewer' })
+  assert.match(result.context, /record-verdict --verdict APPROVED/)
+  assert.match(result.context, /escalate to the user/)
+  assert.equal(audit.entries[0].kind, 'VERDICT')
 })
 
-test('G6: injects escalation continuation when retry budget is exhausted', async () => {
+test('G6: nothing is injected for a worker, a lens or an agent of another phase', async () => {
   const audit = collectingWriter()
-  const stateReader = stateReaderReturning({ currentPhase: 'DESIGN', specialistDone: true, reviewerVerdict: 'CHANGES_REQUESTED', retries: 3, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'solution-architect-reviewer', projectSlug: 'my-project' })
-  assert.equal(result?.decision, 'additionalContext')
-  assert.match(result.context, /escalate/i)
-  assert.equal(audit.entries[0].eventType, 'ContinuationInjected')
-  assert.equal(audit.entries[0].kind, 'ESCALATE')
+  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader: stateReaderReturning(pipelineState('DELIVER')), config: PIPELINE_CONFIG })
+  for (const agent of ['contract-testing-worker', 'cold-reader-lens', 'solution-architect']) {
+    assert.equal((await service.handle(agentReturned(agent)))?.decision, 'allow', agent)
+  }
+  assert.equal(audit.entries.length, 0)
 })
 
-test('G6: injects completion continuation after the final phase is approved', async () => {
+test('G6: allows without context when the state is invalid (fail-open)', async () => {
   const audit = collectingWriter()
-  const stateReader = stateReaderReturning({ currentPhase: 'DELIVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'software-engineer-reviewer', projectSlug: 'my-project' })
-  assert.equal(result?.decision, 'additionalContext')
-  assert.match(result.context, /completed/i)
-  assert.equal(audit.entries[0].eventType, 'ContinuationInjected')
-  assert.equal(audit.entries[0].kind, 'COMPLETE')
-})
-
-test('G6: injects the specialist next-step when the specialist has not run yet (SPECIALIST)', async () => {
-  const audit = collectingWriter()
-  const stateReader = stateReaderReturning({ currentPhase: 'DISCOVER', specialistDone: false, reviewerVerdict: null, retries: 0, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'skraft-orchestrator', projectSlug: 'my-project' })
-  assert.equal(result?.decision, 'additionalContext')
-  assert.match(result.context, /backlog-discoverer/)
-  assert.equal(audit.entries[0].kind, 'NEXT_STEP')
-  assert.equal(audit.entries[0].stage, 'SPECIALIST')
-})
-
-test('G6: allows without context (SKIPPED audit) when state cannot resolve a next agent', async () => {
-  const audit = collectingWriter()
-  // Valid runtime state but config has no such phase → expectedNextAgent Err INVALID_STATE.
-  const stateReader = stateReaderReturning({ currentPhase: 'UNKNOWN', specialistDone: false, reviewerVerdict: null, retries: 0, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project' })
-  assert.equal(result?.decision, 'allow')
-  assert.equal(audit.entries[0].eventType, 'ContinuationInjected')
-  assert.equal(audit.entries[0].kind, 'SKIPPED')
-})
-
-test('G6: allows without reading when state is invalid (fail-open)', async () => {
-  const audit = collectingWriter()
-  const stateReader = stateReaderReturning({ currentPhase: 42 }) // fails validateState
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project' })
+  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader: stateReaderReturning({ currentPhase: 42 }), config: PIPELINE_CONFIG })
+  const result = await service.handle(agentReturned('solution-architect'))
   assert.equal(result?.decision, 'allow')
   assert.equal(audit.entries.length, 0)
 })
@@ -193,7 +154,7 @@ test('G6: allows without reading when state is invalid (fail-open)', async () =>
 test('G6: allows without any read when stateReader is not wired', async () => {
   const audit = collectingWriter()
   const service = createPostToolUseService({ auditWriter: audit, clock, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project' })
+  const result = await service.handle(agentReturned('solution-architect'))
   assert.equal(result?.decision, 'allow')
   assert.equal(audit.entries.length, 0)
 })
@@ -203,7 +164,7 @@ test('G6: allows when projectSlug is absent', async () => {
   let read = false
   const stateReader = { read: async () => { read = true; return {} } }
   const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'x' })
+  const result = await service.handle({ toolName: 'Agent', toolInput: { subagentType: 'solution-architect' } })
   assert.equal(result?.decision, 'allow')
   assert.equal(read, false)
 })
@@ -212,31 +173,28 @@ test('G6: fail-open allow when stateReader throws', async () => {
   const audit = collectingWriter()
   const stateReader = { read: async () => { throw new Error('state unreadable') } }
   const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project' })
+  const result = await service.handle(agentReturned('solution-architect'))
   assert.equal(result?.decision, 'allow')
 })
 
 test('G6: an Agent post-tool-use never runs the G3 skill tracer', async () => {
   const audit = collectingWriter()
-  const stateReader = stateReaderReturning({ currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader, config: PIPELINE_CONFIG })
-  await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project', toolInput: { path: 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md' } })
+  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader: stateReaderReturning(pipelineState('DESIGN')), config: PIPELINE_CONFIG })
+  await service.handle({ ...agentReturned('solution-architect'), toolInput: { subagentType: 'solution-architect', path: 'plugins/skraft-framework/skills/bdd-methodology/SKILL.md' } })
   assert.equal(audit.entries.length, 1)
   assert.equal(audit.entries[0].eventType, 'ContinuationInjected')
 })
 
-test('G6: continuation still allows (never blocks) even when the audit write fails', async () => {
+test('G6: continuation still injects when the audit write fails', async () => {
   const throwingWriter = { write: async () => { throw new Error('disk full') } }
-  const stateReader = stateReaderReturning({ currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: throwingWriter, clock, stateReader, config: PIPELINE_CONFIG })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project' })
+  const service = createPostToolUseService({ auditWriter: throwingWriter, clock, stateReader: stateReaderReturning(pipelineState('DESIGN')), config: PIPELINE_CONFIG })
+  const result = await service.handle(agentReturned('solution-architect'))
   assert.equal(result?.decision, 'additionalContext')
 })
 
-test('G6: fail-open allow when config is not wired (no phaseOrder to resolve)', async () => {
+test('G6: fail-open allow when config is not wired', async () => {
   const audit = collectingWriter()
-  const stateReader = stateReaderReturning({ currentPhase: 'DISCOVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] })
-  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader })
-  const result = await service.handle({ toolName: 'Agent', agentName: 'x', projectSlug: 'my-project' })
+  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader: stateReaderReturning(pipelineState('DESIGN')) })
+  const result = await service.handle(agentReturned('solution-architect'))
   assert.equal(result?.decision, 'allow')
 })

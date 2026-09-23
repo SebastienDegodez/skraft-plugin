@@ -16,10 +16,7 @@ const config = JSON.parse(await readFile(configPath, 'utf8'))
 const manifest = JSON.parse(await readFile(join(pluginRoot, 'hooks/hooks.json'), 'utf8'))
 const projectSlug = 'native-guard-regression'
 const clock = { now: () => '2026-09-16T00:00:00.000Z' }
-const researchState = () => ({
-  currentPhase: 'RESEARCH', specialistDone: false, reviewerVerdict: null,
-  retries: 0, skipPhases: []
-})
+const researchState = () => ({ currentPhase: 'RESEARCH', phasesCompleted: [], phaseArtifacts: {}, verdicts: {} })
 
 // Observe adapter -> composite at its dispatch port, with native and existing wire keys.
 for (const field of ['subagent_type', 'subagentType']) {
@@ -61,7 +58,7 @@ for (const requestedAgent of [
     const result = await guard.handle({ requestedAgent, projectSlug })
     const foreign = requestedAgent === 'other:software-engineer'
 
-    assert.deepEqual(reads, [projectSlug])
+    assert.deepEqual(reads, foreign ? [] : [projectSlug])
     assert.equal(result.decision, foreign ? 'allow' : 'deny')
     assert.equal(records.length, 1)
     assert.equal(records[0].code, foreign ? 'UNGOVERNED' : 'OUT_OF_ORDER')

@@ -42,7 +42,7 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
         return Err({ code: 'VERDICT_NOT_APPROVED', reason: `verdict for ${state.currentPhase} must be APPROVED before advancing` })
       }
       // I2: target must equal nextPhaseAfter(current)
-      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }, []) ?? 'DONE'
+      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }) ?? 'DONE'
       if (event.targetPhase !== expectedNext) {
         return Err({ code: 'ILLEGAL_PHASE_SKIP', reason: `expected ${expectedNext}, got ${event.targetPhase}` })
       }
@@ -119,7 +119,7 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
         ? Object.freeze({ ...state.reviewArtifacts, [event.phase]: Object.freeze([...existingReview, event.path]) })
         : state.reviewArtifacts
 
-      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }, []) ?? 'DONE'
+      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }) ?? 'DONE'
 
       return Ok(Object.freeze({
         ...state,

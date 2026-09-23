@@ -5,10 +5,9 @@ import { createPreToolUseService } from '../../../plugins/skraft-framework/src/a
 // Application-boundary tests for routes the immutable acceptance suite cannot observe:
 // the PIPELINE_COMPLETE block route, and the fail-closed wrap when clock/auditWriter throw.
 const CONFIG = {
-  phaseOrder: ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER'],
+  phaseOrder: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'],
   phaseAgents: {
-    DISCOVER: { specialist: 'backlog-discoverer', reviewer: 'backlog-discoverer-reviewer' },
-    DISCUSS: { specialist: 'backlog-planner', reviewer: 'backlog-planner-reviewer' },
+    RESEARCH: { specialist: 'solution-researcher', reviewer: null },
     DESIGN: { specialist: 'solution-architect', reviewer: 'solution-architect-reviewer' },
     DISTILL: { specialist: 'acceptance-designer', reviewer: 'acceptance-designer-reviewer' },
     DELIVER: { specialist: 'software-engineer', reviewer: 'software-engineer-reviewer' }
@@ -24,9 +23,9 @@ const collectingAuditWriter = () => {
   return { entries, write: async (entry) => { entries.push(entry) } }
 }
 
-// PIPELINE_COMPLETE route — APPROVED on the final phase blocks (no forward agent), code PIPELINE_COMPLETE.
-test('blocks a dispatch after the final phase is APPROVED and audits PIPELINE_COMPLETE', async () => {
-  const state = { currentPhase: 'DELIVER', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] }
+// PIPELINE_COMPLETE route — once the pipeline is DONE no phase agent runs.
+test('blocks a dispatch once the pipeline is DONE and audits PIPELINE_COMPLETE', async () => {
+  const state = { currentPhase: 'DONE', phasesCompleted: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'] }
   const audit = collectingAuditWriter()
   const service = createPreToolUseService({ stateReader: stateReaderReturning(state), auditWriter: audit, config: CONFIG, clock: fixedClock })
 
@@ -43,7 +42,7 @@ test('blocks a dispatch after the final phase is APPROVED and audits PIPELINE_CO
 test('blocks when the clock throws (fail-closed)', async () => {
   const throwingClock = { now: () => { throw new Error('clock failed') } }
   const audit = collectingAuditWriter()
-  const state = { currentPhase: 'DISCUSS', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] }
+  const state = { currentPhase: 'DESIGN' }
   const service = createPreToolUseService({ stateReader: stateReaderReturning(state), auditWriter: audit, config: CONFIG, clock: throwingClock })
 
   const result = await service.handle({ requestedAgent: 'solution-architect', projectSlug: PROJECT_SLUG })
@@ -69,7 +68,7 @@ test('blocks when stateReader throws null and reason uses String(null) (fail-clo
 // Fail-closed: an audit writer that throws still blocks (swallow the audit error).
 test('blocks when the audit writer throws (fail-closed)', async () => {
   const throwingWriter = { write: async () => { throw new Error('disk full') } }
-  const state = { currentPhase: 'DISCUSS', specialistDone: true, reviewerVerdict: 'APPROVED', retries: 0, skipPhases: [] }
+  const state = { currentPhase: 'DESIGN' }
   const service = createPreToolUseService({ stateReader: stateReaderReturning(state), auditWriter: throwingWriter, config: CONFIG, clock: fixedClock })
 
   const result = await service.handle({ requestedAgent: 'solution-architect', projectSlug: PROJECT_SLUG })

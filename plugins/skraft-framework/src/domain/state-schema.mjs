@@ -42,36 +42,20 @@ export const INVARIANT_FIELDS = Object.freeze(
 // Pure intrinsic-shape validation of the recorded pipeline state. No IO, no config
 // cross-checks (phase membership / agent resolvability belong to pipeline-policy, ADR-005).
 
-const VERDICTS = new Set(['APPROVED', 'CHANGES_REQUESTED', null])
-
-const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0
-const isBoolean = (value) => typeof value === 'boolean'
-const isKnownVerdict = (value) => VERDICTS.has(value)
-const isNonNegativeInteger = (value) => Number.isInteger(value) && value >= 0
-const isStringArray = (value) => Array.isArray(value) && value.every((item) => typeof item === 'string')
-
-export const validateState = (raw) => {
-  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    return Err({ code: 'INVALID_STATE', fields: ['state'], reason: 'recorded pipeline state must be an object' })
-  }
-
-  const fields = []
-  if (!isNonEmptyString(raw.currentPhase)) fields.push('currentPhase')
-  if (!isBoolean(raw.specialistDone)) fields.push('specialistDone')
-  if (!isKnownVerdict(raw.reviewerVerdict)) fields.push('reviewerVerdict')
-  if (!isNonNegativeInteger(raw.retries)) fields.push('retries')
-  if (!isStringArray(raw.skipPhases)) fields.push('skipPhases')
-
-  if (fields.length > 0) {
-    return Err({ code: 'INVALID_STATE', fields, reason: `recorded pipeline state is invalid in field(s): ${fields.join(', ')}` })
-  }
-
+// Dispatch projection of the recorded pipeline state, derived from the fields the
+// state CLI actually writes (validatePipelineState below): the current phase, whether
+// its specialist recorded an artefact, its verdict, and its retry budget.
+export const projectDispatchState = (raw) => {
+  const validated = validatePipelineState(raw)
+  if (!validated.ok) return validated
+  const state = validated.value
+  const phase = state.currentPhase
   return Ok(Object.freeze({
-    currentPhase: raw.currentPhase,
-    specialistDone: raw.specialistDone,
-    reviewerVerdict: raw.reviewerVerdict,
-    retries: raw.retries,
-    skipPhases: Object.freeze([...raw.skipPhases])
+    currentPhase: phase,
+    specialistDone: (state.phaseArtifacts[phase] ?? []).length > 0,
+    reviewerVerdict: state.verdicts[phase] ?? null,
+    retries: state.retryCount[phase] ?? 0,
+    maxRetries: state.userPreferences.maxRetriesPerPhase ?? 2,
   }))
 }
 
@@ -90,7 +74,6 @@ const coercePhaseMap = (val) => {
 // skraftPlanFile, phaseHistory, neighborPlanners, nextActions, referencesProcessed,
 // entryMode, ...) pass straight through instead of being silently
 // dropped on rewrite. Missing optional invariant fields are coerced to safe defaults.
-// Distinct from validateState() which validates the hook-dispatch runtime shape.
 export const validatePipelineState = (raw) => {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
     return Err({ code: 'INVALID_STATE', fields: ['state'], reason: 'pipeline state must be an object' })

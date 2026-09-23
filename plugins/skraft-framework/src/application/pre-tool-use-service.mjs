@@ -1,10 +1,11 @@
 import { isErr } from '../domain/result.mjs'
-import { validateState } from '../domain/state-schema.mjs'
-import { evaluateDispatch } from '../domain/pipeline-policy.mjs'
+import { projectDispatchState } from '../domain/state-schema.mjs'
+import { evaluateDispatch, isPipelineAgent } from '../domain/pipeline-policy.mjs'
 import { allow, deny, block } from '../adapters/api/hooks/decision.mjs'
 
-// Pre-tool-use dispatch gate (Contract 3). Wires read -> validate -> evaluate -> audit -> map.
-// Deny-by-default (ADR-004): every path produces a fact; any throw fails closed to block.
+// Pre-tool-use dispatch gate (G1). An agent no phase declares is allowed without reading
+// the state. A phase agent is evaluated against the dispatch projection of state.json;
+// any read failure or throw fails closed to block (ADR-004).
 
 const allowFact = (decision) => ({
   expectedAgent: decision.expectedAgent,
@@ -39,7 +40,7 @@ const unreadableFact = (error) => ({
 })
 
 const decide = (requestedAgent, raw, config) => {
-  const state = validateState(raw)
+  const state = projectDispatchState(raw)
   if (isErr(state)) return blockedFact(state.error)
   const evaluation = evaluateDispatch(requestedAgent, state.value, config)
   if (isErr(evaluation)) {
@@ -63,6 +64,11 @@ export const createPreToolUseService = ({ stateReader, auditWriter, config, cloc
   handle: async ({ requestedAgent, projectSlug }) => {
     try {
       const evaluatedAt = clock.now()
+      if (!isPipelineAgent(requestedAgent, config)) {
+        const fact = decide(requestedAgent, { currentPhase: 'UNGOVERNED' }, config)
+        await auditWriter.write(auditRecord(projectSlug, requestedAgent, fact, evaluatedAt))
+        return fact.harness
+      }
       const raw = await stateReader.read(projectSlug)
       const fact = decide(requestedAgent, raw, config)
       await auditWriter.write(auditRecord(projectSlug, requestedAgent, fact, evaluatedAt))
