@@ -31,3 +31,50 @@ export const resolvePluginRoot = ({ envRoot, cacheRoots = [], moduleRoot } = {})
   if (valid.length > 0) return valid[valid.length - 1]
   return moduleRoot
 }
+
+// Version segment of an installed hook path (.../<version>/src/cli/hook.mjs), either
+// separator. Anchored on the entrypoint: the marketplace directory is often named
+// `skraft` too (cache/skraft/skraft/<version>).
+export const versionFromHookPath = (hookPath) => {
+  const m = String(hookPath).match(/[\\/]([^\\/]+)[\\/]src[\\/]cli[\\/]hook\.mjs$/)
+  return m ? m[1] : ''
+}
+
+const NUMERIC = /^\d+$/
+
+const compareIdentifiers = (a, b) => {
+  const aNumeric = NUMERIC.test(a)
+  const bNumeric = NUMERIC.test(b)
+  if (aNumeric && bNumeric) return Number(a) - Number(b)
+  if (aNumeric !== bNumeric) return aNumeric ? -1 : 1
+  return a.localeCompare(b)
+}
+
+// A shorter prerelease ranks below a longer one sharing its prefix (alpha < alpha.1).
+const comparePrerelease = (left, right) => {
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    if (left[i] === undefined) return -1
+    if (right[i] === undefined) return 1
+    const d = compareIdentifiers(left[i], right[i])
+    if (d !== 0) return d
+  }
+  return 0
+}
+
+// Semver precedence (negative / 0 / positive): a prerelease ranks below its own
+// release, and prerelease identifiers compare numerically when both are numeric.
+// 1.5.2 < 1.6.0-hooks.2 < 1.6.0-hooks.10 < 1.6.0
+export const compareSemver = (a, b) => {
+  const [coreA, preA] = a.split(/-(.+)/s)
+  const [coreB, preB] = b.split(/-(.+)/s)
+  const partsA = coreA.split('.').map(Number)
+  const partsB = coreB.split('.').map(Number)
+  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+    const d = (partsA[i] || 0) - (partsB[i] || 0)
+    if (d !== 0) return d
+  }
+  if (preA === undefined && preB === undefined) return 0
+  if (preA === undefined) return 1
+  if (preB === undefined) return -1
+  return comparePrerelease(preA.split('.'), preB.split('.'))
+}

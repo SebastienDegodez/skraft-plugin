@@ -2,8 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   CLAUDE_PLUGIN_CACHE_GLOB,
+  compareSemver,
   pluginCacheGlobPattern,
   resolvePluginRoot,
+  versionFromHookPath,
 } from '../../../plugins/skraft-framework/src/domain/plugin-root-policy.mjs'
 
 // ─── pluginCacheGlobPattern ─────────────────────────────────────────────────
@@ -81,4 +83,43 @@ test('resolvePluginRoot: defensive against non-array cacheRoots', () => {
 
 test('resolvePluginRoot: no args returns undefined without throwing', () => {
   assert.equal(resolvePluginRoot(), undefined)
+})
+
+// ─── installed-version ordering ─────────────────────────────────────────────
+
+test('versionFromHookPath: reads the segment before src/cli/hook.mjs, whatever the marketplace name', () => {
+  assert.equal(versionFromHookPath('/h/.claude/plugins/cache/skraft/skraft/1.6.0/src/cli/hook.mjs'), '1.6.0')
+  assert.equal(versionFromHookPath('C:\\Users\\a\\.claude\\plugins\\cache\\skraft\\skraft\\1.6.0\\src\\cli\\hook.mjs'), '1.6.0')
+  assert.equal(versionFromHookPath('/h/skraft/1.6.0/src/cli/hook.mjs.bak'), '')
+  assert.equal(versionFromHookPath('/h/skraft/1.6.0/lib/cli/hook.mjs'), '')
+})
+
+const sign = (n) => Math.sign(n)
+
+test('compareSemver: orders core versions numerically, missing segments count as zero', () => {
+  assert.equal(sign(compareSemver('1.10.0', '1.9.0')), 1)
+  assert.equal(sign(compareSemver('1.9.0', '1.10.0')), -1)
+  assert.equal(sign(compareSemver('2.0.0', '1.99.99')), 1)
+  assert.equal(compareSemver('1.0', '1.0.0'), 0)
+  assert.equal(sign(compareSemver('1.0', '1.0.1')), -1)
+  assert.equal(sign(compareSemver('1.0.1', '1.0')), 1)
+})
+
+test('compareSemver: a prerelease ranks below its own release and above the previous one', () => {
+  assert.equal(sign(compareSemver('1.6.0-hooks.1', '1.6.0')), -1)
+  assert.equal(sign(compareSemver('1.6.0', '1.6.0-hooks.1')), 1)
+  assert.equal(sign(compareSemver('1.6.0-hooks.1', '1.5.2')), 1)
+  assert.equal(compareSemver('1.6.0-hooks.1', '1.6.0-hooks.1'), 0)
+})
+
+test('compareSemver: prerelease identifiers compare numerically, then lexically, numeric first', () => {
+  assert.equal(sign(compareSemver('1.0.0-hooks.10', '1.0.0-hooks.2')), 1)
+  assert.equal(sign(compareSemver('1.0.0-hooks.2', '1.0.0-hooks.10')), -1)
+  assert.equal(sign(compareSemver('1.0.0-beta', '1.0.0-alpha')), 1)
+  assert.equal(sign(compareSemver('1.0.0-alpha', '1.0.0-beta')), -1)
+  assert.equal(sign(compareSemver('1.0.0-1', '1.0.0-alpha')), -1)
+  assert.equal(sign(compareSemver('1.0.0-alpha', '1.0.0-1')), 1)
+  assert.equal(sign(compareSemver('1.0.0-alpha', '1.0.0-alpha.1')), -1)
+  assert.equal(sign(compareSemver('1.0.0-alpha.1', '1.0.0-alpha')), 1)
+  assert.equal(sign(compareSemver('1.0.0-rc-1', '1.0.0-rc')), 1)
 })
