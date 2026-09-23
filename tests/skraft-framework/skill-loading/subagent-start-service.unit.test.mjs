@@ -22,25 +22,6 @@ const EAGER_CONFIG = {
   }
 }
 
-const INSTRUCTION_CONFIG = {
-  agentAliases: {
-    'acceptance-designer': 'acceptance-designer',
-    'skraft-orchestrator': 'skraft-orchestrator',
-  },
-  agentSkills: {
-    'acceptance-designer': [],
-    'skraft-orchestrator': [],
-  },
-  agentInstructions: {
-    'acceptance-designer': ['plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md'],
-    'skraft-orchestrator': [
-      'plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md',
-      'plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md',
-      'plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md',
-    ],
-  },
-}
-
 const FIXED_NOW = '2026-06-29T12:00:00.000Z'
 const clock = { now: () => FIXED_NOW }
 
