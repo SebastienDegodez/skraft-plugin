@@ -74,9 +74,6 @@ const segmentWrites = (segment, isTarget) => {
 // A path under src/ or tests/ (the monitored workspace).
 const WORKSPACE_PATH_RE = /(?:^|[/\\])(?:src|tests)[/\\]/i
 
-// A shell redirection whose target token lives under src/ or tests/.
-const REDIRECT_TO_WORKSPACE_RE = /(?:>>?|\btee\b(?:\s+-\S+)*)\s*["']?(?:[^\s|;&<>"']*[/\\])?(?:src|tests)[/\\][^\s|;&<>"']+/i
-
 // A mutating command applied to a path under src/ or tests/.
 const MUTATING_WORKSPACE_RE = /\b(?:rm|mv|cp|truncate|dd|install|vi|vim|nano|emacs|ex)\b[^\n]*?(?:^|[\s"'=([{/\\])(?:src|tests)[/\\]/i
 
@@ -102,9 +99,10 @@ export const isWorkspacePath = (filePath) =>
 const NAMES_WORKSPACE_RE = /(?:^|[\s"'=([{/\\])(?:src|tests)[/\\]/i
 
 // True when a shell command writes into the src/ or tests/ workspace: the forms G7 reads
-// (in-place sed, inline scripts…), plus a mutating verb anywhere on the line (git rm…).
+// (redirections, tee, in-place sed, inline scripts…), plus a mutating verb anywhere on the
+// line (git rm…).
 export const commandWritesWorkspace = (command) =>
-  isString(command) && (REDIRECT_TO_WORKSPACE_RE.test(command) || MUTATING_WORKSPACE_RE.test(command)
+  isString(command) && (MUTATING_WORKSPACE_RE.test(command)
     || segmentsOf(command).some((segment) => segmentWrites(segment, (text) => NAMES_WORKSPACE_RE.test(text))))
 
 // G7 — deny direct writes to state.json / execution-log; reads pass through.
