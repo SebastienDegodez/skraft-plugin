@@ -161,8 +161,8 @@ Set `gates[G7].status` accordingly:
 ## G8 — Conventional commits
 
 Already enforceable from the Git tree alone — no fresh tool run. The producer fills
-`commits_covered[].subject` from `git log --format='%s' <range>`; the lens runs the
-regex from the contract.
+`commits_covered[].subject` from `git log --format='%s' <range>`; the lens checks
+each full message against the contract's G8 rules.
 
 ## G9 — Test integrity (RED→GREEN snapshots)
 
