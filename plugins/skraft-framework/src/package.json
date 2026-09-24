@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.6.1",
-    "@stryker-mutator/tap-runner": "^9.6.1"
+    "@stryker-mutator/tap-runner": "^9.6.1",
+    "ajv": "~8.18.0"
   }
 }
