@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, dirname } from 'node:path'
+import { join, dirname, delimiter } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { fromHarnessInput } from '../../../plugins/skraft-framework/src/adapters/api/hooks/harness-input.mjs'
@@ -138,11 +138,12 @@ for (const toolName of ['Write', 'Edit']) {
         : { file_path: filePath, old_string: '{}', new_string: '{"updated":true}' }
       const outputs = commands.map((command) => {
         // Execute the command declared by the matched route, including its actual CLI arguments.
-        const child = spawnSync('/bin/sh', ['-c', command], {
+        // sh through PATH, as the harnesses run hooks: Git Bash provides it on Windows.
+        const child = spawnSync('sh', ['-c', command], {
           cwd,
           env: {
             ...process.env,
-            PATH: `${dirname(process.execPath)}:${process.env.PATH ?? ''}`,
+            PATH: `${dirname(process.execPath)}${delimiter}${process.env.PATH ?? ''}`,
             CLAUDE_PLUGIN_ROOT: pluginRoot, PLUGIN_ROOT: pluginRoot,
             SKRAFT_HARNESS: 'claude-code', SKRAFT_CONFIG: configPath,
             SKRAFT_AUDIT_LOG: auditLog,
