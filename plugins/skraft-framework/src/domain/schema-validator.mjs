@@ -38,13 +38,25 @@ const typeOf = (typeName) => {
   return type
 }
 
+// A value no branch accepts: the branch of its own type says why, otherwise the
+// allowed types are named.
+const anyOfViolation = (branches, outcomes, value, path) => {
+  const sameType = branches.findIndex((branch) => branch.type !== undefined && typeOf(branch.type).matches(value))
+  if (sameType !== -1) return outcomes[sameType]
+  if (branches.every((branch) => branch.type !== undefined)) {
+    return violation(path, `must be ${branches.map((branch) => typeOf(branch.type).name).join(' or ')}`)
+  }
+  return violation(path, 'has none of the allowed shapes')
+}
+
 export const schemaViolations = (schema, value, root = schema, path = '') => {
   if (schema.$ref !== undefined) {
     const { $ref, ...rest } = schema
     return [...schemaViolations(definition(root, $ref), value, root, path), ...schemaViolations(rest, value, root, path)]
   }
-  if (schema.anyOf !== undefined && !schema.anyOf.some((branch) => schemaViolations(branch, value, root, path).length === 0)) {
-    return violation(path, 'has none of the allowed shapes')
+  if (schema.anyOf !== undefined) {
+    const outcomes = schema.anyOf.map((branch) => schemaViolations(branch, value, root, path))
+    if (!outcomes.some((outcome) => outcome.length === 0)) return anyOfViolation(schema.anyOf, outcomes, value, path)
   }
   if (schema.enum !== undefined && !schema.enum.includes(value)) {
     return violation(path, `must be one of ${schema.enum.map(String).join(', ')}`)

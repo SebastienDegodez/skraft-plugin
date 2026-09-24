@@ -121,21 +121,26 @@ test('validateMetadataField: accepts every documented enum value', () => {
 
 test('validateMetadataField: rejects values that are not the documented shape, naming the problem', () => {
   const cases = [
-    ['adrRatification', null, 'adrRatification: must be an object'],
-    ['adrRatification', { checkpointStatus: 'none', pending: {}, ratified: [] }, 'adrRatification: pending must be a list of ADR rows'],
-    ['adrRatification', { checkpointStatus: 'none', pending: ['012'], ratified: [] }, 'adrRatification: pending must be a list of ADR rows'],
-    ['adrRatification', { checkpointStatus: 'none', pending: [null], ratified: [] }, 'adrRatification: pending must be a list of ADR rows'],
-    ['adrRatification', { checkpointStatus: 'none', pending: [], ratified: [[]] }, 'adrRatification: ratified must be a list of ADR verdicts'],
-    ['nextActions', [''], 'nextActions: must be a list of strings'],
-    ['referencesProcessed', 'docs/prd.md', 'referencesProcessed: must be a list of file paths'],
-    ['neighborPlanners', null, 'neighborPlanners: must be an object'],
-    ['neighborPlanners', { raiPlanFile: 7 }, 'neighborPlanners: raiPlanFile must be a path or null'],
-    ['neighborPlanners', { ssscPlanFile: '' }, 'neighborPlanners: ssscPlanFile must be a path or null'],
-    ['entryMode', 'guess', 'entryMode: must be capture, from-issue, from-prd or null'],
-    ['issueNumber', 0, 'issueNumber: must be a positive integer or null'],
-    ['issueNumber', 1.5, 'issueNumber: must be a positive integer or null'],
-    ['skraftPlanFile', '', 'skraftPlanFile: must be a relative path or null'],
-    ['skraftPlanFile', 3, 'skraftPlanFile: must be a relative path or null'],
+    ['adrRatification', null, 'adrRatification must be an object'],
+    ['adrRatification', { checkpointStatus: 'none', pending: {}, ratified: [] }, 'adrRatification.pending must be an array'],
+    ['adrRatification', { checkpointStatus: 'none', pending: ['012'], ratified: [] }, 'adrRatification.pending[0] must be an object'],
+    ['adrRatification', { checkpointStatus: 'none', pending: [null], ratified: [] }, 'adrRatification.pending[0] must be an object'],
+    ['adrRatification', { checkpointStatus: 'none', pending: [], ratified: [[]] }, 'adrRatification.ratified[0] must be an object'],
+    [
+      'adrRatification',
+      { checkpointStatus: 'awaiting_human', pending: [{ adr: '012' }], ratified: [] },
+      'adrRatification.pending[0].title is required; adrRatification.pending[0].recommended is required; adrRatification.pending[0].status is required',
+    ],
+    ['nextActions', [''], 'nextActions[0] must have at least 1 character(s)'],
+    ['referencesProcessed', 'docs/prd.md', 'referencesProcessed must be an array'],
+    ['neighborPlanners', null, 'neighborPlanners must be an object'],
+    ['neighborPlanners', { raiPlanFile: 7 }, 'neighborPlanners.raiPlanFile must be a string or null'],
+    ['neighborPlanners', { ssscPlanFile: '' }, 'neighborPlanners.ssscPlanFile must have at least 1 character(s)'],
+    ['entryMode', 'guess', 'entryMode must be one of capture, from-issue, from-prd, null'],
+    ['issueNumber', 0, 'issueNumber must be at least 1'],
+    ['issueNumber', 1.5, 'issueNumber must be an integer or null'],
+    ['skraftPlanFile', '', 'skraftPlanFile must have at least 1 character(s)'],
+    ['skraftPlanFile', 3, 'skraftPlanFile must be a string or null'],
   ]
   for (const [field, value, reason] of cases) {
     const r = validateMetadataField(field, value)

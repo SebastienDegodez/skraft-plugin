@@ -21,8 +21,14 @@ test('an object type rejects null and arrays, and accepts a plain object', () =>
 test('enum, const and anyOf name what they allow', () => {
   assert.deepEqual(reasons({ enum: ['a', null] }, 'b'), ['the document must be one of a, null'])
   assert.deepEqual(reasons({ const: 'Proposed' }, 'Accepted'), ['the document must be Proposed'])
-  assert.deepEqual(reasons({ anyOf: [{ type: 'string' }, { type: 'null' }] }, 1), ['the document has none of the allowed shapes'])
   assert.deepEqual(reasons({ anyOf: [{ type: 'string' }, { type: 'null' }] }, null), [])
+})
+
+test('anyOf explains a refusal through the branch of the same type, or names the allowed types', () => {
+  const nullablePositive = { anyOf: [{ type: 'integer', minimum: 1 }, { type: 'null' }] }
+  assert.deepEqual(reasons(nullablePositive, 0), ['the document must be at least 1'])
+  assert.deepEqual(reasons(nullablePositive, '1'), ['the document must be an integer or null'])
+  assert.deepEqual(reasons({ anyOf: [{ enum: ['a'] }, { type: 'null' }] }, 'b'), ['the document has none of the allowed shapes'])
 })
 
 test('minLength and minimum apply only to strings and numbers', () => {
