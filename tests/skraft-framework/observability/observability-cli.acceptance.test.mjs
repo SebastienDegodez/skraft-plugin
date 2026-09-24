@@ -104,7 +104,9 @@ test('health-check: reports the audit log the hooks write, in the project git di
     await writeFile(hookLog, '{"eventType":"SessionGuardEvaluated"}\n{"eventType":"SkillRead"}\n')
 
     const res = await runCli(HEALTH_CLI, { cwd: dir, env: { ...env, SKRAFT_AUDIT_LOG: '' } })
-    assert.deepEqual(JSON.parse(res.stdout).logs, { path: hookLog, present: true, entries: 2 })
+    // The same file, however the platform spells the temp directory (8.3 names on Windows).
+    const { logs } = JSON.parse(res.stdout)
+    assert.deepEqual({ ...logs, path: await realpath(logs.path) }, { path: hookLog, present: true, entries: 2 })
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
