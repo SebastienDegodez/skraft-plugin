@@ -27,11 +27,9 @@ repository-root-relative, never reconstructed from the current date.
 The durable `state.json` is a **safety snapshot**, not a per-turn scratchpad. The token cost of state is driven by *frequency* (re-reading and re-writing the whole file every turn), not by file size. This model eliminates that frequency:
 
 1. **Rehydrate ONCE per session.** Read `state.json` a single time when a session starts or resumes (Phase 0). Do NOT re-read the whole file on every turn.
-2. **Native todo list is the in-session working set.** After rehydration, the orchestrator projects the pipeline into the harness-native todo list (see `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-todo-sync.instructions.md`). Every turn consults the todo list (near-zero token), never the JSON file.
+2. **Every CLI write returns the current state.** Each `state.mjs` event subcommand prints the updated state; drive the next turn from that output, and fetch one field with `state.mjs get --field X`, never the whole file.
 3. **Writes are deterministic and go through the CLI.** Every invariant-bearing mutation (verdict, phase advance, artifact append, retry) is applied by the `state.mjs` CLI, which validates, preserves ALL fields, backs up, and writes atomically. The agent never hand-edits those fields.
-4. **The file is the reconciliation point, never the hot path.** The native todo list does not persist across sessions or harnesses; the snapshot does. It is written at checkpoints and read once at the next rehydration.
-
-The snapshot remains authoritative on disk; the todo list is a disposable in-session projection, always regenerated from the snapshot at rehydration and never the source of truth.
+4. **The file is the reconciliation point, never the hot path.** It is written at checkpoints and read once at the next rehydration.
 
 ## State CLI (deterministic writes — S7 bridge)
 
@@ -165,7 +163,7 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 
 On a turn that changes pipeline state:
 
-1. **DETERMINE** the next action from the **native todo working set** (not by re-reading the file). If a field not carried by the todo list is needed (e.g. `adrRatification`), fetch just that field: `state.mjs get --slug {slug} --field adrRatification`.
+1. **DETERMINE** the next action from your last `state.mjs` output (not by re-reading the file). When you need one field (e.g. `adrRatification`), fetch just that field: `state.mjs get --slug {slug} --field adrRatification`.
 2. **EXECUTE** the action (dispatch a phase agent, dispatch a reviewer, request user input, etc.).
 3. **RECORD** the result through the CLI — one deterministic call per mutation:
    * reviewer verdict → `record-verdict --phase {P} --verdict {V}`
@@ -175,8 +173,7 @@ On a turn that changes pipeline state:
    * a manual, human-validated rework pass is applied to a phase's artefacts (outside the reviewer retry loop) → `incr-rework --phase {P} [--findings N]`
    * phase about to be dispatched for the first time → `mark-phase-started --phase {P}`
    * orchestrator metadata changed → `set --field {F} --data {JSON}`
-   The CLI persists the snapshot atomically.
-4. **REFLECT** the change into the native todo list (mark a todo done / in-progress, add the next). The todo list and the snapshot now agree; no whole-file re-read occurs.
+   The CLI persists the snapshot atomically and prints it; no whole-file re-read occurs.
 
 ### Transition rules
 
@@ -248,13 +245,12 @@ On first invocation, create the state with `state.mjs init --slug {projectSlug}`
 When a session starts or resumes, rehydrate exactly once:
 
 1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount` (the full phase-keyed map, not only the current phase), `reviewArtifacts`, `adrRatification`.
-2. **Project** the pipeline into the native todo working set per `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
-3. **Identify** pending work from the todo list: an open reviewer verdict, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
+2. **Identify** pending work from that snapshot: an open reviewer verdict, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
   Reuse `userPreferences.reporting` from this snapshot and inspect `report.mjs status --slug {slug}` for pending publication, independently of engineering work, even at DONE.
-4. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).
-5. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions), plus a **rework-cost line per phase with nonzero cost** (issue #115): `{phase}: {retryCount} retries + {reworkCount} manual reworks, {findingsResolved} findings resolved`. This is the objective signal for whether a phase is a recurring rework hotspot across epics — read it before deciding whether to strengthen that phase's exit gate.
+3. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).
+4. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions), plus a **rework-cost line per phase with nonzero cost** (issue #115): `{phase}: {retryCount} retries + {reworkCount} manual reworks, {findingsResolved} findings resolved`. This is the objective signal for whether a phase is a recurring rework hotspot across epics — read it before deciding whether to strengthen that phase's exit gate.
 
-From here, subsequent turns use the todo list and the write-through protocol above — the whole snapshot is not re-read again this session.
+From here, subsequent turns use the write-through protocol above — the whole snapshot is not re-read again this session.
 
 ## Recovery Procedure
 

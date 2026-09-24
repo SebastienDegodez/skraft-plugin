@@ -382,8 +382,7 @@
     "quality-gates-lens": [],
     "refactoring-worker": [],
     "Skraft - Orchestrator": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md",
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-todo-sync.instructions.md"
+      "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md"
     ],
     "Skraft - Software Engineer Reviewer": [],
     "Skraft - Software Engineer": [],
