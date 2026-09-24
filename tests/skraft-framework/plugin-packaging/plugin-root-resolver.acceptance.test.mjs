@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
   discoverCacheRoots,
@@ -7,6 +8,8 @@ import {
 } from '../../../plugins/skraft-framework/src/adapters/infrastructure/plugin-root-resolver.mjs'
 
 const HOME = '/home/alice'
+// The running module's plugin root, spelled as the platform spells it (a drive on Windows).
+const LOCAL_ROOT = resolve('/local/plugins/skraft-framework') + sep
 const cacheHook = (version) =>
   `${HOME}/.claude/plugins/cache/hash/skraft/${version}/src/cli/hook.mjs`
 
@@ -67,7 +70,7 @@ test('resolvePluginRootFromEnv: no env → the running module, never a stale ins
     homeDir: HOME,
     glob: () => [cacheHook('1.1.0'), cacheHook('1.2.0')],
   })
-  assert.equal(root, '/local/plugins/skraft-framework/')
+  assert.equal(root, LOCAL_ROOT)
 })
 
 test('resolvePluginRootFromEnv: no env and no module → newest cache match', () => {
@@ -86,7 +89,7 @@ test('resolvePluginRootFromEnv: no env + no cache → module-relative plugin roo
     homeDir: HOME,
     glob: () => [],
   })
-  assert.equal(root, '/local/plugins/skraft-framework/')
+  assert.equal(root, LOCAL_ROOT)
 })
 
 test('discoverCacheRoots: reads the version segment when the marketplace is also named skraft', () => {
