@@ -108,7 +108,7 @@ test('ADVANCE and CLOSE_PHASE mark the closed phase done when given a time', () 
 
 
 test('validateMetadataField: accepts every documented enum value', () => {
-  for (const checkpointStatus of ['none', 'awaiting_human', 'resolved', null]) {
+  for (const checkpointStatus of ['none', 'awaiting_human', 'resolved']) {
     assert.equal(validateMetadataField('adrRatification', { checkpointStatus, pending: [], ratified: [] }).ok, true, checkpointStatus)
   }
   for (const entryMode of ['capture', 'from-issue', 'from-prd', null]) {
@@ -122,6 +122,7 @@ test('validateMetadataField: accepts every documented enum value', () => {
 test('validateMetadataField: rejects values that are not the documented shape, naming the problem', () => {
   const cases = [
     ['adrRatification', null, 'adrRatification must be an object'],
+    ['adrRatification', { checkpointStatus: null, pending: [], ratified: [] }, 'adrRatification.checkpointStatus must be one of none, awaiting_human, resolved'],
     ['adrRatification', { checkpointStatus: 'none', pending: {}, ratified: [] }, 'adrRatification.pending must be an array'],
     ['adrRatification', { checkpointStatus: 'none', pending: ['012'], ratified: [] }, 'adrRatification.pending[0] must be an object'],
     ['adrRatification', { checkpointStatus: 'none', pending: [null], ratified: [] }, 'adrRatification.pending[0] must be an object'],

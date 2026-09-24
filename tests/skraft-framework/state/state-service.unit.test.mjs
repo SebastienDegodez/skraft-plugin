@@ -59,7 +59,7 @@ test('state-service init: fresh default carries the full documented field set', 
   assert.equal(w.entryMode, null)
   assert.equal('entryPoint' in w, false, 'upstream entry routing is retired')
   assert.equal(w.issueNumber, null)
-  assert.deepEqual(w.adrRatification, { checkpointStatus: null, pending: [], ratified: [] })
+  assert.deepEqual(w.adrRatification, { checkpointStatus: 'none', pending: [], ratified: [] })
   assert.deepEqual(w.referencesProcessed, [])
   assert.deepEqual(w.phaseHistory, {})
   assert.deepEqual(w.nextActions, [])

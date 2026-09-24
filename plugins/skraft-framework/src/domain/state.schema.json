@@ -148,7 +148,7 @@
       "required": ["checkpointStatus", "pending", "ratified"],
       "additionalProperties": false,
       "properties": {
-        "checkpointStatus": { "enum": ["none", "awaiting_human", "resolved", null] },
+        "checkpointStatus": { "enum": ["none", "awaiting_human", "resolved"] },
         "pending": {
           "description": "Rows of docs/adr/decisions-index.md still Proposed.",
           "type": "array",
