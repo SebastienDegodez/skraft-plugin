@@ -23,7 +23,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$ROOT" ] && [ -n "$EV" ] || { usage >&2; exit 2; }
 ROOT=$(cd "$ROOT" 2>/dev/null && pwd -P) || { echo "repository root not found" >&2; exit 2; }
-case "$EV" in /*) ;; *) EV="$ROOT/$EV" ;; esac
+case "$EV" in /*|[A-Za-z]:[\\/]*) ;; *) EV="$ROOT/$EV" ;; esac
 if [ -z "$SOLUTION" ]; then
   SOLUTION=$(cd "$ROOT" && ls -1 ./*.sln ./*.slnx 2>/dev/null)
   [ "$(printf '%s\n' "$SOLUTION" | grep -c .)" -eq 1 ] || { echo "select one solution with --solution" >&2; exit 2; }

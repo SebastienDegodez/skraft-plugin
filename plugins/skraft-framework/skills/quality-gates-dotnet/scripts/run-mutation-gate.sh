@@ -16,7 +16,7 @@ require_value() { [ $# -ge 2 ] && [ -n "$2" ] || fail_usage "$1 requires a value
 absolute_dir() { (cd "$1" 2>/dev/null && pwd -P); }
 absolute_file() {
   local path="$1"
-  case "$path" in /*) ;; *) path="$ROOT/$path" ;; esac
+  case "$path" in /*|[A-Za-z]:[\\/]*) ;; *) path="$ROOT/$path" ;; esac
   [ -f "$path" ] || return 1
   printf '%s/%s\n' "$(absolute_dir "$(dirname "$path")")" "$(basename "$path")"
 }
@@ -64,7 +64,7 @@ done
 [ -n "$ROOT" ] || fail_usage "--root is required"
 ROOT=$(absolute_dir "$ROOT") || fail_usage "repository root not found: $ROOT"
 [ -n "$EV" ] || fail_usage "--evidence is required"
-case "$EV" in /*) ;; *) EV="$ROOT/$EV" ;; esac
+case "$EV" in /*|[A-Za-z]:[\\/]*) ;; *) EV="$ROOT/$EV" ;; esac
 [ -n "$CONFIG" ] || CONFIG="$CONFIG_NAME"
 CONFIG=$(absolute_file "$CONFIG") || fail_usage "mutation config not found: $CONFIG. Run configure-mutation.sh first"
 

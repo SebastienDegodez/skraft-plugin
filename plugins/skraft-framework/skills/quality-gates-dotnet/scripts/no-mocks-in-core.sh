@@ -20,7 +20,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$ROOT" ] && [ -n "$EV" ] || { usage >&2; exit 2; }
 ROOT=$(cd "$ROOT" 2>/dev/null && pwd -P) || { echo "repository root not found" >&2; exit 2; }
-case "$EV" in /*) ;; *) EV="$ROOT/$EV" ;; esac
+case "$EV" in /*|[A-Za-z]:[\\/]*) ;; *) EV="$ROOT/$EV" ;; esac
 mkdir -p "$EV" || exit 2
 
 sha256() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi; }

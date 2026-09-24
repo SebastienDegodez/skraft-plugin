@@ -120,7 +120,7 @@ ROOT=$(absolute_dir "$ROOT") || fail_usage "repository root not found: $ROOT"
 if [ -z "$SOLUTION" ]; then
   SOLUTION=$(find_solution) || exit $?
 else
-  case "$SOLUTION" in /*) ;; *) SOLUTION="$ROOT/$SOLUTION" ;; esac
+  case "$SOLUTION" in /*|[A-Za-z]:[\\/]*) ;; *) SOLUTION="$ROOT/$SOLUTION" ;; esac
   [ -f "$SOLUTION" ] || fail_usage "solution not found: $SOLUTION"
   SOLUTION="$(absolute_dir "$(dirname "$SOLUTION")")/$(basename "$SOLUTION")"
 fi
