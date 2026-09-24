@@ -128,15 +128,9 @@ test('an agent that declares no skills carries an empty skill set', () => {
   assert.deepEqual(config.agentSkills['software-engineer'], [])
 })
 
-test('agent aliases and companion instructions are projected deterministically', () => {
-  const descriptors = pipeline()
-  descriptors[1].instructions = ['com.github.copilot/rules/skraft-artifacts.instructions.md']
-  const config = buildFrameworkConfig(descriptors)
-
+test('agent aliases are projected deterministically', () => {
+  const config = buildFrameworkConfig(pipeline())
   assert.equal(config.agentAliases['backlog-discoverer'], 'backlog-discoverer')
-  assert.deepEqual(config.agentInstructions['backlog-discoverer'], [
-    'com.github.copilot/rules/skraft-artifacts.instructions.md',
-  ])
 })
 
 test('expected artifacts are collected from required inputs and produced outputs', () => {

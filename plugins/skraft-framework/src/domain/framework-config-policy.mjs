@@ -2,8 +2,8 @@
 // configuration the hooks consume. No IO, no YAML, no filesystem — the input is
 // already-parsed descriptors, the output is a frozen plain object.
 //
-// A descriptor is: { id?, name, phase?, dispatchedBy?, phases?, skills[],
-// instructions[], inputs[], outputs[] }.
+// A descriptor is: { id?, name, phase?, dispatchedBy?, phases?, skills[], inputs[],
+// outputs[] }.
 // Only the orchestrator carries `phases` (the pipeline order); pipeline specialists
 // and reviewers carry `phase` and are `dispatchedBy: <the orchestrator's own name>`.
 
@@ -80,10 +80,6 @@ const agentAliasesOf = (descriptors) => Object.fromEntries(
   ]),
 )
 
-const agentInstructionsOf = (descriptors) => Object.fromEntries(
-  descriptors.map((descriptor) => [descriptor.name, [...(descriptor.instructions ?? [])]]),
-)
-
 // Who dispatches each agent, by display name (dispatched_by may name an id).
 const agentDispatchersOf = (descriptors, aliases) => Object.fromEntries(
   descriptors
@@ -100,7 +96,6 @@ export const buildFrameworkConfig = (descriptors) => {
     agentAliases,
     agentDispatchers: agentDispatchersOf(descriptors, agentAliases),
     agentSkills: agentSkillsOf(descriptors),
-    agentInstructions: agentInstructionsOf(descriptors),
     agentArtifacts: agentArtifactsOf(descriptors),
   })
 }

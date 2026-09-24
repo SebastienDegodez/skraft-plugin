@@ -352,7 +352,6 @@ export const createAgentExecutor = ({
             subagents: subagents.map(publicIdentity),
             skillsConfigured: agent.skills,
             subagentSkillsConfigured: Object.fromEntries(subagents.map(({ id, skills }) => [id, skills])),
-            instructionsConfigured: agent.instructions.map(({ path }) => path),
           },
         }
       } finally {

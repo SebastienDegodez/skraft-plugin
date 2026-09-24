@@ -109,16 +109,6 @@ export const loadAgentDescriptor = (repoRoot, id) => {
   const skills = configuredSkills(normalizedRoot, name)
   if (!sameValues(sourceSkills, skills)) throw new Error(`Agent skill declarations drift from framework config: ${id}`)
 
-  const instructionPaths = metadataSequence(content, 'instructions')
-  const instructions = instructionPaths.map((instructionPath) => {
-    const instructionFile = resolve(normalizedRoot, instructionPath)
-    assertInside(normalizedRoot, instructionFile, 'Instruction path')
-    return {
-      path: posix(relative(normalizedRoot, instructionFile)),
-      content: readFileSync(instructionFile, 'utf8'),
-    }
-  })
-
   return {
     id,
     name,
@@ -128,7 +118,6 @@ export const loadAgentDescriptor = (repoRoot, id) => {
     declaredModel: String(data.model ?? ''),
     tools: Array.isArray(data.tools) ? data.tools : [],
     skills,
-    instructions,
     prompt: body,
   }
 }

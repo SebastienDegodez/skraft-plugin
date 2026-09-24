@@ -30,7 +30,7 @@ Selection therefore happens in deterministic executor code:
 1. `tags.agent` identifies an allowlisted agent.
 2. `agent-descriptor.mjs` reads the exact source file, hashes it, and checks that its skill list matches framework configuration.
 3. `executor.mjs` creates a Copilot SDK session with that agent preselected.
-4. Agent body and companion instructions become custom-agent prompt context.
+4. The agent body becomes custom-agent prompt context.
 5. The runner passes `plugins/skraft-framework/skills` as Vally's `--skill-dir`, making the complete
 	SKRAFT skill catalog available without injecting every skill into context.
 6. Agent-required skills activate through the runtime skill tool. Vally's
@@ -43,7 +43,7 @@ The business prompt remains role-neutral. Persona text never appears in stimulus
 
 | File | Responsibility |
 |---|---|
-| `agent-descriptor.mjs` | Resolve allowlisted source, parse agent metadata, detect skill-config drift, load companion instructions, compute SHA-256 |
+| `agent-descriptor.mjs` | Resolve allowlisted source, parse agent metadata, detect skill-config drift, compute SHA-256 |
 | `executor.mjs` | Vally-facing orchestration: select agent, create SDK session, pass events through `CopilotAdapter`, attach selected-agent audit event |
 | `tests/agents/agent-behavior/eval.yaml` | Real-agent Vally stimuli and deterministic graders |
 

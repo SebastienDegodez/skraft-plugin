@@ -12,7 +12,7 @@ const capture = () => {
   return { io: { log: (...a) => out.push(a.join(' ')), error: (...a) => errs.push(a.join(' ')) }, out, errs }
 }
 
-const specialist = ({ name, phase, skills = [], instructions = [], inputs = [], outputs = [] }) =>
+const specialist = ({ name, phase, skills = [], inputs = [], outputs = [] }) =>
   [
     '---',
     `name: ${name}`,
@@ -21,7 +21,6 @@ const specialist = ({ name, phase, skills = [], instructions = [], inputs = [], 
     `  dispatched_by: skraft-orchestrator`,
     `  phase: ${phase}`,
     ...(skills.length ? ['  skills:', ...skills.map((s) => `    - ${s}`)] : []),
-    ...(instructions.length ? ['  instructions:', ...instructions.map((path) => `    - ${path}`)] : []),
     '  inputs:',
     '    required:',
     ...inputs.map((i) => `      - ${i}`),
@@ -47,13 +46,12 @@ const orchestrator = (phases) =>
 
 // --- pure: parseAgentDescriptor ---
 
-test('parseAgentDescriptor extracts identity, phase, dispatch, skills, instructions and artifacts', () => {
+test('parseAgentDescriptor extracts identity, phase, dispatch, skills and artifacts', () => {
   const d = parseAgentDescriptor(
     specialist({
       name: 'solution-architect',
       phase: 'DESIGN',
       skills: ['architecture-patterns', 'architecture-decisions'],
-      instructions: ['plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md'],
       inputs: ['stories.md'],
       outputs: ['adr.md', 'diagrams.md'],
     }),
@@ -64,7 +62,6 @@ test('parseAgentDescriptor extracts identity, phase, dispatch, skills, instructi
   assert.equal(d.phase, 'DESIGN')
   assert.equal(d.dispatchedBy, 'skraft-orchestrator')
   assert.deepEqual(d.skills, ['architecture-patterns', 'architecture-decisions'])
-  assert.deepEqual(d.instructions, ['plugins/skraft-framework/com.github.copilot/rules/skraft-artifacts.instructions.md'])
   assert.deepEqual(d.inputs, ['stories.md'])
   assert.deepEqual(d.outputs, ['adr.md', 'diagrams.md'])
 })
@@ -78,7 +75,6 @@ test('parseAgentDescriptor yields empty collections when frontmatter is absent',
   const d = parseAgentDescriptor('# no fences')
   assert.equal(d.name, undefined)
   assert.deepEqual(d.skills, [])
-  assert.deepEqual(d.instructions, [])
   assert.deepEqual(d.inputs, [])
   assert.deepEqual(d.outputs, [])
 })

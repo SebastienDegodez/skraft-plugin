@@ -124,18 +124,6 @@ test('handle called with no arguments returns allow (no agentName → no skills)
   assert.equal(result.decision, 'allow')
 })
 
-test('no harness receives the orchestrator rules from SubagentStart — the orchestrator reads them itself', async () => {
-  for (const harness of ['claude-code', 'copilot']) {
-    const service = createSubagentStartService({
-      config: { agentSkills: { orchestrator: [] }, agentInstructions: { orchestrator: ['rules/skraft-state.instructions.md'] } },
-      skillFileReader: { read: async () => '' },
-      auditWriter: { write: async () => {} },
-      clock: { now: () => '2026-09-23T00:00:00.000Z' },
-    })
-    assert.equal((await service.handle({ agentName: 'orchestrator', harness })).decision, 'allow', harness)
-  }
-})
-
 test('the directive tells the subagent to load each skill with its skill tool', async () => {
   const service = createSubagentStartService({
     config: { agentSkills: { a: [{ name: 'bdd-methodology', policy: 'verify' }, { name: 'outside-in-tdd', policy: 'verify' }] } },
