@@ -14,7 +14,7 @@ const descriptor = ({ name = 'Display Lens', model = 'GPT-5.6 Luna', role = 'rev
 const header = (text) => parseYaml(text.toString().match(/^---\n([\s\S]*?)\n---/)[1])
 const project = (options) => projectNativeClaudeAgents([{ source: `${copilot}/lens.agent.md`, content: Buffer.from(descriptor(options)) }], { exists: () => true })[0].content
 
-for (const [role, model, expected] of [['reviewer', 'GPT-5.6 Luna', 'haiku'], ['implementer', 'claude-sonnet-5', 'sonnet'], ['planner', 'Claude Sonnet 5', 'sonnet']]) {
+for (const [role, model, expected] of [['reviewer', 'GPT-5.6 Luna', 'haiku'], ['implementer', 'claude-sonnet-5', 'sonnet'], ['planner', 'Claude Opus 5', 'opus']]) {
   test(`explicit new-pair helper maps ${role} to bounded native ${expected}`, () => {
     const data = header(project({ role, model }))
     assert.equal(data.model, expected)
@@ -56,6 +56,6 @@ test('actual native tree retains 31 IDs, bounded tools, native models and six pu
     assert.equal(data.tools.includes('mcp__*'), false)
     if (file.endsWith('-lens.md')) assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob'])
   }
-  assert.deepEqual(models, { haiku: 17, sonnet: 13, inherit: 1 })
+  assert.deepEqual(models, { haiku: 17, sonnet: 12, opus: 1, inherit: 1 })
   assert.deepEqual(publicIds, ['backlog-discoverer', 'backlog-planner', 'brownfield-analyst', 'brownfield-harness-builder', 'brownfield-refactorer', 'skraft-orchestrator'])
 })

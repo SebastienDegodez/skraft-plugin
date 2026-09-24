@@ -70,7 +70,7 @@ function nativeModel({ id, data }) {
   const { tier, accepted } = resolveModel({ costRoleClass, modelRequirement })
   if (id === 'skraft-orchestrator' && data.model === 'inherit') return 'inherit'
   if (!accepted.includes(data.model)) throw new Error(`Source model '${data.model}' does not match ${tier} policy`)
-  const model = { economy: 'haiku', standard: 'sonnet', frontier: 'sonnet' }[tier]
+  const model = { economy: 'haiku', standard: 'sonnet', frontier: 'opus' }[tier]
   if (!model) throw new Error(`Unknown native model tier: ${tier}`)
   return model
 }

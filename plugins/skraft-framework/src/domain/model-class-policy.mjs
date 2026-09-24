@@ -32,9 +32,9 @@ const TIER_MODELS = Object.freeze({
     'claude-sonnet-5',
   ]),
   frontier: Object.freeze([
-    'Claude Sonnet 5',
-    'Claude Sonnet 5 (copilot)',
-    'claude-sonnet-5',
+    'Claude Opus 5',
+    'Claude Opus 5 (copilot)',
+    'claude-opus-5',
   ]),
 })
 
