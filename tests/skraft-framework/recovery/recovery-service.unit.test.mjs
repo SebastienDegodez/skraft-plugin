@@ -71,7 +71,7 @@ test('diagnose: CORRUPTED_STATE → CORRUPTED_STATE guidance', async () => {
   })
   const result = await svc.diagnose('demo')
   assert.equal(result.value.code, DIAGNOSIS.CORRUPTED_STATE)
-  assert.match(result.value.action, /init/)
+  assert.match(result.value.action, /reset/)
 })
 
 test('diagnose: invalid schema → INVALID_STATE guidance', async () => {
@@ -152,4 +152,66 @@ test('resolveStale: end-to-end with real stateService resets stuck phase retryCo
   const result = await svc.resolveStale('demo')
   assert.ok(result.ok)
   assert.equal(result.value.retryCount.DESIGN, 0)
+})
+
+// ─── reset ────────────────────────────────────────────────────────────────────
+const archiveRecording = () => {
+  const kept = []
+  return { setAside: async (slug) => { kept.push(slug); return Ok('state.json.invalid.1') }, kept }
+}
+const resetService = ({ stateReader, stateArchive = archiveRecording(), writer = writerOk() }) => {
+  const stateService = createStateService({ stateReader, stateWriter: writer, phaseOrder: ['RESEARCH', 'DESIGN'] })
+  return createRecoveryService({ stateReader, stateWriter: writer, backupReader: backupReaderWith([]), stateArchive, stateService })
+}
+
+test('reset: an invalid state is kept aside, then replaced by a fresh pipeline', async () => {
+  const archive = archiveRecording()
+  const writer = writerOk()
+  const svc = resetService({ stateReader: readerOk({ currentPhase: 42 }), stateArchive: archive, writer })
+  const result = await svc.reset('demo')
+  assert.ok(result.ok)
+  assert.deepEqual(archive.kept, ['demo'])
+  assert.equal(writer._written.demo.currentPhase, 'RESEARCH')
+  assert.equal(writer._written.demo.projectSlug, 'demo')
+})
+
+test('reset: invalid JSON is replaced without a second copy (the reader kept it)', async () => {
+  const archive = archiveRecording()
+  const writer = writerOk()
+  const svc = resetService({ stateReader: readerCorrupted(), stateArchive: archive, writer })
+  const result = await svc.reset('demo')
+  assert.ok(result.ok)
+  assert.deepEqual(archive.kept, [])
+  assert.equal(writer._written.demo.currentPhase, 'RESEARCH')
+})
+
+test('reset: a valid state is refused with NOT_INVALID and left untouched', async () => {
+  const writer = writerOk()
+  const svc = resetService({ stateReader: readerOk(validState()), writer })
+  const result = await svc.reset('demo')
+  assert.equal(result.error.code, 'NOT_INVALID')
+  assert.deepEqual(writer._written, {})
+})
+
+test('reset: a missing state is refused with NO_STATE', async () => {
+  const result = await resetService({ stateReader: readerEnoent() }).reset('demo')
+  assert.equal(result.error.code, 'NO_STATE')
+})
+
+test('reset: an unreadable state is reported as IO_ERROR', async () => {
+  const result = await resetService({ stateReader: readerIoError() }).reset('demo')
+  assert.equal(result.error.code, 'IO_ERROR')
+})
+
+test('reset: nothing is written when the invalid state cannot be kept', async () => {
+  const writer = writerOk()
+  const failing = { setAside: async () => Err({ code: 'IO_ERROR', reason: 'read-only' }) }
+  const result = await resetService({ stateReader: readerOk({ currentPhase: 42 }), stateArchive: failing, writer }).reset('demo')
+  assert.equal(result.error.code, 'IO_ERROR')
+  assert.deepEqual(writer._written, {})
+})
+
+test('reset: a writer failure is propagated', async () => {
+  const result = await resetService({ stateReader: readerOk({ currentPhase: 42 }), writer: writerFail() }).reset('demo')
+  assert.equal(result.error.code, 'IO_ERROR')
 })

@@ -139,5 +139,14 @@ export const createStateService = ({ stateReader, stateWriter, phaseOrder = DEFA
     return Ok(updated)
   }
 
-  return { init, applyEvent, get, configureReporting }
+  // Writes a fresh pipeline over whatever state.json holds. Only the recovery reset
+  // calls it, once it has kept the file it replaces.
+  const reinitialize = async (projectSlug) => {
+    const defaults = DEFAULT_STATE({ projectSlug, phaseOrder })
+    const writeResult = await stateWriter.write(projectSlug, defaults)
+    if (!isOk(writeResult)) return writeResult
+    return Ok(defaults)
+  }
+
+  return { init, applyEvent, get, configureReporting, reinitialize }
 }

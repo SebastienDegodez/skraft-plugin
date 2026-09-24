@@ -94,9 +94,21 @@ test('buildRecoveryGuidance: corrupted with backup → rollback action', () => {
   assert.match(g.action, /rollback --slug demo/)
 })
 
-test('buildRecoveryGuidance: corrupted without backup → init action', () => {
+test('buildRecoveryGuidance: corrupted without backup → reset action', () => {
   const g = buildRecoveryGuidance({ code: DIAGNOSIS.CORRUPTED_STATE, slug: 'demo', backupCount: 0 })
-  assert.match(g.action, /init --slug demo/)
+  assert.match(g.action, /reset --slug demo/)
+})
+
+test('buildRecoveryGuidance: invalid without backup → reset action, then reconstruction', () => {
+  const g = buildRecoveryGuidance({ code: DIAGNOSIS.INVALID_STATE, slug: 'demo', backupCount: 0 })
+  assert.match(g.action, /reset --slug demo/)
+  assert.match(g.how.join(' '), /state\.json\.invalid\.\{ts\}/)
+  assert.match(g.how.join(' '), /confirm the reconstruction with the user/)
+})
+
+test('buildRecoveryGuidance: invalid with backup → rollback action', () => {
+  const g = buildRecoveryGuidance({ code: DIAGNOSIS.INVALID_STATE, slug: 'demo', backupCount: 1 })
+  assert.match(g.action, /rollback --slug demo/)
 })
 
 test('buildRecoveryGuidance: missing without backup → init action', () => {

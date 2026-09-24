@@ -11,7 +11,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, writeFile, mkdir, readFile } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile, mkdir, readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -139,6 +139,39 @@ test('rollback: no healthy backup → NO_BACKUP, exit non-zero', async () => {
     const r = await stateCli(['rollback', '--slug', 'demo'], { basePath })
     assert.notEqual(r.exitCode, 0)
     assert.match(r.stderr, /NO_BACKUP/)
+  })
+})
+
+test('reset: an invalid state with no backup is set aside and the pipeline starts over', async () => {
+  await withTmp(async (basePath) => {
+    const invalid = JSON.stringify({ currentPhase: 42 })
+    await writeRaw(basePath, 'demo', 'state.json', invalid)
+
+    const diagnosis = JSON.parse((await stateCli(['diagnose', '--slug', 'demo'], { basePath })).stdout)
+    assert.equal(diagnosis.code, 'INVALID_STATE')
+    assert.match(diagnosis.action, /reset --slug demo/)
+
+    const r = await stateCli(['reset', '--slug', 'demo'], { basePath })
+    assert.equal(r.exitCode, 0, r.stderr)
+    const fresh = JSON.parse(await readFile(join(basePath, 'demo', 'state.json'), 'utf8'))
+    assert.equal(fresh.projectSlug, 'demo')
+    assert.deepEqual(fresh.phasesCompleted, [])
+
+    const kept = (await readdir(join(basePath, 'demo'))).filter((name) => /^state\.json\.invalid\.\d+$/.test(name))
+    assert.equal(kept.length, 1)
+    assert.equal(await readFile(join(basePath, 'demo', kept[0]), 'utf8'), invalid)
+
+    const healthy = JSON.parse((await stateCli(['diagnose', '--slug', 'demo'], { basePath })).stdout)
+    assert.equal(healthy.code, 'HEALTHY')
+  })
+})
+
+test('reset: a valid state is refused, exit non-zero', async () => {
+  await withTmp(async (basePath) => {
+    await writeRaw(basePath, 'demo', 'state.json', JSON.stringify(baseState()))
+    const r = await stateCli(['reset', '--slug', 'demo'], { basePath })
+    assert.equal(r.exitCode, 1)
+    assert.match(r.stderr, /NOT_INVALID/)
   })
 })
 

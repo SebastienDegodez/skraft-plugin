@@ -44,8 +44,7 @@ export const selectRollbackTarget = (backups) => {
 }
 
 // Guidance `action` strings reference the CLI by the bare `state.mjs {subcommand}`
-// form used throughout skraft-state.instructions.md; they are indicative next-steps
-// for the orchestrator, not literal argv (the real entry is $CLAUDE_PLUGIN_ROOT/src/cli/state.mjs).
+// form; they are indicative next-steps for the orchestrator, not literal argv (the real entry is $CLAUDE_PLUGIN_ROOT/src/cli/state.mjs).
 const CLI = 'state.mjs'
 
 // Produces actionable guidance for a diagnosis, structured as WHY / HOW / ACTION.
@@ -55,6 +54,8 @@ export const buildRecoveryGuidance = (diagnosis) => {
   const { code, slug = '{slug}', reason, backupCount = 0, phase } = diagnosis ?? {}
   const hasBackup = backupCount > 0
   const rollbackAction = `${CLI} rollback --slug ${slug}`
+  const resetAction = `${CLI} reset --slug ${slug}`
+  const reconstruct = 'Then record the artefacts of each phase the on-disk evidence shows completed and close it, in phase order; confirm the reconstruction with the user before resuming.'
 
   switch (code) {
     case DIAGNOSIS.HEALTHY:
@@ -89,9 +90,10 @@ export const buildRecoveryGuidance = (diagnosis) => {
             ]
           : [
               'The corrupted file was snapshotted to state.json.corrupted.{ts} by the reader.',
-              'No backup is recoverable — reconstruct a snapshot with conservative defaults and confirm with the user.',
+              'No backup is recoverable — reset to a fresh pipeline.',
+              reconstruct,
             ],
-        action: hasBackup ? rollbackAction : `${CLI} init --slug ${slug}`,
+        action: hasBackup ? rollbackAction : resetAction,
       }
 
     case DIAGNOSIS.INVALID_STATE:
@@ -100,8 +102,11 @@ export const buildRecoveryGuidance = (diagnosis) => {
         why: `state.json for ${slug} fails schema validation${reason ? `: ${reason}` : '.'}`,
         how: hasBackup
           ? ['The recorded shape is invalid — roll back to the most recent healthy backup.']
-          : ['The recorded shape is invalid and no backup is recoverable — re-initialize and confirm with the user.'],
-        action: hasBackup ? rollbackAction : `${CLI} init --slug ${slug}`,
+          : [
+              'The recorded shape is invalid and no backup is recoverable — reset to a fresh pipeline; the invalid file is kept as state.json.invalid.{ts}.',
+              reconstruct,
+            ],
+        action: hasBackup ? rollbackAction : resetAction,
       }
 
     case DIAGNOSIS.STALE: {

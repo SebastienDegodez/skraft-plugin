@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
 import { createJsonStateBackupReader } from '../adapters/infrastructure/state/json-state-backup-reader.mjs'
+import { createJsonStateArchive } from '../adapters/infrastructure/state/json-state-archive.mjs'
 import { createStateService } from '../application/state-service.mjs'
 import { createPhaseGate } from '../application/phase-gate-service.mjs'
 import { createTrackingFiles } from '../adapters/infrastructure/tracking-files.mjs'
@@ -57,7 +58,9 @@ const phaseGate = frameworkConfig?.phaseAgents
   : undefined
 
 const service = createStateService({ stateReader, stateWriter, phaseOrder, phaseGate })
-const recoveryService = createRecoveryService({ stateReader, stateWriter, backupReader, stateService: service })
+const recoveryService = createRecoveryService({
+  stateReader, stateWriter, backupReader, stateArchive: createJsonStateArchive(basePath), stateService: service,
+})
 const commitScanService = createCommitScanService({
   commitLogReader: createGitCommitLogReader({ cwd: process.cwd() })
 })
@@ -318,6 +321,18 @@ async function run() {
     case 'rollback': {
       // AC2: restore the most recent healthy backup (state.json.bak.*).
       const result = await recoveryService.rollback(slug)
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
+      break
+    }
+
+    case 'reset': {
+      // Start over from a state no command can use; the old file is kept beside it.
+      const result = await recoveryService.reset(slug)
       if (!result.ok) {
         writeError(result.error.code, result.error.reason)
         process.exitCode = domainExitCode(result.error.code)
