@@ -100,6 +100,20 @@ test('in-memory: initialFiles are accessible immediately', async () => {
   assert.equal(await fs.readFile('/seed.txt'), 'seeded')
 })
 
+// A service's path.join spells paths with backslashes on Windows; tests seed with slashes.
+test('in-memory: a path names the same file with either separator', async () => {
+  const fs = createInMemoryFilesystem({ '/repo/plans/p/state.json': { content: '{}', mtimeMs: 7 } })
+  assert.equal(await fs.readFile('\\repo\\plans\\p\\state.json'), '{}')
+  assert.equal(await fs.exists('\\repo\\plans\\p\\state.json'), true)
+  assert.equal((await fs.stat('\\repo\\plans\\p\\state.json')).mtimeMs, 7)
+  assert.deepEqual(await fs.listDir('\\repo\\plans'), ['p'])
+  await fs.writeFile('\\repo\\plans\\p\\note.md', 'a')
+  await fs.appendFile('\\repo\\plans\\p\\note.md', 'b')
+  assert.equal(await fs.readFile('/repo/plans/p/note.md'), 'ab')
+  await fs.remove('\\repo\\plans\\p\\state.json')
+  assert.equal(await fs.exists('/repo/plans/p/state.json'), false)
+})
+
 // ── real filesystem ───────────────────────────────────────────────────────────
 
 test('real filesystem: writeFile then readFile round-trips', async () => {
