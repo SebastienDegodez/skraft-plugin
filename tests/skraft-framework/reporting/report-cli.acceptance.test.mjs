@@ -81,7 +81,6 @@ function fixture(t, { initialized = true, preferences, explicitRoot = true } = {
     assert.equal(result.status, 0, `Existing state init failed: ${result.stderr}`)
     const state = json(statePath)
     state.userPreferences.maxRetriesPerPhase = 7
-    state.userPreferences.language = 'fr'
     if (preferences) state.userPreferences.reporting = preferences
     writeFileSync(statePath, JSON.stringify(state))
   }

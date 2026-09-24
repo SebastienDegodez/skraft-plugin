@@ -11,11 +11,16 @@ import {
   INVARIANT_FIELDS,
   validatePipelineState,
 } from '../../../plugins/skraft-framework/src/domain/state-schema.mjs'
+import {
+  SUPPORTED_KEYWORDS,
+  SUPPORTED_TYPES,
+  schemaViolations,
+} from '../../../plugins/skraft-framework/src/domain/schema-validator.mjs'
 import { isOk } from '../../../plugins/skraft-framework/src/domain/result.mjs'
 import { closeAllPhases, gitRepo, stateCli } from './phase-closure-fixture.mjs'
 
-// state.schema.json is the contract of state.json; STATE_SCHEMA and validatePipelineState
-// enforce it. These tests fail the build when the two disagree.
+// state.schema.json is the contract of state.json and the runtime enforces it through
+// schema-validator.mjs. ajv, a reference implementation, checks that enforcement.
 const schemaUrl = new URL('../../../plugins/skraft-framework/src/domain/state.schema.json', import.meta.url)
 const schema = JSON.parse(readFileSync(schemaUrl, 'utf8'))
 
@@ -35,14 +40,23 @@ const withTrackingRoot = async (fn) => {
 
 const readState = async (root, slug) => JSON.parse(await readFile(join(root, slug, 'state.json'), 'utf8'))
 
-test('the schema declares exactly the STATE_SCHEMA fields', () => {
-  assert.deepEqual(Object.keys(schema.properties).sort(), [...STATE_FIELDS].sort())
-})
-
-test('each schema field declares the owner STATE_SCHEMA gives it', () => {
-  for (const field of STATE_FIELDS) {
-    assert.equal(schema.properties[field]['x-owner'], STATE_SCHEMA[field].owner, field)
+// Every keyword and type the schema uses, found by walking it.
+const keywordsAndTypes = (node, found = { keywords: new Set(), types: new Set() }) => {
+  if (Array.isArray(node)) node.forEach((item) => keywordsAndTypes(item, found))
+  if (node === null || typeof node !== 'object' || Array.isArray(node)) return found
+  for (const [key, value] of Object.entries(node)) {
+    found.keywords.add(key)
+    if (key === 'type') found.types.add(value)
+    if (key === 'properties' || key === '$defs') Object.values(value).forEach((sub) => keywordsAndTypes(sub, found))
+    else if (key !== 'enum' && key !== 'const' && key !== 'required') keywordsAndTypes(value, found)
   }
+  return found
+}
+
+test('the schema uses only keywords and types the runtime validator enforces', () => {
+  const { keywords, types } = keywordsAndTypes(schema)
+  assert.deepEqual([...keywords].filter((keyword) => !SUPPORTED_KEYWORDS.includes(keyword)), [])
+  assert.deepEqual([...types].filter((type) => !SUPPORTED_TYPES.includes(type)), [])
 })
 
 test('every STATE_SCHEMA field declares a known owner', () => {
@@ -90,4 +104,80 @@ test('the schema rejects an unknown field, a verdict outside its values and a fl
   for (const state of rejected) {
     assert.notDeepEqual(schemaErrors(state), [], JSON.stringify(state))
   }
+})
+
+// One sample per rule of the schema, each on its own; the runtime and ajv must agree.
+const SAMPLES = [
+  { currentPhase: 'DESIGN' },
+  { currentPhase: '' },
+  { currentPhase: 7 },
+  {},
+  { currentPhase: 'DESIGN', unknown: true },
+  { currentPhase: 'DESIGN', projectSlug: null },
+  { currentPhase: 'DESIGN', projectSlug: '' },
+  { currentPhase: 'DESIGN', skraftPlanFile: 'plans/p.md' },
+  { currentPhase: 'DESIGN', skraftPlanFile: 3 },
+  { currentPhase: 'DESIGN', entryMode: 'from-prd' },
+  { currentPhase: 'DESIGN', entryMode: 'upstream' },
+  { currentPhase: 'DESIGN', issueNumber: 12 },
+  { currentPhase: 'DESIGN', issueNumber: 0 },
+  { currentPhase: 'DESIGN', issueNumber: '12' },
+  { currentPhase: 'DESIGN', phasesCompleted: ['RESEARCH'] },
+  { currentPhase: 'DESIGN', phasesCompleted: [''] },
+  { currentPhase: 'DESIGN', phasesCompleted: {} },
+  { currentPhase: 'DESIGN', phaseArtifacts: { DESIGN: ['a.md'] } },
+  { currentPhase: 'DESIGN', phaseArtifacts: { DESIGN: 'a.md' } },
+  { currentPhase: 'DESIGN', phaseArtifacts: [] },
+  { currentPhase: 'DESIGN', verdicts: { DESIGN: null, RESEARCH: 'APPROVED' } },
+  { currentPhase: 'DESIGN', verdicts: { DESIGN: 'REJECTED' } },
+  { currentPhase: 'DESIGN', retryCount: { DESIGN: 0 } },
+  { currentPhase: 'DESIGN', retryCount: { DESIGN: -1 } },
+  { currentPhase: 'DESIGN', retryCount: { DESIGN: 0.5 } },
+  { currentPhase: 'DESIGN', referencesProcessed: ['docs/prd.md'] },
+  { currentPhase: 'DESIGN', referencesProcessed: [1] },
+  { currentPhase: 'DESIGN', phaseHistory: { DESIGN: { status: 'inProgress', startedAt: 't', baseSha: null } } },
+  { currentPhase: 'DESIGN', phaseHistory: { DESIGN: { status: 'done', completedAt: 't', baseSha: 'abc' } } },
+  { currentPhase: 'DESIGN', phaseHistory: { DESIGN: { startedAt: 't' } } },
+  { currentPhase: 'DESIGN', phaseHistory: { DESIGN: { status: 'done', completedAt: null } } },
+  { currentPhase: 'DESIGN', phaseHistory: { DESIGN: { status: 'done', note: 'x' } } },
+  { currentPhase: 'DESIGN', nextActions: ['ask the owner'] },
+  { currentPhase: 'DESIGN', nextActions: [''] },
+  { currentPhase: 'DESIGN', userPreferences: { maxRetriesPerPhase: 3, autonomyTier: 'partial', phaseOrder: ['A', 'B'] } },
+  { currentPhase: 'DESIGN', userPreferences: { maxRetriesPerPhase: -1 } },
+  { currentPhase: 'DESIGN', userPreferences: { autonomyTier: 'none' } },
+  { currentPhase: 'DESIGN', userPreferences: { reporting: { confirmed: true } } },
+  { currentPhase: 'DESIGN', userPreferences: { reporting: [] } },
+  { currentPhase: 'DESIGN', userPreferences: { language: 'fr' } },
+  { currentPhase: 'DESIGN', neighborPlanners: { securityPlanFile: 'plans/s.md', raiPlanFile: null } },
+  { currentPhase: 'DESIGN', neighborPlanners: { securityPlanFile: '' } },
+  { currentPhase: 'DESIGN', neighborPlanners: { other: null } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'none', pending: [], ratified: [] } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'pending', pending: [], ratified: [] } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'none', pending: [] } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'none', pending: [], ratified: [], note: '' } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'awaiting_human', pending: [{ adr: '1', title: 't', recommended: 'accept', status: 'Proposed' }], ratified: [] } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'awaiting_human', pending: [{ adr: '1', title: 't', recommended: 'amend', status: 'Proposed' }], ratified: [] } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'awaiting_human', pending: [{ adr: '1', title: 't', recommended: 'accept', status: 'Accepted' }], ratified: [] } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: '1', verdict: 'Rejected', by: 'owner' }] } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: '1', verdict: 'Accepted' }] } },
+  { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: ['ADR-1'] } },
+]
+
+test('the runtime validator and ajv agree on every sample', () => {
+  for (const sample of SAMPLES) {
+    const runtime = schemaViolations(schema, sample).length === 0
+    const reference = validateAgainstSchema(sample)
+    assert.equal(runtime, reference, JSON.stringify(sample))
+    assert.equal(isOk(validatePipelineState(sample)), reference, JSON.stringify(sample))
+  }
+})
+
+test('the samples exercise both verdicts', () => {
+  const verdicts = SAMPLES.map((sample) => validateAgainstSchema(sample))
+  assert.ok(verdicts.includes(true) && verdicts.includes(false))
+})
+
+test('a keyword or type the validator does not know is refused, never skipped', () => {
+  assert.throws(() => schemaViolations({ type: 'boolean' }, true), /unsupported type: boolean/)
+  assert.throws(() => schemaViolations({ $ref: 'other.json#/x' }, {}), /unsupported \$ref/)
 })

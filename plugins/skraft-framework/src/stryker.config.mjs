@@ -27,6 +27,7 @@ export default {
     // US5 — State Transition Bridge (#60)
     'plugins/skraft-framework/src/domain/state-machine.mjs',
     'plugins/skraft-framework/src/domain/state-schema.mjs',
+    'plugins/skraft-framework/src/domain/schema-validator.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/state/json-state-writer.mjs',
     'plugins/skraft-framework/src/application/state-service.mjs',
     // US8 — G4/G5 artifact + verdict + commit completion guard (#8)

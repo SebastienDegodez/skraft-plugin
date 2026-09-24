@@ -83,40 +83,53 @@ test('validatePipelineState: rejects when currentPhase is not a string', () => {
   assert.equal(r.error.code, 'INVALID_STATE')
 })
 
-test('validatePipelineState: coerces missing phasesCompleted to []', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', verdicts: {} })
+test('validatePipelineState: reads every absent invariant field as empty', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
   assert.ok(isOk(r))
   assert.deepEqual(r.value.phasesCompleted, [])
+  for (const field of ['phaseArtifacts', 'verdicts', 'reviewArtifacts', 'retryCount', 'reworkCount', 'findingsResolved', 'userPreferences']) {
+    assert.deepEqual(r.value[field], {}, field)
+  }
 })
 
-test('validatePipelineState: coerces missing retryCount to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.retryCount, {})
+test('validatePipelineState: rejects a value of the wrong shape instead of coercing it', () => {
+  const wrongShapes = {
+    phasesCompleted: 'DISCOVER',
+    phaseArtifacts: [],
+    reviewArtifacts: ['reviews/r.md'],
+    verdicts: ['APPROVED'],
+    retryCount: [1],
+    reworkCount: [1],
+    findingsResolved: [1],
+    userPreferences: [],
+  }
+  for (const [field, value] of Object.entries(wrongShapes)) {
+    const r = validatePipelineState({ currentPhase: 'DISCOVER', [field]: value })
+    assert.ok(isErr(r), field)
+    assert.equal(r.error.code, 'INVALID_STATE')
+    assert.deepEqual(r.error.fields, [field])
+  }
 })
 
-test('validatePipelineState: coerces missing verdicts to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.verdicts, {})
-})
-
-test('validatePipelineState: coerces phaseArtifacts array to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', phaseArtifacts: [] })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.phaseArtifacts, {})
-})
-
-test('validatePipelineState: coerces reviewArtifacts array to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', reviewArtifacts: [] })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.reviewArtifacts, {})
-})
-
-test('validatePipelineState: coerces null phaseArtifacts to {}', () => {
+test('validatePipelineState: rejects a null invariant field', () => {
   const r = validatePipelineState({ currentPhase: 'DISCOVER', phaseArtifacts: null })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.phaseArtifacts, {})
+  assert.ok(isErr(r))
+  assert.deepEqual(r.error.fields, ['phaseArtifacts'])
+})
+
+test('validatePipelineState: rejects a verdict, a count or a path outside its values', () => {
+  const invalid = [
+    [{ verdicts: { DESIGN: 'NEEDS_REWORK' } }, 'verdicts.DESIGN must be one of APPROVED, CHANGES_REQUESTED, null'],
+    [{ retryCount: { DESIGN: -1 } }, 'retryCount.DESIGN must be at least 0'],
+    [{ reworkCount: { DESIGN: 1.5 } }, 'reworkCount.DESIGN must be an integer'],
+    [{ phaseArtifacts: { DESIGN: [''] } }, 'phaseArtifacts.DESIGN[0] must have at least 1 character(s)'],
+    [{ phaseHistory: { DESIGN: { status: 'started' } } }, 'phaseHistory.DESIGN.status must be one of inProgress, done'],
+  ]
+  for (const [fields, reason] of invalid) {
+    const r = validatePipelineState({ currentPhase: 'DESIGN', ...fields })
+    assert.ok(isErr(r), reason)
+    assert.equal(r.error.reason, reason)
+  }
 })
 
 test('validatePipelineState: preserves existing phaseArtifacts object', () => {
@@ -131,46 +144,10 @@ test('validatePipelineState: preserves existing reviewArtifacts object', () => {
   assert.deepEqual(r.value.reviewArtifacts.DISCOVER, ['r.md'])
 })
 
-test('validatePipelineState: coerces missing userPreferences to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.userPreferences, {})
-})
-
 test('validatePipelineState: preserves userPreferences object', () => {
   const r = validatePipelineState({ currentPhase: 'DISCOVER', userPreferences: { maxRetriesPerPhase: 3 } })
   assert.ok(isOk(r))
   assert.equal(r.value.userPreferences.maxRetriesPerPhase, 3)
-})
-
-test('validatePipelineState: coerces array userPreferences to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', userPreferences: [] })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.userPreferences, {})
-})
-
-test('validatePipelineState: coerces verdicts array to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', verdicts: ['APPROVED'] })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.verdicts, {})
-})
-
-test('validatePipelineState: coerces retryCount array to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', retryCount: [1] })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.retryCount, {})
-})
-
-test('validatePipelineState: coerces missing reworkCount to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.reworkCount, {})
-})
-
-test('validatePipelineState: coerces reworkCount array to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', reworkCount: [1] })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.reworkCount, {})
 })
 
 test('validatePipelineState: preserves existing reworkCount object', () => {
@@ -179,116 +156,87 @@ test('validatePipelineState: preserves existing reworkCount object', () => {
   assert.deepEqual(r.value.reworkCount, { DELIVER: 2 })
 })
 
-test('validatePipelineState: coerces missing findingsResolved to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER' })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.findingsResolved, {})
-})
-
-test('validatePipelineState: coerces findingsResolved array to {}', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', findingsResolved: [1] })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.findingsResolved, {})
-})
-
 test('validatePipelineState: preserves existing findingsResolved object', () => {
   const r = validatePipelineState({ currentPhase: 'DISCOVER', findingsResolved: { DELIVER: 12 } })
   assert.ok(isOk(r))
   assert.deepEqual(r.value.findingsResolved, { DELIVER: 12 })
 })
 
-// ─── round-trip fidelity (real hand-authored state.json) ───────────────────────
-// Regression: validatePipelineState must NOT drop orchestrator-owned fields it does
-// not normalize. Prior behaviour silently coerced to 8 keys, destroying 10 fields on
-// every CLI write (proven empirically). These fields drive the DESIGN human checkpoint
-// (adrRatification), upstream handoff (entryPoint), and traceability (issueNumber, ...).
+test('validatePipelineState: copies the recorded lists, never shares them', () => {
+  const raw = { currentPhase: 'DISCOVER', phasesCompleted: ['RESEARCH'], phaseArtifacts: { DESIGN: ['d.md'] } }
+  const r = validatePipelineState(raw)
+  assert.notEqual(r.value.phasesCompleted, raw.phasesCompleted)
+  assert.notEqual(r.value.phaseArtifacts.DESIGN, raw.phaseArtifacts.DESIGN)
+  assert.ok(Object.isFrozen(r.value))
+})
 
-const REAL_STATE = {
+// ─── round-trip fidelity ──────────────────────────────────────────────────────
+// Every field the schema declares survives validation, so no CLI write drops one.
+
+const RECORDED_STATE = {
   projectSlug: 'us1-clean-arch-foundation',
-  skraftPlanFile: '.copilot-tracking/skraft-plans/us1-clean-arch-foundation/state.json',
+  skraftPlanFile: 'plans/us1.md',
   currentPhase: 'DESIGN',
   entryMode: 'from-issue',
-  entryPoint: { skipPhases: [], handoffSource: null, handoffArtifacts: [] },
   issueNumber: 47,
-  adrRatification: { checkpointStatus: 'pending', pending: ['adr-001'], ratified: [] },
-  phasesCompleted: ['DISCOVER', 'DISCUSS'],
-  phaseArtifacts: { DISCOVER: ['research/triage.md'] },
-  reviewerVerdicts: { DISCOVER: 'APPROVED', DISCUSS: 'APPROVED' },
-  reviewArtifacts: ['reviews/discover-review.md', 'reviews/discuss-review.md'],
-  retryCount: { DISCOVER: 0, DISCUSS: 0 },
-  referencesProcessed: [],
-  phaseHistory: { DISCOVER: { status: 'done', startedAt: 't0', completedAt: 't1' } },
-  nextActions: [],
-  userPreferences: { autonomyTier: 'full', reviewCadence: 'weekly', maxRetriesPerPhase: 2 },
-  legacyOverrides: [],
-  neighborPlanners: { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null },
+  adrRatification: {
+    checkpointStatus: 'awaiting_human',
+    pending: [{ adr: '001', title: 'Layered modules', recommended: 'accept', status: 'Proposed' }],
+    ratified: [{ adr: '000', verdict: 'Accepted', by: 'owner 2026-09-20' }],
+  },
+  phasesCompleted: ['RESEARCH'],
+  phaseArtifacts: { RESEARCH: ['research/2026-09-20/us1-research.md'] },
+  verdicts: { RESEARCH: 'APPROVED' },
+  reviewArtifacts: {},
+  retryCount: { RESEARCH: 0 },
+  reworkCount: {},
+  findingsResolved: {},
+  referencesProcessed: ['docs/prds/us1.md'],
+  phaseHistory: {
+    RESEARCH: { status: 'done', startedAt: 't0', baseSha: null, completedAt: 't1' },
+    DESIGN: { status: 'inProgress', startedAt: 't1', baseSha: 'abc123' },
+  },
+  nextActions: ['review the design'],
+  userPreferences: { autonomyTier: 'full', maxRetriesPerPhase: 2 },
+  neighborPlanners: { securityPlanFile: 'plans/security.md', raiPlanFile: null, ssscPlanFile: null },
 }
 
-test('round-trip: preserves every orchestrator-owned field (no silent drop)', () => {
-  const r = validatePipelineState(REAL_STATE)
-  assert.ok(isOk(r))
-  const v = r.value
-  assert.deepEqual(v.entryPoint, REAL_STATE.entryPoint, 'entryPoint preserved')
-  assert.deepEqual(v.adrRatification, REAL_STATE.adrRatification, 'adrRatification preserved')
-  assert.equal(v.issueNumber, 47, 'issueNumber preserved')
-  assert.equal(v.projectSlug, REAL_STATE.projectSlug, 'projectSlug preserved')
-  assert.equal(v.skraftPlanFile, REAL_STATE.skraftPlanFile, 'skraftPlanFile preserved')
-  assert.equal(v.entryMode, 'from-issue', 'entryMode preserved')
-  assert.deepEqual(v.phaseHistory, REAL_STATE.phaseHistory, 'phaseHistory preserved')
-  assert.deepEqual(v.nextActions, [], 'nextActions preserved')
-  assert.deepEqual(v.referencesProcessed, [], 'referencesProcessed preserved')
-  assert.deepEqual(v.legacyOverrides, [], 'unknown top-level fields preserved')
-  assert.deepEqual(v.neighborPlanners, REAL_STATE.neighborPlanners, 'neighborPlanners preserved')
+test('round-trip: preserves every recorded field', () => {
+  const r = validatePipelineState(RECORDED_STATE)
+  assert.ok(isOk(r), r.error?.reason)
+  assert.deepEqual({ ...r.value }, RECORDED_STATE)
 })
 
-test('round-trip: removes obsolete difficulty field', () => {
-  const r = validatePipelineState({ currentPhase: 'RESEARCH', difficulty: 'simple' })
-  assert.ok(isOk(r))
-  assert.equal(Object.hasOwn(r.value, 'difficulty'), false)
+// ─── no older format is migrated ──────────────────────────────────────────────
+
+test('older formats: a field outside the schema is rejected, not dropped or migrated', () => {
+  const older = [
+    [{ difficulty: 'simple' }, 'difficulty is not a known field'],
+    [{ reviewerVerdicts: { DISCOVER: 'APPROVED' } }, 'reviewerVerdicts is not a known field'],
+    [{ reviewArtifactsLegacy: ['reviews/r.md'] }, 'reviewArtifactsLegacy is not a known field'],
+    [{ entryPoint: { skipPhases: [] } }, 'entryPoint is not a known field'],
+    [{ userPreferences: { reviewCadence: 'weekly' } }, 'userPreferences.reviewCadence is not a known field'],
+  ]
+  for (const [fields, reason] of older) {
+    const r = validatePipelineState({ currentPhase: 'DISCOVER', ...fields })
+    assert.ok(isErr(r), reason)
+    assert.equal(r.error.code, 'INVALID_STATE')
+    assert.equal(r.error.reason, reason)
+  }
 })
 
-test('round-trip: migrates reviewerVerdicts -> verdicts and drops the alias', () => {
-  const r = validatePipelineState(REAL_STATE)
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.verdicts, { DISCOVER: 'APPROVED', DISCUSS: 'APPROVED' })
-  assert.equal(r.value.reviewerVerdicts, undefined, 'legacy alias removed (no split-brain)')
+test('older formats: flat-array artefact lists are rejected, not kept under a Legacy key', () => {
+  const r = validatePipelineState({ currentPhase: 'DISCOVER', phaseArtifacts: ['b.md'], reviewArtifacts: ['a.md'] })
+  assert.ok(isErr(r))
+  assert.deepEqual(r.error.fields, ['phaseArtifacts', 'reviewArtifacts'])
+  assert.equal(r.error.reason, 'phaseArtifacts must be an object; reviewArtifacts must be an object')
 })
 
-test('round-trip: canonical verdicts wins over legacy reviewerVerdicts when both present', () => {
+test('older formats: ADR verdicts recorded as bare strings are rejected', () => {
   const r = validatePipelineState({
-    currentPhase: 'DISCOVER',
-    verdicts: { DISCOVER: 'CHANGES_REQUESTED' },
-    reviewerVerdicts: { DISCOVER: 'APPROVED' },
+    currentPhase: 'DISTILL',
+    adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: ['ADR-002'] },
   })
-  assert.ok(isOk(r))
-  assert.equal(r.value.verdicts.DISCOVER, 'CHANGES_REQUESTED')
-  assert.equal(r.value.reviewerVerdicts, undefined)
-})
-
-test('round-trip: flat-array reviewArtifacts preserved under reviewArtifactsLegacy; map restarts empty', () => {
-  const r = validatePipelineState(REAL_STATE)
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.reviewArtifacts, {}, 'canonical map restarts empty')
-  assert.deepEqual(r.value.reviewArtifactsLegacy, REAL_STATE.reviewArtifacts, 'legacy paths preserved verbatim')
-})
-
-test('round-trip: no reviewArtifactsLegacy key when reviewArtifacts is already a map', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', reviewArtifacts: { DISCOVER: ['r.md'] } })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.reviewArtifacts, { DISCOVER: ['r.md'] })
-  assert.equal(r.value.reviewArtifactsLegacy, undefined)
-})
-
-test('round-trip: empty flat arrays do not create Legacy keys', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', reviewArtifacts: [], phaseArtifacts: [] })
-  assert.ok(isOk(r))
-  assert.equal(r.value.reviewArtifactsLegacy, undefined)
-  assert.equal(r.value.phaseArtifactsLegacy, undefined)
-})
-
-test('round-trip: flat-array phaseArtifacts preserved under phaseArtifactsLegacy; map restarts empty', () => {
-  const r = validatePipelineState({ currentPhase: 'DISCOVER', phaseArtifacts: ['plans/a.md', 'plans/b.md'] })
-  assert.ok(isOk(r))
-  assert.deepEqual(r.value.phaseArtifacts, {}, 'canonical map restarts empty')
-  assert.deepEqual(r.value.phaseArtifactsLegacy, ['plans/a.md', 'plans/b.md'], 'legacy paths preserved verbatim')
+  assert.ok(isErr(r))
+  assert.equal(r.error.reason, 'adrRatification.ratified[0] must be an object')
 })

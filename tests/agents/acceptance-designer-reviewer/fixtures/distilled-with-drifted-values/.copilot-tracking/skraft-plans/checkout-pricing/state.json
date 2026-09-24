@@ -8,7 +8,7 @@
     "checkpointStatus": "resolved",
     "pending": [],
     "ratified": [
-      "ADR-002"
+      { "adr": "002", "verdict": "Accepted", "by": "sebastiendegodez (2026-08-12)" }
     ]
   },
   "phasesCompleted": [
@@ -34,8 +34,7 @@
   "phaseHistory": {
     "DISTILL": {
       "status": "inProgress",
-      "startedAt": "2026-08-13T09:00:00Z",
-      "completedAt": null
+      "startedAt": "2026-08-13T09:00:00Z"
     }
   },
   "nextActions": [

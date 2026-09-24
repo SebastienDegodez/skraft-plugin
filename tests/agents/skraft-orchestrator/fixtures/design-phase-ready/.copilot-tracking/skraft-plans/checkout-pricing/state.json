@@ -24,8 +24,7 @@
   "phaseHistory": {
     "DESIGN": {
       "status": "inProgress",
-      "startedAt": "2026-08-13T09:00:00Z",
-      "completedAt": null
+      "startedAt": "2026-08-13T09:00:00Z"
     }
   },
   "nextActions": [

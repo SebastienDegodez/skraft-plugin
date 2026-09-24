@@ -61,7 +61,7 @@ const baseState = (overrides = {}) => ({
   verdicts: {},
   retryCount: {},
   phaseArtifacts: {},
-  reviewArtifacts: [],
+  reviewArtifacts: {},
   userPreferences: { maxRetriesPerPhase: 2 },
   ...overrides
 })
@@ -124,10 +124,10 @@ test('AC2a: state CLI rejects phase skip with ILLEGAL_PHASE_SKIP', async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // AC2b — VERDICT_NOT_APPROVED
 // ─────────────────────────────────────────────────────────────────────────────
-test('AC2b: state CLI rejects advance when RESEARCH verdict is REJECTED', async () => {
+test('AC2b: state CLI rejects advance when RESEARCH verdict is CHANGES_REQUESTED', async () => {
   const basePath = await mkdtemp(join(tmpdir(), 'skraft-ac2b-'))
   try {
-    await writeState(basePath, 'us5', baseState({ verdicts: { RESEARCH: 'REJECTED' } }))
+    await writeState(basePath, 'us5', baseState({ verdicts: { RESEARCH: 'CHANGES_REQUESTED' } }))
     const before = await readState(basePath, 'us5')
 
     const result = await stateCli(

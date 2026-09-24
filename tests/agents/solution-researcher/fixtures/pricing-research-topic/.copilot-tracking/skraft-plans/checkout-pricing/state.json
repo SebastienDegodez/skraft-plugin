@@ -20,8 +20,7 @@
   "phaseHistory": {
     "RESEARCH": {
       "status": "inProgress",
-      "startedAt": "2026-08-12T09:00:00Z",
-      "completedAt": null
+      "startedAt": "2026-08-12T09:00:00Z"
     }
   },
   "nextActions": [

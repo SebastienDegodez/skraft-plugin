@@ -1,32 +1,20 @@
+import { createRequire } from 'node:module'
 import { Ok, Err } from './result.mjs'
+import { schemaViolations } from './schema-validator.mjs'
 
-// The field set of state.json. state.schema.json beside this module is its contract;
-// tests/skraft-framework/state/state-schema-contract.acceptance.test.mjs fails when the
-// schema and this descriptor list different fields or owners.
+// state.schema.json beside this module is the contract of state.json: the reader below
+// enforces it, and STATE_SCHEMA takes the field set and owners from it. Loaded through
+// require, which reads JSON on every supported Node version without a warning.
 //
-// owner:
-//   'invariant'    — owned & normalized by the state machine (validatePipelineState).
-//   'orchestrator' — written by the orchestrator, preserved verbatim on every CLI write.
-export const STATE_SCHEMA = Object.freeze({
-  projectSlug: Object.freeze({ owner: 'orchestrator' }),
-  skraftPlanFile: Object.freeze({ owner: 'orchestrator' }),
-  currentPhase: Object.freeze({ owner: 'invariant' }),
-  entryMode: Object.freeze({ owner: 'orchestrator' }),
-  issueNumber: Object.freeze({ owner: 'orchestrator' }),
-  phasesCompleted: Object.freeze({ owner: 'invariant' }),
-  phaseArtifacts: Object.freeze({ owner: 'invariant' }),
-  verdicts: Object.freeze({ owner: 'invariant' }),
-  reviewArtifacts: Object.freeze({ owner: 'invariant' }),
-  retryCount: Object.freeze({ owner: 'invariant' }),
-  reworkCount: Object.freeze({ owner: 'invariant' }),
-  findingsResolved: Object.freeze({ owner: 'invariant' }),
-  referencesProcessed: Object.freeze({ owner: 'orchestrator' }),
-  phaseHistory: Object.freeze({ owner: 'orchestrator' }),
-  nextActions: Object.freeze({ owner: 'orchestrator' }),
-  userPreferences: Object.freeze({ owner: 'invariant' }),
-  neighborPlanners: Object.freeze({ owner: 'orchestrator' }),
-  adrRatification: Object.freeze({ owner: 'orchestrator' }),
-})
+// owner (x-owner):
+//   'invariant'    — owned by the state machine; an absent one reads as empty.
+//   'orchestrator' — written by the orchestrator through state.mjs set or phase events.
+export const STATE_JSON_SCHEMA = Object.freeze(createRequire(import.meta.url)('./state.schema.json'))
+
+export const STATE_SCHEMA = Object.freeze(Object.fromEntries(
+  Object.entries(STATE_JSON_SCHEMA.properties)
+    .map(([field, schema]) => [field, Object.freeze({ owner: schema['x-owner'] })]),
+))
 
 // Canonical field set (all top-level keys of state.json).
 export const STATE_FIELDS = Object.freeze(Object.keys(STATE_SCHEMA))
@@ -56,63 +44,35 @@ export const projectDispatchState = (raw) => {
   }))
 }
 
-// Coerces a phase-keyed map: arrays → {}, objects with array values → deep copy
-const coercePhaseMap = (val) => {
-  if (!val || Array.isArray(val) || typeof val !== 'object') return {}
-  return Object.fromEntries(
-    Object.entries(val).map(([k, v]) => [k, Array.isArray(v) ? [...v] : []])
-  )
-}
+// What an invariant field reads as while it is absent: nothing recorded yet.
+const ABSENT_INVARIANTS = Object.freeze({
+  phasesCompleted: [],
+  phaseArtifacts: {},
+  verdicts: {},
+  reviewArtifacts: {},
+  retryCount: {},
+  reworkCount: {},
+  findingsResolved: {},
+  userPreferences: {},
+})
 
-// Validates (and coerces) the full orchestrator state.json shape used by the pipeline.
-// FIDELITY (round-trip): every field on the raw object is preserved. The state machine
-// only owns the invariant-bearing subset normalized below; all other fields the
-// orchestrator depends on (adrRatification, issueNumber, projectSlug,
-// skraftPlanFile, phaseHistory, neighborPlanners, nextActions, referencesProcessed,
-// entryMode, ...) pass straight through instead of being silently
-// dropped on rewrite. Missing optional invariant fields are coerced to safe defaults.
+const copyOf = (value) => (Array.isArray(value)
+  ? [...value]
+  : Object.fromEntries(Object.entries(value).map(([key, item]) => [key, Array.isArray(item) ? [...item] : item])))
+
+// Validates the recorded state against state.schema.json. A field the schema does not
+// declare, or a value outside its shape, is INVALID_STATE: no older format is migrated,
+// and no value is coerced. Every field is preserved; absent invariant fields read as empty.
 export const validatePipelineState = (raw) => {
-  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    return Err({ code: 'INVALID_STATE', fields: ['state'], reason: 'pipeline state must be an object' })
+  const violations = schemaViolations(STATE_JSON_SCHEMA, raw)
+  if (violations.length > 0) {
+    return Err({
+      code: 'INVALID_STATE',
+      fields: [...new Set(violations.map(({ path }) => path.split(/[.[]/)[0]))],
+      reason: violations.map(({ reason }) => reason).join('; '),
+    })
   }
-  if (typeof raw.currentPhase !== 'string' || raw.currentPhase.length === 0) {
-    return Err({ code: 'INVALID_STATE', fields: ['currentPhase'], reason: 'currentPhase must be a non-empty string' })
-  }
-
-  // Legacy alias: hand-authored state.json used `reviewerVerdicts`; the canonical
-  // field is `verdicts` (identical phase->verdict map shape). Adopt the legacy value
-  // only when the canonical is absent, then drop the alias to avoid split-brain.
-  const rawVerdicts = (raw.verdicts !== undefined) ? raw.verdicts : raw.reviewerVerdicts
-
-  const { difficulty: _obsoleteDifficulty, ...currentRaw } = raw
-  const coerced = {
-    ...currentRaw,
-    currentPhase: raw.currentPhase,
-    phasesCompleted: Array.isArray(raw.phasesCompleted) ? [...raw.phasesCompleted] : [],
-    verdicts: (rawVerdicts && !Array.isArray(rawVerdicts) && typeof rawVerdicts === 'object')
-      ? { ...rawVerdicts } : {},
-    retryCount: (raw.retryCount && !Array.isArray(raw.retryCount) && typeof raw.retryCount === 'object')
-      ? { ...raw.retryCount } : {},
-    reworkCount: (raw.reworkCount && !Array.isArray(raw.reworkCount) && typeof raw.reworkCount === 'object')
-      ? { ...raw.reworkCount } : {},
-    findingsResolved: (raw.findingsResolved && !Array.isArray(raw.findingsResolved) && typeof raw.findingsResolved === 'object')
-      ? { ...raw.findingsResolved } : {},
-    phaseArtifacts: coercePhaseMap(raw.phaseArtifacts),
-    reviewArtifacts: coercePhaseMap(raw.reviewArtifacts),
-    userPreferences: (raw.userPreferences && typeof raw.userPreferences === 'object' && !Array.isArray(raw.userPreferences))
-      ? { ...raw.userPreferences } : {},
-  }
-
-  // Legacy flat-array artifacts are preserved verbatim under a *Legacy key rather
-  // than dropped; the phase-keyed map restarts empty for future appends.
-  if (Array.isArray(raw.reviewArtifacts) && raw.reviewArtifacts.length > 0) {
-    coerced.reviewArtifactsLegacy = [...raw.reviewArtifacts]
-  }
-  if (Array.isArray(raw.phaseArtifacts) && raw.phaseArtifacts.length > 0) {
-    coerced.phaseArtifactsLegacy = [...raw.phaseArtifacts]
-  }
-
-  delete coerced.reviewerVerdicts
-
-  return Ok(Object.freeze(coerced))
+  const invariants = Object.entries(ABSENT_INVARIANTS)
+    .map(([field, empty]) => [field, copyOf(raw[field] ?? empty)])
+  return Ok(Object.freeze({ ...raw, ...Object.fromEntries(invariants) }))
 }

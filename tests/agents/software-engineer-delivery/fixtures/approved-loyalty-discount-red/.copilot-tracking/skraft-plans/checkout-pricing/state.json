@@ -48,8 +48,7 @@
     },
     "DELIVER": {
       "status": "inProgress",
-      "startedAt": "2026-08-07T11:00:00Z",
-      "completedAt": null
+      "startedAt": "2026-08-07T11:00:00Z"
     }
   },
   "nextActions": [

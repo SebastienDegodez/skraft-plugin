@@ -116,6 +116,11 @@
       "additionalProperties": false,
       "properties": {
         "autonomyTier": { "enum": ["full", "partial", "manual"] },
+        "phaseOrder": {
+          "description": "Overrides skraft-framework.config.json::phaseOrder for this pipeline's transitions.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
         "maxRetriesPerPhase": {
           "description": "Automated retries allowed per phase before the orchestrator escalates. Default 2.",
           "$ref": "#/$defs/count"

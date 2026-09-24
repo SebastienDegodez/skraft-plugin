@@ -347,23 +347,28 @@ test('state-machine INCR_REWORK: negative findings falls back to default of 1', 
 })
 
 // ─── passthrough fidelity: orchestrator-owned fields survive every transition ──
-// Regression pair for the schema round-trip fix: applyTransition validates+coerces
+// Regression pair for the schema round-trip fix: applyTransition validates
 // via validatePipelineState, so preserved fields must reach the returned state and
 // not be dropped by the transition spread.
+const RICH_RATIFICATION = {
+  checkpointStatus: 'awaiting_human',
+  pending: [{ adr: '001', title: 'Loyalty ledger', recommended: 'accept', status: 'Proposed' }],
+  ratified: [],
+}
+
 const mkRichState = (overrides = {}) => mkState({
   projectSlug: 'us9-demo',
   issueNumber: 99,
-  entryPoint: { skipPhases: [], handoffSource: null, handoffArtifacts: [] },
-  adrRatification: { checkpointStatus: 'pending', pending: ['adr-1'], ratified: [] },
-  neighborPlanners: { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null },
+  adrRatification: RICH_RATIFICATION,
+  neighborPlanners: { securityPlanFile: 'plans/security.md', raiPlanFile: null, ssscPlanFile: null },
   ...overrides,
 })
 
 const assertRichPreserved = (value) => {
   assert.equal(value.projectSlug, 'us9-demo', 'projectSlug preserved')
   assert.equal(value.issueNumber, 99, 'issueNumber preserved')
-  assert.deepEqual(value.entryPoint, { skipPhases: [], handoffSource: null, handoffArtifacts: [] }, 'entryPoint preserved')
-  assert.deepEqual(value.adrRatification, { checkpointStatus: 'pending', pending: ['adr-1'], ratified: [] }, 'adrRatification preserved')
+  assert.deepEqual(value.adrRatification, RICH_RATIFICATION, 'adrRatification preserved')
+  assert.equal(value.neighborPlanners.securityPlanFile, 'plans/security.md', 'neighborPlanners preserved')
 }
 
 test('passthrough: RECORD_VERDICT preserves orchestrator-owned fields', () => {

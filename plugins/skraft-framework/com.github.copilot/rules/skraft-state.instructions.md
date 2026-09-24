@@ -159,10 +159,9 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 }
 ```
 
-### Canonical shapes and legacy migration
+### Canonical shapes
 
-* `verdicts` is a phase-keyed map (`{ "DESIGN": "APPROVED" }`). Verdict values are `APPROVED`, `CHANGES_REQUESTED`, or `null`. The legacy field `reviewerVerdicts` (older hand-authored files) is migrated to `verdicts` automatically on read and the alias is dropped — do not write `reviewerVerdicts`.
-* `reviewArtifacts` and `phaseArtifacts` are phase-keyed **maps** of relative paths (`{ "DESIGN": ["reviews/..."] }`), appended through the CLI. A legacy *flat array* on an older file is preserved verbatim under `reviewArtifactsLegacy` / `phaseArtifactsLegacy`; the canonical map restarts empty for future appends. Do not author flat arrays.
+* `verdicts`, `phaseArtifacts`, `reviewArtifacts`, `retryCount`, `reworkCount`, `findingsResolved` and `phaseHistory` are phase-keyed maps. The reader migrates no older format: a legacy key (`reviewerVerdicts`, `*Legacy`, `difficulty`), a flat array or any field outside the schema makes the state `INVALID_STATE`; follow `state.mjs diagnose`.
 
 ### Field semantics
 
