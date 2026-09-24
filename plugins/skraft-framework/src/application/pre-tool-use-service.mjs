@@ -31,17 +31,19 @@ const blockedFact = (error) => ({
   harness: block(error.reason)
 })
 
+const RECOVERY_HINT = 'run state.mjs diagnose for the recovery command'
+
 const unreadableFact = (error) => ({
   expectedAgent: null,
   decision: 'DENY',
   code: 'UNREADABLE_STATE',
   reason: `recorded pipeline state could not be read: ${error?.message ?? String(error)}`,
-  harness: block('recorded pipeline state could not be read; dispatch blocked')
+  harness: block(`recorded pipeline state could not be read; dispatch blocked; ${RECOVERY_HINT}`)
 })
 
 const decide = (requestedAgent, raw, config) => {
   const state = projectDispatchState(raw)
-  if (isErr(state)) return blockedFact(state.error)
+  if (isErr(state)) return blockedFact({ ...state.error, reason: `${state.error.reason}; ${RECOVERY_HINT}` })
   const evaluation = evaluateDispatch(requestedAgent, state.value, config)
   if (isErr(evaluation)) {
     return evaluation.error.code === 'OUT_OF_ORDER' ? deniedFact(evaluation.error) : blockedFact(evaluation.error)

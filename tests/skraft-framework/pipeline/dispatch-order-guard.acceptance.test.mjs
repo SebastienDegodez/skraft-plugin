@@ -169,3 +169,16 @@ test('a pipeline agent is blocked when the state is missing or unusable', async 
     assert.equal(audit.entries[0].code, code)
   }
 })
+
+test('a pipeline agent blocked by an invalid or unreadable state is pointed to state.mjs diagnose', async () => {
+  const readers = [
+    { read: async () => ({ currentPhase: 'RESEARCH', reviewerVerdicts: {} }) },
+    { read: async () => { throw Object.assign(new Error('bad json'), { code: 'CORRUPTED_STATE' }) } },
+  ]
+  for (const stateReader of readers) {
+    const gate = createPreToolUseService({ stateReader, auditWriter: collectingAuditWriter(), config: CONFIG, clock: { now: () => FIXED_NOW } })
+    const result = await gate.handle({ requestedAgent: 'solution-researcher', projectSlug: SLUG })
+    assert.equal(result.decision, 'block')
+    assert.match(result.message, /run state\.mjs diagnose/)
+  }
+})
