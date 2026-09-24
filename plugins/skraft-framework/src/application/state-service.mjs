@@ -11,9 +11,7 @@ import { validateReportingPreferences } from '../domain/reporting-preferences.mj
 // by the orchestrator (Phase 0 / DESIGN checkpoint) and only preserved here.
 const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
   projectSlug: projectSlug ?? null,
-  skraftPlanFile: null,
   currentPhase: phaseOrder[0],
-  entryMode: null,
   issueNumber: null,
   adrRatification: { checkpointStatus: 'none', pending: [], ratified: [] },
   phasesCompleted: [],
@@ -23,7 +21,6 @@ const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
   retryCount: {},
   reworkCount: {},
   findingsResolved: {},
-  referencesProcessed: [],
   phaseHistory: {},
   nextActions: [],
   userPreferences: { maxRetriesPerPhase: 2 },

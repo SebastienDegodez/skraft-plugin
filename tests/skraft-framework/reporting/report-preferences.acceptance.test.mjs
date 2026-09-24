@@ -18,9 +18,7 @@ const preferences = (overrides = {}) => ({
 
 const pipeline = () => ({
   projectSlug: SLUG,
-  skraftPlanFile: 'plans/reporting.md',
   currentPhase: 'DISTILL',
-  entryMode: 'from-issue',
   issueNumber: 23,
   adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: '001', verdict: 'Accepted', by: 'owner 2026-09-17' }] },
   phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN'],
@@ -30,7 +28,6 @@ const pipeline = () => ({
   retryCount: { DISTILL: 1 },
   reworkCount: { DESIGN: 2 },
   findingsResolved: { DISTILL: 3 },
-  referencesProcessed: ['issues/23'],
   phaseHistory: { DESIGN: { status: 'done', completedAt: '2026-09-17T10:00:00Z' } },
   nextActions: ['review test plan'],
   userPreferences: { maxRetriesPerPhase: 7 },

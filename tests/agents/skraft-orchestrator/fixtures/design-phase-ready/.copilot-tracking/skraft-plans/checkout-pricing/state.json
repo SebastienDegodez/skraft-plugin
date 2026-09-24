@@ -1,8 +1,6 @@
 {
   "projectSlug": "checkout-pricing",
-  "skraftPlanFile": ".copilot-tracking/skraft-plans/checkout-pricing/state.json",
   "currentPhase": "DESIGN",
-  "entryMode": "capture",
   "issueNumber": null,
   "adrRatification": {
     "checkpointStatus": "resolved",
@@ -20,7 +18,6 @@
   "retryCount": {},
   "reworkCount": {},
   "findingsResolved": {},
-  "referencesProcessed": [],
   "phaseHistory": {
     "DESIGN": {
       "status": "inProgress",
@@ -31,14 +28,7 @@
     "Design the loyalty-discount story, then have the design reviewed."
   ],
   "userPreferences": {
-    "autonomyTier": "full",
-    "maxRetriesPerPhase": 2,
-    "phaseOrder": [
-      "RESEARCH",
-      "DESIGN",
-      "DISTILL",
-      "DELIVER"
-    ]
+    "maxRetriesPerPhase": 2
   },
   "neighborPlanners": {
     "securityPlanFile": null,

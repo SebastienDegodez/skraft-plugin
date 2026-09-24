@@ -175,9 +175,7 @@ test('validatePipelineState: copies the recorded lists, never shares them', () =
 
 const RECORDED_STATE = {
   projectSlug: 'us1-clean-arch-foundation',
-  skraftPlanFile: 'plans/us1.md',
   currentPhase: 'DESIGN',
-  entryMode: 'from-issue',
   issueNumber: 47,
   adrRatification: {
     checkpointStatus: 'awaiting_human',
@@ -191,13 +189,12 @@ const RECORDED_STATE = {
   retryCount: { RESEARCH: 0 },
   reworkCount: {},
   findingsResolved: {},
-  referencesProcessed: ['docs/prds/us1.md'],
   phaseHistory: {
     RESEARCH: { status: 'done', startedAt: 't0', baseSha: null, completedAt: 't1' },
     DESIGN: { status: 'inProgress', startedAt: 't1', baseSha: 'abc123' },
   },
   nextActions: ['review the design'],
-  userPreferences: { autonomyTier: 'full', maxRetriesPerPhase: 2 },
+  userPreferences: { maxRetriesPerPhase: 2 },
   neighborPlanners: { securityPlanFile: 'plans/security.md', raiPlanFile: null, ssscPlanFile: null },
 }
 
@@ -216,6 +213,11 @@ test('older formats: a field outside the schema is rejected, not dropped or migr
     [{ reviewArtifactsLegacy: ['reviews/r.md'] }, 'reviewArtifactsLegacy is not a known field'],
     [{ entryPoint: { skipPhases: [] } }, 'entryPoint is not a known field'],
     [{ userPreferences: { reviewCadence: 'weekly' } }, 'userPreferences.reviewCadence is not a known field'],
+    [{ skraftPlanFile: 'plans/us1.md' }, 'skraftPlanFile is not a known field'],
+    [{ entryMode: 'from-issue' }, 'entryMode is not a known field'],
+    [{ referencesProcessed: [] }, 'referencesProcessed is not a known field'],
+    [{ userPreferences: { autonomyTier: 'full' } }, 'userPreferences.autonomyTier is not a known field'],
+    [{ userPreferences: { phaseOrder: ['RESEARCH'] } }, 'userPreferences.phaseOrder is not a known field'],
   ]
   for (const [fields, reason] of older) {
     const r = validatePipelineState({ currentPhase: 'DISCOVER', ...fields })

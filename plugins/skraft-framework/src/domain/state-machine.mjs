@@ -45,7 +45,7 @@ export const applyTransition = (currentState, event, { phaseOrder: publishedOrde
   }
 
   const maxRetries = state.userPreferences?.maxRetriesPerPhase ?? 2
-  const phaseOrder = state.userPreferences?.phaseOrder ?? publishedOrder ?? DEFAULT_PHASE_ORDER
+  const phaseOrder = publishedOrder ?? DEFAULT_PHASE_ORDER
 
   switch (event.type) {
     case 'ADVANCE': {

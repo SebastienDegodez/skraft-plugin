@@ -114,14 +114,11 @@ test('state-machine ADVANCE: DELIVER → DONE (last phase → terminal state)', 
   assert.ok([...r.value.phasesCompleted].includes('DELIVER'))
 })
 
-test('state-machine ADVANCE: uses custom phaseOrder from userPreferences', () => {
+test('state-machine ADVANCE: follows the phase order the caller publishes', () => {
   const r = applyTransition(
-    mkState({
-      currentPhase: 'ALPHA',
-      verdicts: { ALPHA: 'APPROVED' },
-      userPreferences: { maxRetriesPerPhase: 2, phaseOrder: ['ALPHA', 'BETA'] },
-    }),
-    { type: 'ADVANCE', targetPhase: 'BETA' }
+    mkState({ currentPhase: 'ALPHA', verdicts: { ALPHA: 'APPROVED' } }),
+    { type: 'ADVANCE', targetPhase: 'BETA' },
+    { phaseOrder: ['ALPHA', 'BETA'] },
   )
   assert.equal(r.ok, true)
   assert.equal(r.value.currentPhase, 'BETA')

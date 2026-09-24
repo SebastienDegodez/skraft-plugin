@@ -1,8 +1,6 @@
 {
   "projectSlug": "checkout-pricing",
-  "skraftPlanFile": ".copilot-tracking/skraft-plans/checkout-pricing/state.json",
   "currentPhase": "DISTILL",
-  "entryMode": "capture",
   "issueNumber": null,
   "adrRatification": {
     "checkpointStatus": "resolved",
@@ -28,7 +26,6 @@
   "retryCount": {},
   "reworkCount": {},
   "findingsResolved": {},
-  "referencesProcessed": [],
   "phaseHistory": {
     "DISTILL": {
       "status": "inProgress",
@@ -39,14 +36,7 @@
     "Distill the loyalty-discount story into executable acceptance specifications."
   ],
   "userPreferences": {
-    "autonomyTier": "full",
-    "maxRetriesPerPhase": 2,
-    "phaseOrder": [
-      "RESEARCH",
-      "DESIGN",
-      "DISTILL",
-      "DELIVER"
-    ]
+    "maxRetriesPerPhase": 2
   },
   "neighborPlanners": {
     "securityPlanFile": null,

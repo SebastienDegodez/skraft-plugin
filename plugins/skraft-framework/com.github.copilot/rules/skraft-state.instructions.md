@@ -50,7 +50,7 @@ node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 | `get` | `--slug` `[--field X]` | Read-only. Full state, or one field. Safe; never writes. |
 | `transition` | `--slug --to {PHASE}` | Advance `currentPhase` (requires APPROVED verdict + legal next phase + the phase gate below); marks the closed phase `done` in `phaseHistory`. |
 | `mark-phase-started` | `--slug --phase {P}` | Record `phaseHistory[P]` as `inProgress` with `startedAt` and `baseSha` (HEAD). `--phase` must equal `currentPhase`; a retry keeps the first start. |
-| `set` | `--slug --field {F} --data {JSON}` | Validate and replace one orchestrator-owned field: `adrRatification`, `neighborPlanners`, `nextActions`, `referencesProcessed`, `entryMode`, `issueNumber`, `skraftPlanFile`. Any other field → `IMMUTABLE_FIELD`. |
+| `set` | `--slug --field {F} --data {JSON}` | Validate and replace one orchestrator-owned field: `adrRatification`, `neighborPlanners`, `nextActions`, `issueNumber`. Any other field → `IMMUTABLE_FIELD`. |
 | `record-verdict` | `--slug --phase {P} --verdict {APPROVED\|CHANGES_REQUESTED}` | Set `verdicts[phase]`. A review's `NEEDS_REWORK` and `REJECTED` record as `CHANGES_REQUESTED`; any other value → `INVALID_VERDICT`. |
 | `record-artifact` | `--slug --phase {P} --path {rel}` | Append to `phaseArtifacts[phase]` (append-only). |
 | `record-review-artifact` | `--slug --phase {P} --path {rel}` | Append to `reviewArtifacts[phase]` (append-only). |
@@ -109,9 +109,7 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 ```json
 {
   "projectSlug": "string",
-  "skraftPlanFile": "string (relative path to plan instructions file)",
   "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE (phaseOrder of skraft-framework.config.json)",
-  "entryMode": "capture | from-issue | from-prd | null",
   "issueNumber": "number | null",
   "phasesCompleted": ["string (phase names)"],
   "phaseArtifacts": {
@@ -132,13 +130,11 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
   "findingsResolved": {
     "RESEARCH": "number (cumulative count of review findings resolved across all rework passes for this phase)"
   },
-  "referencesProcessed": ["string (file paths)"],
   "phaseHistory": {
     "RESEARCH": { "status": "done | inProgress", "startedAt": "string", "baseSha": "string | null (HEAD when the phase started)", "completedAt": "string" }
   },
   "nextActions": ["string"],
   "userPreferences": {
-    "autonomyTier": "full | partial | manual",
     "maxRetriesPerPhase": "number",
     "reporting": "optional; confirmed preferences per skills/qa-reporting/references/report-contract.md; written via report.mjs setup"
   },
@@ -167,7 +163,6 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 
 * `projectSlug` — kebab-case identifier derived from the originating issue title or user-provided project name.
 * `currentPhase` — single phase the pipeline is currently executing. Advances only when the reviewer verdict for that phase is `APPROVED`. `DONE` indicates the full pipeline has completed.
-* `entryMode` — how the pipeline was started. `from-issue` requires `issueNumber`; `from-prd` requires entries in `referencesProcessed`; `capture` requires neither.
 * `userPreferences.maxRetriesPerPhase` — default `2`. When `retryCount[phase] >= maxRetriesPerPhase` and the verdict is not `APPROVED`, the orchestrator escalates to the user.
 * `reworkCount` / `findingsResolved` — **rework-cost tracking** (issue #115). `retryCount[phase]` already counts automated reviewer retries (re-dispatch of the same phase agent on `CHANGES_REQUESTED`); these two fields additionally count **manual** rework — the human-validated fix cycles that happen *after* a reviewer verdict, outside its retry loop (e.g. addressing BLOCKER/HIGH findings in one pass, then remaining findings in a second pass). Call `state.mjs incr-rework --phase {P} [--findings N]` once per manual rework pass; `N` (default `1`) is the count of findings that pass resolved, accumulating into `findingsResolved[phase]`. Together, `retryCount[phase] + reworkCount[phase]` is the phase's total iteration count, and `findingsResolved[phase]` is its total finding volume — the objective signal the resume summary surfaces (see Rehydration) to track whether upstream gates are improving epic over epic.
 * `reviewArtifacts` — append-only map of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers append here exclusively, through `record-review-artifact`.
@@ -262,7 +257,7 @@ When a session starts or resumes, rehydrate exactly once:
 
 1. **Read** the snapshot in one call — `state.mjs get --slug {slug}` — to obtain `currentPhase`, `verdicts[currentPhase]`, `retryCount` (the full phase-keyed map, not only the current phase), `reviewArtifacts`, `adrRatification`.
 2. **Project** the pipeline into the native todo working set per `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies and statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`).
-3. **Identify** pending work from the todo list: an open reviewer verdict, an unprocessed reference, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
+3. **Identify** pending work from the todo list: an open reviewer verdict, missing artifacts for the current phase, `adrRatification.checkpointStatus == "awaiting_human"`, or unresolved user input.
   Reuse `userPreferences.reporting` from this snapshot and inspect `report.mjs status --slug {slug}` for pending publication, independently of engineering work, even at DONE.
 4. **Check** on-disk artifacts for the current phase only (partial outputs under `research/`, `plans/`, `details/`, `changes/`, or `reviews/`; ADRs live project-global in `docs/adr/`).
 5. **Present** a status summary with an emoji checklist (✅ completed phases, 🔄 in-progress phase, ❓ pending decisions), plus a **rework-cost line per phase with nonzero cost** (issue #115): `{phase}: {retryCount} retries + {reworkCount} manual reworks, {findingsResolved} findings resolved`. This is the objective signal for whether a phase is a recurring rework hotspot across epics — read it before deciding whether to strengthen that phase's exit gate.

@@ -1,8 +1,6 @@
 {
   "projectSlug": "orders",
-  "skraftPlanFile": ".copilot-tracking/skraft-plans/orders/state.json",
   "currentPhase": "DELIVER",
-  "entryMode": "capture",
   "issueNumber": null,
   "adrRatification": { "checkpointStatus": "resolved", "pending": [], "ratified": [] },
   "phasesCompleted": ["RESEARCH", "DESIGN", "DISTILL"],
@@ -17,7 +15,6 @@
   "retryCount": {},
   "reworkCount": {},
   "findingsResolved": {},
-  "referencesProcessed": [],
   "phaseHistory": {
     "RESEARCH": { "status": "done", "startedAt": "2026-08-28T08:00:00Z", "completedAt": "2026-08-28T08:10:00Z" },
     "DESIGN": { "status": "done", "startedAt": "2026-08-28T08:10:00Z", "completedAt": "2026-08-28T08:20:00Z" },
@@ -26,9 +23,7 @@
   },
   "nextActions": ["Verify the completed implementation and close DELIVER only if every gate passes."],
   "userPreferences": {
-    "autonomyTier": "full",
-    "maxRetriesPerPhase": 0,
-    "phaseOrder": ["RESEARCH", "DESIGN", "DISTILL", "DELIVER"]
+    "maxRetriesPerPhase": 0
   },
   "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null, "ssscPlanFile": null }
 }

@@ -34,24 +34,20 @@ test('SET_METADATA: rejects an unknown ratification status', () => {
   assert.equal(r.error.code, 'INVALID_METADATA')
 })
 
-test('SET_METADATA: replaces next actions and processed references with string lists', () => {
+test('SET_METADATA: replaces next actions with a string list', () => {
   assert.deepEqual(set('nextActions', ['ask the user']).value.nextActions, ['ask the user'])
-  assert.deepEqual(set('referencesProcessed', ['docs/prd.md']).value.referencesProcessed, ['docs/prd.md'])
   assert.equal(set('nextActions', 'ask the user').error.code, 'INVALID_METADATA')
 })
 
-test('SET_METADATA: records neighbor planners, entry mode, issue number and plan file', () => {
+test('SET_METADATA: records neighbor planners and issue number', () => {
   const neighborPlanners = { securityPlanFile: '.copilot-tracking/security-plans/x/plan.md', raiPlanFile: null, ssscPlanFile: null }
   assert.deepEqual(set('neighborPlanners', neighborPlanners).value.neighborPlanners, neighborPlanners)
-  assert.equal(set('entryMode', 'from-issue').value.entryMode, 'from-issue')
   assert.equal(set('issueNumber', 42).value.issueNumber, 42)
-  assert.equal(set('skraftPlanFile', 'plans/x.md').value.skraftPlanFile, 'plans/x.md')
-  assert.equal(set('entryMode', 'guess').error.code, 'INVALID_METADATA')
   assert.equal(set('issueNumber', -1).error.code, 'INVALID_METADATA')
 })
 
 test('SET_METADATA: refuses invariant-bearing fields', () => {
-  for (const field of ['currentPhase', 'verdicts', 'phaseArtifacts', 'retryCount', 'projectSlug', 'phaseHistory', 'entryPoint']) {
+  for (const field of ['currentPhase', 'verdicts', 'phaseArtifacts', 'retryCount', 'projectSlug', 'phaseHistory', 'entryMode', 'skraftPlanFile', 'referencesProcessed']) {
     const r = set(field, {})
     assert.equal(r.ok, false, field)
     assert.equal(r.error.code, 'IMMUTABLE_FIELD', field)
@@ -111,11 +107,7 @@ test('validateMetadataField: accepts every documented enum value', () => {
   for (const checkpointStatus of ['none', 'awaiting_human', 'resolved']) {
     assert.equal(validateMetadataField('adrRatification', { checkpointStatus, pending: [], ratified: [] }).ok, true, checkpointStatus)
   }
-  for (const entryMode of ['capture', 'from-issue', 'from-prd', null]) {
-    assert.equal(validateMetadataField('entryMode', entryMode).ok, true, entryMode)
-  }
   assert.equal(validateMetadataField('issueNumber', null).ok, true)
-  assert.equal(validateMetadataField('skraftPlanFile', null).ok, true)
   assert.equal(validateMetadataField('neighborPlanners', {}).ok, true)
 })
 
@@ -133,15 +125,11 @@ test('validateMetadataField: rejects values that are not the documented shape, n
       'adrRatification.pending[0].title is required; adrRatification.pending[0].recommended is required; adrRatification.pending[0].status is required',
     ],
     ['nextActions', [''], 'nextActions[0] must have at least 1 character(s)'],
-    ['referencesProcessed', 'docs/prd.md', 'referencesProcessed must be an array'],
     ['neighborPlanners', null, 'neighborPlanners must be an object'],
     ['neighborPlanners', { raiPlanFile: 7 }, 'neighborPlanners.raiPlanFile must be a string or null'],
     ['neighborPlanners', { ssscPlanFile: '' }, 'neighborPlanners.ssscPlanFile must have at least 1 character(s)'],
-    ['entryMode', 'guess', 'entryMode must be one of capture, from-issue, from-prd, null'],
     ['issueNumber', 0, 'issueNumber must be at least 1'],
     ['issueNumber', 1.5, 'issueNumber must be an integer or null'],
-    ['skraftPlanFile', '', 'skraftPlanFile must have at least 1 character(s)'],
-    ['skraftPlanFile', 3, 'skraftPlanFile must be a string or null'],
   ]
   for (const [field, value, reason] of cases) {
     const r = validateMetadataField(field, value)
@@ -157,6 +145,6 @@ test('validateMetadataField: lists the settable fields when a field is refused',
   assert.equal(r.error.field, 'verdicts')
   assert.equal(
     r.error.reason,
-    'verdicts is not settable; settable fields: adrRatification, nextActions, referencesProcessed, neighborPlanners, entryMode, issueNumber, skraftPlanFile',
+    'verdicts is not settable; settable fields: adrRatification, nextActions, neighborPlanners, issueNumber',
   )
 })

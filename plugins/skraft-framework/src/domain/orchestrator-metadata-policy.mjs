@@ -7,7 +7,7 @@ import { schemaViolations } from './schema-validator.mjs'
 // mark-phase-started / phase closure) are not settable here. A value must match its
 // field in state.schema.json, so a `set` never writes a state the reader would refuse.
 export const SETTABLE_METADATA_FIELDS = Object.freeze([
-  'adrRatification', 'nextActions', 'referencesProcessed', 'neighborPlanners', 'entryMode', 'issueNumber', 'skraftPlanFile',
+  'adrRatification', 'nextActions', 'neighborPlanners', 'issueNumber',
 ])
 
 export const validateMetadataField = (field, value) => {

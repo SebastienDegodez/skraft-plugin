@@ -25,19 +25,11 @@
       "description": "Kebab-case identifier of the pipeline; the name of its tracking directory.",
       "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
     },
-    "skraftPlanFile": {
-      "x-owner": "orchestrator",
-      "$ref": "#/$defs/nullablePath"
-    },
     "currentPhase": {
       "x-owner": "invariant",
       "description": "The phase being executed, a phase of phaseOrder, or DONE once every phase closed. Advances only through transition or close-phase.",
       "type": "string",
       "minLength": 1
-    },
-    "entryMode": {
-      "x-owner": "orchestrator",
-      "enum": ["capture", "from-issue", "from-prd", null]
     },
     "issueNumber": {
       "x-owner": "orchestrator",
@@ -85,10 +77,6 @@
       "$ref": "#/$defs/phaseMap",
       "additionalProperties": { "$ref": "#/$defs/count" }
     },
-    "referencesProcessed": {
-      "x-owner": "orchestrator",
-      "$ref": "#/$defs/paths"
-    },
     "phaseHistory": {
       "x-owner": "orchestrator",
       "description": "Written by mark-phase-started (inProgress, startedAt, baseSha) and by phase closure (done, completedAt). DELIVER's baseSha bounds the commits its gate requires.",
@@ -115,12 +103,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "autonomyTier": { "enum": ["full", "partial", "manual"] },
-        "phaseOrder": {
-          "description": "Overrides skraft-framework.config.json::phaseOrder for this pipeline's transitions.",
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        },
         "maxRetriesPerPhase": {
           "description": "Automated retries allowed per phase before the orchestrator escalates. Default 2.",
           "$ref": "#/$defs/count"
