@@ -23,7 +23,6 @@ const agentRuntimeRoots = [
   agentsRoot,
   copilotAgentsRoot,
   join(pluginRoot, 'skills'),
-  join(pluginRoot, 'com.github.copilot/rules'),
   join(pluginRoot, 'assets'),
 ]
 

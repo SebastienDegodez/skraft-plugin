@@ -37,9 +37,9 @@ test('plugin packaging: portable manifest declares the exact v1 schema and only 
   assert.deepEqual(portable.extensions, { 'com.github.copilot': {} })
 })
 
-// Rules retain their Copilot namespace alongside the generated agents and hooks.
-test('plugin packaging: the Copilot rules directory remains shipped', () => {
-  assert.equal(existsSync(join(pluginRoot, 'com.github.copilot/rules')), true)
+// The orchestrator carries its state rules in its descriptor; no path-scoped rules ship.
+test('plugin packaging: no Copilot rules directory ships', () => {
+  assert.equal(existsSync(join(pluginRoot, 'com.github.copilot/rules')), false)
 })
 
 // Claude's agents field accepts Markdown file paths, not a directory. Enumerate every
@@ -72,11 +72,9 @@ test('plugin packaging: shared agents use scalar models accepted by CLI discover
   }
 })
 
-// VS Code reads rules through its Claude-format adapter; Claude Code ignores this field.
-test('plugin packaging: Claude manifest points at the agent and rule adapters', () => {
-  assert.equal(claude.rules, './com.github.copilot/rules')
+test('plugin packaging: Claude manifest points at the agent adapters and no rules', () => {
+  assert.equal(Object.hasOwn(claude, 'rules'), false)
   for (const path of claude.agents) assert.equal(existsSync(join(pluginRoot, path)), true)
-  assert.equal(existsSync(join(pluginRoot, claude.rules)), true)
 })
 
 // Claude loads root hooks by convention; Copilot v1 loads the namespaced copy.

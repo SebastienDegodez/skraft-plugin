@@ -17,7 +17,6 @@ const markdownUnder = (dir) => readdirSync(join(PLUGIN, dir), { recursive: true 
 const agentFacingFiles = () => [
   ...markdownUnder('com.github.copilot/agents'),
   ...markdownUnder('com.anthropic.claude-code/agents'),
-  ...markdownUnder('com.github.copilot/rules'),
   ...markdownUnder('skills'),
   ...markdownUnder('assets'),
 ]

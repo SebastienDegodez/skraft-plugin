@@ -40,6 +40,5 @@
     "./com.anthropic.claude-code/agents/solution-architect.md",
     "./com.anthropic.claude-code/agents/solution-researcher.md",
     "./com.anthropic.claude-code/agents/test-integrity-lens.md"
-  ],
-  "rules": "./com.github.copilot/rules"
+  ]
 }

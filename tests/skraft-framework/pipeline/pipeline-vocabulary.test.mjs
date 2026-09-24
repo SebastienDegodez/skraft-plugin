@@ -4,7 +4,7 @@
 // instruction the runtime can no longer honour.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const PLUGIN = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
@@ -24,7 +24,6 @@ const sources = () => [
     `com.github.copilot/agents/${id}.agent.md`,
     `com.anthropic.claude-code/agents/${id}.md`,
   ]),
-  ...readdirSync(`${PLUGIN}com.github.copilot/rules`).map((file) => `com.github.copilot/rules/${file}`),
 ]
 
 const RETIRED = [
