@@ -381,9 +381,7 @@
     "planning-invest-lens": [],
     "quality-gates-lens": [],
     "refactoring-worker": [],
-    "Skraft - Orchestrator": [
-      "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md"
-    ],
+    "Skraft - Orchestrator": [],
     "Skraft - Software Engineer Reviewer": [],
     "Skraft - Software Engineer": [],
     "Skraft - Solution Architect Reviewer": [],
