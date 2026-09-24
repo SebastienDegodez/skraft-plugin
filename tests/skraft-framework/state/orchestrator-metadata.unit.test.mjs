@@ -34,20 +34,8 @@ test('SET_METADATA: rejects an unknown ratification status', () => {
   assert.equal(r.error.code, 'INVALID_METADATA')
 })
 
-test('SET_METADATA: replaces next actions with a string list', () => {
-  assert.deepEqual(set('nextActions', ['ask the user']).value.nextActions, ['ask the user'])
-  assert.equal(set('nextActions', 'ask the user').error.code, 'INVALID_METADATA')
-})
-
-test('SET_METADATA: records neighbor planners and issue number', () => {
-  const neighborPlanners = { securityPlanFile: '.copilot-tracking/security-plans/x/plan.md', raiPlanFile: null, ssscPlanFile: null }
-  assert.deepEqual(set('neighborPlanners', neighborPlanners).value.neighborPlanners, neighborPlanners)
-  assert.equal(set('issueNumber', 42).value.issueNumber, 42)
-  assert.equal(set('issueNumber', -1).error.code, 'INVALID_METADATA')
-})
-
-test('SET_METADATA: refuses invariant-bearing fields', () => {
-  for (const field of ['currentPhase', 'verdicts', 'phaseArtifacts', 'retryCount', 'projectSlug', 'phaseHistory', 'entryMode', 'skraftPlanFile', 'referencesProcessed']) {
+test('SET_METADATA: refuses every field but the ADR checkpoint', () => {
+  for (const field of ['currentPhase', 'verdicts', 'phaseArtifacts', 'retryCount', 'projectSlug', 'phaseHistory', 'entryMode', 'skraftPlanFile', 'referencesProcessed', 'nextActions', 'neighborPlanners', 'issueNumber']) {
     const r = set(field, {})
     assert.equal(r.ok, false, field)
     assert.equal(r.error.code, 'IMMUTABLE_FIELD', field)
@@ -55,9 +43,10 @@ test('SET_METADATA: refuses invariant-bearing fields', () => {
 })
 
 test('SET_METADATA: preserves every other field', () => {
-  const r = set('nextActions', ['x'], mkState({ verdicts: { RESEARCH: 'APPROVED' }, issueNumber: 7 }))
+  const adrRatification = { checkpointStatus: 'none', pending: [], ratified: [] }
+  const r = set('adrRatification', adrRatification, mkState({ verdicts: { RESEARCH: 'APPROVED' }, phasesCompleted: ['RESEARCH'] }))
   assert.equal(r.value.verdicts.RESEARCH, 'APPROVED')
-  assert.equal(r.value.issueNumber, 7)
+  assert.deepEqual(r.value.phasesCompleted, ['RESEARCH'])
 })
 
 // ─── Phase history ─────────────────────────────────────────────────────────────
@@ -107,8 +96,6 @@ test('validateMetadataField: accepts every documented enum value', () => {
   for (const checkpointStatus of ['none', 'awaiting_human', 'resolved']) {
     assert.equal(validateMetadataField('adrRatification', { checkpointStatus, pending: [], ratified: [] }).ok, true, checkpointStatus)
   }
-  assert.equal(validateMetadataField('issueNumber', null).ok, true)
-  assert.equal(validateMetadataField('neighborPlanners', {}).ok, true)
 })
 
 test('validateMetadataField: rejects values that are not the documented shape, naming the problem', () => {
@@ -124,12 +111,6 @@ test('validateMetadataField: rejects values that are not the documented shape, n
       { checkpointStatus: 'awaiting_human', pending: [{ adr: '012' }], ratified: [] },
       'adrRatification.pending[0].title is required; adrRatification.pending[0].recommended is required; adrRatification.pending[0].status is required',
     ],
-    ['nextActions', [''], 'nextActions[0] must have at least 1 character(s)'],
-    ['neighborPlanners', null, 'neighborPlanners must be an object'],
-    ['neighborPlanners', { raiPlanFile: 7 }, 'neighborPlanners.raiPlanFile must be a string or null'],
-    ['neighborPlanners', { ssscPlanFile: '' }, 'neighborPlanners.ssscPlanFile must have at least 1 character(s)'],
-    ['issueNumber', 0, 'issueNumber must be at least 1'],
-    ['issueNumber', 1.5, 'issueNumber must be an integer or null'],
   ]
   for (const [field, value, reason] of cases) {
     const r = validateMetadataField(field, value)
@@ -145,6 +126,6 @@ test('validateMetadataField: lists the settable fields when a field is refused',
   assert.equal(r.error.field, 'verdicts')
   assert.equal(
     r.error.reason,
-    'verdicts is not settable; settable fields: adrRatification, nextActions, neighborPlanners, issueNumber',
+    'verdicts is not settable; settable fields: adrRatification',
   )
 })

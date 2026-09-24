@@ -12,7 +12,6 @@ import { validateReportingPreferences } from '../domain/reporting-preferences.mj
 const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
   projectSlug: projectSlug ?? null,
   currentPhase: phaseOrder[0],
-  issueNumber: null,
   adrRatification: { checkpointStatus: 'none', pending: [], ratified: [] },
   phasesCompleted: [],
   phaseArtifacts: {},
@@ -22,9 +21,7 @@ const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
   reworkCount: {},
   findingsResolved: {},
   phaseHistory: {},
-  nextActions: [],
   userPreferences: { maxRetriesPerPhase: 2 },
-  neighborPlanners: { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null },
 })
 
 // Application use case: orchestrates stateReader port + stateMachine domain + stateWriter port.

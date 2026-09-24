@@ -355,17 +355,13 @@ const RICH_RATIFICATION = {
 
 const mkRichState = (overrides = {}) => mkState({
   projectSlug: 'us9-demo',
-  issueNumber: 99,
   adrRatification: RICH_RATIFICATION,
-  neighborPlanners: { securityPlanFile: 'plans/security.md', raiPlanFile: null, ssscPlanFile: null },
   ...overrides,
 })
 
 const assertRichPreserved = (value) => {
   assert.equal(value.projectSlug, 'us9-demo', 'projectSlug preserved')
-  assert.equal(value.issueNumber, 99, 'issueNumber preserved')
   assert.deepEqual(value.adrRatification, RICH_RATIFICATION, 'adrRatification preserved')
-  assert.equal(value.neighborPlanners.securityPlanFile, 'plans/security.md', 'neighborPlanners preserved')
 }
 
 test('passthrough: RECORD_VERDICT preserves orchestrator-owned fields', () => {

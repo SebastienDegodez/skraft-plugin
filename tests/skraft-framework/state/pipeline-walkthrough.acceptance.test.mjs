@@ -141,16 +141,17 @@ test('set writes an orchestrator-owned field and rejects invariant fields', asyn
     const env = { SKRAFT_TRACKING_ROOT: root }
     await stateCli(['init', '--slug', 'demo'], env)
 
-    const set = await stateCli(['set', '--slug', 'demo', '--field', 'nextActions', '--data', '["confirm the story"]'], env)
+    const ratification = { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: '001', verdict: 'Accepted', by: 'owner 2026-09-25' }] }
+    const set = await stateCli(['set', '--slug', 'demo', '--field', 'adrRatification', '--data', JSON.stringify(ratification)], env)
     assert.equal(set.exitCode, 0, set.stderr)
     const state = JSON.parse(await readFile(join(root, 'demo', 'state.json'), 'utf8'))
-    assert.deepEqual(state.nextActions, ['confirm the story'])
+    assert.deepEqual(state.adrRatification, ratification)
 
     const refused = await stateCli(['set', '--slug', 'demo', '--field', 'currentPhase', '--data', '"DONE"'], env)
     assert.equal(refused.exitCode, 1)
     assert.match(refused.stderr, /IMMUTABLE_FIELD/)
 
-    const malformed = await stateCli(['set', '--slug', 'demo', '--field', 'nextActions', '--data', '[oops'], env)
+    const malformed = await stateCli(['set', '--slug', 'demo', '--field', 'adrRatification', '--data', '[oops'], env)
     assert.equal(malformed.exitCode, 1)
     assert.match(malformed.stderr, /INVALID_ARGUMENT/)
   })

@@ -79,18 +79,16 @@ Follow the write-through model and the once-per-session Rehydration sequence def
 2. If the state does not exist, create it with `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" init --slug {projectSlug}` and start at RESEARCH.
 3. If it exists, rehydrate in one call — `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`.
 4. **Project the pipeline into the native todo working set** per `$SKRAFT_PLUGIN_ROOT/com.github.copilot/rules/skraft-todo-sync.instructions.md` (phases as todos with dependencies + statuses derived from `phasesCompleted` / `currentPhase` / `verdicts`). This list — not the JSON file — drives every subsequent turn.
-5. Scan for neighbor planners under `.copilot-tracking/security-plans/{slug}/`, `.copilot-tracking/rai-plans/{slug}/`, `.copilot-tracking/sssc-plans/{slug}/`. If found, record their paths with `state.mjs set --slug {projectSlug} --field neighborPlanners --data '{"securityPlanFile":…,"raiPlanFile":…,"ssscPlanFile":…}'` and an advisory line with `state.mjs set --field nextActions` (read-only, no coupling).
-6. Print the resume summary:
+5. Print the resume summary:
    ```
    Pipeline state loaded.
    Current phase: DESIGN
    Story: #42 — Add eligibility check
-   Neighbor planners: security-plans/eligibility (read-only)
    Pending: DESIGN → DISTILL → DELIVER
    ```
-7. Load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json). Apply its startup consent checkpoint; recommend PR reports + issue link + chat summary without preselecting them. Persist confirmed choices with `report.mjs setup`; inspect `report.mjs status` on resume, even at DONE.
-8. When the selected provider is `github`, load [github-search-protocol](../../skills/github-search-protocol/SKILL.md) and use its publication route, not issue discovery. Apply the lifecycle's capability checkpoint with that provider procedure; surface unresolved gaps and required user customization.
-9. Proceed to the current phase independently of pending publication; publication-only retries reuse existing Markdown without dispatching engineering. Provider choices affect reporting only, not engineering pipeline support.
+6. Load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json). Apply its startup consent checkpoint; recommend PR reports + issue link + chat summary without preselecting them. Persist confirmed choices with `report.mjs setup`; inspect `report.mjs status` on resume, even at DONE.
+7. When the selected provider is `github`, load [github-search-protocol](../../skills/github-search-protocol/SKILL.md) and use its publication route, not issue discovery. Apply the lifecycle's capability checkpoint with that provider procedure; surface unresolved gaps and required user customization.
+8. Proceed to the current phase independently of pending publication; publication-only retries reuse existing Markdown without dispatching engineering. Provider choices affect reporting only, not engineering pipeline support.
 
 ## State file
 
@@ -106,7 +104,7 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 
 ```
 ## Working context (provided by orchestrator)
-- Story / issue: {confirmed issueNumber or none} — {title}
+- Story / issue: {confirmed issue number or none} — {title}
 - Feature scope: {stable kebab-case slug from approved feature context}
 - Output path (write here): {exact resolved phase output directory}
 - Artifact convention: write only to the exact path above; tracked Markdown starts with `<!-- markdownlint-disable-file -->`.
@@ -239,11 +237,10 @@ Correct your output and produce revised artefacts at the same dated path.
 | Any `REJECTED` | Stop immediately. Surface reviewer rationale to user. |
 | `state.json` corrupt or schema-invalid | Apply the Recovery Procedure from `skraft-state.instructions.md` (offer to reset to RESEARCH or to a specific phase). |
 | Publication fails, capabilities unavailable or PR/MR absent | Route Report feedback recovery; retain local Markdown and pending status; show cause/customization requirement; continue engineering independently |
-| Neighbor planner artefact contradicts a SKRAFT artefact | Log advisory in `reviews/{date}/`, do not auto-resolve, surface to user |
 
 ## Retry policy
 
-Max retries per phase: `state.json::userPreferences.maxRetriesPerPhase` (default `2`, meaning up to 3 total attempts). On overflow, the orchestrator stops the phase and emits `nextActions` for the user.
+Max retries per phase: `state.json::userPreferences.maxRetriesPerPhase` (default `2`, meaning up to 3 total attempts). On overflow, the orchestrator stops the phase and tells the user what blocks it and what they can do next.
 
 ## Skill usage
 

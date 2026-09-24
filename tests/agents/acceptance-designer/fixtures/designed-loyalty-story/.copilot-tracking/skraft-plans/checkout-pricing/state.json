@@ -1,7 +1,6 @@
 {
   "projectSlug": "checkout-pricing",
   "currentPhase": "DISTILL",
-  "issueNumber": null,
   "adrRatification": {
     "checkpointStatus": "resolved",
     "pending": [],
@@ -32,15 +31,7 @@
       "startedAt": "2026-08-13T09:00:00Z"
     }
   },
-  "nextActions": [
-    "Distill the loyalty-discount story into executable acceptance specifications."
-  ],
   "userPreferences": {
     "maxRetriesPerPhase": 2
-  },
-  "neighborPlanners": {
-    "securityPlanFile": null,
-    "raiPlanFile": null,
-    "ssscPlanFile": null
   }
 }

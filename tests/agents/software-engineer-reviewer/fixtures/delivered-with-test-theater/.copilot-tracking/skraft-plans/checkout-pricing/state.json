@@ -1,7 +1,6 @@
 {
   "projectSlug": "checkout-pricing",
   "currentPhase": "DELIVER",
-  "issueNumber": null,
   "adrRatification": {
     "checkpointStatus": "resolved",
     "pending": [],
@@ -37,15 +36,7 @@
       "startedAt": "2026-08-13T09:00:00Z"
     }
   },
-  "nextActions": [
-    "Review the delivered loyalty-discount slice."
-  ],
   "userPreferences": {
     "maxRetriesPerPhase": 2
-  },
-  "neighborPlanners": {
-    "securityPlanFile": null,
-    "raiPlanFile": null,
-    "ssscPlanFile": null
   }
 }

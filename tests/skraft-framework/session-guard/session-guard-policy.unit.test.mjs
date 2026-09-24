@@ -105,7 +105,7 @@ test('commandMutatesProtectedArtifact allows reads and unrelated commands on the
     'git mv lib/state.json lib/app-state.json',
     'echo "{}" > web/src/store/state.json',
     'echo "<root>/null/state.json and never ran"',
-    'node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" set --field nextActions --data \'["x"]\'',
+    'node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs" set --field adrRatification --data \'{"checkpointStatus":"none","pending":[],"ratified":[]}\'',
     undefined,
   ]) {
     assert.equal(commandMutatesProtectedArtifact(command), false, String(command))

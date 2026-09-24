@@ -1,7 +1,6 @@
 {
   "projectSlug": "storefront",
   "currentPhase": "DELIVER",
-  "issueNumber": null,
   "adrRatification": { "checkpointStatus": "resolved", "pending": [], "ratified": [] },
   "phasesCompleted": ["RESEARCH", "DESIGN", "DISTILL"],
   "phaseArtifacts": {
@@ -21,9 +20,7 @@
     "DISTILL": { "status": "done", "startedAt": "2026-08-28T08:20:00Z", "completedAt": "2026-08-28T08:30:00Z" },
     "DELIVER": { "status": "inProgress", "startedAt": "2026-08-28T08:30:00Z" }
   },
-  "nextActions": ["Verify the completed BFF implementation and close DELIVER only if every gate passes."],
   "userPreferences": {
     "maxRetriesPerPhase": 0
-  },
-  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null, "ssscPlanFile": null }
+  }
 }

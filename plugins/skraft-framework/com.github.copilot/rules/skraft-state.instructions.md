@@ -50,7 +50,7 @@ node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> --slug {projectSlug} [
 | `get` | `--slug` `[--field X]` | Read-only. Full state, or one field. Safe; never writes. |
 | `transition` | `--slug --to {PHASE}` | Advance `currentPhase` (requires APPROVED verdict + legal next phase + the phase gate below); marks the closed phase `done` in `phaseHistory`. |
 | `mark-phase-started` | `--slug --phase {P}` | Record `phaseHistory[P]` as `inProgress` with `startedAt` and `baseSha` (HEAD). `--phase` must equal `currentPhase`; a retry keeps the first start. |
-| `set` | `--slug --field {F} --data {JSON}` | Validate and replace one orchestrator-owned field: `adrRatification`, `neighborPlanners`, `nextActions`, `issueNumber`. Any other field → `IMMUTABLE_FIELD`. |
+| `set` | `--slug --field {F} --data {JSON}` | Validate and replace the orchestrator-owned `adrRatification`. Any other field → `IMMUTABLE_FIELD`. |
 | `record-verdict` | `--slug --phase {P} --verdict {APPROVED\|CHANGES_REQUESTED}` | Set `verdicts[phase]`. A review's `NEEDS_REWORK` and `REJECTED` record as `CHANGES_REQUESTED`; any other value → `INVALID_VERDICT`. |
 | `record-artifact` | `--slug --phase {P} --path {rel}` | Append to `phaseArtifacts[phase]` (append-only). |
 | `record-review-artifact` | `--slug --phase {P} --path {rel}` | Append to `reviewArtifacts[phase]` (append-only). |
@@ -110,7 +110,6 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 {
   "projectSlug": "string",
   "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE (phaseOrder of skraft-framework.config.json)",
-  "issueNumber": "number | null",
   "phasesCompleted": ["string (phase names)"],
   "phaseArtifacts": {
     "RESEARCH": ["string (relative paths)"]
@@ -133,15 +132,9 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
   "phaseHistory": {
     "RESEARCH": { "status": "done | inProgress", "startedAt": "string", "baseSha": "string | null (HEAD when the phase started)", "completedAt": "string" }
   },
-  "nextActions": ["string"],
   "userPreferences": {
     "maxRetriesPerPhase": "number",
     "reporting": "optional; confirmed preferences per skills/qa-reporting/references/report-contract.md; written via report.mjs setup"
-  },
-  "neighborPlanners": {
-    "securityPlanFile": "string | null",
-    "raiPlanFile": "string | null",
-    "ssscPlanFile": "string | null"
   },
   "adrRatification": {
     "checkpointStatus": "none | awaiting_human | resolved",
@@ -166,14 +159,13 @@ State is a JSON document. The state machine owns the invariant-bearing subset; a
 * `userPreferences.maxRetriesPerPhase` — default `2`. When `retryCount[phase] >= maxRetriesPerPhase` and the verdict is not `APPROVED`, the orchestrator escalates to the user.
 * `reworkCount` / `findingsResolved` — **rework-cost tracking** (issue #115). `retryCount[phase]` already counts automated reviewer retries (re-dispatch of the same phase agent on `CHANGES_REQUESTED`); these two fields additionally count **manual** rework — the human-validated fix cycles that happen *after* a reviewer verdict, outside its retry loop (e.g. addressing BLOCKER/HIGH findings in one pass, then remaining findings in a second pass). Call `state.mjs incr-rework --phase {P} [--findings N]` once per manual rework pass; `N` (default `1`) is the count of findings that pass resolved, accumulating into `findingsResolved[phase]`. Together, `retryCount[phase] + reworkCount[phase]` is the phase's total iteration count, and `findingsResolved[phase]` is its total finding volume — the objective signal the resume summary surfaces (see Rehydration) to track whether upstream gates are improving epic over epic.
 * `reviewArtifacts` — append-only map of relative paths under `reviews/{YYYY-MM-DD}/`. Reviewers append here exclusively, through `record-review-artifact`.
-* `neighborPlanners` — interoperability with sibling planners (Security, RAI, SSSC). `null` when no plan exists.
 * `adrRatification` — persists the DESIGN human-ratification gate (genesis B10 HUMAN CHECKPOINT + B4 PLAN MEMENTO) so it survives turns and session resumes. `checkpointStatus` is `none` until DESIGN produces `Proposed` ADRs, `awaiting_human` while the orchestrator has HALTed for a verdict, `resolved` once every ADR is `Accepted`/`Rejected`. `pending` mirrors the `docs/adr/decisions-index.md` rows still `Proposed`; `ratified` accumulates the verdicts. The orchestrator reads the decision index (NOT full ADR bodies) to populate this block. Written at the DESIGN checkpoint with `state.mjs set --field adrRatification`. Defaults to `{ "checkpointStatus": "none", "pending": [], "ratified": [] }`.
 
 ## Per-turn protocol (write-through)
 
 On a turn that changes pipeline state:
 
-1. **DETERMINE** the next action from the **native todo working set** (not by re-reading the file). If a scalar not carried by the todo list is needed (e.g. `issueNumber`), fetch just that field: `state.mjs get --slug {slug} --field issueNumber`.
+1. **DETERMINE** the next action from the **native todo working set** (not by re-reading the file). If a field not carried by the todo list is needed (e.g. `adrRatification`), fetch just that field: `state.mjs get --slug {slug} --field adrRatification`.
 2. **EXECUTE** the action (dispatch a phase agent, dispatch a reviewer, request user input, etc.).
 3. **RECORD** the result through the CLI — one deterministic call per mutation:
    * reviewer verdict → `record-verdict --phase {P} --verdict {V}`

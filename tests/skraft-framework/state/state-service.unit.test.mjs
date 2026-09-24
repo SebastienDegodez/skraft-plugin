@@ -56,11 +56,8 @@ test('state-service init: fresh default carries the full documented field set', 
   assert.equal(w.projectSlug, 'slug')
   // scalars orchestrator populates later — present (null/empty) so no reader guesses
   assert.equal('entryPoint' in w, false, 'upstream entry routing is retired')
-  assert.equal(w.issueNumber, null)
   assert.deepEqual(w.adrRatification, { checkpointStatus: 'none', pending: [], ratified: [] })
   assert.deepEqual(w.phaseHistory, {})
-  assert.deepEqual(w.nextActions, [])
-  assert.deepEqual(w.neighborPlanners, { securityPlanFile: null, raiPlanFile: null, ssscPlanFile: null })
 })
 
 test('state-service init: returns created=false when state exists', async () => {
@@ -202,11 +199,11 @@ test('state-service get: returns full state when field is undefined', async () =
 })
 
 test('state-service get: returns scalar when field is specified', async () => {
-  const state = { ...DEFAULT_PIPELINE, currentPhase: 'DESIGN', issueNumber: 42 }
+  const state = { ...DEFAULT_PIPELINE, currentPhase: 'DESIGN', retryCount: { DESIGN: 1 } }
   const svc = createStateService({ stateReader: readerOk(state), stateWriter: writerOk() })
-  const r = await svc.get('slug', 'issueNumber')
+  const r = await svc.get('slug', 'retryCount')
   assert.equal(r.ok, true)
-  assert.equal(r.value, 42)
+  assert.deepEqual(r.value, { DESIGN: 1 })
 })
 
 test('state-service get: propagates IO_ERROR from reader', async () => {

@@ -14,10 +14,7 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
     },
-    "count": { "type": "integer", "minimum": 0 },
-    "nullablePath": {
-      "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
-    }
+    "count": { "type": "integer", "minimum": 0 }
   },
   "properties": {
     "projectSlug": {
@@ -30,10 +27,6 @@
       "description": "The phase being executed, a phase of phaseOrder, or DONE once every phase closed. Advances only through transition or close-phase.",
       "type": "string",
       "minLength": 1
-    },
-    "issueNumber": {
-      "x-owner": "orchestrator",
-      "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }]
     },
     "phasesCompleted": {
       "x-owner": "invariant",
@@ -93,11 +86,6 @@
         }
       }
     },
-    "nextActions": {
-      "x-owner": "orchestrator",
-      "type": "array",
-      "items": { "type": "string", "minLength": 1 }
-    },
     "userPreferences": {
       "x-owner": "invariant",
       "type": "object",
@@ -111,16 +99,6 @@
           "description": "Confirmed reporting preferences, written by report.mjs setup and validated by reporting-preferences.mjs; see skills/qa-reporting/references/report-contract.md.",
           "type": "object"
         }
-      }
-    },
-    "neighborPlanners": {
-      "x-owner": "orchestrator",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "securityPlanFile": { "$ref": "#/$defs/nullablePath" },
-        "raiPlanFile": { "$ref": "#/$defs/nullablePath" },
-        "ssscPlanFile": { "$ref": "#/$defs/nullablePath" }
       }
     },
     "adrRatification": {

@@ -176,7 +176,6 @@ test('validatePipelineState: copies the recorded lists, never shares them', () =
 const RECORDED_STATE = {
   projectSlug: 'us1-clean-arch-foundation',
   currentPhase: 'DESIGN',
-  issueNumber: 47,
   adrRatification: {
     checkpointStatus: 'awaiting_human',
     pending: [{ adr: '001', title: 'Layered modules', recommended: 'accept', status: 'Proposed' }],
@@ -193,9 +192,7 @@ const RECORDED_STATE = {
     RESEARCH: { status: 'done', startedAt: 't0', baseSha: null, completedAt: 't1' },
     DESIGN: { status: 'inProgress', startedAt: 't1', baseSha: 'abc123' },
   },
-  nextActions: ['review the design'],
   userPreferences: { maxRetriesPerPhase: 2 },
-  neighborPlanners: { securityPlanFile: 'plans/security.md', raiPlanFile: null, ssscPlanFile: null },
 }
 
 test('round-trip: preserves every recorded field', () => {
@@ -218,6 +215,9 @@ test('older formats: a field outside the schema is rejected, not dropped or migr
     [{ referencesProcessed: [] }, 'referencesProcessed is not a known field'],
     [{ userPreferences: { autonomyTier: 'full' } }, 'userPreferences.autonomyTier is not a known field'],
     [{ userPreferences: { phaseOrder: ['RESEARCH'] } }, 'userPreferences.phaseOrder is not a known field'],
+    [{ issueNumber: 47 }, 'issueNumber is not a known field'],
+    [{ nextActions: [] }, 'nextActions is not a known field'],
+    [{ neighborPlanners: {} }, 'neighborPlanners is not a known field'],
   ]
   for (const [fields, reason] of older) {
     const r = validatePipelineState({ currentPhase: 'DISCOVER', ...fields })

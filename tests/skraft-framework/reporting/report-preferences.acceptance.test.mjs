@@ -19,7 +19,6 @@ const preferences = (overrides = {}) => ({
 const pipeline = () => ({
   projectSlug: SLUG,
   currentPhase: 'DISTILL',
-  issueNumber: 23,
   adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: '001', verdict: 'Accepted', by: 'owner 2026-09-17' }] },
   phasesCompleted: ['DISCOVER', 'DISCUSS', 'DESIGN'],
   phaseArtifacts: { DISTILL: ['plans/tests.md'] },
@@ -29,9 +28,7 @@ const pipeline = () => ({
   reworkCount: { DESIGN: 2 },
   findingsResolved: { DISTILL: 3 },
   phaseHistory: { DESIGN: { status: 'done', completedAt: '2026-09-17T10:00:00Z' } },
-  nextActions: ['review test plan'],
   userPreferences: { maxRetriesPerPhase: 7 },
-  neighborPlanners: { securityPlanFile: 'plans/security.md', raiPlanFile: null, ssscPlanFile: null },
 })
 
 // Stateful IO double only: no preference validation or command behavior in the fixture.
@@ -100,7 +97,6 @@ test('publication choices can change at DONE without restarting engineering or c
   initial.currentPhase = 'DONE'
   initial.phasesCompleted = ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']
   initial.verdicts = Object.fromEntries(initial.phasesCompleted.map(phase => [phase, 'APPROVED']))
-  initial.nextActions = []
   initial.userPreferences.reporting = preferences()
   await assertSaved(preferences({ maxMedia: 3, allowDraftPr: true, prNumber: 31 }), initial)
 })

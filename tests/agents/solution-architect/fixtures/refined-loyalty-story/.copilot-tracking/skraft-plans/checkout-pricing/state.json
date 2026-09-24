@@ -1,7 +1,6 @@
 {
   "projectSlug": "checkout-pricing",
   "currentPhase": "DESIGN",
-  "issueNumber": null,
   "adrRatification": {
     "checkpointStatus": "resolved",
     "pending": [],
@@ -33,15 +32,7 @@
       "startedAt": "2026-08-12T09:40:00Z"
     }
   },
-  "nextActions": [
-    "Design the loyalty-discount story from the refined acceptance criteria."
-  ],
   "userPreferences": {
     "maxRetriesPerPhase": 2
-  },
-  "neighborPlanners": {
-    "securityPlanFile": null,
-    "raiPlanFile": null,
-    "ssscPlanFile": null
   }
 }

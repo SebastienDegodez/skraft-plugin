@@ -1,7 +1,6 @@
 {
   "projectSlug": "checkout-pricing",
   "currentPhase": "DESIGN",
-  "issueNumber": null,
   "adrRatification": {
     "checkpointStatus": "resolved",
     "pending": [],
@@ -32,15 +31,7 @@
       "startedAt": "2026-08-12T09:40:00Z"
     }
   },
-  "nextActions": [
-    "Review the loyalty-discount design before DISTILL starts."
-  ],
   "userPreferences": {
     "maxRetriesPerPhase": 2
-  },
-  "neighborPlanners": {
-    "securityPlanFile": null,
-    "raiPlanFile": null,
-    "ssscPlanFile": null
   }
 }

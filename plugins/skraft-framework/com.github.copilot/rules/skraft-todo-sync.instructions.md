@@ -24,7 +24,7 @@ Project the pipeline **structure** (phases, statuses, dependencies) into todos. 
 |---|---|
 | `adrRatification` | structured, gate-bearing, written with `state.mjs set` |
 | `verdicts`, `retryCount` | invariant-bearing, CLI-owned |
-| `userPreferences`, `neighborPlanners` | configuration / interop |
+| `userPreferences` | configuration |
 
 The todo list carries only: one todo per phase, its status, and the phase ordering as dependencies. When the orchestrator needs a scalar, it fetches just that field with `state.mjs get --field X` — it does not stuff scalars into todo text.
 
