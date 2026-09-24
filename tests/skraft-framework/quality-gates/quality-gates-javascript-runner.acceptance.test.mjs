@@ -52,7 +52,7 @@ test('one invocation executes core then boundary and captures independently hash
   assert.deepEqual(result.gates.map((gate) => gate.scope), ['core', 'boundary'])
   assert.equal(calls.length, 2)
   assert.equal(calls[0].command, process.execPath)
-  assert.match(calls[0].args[0], /@stryker-mutator\/core\/bin\/stryker.js$/)
+  assert.match(calls[0].args[0], /@stryker-mutator[\\/]core[\\/]bin[\\/]stryker\.js$/)
   assert.equal(calls[0].args[1], 'run')
   for (const gate of result.gates) {
     assert.equal(gate.childExitCode, 0)
