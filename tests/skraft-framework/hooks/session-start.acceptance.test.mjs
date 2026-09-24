@@ -50,7 +50,7 @@ test('SessionStart gives the session the absolute plugin root and the active pip
     assert.equal(quiet.hookSpecificOutput.hookEventName, 'SessionStart')
     const context = quiet.hookSpecificOutput.additionalContext
     assert.equal(quiet.additionalContext, context)
-    assert.ok(context.includes(`node "${PLUGIN.replace(/\/$/, '')}/src/cli/state.mjs"`), context)
+    assert.ok(context.includes(`node "${PLUGIN.replace(/[\\/]$/, '')}/src/cli/state.mjs"`), context)
     assert.doesNotMatch(context, /Active pipeline/)
 
     execFileSync('node', [STATE_CLI, 'init', '--slug', 'checkout-pricing'], { cwd: project, env, stdio: 'ignore' })
