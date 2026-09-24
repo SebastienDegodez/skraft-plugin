@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "The HVE-Core substrate"
-description: "HVE-Core is the engineering pipeline recovery substrate: state.json, deterministic writes, task projection, and verdict-gated transitions."
+description: "HVE-Core is the engineering pipeline recovery substrate: state.json, its JSON Schema, deterministic writes, and verdict-gated transitions."
 ---
 
 # The HVE-Core substrate
@@ -21,7 +21,8 @@ They do not mutate this state.
 ## `state.json` — the pipeline memory
 
 State persists as JSON at
-`.copilot-tracking/skraft-plans/{project-slug}/state.json`. Key fields:
+`.copilot-tracking/skraft-plans/{project-slug}/state.json`. Its contract is the JSON Schema
+`plugins/skraft-framework/src/domain/state.schema.json`. Key fields:
 
 ```json
 {
@@ -29,11 +30,8 @@ State persists as JSON at
   "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
   "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
   "retryCount": { "DESIGN": 0 },
-  "userPreferences": {
-    "autonomyTier": "full | partial | manual",
-    "maxRetriesPerPhase": 2
-  },
-  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null }
+  "userPreferences": { "maxRetriesPerPhase": 2 },
+  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] }
 }
 ```
 
@@ -41,6 +39,13 @@ State persists as JSON at
 - `phaseArtifacts`, `verdicts`, `retryCount` trace what each phase produced and
   how it was judged.
 - `maxRetriesPerPhase` (default 2) bounds retries before human escalation.
+- `adrRatification` holds DESIGN until a human ratifies every proposed ADR.
+
+The state CLI enforces that schema on every read and write. A field the schema does not
+declare, or a value outside its shape, makes the state invalid: no older format is
+migrated. A pipeline started with an earlier version therefore stops with
+`INVALID_STATE`; `state.mjs diagnose` names the next command, and after `reset` the
+orchestrator rebuilds the state from the artefacts on disk, with your confirmation.
 
 The state carries **no quality dial**. Mutation and coverage thresholds, the four
 adversarial review lenses, the Gherkin gate and the Outside-In double-loop TDD variant
@@ -52,10 +57,8 @@ run, and nothing written into `state.json` can lower them.
 `state.json` is a safety snapshot, not a block reread on every turn:
 
 1. **Rehydrate** — read and validate the snapshot once at session start.
-2. **Project** — project phases into the harness-native task list.
-3. **Execute** — decide from that list, then dispatch an agent or request a human decision.
-4. **Record** — apply each mutation through the deterministic `state.mjs` CLI.
-5. **Reflect** — mirror the mutation into the task list without rereading the whole JSON.
+2. **Execute** — decide from the last state the CLI printed, then dispatch an agent or request a human decision.
+3. **Record** — apply each mutation through the deterministic `state.mjs` CLI, which prints the updated state.
 
 ## How the phases articulate
 
@@ -83,12 +86,6 @@ flowchart TD
 On `CHANGES_REQUESTED`, the same phase is re-dispatched, `retryCount` increases,
 and `currentPhase` does not move. When the retry budget is reached without
 `APPROVED`, the orchestrator escalates to the user.
-
-## Neighbour planners
-
-HVE-Core hosts other planners (Security, RAI, SSSC). SKRAFT references their plans via
-`neighborPlanners.*` but **never writes** into their directory — each planner stays the
-owner of its artifacts.
 
 ## See also
 

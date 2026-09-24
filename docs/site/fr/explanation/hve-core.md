@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "Le substrat HVE-Core"
-description: "HVE-Core est le substrat de reprise du pipeline d'ingénierie : state.json, écriture déterministe, projection en tâches et transitions conditionnées par les verdicts."
+description: "HVE-Core est le substrat de reprise du pipeline d'ingénierie : state.json, son schéma JSON, écriture déterministe et transitions conditionnées par les verdicts."
 ---
 
 # Le substrat HVE-Core
@@ -21,7 +21,8 @@ autonomes. Ils ne mutent pas cet état.
 ## `state.json` — la mémoire du pipeline
 
 L'état persiste en JSON à
-`.copilot-tracking/skraft-plans/{project-slug}/state.json`. Champs clés :
+`.copilot-tracking/skraft-plans/{project-slug}/state.json`. Son contrat est le schéma JSON
+`plugins/skraft-framework/src/domain/state.schema.json`. Champs clés :
 
 ```json
 {
@@ -29,11 +30,8 @@ L'état persiste en JSON à
   "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
   "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
   "retryCount": { "DESIGN": 0 },
-  "userPreferences": {
-    "autonomyTier": "full | partial | manual",
-    "maxRetriesPerPhase": 2
-  },
-  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null }
+  "userPreferences": { "maxRetriesPerPhase": 2 },
+  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] }
 }
 ```
 
@@ -41,6 +39,13 @@ L'état persiste en JSON à
 - `phaseArtifacts`, `verdicts`, `retryCount` tracent ce que chaque phase a
   produit et comment elle a été jugée.
 - `maxRetriesPerPhase` (défaut 2) borne les reprises avant escalade humaine.
+- `adrRatification` retient DESIGN tant qu'un humain n'a pas ratifié chaque ADR proposée.
+
+La CLI d'état applique ce schéma à chaque lecture et écriture. Un champ que le schéma ne
+déclare pas, ou une valeur hors de sa forme, rend l'état invalide : aucun ancien format
+n'est migré. Un pipeline démarré avec une version antérieure s'arrête donc sur
+`INVALID_STATE` ; `state.mjs diagnose` indique la commande suivante, et après `reset`
+l'orchestrateur reconstruit l'état depuis les artefacts sur disque, avec votre confirmation.
 
 L'état ne porte **aucun dial de qualité**. Les seuils de mutation et de couverture, les
 quatre lentilles de revue adverse, la porte Gherkin et la variante TDD Outside-In
@@ -53,10 +58,8 @@ abaisser.
 `state.json` est un snapshot de sécurité, pas un bloc relu à chaque tour :
 
 1. **Rehydrate** — lire et valider le snapshot une fois au début de la session.
-2. **Project** — projeter les phases dans la liste de tâches native du harness.
-3. **Execute** — décider depuis cette liste, puis dispatcher l'agent ou demander une décision humaine.
-4. **Record** — appliquer chaque mutation par la CLI déterministe `state.mjs`.
-5. **Reflect** — répercuter la mutation dans la liste de tâches sans relire tout le JSON.
+2. **Execute** — décider depuis le dernier état affiché par la CLI, puis dispatcher l'agent ou demander une décision humaine.
+3. **Record** — appliquer chaque mutation par la CLI déterministe `state.mjs`, qui affiche l'état mis à jour.
 
 ## Comment les phases s'articulent
 
@@ -84,12 +87,6 @@ flowchart TD
 Sur `CHANGES_REQUESTED`, la même phase est re-dispatchée, `retryCount` augmente et
 `currentPhase` ne bouge pas. Quand le budget de reprises est atteint sans
 `APPROVED`, l'orchestrateur escalade à l'utilisateur.
-
-## Planners voisins
-
-HVE-Core héberge d'autres planners (Security, RAI, SSSC). SKRAFT référence leurs plans
-via `neighborPlanners.*` mais **n'écrit jamais** dans leur répertoire — chaque planner
-reste maître de ses artefacts.
 
 ## Voir aussi
 

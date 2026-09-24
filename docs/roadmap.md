@@ -319,7 +319,9 @@ les champs orchestrator-owned, migration `reviewerVerdicts`→`verdicts`),
 `adapters/infrastructure/state/json-state-writer.mjs` (atomique + backup ≤3),
 `application/state-service.mjs`, `ports/infrastructure/state-writer.mjs`.
 Instructions : `skraft-state.instructions.md` (write-through) +
-`skraft-todo-sync.instructions.md` (projection state→todo natif, Claude/Copilot).
+`skraft-todo-sync.instructions.md` (projection state→todo natif, Claude/Copilot), retirées
+depuis : l'orchestrateur porte ces règles dans son descripteur, `domain/state.schema.json`
+est le contrat de l'état et aucun ancien format n'est plus migré.
 
 **Qualité :** `node --test` 100 % + mutation Stryker ≥ 86 % sur les fichiers état.
 

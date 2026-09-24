@@ -55,9 +55,8 @@ Lancez `npm run plugin:sync` puis `npm run plugin:check` : corps et description 
 dans les deux sens contre un baseline par client, avec traduction des destinations Markdown.
 Les en-têtes natifs restent intacts ; les éditions contradictoires bloquent toute écriture.
 Enregistrez le fichier natif dans le manifeste Claude ; gardez les flags de visibilité internes.
-Placez les règles Copilot path-scoped sous `com.github.copilot/rules/` ; listez une règle dans
-`metadata.instructions` seulement si le même agent doit la recevoir via le hook Claude
-`SubagentStart`.
+Placez chaque règle que suit l'agent dans le corps de son descripteur : le plugin ne livre aucune
+règle path-scoped, et aucun hook n'injecte de fichier de règles dans un agent.
 
 ### 2. Enregistrer dans l'orchestrateur
 

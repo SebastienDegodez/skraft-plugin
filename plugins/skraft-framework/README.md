@@ -224,8 +224,7 @@ plugins/skraft-framework/
 ├── .claude-plugin/plugin.json        explicit registration of all 31 agents
 ├── com.github.copilot/
 │   ├── agents/                      31 flat `.agent.md` synchronized descriptors
-│   ├── hooks/hooks.json             generated exact copy of root hooks
-│   └── rules/                       native path-scoped rules
+│   └── hooks/hooks.json             generated exact copy of root hooks
 ├── com.anthropic.claude-code/
 │   └── agents/                      31 flat editable native Claude `.md` descriptors
 ├── hooks/hooks.json                 canonical source; Claude compatibility

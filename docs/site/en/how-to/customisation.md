@@ -55,9 +55,8 @@ Run `npm run plugin:sync` then `npm run plugin:check`: body and description sync
 in either direction against a per-side baseline, translating Markdown destinations.
 Native headers stay untouched; conflicting prose edits block all writes.
 Register the native file in the Claude manifest; keep internal visibility flags.
-Put path-scoped
-Copilot rules under `com.github.copilot/rules/`; list a rule in `metadata.instructions` only when
-the same agent must receive it through Claude's `SubagentStart` hook.
+Put every rule the agent follows in its descriptor body: the plugin ships no path-scoped rules,
+and no hook injects a rules file into an agent.
 
 ### 2. Register in the orchestrator
 

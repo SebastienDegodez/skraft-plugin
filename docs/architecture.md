@@ -34,8 +34,7 @@ skraft-plugin/
 │   ├── .claude-plugin/                    ← enregistrement explicite des 31 agents Claude
 │   ├── com.github.copilot/
 │   │   ├── agents/                        ← 31 agents éditables à plat `.agent.md`
-│   │   ├── hooks/hooks.json               ← copie exacte générée du hook racine
-│   │   └── rules/                         ← règles path-scoped natives
+│   │   └── hooks/hooks.json               ← copie exacte générée du hook racine
 │   ├── com.anthropic.claude-code/
 │   │   └── agents/                        ← 31 agents Claude natifs éditables à plat `.md`
 │   ├── hooks/hooks.json                   ← source canonique, compatibilité Claude
@@ -71,10 +70,9 @@ skraft-plugin/
 | Dossier | Rôle | Source de vérité |
 |---|---|---|
 | [Manifeste racine](../plugins/skraft-framework/plugin.json) | Schéma Agent Plugins v1 canonique ; aucune liste `agents` racine. | Oui. |
-| [Manifeste Claude](../plugins/skraft-framework/.claude-plugin/plugin.json) | Enregistrement explicite des 31 agents, y compris workers et lenses imbriqués ; champ `rules` pour VS Code. Aucun pointeur `hooks`. | Oui, pour l'enregistrement Claude. |
+| [Manifeste Claude](../plugins/skraft-framework/.claude-plugin/plugin.json) | Enregistrement explicite des 31 agents, y compris workers et lenses imbriqués. Aucun pointeur `hooks`, aucun champ `rules`. | Oui, pour l'enregistrement Claude. |
 | `com.anthropic.claude-code/agents/` | 31 agents Claude natifs éditables à plat ; en-têtes propres au client. | Oui, synchronisation du corps et de la description. |
 | `com.github.copilot/agents/` | 31 fichiers `.agent.md` à plat ; synchronisation bidirectionnelle du contenu partagé, en-têtes client préservés. | Oui, pour les éditions synchronisées. |
-| `com.github.copilot/rules/` | Règles Copilot path-scoped. | Oui. Claude reçoit seulement les règles déclarées par l'agent via `SubagentStart`. |
 | [Hooks racine](../plugins/skraft-framework/hooks/hooks.json) | Source canonique ; surface de compatibilité Claude. | Oui. |
 | [Hooks Copilot](../plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Copie générée exacte du manifeste de hooks racine. | Non. |
 

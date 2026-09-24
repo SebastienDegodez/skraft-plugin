@@ -363,7 +363,7 @@ parts:
             sidebar_position: 4
             fr: "fr/explanation/hve-core.md"
             en: "en/explanation/hve-core.md"
-            source: "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md"
+            source: "plugins/skraft-framework/src/domain/state.schema.json"
             purpose_fr: "Le substrat d'état : state.json, reprise et transitions conditionnées par les verdicts."
             purpose_en: "The state substrate: state.json, recovery, and transitions gated by verdicts."
           - id: traces
@@ -373,7 +373,7 @@ parts:
             sidebar_position: 5
             fr: "fr/explanation/traces.md"
             en: "en/explanation/traces.md"
-            source: "plugins/skraft-framework/com.github.copilot/rules/skraft-state.instructions.md"
+            source: "plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md"
             purpose_fr: "Les traces laissées par le pipeline : artefacts datés, état, PR et verdicts."
             purpose_en: "The traces left by the pipeline: dated artifacts, state, PRs, and verdicts."
           - id: hooks
