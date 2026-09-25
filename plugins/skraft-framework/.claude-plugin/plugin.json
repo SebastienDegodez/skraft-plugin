@@ -1,12 +1,44 @@
 {
   "name": "skraft",
-  "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture and the DISCOVER→DELIVER workflow.",
-  "version": "1.5.2",
+  "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture, backlog discovery and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline.",
+  "version": "1.6.0-hooks.1",
   "author": {
     "name": "SebastienDegodez"
   },
   "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
   "repository": "https://github.com/SebastienDegodez/skraft-plugin",
   "license": "GPL-3.0-or-later",
-  "hooks": "./com.anthropic.claude-code/hooks/hooks.json"
+  "agents": [
+    "./com.anthropic.claude-code/agents/acceptance-designer-reviewer.md",
+    "./com.anthropic.claude-code/agents/acceptance-designer.md",
+    "./com.anthropic.claude-code/agents/architecture-boundaries-lens.md",
+    "./com.anthropic.claude-code/agents/backlog-discoverer-reviewer.md",
+    "./com.anthropic.claude-code/agents/backlog-discoverer.md",
+    "./com.anthropic.claude-code/agents/backlog-planner-reviewer.md",
+    "./com.anthropic.claude-code/agents/backlog-planner.md",
+    "./com.anthropic.claude-code/agents/brownfield-analyst.md",
+    "./com.anthropic.claude-code/agents/brownfield-harness-builder.md",
+    "./com.anthropic.claude-code/agents/brownfield-refactorer.md",
+    "./com.anthropic.claude-code/agents/cold-reader-lens.md",
+    "./com.anthropic.claude-code/agents/contract-fidelity-lens.md",
+    "./com.anthropic.claude-code/agents/contract-testing-worker.md",
+    "./com.anthropic.claude-code/agents/discovery-completeness-lens.md",
+    "./com.anthropic.claude-code/agents/discovery-duplicate-lens.md",
+    "./com.anthropic.claude-code/agents/discovery-prioritization-lens.md",
+    "./com.anthropic.claude-code/agents/mock-fidelity-lens.md",
+    "./com.anthropic.claude-code/agents/mock-integration-worker.md",
+    "./com.anthropic.claude-code/agents/planning-ac-quality-lens.md",
+    "./com.anthropic.claude-code/agents/planning-coherence-lens.md",
+    "./com.anthropic.claude-code/agents/planning-dor-lens.md",
+    "./com.anthropic.claude-code/agents/planning-invest-lens.md",
+    "./com.anthropic.claude-code/agents/quality-gates-lens.md",
+    "./com.anthropic.claude-code/agents/refactoring-worker.md",
+    "./com.anthropic.claude-code/agents/skraft-orchestrator.md",
+    "./com.anthropic.claude-code/agents/software-engineer-reviewer.md",
+    "./com.anthropic.claude-code/agents/software-engineer.md",
+    "./com.anthropic.claude-code/agents/solution-architect-reviewer.md",
+    "./com.anthropic.claude-code/agents/solution-architect.md",
+    "./com.anthropic.claude-code/agents/solution-researcher.md",
+    "./com.anthropic.claude-code/agents/test-integrity-lens.md"
+  ]
 }

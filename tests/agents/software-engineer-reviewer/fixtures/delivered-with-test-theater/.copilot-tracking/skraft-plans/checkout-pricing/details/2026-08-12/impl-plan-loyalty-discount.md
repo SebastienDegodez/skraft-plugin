@@ -5,7 +5,6 @@
 
 - Story: `loyalty-discount`
 - Project slug: `checkout-pricing`
-- Depth tier: `comprehensive`
 - Status: approved for DELIVER
 
 ## Solution shape

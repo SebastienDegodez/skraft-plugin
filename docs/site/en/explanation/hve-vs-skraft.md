@@ -2,12 +2,12 @@
 layout: doc
 lang: en
 title: "HVE → SKRAFT: continuity and rupture"
-description: "How SKRAFT extends HVE by replacing the RPI workflow with a full SDLC pipeline: 5 phases, independent reviewers, gates, and lenses."
+description: "How SKRAFT extends HVE with two standalone product workflows, a four-phase engineering pipeline, independent reviewers, gates, and lenses."
 ---
 
 # HVE → SKRAFT: continuity and rupture
 
-> SKRAFT does not replace HVE — it extends it. Where HVE instruments the conversation between a human and an AI, SKRAFT structures the entire lifecycle of a User Story, from discovery to delivery.
+> SKRAFT does not replace HVE — it extends it. Where HVE instruments the conversation between a human and an AI, SKRAFT separates product preparation from engineering and traces their artifacts.
 
 ## Why the transition?
 
@@ -18,12 +18,18 @@ SKRAFT takes over when you want to:
 - **trace every decision** (artifacts, `state.json`, verdicts),
 - **scale** across a team or a full backlog.
 
-## The SKRAFT pipeline in 5 phases
+## The two SKRAFT layers
 
 ```mermaid
 graph LR
-    D[DISCOVER] -->|triage report| DI[DISCUSS]
-    DI -->|INVEST story| DE[DESIGN]
+    H((human)) --> D[optional DISCOVER]
+    D -->|triage report| H
+    H --> DI[optional DISCUSS]
+    DI -->|INVEST story| H
+    H --> O[skraft-orchestrator]
+    O -->|when needed| R[RESEARCH]
+    R -->|sourced research| DE[DESIGN]
+    O -.sequences.-> DE
     DE -->|ADR + event model| DIS[DISTILL]
     DIS -->|Gherkin scenarios| DEL[DELIVER]
     DEL -->|code + evidence| PR[Pull Request]
@@ -35,25 +41,26 @@ graph LR
     style PR fill:#102016,stroke:#6f8478
 ```
 
-| Phase | Executor agent | Independent reviewer | Gates crossed |
-|-------|---------------|----------------------|---------------|
-| DISCOVER | `backlog-discoverer` | `backlog-discoverer-reviewer` | G1–G6 |
-| DISCUSS | `backlog-planner` | `backlog-planner-reviewer` | G1–G8 |
-| DESIGN | `solution-architect` | `solution-architect-reviewer` | G1–G15 |
-| DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` | G1–G8 |
-| DELIVER | `software-engineer` | `software-engineer-reviewer` | delivery gates |
+| Layer | Step | Executor agent | Independent reviewer |
+|-------|------|---------------|----------------------|
+| Standalone product | DISCOVER | `backlog-discoverer` | `backlog-discoverer-reviewer` |
+| Standalone product | DISCUSS | `backlog-planner` | `backlog-planner-reviewer` |
+| Orchestrated engineering | RESEARCH | `solution-researcher` | no declared phase reviewer |
+| Orchestrated engineering | DESIGN | `solution-architect` | `solution-architect-reviewer` |
+| Orchestrated engineering | DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` |
+| Orchestrated engineering | DELIVER | `software-engineer` | `software-engineer-reviewer` |
 
-> **Jargon**: a *gate* is a quality checkpoint that blocks progression if quality thresholds are not met. A *reviewer* is a read-only agent that emits a verdict without modifying artifacts (CQS principle). The [detail of the 46 gates]({{ "/en/reference/gates" | relative_url }}) is in the catalogue.
+> **Jargon**: a *gate* is a quality checkpoint that blocks progression when quality is not met. A *reviewer* is a read-only agent that emits a verdict without modifying artifacts. The [active grid of 48 gates]({{ "/en/reference/gates" | relative_url }}) details current contracts.
 
 ## HVE vs SKRAFT: comparison table
 
-| Dimension | HVE (RPI) | SKRAFT (5 phases) |
+| Dimension | HVE (RPI) | SKRAFT |
 |-----------|-----------|-------------------|
 | Scope | One development session | One User Story end to end |
 | Review | Human and manual | Adversarial assisted before human review |
 | Traceability | Limited | `state.json`, artifacts, timestamped verdicts |
 | Lenses | None | 4 adversarial lenses (architecture, cold-reader, quality-gates, test-integrity) |
-| Gates | None | 46 gates spread per phase, configurable thresholds |
+| Gates | None | 48 explicit, non-negotiable gates |
 | Scalability | Solo / pair | Team, full backlog |
 
 ## What stays the same
@@ -70,6 +77,6 @@ SKRAFT **inherits** the principles of HVE:
 
 ## See also
 
-- [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}) — detailed description of the 5 phases
+- [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}) — product preparation and orchestrated engineering
 - [Gates]({{ "/en/reference/gates" | relative_url }}) — what each gate checks
-- [Lenses]({{ "/en/reference/lens" | relative_url }}) — the 4 adversarial review lenses
+- [Lenses]({{ "/en/dashboard/" | relative_url }}) — the active adversarial review catalogue

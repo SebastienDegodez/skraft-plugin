@@ -2,18 +2,52 @@ import { expect, test } from '@playwright/test'
 
 const BASE = process.env.BASE_URL || 'http://localhost:4000/skraft-plugin'
 
+const evidenceArm = ({ timestamp, model, skilled, lift, tokens, duration }) => ({
+  timestamp,
+  model,
+  judgeModel: 'gpt-5.6-luna',
+  state: 'pass',
+  reason: 'credibly better',
+  netWin: lift,
+  trialCount: 12,
+  meanScore: skilled,
+  confidenceInterval: { low: skilled - 0.02, high: skilled + 0.02 },
+  signTest: { wins: 8, ties: 2, losses: 2, pValue: 0.04 },
+  metrics: {
+    quality: { baseline: skilled - lift, skilled, delta: lift },
+    efficiency: {
+      baseline: { durationMs: duration * 0.9, tokens: tokens * 0.9, turns: 8, toolCalls: 12 },
+      skilled: { durationMs: duration, tokens, turns: 9, toolCalls: 13 },
+      durationDeltaPercent: 11.1,
+      tokenDeltaPercent: 11.1,
+    },
+    activation: { expected: 12, actual: 12, unexpected: 0, rate: 1 },
+  },
+})
+
+const publishedHistory = {
+  skills: {
+    'outside-in-tdd': [
+      evidenceArm({ timestamp: '2026-08-24T22:09:58.518Z', model: 'gpt-5.6-luna', skilled: 0.893, lift: 0.172, tokens: 270614, duration: 120000 }),
+      evidenceArm({ timestamp: '2026-08-26T20:37:09.417Z', model: 'claude-sonnet-5', skilled: 0.877, lift: 0.058, tokens: 180700, duration: 90000 }),
+    ],
+  },
+  agents: {},
+}
+
 // The dashboard is a static page fed by data/dashboard.json, which the site
 // server regenerates from the plugin sources before Jekyll starts. These checks
 // prove the page renders the catalogue it was given — never that an evaluation
 // passed, which is evidence the page reports rather than something it owns.
 test.describe('quality dashboard', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/data/history.json', (route) => route.fulfill({ json: publishedHistory }))
     await page.goto(`${BASE}/dashboard/`)
     await expect(page.locator('#status')).not.toHaveText('Loading catalogue…')
   })
 
   test('announces the plugin and its headline numbers', async ({ page }) => {
-    await expect(page).toHaveTitle(/SKRAFT Agent Skills/)
+    await expect(page).toHaveTitle(/Agentic catalogue and quality/)
     await expect(page.locator('h1')).toContainText('disciplined')
 
     const metrics = page.locator('#summary .metric')
@@ -59,24 +93,86 @@ test.describe('quality dashboard', () => {
     const tabs = page.locator('.tabs .tab')
     await expect(tabs).toHaveCount(4)
 
-    await page.getByRole('button', { name: 'Quality' }).click()
+    await page.getByRole('button', { name: 'Quality', exact: true }).click()
     await expect(page.locator('#panel-quality')).toBeVisible()
     await expect(page.locator('#panel-quality h2')).toHaveText('Quality and activation')
 
-    await page.getByRole('button', { name: 'Efficiency' }).click()
+    await page.getByRole('button', { name: 'Efficiency', exact: true }).click()
     await expect(page.locator('#panel-efficiency')).toBeVisible()
     await expect(page.locator('#panel-efficiency h2')).toHaveText('Efficiency')
 
-    await page.getByRole('button', { name: 'Models' }).click()
+    await page.getByRole('button', { name: 'Models', exact: true }).click()
     await expect(page.locator('#panel-models')).toBeVisible()
     await expect(page.locator('#panel-models h2')).toHaveText('Model comparison')
+  })
+
+  test('shows the same Luna and Sonnet cohort in quality, efficiency, and models', async ({ page }) => {
+    await page.getByRole('button', { name: 'Quality', exact: true }).click()
+    await expect(page.locator('#quality-grid .evidence-card')).toHaveCount(2)
+    await expect(page.locator('#quality-grid')).toContainText('gpt-5.6-luna')
+    await expect(page.locator('#quality-grid')).toContainText('claude-sonnet-5')
+    await expect(page.locator('#quality-grid .evidence-card', { hasText: 'gpt-5.6-luna' }).locator('.pill')).toHaveText('highest score')
+
+    await page.getByRole('button', { name: 'Efficiency', exact: true }).click()
+    await expect(page.locator('#efficiency-grid .evidence-card')).toHaveCount(2)
+    await expect(page.locator('#efficiency-grid')).toContainText('gpt-5.6-luna')
+    await expect(page.locator('#efficiency-grid')).toContainText('claude-sonnet-5')
+
+    await page.getByRole('button', { name: 'Models', exact: true }).click()
+    await expect(page.locator('#model-grid tbody tr')).toHaveCount(2)
+    await expect(page.locator('#model-grid tr.best')).toContainText('gpt-5.6-luna')
+  })
+
+  test('keeps search and model filters available across every tab', async ({ page }) => {
+    await page.getByRole('button', { name: 'Quality', exact: true }).click()
+    await expect(page.locator('.dashboard-filters')).toBeVisible()
+    await page.locator('#model-filter').selectOption('claude-sonnet-5')
+    await expect(page.locator('#quality-grid .evidence-card')).toHaveCount(1)
+    await expect(page.locator('#quality-grid .evidence-card h3')).toHaveText('claude-sonnet-5')
+
+    await page.getByRole('button', { name: 'Efficiency', exact: true }).click()
+    await expect(page.locator('#efficiency-grid .evidence-card')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Models', exact: true }).click()
+    await expect(page.locator('#model-grid tbody tr')).toHaveCount(1)
+  })
+
+  test('drills from a catalogue skill into its three evidence views', async ({ page }) => {
+    await page.locator('#search').fill('outside-in-tdd')
+    const row = page.locator('#skill-outside-in-tdd')
+    await expect(row.getByRole('button', { name: 'View quality' })).toBeVisible()
+    await expect(row.getByRole('button', { name: 'View efficiency' })).toBeVisible()
+    await expect(row.getByRole('button', { name: 'Compare models' })).toBeVisible()
+
+    await row.getByRole('button', { name: 'View quality' }).click()
+    await expect(page.locator('#panel-quality')).toBeVisible()
+    await expect(page.locator('#quality-grid .evidence-card')).toHaveCount(2)
+  })
+
+  test('explains indicators for readers discovering evaluation evidence', async ({ page }) => {
+    await page.getByRole('button', { name: 'Quality', exact: true }).click()
+    await expect(page.locator('#panel-quality .indicator-guide')).toContainText('Baseline')
+    await expect(page.locator('#panel-quality .indicator-guide')).toContainText('Activation rate')
+
+    await page.getByRole('button', { name: 'Efficiency', exact: true }).click()
+    await expect(page.locator('#panel-efficiency .indicator-guide')).toContainText('Lower resource use')
+    await expect(page.locator('#panel-efficiency .indicator-guide')).toContainText('Tool calls')
+  })
+
+  test('localizes controls, indicators, and evidence in French', async ({ page }) => {
+    await page.goto(`${BASE}/fr/dashboard/`)
+    await expect(page.locator('#status')).not.toHaveText('Chargement du catalogue…')
+    await expect(page.locator('.dashboard-filters')).toContainText('Rechercher dans toutes les vues')
+    await page.getByRole('button', { name: 'Qualité', exact: true }).click()
+    await expect(page.locator('#panel-quality .indicator-guide')).toContainText('Comment lire la qualité')
+    await expect(page.locator('#quality-grid')).toContainText('Avec skill')
+    await expect(page.locator('#quality-grid')).toContainText('score le plus élevé')
   })
 
   test('compares model arms only within a single judge', async ({ page }) => {
     // Two judges do not share a scale, so a comparison table that mixed them
     // would be meaningless. Every rendered cohort names exactly one judge, and
     // holds at least the two arms that make it a comparison.
-    await page.getByRole('button', { name: 'Models' }).click()
+    await page.getByRole('button', { name: 'Models', exact: true }).click()
 
     const cohorts = page.locator('#model-grid .family')
     for (let index = 0; index < (await cohorts.count()); index += 1) {
@@ -99,6 +195,6 @@ test.describe('quality dashboard', () => {
   })
 
   test('is reachable from the handbook', async ({ page }) => {
-    await expect(page.locator('.nav a', { hasText: 'Handbook' })).toHaveAttribute('href', '../')
+    await expect(page.locator('.site-nav__links a', { hasText: 'Handbook' })).toHaveAttribute('href', /\/en\/explanation\/pipeline\/$/)
   })
 })

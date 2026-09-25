@@ -8,10 +8,10 @@ const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const barPath = join(repoRoot, 'plugins/skraft-framework/skills/skraft-quality-bar/SKILL.md')
 const scriptsDir = join(repoRoot, 'plugins/skraft-framework/skills/quality-gates-dotnet/scripts')
 
-// The repository owner chose to have each adapter script carry its own expected
-// value, so the scripts stay executable on their own. That choice recreates the
-// pattern which produced the defect this whole change removes: a threshold stated
-// in more than one place, drifting silently until two of them disagree
+// Adapter wrappers and the root-config scaffold carry checked copies of the expected
+// values so they stay executable without model judgement. That choice recreates the
+// pattern which produced the defect this whole change removes: a threshold stated in
+// more than one place, drifting silently until two of them disagree
 // (software-engineer.agent.md once claimed 80/90/100 while the routing table said
 // skip/100/100). The literals are therefore allowed, but only as CHECKED
 // restatements: this test is what makes them checked.
@@ -25,13 +25,13 @@ function barRows(markdown) {
   return rows
 }
 
-function breakAtFlags(markdown) {
-  const flags = new Map()
+function documentedBreakThresholds(markdown) {
+  const thresholds = new Map()
   for (const line of markdown.split(/\r?\n/)) {
-    const cells = /^\|\s*([^|]+?)\s*\|\s*`--break-at\s+(\d+)`\s*\|/.exec(line)
-    if (cells) flags.set(cells[1].replace(/\s+/g, ''), Number(cells[2]))
+    const cells = /^\|\s*([^|]+?)\s*\|\s*`thresholds\.break\s*=\s*(\d+)`/.exec(line)
+    if (cells) thresholds.set(cells[1].replace(/\s+/g, ''), Number(cells[2]))
   }
-  return flags
+  return thresholds
 }
 
 function scriptConstant(source, name) {
@@ -40,8 +40,8 @@ function scriptConstant(source, name) {
 }
 
 const SCRIPTS = [
-  { file: 'mutation-core.sh', scope: 'Domain,Application' },
-  { file: 'mutation-boundary.sh', scope: 'API,Infrastructure' },
+  { file: 'mutation-core.sh', scope: 'Domain,Application', scaffoldConstant: 'CORE_EXPECTED' },
+  { file: 'mutation-boundary.sh', scope: 'API,Infrastructure', scaffoldConstant: 'BOUNDARY_EXPECTED' },
 ]
 
 describe('quality bar parity', () => {
@@ -71,24 +71,40 @@ describe('quality bar parity', () => {
     })
   }
 
-  it('keeps the documented --break-at flags equal to the bar', () => {
+  it('keeps generated config thresholds in step with both scope wrappers', () => {
+    const scaffold = readFileSync(join(scriptsDir, 'configure-mutation.sh'), 'utf8')
+    const rows = barRows(readFileSync(barPath, 'utf8'))
+
+    for (const { scope, scaffoldConstant } of SCRIPTS) {
+      strictEqual(
+        Number(scriptConstant(scaffold, scaffoldConstant)),
+        rows.get(scope),
+        `${scaffoldConstant} would generate a root config below the quality bar`,
+      )
+    }
+    strictEqual(/dotnet stryker init/.test(scaffold), true, 'scaffold must delegate config schema to Stryker init')
+    strictEqual(/--threshold-high "\$expected"/.test(scaffold), true)
+    strictEqual(/--threshold-low "\$expected"/.test(scaffold), true)
+    strictEqual(/--break-at "\$expected"/.test(scaffold), true)
+  })
+
+  it('keeps the documented config break thresholds equal to the bar', () => {
     const markdown = readFileSync(barPath, 'utf8')
     const rows = barRows(markdown)
-    const flags = breakAtFlags(markdown)
+    const thresholds = documentedBreakThresholds(markdown)
 
     for (const { scope } of SCRIPTS) {
-      strictEqual(flags.get(scope), rows.get(scope), `the --break-at flag documented for ${scope} disagrees with the bar row above it`)
+      strictEqual(thresholds.get(scope), rows.get(scope), `the thresholds.break documented for ${scope} disagrees with the bar row above it`)
     }
   })
 
-  it('refuses a script that takes the threshold as an argument', () => {
-    // --break-at is what makes the runner itself fail. A script that accepted an
-    // --expected flag would let a caller pass a lower number and still produce a
-    // green, fully self-consistent evidence record.
+  it('refuses runtime thresholds and validates checked-in config thresholds', () => {
+    const runner = readFileSync(join(scriptsDir, 'run-mutation-gate.sh'), 'utf8')
     for (const { file } of SCRIPTS) {
       const source = readFileSync(join(scriptsDir, file), 'utf8')
-      strictEqual(/--expected\)/.test(source), true, `${file} must reject --expected explicitly`)
-      strictEqual(/--break-at "\$EXPECTED"/.test(source), true, `${file} must pass its own constant to --break-at`)
+      strictEqual(/--expected/.test(source), true, `${file} must reject --expected explicitly`)
+      strictEqual(/--config-file/.test(runner), true, 'runner must use the checked-in root config')
+      strictEqual(/config\.thresholds\?\.break !== expected/.test(runner), true, 'runner must reject config threshold drift')
     }
   })
 })

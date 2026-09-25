@@ -71,7 +71,7 @@ a contract test, `contract-fidelity-lens` does. Each attacks the **fidelity** of
 wiring (does the mock/contract truly reflect the dependency?) and honours the same
 BLOCKER rule. See the
 [DELIVER fan-out]({{ "/en/explanation/pipeline/deliver" | relative_url }}) and the
-[lenses reference]({{ "/en/reference/lens" | relative_url }}).
+[agentic catalogue]({{ "/en/dashboard/" | relative_url }}).
 
 ## Pitfalls & anti-patterns
 
@@ -85,6 +85,6 @@ BLOCKER rule. See the
 
 - Wiegers, K. *Peer Reviews in Software*, 2002.
 
-Going further: [Review lenses]({{ "/en/reference/lens" | relative_url }}),
+Going further: [Review lenses]({{ "/en/dashboard/" | relative_url }}),
 [Gates]({{ "/en/reference/gates" | relative_url }}),
 [Review before review (principle)]({{ "/en/explanation/why-review-before-review" | relative_url }}).

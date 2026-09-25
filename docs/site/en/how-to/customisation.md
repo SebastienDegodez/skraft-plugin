@@ -43,10 +43,20 @@ You can add a step to an existing phase — for example, inserting a `security-r
 
 ### 1. Create the agent
 
-Create an `.agent.md` file for your new agent using the [create-custom-agent]({{ "/en/reference/skills/create-custom-agent" | relative_url }}) skill. Define clearly:
+Create an agent `.md` file by following the contracts visible in the [agentic catalogue]({{ "/en/dashboard/" | relative_url }}). Define clearly:
 - Its role (executor or reviewer)
 - Its entry/exit contract
 - Its invariants
+
+Create both flat runtime versions under `plugins/skraft-framework/`:
+`com.github.copilot/agents/<id>.agent.md` and `com.anthropic.claude-code/agents/<id>.md`.
+Declare each client's native tools and model explicitly. These are the only two editable trees.
+Run `npm run plugin:sync` then `npm run plugin:check`: body and description synchronize
+in either direction against a per-side baseline, translating Markdown destinations.
+Native headers stay untouched; conflicting prose edits block all writes.
+Register the native file in the Claude manifest; keep internal visibility flags.
+Put every rule the agent follows in its descriptor body: the plugin ships no path-scoped rules,
+and no hook injects a rules file into an agent.
 
 ### 2. Register in the orchestrator
 

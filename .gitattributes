@@ -1,1 +1,5 @@
 .github/workflows/*.lock.yml linguist-generated=true
+# Every text file is checked out with LF on every platform: shell scripts run under bash
+# (Git Bash included), and hook manifests, generated agents and goldens are compared byte
+# for byte. A Windows checkout must not turn any of them into CRLF.
+* text=auto eol=lf

@@ -6,9 +6,9 @@ description: |
   Editorial page generator for the SKRAFT book. Slow cadence (weekly). Reads the
   contract docs/site/_data/book.yml, compares what SHOULD exist (the contract)
   against what exists (the files) and what is in the sources (the real
-  patterns/gates/lenses). For every missing or empty `type: editorial` page, and
-  for every reference page that does not follow the pedagogical template, it
-  WRITES the complete, readable page in FR and EN, then opens a PR ready for
+  patterns/gates and agentic descriptors). For missing, empty or stale retained
+  content, legacy catalogue links and controlled catalogue retirement, it uses
+  the docs orchestrator to write complete mirrored repairs, then opens a PR ready for
   review. It never invents a sourced metric: any figure it cannot trace to the
   code is phrased qualitatively and suffixed `(estime)` / `(estimated)`, never
   left as a hole for a human to fill.
@@ -101,18 +101,21 @@ For each gap, write the complete page (or the missing blocks) in the PR.
 2. **Empty or near-empty editorial page.** Exists but has no real content. ->
    Same treatment: write the complete page, replacing the stub with finished
    content.
-3. **Incomplete reference template.** A page in the `reference` part does not
+3. **Incomplete retained reference template.** A Markdown page in `reference` does not
    follow the required blocks of `reference_template` (notably the
    author/work/year citation, the jargon-free intro callout, or the inline
    glossary link). -> Write the missing blocks in full so the page becomes
    compliant.
-4. **Orphan source.** A pattern / gate / lens / agent / skill present in
-   `sources` but absent from the `book.yml` contract (so no page covers it). ->
-   Add the matching `book.yml` entry AND write the page that covers it.
+4. **Orphan source.** A retained pattern/gate gets a derived page. An agent,
+  skill, worker or lens must be covered by dashboard ownership and stable anchor,
+  never by a new per-item Markdown page.
 5. **Contract-specific requirements.** If a page declares `requires_diagram:
    true` (e.g. `hve-vs-skraft`) without a diagram, or `requires_risk_section:
    true` (e.g. `customisation`) without a risk section, write the missing
    diagram / section in full.
+6. **Narrative or catalogue migration.** Correct stale global-entrypoint/five-phase
+  claims, retarget legacy entity links to localized dashboard anchors, and remove
+  superseded catalogue pages only after link and compatibility checks pass.
 
 ## Procedure
 
@@ -128,7 +131,9 @@ three-way diff in prose.
 
    The ledger already encodes the three-way diff (contract vs files vs sources):
    `missing-page`, `empty-page`, `parity-break`, `orphan-source`,
-   `missing-diataxis-mode`, `ordering-gap`, `basename-mismatch`.
+  `missing-diataxis-mode`, `ordering-gap`, `basename-mismatch`,
+  `catalogue-missing`, `catalogue-topology`, `narrative-orchestration`,
+  `legacy-link`, `catalogue-retirement`.
 
 2. **Activation guard.** If `summary.total == 0`, or the only items are `low`
    declared basename exceptions, call `noop` (`"Skipping: book complete, no
@@ -136,7 +141,7 @@ three-way diff in prose.
 
 3. **Reconcile (full scope).** Run the `skraft-docs-orchestrator` agent (in
    `.github/agents/`) over EVERY open item. It routes each to the right worker —
-   `skraft-docs-placement-architect` (taxonomy / ordering / orphan placement),
+  `skraft-docs-placement-architect` (taxonomy / ownership / retirement / link placement),
    `skraft-docs-derived-writer` (derived pages), `skraft-docs-editorial-writer`
    (complete editorial pages) — runs the deterministic stop-predicates, and gates
    the result through the `skraft-docs-reviewer` panel. Editorial pages are
@@ -172,9 +177,8 @@ three-way diff in prose.
 - **FR/EN mirror, shared basename.** Every page is written in both languages
   with the same heading structure, and the FR and EN files share the same
   English basename (only `fr/` vs `en/` differs).
-- **No source or derived-page modification.** You only write `type: editorial`
-  pages (and the `book.yml` entry for an orphan source). Derived pages belong to
-  `skraft-docs-sync`.
+- **No source modification.** Write only `docs/site/**`. Never recreate retired
+  agent/skill/worker/lens catalogue pages; dashboard owns those facts.
 
 ## Pull request body
 
@@ -182,8 +186,7 @@ Write the PR body in English:
 
 - **Detected gaps**: a table (part, page, gap type, action taken).
 - **Written pages**: list of pages created or completed, FR + EN.
-- **Orphan sources**: any pattern/gate/lens not covered by the contract, with
-  the `book.yml` entry added and the page written.
+- **Orphan sources**: retained pattern/gate page or dashboard ownership fix.
 - **Estimated claims**: list any statement suffixed `(estime)` / `(estimated)`
   so reviewers can confirm the qualitative framing.
 

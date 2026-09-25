@@ -6,5 +6,6 @@
   {% assign other_lang = "fr" %}
   {% assign other_label = "FR" %}
   {% assign new_url = page.url | replace: "/en/", "/fr/" %}
+  {% if page.url == "/dashboard/" %}{% assign new_url = "/fr/dashboard/" %}{% endif %}
 {% endif %}
 <a href="{{ new_url | relative_url }}" lang="{{ other_lang }}">{{ other_label }}</a>

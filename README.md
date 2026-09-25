@@ -2,10 +2,10 @@
 
 # skraft
 
-**Deterministic agentic SDLC pipeline — DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER**
+**Deterministic agentic SDLC pipeline — backlog discovery and planning, then RESEARCH → DESIGN → DISTILL → DELIVER**
 
 Specialized agents, adversarial reviewers, discipline skills (Outside-In TDD, Clean Architecture)
-and mechanical guardrails (hooks) ported to **Claude Code**, **GitHub Copilot** and **Cursor**.
+and mechanical guardrails (hooks) for **Claude Code** and **GitHub Copilot**.
 
 [![skraft-framework CI](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/skraft-framework-ci.yml/badge.svg)](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/skraft-framework-ci.yml)
 [![Release](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/release.yml/badge.svg)](https://github.com/SebastienDegodez/skraft-plugin/actions/workflows/release.yml)
@@ -35,8 +35,8 @@ dependency, tested boundary-to-boundary and hardened with mutation testing.
 - 🔬 **Independent reviewer lenses** (quality-gates, architecture-boundaries, test-integrity, cold-reader) synthesized into a weighted verdict.
 - 📚 **Discipline skills**: Outside-In TDD, Clean Architecture testing, BDD/Gherkin, mutation testing, contract testing, ADR, issue refinement…
 - 🛡️ **Mechanical guardrails G1–G8** (fail-closed hooks): dispatch ordering, forced skill loading + JSONL audit, artifact/verdict/commit verification, state protection.
-- 🎯 **Multi-harness portability**: the same guardrails on Claude Code, Copilot CLI and Cursor.
-- 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, repo-wide `depthTier` configurator.
+- 🎯 **Harness-specific packaging**: shared sources with native adapters; validation limits in [docs/architecture.md](docs/architecture.md#compatibility).
+- 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, structural phase pruning from confirmed upstream evidence.
 
 ## Installation
 
@@ -44,36 +44,48 @@ skraft ships as a **marketplace plugin**. The plugin source lives in [`plugins/`
 
 ### Claude Code
 
-```bash
-# Add the marketplace, then install the "skraft" plugin
+Enter these commands in Claude Code:
+
+```text
 /plugin marketplace add SebastienDegodez/skraft-plugin
 /plugin install skraft
 ```
 
 ### GitHub Copilot, Codex, Cursor
 
-The plugin follows [**Agent Plugins 1.0**](https://agent-plugins.org/specification): the portable
-manifest lives at `plugins/skraft-framework/plugin.json` and each client that needs its own schema
-gets a sibling manifest (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`). Skills, agents,
-instructions and the runtime are shared verbatim — nothing is duplicated.
+[plugins/skraft-framework/plugin.json](plugins/skraft-framework/plugin.json) is the canonical
+[Agent Plugins v1](https://agent-plugins.org/specification) manifest, with `$schema` and no root
+`agents` list. Exactly two editable runtime trees ship: 31 flat Copilot `.agent.md`
+descriptors in `com.github.copilot/agents/`, and 31 flat native Claude `.md` descriptors
+in `com.anthropic.claude-code/agents/`. Body and description sync bidirectionally;
+Markdown destinations adapt to each client while native headers remain untouched.
+Shared-field baseline v2 records stable IDs, not a third descriptor source.
+Skills and runtime stay shared.
 
-Harness-specific hooks live under their reverse-domain namespace:
+Hooks have **one canonical source, two physical plugin surfaces**, with no extra manifest pointers:
 
-| Harness | Hook manifest |
+| Surface | Hook manifest |
 |---|---|
-| Claude Code, Codex | `com.anthropic.claude-code/hooks/hooks.json` |
-| Copilot (installed plugin) | `com.github.copilot/hooks/hooks.json` |
-| Copilot (repo checkout, cloud agent) | [`.github/hooks/skraft-framework.json`](./.github/hooks/skraft-framework.json) |
+| Canonical source; Claude compatibility | [plugins/skraft-framework/hooks/hooks.json](plugins/skraft-framework/hooks/hooks.json) |
+| Generated Copilot namespace; exact byte copy | [plugins/skraft-framework/com.github.copilot/hooks/hooks.json](plugins/skraft-framework/com.github.copilot/hooks/hooks.json) |
+| Separate repository-checkout integration | [.github/hooks/skraft-framework.json](.github/hooks/skraft-framework.json) |
 
-See [`docs/architecture.md`](./docs/architecture.md) for the per-harness porting details.
+Actual Copilot CLI **1.0.83** fixture tests passed namespaced agent discovery and `SessionStart` /
+`PreToolUse` with `CLAUDE_PLUGIN_ROOT`, including paths with spaces.
+[scripts/copilot-hook-smoke.mjs](scripts/copilot-hook-smoke.mjs), run with exact CLI **1.0.83**
+pinned via `--cli` and an isolated `COPILOT_HOME`, also passed against the current migrated
+plugin installed from the local marketplace checkout: **PASS allowed** (1 hook audit entry),
+**PASS denied** (1 hook audit entry), forbidden write absent. This does not verify the full
+six-root picker or hidden-subagent invocation.
+VS Code **1.126** source currently falls back through `.plugin` then
+`.claude-plugin`; full live v1 validation remains unverified. These results are not a blanket
+compatibility claim. See [docs/architecture.md](docs/architecture.md#11-projection-par-harness)
+for current packaging, Claude registration requirements and validation limits.
 
 ## Quick start
 
-Once the plugin is installed, run the full pipeline through the orchestrator:
-
-```
-/skraft
-```
+Once the plugin is installed, select `skraft-orchestrator` in the agent picker
+and give it a refined story.
 
 The orchestrator automatically resumes from the last persisted state, manages phase transitions,
 reviewer verdicts (with retry), and the engineer ↔ reviewer loop.
@@ -86,7 +98,7 @@ All documentation lives in [`docs/`](./docs/).
 |---|---|
 | 📑 Documentation index | [`docs/README.md`](./docs/README.md) |
 | 🏗️ Plugin architecture | [`docs/architecture.md`](./docs/architecture.md) |
-| 🛠️ Guardrail framework (hexagonal, G1–G8, genesis anchoring) | [`plugins/skraft-framework/README.md`](./plugins/skraft-framework/README.md) |
+| 🔌 Distributed plugin (install, pipeline, guardrails, packaging) | [`plugins/skraft-framework/README.md`](./plugins/skraft-framework/README.md) |
 | 🛣️ Roadmap (13 US + status) | [`docs/roadmap.md`](./docs/roadmap.md) |
 | 🤝 Engineer/Reviewer cross-cutting view | [`docs/agents/software-engineer-and-reviewer.md`](./docs/agents/software-engineer-and-reviewer.md) |
 | 🎨 Documentation conventions | [`docs/conventions.md`](./docs/conventions.md) |
@@ -99,14 +111,18 @@ All documentation lives in [`docs/`](./docs/).
 | Specialized phase agents (`backlog-*`, `solution-architect*`, `acceptance-designer*`, `software-engineer*`) | ✅ Implemented |
 | Reviewer lenses (`quality-gates`, `architecture-boundaries`, `test-integrity`, `cold-reader`) | ✅ Implemented |
 | Operational skills (`plugins/skraft-framework/skills/*`) | ✅ Implemented |
-| Hook guardrails G1–G5 + G4/G5 (artifact/verdict/commit) | ✅ Implemented |
-| Guardrails G6–G8, observability, recovery | 🚧 [Roadmap](./docs/roadmap.md) |
+| Runtime guardrails G1–G8 (hooks; G4/G5 in the state CLI) | ✅ Implemented and tested; live harness receipt for G7 only |
+| Observability (health check, housekeeping) and recovery (`diagnose`, `rollback`, `resolve-stale`) | ✅ Implemented — see the [roadmap](./docs/roadmap.md) |
 
 ## Development
 
+Edit only canonical agent and hook sources, then run `npm run plugin:build` and
+`npm run plugin:check` to generate and verify Copilot adapters. Commit generated adapters:
+marketplace Git installs do not run a build.
+
 ```bash
 # Tests (boundary-to-boundary, 0 runtime dependency)
-node --test tests/skraft-framework/*.test.mjs
+node --test "tests/skraft-framework/**/*.test.mjs"
 
 # Mutation testing (Stryker)
 npm --prefix plugins/skraft-framework/src ci && node plugins/skraft-framework/src/node_modules/.bin/stryker run plugins/skraft-framework/src/stryker.config.mjs
@@ -132,8 +148,8 @@ This project follows [**SemVer**](https://semver.org/) and publishes releases **
 - The [`release.yml`](./.github/workflows/release.yml) workflow runs **automatically on every push
   to `main`**, and can also be started by hand from the Actions tab. When it runs, it:
   1. computes the next version from the commit history,
-  2. updates [`CHANGELOG.md`](./CHANGELOG.md) and stamps the version into the four plugin manifests
-     (`plugin.json`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) + `src/package.json`,
+  2. updates [CHANGELOG.md](CHANGELOG.md) and stamps plugin manifests and runtime package metadata
+     through [scripts/set-version.mjs](scripts/set-version.mjs),
   3. creates the **`vX.Y.Z` tag** and the **GitHub Release** with the release notes,
   4. commits everything with `chore(release): X.Y.Z [skip ci]`.
 
@@ -144,7 +160,7 @@ change history.
 
 1. Branch off `main`.
 2. Use **Conventional Commits** (required for automatic versioning).
-3. `node --test tests/skraft-framework/*.test.mjs` must pass.
+3. `node --test "tests/skraft-framework/**/*.test.mjs"` must pass.
 4. Open a Pull Request — CI checks tests, config policy and models.
 
 ## License

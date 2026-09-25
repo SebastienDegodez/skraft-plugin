@@ -27,3 +27,11 @@ export const SkillRef = (path) => {
   if (typeof path !== 'string' || path.trim() === '') throw new Error('SkillRef must be non-empty string')
   return Object.freeze({ type: 'SkillRef', value: path.trim() })
 }
+
+const PROJECT_SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
+// True for a kebab-case slug safe to join into a tracking path (no separator, no dot).
+export const isValidProjectSlug = (slug) => typeof slug === 'string' && PROJECT_SLUG_RE.test(slug)
+
+// The first valid slug among candidates in precedence order, or null.
+export const firstValidProjectSlug = (...candidates) => candidates.find(isValidProjectSlug) ?? null

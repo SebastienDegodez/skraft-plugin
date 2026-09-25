@@ -1,5 +1,5 @@
 ---
-description: "Use when writing or editing SKRAFT handbook pages under docs/site/ (FR or EN). Enforces the Diátaxis structure, the Starbucks fil rouge, the artifact-flow connectors between phases, and FR/EN parity. Load before authoring any handbook page, phase page, catalogue page, or deep-dive."
+description: "Use when writing or editing SKRAFT handbook pages under docs/site/ (FR or EN). Enforces Diátaxis, the Starbucks artifact flow, current product-to-engineering ordering, dashboard catalogue ownership, and FR/EN parity."
 applyTo: "docs/site/**/*.md"
 ---
 
@@ -16,10 +16,10 @@ Never mix modes on the same page.
 
 | Mode | Purpose | Voice | Examples in this site |
 |------|---------|-------|-----------------------|
-| **Tutoriel / Tutorial** | Learn by doing, one guided path | "vous allez…" / "you will…" | the end-to-end fil-rouge walkthrough, getting-started |
-| **Guide pratique / How-to** | Solve one task | imperative steps | install the plugin, customise an agent |
-| **Explication / Explanation** | Understand *why* | discursive, cites sources | principles, why-review-before-review, deep-dives |
-| **Référence / Reference** | Look up facts | terse, tabular | agents, skills, gates, lenses, patterns |
+| **Tutorial** | Learn by doing, one guided path | "you will..." | the end-to-end running-example walkthrough, getting-started |
+| **How-to** | Solve one task | imperative steps | install the plugin, customise an agent |
+| **Explanation** | Understand *why* | discursive, cites sources | principles, review-before-review, deep-dives |
+| **Reference** | Look up facts | terse, tabular | agents, skills, gates, lenses, patterns |
 
 The sidebar (`_data/book.yml` `parts`) is grouped by these modes, and the **folder
 layout mirrors them** (per language):
@@ -30,29 +30,38 @@ fr/
   tutorials/               Learn   — getting-started
   how-to/                  Do      — customisation, contributing (genesis)
   explanation/             Understand
-    pipeline/              the 5 phases + overview + team + fil-rouge (narrative)
+    pipeline/              product preflight + engineering phases + running example
     deep-dive/             outside-in-tdd, walking-skeleton, review-before-review,
                            mocking-microcks, contract-testing (L3 zoom pages)
     architecture, concepts, clean-architecture, hve-core, hve-vs-skraft,
-    traces, for-executives, pourquoi-review-avant-review
-  reference/               Look up — agents/, skills/, gates, lens, patterns,
-                           citations, glossaire, changelog
+    traces, for-executives, localized review-before-review pages
+  dashboard/               Look up — agents, skills, workers, lenses, chains
+  reference/               Look up — gates, patterns, infrastructure,
+                           citations, glossary, changelog
 ```
 
 A new page must declare which mode it belongs to and live in the matching folder.
-The Starbucks fil rouge is **narrative**, so it lives under `explanation/pipeline/`,
+The Starbucks running example is **narrative**, so it lives under `explanation/pipeline/`,
 not `tutorials/`. Task-oriented pages (customise the pipeline, propose a pattern)
 are **how-to**, so they live under `how-to/`, not `tutorials/`.
 
-## 2. The fil rouge is the artifact flow
+## 2. The running thread is the artifact flow
 
 The thread that ties the handbook together is **"each artifact becomes the context
 of the next phase"**:
 
+```text
+triaged issue → INVEST story → research → ADR + event model → Gherkin scenario → code + evidence
+DISCOVER      → DISCUSS      → RESEARCH → DESIGN              → DISTILL          → DELIVER
+optional, autonomous                       orchestrated engineering pipeline
 ```
-issue triée → story INVEST → ADR + modèle d'événements → scénario Gherkin → code + evidence
-DISCOVER   →  DISCUSS      →  DESIGN                    →  DISTILL          →  DELIVER
-```
+
+`backlog-discoverer` followed by `backlog-planner` are two autonomous, optional
+product workflows. When both are used, this order is mandatory. They run before
+`skraft-orchestrator`, never within its dispatch list. `skraft-orchestrator` is
+the single entrypoint for the `RESEARCH → DESIGN → DISTILL → DELIVER`
+engineering pipeline, not the global SKRAFT entrypoint. Brownfield workflows
+and other directly invocable roots remain outside this chain.
 
 Make this chain visible — do not leave phases described in isolation.
 
@@ -63,17 +72,18 @@ drink in the Starbucks mobile app.
 
 - Keep it generalist and self-explanatory (no domain expertise required).
 - It is **illustrative, invented for teaching** — it is NOT derived from the
-  codebase. Mark it as such (e.g. "exemple illustratif" / "illustrative example")
-  so readers never confuse it with attested facts from the plugin.
+  codebase. Mark it as an "illustrative example" in the page's language so
+  readers never confuse it with attested facts from the plugin.
 - Never invent metrics or numbers for it. Qualitative only.
-- Do not introduce a second competing example. Starbucks is the only fil rouge.
+- Do not introduce a second competing example. Starbucks is the only running example.
 
 Per-phase artifact the example produces:
 
-| Phase | Artifact (entrée → sortie) |
-|-------|----------------------------|
+| Step | Artifact (input → output) |
+|------|---------------------------|
 | DISCOVER | raw issue "enable mobile ordering" → triaged & prioritised |
-| DISCUSS | INVEST story "order a customised drink" + ≥3 acceptance criteria |
+| DISCUSS | INVEST story "order a customised drink" + at least 3 acceptance criteria |
+| RESEARCH | refined story → research brief and constraints |
 | DESIGN | ADR (payment) + event model `PlaceOrder` → `OrderPaid` |
 | DISTILL | Gherkin Given cart / When payment / Then receipt |
 | DELIVER | RED→GREEN commits + mutation score |
@@ -82,13 +92,13 @@ Per-phase artifact the example produces:
 
 Each `docs/site/{fr,en}/explanation/pipeline/{phase}.md` MUST include:
 
-1. A **"vous êtes ici" / "you are here" ribbon** at the top showing
-   `DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER` with the current phase
+1. A localized **"you are here" ribbon** at the top showing optional
+  product preflight before `RESEARCH → DESIGN → DISTILL → DELIVER`, with the current step
    highlighted (use `{% include phase-ribbon.html current="<phase>" %}`).
-2. A **"Ce qui entre / Ce qui sort"** ("What enters / What exits") block naming
+2. A localized **"What enters / What exits"** block naming
    the upstream artifact consumed and the downstream artifact produced.
-3. The **Starbucks fil-rouge box** showing what the example looks like at this phase.
-4. The existing **"Les gates franchies ici" / "Gates crossed here"** block linking
+3. The **Starbucks running-example box** showing what the example looks like at this phase.
+4. The existing localized **"Gates crossed here"** block linking
    to the reference gates page (`{{ "/fr/reference/gates" | relative_url }}`).
 
 ## 5. FR/EN parity is mandatory
@@ -98,14 +108,21 @@ Each `docs/site/{fr,en}/explanation/pipeline/{phase}.md` MUST include:
 - Content is equivalent in both languages — same sections, same example, same
   artifact flow. Do not let one language drift ahead.
 
-## 6. Links and citations (existing rules — keep green)
+## 6. Catalogue ownership, links and citations
+
+- Dashboard is sole catalogue for agents, skills, workers and lenses. Never add
+  or regenerate one Markdown page per descriptor.
+- Link catalogue entities to localized dashboard anchors:
+  `/{lang}/dashboard/#agent-<id>`, `#worker-<id>`, `#lens-<id>`, or `#skill-<id>`.
+- Keep factual orchestration in architecture, pipeline narrative and L3
+  deep-dives; dashboard owns exhaustive rows and relationships.
 
 - Internal links use `{{ "/fr/…" | relative_url }}` — never a bare `/fr/…`
   (the baseurl `/skraft-plugin` must be applied, or the link 404s).
 - Any factual claim in an Explanation page carries a citation in the format:
-  `> « quote ≤25 words »` then `> — Author, *Title*, Year.` where author+year
+  `> "quote of 25 words or fewer"` then `> — Author, *Title*, Year.` where author+year
   exist in `_data/citations.yml`. The Starbucks example is exempt (it is fiction).
-- Catalogue/reference pages follow the `reference_template` block contract from `_data/book.yml`.
+- Retained reference pages follow the `reference_template` block contract from `_data/book.yml`.
 
 ## 7. Validation before considering a page done
 

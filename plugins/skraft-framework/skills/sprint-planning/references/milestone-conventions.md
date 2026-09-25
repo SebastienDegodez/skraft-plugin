@@ -42,7 +42,7 @@ A milestone contains stories that:
 
 - Stories from a different feature theme (put them in their own milestone)
 - Stories with unresolved dependencies on future milestones
-- XL stories that have not been split
+- Stories above 8 points that have not been split
 - Stories that failed the DoR gate
 
 ### Milestone Size Constraints

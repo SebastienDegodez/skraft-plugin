@@ -38,7 +38,7 @@ level, no warning level, no override and no rationale that buys an exemption —
 `skraft-quality-bar` skill owns the enforcement level of every gate and the value of
 every threshold, and nothing downstream restates them.
 
-Total: **48 gates** across the 5 phases. What follows is the full grid, exactly as
+Total: **48 gates** across product workflows and engineering phases. What follows is the full grid, exactly as
 each reviewer applies it.
 
 ---
@@ -60,7 +60,7 @@ sprint proposal.
 | ID | What the gate checks | Pass condition | Severity |
 | --- | --- | --- | --- |
 | **G3** | Every P0 has a written justification; P1→P3 follows descending business value; no priority inversion. | No inversions, all P0 justified. | HIGH |
-| **G4** | The sprint proposal respects declared capacity (team-days × 0.7); no P2/P3 takes a slot while a P0/P1 is excluded; no XL issue in the sprint. | Capacity respected, XL excluded. | HIGH |
+| **G4** | The sprint proposal respects declared capacity (team-days × 0.7); no P2/P3 takes a slot while a P0/P1 is excluded; no issue above 8 points in the sprint. | Capacity respected, issues above 8 points excluded. | HIGH |
 
 ### Lens 3 — Duplicate detection
 
@@ -205,12 +205,26 @@ repository owner accepted that trade deliberately — quality is not negotiable.
 | **G3** | The build passes. | Compilation / type-check succeeded. |
 | **G4** | Static analysis passes. | Linter/analyzer reported no blocking issue. |
 | **G5** | Architecture rules pass. | Dependency-direction tests (Clean Architecture) pass. |
-| **G6** | Mutation score meets the bar. | Both sequenced mutation scripts exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 90%). |
+| **G6** | Mutation score meets the bar. | Both sequenced mutation scripts exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 80%). |
 | **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. |
-| **G8** | Conventional commit format. | Every covered commit matches `<type>(<scope>): <subject>`. |
+| **G8** | Full conventional commit message. | Each covered commit uses the feature scope, sign-off and known issue reference; closure requires genuinely finished work and all required gates passed. |
 | **G9** | No test tampering (RED→GREEN integrity). | For each cycle, the test file changed only by **addition** between RED and GREEN snapshots. |
 | **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each cycle, a RED stdout captured at RED time and hashed by sha256, plus a recorded **non-zero** exit code. |
 | **G11** | Line coverage meets the bar. | The coverage runner, invoked with the bar's threshold flags (100% line on Domain and Application), exited `0`. |
+
+**G8 policy:** inline commit rules in the existing agents, on both native clients
+(Copilot and Claude Code). No additional skill, validator or completion receipt.
+
+- **Message:** `type(feature): subject` (optional `!` before `:`), with the
+  approved feature scope. Use `git commit -s` for the `Signed-off-by` trailer.
+- **Issue:** for a known issue, end the body with `Refs: #N` for intermediate
+  work or `Closes #N` only when the whole issue is genuinely finished and all
+  required gates pass. A green slice or DESIGN alone does not close delivery.
+  Omit the issue line when unknown.
+- **Verification:** G8 checks covered Git messages and existing gate evidence.
+  Missing verifiable evidence means `inconclusive`. The evidence v3 schema is
+  unchanged; the standalone subject audit remains a syntax check, not proof of
+  completion.
 
 > **G6 is an exit code, not a number.** Each `quality-gates-<tech>` adapter bundles two
 > sequenced mutation scripts — `mutation-core.sh` then `mutation-boundary.sh` on .NET.

@@ -507,11 +507,11 @@
         title: "Pipeline SDLC - Agents et déclenchements",
         subtitle: "Chaque slide montre un agent (ou lens), ce qu'il fait, ce qui le déclenche, et ce qu'il déclenche ensuite.",
         role: [
-          "Point d'entree unique: /skraft",
+          "Point d'entree unique: skraft-orchestrator",
           "Pipeline stateful: state.json pilote la reprise",
           "Boucle stricte: specialist -> reviewer -> verdict"
         ],
-        trigger: "Utilisateur lance /skraft",
+        trigger: "Utilisateur selectionne skraft-orchestrator",
         does: "L'orchestrateur route la phase courante",
         output: "Dispatch specialist + reviewer + update state",
         next: "Phase suivante ou escalade"
@@ -920,13 +920,13 @@
       {
         phase: "ORCHESTRATOR",
         title: "Agent skraft-orchestrator",
-        subtitle: "Point d'entree unique /skraft — sequence les 5 phases, gere les retries et la reprise.",
+        subtitle: "Point d'entree unique skraft-orchestrator — gere les retries et la reprise.",
         role: [
           "Charge state.json via protocole 6-etapes",
           "Dispatche les specialists + reviewers",
-          "Evalue la difficulte en sortie DISCOVER (3 axes)"
+          "Evalue la difficulte au demarrage de l'ingenierie (4 tiers)"
         ],
-        trigger: "Utilisateur lance /skraft",
+        trigger: "Utilisateur selectionne skraft-orchestrator",
         does: "Route la phase courante, collecte les verdicts, met a jour state.json",
         output: "Dispatch specialist + reviewer + update state.json",
         next: "Phase suivante ou escalade utilisateur si max retries depasse"

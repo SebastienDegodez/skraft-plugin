@@ -126,13 +126,13 @@ Priority assignments are internally consistent. All P0 issues have explicit writ
 
 ### Definition
 
-The sprint proposal respects declared capacity. Total effort for non-P0 issues does not exceed effective capacity (team-days × 0.7). No P2/P3 issue occupies a sprint slot while a P1 issue is excluded. No XL issues are in the sprint.
+The sprint proposal respects declared capacity. Total effort for non-P0 issues does not exceed effective capacity (team-days × 0.7). No P2/P3 issue occupies a sprint slot while a P1 issue is excluded. No issue above 8 points is in the sprint.
 
 ### How to Check
 
-1. **XL check**: Scan sprint proposal for any issue with `effort/XL` label → immediate fail if found
+1. **Oversize check**: Scan sprint proposal for any issue labelled `effort/13` or `effort/21` → immediate fail if found
 2. **Capacity calculation**:
-   - Convert each effort to days: XS=0.25, S=0.5, M=1.0, L=2.5
+   - Convert each estimate to team-days: 1=0.25, 2=0.5, 3=0.75, 5=1.5, 8=3.0
    - Sum all days in sprint proposal (include P0 overrides separately)
    - Compare non-P0 sum to effective capacity (team-days × 0.7)
    - If non-P0 sum > effective capacity → G4 fails
@@ -143,16 +143,16 @@ The sprint proposal respects declared capacity. Total effort for non-P0 issues d
 
 ### Auto-Fail Triggers
 
-- Any `effort/XL` issue appears in the sprint proposal
+- Any `effort/13` or `effort/21` issue appears in the sprint proposal
 - A P2 issue is included in the sprint while a P1 issue with available capacity was excluded
 - Total non-P0 effort exceeds team-days × 0.7
 
 ### Pass Examples (7 team-day sprint, effective = 4.9 days)
 
 ```
-Sprint: #43 P0 S(0.5d) + #42 P1 M(1.0d) + #58 P1 L(2.5d) + #67 P1 M(1.0d) = 5.0d
+Sprint: #43 P0 2pt(0.5d) + #42 P1 3pt(0.75d) + #58 P1 5pt(1.5d) + #67 P1 3pt(0.75d) = 3.5d
 P0 override: #43 (0.5d forced in)
-Non-P0 capacity used: 4.5d ≤ 4.9d effective
+Non-P0 capacity used: 3.0d ≤ 4.9d effective
 P1 excluded: none
 Result: PASS
 ```
@@ -160,13 +160,13 @@ Result: PASS
 ### Fail Examples
 
 ```
-Sprint includes #89 P3 XS(0.25d) but #67 P1 M(1.0d) is excluded
+Sprint includes #89 P3 1pt(0.25d) but #67 P1 3pt(0.75d) is excluded
 → FAIL: P2/P3 before P1
 ```
 
 ```
-Sprint includes #101 effort/XL
-→ FAIL: XL issue in sprint
+Sprint includes #101 effort/21
+→ FAIL: an estimate above 8 points was never split
 ```
 
 ---
@@ -260,6 +260,6 @@ All issue pairs with 40–80% normalized title similarity are documented in the 
 | G1 | Completeness | Triage report | HIGH | Read Discovery Mode section; verify all 3 modes mentioned |
 | G2 | Completeness | Triage report + GitHub | BLOCKER | Query top 5 P0/P1 by creation date; verify all in report |
 | G3 | Prioritization | Triage report | HIGH | Check P0 justifications; scan for priority inversions |
-| G4 | Prioritization | Sprint proposal | HIGH | Check no XL; verify capacity math; check P1 before P2 |
+| G4 | Prioritization | Sprint proposal | HIGH | Check nothing above 8 points; verify capacity math; check P1 before P2 |
 | G5 | Duplicate Detection | Triage report | HIGH | Normalize all titles; compute pairwise similarity; flag >80% pairs |
 | G6 | Duplicate Detection | Triage report | MEDIUM | Collect 40–80% pairs from G5; verify each in Duplicates section |

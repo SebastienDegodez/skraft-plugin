@@ -2,7 +2,7 @@
 export default {
   testRunner: 'tap',
   tap: {
-    testFiles: ['tests/skraft-framework/*.test.mjs'],
+    testFiles: ['tests/skraft-framework/**/*.test.mjs'],
     nodeArgs: ['--test-reporter=tap', '--test-reporter-destination=stdout'],
   },
   mutate: [
@@ -23,9 +23,11 @@ export default {
     'plugins/skraft-framework/src/application/subagent-start-service.mjs',
     'plugins/skraft-framework/src/application/subagent-stop-service.mjs',
     'plugins/skraft-framework/src/application/post-tool-use-service.mjs',
+    'plugins/skraft-framework/src/domain/instruction-policy.mjs',
     // US5 — State Transition Bridge (#60)
     'plugins/skraft-framework/src/domain/state-machine.mjs',
     'plugins/skraft-framework/src/domain/state-schema.mjs',
+    'plugins/skraft-framework/src/domain/schema-validator.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/state/json-state-writer.mjs',
     'plugins/skraft-framework/src/application/state-service.mjs',
     // US8 — G4/G5 artifact + verdict + commit completion guard (#8)
@@ -57,6 +59,26 @@ export default {
     'plugins/skraft-framework/src/adapters/infrastructure/plugin-root-resolver.mjs',
     // Layer separation — tracking layout (namespaced|bare) resolution
     'plugins/skraft-framework/src/domain/tracking-layout-policy.mjs',
+    // Markdown reporting: local rendering and host-MCP handoff (no network client)
+    'plugins/skraft-framework/src/application/render-report.mjs',
+    'plugins/skraft-framework/src/application/report-publication-handoff.mjs',
+    'plugins/skraft-framework/src/domain/reporting-presentation.mjs',
+    'plugins/skraft-framework/src/domain/reporting-preferences.mjs',
+    'plugins/skraft-framework/src/domain/report-mcp-policy.mjs',
+    // State CLI writes for orchestrator-owned metadata
+    'plugins/skraft-framework/src/domain/orchestrator-metadata-policy.mjs',
+    // Active pipeline pointer read by the hooks
+    'plugins/skraft-framework/src/adapters/infrastructure/active-slug-store.mjs',
+    // Phase closure gate (G4/G5) run by the state CLI
+    'plugins/skraft-framework/src/domain/phase-gate-policy.mjs',
+    'plugins/skraft-framework/src/application/phase-gate-service.mjs',
+    // SessionStart context handed to the session
+    'plugins/skraft-framework/src/domain/session-context-policy.mjs',
+    // Dispatch tree enforced on every agent dispatch
+    'plugins/skraft-framework/src/application/dispatch-provenance-service.mjs',
+    // qg-verify: deterministic evidence verification
+    'plugins/skraft-framework/src/domain/evidence-verification-policy.mjs',
+    'plugins/skraft-framework/src/application/evidence-verification-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

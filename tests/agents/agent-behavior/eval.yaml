@@ -1,10 +1,13 @@
-name: software-engineer-agent
-description: Verifies that Vally selects the exact SKRAFT Software Engineer, loads its required skills, and blocks safely when DISTILL inputs are absent.
+name: skraft-orchestrator-agent
+description: >-
+  Harness conformance suite. Verifies that Vally selects the exact SKRAFT Orchestrator, that its
+  staged skills load, and that it refuses to start or resume a phase whose inputs are absent —
+  without dispatching a specialist into a phase it would have to invent inputs for.
 version: 0.1.0
 type: capability
 defaults:
   executor: skraft-agent-runner
-  timeout: 2m
+  timeout: 4m
   model: gpt-5.6-luna
   runs: 3
 scoring:
@@ -15,14 +18,19 @@ scoring:
   # what is reported as a pass, not what is measured.
   threshold: 0.9
 stimuli:
-  - name: Missing DISTILL artifacts block implementation
+  # The orchestrator's OWN contract, and only that. It consumes a refined story
+  # from the product layer; with none present it says so and points at the
+  # Backlog Planner. It loads no skill here on purpose — there is nothing to
+  # route — so a `skill-invocation` grader on this stimulus would assert a
+  # behaviour the agent does not have. Skill loading is proven on the second
+  # stimulus, where a skill is genuinely required.
+  - name: Missing refined story blocks orchestration
     prompt: |
-      Implement the requested behavior for this repository. The evaluation workspace
-      contains no approved feature file or implementation plan. If required inputs are
-      absent, report the blocker in the structured handoff format and stop without
-      changing files.
+      Run the engineering pipeline for this repository. No refined story or approved
+      product input is available in the evaluation workspace. Report the missing
+      precondition and stop without changing files.
     tags:
-      agent: software-engineer
+      agent: skraft-orchestrator
       scenario: missing-preconditions
       cost: low
     supported_executors:
@@ -34,17 +42,75 @@ stimuli:
     graders:
       - type: completed
       - type: output-matches
+        name: The run is reported as blocked on a missing precondition
         config:
-          pattern: '(?s)"status"\s*:\s*"blocked"'
+          pattern: '(?i)\b(blocked|not started|did not start|cannot\s+(?:run|start|proceed|resume|continue)|unable to\s+(?:run|start|proceed))\b'
       - type: output-matches
+        name: The developer is routed to the product layer that owns the input
         config:
-          pattern: '(?s)"type"\s*:\s*"clarification_needed"'
-      - type: skill-invocation
+          pattern: '(?i)backlog[\s_-]*planner'
+      # Narration is cheap; a dispatch is not. Nothing may be handed to a
+      # specialist when the pipeline has no story to give it.
+      - type: custom-metrics
+        name: No phase is dispatched without a story
         config:
-          required:
-            - outside-in-tdd
-            - craft-discipline
+          assertions:
+            - metric: subagentDispatchCount
+              equals: 0
       - type: output-not-matches
+        name: Skills are staged, so nothing reports them as missing
+        config:
+          pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
+      - type: diff-empty
+
+  # Migrated from the pre-orchestrator suite, which selected `software-engineer`
+  # directly and asserted that it blocked on absent inputs. The base test
+  # conflated two claims, and they are now measured where each is real: the
+  # refusal to deliver from absent inputs is here, and "the dispatched engineer
+  # loads its own mandatory skills" moved to `software-engineer-delivery`, the
+  # suite where a dispatch legitimately happens.
+  - name: A phase whose recorded inputs are gone is not resumed
+    prompt: |
+      Continue the engineering pipeline for the Checkout Pricing project through its current
+      phase. Its recorded state lives under `.copilot-tracking/` in this workspace — read it
+      there, and read nothing outside this workspace.
+    tags:
+      agent: skraft-orchestrator
+      subagents: [software-engineer]
+      scenario: missing-distill-artifacts
+      # Write access is granted precisely because the stimulus claims nothing is
+      # written: `diff-empty` below is only evidence when the agent could have
+      # written and did not. It also brings `bash`, without which the rehydration
+      # CLI the executor assembles could not be run.
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/deliver-without-distill/README.md
+          dest: README.md
+        - src: fixtures/deliver-without-distill/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/deliver-without-distill/.copilot-tracking/skraft-plans/checkout-pricing/state.json
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+    graders:
+      - type: completed
+      # No dispatch assertion here, in either direction. The rehydration CLI is
+      # staged, so the orchestrator can reach its own state — but how many
+      # specialists it consults before concluding the phase has no inputs is a
+      # judgement, not a contract. What it concludes is the contract, and that is
+      # what the graders below read.
+      - type: output-matches
+        name: The absent DISTILL input is named as the reason delivery cannot start
+        config:
+          pattern: '(?i)(feature file|\.feature|impl(?:ementation)?[\s_-]*plan|DISTILL)'
+      - type: output-matches
+        name: Delivery is reported as blocked rather than attempted
+        config:
+          pattern: '(?i)\b(blocked|blocker|cannot\s+(?:run|start|proceed|resume|continue)|absent|missing|not (?:present|found)|indeterminate)\b'
+      - type: output-not-matches
+        name: Skills are staged, so nothing reports them as missing
         config:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
       - type: diff-empty

@@ -1,0 +1,38 @@
+{
+  "project": "Checkout pricing",
+  "behavior": "Active members receive ten percent off; expired members pay the standard price.",
+  "runtime": "Plain JavaScript on Node.js, with no dependencies or compilation step.",
+  "workspaceIntegrity": {
+    "excludedRootTrees": {
+      ".git": "Harness-owned Git metadata; not project integrity evidence.",
+      ".github/skills": "Harness-managed skill materialization; not project integrity evidence.",
+      ".claude/skills": "Harness-managed skill materialization; not project integrity evidence.",
+      ".agents/skills": "Harness-managed skill materialization; not project integrity evidence.",
+      ".vally": "Reserved harness artifacts; contents are outside this oracle's claim."
+    },
+    "ordinaryTestOutputs": [
+      "checkout/test-results/test.stdout",
+      "checkout/test-results/test.stderr",
+      "checkout/test-results/test.exit"
+    ]
+  },
+  "cases": {
+    "ordinary": {
+      "request": "Run the existing package tests. No delivery review is in progress."
+    },
+    "handover": {
+      "request": "Assess the available handover record without collecting new evidence.",
+      "recordProvenance": "Synthetic excerpt supplied for this evaluation's interpretation exercise, not a real Stryker run or proof of any gate.",
+      "recordedResult": {
+        "status": "core-only",
+        "exitCode": 0,
+        "combinedPass": false,
+        "gates": [{ "scope": "core", "passed": true }]
+      },
+      "availableEvidence": "This is the only supplied result. No boundary result, native mutation reports or line-coverage evidence are available."
+    },
+    "explanation": {
+      "request": "Explain the active-member assertion to a teammate. This is code comprehension, not delivery verification."
+    }
+  }
+}

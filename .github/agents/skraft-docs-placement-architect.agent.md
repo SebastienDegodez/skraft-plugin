@@ -5,7 +5,8 @@ description: >-
   a handbook page lives in the multi-level menu and in what ORDER, and emits the
   matching book.yml patch. Resolves Diátaxis placement (which part/section by
   mode), assigns sidebar_position, and for an orphan source decides
-  INSERT / REPLACE / NEW-SECTION. Emits a contract patch only — it never writes
+  INSERT / REPLACE / NEW-SECTION, or plans dashboard catalogue migration,
+  section retirement and link retargeting. Emits a contract patch only — it never writes
   page prose and never edits plugin sources.
 model: inherit
 user-invocable: false
@@ -15,7 +16,7 @@ metadata:
   capability: docs-placement
   inputs:
     required:
-      - a drift item (JSON) of type orphan-source | missing-diataxis-mode | invalid-diataxis-mode | ordering-gap | basename-mismatch
+      - a drift item (JSON) of type orphan-source | missing-diataxis-mode | invalid-diataxis-mode | ordering-gap | basename-mismatch | catalogue-missing | catalogue-retirement | legacy-link
       - docs/site/_data/book.yml (the structure contract)
     context:
       - the source file the item points to (for an orphan)
@@ -66,9 +67,10 @@ matches its purpose:
    `meta.basename_exceptions`. Otherwise propose the aligned basename (the EN
    basename wins) and record the rename for the writer.
 4. **orphan-source** — choose ONE placement and justify it:
-   - **INSERT** — the source is a new agent / skill / lens / worker that fits an
-     existing Reference section. Add it to that section (its `generate` directive
-     usually already covers it; confirm the section's `folder_*` + `generate`).
+   - Agent / skill / lens / worker sources belong to the existing
+     `ownership: dashboard` section. Choose **MIGRATE-CATALOGUE** and add the
+     missing source family; do not create page paths.
+   - **INSERT** — a non-catalogue source fits an existing Reference section.
    - **REPLACE** — an existing entry is superseded by this source; mark the old
      entry for removal and add the new one.
    - **NEW-SECTION** — the source starts a new family with no home; add a new
@@ -76,6 +78,13 @@ matches its purpose:
      `folder_fr/folder_en`, and a `generate` directive.
    Then specify the FR + EN page paths the derived-writer must create (mirrored,
    same English basename).
+5. **catalogue-missing** — choose **MIGRATE-CATALOGUE** only when `book.yml`
+  omits ownership/source-family coverage. Source identity/topology blockers are
+  outside this worker's boundary; return `blocked`.
+6. **catalogue-retirement** — choose **RETIRE-SECTION**. List retired globs and
+  require all retained links to be retargeted before deletion. Never delete pages.
+7. **legacy-link** — choose **RETARGET-LINK** and identify localized dashboard
+  route plus stable `agent|worker|lens|skill` anchor for the editorial writer.
 
 ## Output — return EXACTLY this block
 
@@ -83,7 +92,7 @@ matches its purpose:
 status: ok | blocked
 capability: docs-placement
 item: <the drift item id>
-decision: INSERT | REPLACE | NEW-SECTION | SET-MODE | ASSIGN-ORDER | DECLARE-EXCEPTION
+decision: INSERT | REPLACE | NEW-SECTION | SET-MODE | ASSIGN-ORDER | DECLARE-EXCEPTION | MIGRATE-CATALOGUE | RETIRE-SECTION | RETARGET-LINK
 book_yml_patch: |
   <the exact YAML to add/replace, with surrounding context lines>
 pages_to_write:           # for the derived/editorial writer; empty for pure-contract items

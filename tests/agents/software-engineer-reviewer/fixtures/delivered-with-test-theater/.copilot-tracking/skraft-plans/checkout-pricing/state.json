@@ -1,15 +1,6 @@
 {
   "projectSlug": "checkout-pricing",
-  "skraftPlanFile": ".copilot-tracking/skraft-plans/checkout-pricing/state.json",
   "currentPhase": "DELIVER",
-  "entryMode": "capture",
-  "entryPoint": {
-    "skipPhases": [],
-    "handoffSource": null,
-    "handoffArtifacts": []
-  },
-  "issueNumber": null,
-  "difficulty": "medium",
   "adrRatification": {
     "checkpointStatus": "resolved",
     "pending": [],
@@ -39,30 +30,13 @@
   "retryCount": {},
   "reworkCount": {},
   "findingsResolved": {},
-  "referencesProcessed": [],
   "phaseHistory": {
     "DELIVER": {
       "status": "inProgress",
-      "startedAt": "2026-08-13T09:00:00Z",
-      "completedAt": null
+      "startedAt": "2026-08-13T09:00:00Z"
     }
   },
-  "nextActions": [
-    "Review the delivered loyalty-discount slice."
-  ],
   "userPreferences": {
-    "autonomyTier": "full",
-    "maxRetriesPerPhase": 2,
-    "phaseOrder": [
-      "RESEARCH",
-      "DESIGN",
-      "DISTILL",
-      "DELIVER"
-    ]
-  },
-  "neighborPlanners": {
-    "securityPlanFile": null,
-    "raiPlanFile": null,
-    "ssscPlanFile": null
+    "maxRetriesPerPhase": 2
   }
 }

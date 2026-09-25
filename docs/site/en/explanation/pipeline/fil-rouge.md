@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "The running example — a Starbucks order end to end"
-description: "Follow one request, from idea to tested code, across the five phases of the SKRAFT pipeline."
+description: "Follow one request through optional product preflight and then the SKRAFT engineering pipeline."
 persona: tech-lead
 ---
 
@@ -27,7 +27,8 @@ You will see this request turn, phase by phase, into tested code.
 ```mermaid
 graph LR
     A[Idea] -->|triage report| B[INVEST story]
-    B -->|ADR + events| C[Architecture]
+    B -->|sourced research| R[Recommendation]
+    R -->|ADR + events| C[Architecture]
     C -->|Gherkin scenarios| D[Specification]
     D -->|code + evidence| E[Delivered code]
     style A fill:#102016,stroke:#6f8478
@@ -37,7 +38,12 @@ graph LR
     style E fill:#1a3a2a,stroke:#4ed58a
 ```
 
-## Step 1 — DISCOVER: triage the idea
+## Optional product preflight
+
+DISCOVER then DISCUSS are standalone and outside the orchestrator. They run in
+this order when the request does not already arrive refined.
+
+### Step 1 — DISCOVER: triage the idea
 
 The idea arrives as a **raw issue** in the backlog. The `backlog-discoverer`
 triages it: it assigns priority **P1**, detects it overlaps an older "in-app
@@ -48,7 +54,7 @@ payment" request, and records it in a **triage report**.
 
 ➡️ Phase detail: [DISCOVER]({{ "/en/explanation/pipeline/discover" | relative_url }}).
 
-## Step 2 — DISCUSS: turn it into a story
+### Step 2 — DISCUSS: turn it into a story
 
 The `backlog-planner` receives the report and turns the prioritised line into an
 **INVEST story**:
@@ -67,7 +73,20 @@ With its **acceptance criteria**:
 
 ➡️ Phase detail: [DISCUSS]({{ "/en/explanation/pipeline/discuss" | relative_url }}).
 
-## Step 3 — DESIGN: decide the architecture
+## Orchestrated engineering pipeline
+
+### Step 3 — RESEARCH: gather evidence
+
+The `solution-researcher` analyses the story, existing code, and conventions. It
+compares payment options and recommends a sourced approach without writing code
+or deciding the ADR.
+
+- **What enters:** the story and its criteria.
+- **What exits:** the cited research document and its handoff to DESIGN.
+
+➡️ Phase detail: [RESEARCH]({{ "/en/explanation/pipeline/research" | relative_url }}).
+
+### Step 4 — DESIGN: decide the architecture
 
 The `solution-architect` designs the solution. It records an **ADR**:
 
@@ -80,12 +99,12 @@ And an **event model**:
 PlaceOrder → OrderPaid → OrderReady
 ```
 
-- **What enters:** the story and its criteria.
+- **What enters:** the story, its criteria, and the research document.
 - **What exits:** the ADR + the event model + the contracts.
 
 ➡️ Phase detail: [DESIGN]({{ "/en/explanation/pipeline/design" | relative_url }}).
 
-## Step 4 — DISTILL: write the executable contract
+### Step 5 — DISTILL: write the executable contract
 
 The `acceptance-designer` translates the architecture into a **Gherkin
 scenario**, readable by the business:
@@ -103,7 +122,7 @@ Scenario: pay for a customised drink
 
 ➡️ Phase detail: [DISTILL]({{ "/en/explanation/pipeline/distill" | relative_url }}).
 
-## Step 5 — DELIVER: implement, guided by tests
+### Step 6 — DELIVER: implement, guided by tests
 
 The `software-engineer` makes the scenario green with **Outside-In TDD**. It
 first writes the acceptance test (red), then the unit tests for the total
@@ -117,18 +136,20 @@ score** verifies the tests genuinely protect the loyalty rule.
 
 ## What you have just seen
 
-One single request crossed five phases without ever losing its context:
+One request crossed two optional product workflows, then the engineering
+pipeline, without losing its context:
 
 | Phase | Artifact produced |
 | --- | --- |
 | DISCOVER | Prioritised line in the triage report |
 | DISCUSS | INVEST story + 3 acceptance criteria |
+| RESEARCH | Cited research document + recommendation |
 | DESIGN | ADR (payment via ACL) + event model |
 | DISTILL | Gherkin scenario + implementation plan |
 | DELIVER | Tested code + mutation score |
 
-Each artifact became the **context** of the next phase — and each transition was
-only allowed after the verdict of an [independent reviewer]({{ "/en/reference/gates" | relative_url }}).
+Each artifact became the **context** of the next step. Declared reviewers then
+apply the [gates]({{ "/en/reference/gates" | relative_url }}).
 
 ## Going further
 

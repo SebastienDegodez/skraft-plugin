@@ -5,8 +5,6 @@
 
 - Story: `loyalty-discount`
 - Project slug: `checkout-pricing`
-- Depth tier: `standard`
-- Difficulty: `medium`
 - Status: approved for DELIVER
 
 ## Solution shape

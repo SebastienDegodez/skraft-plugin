@@ -1,15 +1,20 @@
 #!/usr/bin/env node
-import { join } from 'node:path'
-import { rename, mkdir, readdir, access } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
 import { createJsonStateBackupReader } from '../adapters/infrastructure/state/json-state-backup-reader.mjs'
+import { createJsonStateArchive } from '../adapters/infrastructure/state/json-state-archive.mjs'
 import { createStateService } from '../application/state-service.mjs'
+import { createPhaseGate } from '../application/phase-gate-service.mjs'
+import { createTrackingFiles } from '../adapters/infrastructure/tracking-files.mjs'
 import { createRecoveryService } from '../application/recovery-service.mjs'
 import { createGitCommitLogReader } from '../adapters/infrastructure/git-commit-log-reader.mjs'
 import { createCommitScanService } from '../application/commit-scan-service.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
-import { stateDirSegments } from '../domain/tracking-layout-policy.mjs'
+import { createActiveSlugStore } from '../adapters/infrastructure/active-slug-store.mjs'
+import { firstValidProjectSlug, isValidProjectSlug } from '../domain/value-objects.mjs'
 
 // basePath: resolved from SKRAFT_TRACKING_ROOT (explicit) → SKRAFT_TRACKING_LAYOUT env →
 // skraft-config.json::trackingLayout → default namespaced. State lives at {basePath}/{slug}/.
@@ -18,8 +23,44 @@ const basePath = resolveTrackingRoot()
 const stateReader = createJsonStateReader(basePath)
 const stateWriter = createJsonStateWriter(basePath)
 const backupReader = createJsonStateBackupReader(basePath)
-const service = createStateService({ stateReader, stateWriter })
-const recoveryService = createRecoveryService({ stateReader, stateWriter, backupReader, stateService: service })
+const activeSlug = createActiveSlugStore(basePath)
+// Framework config: skraft-framework.config.json beside this runtime (SKRAFT_CONFIG
+// overrides). An unreadable config leaves the state machine on its default order and
+// the phase closures ungated.
+const readFrameworkConfig = () => {
+  const configPath = process.env.SKRAFT_CONFIG
+    ?? fileURLToPath(new URL('../../skraft-framework.config.json', import.meta.url))
+  try {
+    return JSON.parse(readFileSync(configPath, 'utf8'))
+  } catch {
+    return null
+  }
+}
+const frameworkConfig = readFrameworkConfig()
+const publishedOrder = frameworkConfig?.phaseOrder
+const phaseOrder = Array.isArray(publishedOrder) && publishedOrder.length > 0
+  && publishedOrder.every((phase) => typeof phase === 'string' && phase.length > 0)
+  ? publishedOrder : undefined
+
+const now = () => new Date().toISOString()
+
+// HEAD of the repository the CLI runs in; null outside a git work tree.
+const headSha = () => {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null
+  } catch {
+    return null
+  }
+}
+
+const phaseGate = frameworkConfig?.phaseAgents
+  ? createPhaseGate({ config: frameworkConfig, trackingFiles: createTrackingFiles(basePath), git: { headSha: async () => headSha() } })
+  : undefined
+
+const service = createStateService({ stateReader, stateWriter, phaseOrder, phaseGate })
+const recoveryService = createRecoveryService({
+  stateReader, stateWriter, backupReader, stateArchive: createJsonStateArchive(basePath), stateService: service,
+})
 const commitScanService = createCommitScanService({
   commitLogReader: createGitCommitLogReader({ cwd: process.cwd() })
 })
@@ -52,23 +93,54 @@ function writeSuccess(data) {
 }
 
 async function run() {
-  const slug = arg('slug')
+  const explicitSlug = arg('slug')
+  if (explicitSlug !== undefined && !isValidProjectSlug(explicitSlug)) {
+    writeError('INVALID_ARGUMENT', `--slug must be a kebab-case project slug, got: ${explicitSlug}`)
+    process.exitCode = 1
+    return
+  }
+  // Without --slug, act on the active pipeline (SKRAFT_PROJECT_SLUG, then the recorded pointer).
+  const slug = firstValidProjectSlug(explicitSlug, process.env.SKRAFT_PROJECT_SLUG, activeSlug.read()) ?? undefined
 
   switch (subcommand) {
     case 'init': {
+      if (explicitSlug === undefined) {
+        writeError('INVALID_ARGUMENT', 'init requires --slug')
+        process.exitCode = 1
+        return
+      }
       const result = await service.init(slug)
       if (!result.ok) {
         writeError(result.error.code, result.error.reason)
         process.exitCode = domainExitCode(result.error.code)
         return
       }
+      activeSlug.write(slug)
       writeSuccess({ created: result.value.created, currentPhase: result.value.currentPhase })
+      break
+    }
+
+    case 'select': {
+      if (explicitSlug === undefined) {
+        writeError('INVALID_ARGUMENT', 'select requires --slug')
+        process.exitCode = 1
+        return
+      }
+      const result = await service.get(slug, 'currentPhase')
+      if (!result.ok) {
+        const code = result.error.code === 'ENOENT' ? 'NO_STATE' : result.error.code
+        writeError(code, `no pipeline state for ${slug}; run init first`)
+        process.exitCode = domainExitCode(code)
+        return
+      }
+      activeSlug.write(slug)
+      writeSuccess({ selected: slug, currentPhase: result.value })
       break
     }
 
     case 'transition': {
       const to = arg('to')
-      const result = await service.applyEvent(slug, { type: 'ADVANCE', targetPhase: to })
+      const result = await service.applyEvent(slug, { type: 'ADVANCE', targetPhase: to, at: now() })
       if (!result.ok) {
         writeError(result.error.code, result.error.reason)
         process.exitCode = domainExitCode(result.error.code)
@@ -121,7 +193,7 @@ async function run() {
       const phase = arg('phase')
       const verdict = arg('verdict')
       const path = arg('artifact')
-      const result = await service.applyEvent(slug, { type: 'CLOSE_PHASE', phase, verdict, path })
+      const result = await service.applyEvent(slug, { type: 'CLOSE_PHASE', phase, verdict, path, at: now() })
       if (!result.ok) {
         writeError(result.error.code, result.error.reason)
         process.exitCode = domainExitCode(result.error.code)
@@ -131,9 +203,30 @@ async function run() {
       break
     }
 
-    case 'set-difficulty': {
-      const value = arg('value')
-      const result = await service.applyEvent(slug, { type: 'SET_DIFFICULTY', value })
+    case 'set': {
+      const field = arg('field')
+      const data = arg('data')
+      let value
+      try {
+        value = JSON.parse(data)
+      } catch {
+        writeError('INVALID_ARGUMENT', `--data must be JSON, got: ${data}`)
+        process.exitCode = 1
+        return
+      }
+      const result = await service.applyEvent(slug, { type: 'SET_METADATA', field, value })
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
+      break
+    }
+
+    case 'mark-phase-started': {
+      const phase = arg('phase')
+      const result = await service.applyEvent(slug, { type: 'MARK_PHASE_STARTED', phase, at: now(), baseSha: headSha() })
       if (!result.ok) {
         writeError(result.error.code, result.error.reason)
         process.exitCode = domainExitCode(result.error.code)
@@ -237,6 +330,18 @@ async function run() {
       break
     }
 
+    case 'reset': {
+      // Start over from a state no command can use; the old file is kept beside it.
+      const result = await recoveryService.reset(slug)
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      writeSuccess(result.value)
+      break
+    }
+
     case 'resolve-stale': {
       // AC3: reset the stuck phase retry budget so the phase can be relaunched.
       const phase = arg('phase')
@@ -247,65 +352,6 @@ async function run() {
         return
       }
       writeSuccess(result.value)
-      break
-    }
-
-    case 'migrate': {
-      // P4 back-compat: relocate a project's STATE from the namespaced layout
-      // (.copilot-tracking/skraft-plans/{slug}/) to the bare layout
-      // (.copilot-tracking/skraft/{slug}/). Dry-run by default; --apply performs the move.
-      // Artefacts (research/plans/details/changes/reviews) are intentionally LEFT IN PLACE:
-      // they stay readable, and bare-mode agents write new artefacts to the shared
-      // .copilot-tracking dirs. Bulk artefact relocation is deliberately out of scope to
-      // avoid collisions with an existing HVE-RPI run on the same bare dirs.
-      if (!slug) {
-        writeError('INVALID_ARGUMENT', 'migrate requires --slug')
-        process.exitCode = 1
-        return
-      }
-      const apply = rest.includes('--apply')
-      const cwd = process.cwd()
-      const fromDir = join(cwd, ...stateDirSegments('namespaced', slug))
-      const toDir = join(cwd, ...stateDirSegments('bare', slug))
-      const fromState = join(fromDir, 'state.json')
-      const toState = join(toDir, 'state.json')
-
-      try {
-        await access(fromState)
-      } catch {
-        writeError('NOT_FOUND', `no namespaced state found at ${fromState}`)
-        process.exitCode = 1
-        return
-      }
-      let targetExists = false
-      try { await access(toState); targetExists = true } catch { /* target free */ }
-      if (targetExists) {
-        writeError('TARGET_EXISTS', `bare state already exists at ${toState}; refusing to overwrite`)
-        process.exitCode = 3
-        return
-      }
-
-      if (!apply) {
-        writeSuccess({ dryRun: true, from: fromState, to: toState, hint: 'pass --apply to perform the move' })
-        break
-      }
-
-      await mkdir(toDir, { recursive: true })
-      const entries = await readdir(fromDir).catch(() => [])
-      const moved = []
-      for (const name of entries) {
-        if (name === 'state.json' || /^state\.json\.bak\.\d+$/.test(name)) {
-          await rename(join(fromDir, name), join(toDir, name))
-          moved.push(name)
-        }
-      }
-      writeSuccess({
-        applied: true,
-        from: fromState,
-        to: toState,
-        moved,
-        note: 'artefacts left in place; bare-mode agents write new artefacts to the shared .copilot-tracking dirs'
-      })
       break
     }
 

@@ -2,106 +2,90 @@
 layout: doc
 lang: en
 title: "The HVE-Core substrate"
-description: "HVE-Core is the substrate the phases articulate on: state.json, the six-step per-turn protocol, transitions gated by verdicts."
+description: "HVE-Core is the engineering pipeline recovery substrate: state.json, its JSON Schema, deterministic writes, and verdict-gated transitions."
 ---
 
 # The HVE-Core substrate
 
-> SKRAFT is not autonomous: it runs on **HVE-Core**. This substrate carries the
-> articulation of the phases in architecture — a shared memory (`state.json`), a turn
-> protocol, and transitions gated by verdicts.
+> HVE-Core gives the engineering pipeline durable memory (`state.json`), recovery
+> after interruption, and transitions gated by verdicts.
 
 ## Why a substrate
 
-A 5-phase pipeline, with one agent and one reviewer per phase, needs a single source
-of truth: where are we, what verdict was issued, how many retries happened. Without it,
-each agent would improvise its own state and resuming after an interruption would be
-impossible. HVE-Core provides that backbone, shared with the neighbour planners
-(Security, RAI, SSSC).
+The pipeline driven by `skraft-orchestrator` needs one source of truth: where
+engineering stands, what verdict was issued, and how many retries happened. Without
+it, every agent would improvise state and recovery after an interruption would be
+impossible. DISCOVER, DISCUSS, and Brownfield roots remain standalone workflows.
+They do not mutate this state.
 
 ## `state.json` — the pipeline memory
 
 State persists as JSON at
-`.copilot-tracking/skraft-plans/{project-slug}/state.json`. Key fields:
+`.copilot-tracking/skraft-plans/{project-slug}/state.json`. Its contract is the JSON Schema
+`plugins/skraft-framework/src/domain/state.schema.json`. Key fields:
 
 ```json
 {
-  "currentPhase": "DISCOVER | DISCUSS | DESIGN | DISTILL | DELIVER | DONE",
-  "difficulty": "simple | medium | medium-hard | challenging | null",
+  "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE",
   "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
-  "reviewerVerdicts": { "DESIGN": "APPROVED | REJECTED | NEEDS_REWORK | null" },
+  "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
   "retryCount": { "DESIGN": 0 },
-  "userPreferences": {
-    "autonomyTier": "full | partial | manual",
-    "maxRetriesPerPhase": 2
-  },
-  "neighborPlanners": { "securityPlanFile": null, "raiPlanFile": null }
+  "userPreferences": { "maxRetriesPerPhase": 2 },
+  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] }
 }
 ```
 
 - `currentPhase` advances **only** on an `APPROVED` verdict.
-- `phaseArtifacts`, `reviewerVerdicts`, `retryCount` trace what each phase produced and
+- `phaseArtifacts`, `verdicts`, `retryCount` trace what each phase produced and
   how it was judged.
 - `maxRetriesPerPhase` (default 2) bounds retries before human escalation.
-- `difficulty` is written once at the exit of DISCOVER and never reassessed. It selects
-  the **DELIVER execution model** — an inline TDD cycle, or one sub-agent dispatched per
-  Gherkin scenario. It routes *how* the work is executed, never *how strictly* it is
-  judged.
+- `adrRatification` holds DESIGN until a human ratifies every proposed ADR.
+
+The state CLI enforces that schema on every read and write. A field the schema does not
+declare, or a value outside its shape, makes the state invalid: no older format is
+migrated. A pipeline started with an earlier version therefore stops with
+`INVALID_STATE`; `state.mjs diagnose` names the next command, and after `reset` the
+orchestrator rebuilds the state from the artefacts on disk, with your confirmation.
 
 The state carries **no quality dial**. Mutation and coverage thresholds, the four
 adversarial review lenses, the Gherkin gate and the Outside-In double-loop TDD variant
 are fixed once and for all by the `skraft-quality-bar` skill; they are the same on every
 run, and nothing written into `state.json` can lower them.
 
-## The six-step per-turn protocol
+## The write-through model
 
-On **every turn**, before any user-facing output:
+`state.json` is a safety snapshot, not a block reread on every turn:
 
-1. **READ** — load `state.json`.
-2. **VALIDATE** — check the schema (otherwise run the recovery procedure).
-3. **DETERMINE** — inspect `currentPhase`, the verdict and `retryCount` to decide the
-   next concrete action.
-4. **EXECUTE** — dispatch the phase agent, dispatch the reviewer, or request a human
-   decision.
-5. **UPDATE** — mutate state in memory (append-only on lists; `currentPhase` advances
-   only on `APPROVED`; increment `retryCount` on retry).
-6. **WRITE** — persist `state.json` before returning control.
+1. **Rehydrate** — read and validate the snapshot once at session start.
+2. **Execute** — decide from the last state the CLI printed, then dispatch an agent or request a human decision.
+3. **Record** — apply each mutation through the deterministic `state.mjs` CLI, which prints the updated state.
 
 ## How the phases articulate
 
-Each phase reads the state, writes its dated artifacts, then its reviewer writes a
-verdict that gates the transition. The **orchestrator** is the single entry point.
+`skraft-orchestrator` is selected with a refined story. It sequences only
+RESEARCH → DESIGN → DISTILL → DELIVER. RESEARCH may be skipped when a confirmed
+upstream HVE handoff proves it already satisfied; it has no declared phase reviewer. The next three phases advance
+according to verdicts from their dedicated reviewers.
 
 ```mermaid
 flowchart TD
     O([skraft-orchestrator]) -->|READ / WRITE| S[(state.json)]
-    O --> D1[DISCOVER]
-    D1 --> R1{reviewer}
-    R1 -->|APPROVED| D2[DISCUSS]
-    R1 -->|NEEDS_REWORK| D1
-    D2 --> R2{reviewer}
-    R2 -->|APPROVED| D3[DESIGN]
-    R2 -->|NEEDS_REWORK| D2
+    O --> D1[RESEARCH when needed]
+    D1 --> D3[DESIGN]
     D3 --> R3{reviewer}
     R3 -->|APPROVED| D4[DISTILL]
-    R3 -->|NEEDS_REWORK| D3
+    R3 -->|CHANGES_REQUESTED| D3
     D4 --> R4{reviewer}
     R4 -->|APPROVED| D5[DELIVER]
-    R4 -->|NEEDS_REWORK| D4
+    R4 -->|CHANGES_REQUESTED| D4
     D5 --> R5{reviewer}
     R5 -->|APPROVED| DONE([DONE])
-    R5 -->|NEEDS_REWORK| D5
+    R5 -->|CHANGES_REQUESTED| D5
 ```
 
-On `REJECTED`/`NEEDS_REWORK`, the same phase is re-dispatched, `retryCount` increases,
-and `currentPhase` does not move. When the retry threshold is reached without
+On `CHANGES_REQUESTED`, the same phase is re-dispatched, `retryCount` increases,
+and `currentPhase` does not move. When the retry budget is reached without
 `APPROVED`, the orchestrator escalates to the user.
-
-## Neighbour planners
-
-HVE-Core hosts other planners (Security, RAI, SSSC). SKRAFT references their plans via
-`neighborPlanners.*` but **never writes** into their directory — each planner stays the
-owner of its artifacts.
 
 ## See also
 

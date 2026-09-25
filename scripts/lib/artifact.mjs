@@ -38,24 +38,17 @@ export const ARTIFACTS = {
   },
   'review-verdict': {
     template: 'plugins/skraft-framework/assets/templates/review-verdict.template.md',
-    required: [
-      'phase',
-      'projectSlug',
-      'date',
-      'attempt',
-      'verdict',
-      'lensCount',
-      'score',
-      'lenses',
-      'synthesis',
-      'conclusion',
+    requiredAny: [
+      ['verdict', 'status'],
+      ['lenses', 'lens_results'],
+      ['synthesis', 'summary'],
     ],
-    optional: [],
+    optional: ['confidence', 'reviewed_at', 'artefacts_reviewed', 'dissent_analysis'],
   },
   'review-comment': {
     template: 'plugins/skraft-framework/assets/templates/review-comment.template.md',
     required: ['phase', 'icon', 'status', 'artefacts', 'verdictLabel', 'nextPhase'],
-    optional: ['difficulty', 'evidence', 'evidenceLinks'],
+    optional: ['evidence', 'evidenceLinks'],
   },
 }
 
@@ -75,8 +68,39 @@ function isMissing(value) {
 export function validate(type, data) {
   const spec = ARTIFACTS[type]
   if (!spec) return { ok: false, type, unknownType: true, missing: [] }
-  const missing = spec.required.filter((key) => isMissing(data ? data[key] : undefined))
+  const missing = [
+    ...(spec.required ?? []).filter((key) => isMissing(data ? data[key] : undefined)),
+    ...(spec.requiredAny ?? [])
+      .filter((keys) => keys.every((key) => isMissing(data ? data[key] : undefined)))
+      .map((keys) => keys.join('|')),
+  ]
   return { ok: missing.length === 0, type, unknownType: false, missing }
+}
+
+const quoteYaml = (value) => JSON.stringify(String(value))
+
+const toYaml = (value, indent = 0) => {
+  const pad = ' '.repeat(indent)
+  if (Array.isArray(value)) {
+    if (value.length === 0) return `${pad}[]`
+    return value.map((item) => {
+      if (item !== null && typeof item === 'object') {
+        const lines = toYaml(item, indent + 2).split('\n')
+        return `${pad}- ${lines[0].trimStart()}${lines.length > 1 ? `\n${lines.slice(1).join('\n')}` : ''}`
+      }
+      return `${pad}- ${toYaml(item).trim()}`
+    }).join('\n')
+  }
+  if (value !== null && typeof value === 'object') {
+    return Object.entries(value).map(([key, item]) => {
+      if (Array.isArray(item) && item.length === 0) return `${pad}${key}: []`
+      if (item !== null && typeof item === 'object') return `${pad}${key}:\n${toYaml(item, indent + 2)}`
+      return `${pad}${key}: ${toYaml(item).trim()}`
+    }).join('\n')
+  }
+  if (typeof value === 'string') return quoteYaml(value)
+  if (value == null) return 'null'
+  return String(value)
 }
 
 /**
@@ -87,5 +111,6 @@ export function renderArtifact(type, data, { root = REPO_ROOT } = {}) {
   const spec = ARTIFACTS[type]
   if (!spec) throw new Error(`unknown artifact type: ${type}`)
   const template = readFileSync(resolve(root, spec.template), 'utf8')
-  return render(template, data)
+  const view = type === 'review-verdict' ? { ...data, payload: toYaml(data) } : data
+  return render(template, view)
 }

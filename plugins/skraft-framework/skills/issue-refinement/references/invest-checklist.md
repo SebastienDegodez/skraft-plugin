@@ -121,7 +121,7 @@ Technical Notes: Performance testing confirms P95 < 2s under 100 concurrent user
 
 **Definition:** The team can agree on a T-shirt size estimate without open-ended discussion.
 
-**Verification question:** "Can a team of three engineers agree on XS/S/M/L in under 5 minutes?"
+**Verification question:** "Can a team of three engineers agree on 1/2/3/5/8 in under 5 minutes?"
 
 **Pass condition:** Scope is clear, acceptance criteria are written, known technical constraints are noted. Unknowns are bounded.
 
@@ -160,13 +160,13 @@ Estimate: M (1 day) — pattern already exists from STORY-02.
 
 **Verification question:** "Can one engineer complete, test, and demo this story in a 3-day window?"
 
-**Pass condition:** Effort is XS, S, or M. L is acceptable if ACs are tight and the team accepts the risk. XL is always a split signal.
+**Pass condition:** Effort is 1, 2, or 3. A 5 or an 8 is acceptable if ACs are tight and the team accepts the risk. Anything above 8 is always a split signal.
 
 **Fail examples:**
 
 | Violation | Signal |
 |---|---|
-| XL estimate | Effort > 3 days, team cannot reduce scope |
+| Estimate above 8 | Effort > 3 days, team cannot reduce scope |
 | 6+ ACs | More ACs than can be implemented and tested in 1-3 days |
 | Multiple personas | Story serves 3 different user roles with distinct flows |
 
@@ -179,7 +179,7 @@ Apply one of the 6 splitting patterns (see splitting-patterns.md):
 **Auto-insurance example (fail):**
 ```
 Story: Insurance application end-to-end
-Effort: XL (estimate: 2 weeks)
+Effort: 21 (estimate: 2 weeks)
 ACs: 12
 ```
 → Fails: must split before continuing.
@@ -240,5 +240,5 @@ Then the driver receives a confirmation valid for 30 days
 | Negotiable | Does this prescribe implementation? | Move HOW to Technical Notes; keep WHAT in story body |
 | Valuable | Would a stakeholder notice if this was never shipped? | Reframe technical work as user-visible outcomes |
 | Estimable | Can the team size this in 5 minutes? | Write ACs first; add spike for unknown integrations |
-| Small | Is this deliverable in 1-3 days? | Apply splitting pattern for L/XL estimates |
+| Small | Is this deliverable in 1-3 days? | Apply splitting pattern for estimates above 8 |
 | Testable | Can a product owner validate this without code? | Add concrete G/W/T ACs from domain examples |

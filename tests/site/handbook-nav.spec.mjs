@@ -22,10 +22,48 @@ test.describe('SKRAFT handbook navigation', () => {
     ).toBeVisible();
   });
 
-  test('HVE-Core substrate is reachable from the pipeline sidebar', async ({ page }) => {
+  test('Brownfield is a first-class journey directly after the core journey', async ({ page }) => {
     await page.goto(`${BASE}/fr/explanation/pipeline/`);
-    await expect(
-      page.locator('.doc-sidebar a', { hasText: 'substrat HVE-Core' })
-    ).toBeVisible();
+    const sections = page.locator('.doc-sidebar__section');
+    await expect(sections).toContainText([
+      'Orientation',
+      'Parcours principal',
+      'Parcours Brownfield',
+      'Comprendre le système',
+      'Approfondissements',
+      'Contextes particuliers'
+    ]);
+    await expect(page.locator('.doc-sidebar a', { hasText: 'Reprendre un existant' })).toBeVisible();
+  });
+
+  test('pager traverses section boundaries in book order', async ({ page }) => {
+    await page.goto(`${BASE}/fr/explanation/pipeline/deliver.html`);
+    await expect(page.locator('.doc-pager a', { hasText: 'Reprendre un existant' })).toBeVisible();
+  });
+
+  test('localized dashboard uses full width and renders ordered topology', async ({ page }) => {
+    await page.goto(`${BASE}/fr/dashboard/`);
+
+    await expect(page.locator('.doc-sidebar')).toHaveCount(0);
+    await expect(page.locator('.dashboard-layout')).toHaveCSS('width', `${page.viewportSize().width}px`);
+    const heroBox = await page.locator('.hero').boundingBox();
+    expect(heroBox.x).toBe(0);
+    expect(heroBox.width).toBe(page.viewportSize().width);
+    await expect(page.locator('.hero h1')).toContainText('Des skills pour une livraison disciplinée.');
+    await expect(page.locator('#chains')).toContainText('Préparation produit, puis ingénierie');
+    await expect(page.locator('.journey-step')).toHaveCount(3);
+    await expect(page.locator('.phase-card')).toHaveCount(4);
+    await expect(page.locator('#agent-backlog-discoverer')).toBeAttached();
+    await expect(page.locator('[id^="skill-"]').first()).toBeAttached();
+  });
+
+  test('legacy dashboard route stays operational with English handbook navigation', async ({ page }) => {
+    await page.goto(`${BASE}/dashboard/`);
+
+    await expect(page.locator('.doc-sidebar')).toHaveCount(0);
+    await expect(page.locator('.hero h1')).toContainText('Skills that make delivery disciplined.');
+    await expect(page.locator('.hero .lead')).toContainText('controlled skill-versus-baseline runs');
+    await expect(page.locator('#topology')).toContainText('Engineering pipeline');
+    await expect(page.locator('.site-nav__lang a')).toHaveAttribute('href', /\/fr\/dashboard\/$/);
   });
 });

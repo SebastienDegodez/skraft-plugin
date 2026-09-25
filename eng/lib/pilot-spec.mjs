@@ -7,21 +7,19 @@
 // that question for a fraction of the budget.
 //
 // Vally 0.12.0 has no stimulus filter, so the pilot is a filtered copy of the
-// spec. Filtering is line-based on purpose: `eng/` reads these specs without a
-// YAML dependency, and the specs this repository authors keep one `- name:` per
-// stimulus under a top-level `stimuli:` key.
+// spec. Resolve YAML aliases before filtering: a kept stimulus may refer to an
+// anchor defined by a stimulus that the pilot drops.
+
+import { parse, stringify } from 'yaml'
 
 const STIMULUS_LINE = /^([ \t]{2,})-[ \t]+name:[ \t]*(.+?)[ \t]*$/
-const RUNS_LINE = /^([ \t]*)runs:[ \t]*\d+[ \t]*$/
 
 /**
  * Split a spec into its header and one entry per stimulus block.
  * A block runs from its `- name:` line to the line before the next one.
  *
- * Exported because the baseline cache keys on the same unit: one block is one
- * stimulus, and one stimulus is what gets re-run or served from cache. Two
- * parsers over the same file shape would drift, which is the defect class this
- * repository keeps paying for.
+ * Retained for the baseline cache's textual block keys. Pilot selection uses
+ * parsed YAML values instead, so dropping a block cannot orphan an alias.
  *
  * @param {string} content raw eval.yaml content
  * @returns {{ header: string[], blocks: { name: string, lines: string[] }[] }}
@@ -62,23 +60,27 @@ export function stripQuotes(value) {
  * @returns {{ spec: string, kept: string[] }}
  */
 export function pilotSpec(content, selectors, runs) {
-  const { header, blocks } = parseBlocks(content)
-  if (blocks.length === 0) throw new Error('spec declares no stimuli')
+  const document = parse(content)
+  const stimuli = document?.stimuli
+  if (!Array.isArray(stimuli) || stimuli.length === 0) throw new Error('spec declares no stimuli')
 
   const wanted = selectors.map((selector) => selector.trim().toLowerCase()).filter(Boolean)
   if (wanted.length === 0) throw new Error('no stimulus selector given')
 
   for (const selector of wanted) {
-    if (!blocks.some((block) => block.name.toLowerCase().includes(selector))) {
-      throw new Error(`no stimulus matches "${selector}" (spec has: ${blocks.map((block) => block.name).join(', ')})`)
+    if (!stimuli.some((stimulus) => stimulus.name.toLowerCase().includes(selector))) {
+      throw new Error(`no stimulus matches "${selector}" (spec has: ${stimuli.map((stimulus) => stimulus.name).join(', ')})`)
     }
   }
 
-  const kept = blocks.filter((block) => wanted.some((selector) => block.name.toLowerCase().includes(selector)))
-  const head = runs === undefined ? header : header.map((line) => line.replace(RUNS_LINE, `$1runs: ${runs}`))
+  const kept = stimuli.filter((stimulus) => wanted.some((selector) => stimulus.name.toLowerCase().includes(selector)))
+  const pilot = { ...document, stimuli: kept }
+  if (runs !== undefined) pilot.defaults = { ...document.defaults, runs }
 
   return {
-    spec: [...head, ...kept.flatMap((block) => block.lines)].join('\n'),
-    kept: kept.map((block) => block.name),
+    // Materialize shared values rather than introducing cross-stimulus aliases
+    // into a pilot that the baseline-cache path may narrow again.
+    spec: stringify(pilot, { aliasDuplicateObjects: false }),
+    kept: kept.map((stimulus) => stimulus.name),
   }
 }

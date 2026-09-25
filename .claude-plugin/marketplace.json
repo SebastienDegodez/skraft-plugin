@@ -4,13 +4,13 @@
     "name": "SebastienDegodez"
   },
   "metadata": {
-    "description": "skraft agentic SDLC pipeline — specialized phase agents, dedicated reviewers and implementation-discipline skills for the DISCOVER→DELIVER workflow."
+    "description": "skraft agentic SDLC pipeline — specialized phase agents, dedicated reviewers and implementation-discipline skills, from backlog discovery to the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline."
   },
   "plugins": [
     {
       "name": "skraft",
       "source": "./plugins/skraft-framework",
-      "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture and the DISCOVER→DELIVER workflow."
+      "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture, backlog discovery and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline."
     }
   ]
 }

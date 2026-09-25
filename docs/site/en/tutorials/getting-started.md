@@ -2,56 +2,87 @@
 layout: doc
 lang: en
 title: "Getting Started"
+description: "Install SKRAFT with /plugin, choose the right journey, and run the first workflow."
 persona: software-engineer
 ---
 
 # Getting Started
 
-## Prerequisites
+> Install the plugin in your assistant, choose your starting point, then run the workflow that fits your project.
 
-- **VS Code** with the **GitHub Copilot** extension enabled
-- **Node.js** (≥ 18) for validation scripts
+## Before you begin
 
-## Installation
+- **Claude Code**, to use the `/plugin` commands below
+- a target repository open in your assistant
+- GitHub access only when you want to work from issues
 
-### 1. Clone the repository
+Node.js, APM, and a clone of the SKRAFT repository are not required to use the
+plugin. They belong to development of the plugin itself.
 
-```bash
-git clone https://github.com/SebastienDegodez/skraft-plugin.git
-cd skraft-plugin
+## 1. Install SKRAFT with `/plugin`
+
+Enter these commands in the Claude Code conversation, not in a terminal:
+
+```text
+/plugin marketplace add SebastienDegodez/skraft-plugin
+/plugin install skraft
 ```
 
-### 2. Install the agent package manager (optional)
+The first command adds the repository as a marketplace. The second installs the
+`skraft` plugin published by that marketplace. Then open `/plugin` and check that
+`skraft` appears under installed plugins.
 
-If you use external plugins, install [apm — Agent Package Manager](https://github.com/microsoft/apm):
+## 2. Choose your journey
 
-```bash
-# macOS / Linux
-curl -sSL https://aka.ms/apm-unix | sh
-# Windows: irm https://aka.ms/apm-windows | iex
+Do not automatically run one global chain. The right starting point depends on
+what your repository already has.
 
-# then, from the repo root (apm reads apm.yml):
-apm install
-```
+| Your situation | Start with | Then |
+| --- | --- | --- |
+| A refined story already exists | `skraft-orchestrator` | engineering pipeline |
+| Issues exist but are not prepared | `backlog-discoverer`, then `backlog-planner` | `skraft-orchestrator` |
+| Code exists without product documentation | `brownfield-analyst` | PRD, issue creation, product preparation, then `skraft-orchestrator` |
+| Legacy code is unsafe to change | `brownfield-harness-builder`, then `brownfield-refactorer` | return to a prepared story, then `skraft-orchestrator` |
 
-### 3. Open in VS Code
+The Brownfield, DISCOVER, and DISCUSS workflows are invoked directly. They are
+not hidden phases of `skraft-orchestrator`. Read the
+[Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }}) when
+taking over an existing system.
 
-Agents are auto-discovered from the `.github/agents/` directory. No additional configuration is needed.
+## 3. Run the first workflow
 
-### 4. First run
+### Story already prepared
 
-Type `/skraft` in Copilot Chat to launch the orchestrator. It automatically detects the project state and resumes from the last persisted phase.
+In the agent selector, choose `skraft-orchestrator`, then give it the refined
+story. This is the sole entrypoint for the engineering pipeline. It loads its
+persistent state and resumes from the last validated point.
 
-### 5. Follow the DISCOVER → DELIVER flow
+### Backlog still raw
 
-Assign yourself a GitHub issue, then let the orchestrator guide you through the six phases:
+First choose `backlog-discoverer` in the agent selector. Once triage is complete,
+choose `backlog-planner` to refine the selected issue. The refined story then
+becomes the input to `skraft-orchestrator`.
 
-1. **DISCOVER** — Triage and prioritization
-2. **DISCUSS** — Refinement into user stories
-3. **DESIGN** — Architecture and ADRs
-4. **DISTILL** — BDD scenarios
-5. **DELIVER** — TDD implementation
+## 4. Understand what will run
 
-Each phase is validated by a dedicated reviewer before moving to the next.
+The core journey has two distinct areas:
 
-→ See the [phase details]({{ "/en/explanation/pipeline/" | relative_url }}) for more information.
+1. **Optional standalone product preparation**
+	- **DISCOVER** triages and prioritizes issues
+	- **DISCUSS** turns an issue into a verifiable story
+2. **Engineering pipeline driven by `skraft-orchestrator`**
+	- **RESEARCH** reduces uncertainty when the work justifies it
+	- **DESIGN** makes and records architecture decisions
+	- **DISTILL** produces executable scenarios and the plan
+	- **DELIVER** implements with Outside-In TDD and gathers evidence
+
+RESEARCH may be skipped when routing concludes that a dedicated investigation
+would add no value. DISCOVER and DISCUSS are never dispatched by
+`skraft-orchestrator`: you choose them before it when your input is not yet a
+ready story.
+
+## 5. Continue reading
+
+- [Choose an entrypoint and see the pipeline]({{ "/en/explanation/pipeline/" | relative_url }})
+- [Follow one request end to end]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }})
+- [Take over a Brownfield system]({{ "/en/explanation/brownfield" | relative_url }})

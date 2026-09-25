@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SKRAFT pipeline state",
+  "description": "{trackingRoot}/{projectSlug}/state.json, written only by src/cli/state.mjs (report.mjs setup writes userPreferences.reporting). x-owner mirrors STATE_SCHEMA in state-schema.mjs: 'invariant' fields are owned by the state machine, 'orchestrator' fields by the orchestrator through state.mjs set or phase events.",
+  "type": "object",
+  "required": ["currentPhase"],
+  "additionalProperties": false,
+  "$defs": {
+    "phaseMap": {
+      "description": "Keyed by phase name (skraft-framework.config.json::phaseOrder).",
+      "type": "object"
+    },
+    "paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "count": { "type": "integer", "minimum": 0 }
+  },
+  "properties": {
+    "projectSlug": {
+      "x-owner": "orchestrator",
+      "description": "Kebab-case identifier of the pipeline; the name of its tracking directory.",
+      "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+    },
+    "currentPhase": {
+      "x-owner": "invariant",
+      "description": "The phase being executed, a phase of phaseOrder, or DONE once every phase closed. Advances only through transition or close-phase.",
+      "type": "string",
+      "minLength": 1
+    },
+    "phasesCompleted": {
+      "x-owner": "invariant",
+      "description": "Closed phases, in closing order. Append-only.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "phaseArtifacts": {
+      "x-owner": "invariant",
+      "description": "Artefacts each phase recorded with record-artifact, relative to the tracking directory. Append-only.",
+      "$ref": "#/$defs/phaseMap",
+      "additionalProperties": { "$ref": "#/$defs/paths" }
+    },
+    "verdicts": {
+      "x-owner": "invariant",
+      "description": "Reviewer verdict per phase. A review's NEEDS_REWORK or REJECTED records as CHANGES_REQUESTED.",
+      "$ref": "#/$defs/phaseMap",
+      "additionalProperties": { "enum": ["APPROVED", "CHANGES_REQUESTED", null] }
+    },
+    "reviewArtifacts": {
+      "x-owner": "invariant",
+      "description": "Review files per phase under reviews/{date}/, relative to the tracking directory. Append-only; the latest one decides the phase gate.",
+      "$ref": "#/$defs/phaseMap",
+      "additionalProperties": { "$ref": "#/$defs/paths" }
+    },
+    "retryCount": {
+      "x-owner": "invariant",
+      "description": "Automated reviewer retries per phase, capped at userPreferences.maxRetriesPerPhase.",
+      "$ref": "#/$defs/phaseMap",
+      "additionalProperties": { "$ref": "#/$defs/count" }
+    },
+    "reworkCount": {
+      "x-owner": "invariant",
+      "description": "Manual, human-validated rework passes per phase (incr-rework). Uncapped.",
+      "$ref": "#/$defs/phaseMap",
+      "additionalProperties": { "$ref": "#/$defs/count" }
+    },
+    "findingsResolved": {
+      "x-owner": "invariant",
+      "description": "Review findings resolved across the rework passes of each phase (incr-rework --findings).",
+      "$ref": "#/$defs/phaseMap",
+      "additionalProperties": { "$ref": "#/$defs/count" }
+    },
+    "phaseHistory": {
+      "x-owner": "orchestrator",
+      "description": "Written by mark-phase-started (inProgress, startedAt, baseSha) and by phase closure (done, completedAt). DELIVER's baseSha bounds the commits its gate requires.",
+      "$ref": "#/$defs/phaseMap",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status"],
+        "additionalProperties": false,
+        "properties": {
+          "status": { "enum": ["inProgress", "done"] },
+          "startedAt": { "type": "string", "minLength": 1 },
+          "baseSha": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }] },
+          "completedAt": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "userPreferences": {
+      "x-owner": "invariant",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxRetriesPerPhase": {
+          "description": "Automated retries allowed per phase before the orchestrator escalates. Default 2.",
+          "$ref": "#/$defs/count"
+        },
+        "reporting": {
+          "description": "Confirmed reporting preferences, written by report.mjs setup and validated by reporting-preferences.mjs; see skills/qa-reporting/references/report-contract.md.",
+          "type": "object"
+        }
+      }
+    },
+    "adrRatification": {
+      "x-owner": "orchestrator",
+      "description": "DESIGN human-ratification checkpoint. awaiting_human while Proposed ADRs wait for the human; resolved once none remain. DESIGN advances to DISTILL only when resolved.",
+      "type": "object",
+      "required": ["checkpointStatus", "pending", "ratified"],
+      "additionalProperties": false,
+      "properties": {
+        "checkpointStatus": { "enum": ["none", "awaiting_human", "resolved"] },
+        "pending": {
+          "description": "Rows of docs/adr/decisions-index.md still Proposed.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["adr", "title", "recommended", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "adr": { "type": "string", "minLength": 1 },
+              "title": { "type": "string", "minLength": 1 },
+              "recommended": { "enum": ["accept", "reject"] },
+              "status": { "const": "Proposed" }
+            }
+          }
+        },
+        "ratified": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["adr", "verdict", "by"],
+            "additionalProperties": false,
+            "properties": {
+              "adr": { "type": "string", "minLength": 1 },
+              "verdict": { "enum": ["Accepted", "Rejected"] },
+              "by": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

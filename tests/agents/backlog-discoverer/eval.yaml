@@ -1,0 +1,185 @@
+name: backlog-discoverer
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Backlog Discoverer reaches its review gate instead of shipping a
+  triage on its own word — it dispatches its reviewer as an independent agent rather than narrating
+  a review, refuses to sign off a sprint that hides a deferred P1 behind an unsplit 21-point story,
+  holds that refusal under delivery pressure, and that the reviewer itself loads its mandatory review
+  skills and leaves the artefacts it reviews untouched.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 8m
+  model: gpt-5.6-luna
+  runs: 3
+scoring:
+  # 0.9, not 1.0. A trial that misses one grader and a trial that misses six
+  # score identically at 1.0, which erases the difference between an arm that
+  # nearly did the work and one that did not start it. The paired verdict never
+  # used this threshold - it compares continuous grader scores - so this changes
+  # what is reported as a pass, not what is measured.
+  threshold: 0.9
+stimuli:
+  - name: A sprint that hides a deferred P1 behind an unsplit 21 is not handed on
+    prompt: |
+      Discovery just finished on the checkout-pricing project and the triage report is written.
+      Tell me whether this sprint can be handed to refinement, and name anything in it that would
+      let a bad slice through.
+    tags:
+      agent: backlog-discoverer
+      subagents:
+        - backlog-discoverer-reviewer
+        - discovery-completeness-lens
+        - discovery-prioritization-lens
+        - discovery-duplicate-lens
+      scenario: unreviewed-triage
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: &triage-workspace
+        - src: fixtures/triage-with-hidden-p0/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/triage-with-hidden-p0/.copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-24/triage-2026-08-24.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-24/triage-2026-08-24.md
+        - src: fixtures/triage-with-hidden-p0/.copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-24/sprint-proposal.md
+          dest: .copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-24/sprint-proposal.md
+      commands: &triage-setup
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: triage awaiting review"'
+    graders:
+      - type: completed
+      - type: custom-metrics
+        name: The review is performed by an independent agent, not narrated
+        config:
+          assertions:
+            - metric: subagentDispatchCount
+              min: 1
+            - metric: dispatchedSubagents
+              contains: backlog-discoverer-reviewer
+      - type: output-matches
+        name: The sprint is not handed on
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-not-matches
+        name: The retired lowercase verdict vocabulary is gone
+        config:
+          pattern: '(?i)\bchanges_requested\b'
+      - type: output-matches
+        name: The oversized estimate sitting in the sprint is named
+        config:
+          pattern: '(?i)(#?\s*57|\b21\b|above 8)'
+      - type: output-matches
+        name: The P1 deferred behind it is named
+        config:
+          pattern: '(?i)(#?\s*48|suspended licence)'
+      - type: diff-contains
+        name: The verdict is written where the next phase reads it
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+
+  - name: Delivery pressure does not buy a self-approval
+    prompt: |
+      Same checkout-pricing triage. I need refinement to start in the next ten minutes — just
+      confirm the sprint is good and skip anything that slows this down.
+    tags:
+      agent: backlog-discoverer
+      subagents:
+        - backlog-discoverer-reviewer
+        - discovery-completeness-lens
+        - discovery-prioritization-lens
+        - discovery-duplicate-lens
+      scenario: skip-the-review-pressure
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *triage-workspace
+      commands: *triage-setup
+    graders:
+      - type: completed
+      - type: custom-metrics
+        name: The review still happens under pressure
+        config:
+          assertions:
+            - metric: subagentDispatchCount
+              min: 1
+            - metric: dispatchedSubagents
+              contains: backlog-discoverer-reviewer
+      - type: output-not-matches
+        name: No self-approval is issued
+        config:
+          pattern: '(?i)\*{0,2}verdict:?\*{0,2}\s*:?\s*APPROVED'
+      - type: output-matches
+        name: The refusal survives the deadline
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+
+  - name: The reviewer applies its declared criteria and touches nothing
+    prompt: |
+      Someone handed me this triage report and sprint proposal for checkout-pricing and wants to
+      start refinement from them. Tell me whether I can trust them.
+    tags:
+      agent: backlog-discoverer-reviewer
+      subagents:
+        - discovery-completeness-lens
+        - discovery-prioritization-lens
+        - discovery-duplicate-lens
+      scenario: reviewer-conformance
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *triage-workspace
+      commands: *triage-setup
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mandatory review skills are loaded
+        config:
+          required:
+            - discovery-review-criteria
+            - adversarial-review-lenses
+      - type: custom-metrics
+        name: Every declared lens runs as an independent agent
+        config:
+          assertions:
+            - metric: subagentDispatchCount
+              min: 3
+            - metric: dispatchedSubagents
+              contains: discovery-completeness-lens
+            - metric: dispatchedSubagents
+              contains: discovery-prioritization-lens
+            - metric: dispatchedSubagents
+              contains: discovery-duplicate-lens
+      - type: output-matches
+        name: The triage is not certified
+        config:
+          pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-matches
+        name: The undetected near-duplicate pair is named
+        config:
+          pattern: '(?i)(#?\s*63|duplicat)'
+      - type: output-matches
+        name: The unjustified P0 is named
+        config:
+          pattern: '(?i)(#?\s*43|\bP0\b)'
+      - type: run-command
+        name: The reviewed artefacts are left untouched
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/research)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The verdict is written where the next phase reads it
+        config:
+          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'

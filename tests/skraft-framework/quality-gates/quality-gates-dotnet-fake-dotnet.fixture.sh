@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -u
+
+[ "${1:-}" = "stryker" ] || exit 90
+# Like Stryker.NET 4.14: --version expects a value (the dashboard project version).
+[ "${2:-}" = "--version" ] && { echo "Missing value for option 'version'" >&2; exit 1; }
+[ "${2:-}" = "--help" ] && { echo "Stryker.NET"; exit 0; }
+
+if [ "${2:-}" = "init" ]; then
+  printf '%s\n' "$*" >> "$FAKE_DOTNET_INIT_LOG"
+  shift 2
+  config=""
+  solution=""
+  threshold_high=""
+  threshold_low=""
+  threshold_break=""
+  break_on_initial_test_failure=false
+  reporters=()
+  mutate=()
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --config-file) config="${2:-}"; shift 2 ;;
+      --solution) solution="${2:-}"; shift 2 ;;
+      --threshold-high) threshold_high="${2:-}"; shift 2 ;;
+      --threshold-low) threshold_low="${2:-}"; shift 2 ;;
+      --break-at) threshold_break="${2:-}"; shift 2 ;;
+      --reporter) reporters+=("${2:-}"); shift 2 ;;
+      --mutate) mutate+=("${2:-}"); shift 2 ;;
+      --break-on-initial-test-failure) break_on_initial_test_failure=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
+  mkdir -p "$(dirname "$config")"
+  {
+    printf '{\n  "stryker-config": {\n'
+    # Like Stryker.NET 4.14 init: unset options come out as "" and null.
+    printf '    "project-info": { "name": "", "module": "", "version": "" },\n'
+    printf '    "project": "",\n'
+    printf '    "test-runner": null,\n'
+    printf '    "solution": "%s",\n' "$solution"
+    printf '    "mutate": ['
+    for index in "${!mutate[@]}"; do
+      [ "$index" -eq 0 ] || printf ','
+      printf '\n      "%s"' "${mutate[$index]}"
+    done
+    printf '\n    ],\n'
+    printf '    "thresholds": { "high": %s, "low": %s, "break": %s },\n' "$threshold_high" "$threshold_low" "$threshold_break"
+    printf '    "reporters": ['
+    for index in "${!reporters[@]}"; do
+      [ "$index" -eq 0 ] || printf ', '
+      printf '"%s"' "${reporters[$index]}"
+    done
+    printf '],\n'
+    printf '    "report-file-name": "mutation-report",\n'
+    printf '    "break-on-initial-test-failure": %s\n' "$break_on_initial_test_failure"
+    printf '  }\n}\n'
+  } > "$config"
+  exit 0
+fi
+
+config=""
+output=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --config-file) config="${2:-}"; shift 2 ;;
+    --output) output="${2:-}"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+# Git Bash reports $PWD as /c/...; pwd -W yields the native path Node compares against.
+printf '%s\t%s\t%s\n' "$(pwd -W 2>/dev/null || pwd)" "$config" "$output" >> "$FAKE_DOTNET_LOG"
+# Like Stryker.NET 4.14: an empty project or module name aborts the run.
+grep -Eq '"(project|module)": *""' "$config" && { echo "Project file cannot be empty." >&2; exit 1; }
+report_name=$(sed -n 's/.*"report-file-name": "\([^"]*\)".*/\1/p' "$config")
+mkdir -p "$output/reports"
+if [ "$(basename "$config")" != "${FAKE_DOTNET_NO_REPORT_CONFIG:-}" ]; then
+  if [ "$(basename "$config")" = "${FAKE_DOTNET_EMPTY_REPORT_CONFIG:-}" ]; then
+    node -e 'const fs = require("node:fs"); const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); report.files = {}; fs.writeFileSync(process.argv[2], JSON.stringify(report));' "$FAKE_DOTNET_REPORT_FIXTURE" "$output/reports/$report_name.json"
+  else
+    cp "$FAKE_DOTNET_REPORT_FIXTURE" "$output/reports/$report_name.json"
+  fi
+fi
+[ "$(basename "$config")" != "${FAKE_DOTNET_FAIL_CONFIG:-}" ]

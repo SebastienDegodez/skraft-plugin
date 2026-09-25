@@ -4,9 +4,20 @@ on:
   push:
     paths:
       - 'plugins/skraft-framework/src/**'
-      - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/com.github.copilot/agents/**'
+      - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
       - 'plugins/skraft-framework/assets/**'
-      - 'plugins/skraft-framework/instructions/**'
+      - 'plugins/skraft-framework/com.github.copilot/hooks/**'
+      - 'plugins/skraft-framework/hooks/**'
+      - 'plugins/skraft-framework/skills/**'
+      - 'plugins/skraft-framework/.codex-plugin/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/dotnet-quality-gates-smoke.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      - 'scripts/lib/native-claude-agent.mjs'
+      - 'plugins/skraft-framework/.agent-sync.json'
+      - 'plugins/skraft-framework/plugin.json'
+      - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'plugins/skraft-framework/skraft-framework.config.json'
       - 'tests/skraft-framework/**'
       - '.claude-plugin/marketplace.json'
@@ -17,9 +28,20 @@ on:
   pull_request:
     paths:
       - 'plugins/skraft-framework/src/**'
-      - 'plugins/skraft-framework/agents/**'
+      - 'plugins/skraft-framework/com.github.copilot/agents/**'
+      - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
       - 'plugins/skraft-framework/assets/**'
-      - 'plugins/skraft-framework/instructions/**'
+      - 'plugins/skraft-framework/com.github.copilot/hooks/**'
+      - 'plugins/skraft-framework/hooks/**'
+      - 'plugins/skraft-framework/skills/**'
+      - 'plugins/skraft-framework/.codex-plugin/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/dotnet-quality-gates-smoke.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      - 'scripts/lib/native-claude-agent.mjs'
+      - 'plugins/skraft-framework/.agent-sync.json'
+      - 'plugins/skraft-framework/plugin.json'
+      - 'plugins/skraft-framework/.claude-plugin/plugin.json'
       - 'plugins/skraft-framework/skraft-framework.config.json'
       - 'tests/skraft-framework/**'
       - '.claude-plugin/marketplace.json'
@@ -42,10 +64,46 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Check generated plugin adapters
+        run: node scripts/project-plugin-adapters.mjs --check
+
+      # The JavaScript quality-gates runner tests resolve the pinned Stryker packages.
+      - name: Install the framework's dev dependencies
+        working-directory: plugins/skraft-framework/src
+        run: npm ci
+
+      # Floor on the framework runtime's coverage, a little under the measured level:
+      # a change that leaves new code untested fails here.
       - name: Run tests with coverage
         run: |
           node --test --experimental-test-coverage \
-            tests/skraft-framework/*.test.mjs
+            '--test-coverage-include=plugins/skraft-framework/src/**' \
+            '--test-coverage-exclude=plugins/skraft-framework/src/node_modules/**' \
+            --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=93 \
+            "tests/skraft-framework/**/*.test.mjs"
+
+  test-windows:
+    name: Tests (Windows, not yet blocking)
+    runs-on: windows-latest
+    # The hooks run on Windows machines, but the suite has never run there: this job
+    # reports what breaks without blocking a merge. Drop continue-on-error once green.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install the framework's dev dependencies
+        working-directory: plugins/skraft-framework/src
+        run: npm ci
+
+      - name: Run tests
+        shell: bash
+        run: node --test "tests/skraft-framework/**/*.test.mjs"
 
   model-policy:
     name: Agent model policy (B12)
@@ -63,7 +121,7 @@ jobs:
         run: node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check
 
   config-policy:
-    name: Guardrail config in sync (US2)
+    name: Guardrail config in sync
     runs-on: ubuntu-latest
 
     steps:
@@ -76,6 +134,26 @@ jobs:
 
       - name: Check skraft-framework.config.json matches the agent descriptors
         run: node plugins/skraft-framework/src/cli/build-config-bin.mjs --check
+
+  dotnet-gates:
+    name: .NET quality-gate scripts (real Stryker.NET)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Run the gate scripts on a real solution
+        run: node scripts/dotnet-quality-gates-smoke.mjs
 
   mutation:
     name: Mutation Testing

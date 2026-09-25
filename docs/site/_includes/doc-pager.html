@@ -4,12 +4,24 @@ current language. Renders nothing when the current page is not in the book.
 {%- endcomment -%}
 {%- assign items = "" -%}
 {%- for part in site.data.book.parts -%}
-  {%- for p in part.pages -%}
-    {%- if page.lang == 'en' -%}{%- assign raw = p.en -%}{%- else -%}{%- assign raw = p.fr -%}{%- endif -%}
-    {%- assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' -%}
-    {%- if page.lang == 'en' -%}{%- assign lbl = p.label_en | default: p.id -%}{%- else -%}{%- assign lbl = p.label_fr | default: p.id -%}{%- endif -%}
-    {%- assign items = items | append: href | append: "::" | append: lbl | append: "||" -%}
-  {%- endfor -%}
+  {%- if part.sections -%}
+    {%- for section in part.sections -%}
+      {%- assign section_pages = section.pages | sort: 'sidebar_position' -%}
+      {%- for p in section_pages -%}
+        {%- if page.lang == 'en' -%}{%- assign raw = p.en -%}{%- else -%}{%- assign raw = p.fr -%}{%- endif -%}
+        {%- assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' -%}
+        {%- if page.lang == 'en' -%}{%- assign lbl = p.label_en | default: p.id -%}{%- else -%}{%- assign lbl = p.label_fr | default: p.id -%}{%- endif -%}
+        {%- assign items = items | append: href | append: "::" | append: lbl | append: "||" -%}
+      {%- endfor -%}
+    {%- endfor -%}
+  {%- else -%}
+    {%- for p in part.pages -%}
+      {%- if page.lang == 'en' -%}{%- assign raw = p.en -%}{%- else -%}{%- assign raw = p.fr -%}{%- endif -%}
+      {%- assign href = '/' | append: raw | replace: 'index.md', '' | replace: '.md', '.html' -%}
+      {%- if page.lang == 'en' -%}{%- assign lbl = p.label_en | default: p.id -%}{%- else -%}{%- assign lbl = p.label_fr | default: p.id -%}{%- endif -%}
+      {%- assign items = items | append: href | append: "::" | append: lbl | append: "||" -%}
+    {%- endfor -%}
+  {%- endif -%}
 {%- endfor -%}
 {%- assign list = items | split: "||" -%}
 {%- assign current = -1 -%}

@@ -1,15 +1,37 @@
 import { Ok, Err, isOk } from './result.mjs'
 import { validatePipelineState } from './state-schema.mjs'
 import { nextPhaseAfter } from './pipeline-policy.mjs'
+import { validateMetadataField } from './orchestrator-metadata-policy.mjs'
+import { toTrackingPath } from './phase-gate-policy.mjs'
 
-// Default phase order — matches skraft-framework.config.json (no IO, derived constant).
-const PHASE_ORDER = ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']
+// Fallback phase order when the caller supplies none. The published order lives in
+// skraft-framework.config.json::phaseOrder and is injected by the application layer.
+export const DEFAULT_PHASE_ORDER = Object.freeze(['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+
+const STATE_VERDICTS = new Set(['APPROVED', 'CHANGES_REQUESTED'])
+
+// One path convention: recorded paths are relative to the project's tracking directory
+// (a repository-relative tracking path is recorded without its prefix).
+const trackingPath = (path) => {
+  const relative = toTrackingPath(path)
+  return relative !== null
+    ? Ok(relative)
+    : Err({ code: 'INVALID_PATH', reason: `${path} must be relative to the project's tracking directory (e.g. reviews/{date}/design-review-1.md)` })
+}
+
+// A closure given a time marks the closed phase done in phaseHistory.
+const completedHistory = (state, phase, at) => {
+  if (!at) return {}
+  const entry = state.phaseHistory?.[phase] ?? {}
+  return { phaseHistory: Object.freeze({ ...state.phaseHistory, [phase]: Object.freeze({ ...entry, status: 'done', completedAt: at }) }) }
+}
 
 // Pure domain state machine. No IO. No side effects.
 // @param {object} currentState — raw state (will be validated+coerced)
 // @param {object} event        — typed event (see contracts-state-transition-bridge.md)
+// @param {object} context      — { phaseOrder } published by the framework config
 // @returns {Result<FrozenState>}
-export const applyTransition = (currentState, event) => {
+export const applyTransition = (currentState, event, { phaseOrder: publishedOrder } = {}) => {
   const validation = validatePipelineState(currentState)
   if (!isOk(validation)) {
     return Err({ code: 'INVALID_STATE', reason: validation.error.reason })
@@ -23,7 +45,7 @@ export const applyTransition = (currentState, event) => {
   }
 
   const maxRetries = state.userPreferences?.maxRetriesPerPhase ?? 2
-  const phaseOrder = state.userPreferences?.phaseOrder ?? PHASE_ORDER
+  const phaseOrder = publishedOrder ?? DEFAULT_PHASE_ORDER
 
   switch (event.type) {
     case 'ADVANCE': {
@@ -32,7 +54,7 @@ export const applyTransition = (currentState, event) => {
         return Err({ code: 'VERDICT_NOT_APPROVED', reason: `verdict for ${state.currentPhase} must be APPROVED before advancing` })
       }
       // I2: target must equal nextPhaseAfter(current)
-      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }, []) ?? 'DONE'
+      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }) ?? 'DONE'
       if (event.targetPhase !== expectedNext) {
         return Err({ code: 'ILLEGAL_PHASE_SKIP', reason: `expected ${expectedNext}, got ${event.targetPhase}` })
       }
@@ -40,10 +62,17 @@ export const applyTransition = (currentState, event) => {
         ...state,
         currentPhase: event.targetPhase,
         phasesCompleted: Object.freeze([...state.phasesCompleted, state.currentPhase]),
+        ...completedHistory(state, state.currentPhase, event.at),
       }))
     }
 
     case 'RECORD_VERDICT': {
+      if (!STATE_VERDICTS.has(event.verdict)) {
+        return Err({
+          code: 'INVALID_VERDICT',
+          reason: `verdict must be APPROVED or CHANGES_REQUESTED, got ${event.verdict}; a review's NEEDS_REWORK and REJECTED record as CHANGES_REQUESTED`,
+        })
+      }
       return Ok(Object.freeze({
         ...state,
         verdicts: Object.freeze({ ...state.verdicts, [event.phase]: event.verdict }),
@@ -57,13 +86,15 @@ export const applyTransition = (currentState, event) => {
           return Err({ code: 'APPEND_ONLY_VIOLATION', reason: 'phasesCompleted is append-only; replacement with fewer entries rejected' })
         }
       }
+      const artifactPath = trackingPath(event.path)
+      if (!isOk(artifactPath)) return artifactPath
       // I5: phaseArtifacts[phase] is append-only
       const existingArtifacts = state.phaseArtifacts[event.phase] ?? []
       return Ok(Object.freeze({
         ...state,
         phaseArtifacts: Object.freeze({
           ...state.phaseArtifacts,
-          [event.phase]: Object.freeze([...existingArtifacts, event.path]),
+          [event.phase]: Object.freeze([...existingArtifacts, artifactPath.value]),
         }),
       }))
     }
@@ -77,11 +108,13 @@ export const applyTransition = (currentState, event) => {
           return Err({ code: 'APPEND_ONLY_VIOLATION', reason: 'reviewArtifacts is append-only; replacement with fewer entries rejected' })
         }
       }
+      const reviewPath = trackingPath(event.path)
+      if (!isOk(reviewPath)) return reviewPath
       return Ok(Object.freeze({
         ...state,
         reviewArtifacts: Object.freeze({
           ...state.reviewArtifacts,
-          [event.phase]: Object.freeze([...existingReview, event.path]),
+          [event.phase]: Object.freeze([...existingReview, reviewPath.value]),
         }),
       }))
     }
@@ -103,12 +136,18 @@ export const applyTransition = (currentState, event) => {
         })
       }
 
+      let closingReview = null
+      if (event.path !== undefined) {
+        const reviewPath = trackingPath(event.path)
+        if (!isOk(reviewPath)) return reviewPath
+        closingReview = reviewPath.value
+      }
       const existingReview = state.reviewArtifacts[event.phase] ?? []
-      const reviewArtifacts = event.path
-        ? Object.freeze({ ...state.reviewArtifacts, [event.phase]: Object.freeze([...existingReview, event.path]) })
+      const reviewArtifacts = closingReview
+        ? Object.freeze({ ...state.reviewArtifacts, [event.phase]: Object.freeze([...existingReview, closingReview]) })
         : state.reviewArtifacts
 
-      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }, []) ?? 'DONE'
+      const expectedNext = nextPhaseAfter(state.currentPhase, { phaseOrder }) ?? 'DONE'
 
       return Ok(Object.freeze({
         ...state,
@@ -116,15 +155,32 @@ export const applyTransition = (currentState, event) => {
         reviewArtifacts,
         currentPhase: expectedNext,
         phasesCompleted: Object.freeze([...state.phasesCompleted, state.currentPhase]),
+        ...completedHistory(state, state.currentPhase, event.at),
       }))
     }
 
-    case 'SET_DIFFICULTY': {
-      // I7: write-once
-      if (state.difficulty !== null) {
-        return Err({ code: 'IMMUTABLE_FIELD', reason: 'difficulty is already set and cannot be changed' })
+    case 'SET_METADATA': {
+      const validated = validateMetadataField(event.field, event.value)
+      if (!isOk(validated)) return validated
+      return Ok(Object.freeze({ ...state, [event.field]: validated.value }))
+    }
+
+    case 'MARK_PHASE_STARTED': {
+      if (event.phase !== state.currentPhase) {
+        return Err({
+          code: 'PHASE_MISMATCH',
+          reason: `mark-phase-started target ${event.phase} does not match currentPhase ${state.currentPhase}`,
+        })
       }
-      return Ok(Object.freeze({ ...state, difficulty: event.value }))
+      // A retry re-dispatches the same phase: the first start and base commit stand.
+      if (state.phaseHistory?.[event.phase]?.startedAt) return Ok(Object.freeze({ ...state }))
+      return Ok(Object.freeze({
+        ...state,
+        phaseHistory: Object.freeze({
+          ...state.phaseHistory,
+          [event.phase]: Object.freeze({ status: 'inProgress', startedAt: event.at, baseSha: event.baseSha ?? null }),
+        }),
+      }))
     }
 
     case 'INCR_RETRY': {
