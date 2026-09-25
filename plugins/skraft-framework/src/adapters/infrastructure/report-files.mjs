@@ -23,8 +23,10 @@ export function createReportFiles(root) {
   }
 
   function pathFor(path, { reference = false } = {}) {
-    if (typeof path !== 'string' || !path || /[\u0000-\u001f\u007f\\]/.test(path)
-      || path.split('/').includes('..') || (reference && !isRootReference(path))) {
+    // Native absolute Windows paths use `\`; only relative references must stay `/`-only.
+    const shape = typeof path === 'string' && sep === '\\' && isAbsolute(path) ? path.split(sep).join('/') : path
+    if (typeof shape !== 'string' || !shape || /[\u0000-\u001f\u007f\\]/.test(shape)
+      || shape.split('/').includes('..') || (reference && !isRootReference(shape))) {
       throw new Error('Invalid repository path or source reference')
     }
     // macOS /var and /private/var may name the same authorized root. Map only
