@@ -68,7 +68,8 @@ while [ "$#" -gt 0 ]; do
     *) shift ;;
   esac
 done
-printf '%s\t%s\t%s\n' "$PWD" "$config" "$output" >> "$FAKE_DOTNET_LOG"
+# Git Bash reports $PWD as /c/...; pwd -W yields the native path Node compares against.
+printf '%s\t%s\t%s\n' "$(pwd -W 2>/dev/null || pwd)" "$config" "$output" >> "$FAKE_DOTNET_LOG"
 # Like Stryker.NET 4.14: an empty project or module name aborts the run.
 grep -Eq '"(project|module)": *""' "$config" && { echo "Project file cannot be empty." >&2; exit 1; }
 report_name=$(sed -n 's/.*"report-file-name": "\([^"]*\)".*/\1/p' "$config")

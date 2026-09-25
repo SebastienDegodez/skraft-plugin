@@ -32,7 +32,7 @@ command -v node >/dev/null 2>&1 || { echo "node is not on PATH" >&2; exit 3; }
 command -v dotnet >/dev/null 2>&1 || { echo "dotnet is not on PATH" >&2; exit 3; }
 mkdir -p "$EV" || exit 2
 
-sha256() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi; }
+sha256() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 < "$1" | awk '{print $1}'; else sha256sum < "$1" | awk '{print $1}'; fi; }
 RESULTS=$(mktemp -d "${TMPDIR:-/tmp}/skraft-coverage.XXXXXX") || exit 2
 trap 'rm -rf "$RESULTS"' EXIT
 

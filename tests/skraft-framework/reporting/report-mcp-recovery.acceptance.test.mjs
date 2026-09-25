@@ -4,8 +4,9 @@ import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, delimiter } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { gitExecutable, installGhSentinel, isolatedEnv } from './fixtures/isolated-cli-env.mjs'
 import { preparePublication, decidePublication, recordPublication } from '../../../plugins/skraft-framework/src/application/report-publication-handoff.mjs'
 
 // Successor contracts at the application and real local CLI boundaries.
@@ -194,10 +195,8 @@ function fixture(t) {
   mkdirSync(repo)
   mkdirSync(bin)
   writeFileSync(forbidden, '')
-  writeFileSync(join(bin, 'gh'), `#!${process.execPath}\nrequire('node:fs').appendFileSync(process.env.FORBIDDEN_GH_LOG, 'called'); process.exit(1);\n`, { mode: 0o755 })
-  const env = { PATH: [bin, dirname(process.execPath), '/usr/bin', '/bin'].join(delimiter), HOME: root,
-    TMPDIR: root, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', GIT_TERMINAL_PROMPT: '0',
-    SKRAFT_TRACKING_ROOT: tracking, FORBIDDEN_GH_LOG: forbidden }
+  const gh = installGhSentinel(bin, `require('node:fs').appendFileSync(process.env.FORBIDDEN_GH_LOG, 'called'); process.exit(1);\n`)
+  const env = isolatedEnv({ bin, home: root, temp: root, extra: { SKRAFT_TRACKING_ROOT: tracking, FORBIDDEN_GH_LOG: forbidden } })
   const run = (executable, args) => {
     const result = spawnSync(executable, args, { cwd: repo, env, encoding: 'utf8', timeout: 15_000 })
     assert.equal(result.error, undefined)
@@ -208,10 +207,10 @@ function fixture(t) {
     try { assert.equal(readFileSync(forbidden, 'utf8'), '', 'No remote gh operation permitted') }
     finally { rmSync(root, { recursive: true, force: true }) }
   })
-  assert.equal(run(join(bin, 'gh'), ['probe']).status, 1)
+  assert.equal(run(gh.file, [...gh.args, 'probe']).status, 1)
   assert.equal(readFileSync(forbidden, 'utf8'), 'called')
   writeFileSync(forbidden, '')
-  assert.equal(run('/usr/bin/git', ['init', '--initial-branch', branch]).status, 0)
+  assert.equal(run(gitExecutable, ['init', '--initial-branch', branch]).status, 0)
   success(run(process.execPath, [stateCli, 'init', '--slug', slug]))
   const write = (name, value) => writeFileSync(join(repo, name), typeof value === 'string' ? value : JSON.stringify(value))
   const invoke = (...args) => run(process.execPath, [cli, ...args])

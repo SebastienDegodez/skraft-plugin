@@ -4,8 +4,9 @@ import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, delimiter } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { gitExecutable, installGhSentinel, isolatedEnv } from './fixtures/isolated-cli-env.mjs'
 
 // Local CLI boundary -> setup, rendering and preparation security. No application doubles.
 // Host MCP lifecycle/receipts belong to report-mcp-cli.acceptance.test.mjs;
@@ -23,8 +24,7 @@ const prefs = (overrides = {}) => ({
 const hash = (text) => createHash('sha256').update(text).digest('hex')
 const json = (path) => JSON.parse(readFileSync(path, 'utf8'))
 
-const forbiddenGh = `#!${process.execPath}
-require('node:fs').appendFileSync(process.env.FORBIDDEN_GH_LOG, JSON.stringify(process.argv.slice(2)) + '\\n');
+const forbiddenGh = `require('node:fs').appendFileSync(process.env.FORBIDDEN_GH_LOG, JSON.stringify(process.argv.slice(2)) + '\\n');
 throw new Error('FORBIDDEN_GH_INVOCATION');
 `
 
@@ -46,27 +46,25 @@ function fixture(t, { initialized = true, preferences, explicitRoot = true } = {
     writeFileSync(path, typeof value === 'string' ? value : JSON.stringify(value))
     return path
   }
-  writeFileSync(join(bin, 'gh'), forbiddenGh, { mode: 0o755 })
+  const gh = installGhSentinel(bin, forbiddenGh)
   const tracking = explicitRoot ? join(repo, 'custom-tracking') : join(repo, '.copilot-tracking/skraft-plans')
-  const env = {
-    PATH: [bin, dirname(process.execPath), '/usr/bin', '/bin'].join(delimiter),
-    HOME: home, TMPDIR: temp, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null',
-    GIT_TERMINAL_PROMPT: '0', FORBIDDEN_GH_LOG: ghLog,
+  const env = isolatedEnv({ bin, home, temp, extra: {
+    FORBIDDEN_GH_LOG: ghLog,
     ...(explicitRoot ? { SKRAFT_TRACKING_ROOT: tracking } : {}),
-  }
+  } })
   const run = (file, args) => {
     const result = spawnSync(file, args, { cwd: repo, env, encoding: 'utf8', timeout: 15_000 })
     assert.equal(result.error, undefined, `Fixture/process failure: ${result.error}`)
     assert.equal(result.signal, null, `Process killed: ${result.signal}`)
     return result
   }
-  const probe = run(join(bin, 'gh'), ['sentinel-probe'])
+  const probe = run(gh.file, [...gh.args, 'sentinel-probe'])
   assert.notEqual(probe.status, 0)
   assert.match(probe.stderr, /FORBIDDEN_GH_INVOCATION/)
   assert.deepEqual(JSON.parse(readFileSync(ghLog, 'utf8')), ['sentinel-probe'])
   writeFileSync(ghLog, '')
   const git = (...args) => {
-    const result = run('/usr/bin/git', ['-c', `core.hooksPath=${join(temp, 'hooks')}`, '-c', 'commit.gpgsign=false', ...args])
+    const result = run(gitExecutable, ['-c', `core.hooksPath=${join(temp, 'hooks')}`, '-c', 'commit.gpgsign=false', ...args])
     assert.equal(result.status, 0, `Git fixture failed: ${result.stderr}`)
     return result.stdout.trim()
   }

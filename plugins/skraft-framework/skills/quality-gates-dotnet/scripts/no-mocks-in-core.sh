@@ -23,7 +23,7 @@ ROOT=$(cd "$ROOT" 2>/dev/null && pwd -P) || { echo "repository root not found" >
 case "$EV" in /*|[A-Za-z]:[\\/]*) ;; *) EV="$ROOT/$EV" ;; esac
 mkdir -p "$EV" || exit 2
 
-sha256() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi; }
+sha256() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 < "$1" | awk '{print $1}'; else sha256sum < "$1" | awk '{print $1}'; fi; }
 # Directories matching the given -name tests, build output and dependencies pruned.
 project_dirs() {
   (cd "$ROOT" && find . \( -name bin -o -name obj -o -name node_modules -o -name .git \) -prune -o -type d \( "$@" \) -print) | sed 's|^\./||' | sort

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative } from 'node:path'
 import { readFrontMatter } from '../../../eng/lib/front-matter.mjs'
 
 // A harness discovers agents by walking the plugin's `agents/` directory and treating
@@ -69,7 +69,7 @@ test('agent-discovery: source and copies retain visibility flags for exactly six
     const publicIds = []
     for (const path of files) {
       const { data } = readFrontMatter(readFileSync(path, 'utf8'))
-      const id = path.split('/').at(-1).replace(/(?:\.agent)?\.md$/, '')
+      const id = basename(path).replace(/(?:\.agent)?\.md$/, '')
       const expected = userInvocableAgentIds.has(id)
 
       assert.equal(
@@ -89,7 +89,7 @@ test('agent-discovery: source and copies retain visibility flags for exactly six
 })
 
 test('agent-discovery: shipped Copilot agents stay flat for CLI discovery', () => {
-  const expected = markdownFiles.map((path) => path.split('/').at(-1).replace(/\.md$/, '.agent.md')).sort()
+  const expected = markdownFiles.map((path) => basename(path).replace(/\.md$/, '.agent.md')).sort()
   assert.deepEqual(copilotFiles.map((path) => relative(copilotAgentsRoot, path)).sort(), expected)
 })
 

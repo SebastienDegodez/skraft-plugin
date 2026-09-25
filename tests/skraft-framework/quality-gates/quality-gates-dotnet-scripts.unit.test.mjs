@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 import { promisify } from 'node:util'
@@ -123,8 +123,8 @@ test('canonical scaffold writes two root configs for one whole-solution run per 
 
     const calls = (await readFile(log, 'utf8')).trim().split('\n').map((line) => line.split('\t'))
     assert.equal(calls.length, 2)
-    assert.ok(calls.every(([cwd]) => cwd === root))
-    assert.deepEqual(calls.map(([, config]) => config.split('/').at(-1)), [
+    assert.deepEqual(await Promise.all(calls.map(([cwd]) => realpath(cwd))), [root, root])
+    assert.deepEqual(calls.map(([, config]) => basename(config)), [
       'stryker-config-core.json',
       'stryker-config-boundary.json',
     ])

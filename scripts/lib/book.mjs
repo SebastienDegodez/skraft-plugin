@@ -115,7 +115,7 @@ export function findFiles(pattern) {
       return [];
     }
   }
-  const parts = absPattern.split('/');
+  const parts = absPattern.split(/[\\/]/);
   const rootParts = [];
   let i = 0;
   while (i < parts.length && !parts[i].includes('*')) {
