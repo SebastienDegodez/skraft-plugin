@@ -17,7 +17,6 @@ const targets = [
   'plugins/skraft-framework/plugin.json',
   'plugins/skraft-framework/.claude-plugin/plugin.json',
   'plugins/skraft-framework/.codex-plugin/plugin.json',
-  'plugins/skraft-framework/.cursor-plugin/plugin.json',
   'plugins/skraft-framework/src/package.json',
 ];
 
