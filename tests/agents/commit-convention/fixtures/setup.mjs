@@ -43,7 +43,7 @@ function prepare(workspace, scenario) {
   return { root, base, scenario }
 }
 
-const validMessage = scenario => 'docs(loyalty-discount): clarify expired membership pricing' + ({
+const validMessage = scenario => 'docs(discount): clarify expired membership pricing' + ({
   intermediate: '\n\nRefs: #42', completion: '\n\nCloses #42', unknown: '',
 }[scenario])
 const commit = (s, message = validMessage(s.scenario), sign = true) => git(s.root, ['commit', '--quiet', ...(sign ? ['-s'] : []), '-F', '-'], message)
@@ -88,7 +88,7 @@ async function smoke() {
       console.log(scenario + ': pinned seed ' + s.base + '; staged fixture and Vally graders passed')
     }
     const probes = [
-      ['wrong-scope', 'intermediate', m => m.replace('(loyalty-discount)', '(docs)'), 'message'],
+      ['wrong-scope', 'intermediate', m => m.replace('(discount)', '(docs)'), 'message'],
       ['premature-close', 'intermediate', m => m.replace('Refs: #42', 'Closes #42'), 'message'],
       ['hidden-close', 'intermediate', m => m + '\nFixes #42', 'message'],
       ['wrong-issue', 'intermediate', m => m.replace('#42', '#43'), 'message'],

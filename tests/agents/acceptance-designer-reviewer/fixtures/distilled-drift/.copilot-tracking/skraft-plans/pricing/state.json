@@ -1,0 +1,39 @@
+{
+  "projectSlug": "pricing",
+  "currentPhase": "DISTILL",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": [
+      { "adr": "002", "verdict": "Accepted", "by": "sebastiendegodez (2026-08-12)" }
+    ]
+  },
+  "phasesCompleted": [
+    "RESEARCH",
+    "DESIGN"
+  ],
+  "phaseArtifacts": {
+    "DISTILL": [
+      ".copilot-tracking/skraft-plans/pricing/features/discount.feature",
+      ".copilot-tracking/skraft-plans/pricing/details/2026-08-13/test.md",
+      ".copilot-tracking/skraft-plans/pricing/details/2026-08-13/impl.md"
+    ]
+  },
+  "verdicts": {
+    "RESEARCH": "APPROVED",
+    "DESIGN": "APPROVED"
+  },
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "phaseHistory": {
+    "DISTILL": {
+      "status": "inProgress",
+      "startedAt": "2026-08-13T09:00:00Z"
+    }
+  },
+  "userPreferences": {
+    "maxRetriesPerPhase": 2
+  }
+}

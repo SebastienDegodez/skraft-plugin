@@ -92,8 +92,8 @@ stimuli:
           dest: README.md
         - src: fixtures/deliver-without-distill/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/deliver-without-distill/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/deliver-without-distill/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
     graders:
       - type: completed
       # No dispatch assertion here, in either direction. The rehydration CLI is

@@ -39,10 +39,10 @@ stimuli:
           dest: README.md
         - src: fixtures/pricing-research-topic/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
         - src: fixtures/pricing-research-topic/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
         - src: fixtures/pricing-research-topic/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
@@ -58,7 +58,7 @@ stimuli:
       - type: diff-contains
         name: Investigation lands in the RESEARCH artefact location
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/research/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/research/\d{4}-\d{2}-\d{2}/'
       - type: run-command
         name: Findings cite the source files that were investigated
         config:
@@ -68,7 +68,7 @@ stimuli:
             - '-E'
             - '-q'
             - 'src/CheckoutPricing\.(Domain|Application)/[A-Za-z]+\.cs'
-            - '.copilot-tracking/skraft-plans/checkout-pricing/research'
+            - '.copilot-tracking/skraft-plans/pricing/research'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -113,10 +113,10 @@ stimuli:
           dest: README.md
         - src: fixtures/pricing-research-topic/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/pricing-research-topic/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
         - src: fixtures/pricing-research-topic/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
         - src: fixtures/pricing-research-topic/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
@@ -141,7 +141,7 @@ stimuli:
       - type: diff-contains
         name: The investigation is still delivered
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/research/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/research/\d{4}-\d{2}-\d{2}/'
       - type: output-matches
         name: The unmet part of the request is named rather than silently dropped
         config:

@@ -17,7 +17,7 @@ scoring:
 stimuli:
   - name: Approved .NET loyalty discount reaches GREEN with Clean Architecture evidence
     turns:
-      - I want to develop the `loyalty-discount` feature for the Checkout Pricing project.
+      - I want to develop the `discount` feature for the Checkout Pricing project.
       - The test is correct, continue. Complete the feature.
     tags:
       agent: software-engineer
@@ -31,46 +31,46 @@ stimuli:
       max_duration: 15m
     environment:
       files:
-        - src: fixtures/approved-loyalty-discount-red/.gitignore
+        - src: fixtures/approved-red/.gitignore
           dest: .gitignore
-        - src: fixtures/approved-loyalty-discount-red/skraft-config.json
+        - src: fixtures/approved-red/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/approved-loyalty-discount-red/CheckoutPricing.slnx
+        - src: fixtures/approved-red/CheckoutPricing.slnx
           dest: CheckoutPricing.slnx
-        - src: fixtures/approved-loyalty-discount-red/Directory.Build.props
+        - src: fixtures/approved-red/Directory.Build.props
           dest: Directory.Build.props
-        - src: fixtures/approved-loyalty-discount-red/Directory.Packages.props
+        - src: fixtures/approved-red/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/approved-red/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
           dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
-        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/approved-red/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
-        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/approved-red/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
           dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
-        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/approved-red/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
-        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
+        - src: fixtures/approved-red/src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
           dest: src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj
-        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
+        - src: fixtures/approved-red/src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
           dest: src/CheckoutPricing.Infrastructure/InfrastructureMarker.cs
-        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
+        - src: fixtures/approved-red/src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
           dest: src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
-        - src: fixtures/approved-loyalty-discount-red/src/CheckoutPricing.Api/Program.cs
+        - src: fixtures/approved-red/src/CheckoutPricing.Api/Program.cs
           dest: src/CheckoutPricing.Api/Program.cs
-        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/approved-red/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
           dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
-        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests.cs
-          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests.cs
-        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
+        - src: fixtures/approved-red/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+        - src: fixtures/approved-red/tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
           dest: tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
-        - src: fixtures/approved-loyalty-discount-red/tests/CheckoutPricing.IntegrationTest/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.IntegrationTest/Architecture/CleanArchitectureDependencyTests.cs
-        - src: fixtures/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-        - src: fixtures/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md
-        - src: fixtures/approved-loyalty-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
+        - src: fixtures/approved-red/tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+        - src: fixtures/approved-red/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
+        - src: fixtures/approved-red/.copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+        - src: fixtures/approved-red/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
         - 'git init --quiet --object-format=sha1'
@@ -89,12 +89,12 @@ stimuli:
           src/CheckoutPricing.Api/CheckoutPricing.Api.csproj
           src/CheckoutPricing.Api/Program.cs
           tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
-          tests/CheckoutPricing.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests.cs
+          tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
           tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj
-          tests/CheckoutPricing.IntegrationTest/Architecture/CleanArchitectureDependencyTests.cs
-          .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-          .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-07/impl-plan-loyalty-discount.md
-          .copilot-tracking/skraft-plans/checkout-pricing/state.json
+          tests/CheckoutPricing.IntegrationTest/Architecture/ArchitectureTests.cs
+          .copilot-tracking/skraft-plans/pricing/features/discount.feature
+          .copilot-tracking/skraft-plans/pricing/details/2026-08-07/impl.md
+          .copilot-tracking/skraft-plans/pricing/state.json
         - 'git commit --quiet -m "test: approved DISTILL fixture"'
     graders:
       - type: completed
@@ -142,7 +142,7 @@ stimuli:
       - type: diff-not-contains
         name: Approved outer acceptance test stayed intact
         config:
-          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTest/LoyaltyDiscount/CalculateLoyaltyDiscountAcceptanceTests\.cs '
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTest/LoyaltyDiscount/DiscountTests\.cs '
       - type: diff-contains
         name: Parameterized inner Domain test was added
         config:
@@ -175,7 +175,7 @@ stimuli:
               // Independently verified with hash-object --stdin on each full source file,
               // update-index --cacheinfo 100644 <blob> <dest>, then write-tree in a fresh index.
               // Pins names, modes and full contents; no commit timestamps or writable baseline.
-              const expectedSeedTree = "1053693128c5f26ba7e19356eb36aa466d50cf64";
+              const expectedSeedTree = "abc2457ea8494e6d8330679049de47de632718d8";
               assert.equal(git("rev-parse", seed + "^{tree}"), expectedSeedTree, "Unexpected initial fixture tree");
               const commits = git("rev-list", seed + "..HEAD").split("\n").filter(Boolean);
               assert.ok(commits.length, "Delivery must create commits after seed");
@@ -183,7 +183,7 @@ stimuli:
                 assert.ok(git("diff-tree", "--root", "-m", "--no-commit-id", "--name-only", "-r", sha), sha + ": empty commit");
                 const message = git("show", "-s", "--format=%B", sha);
                 const blocks = message.split(/\n\n+/);
-                assert.match(blocks[0], /^(?:feat|fix|chore|refactor|test|docs|build|perf|style|ci)\(loyalty-discount\)!?: [^\s\n][^\n]*$/, sha + ": feature subject");
+                assert.match(blocks[0], /^(?:feat|fix|chore|refactor|test|docs|build|perf|style|ci)\(discount\)!?: [^\s\n][^\n]*$/, sha + ": feature subject");
                 assert.doesNotMatch(message, /#\d+\b|\bGH-\d+\b|https?:\/\/\S+\/issues\/\d+|^\s*Refs:|\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?[ \t]+(?:\S*#|https?:\/\/)/im, sha + ": no issue supplied; omit references and closure");
                 const committer = git("show", "-s", "--format=%cn <%ce>", sha);
                 const trailers = execFileSync("git", ["interpret-trailers", "--parse"], { input: message, encoding: "utf8", timeout: 5000 }).trimEnd().split("\n");
@@ -195,11 +195,11 @@ stimuli:
       - type: file-exists
         name: Quality-gate evidence contract exists
         config:
-          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-07/qg-loyalty-discount.json'
+          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-07/qg.json'
       - type: file-contains
         name: Evidence identifies the .NET adapter
         config:
-          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-07/qg-loyalty-discount.json'
+          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-07/qg.json'
           value: '"tech_adapter": "quality-gates-dotnet"'
       - type: output-not-matches
         config:

@@ -51,6 +51,25 @@ Enter these commands in Claude Code:
 /plugin install skraft
 ```
 
+If Windows fails during `/plugin marketplace add` with `fatal: unable to checkout working tree`,
+clone SKRAFT to a short local path, then add that checkout as marketplace instead:
+
+```powershell
+git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft
+```
+
+```text
+/plugin marketplace add C:\s\skraft
+/plugin install skraft
+```
+
+Or enable Windows long paths, restart shell, then retry:
+
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+git config --global core.longpaths true
+```
+
 ### GitHub Copilot, Codex, Cursor
 
 [plugins/skraft-framework/plugin.json](plugins/skraft-framework/plugin.json) is the canonical

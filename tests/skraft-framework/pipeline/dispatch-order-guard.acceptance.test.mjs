@@ -10,7 +10,7 @@ import { createPreToolUseService } from '../../../plugins/skraft-framework/src/a
 import { createJsonStateReader } from '../../../plugins/skraft-framework/src/adapters/infrastructure/json-state-reader.mjs'
 import { CONFIG, closeAllPhases, gitRepo, producePhase, stateCli } from '../state/phase-closure-fixture.mjs'
 
-const SLUG = 'checkout-pricing'
+const SLUG = 'pricing'
 const FIXED_NOW = '2026-09-23T12:00:00.000Z'
 
 const collectingAuditWriter = () => {

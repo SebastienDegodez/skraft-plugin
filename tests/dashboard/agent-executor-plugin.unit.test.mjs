@@ -227,10 +227,10 @@ describe('Vally executor plugin registration', () => {
     )
     deepStrictEqual(pilotPermissionHandler({
       kind: 'shell',
-      commandSegments: [{ identifier: 'node', fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project checkout-pricing` }],
+      commandSegments: [{ identifier: 'node', fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project pricing` }],
       possiblePaths: [`${pluginRoot}/src/cli/state.mjs`],
       possibleUrls: [],
-      fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project checkout-pricing`,
+      fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project pricing`,
     }, context), { kind: 'approve-once' })
 
     strictEqual(

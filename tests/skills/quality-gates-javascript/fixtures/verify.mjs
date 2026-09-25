@@ -12,7 +12,7 @@ export function specimen(context, scenario) {
   assert.ok(Object.hasOwn(context.cases, scenario), `Unknown scenario: ${scenario}`)
   return {
     'package.json': JSON.stringify({
-      name: 'checkout-pricing', private: true, type: 'module',
+      name: 'pricing', private: true, type: 'module',
       scripts: { test: 'node --test tests/pricing.test.mjs tests/architecture.test.mjs' },
     }, null, 2) + '\n',
     'README.md': `# ${context.project}\n\n${context.behavior}\n\n${context.runtime}\n` +

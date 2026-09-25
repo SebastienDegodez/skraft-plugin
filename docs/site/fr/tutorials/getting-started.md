@@ -32,6 +32,27 @@ La première commande ajoute le dépôt comme marketplace. La seconde installe l
 plugin `skraft` publié par ce marketplace. Ouvrez ensuite `/plugin` et vérifiez que
 `skraft` apparaît dans les plugins installés.
 
+### Contournement Windows
+
+Si `/plugin marketplace add` échoue avec `fatal: unable to checkout working tree`,
+clonez SKRAFT sur un chemin local court, puis ajoutez ce checkout comme marketplace :
+
+```powershell
+git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft
+```
+
+```text
+/plugin marketplace add C:\s\skraft
+/plugin install skraft
+```
+
+Ou activez les chemins longs Windows, redémarrez le shell, puis réessayez :
+
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+git config --global core.longpaths true
+```
+
 ## 2. Choisir votre parcours
 
 Ne lancez pas automatiquement toute la chaîne. Le bon point de départ dépend de

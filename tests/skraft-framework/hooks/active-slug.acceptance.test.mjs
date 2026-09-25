@@ -47,8 +47,8 @@ const agentDispatch = (subagentType) => ({
 
 test('init records the active pipeline and G1 then governs a real dispatch payload', () => {
   withTrackingRoot(({ root, env }) => {
-    assert.equal(state(env, 'init', '--slug', 'checkout-pricing').code, 0)
-    assert.equal(readFileSync(join(root, '.active-slug'), 'utf8').trim(), 'checkout-pricing')
+    assert.equal(state(env, 'init', '--slug', 'pricing').code, 0)
+    assert.equal(readFileSync(join(root, '.active-slug'), 'utf8').trim(), 'pricing')
 
     const denied = hook(env, ['PreToolUse', 'Agent'], agentDispatch('skraft:software-engineer'))
     assert.equal(denied.hookSpecificOutput.permissionDecision, 'deny')
@@ -79,7 +79,7 @@ test('select switches the active pipeline; an unknown or malformed slug is refus
 
 test('a subcommand without --slug acts on the active pipeline', () => {
   withTrackingRoot(({ env }) => {
-    state(env, 'init', '--slug', 'checkout-pricing')
+    state(env, 'init', '--slug', 'pricing')
     assert.equal(state(env, 'get', '--field', 'currentPhase').out.trim(), 'RESEARCH')
   })
 })
@@ -87,7 +87,7 @@ test('a subcommand without --slug acts on the active pipeline', () => {
 test('SKRAFT_PROJECT_SLUG overrides the recorded pointer; a malformed pointer is ignored', () => {
   withTrackingRoot(({ root, env }) => {
     state(env, 'init', '--slug', 'other')
-    state(env, 'init', '--slug', 'checkout-pricing')
+    state(env, 'init', '--slug', 'pricing')
     const pinned = { ...env, SKRAFT_PROJECT_SLUG: 'other' }
     producePhase({ root, slug: 'other', phase: 'RESEARCH', cli: fixtureCli({ root }) })
     state(pinned, 'close-phase', '--phase', 'RESEARCH', '--verdict', 'APPROVED')
@@ -111,7 +111,7 @@ const inProject = (fn) => {
 
 test('the hook resolves the tracking root from the payload cwd, not its own working directory', () => {
   inProject(({ project, env }) => {
-    execFileSync('node', [STATE_CLI, 'init', '--slug', 'checkout-pricing'], { cwd: project, env, stdio: 'ignore' })
+    execFileSync('node', [STATE_CLI, 'init', '--slug', 'pricing'], { cwd: project, env, stdio: 'ignore' })
     const payload = { ...agentDispatch('software-engineer'), cwd: project }
     const denied = hook(env, ['PreToolUse', 'Agent'], payload)
     assert.equal(denied?.hookSpecificOutput?.permissionDecision, 'deny')
@@ -120,8 +120,8 @@ test('the hook resolves the tracking root from the payload cwd, not its own work
 
 test('a corrupted state blocks a phase dispatch without leaving a snapshot per hook call', () => {
   inProject(({ project, env }) => {
-    execFileSync('node', [STATE_CLI, 'init', '--slug', 'checkout-pricing'], { cwd: project, env, stdio: 'ignore' })
-    const dir = join(project, '.copilot-tracking', 'skraft-plans', 'checkout-pricing')
+    execFileSync('node', [STATE_CLI, 'init', '--slug', 'pricing'], { cwd: project, env, stdio: 'ignore' })
+    const dir = join(project, '.copilot-tracking', 'skraft-plans', 'pricing')
     writeFileSync(join(dir, 'state.json'), '{ truncated')
     const payload = { ...agentDispatch('solution-researcher'), cwd: project }
     hook(env, ['PreToolUse', 'Agent'], payload)

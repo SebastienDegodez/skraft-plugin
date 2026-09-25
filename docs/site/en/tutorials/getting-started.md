@@ -32,6 +32,27 @@ The first command adds the repository as a marketplace. The second installs the
 `skraft` plugin published by that marketplace. Then open `/plugin` and check that
 `skraft` appears under installed plugins.
 
+### Windows workaround
+
+If `/plugin marketplace add` fails with `fatal: unable to checkout working tree`,
+clone SKRAFT to a short local path and add that checkout instead:
+
+```powershell
+git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft
+```
+
+```text
+/plugin marketplace add C:\s\skraft
+/plugin install skraft
+```
+
+Or enable Windows long paths, restart the shell, and retry:
+
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+git config --global core.longpaths true
+```
+
 ## 2. Choose your journey
 
 Do not automatically run one global chain. The right starting point depends on

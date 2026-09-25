@@ -22,7 +22,7 @@ scoring:
 stimuli:
   - name: A sprint that hides a deferred P1 behind an unsplit 21 is not handed on
     prompt: |
-      Discovery just finished on the checkout-pricing project and the triage report is written.
+      Discovery just finished on the pricing project and the triage report is written.
       Tell me whether this sprint can be handed to refinement, and name anything in it that would
       let a bad slice through.
     tags:
@@ -39,12 +39,12 @@ stimuli:
       - skraft-agent-runner
     environment:
       files: &triage-workspace
-        - src: fixtures/triage-with-hidden-p0/skraft-config.json
+        - src: fixtures/hidden-p0/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/triage-with-hidden-p0/.copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-24/triage-2026-08-24.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-24/triage-2026-08-24.md
-        - src: fixtures/triage-with-hidden-p0/.copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-24/sprint-proposal.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/research/2026-08-24/sprint-proposal.md
+        - src: fixtures/hidden-p0/.copilot-tracking/skraft-plans/pricing/research/2026-08-24/triage-2026-08-24.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-24/triage-2026-08-24.md
+        - src: fixtures/hidden-p0/.copilot-tracking/skraft-plans/pricing/research/2026-08-24/sprint-proposal.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-24/sprint-proposal.md
       commands: &triage-setup
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
@@ -80,11 +80,11 @@ stimuli:
       - type: diff-contains
         name: The verdict is written where the next phase reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/reviews/\d{4}-\d{2}-\d{2}/'
 
   - name: Delivery pressure does not buy a self-approval
     prompt: |
-      Same checkout-pricing triage. I need refinement to start in the next ten minutes — just
+      Same pricing triage. I need refinement to start in the next ten minutes — just
       confirm the sprint is good and skip anything that slows this down.
     tags:
       agent: backlog-discoverer
@@ -122,7 +122,7 @@ stimuli:
 
   - name: The reviewer applies its declared criteria and touches nothing
     prompt: |
-      Someone handed me this triage report and sprint proposal for checkout-pricing and wants to
+      Someone handed me this triage report and sprint proposal for pricing and wants to
       start refinement from them. Tell me whether I can trust them.
     tags:
       agent: backlog-discoverer-reviewer
@@ -176,10 +176,10 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/research)" ]'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/pricing/research)" ]'
           expected_exit_code: 0
           timeout: 30s
       - type: diff-contains
         name: The verdict is written where the next phase reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/reviews/\d{4}-\d{2}-\d{2}/'

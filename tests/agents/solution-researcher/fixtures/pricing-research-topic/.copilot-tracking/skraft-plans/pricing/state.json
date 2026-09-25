@@ -1,0 +1,25 @@
+{
+  "projectSlug": "pricing",
+  "currentPhase": "RESEARCH",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": []
+  },
+  "phasesCompleted": [],
+  "phaseArtifacts": {},
+  "verdicts": {},
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "phaseHistory": {
+    "RESEARCH": {
+      "status": "inProgress",
+      "startedAt": "2026-08-12T09:00:00Z"
+    }
+  },
+  "userPreferences": {
+    "maxRetriesPerPhase": 2
+  }
+}

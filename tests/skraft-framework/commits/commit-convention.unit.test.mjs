@@ -11,7 +11,7 @@ test('isConventionalCommitSubject: rejects missing feature scope', () => {
 })
 
 test('isConventionalCommitSubject: accepts breaking change with feature scope', () => {
-  assert.equal(isConventionalCommitSubject('feat(loyalty-discount)!: change reward rules'), true)
+  assert.equal(isConventionalCommitSubject('feat(discount)!: change reward rules'), true)
 })
 
 test('isConventionalCommitSubject: false for a generic auto-commit-hook message', () => {

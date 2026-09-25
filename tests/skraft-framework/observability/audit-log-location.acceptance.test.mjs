@@ -22,7 +22,7 @@ test('the hooks write the audit log of the project they run in', () => {
   inProject(({ project, env }) => {
     execFileSync('git', ['init', '-q'], { cwd: project })
     mkdirSync(join(project, 'sub'), { recursive: true })
-    execFileSync('node', [STATE_CLI, 'init', '--slug', 'checkout-pricing'], { cwd: project, env, stdio: 'ignore' })
+    execFileSync('node', [STATE_CLI, 'init', '--slug', 'pricing'], { cwd: project, env, stdio: 'ignore' })
     execFileSync('node', [join(PLUGIN, 'src/cli/hook.mjs'), 'PreToolUse', 'Agent'], {
       cwd: tmpdir(),
       env,

@@ -4,14 +4,14 @@ Suite-local .NET 10 Clean Architecture application for the Software Engineer del
 
 ## Fixture states
 
-### `approved-loyalty-discount-red`
+### `approved-red`
 
-Approved DISTILL handoff for the `loyalty-discount` story:
+Approved DISTILL handoff for the `discount` story:
 
 - four production projects under `src/`;
 - exactly two xUnit projects under `tests/`;
 - `NetArchTest.Rules` dependency checks;
-- immutable outer acceptance test compiling and failing only on loyalty-discount behavior;
+- immutable outer acceptance test compiling and failing only on discount behavior;
 - approved feature and implementation-plan artifacts.
 
 Prepare with `dotnet restore CheckoutPricing.slnx`. Baseline verification with

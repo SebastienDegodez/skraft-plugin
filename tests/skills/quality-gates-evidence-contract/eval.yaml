@@ -22,27 +22,27 @@ stimuli:
   # Content eval 1 of the packet — produce the log from captured outputs.
   - name: The evidence log is assembled from the captured outputs, digests included
     prompt: |
-      The quality gates for the `loyalty-discount` story have already been run and their output
+      The quality gates for the `discount` story have already been run and their output
       captured to disk under
-      `.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/`.
+      `.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/`.
 
       Produce the quality-gates evidence for that story from those captured outputs.
     constraints:
       max_duration: 4m
     environment:
       files:
-        - src: fixtures/captured-outputs/skraft-config.json
+        - src: fixtures/captured/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/captured-outputs/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.stdout
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.stdout
-        - src: fixtures/captured-outputs/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.exit
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.exit
-        - src: fixtures/captured-outputs/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.stdout
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.stdout
-        - src: fixtures/captured-outputs/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.exit
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.exit
-        - src: fixtures/captured-outputs/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-mutation.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-mutation.json
+        - src: fixtures/captured/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-tests.stdout
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-tests.stdout
+        - src: fixtures/captured/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-tests.exit
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-tests.exit
+        - src: fixtures/captured/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-build.stdout
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-build.stdout
+        - src: fixtures/captured/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-build.exit
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-build.exit
+        - src: fixtures/captured/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-mutation.json
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-mutation.json
       commandTimeout: 1m
       commands:
         - 'git init --quiet'
@@ -54,16 +54,16 @@ stimuli:
       - type: file-exists
         name: The evidence log was written where the contract puts it
         config:
-          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount.json'
+          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg.json'
       - type: file-contains
         name: The log declares the schema it claims to satisfy
         config:
-          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount.json'
+          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg.json'
           value: 'quality-gates-evidence/v2'
       - type: file-contains
         name: The log names the stack adapter it was produced under
         config:
-          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount.json'
+          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg.json'
           value: 'quality-gates-dotnet'
       # The one grader that separates an assembled log from a transcribed one:
       # every digest is recomputed from the file it claims to hash. A model that
@@ -77,12 +77,12 @@ stimuli:
             - |
               const { createHash } = require('node:crypto')
               const { readFileSync } = require('node:fs')
-              const dir = '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20'
-              const log = JSON.parse(readFileSync(dir + '/qg-loyalty-discount.json', 'utf8'))
+              const dir = '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20'
+              const log = JSON.parse(readFileSync(dir + '/qg.json', 'utf8'))
               const digests = JSON.stringify(log).match(/\b[a-f0-9]{64}\b/g) ?? []
               if (digests.length < 2) { console.error('Fewer than two digests were declared.'); process.exit(1) }
               const files = ['tests.stdout', 'build.stdout', 'mutation.json']
-                .map((suffix) => dir + '/qg-loyalty-discount-' + suffix)
+                .map((suffix) => dir + '/qg-discount-' + suffix)
               const actual = new Set(files.map((f) => createHash('sha256').update(readFileSync(f)).digest('hex')))
               const wrong = digests.filter((d) => !actual.has(d))
               if (wrong.length) { console.error('Declared digests that hash nothing on disk: ' + wrong.join(', ')); process.exit(1) }
@@ -96,9 +96,9 @@ stimuli:
             - '-e'
             - |
               const { readFileSync } = require('node:fs')
-              const dir = '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20'
-              const log = JSON.parse(readFileSync(dir + '/qg-loyalty-discount.json', 'utf8'))
-              const captured = Number(readFileSync(dir + '/qg-loyalty-discount-tests.exit', 'utf8').trim())
+              const dir = '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20'
+              const log = JSON.parse(readFileSync(dir + '/qg.json', 'utf8'))
+              const captured = Number(readFileSync(dir + '/qg-tests.exit', 'utf8').trim())
               const codes = JSON.stringify(log).match(/"exit_code"\s*:\s*(-?\d+)/g) ?? []
               if (!codes.length) { console.error('No exit code was carried into the log.'); process.exit(1) }
               if (!codes.some((c) => Number(c.split(':')[1]) === captured)) {
@@ -109,7 +109,7 @@ stimuli:
       - type: file-not-matches
         name: No gate was attested without the substrate that backs it
         config:
-          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount.json'
+          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg.json'
           pattern: '(?i)"(?:stdout_sha256|report_sha256)"\s*:\s*"(?:|n/a|tbd|unknown|pending)"'
       - type: skill-invocation
         name: The skill under test is loaded
@@ -121,28 +121,28 @@ stimuli:
   # not a fresh prose reading of it.
   - name: The reviewer summary is rendered from the log rather than re-narrated
     prompt: |
-      The evidence log for the `loyalty-discount` story is already in the workspace under
-      `.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/`.
+      The evidence log for the `discount` story is already in the workspace under
+      `.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/`.
 
       Summarize the quality gates for the reviewer.
     constraints:
       max_duration: 4m
     environment:
       files:
-        - src: fixtures/assembled-evidence/skraft-config.json
+        - src: fixtures/assembled/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/assembled-evidence/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount.json
-        - src: fixtures/assembled-evidence/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.stdout
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.stdout
-        - src: fixtures/assembled-evidence/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.exit
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-tests.exit
-        - src: fixtures/assembled-evidence/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.stdout
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.stdout
-        - src: fixtures/assembled-evidence/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.exit
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-build.exit
-        - src: fixtures/assembled-evidence/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-mutation.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount-mutation.json
+        - src: fixtures/assembled/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg.json
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg.json
+        - src: fixtures/assembled/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-tests.stdout
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-tests.stdout
+        - src: fixtures/assembled/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-tests.exit
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-tests.exit
+        - src: fixtures/assembled/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-build.stdout
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-build.stdout
+        - src: fixtures/assembled/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-build.exit
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-build.exit
+        - src: fixtures/assembled/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-mutation.json
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg-mutation.json
       commandTimeout: 1m
       commands:
         - 'git init --quiet'
@@ -154,16 +154,16 @@ stimuli:
       - type: file-exists
         name: A rendered summary exists beside the log it derives from
         config:
-          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount.md'
+          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg.md'
       - type: file-contains
         name: The summary declares itself derived, not authoritative
         config:
-          path: '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20/qg-loyalty-discount.md'
-          value: 'qg-loyalty-discount.json'
+          path: '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20/qg.md'
+          value: 'qg.json'
       - type: output-matches
         name: The reviewer is pointed at the rendered file, not handed prose instead
         config:
-          pattern: 'qg-loyalty-discount\.md'
+          pattern: 'qg-discount\.md'
       - type: output-matches
         name: The mutation score is the one in the report, not a recollection
         config:
@@ -176,9 +176,9 @@ stimuli:
             - '-e'
             - |
               const { readFileSync } = require('node:fs')
-              const dir = '.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-20'
-              const log = JSON.parse(readFileSync(dir + '/qg-loyalty-discount.json', 'utf8'))
-              const md = readFileSync(dir + '/qg-loyalty-discount.md', 'utf8')
+              const dir = '.copilot-tracking/skraft-plans/pricing/evidence/2026-08-20'
+              const log = JSON.parse(readFileSync(dir + '/qg.json', 'utf8'))
+              const md = readFileSync(dir + '/qg.md', 'utf8')
               for (const gate of log.gates ?? []) {
                 if (!md.includes(gate.gate)) { console.error('Gate "' + gate.gate + '" is in the log but not in the summary.'); process.exit(1) }
               }
@@ -187,7 +187,7 @@ stimuli:
       - type: diff-not-contains
         name: The authoritative log was not edited while summarizing it
         config:
-          pattern: '(?m)^diff --git a/.*qg-loyalty-discount\.json '
+          pattern: '(?m)^diff --git a/.*qg-discount\.json '
       - type: skill-invocation
         name: The skill under test is loaded
         config:
