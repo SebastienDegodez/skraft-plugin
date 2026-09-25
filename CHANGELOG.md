@@ -3,6 +3,17 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.6.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.6.0...v1.6.1) (2026-09-25)
+
+### 🐛 Bug Fixes
+
+* **ci:** use supported Copilot model ([e982029](https://github.com/SebastienDegodez/skraft-plugin/commit/e9820299e286290d29e9ff9d5f3e73af9a4dd792))
+
+### 📝 Documentation
+
+* **mikado-method:** update LICENSE and provenance details for clarity ([ed6345f](https://github.com/SebastienDegodez/skraft-plugin/commit/ed6345fee13980da5af5858021cf59354fd9650b))
+* **mikado-method:** update LICENSE link for clarity ([3412e5e](https://github.com/SebastienDegodez/skraft-plugin/commit/3412e5e9f481f8fb7c6f052ccce5a2ee97719778))
+
 ## [1.6.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.5.2...v1.6.0) (2026-09-25)
 
 ### ✨ Features
