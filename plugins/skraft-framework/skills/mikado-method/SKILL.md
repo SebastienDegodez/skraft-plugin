@@ -11,12 +11,6 @@ the change, let the compiler and test suite reveal what it actually depends on, 
 the missing prerequisites bottom-up. The graph is the artifact — the failed experiment's code is
 always thrown away.
 
-Validation discipline adapted from
-[chaabani-anis/mikado-method](https://github.com/chaabani-anis/mikado-method) (MIT License): the
-same rigor (mandatory graph validation, traceability, golden-master gate, atomic leaf commits),
-reimplemented against SKRAFT's Mermaid graph convention instead of that project's rail-notation
-format.
-
 **Precondition.** A green safety net must exist before starting (see `characterize-with-contracts`
 / `brownfield-harness-builder`). Mikado surfaces prerequisites via real compiler/test failures — a
 codebase with weak or no test coverage gives false leaves (nothing breaks because nothing was
