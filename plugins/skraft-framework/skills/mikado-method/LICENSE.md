@@ -3,8 +3,8 @@
 ## License
 
 This skill is part of the SKRAFT framework and is distributed under the
-repository license: **GNU General Public License v3.0** (see the root
-[`LICENSE`](../../../../LICENSE)).
+repository license: **GNU General Public License v3.0** (see the
+[repository license](https://github.com/SebastienDegodez/skraft-plugin/blob/main/LICENSE)).
 
 ## Method
 
