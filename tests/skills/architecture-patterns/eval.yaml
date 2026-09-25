@@ -30,9 +30,9 @@ stimuli:
       max_duration: 3m
     environment:
       files:
-        - src: fixtures/context-map-conformist-into-core/skraft-config.json
+        - src: fixtures/conformist-core/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/context-map-conformist-into-core/.copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
+        - src: fixtures/conformist-core/.copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
           dest: .copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
       commandTimeout: 1m
       commands:
@@ -78,9 +78,9 @@ stimuli:
       max_duration: 3m
     environment:
       files:
-        - src: fixtures/context-map-balanced-arrow/skraft-config.json
+        - src: fixtures/balanced-arrow/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/context-map-balanced-arrow/.copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
+        - src: fixtures/balanced-arrow/.copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
           dest: .copilot-tracking/skraft-plans/driver-quotes/details/2026-08-13/context-map.md
       commandTimeout: 1m
       commands:

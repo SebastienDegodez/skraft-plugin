@@ -262,12 +262,12 @@ stimuli:
       intent: non-activation
     environment:
       files:
-        - src: fixtures/signed-off-specification/.gitignore
+        - src: fixtures/signed-spec/.gitignore
           dest: .gitignore
-        - src: fixtures/signed-off-specification/.copilot-tracking/skraft-plans/refunds/features/refund-request.feature
+        - src: fixtures/signed-spec/.copilot-tracking/skraft-plans/refunds/features/refund-request.feature
           dest: .copilot-tracking/skraft-plans/refunds/features/refund-request.feature
-        - src: fixtures/signed-off-specification/.copilot-tracking/skraft-plans/refunds/details/2026-08-12/contracts-refund-request.md
-          dest: .copilot-tracking/skraft-plans/refunds/details/2026-08-12/contracts-refund-request.md
+        - src: fixtures/signed-spec/.copilot-tracking/skraft-plans/refunds/details/2026-08-12/contracts-refund.md
+          dest: .copilot-tracking/skraft-plans/refunds/details/2026-08-12/contracts-refund.md
       commands:
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'

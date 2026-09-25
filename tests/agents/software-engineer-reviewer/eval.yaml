@@ -38,24 +38,24 @@ stimuli:
       - skraft-agent-runner
     environment:
       files:
-        - src: fixtures/delivered-with-test-theater/skraft-config.json
+        - src: fixtures/delivered-theater/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json
-        - src: fixtures/delivered-with-test-theater/src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/impl.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/impl.md
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/changes/2026-08-13/change-log.md
+          dest: .copilot-tracking/skraft-plans/pricing/changes/2026-08-13/change-log.md
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-13/qg.json
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-13/qg.json
+        - src: fixtures/delivered-theater/src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
           dest: src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
-        - src: fixtures/delivered-with-test-theater/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/delivered-theater/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
-        - src: fixtures/delivered-with-test-theater/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountPolicyTests.cs
-          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountPolicyTests.cs
+        - src: fixtures/delivered-theater/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountPolicyTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountPolicyTests.cs
       commands:
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
@@ -101,7 +101,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- src tests .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details .copilot-tracking/skraft-plans/checkout-pricing/changes .copilot-tracking/skraft-plans/checkout-pricing/evidence)" ]'
+            - '[ -z "$(git status --porcelain -- src tests .copilot-tracking/skraft-plans/pricing/features .copilot-tracking/skraft-plans/pricing/details .copilot-tracking/skraft-plans/pricing/changes .copilot-tracking/skraft-plans/pricing/evidence)" ]'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -110,7 +110,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/deliver-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
+            - "set -- .copilot-tracking/skraft-plans/pricing/reviews/*/deliver-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
           expected_exit_code: 0
           timeout: 30s
 
@@ -132,24 +132,24 @@ stimuli:
       - skraft-agent-runner
     environment:
       files:
-        - src: fixtures/delivered-with-test-theater/skraft-config.json
+        - src: fixtures/delivered-theater/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/impl-plan-loyalty-discount.md
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/changes/2026-08-13/change-log.md
-        - src: fixtures/delivered-with-test-theater/.copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/evidence/2026-08-13/qg-loyalty-discount.json
-        - src: fixtures/delivered-with-test-theater/src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/impl.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/impl.md
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/changes/2026-08-13/change-log.md
+          dest: .copilot-tracking/skraft-plans/pricing/changes/2026-08-13/change-log.md
+        - src: fixtures/delivered-theater/.copilot-tracking/skraft-plans/pricing/evidence/2026-08-13/qg.json
+          dest: .copilot-tracking/skraft-plans/pricing/evidence/2026-08-13/qg.json
+        - src: fixtures/delivered-theater/src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
           dest: src/CheckoutPricing.Domain/LoyaltyDiscountPolicy.cs
-        - src: fixtures/delivered-with-test-theater/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/delivered-theater/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
-        - src: fixtures/delivered-with-test-theater/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountPolicyTests.cs
-          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountPolicyTests.cs
+        - src: fixtures/delivered-theater/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountPolicyTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountPolicyTests.cs
       commands:
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
@@ -164,7 +164,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- src tests .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details .copilot-tracking/skraft-plans/checkout-pricing/changes .copilot-tracking/skraft-plans/checkout-pricing/evidence)" ]'
+            - '[ -z "$(git status --porcelain -- src tests .copilot-tracking/skraft-plans/pricing/features .copilot-tracking/skraft-plans/pricing/details .copilot-tracking/skraft-plans/pricing/changes .copilot-tracking/skraft-plans/pricing/evidence)" ]'
           expected_exit_code: 0
           timeout: 30s
       - type: custom-metrics
@@ -179,7 +179,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - "set -- .copilot-tracking/skraft-plans/checkout-pricing/reviews/*/deliver-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
+            - "set -- .copilot-tracking/skraft-plans/pricing/reviews/*/deliver-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
           expected_exit_code: 0
           timeout: 30s
       - type: skill-invocation

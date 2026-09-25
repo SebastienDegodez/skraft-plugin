@@ -34,35 +34,35 @@ stimuli:
       - skraft-agent-runner
     environment:
       files: &designed-workspace
-        - src: fixtures/designed-loyalty-story/.gitignore
+        - src: fixtures/designed-story/.gitignore
           dest: .gitignore
-        - src: fixtures/designed-loyalty-story/skraft-config.json
+        - src: fixtures/designed-story/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/designed-loyalty-story/CheckoutPricing.slnx
+        - src: fixtures/designed-story/CheckoutPricing.slnx
           dest: CheckoutPricing.slnx
-        - src: fixtures/designed-loyalty-story/Directory.Build.props
+        - src: fixtures/designed-story/Directory.Build.props
           dest: Directory.Build.props
-        - src: fixtures/designed-loyalty-story/Directory.Packages.props
+        - src: fixtures/designed-story/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/contracts-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-12/contracts-loyalty-discount.md
-        - src: fixtures/designed-loyalty-story/docs/adr/decisions-index.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md
+        - src: fixtures/designed-story/docs/adr/decisions-index.md
           dest: docs/adr/decisions-index.md
-        - src: fixtures/designed-loyalty-story/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/designed-story/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
           dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
-        - src: fixtures/designed-loyalty-story/src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/designed-story/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
-        - src: fixtures/designed-loyalty-story/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/designed-story/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
           dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
-        - src: fixtures/designed-loyalty-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
+        - src: fixtures/designed-story/src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
           dest: src/CheckoutPricing.Application/CalculateLoyaltyDiscount.cs
-        - src: fixtures/designed-loyalty-story/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
+        - src: fixtures/designed-story/tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
           dest: tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj
       commands: &designed-setup
         - 'dotnet restore CheckoutPricing.slnx'
@@ -90,7 +90,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - 'ls .copilot-tracking/skraft-plans/checkout-pricing/features/*.feature >/dev/null 2>&1'
+            - 'ls .copilot-tracking/skraft-plans/pricing/features/*.feature >/dev/null 2>&1'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -99,7 +99,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - 'for v in 9500 9000 8500; do grep -rq "$v" .copilot-tracking/skraft-plans/checkout-pricing/features || exit 1; done'
+            - 'for v in 9500 9000 8500; do grep -rq "$v" .copilot-tracking/skraft-plans/pricing/features || exit 1; done'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -152,7 +152,7 @@ stimuli:
             - '-lc'
             - |-
               set -f
-              files=$(find .copilot-tracking/skraft-plans/checkout-pricing/features tests \
+              files=$(find .copilot-tracking/skraft-plans/pricing/features tests \
                 -type f \( -name '*.feature' -o -name '*.cs' -o -name '*.md' \) \
                 ! -path '*/bin/*' ! -path '*/obj/*' 2>/dev/null)
               [ -n "$files" ] || exit 0
@@ -207,7 +207,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - 'grep -rq 9500 .copilot-tracking/skraft-plans/checkout-pricing/features'
+            - 'grep -rq 9500 .copilot-tracking/skraft-plans/pricing/features'
           expected_exit_code: 0
           timeout: 30s
       # A conformance failure has to say whether the skills even loaded.
@@ -234,14 +234,14 @@ stimuli:
       - skraft-agent-runner
     environment:
       files:
-        - src: fixtures/designed-loyalty-story/.gitignore
+        - src: fixtures/designed-story/.gitignore
           dest: .gitignore
-        - src: fixtures/designed-loyalty-story/skraft-config.json
+        - src: fixtures/designed-story/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/designed-loyalty-story/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/designed-story/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
     graders:
       - type: completed
       - type: output-matches

@@ -17,45 +17,45 @@ stimuli:
       to bring back.
     environment:
       files:
-        - src: fixtures/delivered-with-dropped-scenario/.gitignore
+        - src: fixtures/dropped-scenario/.gitignore
           dest: .gitignore
-        - src: fixtures/delivered-with-dropped-scenario/skraft-config.json
+        - src: fixtures/dropped-scenario/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/delivered-with-dropped-scenario/LoyaltyPricing.slnx
+        - src: fixtures/dropped-scenario/LoyaltyPricing.slnx
           dest: LoyaltyPricing.slnx
-        - src: fixtures/delivered-with-dropped-scenario/Directory.Build.props
+        - src: fixtures/dropped-scenario/Directory.Build.props
           dest: Directory.Build.props
-        - src: fixtures/delivered-with-dropped-scenario/Directory.Packages.props
+        - src: fixtures/dropped-scenario/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: fixtures/delivered-with-dropped-scenario/src/LoyaltyPricing.Domain/LoyaltyPricing.Domain.csproj
+        - src: fixtures/dropped-scenario/src/LoyaltyPricing.Domain/LoyaltyPricing.Domain.csproj
           dest: src/LoyaltyPricing.Domain/LoyaltyPricing.Domain.csproj
-        - src: fixtures/delivered-with-dropped-scenario/src/LoyaltyPricing.Domain/LoyaltyDiscountPolicy.cs
+        - src: fixtures/dropped-scenario/src/LoyaltyPricing.Domain/LoyaltyDiscountPolicy.cs
           dest: src/LoyaltyPricing.Domain/LoyaltyDiscountPolicy.cs
-        - src: fixtures/delivered-with-dropped-scenario/src/LoyaltyPricing.Application/LoyaltyPricing.Application.csproj
+        - src: fixtures/dropped-scenario/src/LoyaltyPricing.Application/LoyaltyPricing.Application.csproj
           dest: src/LoyaltyPricing.Application/LoyaltyPricing.Application.csproj
-        - src: fixtures/delivered-with-dropped-scenario/src/LoyaltyPricing.Application/CalculatePayableTotal.cs
+        - src: fixtures/dropped-scenario/src/LoyaltyPricing.Application/CalculatePayableTotal.cs
           dest: src/LoyaltyPricing.Application/CalculatePayableTotal.cs
-        - src: fixtures/delivered-with-dropped-scenario/tests/LoyaltyPricing.UnitTests/LoyaltyPricing.UnitTests.csproj
+        - src: fixtures/dropped-scenario/tests/LoyaltyPricing.UnitTests/LoyaltyPricing.UnitTests.csproj
           dest: tests/LoyaltyPricing.UnitTests/LoyaltyPricing.UnitTests.csproj
-        - src: fixtures/delivered-with-dropped-scenario/tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
-          dest: tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
-        - src: fixtures/delivered-with-dropped-scenario/red/CalculatePayableTotalAcceptanceTests.cs
-          dest: .fixture-red/CalculatePayableTotalAcceptanceTests.cs
-        - src: fixtures/delivered-with-dropped-scenario/.copilot-tracking/skraft-plans/loyalty-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/features/loyalty-discount.feature
-        - src: fixtures/delivered-with-dropped-scenario/.copilot-tracking/skraft-plans/loyalty-pricing/changes/2026-08-14/change-log.md
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/changes/2026-08-14/change-log.md
+        - src: fixtures/dropped-scenario/tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs
+          dest: tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs
+        - src: fixtures/dropped-scenario/red/PayableTotalTests.cs
+          dest: .fixture-red/PayableTotalTests.cs
+        - src: fixtures/dropped-scenario/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
+        - src: fixtures/dropped-scenario/.copilot-tracking/skraft-plans/pricing/changes/2026-08-14/change-log.md
+          dest: .copilot-tracking/skraft-plans/pricing/changes/2026-08-14/change-log.md
       commandTimeout: 2m
       commands:
         - 'dotnet restore LoyaltyPricing.slnx'
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
         - 'git config user.name "SKRAFT Evaluation"'
-        - 'cp tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs .fixture-red/delivered-state.cs'
-        - 'cp .fixture-red/CalculatePayableTotalAcceptanceTests.cs tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs'
+        - 'cp tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs .fixture-red/delivered-state.cs'
+        - 'cp .fixture-red/PayableTotalTests.cs tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs'
         - 'git add .gitignore skraft-config.json LoyaltyPricing.slnx Directory.Build.props Directory.Packages.props src tests .copilot-tracking'
         - 'git commit --quiet -m "test: loyalty discount scenarios"'
-        - 'cp .fixture-red/delivered-state.cs tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs'
+        - 'cp .fixture-red/delivered-state.cs tests/LoyaltyPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs'
         - 'rm -rf .fixture-red'
         - 'git add -A'
         - 'git commit --quiet -m "feat: loyalty discount"'
@@ -104,14 +104,14 @@ stimuli:
       max_duration: 3m
     environment:
       files:
-        - src: fixtures/design-with-buried-coupling/skraft-config.json
+        - src: fixtures/buried-coupling/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/design-with-buried-coupling/.copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/contracts-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/contracts-loyalty-discount.md
-        - src: fixtures/design-with-buried-coupling/.copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/diagrams-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/diagrams-loyalty-discount.md
-        - src: fixtures/design-with-buried-coupling/.copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/context-map.md
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/context-map.md
+        - src: fixtures/buried-coupling/.copilot-tracking/skraft-plans/pricing/details/2026-08-13/contracts.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-13/contracts.md
+        - src: fixtures/buried-coupling/.copilot-tracking/skraft-plans/pricing/details/2026-08-13/diagrams.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-13/diagrams.md
+        - src: fixtures/buried-coupling/.copilot-tracking/skraft-plans/pricing/details/2026-08-13/context-map.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-13/context-map.md
       commandTimeout: 1m
       commands:
         - 'git init --quiet'
@@ -157,16 +157,16 @@ stimuli:
       max_duration: 3m
     environment:
       files:
-        - src: fixtures/sound-specification/skraft-config.json
+        - src: fixtures/sound-spec/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/sound-specification/.copilot-tracking/skraft-plans/loyalty-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-        - src: fixtures/sound-specification/.copilot-tracking/skraft-plans/loyalty-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/features/loyalty-discount.feature
-        - src: fixtures/sound-specification/.copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/test-plan-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/details/2026-08-13/test-plan-loyalty-discount.md
-        - src: fixtures/sound-specification/.copilot-tracking/skraft-plans/loyalty-pricing/review-checklist.md
-          dest: .copilot-tracking/skraft-plans/loyalty-pricing/review-checklist.md
+        - src: fixtures/sound-spec/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/sound-spec/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
+        - src: fixtures/sound-spec/.copilot-tracking/skraft-plans/pricing/details/2026-08-13/test.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-13/test.md
+        - src: fixtures/sound-spec/.copilot-tracking/skraft-plans/pricing/review-checklist.md
+          dest: .copilot-tracking/skraft-plans/pricing/review-checklist.md
       commandTimeout: 1m
       commands:
         - 'git init --quiet'
@@ -267,10 +267,10 @@ stimuli:
       max_duration: 3m
     environment:
       files:
-        - src: fixtures/self-contradicting-story/skraft-config.json
+        - src: fixtures/contradicting-story/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/self-contradicting-story/.copilot-tracking/skraft-plans/driver-quotes/plans/2026-08-12/stories-milestone-1.md
-          dest: .copilot-tracking/skraft-plans/driver-quotes/plans/2026-08-12/stories-milestone-1.md
+        - src: fixtures/contradicting-story/.copilot-tracking/skraft-plans/driver-quotes/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/driver-quotes/plans/2026-08-12/stories-m1.md
       commandTimeout: 1m
       commands:
         - 'git init --quiet'

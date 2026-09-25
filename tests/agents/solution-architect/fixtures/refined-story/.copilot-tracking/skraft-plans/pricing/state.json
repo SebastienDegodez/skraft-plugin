@@ -1,0 +1,38 @@
+{
+  "projectSlug": "pricing",
+  "currentPhase": "DESIGN",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": []
+  },
+  "phasesCompleted": [
+    "RESEARCH"
+  ],
+  "phaseArtifacts": {
+    "RESEARCH": [
+      ".copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md"
+    ]
+  },
+  "verdicts": {
+    "RESEARCH": "APPROVED"
+  },
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "phaseHistory": {
+    "RESEARCH": {
+      "status": "done",
+      "startedAt": "2026-08-12T09:00:00Z",
+      "completedAt": "2026-08-12T09:40:00Z"
+    },
+    "DESIGN": {
+      "status": "inProgress",
+      "startedAt": "2026-08-12T09:40:00Z"
+    }
+  },
+  "userPreferences": {
+    "maxRetriesPerPhase": 2
+  }
+}

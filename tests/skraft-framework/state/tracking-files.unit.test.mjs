@@ -10,16 +10,16 @@ import { createTrackingFiles } from '../../../plugins/skraft-framework/src/adapt
 test('tracking files: a recorded file exists and reads back; a directory or a missing path does not exist', async () => {
   const root = mkdtempSync(join(tmpdir(), 'skraft-tracking-files-'))
   try {
-    mkdirSync(join(root, 'checkout-pricing', 'research'), { recursive: true })
-    writeFileSync(join(root, 'checkout-pricing', 'research', 'findings.md'), '# Findings\n')
+    mkdirSync(join(root, 'pricing', 'research'), { recursive: true })
+    writeFileSync(join(root, 'pricing', 'research', 'findings.md'), '# Findings\n')
     const files = createTrackingFiles(root)
 
-    assert.equal(await files.exists('checkout-pricing', 'research/findings.md'), true)
-    assert.equal(await files.read('checkout-pricing', 'research/findings.md'), '# Findings\n')
-    assert.equal(await files.exists('checkout-pricing', 'research'), false)
-    assert.equal(await files.exists('checkout-pricing', 'design/adr.md'), false)
+    assert.equal(await files.exists('pricing', 'research/findings.md'), true)
+    assert.equal(await files.read('pricing', 'research/findings.md'), '# Findings\n')
+    assert.equal(await files.exists('pricing', 'research'), false)
+    assert.equal(await files.exists('pricing', 'design/adr.md'), false)
     assert.equal(await files.exists('other-project', 'research/findings.md'), false)
-    await assert.rejects(files.read('checkout-pricing', 'design/adr.md'), { code: 'ENOENT' })
+    await assert.rejects(files.read('pricing', 'design/adr.md'), { code: 'ENOENT' })
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

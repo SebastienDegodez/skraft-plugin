@@ -62,7 +62,7 @@ export function verify(mode, context, scenario, base, workspace = process.cwd())
     return
   }
   const message = git('show', '-s', '--format=%B', sha)
-  assert.match(message.split('\n')[0], /^docs\(loyalty-discount\): [^\s].*$/, 'Feature scope, not a technical folder')
+  assert.match(message.split('\n')[0], /^docs\(discount\): [^\s].*$/, 'Feature scope, not a technical folder')
   const identity = context.identity.name + ' <' + context.identity.email + '>'
   assert.equal(git('show', '-s', '--format=%an <%ae>', sha), identity, 'Author identity changed')
   assert.equal(git('show', '-s', '--format=%cn <%ce>', sha), identity, 'Committer identity changed')

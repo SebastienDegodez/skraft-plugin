@@ -22,8 +22,8 @@ test('sessionContext: the absolute CLI path, without a trailing separator', () =
 })
 
 test('sessionContext: names the active pipeline and its phase when there is one', () => {
-  const lines = sessionContext({ pluginRoot: '/opt/skraft', activeSlug: 'checkout-pricing', currentPhase: 'DESIGN' }).split('\n')
+  const lines = sessionContext({ pluginRoot: '/opt/skraft', activeSlug: 'pricing', currentPhase: 'DESIGN' }).split('\n')
   assert.equal(lines.length, 3)
-  assert.equal(lines[2], 'Active pipeline: checkout-pricing, phase DESIGN — the SKRAFT hooks guard this pipeline; state.mjs select switches it.')
+  assert.equal(lines[2], 'Active pipeline: pricing, phase DESIGN — the SKRAFT hooks guard this pipeline; state.mjs select switches it.')
   assert.match(sessionContext({ pluginRoot: '/opt/skraft', activeSlug: 'x' }), /Active pipeline: x, phase unknown/)
 })

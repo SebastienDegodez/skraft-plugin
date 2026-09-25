@@ -38,12 +38,12 @@ stimuli:
       files: &design-ready-workspace
         - src: fixtures/design-phase-ready/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
         - src: fixtures/design-phase-ready/docs/adr/decisions-index.md
           dest: docs/adr/decisions-index.md
         - src: fixtures/design-phase-ready/src/CheckoutPricing.Domain/LoyaltyTier.cs
@@ -75,11 +75,11 @@ stimuli:
       - type: diff-contains
         name: The phase produces its own artefacts
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/details/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/details/\d{4}-\d{2}-\d{2}/'
       - type: diff-contains
         name: The review leaves a verdict behind
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/reviews/\d{4}-\d{2}-\d{2}/'
 
   - name: A request to skip the review does not remove it
     prompt: |
@@ -115,11 +115,11 @@ stimuli:
       - type: diff-contains
         name: The review still leaves a verdict behind
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/reviews/\d{4}-\d{2}-\d{2}/'
 
   - name: A fresh pipeline with no handoff remains at research
     prompt: |
-      Initialize the engineering pipeline for the refined checkout-pricing documentation change.
+      Initialize the engineering pipeline for the refined pricing documentation change.
       There is no upstream backlog or sprint handoff. Persist where the pipeline must begin, but
       do not start phase work yet.
     tags:
@@ -155,7 +155,7 @@ stimuli:
           args:
             - '-e'
             - >-
-              const s=require('./.copilot-tracking/skraft-plans/checkout-pricing/state.json');
+              const s=require('./.copilot-tracking/skraft-plans/pricing/state.json');
               if(s.currentPhase!=='RESEARCH') process.exit(1)
           expected_exit_code: 0
           timeout: 30s
@@ -166,7 +166,7 @@ stimuli:
           args:
             - '-lc'
             - >-
-              [ ! -d .copilot-tracking/skraft-plans/checkout-pricing/research ] &&
-              [ ! -d .copilot-tracking/skraft-plans/checkout-pricing/details ]
+              [ ! -d .copilot-tracking/skraft-plans/pricing/research ] &&
+              [ ! -d .copilot-tracking/skraft-plans/pricing/details ]
           expected_exit_code: 0
           timeout: 30s
