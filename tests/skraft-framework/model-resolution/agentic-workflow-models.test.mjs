@@ -6,8 +6,10 @@ import { dirname, join } from 'node:path'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 const read = (rel) => readFileSync(join(repoRoot, rel), 'utf8')
-const WORKFLOWS = ['skraft-docs-gaps', 'skraft-docs-sync']
-const SUPPORTED_MODEL = 'claude-sonnet-5'
+const WORKFLOW_MODELS = {
+  'skraft-docs-gaps': 'claude-sonnet-5',
+  'skraft-docs-sync': 'gpt-5-mini',
+}
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 const sourceModel = (name) => {
@@ -22,14 +24,14 @@ const lockMetadata = (name) => {
   return JSON.parse(match[1])
 }
 
-test('agentic workflow sources pin the supported Copilot model', () => {
-  for (const name of WORKFLOWS) {
-    assert.equal(sourceModel(name), SUPPORTED_MODEL, `${name}.md must stay on supported model ${SUPPORTED_MODEL}`)
+test('agentic workflow sources pin intended Copilot model', () => {
+  for (const [name, model] of Object.entries(WORKFLOW_MODELS)) {
+    assert.equal(sourceModel(name), model, `${name}.md must stay on supported model ${model}`)
   }
 })
 
 test('compiled lockfiles mirror the source workflow model', () => {
-  for (const name of WORKFLOWS) {
+  for (const name of Object.keys(WORKFLOW_MODELS)) {
     const model = sourceModel(name)
     const escapedModel = escapeRegExp(model)
     const lock = read(`.github/workflows/${name}.lock.yml`)
