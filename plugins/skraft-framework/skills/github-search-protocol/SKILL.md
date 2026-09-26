@@ -1,9 +1,31 @@
 ---
 name: github-search-protocol
-description: "Use when building GitHub search queries, paginating through issue results, filtering by labels/milestones/assignees, or implementing artifact-driven discovery from git history. Covers GitHub search syntax, MCP tool usage patterns, and result ranking."
+description: "Use when finding GitHub issues to work on, exploring a backlog by labels, milestones or assignees, finding issues related to changed files, or publishing already-prepared Markdown to PR conversation or issue comments, including updates and interrupted-publication retries. Covers issue discovery queries, pagination and ranking, plus MCP-first publication with host gh fallback when MCP capability is unavailable. Not for authoring Markdown, generating reports or judging their content."
 ---
 
 # GitHub Search Protocol
+
+## Existing issue content is read-only
+
+Never change the `title` or `body` of an existing issue, through MCP, CLI or any
+other transport, even when the installed tool exposes those fields. Omit both
+fields from issue-update payloads; do not resend their current values.
+Publish refinements, acceptance criteria, reports and proposed wording in comments
+or local artifacts instead. A comment's `body` is distinct from the issue's `body`:
+only the selected comment may be created or updated under the publication protocol.
+
+## Route by intent
+
+- **Publish prepared Markdown** to a GitHub PR conversation or issue comment, update it,
+  or reconcile an interrupted attempt: load [GitHub publication](references/github-publication.md)
+  and follow that path only. Stop here; do not run discovery or apply its result caps.
+- **Discover issues**: continue below. Before a search or triage MCP call, load
+  [MCP tool patterns](references/mcp-tool-patterns.md) for host schema binding,
+  parameters, responses and errors. For qualifiers or query recipes beyond this page,
+  load [search syntax](references/github-search-syntax.md). When extracting domain terms
+  from changed files, load [artifact-driven heuristics](references/artifact-driven-heuristics.md).
+- **Author Markdown or generate reports**: return to the owning producer; this skill
+  transports prepared content, not its authorship or approval.
 
 ## Overview
 
@@ -168,75 +190,16 @@ label:priority/P0,priority/P1 no:assignee is:open is:issue sort:created-desc
 
 ## MCP Tool Patterns
 
-### Available Tools
-
-| Tool | Purpose |
-|---|---|
-| `mcp_github_search_issues` | Search and list issues matching a query |
-| `mcp_github_issue_write` | Update labels, milestone, or assignees on an existing issue |
-
-### mcp_github_search_issues
-
-**Parameters**:
-```json
-{
-  "owner": "org-or-user",
-  "repo": "repository-name",
-  "query": "assignee:@me is:open is:issue sort:updated-desc",
-  "per_page": 20,
-  "page": 1
-}
-```
-
-**Response shape**:
-```json
-{
-  "total_count": 47,
-  "items": [
-    {
-      "number": 42,
-      "title": "Add eligibility check for young drivers",
-      "body": "As a driver under 25...",
-      "state": "open",
-      "labels": [{"name": "type/feature"}, {"name": "priority/P1"}],
-      "assignees": [{"login": "user"}],
-      "milestone": {"title": "v0.2"},
-      "created_at": "2026-04-10T14:30:00Z",
-      "updated_at": "2026-05-01T09:15:00Z",
-      "comments": 3
-    }
-  ]
-}
-```
-
-**Error handling**:
-| HTTP Status | Meaning | Action |
-|---|---|---|
-| 422 Unprocessable Entity | Invalid query syntax | Simplify: remove one qualifier at a time, retry |
-| 403 Forbidden | Rate limit exceeded | Wait 60 seconds, retry once |
-| 404 Not Found | Repository not found | Verify owner/repo, report blocker |
-| 401 Unauthorized | Authentication required | Report authentication blocker |
-
-### mcp_github_issue_write
-
-**Parameters**:
-```json
-{
-  "owner": "org-or-user",
-  "repo": "repository-name",
-  "issue_number": 42,
-  "labels": ["type/feature", "priority/P1", "effort/M", "status/ready"],
-  "milestone": 3
-}
-```
-
-**What can be updated**: labels (full replacement — include all labels to keep), milestone (by ID), assignees (full replacement)
-
-**What cannot be updated**: issue body, title, state (open/close) via this tool
+Before invoking a discovery/triage tool, load [MCP tool patterns](references/mcp-tool-patterns.md).
+That reference owns parameter, response and error details; bind its example names to
+actual exposed host tools and schemas, never manufacture a callable namespace.
 
 ---
 
 ## Pagination Pattern
+
+DISCOVER only: bounded issue search is not exhaustive publication reconciliation.
+Publication must read every relevant comment page; use its routed reference instead.
 
 ```
 page = 1

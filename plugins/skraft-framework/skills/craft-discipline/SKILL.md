@@ -84,9 +84,11 @@ Load the [`mutation-testing`](../mutation-testing/SKILL.md) skill for full workf
 
 ### C9 — Conventional commit format
 
-Format: `type(scope): subject`
-
-Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+Use `git commit -s` with `type(feature): subject`, e.g.
+`test(loyalty-discount): cover expired membership`. For a known issue, end the
+body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole
+issue is genuinely finished and all required gates pass. Omit the issue line
+when unknown.
 
 ### C10 — Object Calisthenics on Domain
 

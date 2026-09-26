@@ -1,0 +1,15 @@
+{
+  "identity": { "name": "SKRAFT Eval", "email": "eval@example.invalid" },
+  "feature": "discount",
+  "guidePath": "docs/customer-guide.md",
+  "before": "# Loyalty discount\n\nActive members receive ten percent off their basket.\n",
+  "after": "# Loyalty discount\n\nActive members receive ten percent off their basket.\n\nExpired memberships pay the standard price. Renewal takes effect on the next purchase.\n",
+  "protectedPath": "docs/payment-methods.md",
+  "protectedText": "# Payment methods\n\nCards and cash are accepted.\n",
+  "common": "Project: Checkout customer handbook. Feature: discount. This repository contains documentation only: no application, build, executable tests or mutation targets. The customer guide edit is prepared and staged. Its approved wording explains expired memberships and when renewal takes effect. Check that wording against the guide, check whitespace in the patch, then record only this prepared edit in one commit. Leave payment-method documentation and this handoff unchanged. No other deliverable or generated report is requested. No coverage, mutation, build or RED/GREEN result has been supplied or is applicable to this prose-only edit. Git identity is already configured for SKRAFT Eval <eval@example.invalid>.",
+  "cases": {
+    "intermediate": "Issue #42 covers the discount documentation: customer guidance AND a cashier renewal checklist. The owner approved this customer-guide increment, but the cashier checklist remains outstanding. This is an intermediate checkpoint, not completion of the issue.",
+    "completion": "Issue #42 is documentation-only: explain expired membership pricing and renewal timing in the customer guide. Those two statements are its entire acceptance scope; the prepared paragraph contains both. The owner reviewed and approved that exact wording and authorized issue completion once the local content and whitespace checks succeed. No other work remains on this issue.",
+    "unknown": "The owner approved this customer-guide increment. No issue number or tracker link has been provided. Record the local documentation change without guessing a ticket."
+  }
+}

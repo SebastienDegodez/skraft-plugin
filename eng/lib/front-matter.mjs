@@ -1,6 +1,6 @@
 // Minimal front matter reader for the agentic primitives this repository ships.
 //
-// SKILL.md and *.agent.md front matter uses a tiny YAML subset: scalars, quoted
+// SKILL.md and agent descriptor front matter uses a tiny YAML subset: scalars, quoted
 // scalars, block scalars (`>` / `|`) and sequences. Reading it without a YAML
 // dependency keeps every eng/ script runnable from a bare `node`, with no
 // install step, in any CI job.

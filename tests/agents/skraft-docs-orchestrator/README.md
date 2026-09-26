@@ -22,9 +22,9 @@ it to confirm the drift the stimulus starts from:
 
 | Fixture | Verified starting state |
 |---|---|
-| `handbook-with-orphan-worker/` | `scan-drift` → exactly 1 item: `missing-page` / `workers-mock-integration-worker`, `lang: both`, severity `high`. `lint-nav` clean. |
-| `handbook-missing-diataxis-mode/` | `lint-nav` → exactly 1 problem: `NAV-MODE-MISSING` on `parts[0]`, exit 1. `scan-drift` → exactly 1 item: `missing-diataxis-mode`. |
-| `handbook-missing-editorial-page/` | `scan-drift` → exactly 1 item: `missing-page` / `for-executives`, `pageType: editorial`. `lint-nav` clean. |
+| `orphan-worker/` | `scan-drift` → exactly 1 item: `missing-page` / `workers-mock-integration-worker`, `lang: both`, severity `high`. `lint-nav` clean. |
+| `diataxis-gap/` | `lint-nav` → exactly 1 problem: `NAV-MODE-MISSING` on `parts[0]`, exit 1. `scan-drift` → exactly 1 item: `missing-diataxis-mode`. |
+| `editorial-gap/` | `scan-drift` → exactly 1 item: `missing-page` / `for-executives`, `pageType: editorial`. `lint-nav` clean. |
 
 That is why the graders can afford to be exit-code assertions on the same two scripts: the
 before-state is known exactly, so "scans clean afterwards" is a real repair and not a tautology.

@@ -3,8 +3,8 @@
 Cette page liste les **13 user stories** du framework de garde-fous déterministes,
 avec leur gain, statut et milestone.
 
-> **Mise à jour :** quand une US est livrée, passez son statut à ✅ Livré
-> **et** cochez la case dans `plugins/skraft-framework/README.md`.
+> **Mise à jour :** quand une US est livrée, passez son statut à ✅ Livré.
+> Le README du plugin reste centré sur les capacités effectivement distribuées.
 
 ## 1. Vue d'ensemble
 
@@ -15,7 +15,7 @@ avec leur gain, statut et milestone.
 | [US3](#us3) | G1 garde d'ordre de dispatch | `gain:anti-drift` | ✅ Livré | Phase 1 — MVP |
 | [US4](#us4) | G2/G3 forçage skills + audit | `gain:anti-drift` | ✅ Livré | Phase 1 — MVP |
 | [US5](#us5) | Manifests hooks Copilot + Claude | `gain:reliability` | ✅ Livré | Phase 1 — MVP |
-| [US6](#us6) | Tests boundary-to-boundary | `gain:reliability` | 🔲 À faire | Phase 1 — MVP |
+| [US6](#us6) | Tests boundary-to-boundary | `gain:reliability` | ✅ Livré | Phase 1 — MVP |
 | [US7](#us7) | Documentation + roadmap.md | `gain:dx` | ✅ Livré | Phase 1 — MVP |
 | [US8](#us8) | G4/G5 artefacts + verdict + commit | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
 | [US9](#us9) | S7 execution-log + CLI bridge | `gain:reliability` | ✅ Livré | Phase 2 — Complétude |
@@ -26,6 +26,9 @@ avec leur gain, statut et milestone.
 | [S1](#s1) | State write-through (économie de tokens) | `gain:eco-tokens` | ✅ Livré | Phase 2 — Complétude |
 | [S2](#s2) | Config repo-wide (`skraft-config.json`) | `gain:dx` | ✅ Livré | Phase 2 — Complétude |
 | [S3](#s3) | Séparation des couches (produit / ingénierie, RPI-aligné) | `gain:dx` | ✅ Livré | Phase 3 — Alignement RPI |
+
+« Livré » signifie implémenté et couvert par les tests. La preuve en session réelle, garde
+par garde, est suivie dans la [référence des hooks](site/fr/reference/infrastructure/hooks.md#statut-de-vérification).
 
 ---
 
@@ -44,7 +47,8 @@ Audit-writer = seam de test observable. Zéro dépendance runtime.
 `ports/api` + `ports/infrastructure`, `adapters/api/hooks` (hook-entry, hook-router,
 payload, decision, service-factory), `adapters/infrastructure` (jsonl-audit-writer,
 null-audit-writer, json-state-reader, system-time, fixed-time, real-filesystem,
-in-memory-filesystem), `application/config-loader`, `cli/hook.mjs`.
+in-memory-filesystem), `application/config-loader` (aucun hook ni CLI ne le lit
+aujourd'hui), `cli/hook.mjs`.
 
 **Dépend de :** —
 
@@ -79,6 +83,10 @@ hors-séquence est bloqué **avant** de payer le sous-agent.
 `adapters/infrastructure/json-state-reader.mjs`, `application/pre-tool-use-service.mjs`.
 Branché sur `PreToolUse(Agent)` — fail-closed.
 
+**Complément :** garde de provenance (`evaluateDispatchProvenance`,
+`application/dispatch-provenance-service.mjs`) sur le même événement — aucun agent ne se
+dispatche lui-même, un agent au dispatcher déclaré n'est dispatché que par lui. Fail-open.
+
 **Dépend de :** US1, US2
 
 ---
@@ -109,8 +117,9 @@ n'a pas lu un skill obligatoire est relancé ; les lectures sont journalisées e
 **Gain :** `gain:reliability` — mêmes garde-fous sur les deux runtimes (Copilot CLI
 et Claude Code).
 
-**Modules livrés :** `plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json` (Claude Code), `.github/hooks/skraft-framework.json`
-(Copilot), `cli/hook.mjs` routé via `service-factory`.
+**Modules livrés :** `plugins/skraft-framework/hooks/hooks.json` (source canonique, Claude
+Code), `plugins/skraft-framework/com.github.copilot/hooks/hooks.json` (copie générée, Copilot
+v1), `cli/hook.mjs` routé via `service-factory`.
 
 **Dépend de :** US3, US4
 
@@ -119,7 +128,7 @@ et Claude Code).
 ### US6 — Tests boundary-to-boundary + audit du hooks.json réel <a id="us6"></a>
 
 **Issue :** [#52](https://github.com/SebastienDegodez/skraft-plugin/issues/52)
-**Statut :** 🔲 À faire
+**Statut :** ✅ Livré
 **Milestone :** Phase 1 — MVP
 
 **Gain :** `gain:reliability` — non-régression prouvée sur les décisions allow/deny/block.
@@ -128,6 +137,11 @@ Le test `real-hook-audit` échoue si `hooks.json` ne route pas un event attendu.
 **Périmètre :** domain purs (pipeline-policy, skill-policy), application services à ports
 mockés, driver-adapter (spy audit writer + MockStdin/Stdout, normalisation payload),
 `real-hook-audit`, `config-in-sync`.
+
+**Livré :** `tests/skraft-framework/hooks/real-hook-audit.test.mjs`,
+`hooks/hook-manifest.test.mjs` (chaque matcher du manifeste réel),
+`hooks/hook-wire-format.acceptance.test.mjs` (le CLI de hook de bout en bout),
+`configuration/config-in-sync.test.mjs`.
 
 **Dépend de :** US3, US4, US5
 
@@ -142,9 +156,9 @@ mockés, driver-adapter (spy audit writer + MockStdin/Stdout, normalisation payl
 **Gain :** `gain:dx` — lecteur comprend chaque garde-fou, son ancrage genesis,
 et comment en ajouter un nouveau.
 
-**Livrables :** `plugins/skraft-framework/README.md` (architecture hexagonale, events, config, fail modes,
-ancrage genesis A9/S4/S7, G1..G8, guide « comment ajouter un garde-fou »),
-`docs/roadmap.md` (cette page).
+**Livrables :** `docs/site/fr/explanation/hooks.md` et
+`docs/site/en/explanation/hooks.md` (architecture, events, config et fail modes),
+`docs/roadmap.md` (cette page), plus le README utilisateur du plugin.
 
 **Dépend de :** US5
 
@@ -159,9 +173,14 @@ ancrage genesis A9/S4/S7, G1..G8, guide « comment ajouter un garde-fou »),
 **Gain :** `gain:anti-drift` + `gain:reliability` + `gain:safety` — avancement bloqué
 sans artefacts réels, verdict APPROVED et commit git vérifié.
 
-**Périmètre :** `domain/artifact-policy.mjs`, parseur de verdict reviewer
-(`reviews/{date}/*.md`), `driven/git-commit-verifier`, `subagent-stop-service`
-complétion fail-closed.
+**Livré :** la porte de phase du CLI d'état. `state.mjs transition` et
+`state.mjs close-phase` refusent avec `PHASE_GATE` tant qu'une sortie requise manque sur
+disque (G4), que l'artefact de revue décisif ne porte pas le verdict enregistré, ou qu'une
+phase DELIVER n'a aucun commit depuis son démarrage (G5). Modules :
+`domain/phase-gate-policy.mjs`, `application/phase-gate-service.mjs`, parseur de verdict
+de `domain/artifact-policy.mjs`, `adapters/infrastructure/git-repository.mjs`. Fail-closed.
+Le contrôle ne passe plus par `SubagentStop` : l'orchestrateur n'enregistre artefacts et
+verdicts qu'au retour du sous-agent. `git-commit-verifier` a été supprimé.
 
 **Dépend de :** US3
 
@@ -213,12 +232,13 @@ session guard `domain/session-guard-policy.mjs` bloque writes `src`/`tests` hors
 agent monitoré pendant DELIVER.
 
 **Livré :** `domain/session-guard-policy.mjs` (pur) + `application/pre-tool-use-session-guard-service.mjs`.
-G7 (state-independent) refuse toute mutation directe des artefacts protégés
-(redirection shell, verbe mutant, ou outil Write/Edit) ; la lecture reste permise —
-la seule voie d'écriture sanctionnée est le CLI d'état (#60, S7). G8, pendant DELIVER,
-bloque les writes `src/`/`tests/` hors des agents DELIVER monitorés
-(`phaseAgents.DELIVER`) ; fail-open si l'état est illisible (un bug du hook ne fige
-jamais le pipeline).
+G7 (state-independent) refuse toute mutation directe des artefacts protégés —
+`state.json`, journal d'exécution, pointeur `.active-slug` — par redirection shell,
+verbe mutant, interpréteur en ligne ou outil Write/Edit/MultiEdit/NotebookEdit ; la lecture
+reste permise — la seule voie d'écriture sanctionnée est le CLI d'état (#60, S7). G8,
+pendant DELIVER, bloque les writes `src/`/`tests/` hors des agents DELIVER
+(`phaseAgents.DELIVER`) et des agents qu'ils dispatchent ; fail-open si l'état est
+illisible (un bug du hook ne fige jamais le pipeline).
 
 **Dépend de :** US3
 
@@ -239,7 +259,7 @@ housekeeping `SessionStart` (rétention audit, signaux périmés).
 **Modules livrés :** `domain/observability-policy.mjs` (seuils + `detectStalePhase`
 fail-open + `planAuditRetention` / `planStaleSignals`), `application/health-check-service.mjs`,
 `application/session-start-service.mjs`, `cli/health-check.mjs`, `cli/housekeeping.mjs`,
-entrées `SessionStart` dans `plugins/skraft-framework/com.anthropic.claude-code/hooks/hooks.json` + `.github/hooks/skraft-framework.json`.
+entrée `SessionStart` dans `plugins/skraft-framework/hooks/hooks.json` (et sa copie Copilot).
 Seuils configurés via le bloc `observability` de `skraft-config.json`.
 
 **Dépend de :** US8, US9
@@ -292,14 +312,16 @@ write-through supprime cette fréquence : réhydratation **1×/session**, workin
 natif, écritures déterministes via CLI aux checkpoints. Projection ~800 → ~50 tokens/tour.
 
 **Modules livrés :** `cli/state.mjs` (S7 bridge : `init | get | transition |
-record-verdict | record-artifact | record-review-artifact | set-difficulty |
+record-verdict | record-artifact | record-review-artifact |
 incr-retry`), `domain/state-machine.mjs` (invariants I1-I9, append-only, DONE terminal),
 `domain/state-schema.mjs` (`validatePipelineState` round-trip fidelity — préserve tous
 les champs orchestrator-owned, migration `reviewerVerdicts`→`verdicts`),
 `adapters/infrastructure/state/json-state-writer.mjs` (atomique + backup ≤3),
 `application/state-service.mjs`, `ports/infrastructure/state-writer.mjs`.
 Instructions : `skraft-state.instructions.md` (write-through) +
-`skraft-todo-sync.instructions.md` (projection state→todo natif, Claude/Copilot).
+`skraft-todo-sync.instructions.md` (projection state→todo natif, Claude/Copilot), retirées
+depuis : l'orchestrateur porte ces règles dans son descripteur, `domain/state.schema.json`
+est le contrat de l'état et aucun ancien format n'est plus migré.
 
 **Qualité :** `node --test` 100 % + mutation Stryker ≥ 86 % sur les fichiers état.
 
@@ -313,8 +335,8 @@ Instructions : `skraft-state.instructions.md` (write-through) +
 **Milestone :** Phase 2 — Complétude
 
 **Gain :** `gain:dx` — ce qui est une propriété du **dépôt** quitte `state.json` pour un
-fichier repo-wide `skraft-config.json` géré par un CLI ; `difficulty` reste per-work-item
-via `state.mjs`. Les agents n'appellent que des commandes (get/set délégués au script).
+fichier repo-wide `skraft-config.json` géré par un CLI. Les agents n'appellent que des
+commandes (get/set délégués au script).
 
 **Modules livrés :** `domain/config-schema.mjs` (pur, round-trip),
 `application/config-service.mjs` (`init/get/set`),
@@ -330,15 +352,15 @@ le sujet, a été supprimé avec lui. `cli/config.mjs` subsiste et ne gouverne p
 seule clé**, `trackingLayout` (voir [S3](#s3)) ; une clé `depthTier` restée dans le fichier
 d'un dépôt ancien y passe désormais comme un champ inconnu quelconque, par fidélité de
 round-trip. Les seuils ne sont plus configurables : le skill `skraft-quality-bar` porte la
-barre unique et permanente — mutation 100 % sur Domain/Application et 90 % sur
+barre unique et permanente — mutation 100 % sur Domain/Application et 80 % sur
 API/Infrastructure, couverture de lignes 100 % sur Domain/Application, les quatre lentilles
 adversariales à chaque revue, gate Gherkin obligatoire, ADR pour toute décision non
 triviale, Object Calisthenics sur le Domain, TDD Outside-In double boucle. Chaque gate est
 **bloquante** : les niveaux `advisory` et `warning`, et la rationale qui achetait une
 exemption, n'existent plus. La mutation tourne en deux scripts séquencés livrés par
 l'adaptateur `quality-gates-<tech>` (core Domain/Application, puis boundary
-API/Infrastructure) : chaque script porte sa valeur attendue et la passe au `--break-at` du
-runner, dont le **code de sortie** fait verdict.
+API/Infrastructure) : chaque script porte sa valeur attendue, inscrite comme seuil `break` de sa
+configuration Stryker, et le **code de sortie** du runner fait verdict.
 
 **Conséquence sur le coût :** `depthTier` était aussi le cost governor du framework
 (fan-out reviewer 1/2/4, nombre de runs de mutation, activation de la gate Gherkin). Sans

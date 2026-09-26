@@ -1,5 +1,6 @@
 import { isErr } from '../domain/result.mjs'
 import { guardProtectedArtifact, guardWorkspaceWrite } from '../domain/session-guard-policy.mjs'
+import { canonicalAgentName } from '../domain/instruction-policy.mjs'
 import { allow, deny } from '../adapters/api/hooks/decision.mjs'
 
 // PreToolUse session guard (G7/G8). Wires the pure session-guard policy to the
@@ -10,18 +11,40 @@ import { allow, deny } from '../adapters/api/hooks/decision.mjs'
 // state cannot be read we fail-open on that guard alone (a hook bug must never freeze
 // the pipeline — README fail-mode rule), G7 having already run.
 
+// The DELIVER specialist and reviewer, plus every agent they dispatch, transitively
+// (the engineer's workers, the reviewer's lenses) — all run inside the monitored phase.
 const deliverAgentsFrom = (config) => {
   const deliver = config?.phaseAgents?.DELIVER ?? {}
-  return [deliver.specialist, deliver.reviewer].filter((a) => typeof a === 'string')
+  const monitored = new Set([deliver.specialist, deliver.reviewer]
+    .filter((a) => typeof a === 'string')
+    .map((a) => canonicalAgentName(a, config)))
+  const dispatchers = Object.entries(config?.agentDispatchers ?? {})
+  let grew = monitored.size > 0
+  while (grew) {
+    grew = false
+    for (const [agent, dispatcher] of dispatchers) {
+      const name = canonicalAgentName(agent, config)
+      if (!monitored.has(name) && monitored.has(canonicalAgentName(dispatcher, config))) {
+        monitored.add(name)
+        grew = true
+      }
+    }
+  }
+  return [...monitored]
 }
 
+// Tools that write the file they name.
+const FILE_WRITING_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
+
 // Extract the write signals from a normalised PreToolUse payload. Bash carries the
-// command; Write/Edit tools carry the file path (filePath or path).
+// command; file-writing tools carry the adapter's filePath signal or legacy arguments.
 const writeSignals = (payload) => {
   const toolName = payload.toolName
   const toolInput = payload.toolInput ?? {}
   const command = toolName === 'Bash' && typeof toolInput.command === 'string' ? toolInput.command : undefined
-  const filePath = (toolName === 'Write' || toolName === 'Edit') ? (toolInput.filePath ?? toolInput.path ?? undefined) : undefined
+  const filePath = FILE_WRITING_TOOLS.has(toolName)
+    ? (payload.filePath ?? toolInput.filePath ?? toolInput.path ?? toolInput.notebook_path ?? undefined)
+    : undefined
   return { command, filePath }
 }
 
@@ -33,7 +56,7 @@ const audit = async (auditWriter, entry) => {
   try { await auditWriter.write(entry) } catch { /* audit failure must never change the decision */ }
 }
 
-export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, config, clock }) => ({
+export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, config, clock, trackingDir }) => ({
   handle: async (payload = {}) => {
     const { command, filePath } = writeSignals(payload)
     const agentName = payload.agentName ?? null
@@ -51,13 +74,15 @@ export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, 
     })
 
     // G7 — protected-artifact write ban (always enforced, state-independent).
-    const protectedResult = guardProtectedArtifact({ command, filePath })
+    const protectedResult = guardProtectedArtifact({ command, filePath, trackingDir })
     if (isErr(protectedResult)) {
       await record({ decision: 'DENY', code: protectedResult.error.code, reason: protectedResult.error.reason })
       return deny(protectedResult.error.reason)
     }
 
-    // G8 — workspace write must run inside the monitored DELIVER sub-agent.
+    // G8 — workspace write must run inside the monitored DELIVER sub-agent. Without an
+    // active pipeline there is no phase to guard, and nothing worth an audit line.
+    if (!projectSlug) return allow()
     let phase = null
     try {
       const raw = await stateReader.read(projectSlug)
@@ -73,7 +98,11 @@ export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, 
       await record({ decision: 'ALLOW', code: 'UNCONFIGURED_DELIVER_AGENTS', reason: 'no monitored DELIVER agents configured; session guard fail-open' })
       return allow()
     }
-    const workspaceResult = guardWorkspaceWrite({ command, filePath, phase, agentName, deliverAgents })
+    const workspaceResult = guardWorkspaceWrite({
+      command, filePath, phase,
+      agentName: canonicalAgentName(agentName, config) ?? null,
+      deliverAgents
+    })
     if (isErr(workspaceResult)) {
       await record({ decision: 'DENY', code: workspaceResult.error.code, reason: workspaceResult.error.reason })
       return deny(workspaceResult.error.reason)

@@ -1,0 +1,134 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { resolve, sep } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import {
+  discoverCacheRoots,
+  resolvePluginRootFromEnv,
+} from '../../../plugins/skraft-framework/src/adapters/infrastructure/plugin-root-resolver.mjs'
+
+const HOME = '/home/alice'
+// The running module's plugin root, spelled as the platform spells it (a drive on Windows).
+const LOCAL_ROOT = resolve('/local/plugins/skraft-framework') + sep
+const cacheHook = (version) =>
+  `${HOME}/.claude/plugins/cache/hash/skraft/${version}/src/cli/hook.mjs`
+
+// ─── discoverCacheRoots ─────────────────────────────────────────────────────
+
+test('discoverCacheRoots: derives plugin roots from matched hook.mjs paths', () => {
+  const glob = () => [cacheHook('1.1.0')]
+  assert.deepEqual(
+    discoverCacheRoots({ homeDir: HOME, glob }),
+    [`${HOME}/.claude/plugins/cache/hash/skraft/1.1.0`],
+  )
+})
+
+test('discoverCacheRoots: sorts matches ascending (newest last)', () => {
+  const glob = () => [cacheHook('2.0.0'), cacheHook('1.1.0'), cacheHook('1.2.0')]
+  const roots = discoverCacheRoots({ homeDir: HOME, glob })
+  assert.equal(roots[roots.length - 1], `${HOME}/.claude/plugins/cache/hash/skraft/2.0.0`)
+})
+
+test('discoverCacheRoots: equal versions compare as equal (stable order)', () => {
+  const glob = () => [cacheHook('1.0.0'), cacheHook('1.0.0')]
+  const roots = discoverCacheRoots({ homeDir: HOME, glob })
+  assert.deepEqual(roots, [
+    `${HOME}/.claude/plugins/cache/hash/skraft/1.0.0`,
+    `${HOME}/.claude/plugins/cache/hash/skraft/1.0.0`,
+  ])
+})
+
+test('discoverCacheRoots: fail-open — no matches returns empty list', () => {
+  assert.deepEqual(discoverCacheRoots({ homeDir: HOME, glob: () => [] }), [])
+})
+
+test('discoverCacheRoots: fail-open — glob nullish returns empty list', () => {
+  assert.deepEqual(discoverCacheRoots({ homeDir: HOME, glob: () => undefined }), [])
+})
+
+test('discoverCacheRoots: fail-open — glob that throws returns empty list', () => {
+  const glob = () => { throw new Error('EACCES') }
+  assert.deepEqual(discoverCacheRoots({ homeDir: HOME, glob }), [])
+})
+
+// ─── resolvePluginRootFromEnv ───────────────────────────────────────────────
+
+test('resolvePluginRootFromEnv: CLAUDE_PLUGIN_ROOT wins over cache + module', () => {
+  const root = resolvePluginRootFromEnv({
+    env: { CLAUDE_PLUGIN_ROOT: '/injected/skraft' },
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
+    homeDir: HOME,
+    glob: () => [cacheHook('1.1.0')],
+  })
+  assert.equal(root, '/injected/skraft')
+})
+
+test('resolvePluginRootFromEnv: no env → the running module, never a stale installed copy', () => {
+  const root = resolvePluginRootFromEnv({
+    env: {},
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
+    homeDir: HOME,
+    glob: () => [cacheHook('1.1.0'), cacheHook('1.2.0')],
+  })
+  assert.equal(root, LOCAL_ROOT)
+})
+
+test('resolvePluginRootFromEnv: no env and no module → newest cache match', () => {
+  const root = resolvePluginRootFromEnv({
+    env: {},
+    homeDir: HOME,
+    glob: () => [cacheHook('1.1.0'), cacheHook('1.2.0')],
+  })
+  assert.equal(root, `${HOME}/.claude/plugins/cache/hash/skraft/1.2.0`)
+})
+
+test('resolvePluginRootFromEnv: no env + no cache → module-relative plugin root', () => {
+  const root = resolvePluginRootFromEnv({
+    env: {},
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
+    homeDir: HOME,
+    glob: () => [],
+  })
+  assert.equal(root, LOCAL_ROOT)
+})
+
+test('discoverCacheRoots: reads the version segment when the marketplace is also named skraft', () => {
+  const hook = (version) => `${HOME}/.claude/plugins/cache/skraft/skraft/${version}/src/cli/hook.mjs`
+  const roots = discoverCacheRoots({ homeDir: HOME, glob: () => [hook('1.6.0'), hook('1.5.2')] })
+  assert.equal(roots[roots.length - 1], `${HOME}/.claude/plugins/cache/skraft/skraft/1.6.0`)
+})
+
+test('discoverCacheRoots: a prerelease sorts above the previous release and below its own release', () => {
+  const glob = () => [cacheHook('1.6.0'), cacheHook('1.6.0-hooks.1'), cacheHook('1.5.2')]
+  assert.deepEqual(discoverCacheRoots({ homeDir: HOME, glob }), [
+    `${HOME}/.claude/plugins/cache/hash/skraft/1.5.2`,
+    `${HOME}/.claude/plugins/cache/hash/skraft/1.6.0-hooks.1`,
+    `${HOME}/.claude/plugins/cache/hash/skraft/1.6.0`,
+  ])
+})
+
+test('discoverCacheRoots: prerelease identifiers compare numerically', () => {
+  const glob = () => [cacheHook('1.6.0-hooks.10'), cacheHook('1.6.0-hooks.2')]
+  const roots = discoverCacheRoots({ homeDir: HOME, glob })
+  assert.equal(roots[roots.length - 1], `${HOME}/.claude/plugins/cache/hash/skraft/1.6.0-hooks.10`)
+})
+
+test('resolvePluginRootFromEnv: CLAUDE_PLUGIN_ROOT wins over a generic PLUGIN_ROOT', () => {
+  const root = resolvePluginRootFromEnv({
+    env: { PLUGIN_ROOT: '/some/other/tool', CLAUDE_PLUGIN_ROOT: '/injected/skraft' },
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
+    homeDir: HOME,
+    glob: () => [],
+  })
+  assert.equal(root, '/injected/skraft')
+})
+
+test('resolvePluginRootFromEnv: PLUGIN_ROOT applies when CLAUDE_PLUGIN_ROOT is absent', () => {
+  const root = resolvePluginRootFromEnv({
+    env: { PLUGIN_ROOT: '/copilot/skraft' },
+    moduleUrl: pathToFileURL('/local/plugins/skraft-framework/src/cli/hook.mjs').href,
+    homeDir: HOME,
+    glob: () => [],
+  })
+  assert.equal(root, '/copilot/skraft')
+})

@@ -1,5 +1,6 @@
 import { deepStrictEqual, ok, strictEqual, throws } from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { parse } from 'yaml'
 
 import { pilotSpec } from '../../eng/lib/pilot-spec.mjs'
 
@@ -24,6 +25,93 @@ const spec = [
 ].join('\n')
 
 describe('pilot spec', () => {
+  it('preserves resolved aliases when the defining stimulus is removed', () => {
+    const source = `name: synthetic-aliases
+defaults:
+  model: synthetic-model
+  runs: 7
+  timeout: 3m
+stimuli:
+  - name: Anchor owner
+    prompt: &prompt |-
+      Keep the approved result.
+    environment: &environment
+      files:
+        - src: ./fixtures/input.txt
+          dest: input.txt
+    graders: &graders
+      - type: text
+        expected: &expected approved
+  - name: Selected consumer
+    prompt: *prompt
+    environment: *environment
+    graders: *graders
+    tags: [*expected]
+  - name: Other consumer
+    prompt: *prompt
+    environment: *environment
+    graders: *graders
+metadata:
+  expected: *expected
+`
+    const original = parse(source)
+    for (const selectors of [['Selected'], ['consumer']]) {
+      const result = pilotSpec(source, selectors, 1)
+      deepStrictEqual(parse(result.spec), {
+        ...original,
+        defaults: { ...original.defaults, runs: 1 },
+        stimuli: original.stimuli.filter(({ name }) => selectors.some((selector) => name.includes(selector))),
+      })
+    }
+  })
+
+  it('filters YAML sequence items rather than name-like prompt lines or nested lists', () => {
+    const source = `name: synthetic-shape
+defaults: { model: pinned-model, runs: 4 }
+stimuli:
+  - prompt: |
+      Example:
+        - name: not a stimulus
+    name: "Selected: quoted" # trailing comment
+    graders:
+      - name: nested grader
+        type: text
+  - name: Excluded
+    prompt: Other
+metadata: { runs: 9 }
+`
+    const original = parse(source)
+    const result = pilotSpec(source, ['SELECTED: QUOTED'])
+    deepStrictEqual(result.kept, ['Selected: quoted'])
+    deepStrictEqual(parse(result.spec), { ...original, stimuli: [original.stimuli[0]] })
+  })
+
+  it('overrides only defaults.runs, adding it when absent', () => {
+    for (const defaults of ['', 'defaults: { model: pinned-model }\n']) {
+      const source = `${defaults}stimuli:\n  - name: Selected\n    runs: 9\n`
+      deepStrictEqual(parse(pilotSpec(source, ['Selected'], 1).spec), {
+        ...parse(source),
+        defaults: { ...parse(source).defaults, runs: 1 },
+      })
+    }
+  })
+
+  it('does not mutate an aliased defaults mapping reused by a stimulus', () => {
+    const source = `defaults: &settings { runs: 7, model: pinned-model }
+stimuli:
+  - name: Selected
+    settings: *settings
+`
+    const original = parse(source)
+    deepStrictEqual(parse(pilotSpec(source, ['Selected'], 1).spec), {
+      ...original, defaults: { ...original.defaults, runs: 1 },
+    })
+  })
+
+  it('rejects malformed YAML instead of emitting a broken pilot', () => {
+    throws(() => pilotSpec('stimuli:\n  - name: Selected\n    prompt: *missing\n', ['Selected']), /alias/i)
+  })
+
   it('keeps the header and only the selected stimulus', () => {
     const { spec: pilot, kept } = pilotSpec(spec, ['preserve an approved'])
 

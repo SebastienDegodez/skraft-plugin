@@ -2,7 +2,7 @@
 layout: doc
 lang: fr
 title: "Le fil rouge — une commande Starbucks de bout en bout"
-description: "Suivez une même demande, de l'idée au code testé, à travers les cinq phases du pipeline SKRAFT."
+description: "Suivez une demande à travers la préparation produit optionnelle puis le pipeline d'ingénierie SKRAFT."
 persona: tech-lead
 ---
 
@@ -27,7 +27,8 @@ Vous verrez cette demande se transformer, phase par phase, en code testé.
 ```mermaid
 graph LR
     A[Idée] -->|rapport de triage| B[Story INVEST]
-    B -->|ADR + événements| C[Architecture]
+    B -->|recherche sourcée| R[Recommandation]
+    R -->|ADR + événements| C[Architecture]
     C -->|scénarios Gherkin| D[Spécification]
     D -->|code + évidence| E[Code livré]
     style A fill:#102016,stroke:#6f8478
@@ -37,7 +38,12 @@ graph LR
     style E fill:#1a3a2a,stroke:#4ed58a
 ```
 
-## Étape 1 — DISCOVER : trier l'idée
+## Préparation produit optionnelle
+
+DISCOVER puis DISCUSS sont autonomes et hors orchestrateur. Ils sont utilisés
+dans cet ordre lorsque la demande n'arrive pas déjà affinée.
+
+### Étape 1 — DISCOVER : trier l'idée
 
 L'idée arrive comme une **issue brute** dans le backlog. Le `backlog-discoverer`
 la trie : il lui donne la priorité **P1**, détecte qu'elle recoupe une ancienne
@@ -48,7 +54,7 @@ demande « paiement in-app », et l'inscrit dans un **rapport de triage**.
 
 ➡️ Détail de la phase : [DISCOVER]({{ "/fr/explanation/pipeline/discover" | relative_url }}).
 
-## Étape 2 — DISCUSS : en faire une story
+### Étape 2 — DISCUSS : en faire une story
 
 Le `backlog-planner` reçoit le rapport et transforme la ligne priorisée en
 **story INVEST** :
@@ -67,7 +73,20 @@ Avec ses **critères d'acceptation** :
 
 ➡️ Détail de la phase : [DISCUSS]({{ "/fr/explanation/pipeline/discuss" | relative_url }}).
 
-## Étape 3 — DESIGN : décider l'architecture
+## Pipeline d'ingénierie orchestré
+
+### Étape 3 — RESEARCH : réunir les preuves
+
+Le `solution-researcher` analyse la story, le code existant et les conventions.
+Il compare les options de paiement et recommande une approche sourcée sans écrire
+de code ni décider l'ADR.
+
+- **Ce qui entre :** la story et ses critères.
+- **Ce qui sort :** le document de recherche cité et son handoff vers DESIGN.
+
+➡️ Détail de la phase : [RESEARCH]({{ "/fr/explanation/pipeline/research" | relative_url }}).
+
+### Étape 4 — DESIGN : décider l'architecture
 
 Le `solution-architect` conçoit la solution. Il acte un **ADR** :
 
@@ -80,12 +99,12 @@ Et un **modèle d'événements** :
 PasserCommande → CommandePayée → CommandePrête
 ```
 
-- **Ce qui entre :** la story et ses critères.
+- **Ce qui entre :** la story, ses critères et le document de recherche.
 - **Ce qui sort :** l'ADR + le modèle d'événements + les contrats.
 
 ➡️ Détail de la phase : [DESIGN]({{ "/fr/explanation/pipeline/design" | relative_url }}).
 
-## Étape 4 — DISTILL : écrire le contrat exécutable
+### Étape 5 — DISTILL : écrire le contrat exécutable
 
 L'`acceptance-designer` traduit l'architecture en **scénario Gherkin**, lisible
 par le métier :
@@ -103,7 +122,7 @@ Scénario: payer une boisson personnalisée
 
 ➡️ Détail de la phase : [DISTILL]({{ "/fr/explanation/pipeline/distill" | relative_url }}).
 
-## Étape 5 — DELIVER : implémenter, guidé par les tests
+### Étape 6 — DELIVER : implémenter, guidé par les tests
 
 Le `software-engineer` rend le scénario vert en **Outside-In TDD**. Il écrit
 d'abord le test d'acceptation (rouge), puis les tests unitaires du calcul du
@@ -117,18 +136,20 @@ mutation** vérifie que les tests protègent réellement la règle de fidélité
 
 ## Ce que vous venez de voir
 
-Une seule demande a traversé cinq phases sans jamais perdre son contexte :
+Une seule demande a traversé deux workflows produit optionnels, puis le pipeline
+d'ingénierie, sans perdre son contexte :
 
 | Phase | Artefact produit |
 | --- | --- |
 | DISCOVER | Ligne priorisée du rapport de triage |
 | DISCUSS | Story INVEST + 3 critères d'acceptation |
+| RESEARCH | Document de recherche cité + recommandation |
 | DESIGN | ADR (paiement via ACL) + modèle d'événements |
 | DISTILL | Scénario Gherkin + plan d'implémentation |
 | DELIVER | Code testé + score de mutation |
 
-Chaque artefact est devenu le **contexte** de la phase suivante — et chaque
-transition n'a été permise qu'après le verdict d'un [reviewer indépendant]({{ "/fr/reference/gates" | relative_url }}).
+Chaque artefact est devenu le **contexte** de l'étape suivante. Les reviewers
+déclarés appliquent ensuite les [gates]({{ "/fr/reference/gates" | relative_url }}).
 
 ## Pour aller plus loin
 

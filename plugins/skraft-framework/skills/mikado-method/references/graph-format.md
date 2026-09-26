@@ -5,13 +5,6 @@ needed (e.g. before writing the first node, or when `scripts/validate-mikado.sh`
 reports a parse issue). This is the annotated reference; `SKILL.md` only shows the
 minimal skeleton.
 
-Format and validation discipline adapted from
-[chaabani-anis/mikado-method](https://github.com/chaabani-anis/mikado-method)
-(MIT License) — that project encodes the same graph in a rail-notation plain-text
-format designed for its own bash validator. This skill keeps SKRAFT's house
-convention of Mermaid `graph TD` instead (consistent with every other diagram in
-the SKRAFT handbook) and reimplements the validation passes against that syntax.
-
 ## File location
 
 ```
@@ -149,9 +142,7 @@ Before the first leaf implementation, the graph MUST contain either:
   %% no-golden-master: coverage 92% on AdminService, characterization tests exist
   ```
 
-`scripts/validate-mikado.sh` Pass 7 fails the graph if neither is present. This
-mirrors the source project's golden-master gate: never start restructuring a
-module with unmeasured, unprotected coverage.
+`scripts/validate-mikado.sh` Pass 7 fails the graph if neither is present.
 
 ## Full example
 
@@ -175,5 +166,5 @@ graph TD
 Validate any graph file with (add `--no-git` since the SHAs above are fictional):
 
 ```bash
-bash plugins/skraft-framework/skills/mikado-method/scripts/validate-mikado.sh --no-git <path-to-graph.md>
+bash "$SKRAFT_PLUGIN_ROOT/skills/mikado-method/scripts/validate-mikado.sh" --no-git <path-to-graph.md>
 ```

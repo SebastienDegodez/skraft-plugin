@@ -11,12 +11,18 @@ SKRAFT is built on six concepts from software engineering. Each concept is appli
 
 ## Use Case
 
-A Use Case captures a contract between stakeholders about expected system behavior. In SKRAFT, **one story = one Use Case = one full pipeline cycle** (DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER).
+A Use Case captures a contract between stakeholders about expected system behavior. In SKRAFT, **one refined story = one Use Case = one complete engineering cycle** (RESEARCH → DESIGN → DISTILL → DELIVER). Optional standalone DISCOVER then DISCUSS may prepare that story upstream.
 
 > « A use case captures a contract between the stakeholders of a system about its behavior. »
 > — Cockburn, A., *Writing Effective Use Cases*, 2001.
 
 Each pipeline pass handles exactly one Use Case. No batching, no shortcuts.
+
+## Engineering entry point
+
+When the user selects `skraft-orchestrator` with a refined story, every engineering phase runs: RESEARCH → DESIGN → DISTILL → DELIVER. DISCOVER and DISCUSS are standalone product workflows used upstream when needed; the refined story they produce is the pipeline's input, never a reason to skip an engineering phase.
+
+Engineering rigor is identical for every story: [`skraft-quality-bar`]({{ "/en/dashboard/" | relative_url }}#skill-skraft-quality-bar) keeps the same bar for all of them.
 
 ## CQS — Command-Query Separation
 

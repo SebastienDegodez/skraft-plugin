@@ -1,0 +1,37 @@
+{
+  "projectSlug": "pricing",
+  "currentPhase": "DESIGN",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": [
+      { "adr": "002", "verdict": "Accepted", "by": "sebastiendegodez (2026-08-12)" }
+    ]
+  },
+  "phasesCompleted": [
+    "RESEARCH"
+  ],
+  "phaseArtifacts": {
+    "DESIGN": [
+      ".copilot-tracking/skraft-plans/pricing/details/2026-08-12/contracts.md",
+      ".copilot-tracking/skraft-plans/pricing/details/2026-08-12/diagrams.md",
+      ".copilot-tracking/skraft-plans/pricing/details/2026-08-12/matrix.md"
+    ]
+  },
+  "verdicts": {
+    "RESEARCH": "APPROVED"
+  },
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "phaseHistory": {
+    "DESIGN": {
+      "status": "inProgress",
+      "startedAt": "2026-08-12T09:40:00Z"
+    }
+  },
+  "userPreferences": {
+    "maxRetriesPerPhase": 2
+  }
+}

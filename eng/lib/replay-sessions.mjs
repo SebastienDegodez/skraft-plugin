@@ -12,11 +12,11 @@ export const ROLE_BY_VARIANT = { baseline: 'baseline', skilled: 'skilled' }
 /**
  * The variant a recorded trial belongs to, read back from where it was written.
  *
- * Vally stamps `metadata.variant` only when the run itself declares variants.
- * Two isolated `vally eval` runs do not — the only remaining evidence is the
- * directory the runner pointed `--output-dir` at. Without this, both passes tag
- * as `unknown` and the replay loses the one distinction that makes it worth
- * reading: baseline against skilled.
+ * Vally may stamp the generic `main` variant for two isolated `vally eval`
+ * runs. The reliable evidence is the directory the runner pointed
+ * `--output-dir` at. Without this, both passes tag as `main` and the replay
+ * loses the one distinction that makes it worth reading: baseline against
+ * skilled.
  *
  * @param {string} path any path inside the run's output directory
  * @returns {string} the variant, or an empty string when the path carries none

@@ -3,8 +3,8 @@ name: skraft-docs-orchestrator
 description: >-
   Use to reconcile the SKRAFT handbook (docs/site/) with the shipped plugin
   sources — detect documentation drift (missing/empty/stale pages, FR/EN parity
-  breaks, broken multi-level menu, ordering gaps, orphan agents/skills/lenses,
-  invalid citations) and repair it through a pull request. Dispatched by the
+   breaks, broken navigation, catalogue topology, stale orchestration narratives,
+   legacy links and invalid citations) and repair it through a pull request. Dispatched by the
   gh-aw docs workflows or invoked manually to sweep the book. It runs the
   deterministic scanner, drives each drift item to an in-sync terminal state via
   specialist workers, gates the result through an adversarial reviewer, and emits
@@ -63,7 +63,10 @@ You **dispatch** specialist workers; you do not write pages yourself.
 3. **One PR, one writer.** Under gh-aw you hold no write token: you stage all page
    edits in the working tree and emit a single `create-pull-request` safe output.
    Never push, never merge.
-4. **Single-writer per item.** Two workers must never touch the same ledger item
+4. **Dashboard owns the agentic catalogue.** Agents, skills, workers and lenses
+   are rendered from descriptors. Never recreate per-item Markdown catalogue pages
+   or the retired overview indexes.
+5. **Single-writer per item.** Two workers must never touch the same ledger item
    concurrently. A worker owns an item by its `owner` field; you flip it on spawn
    and clear it on terminal/escalation.
 
@@ -80,33 +83,11 @@ owns `.copilot-tracking/`; the docs chain never writes there.
    node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
    ```
 
-2. Read `.skraft-docs/ledger.json`. If `summary.total == 0`,
-   do NOT stop yet. Run the forced order-rediscovery checkpoint first.
+2. Read `.skraft-docs/ledger.json`. If `summary.total == 0`, STOP immediately and
+   report "Handbook in sync — no drift." Under gh-aw, emit `noop`. Spawn no worker
+   and perform no artificial refresh.
 3. If a ledger from a previous run exists with `state` values, merge: keep
    `done` items, re-open anything the fresh scan still reports.
-
-### Phase 0.5 — Forced order rediscovery (always)
-
-Before processing drift items, ALWAYS refresh these two derived overview pages:
-
-- `docs/site/fr/reference/agents/index.md` + `docs/site/en/reference/agents/index.md`
-- `docs/site/fr/reference/skills/index.md` + `docs/site/en/reference/skills/index.md`
-
-This refresh is mandatory even when scanner reports `summary.total == 0`. Route both
-to `skraft-docs-derived-writer` with a virtual item payload (`type: forced-order-refresh`,
-`pageType: derived`) and the explicit page paths. The worker must re-discover ordering
-from current agent sources, not from previous handbook content.
-
-After both refreshes, run stop-predicate tools:
-
-```bash
-node scripts/scan-drift.mjs --out .skraft-docs/ledger.json
-node scripts/lint-nav.mjs
-node scripts/check-citations.mjs --citations docs/site/_data/citations.yml --pages "docs/site/**/*.md"
-```
-
-If `summary.total == 0` and forced refresh produced no file change, STOP and report
-"Handbook in sync — no drift." (Under gh-aw, emit `noop`).
 
 ## Phase 1 — Reconcile each item (A11 loop)
 
@@ -122,10 +103,13 @@ each item with `state: open`:
    |---|---|---|
    | `missing-diataxis-mode`, `invalid-diataxis-mode`, `ordering-gap`, `basename-mismatch` | `skraft-docs-placement-architect` | a `book.yml` patch (mode / position / exception) |
    | `orphan-source` | `skraft-docs-placement-architect` → then `skraft-docs-derived-writer` | a `book.yml` entry AND the FR+EN page |
+   | `catalogue-missing` caused by `book.yml` ownership | `skraft-docs-placement-architect` | `MIGRATE-CATALOGUE` contract patch |
+   | `catalogue-topology` or source-identity `catalogue-missing` | no writer; escalate | source/config blocker outside `docs/site/**` write boundary |
    | `missing-page` / `empty-page` / `parity-break` where `pageType: derived` | `skraft-docs-derived-writer` | the FR+EN derived page(s) from `source` |
-   | `order-drift` | `skraft-docs-derived-writer` | regenerated FR+EN `agents/index` + `skills/index` matching current orchestrator/agent usage order |
-   | `forced-order-refresh` (virtual) | `skraft-docs-derived-writer` | regenerated FR+EN `agents/index` + `skills/index` ordered by current agent usage |
    | `missing-page` / `empty-page` / `parity-break` where `pageType: editorial` | `skraft-docs-editorial-writer` | the complete FR+EN editorial page(s) |
+   | `missing-page` / `empty-page` / `parity-break` where `pageType: dashboard` | `skraft-docs-editorial-writer` | localized dashboard wrapper pair, preserving shared app/shell contract |
+   | `narrative-orchestration`, `legacy-link` | `skraft-docs-editorial-writer` | mirrored factual narrative or localized dashboard-anchor link correction |
+   | `catalogue-retirement` | `skraft-docs-placement-architect` → then `skraft-docs-editorial-writer` | `RETIRE-SECTION` decision, retained-link migration, then superseded page removal |
 
    Pass the worker the **raw item JSON** plus the contract path. Do not summarize.
 4. **Collect** the worker's structured result (it returns paths; it does not commit).
@@ -151,7 +135,7 @@ each item with `state: open`:
 ## Phase 2 — Adversarial review (A7)
 
 When no item remains `open`/`in-progress`, dispatch `skraft-docs-reviewer` with
-the list of touched pages. The reviewer starts FRESH (it must not see worker
+the list of touched pages, layouts, includes, data and dashboard assets. The reviewer starts FRESH (it must not see worker
 notes). It fans out four lenses and returns one verdict:
 
 | Verdict | Action |

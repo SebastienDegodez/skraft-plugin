@@ -128,21 +128,22 @@ Write a trace table:
 
 **Definition:** The story is deliverable in 1-3 days by a single engineer, or 1-2 days pair-programming.
 
-**Pass condition:** Effort estimate is XS, S, or M. L is acceptable if all ACs are tight and scope is locked. XL is always a hard failure.
+**Pass condition:** Effort estimate is 1, 2, or 3. A 5 or an 8 is acceptable if all ACs are tight and scope is locked. Anything above 8 is a hard failure.
 
-**Fail condition:** Estimate is XL. Or estimate is L but the team cannot agree on what is in scope.
+**Fail condition:** Estimate is 13 or 21. Or estimate is 5/8 but the team cannot agree on what is in scope.
 
-**How to fix:** Apply a splitting pattern (see splitting-patterns.md). Split until the largest piece is L or smaller. An XL story must be split before DoR can be claimed.
+**How to fix:** Apply a splitting pattern (see splitting-patterns.md). Split until the largest piece is 8 or smaller. A story above 8 points must be split before DoR can be claimed.
 
 **Sizing reference:**
 
-| Size | Duration | AC count (guideline) |
+| Points | Duration | AC count (guideline) |
 |---|---|---|
-| XS | < 2 hours | 1 |
-| S | 2-4 hours | 2 |
-| M | 1 day | 3-4 |
-| L | 2-3 days | 4-5 |
-| XL | > 3 days | 6+ → **split required** |
+| 1 | < 2 hours | 1 |
+| 2 | 2-4 hours | 2 |
+| 3 | 1 day | 3-4 |
+| 5 | 2 days | 4-5 |
+| 8 | 3 days | 5-6 |
+| 13 · 21 | > 3 days | 6+ → **split required** |
 
 ---
 

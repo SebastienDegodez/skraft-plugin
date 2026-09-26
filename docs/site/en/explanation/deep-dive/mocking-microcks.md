@@ -91,7 +91,7 @@ deterministic while still exercising the real boundary the service depends on.
 - [Architecture]({{ "/en/explanation/architecture" | relative_url }}) — the L1 + L2 view this page zooms out of.
 - [L3 zoom: contract testing]({{ "/en/explanation/deep-dive/contract-testing" | relative_url }}) — the sibling provider-side fan-out.
 - [DELIVER]({{ "/en/explanation/pipeline/deliver" | relative_url }}) — the phase that owns this fan-out.
-- [Agents reference]({{ "/en/reference/agents/" | relative_url }}) — every agent, worker and lens. Unsure about a term? See the [glossary]({{ "/en/reference/glossary" | relative_url }}).
+- [Agentic catalogue]({{ "/en/dashboard/" | relative_url }}) — every agent, worker and lens. Unsure about a term? See the [glossary]({{ "/en/reference/glossary" | relative_url }}).
 
 ## Sources
 

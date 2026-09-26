@@ -1,0 +1,136 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { createSubagentStartService } from '../../../plugins/skraft-framework/src/application/subagent-start-service.mjs'
+
+const CONFIG = {
+  agentSkills: {
+    'acceptance-designer': [
+      { name: 'bdd-methodology', policy: 'verify' },
+      { name: 'outside-in-tdd', policy: 'verify' }
+    ],
+    'skraft-orchestrator': []
+  }
+}
+
+const EAGER_CONFIG = {
+  agentSkills: {
+    'acceptance-designer': [
+      { name: 'bdd-methodology', policy: 'eager' },
+      { name: 'outside-in-tdd', policy: 'verify' }
+    ],
+    'skraft-orchestrator': []
+  }
+}
+
+const FIXED_NOW = '2026-06-29T12:00:00.000Z'
+const clock = { now: () => FIXED_NOW }
+
+const nullSkillFileReader = { read: async () => { throw new Error('not found') } }
+const nullAuditWriter = { write: async () => {} }
+
+const collectingWriter = () => {
+  const entries = []
+  return { entries, write: async (e) => { entries.push(e) } }
+}
+
+// verify mode (default) ———————————————————————————————————————————————
+
+test('returns additionalContext with mandatory skills directive in verify mode', async () => {
+  const service = createSubagentStartService({ config: CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
+  const result = await service.handle({ agentName: 'acceptance-designer' })
+  assert.equal(result.decision, 'additionalContext')
+  assert.ok(result.context.includes('The following skills are MANDATORY:'))
+  // Kills StringLiteral mutant: join(', ') → join('') — names must be comma-separated
+  assert.ok(result.context.includes('bdd-methodology, outside-in-tdd'),
+    `directive must list skills comma-separated; got: "${result.context}"`)
+})
+
+test('returns allow when agent has no mandatory skills', async () => {
+  const service = createSubagentStartService({ config: CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
+  const result = await service.handle({ agentName: 'skraft-orchestrator' })
+  assert.equal(result.decision, 'allow')
+})
+
+test('returns allow when agentName is unknown', async () => {
+  const service = createSubagentStartService({ config: CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
+  const result = await service.handle({ agentName: 'unknown-agent' })
+  assert.equal(result.decision, 'allow')
+})
+
+// eager mode (driven by policy field in config) ———————————————————————
+
+test('eager mode inlines SKILL.md content alongside the directive', async () => {
+  const skillFileReader = { read: async (name) => `content of ${name}` }
+  const service = createSubagentStartService({ config: EAGER_CONFIG, skillFileReader, auditWriter: nullAuditWriter, clock })
+  const result = await service.handle({ agentName: 'acceptance-designer' })
+  assert.equal(result.decision, 'additionalContext')
+  assert.ok(result.context.includes('The following skills are MANDATORY:'))
+  assert.ok(result.context.includes('content of bdd-methodology'))
+})
+
+test('eager mode puts each inlined SKILL.md in its own paragraph after the directive', async () => {
+  const skillFileReader = { read: async (name) => `# ${name}` }
+  const service = createSubagentStartService({ config: EAGER_CONFIG, skillFileReader, auditWriter: nullAuditWriter, clock })
+  const { context } = await service.handle({ agentName: 'acceptance-designer' })
+  const [directive, inlined, ...rest] = context.split('\n\n')
+  assert.match(directive, /^The following skills are MANDATORY: bdd-methodology, outside-in-tdd\. /)
+  assert.equal(inlined, '# bdd-methodology')
+  assert.deepEqual(rest, [])
+})
+
+test('eager mode records an unreadable SKILL.md with the reader error and the clock time', async () => {
+  const failing = (thrown) => ({ read: async () => { throw thrown } })
+  for (const [thrown, reason] of [[new Error('EACCES: permission denied'), 'EACCES: permission denied'], [undefined, 'unknown']]) {
+    const audit = collectingWriter()
+    const service = createSubagentStartService({ config: EAGER_CONFIG, skillFileReader: failing(thrown), auditWriter: audit, clock })
+    await service.handle({ agentName: 'acceptance-designer' })
+    assert.deepEqual(audit.entries, [{
+      eventType: 'EagerReadFailed', agentName: 'acceptance-designer', skillName: 'bdd-methodology', decision: 'WARN', reason, timestamp: FIXED_NOW,
+    }])
+  }
+  const audit = collectingWriter()
+  const brokenClock = { now: () => { throw new Error('no clock') } }
+  await createSubagentStartService({ config: EAGER_CONFIG, skillFileReader: nullSkillFileReader, auditWriter: audit, clock: brokenClock })
+    .handle({ agentName: 'acceptance-designer' })
+  assert.match(audit.entries[0].timestamp, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+})
+
+test('eager mode reads only skills with policy eager, not verify-policy skills', async () => {
+  // Kills MethodExpression mutant: filter(isEagerSkill) → skillEntries (reads all skills eagerly)
+  // Also kills ConditionalExpression mutant: isEagerSkill → true
+  const readSkills = []
+  const trackingReader = { read: async (name) => { readSkills.push(name); return `content-${name}` } }
+  const service = createSubagentStartService({ config: EAGER_CONFIG, skillFileReader: trackingReader, auditWriter: nullAuditWriter, clock })
+  await service.handle({ agentName: 'acceptance-designer' })
+  // EAGER_CONFIG: bdd-methodology=eager, outside-in-tdd=verify → only bdd-methodology must be read
+  assert.deepEqual(readSkills, ['bdd-methodology'],
+    `only eager-policy skills must be read; skillFileReader was called for: ${JSON.stringify(readSkills)}`)
+})
+
+test('eager mode still returns directive when skill file is unreadable (fail-open)', async () => {
+  const audit = collectingWriter()
+  const service = createSubagentStartService({ config: EAGER_CONFIG, skillFileReader: nullSkillFileReader, auditWriter: audit, clock })
+  const result = await service.handle({ agentName: 'acceptance-designer' })
+  assert.equal(result.decision, 'additionalContext')
+  assert.ok(result.context.includes('The following skills are MANDATORY:'))
+  assert.ok(audit.entries.some((e) => e.eventType === 'EagerReadFailed'), 'EagerReadFailed audit entry must be written')
+})
+
+// edge cases ——————————————————————————————————————————————————————————
+
+test('handle called with no arguments returns allow (no agentName → no skills)', async () => {
+  const service = createSubagentStartService({ config: CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
+  const result = await service.handle()
+  assert.equal(result.decision, 'allow')
+})
+
+test('the directive tells the subagent to load each skill with its skill tool', async () => {
+  const service = createSubagentStartService({
+    config: { agentSkills: { a: [{ name: 'bdd-methodology', policy: 'verify' }, { name: 'outside-in-tdd', policy: 'verify' }] } },
+    skillFileReader: { read: async () => '' },
+    auditWriter: { write: async () => {} },
+    clock: { now: () => '2026-09-23T00:00:00.000Z' },
+  })
+  const result = await service.handle({ agentName: 'a' })
+  assert.equal(result.context, 'The following skills are MANDATORY: bdd-methodology, outside-in-tdd. Load each with your skill tool, by name, before any other work; a skill you only name or read about is not loaded, and the agent cannot stop until it is.')
+})

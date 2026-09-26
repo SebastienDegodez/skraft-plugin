@@ -6,9 +6,7 @@ on:
     paths:
       - "docs/site/**"
       - "eng/**"
-      - "plugins/skills/**"
-      - "plugins/agents/**"
-      - "plugins/.claude-plugin/plugin.json"
+      - "plugins/skraft-framework/**"
       - "tests/skills/**"
       - ".github/workflows/pages-deploy.yml"
   workflow_dispatch:
@@ -27,23 +25,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@762794c140bbeda0f1224786aa33b4b46783a6c1 # v1.326.0
         with:
           ruby-version: "3.3"
           bundler-cache: true
           working-directory: docs/site
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
 
       - name: Setup Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
 
       # The dashboard catalogue is derived from the plugin sources at build time,
       # so the published page can never drift from what the plugin ships.
@@ -75,7 +73,7 @@ jobs:
 
       - name: Restore the AGENTVIZ build
         id: agentviz-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: /tmp/agentviz-dist
           key: agentviz-dist-${{ steps.agentviz.outputs.sha }}
@@ -99,7 +97,7 @@ jobs:
           echo "${{ steps.agentviz.outputs.sha }}" > _site/dashboard/replay/.agentviz-commit
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: _site
 
@@ -112,4 +110,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

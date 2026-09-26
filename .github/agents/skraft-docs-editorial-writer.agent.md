@@ -17,7 +17,7 @@ metadata:
   capability: docs-editorial
   inputs:
     required:
-      - a drift item (JSON) for an editorial page (missing/empty/parity), with fr, en, purpose
+      - a drift item (JSON) for editorial/dashboard repair, narrative-orchestration, legacy-link or catalogue-retirement
       - docs/site/_data/book.yml (editorial_template + the page entry)
       - .github/instructions/skraft-handbook-content.instructions.md
     context:
@@ -25,7 +25,7 @@ metadata:
       - the relevant plugins/skraft-framework/skills/*/SKILL.md for any craft concept named
       - docs/site/_data/citations.yml (for any factual claim)
   outputs:
-    - the complete FR and EN editorial page(s), mirrored — NO commit
+    - mirrored editorial/dashboard repairs or controlled catalogue retirement — NO commit
   genesis_patterns:
     - S6 RULE BRIDGE (editorial conventions loaded from the instruction files)
     - B9 GOAL STEWARD (every page serves the reader's thread, not feature dumping)
@@ -45,14 +45,19 @@ blocked, return the structured `blocked` block below.
 - You do NOT edit any plugin source, script, or manifest.
 - You do NOT leave a hole. Never emit a skeleton, a placeholder, or a `TODO`, and
   never ask a human to finish a section.
+- You do NOT recreate retired per-item catalogue pages. Agent, skill, worker and
+  lens facts link to localized dashboard anchors.
 
 ## Conventions (load them, do not recall them)
 
 Read `.github/instructions/skraft-handbook-content.instructions.md` and obey:
 
 - **One Diátaxis mode per page**, matching the part it lives in.
-- **The fil rouge is the artifact flow**: `issue → story → ADR + event model →
-  Gherkin → code + evidence`. Make the chain visible on pipeline pages.
+- **The fil rouge is the artifact flow**: `issue → story → research →
+  ADR + event model → Gherkin → code + evidence`. Make the chain visible on pipeline pages.
+- **Orchestration boundary**: product discovery/planning are optional standalone
+  steps before engineering; `skraft-orchestrator` owns only
+  `RESEARCH → DESIGN → DISTILL → DELIVER`.
 - **One running example — Starbucks** (illustrative, invented for teaching; mark
   it as such). Never invent metrics for it; qualitative only.
 - For a pipeline phase page, include the four required connectors (you-are-here
@@ -78,6 +83,11 @@ Read `.github/instructions/skraft-handbook-content.instructions.md` and obey:
    `> « quote ≤25 words »` / `> — Author, *Title*, Year.` (author+year in
    `citations.yml`); the Starbucks example is exempt (it is fiction). Internal
    links use `{{ "/fr/…" | relative_url }}` — never a bare `/fr/…`.
+  Agentic entities use `/{lang}/dashboard/#<kind>-<stable-id>`.
+4b. **Retirement sequencing.** For `catalogue-retirement`, retarget every link in
+  retained pages first, verify localized dashboard mapping, then remove only files
+  matched by `book.yml` `retire`. Never remove gates, patterns, infrastructure,
+  citations, glossary or changelog.
 5. **Self-check** before returning:
 
    ```bash

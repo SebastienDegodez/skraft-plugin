@@ -2,7 +2,8 @@
 // configuration the hooks consume. No IO, no YAML, no filesystem — the input is
 // already-parsed descriptors, the output is a frozen plain object.
 //
-// A descriptor is: { name, phase?, dispatchedBy?, phases?, skills[], inputs[], outputs[] }.
+// A descriptor is: { id?, name, phase?, dispatchedBy?, phases?, skills[], inputs[],
+// outputs[] }.
 // Only the orchestrator carries `phases` (the pipeline order); pipeline specialists
 // and reviewers carry `phase` and are `dispatchedBy: <the orchestrator's own name>`.
 
@@ -69,11 +70,31 @@ const agentArtifactsOf = (descriptors) =>
     descriptors.map((d) => [d.name, { inputs: [...(d.inputs ?? [])], outputs: [...(d.outputs ?? [])] }]),
   )
 
+// Harnesses disagree on the identifier surfaced by SubagentStart: display name,
+// filename id, or a plugin-prefixed id. Keep one deterministic map to the display name
+// used by all generated policy sections.
+const agentAliasesOf = (descriptors) => Object.fromEntries(
+  descriptors.flatMap((descriptor) => [
+    ...(descriptor.id ? [[descriptor.id, descriptor.name]] : []),
+    [descriptor.name, descriptor.name],
+  ]),
+)
+
+// Who dispatches each agent, by display name (dispatched_by may name an id).
+const agentDispatchersOf = (descriptors, aliases) => Object.fromEntries(
+  descriptors
+    .filter((descriptor) => typeof descriptor.dispatchedBy === 'string' && descriptor.dispatchedBy.length > 0)
+    .map((descriptor) => [descriptor.name, aliases[descriptor.dispatchedBy] ?? descriptor.dispatchedBy]),
+)
+
 export const buildFrameworkConfig = (descriptors) => {
   const phaseOrder = phaseOrderOf(descriptors)
+  const agentAliases = agentAliasesOf(descriptors)
   return deepFreeze({
     phaseOrder,
     phaseAgents: phaseAgentsOf(descriptors, phaseOrder),
+    agentAliases,
+    agentDispatchers: agentDispatchersOf(descriptors, agentAliases),
     agentSkills: agentSkillsOf(descriptors),
     agentArtifacts: agentArtifactsOf(descriptors),
   })

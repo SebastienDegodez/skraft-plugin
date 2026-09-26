@@ -1,0 +1,12 @@
+{
+  "files": {
+    "Source.cs": {
+      "mutants": [
+        {
+          "id": "1",
+          "status": "Killed"
+        }
+      ]
+    }
+  }
+}

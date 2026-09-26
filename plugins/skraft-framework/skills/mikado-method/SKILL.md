@@ -11,12 +11,6 @@ the change, let the compiler and test suite reveal what it actually depends on, 
 the missing prerequisites bottom-up. The graph is the artifact — the failed experiment's code is
 always thrown away.
 
-Validation discipline adapted from
-[chaabani-anis/mikado-method](https://github.com/chaabani-anis/mikado-method) (MIT License): the
-same rigor (mandatory graph validation, traceability, golden-master gate, atomic leaf commits),
-reimplemented against SKRAFT's Mermaid graph convention instead of that project's rail-notation
-format.
-
 **Precondition.** A green safety net must exist before starting (see `characterize-with-contracts`
 / `brownfield-harness-builder`). Mikado surfaces prerequisites via real compiler/test failures — a
 codebase with weak or no test coverage gives false leaves (nothing breaks because nothing was
@@ -78,7 +72,7 @@ Example: `refactor(mikado-graph): {P1} requires {P2} in src/Admin.cs:40`.
 Run the deterministic validator before every leaf commit and after every graph-update commit:
 
 ```bash
-bash plugins/skraft-framework/skills/mikado-method/scripts/validate-mikado.sh <path-to-graph.md>
+bash "$SKRAFT_PLUGIN_ROOT/skills/mikado-method/scripts/validate-mikado.sh" <path-to-graph.md>
 ```
 
 Exit 0 = valid, safe to proceed. Exit non-zero = STOP and fix the graph first — never proceed on a

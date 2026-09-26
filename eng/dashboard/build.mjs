@@ -46,7 +46,7 @@ const readJson = (path, fallback) => {
 
 const reportPath = resolve(repoRoot, values.report)
 const report = readJson(reportPath, null)
-if (!report || report.schemaVersion !== 1 || !Array.isArray(report.skills)) {
+if (!report || report.schemaVersion !== 2 || !Array.isArray(report.skills) || !report.topology) {
   throw new Error(`Catalogue report is missing or unsupported: ${reportPath} — run eng/catalog/scan.mjs first`)
 }
 
@@ -56,13 +56,14 @@ const history = readJson(resolve(repoRoot, values.history), { schemaVersion: 1, 
 
 const rawUrl = (file) => `https://raw.githubusercontent.com/${values.repository}/${values['data-branch']}/data/${file}`
 const dashboard = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedAt: new Date().toISOString(),
   repository: values.repository,
   plugin: report.plugin,
   summary: report.summary,
   skills: report.skills,
   agents: report.agents,
+  topology: report.topology,
   history: history.skills ?? {},
   agentHistory: history.agents ?? {},
   sources: {

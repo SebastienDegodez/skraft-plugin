@@ -23,6 +23,81 @@
       "reviewer": "Skraft - Software Engineer Reviewer"
     }
   },
+  "agentAliases": {
+    "acceptance-designer-reviewer": "Skraft - Acceptance Designer Reviewer",
+    "Skraft - Acceptance Designer Reviewer": "Skraft - Acceptance Designer Reviewer",
+    "acceptance-designer": "Skraft - Acceptance Designer",
+    "Skraft - Acceptance Designer": "Skraft - Acceptance Designer",
+    "architecture-boundaries-lens": "architecture-boundaries-lens",
+    "backlog-discoverer-reviewer": "Skraft - Backlog Discoverer Reviewer",
+    "Skraft - Backlog Discoverer Reviewer": "Skraft - Backlog Discoverer Reviewer",
+    "backlog-discoverer": "Skraft - Backlog Discoverer",
+    "Skraft - Backlog Discoverer": "Skraft - Backlog Discoverer",
+    "backlog-planner-reviewer": "Skraft - Backlog Planner Reviewer",
+    "Skraft - Backlog Planner Reviewer": "Skraft - Backlog Planner Reviewer",
+    "backlog-planner": "Skraft - Backlog Planner",
+    "Skraft - Backlog Planner": "Skraft - Backlog Planner",
+    "brownfield-analyst": "Skraft - Brownfield Analyst",
+    "Skraft - Brownfield Analyst": "Skraft - Brownfield Analyst",
+    "brownfield-harness-builder": "Skraft - Brownfield Harness Builder",
+    "Skraft - Brownfield Harness Builder": "Skraft - Brownfield Harness Builder",
+    "brownfield-refactorer": "Skraft - Brownfield Refactorer",
+    "Skraft - Brownfield Refactorer": "Skraft - Brownfield Refactorer",
+    "cold-reader-lens": "cold-reader-lens",
+    "contract-fidelity-lens": "contract-fidelity-lens",
+    "contract-testing-worker": "contract-testing-worker",
+    "discovery-completeness-lens": "discovery-completeness-lens",
+    "discovery-duplicate-lens": "discovery-duplicate-lens",
+    "discovery-prioritization-lens": "discovery-prioritization-lens",
+    "mock-fidelity-lens": "mock-fidelity-lens",
+    "mock-integration-worker": "mock-integration-worker",
+    "planning-ac-quality-lens": "planning-ac-quality-lens",
+    "planning-coherence-lens": "planning-coherence-lens",
+    "planning-dor-lens": "planning-dor-lens",
+    "planning-invest-lens": "planning-invest-lens",
+    "quality-gates-lens": "quality-gates-lens",
+    "refactoring-worker": "refactoring-worker",
+    "skraft-orchestrator": "Skraft - Orchestrator",
+    "Skraft - Orchestrator": "Skraft - Orchestrator",
+    "software-engineer-reviewer": "Skraft - Software Engineer Reviewer",
+    "Skraft - Software Engineer Reviewer": "Skraft - Software Engineer Reviewer",
+    "software-engineer": "Skraft - Software Engineer",
+    "Skraft - Software Engineer": "Skraft - Software Engineer",
+    "solution-architect-reviewer": "Skraft - Solution Architect Reviewer",
+    "Skraft - Solution Architect Reviewer": "Skraft - Solution Architect Reviewer",
+    "solution-architect": "Skraft - Solution Architect",
+    "Skraft - Solution Architect": "Skraft - Solution Architect",
+    "solution-researcher": "Skraft - Solution Researcher",
+    "Skraft - Solution Researcher": "Skraft - Solution Researcher",
+    "test-integrity-lens": "test-integrity-lens"
+  },
+  "agentDispatchers": {
+    "Skraft - Acceptance Designer Reviewer": "Skraft - Orchestrator",
+    "Skraft - Acceptance Designer": "Skraft - Orchestrator",
+    "architecture-boundaries-lens": "Skraft - Software Engineer Reviewer",
+    "Skraft - Backlog Discoverer Reviewer": "Skraft - Backlog Discoverer",
+    "Skraft - Backlog Planner Reviewer": "Skraft - Backlog Planner",
+    "cold-reader-lens": "Skraft - Software Engineer Reviewer",
+    "contract-fidelity-lens": "Skraft - Software Engineer Reviewer",
+    "contract-testing-worker": "Skraft - Software Engineer",
+    "discovery-completeness-lens": "Skraft - Backlog Discoverer Reviewer",
+    "discovery-duplicate-lens": "Skraft - Backlog Discoverer Reviewer",
+    "discovery-prioritization-lens": "Skraft - Backlog Discoverer Reviewer",
+    "mock-fidelity-lens": "Skraft - Software Engineer Reviewer",
+    "mock-integration-worker": "Skraft - Software Engineer",
+    "planning-ac-quality-lens": "Skraft - Backlog Planner Reviewer",
+    "planning-coherence-lens": "Skraft - Backlog Planner Reviewer",
+    "planning-dor-lens": "Skraft - Backlog Planner Reviewer",
+    "planning-invest-lens": "Skraft - Backlog Planner Reviewer",
+    "quality-gates-lens": "Skraft - Software Engineer Reviewer",
+    "refactoring-worker": "Skraft - Brownfield Refactorer",
+    "Skraft - Software Engineer Reviewer": "Skraft - Orchestrator",
+    "Skraft - Software Engineer": "Skraft - Orchestrator",
+    "Skraft - Solution Architect Reviewer": "Skraft - Orchestrator",
+    "Skraft - Solution Architect": "Skraft - Orchestrator",
+    "Skraft - Solution Researcher": "Skraft - Orchestrator",
+    "test-integrity-lens": "Skraft - Software Engineer Reviewer"
+  },
   "agentSkills": {
     "Skraft - Acceptance Designer Reviewer": [
       {
@@ -31,6 +106,10 @@
       },
       {
         "name": "adversarial-review-lenses",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
         "policy": "verify"
       }
     ],
@@ -58,8 +137,13 @@
       {
         "name": "resolving-stack-commands",
         "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
+        "policy": "verify"
       }
     ],
+    "architecture-boundaries-lens": [],
     "Skraft - Backlog Discoverer Reviewer": [
       {
         "name": "discovery-review-criteria",
@@ -126,15 +210,48 @@
         "policy": "verify"
       }
     ],
-    "architecture-boundaries-lens": [],
     "cold-reader-lens": [],
-    "quality-gates-lens": [],
-    "test-integrity-lens": [],
-    "Skraft - Orchestrator": [
+    "contract-fidelity-lens": [],
+    "contract-testing-worker": [
       {
-        "name": "skraft-difficulty-routing",
+        "name": "contract-testing-roster",
         "policy": "verify"
       },
+      {
+        "name": "contract-testing",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
+        "policy": "verify"
+      }
+    ],
+    "discovery-completeness-lens": [],
+    "discovery-duplicate-lens": [],
+    "discovery-prioritization-lens": [],
+    "mock-fidelity-lens": [],
+    "mock-integration-worker": [
+      {
+        "name": "mocking-strategy-roster",
+        "policy": "verify"
+      },
+      {
+        "name": "resolving-stack-commands",
+        "policy": "verify"
+      }
+    ],
+    "planning-ac-quality-lens": [],
+    "planning-coherence-lens": [],
+    "planning-dor-lens": [],
+    "planning-invest-lens": [],
+    "quality-gates-lens": [
+      {
+        "name": "qa-reporting",
+        "policy": "verify"
+      }
+    ],
+    "refactoring-worker": [],
+    "Skraft - Orchestrator": [
       {
         "name": "adversarial-review-lenses",
         "policy": "verify"
@@ -146,11 +263,23 @@
       {
         "name": "playwright-evidence",
         "policy": "verify"
+      },
+      {
+        "name": "github-search-protocol",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
+        "policy": "verify"
       }
     ],
     "Skraft - Software Engineer Reviewer": [
       {
         "name": "adversarial-review-lenses",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
         "policy": "verify"
       }
     ],
@@ -192,7 +321,15 @@
         "policy": "verify"
       },
       {
+        "name": "quality-gates-javascript",
+        "policy": "verify"
+      },
+      {
         "name": "resolving-stack-commands",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
         "policy": "verify"
       }
     ],
@@ -217,33 +354,7 @@
       }
     ],
     "Skraft - Solution Researcher": [],
-    "contract-fidelity-lens": [],
-    "contract-testing-worker": [
-      {
-        "name": "contract-testing-roster",
-        "policy": "verify"
-      },
-      {
-        "name": "contract-testing",
-        "policy": "verify"
-      },
-      {
-        "name": "resolving-stack-commands",
-        "policy": "verify"
-      }
-    ],
-    "mock-fidelity-lens": [],
-    "mock-integration-worker": [
-      {
-        "name": "mocking-strategy-roster",
-        "policy": "verify"
-      },
-      {
-        "name": "resolving-stack-commands",
-        "policy": "verify"
-      }
-    ],
-    "refactoring-worker": []
+    "test-integrity-lens": []
   },
   "agentArtifacts": {
     "Skraft - Acceptance Designer Reviewer": {
@@ -263,11 +374,15 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
       ],
       "outputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature",
+        ".copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md",
         "tests/**/{Feature}AcceptanceTests.cs"
       ]
+    },
+    "architecture-boundaries-lens": {
+      "inputs": [],
+      "outputs": []
     },
     "Skraft - Backlog Discoverer Reviewer": {
       "inputs": [
@@ -337,11 +452,60 @@
         "a sequence of green commits (one per completed leaf/slice)"
       ]
     },
-    "architecture-boundaries-lens": {
+    "cold-reader-lens": {
       "inputs": [],
       "outputs": []
     },
-    "cold-reader-lens": {
+    "contract-fidelity-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "contract-testing-worker": {
+      "inputs": [
+        "the API (provider) descriptor for the active slice"
+      ],
+      "outputs": [
+        "structured result block (stack, microcks, files[], testCommand) — NO commit"
+      ]
+    },
+    "discovery-completeness-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "discovery-duplicate-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "discovery-prioritization-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "mock-fidelity-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "mock-integration-worker": {
+      "inputs": [
+        "downstream dependency descriptor (the client the SUT calls)",
+        "the integration-test intent for the active slice"
+      ],
+      "outputs": [
+        "structured result block (strategy, stack, files[], testCommand) — NO commit"
+      ]
+    },
+    "planning-ac-quality-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "planning-coherence-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "planning-dor-lens": {
+      "inputs": [],
+      "outputs": []
+    },
+    "planning-invest-lens": {
       "inputs": [],
       "outputs": []
     },
@@ -349,9 +513,15 @@
       "inputs": [],
       "outputs": []
     },
-    "test-integrity-lens": {
-      "inputs": [],
-      "outputs": []
+    "refactoring-worker": {
+      "inputs": [
+        "full current graph/slice-plan artifact content",
+        "the specific leaf/slice to implement, verbatim",
+        "acceptance criteria (from mikado-method or strangler-fig-method, verbatim)"
+      ],
+      "outputs": [
+        "one of ADVANCE / EXPAND / DONE / BLOCKED (structured result) — no commit on EXPAND/BLOCKED"
+      ]
     },
     "Skraft - Orchestrator": {
       "inputs": [],
@@ -368,14 +538,14 @@
     },
     "Skraft - Software Engineer": {
       "inputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/features/{feature}.feature",
+        ".copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md"
       ],
       "outputs": [
         "Source code commits (conventional commits)",
         ".copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/qg-{story}.json (quality-gates evidence log)",
-        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/* (captured stdout, exit codes, RED/GREEN snapshots)"
+        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json (quality-gates evidence log)",
+        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/* (optional, captured stdout, exit codes and RED/GREEN snapshots the evidence log references)"
       ]
     },
     "Skraft - Solution Architect Reviewer": {
@@ -403,8 +573,8 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/consistency-matrix-{story}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md"
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md (optional, only when an accepted decision is superseded)",
+        ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-{story}-{NNN}.md (optional, only when a decision drifts and the architect halts)"
       ]
     },
     "Skraft - Solution Researcher": {
@@ -413,40 +583,9 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md"
       ]
     },
-    "contract-fidelity-lens": {
+    "test-integrity-lens": {
       "inputs": [],
       "outputs": []
-    },
-    "contract-testing-worker": {
-      "inputs": [
-        "the API (provider) descriptor for the active slice"
-      ],
-      "outputs": [
-        "structured result block (stack, microcks, files[], testCommand) — NO commit"
-      ]
-    },
-    "mock-fidelity-lens": {
-      "inputs": [],
-      "outputs": []
-    },
-    "mock-integration-worker": {
-      "inputs": [
-        "downstream dependency descriptor (the client the SUT calls)",
-        "the integration-test intent for the active slice"
-      ],
-      "outputs": [
-        "structured result block (strategy, stack, files[], testCommand) — NO commit"
-      ]
-    },
-    "refactoring-worker": {
-      "inputs": [
-        "full current graph/slice-plan artifact content",
-        "the specific leaf/slice to implement, verbatim",
-        "acceptance criteria (from mikado-method or strangler-fig-method, verbatim)"
-      ],
-      "outputs": [
-        "one of ADVANCE / EXPAND / DONE / BLOCKED (structured result) — no commit on EXPAND/BLOCKED"
-      ]
     }
   }
 }

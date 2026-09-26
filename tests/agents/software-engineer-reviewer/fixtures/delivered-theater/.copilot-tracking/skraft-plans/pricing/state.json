@@ -1,0 +1,42 @@
+{
+  "projectSlug": "pricing",
+  "currentPhase": "DELIVER",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": []
+  },
+  "phasesCompleted": [
+    "RESEARCH",
+    "DESIGN",
+    "DISTILL"
+  ],
+  "phaseArtifacts": {
+    "DISTILL": [
+      ".copilot-tracking/skraft-plans/pricing/features/discount.feature",
+      ".copilot-tracking/skraft-plans/pricing/details/2026-08-12/impl.md"
+    ],
+    "DELIVER": [
+      ".copilot-tracking/skraft-plans/pricing/changes/2026-08-13/change-log.md",
+      ".copilot-tracking/skraft-plans/pricing/evidence/2026-08-13/qg.json"
+    ]
+  },
+  "verdicts": {
+    "RESEARCH": "APPROVED",
+    "DESIGN": "APPROVED",
+    "DISTILL": "APPROVED"
+  },
+  "reviewArtifacts": {},
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "phaseHistory": {
+    "DELIVER": {
+      "status": "inProgress",
+      "startedAt": "2026-08-13T09:00:00Z"
+    }
+  },
+  "userPreferences": {
+    "maxRetriesPerPhase": 2
+  }
+}

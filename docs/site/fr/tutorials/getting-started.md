@@ -2,56 +2,108 @@
 layout: doc
 lang: fr
 title: "Démarrage rapide"
+description: "Installer SKRAFT avec /plugin, choisir le bon parcours et lancer le premier workflow."
 persona: software-engineer
 ---
 
 # Démarrage rapide
 
-## Prérequis
+> Installez le plugin dans votre assistant, choisissez votre point de départ, puis lancez le workflow adapté à votre projet.
 
-- **VS Code** avec l'extension **GitHub Copilot** activée
-- **Node.js** (≥ 18) pour les scripts de validation
+## Avant de commencer
 
-## Installation
+- **Claude Code**, pour utiliser les commandes `/plugin` ci-dessous
+- un dépôt cible ouvert dans votre assistant
+- un accès GitHub uniquement si vous voulez travailler depuis des issues
 
-### 1. Cloner le dépôt
+Node.js, APM et un clone du dépôt SKRAFT ne sont pas requis pour utiliser le
+plugin. Ils concernent le développement du plugin lui-même.
 
-```bash
-git clone https://github.com/SebastienDegodez/skraft-plugin.git
-cd skraft-plugin
+## 1. Installer SKRAFT avec `/plugin`
+
+Saisissez ces commandes dans la conversation Claude Code, pas dans un terminal :
+
+```text
+/plugin marketplace add SebastienDegodez/skraft-plugin
+/plugin install skraft
 ```
 
-### 2. Installer le gestionnaire de paquets agents (optionnel)
+La première commande ajoute le dépôt comme marketplace. La seconde installe le
+plugin `skraft` publié par ce marketplace. Ouvrez ensuite `/plugin` et vérifiez que
+`skraft` apparaît dans les plugins installés.
 
-Si vous utilisez des plugins externes, installez [apm — Agent Package Manager](https://github.com/microsoft/apm) :
+### Contournement Windows
 
-```bash
-# macOS / Linux
-curl -sSL https://aka.ms/apm-unix | sh
-# Windows : irm https://aka.ms/apm-windows | iex
+Si `/plugin marketplace add` échoue avec `fatal: unable to checkout working tree`,
+clonez SKRAFT sur un chemin local court, puis ajoutez ce checkout comme marketplace :
 
-# puis, depuis la racine du dépôt (apm lit apm.yml) :
-apm install
+```powershell
+git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft
 ```
 
-### 3. Ouvrir dans VS Code
+```text
+/plugin marketplace add C:\s\skraft
+/plugin install skraft
+```
 
-Les agents sont auto-découverts depuis le répertoire `.github/agents/`. Aucune configuration supplémentaire n'est nécessaire.
+Ou activez les chemins longs Windows, redémarrez le shell, puis réessayez :
 
-### 4. Premier lancement
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+git config --global core.longpaths true
+```
 
-Tapez `/skraft` dans le chat Copilot pour lancer l'orchestrateur. Il détecte automatiquement l'état du projet et reprend depuis la dernière phase persistée.
+## 2. Choisir votre parcours
 
-### 5. Suivre le flux DISCOVER → DELIVER
+Ne lancez pas automatiquement toute la chaîne. Le bon point de départ dépend de
+ce que votre dépôt possède déjà.
 
-Assignez-vous une issue GitHub, puis laissez l'orchestrateur vous guider à travers les six phases :
+| Votre situation | Commencez par | Puis |
+| --- | --- | --- |
+| Une story est déjà affinée | `skraft-orchestrator` | pipeline d'ingénierie |
+| Des issues existent, mais ne sont pas préparées | `backlog-discoverer`, puis `backlog-planner` | `skraft-orchestrator` |
+| Le code existe sans documentation produit | `brownfield-analyst` | PRD, création des issues, préparation produit, puis `skraft-orchestrator` |
+| Le legacy est dangereux à modifier | `brownfield-harness-builder`, puis `brownfield-refactorer` | retour vers une story préparée, puis `skraft-orchestrator` |
 
-1. **DISCOVER** — Triage et priorisation
-2. **DISCUSS** — Raffinement en user stories
-3. **DESIGN** — Architecture et ADR
-4. **DISTILL** — Scénarios BDD
-5. **DELIVER** — Implémentation TDD
+Les workflows Brownfield, DISCOVER et DISCUSS sont invoqués directement. Ils ne
+sont pas des phases cachées de `skraft-orchestrator`. Consultez le
+[parcours Brownfield]({{ "/fr/explanation/brownfield" | relative_url }}) si vous
+reprenez un système existant.
 
-Chaque phase est validée par un reviewer dédié avant de passer à la suivante.
+## 3. Lancer le premier workflow
 
-→ Consultez le [détail des phases]({{ "/fr/explanation/pipeline/" | relative_url }}) pour approfondir.
+### Story déjà prête
+
+Dans le sélecteur d'agents, choisissez `skraft-orchestrator`, puis donnez-lui la
+story affinée. C'est le seul point d'entrée du pipeline d'ingénierie. Il charge
+son état persistant et reprend au dernier point validé.
+
+### Backlog encore brut
+
+Choisissez d'abord `backlog-discoverer` dans le sélecteur d'agents. Une fois le
+triage terminé, choisissez `backlog-planner` pour affiner l'issue retenue. La
+story affinée devient alors l'entrée de `skraft-orchestrator`.
+
+## 4. Comprendre ce qui va s'exécuter
+
+Le parcours principal contient deux zones distinctes :
+
+1. **Préparation produit optionnelle et autonome**
+	- **DISCOVER** trie et priorise les issues
+	- **DISCUSS** transforme une issue en story vérifiable
+2. **Pipeline d'ingénierie piloté par `skraft-orchestrator`**
+	- **RESEARCH** réduit l'incertitude lorsque le travail le justifie
+	- **DESIGN** prend et trace les décisions d'architecture
+	- **DISTILL** produit les scénarios exécutables et le plan
+	- **DELIVER** implémente par Outside-In TDD et rassemble les preuves
+
+RESEARCH peut être sauté lorsque le routage conclut qu'une investigation dédiée
+n'apporterait rien. DISCOVER et DISCUSS ne sont jamais dispatchés par
+`skraft-orchestrator` : vous les choisissez avant lui lorsque votre entrée n'est
+pas encore une story prête.
+
+## 5. Continuer la lecture
+
+- [Choisir un point d'entrée et voir le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }})
+- [Suivre une demande de bout en bout]({{ "/fr/explanation/pipeline/fil-rouge" | relative_url }})
+- [Reprendre un système Brownfield]({{ "/fr/explanation/brownfield" | relative_url }})

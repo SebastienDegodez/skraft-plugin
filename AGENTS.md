@@ -15,8 +15,11 @@ Rules:
 
 ## skraft-framework documentation
 
-- Framework architecture, genesis anchoring (A9/S4/S7), fail modes, guardrails G1–G8,
-  and the guide for adding a new guardrail: **`plugins/skraft-framework/README.md`**.
+- Plugin install, use, pipeline, guardrails and harness packaging:
+  **`plugins/skraft-framework/README.md`**.
+- Framework internals and physical architecture: **`docs/architecture.md`**.
+- Runtime hook rationale, fail modes and guardrails G1–G8:
+  **`docs/site/en/explanation/hooks.md`** and **`docs/site/fr/explanation/hooks.md`**.
 - Roadmap with all 13 US (gain + status + milestone): **`docs/roadmap.md`**.
 - Skill evaluation (Vally), the published quality dashboard and AGENTVIZ replay:
   **`docs/skill-evaluation.md`**.
@@ -36,12 +39,15 @@ plugins/
       api/hooks/       ← Hook router, service factory, entry, decision helpers
       infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
     cli/               ← Composition root: hook.mjs wires all services
-    hooks/               ← hooks.json manifest (Claude Code hook declarations)
+    hooks/hooks.json     ← Canonical hook source; Claude compatibility surface
+    com.github.copilot/hooks/hooks.json  ← Generated exact copy for Copilot v1
+    com.github.copilot/agents/           ← 31 flat editable `.agent.md` descriptors
+    com.anthropic.claude-code/agents/    ← 31 flat editable native `.md` descriptors
     stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
     skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 
 tests/
-  skraft-framework/    ← ALL framework tests (unit + acceptance) — single flat directory
+  skraft-framework/    ← ALL framework tests, grouped by feature (unit + acceptance + fixtures)
   dashboard/           ← Tests for the eng/ evaluation & dashboard tooling
   skills/              ← Vally eval specs: tests/skills/<skill>/eval.yaml
   agents/              ← Vally real-agent specs + suite-local fixtures
@@ -55,16 +61,55 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
   run-vally-evals.sh   ← One local runner: paired skill comparisons + real-agent suites
 ```
 
+### Agent descriptor rules
+
+Descriptors under `plugins/skraft-framework/com.github.copilot/agents/` are
+prompts an agent pays for on every run, not documentation.
+
+- Edit agents in either of the two flat runtime trees; author hooks only in
+  [plugins/skraft-framework/hooks/hooks.json](plugins/skraft-framework/hooks/hooks.json).
+  Run `npm run plugin:sync` then `npm run plugin:check` to synchronize shared content with
+  [scripts/project-plugin-adapters.mjs](scripts/project-plugin-adapters.mjs) (`--apply` / `--check`).
+  Sync body and description only; preserve every client-specific header.
+  Keep stable basename IDs and per-side shared fields in `.agent-sync.json` v2.
+  Never introduce a third descriptor tree or header/template surrogate.
+  New agents require both explicitly authored client versions; never inherit tools blindly.
+  Commit both runtime surfaces and baseline together; marketplace Git installs do not build.
+- Keep root [plugins/skraft-framework/plugin.json](plugins/skraft-framework/plugin.json)
+  on the canonical v1 schema with no root `agents` list. Keep all 31 agents registered in
+  [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json),
+  including internal workers and lenses. Never delete internal registrations to hide them.
+  Preserve `user-invocable: false`; it is not documented for Claude subagents and does not
+  guarantee picker hiding. Six standalone roots are intended public Copilot entry points.
+- Keep one canonical hook source and two physical plugin surfaces: root compatibility hooks
+  plus generated Copilot namespace. Do not add extra manifest `hooks` pointers.
+  See [docs/architecture.md](docs/architecture.md#compatibility) for current compatibility limits;
+  preserve ADR-008 as historical evidence, not current packaging guidance.
+- **Write for the agent, never for a human reader.** Every sentence must carry a
+  decision the agent has to make. No prose explaining why a rule exists, no gloss
+  on the descriptor's own wording, no justification clause. The reasoning belongs
+  in the commit message.
+- **Put a rule's scope inside the rule**, not in a paragraph after it. A
+  prohibition scoped too narrowly is an escape hatch: `You NEVER produce business
+  content yourself` left the orchestrator free to configure Stryker and run the
+  mutation gates, so it did DELIVER itself and dispatched nothing.
+- **Never argue from the evaluation sandbox.** `none of them are available here`
+  describes the harness command allowlist; on a developer's machine `base64` and
+  `python` work, so the claim is false everywhere else and the agent reads the
+  whole rule as stale. Argue from what holds in both.
+- **Required dispatch content goes in an explicit list.** Buried mid-paragraph it
+  lands about half the time.
+
 ### Test placement rules
 
-- **Framework test files live in `tests/skraft-framework/`** — never inside `plugins/`.
+- **Framework test files live in `tests/skraft-framework/<feature>/`** — never inside `plugins/`. Colocate unit tests, acceptance tests and fixtures for the same feature.
 - **Evaluation/dashboard tooling tests live in `tests/dashboard/`** and import from `../../eng/...`.
 - Naming convention:
   - Unit tests: `{module}.unit.test.mjs` (e.g. `skill-policy.unit.test.mjs`)
   - Acceptance tests: `{feature}.acceptance.test.mjs` (e.g. `skill-loading.acceptance.test.mjs`)
   - Integration/other: `{module}.test.mjs`
-- `stryker.config.mjs` uses the glob `tests/skraft-framework/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
-- Import paths from `tests/skraft-framework/` into plugin source: `../../plugins/skraft-framework/src/...`
+- `stryker.config.mjs` uses the recursive glob `tests/skraft-framework/**/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
+- Import paths from `tests/skraft-framework/<feature>/` into plugin source: `../../../plugins/skraft-framework/src/...`
 
 ### Vally evaluation rules
 
@@ -115,7 +160,7 @@ eng/                   ← Skill evaluation & dashboard tooling (zero-dependency
 ### stryker.config.mjs rules
 
 - The `mutate` array is **additive**: when adding new modules, append to the existing list — never replace it.
-- The `testFiles` glob must stay `['tests/skraft-framework/*.test.mjs']` — never enumerate files explicitly.
+- The `testFiles` glob must stay `['tests/skraft-framework/**/*.test.mjs']` — never enumerate files explicitly.
 - The existing `thresholds` are set per-story; do not change them without an explicit instruction.
 
 ### gh-aw workflow frontmatter rules

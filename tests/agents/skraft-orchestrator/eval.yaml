@@ -3,8 +3,7 @@ version: 0.1.0
 description: >-
   Verifies that the real SKRAFT Orchestrator dispatches the phase specialist AND its reviewer as
   independent agents rather than declaring the review done, keeps the review in place when a
-  developer asks to skip it, and honours the entry point the project
-  recorded in state as binding. It routes and
+  developer asks to skip it, and opens a fresh pipeline at research. It routes and
   reviews only: the skills a later phase owns must stay unloaded, because loading them here would
   mean the orchestrator is doing a specialist's work.
 type: capability
@@ -39,12 +38,12 @@ stimuli:
       files: &design-ready-workspace
         - src: fixtures/design-phase-ready/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
         - src: fixtures/design-phase-ready/docs/adr/decisions-index.md
           dest: docs/adr/decisions-index.md
         - src: fixtures/design-phase-ready/src/CheckoutPricing.Domain/LoyaltyTier.cs
@@ -58,11 +57,8 @@ stimuli:
     graders:
       - type: completed
       - type: skill-invocation
-        name: The routing and review skills are loaded, and no later phase's skill is
+        name: Resuming DESIGN does not pull a later phase's skill into the router
         config:
-          required:
-            - skraft-difficulty-routing
-            - adversarial-review-lenses
           disallowed:
             - contract-testing
             - playwright-evidence
@@ -79,11 +75,11 @@ stimuli:
       - type: diff-contains
         name: The phase produces its own artefacts
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/details/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/details/\d{4}-\d{2}-\d{2}/'
       - type: diff-contains
         name: The review leaves a verdict behind
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/reviews/\d{4}-\d{2}-\d{2}/'
 
   - name: A request to skip the review does not remove it
     prompt: |
@@ -119,64 +115,58 @@ stimuli:
       - type: diff-contains
         name: The review still leaves a verdict behind
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          pattern: '\.copilot-tracking/skraft-plans/pricing/reviews/\d{4}-\d{2}-\d{2}/'
 
-  - name: The recorded entry point governs which phases run
+  - name: A fresh pipeline with no handoff remains at research
     prompt: |
-      Take the loyalty tier pricing story through the next stage of our engineering process,
-      following whatever this project has already recorded about where it is starting from.
+      Initialize the engineering pipeline for the refined pricing documentation change.
+      There is no upstream backlog or sprint handoff. Persist where the pipeline must begin, but
+      do not start phase work yet.
     tags:
       agent: skraft-orchestrator
-      subagents:
-        - solution-researcher
-        - solution-architect
-        - solution-architect-reviewer
-      scenario: binding-project-settings
+      scenario: fresh-simple-routing
       permissions: workspace-write
-      cost: high
+      cost: low
     supported_executors:
       - skraft-agent-runner
     environment:
       files:
-        - src: fixtures/entry-point-skips-research/skraft-config.json
-          dest: skraft-config.json
-        - src: fixtures/entry-point-skips-research/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/stories-m1.md
-        - src: fixtures/design-phase-ready/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-        - src: fixtures/design-phase-ready/docs/adr/decisions-index.md
-          dest: docs/adr/decisions-index.md
-        - src: fixtures/design-phase-ready/src/CheckoutPricing.Domain/LoyaltyTier.cs
-          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
-      commands: *design-ready-setup
+        - src: fixtures/fresh-simple-routing/README.md
+          dest: README.md
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: simple documentation story"'
     graders:
       - type: completed
       - type: skill-invocation
-        name: The routing skill is loaded before any phase is chosen, and nothing a later phase owns
+        name: A fresh pipeline loads no phase-owned skill
         config:
-          required:
-            - skraft-difficulty-routing
           disallowed:
+            - adversarial-review-lenses
             - contract-testing
             - playwright-evidence
       - type: run-command
-        name: The skipped phase produces nothing
+        name: The pipeline is persisted at research
+        config:
+          command: node
+          args:
+            - '-e'
+            - >-
+              const s=require('./.copilot-tracking/skraft-plans/pricing/state.json');
+              if(s.currentPhase!=='RESEARCH') process.exit(1)
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No phase work starts during initialization
         config:
           command: bash
           args:
             - '-lc'
-            - '[ ! -d .copilot-tracking/skraft-plans/checkout-pricing/research ]'
+            - >-
+              [ ! -d .copilot-tracking/skraft-plans/pricing/research ] &&
+              [ ! -d .copilot-tracking/skraft-plans/pricing/details ]
           expected_exit_code: 0
           timeout: 30s
-      - type: custom-metrics
-        name: The reviewer always runs
-        config:
-          assertions:
-            - metric: dispatchedSubagents
-              contains: solution-architect-reviewer
-      - type: diff-contains
-        name: The review leaves a verdict behind
-        config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'

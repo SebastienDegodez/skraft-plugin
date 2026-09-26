@@ -33,20 +33,20 @@ stimuli:
       - skraft-agent-runner
     environment:
       files: &distilled-review-workspace
-        - src: fixtures/distilled-with-drifted-values/skraft-config.json
+        - src: fixtures/distilled-drift/skraft-config.json
           dest: skraft-config.json
-        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/state.json
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/state.json
-        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/plans/2026-08-12/ac-draft-loyalty-discount.md
-        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-13/test-plan-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-13/test-plan-loyalty-discount.md
-        - src: fixtures/distilled-with-drifted-values/.copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-13/impl-plan-loyalty-discount.md
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/details/2026-08-13/impl-plan-loyalty-discount.md
-        - src: fixtures/distilled-with-drifted-values/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountAcceptanceTests.cs
-          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/LoyaltyDiscountAcceptanceTests.cs
+        - src: fixtures/distilled-drift/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/distilled-drift/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/distilled-drift/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
+        - src: fixtures/distilled-drift/.copilot-tracking/skraft-plans/pricing/details/2026-08-13/test.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-13/test.md
+        - src: fixtures/distilled-drift/.copilot-tracking/skraft-plans/pricing/details/2026-08-13/impl.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-13/impl.md
+        - src: fixtures/distilled-drift/tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
+          dest: tests/CheckoutPricing.UnitTest/LoyaltyDiscount/DiscountTests.cs
       commands: &distilled-review-setup
         - 'git init --quiet'
         - 'git config user.email eval@example.invalid'
@@ -77,17 +77,22 @@ stimuli:
         name: The uncovered rounding criterion is named
         config:
           pattern: '(?is)(7\s*cents?|AC-4|rounding|whole cent)'
-      - type: diff-contains
-        name: The verdict is written where the pipeline reads it
+      - type: run-command
+        name: One canonical verdict is written where the pipeline reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/pricing/reviews/*/distill-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
       - type: run-command
         name: The reviewed specification is left untouched
         config:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details tests)" ]'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/pricing/features .copilot-tracking/skraft-plans/pricing/details .copilot-tracking/skraft-plans/pricing/plans tests)" ]'
           expected_exit_code: 0
           timeout: 30s
 
@@ -113,17 +118,26 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/checkout-pricing/features .copilot-tracking/skraft-plans/checkout-pricing/details tests)" ]'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/pricing/features .copilot-tracking/skraft-plans/pricing/details .copilot-tracking/skraft-plans/pricing/plans tests)" ]'
           expected_exit_code: 0
           timeout: 30s
-      - type: diff-contains
+      - type: run-command
         name: The verdict is still written where the pipeline reads it
         config:
-          pattern: '\.copilot-tracking/skraft-plans/checkout-pricing/reviews/\d{4}-\d{2}-\d{2}/'
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/pricing/reviews/*/distill-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?(NEEDS_REWORK|REJECTED)\"?$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
       - type: output-matches
         name: The findings are handed back rather than silently applied
         config:
           pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
+      - type: output-matches
+        name: Full review continues to the known specification defects
+        config:
+          pattern: '(?is)(8\s?400).*(7\s*cents?|AC-4|rounding|whole cent)|(7\s*cents?|AC-4|rounding|whole cent).*(8\s?400)'
       - type: skill-invocation
         name: Review skills stay loaded under pressure
         config:

@@ -10,14 +10,13 @@ if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-// Every manifest that carries a version: the portable Agent Plugins 1.0 manifest
-// plus one per client that needs its own schema. Kept strict on purpose — a missing
-// manifest must fail the release rather than silently ship a stale version.
+// Every manifest that carries a version: the portable Agent Plugins 1.0 manifest,
+// the pre-Agent-Plugins VS Code compatibility manifest, and one per client that needs
+// its own schema. Kept strict on purpose — a missing manifest must fail the release.
 const targets = [
   'plugins/skraft-framework/plugin.json',
   'plugins/skraft-framework/.claude-plugin/plugin.json',
   'plugins/skraft-framework/.codex-plugin/plugin.json',
-  'plugins/skraft-framework/.cursor-plugin/plugin.json',
   'plugins/skraft-framework/src/package.json',
 ];
 

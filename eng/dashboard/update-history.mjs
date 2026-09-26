@@ -68,6 +68,11 @@ for (const resultInput of values.results) {
       judgeModel: result.judgeModel ?? 'unknown',
       state: verdictState(verdict),
       reason: verdict.reason ?? '',
+      // Which revision of the subject was measured. The dashboard compares it
+      // against the catalogue's current hash and marks the row stale when they
+      // differ, so a verdict can never keep vouching for a descriptor that has
+      // since been rewritten. Skills have no equivalent hash yet, hence null.
+      descriptorSha: verdict.descriptorSha ?? null,
       netWin: verdict.netWin ?? 0,
       trialCount: verdict.trialCount ?? 0,
       // The judged score of the treatment, with the interval the judge reported

@@ -1,0 +1,228 @@
+name: commit-convention
+version: 0.1.0
+description: Real Software Engineer commits prepared documentation with feature scope, honest issue disposition and identity sign-off.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  model: gpt-5.6-luna
+  timeout: 4m
+  runs: 1
+scoring:
+  threshold: 1
+
+# Three small, single-arm conformance cases, not a measured improvement claim.
+# No skill/checker under test and no invocation requirement for commit rules.
+# Nested checkout isolates real Git objects from Vally's own workspace/index.
+# Graders authenticate inputs before importing the independent offline oracle.
+# The pinned seed commit fixes initial content, paths, identity and history.
+# Sentinel checks actual prose and whitespace; no invented code-quality proof.
+# It does not prove the agent itself ran checks: inspect the live trajectory.
+# Scope is checkout plus pinned fixture inputs, not all harness-owned files.
+# Pilot: setup.mjs --pilot-runner delegates runner's Vally invocation with a
+# native completion tag filter, one run, Luna, zero retries and cache disabled.
+stimuli:
+  - name: Record a customer guide increment while the issue remains open
+    prompt: |
+      The discount customer-guide edit is ready in checkout. Read its
+      handoff, check the prepared change and commit this increment. The cashier
+      checklist on issue #42 still needs work; this is only a checkpoint.
+      Leave unrelated files alone.
+    tags:
+      agent: software-engineer
+      scenario: intermediate
+      permissions: workspace-write
+      cost: low
+    supported_executors: [skraft-agent-runner]
+    environment:
+      files: &files
+        - src: fixtures/setup.mjs
+          dest: .fixture-input/setup.mjs
+        - src: fixtures/verify.mjs
+          dest: .fixture-input/verify.mjs
+        - src: fixtures/context.json
+          dest: .fixture-input/context.json
+      commandTimeout: 30s
+      commands:
+        - node .fixture-input/setup.mjs intermediate
+    graders:
+      - type: completed
+      - type: run-command
+        name: Sentinel — approved prose and protected files intact; whitespace checks pass
+        config:
+          command: node
+          args: &probe-args
+            - --input-type=module
+            - -e
+            - |
+              const { readFileSync } = await import('node:fs')
+              const { createHash } = await import('node:crypto')
+              const read = (name, sha) => {
+                const bytes = readFileSync('.fixture-input/' + name)
+                if (createHash('sha256').update(bytes).digest('hex') !== sha) throw new Error('Oracle input changed: ' + name)
+                return bytes
+              }
+              read('setup.mjs', process.env.SETUP_SHA)
+              const source = read('verify.mjs', process.env.ORACLE_SHA)
+              const context = JSON.parse(read('context.json', process.env.CONTEXT_SHA))
+              const { verify } = await import('data:text/javascript;base64,' + source.toString('base64'))
+              verify(process.env.CHECK, context, process.env.SCENARIO, process.env.BASE_SHA)
+          env:
+            CHECK: sentinel
+            SCENARIO: intermediate
+            BASE_SHA: &intermediate-base 082693446d4f59c0f80ad6961de52c31de77c85a
+            SETUP_SHA: &setup-sha db9fdf9f947f8fbe7760dd43508753b70a93d3b38dff8fb0ed049b9dc9374505
+            ORACLE_SHA: &oracle-sha 67895451ed3653299430e539358bc3f29193173bfd859d6ae2670737df0819de
+            CONTEXT_SHA: &context-sha 56b763c3cb1f42800198684cd08244b79be83f9f9676dc3ae44d48f09dbe5334
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Exactly the prepared guide change is committed; no unrelated files
+        config:
+          command: node
+          args: *probe-args
+          env:
+            CHECK: tree
+            SCENARIO: intermediate
+            BASE_SHA: *intermediate-base
+            SETUP_SHA: *setup-sha
+            ORACLE_SHA: *oracle-sha
+            CONTEXT_SHA: *context-sha
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Feature scope and identity sign-off reference issue 42 without closing it
+        config:
+          command: node
+          args: *probe-args
+          env:
+            CHECK: message
+            SCENARIO: intermediate
+            BASE_SHA: *intermediate-base
+            SETUP_SHA: *setup-sha
+            ORACLE_SHA: *oracle-sha
+            CONTEXT_SHA: *context-sha
+          expected_exit_code: 0
+          timeout: 30s
+
+  - name: Finish the approved customer guide issue
+    prompt: |
+      Please finish the documentation-only discount issue #42 in checkout.
+      The owner approved the staged customer-guide wording; the handoff records
+      the whole issue scope and completion approval. Check the prepared change
+      and commit it. Keep this limited to the guide, leaving unrelated files alone.
+    tags:
+      agent: software-engineer
+      scenario: completion
+      permissions: workspace-write
+      cost: low
+    supported_executors: [skraft-agent-runner]
+    environment:
+      files: *files
+      commandTimeout: 30s
+      commands:
+        - node .fixture-input/setup.mjs completion
+    graders:
+      - type: completed
+      - type: run-command
+        name: Sentinel — approved prose and protected files intact; whitespace checks pass
+        config:
+          command: node
+          args: *probe-args
+          env:
+            CHECK: sentinel
+            SCENARIO: completion
+            BASE_SHA: &completion-base c19e751bc615a52bec93bb112448f15824f951e3
+            SETUP_SHA: *setup-sha
+            ORACLE_SHA: *oracle-sha
+            CONTEXT_SHA: *context-sha
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Exactly the prepared guide change is committed; no unrelated files
+        config:
+          command: node
+          args: *probe-args
+          env:
+            CHECK: tree
+            SCENARIO: completion
+            BASE_SHA: *completion-base
+            SETUP_SHA: *setup-sha
+            ORACLE_SHA: *oracle-sha
+            CONTEXT_SHA: *context-sha
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Feature scope and identity sign-off close the genuinely complete issue 42
+        config:
+          command: node
+          args: *probe-args
+          env:
+            CHECK: message
+            SCENARIO: completion
+            BASE_SHA: *completion-base
+            SETUP_SHA: *setup-sha
+            ORACLE_SHA: *oracle-sha
+            CONTEXT_SHA: *context-sha
+          expected_exit_code: 0
+          timeout: 30s
+
+  - name: Record the approved guide edit without a known issue
+    prompt: |
+      Commit the approved discount guide edit prepared in checkout after
+      checking it against the handoff. I have no issue number for this work.
+      Leave unrelated files alone.
+    tags:
+      agent: software-engineer
+      scenario: unknown
+      permissions: workspace-write
+      cost: low
+    supported_executors: [skraft-agent-runner]
+    environment:
+      files: *files
+      commandTimeout: 30s
+      commands:
+        - node .fixture-input/setup.mjs unknown
+    graders:
+      - type: completed
+      - type: run-command
+        name: Sentinel — approved prose and protected files intact; whitespace checks pass
+        config:
+          command: node
+          args: *probe-args
+          env:
+            CHECK: sentinel
+            SCENARIO: unknown
+            BASE_SHA: &unknown-base ea4b1efa0484a62e3b9a8140ff9940e433d2c9cb
+            SETUP_SHA: *setup-sha
+            ORACLE_SHA: *oracle-sha
+            CONTEXT_SHA: *context-sha
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Exactly the prepared guide change is committed; no unrelated files
+        config:
+          command: node
+          args: *probe-args
+          env:
+            CHECK: tree
+            SCENARIO: unknown
+            BASE_SHA: *unknown-base
+            SETUP_SHA: *setup-sha
+            ORACLE_SHA: *oracle-sha
+            CONTEXT_SHA: *context-sha
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Feature scope and identity sign-off omit invented issue references
+        config:
+          command: node
+          args: *probe-args
+          env:
+            CHECK: message
+            SCENARIO: unknown
+            BASE_SHA: *unknown-base
+            SETUP_SHA: *setup-sha
+            ORACLE_SHA: *oracle-sha
+            CONTEXT_SHA: *context-sha
+          expected_exit_code: 0
+          timeout: 30s

@@ -123,10 +123,10 @@ stimuli:
           dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
         - src: fixtures/approved-discount-red/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/approved-discount-red/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-        - src: fixtures/approved-discount-red/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+        - src: fixtures/approved-discount-red/tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
+        - src: fixtures/approved-discount-red/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
         - 'git init --quiet'
@@ -181,7 +181,7 @@ stimuli:
       - type: diff-not-contains
         name: Approved Gherkin stayed intact
         config:
-          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount\.feature '
+          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/pricing/features/discount\.feature '
       - type: diff-contains
         name: Approved behavior became executable at the Application boundary
         config:
@@ -246,30 +246,30 @@ stimuli:
       max_duration: 6m
     environment:
       files:
-        - src: fixtures/discount-fixture-theater/.gitignore
+        - src: fixtures/discount-theater/.gitignore
           dest: .gitignore
-        - src: fixtures/discount-fixture-theater/CheckoutPricing.slnx
+        - src: fixtures/discount-theater/CheckoutPricing.slnx
           dest: CheckoutPricing.slnx
-        - src: fixtures/discount-fixture-theater/Directory.Build.props
+        - src: fixtures/discount-theater/Directory.Build.props
           dest: Directory.Build.props
-        - src: fixtures/discount-fixture-theater/Directory.Packages.props
+        - src: fixtures/discount-theater/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: fixtures/discount-fixture-theater/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/discount-theater/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
           dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
-        - src: fixtures/discount-fixture-theater/src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/discount-theater/src/CheckoutPricing.Domain/LoyaltyTier.cs
           dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
-        - src: fixtures/discount-fixture-theater/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/discount-theater/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
           dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
-        - src: fixtures/discount-fixture-theater/src/CheckoutPricing.Application/CalculatePayableTotal.cs
+        - src: fixtures/discount-theater/src/CheckoutPricing.Application/CalculatePayableTotal.cs
           dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
-        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+        - src: fixtures/discount-theater/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/DiscountFixture.cs
+        - src: fixtures/discount-theater/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/DiscountFixture.cs
           dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/DiscountFixture.cs
-        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
-          dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
-        - src: fixtures/discount-fixture-theater/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/discount-theater/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs
+          dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs
+        - src: fixtures/discount-theater/tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
         - 'git init --quiet'
@@ -323,11 +323,11 @@ stimuli:
       - type: diff-contains
         name: Acceptance wiring changed
         config:
-          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests\.cs '
+          pattern: '(?m)^diff --git a/tests/CheckoutPricing\.UnitTests/LoyaltyDiscount/PayableTotalTests\.cs '
       - type: file-not-contains
         name: Acceptance test no longer imports the discount helper
         config:
-          path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
+          path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs
           value: 'DiscountFixture'
       - type: file-not-exists
         name: Misleading discount helper was removed
@@ -336,7 +336,7 @@ stimuli:
       - type: file-contains
         name: Approved payable total remains asserted
         config:
-          path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalAcceptanceTests.cs
+          path: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/PayableTotalTests.cs
           value: '9_200'
       - type: prompt
         config:
@@ -387,12 +387,12 @@ stimuli:
           dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
         - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
         - src: fixtures/placeholder-red-evidence/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/GoldCustomerDiscountTests.cs
           dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/GoldCustomerDiscountTests.cs
-        - src: fixtures/placeholder-red-evidence/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+        - src: fixtures/placeholder-red-evidence/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
         - 'git init --quiet'
@@ -444,7 +444,7 @@ stimuli:
       - type: diff-not-contains
         name: Approved scenario stayed intact
         config:
-          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount\.feature '
+          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/pricing/features/discount\.feature '
       - type: run-command
         name: Clean Architecture dependency tests are GREEN
         config:
@@ -492,28 +492,28 @@ stimuli:
       max_duration: 6m
     environment:
       files:
-        - src: fixtures/approved-gold-discount-missing/.gitignore
+        - src: fixtures/approved-discount-missing/.gitignore
           dest: .gitignore
-        - src: fixtures/approved-gold-discount-missing/CheckoutPricing.slnx
+        - src: fixtures/approved-discount-missing/CheckoutPricing.slnx
           dest: CheckoutPricing.slnx
-        - src: fixtures/approved-gold-discount-missing/Directory.Build.props
+        - src: fixtures/approved-discount-missing/Directory.Build.props
           dest: Directory.Build.props
-        - src: fixtures/approved-gold-discount-missing/Directory.Packages.props
+        - src: fixtures/approved-discount-missing/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: fixtures/approved-gold-discount-missing/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
+        - src: fixtures/approved-discount-missing/src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
           dest: src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj
-        - src: fixtures/approved-gold-discount-missing/src/CheckoutPricing.Domain/DomainMarker.cs
+        - src: fixtures/approved-discount-missing/src/CheckoutPricing.Domain/DomainMarker.cs
           dest: src/CheckoutPricing.Domain/DomainMarker.cs
-        - src: fixtures/approved-gold-discount-missing/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
+        - src: fixtures/approved-discount-missing/src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
           dest: src/CheckoutPricing.Application/CheckoutPricing.Application.csproj
-        - src: fixtures/approved-gold-discount-missing/src/CheckoutPricing.Application/ApplicationMarker.cs
+        - src: fixtures/approved-discount-missing/src/CheckoutPricing.Application/ApplicationMarker.cs
           dest: src/CheckoutPricing.Application/ApplicationMarker.cs
-        - src: fixtures/approved-gold-discount-missing/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
+        - src: fixtures/approved-discount-missing/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/approved-gold-discount-missing/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-        - src: fixtures/approved-gold-discount-missing/.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
-          dest: .copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount.feature
+        - src: fixtures/approved-discount-missing/tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
+        - src: fixtures/approved-discount-missing/.copilot-tracking/skraft-plans/pricing/features/discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/discount.feature
       commands:
         - 'dotnet restore CheckoutPricing.slnx'
         - 'git init --quiet'
@@ -559,7 +559,7 @@ stimuli:
       - type: diff-not-contains
         name: Approved scenario stayed intact
         config:
-          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/checkout-pricing/features/loyalty-discount\.feature '
+          pattern: '(?m)^diff --git a/\.copilot-tracking/skraft-plans/pricing/features/discount\.feature '
       - type: run-command
         name: Sentinel — build infrastructure survived the trial
         config:
@@ -637,8 +637,8 @@ stimuli:
           dest: src/CheckoutPricing.Application/CalculatePayableTotal.cs
         - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
           dest: tests/CheckoutPricing.UnitTests/CheckoutPricing.UnitTests.csproj
-        - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
-          dest: tests/CheckoutPricing.UnitTests/Architecture/CleanArchitectureDependencyTests.cs
+        - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
+          dest: tests/CheckoutPricing.UnitTests/Architecture/ArchitectureTests.cs
         - src: fixtures/green-checkout-tests/tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalTests.cs
           dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscount/CalculatePayableTotalTests.cs
       commands:

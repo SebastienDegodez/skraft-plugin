@@ -14,32 +14,30 @@ SKRAFT applies the CQS (Command-Query Separation) principle at the system level.
 
 ## Overview (L1 + L2)
 
-This view stays at two levels: **L1** the orchestrator, and **L2** the five phase
-agents and their independent reviewers. The internal **L3** fan-out (test wiring
+This view stays at two levels: **L1** invocable roots and **L2** engineering
+pipeline agents and their declared reviewers. DISCOVER then DISCUSS are optional
+standalone product workflows; they precede the orchestrator without becoming its
+children. The internal **L3** fan-out (test wiring
 inside DELIVER) has its own zoom pages — see *Zoom further* below.
 
 ```mermaid
 graph TB
-    O[skraft-orchestrator] -->|dispatch| BD[backlog-discoverer]
-    O -->|dispatch| BP[backlog-planner]
+    BD[backlog-discoverer] -.->|when both are used| BP[backlog-planner]
+    BP -.->|refined story| O[skraft-orchestrator]
+    O -->|dispatch| SR[solution-researcher]
     O -->|dispatch| SA[solution-architect]
     O -->|dispatch| AD[acceptance-designer]
     O -->|dispatch| SE[software-engineer]
     
-    BD -->|writes| A1[triage report]
-    BP -->|writes| A2[refined stories]
+    SR -->|writes| A0[sourced research]
     SA -->|writes| A3[ADRs + diagrams]
     AD -->|writes| A4[Gherkin scenarios]
     SE -->|writes| A5[tested code]
     
-    A1 -.->|reads| BDR[backlog-discoverer-reviewer]
-    A2 -.->|reads| BPR[backlog-planner-reviewer]
     A3 -.->|reads| SAR[solution-architect-reviewer]
     A4 -.->|reads| ADR[acceptance-designer-reviewer]
     A5 -.->|reads| SER[software-engineer-reviewer]
     
-    BDR -->|verdict| O
-    BPR -->|verdict| O
     SAR -->|verdict| O
     ADR -->|verdict| O
     SER -->|verdict| O
@@ -76,7 +74,7 @@ Each L3 fan-out has its own zoom page so this diagram stays readable:
 | Mocking the downstream dependency | `mock-integration-worker` → strategy roster → Microcks (default) / in-process | [L3 zoom: mocking (Microcks)]({{ "/en/explanation/deep-dive/mocking-microcks" | relative_url }}) |
 | Provider-side contract test | `contract-testing-worker` → roster → in-process integration + Microcks (opt-in) | [L3 zoom: contract testing]({{ "/en/explanation/deep-dive/contract-testing" | relative_url }}) |
 
-See also the [agents reference]({{ "/en/reference/agents/" | relative_url }}).
+See also the [agentic catalogue]({{ "/en/dashboard/" | relative_url }}).
 
 ## Strict separation
 

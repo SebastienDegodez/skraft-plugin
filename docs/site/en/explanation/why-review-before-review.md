@@ -99,5 +99,5 @@ judgment — the guardrails keep the structure honest, not the facts.
 ## See also
 
 - [For decision-makers]({{ "/en/explanation/for-executives" | relative_url }}) — TTM projection for executives
-- [Lenses]({{ "/en/reference/lens" | relative_url }}) — the 4 adversarial review lenses
-- [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}) — the 5 lifecycle phases
+- [Lenses]({{ "/en/dashboard/" | relative_url }}) — the adversarial review catalogue
+- [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}) — product preparation followed by orchestrated engineering

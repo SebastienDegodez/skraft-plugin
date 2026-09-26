@@ -33,7 +33,7 @@ invariant de conception — un budget, pas un espoir.
 
 ## Les leviers
 
-SKRAFT applique cinq leviers issus de la discipline Genesis pour tenir ce budget.
+SKRAFT applique quatre leviers issus de la discipline Genesis pour tenir ce budget.
 Chaque levier agit sur une dimension distincte de la dépense.
 
 | Levier | Ce que ça fait |
@@ -41,8 +41,6 @@ Chaque levier agit sur une dimension distincte de la dépense.
 | **Discipline de cache** | Les prompts-système et les instructions partagées sont conçus pour être *rechargés* entre les tours sans recalcul — tout ce qui peut être mis en cache KV l'est, et la structure des messages le garantit. |
 | **Classe par rôle** | Chaque agent porte une classe cible B12 — `implementer`, `planner` ou `reviewer`. Les producteurs d'artefacts (discoverer, planner, architect, engineer) reçoivent la classe la plus capable ; les reviewers de phase et les lentilles, dont la tâche est bornée, reçoivent la classe la moins chère qui tienne le travail. Deux rôles font exception et exigent une classe *Sonnet ou supérieure* quel que soit leur rôle : `software-engineer` et `software-engineer-reviewer` (arbitrage multi-contraintes). |
 | **Surface d'outils** | Aucun agent ne reçoit un catalogue MCP complet. Chaque agent ne voit que les outils dont il a besoin pour sa tâche précise. Chaque outil superflu est une invitation à raisonner inutilement. |
-| **Modèle d'exécution par difficulté** | Chaque work item porte une `difficulty` dans `state.json` (`simple`, `medium`, `medium-hard`, `challenging`), évaluée une fois à la sortie de DISCOVER. Elle décide de la façon dont DELIVER s'exécute : cycle TDD inline pour les paliers les plus simples, sous-agent dispatché par scénario Gherkin et artefacts intermédiaires pour les plus durs. L'effort va là où le travail l'exige, et nulle part ailleurs. C'est une forme d'exécution, pas un réglage de rigueur — elle ne change jamais ce qu'il faut prouver. |
-| **Élagage structurel** | Sur un handoff HVE entrant, la phase DISCOVER est sautée : le backlog et la priorisation arrivent déjà formés. Le pipeline n'exécute pas ce qu'il n'a pas à recalculer. |
 
 Ces leviers ne sont pas indépendants. La discipline de cache et la classe par rôle se
 renforcent mutuellement : un modèle de classe basse rechargeable depuis le cache KV coûte une
@@ -94,7 +92,7 @@ garantissent la fiabilité des livrables.
 
 Cette séparation relevait de la discipline ; elle relève désormais du fait. La barre
 tient dans une seule skill, `skraft-quality-bar`, et rien ne lit de réglage pour
-l'abaisser : score de mutation à 100 % sur Domain et Application et 90 % sur API et
+l'abaisser : score de mutation à 100 % sur Domain et Application et 80 % sur API et
 Infrastructure, couverture de lignes à 100 % sur Domain et Application, les quatre
 lentilles adversariales sur chaque revue, la gate Gherkin, un ADR pour toute décision
 non triviale, Object Calisthenics sur le Domain. Chaque gate bloque. Les niveaux
@@ -121,8 +119,8 @@ permet à un run d'acheter son passage sous la barre n'est pas une économie —
 défaut différé.
 
 Ce qui reste — et c'est la plus grosse moitié de la dépense — ce sont les leviers de
-forme : classe de modèle, discipline de cache, surface d'outils, volume de sortie,
-élagage structurel. La distinction est importante en pratique : quand un run dépasse un
+forme : classe de modèle, discipline de cache, surface d'outils, volume de sortie.
+La distinction est importante en pratique : quand un run dépasse un
 budget de tokens estimé, la première question n'est pas « quels reviewers
 désactiver ? » — cette question n'a plus de réponse — mais « quel levier de forme n'est
 pas encore appliqué ? ».
@@ -134,7 +132,7 @@ pas encore appliqué ? ».
 La classe de modèle est **réellement appliquée** : un résolveur déterministe
 (`plugins/skraft-framework/src/`, Clean Architecture, zéro dépendance) lit le `cost_role_class` et le
 plancher `model_requirement` de chaque agent, puis **pinne le champ `model:`** de son
-`*.agent.md` au modèle concret résolu. Le tableau de la section « Mesures réelles »
+descripteur `.md` au modèle concret résolu. Le tableau de la section « Mesures réelles »
 décrit la politique : `reviewer → claude-haiku-4.5`, `implementer → claude-sonnet-4.5`,
 `planner → claude-sonnet-5`, le plancher Sonnet relevant les deux exceptions
 (`software-engineer`, `software-engineer-reviewer`). Une seule source de vérité ; un

@@ -66,8 +66,8 @@ LOW VALUE  │   Fill-ins       │   Avoid          │
 |---|---|---|
 | High Value / Low Effort (Quick Wins) | Driver eligibility check (M), licence validation (M) | Do first — high ROI |
 | High Value / High Effort (Strategic Bets) | Full application flow (L), payment integration (L) | Plan carefully — split if possible |
-| Low Value / Low Effort (Fill-ins) | Copy improvements (XS), minor UX tweaks (S) | Only if capacity remains after Quick Wins |
-| Low Value / High Effort (Avoid) | Legacy COBOL integration (XL) without clear user value | Defer or cut |
+| Low Value / Low Effort (Fill-ins) | Copy improvements (1), minor UX tweaks (2) | Only if capacity remains after Quick Wins |
+| Low Value / High Effort (Avoid) | Legacy COBOL integration (21) without clear user value | Defer or cut |
 
 ---
 
@@ -83,7 +83,7 @@ Priority Score = (Business Value × 3 + Risk Reduction × 2) / Effort
 |---|---|---|
 | Business Value | 1-5 | 5 = core user journey, legal requirement; 1 = marginal improvement |
 | Risk Reduction | 1-5 | 5 = eliminates a blocking risk; 1 = no risk impact |
-| Effort | 1-5 mapped from T-shirt: XS=1, S=2, M=3, L=4, XL=5 | Higher effort = lower score |
+| Effort | 1-5 mapped from story points: 1→1, 2→2, 3→3, 5→4, 8→5 | Higher effort = lower score |
 
 **Example calculation:**
 

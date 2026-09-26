@@ -10,6 +10,8 @@ import { allow } from '../adapters/api/hooks/decision.mjs'
 //                               blocked on a missing state file.
 //   G7/G8 session guard        — always runs (G7 protected-artifact ban is unconditional;
 //                               G8 workspace-write check applies during DELIVER).
+//   provenance guard           — runs on every agent dispatch, pipeline or not: no
+//                               self-dispatch, no dispatch outside the declared tree.
 //
 // Decisions combine FAIL-CLOSED: block > deny > allow. A missing guard is a safe allow.
 
@@ -21,11 +23,14 @@ const combine = (decisions) =>
     ?? decisions.find((d) => d.decision === 'deny')
     ?? allow()
 
-export const createPreToolUseCompositeService = ({ dispatchGuard, sessionGuard } = {}) => ({
+export const createPreToolUseCompositeService = ({ dispatchGuard, sessionGuard, provenanceGuard } = {}) => ({
   handle: async (payload = {}) => {
     const decisions = []
 
     const requestedAgent = requestedAgentOf(payload)
+    if (provenanceGuard && requestedAgent) {
+      decisions.push(await provenanceGuard.handle({ agentName: payload.agentName, requestedAgent }))
+    }
     if (dispatchGuard && payload.projectSlug && requestedAgent) {
       decisions.push(await dispatchGuard.handle({ requestedAgent, projectSlug: payload.projectSlug }))
     }
