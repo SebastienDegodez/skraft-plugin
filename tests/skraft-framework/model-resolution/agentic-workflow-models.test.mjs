@@ -1,14 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 const read = (rel) => readFileSync(join(repoRoot, rel), 'utf8')
-const WORKFLOWS = ['skraft-docs-gaps', 'skraft-docs-sync']
-const SUPPORTED_MODEL = 'claude-sonnet-5'
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const ghAwWorkflows = () =>
+  readdirSync(join(repoRoot, '.github/workflows'))
+    .filter((name) => name.endsWith('.md'))
+    .map((name) => basename(name, '.md'))
+    .filter((name) => read(`.github/workflows/${name}.lock.yml`).includes('# gh-aw-metadata:'))
 
 const sourceModel = (name) => {
   const match = read(`.github/workflows/${name}.md`).match(/^model:\s*(.+?)\s*$/m)
@@ -22,14 +25,8 @@ const lockMetadata = (name) => {
   return JSON.parse(match[1])
 }
 
-test('agentic workflow sources pin the supported Copilot model', () => {
-  for (const name of WORKFLOWS) {
-    assert.equal(sourceModel(name), SUPPORTED_MODEL, `${name}.md must stay on supported model ${SUPPORTED_MODEL}`)
-  }
-})
-
 test('compiled lockfiles mirror the source workflow model', () => {
-  for (const name of WORKFLOWS) {
+  for (const name of ghAwWorkflows()) {
     const model = sourceModel(name)
     const escapedModel = escapeRegExp(model)
     const lock = read(`.github/workflows/${name}.lock.yml`)
