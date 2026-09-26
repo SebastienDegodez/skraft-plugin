@@ -1,0 +1,42 @@
+name: brownfield-harness-builder
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Brownfield Harness Builder refuses to invent a service target when
+  the requested path is inaccessible.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 4m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  threshold: 0.9
+stimuli:
+  - name: Inaccessible target service blocks harness setup
+    prompt: |
+      Build the safety net for the service at `/definitely/missing/service`. Discover its contract,
+      stand up mocks, and lock in current behaviour. Do not substitute another target.
+    tags:
+      agent: brownfield-harness-builder
+      scenario: missing-target-service
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/empty-repo/README.md
+          dest: README.md
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: empty harness workspace"'
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Missing target service is reported as a blocker
+        config:
+          pattern: '(?is)(blocked|missing input|missing target|/definitely/missing/service|not accessible)'
+      - type: diff-empty

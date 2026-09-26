@@ -1,0 +1,42 @@
+name: brownfield-refactorer
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Brownfield Refactorer refuses to proceed without a safety net and
+  redirects the developer to the harness-building workflow first.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 4m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  threshold: 0.9
+stimuli:
+  - name: Missing safety net blocks refactoring and points to harness building
+    prompt: |
+      Refactor the pricing module safely, but there is no existing harness or characterization test
+      for it. Tell me what happens next and stop without changing code.
+    tags:
+      agent: brownfield-refactorer
+      scenario: missing-safety-net
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/no-safety-net/README.md
+          dest: README.md
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: refactor request without harness"'
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Missing safety net is reported as a blocker
+        config:
+          pattern: '(?is)(blocked|missing_precondition|no safety net|Brownfield Harness Builder)'
+      - type: diff-empty

@@ -1,0 +1,42 @@
+name: brownfield-analyst
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Brownfield Analyst reports an inaccessible repository path as a
+  blocker instead of inventing a PRD from nothing.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 4m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  threshold: 0.9
+stimuli:
+  - name: Inaccessible repository path blocks analysis
+    prompt: |
+      Analyze the brownfield repository at `/definitely/missing/repository` and produce the PRD I
+      would hand to backlog tooling. Do not substitute another path.
+    tags:
+      agent: brownfield-analyst
+      scenario: missing-repository-path
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files:
+        - src: fixtures/empty-repo/README.md
+          dest: README.md
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: empty brownfield workspace"'
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Missing repository path is reported as a blocker
+        config:
+          pattern: '(?is)(blocked|missing_input|repository path not accessible|/definitely/missing/repository)'
+      - type: diff-empty
