@@ -1,5 +1,5 @@
 ---
-model: claude-sonnet-5
+model: gpt-5-mini
 engine:
   id: copilot
 description: |
