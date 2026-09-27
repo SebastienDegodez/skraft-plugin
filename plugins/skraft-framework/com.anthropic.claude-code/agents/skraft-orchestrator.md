@@ -249,7 +249,7 @@ Paths use the resolved tracking root, normally `.copilot-tracking/skraft-plans/{
 |---|---|---|---|
 | RESEARCH | `Skraft - Solution Researcher` | — (none; closed via manual `close-phase`) | `research/{date}/{slug}-research.md` |
 | DESIGN | `Skraft - Solution Architect` | `Skraft - Solution Architect Reviewer` | `details/{date}/event-model-*.md`, `details/{date}/contracts-*.md`. ADRs live in repository `docs/adr/` and exist only for decisions the eligibility gate admits; their absence is not a missing artefact. |
-| DISTILL | `Skraft - Acceptance Designer` | `Skraft - Acceptance Designer Reviewer` | `features/*.feature`, `details/{date}/impl-plan-*.md`, `tests/**/{Feature}AcceptanceTests.cs` (RED) |
+| DISTILL | `Skraft - Acceptance Designer` | `Skraft - Acceptance Designer Reviewer` | `features/*.feature`, `details/{date}/test-plan-*.md`, `details/{date}/impl-plan-*.md`, `tests/**/{Feature}AcceptanceTests.cs` (RED) |
 | DELIVER | `Skraft - Software Engineer` | `Skraft - Software Engineer Reviewer` | Committed code + passing tests + `changes/{date}/change-log.md` |
 
 The refined story that RESEARCH and DESIGN consume (`plans/{date}/stories-*.md`) is produced by the standalone `Skraft - Backlog Planner` (product layer), not by this orchestrator.
@@ -258,8 +258,16 @@ The refined story that RESEARCH and DESIGN consume (`plans/{date}/stories-*.md`)
 
 DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from here.
 
-1. Read the implementation plan, features and approved forecast from their recorded refs.
-2. Dispatch `Skraft - Software Engineer` with those refs and existing contract artefacts. Include exact reporting output directory, confirmed media policy, and [qa-reporting entry](../../skills/qa-reporting/SKILL.md). Require engineer-owned quality evidence, change log, actual-impact outcome data and frontend manifest on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
+1. Read the recorded DISTILL refs (`state.mjs get --field phaseArtifacts`) and the approved forecast ref. Do not open the plans yourself.
+2. Dispatch `Skraft - Software Engineer` with this required ref list — a missing entry makes the engineer re-plan the story:
+   - `.feature` file(s)
+   - `test-plan-{story}.md`
+   - `impl-plan-{story}.md`
+   - outer acceptance test path(s) returned by the acceptance designer
+   - `contracts-{story}.md` and `docs/adr/decisions-index.md`
+   - approved forecast ref, exact reporting output directory, confirmed media policy, [qa-reporting entry](../../skills/qa-reporting/SKILL.md)
+
+   Require engineer-owned quality evidence, change log, actual-impact outcome data and frontend manifest on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
 3. Dispatch `Skraft - Software Engineer Reviewer` with produced code/tests and raw outcome, forecast, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
 4. Handle verdict using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED` or blocked DELIVER, record the persisted review and route the outcome below. Engineer owns capture and change-log production, never you. Mark pipeline complete only on engineering approval; publication failure does not change that verdict.

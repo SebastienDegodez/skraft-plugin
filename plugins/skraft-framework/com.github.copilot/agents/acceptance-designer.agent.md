@@ -128,34 +128,43 @@ Apply the bdd-methodology skill fully. Per feature file:
 
 ### 4. TEST PLAN (via test-design-mandates skill)
 
-Build the coverage matrix:
+Build the coverage matrix. The software-engineer applies each row as written, so leave no cell to decide later:
 
-| Scenario | Use Case Boundary | Layer | Double Type | Walking Skeleton | Priority |
-|---|---|---|---|---|---|
-| {name} | {use-case-name} | Application | InMemory repository | A | P1 |
+| Scenario | Use Case Boundary | Layer | Double Type | Walking Skeleton | Extraction Reason | Priority |
+|---|---|---|---|---|---|---|
+| {name} | {use-case-name} | Application | InMemory repository | A | — | P1 |
+| {name} — {Policy} rule sweep | {use-case-name} | Domain | none | — | Gate a | P2 |
 
-Apply the 4 mandates and select Walking Skeleton strategy (A/B/C/D) per feature.
+Apply the 4 mandates and select Walking Skeleton strategy (A/B/C/D) per feature. `Extraction Reason` is `—` for non-Domain rows and the Mandate 4 gate code (`Gate a` / `Gate b`) for every planned Domain unit test.
 
 ### 5. IMPLEMENTATION PLAN
 
-Derive the outside-in order from the test plan. Each step must name:
+Derive the outside-in order from the test plan. The software-engineer runs the steps in this order, one slice per step, without re-planning. Cover EVERY scenario of the `.feature`, not only the first. Each step must name:
+- The **scenario** and its **test-plan row**
 - The **file to create** (`tests/…` or `src/…`)
 - The **test or class to write**
 - The **use case boundary** it enters through
 
 ```markdown
 ## Step 1 — Acceptance test (Application layer)
+- Scenario: `{Scenario title}` — test-plan row `{Scenario}`
 - Test: `tests/MyContext.UnitTest/Features/{Feature}/{Scenario}Test.cs`
 - Enters through: `{UseCaseName}` use case
 - Double: InMemory{Repository}
 
 ## Step 2 — Domain extraction (if complex invariant)
+- Scenario: `{Scenario title}` — test-plan row `{Scenario} — {Policy} rule sweep` (Gate a)
 - Test: `tests/MyContext.UnitTest/Domain/{Policy}PolicyTests.cs`
 - Extracted from: RED phase of Step 1
 
 ## Step 3 — Infrastructure adapter
 - Test: `tests/MyContext.IntegrationTest/Infrastructure/{Adapter}Tests.cs`
 - Real: PostgreSQL via Testcontainers
+
+## Step 4 — Acceptance test for the next scenario
+- Scenario: `{Next scenario title}` — test-plan row `{Next scenario}`
+- Test: next case in the Step 1 test file
+- Enters through: `{UseCaseName}` use case
 ```
 
 ### 6. IMPLEMENT OUTER ACCEPTANCE TEST (RED)

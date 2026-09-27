@@ -15,8 +15,8 @@ La phase DELIVER implémente le code fonctionnel, guidé par les tests, avec une
 
 | | |
 |---|---|
-| **Vient de** | **DISTILL** — les scénarios Gherkin + le plan |
-| **Ce qui entre** | Spécifications exécutables à implémenter ; rapport prévisionnel du flux de reporting approuvé |
+| **Vient de** | **DISTILL** — les scénarios Gherkin, le plan de tests, le plan d'implémentation et le test d'acceptation RED |
+| **Ce qui entre** | Spécifications exécutables à implémenter, dans l'ordre du plan d'implémentation, avec la couche et le double du plan de tests pour chaque scénario ; rapport prévisionnel du flux de reporting approuvé |
 | **Ce qui sort** | Code testé + évidence qualité (mutation, RED→GREEN) ; rapport de résultat à la fin ou au blocage |
 | **Va vers** | La **Pull Request** — revue humaine puis livraison |
 | **Agent responsable** | `software-engineer` |

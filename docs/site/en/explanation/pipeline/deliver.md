@@ -15,8 +15,8 @@ The DELIVER phase implements working code, guided by tests, with empirically ver
 
 | | |
 |---|---|
-| **Comes from** | **DISTILL** — the Gherkin scenarios + the plan |
-| **What enters** | Executable specifications to implement; forecast from the approved reporting flow |
+| **Comes from** | **DISTILL** — the Gherkin scenarios, the test plan, the implementation plan and the RED acceptance test |
+| **What enters** | Executable specifications to implement, in the implementation plan's order, with the test plan's layer and double per scenario; forecast from the approved reporting flow |
 | **What exits** | Tested code + quality evidence (mutation, RED→GREEN); outcome report at completion or blockage |
 | **Goes to** | The **Pull Request** — human review then delivery |
 | **Responsible agent** | `software-engineer` |

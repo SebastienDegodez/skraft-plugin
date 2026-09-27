@@ -539,7 +539,9 @@
     "Skraft - Software Engineer": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature",
-        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md"
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md",
+        "tests/**/{Feature}AcceptanceTests.cs"
       ],
       "outputs": [
         "Source code commits (conventional commits)",

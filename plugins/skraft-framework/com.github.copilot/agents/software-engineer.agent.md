@@ -38,10 +38,12 @@ metadata:
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
+      - tests/**/{Feature}AcceptanceTests.cs
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
-        - docs/adr/adr-{NNN}-{slug}.md
+      - docs/adr/decisions-index.md
   outputs:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
@@ -106,16 +108,17 @@ These are owned by the skills — load them, do not inline rules here.
 ## Execution Workflow (Execute in Order)
 
 ### 1. PREPARE
-- Load the DISTILL artefacts: the `.feature`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Run the suite to confirm the acceptance test is RED on a business assertion.
+- Load the DISTILL artefacts: the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Take their paths from the dispatch refs; without a ref, search `.copilot-tracking/skraft-plans/{projectSlug}/`. Run the suite to confirm the acceptance test is RED on a business assertion.
 - Do NOT re-author the acceptance test or alter its input / expected values (Iron Rule of tests).
-- Identify entry boundaries and expected outward effects from the existing acceptance test + impl-plan.
+- Identify entry boundaries and expected outward effects from the existing acceptance test + the impl-plan step of the active scenario. Use the file, test and use case boundary that step names.
+- Respect the test-plan row of the active scenario: every test you write uses its layer, use case boundary and double type, and a Domain unit test exists only where the test-plan plans one with an `Extraction Reason`. Deviate only when a loaded skill forbids the planned choice, and record `PLAN_DEVIATION: {row} — {planned} → {actual} — {rule}` in the execution journal.
 - Target exactly ONE active behavioral scenario. The acceptance-designer authored the FIRST scenario's test only; once that slice is green and committed, YOU author the next scenario's acceptance test from the `.feature`. Never park a pending scenario with `Skip` / `[Ignore]` — see `outside-in-tdd` → One Acceptance Test at a Time.
 
 ### 2. RED (inner loop)
 - The OUTER acceptance test already exists (from DISTILL). Drive the INNER loop: write ONE failing unit test for the next behavior slice the acceptance test demands.
 - **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile). Never weaken or edit the acceptance test to make it pass.
 - **Capture the RED evidence NOW — it cannot be reconstructed at COMMIT.** The run that proves this test fails is the only evidence gate **G10 — RED observed** accepts. Redirect its stdout and exit code to the evidence directory before writing a line of production code, following the RED-capture recipe of your stack's `quality-gates-<tech>` adapter (`quality-gates-dotnet` for .NET). Load that adapter here, not only at COMMIT. A cycle that reaches COMMIT without its capture is `G10: fail`, never `not_applicable`.
-- **Edge cases not expressible in Gherkin** (defensive branch, exhaustive-enum fallback, combinatorial sweep of an already-decided rule — e.g. a `PolicyService`) are authored HERE via TDD, but ONLY when `test-design-mandates` Mandate 4 Gate (a) or (b) opens, and ONLY with values traceable to a decided AC. The domain class emerges from this RED — create nothing before the compile failure (`outside-in-tdd` Step 2). If the case is an UNDECIDED business decision, STOP and escalate to DISCUSS — never invent a verdict or value.
+- **Edge cases not expressible in Gherkin** (defensive branch, exhaustive-enum fallback, combinatorial sweep of an already-decided rule — e.g. a `PolicyService`) are authored HERE via TDD, but ONLY when `test-design-mandates` Mandate 4 Gate (a) or (b) opens, and ONLY with values traceable to a decided AC. A Domain unit test the test-plan does not plan is a `PLAN_DEVIATION`. The domain class emerges from this RED — create nothing before the compile failure (`outside-in-tdd` Step 2). If the case is an UNDECIDED business decision, STOP and escalate to DISCUSS — never invent a verdict or value.
 
 ### 3. SYNTHESIZE-GREEN
 - Write minimal production code to pass the test.
@@ -174,7 +177,7 @@ Before concluding, verify and output this valid markdown checklist visually in t
 Always print a trace of your cycle directly into the chat/console output exclusively. Do not add this to the commit message:
 ```markdown
 ### Cycle <N>: <Behavior>
-**PREPARE**: Target boundary `<Class/Method>`.
+**PREPARE**: impl-plan step `<N>`, test-plan row `<scenario>`. Target boundary `<Class/Method>`. (`PLAN_DEVIATION: …` when one applies.)
 **RED**: Wrote `<TestName>`. Failed because `<reason>`.
 **GREEN**: Implemented `<Classes/Files>`. All green.
 **COMMIT**: <Hash/Message>. Mutation gate: <core exit> / <boundary exit>.
