@@ -70,7 +70,8 @@ Load before starting. If missing, report `[SKILL MISSING] characterize-with-cont
 ```
 Blocked: target service `<path>` is not accessible from workspace `<workspace>`. I cannot access, read, or open target.
 
-Harness built for: <path>
+Target service: <path>
+Harness status: not built
 Contract: none — target service inaccessible; cannot access or open target
 Verdict: FAIL
 Coverage gaps (if any): entire target service inaccessible; no contract discoverable, no code to characterize

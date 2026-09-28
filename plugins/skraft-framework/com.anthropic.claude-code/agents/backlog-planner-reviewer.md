@@ -53,6 +53,8 @@ skill calls are your first actions:
   `severity`.
 - Quote only free-text values and free-text list items.
 - Derive `{date}` from reviewed artefact paths. Never invent today's date.
+- All reviewed artefacts must resolve to one `{projectSlug}` and one `{date}`. If inputs disagree,
+  stop and report the routing conflict instead of guessing an output path.
 - Persist exactly one verdict file with the artifact CLI at
   `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md`. Write no
   other file. Suppress the artifact command's stdout, keep its stderr visible, and check its exit
@@ -136,7 +138,8 @@ values. Pipe exactly that YAML into the `review-verdict` artifact command:
 
 ```bash
 node "$SKRAFT_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
-  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md <<'EOF'
+  --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md \
+  >/dev/null <<'EOF'
 {the verdict YAML built above}
 EOF
 ```
