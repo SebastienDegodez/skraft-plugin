@@ -474,3 +474,90 @@ La commande de couverture des graders — `dotnet test … /p:Threshold=100
 > **Portée de la mesure.** Ce déplacement change l'environnement de départ de plusieurs stimuli
 > de `outside-in-tdd`. Son verdict publié a été obtenu sur l'ancienne fixture ; il faudra le
 > rejouer avant de comparer un futur résultat à celui-là.
+
+## 15. Extension Spring Boot — J1 à J3
+
+Tranche 0 du support Java/Spring Boot : vérifier, avant d'écrire la moindre skill Java, si la
+skill agnostique suffit déjà sur un build Maven multi-module, et si Sonnet 5 sans skill ne gère
+pas déjà ces décisions.
+
+### Sondes préalables (indicatives, pas un verdict)
+
+Sous-agents Sonnet 5, fixture `payment-authorization-spring`, 1–2 runs par cellule, contexte
+de harness non isolé (instructions du dépôt visibles). Signal de direction uniquement.
+
+| Sonde | Sans skill | Avec `clean-architecture-testing` |
+|---|---|---|
+| Couvrir l'adaptateur HTTP | 2/2 bon module ; 1/2 `MockRestServiceServer` (transport simulé in-process) | 2/2 WireMock, vrai HTTP |
+| Adaptateur JPA (piège H2) | 2/2 Testcontainers Postgres + `Replace.NONE` | 1/1 idem |
+| Garde de couches | 1/1 **troisième module** `payment-architecture-test` (Failsafe) | 1/1 ArchUnit dans `payment-integration-test` |
+| Gate de mutation (100 % cœur / 80 % adaptateurs) | 2/2 PIT cross-module correct, gate réel | non sondé |
+
+Lecture : l'outillage Java/Spring est maîtrisé sans skill. L'écart porte sur la politique — deux
+modules de test, serveur de substitution plutôt que transport simulé — et la skill agnostique le
+corrige déjà. Aucune skill Java de placement n'est écrite tant que Vally ne montre pas de trou.
+La sonde mutation relève de la future `quality-gates-java`, pas de cette skill : coupée ici.
+
+### Stimuli
+
+| # | Stimulus | Classe | Preuve | Hypothèse |
+|---|---|---|---|---|
+| J1 | `Spring Boot: the Maven build rejects a layer leak, the save loop stays fast` | décideur | déterministe : sentinelle `mvn -o validate`, `verify` vert, suite rapide verte seule, exactement deux `src/test`, diff dans `payment-integration-test/src/test/`, rien dans `payment-unit-test/src/`, **sonde de fuite** (copie jetable, `spring-web` + `RestClient` injectés dans `payment-application`, `verify` doit échouer) ; rubrique | victoire traitement (sonde P3) |
+| J2 | `Spring Boot: first tests for the REST payment adapter` | décideur | déterministe : sentinelle, `verify` vert, deux `src/test`, diff dans le module lent, production intacte, **sonde refus** (402 → 409 doit casser un test), **sonde requête** (champ JSON `reference` → `ref` doit casser un test) ; rubrique pour le vrai fil HTTP | victoire partielle (sonde P1) |
+| J3 | `Spring Boot: test the JPA order repository adapter` | garde-fou de régression | rubrique | **égalité attendue** ; une défaite est le constat (sonde P2) |
+
+Le near miss S5 couvre la non-activation pour tout le spec. Le S2 .NET (forced-concept
+in-memory) n'est pas rejoué en Java : P2 montre que la base choisit déjà le vrai moteur, J3 garde
+cette tranche. Les noms ne partagent aucun fragment avec les stimuli .NET : `STIMULI` est
+insensible à la casse, et `STIMULI="Spring Boot:"` isole le bloc Java.
+
+### Fixture `fixtures/payment-authorization-spring/`
+
+Exception assumée à la règle « C# d'abord » : le comportement évalué est propre à Maven/Spring
+(module par préoccupation, suites Failsafe, mocks de transport Spring).
+
+- Spring Boot 3.5.14, Java 21, Maven multi-module, un sous-projet par couche :
+  `payment-domain` (aucune dépendance), `payment-application` (→ domain),
+  `payment-infrastructure` (→ application, `spring-web`, Jackson),
+  `payment-app` (racine de composition `@SpringBootApplication`).
+- Deux sous-projets de test existants et verts : `payment-unit-test` (cas d'usage, stubs
+  écrits à la main) et `payment-integration-test` (adaptateur fichier réel).
+- Piège J2 : `HttpPaymentGateway` reçoit son `RestClient` par constructeur.
+- Aucun Docker requis. Setup : `mvn -B -q -ntp verify` en ligne (réchauffe `~/.m2`), puis graders
+  hors ligne (`-o`) et bornés.
+
+### Budget
+
+`defaults.runs` vaut 4 pour tout le spec (§7) : 3 × 4 = **12 essais Java par bras**, 32 avec le
+bloc .NET. Écart assumé avec les 5 runs proposés : changer `defaults.runs` déplacerait aussi le
+budget .NET. Avec ~50 % d'égalités, le bloc Java seul vise 4–6 paires discordantes, sous le
+seuil de 6 : son verdict se lit poolé avec le .NET.
+
+### Dépense étagée
+
+1. **A — harnais** : 1 essai de J2 (le plus destructeur : edits de pom, dépendances, transport).
+   `STIMULI="Spring Boot: first tests" PILOT_RUNS=1 eng/run-vally-evals.sh clean-architecture-testing`
+2. **B — pilote** : J1, 4 runs.
+   `STIMULI="Spring Boot: the Maven build" PILOT_RUNS=4 eng/run-vally-evals.sh clean-architecture-testing`
+3. **C — bras complet** : tout le spec, après un pilote qui montre une direction.
+
+Prérequis : JDK 21+ et Maven 3.9 sur la machine qui exécute. Le workflow CI d'évaluation n'installe
+pas Java : suivi séparé.
+
+### Validations statiques réalisées
+
+- `vally lint --eval-spec … --strict` : valide ; `loadEvalSpec` : 8 stimuli, rubriques à côté des
+  graders, `skill-invocation` partout, `scale_1_10`, aucun `scoring.weights`, 20 chemins de
+  fixture présents, destinations sûres.
+- Fixture : `mvn -B verify` vert (2 tests unitaires, 1 d'intégration).
+- Rejeu des graders déterministes : fixture intacte → J1 échoue placement + sonde de fuite, J2
+  échoue placement + deux sondes ; P3-t1 passe tout J1 ; P3-b1 échoue exactement les deux graders
+  structurels ; les quatre espaces P1 passent tout J2 déterministe — seul le juge sépare P1-b2.
+
+### Limites connues
+
+- J2 : le « vrai fil HTTP » n'est jugé que par la rubrique.
+- Essais parallèles sur un `~/.m2` partagé ; les graders construisent en réacteur (`-am`), jamais
+  depuis un artefact installé par un autre essai.
+- Les modifications non commitées de `references/architecture-rules.md` et `examples-dotnet.md`
+  présentes dans l'arbre de travail changent le bras traitement : à trancher avant toute mesure.
