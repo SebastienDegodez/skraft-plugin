@@ -68,10 +68,10 @@ Load before starting. If missing, report `[SKILL MISSING] characterize-with-cont
    If it is missing, outside workspace, or unreadable, emit EXACTLY this blocker wording and stop:
 
 ```
-Blocked: missing target service `<path>` is not accessible from workspace `<workspace>`. I cannot access, read, or open target.
+Blocked: target service `<path>` is not accessible from workspace `<workspace>`. I cannot access, read, or open target.
 
 Harness built for: <path>
-Contract: none — missing target service; cannot access or open target
+Contract: none — target service inaccessible; cannot access or open target
 Verdict: FAIL
 Coverage gaps (if any): entire target service inaccessible; no contract discoverable, no code to characterize
 Next step: provide target service path inside workspace, then rerun.
