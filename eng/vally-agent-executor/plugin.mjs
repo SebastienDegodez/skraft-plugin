@@ -30,7 +30,8 @@ const commandName = ({ identifier = '' }) => identifier.trim().split(/\s+/, 1)[0
 // is admitted only while both hold, and the agent may never touch `.eval-bin`:
 // otherwise it could plant a wrapper that calls the real tool.
 const STAGED_BIN = '.eval-bin'
-const stagedBinReference = /\.eval-bin(?![\w.-])/
+const HARNESS_DIRS = [STAGED_BIN, '.eval']
+const harnessReference = /\.eval|\bgit\s+tag\b/i
 const stagedCommand = (context, name) => {
 	if (!name || name.includes('/') || !context?.workDir) return false
 	const bin = join(context.workDir, STAGED_BIN)
@@ -109,8 +110,8 @@ const absolutePathTokens = (text) => [...text.matchAll(/(?:^|[\s'"`=(<>|&;])(\/[
 // scan, but remove each quoted payload body before extracting absolute paths.
 const shellSyntaxOnly = (text) => text.replace(/<<\s*(['"])([^\r\n]+)\1[^\r\n]*\r?\n[\s\S]*?\r?\n\2(?=\r?\n|$)/g, '<<$1$2$1\n$2')
 
-const insideStagedBin = (workDir, candidate) => Boolean(workDir && candidate)
-	&& insideWorkspace(join(workDir, STAGED_BIN), isAbsolute(candidate) ? candidate : join(workDir, candidate))
+const insideHarness = (workDir, candidate) => Boolean(workDir && candidate)
+	&& HARNESS_DIRS.some((dir) => insideWorkspace(join(workDir, dir), isAbsolute(candidate) ? candidate : join(workDir, candidate)))
 
 const insideAnyRoot = (roots, candidate) => roots.some((root) => insideWorkspace(root, candidate))
 
@@ -131,8 +132,8 @@ export const pilotPermissionHandler = (request, context) => {
 	if (!deliveryWriteAllowed(context)) return rejected('The routing pilot permits read-only workspace access.')
 
 	if (request.kind === 'write') {
-		if (insideStagedBin(context.workDir, request.fileName)) {
-			return rejected('The staged evaluation CLIs are not writable.')
+		if (insideHarness(context.workDir, request.fileName)) {
+			return rejected('The staged evaluation harness is not writable.')
 		}
 		return insideWorkspace(context.workDir, request.fileName)
 			? approved
@@ -151,9 +152,9 @@ export const pilotPermissionHandler = (request, context) => {
 				|| stagedCommand(context, name)
 				|| (name === 'bash' && mutationAdapterScript.test(command.fullCommandText ?? command.identifier ?? ''))
 		})
-		const workspacePaths = paths.every((path) => insideAnyRoot(roots, path))
+		const workspacePaths = paths.every((path) => insideAnyRoot(roots, path) && !insideHarness(context.workDir, path))
 			&& !escapesWorkspace(roots, commandText)
-		const operationAllowed = !forbiddenShell.test(commandText) && !stagedBinReference.test(shellSyntaxOnly(commandText))
+		const operationAllowed = !forbiddenShell.test(commandText) && !harnessReference.test(commandText)
 		return localOnly && knownCommands && workspacePaths && operationAllowed
 			? approved
 			: rejected('Delivery shell access is limited to local build/test/git commands inside the prepared workspace; restore and package installation are disabled.')
