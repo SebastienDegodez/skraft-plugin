@@ -571,7 +571,7 @@ stimuli:
             - clean-architecture-testing
     rubric:
       - Exercises the adapter's own HTTP client over a real connection to a stand-in server, rather than replacing the client or its transport with something that answers in its place.
-      - Covers the provider changing the shape of its answer, not only the answers it documents today.
+      - Enters through the adapter itself and checks what crosses the wire, without booting the whole application to reach it.
       - Leaves the suite developers run on every save as fast as it was.
 
   # Regression guard. Sonnet 5 already picks the real engine here without the

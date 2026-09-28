@@ -561,3 +561,20 @@ pas Java : suivi séparé.
   depuis un artefact installé par un autre essai.
 - Les modifications non commitées de `references/architecture-rules.md` et `examples-dotnet.md`
   présentes dans l'arbre de travail changent le bras traitement : à trancher avant toute mesure.
+
+### Étape A — harnais validé (2026-09-28)
+
+1 essai de J2, deux bras. Harnais sain : sentinelle tenue, poms intacts, les 8 graders déterministes
+passent dans les deux bras, `skill-invocation` chargée côté traitement seulement, ~2,5–3 min par
+bras. Sortie dans `eval-results-pilot/`, jamais un verdict.
+
+Deux défauts d'instrument trouvés et corrigés avant toute mesure :
+
+- Les ancres YAML `&spring-fixture-*` ne survivaient pas à `make-pilot-spec.mjs`, qui extrait les
+  blocs de stimulus comme texte : liste de fixture et setup écrits en toutes lettres dans J1 et J2.
+- La défaite du seul essai (juge 6,7 contre 8,9) venait entièrement de l'item « couvre un
+  changement de forme de la réponse », que la skill n'enseigne pas : bruit hors skill. Remplacé
+  par « entre par l'adaptateur et vérifie ce qui passe sur le fil, sans démarrer l'application ».
+
+Observation : la base a cette fois choisi un vrai serveur HTTP (WireMock). J2 risque de produire
+surtout des égalités ; J1 reste le décideur attendu.
