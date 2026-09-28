@@ -1,8 +1,23 @@
 # Architecture Rules (NetArchTest)
 
-Layer discipline enforced by CI. Every rule is one `[Fact]`. Failure message must list violating types.
+Layer discipline enforced by CI. Every rule is one test. Failure message must list violating types.
 
-## Layer Dependency Rules
+## Project References — the dependency rule
+
+Each project references exactly its inner neighbour. The reference graph is the rule; enforce it on the project files, never on imports.
+
+| Project | References | Never references |
+|---|---|---|
+| Api | Infrastructure | Application, Domain |
+| Infrastructure | Application | Domain, Api |
+| Application | Domain | Infrastructure, Api |
+| Domain | Nothing | Application, Infrastructure, Api |
+
+Types reachable through a transitive reference MAY be imported: Infrastructure uses the Domain types an Application port exposes, Api composes Application use cases through its Infrastructure reference. Never add a direct reference to reach them.
+
+## Type Dependency Rules
+
+What imports can still break once references are correct: outward dependencies and framework leaks into the business code.
 
 | Source layer | Forbidden target | Reason |
 |---|---|---|
@@ -15,7 +30,7 @@ Layer discipline enforced by CI. Every rule is one `[Fact]`. Failure message mus
 | Application | Api | Application is transport-agnostic |
 | Application | `Microsoft.EntityFrameworkCore` | EF Core belongs to Infrastructure |
 | Application | `Microsoft.AspNetCore.*` | HTTP is API only |
-| Api | Application (except `Program.cs`) | API routes through Infrastructure DI / buses |
+| Infrastructure | Api | Infrastructure implements Application interfaces, never transport |
 | SharedKernel | Anything | SharedKernel depends on nothing |
 
 ## Implementation Pattern
@@ -23,6 +38,24 @@ Layer discipline enforced by CI. Every rule is one `[Fact]`. Failure message mus
 ```csharp
 public sealed class ArchitectureTests
 {
+    // ----- Project references -----
+
+    [Theory]
+    [InlineData("MyApp.Domain")]
+    [InlineData("MyApp.Application", "MyApp.Domain")]
+    [InlineData("MyApp.Infrastructure", "MyApp.Application")]
+    [InlineData("MyApp.Api", "MyApp.Infrastructure")]
+    public void Project_ReferencesOnlyItsInnerNeighbour(string project, params string[] allowed)
+    {
+        var references = XDocument.Load(ProjectFile(project))
+            .Descendants("ProjectReference")
+            .Select(reference => Path.GetFileNameWithoutExtension(((string)reference.Attribute("Include")!).Replace('\\', '/')))
+            .Order()
+            .ToArray();
+
+        Assert.Equal(allowed.Order().ToArray(), references);
+    }
+
     // ----- Domain -----
 
     [Fact] public void Domain_ShouldNotDependOn_Application()
@@ -54,19 +87,10 @@ public sealed class ArchitectureTests
     [Fact] public void Application_ShouldNotDependOn_AspNetCore()
         => AssertNoDependency(ApplicationAssembly, "Microsoft.AspNetCore");
 
-    // ----- API -----
+    // ----- Infrastructure -----
 
-    [Fact]
-    public void Api_ShouldNotDependOn_Application_Except_Program()
-    {
-        var result = Types.InAssembly(ApiAssembly)
-            .That().DoNotHaveName("Program")
-            .And().DoNotResideInNamespace("MyApp.Api.Composition")
-            .Should().NotHaveDependencyOn("MyApp.Application")
-            .GetResult();
-
-        Assert.True(result.IsSuccessful, Format(result));
-    }
+    [Fact] public void Infrastructure_ShouldNotDependOn_Api()
+        => AssertNoDependency(InfrastructureAssembly, "MyApp.Api");
 
     // ----- SharedKernel -----
 
@@ -85,8 +109,16 @@ public sealed class ArchitectureTests
     private static readonly Assembly DomainAssembly = typeof(IDomainMarker).Assembly;
     private static readonly Assembly ApplicationAssembly = typeof(IApplicationMarker).Assembly;
     private static readonly Assembly InfrastructureAssembly = typeof(IInfrastructureMarker).Assembly;
-    private static readonly Assembly ApiAssembly = typeof(IApiMarker).Assembly;
     private static readonly Assembly SharedKernelAssembly = typeof(ISharedKernelMarker).Assembly;
+
+    private static string ProjectFile(string project)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !directory.EnumerateFiles("*.sln*").Any())
+            directory = directory.Parent;
+
+        return Path.Combine(directory!.FullName, "src", project, $"{project}.csproj");
+    }
 
     private static void AssertNoDependency(Assembly assembly, string forbidden)
     {
@@ -137,4 +169,4 @@ public void AllCommandHandlers_ShouldImplementICommandHandler()
 
 ## CI Integration
 
-Architecture tests run with the unit test suite (fast, <1 s each). They MUST fail the build on violation — never `Skip = "known issue"`.
+Architecture tests live in the `IntegrationTest` project and run as a CI gate, never in the suite developers run on every save. They MUST fail the build on violation — never `Skip = "known issue"`.

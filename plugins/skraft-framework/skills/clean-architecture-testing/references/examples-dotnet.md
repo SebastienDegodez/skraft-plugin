@@ -237,16 +237,29 @@ public sealed class ArchitectureTests
     public void Application_ShouldNotDependOn_Api()
         => AssertNoDependency(typeof(IApplicationMarker).Assembly, "MyApp.Api");
 
-    [Fact]
-    public void Api_ShouldNotDependOn_Application_Directly()
+    [Theory]
+    [InlineData("MyApp.Domain")]
+    [InlineData("MyApp.Application", "MyApp.Domain")]
+    [InlineData("MyApp.Infrastructure", "MyApp.Application")]
+    [InlineData("MyApp.Api", "MyApp.Infrastructure")]
+    public void Project_ReferencesOnlyItsInnerNeighbour(string project, params string[] allowed)
     {
-        // API goes through Infrastructure DI; direct Application reference is forbidden.
-        var result = Types.InAssembly(typeof(IApiMarker).Assembly)
-            .That().DoNotHaveName("Program")
-            .Should().NotHaveDependencyOn("MyApp.Application")
-            .GetResult();
+        // The reference graph is the rule; transitive types (Domain in Infrastructure, Application in Api) may be imported.
+        var references = XDocument.Load(Path.Combine(SolutionRoot(), "src", project, $"{project}.csproj"))
+            .Descendants("ProjectReference")
+            .Select(reference => Path.GetFileNameWithoutExtension(((string)reference.Attribute("Include")!).Replace('\\', '/')))
+            .Order()
+            .ToArray();
 
-        result.IsSuccessful.Should().BeTrue(Format(result));
+        references.Should().Equal(allowed.Order());
+    }
+
+    private static string SolutionRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !directory.EnumerateFiles("*.sln*").Any())
+            directory = directory.Parent;
+        return directory!.FullName;
     }
 
     private static void AssertNoDependency(Assembly assembly, string forbidden)
