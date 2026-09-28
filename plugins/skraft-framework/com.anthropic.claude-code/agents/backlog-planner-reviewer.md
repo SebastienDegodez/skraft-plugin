@@ -54,7 +54,8 @@ skill calls are your first actions:
 - Quote only free-text values and free-text list items.
 - Derive `{date}` from reviewed artefact paths. Never invent today's date.
 - All reviewed artefacts must resolve to one `{projectSlug}` and one `{date}`. If inputs disagree,
-  stop and report the routing conflict instead of guessing an output path.
+  emit the YAML contract below with `verdict: REJECTED`, `confidence: low`, every lens
+  `status: inconclusive`, and a blocking finding that names the routing conflict.
 - Persist exactly one verdict file with the artifact CLI at
   `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md`. Write no
   other file. Suppress the artifact command's stdout, keep its stderr visible, and check its exit
@@ -71,7 +72,10 @@ Collect artefacts:
 
 READ-ONLY on every artefact listed above. The reviewer never writes to `research/`, `plans/`, `adrs/`, `details/`, `changes/`, or `features/`. Its declared output `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md` is its only writable path.
 
-If artefacts are missing, note them and proceed with available inputs. Never block on context files.
+The stories file and at least one AC draft are required review inputs. Triage context is optional
+reference only. If optional context is missing, note it and continue. If a required review input is
+missing or unreadable, emit the YAML contract below with `verdict: REJECTED`, `confidence: low`,
+every lens `status: inconclusive`, and a blocking finding that names the missing input, then stop.
 
 ### Phase 2: FAN-OUT (B1)
 
