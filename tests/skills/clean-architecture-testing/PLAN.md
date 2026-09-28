@@ -635,3 +635,27 @@ Suites, chacune dans une itération approuvée séparément :
   des couches internes et de la bibliothèque standard) + exemple Java ;
 - J2 : plafond atteint, à remplacer ou requalifier en garde-fou de régression ;
 - J3 : le prompt « écris le test » sans dépôt fait noter la délivrabilité ; reformuler.
+
+### Itération skill — liste blanche (`936f0f5`) et pilote J1 (2026-09-28, 4 runs, non publiable)
+
+Skill : Domain et Application ne dépendent que d'eux-mêmes, des couches internes et du cœur du
+langage (sans I/O, réseau, persistance) ; `references/examples-java.md` ajouté ; exemples .NET
+passés de liste noire à liste blanche. Extraits Java et .NET exécutés avant commit : verts sur un
+projet propre, rouges sur fuite framework, fuite I/O de la bibliothèque standard et référence de
+projet sautant une couche.
+
+| Grader | Base | Traitement |
+|---|---|---|
+| Tests toujours à deux endroits | 0/4 | 4/4 |
+| Garde dans la suite lente | 0/4 | 4/4 |
+| Fuite injectée rejetée par le build | 4/4 | **4/4** (1/4 à l'itération précédente) |
+| Build entier vert | 4/4 | 3/4 → 4/4 après correction du grader |
+
+Graders 4V/0E/0D (signe p = 0,125 : 4 paires discordantes, sous le seuil de 6). Juge 3V/0E/0D, une
+comparaison du juge en erreur exclue. Direction nette, verdict impossible à cette taille.
+
+Défaut d'instrument corrigé : l'échec « build entier vert » de l'essai traitement 0 était un
+dépassement du tampon de sortie de Vally (1,2 Mo de traces journalisées par la garde ArchUnit,
+tests verts). Rejoué sur le diff : vert. Les graders `mvn verify` / `mvn test` écrivent désormais
+dans un fichier temporaire et n'affichent que les 40 dernières lignes en cas d'échec ; vérifié sur
+un build vert bruyant (passe) et un build rouge (échoue, trace visible).

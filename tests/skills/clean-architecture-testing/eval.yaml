@@ -326,18 +326,24 @@ stimuli:
           args: [-B, -q, -o, validate]
           expected_exit_code: 0
           timeout: 2m
+      # Output goes to a scratch file: a guard that logs heavily while green
+      # must not fail on Vally's output buffer.
       - type: run-command
         name: Every test in the build is green
         config:
-          command: mvn
-          args: [-B, -q, -o, verify]
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
           expected_exit_code: 0
           timeout: 5m
       - type: run-command
         name: The fast suite is still green on its own
         config:
-          command: mvn
-          args: [-B, -q, -o, test, -pl, payment-unit-test, -am]
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -o test -pl payment-unit-test -am >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
           expected_exit_code: 0
           timeout: 3m
       # Structural sentinel: the two-speed suite does not grow a third home for
@@ -490,8 +496,10 @@ stimuli:
       - type: run-command
         name: Every test in the build is green
         config:
-          command: mvn
-          args: [-B, -q, -o, verify]
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
           expected_exit_code: 0
           timeout: 5m
       - type: run-command
