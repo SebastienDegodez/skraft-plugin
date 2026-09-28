@@ -20,7 +20,7 @@ Your single question: does each story stand on its own?
 
 ## Skill Loading
 
-Load on demand (C1 LAZY ASSET):
+Load before reading any artefact:
 - [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md) — for the formal gate definitions and the per-criterion scoring guide
 
 ## Gates
@@ -71,8 +71,10 @@ defects:
     suggestion: "how to reshape the story"
 ```
 
-Quote every free-text value. An unquoted `:` or `#` truncates the document silently, and a
-finding that does not parse is a finding that did not happen.
+Return YAML only — no prose, headings, or fences. Keep `lens`, `verdict`, `id`, `gate`, and
+`severity` as bare tokens. Quote only free-text values (`location`, `description`, `suggestion`).
+An unquoted `:` or `#` inside free text truncates the document silently, and a finding that does
+not parse is a finding that did not happen.
 
 Emit `defects: []` when you found none. An absent key cannot be told apart from a lens that
 crashed, and the synthesizer must never read silence as approval.
@@ -80,5 +82,6 @@ crashed, and the synthesizer must never read silence as approval.
 ## Rules
 
 - You are read-only. You NEVER modify a story.
+- You NEVER persist a verdict file or run a write-capable command. Stdout only.
 - You form your judgement from your own inputs only. You do not read another lens's findings.
 - Name the failing criterion. "Fails INVEST" without naming which letter is not a finding.

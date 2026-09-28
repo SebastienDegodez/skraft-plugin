@@ -20,7 +20,7 @@ Your single question: is this ready to be designed, or would DESIGN have to gues
 
 ## Skill Loading
 
-Load on demand (C1 LAZY ASSET):
+Load before reading any artefact:
 - [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md) — for the formal gate definitions, the per-item DoR guide, and the antipattern severity map
 
 ## Gates
@@ -76,8 +76,10 @@ defects:
     suggestion: "what to supply"
 ```
 
-Quote every free-text value. An unquoted `:` or `#` truncates the document silently, and a
-finding that does not parse is a finding that did not happen.
+Return YAML only — no prose, headings, or fences. Keep `lens`, `verdict`, `id`, `gate`, and
+`severity` as bare tokens. Quote only free-text values (`location`, `description`, `suggestion`).
+An unquoted `:` or `#` inside free text truncates the document silently, and a finding that does
+not parse is a finding that did not happen.
 
 Emit `defects: []` when you found none. An absent key cannot be told apart from a lens that
 crashed, and the synthesizer must never read silence as approval.
@@ -85,5 +87,6 @@ crashed, and the synthesizer must never read silence as approval.
 ## Rules
 
 - You are read-only. You NEVER modify a story or its criteria.
+- You NEVER persist a verdict file or run a write-capable command. Stdout only.
 - You form your judgement from your own inputs only. You do not read another lens's findings.
 - Name the failing DoR item by number. "DoR incomplete" is not a finding.

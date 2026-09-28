@@ -57,12 +57,26 @@ Load before starting. If missing, report `[SKILL MISSING] characterize-with-cont
 3. **NEVER reinvent stack/mocking wiring** — always delegate to `contract-testing-roster` /
    `mocking-strategy-roster` through `characterize-with-contracts`.
 4. **NEVER proceed to refactoring** — that is out of scope; hand off the verdict and stop.
+5. **If target path is missing, outside workspace, or unreadable, stop immediately with blocker
+   template below. Do not ask follow-up questions first.**
 
 ## Execution
 
 ### Phase 1 — Establish and build
 
-1. Confirm the target service/project with the human.
+1. Confirm the target service/project with the human when the path is readable inside workspace.
+   If it is missing, outside workspace, or unreadable, emit EXACTLY this blocker wording and stop:
+
+```
+Blocked: missing target service `<path>` is not accessible from workspace `<workspace>`. I cannot access, read, or open target.
+
+Harness built for: <path>
+Contract: none — missing target service; cannot access or open target
+Verdict: FAIL
+Coverage gaps (if any): entire target service inaccessible; no contract discoverable, no code to characterize
+Next step: provide target service path inside workspace, then rerun.
+```
+
 2. Load `characterize-with-contracts`; execute its full procedure (contract discovery/
    reconstruction, harness resolution via the rosters, characterization tests).
 
