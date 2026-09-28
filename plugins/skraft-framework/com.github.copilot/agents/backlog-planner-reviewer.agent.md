@@ -142,7 +142,7 @@ values. Pipe exactly that YAML into the `review-verdict` artifact command:
 ```bash
 node "$SKRAFT_PLUGIN_ROOT/src/cli/artifact.mjs" review-verdict \
   --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md \
-  >/dev/null <<'EOF'
+  <<'EOF' >/dev/null
 {the verdict YAML built above}
 EOF
 ```
