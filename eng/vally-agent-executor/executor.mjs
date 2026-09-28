@@ -296,6 +296,7 @@ export const createAgentExecutor = ({
             // the command it was just ordered to run, and the refusal reads as
             // the agent declining to write its artefact.
             readableRoots: [options.workDir, pluginRoot, ...skillDirectories],
+            searchPath: env?.PATH,
           }),
         })
         session.on((event) => {

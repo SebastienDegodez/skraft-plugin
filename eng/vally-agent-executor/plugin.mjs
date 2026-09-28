@@ -1,8 +1,8 @@
 import { CopilotClient } from '@github/copilot-sdk'
 import { computeMetrics } from '@microsoft/vally'
 import { CopilotAdapter } from '@microsoft/vally/trajectory'
-import { realpathSync } from 'node:fs'
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { realpathSync, statSync } from 'node:fs'
+import { basename, delimiter, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { createAgentExecutor } from './executor.mjs'
@@ -25,6 +25,23 @@ const localCommands = new Set([
 const mutationAdapterScript = /^bash\s+scripts\/(?:configure-mutation|mutation-core|mutation-boundary)\.sh(?:\s|$)/
 const forbiddenShell = /(?:^|\s)(?:restore|add\s+package|tool\s+(?:install|update)|nuget\s+push|git\s+(?:clean|reset\s+--hard))(?:\s|$)/i
 const commandName = ({ identifier = '' }) => identifier.trim().split(/\s+/, 1)[0]
+// A suite may stage a scripted CLI in the workspace `.eval-bin`, first on PATH,
+// so a command such as `gh` reaches a fake host instead of a real one. The name
+// is admitted only while both hold, and the agent may never touch `.eval-bin`:
+// otherwise it could plant a wrapper that calls the real tool.
+const STAGED_BIN = '.eval-bin'
+const stagedBinReference = /\.eval-bin(?![\w.-])/
+const stagedCommand = (context, name) => {
+	if (!name || name.includes('/') || !context?.workDir) return false
+	const bin = join(context.workDir, STAGED_BIN)
+	const [first] = String(context.searchPath ?? '').split(delimiter)
+	if (first !== bin) return false
+	try {
+		return statSync(join(bin, name)).isFile()
+	} catch {
+		return false
+	}
+}
 // A device node carries no repository evidence, so it stays reachable even
 // though it sits outside the prepared workspace.
 const neutralAbsolutePath = /^\/dev\//
@@ -92,6 +109,9 @@ const absolutePathTokens = (text) => [...text.matchAll(/(?:^|[\s'"`=(<>|&;])(\/[
 // scan, but remove each quoted payload body before extracting absolute paths.
 const shellSyntaxOnly = (text) => text.replace(/<<\s*(['"])([^\r\n]+)\1[^\r\n]*\r?\n[\s\S]*?\r?\n\2(?=\r?\n|$)/g, '<<$1$2$1\n$2')
 
+const insideStagedBin = (workDir, candidate) => Boolean(workDir && candidate)
+	&& insideWorkspace(join(workDir, STAGED_BIN), isAbsolute(candidate) ? candidate : join(workDir, candidate))
+
 const insideAnyRoot = (roots, candidate) => roots.some((root) => insideWorkspace(root, candidate))
 
 const escapesWorkspace = (roots, text) => absolutePathTokens(shellSyntaxOnly(text))
@@ -111,6 +131,9 @@ export const pilotPermissionHandler = (request, context) => {
 	if (!deliveryWriteAllowed(context)) return rejected('The routing pilot permits read-only workspace access.')
 
 	if (request.kind === 'write') {
+		if (insideStagedBin(context.workDir, request.fileName)) {
+			return rejected('The staged evaluation CLIs are not writable.')
+		}
 		return insideWorkspace(context.workDir, request.fileName)
 			? approved
 			: rejected('Delivery writes must stay inside the prepared evaluation workspace.')
@@ -124,11 +147,13 @@ export const pilotPermissionHandler = (request, context) => {
 		const localOnly = urls.length === 0 && !request.requestSandboxBypass
 		const knownCommands = commands.length > 0 && commands.every((command) => {
 			const name = commandName(command)
-			return localCommands.has(name) || (name === 'bash' && mutationAdapterScript.test(command.fullCommandText ?? command.identifier ?? ''))
+			return localCommands.has(name)
+				|| stagedCommand(context, name)
+				|| (name === 'bash' && mutationAdapterScript.test(command.fullCommandText ?? command.identifier ?? ''))
 		})
 		const workspacePaths = paths.every((path) => insideAnyRoot(roots, path))
 			&& !escapesWorkspace(roots, commandText)
-		const operationAllowed = !forbiddenShell.test(commandText)
+		const operationAllowed = !forbiddenShell.test(commandText) && !stagedBinReference.test(shellSyntaxOnly(commandText))
 		return localOnly && knownCommands && workspacePaths && operationAllowed
 			? approved
 			: rejected('Delivery shell access is limited to local build/test/git commands inside the prepared workspace; restore and package installation are disabled.')
