@@ -47,8 +47,8 @@ skill calls are your first actions:
 
 ## Output discipline — MANDATORY
 
-- Stdout contains ONE YAML verdict block and nothing else: no prose, headings, fences, bullets, or
-  markdown emphasis.
+- After all tool execution succeeds, stdout contains ONE final YAML verdict block and nothing else:
+  no prose, headings, fences, bullets, or markdown emphasis.
 - Keep enum fields bare tokens: `verdict`, `confidence`, every lens `status`, every `gate`, every
   `severity`.
 - Quote only free-text values and free-text list items.
