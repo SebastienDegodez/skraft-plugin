@@ -1,6 +1,6 @@
-# Architecture Rules (NetArchTest)
+# Architecture Rules
 
-Layer discipline enforced by CI. Every rule is one test. Failure message must list violating types.
+Layer discipline enforced by CI. Every rule is one test. Failure message must list violating types. The rules are language-agnostic; the implementation below is .NET (NetArchTest), the Java one is in [examples-java.md](examples-java.md).
 
 ## Project References — the dependency rule
 
@@ -17,19 +17,17 @@ Types reachable through a transitive reference MAY be imported: Infrastructure u
 
 ## Type Dependency Rules
 
-What imports can still break once references are correct: outward dependencies and framework leaks into the business code.
+Correct references still let the business code import a framework, an I/O type or a network client. Guard Domain and Application with an **allow-list**: a deny-list only catches the frameworks someone thought to name, and a guard limited to the project's own layers catches none.
+
+| Layer | May depend on | Everything else fails the build, including |
+|---|---|---|
+| Domain | Domain, the language core | frameworks, I/O, network, persistence, every other layer |
+| Application | Application, Domain, the language core | frameworks, I/O, network, persistence, Infrastructure, Api |
+
+The language core excludes I/O, network and persistence (.NET: `System` minus `System.IO`, `System.Net`, `System.Data`; Java: `java.lang`, `java.util`, `java.time`, `java.math`).
 
 | Source layer | Forbidden target | Reason |
 |---|---|---|
-| Domain | Application | Inversion: Domain must not know about orchestration |
-| Domain | Infrastructure | Iron Law: Infrastructure flows inward only via interfaces |
-| Domain | Api | Domain is framework-agnostic |
-| Domain | `Microsoft.EntityFrameworkCore` | Persistence is Infrastructure only |
-| Domain | `Microsoft.AspNetCore.*` | HTTP is API only |
-| Application | Infrastructure | Application depends on Domain + abstractions |
-| Application | Api | Application is transport-agnostic |
-| Application | `Microsoft.EntityFrameworkCore` | EF Core belongs to Infrastructure |
-| Application | `Microsoft.AspNetCore.*` | HTTP is API only |
 | Infrastructure | Api | Infrastructure implements Application interfaces, never transport |
 | SharedKernel | Anything | SharedKernel depends on nothing |
 
@@ -56,36 +54,13 @@ public sealed class ArchitectureTests
         Assert.Equal(allowed.Order().ToArray(), references);
     }
 
-    // ----- Domain -----
+    // ----- Domain and Application: allow-list -----
 
-    [Fact] public void Domain_ShouldNotDependOn_Application()
-        => AssertNoDependency(DomainAssembly, "MyApp.Application");
+    [Fact] public void Domain_DependsOnlyOnItselfAndTheLanguageCore()
+        => AssertOnly(DomainAssembly, "MyApp.Domain");
 
-    [Fact] public void Domain_ShouldNotDependOn_Infrastructure()
-        => AssertNoDependency(DomainAssembly, "MyApp.Infrastructure");
-
-    [Fact] public void Domain_ShouldNotDependOn_Api()
-        => AssertNoDependency(DomainAssembly, "MyApp.Api");
-
-    [Fact] public void Domain_ShouldNotDependOn_EntityFrameworkCore()
-        => AssertNoDependency(DomainAssembly, "Microsoft.EntityFrameworkCore");
-
-    [Fact] public void Domain_ShouldNotDependOn_AspNetCore()
-        => AssertNoDependency(DomainAssembly, "Microsoft.AspNetCore");
-
-    // ----- Application -----
-
-    [Fact] public void Application_ShouldNotDependOn_Infrastructure()
-        => AssertNoDependency(ApplicationAssembly, "MyApp.Infrastructure");
-
-    [Fact] public void Application_ShouldNotDependOn_Api()
-        => AssertNoDependency(ApplicationAssembly, "MyApp.Api");
-
-    [Fact] public void Application_ShouldNotDependOn_EntityFrameworkCore()
-        => AssertNoDependency(ApplicationAssembly, "Microsoft.EntityFrameworkCore");
-
-    [Fact] public void Application_ShouldNotDependOn_AspNetCore()
-        => AssertNoDependency(ApplicationAssembly, "Microsoft.AspNetCore");
+    [Fact] public void Application_DependsOnlyOnInnerLayersAndTheLanguageCore()
+        => AssertOnly(ApplicationAssembly, "MyApp.Application", "MyApp.Domain");
 
     // ----- Infrastructure -----
 
@@ -126,6 +101,20 @@ public sealed class ArchitectureTests
             .Should().NotHaveDependencyOn(forbidden)
             .GetResult();
         Assert.True(result.IsSuccessful, Format(result));
+    }
+
+    // `System` is the base library; I/O, network and persistence inside it are technical details too.
+    private static void AssertOnly(Assembly assembly, params string[] layers)
+    {
+        var frameworks = Types.InAssembly(assembly)
+            .Should().OnlyHaveDependenciesOn([.. layers, "System"])
+            .GetResult();
+        var io = Types.InAssembly(assembly)
+            .Should().NotHaveDependencyOnAny("System.IO", "System.Net", "System.Data")
+            .GetResult();
+
+        Assert.True(frameworks.IsSuccessful, Format(frameworks));
+        Assert.True(io.IsSuccessful, Format(io));
     }
 
     private static string Format(TestResult result)

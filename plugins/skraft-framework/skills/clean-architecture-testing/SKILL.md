@@ -107,7 +107,7 @@ Pick one mocking library per solution and stick to it. Same for the app host fac
 
 ## Per-Layer Examples (pseudo-code)
 
-Full runnable .NET examples: [examples-dotnet.md](references/examples-dotnet.md). Same patterns translate directly to Java, Python, TypeScript — the roles are identical.
+Full runnable examples: [examples-dotnet.md](references/examples-dotnet.md) (.NET) and [examples-java.md](references/examples-java.md) (Java / Spring Boot, Maven). The roles are identical across languages.
 
 ### Application — acceptance test
 
@@ -150,9 +150,15 @@ then response.status == 201
 ### Architecture — layer rule
 
 ```
-assert types in DomainAssembly have no dependency on "MyApp.Infrastructure"
-  else fail with "Domain must not reference Infrastructure. Violations: ..."
+assert each project references only its inner neighbour
+  (Api → Infrastructure → Application → Domain)
+
+assert types in Domain depend only on Domain and the language core
+assert types in Application depend only on Application, Domain and the language core
+  else fail with "Violations: ..."
 ```
+
+The language core excludes I/O, network and persistence. Allow-list the business code: a rule that only forbids the other layers lets every framework through.
 
 ## External Contract Mocks (Infrastructure & API)
 
@@ -206,6 +212,7 @@ Extended tree with tie-breakers: [doubles-decision-tree.md](references/doubles-d
 | Shared global container across test classes | One container per test class, isolated lifecycle. |
 | In-process app host used to test a handler | Switch to an Application-level test with mocks. |
 | No architecture test guarding layer references | Add the rule. Layer discipline must be enforced by CI, not reviews. |
+| Architecture test that only forbids the other layers | Allow-list what Domain and Application may depend on; a framework or an I/O client passes a layer-only rule. |
 | In-memory fake DB provider used as Infrastructure test | Infrastructure tests MUST use the real provider via real container. In-memory providers silently accept invalid SQL. |
 | One acceptance test covers 5 rules | Split: one Gherkin scenario = one test. |
 | Duplicating acceptance coverage with a Domain test on the same rule | Delete the Domain test unless the rule was extracted. |
@@ -226,5 +233,6 @@ These thoughts signal you're about to violate the policy:
 ## References
 
 - [examples-dotnet.md](references/examples-dotnet.md) — full runnable .NET examples (FakeItEasy, Testcontainers, in-process app host, architecture scanner)
-- [architecture-rules.md](references/architecture-rules.md) — complete architecture rule set (.NET flavour; rules themselves are language-agnostic)
+- [examples-java.md](references/examples-java.md) — Maven module layout and the ArchUnit architecture guard for Java / Spring Boot
+- [architecture-rules.md](references/architecture-rules.md) — complete architecture rule set (project references + allow-list; .NET implementation)
 - [doubles-decision-tree.md](references/doubles-decision-tree.md) — extended decision tree with tie-breakers

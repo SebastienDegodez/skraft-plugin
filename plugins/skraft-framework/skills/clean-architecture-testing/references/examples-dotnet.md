@@ -221,21 +221,14 @@ For E2E tests that hit a DB, override services in `WebApplicationFactory<Program
 ```csharp
 public sealed class ArchitectureTests
 {
+    // Allow-list: a guard limited to the solution's own layers lets every framework through.
     [Fact]
-    public void Domain_ShouldNotDependOn_Infrastructure()
-        => AssertNoDependency(typeof(IDomainMarker).Assembly, "MyApp.Infrastructure");
+    public void Domain_DependsOnlyOnItselfAndTheLanguageCore()
+        => AssertOnly(typeof(IDomainMarker).Assembly, "MyApp.Domain");
 
     [Fact]
-    public void Domain_ShouldNotDependOn_Application()
-        => AssertNoDependency(typeof(IDomainMarker).Assembly, "MyApp.Application");
-
-    [Fact]
-    public void Application_ShouldNotDependOn_Infrastructure()
-        => AssertNoDependency(typeof(IApplicationMarker).Assembly, "MyApp.Infrastructure");
-
-    [Fact]
-    public void Application_ShouldNotDependOn_Api()
-        => AssertNoDependency(typeof(IApplicationMarker).Assembly, "MyApp.Api");
+    public void Application_DependsOnlyOnInnerLayersAndTheLanguageCore()
+        => AssertOnly(typeof(IApplicationMarker).Assembly, "MyApp.Application", "MyApp.Domain");
 
     [Theory]
     [InlineData("MyApp.Domain")]
@@ -262,12 +255,18 @@ public sealed class ArchitectureTests
         return directory!.FullName;
     }
 
-    private static void AssertNoDependency(Assembly assembly, string forbidden)
+    // `System` is the base library; I/O, network and persistence inside it are technical details too.
+    private static void AssertOnly(Assembly assembly, params string[] layers)
     {
-        var result = Types.InAssembly(assembly)
-            .Should().NotHaveDependencyOn(forbidden)
+        var frameworks = Types.InAssembly(assembly)
+            .Should().OnlyHaveDependenciesOn([.. layers, "System"])
             .GetResult();
-        result.IsSuccessful.Should().BeTrue(Format(result));
+        var io = Types.InAssembly(assembly)
+            .Should().NotHaveDependencyOnAny("System.IO", "System.Net", "System.Data")
+            .GetResult();
+
+        frameworks.IsSuccessful.Should().BeTrue(Format(frameworks));
+        io.IsSuccessful.Should().BeTrue(Format(io));
     }
 
     private static string Format(TestResult result)
