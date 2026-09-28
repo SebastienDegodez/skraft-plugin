@@ -1,4 +1,1565 @@
 {
-  "generated": "2026-09-21T08:44:58.112Z",
-  "sessions": []
+  "generated": "2026-09-28T09:34:33.905Z",
+  "sessions": [
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "2026-09-28"
+      ],
+      "mtime": 1790586380270.178
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "2026-09-28"
+      ],
+      "mtime": 1790586412389.45
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "2026-09-28"
+      ],
+      "mtime": 1790586447900.7793
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "2026-09-28"
+      ],
+      "mtime": 1790586553527.414
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "2026-09-28"
+      ],
+      "mtime": 1790586675559.191
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "2026-09-28"
+      ],
+      "mtime": 1790586756864.9807
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "2026-09-28"
+      ],
+      "mtime": 1790586863308.8628
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "2026-09-28"
+      ],
+      "mtime": 1790586965747.5994
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "2026-09-28"
+      ],
+      "mtime": 1790587127182.6208
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 0)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "2026-09-28"
+      ],
+      "mtime": 1790586465017.4302
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 1)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "2026-09-28"
+      ],
+      "mtime": 1790586666181.9067
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 2)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "2026-09-28"
+      ],
+      "mtime": 1790586817999.5247
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 0)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "2026-09-28"
+      ],
+      "mtime": 1790586955503.979
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 1)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "2026-09-28"
+      ],
+      "mtime": 1790587104554.91
+    },
+    {
+      "id": "scheduled/2026-09-28/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 2)",
+      "url": "sessions/scheduled/2026-09-28/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "2026-09-28"
+      ],
+      "mtime": 1790587261453.636
+    },
+    {
+      "id": "scheduled/2026-09-28/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/scheduled/2026-09-28/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "2026-09-28"
+      ],
+      "mtime": 1790586359035.349
+    },
+    {
+      "id": "scheduled/2026-09-28/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/scheduled/2026-09-28/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "2026-09-28"
+      ],
+      "mtime": 1790586383741.5488
+    },
+    {
+      "id": "scheduled/2026-09-28/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/scheduled/2026-09-28/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "2026-09-28"
+      ],
+      "mtime": 1790586400729.622
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790586342054.4622
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790586342179.2244
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790586341394.4185
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790586350444.6216
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-09-28"
+      ],
+      "mtime": 1790586364467.2134
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-09-28"
+      ],
+      "mtime": 1790586357697.7046
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-09-28"
+      ],
+      "mtime": 1790586369764.0696
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-09-28"
+      ],
+      "mtime": 1790586375510.3623
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790586375435.1438
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790586379189.935
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790586385707.73
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790586385345.301
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-09-28"
+      ],
+      "mtime": 1790586533215.6248
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-09-28"
+      ],
+      "mtime": 1790586509416.3564
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-09-28"
+      ],
+      "mtime": 1790586523606.2468
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-09-28"
+      ],
+      "mtime": 1790586636535.567
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-09-28"
+      ],
+      "mtime": 1790586534561.6587
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-09-28"
+      ],
+      "mtime": 1790586545728.0642
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-09-28"
+      ],
+      "mtime": 1790586546230.9817
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-09-28"
+      ],
+      "mtime": 1790586556514.5496
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790586611730.215
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790586606639.6296
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790586675654.091
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790586686775.6296
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790586705651.108
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790586737560.0452
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790586758059.1401
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790586919922.3955
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586791052.4058
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586811654.145
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586832912.2134
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586868886.0667
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790586913950.9614
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790586937949.9814
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587006600.5056
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587008587.5662
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587019668.531
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587021213.149
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587020634.28
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587028965.3513
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-09-28"
+      ],
+      "mtime": 1790587036225.9546
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-09-28"
+      ],
+      "mtime": 1790587037929.9343
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-09-28"
+      ],
+      "mtime": 1790587046933.1135
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-09-28"
+      ],
+      "mtime": 1790587052985.1182
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790587048483.0122
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790587056725.4407
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790587062398.557
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790587064846.2097
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-09-28"
+      ],
+      "mtime": 1790587197374.2798
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-09-28"
+      ],
+      "mtime": 1790587212253.6296
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-09-28"
+      ],
+      "mtime": 1790587240574.2285
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-09-28"
+      ],
+      "mtime": 1790587310599.0405
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-09-28"
+      ],
+      "mtime": 1790587228593.2595
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-09-28"
+      ],
+      "mtime": 1790587242340.1045
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-09-28"
+      ],
+      "mtime": 1790587255099.26
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-09-28"
+      ],
+      "mtime": 1790587257158.9177
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790587378359.0242
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790587329736.5337
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790587394202.5977
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-09-28"
+      ],
+      "mtime": 1790587390186.4673
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790587470834.529
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790587472024.4248
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790587483749.2053
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-09-28"
+      ],
+      "mtime": 1790587556848.083
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790587554248.3535
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790587536508.9666
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790587609634.0522
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790587607731.3354
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587648908.5046
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587693696.9626
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587699256.5469
+    },
+    {
+      "id": "scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-09-28"
+      ],
+      "mtime": 1790587734704.2632
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586413942.1826
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586425085.2988
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586419629.7427
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586428598.385
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 4)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586436461.737
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586442346.6345
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586446196.079
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586451576.713
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586464717.419
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 4)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586462296.0103
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 0)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586468017.622
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 1)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586484158.0432
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 2)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586476246.0166
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 3)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586485391.2888
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 4)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586489239.3198
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586514745.0273
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586511866.18
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586519100.5706
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586531364.331
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 4)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-09-28"
+      ],
+      "mtime": 1790586533710.1072
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586539924.9392
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586552063.4802
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586554791.1667
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586557481.553
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 4)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-09-28"
+      ],
+      "mtime": 1790586571575.1392
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 0)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586565349.9321
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 1)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586572081.1492
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 2)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586580493.2422
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 3)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586587320.9841
+    },
+    {
+      "id": "scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 4)",
+      "url": "sessions/scheduled/2026-09-28/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-09-28"
+      ],
+      "mtime": 1790586588351.7808
+    }
+  ]
 }
