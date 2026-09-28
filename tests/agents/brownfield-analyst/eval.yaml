@@ -38,5 +38,5 @@ stimuli:
       - type: output-matches
         name: Missing repository path is reported as a blocker
         config:
-          pattern: '(?is)(blocked|missing_input|repository path not accessible|/definitely/missing/repository)'
+          pattern: '(?is)(?=.*(?:blocked|missing[_ ]input|repository path not accessible|not accessible|cannot (?:access|read|open)|unable to (?:access|read|open)))(?=.*(?:repository|repo path|/definitely/missing/repository)).*'
       - type: diff-empty

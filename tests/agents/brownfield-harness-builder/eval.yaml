@@ -38,5 +38,5 @@ stimuli:
       - type: output-matches
         name: Missing target service is reported as a blocker
         config:
-          pattern: '(?is)(blocked|missing input|missing target|/definitely/missing/service|not accessible)'
+          pattern: '(?is)(?=.*(?:blocked|missing input|missing target|not accessible|cannot (?:access|read|open)|unable to (?:access|read|open)))(?=.*(?:service|target|/definitely/missing/service)).*'
       - type: diff-empty
