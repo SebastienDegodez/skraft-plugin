@@ -607,3 +607,31 @@ La règle porte sur les **références de projet**, pas sur les imports : Api �
 Application → Domain, une seule référence vers la couche voisine. Les types atteints par référence
 transitive peuvent être importés (Domain dans Infrastructure, Application dans Api). La fixture
 Spring était déjà conforme au niveau des `pom.xml` : aucune modification.
+
+### Étape C, bloc Spring Boot (2026-09-28, 4 runs, pilote non publiable)
+
+Skill commitée `b688e78`, bras frais des deux côtés. `STIMULI="Spring Boot:"`, 12 essais par bras.
+
+Verdict poolé : **aucune amélioration crédible**. Graders 5V/5E/2D (signe p = 0,45), juge 3V/3E/6D
+(moyenne −0,10, IC 95 % [−0,32 ; +0,12]). Cellules par stimulus : descriptives uniquement.
+
+| Stimulus | Graders | Lecture |
+|---|---|---|
+| J1 garde de couches | 4V | Placement : base 0/4, traitement 4/4. Fuite injectée rejetée : base **4/4**, traitement **1/4**. |
+| J2 adaptateur REST | 4E au plafond | Les deux bras utilisent un vrai serveur HTTP ; la base gère déjà ce cas. |
+| J3 adaptateur JPA (garde) | 2E / 2D | Défaites de 1 point, causées par le juge (« espace vide, gabarit non vérifiable ») dans les deux bras ; les deux choisissent Postgres. Bruit d'instrument, pas une dégradation de la skill. |
+
+Constat principal, J1 : trois gardes traitement sur quatre se limitent à
+`layeredArchitecture().consideringOnlyDependenciesInLayers()` — dépendances entre couches internes
+seulement, aucune interdiction de framework dans `domain..` / `application..`. La base interdit
+Spring/Jackson ou restreint à `java..` dans 4/4. La skill enseigne où placer la garde, pas ce
+qu'elle doit couvrir hors .NET : sa table de règles par type ne nomme que `Microsoft.*`, et la
+règle de références de projet mise en tête depuis `b688e78` pousse vers une garde interne.
+Tendance au pilote B (anciennes références) : 3/4 ; ici 1/4. n = 4, non attribuable avec certitude.
+
+Suites, chacune dans une itération approuvée séparément :
+
+- skill : règle agnostique en liste blanche (Domain et Application ne dépendent que d'eux-mêmes,
+  des couches internes et de la bibliothèque standard) + exemple Java ;
+- J2 : plafond atteint, à remplacer ou requalifier en garde-fou de régression ;
+- J3 : le prompt « écris le test » sans dépôt fait noter la délivrabilité ; reformuler.
