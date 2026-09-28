@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.7.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.6.1...v1.7.0) (2026-09-28)
+
+### ✨ Features
+
+* **deliver:** make the software engineer consume the DISTILL test plan ([42f0204](https://github.com/SebastienDegodez/skraft-plugin/commit/42f020487133c045e3f3b522a51f87c12b5aabd8))
+
 ## [1.6.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.6.0...v1.6.1) (2026-09-25)
 
 ### 🐛 Bug Fixes
