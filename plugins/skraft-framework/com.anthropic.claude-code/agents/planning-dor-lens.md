@@ -36,8 +36,8 @@ Verify each item per story: problem statement, specific persona, three or more d
 UAT scenarios, criteria derived from those scenarios, right-sized at one to three days,
 technical notes, dependencies listed.
 
-A story missing two or more items is an automatic `fail` with blocker defects — it is not
-near-ready, it is unrefined.
+A story missing two or more items sets lens `verdict: fail`. Emit explicit `defects` entries for
+the missing items with `severity: blocker` — it is not near-ready, it is unrefined.
 
 ## Checking G8
 

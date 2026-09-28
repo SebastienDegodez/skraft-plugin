@@ -55,7 +55,8 @@ skill calls are your first actions:
 - Derive `{date}` from reviewed artefact paths. Never invent today's date.
 - Persist exactly one verdict file with the artifact CLI at
   `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md`. Write no
-  other file. Suppress the artifact command's own stdout/stderr, then emit the YAML block yourself.
+  other file. Suppress the artifact command's stdout, keep its stderr visible, and check its exit
+  status. Emit the YAML block to stdout only after the write succeeded.
 
 ## Protocol
 
