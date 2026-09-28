@@ -578,3 +578,32 @@ Deux défauts d'instrument trouvés et corrigés avant toute mesure :
 
 Observation : la base a cette fois choisi un vrai serveur HTTP (WireMock). J2 risque de produire
 surtout des égalités ; J1 reste le décideur attendu.
+
+### Étape B — pilote J1 (2026-09-28, 4 runs, non publiable)
+
+Premier passage perdu : le bras traitement a échoué 4/4 à l'authentification (panne réseau,
+`api.github.com/copilot_internal/user`). Rejoué avec `BASELINE_CACHE=1` sur cache vide : bras de
+base frais, résultat marqué `publishable: false`.
+
+| Grader | Base | Traitement |
+|---|---|---|
+| Tests toujours à deux endroits | 0/4 | 4/4 |
+| Garde dans la suite lente | 0/4 | 4/4 |
+| Fuite injectée rejetée par le build | 2/4 | 3/4 |
+| Skill chargée | 0/4 | 4/4 |
+
+Juge : 4 victoires / 0 égalité / 0 défaite, écart moyen +0,55 [IC 95 % +0,07 ; +1,03]. Direction
+nette. La base crée un module `payment-architecture-test` à chaque essai (4/4). La sonde de fuite
+sépare garde complète et garde partielle : l'échec traitement bannit Spring dans `domain..`
+seulement, pas dans `application..`.
+
+Mesuré avec l'arbre de travail de l'époque : références `architecture-rules.md` /
+`examples-dotnet.md` / `pattern-catalog.md` non commitées, remplacées depuis (ci-dessous). L'étape C
+doit tourner sur la version commitée.
+
+### Règle de dépendance clarifiée (2026-09-28)
+
+La règle porte sur les **références de projet**, pas sur les imports : Api → Infrastructure →
+Application → Domain, une seule référence vers la couche voisine. Les types atteints par référence
+transitive peuvent être importés (Domain dans Infrastructure, Application dans Api). La fixture
+Spring était déjà conforme au niveau des `pom.xml` : aucune modification.
