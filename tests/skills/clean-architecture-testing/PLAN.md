@@ -483,7 +483,7 @@ pas déjà ces décisions.
 
 ### Sondes préalables (indicatives, pas un verdict)
 
-Sous-agents Sonnet 5, fixture `payment-authorization-spring`, 1–2 runs par cellule, contexte
+Sous-agents Sonnet 5, fixture `payment-spring`, 1–2 runs par cellule, contexte
 de harness non isolé (instructions du dépôt visibles). Signal de direction uniquement.
 
 | Sonde | Sans skill | Avec `clean-architecture-testing` |
@@ -511,7 +511,7 @@ in-memory) n'est pas rejoué en Java : P2 montre que la base choisit déjà le v
 cette tranche. Les noms ne partagent aucun fragment avec les stimuli .NET : `STIMULI` est
 insensible à la casse, et `STIMULI="Spring Boot:"` isole le bloc Java.
 
-### Fixture `fixtures/payment-authorization-spring/`
+### Fixture `fixtures/payment-spring/`
 
 Exception assumée à la règle « C# d'abord » : le comportement évalué est propre à Maven/Spring
 (module par préoccupation, suites Failsafe, mocks de transport Spring).
@@ -525,6 +525,10 @@ Exception assumée à la règle « C# d'abord » : le comportement évalué est 
 - Piège J2 : `HttpPaymentGateway` reçoit son `RestClient` par constructeur.
 - Aucun Docker requis. Setup : `mvn -B -q -ntp verify` en ligne (réchauffe `~/.m2`), puis graders
   hors ligne (`-o`) et bornés.
+- Stockage à plat, `<module>/<fichier>` : l'arborescence Maven (`src/main/java/com/example/…`)
+  dépasse le budget de 145 caractères des chemins suivis (installation marketplace sous Windows).
+  Les `dest:` de `eval.yaml` la reconstruisent ; la fixture ne se construit donc qu'une fois
+  mise en place, jamais dans le dépôt.
 
 ### Budget
 

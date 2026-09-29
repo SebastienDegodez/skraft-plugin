@@ -387,45 +387,45 @@ stimuli:
       max_agent_duration: 11m
     environment:
       files:
-        - src: fixtures/payment-authorization-spring/.gitignore
+        - src: fixtures/payment-spring/.gitignore
           dest: .gitignore
-        - src: fixtures/payment-authorization-spring/pom.xml
+        - src: fixtures/payment-spring/pom.xml
           dest: pom.xml
-        - src: fixtures/payment-authorization-spring/payment-domain/pom.xml
+        - src: fixtures/payment-spring/payment-domain/pom.xml
           dest: payment-domain/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: fixtures/payment-spring/payment-domain/Money.java
           dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
-        - src: fixtures/payment-authorization-spring/payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
           dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
-        - src: fixtures/payment-authorization-spring/payment-application/pom.xml
+        - src: fixtures/payment-spring/payment-application/pom.xml
           dest: payment-application/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: fixtures/payment-spring/payment-application/PaymentGateway.java
           dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
-        - src: fixtures/payment-authorization-spring/payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: fixtures/payment-spring/payment-application/ReceiptStore.java
           dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
-        - src: fixtures/payment-authorization-spring/payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
           dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
-        - src: fixtures/payment-authorization-spring/payment-infrastructure/pom.xml
+        - src: fixtures/payment-spring/payment-infrastructure/pom.xml
           dest: payment-infrastructure/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
           dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
-        - src: fixtures/payment-authorization-spring/payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
           dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
-        - src: fixtures/payment-authorization-spring/payment-app/pom.xml
+        - src: fixtures/payment-spring/payment-app/pom.xml
           dest: payment-app/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: fixtures/payment-spring/payment-app/PaymentApplication.java
           dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
-        - src: fixtures/payment-authorization-spring/payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: fixtures/payment-spring/payment-app/PaymentConfiguration.java
           dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
-        - src: fixtures/payment-authorization-spring/payment-app/src/main/resources/application.properties
+        - src: fixtures/payment-spring/payment-app/application.properties
           dest: payment-app/src/main/resources/application.properties
-        - src: fixtures/payment-authorization-spring/payment-unit-test/pom.xml
+        - src: fixtures/payment-spring/payment-unit-test/pom.xml
           dest: payment-unit-test/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
           dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
-        - src: fixtures/payment-authorization-spring/payment-integration-test/pom.xml
+        - src: fixtures/payment-spring/payment-integration-test/pom.xml
           dest: payment-integration-test/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+        - src: fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
           dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
       commands:
         - 'mvn -B -q -ntp verify'
@@ -560,45 +560,45 @@ stimuli:
       max_agent_duration: 11m
     environment:
       files:
-        - src: fixtures/payment-authorization-spring/.gitignore
+        - src: fixtures/payment-spring/.gitignore
           dest: .gitignore
-        - src: fixtures/payment-authorization-spring/pom.xml
+        - src: fixtures/payment-spring/pom.xml
           dest: pom.xml
-        - src: fixtures/payment-authorization-spring/payment-domain/pom.xml
+        - src: fixtures/payment-spring/payment-domain/pom.xml
           dest: payment-domain/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: fixtures/payment-spring/payment-domain/Money.java
           dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
-        - src: fixtures/payment-authorization-spring/payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
           dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
-        - src: fixtures/payment-authorization-spring/payment-application/pom.xml
+        - src: fixtures/payment-spring/payment-application/pom.xml
           dest: payment-application/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: fixtures/payment-spring/payment-application/PaymentGateway.java
           dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
-        - src: fixtures/payment-authorization-spring/payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: fixtures/payment-spring/payment-application/ReceiptStore.java
           dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
-        - src: fixtures/payment-authorization-spring/payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
           dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
-        - src: fixtures/payment-authorization-spring/payment-infrastructure/pom.xml
+        - src: fixtures/payment-spring/payment-infrastructure/pom.xml
           dest: payment-infrastructure/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
           dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
-        - src: fixtures/payment-authorization-spring/payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
           dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
-        - src: fixtures/payment-authorization-spring/payment-app/pom.xml
+        - src: fixtures/payment-spring/payment-app/pom.xml
           dest: payment-app/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: fixtures/payment-spring/payment-app/PaymentApplication.java
           dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
-        - src: fixtures/payment-authorization-spring/payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: fixtures/payment-spring/payment-app/PaymentConfiguration.java
           dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
-        - src: fixtures/payment-authorization-spring/payment-app/src/main/resources/application.properties
+        - src: fixtures/payment-spring/payment-app/application.properties
           dest: payment-app/src/main/resources/application.properties
-        - src: fixtures/payment-authorization-spring/payment-unit-test/pom.xml
+        - src: fixtures/payment-spring/payment-unit-test/pom.xml
           dest: payment-unit-test/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
           dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
-        - src: fixtures/payment-authorization-spring/payment-integration-test/pom.xml
+        - src: fixtures/payment-spring/payment-integration-test/pom.xml
           dest: payment-integration-test/pom.xml
-        - src: fixtures/payment-authorization-spring/payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+        - src: fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
           dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
       commands:
         - 'mvn -B -q -ntp verify'
