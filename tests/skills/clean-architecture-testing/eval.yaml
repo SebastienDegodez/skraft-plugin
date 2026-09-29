@@ -117,6 +117,56 @@ stimuli:
         name: The fast suite did not take on the adapter
         config:
           pattern: '(?m)^diff --git a/tests/PaymentAuthorization\.UnitTest/(?!bin/|obj/).*\.cs '
+      - type: run-command
+        name: A test fails when the refusal is no longer read as a decline
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              find . -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +
+              adapter=src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+              suite=tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+              grep -q 'HttpStatusCode.PaymentRequired' "$adapter" || { echo "adapter source changed; probe cannot apply"; exit 2; }
+              dotnet test "$suite" >/dev/null 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              sed -i.orig 's/HttpStatusCode.PaymentRequired/HttpStatusCode.Conflict/' "$adapter"
+              if dotnet test "$suite" >/dev/null 2>&1; then
+                echo "refusal handling changed and every test stayed green"
+                exit 1
+              fi
+              echo "a test caught the broken refusal handling"
+          expected_exit_code: 0
+          timeout: 6m
+      - type: run-command
+        name: A test fails when the request body no longer matches the provider's contract
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              find . -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +
+              adapter=src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+              suite=tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+              grep -q 'JsonPropertyName("reference")' "$adapter" || { echo "adapter source changed; probe cannot apply"; exit 2; }
+              dotnet test "$suite" >/dev/null 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              sed -i.orig 's/JsonPropertyName("reference")/JsonPropertyName("ref")/' "$adapter"
+              if dotnet test "$suite" >/dev/null 2>&1; then
+                echo "the request body changed shape and every test stayed green"
+                exit 1
+              fi
+              echo "a test caught the broken request body"
+          expected_exit_code: 0
+          timeout: 6m
       - type: prompt
         config:
           scoring: scale_1_10
