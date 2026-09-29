@@ -3,6 +3,20 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.7.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.7.0...v1.7.1) (2026-09-29)
+
+### 🐛 Bug Fixes
+
+* **evals:** keep a command-shaped VALLY word-split ([577a4fe](https://github.com/SebastienDegodez/skraft-plugin/commit/577a4fe45d353b81ee04e86e07c5ac1904112fc6)), closes [#160](https://github.com/SebastienDegodez/skraft-plugin/issues/160)
+* **evals:** move the fixtures' architecture tests out of the fast suite ([ae58cea](https://github.com/SebastienDegodez/skraft-plugin/commit/ae58ceab27ec8d94d7655b48b56c95634f324c64))
+* **evals:** repair the two breaks that stop a run before it starts ([e3f8027](https://github.com/SebastienDegodez/skraft-plugin/commit/e3f8027cc490d4f50c831e73acdac30c64b696af))
+* **evals:** shorten the clean-architecture-testing fixture path ([4f810a8](https://github.com/SebastienDegodez/skraft-plugin/commit/4f810a8a035dfc0f0119b2273e328ccf18ad1ce7)), closes [#176](https://github.com/SebastienDegodez/skraft-plugin/issues/176)
+
+### 📝 Documentation
+
+* **evals:** record why an instrument is shaped the way it is ([6ef9cd8](https://github.com/SebastienDegodez/skraft-plugin/commit/6ef9cd8d1c990c040e538479852f00f12f46e9a8))
+* **evals:** record why the clean-architecture-testing measurement did not run ([839c12f](https://github.com/SebastienDegodez/skraft-plugin/commit/839c12ff1321744f11f14a3b448bed00c953edcf))
+
 ## [1.7.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.6.1...v1.7.0) (2026-09-28)
 
 ### ✨ Features
