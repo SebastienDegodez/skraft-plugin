@@ -83,17 +83,21 @@ fi
 
 SKRAFT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
-# Two shapes have to survive here. The fallbacks are commands carrying their own
-# arguments (`npx --yes …`), which must word-split; a caller-supplied VALLY is a
-# path to one binary, which must NOT — and on a checkout under a directory whose
-# name contains a space ("OneDrive - AXA"), splitting it produced
-# `/Users/…/OneDrive: No such file or directory` on every arm. So: an array for
-# invoking, and the string only for the `--vally` flag the node adapters parse.
-if [ -n "${VALLY:-}" ]; then
+# Two shapes have to survive here. A command carrying its own arguments
+# (`npx --yes …`, `node fake-vally.mjs`) must word-split; a path to one binary
+# must NOT — on a checkout under a directory whose name contains a space
+# ("OneDrive - AXA"), splitting it produced
+# `/Users/…/OneDrive: No such file or directory` on every arm. A caller-supplied
+# VALLY that names an existing file is that path; anything else is a command.
+# So: an array for invoking, and the string only for the `--vally` flag the node
+# adapters parse.
+if [ -n "${VALLY:-}" ] && [ -e "$VALLY" ]; then
   VALLY_CMD=("$VALLY")
   # adapt.mjs re-splits that string on whitespace, keeping double-quoted runs
   # whole, so a path with spaces has to reach it already quoted.
   case "$VALLY" in *[[:space:]]*) VALLY="\"$VALLY\"" ;; esac
+elif [ -n "${VALLY:-}" ]; then
+  read -r -a VALLY_CMD <<< "$VALLY"
 elif command -v vally >/dev/null 2>&1 && [ "$(vally --version)" = "0.12.0" ]; then
   VALLY_CMD=(vally)
   VALLY="vally"
