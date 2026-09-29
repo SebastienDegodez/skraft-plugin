@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-28T09:34:33.905Z",
+  "generated": "2026-09-29T22:03:23.640Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -1560,6 +1560,630 @@
         "2026-09-28"
       ],
       "mtime": 1790586588351.7808
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run0",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "pr-182"
+      ],
+      "mtime": 1790719401984.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run1",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "pr-182"
+      ],
+      "mtime": 1790719401987.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run2",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "pr-182"
+      ],
+      "mtime": 1790719401984.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run3",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "pr-182"
+      ],
+      "mtime": 1790719401986.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run0",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "pr-182"
+      ],
+      "mtime": 1790719401971.9314
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run1",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "pr-182"
+      ],
+      "mtime": 1790719401977.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run2",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "pr-182"
+      ],
+      "mtime": 1790719401980.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run3",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "pr-182"
+      ],
+      "mtime": 1790719401977.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run0",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "pr-182"
+      ],
+      "mtime": 1790719401971.9314
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run1",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "pr-182"
+      ],
+      "mtime": 1790719401980.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run2",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "pr-182"
+      ],
+      "mtime": 1790719401977.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run3",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "pr-182"
+      ],
+      "mtime": 1790719401977.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run0",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "pr-182"
+      ],
+      "mtime": 1790719401986.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run1",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "pr-182"
+      ],
+      "mtime": 1790719401987.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run2",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "pr-182"
+      ],
+      "mtime": 1790719401986.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run3",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "pr-182"
+      ],
+      "mtime": 1790719401988.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run0",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "pr-182"
+      ],
+      "mtime": 1790719401984.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run1",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "pr-182"
+      ],
+      "mtime": 1790719401983.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run2",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "pr-182"
+      ],
+      "mtime": 1790719401984.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run3",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "pr-182"
+      ],
+      "mtime": 1790719401981.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run0",
+      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "the-failing-test-is-already-in-the-right-place",
+        "pr-182"
+      ],
+      "mtime": 1790719401966.9314
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run1",
+      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "the-failing-test-is-already-in-the-right-place",
+        "pr-182"
+      ],
+      "mtime": 1790719401976.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run2",
+      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "the-failing-test-is-already-in-the-right-place",
+        "pr-182"
+      ],
+      "mtime": 1790719401972.9314
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run3",
+      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "baseline",
+        "the-failing-test-is-already-in-the-right-place",
+        "pr-182"
+      ],
+      "mtime": 1790719401976.9312
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run0",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "pr-182"
+      ],
+      "mtime": 1790719402052.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run1",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "pr-182"
+      ],
+      "mtime": 1790719402052.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run2",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "pr-182"
+      ],
+      "mtime": 1790719402053.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run3",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "pr-182"
+      ],
+      "mtime": 1790719402052.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run0",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "pr-182"
+      ],
+      "mtime": 1790719402048.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run1",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "pr-182"
+      ],
+      "mtime": 1790719402048.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run2",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "pr-182"
+      ],
+      "mtime": 1790719402050.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run3",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "pr-182"
+      ],
+      "mtime": 1790719402046.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run0",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "pr-182"
+      ],
+      "mtime": 1790719402051.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run1",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "pr-182"
+      ],
+      "mtime": 1790719402051.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run2",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "pr-182"
+      ],
+      "mtime": 1790719402039.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run3",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "pr-182"
+      ],
+      "mtime": 1790719402047.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run0",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "pr-182"
+      ],
+      "mtime": 1790719402056.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run1",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "pr-182"
+      ],
+      "mtime": 1790719402054.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run2",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "pr-182"
+      ],
+      "mtime": 1790719402055.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run3",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "pr-182"
+      ],
+      "mtime": 1790719402054.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run0",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "pr-182"
+      ],
+      "mtime": 1790719402043.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run1",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "pr-182"
+      ],
+      "mtime": 1790719402047.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run2",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "pr-182"
+      ],
+      "mtime": 1790719402047.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run3",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "pr-182"
+      ],
+      "mtime": 1790719402047.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run0",
+      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 0)",
+      "url": "sessions/pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "the-failing-test-is-already-in-the-right-place",
+        "pr-182"
+      ],
+      "mtime": 1790719402037.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run1",
+      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 1)",
+      "url": "sessions/pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "the-failing-test-is-already-in-the-right-place",
+        "pr-182"
+      ],
+      "mtime": 1790719402045.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run2",
+      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 2)",
+      "url": "sessions/pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "the-failing-test-is-already-in-the-right-place",
+        "pr-182"
+      ],
+      "mtime": 1790719402047.931
+    },
+    {
+      "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run3",
+      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 3)",
+      "url": "sessions/pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "clean-architecture-testing",
+        "skilled",
+        "the-failing-test-is-already-in-the-right-place",
+        "pr-182"
+      ],
+      "mtime": 1790719402043.931
     }
   ]
 }
