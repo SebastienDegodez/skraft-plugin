@@ -670,3 +670,29 @@ un build vert bruyant (passe) et un build rouge (échoue, trace visible).
   un défaut. Toujours garde-fou, égalité attendue.
 - Portefeuille : décideurs S1, S2, S3, J1 (16 essais) ; garde-fous S4, J2, J3 et near miss S5
   (16 essais, égalités attendues). 32 essais par bras, 8–12 paires discordantes visées.
+
+### Étape C complète (2026-09-29, instrument `a43da8a`, skill `936f0f5`, bras frais, publiable)
+
+Verdict : **comparaison incomplète** (2 essais en erreur, 4 paires exclues faute d'activation) —
+ni réussite, ni régression. Graders 10V/11E/5D, 15 paires discordantes, signe p = 0,30 ;
+Wilcoxon p = 0,019 ; juge 10V/14E/6D, moyenne +0,07 [IC 95 % −0,05 ; +0,20]. Cellules
+descriptives uniquement.
+
+| Stimulus | Rôle | Paires | Lecture |
+|---|---|---|---|
+| J1 Spring, garde de couches | décideur | 4V (0,71 → 0,99) | Placement et fuite injectée tenus 4/4 côté traitement ; la base crée un troisième module 4/4. |
+| S2 .NET, moteur in-memory | décideur | 2V 2E | — |
+| S3 .NET, garde de couches | décideur | 1V 1E(plancher) 2 erreurs | **Défaut d'instrument** : espace vide, « Set that up » ; les deux bras constatent le vide et demandent des précisions (juge 0). Deux essais traitement en délai dépassé (4 min). |
+| S1 .NET, adaptateur HTTP | décideur | 4 exclues | **Skill jamais chargée (0/4)** alors que son jumeau Java J2, même prompt, la charge 4/4. Écarts juge 0,02–0,07 entre deux bras sans skill : bruit de référence. |
+| J3 Spring, JPA | garde-fou | 2V 2E | Reformulation efficace : plus de pénalité « gabarit non vérifiable ». |
+| J2 Spring, adaptateur REST | garde-fou | 3D (1,00 → 0,99) 1E | Graders déterministes identiques ; le juge retire un point sur l'item « suite rapide » en lisant le démarrage de WireMock comme un coût de boucle courte, alors que le test est dans le module lent dans les deux bras. Ambiguïté de rubrique, pas une dégradation. |
+| S4 .NET, 40 cas IBAN | garde-fou | 3E(plafond) 1D | Une réponse traitement propose un faux pour la règle de validation dans les tests de cas d'usage — contraire à la skill (objets du domaine réels). Isolé. |
+| S5 near miss | non-activation | 2E 1V 1D | Skill non chargée 4/4 comme attendu. |
+
+Causes à traiter dans une itération approuvée séparément, sans achat de runs rétroactif :
+
+1. S3 : espace vide pour une demande d'implémentation → demander l'approche (comme J3) ou monter
+   la fixture .NET ; J1 couvre déjà la version exécutable.
+2. S1 : écart d'activation → la `description` ne nomme pas le cas « adaptateur vers une API
+   externe » ; à vérifier contre le near miss S5.
+3. J2 : l'item « suite rapide » est déjà prouvé par les graders de diff ; le retirer de la rubrique.
