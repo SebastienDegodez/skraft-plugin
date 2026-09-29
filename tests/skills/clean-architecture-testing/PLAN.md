@@ -696,3 +696,16 @@ Causes à traiter dans une itération approuvée séparément, sans achat de run
 2. S1 : écart d'activation → la `description` ne nomme pas le cas « adaptateur vers une API
    externe » ; à vérifier contre le near miss S5.
 3. J2 : l'item « suite rapide » est déjà prouvé par les graders de diff ; le retirer de la rubrique.
+
+### Itération après l'étape C (2026-09-29)
+
+- S3 : la fixture .NET `payment-authorization` est désormais montée. Graders déterministes
+  calqués sur J1 : build (sentinelle), suite verte, deux projets de test, garde dans
+  IntegrationTest, rien dans UnitTest. La sonde de fuite injecte un `System.Net.Http.HttpClient`
+  dans Application sur une copie jetable. Rejoué sur trois états : fixture intacte → placement et
+  fuite en échec ; liste blanche NetArchTest dans IntegrationTest → tout vert ; troisième projet
+  avec une liste noire limitée aux projets voisins → deux projets, placement et fuite en échec.
+- S1 : la `description` de la skill nomme désormais la couverture d'un adaptateur vers une API
+  externe, une base ou le système de fichiers (0/4 activations à l'étape C).
+- S1 et J2 : le critère « suite rapide » est retiré de la rubrique ; les graders de diff le
+  prouvent déjà, et le juge l'appliquait au démarrage de WireMock dans le module lent.

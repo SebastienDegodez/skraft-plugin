@@ -129,7 +129,6 @@ stimuli:
       - Exercises the adapter's own HTTP client against a stand-in server rather than replacing that client with something that answers in its place.
       - Covers a refusal from the provider as well as an approval.
       - Asserts what the adapter sends, not only what it hands back.
-      - Leaves the suite developers run on every save as fast as it was.
 
   # Forced-concept decider. The developer names the substitution outright; that
   # pressure is the behaviour under evaluation, which is the one case
@@ -160,6 +159,12 @@ stimuli:
       - Separates the tests that genuinely need a database from those that never did, instead of treating the suite as one block.
       - Does not present the substitution as an acceptable default for adapter tests.
 
+  # Deterministic decider, .NET twin of the Spring layer-guard stimulus. It ran
+  # on an empty workspace until Stage C, where both arms found nothing to set up
+  # and asked for clarification. The payment-authorization solution is staged
+  # instead. The leak probe injects a base-library HTTP client into Application
+  # in a scratch copy: a guard that only forbids the solution's other projects
+  # lets it through, so an existing but hollow guard cannot pass.
   - name: Stop layer violations at the build without slowing the fast suite
     prompt: |
       Layer violations keep slipping through review here — someone reaches for a
@@ -168,7 +173,120 @@ stimuli:
 
       Set that up. One thing I care about: the suite the team runs on every save
       has to stay as quick as it is today.
+    constraints:
+      max_duration: 12m
+      max_agent_duration: 8m
+    environment:
+      files:
+        - src: fixtures/payment/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/payment/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/payment/PaymentAuthorization.slnx
+          dest: PaymentAuthorization.slnx
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+          dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+          dest: src/PaymentAuthorization.Domain/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+          dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+          dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+          dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+          dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+          dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+          dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+      commands:
+        - 'dotnet restore PaymentAuthorization.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - type: run-command
+        name: 'Sentinel: the solution still builds'
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet build PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: Every test in the solution is green
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet test PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 4m
+      - type: run-command
+        name: The bounded context still has exactly two test projects
+        config:
+          command: bash
+          args:
+            - -c
+            - 'test "$(ls -d tests/*/ | wc -l | tr -d " ")" = "2"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The guard landed in the slow suite
+        config:
+          pattern: '(?m)^diff --git a/tests/PaymentAuthorization\.IntegrationTest/(?!bin/|obj/).*\.cs '
+      - type: diff-not-contains
+        name: The fast suite did not take on the guard
+        config:
+          pattern: '(?m)^diff --git a/tests/PaymentAuthorization\.UnitTest/(?!bin/|obj/)'
+      - type: run-command
+        name: The build fails when the business code reaches for an HTTP client
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              log="$work/out.log"
+              dotnet test PaymentAuthorization.slnx >"$log" 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              cat > src/PaymentAuthorization.Application/ProviderShortcut.cs <<'CS'
+              namespace PaymentAuthorization.Application;
+
+              public sealed class ProviderShortcut(System.Net.Http.HttpClient client)
+              {
+                  public Task<string> PingAsync() => client.GetStringAsync("/ping");
+              }
+              CS
+              dotnet build src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj >"$log" 2>&1 || { echo "injected leak does not compile; probe is broken"; exit 3; }
+              if dotnet test PaymentAuthorization.slnx >"$log" 2>&1; then
+                echo "business code reached for an HTTP client and the build stayed green"
+                exit 1
+              fi
+              echo "the build failed on the injected layer violation"
+          expected_exit_code: 0
+          timeout: 6m
       - type: prompt
         config:
           scoring: scale_1_10
@@ -178,9 +296,9 @@ stimuli:
           required:
             - clean-architecture-testing
     rubric:
-      - Adds an automated check that fails the build when the business code depends on a technical detail.
-      - Places that check with the slower suite that runs on the way in, not in the suite developers run on every save.
-      - Does not propose a dedicated new test project for the check; the existing slower suite hosts it.
+      - Adds an automated check that fails the build when the business code depends on a technical framework or transport detail.
+      - Keeps that check out of the suite developers run on every save, which runs exactly as before.
+      - Hosts the check in the existing slower test project instead of a new dedicated one.
       - Says when the check runs, so the team can see it is a gate and not part of the tight loop.
 
   # Regression guard. The baseline already answers this well, so a tie is the
@@ -584,7 +702,6 @@ stimuli:
     rubric:
       - Exercises the adapter's own HTTP client over a real connection to a stand-in server, rather than replacing the client or its transport with something that answers in its place.
       - Enters through the adapter itself and checks what crosses the wire, without booting the whole application to reach it.
-      - Leaves the suite developers run on every save as fast as it was.
 
   # Regression guard. Sonnet 5 already picks the real engine here without the
   # skill, so a tie is the expected result and a loss is the finding: it would
