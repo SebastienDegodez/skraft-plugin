@@ -17,12 +17,14 @@ Defines **where** to test and **with which doubles** in a Clean Architecture sol
 
 **Default = Application-level acceptance test.** Do NOT write Domain tests by default.
 
-Extract a Domain test ONLY when a business rule:
-- Has complex invariants or a large edge-case matrix, AND
-- Is extracted into a reusable Policy / Domain Service / Specification.
+Write a Domain test ONLY when `test-design-mandates` **Mandate 4** opens a gate for the extracted pure function:
+- Gate (a) `branch_unreachable_via_AC` — a behavioral branch no realistic acceptance scenario can reach, or
+- Gate (b) `combinatorial_economy` — covering the input grid through acceptance tests would exceed roughly 10-15 scenarios for one rule.
+
+The test plan MUST record the `Extraction Reason`. No gate open = no Domain test (`M4 negative — saturated by AC`). Mandate 4 is the single owner of this criterion; do not apply a looser one.
 
 **NEVER test directly:**
-- Constructors (unless they enforce complex invariants)
+- Constructors (unless Mandate 4 opens a gate for them)
 - Simple value objects (covered by usage in Application acceptance tests)
 - Getters / setters / DTOs / ViewModels / passive data structures
 
@@ -34,7 +36,7 @@ A test asserting `new PolicyNumber("abc").value == "abc"` is noise. It tests the
 
 | Test project | Targets | Contains |
 |---|---|---|
-| `<Context>.UnitTest` | Domain + Application | Domain unit tests (rare, extracted rules) + Application acceptance tests (mocks on output gateways, in-memory fakes) |
+| `<Context>.UnitTest` | Domain + Application | Domain unit tests (rare, only when a Mandate 4 gate opens) + Application acceptance tests (hand-written InMemory doubles on output gateways) |
 | `<Context>.IntegrationTest` | Infrastructure + API + Architecture | Infrastructure integration tests (real containers), API end-to-end tests (in-process app host), architecture tests |
 
 **Rationale:**
@@ -85,8 +87,8 @@ not "which ticket created it?"
 | Layer | Test type | Entry point | Doubles | Target speed | When to write |
 |---|---|---|---|---|---|
 | **SharedKernel** | None | — | — | — | Never (interfaces + base classes, no logic) |
-| **Domain** | Pure unit (rare) | Policy / Domain Service / Specification | None (real objects) | <10 ms | Only for extracted complex rules |
-| **Application** | Acceptance (sociable) | Command / Query handler or UseCase | Mocks on output gateways, hand-written in-memory fakes for stateful reuse | <100 ms | **Default** — one per Gherkin scenario |
+| **Domain** | Pure unit (rare) | Policy / Domain Service / Specification | None (real objects) | <10 ms | Only when a Mandate 4 gate opens (Extraction Reason recorded) |
+| **Application** | Acceptance (sociable) | Command / Query handler or UseCase | Hand-written InMemory doubles on output gateways (no mocking library) | <100 ms | **Default** — one per Gherkin scenario |
 | **Infrastructure** | Integration | Gateway adapter (repository, read service, message handler) | Real I/O via containers (DB, broker); external APIs via contract mock server | 1-5 s | One per adapter contract |
 | **API** | End-to-end | HTTP endpoint via in-process app host | Real internal stack; contract mock server for downstream externals | 1-5 s | Walking skeleton + one happy path per endpoint |
 | **Architecture** | Static analysis | Assembly / module scan | None | <1 s | One rule per constraint, CI gate |
@@ -96,14 +98,14 @@ not "which ticket created it?"
 | Role | Use for | Never for |
 |---|---|---|
 | **Real domain object** | Always, at every layer that touches Domain | — |
-| **Mock / stub on output gateway** | Output gateways at Application level (repository, dispatcher, external service interfaces) (repositories, dispatchers, external service interfaces) | Domain objects, Application handlers |
-| **Hand-written in-memory fake** | Reusable across many Application tests, stateful scenarios | One-off single-test cases |
+| **Hand-written InMemory double** (Dictionary / List / Map behind the port, plus a recorded list of published events when the test needs to observe them) | Output gateways at Application level (repository, dispatcher, external service interfaces) | Domain objects, Application handlers |
+| **Mocking library** (FakeItEasy, Moq, NSubstitute, sinon, jest.fn, ...) | Nowhere in Domain, Application or `<Context>.UnitTest` (gate G7 `no-mocks-in-core.sh`). Allowed only in `<Context>.IntegrationTest` for external systems | Any core test; no behaviour-verification (`MustHaveHappened`, `Received`, `Verify`) |
 | **Real container** (DB, broker) | Infrastructure adapter tests exclusively | Application or Domain tests |
 | **Contract mock server** (for external APIs / brokers) | Infrastructure adapter tests against externals; API E2E with downstream externals | Internal domain logic, Application handlers |
 | **In-process app host** (boots the full API) | API layer end-to-end tests exclusively | Application, Domain, Infrastructure |
 | **Architecture scanner** | Architecture tests | Any behavioral test |
 
-Pick one mocking library per solution and stick to it. Same for the app host factory. Mixing libraries across tests is a smell.
+No mocking library in the core: assert on the observable state of the InMemory double or on the use-case result. In `IntegrationTest`, pick one mock/contract tool per solution and stick to it. Same for the app host factory. Mixing libraries across tests is a smell.
 
 ## Per-Layer Examples (pseudo-code)
 
@@ -112,14 +114,14 @@ Full runnable .NET examples: [examples-dotnet.md](references/examples-dotnet.md)
 ### Application — acceptance test
 
 ```
-given repository := mock of IOrderRepository
-  and dispatcher := mock of IDomainEventDispatcher
+given repository := new InMemoryOrderRepository()      # Dictionary behind IOrderRepository
+  and dispatcher := new InMemoryEventDispatcher()       # records dispatched events in a List
   and handler := new PlaceOrderCommandHandler(repository, dispatcher)
 
 when handler.handle(PlaceOrderCommand(id, "Alice"))
 
-then repository received add(order where order.customerName == "Alice") exactly once
- and dispatcher received dispatch(events containing OrderPlacedEvent) exactly once
+then repository.findById(id).customerName == "Alice"
+ and dispatcher.dispatched contains one OrderPlacedEvent
 ```
 
 ### Infrastructure — integration test
@@ -163,7 +165,7 @@ When an adapter (Infrastructure) or endpoint (API) talks to an external HTTP / g
 - In API end-to-end tests, wire downstream externals to the mock through DI overrides.
 - The same contract file can later validate real responses (contract verification).
 
-Out of scope for this skill — see `api-contract-testing` *(upcoming)* for the full pattern.
+Out of scope for this skill — see `contract-testing` (contract verification) and `mocking-strategy-roster` (mock strategy) for the full pattern.
 
 ## Decision Tree — Which Test Layer?
 
@@ -173,9 +175,9 @@ digraph which_layer {
     "Use case orchestration\n(load/save/publish)" [shape=box];
     "Gateway adapter\n(DB, HTTP, broker)" [shape=box];
     "HTTP endpoint wiring" [shape=box];
-    "Complex reusable rule\n(many edge cases)" [shape=box];
+    "Extracted pure rule\n(Mandate 4 gate open)" [shape=box];
     "Layer boundary rule" [shape=box];
-    "Application acceptance test\n(mocks on output gateways)" [shape=box, style=filled];
+    "Application acceptance test\n(InMemory doubles on output gateways)" [shape=box, style=filled];
     "Infrastructure integration test\n(real container / contract mock)" [shape=box, style=filled];
     "API end-to-end test\n(in-process app host)" [shape=box, style=filled];
     "Domain unit test\n(pure)" [shape=box, style=filled];
@@ -184,12 +186,12 @@ digraph which_layer {
     "What is the change?" -> "Use case orchestration\n(load/save/publish)";
     "What is the change?" -> "Gateway adapter\n(DB, HTTP, broker)";
     "What is the change?" -> "HTTP endpoint wiring";
-    "What is the change?" -> "Complex reusable rule\n(many edge cases)";
+    "What is the change?" -> "Extracted pure rule\n(Mandate 4 gate open)";
     "What is the change?" -> "Layer boundary rule";
-    "Use case orchestration\n(load/save/publish)" -> "Application acceptance test\n(mocks on output gateways)";
+    "Use case orchestration\n(load/save/publish)" -> "Application acceptance test\n(InMemory doubles on output gateways)";
     "Gateway adapter\n(DB, HTTP, broker)" -> "Infrastructure integration test\n(real container / contract mock)";
     "HTTP endpoint wiring" -> "API end-to-end test\n(in-process app host)";
-    "Complex reusable rule\n(many edge cases)" -> "Domain unit test\n(pure)";
+    "Extracted pure rule\n(Mandate 4 gate open)" -> "Domain unit test\n(pure)";
     "Layer boundary rule" -> "Architecture test\n(static scan)";
 }
 ```
@@ -201,10 +203,11 @@ Extended tree with tie-breakers: [doubles-decision-tree.md](references/doubles-d
 | Anti-pattern | Fix |
 |---|---|
 | Testing `new ValueObject(x).value == x` | Delete. Covered by usage in Application test. |
-| Mocking a domain object | Use the real aggregate. Mock only output gateways. |
+| Mocking a domain object | Use the real aggregate. Replace only output gateways, with InMemory doubles. |
+| Mocking library (`A.Fake`, `Substitute.For`, `Mock<>`) in the core | Replace with a hand-written InMemory double (G7 fails the build). |
 | Real container in an Application-level test | Move to Infrastructure layer or use an in-memory fake. |
 | Shared global container across test classes | One container per test class, isolated lifecycle. |
-| In-process app host used to test a handler | Switch to an Application-level test with mocks. |
+| In-process app host used to test a handler | Switch to an Application-level test with InMemory doubles. |
 | No architecture test guarding layer references | Add the rule. Layer discipline must be enforced by CI, not reviews. |
 | In-memory fake DB provider used as Infrastructure test | Infrastructure tests MUST use the real provider via real container. In-memory providers silently accept invalid SQL. |
 | One acceptance test covers 5 rules | Split: one Gherkin scenario = one test. |
@@ -225,6 +228,6 @@ These thoughts signal you're about to violate the policy:
 
 ## References
 
-- [examples-dotnet.md](references/examples-dotnet.md) — full runnable .NET examples (FakeItEasy, Testcontainers, in-process app host, architecture scanner)
+- [examples-dotnet.md](references/examples-dotnet.md) — full runnable .NET examples (InMemory doubles, Testcontainers, in-process app host, architecture scanner)
 - [architecture-rules.md](references/architecture-rules.md) — complete architecture rule set (.NET flavour; rules themselves are language-agnostic)
 - [doubles-decision-tree.md](references/doubles-decision-tree.md) — extended decision tree with tie-breakers

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # G7 — no mocking framework in the Domain/Application core or in its unit tests.
 # Scans every *.Domain and *.Application project (any depth: nested bounded contexts
-# included) and the *.Domain.*Tests, *.Application.*Tests and *.UnitTests projects;
+# included) and the *.UnitTest project (singular, the framework convention; the plural
+# *.UnitTests and the legacy *.Domain.*Tests / *.Application.*Tests are still scanned);
 # integration tests are out of scope (in-process doubles are allowed there).
 # Evidence: qg-mocks.stdout (one "path:line:text" per hit, empty on pass), .exit, .sha256.
 # Exit: 0 pass | 1 hits found | 2 usage or layout error
@@ -31,7 +32,7 @@ project_dirs() {
 
 CORE=$(project_dirs -name '*.Domain' -o -name '*.Application')
 [ -n "$CORE" ] || { echo "no *.Domain or *.Application project under $ROOT" >&2; exit 2; }
-DIRS=$(project_dirs -name '*.Domain' -o -name '*.Application' -o -name '*.Domain.*Tests' -o -name '*.Application.*Tests' -o -name '*.UnitTests')
+DIRS=$(project_dirs -name '*.Domain' -o -name '*.Application' -o -name '*.Domain.*Tests' -o -name '*.Application.*Tests' -o -name '*.UnitTest' -o -name '*.UnitTests')
 
 PATTERN='using[[:space:]]+(Moq|FakeItEasy|NSubstitute|AutoFixture\.AutoMoq)[[:space:]]*;|(^|[^A-Za-z0-9_])new[[:space:]]+Mock<|Substitute\.For<|A\.Fake<'
 STDOUT="$EV/qg-mocks.stdout"

@@ -14,7 +14,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 ├─────────────────────────────────────┤
 │  Application                        │  ← Acceptance tests (use case boundary, InMemory doubles)
 ├─────────────────────────────────────┤
-│  Domain                             │  ← Unit tests (pure functions only, when extracted)
+│  Domain                             │  ← Unit tests (pure functions only, and only when a Mandate 4 gate opens)
 ├─────────────────────────────────────┤
 │  Infrastructure                     │  ← Integration tests (Testcontainers, real adapters)
 └─────────────────────────────────────┘
@@ -27,10 +27,10 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 | What to test | Project | Layer | Double type | Speed |
 |---|---|---|---|---|
 | Use case / command handler behaviour | `UnitTest` | Application | `InMemory{Interface}` per application interface | Fast (<1s) |
-| Domain policy / specification (complex invariant) | `UnitTest` | Domain | None — pure function, call directly | Fast (<1s) |
-| Domain entity invariant (rare, complex only) | `UnitTest` | Domain | None — construct and assert | Fast (<1s) |
+| Domain policy / specification (only when a Mandate 4 gate opens) | `UnitTest` | Domain | None — pure function, call directly | Fast (<1s) |
+| Domain entity invariant (only when a Mandate 4 gate opens) | `UnitTest` | Domain | None — construct and assert | Fast (<1s) |
 | Repository adapter (real persistence) | `IntegrationTest` | Infrastructure | Real DB (Testcontainers) | Slow (5–30s) |
-| External service adapter | `IntegrationTest` | Infrastructure | Real or WireMock (Testcontainers) | Slow |
+| External service adapter | `IntegrationTest` | Infrastructure | Real or the mock strategy resolved by `mocking-strategy-roster` (default Microcks) | Slow |
 | API endpoint + DI wiring | `IntegrationTest` | API | `WebApplicationFactory` or in-process host | Slow |
 | Architecture boundaries (layer rules) | `IntegrationTest` | Architecture | Static analysis (NetArchTest, ArchUnit) | Medium |
 
@@ -56,7 +56,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 
 ## Domain Layer — Rules
 
-**When to write a Domain test:** ONLY when a business rule has complex invariants or a large edge-case matrix AND the rule is extracted into a reusable Policy / Specification / Domain Service.
+**When to write a Domain test:** only when Mandate 4 opens gate (a) or (b) — see `SKILL.md` Mandate 4. The test plan records the `Extraction Reason`. Otherwise the use-case acceptance test covers the rule.
 
 **Entry point:** The public method signature of the policy / specification
 **Double type:** None. Pure function — no collaborators to double.
@@ -64,7 +64,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 
 **Do NOT write Domain tests for:**
 - Simple value objects (covered by Application tests)
-- Constructors (unless they enforce complex invariants)
+- Constructors
 - Getters / properties
 - DTOs or data containers
 
@@ -113,7 +113,7 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 | Mistake | Correct approach |
 |---|---|
 | Using a real database in `UnitTest` | Use `InMemory{Interface}` — keep unit tests I/O-free |
-| Using a mock where an InMemory exists | InMemory > mock for application interfaces. Mocks for external services only. |
-| Writing a Domain test for a simple value object | Covered indirectly by Application acceptance test |
+| Using a mocking library or behaviour verification (`Mock<>`, `A.Fake`, `Substitute.For`, `Received`, `Verify`) in Domain, Application or `UnitTest` | Hand-written InMemory double over a Dictionary/List (G7). Mocking/contract tools only in `IntegrationTest`, for external systems. |
+| Writing a Domain test without an open Mandate 4 gate (e.g. a simple value object) | Covered by the Application acceptance test |
 | Testing infrastructure logic in Application tests | Write a separate Infrastructure integration test |
 | Skipping Architecture tests | Run in CI — they are the only thing that enforces the dependency rule |

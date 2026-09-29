@@ -26,7 +26,7 @@ Load on demand (C1 LAZY ASSET):
 
 | Gate | Verification | Method |
 |------|-------------|--------|
-| G4 | No mock in Domain/Application tests | Search test files for `A.Fake<>`, `Mock<>`, `Substitute.For<>` on Domain/Application types |
+| G4 | No mock in Domain/Application tests | Search test files for `A.Fake<>`, `Mock<>`, `Substitute.For<>` (or any mocking library: FakeItEasy, Moq, NSubstitute, sinon, jest/vi mocks, testdouble) in Domain/Application/`<Context>.UnitTest` |
 | G5 | Clean Architecture dependencies inward | Analyze `using`/import statements: Domain → nothing, Application → Domain only, API/Infra → Application |
 | G10 | Object Calisthenics on Domain | Check the 9 rules on Domain layer code |
 
@@ -35,7 +35,7 @@ Load on demand (C1 LAZY ASSET):
 Scan all files in `*.UnitTest` project:
 - `A.Fake<IDomainType>()` → `blocker`
 - `A.Fake<IApplicationType>()` → `blocker`
-- `A.Fake<IDrivenPort>()` → allowed (repository, gateway)
+- `A.Fake<IDrivenPort>()` → `blocker` (replace it with a hand-written InMemory double over a Dictionary/List; mocking tools are allowed only in `<Context>.IntegrationTest` for external systems)
 
 ## G5 — Dependency Direction
 

@@ -10,8 +10,8 @@ improving readability, maintainability, and signal-to-noise ratio.
 
 ## When to Load
 
-- After GREEN: tests pass, you notice duplication or unclear naming.
-- During COMMIT & VERIFY: cleanup before commit, no new behavior.
+- After GREEN and after that cycle's green_commit exists: tests pass, you notice duplication or unclear naming. Never edit a test file between its red_commit and green_commit (gate G9).
+- During COMMIT & VERIFY: cleanup goes in its own refactor(<feature>) commit after the green_commit, no new behavior; re-run the full suite and mutation scripts after it.
 - Reviewing test code that smells (long arrange, repeated setup, cryptic names).
 
 ## Hard Rule
@@ -78,7 +78,7 @@ public void WhenDriverMeetsAllCriteria_ShouldBeEligible() { ... }
 
 **Transform:**
 ```csharp
-// Before — 4 methods with identical structure
+// Before — 3 methods with identical structure
 [Fact] public void WhenAge17_ShouldBeIneligible() { ... }
 [Fact] public void WhenAge16_ShouldBeIneligible() { ... }
 [Fact] public void WhenAge15_ShouldBeIneligible() { ... }
@@ -90,7 +90,7 @@ public void WhenDriverMeetsAllCriteria_ShouldBeEligible() { ... }
 [InlineData(15)]
 public void WhenDriverIsUnder18_ShouldBeIneligible(int age)
 {
-    var result = policy.Evaluate(ADriver(age: age), AVehicle());
+    var result = CreatePolicy().Evaluate(ADriver(age: age), AVehicle());
     result.IsEligible.Should().BeFalse();
 }
 ```
@@ -114,10 +114,11 @@ Assert.Equal("driver_too_young", result.Reason.Code);
 Assert.Contains("18", result.Reason.Message);
 
 // After
-private static void ShouldBeRejectedWith(EligibilityResult result, string reasonCode)
+private static void ShouldBeRejectedWith(EligibilityResult result, string reasonCode, string messageFragment)
 {
     result.IsEligible.Should().BeFalse();
     result.Reason.Code.Should().Be(reasonCode);
+    result.Reason.Message.Should().Contain(messageFragment);
 }
 ```
 
@@ -145,7 +146,7 @@ WhenVehicleIsTooOld_EligibilityTests.cs
 
 **Rules:**
 - Each class = one business scenario group (one `When` clause).
-- Shared helpers move to a base class or `TestKit`.
+- Shared helpers move to a static helper or builder class in the same test project (or to `TestKit` when both UnitTest and IntegrationTest projects use them); do not introduce a base class.
 - File name matches class name exactly.
 
 ---

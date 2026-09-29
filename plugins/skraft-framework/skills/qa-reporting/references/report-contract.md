@@ -55,16 +55,17 @@ issue/work-item destinations. Confirm the full provider/host/repository scope;
 never derive it from an editor tab. These options enable reporting only, not
 Azure/GitLab support for the entire engineering pipeline.
 
-Renderer data has exactly the fields below: `kind` is `forecast` or `outcome`,
-`story` an identifier, `title` a string, `revision` the full 40-hex source commit,
-`language` `fr` or `en`, and `impact.expected` a string. `impact.actual` is optional
+Renderer data uses the fields below; other keys are ignored, so add none: `kind` is
+`forecast` or `outcome`, `story` an identifier, `title` a string, `revision` the full
+source commit id (40 hex, or 64 hex for SHA-256 repositories), `language` `fr` or `en`, and `impact.expected` a string. `impact.actual` is optional
 for forecast; supply observed impact or explicit unknown for outcome. Criteria
 carry unique `id`, `description`, `test` strings and optional root-relative
 `evidence`. The four `*Ref` fields are optional in the wire schema: supply
 `testPlanRef` for forecast; `qualityEvidenceRef`, `changeLogRef` for outcome;
 router supplies `reviewRef` only after that review is persisted. `limitations`
 is a string array; media entries carry `label` plus optional existing `url` and/or
-root-relative `path`. `maxMedia` is the explicitly selected nonnegative integer.
+root-relative `path`. `maxMedia` is a nonnegative integer; when reporting preferences
+exist their `maxMedia` overrides the data value, and with neither it is 0.
 Example outcome (illustrative refs; replace with actual returned paths):
 
 ```json
@@ -78,9 +79,9 @@ Example outcome (illustrative refs; replace with actual returned paths):
     "expected": "Reject invalid checkout; source: docs/checkout.md",
     "actual": "Observed rejection in AC-1 test; deployment unverified."
   },
-  "criteria": [{ "id": "AC-1", "description": "Reject invalid checkout", "test": "Checkout rejects invalid input", "evidence": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/tests.stdout" }],
+  "criteria": [{ "id": "AC-1", "description": "Reject invalid checkout", "test": "Checkout rejects invalid input", "evidence": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/checkout/qg-tests.stdout" }],
   "testPlanRef": ".copilot-tracking/skraft-plans/checkout/details/2026-09-17/test-plan-checkout.md",
-  "qualityEvidenceRef": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/qg-checkout.json",
+  "qualityEvidenceRef": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/checkout/qg-checkout.json",
   "reviewRef": ".copilot-tracking/skraft-plans/checkout/reviews/2026-09-17/deliver-review-1.md",
   "changeLogRef": ".copilot-tracking/skraft-plans/checkout/changes/2026-09-17/change-log.md",
   "limitations": ["Browser evidence is local-only; no deployment evidence."],
@@ -91,8 +92,9 @@ Example outcome (illustrative refs; replace with actual returned paths):
 
 Missing refs remain missing, never fabricated to satisfy rendering. Keep canonical
 [quality evidence](../../quality-gates-evidence-contract/SKILL.md) and
-[quality bar](../../skraft-quality-bar/SKILL.md) authoritative: current v3
-includes G11; legacy v1/v2 stay readable, missing gates never pass. Renderer local
+[quality bar](../../skraft-quality-bar/SKILL.md) authoritative: the current schema is
+v4 (G11 present, G6 recorded per mutation scope); v1-v3 logs stay readable and a gate
+missing from a log renders UNVERIFIED, never pass. Renderer local
 proof checks are distinct from recorded reviewer verdict, particularly Git checks
 G8/G9. A final report has no verdict of its own and cannot overrule review.
 

@@ -73,13 +73,13 @@ report paths. CI evidence uses checked-in configuration without overlays.
 For each real survivor:
 
 1. **Read the mutation** — what operator changed? what line?
-2. **Write ONE boundary test** targeting the exact edge:
+2. **Write ONE boundary test** targeting the exact edge, entering through the scenario's use-case boundary (`test-design-mandates` Mandate 1); a Domain unit test only when Mandate 4 Gate (a) or (b) opens:
    ```csharp
    // Survivor: `age >= 18` → `age > 18`
    [Fact]
    public void WhenDriverIsExactly18_ShouldBeEligible()
    {
-       // ... test the boundary value age=18
+       // ... arrange via the use case boundary, assert the outcome at age=18
    }
    ```
    Frontend example: for `age >= 18` mutated to `age > 18`, assert observable UI or
@@ -102,10 +102,11 @@ an ignored mutant remains visible in JSON evidence.
 
 ## Gate Decision
 
-The adapter's exit code is the verdict — .NET uses `--break-at`, StrykerJS uses
-`thresholds.break` plus fresh-report validation. `skraft-quality-bar` states the bar
-for each scope. This skill decides only what a
-survivor means:
+The adapter's exit code is the verdict. .NET: the wrapper refuses a checked-in config
+whose thresholds differ from the bar, runs Stryker with that config, and recomputes the
+score from the tested mutants (exit non-zero below the bar). StrykerJS: `thresholds.break`
+plus fresh-report validation. `skraft-quality-bar` states the bar for each scope. This
+skill decides only what a survivor means:
 
 | Survivors | Verdict |
 |---------------|---------|
@@ -113,16 +114,17 @@ survivor means:
 | Only equivalent mutants, each narrowly suppressed with rationale; rerun green | ✅ Proceed |
 | Core below 100%, boundary below 80%, or any real core survivor | ❌ BLOCK — return to Step 4 |
 
-## Mutation Categories Reference
+## Examples of mutations (Stryker.NET mutator names for suppression)
 
-| Category | Examples |
+| Mutator | Examples |
 |----------|----------|
 | Arithmetic | `+` ↔ `-`, `*` ↔ `/` |
-| Comparison | `>` ↔ `>=`, `<` ↔ `<=`, `==` ↔ `!=` |
-| Boolean | `true` ↔ `false`, `&&` ↔ `||` |
-| Conditional | negate conditions, remove `if` branch |
-| Return value | `return true` → `return false` |
-| LINQ | `.Any()` ↔ `.All()`, `.First()` ↔ `.Last()` |
+| Equality | `>` ↔ `>=`, `<` ↔ `<=`, `==` ↔ `!=` |
+| Logical | `&&` ↔ `||` |
+| Boolean | `true` ↔ `false` |
+| Conditional | ternary branch swaps |
+| Linq | `.Any()` ↔ `.All()`, `.First()` ↔ `.Last()` |
+| Statement / Block removal | removed statement, emptied block (including an `if` body) |
 
 Scope and exclusions belong to durable adapter configuration. Everything developer
 authored remains in scope unless deterministic adapter policy excludes it. DTO or

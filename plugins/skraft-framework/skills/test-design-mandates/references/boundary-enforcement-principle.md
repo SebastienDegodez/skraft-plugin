@@ -4,7 +4,7 @@
 
 In Clean Architecture, every test enters through a **use case boundary** — the Application layer's entry point — and asserts at the next visible boundary in the direction of the architecture.
 
-No test ever targets an internal class directly unless that class IS the boundary (e.g., a domain Policy extracted as a pure function).
+No test ever targets an internal class directly unless that class IS the boundary (e.g., a domain Policy extracted as a pure function because a test-design-mandates Mandate 4 gate opened).
 
 ---
 
@@ -80,7 +80,7 @@ var result = await _useCase.Handle(new CheckEligibilityCommand(driverId));
 result.IsEligible.Should().BeTrue();
 ```
 
-### ✅ Correct — Domain boundary (extracted pure function)
+### ✅ Correct — Domain boundary (extracted pure function, only when a Mandate 4 gate opens)
 
 ```csharp
 // Enters through the policy's public signature

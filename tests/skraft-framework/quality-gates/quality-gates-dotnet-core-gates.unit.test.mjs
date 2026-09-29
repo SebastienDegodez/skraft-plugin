@@ -55,6 +55,17 @@ test('G7 finds a mocking framework in a nested bounded context and its unit test
   })
 })
 
+test('G7 scans the singular *.UnitTest project', async () => {
+  await withRoot(async (root) => {
+    await touch(root, 'src/Checkout.Domain/Basket.cs', 'namespace Checkout;\n')
+    await touch(root, 'tests/Checkout.UnitTest/BasketTests.cs', 'using FakeItEasy;\n')
+    const evidence = join(root, 'ev')
+    const result = await run(NO_MOCKS, ['--root', root, '--evidence', evidence])
+    assert.equal(result.exitCode, 1)
+    assert.match(await readFile(join(evidence, 'qg-mocks.stdout'), 'utf8'), /Checkout\.UnitTest\/BasketTests\.cs:1:using FakeItEasy;/)
+  })
+})
+
 test('G7 passes with an empty output when the core is double-free', async () => {
   await withRoot(async (root) => {
     await touch(root, 'src/Checkout.Domain/Basket.cs', 'namespace Checkout;\n')

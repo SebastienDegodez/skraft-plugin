@@ -60,7 +60,7 @@ strategy: inprocess
 stack: dotnet
 library: fakeiteasy | nsubstitute | moq
 files:
-  - test/{Sut}.IntegrationTests/{Sut}ApiFactory.cs
+  - test/{Sut}.IntegrationTest/{Sut}ApiFactory.cs
 testCommand: <resolved via resolving-stack-commands>
 notes: in-process double for I{Downstream}Client swapped into the test host DI
 ```

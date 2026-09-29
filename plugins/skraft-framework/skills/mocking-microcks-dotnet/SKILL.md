@@ -77,7 +77,7 @@ Return, do not commit:
 strategy: microcks
 stack: dotnet
 files:
-  - test/{Sut}.IntegrationTests/{Sut}WebApplicationFactory.cs
+  - test/{Sut}.IntegrationTest/{Sut}WebApplicationFactory.cs
 testCommand: <resolved via resolving-stack-commands>   # e.g. dotnet test
 notes: MicrocksContainerEnsemble seeded from {downstream-api} contract ; SUT base URL -> GetRestMockEndpoint
 ```

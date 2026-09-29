@@ -137,4 +137,4 @@ public void AllCommandHandlers_ShouldImplementICommandHandler()
 
 ## CI Integration
 
-Architecture tests run with the unit test suite (fast, <1 s each). They MUST fail the build on violation — never `Skip = "known issue"`.
+Architecture tests run with the IntegrationTest suite on commit/CI, not the tight loop; they MUST fail the build on violation — never `Skip = "known issue"`.

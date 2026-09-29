@@ -108,7 +108,7 @@ var repository = Environment.GetEnvironmentVariable("TEST_MODE") == "integration
 ```
 Does the feature write to or read from persistent storage?
 │
-├── NO → Strategy A (Full InMemory)
+├── NO → Strategy A (Full InMemory; fake any external service)
 │
 └── YES
     │
@@ -125,6 +125,8 @@ Does the feature write to or read from persistent storage?
         ├── YES → Strategy C (Real local with Testcontainers)
         │
         └── NO → Strategy D (Configurable)
+
+Also Strategy D whenever the same test must run in both unit and integration mode.
 ```
 
 ---

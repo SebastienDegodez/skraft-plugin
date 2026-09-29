@@ -31,12 +31,16 @@ rationale that grants an exemption.
 
 | Gate | Level |
 | --- | --- |
-| Clean Architecture boundaries | blocking |
-| TDD cycle respected | blocking |
-| Test integrity | blocking |
-| Mutation Domain/Application meets the bar | blocking |
-| Mutation API/Infrastructure meets the bar | blocking |
-| Gherkin gate (user-approved scenarios) | blocking |
+| G1-G4 acceptance, unit, build, static analysis pass | blocking |
+| G5 Clean Architecture boundaries | blocking |
+| G6 Mutation Domain/Application meets the bar (core) | blocking |
+| G6 Mutation API/Infrastructure meets the bar (boundary) | blocking |
+| G7 No mocks in Domain/Application | blocking |
+| G8 Conventional commit policy | blocking |
+| G9 Test integrity (RED->GREEN, no tampering) | blocking |
+| G10 TDD cycle respected (RED observed) | blocking |
+| G11 Line coverage Domain/Application meets the bar | blocking |
+| Gherkin gate (DISTILL review APPROVED before DELIVER starts) | blocking |
 | ADR for non-trivial decisions | blocking |
 | Object Calisthenics (Domain) | blocking |
 
@@ -64,15 +68,18 @@ and execute them. Checked-in configs are also local-debug and CI/CD interface.
 ## Threshold flags
 
 Stated once so recipes copy rather than invent. Adapter scripts and the config scaffold
-carry each value as a literal, and guard tests assert those literals still equal the
-table above — checked restatements, not independent definitions.
+carry each mutation value as a literal; a guard test asserts the .NET literals equal the
+table above. The coverage script (`coverage-core.sh`) and the JavaScript adapter
+(`gate-policy.mjs`) carry the same values and are not yet covered by that test.
 
 | Scope | Mutation | Coverage |
 | --- | --- | --- |
-| Domain, Application | `thresholds.break = 100` in the checked-in core Stryker config (written by the adapter's scaffold) | 100% line coverage, enforced by the adapter's coverage script |
+| Domain, Application | `thresholds.break = 100` in the checked-in core Stryker config (written by the adapter's scaffold) | 100% line coverage, enforced by the .NET adapter's `coverage-core.sh` (G11); the JavaScript adapter has none and reports a blocker |
 | API, Infrastructure | `thresholds.break = 80` in the checked-in boundary config | not gated on coverage |
 
-The runner reads the threshold from its config and exits non-zero below it; the
-coverage script exits non-zero below the bar. That exit code is the verdict. A run
+The wrapper carries the bar: it refuses a checked-in config whose `thresholds`
+high/low/break differ from it (exit 2), runs Stryker, recomputes the score from the
+tested mutants and exits non-zero below the bar. The coverage script exits non-zero
+below the bar. That exit code is the verdict. A run
 whose score is read from a report and judged in prose is not a gate — it is an
 opinion about a gate. No caller argument sets a threshold: the scripts refuse one.

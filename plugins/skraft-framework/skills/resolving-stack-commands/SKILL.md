@@ -1,6 +1,6 @@
 ---
 name: resolving-stack-commands
-description: Use whenever an agent must run a toolchain command (build, test, mutation) and needs the concrete invocation. Resolves build/test/mutation commands from the detected stack via the `quality-gates-<tech>` adapters so no agent hardcodes `dotnet test`, `dotnet build`, or any toolchain command. Loaded by acceptance-designer and software-engineer.
+description: Use whenever an agent must run a toolchain command (build, test, mutation) and needs the concrete invocation. Resolves build/test/mutation commands from the detected stack via the `quality-gates-<tech>` adapters so no agent hardcodes `dotnet test`, `dotnet build`, or any toolchain command. Loaded by acceptance-designer, software-engineer, contract-testing-worker and mock-integration-worker.
 ---
 
 # Resolving Stack Commands (stack-agnostic)
@@ -54,4 +54,4 @@ context:
 
 - Resolve the command (build / test / mutation) from the matching `quality-gates-<tech>` adapter; do not embed it in workflow steps.
 - Run it, then assert on its output (build succeeds, RED on a business assertion, GREEN gate, mutation score, etc.).
-- Adding a stack = add a `quality-gates-<tech>` adapter and a row here, with zero edits to agents.
+- Adding a stack = add a `quality-gates-<tech>` adapter and a row here, and register the adapter in the agents' skills lists, the software-engineer trigger table and config `agentSkills`; workflow steps stay unchanged.

@@ -8,8 +8,8 @@
 
 ```
 tests/
-└── MonAssurance.IntegrationTests/
-    ├── MonAssurance.IntegrationTests.csproj
+└── MonAssurance.IntegrationTest/
+    ├── MonAssurance.IntegrationTest.csproj
     ├── contracts/
     │   ├── eligibility-check-api.yaml
     │   ├── eligibility-check-api.apiexamples.yaml
@@ -59,7 +59,7 @@ tests/
 ## WebApplicationFactory with Microcks
 
 ```csharp
-// tests/MonAssurance.IntegrationTests/Tests/Infrastructure/EligibilityApiFactory.cs
+// tests/MonAssurance.IntegrationTest/Tests/Infrastructure/EligibilityApiFactory.cs
 
 using Microcks.Testcontainers;
 using Microsoft.AspNetCore.Hosting;
@@ -67,7 +67,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using MonAssurance.Application.Ports;
 
-namespace MonAssurance.IntegrationTests.Infrastructure;
+namespace MonAssurance.IntegrationTest.Infrastructure;
 
 /// <summary>
 /// WebApplicationFactory that replaces the real IEligibilityGateway with a
@@ -125,14 +125,14 @@ public sealed class EligibilityApiFactory : WebApplicationFactory<Program>, IAsy
 ## Test Class
 
 ```csharp
-// tests/MonAssurance.IntegrationTests/Tests/EligibilityEndpointTests.cs
+// tests/MonAssurance.IntegrationTest/Tests/EligibilityEndpointTests.cs
 
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using MonAssurance.IntegrationTests.Infrastructure;
+using MonAssurance.IntegrationTest.Infrastructure;
 
-namespace MonAssurance.IntegrationTests.Tests;
+namespace MonAssurance.IntegrationTest.Tests;
 
 [Collection("EligibilityApi")]
 public sealed class EligibilityEndpointTests : IClassFixture<EligibilityApiFactory>

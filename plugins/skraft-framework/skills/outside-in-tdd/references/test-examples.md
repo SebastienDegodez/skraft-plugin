@@ -99,10 +99,10 @@ public sealed class PlaceOrderCommandHandler
         // Confirm order (Domain business logic)
         order.Confirm();
 
-        // Check inventory (Infrastructure - mocked in tests)
+        // Check inventory (Infrastructure - InMemory double in tests)
         await _inventoryService.ReserveItems(order.OrderLines, cancellationToken);
 
-        // Persist (Infrastructure - mocked in tests)
+        // Persist (Infrastructure - InMemory double in tests)
         await _orderRepository.AddAsync(order, cancellationToken);
 
         return order.Id;
@@ -113,16 +113,16 @@ public sealed class PlaceOrderCommandHandler
 ### Test: Sociable Test for Command Handler
 
 ```csharp
-namespace MyProject.UnitTests.Application.Orders.Commands;
+namespace MyProject.UnitTest.Application.Orders.Commands;
 
 public sealed class PlaceOrderCommandHandlerTests
 {
     [Fact]
     public async Task WhenPlacingValidOrder_ShouldCreateConfirmedOrderWithItems()
     {
-        // Arrange - Mock only Infrastructure
-        var orderRepository = A.Fake<IOrderRepository>();
-        var inventoryService = A.Fake<IInventoryService>();
+        // Arrange - InMemory doubles for Infrastructure only
+        var orderRepository = new InMemoryOrderRepository();
+        var inventoryService = new InMemoryInventoryService();
         var handler = new PlaceOrderCommandHandler(orderRepository, inventoryService);
 
         var orderId = OrderId.CreateNew();
@@ -141,32 +141,25 @@ public sealed class PlaceOrderCommandHandlerTests
         // Act - Use real Domain objects
         var resultOrderId = await handler.Handle(command);
 
-        // Assert - Verify Infrastructure calls and Domain state
+        // Assert - Observable state of the InMemory doubles and Domain state
         Assert.Equal(orderId, resultOrderId);
 
-        A.CallTo(() => inventoryService.ReserveItems(
-            A<IReadOnlyCollection<OrderLine>>._,
-            A<CancellationToken>._
-        )).MustHaveHappenedOnceExactly();
+        Assert.Single(inventoryService.Reservations);
 
-        A.CallTo(() => orderRepository.AddAsync(
-            A<Order>.That.Matches(o =>
-                o.Id == orderId &&
-                o.CustomerId == customerId &&
-                o.Status == OrderStatus.Confirmed &&
-                o.OrderLines.Count == 2 &&
-                o.OrderLines.First().Quantity == 2
-            ),
-            A<CancellationToken>._
-        )).MustHaveHappenedOnceExactly();
+        var saved = Assert.Single(orderRepository.Orders.Values);
+        Assert.Equal(orderId, saved.Id);
+        Assert.Equal(customerId, saved.CustomerId);
+        Assert.Equal(OrderStatus.Confirmed, saved.Status);
+        Assert.Equal(2, saved.OrderLines.Count);
+        Assert.Equal(2, saved.OrderLines.First().Quantity);
     }
 
     [Fact]
     public async Task WhenPlacingOrderWithInvalidQuantity_ShouldThrowDomainException()
     {
         // Arrange
-        var orderRepository = A.Fake<IOrderRepository>();
-        var inventoryService = A.Fake<IInventoryService>();
+        var orderRepository = new InMemoryOrderRepository();
+        var inventoryService = new InMemoryInventoryService();
         var handler = new PlaceOrderCommandHandler(orderRepository, inventoryService);
 
         var command = new PlaceOrderCommand(
@@ -182,17 +175,16 @@ public sealed class PlaceOrderCommandHandlerTests
         // Act & Assert - Domain validation triggers exception
         await Assert.ThrowsAsync<DomainException>(() => handler.Handle(command));
 
-        // Verify infrastructure was never called
-        A.CallTo(() => orderRepository.AddAsync(A<Order>._, A<CancellationToken>._))
-            .MustNotHaveHappened();
+        // Nothing was stored
+        Assert.Empty(orderRepository.Orders);
     }
 
     [Fact]
     public async Task WhenPlacingOrderWithoutItems_ShouldThrowDomainException()
     {
         // Arrange
-        var orderRepository = A.Fake<IOrderRepository>();
-        var inventoryService = A.Fake<IInventoryService>();
+        var orderRepository = new InMemoryOrderRepository();
+        var inventoryService = new InMemoryInventoryService();
         var handler = new PlaceOrderCommandHandler(orderRepository, inventoryService);
 
         var command = new PlaceOrderCommand(
@@ -204,6 +196,30 @@ public sealed class PlaceOrderCommandHandlerTests
 
         // Act & Assert - Domain business rule enforced
         await Assert.ThrowsAsync<DomainException>(() => handler.Handle(command));
+    }
+
+    // Very simple InMemory doubles: a Dictionary / List behind the port interface.
+    // Shared ones may live in the non-test TestKit project.
+    private sealed class InMemoryOrderRepository : IOrderRepository
+    {
+        public Dictionary<OrderId, Order> Orders { get; } = new();
+
+        public Task AddAsync(Order order, CancellationToken cancellationToken)
+        {
+            Orders[order.Id] = order;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryInventoryService : IInventoryService
+    {
+        public List<IReadOnlyCollection<OrderLine>> Reservations { get; } = new();
+
+        public Task ReserveItems(IReadOnlyCollection<OrderLine> lines, CancellationToken cancellationToken)
+        {
+            Reservations.Add(lines);
+            return Task.CompletedTask;
+        }
     }
 }
 ```
@@ -251,7 +267,7 @@ public sealed class GetOrderQueryHandler
 ### Query Test
 
 ```csharp
-namespace MyProject.UnitTests.Application.Orders.Queries;
+namespace MyProject.UnitTest.Application.Orders.Queries;
 
 public sealed class GetOrderQueryHandlerTests
 {
@@ -276,9 +292,8 @@ public sealed class GetOrderQueryHandlerTests
         );
         order.Confirm();
 
-        var orderRepository = A.Fake<IOrderRepository>();
-        A.CallTo(() => orderRepository.GetByIdAsync(orderId, A<CancellationToken>._))
-            .Returns(order);
+        var orderRepository = new InMemoryOrderRepository();
+        orderRepository.Orders[orderId] = order;
 
         var handler = new GetOrderQueryHandler(orderRepository);
         var query = new GetOrderQuery(orderId);
@@ -300,9 +315,7 @@ public sealed class GetOrderQueryHandlerTests
     {
         // Arrange
         var orderId = OrderId.CreateNew();
-        var orderRepository = A.Fake<IOrderRepository>();
-        A.CallTo(() => orderRepository.GetByIdAsync(orderId, A<CancellationToken>._))
-            .Returns(Task.FromResult<Order?>(null));
+        var orderRepository = new InMemoryOrderRepository(); // empty
 
         var handler = new GetOrderQueryHandler(orderRepository);
         var query = new GetOrderQuery(orderId);
@@ -312,6 +325,15 @@ public sealed class GetOrderQueryHandlerTests
 
         // Assert
         Assert.Null(result);
+    }
+
+    // Very simple InMemory double: a Dictionary behind the port interface.
+    private sealed class InMemoryOrderRepository : IOrderRepository
+    {
+        public Dictionary<OrderId, Order> Orders { get; } = new();
+
+        public Task<Order?> GetByIdAsync(OrderId id, CancellationToken cancellationToken) =>
+            Task.FromResult(Orders.TryGetValue(id, out var found) ? found : null);
     }
 }
 ```
@@ -332,37 +354,30 @@ order.Confirm();
 Assert.Equal(OrderStatus.Confirmed, order.Status);
 ```
 
-### ❌ DON'T: Mock Domain Objects
+### ❌ DON'T: Mock Domain Objects, or use a mocking library in the core
 
 ```csharp
-// ❌ Bad: Mocking Domain behavior
+// ❌ Bad: Mocking Domain behavior (and any mocking library is banned in Domain,
+// Application and <Context>.UnitTest: G7 no-mocks-in-core.sh)
 var fakeOrder = A.Fake<Order>();
 A.CallTo(() => fakeOrder.RegisterOrderItem(...)).DoesNothing();
 ```
 
-### ✅ DO: Mock Infrastructure
+### ✅ DO: Replace Infrastructure with InMemory doubles
 
 ```csharp
-// Mock repositories
-var orderRepository = A.Fake<IOrderRepository>();
-A.CallTo(() => orderRepository.AddAsync(...)).Returns(Task.CompletedTask);
-
-// Mock external services
-var inventoryService = A.Fake<IInventoryService>();
-A.CallTo(() => inventoryService.ReserveItems(...)).Returns(Task.CompletedTask);
+// Hand-written InMemory repository and external service
+var orderRepository = new InMemoryOrderRepository();
+var inventoryService = new InMemoryInventoryService();
 ```
 
-### ✅ DO: Verify Infrastructure Calls
+### ✅ DO: Assert on the observable state of the InMemory double
 
 ```csharp
-// Verify repository was called correctly
-A.CallTo(() => orderRepository.AddAsync(
-    A<Order>.That.Matches(o => 
-        o.Id == expectedId &&
-        o.Status == OrderStatus.Confirmed
-    ),
-    A<CancellationToken>._
-)).MustHaveHappenedOnceExactly();
+// Assert on what the repository now holds, not on which calls were made
+var saved = Assert.Single(orderRepository.Orders.Values);
+Assert.Equal(expectedId, saved.Id);
+Assert.Equal(OrderStatus.Confirmed, saved.Status);
 ```
 
 ### ✅ DO: Test Domain Validation
@@ -382,7 +397,9 @@ await Assert.ThrowsAsync<DomainException>(
 4. **Refactoring-safe**: Changes to Domain structure don't break tests
 5. **Clear intent**: Tests show how Domain and Application collaborate
 
-## Example 3: Domain Logic Test (Pure — No Mocks)
+## Example 3: Domain Logic Test (rare: only when Mandate 4 opens a gate; pure, no doubles)
+
+This test exists only when `test-design-mandates` Mandate 4 opens Gate (a) or (b) and the test-plan records the Extraction Reason. By default the Use Case test above already covers the rule.
 
 ### Domain: Eligibility Policy
 
@@ -410,7 +427,7 @@ public sealed class EligibilityPolicy
 ### Test: Domain Policy Tests
 
 ```csharp
-namespace MonAssurance.UnitTests.Domain.Eligibility;
+namespace MonAssurance.UnitTest.Domain.Eligibility;
 
 public sealed class EligibilityPolicyTests
 {
@@ -469,7 +486,7 @@ public sealed class EligibilityPolicyTests
 
 | Aspect | Acceptance Test | Domain Test |
 |---|---|---|
-| Dependencies | Mock Infrastructure | None (pure) |
-| Subject | Handler (orchestrator) | Aggregate/VO/Service |
-| Assertions | Infrastructure calls + Domain state | Domain state only |
-| When to use | Orchestration flows | Complex business rules, edge matrices |
+| Dependencies | InMemory doubles for Infrastructure | None (pure) |
+| Subject | Handler (orchestrator) | Domain service / policy (aggregates and VOs are not tested directly) |
+| Assertions | InMemory double state + Domain state | Return value / Domain state only |
+| When to use | Default: orchestration flows and the rules they carry | Only when `test-design-mandates` Mandate 4 opens a gate |

@@ -136,13 +136,13 @@ for `fail` or for missing evidence.
 quality-gates lens reports its verdict and checks only the commit policy it cannot
 (approved feature scope, `Refs`/`Closes` issue line).
 
-| Field | How the lens falsifies it |
+| Field | How qg-verify falsifies it |
 |-------|---------------------------|
 | `repo_root_rev` | resolves, and is `HEAD` or the parent of an evidence-only `HEAD` (the commit that adds the log touches only the story's evidence directory) |
 | covered range | with the DELIVER base, every commit in `base..repo_root_rev` is listed in `commits_covered` |
-| `commits_covered[].sha` | independent Git-derived evidence resolves this exact SHA; proven missing SHA → contradiction, inaccessible evidence → inconclusive |
-| `commits_covered[].files_changed` | compare with independently accessible actual commit diff; listed file absent → contradiction, unavailable diff → inconclusive |
-| `commits_covered[].subject` | equals the first line of the actual full message for that exact SHA; apply G8 below to the full message, not this producer-supplied summary |
+| `commits_covered[].sha` | `qg-verify` resolves this exact SHA with `git cat-file`; an SHA git cannot resolve (missing OR unreadable) → fail |
+| `commits_covered[].files_changed` | every listed path must appear in `git diff-tree` of that commit; a listed path absent (or diff unreadable) → fail |
+| `commits_covered[].subject` | must equal `git log -1 --format=%s` of that SHA; mismatch → fail. Apply G8 below to the full message, not this producer-supplied summary |
 | `gates[].stdout_ref` | file MUST exist at the declared path |
 | `gates[].stdout_sha256` | re-hash of the file MUST equal declared value |
 | `gates[].stdout_tail` | MUST be a strict suffix of the file content |
@@ -150,7 +150,7 @@ quality-gates lens reports its verdict and checks only the commit policy it cann
 | `gates[].metrics.tests_failed` | for `status: "pass"` MUST be `0` |
 | `test_integrity.cycles[].red_snapshot_ref` | file MUST exist; content MUST equal `git show {red_commit}:{test_file}` |
 | `test_integrity.cycles[].green_snapshot_ref` | same against `green_commit` |
-| RED→GREEN diff | computed by the lens: any line REMOVED or MUTATED in an existing test → G9 violation; only ADDED lines are allowed |
+| RED→GREEN diff | computed by `qg-verify` from the two snapshots (first `test_files` entry): any line REMOVED or MUTATED in an existing test → G9 violation (fail); only ADDED lines are allowed |
 | `test_integrity.cycles[].red_stdout_ref` | file MUST exist; re-hash MUST equal `red_stdout_sha256` |
 | `test_integrity.cycles[].red_exit_code_ref` | file MUST exist; for G10 `status: "pass"` content MUST be NON-zero — a `0` means the test never failed |
 
@@ -182,22 +182,20 @@ messages. A verified violation is `fail`; a message nobody can read is `inconclu
 
 - `qg-verify` exits `0` pass, `1` fail, `2` inconclusive; the producer runs it on its own log
   before handing over, the reviewer runs it again, the lens reports its result.
-- Any of the following → `verdict: inconclusive` (never `pass`):
-  - the JSON is missing
-  - a required field is absent or malformed
-  - a referenced file does not exist
-  - a `stdout_sha256` does not match the file content
-  - a snapshot does not match `git show {commit}:{path}`
-  - G8 actual message or completion claim cannot be independently verified with available tools
-- Any of the following → `verdict: fail`:
-  - a gate has `status: "fail"`
-  - `metrics.tests_failed > 0` while `status: "pass"` (internal contradiction)
-  - an actual covered commit message violates the shared G8 policy
-  - G9 diff shows a line REMOVED or MUTATED in an existing test between RED and GREEN snapshots
-  - G10: a cycle records a zero exit code for its RED run
-  - `commits_covered[].sha` does not resolve in Git
-  - `files_changed` lists a path absent from the actual commit diff
-  - a commit made since the DELIVER base is missing from `commits_covered`
+- Any of the following → `verdict: inconclusive` (never `pass`): the JSON is missing or not JSON;
+  a required field is absent or malformed; `$schema` unsupported; a required gate is absent or
+  duplicated; a gate `status` is not pass/fail/not_applicable, or `not_applicable` has no
+  `rationale`; a referenced stdout/exit/snapshot file does not exist or the exit file holds no
+  integer; a `stdout_sha256` / `red_stdout_sha256` does not match the file; `stdout_tail` is not
+  the end of the file; a snapshot does not match `git show {commit}:{path}`; a cycle's RED stdout
+  or exit code is missing. (G8 message readability is judged by the lens, not qg-verify.)
+- Any of the following → `verdict: fail`: a gate has `status: "fail"`; a `pass` gate other than
+  G7-G10 whose exit file is non-zero, or whose `metrics.tests_failed > 0`; G7 `pass` while
+  `qg-mocks.stdout` is non-empty; `repo_root_rev` does not resolve; a covered `sha` does not
+  resolve; a covered `subject` differs from the actual first line; `files_changed` lists a path
+  absent from the commit diff; a covered message is not `type(feature): subject` or lacks
+  `Signed-off-by`; a commit since the DELIVER base is missing from `commits_covered`; G9 shows a
+  removed or mutated line; a cycle's RED exit code is 0.
 - `repo_root_rev` neither `HEAD` nor the parent of an evidence-only `HEAD` → `inconclusive`
   (the log describes an older tree)
 

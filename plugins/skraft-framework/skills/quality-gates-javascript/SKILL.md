@@ -88,7 +88,9 @@ rather than silently shrinking denominator.
 - Exit 1: failed child/report/score or source changed during execution.
 - Exit 2: invalid input, unsupported tooling/config or evidence I/O failure.
 - JSON stdout supplies verdict, `combinedPass`, gate records and manifest path.
-  Only full `status: pass` plus exit 0 qualifies as combined mutation proof.
+  Only status `pass` with exit 0 from a run without `--core-only`, `--since` or
+  `--overlay` qualifies as combined mutation proof; `--since` and `--overlay` runs also
+  print `pass` and `combinedPass: true`, treat them as diagnostic.
 - Each invocation allocates a unique evidence directory. Per scope: effective
   config, native report, stdout/stderr, child exit and adapter gate exit.
   Manifest captures SHA-256 hashes, command argv, timings, source/test hashes,
@@ -97,8 +99,10 @@ rather than silently shrinking denominator.
   a valid fresh report is failure. Reject malformed/empty reports, wrong root,
   config/report-path mismatch, changed sources, unexpected files/statuses and
   symlink reports. Source/test/config edits during execution block.
-- Manifest is supporting G6 evidence, not a replacement v3 evidence log. Producer
-  references both scope records from existing contract; never invent new gate IDs
-  or claim all quality gates passed. Git revision alone does not attest dirty tree.
+- Manifest is supporting G6 evidence, not a replacement v4 evidence log. The producer
+  writes one G6 entry per scope (core, boundary) from the runner's `<scope>.stdout` and
+  `<scope>.gate.exit`, with refs relative to the tracking directory as in
+  `quality-gates-evidence-contract`; never invent gate IDs or claim all quality gates
+  passed. Git revision alone does not attest dirty tree.
 - No browser/frontend mapping, TypeScript transpilation, test installation,
   equivalence-suppression support, coverage gate or automatic commit/push.

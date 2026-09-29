@@ -122,7 +122,7 @@ If YES → ambiguous → flag.
 
 **Definition:** For every use case named in the coverage matrix that is NEW to this story (not reused from a prior story), the outer acceptance test enters at the Application layer (`<Context>.UnitTest`, per `clean-architecture-testing`) — not solely via an Integration/HTTP test — and an Application/UseCase-level test file for it physically exists in the repo, referenced from `impl-plan-{story}.md`.
 
-**Why this gate exists:** `outside-in-tdd`'s Concentric Circle Expansion mandates Phase 1 (Application-layer acceptance test + domain unit tests) GREEN before Phase 2 (API/HTTP integration test) or Phase 3 (Infrastructure) begins. A DISTILL pass that ships only HTTP/Integration tests for a brand-new use case has silently skipped Phase 1 — G1–G10 do not detect this because they check Gherkin/plan artefacts, never the actual test files on disk.
+**Why this gate exists:** `outside-in-tdd`'s Concentric Circle Expansion mandates Phase 1 (Application-layer acceptance test; a Domain unit test only where `test-design-mandates` Mandate 4 opens a gate) GREEN before Phase 2 (API/HTTP integration test) or Phase 3 (Infrastructure) begins. A DISTILL pass that ships only HTTP/Integration tests for a brand-new use case has silently skipped Phase 1 — G1–G10 do not detect this because they check Gherkin/plan artefacts, never the actual test files on disk.
 
 **How to check:**
 1. From the boundary-enforcement coverage matrix (see G7), list every use case boundary named in `test-plan-{story}.md` / `contracts-{story}.md`.

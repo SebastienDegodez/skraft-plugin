@@ -241,7 +241,7 @@ Paths passed to `WithMainArtifacts` are resolved relative to the test project ou
 
 **Directory layout in test project:**
 ```
-MonAssurance.IntegrationTests/
+MonAssurance.IntegrationTest/
 ├── contracts/
 │   ├── eligibility-check-api.yaml
 │   ├── eligibility-check-api.apiexamples.yaml

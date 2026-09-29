@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: Use when an approved scenario, Gherkin example, worked example, or expected result has to become working software through outside-in / double-loop TDD -- start from an acceptance or application-boundary test, get a trustworthy RED before implementation, let domain logic emerge only from failing behavior, and drive one walking skeleton or first delivery slice at a time. Also use to decide what belongs in first delivery and what stays out of scope, when checking whether a failing suite proves a missing approved behavior or is false evidence, when replacing fixture-provided or test-provided false greens with production behavior, when wider HTTP/DB/infrastructure tests should wait behind an inner failing behavior, and when splitting RED and GREEN across workers or subagents with inspection between them. Finish with post-GREEN wiring verification, mutation/coverage gates, and never commit on red.
+description: Use when an approved scenario, Gherkin example, worked example, or expected result has to become working software through outside-in / double-loop TDD -- start from an acceptance or application-boundary test, get a trustworthy RED before implementation, let domain logic emerge only from failing behavior, and drive one walking skeleton or first delivery slice at a time. Also use to decide what belongs in first delivery and what stays out of scope, when checking whether a failing suite proves a missing approved behavior or is false evidence, when replacing fixture-provided or test-provided false greens with production behavior, when wider HTTP/DB/infrastructure tests should wait behind an inner failing behavior, and when splitting RED and GREEN across workers or subagents with inspection between them. Finish with post-GREEN wiring verification, mutation/coverage gates. Commit RED only on the feature branch, as the RED evidence commit (G9 red_commit); never push a red state to a shared branch; the story ends GREEN.
 ---
 
 # Outside-In TDD
@@ -8,7 +8,7 @@ description: Use when an approved scenario, Gherkin example, worked example, or 
 Turns an **approved** scenario into working software. Start from observable behavior at the
 application boundary, get trustworthy failure first, then let design emerge from failing tests.
 
-**Core rule:** real domain objects, mocked external boundaries, fast in-memory tests.
+**Core rule:** real domain objects, output gateways replaced by simple hand-written InMemory doubles (no mocking library in Domain, Application or `<Context>.UnitTest`), fast in-memory tests.
 **Hard rule:** no implementation code before RED is a clean behavior failure.
 
 ## Entry Gate — read before anything else
@@ -20,7 +20,11 @@ Gherkin scenario, a worked example, an agreed expected value. When it does not:
 
 - **Stop.** No test, no implementation, no provisional choice of outcome on the business's behalf.
 - Name the decision that is still open, and ask for one observable example that closes it.
-- `bdd-methodology` owns that conversation. Re-enter here once it has an answer.
+- `bdd-methodology` owns how the approved outcome is written down (Gherkin). This skill does not
+  open the conversation: interactively, ask the person; under an autonomous dispatch return the
+  structured blocker (`clarification_needed`) naming the open decision and the one example that
+  would close it, then re-enter here once the outcome is approved (Gherkin gate,
+  `skraft-quality-bar`).
 
 An unapproved outcome driven out through a clean cycle still yields a suite that proves only that
 the code matches a guess.
@@ -33,10 +37,11 @@ it, **and which production layer a business rule's code lands in**. Everything e
 
 | Question | Owner |
 |---|---|
-| What the observable behaviour IS, and whether it is approved | `bdd-methodology` |
+| What the approved observable behaviour looks like (Gherkin) | `bdd-methodology` |
+| Whether the outcome is approved | the person, checked by the `Gherkin gate` in `skraft-quality-bar` |
 | Which test project, which **test** layer, which double | `clean-architecture-testing` |
 | Whether a domain test is authorized; coverage matrix; walking-skeleton strategy A–D | `test-design-mandates` |
-| Mutation score, survivor classification, report parsing | `mutation-testing` |
+| Mutation survivor classification and report parsing (bar: `skraft-quality-bar`) | `mutation-testing` |
 | Commit-time self-check | `craft-discipline` |
 | Cleaning up test code that already passes | `test-refactoring-catalog` |
 | **Phase order, entry evidence, the outer→inner handoff, and which production layer a rule's code lands in** | **this skill** |
@@ -137,7 +142,7 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 
 - Run the **Post-GREEN Wiring Verification** below to detect Fixture Theater.
 - Run the **Coverage and Mutation Gate** below.
-- Commit. The message format is `craft-discipline` C9. **Never commit on red.**
+- Commit. The message format is `craft-discipline` C9. Commit RED only on the feature branch, as the RED evidence commit (G9 `red_commit`); never push a red state to a shared branch; the story ends GREEN.
 
 ## Quick Reference
 
@@ -147,7 +152,7 @@ Refining code instead of revising RED means you are back in 3-step TDD — stop 
 | **RED** | Write test, stub until it compiles, run | Test fails on **behavior** (assertion), not compilation |
 | **Guidance** (**MANDATORY**) | Orient the approach, **name the type and layer that will own the rule**, + **the failing test is inspected** | Owning type and layer stated before the implementation is written, the RED output has been seen by someone other than its implementer |
 | **SYNTHESIZE GREEN** | Synthesize the smallest slice the test demands, clean the first time | Tests green, architecture respected, nothing built the test did not force |
-| **COMMIT & VERIFY** | Wiring verification, mutation gate, commit | Production files in the diff, mutation gate run and its survivors resolved, never on red |
+| **COMMIT & VERIFY** | Wiring verification, mutation gate, commit | Production files in the diff, mutation gate run and its survivors resolved, story ends GREEN (RED committed only on the feature branch) |
 
 ## Common Rationalizations
 
@@ -181,12 +186,12 @@ A test modified to turn green is theater: it no longer witnesses behavior.
 
 ## Boundary-to-Boundary Testing (all test levels)
 
-Every test enters through an **input boundary** (use case / interactor) and asserts at **output boundaries** (gateways) or on the return value. Internal classes (entities, value objects, domain services) are exercised **indirectly** — never instantiated directly in test code.
+Every test enters through an **input boundary** (use case / interactor) and asserts at **output boundaries** (gateways) or on the return value. Internal classes (entities, value objects) are exercised **indirectly** and never instantiated directly in test code. A Domain policy or domain service is itself a boundary: its public signature is the contract, and it gets its own test only when `test-design-mandates` Mandate 4 opens a gate.
 
 | Test level | Input boundary | Output observation |
 |---|---|---|
-| Acceptance | Use case / interactor (application handler) | Gateway mocked (repository, email…) or use-case output DTO |
-| Unit (domain function) | The public function signature (its contract IS the boundary) | Return value |
+| Acceptance | Use case / interactor (application handler) | InMemory gateway double (repository, email…) or use-case output DTO |
+| Unit (domain function, only when Mandate 4 opens a gate) | The public function signature (its contract IS the boundary) | Return value |
 | Integration (gateway adapter) | Gateway contract | Real infrastructure (DB, filesystem, subprocess) |
 
 **Unit tests are NOT "isolated object tests."** They are boundary-to-boundary at a smaller scope. Testing a pure domain function by calling it directly IS boundary-to-boundary — the function's public signature is the contract under test.
@@ -205,7 +210,7 @@ an orchestrator.
 | Orchestration (load/save/publish, no rule) | Application use case / handler | Use Case test (Acceptance) |
 | Simple rule: one condition, no edge-case matrix | Application use case / handler | Already covered by primary Use Case test |
 | Rule over an aggregate's own state | Method on the Domain entity / aggregate | Use Case test (Acceptance) |
-| Complex invariants, large edge-case matrices, or reused rules | A NEW named type in the Domain project (`architecture-patterns` picks Policy vs Domain Service vs Specification) | Use Case test (Acceptance); add a Domain test only if `test-design-mandates` Mandate 4 opens a gate |
+| Complex invariants, large edge-case matrices, or reused rules | A NEW named type in the Domain project (a Policy, Domain Service or Specification, named for the rule it holds) | Use Case test (Acceptance); add a Domain test only if `test-design-mandates` Mandate 4 opens a gate |
 
 **"Complex" is not a judgement call:** tiers or bands, a cap or a floor, rounding, or three or more
 worked examples of one calculation put you on the last row. Classify the whole approved rule as the
@@ -217,11 +222,12 @@ that carries the tier rate while the handler keeps the bands and the cap is the 
 done. Placement never depends on whether a Domain test is authorized: an unauthorized Domain test
 means the Use Case test covers the type, never that the rule moves back into the handler.
 
-**Default:** Start with a Use Case test. Add Domain tests only if extracting a complex rule makes testing simpler.
+**Default:** Start with a Use Case test. A Domain test exists only where `test-design-mandates` Mandate 4 opens Gate (a) or (b).
 
 Placement is not permission to design upfront: the Domain type still appears only when a failing
-test demands it (Step 2). When a rule has meaningful edge-case combinations, cover those
-combinations explicitly in Domain tests.
+test demands it (Step 2). When a rule has meaningful edge-case combinations, cover them through
+the Use Case test; a Domain test for them exists only if `test-design-mandates` Mandate 4 opens a
+gate (no double coverage).
 
 ## Outside-In Approach
 
@@ -232,7 +238,7 @@ observable behavior is; this skill turns it into working software.
 ### Step 1: Map Scenario to Acceptance Test
 
 Translate the scenario to a top-level acceptance-style test entering at the Application boundary.
-Mock only external boundaries; use real domain objects.
+Replace output gateways with InMemory doubles; use real domain objects.
 
 ### Step 2: Let Domain Emerge
 
@@ -252,7 +258,7 @@ The bar is a failing test, **not a failing test that already names the type**. F
   the Domain type you wish existed, let that reference fail to compile, then create it
 - Orchestrators coordinate; every rule past the simple-rule row of *When to Write Which* lives in
   the domain
-- Real domain objects, never mocked
+- Real domain objects, never mocked or faked
 
 Placeholder test bodies are the same failure mode — see **Placeholder assertions are NOT wishful
 thinking** above.
@@ -261,12 +267,14 @@ thinking** above.
 
 After the suite turns green and BEFORE commit:
 
-1. Run `git diff --name-only`. Every production file the behavior required MUST appear in the diff.
+1. Run `git status --porcelain --untracked-files=all` (lists modified, staged and each untracked
+   file; `git diff --name-only` misses new files and anything staged). Every production file the
+   behavior required MUST appear.
 2. If only test files changed but tests flipped RED → GREEN → you hit **Fixture Theater**: the test
    setup implements the feature. BLOCK the commit, go back to GREEN, write the production code.
 3. Deletion test: mentally revert the production changes. If tests still pass, the test is exercising
    fixture state, not behavior.
-4. Placement check: run `git diff --name-only`. If an Application file gained a rate, threshold, cap,
+4. Placement check: run `git status --porcelain --untracked-files=all`. If an Application file gained a rate, threshold, cap,
    or rounding computation and no Domain file was added or changed, the policy is in the orchestrator.
    BLOCK the commit and move it. Moving misplaced code is not the forbidden post-GREEN iteration: the
    acceptance test does not change and stays green throughout.
@@ -299,23 +307,25 @@ the skeleton level: two incomplete end-to-end paths, neither of them evidence.
 
 This skill decides **in what order** you take them and what "done" means for one:
 
-- Write ONE acceptance test proving end-to-end wiring with **real adapters** (filesystem, DB,
-  subprocess, HTTP — fake only costly externals like paid APIs).
+- Write ONE acceptance test proving end-to-end wiring. Which adapters are real or InMemory follows
+  the strategy A–D that `test-design-mandates` picks: Strategy A (full InMemory) is the default when
+  the feature has no persistence or external service; real adapters (filesystem, DB, subprocess,
+  HTTP) belong to B–D and to `<Context>.IntegrationTest`, faking only costly externals like paid APIs.
 - Implement the thinnest possible slice: hardcoded values, minimal branching, no error handling
   beyond what the AT requires.
-- Unit tests only if needed to decompose a complex GREEN.
+- A Domain test only where `test-design-mandates` Mandate 4 opens a gate.
 - The AT drives ALL implementation. A later scenario's test may go green on its first run because an
   earlier skeleton already covered it — that is correct. Confirm it with the deletion test rather
   than assuming it.
 
 ## Concentric Circle Expansion
 
-The double loop (acceptance + domain unit tests) is the inner circle. Once it is GREEN for a
+The double loop (acceptance test, plus a Domain test only when Mandate 4 opens a gate) is the inner circle. Once it is GREEN for a
 behavior slice, expand outward — one circle at a time.
 
 | Phase | What to write | Prerequisite |
 |---|---|---|
-| **1 — Inner (double loop)** | Acceptance test at the application boundary + domain unit tests | none — always first |
+| **1 — Inner (double loop)** | Acceptance test at the application boundary (+ a Domain test only if Mandate 4 opens a gate) | none — always first |
 | **2 — API circle** | Integration test at the transport boundary (in-process host, real entry point) | Phase 1 GREEN |
 | **3 — Infrastructure circle** | Integration test at the persistence / broker / external adapter boundary | Phase 2 GREEN |
 
@@ -377,11 +387,11 @@ worth taking.
 
 | Mistake | Fix |
 |---|---|
-| Mocking domain objects in acceptance tests | Use real domain objects, mock only external boundaries |
+| Mocking or faking domain objects in acceptance tests | Use real domain objects; replace only output gateways, with InMemory doubles (no mocking library in the core) |
 | Designing domain objects upfront | Let domain emerge from test failures — don't design before testing |
 | Treating compilation errors as RED | Stub to compile, then confirm failure on a business assertion |
 | Placeholder assertion standing in for a real one | Call the API you wish existed; let the missing symbol fail the build |
-| Committing when only test files changed | Post-GREEN verification via `git diff --name-only` |
+| Committing when only test files changed | Post-GREEN verification via `git status --porcelain --untracked-files=all` |
 | Modifying a failing test to pass | Iron Rule violation — fix the implementation or revert |
 | Skipping the architectural guidance checkpoint | The failing test is inspected before any implementation is written |
 | Writing every acceptance test up front and skipping all but one | Author one acceptance test per slice — a skipped test is a false green |
@@ -398,6 +408,6 @@ self-check. See **What this skill owns** for the full delegation map, and pair w
 testing skills for patterns and examples.
 
 ## References
-- [test-examples.md](references/test-examples.md) - Worked Acceptance and Domain test examples (real domain objects, mocked boundaries).
+- [test-examples.md](references/test-examples.md) - Worked Acceptance and Domain test examples (real domain objects, InMemory doubles for output gateways).
 - [testing-strategy.md](references/testing-strategy.md) - Testing pyramid and strategy.
 - [cqrs-patterns.md](references/cqrs-patterns.md) - CQRS architecture references.

@@ -42,7 +42,7 @@ Analyze each test method for these anti-patterns:
 - Pattern: test copies the computation then asserts equality
 
 ### Implementation Mirroring
-- `Verify()` / `MustHaveHappened()` without state assertion → blocker
+- `Verify()` / `MustHaveHappened()` / `Received()` in the core (Domain, Application, `<Context>.UnitTest`) → blocker (assert on the InMemory double's observable state or the use-case result); elsewhere without state assertion → blocker
 - Asserting HOW instead of WHAT
 
 ### Fixture Theater

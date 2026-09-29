@@ -4,7 +4,7 @@ Full runnable examples. Each example matches the short snippet in `SKILL.md`.
 
 ## Domain — Pure Unit Test (rare, extracted rule only)
 
-Only applies when a rule was extracted into a reusable Policy / Specification with a non-trivial edge-case matrix.
+Only applies when `test-design-mandates` Mandate 4 opens a gate (`branch_unreachable_via_AC` or `combinatorial_economy`) and the test plan records the `Extraction Reason`. Default: the Application acceptance test covers the rule. The sample below shows the shape of a `combinatorial_economy` sweep; the three rows are abbreviated, a real sweep exists because the grid exceeds roughly 10-15 acceptance scenarios.
 
 ```csharp
 public sealed class EligibilityPolicyTests
@@ -32,7 +32,7 @@ public sealed class EligibilityPolicyTests
 
 ## Application — Acceptance Test (default layer)
 
-Sociable test: real domain objects, mocks only on output gateways.
+Sociable test: real domain objects, hand-written InMemory doubles on output gateways (no mocking library in the core; assert on the double's state).
 
 ```csharp
 public sealed class PlaceOrderCommandHandlerTests
@@ -40,52 +40,45 @@ public sealed class PlaceOrderCommandHandlerTests
     [Fact]
     public async Task WhenPlacingOrder_ShouldPersistAndRaiseEvent()
     {
-        var repository = A.Fake<IOrderRepository>();
-        var dispatcher = A.Fake<IDomainEventDispatcher>();
+        var repository = new InMemoryOrderRepository();
+        var dispatcher = new InMemoryEventDispatcher();
         var handler = new PlaceOrderCommandHandler(repository, dispatcher);
 
         var command = new PlaceOrderCommand(OrderId.New(), "Alice");
         await handler.HandleAsync(command, CancellationToken.None);
 
-        A.CallTo(() => repository.AddAsync(
-                A<Order>.That.Matches(o =>
-                    o.Id == command.OrderId &&
-                    o.CustomerName == "Alice"),
-                A<CancellationToken>._))
-            .MustHaveHappenedOnceExactly();
-
-        A.CallTo(() => dispatcher.DispatchAsync(
-                A<IEnumerable<DomainEvent>>.That.Matches(e =>
-                    e.OfType<OrderPlacedEvent>().Any()),
-                A<CancellationToken>._))
-            .MustHaveHappenedOnceExactly();
+        var persisted = await repository.FindAsync(command.OrderId, CancellationToken.None);
+        persisted!.CustomerName.Should().Be("Alice");
+        dispatcher.Dispatched.OfType<OrderPlacedEvent>().Should().ContainSingle();
     }
 
     [Fact]
     public async Task WhenCustomerNameIsEmpty_ShouldRejectBeforePersisting()
     {
-        var repository = A.Fake<IOrderRepository>();
-        var dispatcher = A.Fake<IDomainEventDispatcher>();
+        var repository = new InMemoryOrderRepository();
+        var dispatcher = new InMemoryEventDispatcher();
         var handler = new PlaceOrderCommandHandler(repository, dispatcher);
 
         var act = () => handler.HandleAsync(
             new PlaceOrderCommand(OrderId.New(), ""), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
-        A.CallTo(() => repository.AddAsync(A<Order>._, A<CancellationToken>._))
-            .MustNotHaveHappened();
+        repository.Count.Should().Be(0);
+        dispatcher.Dispatched.Should().BeEmpty();
     }
 }
 ```
 
-### When a hand-written fake is justified
+### The InMemory doubles
 
-When many tests need the repository to behave as a store:
+Hand-written, tiny, a `Dictionary` / `List` behind the port interface. Shared doubles live in the non-test `TestKit` project.
 
 ```csharp
 public sealed class InMemoryOrderRepository : IOrderRepository
 {
     private readonly Dictionary<OrderId, Order> _store = new();
+
+    public int Count => _store.Count;
 
     public Task AddAsync(Order order, CancellationToken ct)
     {
@@ -96,9 +89,20 @@ public sealed class InMemoryOrderRepository : IOrderRepository
     public Task<Order?> FindAsync(OrderId id, CancellationToken ct)
         => Task.FromResult(_store.GetValueOrDefault(id));
 }
-```
 
-Use when FakeItEasy setup becomes repetitive (>3 tests need the same state machine).
+public sealed class InMemoryEventDispatcher : IDomainEventDispatcher
+{
+    private readonly List<DomainEvent> _dispatched = new();
+
+    public IReadOnlyList<DomainEvent> Dispatched => _dispatched;
+
+    public Task DispatchAsync(IEnumerable<DomainEvent> events, CancellationToken ct)
+    {
+        _dispatched.AddRange(events);
+        return Task.CompletedTask;
+    }
+}
+```
 
 ## Infrastructure — Integration Test with Testcontainers
 
@@ -177,7 +181,7 @@ public sealed class PaymentGatewayAdapterTests : IAsyncLifetime
 }
 ```
 
-Full mocking + contract validation patterns (async protocols included) → upcoming `api-contract-testing` skill.
+Full mocking + contract validation patterns (async protocols included) → see `contract-testing` (contract verification) and `mocking-strategy-roster` (mock strategy).
 
 ## API — E2E with WebApplicationFactory
 

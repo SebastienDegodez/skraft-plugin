@@ -1,14 +1,13 @@
 using System.Collections.Generic;
 using Xunit;
-using FakeItEasy;
 
-namespace MyProject.UnitTests.Application.Orders.Queries;
+namespace MyProject.UnitTest.Application.Orders.Queries;
 
 /// <summary>
 /// Template for testing Query Handlers.
-/// 
+///
 /// Key points:
-/// - Mock only Infrastructure dependencies (repositories)
+/// - No mocking library in the core: the repository is a small hand-written InMemory double
 /// - Set up test data with real Domain objects
 /// - Return ViewModels, never Domain objects
 /// - Focus on mapping correctness
@@ -22,9 +21,8 @@ public sealed class QueryHandlerTests
         var aggregate = Aggregate.Create(/* parameters */);
         // ... configure aggregate state ...
 
-        var repository = A.Fake<IRepository>();
-        A.CallTo(() => repository.GetByIdAsync(aggregate.Id, A<CancellationToken>._))
-            .Returns(aggregate);
+        var repository = new InMemoryRepository();
+        repository.Items[aggregate.Id] = aggregate;
 
         var handler = new QueryHandler(repository);
         var query = new Query(aggregate.Id);
@@ -41,10 +39,8 @@ public sealed class QueryHandlerTests
     [Fact]
     public async Task WhenQueryingNonExistingData_ShouldReturnNull()
     {
-        // Arrange
-        var repository = A.Fake<IRepository>();
-        A.CallTo(() => repository.GetByIdAsync(A<Id>._, A<CancellationToken>._))
-            .Returns(Task.FromResult<Aggregate?>(null));
+        // Arrange - empty InMemory repository
+        var repository = new InMemoryRepository();
 
         var handler = new QueryHandler(repository);
         var query = new Query(Id.CreateNew());
@@ -54,5 +50,14 @@ public sealed class QueryHandlerTests
 
         // Assert
         Assert.Null(result);
+    }
+
+    // Very simple InMemory double: a Dictionary behind the port interface.
+    private sealed class InMemoryRepository : IRepository
+    {
+        public Dictionary<Id, Aggregate> Items { get; } = new();
+
+        public Task<Aggregate?> GetByIdAsync(Id id, CancellationToken cancellationToken) =>
+            Task.FromResult(Items.TryGetValue(id, out var found) ? found : null);
     }
 }

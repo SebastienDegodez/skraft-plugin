@@ -83,6 +83,25 @@ const canonicalSolution = async (root) => {
 
 const readConfig = async (root, name) => JSON.parse(await readFile(join(root, name), 'utf8'))['stryker-config']
 
+test('canonical scaffold accepts a .Api project and keeps its casing in the boundary glob', async () => {
+  const { root, env } = await setup()
+  try {
+    await Promise.all([
+      touch(root, 'Checkout.sln', ''),
+      touchProject(root, 'src/Checkout.Domain/Checkout.Domain.csproj'),
+      touchProject(root, 'src/Checkout.Application/Checkout.Application.csproj'),
+      touchProject(root, 'src/Checkout.Api/Checkout.Api.csproj'),
+      touchProject(root, 'src/Checkout.Infrastructure/Checkout.Infrastructure.csproj'),
+    ])
+    const configured = await run(CONFIGURE, ['--root', root], { cwd: root, env })
+    assert.equal(configured.exitCode, 0, configured.stderr)
+    const boundaryConfig = await readConfig(root, 'stryker-config-boundary.json')
+    assert.deepEqual(boundaryConfig.mutate.slice(0, 2), ['**/*.Api/**/*.cs', '**/*.Infrastructure/**/*.cs'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('canonical scaffold writes two root configs for one whole-solution run per gate', async () => {
   const { root, log, initLog, env } = await setup()
   try {

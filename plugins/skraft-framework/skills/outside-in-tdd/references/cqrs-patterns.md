@@ -99,7 +99,7 @@ public sealed class PlaceOrderCommandHandler
 - Accept primitive types or DTOs as parameters
 - Create/load Domain aggregates
 - Invoke Domain methods (business logic)
-- Call Infrastructure services (mocked in tests)
+- Call Infrastructure services (replaced by InMemory doubles in unit tests)
 - Return IDs or void
 - No business logic in handler (only orchestration)
 
@@ -197,4 +197,4 @@ public sealed record OrderLineViewModel(
 4. **Business logic stays in Domain**
 5. **Handlers orchestrate, don't implement logic**
 6. **Test handlers with real Domain objects**
-7. **Mock only Infrastructure dependencies**
+7. **Replace Infrastructure dependencies with InMemory doubles (no mocking library in the core)**

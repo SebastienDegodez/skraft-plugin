@@ -164,13 +164,13 @@ spec:
 ## Consumer Test
 
 ```csharp
-// tests/MonAssurance.IntegrationTests/Tests/EligibilityEventConsumerTests.cs
+// tests/MonAssurance.IntegrationTest/Tests/EligibilityEventConsumerTests.cs
 // Pattern: Microcks publishes example events → consumer processes them → assert state
 
 using Confluent.Kafka;
 using Microcks.Testcontainers;
 
-namespace MonAssurance.IntegrationTests.Tests;
+namespace MonAssurance.IntegrationTest.Tests;
 
 public sealed class EligibilityEventConsumerTests : IAsyncLifetime
 {
@@ -243,10 +243,10 @@ public sealed class EligibilityEventConsumerTests : IAsyncLifetime
 ## Producer Test
 
 ```csharp
-// tests/MonAssurance.IntegrationTests/Tests/EligibilityEventProducerTests.cs
+// tests/MonAssurance.IntegrationTest/Tests/EligibilityEventProducerTests.cs
 // Pattern: trigger use case → assert event published on Kafka → verify via VerifyAsync
 
-namespace MonAssurance.IntegrationTests.Tests;
+namespace MonAssurance.IntegrationTest.Tests;
 
 public sealed class EligibilityEventProducerTests : IAsyncLifetime
 {

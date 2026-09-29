@@ -41,7 +41,7 @@
 **Test project layout (DELIVER):**
 ```
 tests/
-└── MonAssurance.IntegrationTests/
+└── MonAssurance.IntegrationTest/
     ├── contracts/
     │   ├── eligibility-check-api.yaml
     │   ├── eligibility-check-api.apiexamples.yaml
@@ -128,7 +128,7 @@ metadata:
 ### Step 3 — Update the ServiceId in conformance tests
 
 ```csharp
-// In MonAssurance.IntegrationTests
+// In MonAssurance.IntegrationTest
 var request = new TestRequest { ServiceId = "Eligibility Check API:2.0.0", /* ... */ };
 //                                                                  ↑ bumped
 var result = await _microcks.TestEndpointAsync(request);

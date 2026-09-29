@@ -89,7 +89,7 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
 2. **Double-Loop TDD**: 1 Acceptance test (outside) -> Focused Unit tests (inside).
-3. **4-Phase Cycle**: PREPARE -> RED -> SYNTHESIZE-GREEN -> COMMIT (No commit on red!).
+3. **4-Phase Cycle**: PREPARE -> RED -> SYNTHESIZE-GREEN -> COMMIT (commit RED only on the feature branch, as the RED evidence commit — G9 `red_commit`; never push a red state to a shared branch; the story ends GREEN).
 4. **Iron Rule of Tests**: NEVER modify a failing test to make it pass. Fix the implementation. If stuck after 3 attempts, revert to green and escalate.
 5. **No Test Theater**: Tests MUST fail if behavior changes. Every unit test must kill a unique mutant. Zero mockist tests in Domain/Application.
 6. **Token Economy**: Concise responses, no unsolicited docs, no unnecessary files.

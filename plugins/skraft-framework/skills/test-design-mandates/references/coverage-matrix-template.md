@@ -13,7 +13,7 @@ Use this as the input to the implementation plan (outside-in order = P1 → P2 �
 |---|---|---|---|---|---|---|---|---|
 | 1 | {Scenario title} | `{feature}.feature` | `{UseCaseName}` | Application | InMemory{Interface} | ✅ | A | P1 |
 | 2 | {Scenario title} | `{feature}.feature` | `{UseCaseName}` | Application | InMemory{Interface} | | A | P1 |
-| 3 | {Complex invariant} | — | `{PolicyName}` | Domain | None (pure function) | | — | P2 |
+| 3 | {Gate (a)/(b) case, with its Extraction Reason} | — | `{PolicyName}` | Domain | None (pure function) | | — | P2 |
 | 4 | {Adapter test} | — | `{IRepositoryName}` | Infrastructure | Testcontainers | | C | P3 |
 
 ---
@@ -38,10 +38,10 @@ Use this as the input to the implementation plan (outside-in order = P1 → P2 �
 | # | Scenario | Feature File | Use Case Boundary | Layer | Double Type | Walking Skeleton | Strategy | Priority |
 |---|---|---|---|---|---|---|---|---|
 | 1 | Driver with clean record obtains eligibility | `eligibility-check.feature` | `CheckEligibilityUseCase` | Application | `InMemoryEligibilityRepository` | ✅ | A | P1 |
-| 2 | Driver at age limit obtains eligibility | `eligibility-check.feature` | `CheckEligibilityUseCase` | Application | `InMemoryEligibilityRepository` | | A | P1 |
+| 2 | Driver at age limit obtains eligibility | `eligibility-check.feature` | `CheckEligibilityUseCase` | Application | `InMemoryEligibilityRepository` | | A | P2 |
 | 3 | Driver with 2+ accidents is rejected | `eligibility-check.feature` | `CheckEligibilityUseCase` | Application | `InMemoryEligibilityRepository` | | A | P2 |
 | 4 | Driver with suspended licence is rejected | `eligibility-check.feature` | `CheckEligibilityUseCase` | Application | `InMemoryEligibilityRepository` | | A | P2 |
-| 5 | Eligibility invariant: accident count threshold | — | `EligibilityPolicy` | Domain | None (pure function) | | — | P2 |
+| 5 | Eligibility premium grid, combinatorial sweep (`combinatorial_economy`) | — | `EligibilityPolicy` | Domain | None (pure function) | | — | P2 |
 | 6 | Eligibility result persisted correctly | — | `IEligibilityRepository` | Infrastructure | Testcontainers (PostgreSQL) | | C | P3 |
 
 ---

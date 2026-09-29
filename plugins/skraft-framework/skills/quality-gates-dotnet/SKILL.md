@@ -55,7 +55,10 @@ Populate the contract:
 
 ## G3 — Build passes
 
-Implicit in `dotnet test` for most repos. If the team wants an explicit gate:
+G3 is a required entry of every log; never omit it. Preferred: run the explicit build
+(stdout, exit and sha256 into `qg-build.*`) and point G3 at `qg-build.*`. If the G1/G2
+`dotnet test` run already built the solution, G3 may instead reference `qg-tests.stdout` /
+`.exit` / `.stdout.sha256` (the same files as G1/G2).
 
 ```bash
 dotnet build --nologo --no-incremental \
@@ -72,7 +75,8 @@ If the build is clean, G4 inherits its evidence from G3 and sets
 
 ## G5 — Architecture rules
 
-If the repo carries a `*.ArchitectureTests` project (NetArchTest / ArchUnitNET):
+If the solution carries architecture tests (NetArchTest / ArchUnitNET; by convention an
+`ArchitectureTests` class in the `*.IntegrationTest` project):
 
 ```bash
 dotnet test --nologo \
@@ -84,7 +88,7 @@ echo $? > "$EV/qg-arch.exit"
 shasum -a 256 "$EV/qg-arch.stdout" | awk '{print $1}' > "$EV/qg-arch.stdout.sha256"
 ```
 
-If absent, mark G5 `status: "not_applicable"` with `rationale: "no architecture tests project"`.
+Only when no such tests exist anywhere, mark G5 `status: "not_applicable"` with `rationale: "no architecture tests"`.
 
 ## G6 — Mutation score
 
@@ -104,8 +108,8 @@ the variable is empty, use that absolute path. The configure script writes:
 - `stryker-config-core.json` — whole solution, Domain/Application source globs, 100.
 - `stryker-config-boundary.json` — whole solution, API/Infrastructure source globs, 80.
 
-Canonical mode requires `.Domain`, `.Application`, `.API`, and `.Infrastructure`
-projects. Multiple bounded contexts are allowed. If one solution cannot be selected
+Canonical mode requires `.Domain`, `.Application`, `.API` (or `.Api`, matched
+case-insensitively), and `.Infrastructure` projects. Multiple bounded contexts are allowed. If one solution cannot be selected
 unambiguously, pass `--solution`. For a BFF/non-standard layout, never invent missing
 projects; pass explicit source globs for both scopes:
 
@@ -172,8 +176,11 @@ bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/no-mocks-in-core.s
 ```
 
 The script scans every `*.Domain` and `*.Application` project at any depth, plus the
-`*.Domain.*Tests`, `*.Application.*Tests` and `*.UnitTests` projects, for mocking
-frameworks (Moq, NSubstitute, FakeItEasy, AutoMoq). It writes `qg-mocks.stdout` (one hit
+`*.UnitTest` project (singular, the framework convention; the plural `*.UnitTests` and the
+legacy `*.Domain.*Tests` / `*.Application.*Tests` are still matched), for mocking
+frameworks (Moq, NSubstitute, FakeItEasy, AutoMoq). Domain, Application and `*.UnitTest` use
+hand-written InMemory doubles only; mocking and contract tools stay allowed in `*.IntegrationTest`
+for external systems. It writes `qg-mocks.stdout` (one hit
 per line, empty when clean), `.exit` and `.stdout.sha256`; its exit is the verdict.
 Populate G7 with `status: "pass"` only on exit 0; `stdout_ref` = `evidence/{date}/{story}/qg-mocks.stdout`.
 
@@ -193,28 +200,30 @@ measured. The bar lives in the script; `--threshold` is refused. Populate G11 wi
 
 ## G8 — Conventional commits
 
-Already enforceable from the Git tree alone — no fresh tool run. The producer fills
-`commits_covered[].subject` from `git log --format='%s' <range>`; the lens checks
-each full message against the contract's G8 rules.
+G8 needs no fresh tool run. Fill `commits_covered[]` (`sha`, `subject`, `files_changed`) from
+git (producer flow step 6); `qg-verify` checks syntax, sign-off, subject equality and range
+completeness, the lens checks feature scope and the issue line.
 
 ## G9 — Test integrity (RED→GREEN snapshots)
 
-For every TDD cycle, capture both snapshots when each commit lands:
+For every TDD cycle, capture both snapshots from the commits that hold them: the RED
+evidence commit (`red_commit`, committed on the feature branch) and the GREEN commit:
 
 ```bash
 mkdir -p "$EV/snapshots"
-# at RED:
-git show HEAD:tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs \
+# from the RED evidence commit (red_commit):
+git show <red_commit>:tests/MonAssurance.UnitTest/Eligibilite/SomeTests.cs \
   > "$EV/snapshots/red-1-SomeTests.cs"
-# at GREEN (after the implementation commit):
-git show HEAD:tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs \
+# from the GREEN commit (green_commit):
+git show <green_commit>:tests/MonAssurance.UnitTest/Eligibilite/SomeTests.cs \
   > "$EV/snapshots/green-1-SomeTests.cs"
 ```
 
-The producer records `red_commit`, `green_commit`, and the two snapshot paths in
-the contract. The lens diffs the two snapshots and FAILS G9 if any line was
-removed or mutated in a pre-existing assertion (only additions are allowed —
-that is the Iron Rule of Tests, mechanically verifiable).
+Commit RED only on the feature branch, as the RED evidence commit (G9 `red_commit`);
+never push a red state to a shared branch; the story ends GREEN. The producer records
+`red_commit`, `green_commit`, and the two snapshot paths in the contract. `qg-verify`
+diffs the two snapshots and FAILS G9 if any line was removed or mutated in a pre-existing
+test (only additions are allowed — that is the Iron Rule of Tests, mechanically verifiable).
 
 ## G10 — RED observed
 
@@ -261,7 +270,7 @@ G9 keeps the commit/snapshot job unchanged.
    (`qg-red-{cycle}.stdout` / `.exit` / `.stdout.sha256`) with a non-zero exit. They are
    NOT re-runnable here — a missing capture is `status: "fail"`, never `not_applicable`.
 5. `repo_root_rev = git rev-parse HEAD` — the last work commit.
-6. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
+6. Build `commits_covered[]` from `git log --no-merges --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
    `git show --name-only --format= <sha>` per commit: every commit since DELIVER started.
 7. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v4).
 8. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
@@ -269,6 +278,8 @@ G9 keeps the commit/snapshot job unchanged.
    `"verdict": "pass"`; otherwise fix the gate or the log, never the verifier's input.
 
 If a tool is unavailable in the environment (no Stryker installed, no SDK), the
-gate is `status: "fail"` with the captured stderr — NOT `not_applicable`. The
+gate is `status: "fail"`, NOT `not_applicable`: redirect the script's stderr into the gate's
+stdout file (`bash <script> ... 2> "$EV/qg-<gate>.stdout"`), write its exit code and sha256
+beside it so `stdout_ref`, `exit_code_ref` and `stdout_sha256` resolve, then report the blocker. The
 contract treats unverifiable gates strictly so the lens can collapse them to
 `inconclusive` upstream.

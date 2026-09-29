@@ -14,7 +14,7 @@ Usage: configure-mutation.sh --root <dir> [--solution <sln|slnx>]
        [--core-mutate <glob> ... --boundary-mutate <glob> ...] [--force] [--help]
 
 Canonical mode discovers one solution and requires canonical .Domain, .Application,
-.API, and .Infrastructure projects. BFF/non-standard mode requires explicit inclusive
+.API (or .Api), and .Infrastructure projects. BFF/non-standard mode requires explicit inclusive
 globs for BOTH scopes. Existing differing configs are preserved unless --force is used.
 EOF
 }
@@ -39,8 +39,12 @@ require_layer() {
   local suffix="$1" count=0 path
   [ -d "$ROOT/src" ] || fail_usage "canonical mutation config requires src/; use explicit --core-mutate and --boundary-mutate for a BFF"
   while IFS= read -r path; do
-    [ -n "$path" ] && canonical_project "$path" && count=$((count + 1))
-  done < <(find "$ROOT/src" -type f -name "*.$suffix.csproj" -print | LC_ALL=C sort)
+    if [ -n "$path" ] && canonical_project "$path"; then
+      count=$((count + 1))
+      # keep the casing the repository uses (.API or .Api): globs are case-sensitive
+      [ "$count" -eq 1 ] && FOUND_SUFFIX=$(basename "$path" .csproj | sed 's/.*\.//')
+    fi
+  done < <(find "$ROOT/src" -type f -iname "*.$suffix.csproj" -print | LC_ALL=C sort)
   [ "$count" -gt 0 ] || fail_usage "canonical mutation config requires a .$suffix project; use explicit globs for a BFF"
 }
 init_config() {
@@ -133,9 +137,10 @@ if [ "${#CORE_PATTERNS[@]}" -eq 0 ] && [ "${#BOUNDARY_PATTERNS[@]}" -eq 0 ]; the
   require_layer Domain
   require_layer Application
   require_layer API
+  API_SUFFIX=$FOUND_SUFFIX
   require_layer Infrastructure
   CORE_PATTERNS=("**/*.Domain/**/*.cs" "**/*.Application/**/*.cs")
-  BOUNDARY_PATTERNS=("**/*.API/**/*.cs" "**/*.Infrastructure/**/*.cs")
+  BOUNDARY_PATTERNS=("**/*.$API_SUFFIX/**/*.cs" "**/*.Infrastructure/**/*.cs")
 elif [ "${#CORE_PATTERNS[@]}" -eq 0 ] || [ "${#BOUNDARY_PATTERNS[@]}" -eq 0 ]; then
   fail_usage "non-standard mode requires at least one --core-mutate and one --boundary-mutate glob"
 fi

@@ -21,13 +21,14 @@ Five mandatory rules that govern how tests are designed in a Clean Architecture 
 
 **Application:**
 - Acceptance test → enters through `{UseCaseName}` use case / command handler
-- Domain unit test (when extracted) → enters through the domain function or policy's public signature
+- Domain unit test (only when a Mandate 4 gate opens) → enters through the domain function or policy's public signature
 - Infrastructure test → enters through the application interface (repository contract)
 
 **TBU detection checklist (run after GREEN):**
-- [ ] Can I delete the production implementation and still have the test pass? → Wired? YES = TBU
-- [ ] Is the use case wired in the DI container? → Not tested if no integration test exercises the wiring
-- [ ] Does the acceptance test use an `InMemory` implementation, not the real one? → Correct for unit pass; add integration test for real wiring
+- [ ] Is the use case registered in the DI container / composition root, and does an integration or API test reach it through that real registration? If no test does, it is TBU.
+- [ ] If the acceptance test uses an `InMemory` double, does a separate Infrastructure test verify the real adapter?
+
+(Deletion test: drop the production implementation and check that the test goes RED. That is Fixture Theater detection, owned by `outside-in-tdd` Post-GREEN Wiring Verification.)
 
 ---
 
@@ -91,7 +92,7 @@ Outcome (Then)  → observable business result (not internal state)
 3. If `A(P) == B(P)` AND combinatorial size ≤ 10–15 → **forbidden to extract**, log `M4 negative — saturated by AC`.
 4. Otherwise, name which gate opens and record the corresponding `Extraction Reason` code.
 
-**Counter-example (STORY-41 contrefactual):** `Vehicle.MinimumAge()` has `B(P) = {21, 16}`. Five planned AC reach both outputs, so `A(P) == B(P)`. Combinatorial size = 3 cases, well under threshold. **Both gates closed → no domain test.** The 5 AC do all the work; if `MinimumAge()` breaks, all 5 turn red — that is the intended business signal.
+**Counter-example (counterfactual):** `Vehicle.MinimumAge()` has `B(P) = {21, 16}`. Five planned AC reach both outputs, so `A(P) == B(P)`. The input grid is far below the 10–15 threshold. **Both gates closed → no domain test.** The 5 AC do all the work; if `MinimumAge()` breaks, all 5 turn red — that is the intended business signal.
 
 ---
 
@@ -108,7 +109,7 @@ believes the AC is verified while CSS/mount/z-index regressions go uncaught.
 
 **Enforcement:**
 - Tag scenario `@visual` (see `bdd-methodology`).
-- Add matrix row: `Layer = E2E`, `Double Type = Real browser (Playwright)`.
+- Add matrix row: `Layer = E2E`, `Double Type = Real browser (Playwright)`. The E2E specs live in the Node/Playwright folder `tests/e2e/`, outside the per-context .NET two-project rule (`<Context>.UnitTest` / `<Context>.IntegrationTest`).
 - `@visual` w/o `tests/e2e/` spec → coverage gap, block story (G9 check).
 
 ---
@@ -124,14 +125,14 @@ Allowed `Extraction Reason` codes:
 | Scenario | Use Case Boundary | Layer | Extraction Reason | Double Type | Walking Skeleton | Priority |
 |---|---|---|---|---|---|---|
 | Happy path — driver eligible | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P1 |
-| Edge — driver at age limit | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P1 |
+| Edge — driver at age limit | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P2 |
 | Rejection — too many accidents | `CheckEligibilityUseCase` | Application | — | InMemory repository | A | P2 |
 | Combinatorial sweep — premium grid | `PricingPolicy.computePremium` | Domain | `combinatorial_economy` | None (pure function) | — | P2 |
 | Infrastructure — real persistence | `IEligibilityRepository` | Infrastructure | — | Real DB (Testcontainers) | — | P3 |
 
 **Priority:**
 - P1 — happy path, walking skeleton basis
-- P2 — business rule coverage, edge cases
+- P2 — business rules, edge cases and rejections
 - P3 — infrastructure, integration, error paths
 
 ---
@@ -153,12 +154,14 @@ A walking skeleton is the thinnest possible slice that exercises the full path f
 
 ```
 Does the feature write to or read from persistent storage?
-├── NO  → Strategy A (full InMemory)
+├── NO  → Strategy A (full InMemory; fake any external service)
 └── YES → Does it call an expensive external service (payment, SMS, AI)?
           ├── YES → Strategy B (real local DB + fake external)
           └── NO  → Is the storage local and controllable?
                     ├── YES → Strategy C (real local with Testcontainers)
                     └── NO  → Strategy D (configurable)
+
+Also Strategy D whenever the same test must run in both unit and integration mode.
 ```
 
 ### Walking Skeleton Sizing
@@ -174,16 +177,16 @@ Does the feature write to or read from persistent storage?
 | What to test | Test project | Layer | Double type |
 |---|---|---|---|
 | Use case / command handler | `UnitTest` | Application | InMemory application interfaces |
-| Domain policy / specification | `UnitTest` | Domain | None (pure function — call directly) |
+| Domain policy / specification (only when a Mandate 4 gate opens) | `UnitTest` | Domain | None (pure function — call directly) |
 | Repository adapter | `IntegrationTest` | Infrastructure | Real DB via Testcontainers |
 | API controller / endpoint | `IntegrationTest` | API | In-process app host (WebApplicationFactory or equivalent) |
 | Architecture boundaries | `IntegrationTest` | Architecture | Static analysis (NetArchTest, ArchUnit, etc.) |
-| Visual/positional/style assertion (`@visual`) | `E2E` (Playwright) | Presentation (E2E) | Real browser engine — `boundingBox()`, `getComputedStyle()` |
+| Visual/positional/style assertion (`@visual`) | `tests/e2e/` (Playwright; Node folder outside the per-context .NET two-project rule) | Presentation (E2E) | Real browser engine — `boundingBox()`, `getComputedStyle()` |
 
 **Never:**
 - Test a domain entity by instantiating it directly in an Application acceptance test
 - Use a real database in `UnitTest`
-- Use a mock where an InMemory fake exists (InMemory > mock for repositories)
+- Use a mocking library or behaviour verification (`Mock<>`, `A.Fake`, `Substitute.For`, `MustHaveHappened`, `Received`, `Verify`) in Domain, Application or `UnitTest` — replace output gateways with hand-written InMemory doubles (G7). Mocking/contract tools stay in `IntegrationTest` for external systems only
 
 ---
 
