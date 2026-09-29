@@ -1,6 +1,6 @@
 # Clean Architecture Testing — Java / Spring Boot (Maven)
 
-Roles and doubles: [examples-dotnet.md](examples-dotnet.md). Maven specifics only.
+Full runnable examples per layer. Roles and doubles follow the tables in `SKILL.md` — identical across languages, only the library names differ (here: JUnit 5, Mockito, Testcontainers, Spring Boot Test, ArchUnit).
 
 ```dot
 digraph maven_modules {
@@ -20,6 +20,124 @@ digraph maven_modules {
     third -> infra [style=dashed, color=red, label="forbidden: third test module"];
 }
 ```
+
+## Domain — pure unit test (rare, extracted rule only)
+
+Only applies when a rule was extracted into a reusable Policy / Specification with a non-trivial edge-case matrix.
+
+```java
+class EligibilityPolicyTest {
+
+    @ParameterizedTest
+    @CsvSource({"17,0,false", "18,0,true", "25,3,true"})
+    void evaluate_appliesAgeAndExperienceRules(int age, int yearsOfExperience, boolean expectedEligible) {
+        var result = new EligibilityPolicy().evaluate(new UserInfo(age, yearsOfExperience), new ResourceInfo("standard", 1));
+
+        assertThat(result.isEligible()).isEqualTo(expectedEligible);
+    }
+}
+```
+
+**Not a Domain test:** a single `@Test` asserting `new Money(10, "EUR").amount() == 10`. Delete and rely on usage in Application tests.
+
+## Application — acceptance test (default layer, Mockito)
+
+Sociable test: real domain objects, mocks only on output gateways.
+
+```java
+class PlaceOrderCommandHandlerTest {
+
+    @Test
+    void handle_persistsOrderAndDispatchesEvent() {
+        var repository = mock(OrderRepository.class);
+        var dispatcher = mock(DomainEventDispatcher.class);
+        var handler = new PlaceOrderCommandHandler(repository, dispatcher);
+
+        handler.handle(new PlaceOrderCommand(OrderId.newId(), "Alice"));
+
+        verify(repository).add(argThat(order -> order.customerName().equals("Alice")));
+        verify(dispatcher).dispatch(argThat(events ->
+                events.stream().anyMatch(OrderPlacedEvent.class::isInstance)));
+    }
+
+    @Test
+    void handle_whenCustomerNameIsBlank_rejectsBeforePersisting() {
+        var repository = mock(OrderRepository.class);
+        var handler = new PlaceOrderCommandHandler(repository, mock(DomainEventDispatcher.class));
+
+        assertThatThrownBy(() -> handler.handle(new PlaceOrderCommand(OrderId.newId(), "")))
+                .isInstanceOf(DomainException.class);
+        verifyNoInteractions(repository);
+    }
+}
+```
+
+Use a hand-written in-memory fake instead of `mock(...)` once more than three tests need the repository to behave as a store (add / find).
+
+## Infrastructure — integration test with Testcontainers
+
+One container per test class. Real provider, never an in-memory JPA/Hibernate provider.
+
+```java
+@Testcontainers
+class OrderRepositoryTest {
+
+    @Container
+    static final PostgreSQLContainer<?> db = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    private OrderRepository sut;
+
+    @BeforeEach
+    void migrate() {
+        var dataSource = DataSourceBuilder.create()
+                .url(db.getJdbcUrl()).username(db.getUsername()).password(db.getPassword()).build();
+        Flyway.configure().dataSource(dataSource).load().migrate();
+        sut = new JdbcOrderRepository(new JdbcTemplate(dataSource));
+    }
+
+    @Test
+    void add_persistsOrder() {
+        sut.add(Order.create(OrderId.newId(), "Alice"));
+
+        assertThat(sut.findAll()).extracting(Order::customerName).containsExactly("Alice");
+    }
+
+    @Test
+    void find_whenOrderMissing_returnsEmpty() {
+        assertThat(sut.find(OrderId.newId())).isEmpty();
+    }
+}
+```
+
+## API — end-to-end test with Spring Boot Test
+
+One happy-path test per endpoint + walking skeleton.
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class OrdersEndpointTest {
+
+    @Autowired
+    private TestRestTemplate client;
+
+    @Test
+    void postOrders_withValidBody_returns201() {
+        var response = client.postForEntity("/orders", new PlaceOrderRequest("Alice"), Void.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getHeaders().getLocation()).isNotNull();
+    }
+
+    @Test
+    void getOrder_whenMissing_returns404() {
+        var response = client.getForEntity("/orders/" + UUID.randomUUID(), Void.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+}
+```
+
+For E2E tests that hit a DB, override the `DataSource` bean with a Testcontainers-backed one via `@DynamicPropertySource`. Downstream HTTP calls to external APIs → route them to a contract mock server (Microcks).
 
 ## Architecture guard
 
