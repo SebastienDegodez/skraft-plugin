@@ -1,6 +1,6 @@
 ---
 name: clean-architecture-testing
-description: Use when it is unclear where a test belongs and what it is allowed to talk to — which test project and layer it goes in, whether it gets a real database, an in-memory fake, or no double at all, and whether a value object or a constructor is worth a test of its own. Also use when layer dependencies must be enforced by the build instead of by review.
+description: Use when it is unclear where a test belongs and what it is allowed to talk to — which test project and layer it goes in, whether it gets a real database, an in-memory fake, or no double at all, and whether a value object or a constructor is worth a test of its own. Also use when covering an adapter that calls an external API, a database or the file system, and when layer dependencies must be enforced by the build instead of by review.
 ---
 
 # Clean Architecture Testing
