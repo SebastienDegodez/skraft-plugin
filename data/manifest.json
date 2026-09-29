@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-29T22:58:36.288Z",
+  "generated": "2026-09-29T23:56:04.805Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -1572,7 +1572,7 @@
         "cover-the-payment-adapter-that-nothing-tests-yet",
         "pr-182"
       ],
-      "mtime": 1790722712728.5356
+      "mtime": 1790726161315.2258
     },
     {
       "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run1",
@@ -1585,7 +1585,7 @@
         "cover-the-payment-adapter-that-nothing-tests-yet",
         "pr-182"
       ],
-      "mtime": 1790722712772.7773
+      "mtime": 1790726161375.2256
     },
     {
       "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run2",
@@ -1598,7 +1598,7 @@
         "cover-the-payment-adapter-that-nothing-tests-yet",
         "pr-182"
       ],
-      "mtime": 1790722712772.7773
+      "mtime": 1790726161376.2256
     },
     {
       "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run3",
@@ -1611,7 +1611,7 @@
         "cover-the-payment-adapter-that-nothing-tests-yet",
         "pr-182"
       ],
-      "mtime": 1790722712822.5342
+      "mtime": 1790726161376.2256
     },
     {
       "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run0",
@@ -1624,7 +1624,7 @@
         "forty-validation-cases-for-a-rule-three-use-cases-share",
         "pr-182"
       ],
-      "mtime": 1790722712820.5342
+      "mtime": 1790726161432.2253
     },
     {
       "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run1",
@@ -1637,7 +1637,7 @@
         "forty-validation-cases-for-a-rule-three-use-cases-share",
         "pr-182"
       ],
-      "mtime": 1790722712822.045
+      "mtime": 1790726161433.2253
     },
     {
       "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run2",
@@ -1650,7 +1650,7 @@
         "forty-validation-cases-for-a-rule-three-use-cases-share",
         "pr-182"
       ],
-      "mtime": 1790722712822.045
+      "mtime": 1790726161433.2253
     },
     {
       "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run3",
@@ -1663,7 +1663,7 @@
         "forty-validation-cases-for-a-rule-three-use-cases-share",
         "pr-182"
       ],
-      "mtime": 1790722712822.045
+      "mtime": 1790726161433.2253
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run0",
@@ -1676,7 +1676,7 @@
         "spring-boot-first-tests-for-the-rest-payment-adapter",
         "pr-182"
       ],
-      "mtime": 1790722712859.5334
+      "mtime": 1790726161489.225
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run1",
@@ -1689,7 +1689,7 @@
         "spring-boot-first-tests-for-the-rest-payment-adapter",
         "pr-182"
       ],
-      "mtime": 1790722712904.5327
+      "mtime": 1790726161491.225
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run2",
@@ -1702,7 +1702,7 @@
         "spring-boot-first-tests-for-the-rest-payment-adapter",
         "pr-182"
       ],
-      "mtime": 1790722712907.6414
+      "mtime": 1790726161491.225
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run3",
@@ -1715,7 +1715,7 @@
         "spring-boot-first-tests-for-the-rest-payment-adapter",
         "pr-182"
       ],
-      "mtime": 1790722712908.5327
+      "mtime": 1790726161546.225
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run0",
@@ -1728,7 +1728,7 @@
         "spring-boot-test-the-jpa-order-repository-adapter",
         "pr-182"
       ],
-      "mtime": 1790722712907.6414
+      "mtime": 1790726161550.225
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run1",
@@ -1741,7 +1741,7 @@
         "spring-boot-test-the-jpa-order-repository-adapter",
         "pr-182"
       ],
-      "mtime": 1790722712906.8804
+      "mtime": 1790726161551.225
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run2",
@@ -1754,7 +1754,7 @@
         "spring-boot-test-the-jpa-order-repository-adapter",
         "pr-182"
       ],
-      "mtime": 1790722712907.6414
+      "mtime": 1790726161552.408
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run3",
@@ -1767,7 +1767,7 @@
         "spring-boot-test-the-jpa-order-repository-adapter",
         "pr-182"
       ],
-      "mtime": 1790722712951.532
+      "mtime": 1790726161552.408
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run0",
@@ -1780,7 +1780,7 @@
         "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
         "pr-182"
       ],
-      "mtime": 1790722712953.532
+      "mtime": 1790726161555.2249
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run1",
@@ -1793,7 +1793,7 @@
         "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
         "pr-182"
       ],
-      "mtime": 1790722712952.541
+      "mtime": 1790726161604.2249
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run2",
@@ -1806,7 +1806,7 @@
         "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
         "pr-182"
       ],
-      "mtime": 1790722712993.5312
+      "mtime": 1790726161664.2246
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run3",
@@ -1819,7 +1819,7 @@
         "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
         "pr-182"
       ],
-      "mtime": 1790722712994.5312
+      "mtime": 1790726161668.2246
     },
     {
       "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run0",
@@ -1832,7 +1832,7 @@
         "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
         "pr-182"
       ],
-      "mtime": 1790722712994.5312
+      "mtime": 1790726161667.2246
     },
     {
       "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run1",
@@ -1845,7 +1845,7 @@
         "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
         "pr-182"
       ],
-      "mtime": 1790722713046.5305
+      "mtime": 1790726161668.2246
     },
     {
       "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run2",
@@ -1858,7 +1858,7 @@
         "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
         "pr-182"
       ],
-      "mtime": 1790722713046.5305
+      "mtime": 1790726161739.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run3",
@@ -1871,7 +1871,7 @@
         "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
         "pr-182"
       ],
-      "mtime": 1790722713046.5305
+      "mtime": 1790726161739.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run0",
@@ -1884,7 +1884,7 @@
         "swap-the-database-engine-out-of-the-repository-tests",
         "pr-182"
       ],
-      "mtime": 1790722713045.5305
+      "mtime": 1790726161737.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run1",
@@ -1897,7 +1897,7 @@
         "swap-the-database-engine-out-of-the-repository-tests",
         "pr-182"
       ],
-      "mtime": 1790722713045.5305
+      "mtime": 1790726161738.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run2",
@@ -1910,7 +1910,7 @@
         "swap-the-database-engine-out-of-the-repository-tests",
         "pr-182"
       ],
-      "mtime": 1790722713045.5305
+      "mtime": 1790726161738.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run3",
@@ -1923,7 +1923,7 @@
         "swap-the-database-engine-out-of-the-repository-tests",
         "pr-182"
       ],
-      "mtime": 1790722713045.5305
+      "mtime": 1790726161738.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run0",
@@ -1936,7 +1936,7 @@
         "the-failing-test-is-already-in-the-right-place",
         "pr-182"
       ],
-      "mtime": 1790722713044.5305
+      "mtime": 1790726161735.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run1",
@@ -1949,7 +1949,7 @@
         "the-failing-test-is-already-in-the-right-place",
         "pr-182"
       ],
-      "mtime": 1790722713045.5305
+      "mtime": 1790726161737.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run2",
@@ -1962,7 +1962,7 @@
         "the-failing-test-is-already-in-the-right-place",
         "pr-182"
       ],
-      "mtime": 1790722713045.5305
+      "mtime": 1790726161738.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run3",
@@ -1975,7 +1975,7 @@
         "the-failing-test-is-already-in-the-right-place",
         "pr-182"
       ],
-      "mtime": 1790722713045.5305
+      "mtime": 1790726161737.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run0",
@@ -1988,7 +1988,7 @@
         "cover-the-payment-adapter-that-nothing-tests-yet",
         "pr-182"
       ],
-      "mtime": 1790722713147.5288
+      "mtime": 1790726161798.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run1",
@@ -2001,7 +2001,7 @@
         "cover-the-payment-adapter-that-nothing-tests-yet",
         "pr-182"
       ],
-      "mtime": 1790722713148.5288
+      "mtime": 1790726161798.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run2",
@@ -2014,7 +2014,7 @@
         "cover-the-payment-adapter-that-nothing-tests-yet",
         "pr-182"
       ],
-      "mtime": 1790722713148.5288
+      "mtime": 1790726161798.2244
     },
     {
       "id": "pr/182/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run3",
@@ -2027,7 +2027,7 @@
         "cover-the-payment-adapter-that-nothing-tests-yet",
         "pr-182"
       ],
-      "mtime": 1790722713147.5288
+      "mtime": 1790726161857.224
     },
     {
       "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run0",
@@ -2040,7 +2040,7 @@
         "forty-validation-cases-for-a-rule-three-use-cases-share",
         "pr-182"
       ],
-      "mtime": 1790722713144.529
+      "mtime": 1790726161848.224
     },
     {
       "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run1",
@@ -2053,7 +2053,7 @@
         "forty-validation-cases-for-a-rule-three-use-cases-share",
         "pr-182"
       ],
-      "mtime": 1790722713145.5288
+      "mtime": 1790726161853.224
     },
     {
       "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run2",
@@ -2066,7 +2066,7 @@
         "forty-validation-cases-for-a-rule-three-use-cases-share",
         "pr-182"
       ],
-      "mtime": 1790722713144.529
+      "mtime": 1790726161853.224
     },
     {
       "id": "pr/182/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run3",
@@ -2079,7 +2079,7 @@
         "forty-validation-cases-for-a-rule-three-use-cases-share",
         "pr-182"
       ],
-      "mtime": 1790722713144.529
+      "mtime": 1790726161850.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run0",
@@ -2092,7 +2092,7 @@
         "spring-boot-first-tests-for-the-rest-payment-adapter",
         "pr-182"
       ],
-      "mtime": 1790722713147.5288
+      "mtime": 1790726161858.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run1",
@@ -2105,7 +2105,7 @@
         "spring-boot-first-tests-for-the-rest-payment-adapter",
         "pr-182"
       ],
-      "mtime": 1790722713148.5288
+      "mtime": 1790726161860.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run2",
@@ -2118,7 +2118,7 @@
         "spring-boot-first-tests-for-the-rest-payment-adapter",
         "pr-182"
       ],
-      "mtime": 1790722713148.5288
+      "mtime": 1790726161859.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run3",
@@ -2131,7 +2131,7 @@
         "spring-boot-first-tests-for-the-rest-payment-adapter",
         "pr-182"
       ],
-      "mtime": 1790722713148.5288
+      "mtime": 1790726161861.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run0",
@@ -2144,7 +2144,7 @@
         "spring-boot-test-the-jpa-order-repository-adapter",
         "pr-182"
       ],
-      "mtime": 1790722713144.529
+      "mtime": 1790726161850.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run1",
@@ -2157,7 +2157,7 @@
         "spring-boot-test-the-jpa-order-repository-adapter",
         "pr-182"
       ],
-      "mtime": 1790722713146.5288
+      "mtime": 1790726161854.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run2",
@@ -2170,7 +2170,7 @@
         "spring-boot-test-the-jpa-order-repository-adapter",
         "pr-182"
       ],
-      "mtime": 1790722713146.5288
+      "mtime": 1790726161853.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run3",
@@ -2183,7 +2183,7 @@
         "spring-boot-test-the-jpa-order-repository-adapter",
         "pr-182"
       ],
-      "mtime": 1790722713146.5288
+      "mtime": 1790726161853.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run0",
@@ -2196,7 +2196,7 @@
         "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
         "pr-182"
       ],
-      "mtime": 1790722713148.5288
+      "mtime": 1790726161860.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run1",
@@ -2209,7 +2209,7 @@
         "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
         "pr-182"
       ],
-      "mtime": 1790722713148.5288
+      "mtime": 1790726161860.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run2",
@@ -2222,7 +2222,7 @@
         "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
         "pr-182"
       ],
-      "mtime": 1790722713173.8582
+      "mtime": 1790726161859.224
     },
     {
       "id": "pr/182/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run3",
@@ -2235,7 +2235,7 @@
         "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
         "pr-182"
       ],
-      "mtime": 1790722713175.5286
+      "mtime": 1790726161859.224
     },
     {
       "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run0",
@@ -2248,7 +2248,7 @@
         "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
         "pr-182"
       ],
-      "mtime": 1790722713175.5286
+      "mtime": 1790726161859.224
     },
     {
       "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run1",
@@ -2261,7 +2261,7 @@
         "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
         "pr-182"
       ],
-      "mtime": 1790722713175.5286
+      "mtime": 1790726161916.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run2",
@@ -2274,7 +2274,7 @@
         "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
         "pr-182"
       ],
-      "mtime": 1790722713175.5286
+      "mtime": 1790726161919.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run3",
@@ -2287,7 +2287,7 @@
         "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
         "pr-182"
       ],
-      "mtime": 1790722713177.5283
+      "mtime": 1790726161919.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run0",
@@ -2300,7 +2300,7 @@
         "swap-the-database-engine-out-of-the-repository-tests",
         "pr-182"
       ],
-      "mtime": 1790722713174.5286
+      "mtime": 1790726161917.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run1",
@@ -2313,7 +2313,7 @@
         "swap-the-database-engine-out-of-the-repository-tests",
         "pr-182"
       ],
-      "mtime": 1790722713174.5286
+      "mtime": 1790726161917.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run2",
@@ -2326,7 +2326,7 @@
         "swap-the-database-engine-out-of-the-repository-tests",
         "pr-182"
       ],
-      "mtime": 1790722713174.5286
+      "mtime": 1790726161918.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run3",
@@ -2339,7 +2339,7 @@
         "swap-the-database-engine-out-of-the-repository-tests",
         "pr-182"
       ],
-      "mtime": 1790722713174.5286
+      "mtime": 1790726161917.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run0",
@@ -2352,7 +2352,7 @@
         "the-failing-test-is-already-in-the-right-place",
         "pr-182"
       ],
-      "mtime": 1790722713225.5276
+      "mtime": 1790726161915.425
     },
     {
       "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run1",
@@ -2365,7 +2365,7 @@
         "the-failing-test-is-already-in-the-right-place",
         "pr-182"
       ],
-      "mtime": 1790722713225.5276
+      "mtime": 1790726161916.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run2",
@@ -2378,7 +2378,7 @@
         "the-failing-test-is-already-in-the-right-place",
         "pr-182"
       ],
-      "mtime": 1790722713225.5276
+      "mtime": 1790726161916.2239
     },
     {
       "id": "pr/182/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run3",
@@ -2391,7 +2391,7 @@
         "the-failing-test-is-already-in-the-right-place",
         "pr-182"
       ],
-      "mtime": 1790722713225.5276
+      "mtime": 1790726161916.2239
     }
   ]
 }
