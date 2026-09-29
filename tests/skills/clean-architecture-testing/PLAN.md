@@ -394,14 +394,14 @@ d'environnement.
 | Tentative | Échec | Nature | Suite |
 |---|---|---|---|
 | 1 | `Could not resolve a @github/copilot platform package (tried @github/copilot-darwin-arm64)` | outillage | `@github/copilot-darwin-arm64@1.0.81` a supprimé l'export `./sdk` attendu par `@github/copilot-sdk@1.0.9` → épinglage à 1.0.78 |
-| 2 | `/Users/a239hz/OneDrive: No such file or directory` | outillage | `$VALLY` non quoté dans le runner → tableau bash |
+| 2 | `/Users/<user>/OneDrive: No such file or directory` | outillage | `$VALLY` non quoté dans le runner → tableau bash |
 | 3 | idem 1, réapparu | outillage | `npm install --no-save` avait élagué le paquet épinglé ; réinstallé avec le CLI |
 | 4 | `ProxyResponseError: HTTP 403 response does not appear to originate from GitHub` | **environnement** | non contournable depuis cette machine |
 
 Diagnostic du blocage n° 4 : `GET https://api.github.com/copilot_internal/v2/token` avec le token
-`gh` actif renvoie une page 403 anti-scraping. Le compte actif (`fdescamps`) n'a pas
+`gh` actif renvoie une page 403 anti-scraping. Le compte actif n'a pas
 d'habilitation Copilot sur ce chemin, et le compte Copilot d'entreprise
-(`francois-descamps_axaghcop`) est en échec d'authentification dans le trousseau
+est en échec d'authentification dans le trousseau
 (`gh auth status` : *Failed to log in*).
 
 **Pour débloquer**, au choix :
