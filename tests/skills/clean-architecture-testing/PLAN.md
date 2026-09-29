@@ -659,3 +659,14 @@ dépassement du tampon de sortie de Vally (1,2 Mo de traces journalisées par la
 tests verts). Rejoué sur le diff : vert. Les graders `mvn verify` / `mvn test` écrivent désormais
 dans un fichier temporaire et n'affichent que les 40 dernières lignes en cas d'échec ; vérifié sur
 un build vert bruyant (passe) et un build rouge (échoue, trace visible).
+
+### Instrument avant l'étape C complète (2026-09-28)
+
+- J2 requalifié **garde-fou de régression** (`role: regression-guard`) : la base a passé tous les
+  graders déterministes à l'étape A et en 4/4 à l'étape C Spring. Égalité attendue ; une défaite
+  signalerait une dégradation de la couverture d'adaptateur par la skill.
+- J3 : le prompt demande l'approche de test plutôt que le fichier (« Before anyone writes it, tell
+  me how that adapter should be tested. ») ; item de rubrique ajouté : l'absence de dépôt n'est pas
+  un défaut. Toujours garde-fou, égalité attendue.
+- Portefeuille : décideurs S1, S2, S3, J1 (16 essais) ; garde-fous S4, J2, J3 et near miss S5
+  (16 essais, égalités attendues). 32 essais par bras, 8–12 paires discordantes visées.

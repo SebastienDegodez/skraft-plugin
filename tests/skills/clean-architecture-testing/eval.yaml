@@ -420,12 +420,16 @@ stimuli:
       - Hosts the check in the existing slower suite instead of a new dedicated test module.
       - Says when the check runs, so the team can see it is a gate and not part of the tight loop.
 
-  # Deterministic decider. Same trap as the .NET adapter stimulus: the adapter
-  # takes its RestClient by constructor, and Spring ships an in-process mock of
-  # the transport one import away. Placement is proved by the diff, coverage of
-  # the refusal and of the request body by mutating a scratch copy of the
-  # adapter — only the real-wire question is left to the judge.
+  # Regression guard. Same trap as the .NET adapter stimulus: the adapter takes
+  # its RestClient by constructor, and Spring ships an in-process mock of the
+  # transport one import away. The baseline passed every deterministic grader in
+  # Stage A and in 4/4 Stage C trials, so a tie is the expected result and a loss
+  # is the finding: the skill degrading adapter coverage the baseline gets right.
+  # Placement is proved by the diff, coverage of the refusal and of the request
+  # body by mutating a scratch copy of the adapter.
   - name: 'Spring Boot: first tests for the REST payment adapter'
+    tags:
+      role: regression-guard
     prompt: |
       Our payment step goes out to the provider's REST API. Nothing covers that
       part today, so if the provider changes the shape of its answer, or we send
@@ -586,7 +590,9 @@ stimuli:
   # skill, so a tie is the expected result and a loss is the finding: it would
   # mean the skill pushed a baseline that got this right towards something worse.
   # Exempt from discrimination ranking. Postgres and Spring Data JPA are the
-  # repository's context, not a hint.
+  # repository's context, not a hint. The request asks for the approach, not a
+  # file: with no repository staged, "write the test" was graded on whether an
+  # unverifiable template compiled.
   - name: 'Spring Boot: test the JPA order repository adapter'
     tags:
       role: regression-guard
@@ -596,7 +602,7 @@ stimuli:
       port and maps the Order aggregate to an OrderEntity. It also has a custom JPQL
       query, findOpenOrdersOlderThan(Instant cutoff). Nothing tests that adapter yet.
 
-      Write the test for it.
+      Before anyone writes it, tell me how that adapter should be tested.
     graders:
       - type: prompt
         config:
@@ -611,3 +617,4 @@ stimuli:
       - Makes sure the test cannot silently run against a different database than the one it declares.
       - Exercises the custom query with cases on both sides of its cutoff and of its status filter.
       - Keeps the test with the slower suite, away from the tests developers run on every save.
+      - Is judged on the proposed approach; the absence of a repository to run it against is not a defect.
