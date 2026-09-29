@@ -15,7 +15,7 @@
 |---|---|
 | Skill évaluée | `plugins/skraft-framework/skills/clean-architecture-testing/SKILL.md` |
 | Spec d'éval | `tests/skills/clean-architecture-testing/eval.yaml` *(à créer)* |
-| Fixture | `tests/skills/clean-architecture-testing/fixtures/payment-authorization/` *(à créer)* |
+| Fixture | `tests/skills/clean-architecture-testing/fixtures/payment/` *(à créer)* |
 | Runner | `eng/run-vally-evals.sh clean-architecture-testing` |
 
 Le nom du répertoire d'éval correspond exactement au répertoire de la skill livrée — condition
@@ -184,7 +184,7 @@ et aucun conteneur Docker n'entre dans la boucle.
 
 ---
 
-## 6. Fixture : `fixtures/payment-authorization/` (S1 uniquement)
+## 6. Fixture : `fixtures/payment/` (S1 uniquement)
 
 Choix **C#/.NET**, conforme à la règle 18 — aucune exception JavaScript à justifier.
 
@@ -278,7 +278,7 @@ Authentification : le runner exige un token GitHub habilité Copilot
 |---|---|
 | créer | `tests/skills/clean-architecture-testing/eval.yaml` |
 | créer | `tests/skills/clean-architecture-testing/PLAN.md` *(ce document)* |
-| créer | `tests/skills/clean-architecture-testing/fixtures/payment-authorization/**` |
+| créer | `tests/skills/clean-architecture-testing/fixtures/payment/**` |
 | ne pas modifier | `eng/vally-adapter/skip-evals.txt` — une skill nouvellement évaluée ne naît pas dans la liste des sautées |
 
 **Rien d'autre.** En particulier : aucune modification de la skill cible, aucun test unitaire ou

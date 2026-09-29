@@ -96,7 +96,7 @@ the protocol.
 
 ## Fixture
 
-`fixtures/payment-authorization/` — a layered .NET solution, used by S1 only.
+`fixtures/payment/` — a layered .NET solution, used by S1 only.
 
 Both test projects already exist and are green (2 unit tests, 1 integration
 test, build clean). The question the stimulus asks is therefore *where the new
