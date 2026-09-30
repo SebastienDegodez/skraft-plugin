@@ -38,7 +38,10 @@ export const ARTIFACTS = {
       ['lenses', 'lens_results'],
       ['synthesis', 'summary'],
     ],
-    optional: ['confidence', 'reviewed_at', 'artefacts_reviewed', 'dissent_analysis'],
+    optional: [
+      'confidence', 'reviewed_at', 'artefacts_reviewed', 'dissent_analysis',
+      'reviewed_sha', 'carried_forward', 'escalation',
+    ],
   },
   'review-comment': {
     template: 'assets/templates/review-comment.template.md',

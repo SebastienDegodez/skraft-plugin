@@ -179,7 +179,7 @@ When the handoff block's mode line reads `rework`, the previous review's finding
 1. Read the previous review the block names. Skip PREPARE's planning: the plans, the acceptance tests and your previous commits stand.
 2. Fix each finding with the smallest change. A production change still goes RED → SYNTHESIZE-GREEN → COMMIT through a test.
 3. Re-run only the gates your change invalidates:
-   - production or test code changed → the affected tests, the differential core mutation since the last reviewed commit, then the final full core and boundary runs and a new evidence log;
+   - production or test code changed → the affected tests, then the full core and boundary mutation runs and a new evidence log — no differential run first;
    - only commit messages, the change log or evidence metadata changed → regenerate the evidence log from the existing captures, commit it, and re-run `qg-verify`; never re-run tests or mutation.
 4. Keep every captured output your change does not invalidate.
 
