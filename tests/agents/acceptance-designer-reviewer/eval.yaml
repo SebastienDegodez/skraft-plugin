@@ -72,7 +72,7 @@ stimuli:
       - type: output-matches
         name: The amount that no longer matches the agreed criteria is named
         config:
-          pattern: '8\s?400'
+          pattern: '8(?:,|\s)?400'
       - type: output-matches
         name: The uncovered rounding criterion is named
         config:
@@ -137,7 +137,7 @@ stimuli:
       - type: output-matches
         name: Full review continues to the known specification defects
         config:
-          pattern: '(?is)(8\s?400).*(7\s*cents?|AC-4|rounding|whole cent)|(7\s*cents?|AC-4|rounding|whole cent).*(8\s?400)'
+          pattern: '(?is)(8(?:,|\s)?400).*(7\s*cents?|AC-4|rounding|whole cent)|(7\s*cents?|AC-4|rounding|whole cent).*(8(?:,|\s)?400)'
       - type: skill-invocation
         name: Review skills stay loaded under pressure
         config:

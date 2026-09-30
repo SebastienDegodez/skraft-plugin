@@ -110,6 +110,16 @@ These are owned by the skills — load them, do not inline rules here.
 
 ## Execution Workflow (Execute in Order)
 
+### Prepared documentation-only handoff
+
+Use this path only when the handoff explicitly says the change is documentation-only, already prepared and staged, has no applicable executable tests/build/mutation targets, and requests no other deliverable. When the checkout is nested, enter the repository named by the handoff; run every repository command there, never in its parent workspace.
+
+1. Read the handoff, run `git status --short` and `git diff --cached --name-only`, and inspect the patch. Confirm only the approved document is staged or changed, no untracked files exist, and its wording matches the approved text; stop if any check fails.
+2. Run `git diff --cached --check` and `git diff --check`. If both pass, commit only the prepared change with `git commit -s` and `docs({feature-scope}): {concise subject}`. For a known issue, use final body line `Refs: #N` for intermediate work or `Closes #N` only when the handoff confirms the entire issue is complete; omit issue references when unknown.
+3. Verify exactly one commit contains only the approved document, the checkout is clean, and the commit has the configured identity and matching sign-off. Report its hash, applicable checks, and issue disposition.
+
+Do not enter PREPARE, RED, SYNTHESIZE-GREEN, or code COMMIT & VERIFY for this path. Do not create tests, change logs, quality-evidence logs, or QA reports, and do not claim code-test or mutation results. The explicit handoff scope overrides generic code-output requirements when those outputs are inapplicable.
+
 ### 1. PREPARE
 - Load the DISTILL artefacts: the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Take their paths from the handoff block; without a ref, search `.copilot-tracking/skraft-plans/{projectSlug}/`. The plans are settled: never re-plan the story.
 - Take build and test commands from the stack-commands file in the handoff block. Load `resolving-stack-commands` only when the file is absent or one of its commands fails, then rewrite the file with the corrected commands.
