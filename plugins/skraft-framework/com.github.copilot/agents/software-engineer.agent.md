@@ -24,17 +24,7 @@ metadata:
   phase: DELIVER
   skills:
     - outside-in-tdd
-    - clean-architecture-testing
-    - test-design-mandates
     - craft-discipline
-    - test-refactoring-catalog
-    - mutation-testing
-    - skraft-quality-bar
-    - quality-gates-evidence-contract
-    - quality-gates-dotnet
-    - quality-gates-javascript
-    - resolving-stack-commands
-    - qa-reporting
   on_demand_skills:
     - clean-architecture-testing
     - test-design-mandates
@@ -86,11 +76,11 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions. If bloc
 ```
 
 ## Skill Loading -- MANDATORY
-Load each skill via its link using your read tool. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
+Load each skill by name. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup (before PREPARE)
-- [outside-in-tdd](../../skills/outside-in-tdd/SKILL.md)
-- [craft-discipline](../../skills/craft-discipline/SKILL.md)
+- `outside-in-tdd`
+- `craft-discipline`
 
 ### Load on demand (trigger-based)
 
@@ -98,16 +88,16 @@ Load each skill below only when its trigger fires, never at startup.
 
 | Skill | Load when... |
 |-------|--------------|
-| [clean-architecture-testing](../../skills/clean-architecture-testing/SKILL.md) | Deciding test level, boundary placement, or doubles policy |
-| [test-design-mandates](../../skills/test-design-mandates/SKILL.md) | Deciding whether a Domain unit test is authorized |
-| [test-refactoring-catalog](../../skills/test-refactoring-catalog/SKILL.md) | Refactoring a test (helpers, renaming, deduplication) |
-| [mutation-testing](../../skills/mutation-testing/SKILL.md) | Entering phase 4 (COMMIT & VERIFY) |
-| [quality-gates-evidence-contract](../../skills/quality-gates-evidence-contract/SKILL.md) | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
-| [quality-gates-dotnet](../../skills/quality-gates-dotnet/SKILL.md) | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
-| [quality-gates-javascript](../../skills/quality-gates-javascript/SKILL.md) | Repo has a Node package (`package.json`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
-| [resolving-stack-commands](../../skills/resolving-stack-commands/SKILL.md) | Needing a build or test command the stack-commands file does not hold, or one of its commands fails — never hardcode one |
-| [skraft-quality-bar](../../skills/skraft-quality-bar/SKILL.md) | Entering phase 4 — the thresholds the final gates enforce |
-| [qa-reporting](../../skills/qa-reporting/SKILL.md) | Preparing the outcome handoff |
+| `clean-architecture-testing` | Deciding test level, boundary placement, or doubles policy |
+| `test-design-mandates` | Deciding whether a Domain unit test is authorized |
+| `test-refactoring-catalog` | Refactoring a test (helpers, renaming, deduplication) |
+| `mutation-testing` | Entering phase 4 (COMMIT & VERIFY) |
+| `quality-gates-evidence-contract` | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
+| `quality-gates-dotnet` | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
+| `quality-gates-javascript` | Repo has a Node package (`package.json`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
+| `resolving-stack-commands` | Needing a build or test command the stack-commands file does not hold, or one of its commands fails — never hardcode one |
+| `skraft-quality-bar` | Entering phase 4 — the thresholds the final gates enforce |
+| `qa-reporting` | Preparing the outcome handoff |
 
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
@@ -157,14 +147,14 @@ These are owned by the skills — load them, do not inline rules here.
 
 ### Outcome handoff (success or blockage)
 
-Load [qa-reporting](../../skills/qa-reporting/SKILL.md) before preparing
+Load `qa-reporting` before preparing
 delivery data. You own quality evidence, change log, actual-impact outcome JSON
 and media manifest; never delegate their production to the orchestrator. Reuse
 approved forecast/plan Markdown and captured gate outputs, not raw full logs or
 new verdict prose. Source actual impact to tests/changes; disclose missing proofs
 and blockers even when delivery stops. Leave `reviewRef` for router binding.
 
-For frontend stories only, load [playwright-evidence](../../skills/playwright-evidence/SKILL.md):
+For frontend stories only, load `playwright-evidence`:
 capture a bounded approved success screenshot during the existing real test run,
 retain all local failure/correctness evidence, and honor report media selection
 without uploads. Never rerun gates solely for reporting. Return exact

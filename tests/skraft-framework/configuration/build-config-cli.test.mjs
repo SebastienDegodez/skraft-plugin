@@ -81,7 +81,6 @@ test('parseAgentDescriptor reads on-demand skills and merges context with recomm
     '  phase: DELIVER',
     '  skills:',
     '    - outside-in-tdd',
-    '    - mutation-testing',
     '  on_demand_skills:',
     '    - mutation-testing',
     '  inputs:',
@@ -95,7 +94,7 @@ test('parseAgentDescriptor reads on-demand skills and merges context with recomm
     '',
     '# body',
   ].join('\n'))
-  assert.deepEqual(d.skills, ['outside-in-tdd', 'mutation-testing'])
+  assert.deepEqual(d.skills, ['outside-in-tdd'])
   assert.deepEqual(d.onDemandSkills, ['mutation-testing'])
   assert.deepEqual(d.inputs, ['test-plan.md'])
   assert.deepEqual(d.context, ['contracts.md', 'research.md'])
@@ -182,6 +181,25 @@ test('main fails (exit 1) and names the orphan when an agent declares no parent'
   const code = main(['--check', '--dir', agents, '--out', out], io)
   assert.equal(code, 1)
   assert.ok(errs.some((l) => /orphan-agent/.test(l) && /ORPHAN_AGENT/.test(l)))
+  await rm(dir, { recursive: true, force: true })
+})
+
+test('main fails (exit 1) and names the skill an agent lists as both mandatory and on-demand', async () => {
+  const { dir, agents, out } = await fixtureDir()
+  await writeFile(
+    join(agents, 'eng.md'),
+    [
+      '---', 'name: software-engineer', 'description: "x"', 'metadata:',
+      '  dispatched_by: skraft-orchestrator', '  phase: DELIVER',
+      '  skills:', '    - outside-in-tdd', '    - mutation-testing',
+      '  on_demand_skills:', '    - mutation-testing',
+      '---', '', '# body',
+    ].join('\n'),
+  )
+  const { io, errs } = capture()
+  const code = main(['--apply', '--dir', agents, '--out', out], io)
+  assert.equal(code, 1)
+  assert.ok(errs.some((l) => /software-engineer/.test(l) && /mutation-testing/.test(l) && /SKILL_DECLARED_TWICE/.test(l)))
   await rm(dir, { recursive: true, force: true })
 })
 

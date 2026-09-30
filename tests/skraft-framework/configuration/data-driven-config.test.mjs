@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildFrameworkConfig,
+  validateSkillDeclarations,
   DEFAULT_SKILL_POLICY,
   ON_DEMAND_SKILL_POLICY,
 } from '../../../plugins/skraft-framework/src/domain/framework-config-policy.mjs'
@@ -171,20 +172,40 @@ test('each dispatched agent records its dispatcher by display name', () => {
   })
 })
 
-test('skills a descriptor lists as on-demand keep their order and carry the on-demand policy', () => {
+test('on-demand skills follow the mandatory skills, each list in declaration order', () => {
   const config = buildFrameworkConfig([
     orchestrator(PHASES),
     {
-      ...agent({ name: 'software-engineer', phase: 'DELIVER', skills: ['outside-in-tdd', 'mutation-testing', 'craft-discipline'] }),
-      onDemandSkills: ['mutation-testing'],
+      ...agent({ name: 'software-engineer', phase: 'DELIVER', skills: ['outside-in-tdd', 'craft-discipline'] }),
+      onDemandSkills: ['mutation-testing', 'qa-reporting'],
     },
   ])
   assert.deepEqual(config.agentSkills['software-engineer'], [
     { name: 'outside-in-tdd', policy: DEFAULT_SKILL_POLICY },
-    { name: 'mutation-testing', policy: ON_DEMAND_SKILL_POLICY },
     { name: 'craft-discipline', policy: DEFAULT_SKILL_POLICY },
+    { name: 'mutation-testing', policy: ON_DEMAND_SKILL_POLICY },
+    { name: 'qa-reporting', policy: ON_DEMAND_SKILL_POLICY },
   ])
   assert.equal(ON_DEMAND_SKILL_POLICY, 'on-demand')
+})
+
+test('an agent with only on-demand skills gets them all under the on-demand policy', () => {
+  const config = buildFrameworkConfig([{ ...orchestrator(PHASES), onDemandSkills: ['qa-reporting'] }])
+  assert.deepEqual(config.agentSkills['skraft-orchestrator'], [{ name: 'qa-reporting', policy: ON_DEMAND_SKILL_POLICY }])
+})
+
+test('a skill listed as both mandatory and on-demand is a violation naming the agent and the skill', () => {
+  const violations = validateSkillDeclarations([
+    { name: 'software-engineer', skills: ['outside-in-tdd', 'mutation-testing'], onDemandSkills: ['mutation-testing', 'qa-reporting'] },
+    { name: 'acceptance-designer', skills: ['bdd-methodology'], onDemandSkills: ['qa-reporting'] },
+    { name: 'bare' },
+  ])
+  assert.deepEqual(violations, [{
+    agent: 'software-engineer',
+    code: 'SKILL_DECLARED_TWICE',
+    message: "'mutation-testing' is listed under both skills and on_demand_skills; keep it in one list",
+  }])
+  assert.ok(Object.isFrozen(violations))
 })
 
 test('context inputs are projected per agent, apart from the required inputs', () => {

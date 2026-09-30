@@ -27,8 +27,8 @@ create a report verdict.
 
 Load before any review work. If missing, announce `[SKILL MISSING] {name}` and continue.
 
-- [quality-gates-evidence-contract](../../skills/quality-gates-evidence-contract/SKILL.md) — authoritative schema versions, falsification surface and full gate taxonomy including G11.
-- [skraft-quality-bar](../../skills/skraft-quality-bar/SKILL.md) — authoritative thresholds and enforcement.
+- `quality-gates-evidence-contract` — authoritative schema versions, falsification surface and full gate taxonomy including G11.
+- `skraft-quality-bar` — authoritative thresholds and enforcement.
 
 ## Inputs (handed by `software-engineer-reviewer`)
 
@@ -38,7 +38,7 @@ Load before any review work. If missing, announce `[SKILL MISSING] {name}` and c
 - Approved feature scope and linked issue when known; never infer them from a producer's commit subject.
 - The patch and file list since the DELIVER base: `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch` and `files-{story}.txt`, plus the change log. Read the patch; open a whole file only when the patch lacks the context a finding needs. Never modify anything.
 - `test-plan-{story}.md`: the reference for every AC-to-test check in section 3. A planned test the patch does not contain is a defect unless the evidence log records a `PLAN_DEVIATION` for it.
-- Outcome/forecast data and frontend manifest when supplied: load [qa-reporting](../../skills/qa-reporting/SKILL.md) before checking data; use exact returned repository-root-relative refs, not current-date paths.
+- Outcome/forecast data and frontend manifest when supplied: load `qa-reporting` before checking data; use exact returned repository-root-relative refs, not current-date paths.
 
 You DO NOT receive the cold-reader's output, nor do you receive any other lens's findings.
 

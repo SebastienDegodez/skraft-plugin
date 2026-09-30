@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { parseYaml } from '../domain/yaml-parser.mjs'
-import { buildFrameworkConfig } from '../domain/framework-config-policy.mjs'
+import { buildFrameworkConfig, validateSkillDeclarations } from '../domain/framework-config-policy.mjs'
 import { validateDispatch } from '../domain/dispatch-policy.mjs'
 
 // Pull the frontmatter block (between the first two `---` fences).
@@ -67,6 +67,11 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
   const violations = validateDispatch(descriptors)
   if (violations.length > 0) {
     for (const v of violations) error(`dispatch: ${v.agent} — ${v.message} (${v.code})`)
+    return 1
+  }
+  const skillViolations = validateSkillDeclarations(descriptors)
+  if (skillViolations.length > 0) {
+    for (const v of skillViolations) error(`skills: ${v.agent} — ${v.message} (${v.code})`)
     return 1
   }
 

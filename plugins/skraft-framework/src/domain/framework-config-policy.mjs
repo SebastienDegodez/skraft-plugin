@@ -61,15 +61,30 @@ const phaseAgentsOf = (descriptors, phaseOrder) => {
   )
 }
 
-const skillsWithPolicy = (skills, onDemand) => skills.map((name) => ({
-  name,
-  policy: onDemand.has(name) ? ON_DEMAND_SKILL_POLICY : DEFAULT_SKILL_POLICY,
-}))
+const skillsWithPolicy = (skills, onDemandSkills) => [
+  ...skills.map((name) => ({ name, policy: DEFAULT_SKILL_POLICY })),
+  ...onDemandSkills.map((name) => ({ name, policy: ON_DEMAND_SKILL_POLICY })),
+]
 
-// Every agent's skills, in declaration order: the verification policy by default, the
-// on-demand policy for those its descriptor lists under on_demand_skills.
+// Every agent's skills, in declaration order: its `skills` under the verification
+// policy, then its `on_demand_skills` under the on-demand policy.
 const agentSkillsOf = (descriptors) =>
-  Object.fromEntries(descriptors.map((d) => [d.name, skillsWithPolicy(d.skills ?? [], new Set(d.onDemandSkills ?? []))]))
+  Object.fromEntries(descriptors.map((d) => [d.name, skillsWithPolicy(d.skills ?? [], d.onDemandSkills ?? [])]))
+
+// The two skill lists are disjoint: a skill is either mandatory or on-demand, never
+// both. Returns a frozen list of violations (empty = valid) for config:check.
+export const validateSkillDeclarations = (descriptors) => Object.freeze(
+  descriptors.flatMap((d) => {
+    const mandatory = new Set(d.skills ?? [])
+    return (d.onDemandSkills ?? [])
+      .filter((name) => mandatory.has(name))
+      .map((name) => ({
+        agent: d.name,
+        code: 'SKILL_DECLARED_TWICE',
+        message: `'${name}' is listed under both skills and on_demand_skills; keep it in one list`,
+      }))
+  }),
+)
 
 // Every agent's expected artifacts: its required inputs and its produced outputs.
 const agentArtifactsOf = (descriptors) =>

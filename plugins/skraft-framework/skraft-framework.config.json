@@ -127,12 +127,12 @@
         "policy": "verify"
       },
       {
-        "name": "skraft-quality-bar",
-        "policy": "on-demand"
-      },
-      {
         "name": "craft-discipline",
         "policy": "verify"
+      },
+      {
+        "name": "skraft-quality-bar",
+        "policy": "on-demand"
       },
       {
         "name": "resolving-stack-commands",
@@ -289,16 +289,16 @@
         "policy": "verify"
       },
       {
+        "name": "craft-discipline",
+        "policy": "verify"
+      },
+      {
         "name": "clean-architecture-testing",
         "policy": "on-demand"
       },
       {
         "name": "test-design-mandates",
         "policy": "on-demand"
-      },
-      {
-        "name": "craft-discipline",
-        "policy": "verify"
       },
       {
         "name": "test-refactoring-catalog",

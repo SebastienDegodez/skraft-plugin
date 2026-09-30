@@ -25,7 +25,7 @@ A placement an `Accepted` or `Proposed` ADR in the decisions index or the contra
 ## Skill Loading
 
 Load on demand (C1 LAZY ASSET):
-- [clean-architecture-testing](../../skills/clean-architecture-testing/SKILL.md) — for layer boundary rules
+- `clean-architecture-testing` — for layer boundary rules
 
 ## Gates
 

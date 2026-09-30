@@ -168,7 +168,7 @@ retains publication history.
 |---|---|---|
 | G1 | Out-of-order phase dispatch blocked before execution | Fail closed |
 | Provenance | An agent never dispatches itself, nor an agent another agent owns | Fail open on hook error |
-| G2 | Mandatory skills injected on agent start; skills an agent declares under `metadata.on_demand_skills` are listed as on-demand, not injected | Fail open on hook error |
+| G2 | Skills under `metadata.skills` injected as mandatory on agent start; skills under `metadata.on_demand_skills` (a disjoint list) are listed as on-demand, not injected | Fail open on hook error |
 | G3 | Skill reads recorded; a subagent that never loaded a mandatory skill is sent back (on-demand skills are traced, never required) | Fail open on hook error |
 | G4 | A phase does not close until its required artifacts exist (state CLI) | Fail closed |
 | G5 | A phase does not close unless the review artifact, the recorded verdict and, for DELIVER, a new commit agree (state CLI) | Fail closed |

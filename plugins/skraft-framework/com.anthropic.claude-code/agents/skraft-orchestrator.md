@@ -46,12 +46,6 @@ metadata:
     - DISTILL
     - DELIVER
   state_file: .copilot-tracking/skraft-plans/{projectSlug}/state.json
-  skills:
-    - adversarial-review-lenses
-    - contract-testing
-    - playwright-evidence
-    - github-search-protocol
-    - qa-reporting
   on_demand_skills:
     - adversarial-review-lenses
     - contract-testing
@@ -86,7 +80,7 @@ Rehydrate once: read the snapshot ONE time here; after that, the output of your 
    ```
    Add one line per phase with a nonzero rework cost: `{phase}: {retryCount} retries + {reworkCount} manual reworks, {findingsResolved} findings resolved`.
 5. Run `report.mjs status` at startup and on every resume, even at DONE. When it shows persisted reporting preferences, load no reporting asset or skill here. Only when none are persisted, load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json) for the startup consent checkpoint: recommend PR reports + issue link + chat summary without preselecting them, and persist confirmed choices with `report.mjs setup`.
-6. Load the selected provider skill at the first remote report operation under Report feedback, never at startup: for `github`, [github-search-protocol](../../skills/github-search-protocol/SKILL.md), using its publication route, not issue discovery. Apply the lifecycle's capability checkpoint there with that provider procedure; surface unresolved gaps and required user customization.
+6. Load the selected provider skill at the first remote report operation under Report feedback, never at startup: for `github`, `github-search-protocol`, using its publication route, not issue discovery. Apply the lifecycle's capability checkpoint there with that provider procedure; surface unresolved gaps and required user customization.
 7. Proceed to the current phase independently of pending publication; publication-only retries reuse existing Markdown without dispatching engineering. Provider choices affect reporting only, not engineering pipeline support.
 
 ## State file
@@ -168,7 +162,7 @@ Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slu
 Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
 
 **Step 3 — Dispatch reviewer**
-Dispatch the reviewer with the Dispatch context header and its handoff block: the block lists the artefacts under review and, on a re-review, the previous review. Do NOT summarize or interpret — pass raw paths only. The reviewer applies `$SKRAFT_PLUGIN_ROOT/skills/adversarial-review-lenses/SKILL.md` and writes its verdict file to `reviews/{date}/`.
+Dispatch the reviewer with the Dispatch context header and its handoff block: the block lists the artefacts under review and, on a re-review, the previous review. Do NOT summarize or interpret — pass raw paths only. The reviewer applies the `adversarial-review-lenses` skill and writes its verdict file to `reviews/{date}/`.
 
 **Step 4 — Handle verdict**
 
@@ -234,7 +228,7 @@ EOF
 
 ### DESIGN-only: ADR ratification checkpoint (B10 HUMAN CHECKPOINT)
 
-ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in `$SKRAFT_PLUGIN_ROOT/skills/architecture-decisions/SKILL.md` (Ratification Contract); this is its wiring.
+ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in the `architecture-decisions` skill (Ratification Contract); this is its wiring.
 
 1. **Read the digest, not the bodies.** Read `docs/adr/decisions-index.md` (the cheap verdict surface) — `cat docs/adr/decisions-index.md`. Do NOT load full ADR bodies. To inspect one ADR's header without its body, use the S7 extraction command in `architecture-decisions` ("Reading the digest cheaply"); fall back to `read_file` on the first ~12 lines only if the command is unavailable. Collect every row whose `Status == Proposed`.
 2. **No Proposed rows →** ratification is a no-op; `state.mjs set --field adrRatification --data '{"checkpointStatus":"resolved","pending":[],"ratified":[…]}'`, then `state.mjs transition --to DISTILL`.
@@ -280,7 +274,7 @@ DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from 
 1. Do not open the plans yourself. Run `state.mjs handoff --agent "Skraft - Software Engineer"`; its block resolves the recorded DISTILL refs.
 2. Dispatch `Skraft - Software Engineer` with the Dispatch context header, its handoff block pasted verbatim, and these additions — a missing entry makes the engineer re-plan the story:
    - outer acceptance test path(s) and the RED evidence refs the acceptance designer returned
-   - approved forecast ref, exact reporting output directory, confirmed media policy, [qa-reporting entry](../../skills/qa-reporting/SKILL.md)
+   - approved forecast ref, exact reporting output directory, confirmed media policy, `qa-reporting` skill name
 
    The block carries the `.feature` file(s), `test-plan-{story}.md`, `impl-plan-{story}.md`, `contracts-{story}.md`, `docs/adr/decisions-index.md`, the research conventions and the stack-commands file. Every DELIVER re-dispatch — rework included — carries the same block and the same additions.
 
@@ -291,9 +285,9 @@ DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from 
 
 ## Report feedback
 
-At report boundaries, load [qa-reporting](../../skills/qa-reporting/SKILL.md) before handling producer data or rendering. For publication and publication-only resume, load [host publication lifecycle](../../assets/reporting/mcp-publication.md). Apply Phase 0's conditional provider-skill load before remote operations.
+At report boundaries, load `qa-reporting` before handling producer data or rendering. For publication and publication-only resume, load [host publication lifecycle](../../assets/reporting/mcp-publication.md). Apply Phase 0's conditional provider-skill load before remote operations.
 
-- DISTILL dispatch: pass [qa-reporting entry](../../skills/qa-reporting/SKILL.md); require designer-owned forecast data from existing test/implementation plans and sourced expected impact; pass raw data and source refs to acceptance reviewer. After `APPROVED`, record review and render forecast before DELIVER.
+- DISTILL dispatch: pass `qa-reporting` skill name; require designer-owned forecast data from existing test/implementation plans and sourced expected impact; pass raw data and source refs to acceptance reviewer. After `APPROVED`, record review and render forecast before DELIVER.
 - DELIVER approval or blockage: use engineer-owned outcome data and actual gates; record existing reviewer verdict. Missing engineering evidence stays blocking, never hidden by a report.
 - Bind only the persisted `reviewRef` into producer data; render once through qa-reporting's existing CLI using exact returned data/output paths. Do not synthesize impact or a verdict.
 - Hand the existing Markdown, story/kind and confirmed destinations to the lifecycle. Follow its local decision and receipt checkpoints; use the selected provider procedure for remote operations. Return invalid content to its producer.

@@ -64,8 +64,8 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load startup skills before starting; consult other skills at their stated trigger. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
-- [architecture-patterns](../../skills/architecture-patterns/SKILL.md)
-- [architecture-decisions](../../skills/architecture-decisions/SKILL.md)
+- `architecture-patterns`
+- `architecture-decisions`
 
 ### Load on demand (Phase 6 — language-specific layering)
 - `clean-architecture-<language>` (e.g. `clean-architecture-dotnet`) — OPTIONAL. Take the project's primary language from the research `Project conventions` section (Phase 1) and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.

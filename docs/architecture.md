@@ -171,8 +171,9 @@ metadata:
 <persona, principes, workflow, contraintes…>
 ```
 
-Le frontmatter `metadata.skills` **déclare** les skills que l'agent peut
-charger. Le chargement effectif se fait à l'exécution (cf. §5).
+Le frontmatter `metadata.skills` (obligatoires) et `metadata.on_demand_skills` (à la
+demande) **déclarent** les skills que l'agent peut charger. Le chargement effectif se fait
+à l'exécution (cf. §5).
 
 ---
 
@@ -210,9 +211,10 @@ L'agent `software-engineer` distingue deux modes de chargement :
 | **Trigger-based** | Chargé à la volée selon le déclencheur. | Idem : log et continuation. |
 
 Côté hooks, chaque skill de `metadata.skills` est obligatoire (injectée au SubagentStart,
-exigée au SubagentStop), sauf celles que l'agent liste aussi sous `metadata.on_demand_skills` :
-politique `on-demand` dans `agentSkills`, tracée mais jamais exigée. Pour `software-engineer`,
-seules `outside-in-tdd` et `craft-discipline` restent obligatoires.
+exigée au SubagentStop). Chaque skill de `metadata.on_demand_skills` reçoit la politique
+`on-demand` dans `agentSkills` : tracée mais jamais exigée. Les deux listes sont disjointes ;
+`build-config-bin.mjs` refuse un skill déclaré dans les deux (`SKILL_DECLARED_TWICE`). Pour
+`software-engineer`, `metadata.skills` ne contient que `outside-in-tdd` et `craft-discipline`.
 
 Les entrées passent d'un agent à l'autre par le bloc que `state.mjs handoff --agent <nom>`
 calcule depuis les artefacts enregistrés (`phaseArtifacts`) et `agentArtifacts[agent].inputs`.

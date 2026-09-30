@@ -30,7 +30,6 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/files-{story}.txt (optional, Phase 2 changed-file list)
   skills:
     - adversarial-review-lenses
-    - qa-reporting
   on_demand_skills:
     - qa-reporting
   genesis_patterns:
@@ -62,9 +61,9 @@ Repair pressure never changes ownership. Never use edit, write, or shell file-wr
 
 Before reading artefacts or dispatching a lens, load this skill. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
-- [adversarial-review-lenses](../../skills/adversarial-review-lenses/SKILL.md)
+- `adversarial-review-lenses`
 
-Load [qa-reporting](../../skills/qa-reporting/SKILL.md) on demand, only at the Phase 1 reporting-inputs check.
+Load `qa-reporting` on demand, only at the Phase 1 reporting-inputs check.
 
 ## Protocol
 
@@ -76,7 +75,7 @@ Collect the following artifacts from the engineer's output:
 - **TDD journal** — engineer's log of phases (if available)
 - **Checklist** — engineer's self-assessment (if available)
 - **Plan artefacts** — the `.feature` file(s), `test-plan-{story}.md`, `impl-plan-{story}.md`, `contracts-{story}.md` and `docs/adr/decisions-index.md`, from the handoff block. They are the reference the lenses judge against; never reconstruct them from the code.
-- **Reporting inputs** — exact returned repository-root-relative outcome, approved forecast, quality-evidence, change-log and frontend-manifest refs. Load [qa-reporting](../../skills/qa-reporting/SKILL.md) before checking these data; never reconstruct dated paths.
+- **Reporting inputs** — exact returned repository-root-relative outcome, approved forecast, quality-evidence, change-log and frontend-manifest refs. Load `qa-reporting` before checking these data; never reconstruct dated paths.
 
 If artifacts are missing, note them but proceed with available inputs.
 
@@ -107,7 +106,7 @@ Dispatch exactly these four registered ids before synthesis: `quality-gates-lens
 
 | Lens | Sub-agent | Input |
 |------|-----------|-------|
-| quality-gates | [quality-gates-lens](quality-gates-lens.md) | The `qg-verify` result and the commit messages written above + patch and file list + journal + checklist + `test-plan-{story}.md` + raw quality-evidence, outcome, forecast, change-log and manifest refs + [qa-reporting entry](../../skills/qa-reporting/SKILL.md) |
+| quality-gates | [quality-gates-lens](quality-gates-lens.md) | The `qg-verify` result and the commit messages written above + patch and file list + journal + checklist + `test-plan-{story}.md` + raw quality-evidence, outcome, forecast, change-log and manifest refs + `qa-reporting` skill name |
 | architecture-boundaries | [architecture-boundaries-lens](architecture-boundaries-lens.md) | Patch and file list + `contracts-{story}.md` + `docs/adr/decisions-index.md` |
 | test-integrity | [test-integrity-lens](test-integrity-lens.md) | Patch and file list + `test-plan-{story}.md` + `.feature` file(s) |
 | cold-reader | [cold-reader-lens](cold-reader-lens.md) | Patch and file list ONLY (NO journal, NO checklist, NO plan, NO contract) |
