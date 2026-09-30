@@ -18,7 +18,7 @@ Rules:
 - Plugin install, use, pipeline, guardrails and harness packaging:
   **`plugins/skraft-framework/README.md`**.
 - Framework internals and physical architecture: **`docs/architecture.md`**.
-- Runtime hook rationale, fail modes and guardrails G1–G8:
+- Runtime hook rationale, fail modes and guardrails G1–G9:
   **`docs/site/en/explanation/hooks.md`** and **`docs/site/fr/explanation/hooks.md`**.
 - Roadmap with all 13 US (gain + status + milestone): **`docs/roadmap.md`**.
 - Skill evaluation (Vally), the published quality dashboard and AGENTVIZ replay:

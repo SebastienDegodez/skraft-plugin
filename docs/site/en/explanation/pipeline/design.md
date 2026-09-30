@@ -16,7 +16,7 @@ The DESIGN phase translates refined stories into explicit, traceable architectur
 | | |
 |---|---|
 | **Comes from** | **DISCUSS** — the INVEST story + its criteria |
-| **What enters** | Refined story to design |
+| **What enters** | Refined story, RESEARCH brief and structural scan |
 | **What exits** | ADR + component diagram + event model |
 | **Goes to** | **DISTILL** — which derives the executable scenarios |
 | **Responsible agent** | `solution-architect` |
@@ -41,8 +41,25 @@ The ordering story enters. DESIGN produces an **ADR** “delegate payment to an 
 - Component diagram with Bounded Context boundaries.
 - Event Model showing the Command → Event → Read Model flow.
 - Interface contracts between components.
+- Consistency matrix tying ADR decisions back to diagrams, contracts and event models.
+
+## How upstream evidence is reused
+
+The solution architect receives the research document as a required input and the
+`details/{date}/structural-scan.json` report as context. Phase 3 is **REUSE
+VERIFICATION**: it classifies existing aggregates, contexts, use cases and patterns from
+those two sources first, and searches code only for questions they leave open. The scan
+is run once by the orchestrator before the first DESIGN dispatch; it detects CQRS bus,
+Event Sourcing and Saga signatures, while cross-context ACL stays a manual review point.
+
+The reviewer runs before human ADR ratification. Gates that require an `Accepted` ADR
+accept a current-pass `Proposed` ADR; gates that forbid an `Accepted` ADR also forbid a
+current-pass `Proposed` one. The reviewer reads `docs/adr/decisions-index.md` first,
+opens only ADR bodies needed for the pass under review, and re-runs the structural scan
+for G1. Interface contracts pass G4 when they live in Domain or Application, matching the
+layer the ADR records, never in Infrastructure.
 
 ## Gates crossed here
 
-This phase crosses gates **G1–G15** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
+This phase crosses gates **G1–G16** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
 Each gate is checked by the independent reviewer before moving on to **DISTILL**.

@@ -168,13 +168,14 @@ retains publication history.
 |---|---|---|
 | G1 | Out-of-order phase dispatch blocked before execution | Fail closed |
 | Provenance | An agent never dispatches itself, nor an agent another agent owns | Fail open on hook error |
-| G2 | Mandatory skills injected on agent start | Fail open on hook error |
-| G3 | Skill reads recorded; a subagent that never loaded a mandatory skill is sent back | Fail open on hook error |
+| G2 | Mandatory skills injected on agent start; skills an agent declares under `metadata.on_demand_skills` are listed as on-demand, not injected | Fail open on hook error |
+| G3 | Skill reads recorded; a subagent that never loaded a mandatory skill is sent back (on-demand skills are traced, never required) | Fail open on hook error |
 | G4 | A phase does not close until its required artifacts exist (state CLI) | Fail closed |
 | G5 | A phase does not close unless the review artifact, the recorded verdict and, for DELIVER, a new commit agree (state CLI) | Fail closed |
 | G6 | Next-phase or retry context injected after a dispatch | Fail open on hook error |
 | G7 | Direct writes to state, execution logs and the active-pipeline pointer blocked | Fail closed |
 | G8 | Source and test writes during DELIVER restricted to the DELIVER agents and the agents they dispatch | Fail open on hook error |
+| G9 | A phase-agent dispatch must name every recorded required input (e.g. the DELIVER `test-plan`) and, on a retry, the previous review; the refusal points to `state.mjs handoff` | Fail open on unreadable state |
 
 Off-pipeline agents and internal workers are intentionally not subject to G1 phase ordering.
 Missing or corrupt pipeline state still blocks a governed phase.
@@ -204,8 +205,17 @@ directly:
 
 ```bash
 node "<plugin-root>/src/cli/state.mjs" get --slug my-feature
+node "<plugin-root>/src/cli/state.mjs" handoff --agent "Skraft - Software Engineer"
+node "<plugin-root>/src/cli/state.mjs" timeline
 node "<plugin-root>/src/cli/health-check.mjs"
 ```
+
+`handoff` prints the block the orchestrator pastes into a phase dispatch: the recorded
+inputs the agent must read instead of re-deriving them, and on a retry the rework or
+re-review mode with the previous review. `timeline` reports, per phase, specialist and
+reviewer time and the number of attempts from the dispatch journal. At DESIGN start the
+orchestrator runs `src/cli/structural-scan.mjs` once; the architect and the DESIGN reviewer
+read its JSON report instead of re-grepping the code.
 
 Run these from the consumer repository so SKRAFT resolves that repository's tracking
 state. Hook commands use `CLAUDE_PLUGIN_ROOT`; actual Copilot CLI 1.0.83 fixtures verified

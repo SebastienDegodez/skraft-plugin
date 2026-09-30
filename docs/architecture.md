@@ -209,6 +209,16 @@ L'agent `software-engineer` distingue deux modes de chargement :
 | **Mandatory at startup** | Chargé avant la phase PREPARE. | Log `[SKILL MISSING] <name>` et l'agent continue. |
 | **Trigger-based** | Chargé à la volée selon le déclencheur. | Idem : log et continuation. |
 
+Côté hooks, chaque skill de `metadata.skills` est obligatoire (injectée au SubagentStart,
+exigée au SubagentStop), sauf celles que l'agent liste aussi sous `metadata.on_demand_skills` :
+politique `on-demand` dans `agentSkills`, tracée mais jamais exigée. Pour `software-engineer`,
+seules `outside-in-tdd` et `craft-discipline` restent obligatoires.
+
+Les entrées passent d'un agent à l'autre par le bloc que `state.mjs handoff --agent <nom>`
+calcule depuis les artefacts enregistrés (`phaseArtifacts`) et `agentArtifacts[agent].inputs`.
+Le garde G9 (PreToolUse) refuse un dispatch d'agent de phase qui omet une entrée requise
+enregistrée ou, en reprise, la revue précédente.
+
 Voir la fiche [`agents/software-engineer.md`](./agents/software-engineer.md)
 pour la matrice complète des skills consommés.
 

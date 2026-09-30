@@ -17,7 +17,7 @@ The DISTILL phase transforms architecture decisions into executable specificatio
 |---|---|
 | **Comes from** | **DESIGN** — the ADR and the event model |
 | **What enters** | Architecture decisions to specify |
-| **What exits** | Gherkin scenarios + test plan + implementation plan; approved reporting flow adds a forecast |
+| **What exits** | Gherkin scenarios + test plan + implementation plan + stack commands + acceptance RED proof; approved reporting flow adds a forecast |
 | **Goes to** | **DELIVER** — which implements them with TDD |
 | **Responsible agent** | `acceptance-designer` |
 | **Associated reviewer** | `acceptance-designer-reviewer` |
@@ -41,6 +41,16 @@ The ADR and event model enter. DISTILL writes the **Gherkin scenario**: “Given
 - Coverage matrix linking each acceptance criterion to a scenario.
 - Implementation plan ordering tests by layer (Domain, Application, Infrastructure, API).
 - Identification of Test Doubles needed at each boundary.
+- `details/{date}/stack-commands.md`, when commands had to be resolved or corrected.
+- `evidence/{date}/{story}/acceptance-red.stdout`, `.exit` and `.rev`, proving the first acceptance test failed RED.
+
+## How DELIVER receives execution proof
+
+DISTILL resolves build, test and mutation commands once into `stack-commands.md` instead
+of leaving the engineer to rediscover them. It also captures the first acceptance RED run:
+stdout, non-zero exit code and source revision. When DELIVER starts and `HEAD` still
+matches that revision, the software engineer reuses that proof instead of re-running the
+same acceptance test during PREPARE.
 
 ## From approved plan to forecast
 

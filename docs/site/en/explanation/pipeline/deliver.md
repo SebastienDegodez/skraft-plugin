@@ -16,7 +16,7 @@ The DELIVER phase implements working code, guided by tests, with empirically ver
 | | |
 |---|---|
 | **Comes from** | **DISTILL** — the Gherkin scenarios, the test plan, the implementation plan and the RED acceptance test |
-| **What enters** | Executable specifications to implement, in the implementation plan's order, with the test plan's layer and double per scenario; forecast from the approved reporting flow |
+| **What enters** | Executable specifications to implement, in the implementation plan's order, with the test plan's layer and double per scenario; contracts, ADR index, research conventions, stack commands and forecast from the approved reporting flow |
 | **What exits** | Tested code + quality evidence (mutation, RED→GREEN); outcome report at completion or blockage |
 | **Goes to** | The **Pull Request** — human review then delivery |
 | **Responsible agent** | `software-engineer` |
@@ -41,6 +41,32 @@ The scenario enters. DELIVER implements the total calculation and loyalty credit
 - Passing acceptance tests linked to Gherkin scenarios.
 - Unit tests covering Domain invariants.
 - Mutation Score as empirical proof of test quality.
+- Quality-gates evidence log, change log and outcome data for the reviewer.
+
+## Handoff, RED and rework
+
+DELIVER starts from the `state.mjs handoff` block, not from a fresh reconstruction. The
+block carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`,
+`contracts-{story}.md`, `docs/adr/decisions-index.md`, research conventions,
+`stack-commands.md` and acceptance RED evidence. Retries carry the same block, so the
+test plan and implementation plan are still present during rework.
+
+RED inspection happens inside the software-engineer dispatch: the recorded G10 capture is
+the inspection, and the engineer continues RED → GREEN → COMMIT without a second dispatch.
+Per-cycle mutation is differential since the previous cycle's last commit and is skipped
+when no core production file changed. Only the final full core then boundary mutation run
+is G6 evidence.
+
+The reviewer prepares `diff-{story}.patch` and `files-{story}.txt` once, then hands those
+paths to the lenses. `quality-gates` also receives the test plan, `test-integrity` receives
+the test plan and `.feature`, `architecture-boundaries` receives contracts and the ADR
+index, and `cold-reader` receives only the patch and file list.
+
+On rework, the engineer changes only what the previous review's findings name. On
+re-review, the reviewer re-runs the lenses or gates that failed, were inconclusive or had
+changed inputs, and carries forward the other passing results in the verdict YAML. If the
+only issue is an environment-caused inconclusive gate, the orchestrator escalates the cause
+and command to the user instead of re-dispatching the engineer.
 
 ## From evidence to outcome
 
