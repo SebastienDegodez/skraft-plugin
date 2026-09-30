@@ -1,0 +1,232 @@
+name: backlog-planner
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Backlog Planner blocks when DISCOVER artefacts are absent, routes
+  flawed DISCUSS artefacts through its reviewer instead of self-approving, and that the reviewer
+  plus its planning lenses stay read-only while naming concrete planning defects.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 8m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  threshold: 0.9
+stimuli:
+  - name: Missing triage report blocks DISCUSS before any story is drafted
+    prompt: |
+      Refine the pricing backlog into ready stories for design. No DISCOVER triage artefact is
+      available in this workspace. Report what blocks DISCUSS and stop without writing story files.
+    tags:
+      agent: backlog-planner
+      scenario: missing-triage-report
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: &missing-triage-files
+        - src: fixtures/missing-triage/README.md
+          dest: README.md
+        - src: fixtures/missing-triage/skraft-config.json
+          dest: skraft-config.json
+      commands: &missing-triage-setup
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: discuss without discover artefacts"'
+    graders:
+      - type: completed
+      - type: output-matches
+        name: DISCUSS is reported as blocked on the missing triage artefact
+        config:
+          pattern: '(?is)(blocked|missing artefact|missing precondition|PRIOR PHASE GATE FAILED).*(triage|DISCOVER)'
+      - type: diff-empty
+
+  - name: Reviewer fan-out rejects flawed discuss artefacts and writes one verdict
+    prompt: |
+      Review these pricing DISCUSS artefacts exactly as backlog-planner-reviewer. Tell me whether
+      DESIGN can rely on them, and persist the canonical review verdict.
+    tags:
+      agent: backlog-planner-reviewer
+      subagents: &planning-lenses
+        - planning-invest-lens
+        - planning-ac-quality-lens
+        - planning-coherence-lens
+        - planning-dor-lens
+      scenario: flawed-discuss-review
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: &flawed-discuss-files
+        - src: fixtures/flawed-discuss/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/flawed-discuss/.copilot-tracking/skraft-plans/pricing/research/2026-08-25/triage-2026-08-25.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-25/triage-2026-08-25.md
+        - src: fixtures/flawed-discuss/.copilot-tracking/skraft-plans/pricing/plans/2026-08-25/stories-v1.2-pricing-hygiene.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-25/stories-v1.2-pricing-hygiene.md
+        - src: fixtures/flawed-discuss/.copilot-tracking/skraft-plans/pricing/plans/2026-08-25/ac-draft-driver-age-validation.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-25/ac-draft-driver-age-validation.md
+        - src: fixtures/flawed-discuss/.copilot-tracking/skraft-plans/pricing/plans/2026-08-25/ac-draft-loyalty-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-25/ac-draft-loyalty-discount.md
+      commands: &flawed-discuss-setup
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: flawed discuss artefacts awaiting review"'
+    graders:
+      - type: completed
+      - type: skill-invocation
+        name: Mandatory review skills are loaded
+        config:
+          required:
+            - planning-review-criteria
+            - adversarial-review-lenses
+      - type: custom-metrics
+        name: All four planning lenses run as independent agents
+        config:
+          assertions:
+            - metric: subagentDispatchCount
+              min: 4
+            - metric: dispatchedSubagents
+              contains: planning-invest-lens
+            - metric: dispatchedSubagents
+              contains: planning-ac-quality-lens
+            - metric: dispatchedSubagents
+              contains: planning-coherence-lens
+            - metric: dispatchedSubagents
+              contains: planning-dor-lens
+      - type: output-matches
+        name: The flawed discuss artefacts are rejected for rework
+        config:
+          pattern: '(?i)\bNEEDS_REWORK\b'
+      - type: output-matches
+        name: The review names the cycle and technical AC leak
+        config:
+          pattern: '(?is)(ST-101 -> ST-102 -> ST-101|HTTP 200|PricingController)'
+      - type: run-command
+        name: The reviewed research and plan artefacts stay untouched
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/pricing/research .copilot-tracking/skraft-plans/pricing/plans)" ]'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: One canonical discuss review verdict is written
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - "set -- .copilot-tracking/skraft-plans/pricing/reviews/*/discuss-review-*.md; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && grep -q '^# Review verdict$' \"$1\" && grep -Eq '^verdict: \"?NEEDS_REWORK\"?$' \"$1\""
+          expected_exit_code: 0
+          timeout: 30s
+
+  - name: INVEST lens names the cycle and oversized technical story without rewriting it
+    prompt: |
+      Read only the pricing stories file in this workspace. Return the exact YAML verdict for
+      whether each story stands on its own.
+    tags:
+      agent: planning-invest-lens
+      scenario: invest-failures
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *flawed-discuss-files
+      commands: *flawed-discuss-setup
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Lens returns a failing YAML verdict
+        config:
+          pattern: '(?is)lens:\s*planning-invest.*verdict:\s*fail'
+      - type: output-matches
+        name: The cycle or oversized technical story is named
+        config:
+          pattern: '(?is)(ST-101 -> ST-102 -> ST-101|13|implement PricingController)'
+      - type: diff-empty
+
+  - name: AC quality lens catches technical and under-specified criteria without editing them
+    prompt: |
+      Read only the pricing acceptance-criteria drafts in this workspace. Return the exact YAML
+      verdict for whether the criteria admit exactly one business reading.
+    tags:
+      agent: planning-ac-quality-lens
+      scenario: ac-quality-failures
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *flawed-discuss-files
+      commands: *flawed-discuss-setup
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Lens returns a failing YAML verdict
+        config:
+          pattern: '(?is)lens:\s*planning-ac-quality.*verdict:\s*fail'
+      - type: output-matches
+        name: The technical leak is named
+        config:
+          pattern: '(?is)(HTTP 200|DiscountRepository|Repository)'
+      - type: diff-empty
+
+  - name: Coherence lens catches impossible sequencing and capacity drift without editing artefacts
+    prompt: |
+      Read the pricing sprint plan plus its acceptance-criteria drafts in this workspace. Return
+      the exact YAML verdict for whether the sprint can be delivered as written.
+    tags:
+      agent: planning-coherence-lens
+      scenario: coherence-failures
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *flawed-discuss-files
+      commands: *flawed-discuss-setup
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Lens returns a failing YAML verdict
+        config:
+          pattern: '(?is)lens:\s*planning-coherence.*verdict:\s*fail'
+      - type: output-matches
+        name: The delivery cycle or overloaded sequence is named
+        config:
+          pattern: '(?is)(ST-101 -> ST-102 -> ST-101|capacity|13)'
+      - type: diff-empty
+
+  - name: DoR lens rejects stories that still force DESIGN to guess
+    prompt: |
+      Read the pricing stories file and acceptance-criteria drafts in this workspace. Return the
+      exact YAML verdict for whether they are ready for design.
+    tags:
+      agent: planning-dor-lens
+      scenario: dor-failures
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *flawed-discuss-files
+      commands: *flawed-discuss-setup
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Lens returns a failing YAML verdict
+        config:
+          pattern: '(?is)lens:\s*planning-dor.*verdict:\s*fail'
+      - type: output-matches
+        name: A failing DoR item or antipattern is named
+        config:
+          pattern: '(?is)(item 2|item 3|Implement-X|Vague Persona|Generic Data)'
+      - type: diff-empty

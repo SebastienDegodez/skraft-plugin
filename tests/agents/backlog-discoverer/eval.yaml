@@ -82,6 +82,84 @@ stimuli:
         config:
           pattern: '\.copilot-tracking/skraft-plans/pricing/reviews/\d{4}-\d{2}-\d{2}/'
 
+  - name: Completeness lens refuses to bless an unexplained single-mode discovery
+    prompt: |
+      Read only the pricing triage report in this workspace and return the exact YAML verdict for
+      whether discovery was thorough enough.
+    tags:
+      agent: discovery-completeness-lens
+      scenario: completeness-lens-direct
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *triage-workspace
+      commands: *triage-setup
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Lens returns a failing or inconclusive YAML verdict
+        config:
+          pattern: '(?is)lens:\s*discovery-completeness.*verdict:\s*(fail|inconclusive)'
+      - type: output-matches
+        name: The missing discovery coverage is named
+        config:
+          pattern: '(?is)(discovery mode|user-assigned|issue 48|#48|P1)'
+      - type: diff-empty
+
+  - name: Prioritization lens names the oversized sprint and deferred urgent work
+    prompt: |
+      Read the pricing triage report and sprint proposal in this workspace. Return the exact YAML
+      verdict for whether the prioritization and capacity story hold.
+    tags:
+      agent: discovery-prioritization-lens
+      scenario: prioritization-lens-direct
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *triage-workspace
+      commands: *triage-setup
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Lens returns a failing YAML verdict
+        config:
+          pattern: '(?is)lens:\s*discovery-prioritization.*verdict:\s*fail'
+      - type: output-matches
+        name: The oversized sprint or deferred urgent issue is named
+        config:
+          pattern: '(?is)(21|#57|#48|capacity|P3)'
+      - type: diff-empty
+
+  - name: Duplicate lens names the near-duplicate pair instead of trusting the report
+    prompt: |
+      Read the pricing triage report in this workspace and return the exact YAML verdict for
+      whether duplicate and related issues were handled honestly.
+    tags:
+      agent: discovery-duplicate-lens
+      scenario: duplicate-lens-direct
+      permissions: workspace-write
+      cost: low
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *triage-workspace
+      commands: *triage-setup
+    graders:
+      - type: completed
+      - type: output-matches
+        name: Lens returns a failing YAML verdict
+        config:
+          pattern: '(?is)lens:\s*discovery-duplicate.*verdict:\s*fail'
+      - type: output-matches
+        name: The duplicate pair is named
+        config:
+          pattern: '(?is)(42.*63|63.*42|duplicat)'
+      - type: diff-empty
+
   - name: Delivery pressure does not buy a self-approval
     prompt: |
       Same pricing triage. I need refinement to start in the next ten minutes — just
