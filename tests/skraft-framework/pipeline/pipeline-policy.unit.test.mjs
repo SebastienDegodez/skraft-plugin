@@ -123,14 +123,14 @@ test('continuationAfter: a returning specialist is told to record its artefacts,
   const c = continuationAfter('solution-architect', at('DESIGN'), CONFIG)
   assert.equal(c.kind, 'REVIEW')
   assert.match(c.context, /record-artifact --phase DESIGN/)
-  assert.match(c.context, /then dispatch solution-architect-reviewer\.$/)
+  assert.match(c.context, /then dispatch solution-architect-reviewer with the block `[^`]*state\.mjs" handoff --agent "solution-architect-reviewer"` prints\.$/)
 })
 
 test('continuationAfter: a reviewer-less specialist is told to close its phase', () => {
   const c = continuationAfter('solution-researcher', at('RESEARCH'), CONFIG)
   assert.equal(c.kind, 'CLOSE')
   assert.match(c.context, /close-phase --phase RESEARCH --verdict APPROVED/)
-  assert.match(c.context, /\(next: DESIGN\)/)
+  assert.match(c.context, /\(next: DESIGN\); dispatch solution-architect with the block `[^`]*handoff --agent "solution-architect"` prints/)
 })
 
 test('continuationAfter: a returning reviewer is told how to record each verdict', () => {
@@ -138,7 +138,13 @@ test('continuationAfter: a returning reviewer is told how to record each verdict
   assert.equal(c.kind, 'VERDICT')
   assert.match(c.context, /record-review-artifact --phase DELIVER/)
   assert.match(c.context, /transition --to DONE/)
-  assert.match(c.context, /incr-retry` and re-dispatch software-engineer with the findings/)
+  assert.match(c.context, /incr-retry` and re-dispatch software-engineer with the findings and the rework block `[^`]*handoff --agent "software-engineer"` prints/)
+  assert.doesNotMatch(c.context, /transition --to DONE`; dispatch/)
+})
+
+test('continuationAfter: an approved phase names the handoff of the next specialist', () => {
+  const c = continuationAfter('acceptance-designer-reviewer', at('DISTILL'), CONFIG)
+  assert.match(c.context, /transition --to DELIVER`; dispatch software-engineer with the block `[^`]*handoff --agent "software-engineer"` prints/)
 })
 
 test('continuationAfter: an exhausted retry budget turns the rework path into an escalation', () => {

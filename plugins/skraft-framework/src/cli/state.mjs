@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { join, relative } from 'node:path'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
 import { createJsonStateBackupReader } from '../adapters/infrastructure/state/json-state-backup-reader.mjs'
@@ -15,6 +16,9 @@ import { createCommitScanService } from '../application/commit-scan-service.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
 import { createActiveSlugStore } from '../adapters/infrastructure/active-slug-store.mjs'
 import { firstValidProjectSlug, isValidProjectSlug } from '../domain/value-objects.mjs'
+import { buildHandoff, renderHandoff } from '../domain/handoff-policy.mjs'
+import { buildTimeline } from '../domain/dispatch-timeline-policy.mjs'
+import { resolveAuditLogPath } from '../adapters/infrastructure/audit-log-resolver.mjs'
 
 // basePath: resolved from SKRAFT_TRACKING_ROOT (explicit) → SKRAFT_TRACKING_LAYOUT env →
 // skraft-config.json::trackingLayout → default namespaced. State lives at {basePath}/{slug}/.
@@ -82,6 +86,37 @@ function domainExitCode(code) {
 
 function writeError(code, reason) {
   process.stderr.write(JSON.stringify({ code, reason }) + '\n')
+}
+
+// The tracking directory of a pipeline as the repository sees it, e.g.
+// `.copilot-tracking/skraft-plans/checkout/`: the prefix a sub-agent resolves paths with.
+const trackingPrefixOf = (slug) => `${relative(process.cwd(), join(basePath, slug)).split(/[\\/]/).join('/')}/`
+
+// Audit records of one pipeline, oldest first; unparseable lines carry nothing.
+const readAuditRecords = (path, slug) => {
+  let content = ''
+  try { content = readFileSync(path, 'utf8') } catch { return [] }
+  return content.split('\n').flatMap((line) => {
+    try {
+      const record = line.trim() ? JSON.parse(line) : null
+      return record && record.projectSlug === slug ? [record] : []
+    } catch { return [] }
+  })
+}
+
+// Captured mutation outputs under the pipeline's evidence directory.
+const readMutationOutputs = (slug) => {
+  const evidenceDir = join(basePath, slug, 'evidence')
+  let entries = []
+  try { entries = readdirSync(evidenceDir, { recursive: true }).map(String) } catch { return [] }
+  return entries
+    .filter((entry) => /(?:^|[\\/])[^\\/]*mutation[^\\/]*\.stdout$/i.test(entry))
+    .sort()
+    .flatMap((entry) => {
+      try {
+        return [{ ref: `evidence/${entry.split(/[\\/]/).join('/')}`, stdout: readFileSync(join(evidenceDir, entry), 'utf8') }]
+      } catch { return [] }
+    })
 }
 
 function writeSuccess(data) {
@@ -352,6 +387,53 @@ async function run() {
         return
       }
       writeSuccess(result.value)
+      break
+    }
+
+    case 'handoff': {
+      // The dispatch manifest of a phase agent: its required and context inputs resolved
+      // from the recorded artefacts, and on a retry the review and previous output.
+      const agent = arg('agent')
+      if (agent === undefined) {
+        writeError('INVALID_ARGUMENT', 'handoff requires --agent')
+        process.exitCode = 1
+        return
+      }
+      const result = await service.get(slug)
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      const handoff = buildHandoff({ agent, state: result.value, config: frameworkConfig ?? {} })
+      if (!handoff.ok) {
+        writeError(handoff.error.code, handoff.error.reason)
+        process.exitCode = 1
+        return
+      }
+      if (rest.includes('--json')) writeSuccess(handoff.value)
+      else process.stdout.write(renderHandoff(handoff.value, { trackingPrefix: trackingPrefixOf(slug) }) + '\n')
+      break
+    }
+
+    case 'timeline': {
+      // Where each phase's time went, from phaseHistory and the dispatch journal.
+      const result = await service.get(slug)
+      if (!result.ok) {
+        writeError(result.error.code, result.error.reason)
+        process.exitCode = domainExitCode(result.error.code)
+        return
+      }
+      const auditLog = arg('audit-log') ?? resolveAuditLogPath({
+        cwd: process.cwd(),
+        pluginRoot: fileURLToPath(new URL('../..', import.meta.url)),
+      })
+      writeSuccess(buildTimeline({
+        state: result.value,
+        events: readAuditRecords(auditLog, slug),
+        config: frameworkConfig ?? {},
+        mutations: readMutationOutputs(slug),
+      }))
       break
     }
 

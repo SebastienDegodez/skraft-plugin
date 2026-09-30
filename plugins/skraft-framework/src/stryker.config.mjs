@@ -79,6 +79,11 @@ export default {
     // qg-verify: deterministic evidence verification
     'plugins/skraft-framework/src/domain/evidence-verification-policy.mjs',
     'plugins/skraft-framework/src/application/evidence-verification-service.mjs',
+    // G9 handoff guard + dispatch timeline
+    'plugins/skraft-framework/src/domain/handoff-policy.mjs',
+    'plugins/skraft-framework/src/application/handoff-guard-service.mjs',
+    'plugins/skraft-framework/src/domain/dispatch-timeline-policy.mjs',
+    'plugins/skraft-framework/src/application/dispatch-journal-service.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

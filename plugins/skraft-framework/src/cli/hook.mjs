@@ -5,15 +5,6 @@ import { createHookService } from '../adapters/api/hooks/service-factory.mjs'
 import { toHarnessOutput } from '../adapters/api/hooks/harness-output.mjs'
 import { fromHarnessInput } from '../adapters/api/hooks/harness-input.mjs'
 import { createJsonlAuditWriter } from '../adapters/infrastructure/jsonl-audit-writer.mjs'
-import { createSkillFileReader } from '../adapters/infrastructure/skill-file-reader.mjs'
-import { createJsonlTranscriptReader } from '../adapters/infrastructure/jsonl-transcript-reader.mjs'
-import { createSubagentStartService } from '../application/subagent-start-service.mjs'
-import { createSubagentStopService } from '../application/subagent-stop-service.mjs'
-import { createPostToolUseService } from '../application/post-tool-use-service.mjs'
-import { createPreToolUseService } from '../application/pre-tool-use-service.mjs'
-import { createPreToolUseSessionGuardService } from '../application/pre-tool-use-session-guard-service.mjs'
-import { createPreToolUseCompositeService } from '../application/pre-tool-use-composite.mjs'
-import { createDispatchProvenanceService } from '../application/dispatch-provenance-service.mjs'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { resolvePluginRootFromEnv } from '../adapters/infrastructure/plugin-root-resolver.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
@@ -47,12 +38,63 @@ const readStdin = async () => {
 const sessionCwd = (payload) =>
   typeof payload.cwd === 'string' && payload.cwd.length > 0 ? payload.cwd : process.cwd()
 
-const compose = async (cwd) => {
+// Each event loads only the services it routes to: a hook runs on every tool call, so
+// the modules of the other events are never imported.
+const SERVICES = {
+  PreToolUse: async ({ config, stateReader, trackingRoot }) => {
+    const [
+      { createPreToolUseService },
+      { createPreToolUseSessionGuardService },
+      { createPreToolUseCompositeService },
+      { createDispatchProvenanceService },
+      { createHandoffGuardService },
+    ] = await Promise.all([
+      import('../application/pre-tool-use-service.mjs'),
+      import('../application/pre-tool-use-session-guard-service.mjs'),
+      import('../application/pre-tool-use-composite.mjs'),
+      import('../application/dispatch-provenance-service.mjs'),
+      import('../application/handoff-guard-service.mjs'),
+    ])
+    // PreToolUse composite: G1 dispatch order, G9 handoff, provenance and G7/G8 (see composite).
+    return {
+      preToolUse: createPreToolUseCompositeService({
+        dispatchGuard: createPreToolUseService({ stateReader, auditWriter, config, clock }),
+        sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
+        provenanceGuard: createDispatchProvenanceService({ config, auditWriter, clock }),
+        handoffGuard: createHandoffGuardService({ stateReader, auditWriter, config, clock }),
+      }),
+    }
+  },
+  SubagentStart: async ({ config, stateReader }) => {
+    const [{ createSkillFileReader }, { createSubagentStartService }, { createDispatchJournal }] = await Promise.all([
+      import('../adapters/infrastructure/skill-file-reader.mjs'),
+      import('../application/subagent-start-service.mjs'),
+      import('../application/dispatch-journal-service.mjs'),
+    ])
+    const journal = createDispatchJournal({ auditWriter, stateReader, config, clock })
+    const skillFileReader = createSkillFileReader({ pluginsRoot: pluginRoot })
+    return { subagentStart: journal.started(createSubagentStartService({ config, skillFileReader, auditWriter, clock })) }
+  },
+  SubagentStop: async ({ config, stateReader }) => {
+    const [{ createJsonlTranscriptReader }, { createSubagentStopService }, { createDispatchJournal }] = await Promise.all([
+      import('../adapters/infrastructure/jsonl-transcript-reader.mjs'),
+      import('../application/subagent-stop-service.mjs'),
+      import('../application/dispatch-journal-service.mjs'),
+    ])
+    const journal = createDispatchJournal({ auditWriter, stateReader, config, clock })
+    return { subagentStop: journal.stopped(createSubagentStopService({ config, transcriptReaderFactory: createJsonlTranscriptReader, auditWriter, clock })) }
+  },
+  PostToolUse: async ({ config, stateReader }) => {
+    const { createPostToolUseService } = await import('../application/post-tool-use-service.mjs')
+    return { postToolUse: createPostToolUseService({ auditWriter, clock, stateReader, config }) }
+  },
+}
+
+const compose = async (cwd, hookEvent) => {
   auditWriter = createJsonlAuditWriter(resolveAuditLogPath({ cwd, pluginRoot }))
   // Same tracking-root resolution as cli/state.mjs (SKRAFT_TRACKING_ROOT → layout →
   // default namespaced), anchored on the harness session directory.
   const trackingRoot = resolveTrackingRoot({ cwd })
-  const skillFileReader = createSkillFileReader({ pluginsRoot: pluginRoot })
   // Hooks never snapshot a corrupted state: the state CLI does, once, when it recovers.
   const stateReader = createJsonStateReader(trackingRoot, { snapshotCorrupted: false })
 
@@ -61,16 +103,16 @@ const compose = async (cwd) => {
   try { config = JSON.parse(await readFile(configPath, 'utf8')) }
   catch { /* fail-open: missing config means no mandatory skills, hooks still allow */ }
 
-  const subagentStart = createSubagentStartService({ config, skillFileReader, auditWriter, clock })
-  const subagentStop = createSubagentStopService({ config, transcriptReaderFactory: createJsonlTranscriptReader, auditWriter, clock })
-  const postToolUse = createPostToolUseService({ auditWriter, clock, stateReader, config })
-  // PreToolUse composite: G1 dispatch-order guard + G7/G8 session guard (see composite).
-  const preToolUse = createPreToolUseCompositeService({
-    dispatchGuard: createPreToolUseService({ stateReader, auditWriter, config, clock }),
-    sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
-    provenanceGuard: createDispatchProvenanceService({ config, auditWriter, clock })
-  })
-  return { trackingRoot, hookService: createHookService({ preToolUse, subagentStart, subagentStop, postToolUse }) }
+  const services = SERVICES[hookEvent] ? await SERVICES[hookEvent]({ config, stateReader, trackingRoot }) : {}
+  return { trackingRoot, hookService: createHookService(services) }
+}
+
+// PostToolUse(Read) only traces SKILL.md reads: any other read has nothing to record,
+// so the hook returns before composing anything.
+const isUntracedRead = (hookEvent, payload) => {
+  if (hookEvent !== 'PostToolUse' || payload.toolName !== 'Read') return false
+  const paths = [payload.filePath, payload.toolInput?.path].filter((path) => typeof path === 'string')
+  return !paths.some((path) => /SKILL\.md$/i.test(path))
 }
 
 // CLI flow: stdin in, parse JSON, route hook, stdout out. The manifest forwards the
@@ -92,7 +134,10 @@ try {
     payload.toolName = argMatcher
   }
 
-  const { trackingRoot, hookService } = await compose(sessionCwd(payload))
+  const hookEvent = argEvent ?? payload.hookType ?? payload.hook_type ?? payload.hook_event_name ?? payload.hookEventName ?? payload.type
+  if (isUntracedRead(hookEvent, payload)) process.exit(0)
+
+  const { trackingRoot, hookService } = await compose(sessionCwd(payload), hookEvent)
   // No harness sends a project slug: take the active pipeline the state CLI recorded,
   // unless SKRAFT_PROJECT_SLUG pins one. An invalid candidate is never joined into a path.
   payload.projectSlug = firstValidProjectSlug(
@@ -105,8 +150,7 @@ try {
 
   // The services speak the framework's decision vocabulary; the harnesses do not. Translate
   // at this boundary (see adapters/api/hooks/harness-output.mjs) — an allow writes nothing.
-  const hookEventName = argEvent ?? payload.hookType ?? payload.hook_event_name ?? payload.type
-  const output = toHarnessOutput(result, hookEventName)
+  const output = toHarnessOutput(result, hookEvent)
   if (output !== undefined) {
     process.stdout.write(JSON.stringify(output))
   }
