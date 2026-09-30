@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   buildFrameworkConfig,
   DEFAULT_SKILL_POLICY,
+  ON_DEMAND_SKILL_POLICY,
 } from '../../../plugins/skraft-framework/src/domain/framework-config-policy.mjs'
 
 // --- descriptor factories (the pure function's input boundary) ---
@@ -168,4 +169,34 @@ test('each dispatched agent records its dispatcher by display name', () => {
     'contract-testing-worker': 'Skraft - Software Engineer',
     'cold-reader-lens': 'unknown-parent',
   })
+})
+
+test('skills a descriptor lists as on-demand keep their order and carry the on-demand policy', () => {
+  const config = buildFrameworkConfig([
+    orchestrator(PHASES),
+    {
+      ...agent({ name: 'software-engineer', phase: 'DELIVER', skills: ['outside-in-tdd', 'mutation-testing', 'craft-discipline'] }),
+      onDemandSkills: ['mutation-testing'],
+    },
+  ])
+  assert.deepEqual(config.agentSkills['software-engineer'], [
+    { name: 'outside-in-tdd', policy: DEFAULT_SKILL_POLICY },
+    { name: 'mutation-testing', policy: ON_DEMAND_SKILL_POLICY },
+    { name: 'craft-discipline', policy: DEFAULT_SKILL_POLICY },
+  ])
+  assert.equal(ON_DEMAND_SKILL_POLICY, 'on-demand')
+})
+
+test('context inputs are projected per agent, apart from the required inputs', () => {
+  const config = buildFrameworkConfig([
+    orchestrator(PHASES),
+    {
+      ...agent({ name: 'software-engineer', phase: 'DELIVER', inputs: ['test-plan-{story}.md'] }),
+      context: ['contracts-{story}.md', 'docs/adr/decisions-index.md'],
+    },
+    agent({ name: 'software-engineer-reviewer', phase: 'DELIVER' }),
+  ])
+  assert.deepEqual(config.agentContext['software-engineer'], ['contracts-{story}.md', 'docs/adr/decisions-index.md'])
+  assert.deepEqual(config.agentContext['software-engineer-reviewer'], [])
+  assert.deepEqual(config.agentArtifacts['software-engineer'].inputs, ['test-plan-{story}.md'])
 })

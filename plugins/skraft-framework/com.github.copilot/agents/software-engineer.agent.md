@@ -35,6 +35,17 @@ metadata:
     - quality-gates-javascript
     - resolving-stack-commands
     - qa-reporting
+  on_demand_skills:
+    - clean-architecture-testing
+    - test-design-mandates
+    - test-refactoring-catalog
+    - mutation-testing
+    - skraft-quality-bar
+    - quality-gates-evidence-contract
+    - quality-gates-dotnet
+    - quality-gates-javascript
+    - resolving-stack-commands
+    - qa-reporting
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
@@ -44,6 +55,9 @@ metadata:
     context:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md
       - docs/adr/decisions-index.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.*
   outputs:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
@@ -80,6 +94,8 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 
 ### Load on demand (trigger-based)
 
+Load each skill below only when its trigger fires, never at startup.
+
 | Skill | Load when... |
 |-------|--------------|
 | [clean-architecture-testing](../../skills/clean-architecture-testing/SKILL.md) | Deciding test level, boundary placement, or doubles policy |
@@ -89,7 +105,9 @@ Load each skill via its link using your read tool. Only announce missing ones: `
 | [quality-gates-evidence-contract](../../skills/quality-gates-evidence-contract/SKILL.md) | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
 | [quality-gates-dotnet](../../skills/quality-gates-dotnet/SKILL.md) | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
 | [quality-gates-javascript](../../skills/quality-gates-javascript/SKILL.md) | Repo has a Node package (`package.json`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
-| [resolving-stack-commands](../../skills/resolving-stack-commands/SKILL.md) | Needing any build or test command — never hardcode one |
+| [resolving-stack-commands](../../skills/resolving-stack-commands/SKILL.md) | Needing a build or test command the stack-commands file does not hold, or one of its commands fails — never hardcode one |
+| [skraft-quality-bar](../../skills/skraft-quality-bar/SKILL.md) | Entering phase 4 — the thresholds the final gates enforce |
+| [qa-reporting](../../skills/qa-reporting/SKILL.md) | Preparing the outcome handoff |
 
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
@@ -108,7 +126,10 @@ These are owned by the skills — load them, do not inline rules here.
 ## Execution Workflow (Execute in Order)
 
 ### 1. PREPARE
-- Load the DISTILL artefacts: the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Take their paths from the dispatch refs; without a ref, search `.copilot-tracking/skraft-plans/{projectSlug}/`. Run the suite to confirm the acceptance test is RED on a business assertion.
+- Load the DISTILL artefacts: the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, and the **outer acceptance test(s) already authored by the acceptance-designer**. Take their paths from the handoff block; without a ref, search `.copilot-tracking/skraft-plans/{projectSlug}/`. The plans are settled: never re-plan the story.
+- Take build and test commands from the stack-commands file in the handoff block. Load `resolving-stack-commands` only when the file is absent or one of its commands fails, then rewrite the file with the corrected commands.
+- Take project conventions from the research document's `Project conventions` section when the handoff block lists it; do not re-derive them from the code.
+- Confirm the acceptance test is RED on a business assertion without re-running what DISTILL proved: when the dispatch carries the acceptance designer's RED evidence refs and `git rev-parse HEAD` equals the source revision they record, that evidence is the proof — run nothing. Otherwise run only that acceptance test, filtered to it, never the full suite.
 - Do NOT re-author the acceptance test or alter its input / expected values (Iron Rule of tests).
 - Identify entry boundaries and expected outward effects from the existing acceptance test + the impl-plan step of the active scenario. Use the file, test and use case boundary that step names.
 - Respect the test-plan row of the active scenario: every test you write uses its layer, use case boundary and double type, and a Domain unit test exists only where the test-plan plans one with an `Extraction Reason`. Deviate only when a loaded skill forbids the planned choice, and record `PLAN_DEVIATION: {row} — {planned} → {actual} — {rule}` in the execution journal.
@@ -117,7 +138,8 @@ These are owned by the skills — load them, do not inline rules here.
 ### 2. RED (inner loop)
 - The OUTER acceptance test already exists (from DISTILL). Drive the INNER loop: write ONE failing unit test for the next behavior slice the acceptance test demands.
 - **Gate**: The test must fail on a BUSINESS ASSERTION, not a compilation or setup error. (Stub just enough to compile). Never weaken or edit the acceptance test to make it pass.
-- **Capture the RED evidence NOW — it cannot be reconstructed at COMMIT.** The run that proves this test fails is the only evidence gate **G10 — RED observed** accepts. Redirect its stdout and exit code to the evidence directory before writing a line of production code, following the RED-capture recipe of your stack's `quality-gates-<tech>` adapter (`quality-gates-dotnet` for .NET). Load that adapter here, not only at COMMIT. A cycle that reaches COMMIT without its capture is `G10: fail`, never `not_applicable`.
+- **Capture the RED evidence NOW — it cannot be reconstructed at COMMIT.** The run that proves this test fails is the only evidence gate **G10 — RED observed** accepts. Run only the new test, filtered to it, and redirect its stdout and exit code to the evidence directory before writing a line of production code, following the RED-capture recipe of your stack's `quality-gates-<tech>` adapter (`quality-gates-dotnet` for .NET). Load that adapter here, not only at COMMIT. A cycle that reaches COMMIT without its capture is `G10: fail`, never `not_applicable`.
+- **This capture is the RED inspection.** `qg-verify` and the reviewer's `test-integrity` lens check it after the fact. Run RED → SYNTHESIZE-GREEN → COMMIT for every cycle inside this one dispatch; never stop after RED to wait for an inspection.
 - **Edge cases not expressible in Gherkin** (defensive branch, exhaustive-enum fallback, combinatorial sweep of an already-decided rule — e.g. a `PolicyService`) are authored HERE via TDD, but ONLY when `test-design-mandates` Mandate 4 Gate (a) or (b) opens, and ONLY with values traceable to a decided AC. A Domain unit test the test-plan does not plan is a `PLAN_DEVIATION`. The domain class emerges from this RED — create nothing before the compile failure (`outside-in-tdd` Step 2). If the case is an UNDECIDED business decision, STOP and escalate to DISCUSS — never invent a verdict or value.
 
 ### 3. SYNTHESIZE-GREEN
@@ -128,7 +150,7 @@ These are owned by the skills — load them, do not inline rules here.
 ### 4. COMMIT & VERIFY
 - **Post-GREEN Wiring Verification — FIRST, before anything else in this phase.** Run `git diff --name-only`. Every production file the behavior required MUST appear. If only test files changed while the suite flipped RED → GREEN, that is **Fixture Theater**: BLOCK the commit, go back and write the production code. Then apply the deletion test — revert the production change mentally; if the tests still pass, they are exercising fixture state, not behavior. (`outside-in-tdd` → Post-GREEN Wiring Verification.)
 - Run static checks, formatting, and Mutation Testing.
-- **Gate**: inside the cycle, run the stack adapter's core mutation script in differential mode since `phaseHistory.DELIVER.baseSha` — feedback, not evidence. After the story's last work commit, run the full core then boundary scripts: their exit code is the verdict; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
+- **Gate**: inside the cycle, run the stack adapter's core mutation script in differential mode since the previous cycle's commit (`phaseHistory.DELIVER.baseSha` for the first cycle) — feedback, not evidence. Skip it when the cycle changed no core production file. After the story's last work commit, run the full core then boundary scripts: their exit code is the verdict and the only G6 evidence; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
 - Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
 - **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v4) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`). Run each gate command or script into `evidence/{date}/{story}/`, capture RED→GREEN snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
@@ -150,6 +172,17 @@ repository-root-relative outcome, forecast, quality-evidence, change-log and
 manifest refs plus full source revision and limitations; use dispatched paths,
 not current-date guesses. No publication or pipeline-state writes.
 
+## Rework mode (handoff mode `rework`)
+
+When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass:
+
+1. Read the previous review the block names. Skip PREPARE's planning: the plans, the acceptance tests and your previous commits stand.
+2. Fix each finding with the smallest change. A production change still goes RED → SYNTHESIZE-GREEN → COMMIT through a test.
+3. Re-run only the gates your change invalidates:
+   - production or test code changed → the affected tests, the differential core mutation since the last reviewed commit, then the final full core and boundary runs and a new evidence log;
+   - only commit messages, the change log or evidence metadata changed → regenerate the evidence log from the existing captures, commit it, and re-run `qg-verify`; never re-run tests or mutation.
+4. Keep every captured output your change does not invalidate.
+
 ## Test-wiring workers (fan-out, B1)
 When a slice needs **test infrastructure** rather than business logic, fan out to an internal worker, then verify its output yourself. The worker returns a structured result; it never commits. YOU integrate the returned files into your TDD loop and commit.
 
@@ -159,7 +192,7 @@ When a slice needs **test infrastructure** rather than business logic, fan out t
 | Provider contract test for THIS service's API | [contract-testing-worker](contract-testing-worker.agent.md) | baseline WAF+HttpClient test (+ optional Microcks `TestEndpointAsync`) |
 
 **TIER-1 verify (A9 SUPERVISED EXECUTION) — do NOT trust the worker's prose.**
-1. Take the `testCommand` from the worker's structured result. Resolve it via `resolving-stack-commands` if absent — never hardcode `dotnet test`.
+1. Take the `testCommand` from the worker's structured result. When absent, take it from the stack-commands file, then from `resolving-stack-commands` — never hardcode `dotnet test`.
 2. Run it through the terminal. Confirm the slice goes RED on a business assertion, then drive your own GREEN.
 3. If the worker returned a `blocked` payload, surface it — do not invent the wiring yourself.
 4. Only after your own RED→GREEN passes do you commit (one-writer rule: the worker never commits).

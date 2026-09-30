@@ -84,6 +84,7 @@ export default {
     'plugins/skraft-framework/src/application/handoff-guard-service.mjs',
     'plugins/skraft-framework/src/domain/dispatch-timeline-policy.mjs',
     'plugins/skraft-framework/src/application/dispatch-journal-service.mjs',
+    'plugins/skraft-framework/src/domain/structural-scan-policy.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

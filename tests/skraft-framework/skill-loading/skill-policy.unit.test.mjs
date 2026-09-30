@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   mandatorySkillsFor,
+  onDemandSkillsFor,
   missingSkills,
   extractLoadedSkills,
   isEagerSkill
@@ -157,4 +158,36 @@ test('isEagerSkill: only an eager policy, tolerating a missing entry', () => {
   assert.equal(isEagerSkill({ name: 'x', policy: 'eager' }), true)
   assert.equal(isEagerSkill({ name: 'x', policy: 'verify' }), false)
   assert.equal(isEagerSkill(undefined), false)
+})
+
+// on-demand policy ————————————————————————————————————————————————————
+
+const ON_DEMAND_CONFIG = {
+  agentSkills: {
+    'software-engineer': [
+      { name: 'outside-in-tdd', policy: 'verify' },
+      { name: 'mutation-testing', policy: 'on-demand' },
+      { name: 'craft-discipline', policy: 'eager' },
+      { name: 'qa-reporting', policy: 'on-demand' }
+    ]
+  }
+}
+
+test('mandatorySkillsFor excludes on-demand skills and keeps verify and eager ones', () => {
+  assert.deepEqual(mandatorySkillsFor('software-engineer', ON_DEMAND_CONFIG), [
+    { name: 'outside-in-tdd', policy: 'verify' },
+    { name: 'craft-discipline', policy: 'eager' }
+  ])
+})
+
+test('onDemandSkillsFor returns only on-demand skills in declaration order', () => {
+  assert.deepEqual(onDemandSkillsFor('software-engineer', ON_DEMAND_CONFIG), [
+    { name: 'mutation-testing', policy: 'on-demand' },
+    { name: 'qa-reporting', policy: 'on-demand' }
+  ])
+})
+
+test('onDemandSkillsFor treats string entries as mandatory and unknown agents as empty', () => {
+  assert.deepEqual(onDemandSkillsFor('agent', { agentSkills: { agent: ['skill-a'] } }), [])
+  assert.deepEqual(onDemandSkillsFor('unknown', ON_DEMAND_CONFIG), [])
 })

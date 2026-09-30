@@ -134,7 +134,11 @@ const bullet = (prefix) => (input) => {
       ? input.paths.map((path) => `  - \`${prefix}${path}\``).join('\n')
       : `  - \`${input.input}\` — not recorded: supply the exact path, or state that it does not exist`
   }
-  if (input.kind === 'repository') return `  - \`${input.pattern}\` — supply the exact path(s) the upstream agent returned`
+  if (input.kind === 'repository') {
+    return /[{*]/.test(input.pattern)
+      ? `  - \`${input.pattern}\` — supply the exact path(s) the upstream agent returned`
+      : `  - \`${input.pattern}\``
+  }
   return `  - ${input.input} — supply it`
 }
 

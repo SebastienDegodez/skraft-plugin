@@ -15,7 +15,9 @@ const config = JSON.parse(readFileSync(new URL(
 ), 'utf8'))
 const engineer = config.phaseAgents.DELIVER.specialist
 const projectSlug = 'native-stop-regression'
-const requiredSkills = config.agentSkills[engineer].map((entry) => entry.name)
+const requiredSkills = config.agentSkills[engineer]
+  .filter((entry) => entry.policy !== 'on-demand')
+  .map((entry) => entry.name)
 const identities = [
   engineer,
   'software-engineer',

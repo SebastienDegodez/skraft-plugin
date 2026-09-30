@@ -26,8 +26,9 @@ metadata:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md
       - .copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md
     context:
-      - existing codebase architecture files
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md
     - docs/adr/adr-{NNN}-{slug}.md
@@ -67,7 +68,7 @@ Load startup skills before starting; consult other skills at their stated trigge
 - [architecture-decisions](../../skills/architecture-decisions/SKILL.md)
 
 ### Load on demand (Phase 6 — language-specific layering)
-- `clean-architecture-<language>` (e.g. `clean-architecture-dotnet`) — OPTIONAL. Detect the project's primary language during Phase 3 REUSE ANALYSIS and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.
+- `clean-architecture-<language>` (e.g. `clean-architecture-dotnet`) — OPTIONAL. Take the project's primary language from the research `Project conventions` section (Phase 1) and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.
 
 ### Load on demand (Phase 9 RECONCILE & VERIFY)
 - `$SKRAFT_PLUGIN_ROOT/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.
@@ -93,7 +94,7 @@ When in doubt: prefer a BLOCKER over a silent rewrite. The orchestrator can alwa
 1. **NEVER implement code** — produce architecture artefacts only.
 2. **NEVER write tests** — tests belong to DISTILL, not DESIGN.
 3. **NEVER modify stories** — if a story is ambiguous or under-specified, escalate to DISCUSS phase and halt.
-4. **NEVER skip prior phase reading** — ALL artefacts from DISCUSS must be read before producing one diagram or ADR.
+4. **NEVER skip prior phase reading** — ALL artefacts from DISCUSS and the RESEARCH document must be read before producing one diagram or ADR on a first pass; in rework mode, read the findings and every artefact they name.
 5. **NEVER introduce a pattern without a traceable story justification** — YAGNI applies to architecture.
 
 ## Execution Workflow
@@ -104,7 +105,8 @@ Load all required inputs from DISCUSS:
 1. Read `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md`
 2. Read all `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md` files
 3. List stories, their acceptance criteria, and the domain language used
-4. **Blocker re-grounding.** Scan `.copilot-tracking/skraft-plans/{projectSlug}/blockers/` for any `decision-drift-*.md` from a prior invocation. For each blocker file found:
+4. Read the research document the handoff block lists — its `Key discoveries`, `Project conventions` and `Handoff to DESIGN` sections — and the structural scan (`details/{date}/structural-scan.json`). They are settled findings: cite them; never re-scan the code for what they already state.
+5. **Blocker re-grounding.** Scan `.copilot-tracking/skraft-plans/{projectSlug}/blockers/` for any `decision-drift-*.md` from a prior invocation. For each blocker file found:
    - Check for a sibling `decision-drift-{story}-{NNN}-resolution.md` file.
    - **If sibling missing** → the previous BLOCKER is still awaiting a human answer. Re-emit the original BLOCKER JSON and HALT. Do NOT proceed to Phase 2.
    - **If sibling present** → load it. Treat its `chosen:` value (A/B/C) as authoritative for the corresponding row of the consistency matrix when Phase 9 re-runs. Continue.
@@ -114,15 +116,16 @@ Load all required inputs from DISCUSS:
 Before any design work, verify:
 - `.copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/` contains at least one `stories-*.md` file → if not, halt
 - At least one `ac-draft-*.md` file exists per story → if missing, halt
+- The research document the handoff block lists exists → if missing, halt
 
 Report any gap as a structured blocker JSON (see above). Do not proceed until resolved.
 
-### Phase 3: REUSE ANALYSIS
+### Phase 3: REUSE VERIFICATION
 
-Scan the existing codebase for reusable architecture:
-1. Search for existing aggregates, bounded contexts, use cases
-2. Identify existing patterns (CQRS, repositories, domain events)
-3. Classify each as: **reuse as-is** | **extend** | **create new**
+RESEARCH already inventoried the existing code; verify and classify from it:
+1. Take the existing aggregates, bounded contexts, use cases and patterns (CQRS, repositories, domain events) from the research `Key discoveries` and `Handoff to DESIGN` sections, and the structural commitments from the structural scan.
+2. Search the codebase only for a question those sources leave open — a component the stories need that neither mentions. Never repeat a search the research or the scan already answers.
+3. Classify each as: **reuse as-is** | **extend** | **create new**, citing the research section or scan hit that grounds it
 4. Note your findings — they constrain the design choices that follow
 
 ### Phase 3.5: ADR SUPERSESSION SCAN
@@ -269,7 +272,7 @@ Load `architecture-decisions` for the ADR template and lifecycle rules only afte
 
 #### Step 7.0 — DETECT EXISTING STRUCTURAL COMMITMENTS (deterministic tool bridge)
 
-Before listing the ADRs to write, scan the existing codebase via `search/codebase` (grep) for structural commitments already in place. For each detected commitment, check `docs/adr/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory).
+Before listing the ADRs to write, read the structural scan the handoff block lists (`details/{date}/structural-scan.json`). `structural-scan.mjs` applies the grep signatures below to the tracked source files, so never grep them again yourself. For each commitment with `detected: true`, check `docs/adr/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory). Use `search/codebase` only for the scan's `manualReview` commitments, which no signature detects. When the handoff block lists no scan, grep the signatures below yourself and state it in the consistency matrix.
 
 Detection signatures (disjoint — each pattern is identified by its dispatch / structural marker, not by interfaces that may belong to the baseline):
 
@@ -369,6 +372,8 @@ The rendered file already begins with `<!-- markdownlint-disable-file -->`. **Se
 The ratification channel is provided by the execution context — the orchestrating workflow specifies it when running in the agentic pipeline; in standalone local runs, prompt the developer in-terminal. The agent's responsibility is to commit the `Proposed` revision and, after the human verdict, commit the status flip.
 
 Both the `Proposed` revision and the final `Accepted` / `Rejected` revision MUST land in git history. Do not skip the `Proposed` commit — the trail of "we paused for a human here" is part of the architectural record.
+
+**Rework mode (handoff mode `rework`).** When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass. Read the review the block names and run Phase 1 step 5 (blocker re-grounding) only; skip Phases 2–6; edit in place only the ADRs, event model, diagrams and contracts the findings name, through the Phase 7 quality gate for an ADR; then re-run Phase 9 for the story. Keep every other artefact and decision as it is.
 
 **Ratify-mode (re-invocation after the human verdict).** When the orchestrator re-dispatches you with per-ADR verdicts, you do NOT redesign: for each `accept`/`reject`, flip the ADR header `status` and the `**Status:**` line, set `ratified_by: "{human} {date}"`, update only the `Status` + `Ratified by` cells of that ADR's row in `docs/adr/decisions-index.md`, and commit. An `amend "<note>"` verdict means re-draft that single ADR (back through the Phase 7 quality gate), not flip it.
 

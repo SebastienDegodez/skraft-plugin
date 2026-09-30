@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { join, relative } from 'node:path'
+import { isAbsolute, join, relative } from 'node:path'
 import { createJsonStateReader } from '../adapters/infrastructure/json-state-reader.mjs'
 import { createJsonStateWriter } from '../adapters/infrastructure/state/json-state-writer.mjs'
 import { createJsonStateBackupReader } from '../adapters/infrastructure/state/json-state-backup-reader.mjs'
@@ -90,7 +90,11 @@ function writeError(code, reason) {
 
 // The tracking directory of a pipeline as the repository sees it, e.g.
 // `.copilot-tracking/skraft-plans/checkout/`: the prefix a sub-agent resolves paths with.
-const trackingPrefixOf = (slug) => `${relative(process.cwd(), join(basePath, slug)).split(/[\\/]/).join('/')}/`
+const trackingPrefixOf = (slug) => {
+  const local = relative(process.cwd(), join(basePath, slug))
+  const path = local.startsWith('..') || isAbsolute(local) ? join(basePath, slug) : local
+  return `${path.split(/[\\/]/).join('/')}/`
+}
 
 // Audit records of one pipeline, oldest first; unparseable lines carry nothing.
 const readAuditRecords = (path, slug) => {

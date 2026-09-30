@@ -71,11 +71,43 @@ test('parseAgentDescriptor reads the orchestrator phase order from metadata.phas
   assert.deepEqual(d.phases, ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER'])
 })
 
+test('parseAgentDescriptor reads on-demand skills and merges context with recommended inputs', () => {
+  const d = parseAgentDescriptor([
+    '---',
+    'name: software-engineer',
+    'description: "x"',
+    'metadata:',
+    '  dispatched_by: skraft-orchestrator',
+    '  phase: DELIVER',
+    '  skills:',
+    '    - outside-in-tdd',
+    '    - mutation-testing',
+    '  on_demand_skills:',
+    '    - mutation-testing',
+    '  inputs:',
+    '    required:',
+    '      - test-plan.md',
+    '    context:',
+    '      - contracts.md',
+    '    recommended:',
+    '      - research.md',
+    '---',
+    '',
+    '# body',
+  ].join('\n'))
+  assert.deepEqual(d.skills, ['outside-in-tdd', 'mutation-testing'])
+  assert.deepEqual(d.onDemandSkills, ['mutation-testing'])
+  assert.deepEqual(d.inputs, ['test-plan.md'])
+  assert.deepEqual(d.context, ['contracts.md', 'research.md'])
+})
+
 test('parseAgentDescriptor yields empty collections when frontmatter is absent', () => {
   const d = parseAgentDescriptor('# no fences')
   assert.equal(d.name, undefined)
   assert.deepEqual(d.skills, [])
+  assert.deepEqual(d.onDemandSkills, [])
   assert.deepEqual(d.inputs, [])
+  assert.deepEqual(d.context, [])
   assert.deepEqual(d.outputs, [])
 })
 

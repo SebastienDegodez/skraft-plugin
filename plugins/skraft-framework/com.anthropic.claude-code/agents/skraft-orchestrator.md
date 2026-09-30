@@ -52,6 +52,12 @@ metadata:
     - playwright-evidence
     - github-search-protocol
     - qa-reporting
+  on_demand_skills:
+    - adversarial-review-lenses
+    - contract-testing
+    - playwright-evidence
+    - github-search-protocol
+    - qa-reporting
 ---
 
 # skraft Engineering Pipeline Orchestrator
@@ -79,8 +85,8 @@ Rehydrate once: read the snapshot ONE time here; after that, the output of your 
    Pending: DESIGN → DISTILL → DELIVER
    ```
    Add one line per phase with a nonzero rework cost: `{phase}: {retryCount} retries + {reworkCount} manual reworks, {findingsResolved} findings resolved`.
-5. Load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json). Apply its startup consent checkpoint; recommend PR reports + issue link + chat summary without preselecting them. Persist confirmed choices with `report.mjs setup`; inspect `report.mjs status` on resume, even at DONE.
-6. When the selected provider is `github`, load [github-search-protocol](../../skills/github-search-protocol/SKILL.md) and use its publication route, not issue discovery. Apply the lifecycle's capability checkpoint with that provider procedure; surface unresolved gaps and required user customization.
+5. Run `report.mjs status` at startup and on every resume, even at DONE. When it shows persisted reporting preferences, load no reporting asset or skill here. Only when none are persisted, load [host publication lifecycle](../../assets/reporting/mcp-publication.md) and its [preference schema](../../skills/qa-reporting/references/report-contract.md#data-interfaces-json) for the startup consent checkpoint: recommend PR reports + issue link + chat summary without preselecting them, and persist confirmed choices with `report.mjs setup`.
+6. Load the selected provider skill at the first remote report operation under Report feedback, never at startup: for `github`, [github-search-protocol](../../skills/github-search-protocol/SKILL.md), using its publication route, not issue discovery. Apply the lifecycle's capability checkpoint there with that provider procedure; surface unresolved gaps and required user customization.
 7. Proceed to the current phase independently of pending publication; publication-only retries reuse existing Markdown without dispatching engineering. Provider choices affect reporting only, not engineering pipeline support.
 
 ## State file
@@ -99,6 +105,8 @@ Run `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> [--slug {projectS
 | `record-review-artifact --phase {P} --path {rel}` | a reviewer wrote its verdict file |
 | `record-verdict --phase {P} --verdict {V}` | a review returned; `V` is `APPROVED`, or `CHANGES_REQUESTED` for `NEEDS_REWORK` and `REJECTED` |
 | `incr-retry --phase {P}` | you re-dispatch a phase after a non-APPROVED verdict |
+| `handoff --agent "{agent}"` | before every specialist and reviewer dispatch: prints the handoff block you paste verbatim |
+| `timeline` | the user asks where a run's time went: per phase, specialist, reviewer, lens, rework and mutation time |
 | `incr-rework --phase {P} --findings {N}` | a human-validated rework pass fixed `N` findings outside the reviewer retry loop; once per pass, before closing the phase |
 | `transition --to {NEXT}` | the current phase's recorded verdict is `APPROVED` |
 | `close-phase --phase {P} --verdict APPROVED [--artifact {rel}]` | you close RESEARCH, or a phase under Manual closure |
@@ -122,7 +130,7 @@ Every phase of RESEARCH → DESIGN → DISTILL → DELIVER runs for every story;
 
 ### Dispatch context header (the orchestrator provides context; sub-agents load nothing)
 
-Sub-agents run in isolated contexts and never read or write pipeline state — the orchestrator owns `state.json`. Therefore the orchestrator, NOT the sub-agent, supplies every piece of context the sub-agent needs. Prepend this standard header to EVERY specialist/reviewer dispatch payload:
+Sub-agents run in isolated contexts and never read or write pipeline state — the orchestrator owns `state.json`. Therefore the orchestrator, NOT the sub-agent, supplies every piece of context the sub-agent needs. Prepend this standard header to EVERY specialist/reviewer dispatch payload — first pass, rework and re-review alike:
 
 ```
 ## Working context (provided by orchestrator)
@@ -130,8 +138,16 @@ Sub-agents run in isolated contexts and never read or write pipeline state — t
 - Feature scope: {stable kebab-case slug from approved feature context}
 - Output path (write here): {exact resolved phase output directory}
 - Artifact convention: write only to the exact path above; tracked Markdown starts with `<!-- markdownlint-disable-file -->`.
-- Upstream artefacts: {paths from previous phases}
+
+{the block printed by `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" handoff --agent "{agent}"`, pasted verbatim}
 ```
+
+**Handoff block rules — every specialist and reviewer dispatch:**
+
+- Run `state.mjs handoff --agent "{agent}"` immediately before the dispatch and paste its output verbatim. Never write the upstream input list by hand, never summarise it, never drop a line.
+- For each line the block marks `supply it` or `supply the exact path`, add the exact repository-root-relative path the upstream agent returned, or write `none` when it does not exist.
+- On a retry the block already carries the previous review and the previous output; keep them.
+- The PreToolUse hook (G9) refuses a phase-agent dispatch whose prompt omits a recorded required input and names each missing path. Run `state.mjs handoff` again and paste its block; never retype the paths it names.
 
 Pass the approved feature scope and known issue to existing writers and reviewers;
 never invent an issue. Writers use `git commit -s` and `type(feature): subject`,
@@ -144,20 +160,23 @@ The sub-agent never touches `state.json` or `skraft-config.json`; it consumes th
 For DESIGN and DISTILL:
 
 **Step 1 — Dispatch specialist agent**
-Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slug} --phase {P}`: it records `startedAt` and the `baseSha` that bounds the phase's commits (retries keep the first). Take the current phase from your last `state.mjs` output (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above (story, output path, artifact conventions, upstream artefacts). When you need one field, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
+Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slug} --phase {P}`: it records `startedAt` and the `baseSha` that bounds the phase's commits (retries keep the first). Take the current phase from your last `state.mjs` output (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above and its handoff block. When you need one field, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
+
+**DESIGN only — structural scan, once per phase.** Before the architect's first DESIGN dispatch, run `node "$SKRAFT_PLUGIN_ROOT/src/cli/structural-scan.mjs" --out .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json`, then `state.mjs record-artifact --phase DESIGN --path details/{date}/structural-scan.json`. The handoff blocks then hand it to the architect and the DESIGN reviewer. Never re-run it on a DESIGN retry. It is the only tool you run yourself besides `state.mjs`, `report.mjs` and `git`; never run a build, a test or a quality gate.
 
 **Step 2 — Collect output**
 Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
 
 **Step 3 — Dispatch reviewer**
-Pass the produced artefact paths to the reviewer agent. Do NOT summarize or interpret — pass raw paths only. The reviewer applies `$SKRAFT_PLUGIN_ROOT/skills/adversarial-review-lenses/SKILL.md` and writes its verdict file to `reviews/{date}/`.
+Dispatch the reviewer with the Dispatch context header and its handoff block: the block lists the artefacts under review and, on a re-review, the previous review. Do NOT summarize or interpret — pass raw paths only. The reviewer applies `$SKRAFT_PLUGIN_ROOT/skills/adversarial-review-lenses/SKILL.md` and writes its verdict file to `reviews/{date}/`.
 
 **Step 4 — Handle verdict**
 
 | Verdict | Action |
 |---|---|
 | `APPROVED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict APPROVED`, route any report due under Report feedback, then `state.mjs transition --to {NEXT}` (refused with `PHASE_GATE` while a required artefact is unrecorded or the review does not record APPROVED; for DELIVER, while no commit exists since the phase started). **DESIGN only:** before `transition`, run the ADR ratification checkpoint below — DESIGN does not advance to DISTILL on `APPROVED` alone. |
-| `NEEDS_REWORK` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`, then `state.mjs incr-retry --phase {P}`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch agent with reviewer findings attached. Else: stop, surface to user. |
+| `NEEDS_REWORK` with `escalation: environment` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Do NOT `incr-retry` and do NOT re-dispatch the specialist. Stop and show the user the environment cause and the command the review names. When the user reports the environment fixed, re-dispatch the reviewer only, with its handoff block. |
+| `NEEDS_REWORK` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`, then `state.mjs incr-retry --phase {P}`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch the specialist with the Retry prompt template below. Else: stop, surface to user. |
 | `REJECTED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Stop pipeline immediately. Surface blockage to user; no unsolicited remote phase comment. |
 
 ### RESEARCH (reviewer-less phase — specialist-only)
@@ -258,17 +277,15 @@ The refined story that RESEARCH and DESIGN consume (`plans/{date}/stories-*.md`)
 
 DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from here.
 
-1. Read the recorded DISTILL refs (`state.mjs get --field phaseArtifacts`) and the approved forecast ref. Do not open the plans yourself.
-2. Dispatch `Skraft - Software Engineer` with this required ref list — a missing entry makes the engineer re-plan the story:
-   - `.feature` file(s)
-   - `test-plan-{story}.md`
-   - `impl-plan-{story}.md`
-   - outer acceptance test path(s) returned by the acceptance designer
-   - `contracts-{story}.md` and `docs/adr/decisions-index.md`
+1. Do not open the plans yourself. Run `state.mjs handoff --agent "Skraft - Software Engineer"`; its block resolves the recorded DISTILL refs.
+2. Dispatch `Skraft - Software Engineer` with the Dispatch context header, its handoff block pasted verbatim, and these additions — a missing entry makes the engineer re-plan the story:
+   - outer acceptance test path(s) and the RED evidence refs the acceptance designer returned
    - approved forecast ref, exact reporting output directory, confirmed media policy, [qa-reporting entry](../../skills/qa-reporting/SKILL.md)
 
+   The block carries the `.feature` file(s), `test-plan-{story}.md`, `impl-plan-{story}.md`, `contracts-{story}.md`, `docs/adr/decisions-index.md`, the research conventions and the stack-commands file. Every DELIVER re-dispatch — rework included — carries the same block and the same additions.
+
    Require engineer-owned quality evidence, change log, actual-impact outcome data and frontend manifest on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
-3. Dispatch `Skraft - Software Engineer Reviewer` with produced code/tests and raw outcome, forecast, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
+3. Record the engineer's change log and quality-evidence log with `state.mjs record-artifact --phase DELIVER`, then dispatch `Skraft - Software Engineer Reviewer` with the Dispatch context header, its handoff block (it carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, contracts and decisions index), and the raw outcome, forecast, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
 4. Handle verdict using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED` or blocked DELIVER, record the persisted review and route the outcome below. Engineer owns capture and change-log production, never you. Mark pipeline complete only on engineering approval; publication failure does not change that verdict.
 
@@ -286,21 +303,20 @@ At report boundaries, load [qa-reporting](../../skills/qa-reporting/SKILL.md) be
 
 ## Retry prompt template
 
-When the reviewer returns `NEEDS_REWORK`, re-dispatch the specialist agent with this addendum:
+When the reviewer returns `NEEDS_REWORK`, run `incr-retry`, then `state.mjs handoff --agent "{specialist}"`, and re-dispatch the specialist with the Dispatch context header, the complete handoff block (its mode line reads `rework`) and this addendum. Never replace the block with the findings alone: the specialist needs every original input — in DELIVER, `test-plan-{story}.md` and `impl-plan-{story}.md` included.
 
 ```
 ## Reviewer findings (attempt {N} of {maxAttempts})
 
-The reviewer returned `NEEDS_REWORK`. Address ALL findings before reproposing.
+The reviewer returned `NEEDS_REWORK`. Work in rework mode: address ALL findings, change only what they name, keep every other artefact, decision and passing gate.
 
 ### Findings
-{reviewer findings verbatim — path to reviews/{date}/{phase}-review.md}
+{reviewer findings verbatim — the previous review path is in the handoff block}
 
-### Your previous output
-{paths to previous artefacts}
-
-Correct your output and produce revised artefacts at the same dated path.
+Revise your output in place at the same dated paths.
 ```
+
+After the rework returns, dispatch the reviewer with its handoff block: its mode line reads `re-review`.
 
 ## Error handling
 
@@ -323,6 +339,8 @@ Max retries per phase: `state.json::userPreferences.maxRetriesPerPhase` (default
 - `playwright-evidence` — engineer loads for frontend DELIVER capture; router passes policy and consumes returned refs only.
 - `github-search-protocol` — load only for selected GitHub reporting provider; use publication route for prepared Markdown.
 - `qa-reporting` — load before report data handoff or rendering; producers/reviewers retain data and verdict ownership.
+
+All five skills are on-demand for you: load each one only at the step named above, never at startup.
 
 ## Entry point summary
 
@@ -348,4 +366,4 @@ Before EACH dispatch, re-read this checklist:
 - [ ] Have I verified the expected artefact exists at the dated pipeline path before dispatching the reviewer?
 - [ ] Will I record the verdict/artifact/transition through the `state.mjs` CLI (not a hand-edit)?
 - [ ] Did I run `state.mjs mark-phase-started --phase {P}` before the phase's first dispatch?
-- [ ] Have I passed all upstream artefact paths in the dispatch payload?
+- [ ] Did I paste the block `state.mjs handoff --agent "{agent}"` printed, verbatim, into this dispatch — retries included?

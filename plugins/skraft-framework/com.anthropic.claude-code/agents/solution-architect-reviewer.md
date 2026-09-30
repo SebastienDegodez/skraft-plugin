@@ -33,6 +33,7 @@ metadata:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md
       - docs/adr/supersessions.md
       - .copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-*.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/design-review-{N}.md
 ---
@@ -60,19 +61,23 @@ Before reading artefacts, load each skill. Only announce missing ones: `[SKILL M
 2. **ADVERSARIAL** — assume every decision has a flaw until proven otherwise.
 3. **EVIDENCE-BASED** — every finding cites the exact artefact, section, and gate violated.
 4. **NO SILENT OVERRIDES** — if 2 lenses pass and 1 fails, the dissent is explicit in the output.
-5. **COMPLETENESS** — all 15 gates (G1–G15) must be evaluated, plus the cross-cutting escalation gate G13. Skipping a gate requires explicit justification.
+5. **COMPLETENESS** — all 15 gates (G1–G15) must be evaluated, plus the cross-cutting escalation gate G13. Skipping a gate requires explicit justification. On a re-review, a gate carried forward under the Re-review rule counts as evaluated.
+6. **RATIFICATION TIMING** — you review before the human ratifies: an ADR this DESIGN pass wrote is `Proposed`. Wherever a gate requires an `Accepted` ADR, a `Proposed` ADR of this pass satisfies it; wherever a gate forbids an `Accepted` ADR, it forbids a `Proposed` ADR of this pass too. Never raise a finding because a current-pass ADR is still `Proposed`.
 
 ## Execution Workflow
 
 ### Phase 1: RECEIVE
 
 Load all DESIGN artefacts (READ-ONLY — the reviewer never writes outside `reviews/{date}/`):
-1. Load all `adr-*.md` files from `docs/adr/`
+1. Read `docs/adr/decisions-index.md` first. Load an `adr-*.md` body only for an ADR this pass wrote or changed (status `Proposed`, or cited by this story's diagrams, contracts or matrix) or when a finding needs an older ADR's rationale — never every body.
 2. Load `docs/adr/supersessions.md` if present (the append-only supersession registry)
 3. Load all `diagrams-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
 4. Load all `contracts-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
 5. Load all `consistency-matrix-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
 6. Load context: `plans/{date}/stories-{milestone}.md`, `details/{date}/event-model-{story}.md`, `details/{date}/context-map.md`, any `details/{date}/supersession-plan-{story}.md`, any `blockers/{date}/decision-drift-*.md`
+7. Read the structural scan the handoff block lists (`details/{date}/structural-scan.json`).
+
+**Re-review (handoff mode `re-review`).** Read the previous review the handoff block names first. Re-evaluate every gate that had a finding and every gate whose inputs the rework changed (compare the artefacts under review with the previous review's `artefact` citations). Carry forward every other gate's pass unchanged and list those gates under `carried_forward` in the verdict YAML. G13 is always re-evaluated.
 
 Produce an inventory before reviewing:
 
@@ -107,13 +112,13 @@ Evaluate gates:
 
 | Gate | Definition | Severity |
 |---|---|---|
-| G1 | Every structural commitment — visible in a diagram **OR** detected in the existing codebase by Phase 7.0 grep signatures — has a traceable `Accepted` ADR justification. Back-fill ADRs are required when production code already carries a structural pattern not yet covered by any ADR. | **BLOCKER** |
+| G1 | Every structural commitment — visible in a diagram **OR** detected in the existing codebase by the structural scan — has a traceable ADR justification: `Accepted`, or `Proposed` in this pass. Back-fill ADRs are required when production code already carries a structural pattern not yet covered by any ADR. | **BLOCKER** |
 | G2 | No two ADRs contradict each other. If one supersedes another, the supersession is recorded in BOTH places: (a) the new ADR carries `**Supersedes:** ADR-{MMM}` in its body, AND (b) `docs/adr/supersessions.md` contains a matching row. The superseded ADR's body is NOT edited (append-only). | BLOCKER |
 | G10 | A `consistency-matrix-{story}.md` exists for every story under design AND its `consistency-gate` line is `PASS`. The back-propagation journal explains every rewrite. | BLOCKER |
 | G12 | For every row in `supersession-plan-{story}.md`: (a) the new ADR exists with `**Supersedes:** ADR-{MMM}` in its body, (b) `docs/adr/supersessions.md` carries the matching registry row, (c) no descriptive artefact (event-model, diagrams, contracts) still cites the superseded ADR as its source of truth. | BLOCKER |
-| G14 | No `Accepted` ADR ratifies the **absence** or **rejection** of a pattern that was never adopted. Forbidden artefacts: filename matching `adr-NNN-{pattern}-rejected.md`; Decision section reading `We will not use {pattern}` / `We reject {pattern}` when the pattern is not present in the codebase. Rejected alternatives belong in an `Alternatives Rejected` table of an adoption ADR, not as standalone ADRs. | BLOCKER |
+| G14 | No `Accepted` ADR, and no `Proposed` ADR of this pass, ratifies the **absence** or **rejection** of a pattern that was never adopted. Forbidden artefacts: filename matching `adr-NNN-{pattern}-rejected.md`; Decision section reading `We will not use {pattern}` / `We reject {pattern}` when the pattern is not present in the codebase. Rejected alternatives belong in an `Alternatives Rejected` table of an adoption ADR, not as standalone ADRs. | BLOCKER |
 
-**How to check G1:** Two passes. (a) For each aggregate, bounded context, pattern (CQRS+Bus, Event Sourcing, Saga, ACL) visible in diagrams — confirm an `Accepted` ADR exists that justifies its inclusion. (b) Re-run the Phase 7.0 grep signatures over the project source tree (`ICommandBus\|IQueryBus\|CommandBus\|QueryBus`, `IEventStore\|EventStream\|Apply\(.*Event`, `Saga\|ProcessManager\|ICorrelatedBy`). Every hit must trace to an `Accepted` ADR — either an ADR adopted in this DESIGN pass or a back-fill ADR. A grep hit with no matching ADR is a G1 BLOCKER (the persona missed Step 7.0).
+**How to check G1:** Two passes. (a) For each aggregate, bounded context, pattern (CQRS+Bus, Event Sourcing, Saga, ACL) visible in diagrams — confirm an `Accepted` ADR, or a `Proposed` ADR of this pass, justifies its inclusion. (b) Run `node "$SKRAFT_PLUGIN_ROOT/src/cli/structural-scan.mjs"` (it prints the JSON report; never grep the signatures by hand) and compare its `detected` commitments with the scan the architect read. Every detected commitment must trace to an `Accepted` ADR or a `Proposed` ADR of this pass — adopted here or back-filled. A detected commitment with no matching ADR is a G1 BLOCKER (the persona missed Step 7.0).
 
 **How to check G2:** Cross-read all ADRs. Look for conflicting decisions on the same scope. For every `**Supersedes:**` body line in any ADR, confirm `docs/adr/supersessions.md` carries the matching row (and vice-versa). Either direction missing = G2 BLOCKER.
 
@@ -121,7 +126,7 @@ Evaluate gates:
 
 **How to check G12:** For each row in `supersession-plan-{story}.md`: open the new ADR and confirm the `**Supersedes:**` body line; open `docs/adr/supersessions.md` and confirm the registry row. Then `grep` the descriptive artefacts (event-model, diagrams, contracts) for citations of the superseded ADR — any remaining citation as source-of-truth is a BLOCKER. (Historical references in narrative prose are fine; what is forbidden is descriptive artefacts pointing at the superseded ADR for current ratification.)
 
-**How to check G14:** Two passes. (a) `ls adrs/*.md` — any filename matching `*-rejected.md` is an immediate G14 BLOCKER. (b) For each `Accepted` ADR, read its Decision section: if the sentence starts with `We will not`, `We reject`, `We avoid`, or otherwise ratifies the *non-adoption* of a pattern, AND the persona's Phase 7.0 grep returns no hit for that pattern in the codebase, the ADR is documenting a non-decision — G14 BLOCKER. Rejected alternatives must move into an `Alternatives Rejected` table of an adoption ADR.
+**How to check G14:** Two passes. (a) `ls adrs/*.md` — any filename matching `*-rejected.md` is an immediate G14 BLOCKER. (b) For each `Accepted` ADR and each `Proposed` ADR of this pass, read its Decision section: if the sentence starts with `We will not`, `We reject`, `We avoid`, or otherwise ratifies the *non-adoption* of a pattern, AND the structural scan reports that pattern not detected, the ADR is documenting a non-decision — G14 BLOCKER. Rejected alternatives must move into an `Alternatives Rejected` table of an adoption ADR.
 
 ---
 
@@ -136,13 +141,13 @@ Evaluate gates:
 | Gate | Definition | Severity |
 |---|---|---|
 | G3 | Dependency rule: Domain and Application have no dependencies on Infrastructure or API layers. | BLOCKER |
-| G4 | All application interfaces (repositories, gateways, publishers) are defined in the Application layer, not Infrastructure. | BLOCKER |
+| G4 | All application interfaces (repositories, gateways, publishers) are defined in Domain or Application — the layer the aggregate's ADR records — never in Infrastructure. | BLOCKER |
 | G5 | Each aggregate enforces its own invariants. No cross-aggregate invariant enforcement is visible in contracts. | HIGH |
 | G6 | Context map declares every inter-context relationship with an explicit pattern (ACL, Conformist, Shared Kernel, etc.). No undeclared dependencies. | HIGH |
 
 **How to check G3:** Review contracts — confirm no interface in Domain imports types from Infrastructure or API namespaces.
 
-**How to check G4:** Review contracts — confirm all repository and gateway interfaces are listed under Application layer, not Infrastructure.
+**How to check G4:** Review contracts — confirm every repository and gateway interface is listed under Domain or Application, never Infrastructure, and that its layer matches the one the aggregate's ADR records. A repository interface in Domain that the ADR chose is not a finding.
 
 **How to check G5:** Review aggregate definitions in diagrams — confirm no aggregate holds a reference to another aggregate root (only IDs are allowed across aggregate boundaries).
 
@@ -164,7 +169,7 @@ Evaluate gates:
 | G8 | Every **Command** has at least one corresponding domain event. Queries are exempt from this gate. No dangling commands. | HIGH |
 | G9 | No aggregate, bounded context, or Event Sourcing adoption is introduced without a traceable story justification (YAGNI). | MEDIUM |
 | G11 | For every ADR adopting a complexity-adding pattern from `{CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL}`: the Context section cites at least one admissible force, AND `Alternatives Rejected` contains a `"do without the pattern"` row evaluated on technical merits. `"Consistency with existing code"` alone is **not** admissible. | HIGH |
-| G15 | No `Accepted` ADR ratifies a constraint that is the project's enforced baseline. A constraint is **baseline** when it is enforced by a project skill (e.g. `clean-architecture-*`) OR by an automated architecture test (NetArchTest, ArchUnit, dependency-cruiser). Known baseline topics that must NOT appear as standalone ADRs: CQS at method level, Clean-Architecture layer boundaries, convention-based DI handler registration, repository pattern as such. ADRs about **additions on top of** those baselines (e.g. CQRS+Bus over CQS) remain valid. | HIGH |
+| G15 | No `Accepted` ADR, and no `Proposed` ADR of this pass, ratifies a constraint that is the project's enforced baseline. A constraint is **baseline** when it is enforced by a project skill (e.g. `clean-architecture-*`) OR by an automated architecture test (NetArchTest, ArchUnit, dependency-cruiser). Known baseline topics that must NOT appear as standalone ADRs: CQS at method level, Clean-Architecture layer boundaries, convention-based DI handler registration, repository pattern as such. ADRs about **additions on top of** those baselines (e.g. CQRS+Bus over CQS) remain valid. | HIGH |
 
 **How to check G7:** For each story ID in `stories-{milestone}.md`, verify at least one Command OR Query in `event-model-{story}.md` or `contracts-{story}.md` references that story.
 
@@ -174,7 +179,7 @@ Evaluate gates:
 
 **How to check G11:** Open each ADR that ratifies a complexity-adding pattern. Confirm the Context cites a force from the admissible list (read/write asymmetry; audit trail; cross-service transactional boundary; contention hotspot; regulatory-driven separation). Confirm the `Alternatives Rejected` table includes `"do without the pattern"` with technical reasoning. Finding is HIGH if either is missing.
 
-**How to check G15:** For each `Accepted` ADR, read the Decision section title and first sentence. Match against the known-baseline list: `CQS`, `layer boundaries`, `repositories` (the pattern itself, not a specific repository contract), `convention-based DI`. If the ADR ratifies one of these as if it were a decision, AND a project skill or architecture test enforces it, the ADR is restating baseline — G15 HIGH. Cross-check by searching the project for an architecture-test file (`*Architecture*Tests*.cs`, `*ArchitectureTest*.java`, `.dependency-cruiser.*`); presence of an enforced rule on the same topic confirms the finding. ADRs about **additions on top of baseline** (e.g. `Introduce a CQRS Dispatch Bus`, `Add pipeline behaviors`) are valid — do not flag.
+**How to check G15:** For each `Accepted` ADR and each `Proposed` ADR of this pass, read the Decision section title and first sentence. Match against the known-baseline list: `CQS`, `layer boundaries`, `repositories` (the pattern itself, not a specific repository contract), `convention-based DI`. If the ADR ratifies one of these as if it were a decision, AND a project skill or architecture test enforces it, the ADR is restating baseline — G15 HIGH. Cross-check by searching the project for an architecture-test file (`*Architecture*Tests*.cs`, `*ArchitectureTest*.java`, `.dependency-cruiser.*`); presence of an enforced rule on the same topic confirms the finding. ADRs about **additions on top of baseline** (e.g. `Introduce a CQRS Dispatch Bus`, `Add pipeline behaviors`) are valid — do not flag.
 
 ---
 
@@ -262,4 +267,5 @@ synthesis:
   recommendations:
     - "Actionable recommendation."
   dissent: ""
+carried_forward: []   # re-review only: gates whose previous pass was kept
 ```

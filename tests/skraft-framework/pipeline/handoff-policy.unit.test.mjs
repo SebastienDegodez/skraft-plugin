@@ -177,6 +177,8 @@ test('renderHandoff: lists resolved paths under the tracking prefix and flags wh
   assert.match(block, /`\.copilot-tracking\/skraft-plans\/checkout\/details\/2026-09-30\/test-plan-42\.md`/)
   assert.match(block, /`tests\/\*\*\/\{Feature\}AcceptanceTests\.cs` — supply the exact path/)
   assert.match(block, /- Context inputs — consult when a step needs them:/)
+  assert.match(block, /\n {2}- `docs\/adr\/decisions-index\.md`\n|\n {2}- `docs\/adr\/decisions-index\.md`$/,
+    'a fixed repository path is listed as is, with nothing to supply')
   assert.doesNotMatch(block, /Previous review/)
 })
 
