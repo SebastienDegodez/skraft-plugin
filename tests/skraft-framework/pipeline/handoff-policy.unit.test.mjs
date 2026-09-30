@@ -147,6 +147,22 @@ test('evaluateHandoff: a rework dispatch must also name the previous review', ()
   assert.equal(complete.ok, true)
 })
 
+test('evaluateHandoff: paths recorded with Windows separators resolve, and the pasted block satisfies the guard', () => {
+  const windowsState = state({
+    phaseArtifacts: {
+      DISTILL: ['features\\billing-checkout.feature', 'details\\2026-09-30\\test-plan-42.md'],
+    },
+    verdicts: { DELIVER: 'CHANGES_REQUESTED' },
+    reviewArtifacts: { DELIVER: ['reviews\\2026-09-30\\deliver-review-1.md'] },
+  })
+  const handoff = buildHandoff({ agent: 'engineer', state: windowsState, config: CONFIG })
+  assert.deepEqual(handoff.value.required[1].paths, ['details/2026-09-30/test-plan-42.md'])
+  assert.equal(handoff.value.previousReview, 'reviews/2026-09-30/deliver-review-1.md')
+  const prompt = renderHandoff(handoff.value)
+  assert.equal(evaluateHandoff({ agent: 'engineer', state: windowsState, config: CONFIG, prompt }).ok, true)
+  assert.equal(evaluateHandoff({ agent: 'engineer', state: windowsState, config: CONFIG, prompt: 'fix it' }).ok, false)
+})
+
 test('evaluateHandoff: unresolved, repository and note inputs are never enforced', () => {
   const result = evaluateHandoff({
     agent: 'architect',

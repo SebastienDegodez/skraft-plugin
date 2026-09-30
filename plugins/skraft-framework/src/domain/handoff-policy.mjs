@@ -37,11 +37,15 @@ const classifyInput = (entry) => {
 
 const unique = (values) => [...new Set(values)]
 
+// State may hold a path recorded with Windows separators; compare and print one form.
+const forwardSlashes = (path) => String(path).replace(/\\/g, '/')
+const recordedIn = (state, phase) => (state?.phaseArtifacts?.[phase] ?? []).map(forwardSlashes)
+
 // Every artefact recorded so far, phase order first, oldest first.
 const recordedArtifacts = (state, config) => {
   const byPhase = state?.phaseArtifacts ?? {}
   const phases = unique([...(config?.phaseOrder ?? []), ...Object.keys(byPhase)])
-  return unique(phases.flatMap((phase) => byPhase[phase] ?? []))
+  return unique(phases.flatMap((phase) => recordedIn(state, phase)))
 }
 
 const resolveInput = (entry, recorded) => {
@@ -77,7 +81,7 @@ export const buildHandoff = ({ agent, state, config }) => {
   const mode = modeOf(target.role, state, phase)
   const retries = state?.retryCount?.[phase] ?? 0
   const maxRetries = state?.userPreferences?.maxRetriesPerPhase ?? 2
-  const reviews = state?.reviewArtifacts?.[phase] ?? []
+  const reviews = (state?.reviewArtifacts?.[phase] ?? []).map(forwardSlashes)
   const previousReview = mode === HANDOFF_MODES.FIRST_PASS ? null : (reviews.at(-1) ?? null)
 
   return Ok(Object.freeze({
@@ -89,13 +93,13 @@ export const buildHandoff = ({ agent, state, config }) => {
     maxAttempts: maxRetries + 1,
     required: (artifacts.inputs ?? []).map((entry) => resolveInput(entry, recorded)),
     context: contextEntries.map((entry) => resolveInput(entry, recorded)),
-    underReview: target.role === 'reviewer' ? [...(state?.phaseArtifacts?.[phase] ?? [])] : [],
+    underReview: target.role === 'reviewer' ? recordedIn(state, phase) : [],
     previousReview,
-    previousOutputs: mode === HANDOFF_MODES.REWORK ? [...(state?.phaseArtifacts?.[phase] ?? [])] : [],
+    previousOutputs: mode === HANDOFF_MODES.REWORK ? recordedIn(state, phase) : [],
   }))
 }
 
-const normalisePrompt = (prompt) => (typeof prompt === 'string' ? prompt.replace(/\\/g, '/') : '')
+const normalisePrompt = (prompt) => (typeof prompt === 'string' ? forwardSlashes(prompt) : '')
 
 // The guard (G9). A dispatch must name at least one recorded path for every required
 // tracked input, and — on a rework or re-review — the review that holds the findings.
