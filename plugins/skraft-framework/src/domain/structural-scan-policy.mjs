@@ -27,6 +27,16 @@ const EXCLUDED_SEGMENTS = new Set([
 ])
 
 const MAX_LINE_LENGTH = 160
+const SLASH_LINE_COMMENT_EXTENSIONS = new Set([
+  'cs', 'fs', 'java', 'kt', 'scala', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs',
+  'go', 'php', 'rs', 'swift',
+])
+const SLASH_BLOCK_COMMENT_EXTENSIONS = new Set([
+  'cs', 'fs', 'java', 'kt', 'scala', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs',
+  'go', 'php', 'rs', 'swift',
+])
+const HASH_COMMENT_EXTENSIONS = new Set(['py', 'rb', 'php'])
+const NESTED_BLOCK_COMMENT_EXTENSIONS = new Set(['fs', 'scala', 'rs', 'swift'])
 
 // True when the path is source code worth scanning: a known source extension, outside
 // dependency, build and tracking directories.
@@ -41,12 +51,30 @@ export const isScannableSource = (path) => {
 const maskNonCode = (content, path) => {
   const chars = content.split('')
   const extension = typeof path === 'string' ? path.split('.').at(-1).toLowerCase() : ''
-  const hashComments = new Set(['py', 'rb', 'php'])
   let state = 'code'
   let quote = ''
   let verbatim = false
+  let blockStart = '/*'
   let blockEnd = '*/'
-  for (let index = 0; index < chars.length; index++) {
+  let blockDepth = 0
+  let nestedBlock = false
+  let rawQuoteCount = 0
+  let rawHashCount = 0
+  let index = 0
+  const startRawString = (start, quoteAt, hashes, allowTriple = false, fixedQuoteCount = null) => {
+    let quoteCount = fixedQuoteCount ?? 0
+    if (fixedQuoteCount === null) {
+      while (chars[quoteAt + quoteCount] === '"') quoteCount++
+      if (quoteCount === 0 || quoteCount === 2 || (!allowTriple && quoteCount !== 1)) return false
+    }
+    for (let cursor = start; cursor < quoteAt + quoteCount; cursor++) chars[cursor] = ' '
+    rawQuoteCount = quoteCount
+    rawHashCount = hashes
+    state = 'raw-string'
+    index = quoteAt + quoteCount - 1
+    return true
+  }
+  for (index = 0; index < chars.length; index++) {
     const current = chars[index]
     const next = chars[index + 1]
     const preserve = current === '\n' || current === '\r'
@@ -56,10 +84,33 @@ const maskNonCode = (content, path) => {
       continue
     }
     if (state === 'block-comment') {
-      if (current === blockEnd[0] && next === blockEnd[1]) {
+      if (nestedBlock && current === blockStart[0] && next === blockStart[1]) {
+        chars[index] = ' '
+        chars[++index] = ' '
+        blockDepth++
+      } else if (current === blockEnd[0] && next === blockEnd[1]) {
         chars[index] = ' '
         chars[index + 1] = ' '
         index++
+        blockDepth--
+        if (blockDepth === 0) state = 'code'
+      } else if (!preserve) chars[index] = ' '
+      continue
+    }
+    if (state === 'raw-string') {
+      let matches = current === '"'
+      let quoteRun = 0
+      while (chars[index + quoteRun] === '"') quoteRun++
+      matches = matches && (extension === 'cs'
+        ? quoteRun >= rawQuoteCount
+        : quoteRun === rawQuoteCount)
+      for (let offset = 0; matches && offset < rawHashCount; offset++) {
+        matches = chars[index + quoteRun + offset] === '#'
+      }
+      if (matches) {
+        const delimiterLength = quoteRun + rawHashCount
+        for (let offset = 0; offset < delimiterLength; offset++) chars[index + offset] = ' '
+        index += delimiterLength - 1
         state = 'code'
       } else if (!preserve) chars[index] = ' '
       continue
@@ -85,26 +136,49 @@ const maskNonCode = (content, path) => {
       } else if (!preserve) chars[index] = ' '
       continue
     }
-    if (current === '/' && next === '/') {
+    if (SLASH_LINE_COMMENT_EXTENSIONS.has(extension) && current === '/' && next === '/') {
       chars[index] = ' '
       chars[++index] = ' '
       state = 'line-comment'
-    } else if (current === '/' && next === '*') {
+    } else if (SLASH_BLOCK_COMMENT_EXTENSIONS.has(extension) && current === '/' && next === '*') {
       chars[index] = ' '
       chars[++index] = ' '
+      blockStart = '/*'
       blockEnd = '*/'
+      blockDepth = 1
+      nestedBlock = NESTED_BLOCK_COMMENT_EXTENSIONS.has(extension)
       state = 'block-comment'
     } else if (extension === 'fs' && current === '(' && next === '*') {
       chars[index] = ' '
       chars[++index] = ' '
+      blockStart = '(*'
       blockEnd = '*)'
+      blockDepth = 1
+      nestedBlock = true
       state = 'block-comment'
-    } else if (hashComments.has(extension) && current === '#') {
+    } else if (HASH_COMMENT_EXTENSIONS.has(extension) && current === '#') {
       chars[index] = ' '
       state = 'line-comment'
     } else if (extension === 'vb' && current === "'") {
       chars[index] = ' '
       state = 'line-comment'
+    } else if (extension === 'swift' && current === '#') {
+      let quoteAt = index
+      while (chars[quoteAt] === '#') quoteAt++
+      if (chars[quoteAt] === '"') {
+        const multiline = chars[quoteAt + 1] === '"'
+          && chars[quoteAt + 2] === '"'
+          && (chars[quoteAt + 3] === '\n' || chars[quoteAt + 3] === '\r')
+        startRawString(index, quoteAt, quoteAt - index, false, multiline ? 3 : 1)
+      }
+    } else if (extension === 'rs' && (current === 'r' || current === 'b' && next === 'r')) {
+      const start = index
+      const rawPrefix = current === 'b' ? index + 1 : index
+      let quoteAt = rawPrefix + 1
+      while (chars[quoteAt] === '#') quoteAt++
+      if (chars[quoteAt] === '"') startRawString(start, quoteAt, quoteAt - rawPrefix - 1, false, 1)
+    } else if (extension === 'cs' && current === '"' && next === '"') {
+      startRawString(index, index, 0, true)
     } else if (current === '@' && next === '"') {
       chars[index] = ' '
       chars[++index] = ' '

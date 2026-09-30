@@ -57,7 +57,35 @@ test('scanSource ignores signatures in line comments, block comments and string 
     { commitment: 'saga', path: 'src/a.cs', line: 6, text: 'public class ShippingSagaHandler(CommandBus bus) {}' },
   ])
   assert.deepEqual(scanSource('src/a.py', '# CommandBus'), [])
+  assert.deepEqual(scanSource('src/a.py', 'pages = len(items) // 2; bus = CommandBus()'), [
+    { commitment: 'cqrs-bus', path: 'src/a.py', line: 1, text: 'pages = len(items) // 2; bus = CommandBus()' },
+  ])
   assert.deepEqual(scanSource('src/a.vb', "' CommandBus"), [])
+  for (const [path, comment] of [
+    ['src/a.fs', '(* outer (* inner *) CommandBus *)'],
+    ['src/a.rs', '/* outer /* inner */ CommandBus */'],
+    ['src/a.scala', '/* outer /* inner */ CommandBus */'],
+    ['src/a.swift', '/* outer /* inner */ CommandBus */'],
+  ]) {
+    assert.deepEqual(scanSource(path, comment), [])
+  }
+  for (const [path, literal] of [
+    ['src/a.rs', 'let text = r#"a " Saga"#;'],
+    ['src/a.swift', 'let text = #"a " Saga"#;'],
+    ['src/a.swift', 'let text = #"" Saga"#;'],
+    ['src/a.swift', 'let text = ##"" Saga"##;'],
+    ['src/a.swift', 'let text = ##"""a " Saga"""##;'],
+    ['src/a.swift', 'let text = #"""\n Saga\n"""#;'],
+    ['src/a.cs', 'var text = """"a """ Saga"""";'],
+  ]) {
+    assert.deepEqual(scanSource(path, literal), [])
+  }
+  assert.deepEqual(scanSource('src/a.rs', 'let quote = r#"""#; let bus = CommandBus::new();'), [
+    { commitment: 'cqrs-bus', path: 'src/a.rs', line: 1, text: 'let quote = r#"""#; let bus = CommandBus::new();' },
+  ])
+  assert.deepEqual(scanSource('src/a.cs', 'var s = """"text""""" ;\npublic class Saga {}'), [
+    { commitment: 'saga', path: 'src/a.cs', line: 2, text: 'public class Saga {}' },
+  ])
 })
 
 test('scanSource detects Apply of an event and handles CRLF and non-string content', () => {
