@@ -36,7 +36,7 @@ Load before any review work. If missing, announce `[SKILL MISSING] {name}` and c
 - The evidence log: `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json`.
 - Approved feature scope and linked issue when known; never infer them from a producer's commit subject.
 - The patch and file list since the DELIVER base: `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch` and `files-{story}.txt`, plus the change log. Read the patch; open a whole file only when the patch lacks the context a finding needs. Never modify anything.
-- `test-plan-{story}.md`: the reference for every AC-to-test check in section 3. A planned test the patch does not contain is a defect unless the evidence log records a `PLAN_DEVIATION` for it.
+- `test-plan-{story}.md`: the reference for every AC-to-test check in section 3. A planned test the patch does not contain is a defect unless the execution journal, evidence log or a commit message records a `PLAN_DEVIATION` for it.
 - Outcome/forecast data and frontend manifest when supplied: load `qa-reporting` before checking data; use exact returned repository-root-relative refs, not current-date paths.
 
 You DO NOT receive the cold-reader's output, nor do you receive any other lens's findings.

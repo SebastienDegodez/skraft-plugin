@@ -150,20 +150,17 @@ const ON_DEMAND_CONFIG = {
   }
 }
 
-test('on-demand skills are named as step-time loads, never in the MANDATORY directive', async () => {
+test('on-demand skills are not injected into the SubagentStart context', async () => {
   const service = createSubagentStartService({ config: ON_DEMAND_CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
   const result = await service.handle({ agentName: 'software-engineer' })
   assert.equal(result.decision, 'additionalContext')
   assert.ok(result.context.includes('The following skills are MANDATORY: outside-in-tdd.'),
     `only verify skills are mandatory; got: "${result.context}"`)
-  assert.ok(result.context.includes('Load these skills only at the step that needs them, never up-front: mutation-testing, qa-reporting.'),
-    `on-demand skills must be listed comma-separated; got: "${result.context}"`)
+  assert.doesNotMatch(result.context, /mutation-testing|qa-reporting/)
 })
 
-test('an agent with only on-demand skills gets the on-demand note without a MANDATORY directive', async () => {
+test('an agent with only on-demand skills gets no SubagentStart context', async () => {
   const service = createSubagentStartService({ config: ON_DEMAND_CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
   const result = await service.handle({ agentName: 'skraft-orchestrator' })
-  assert.equal(result.decision, 'additionalContext')
-  assert.ok(!result.context.includes('MANDATORY'))
-  assert.ok(result.context.includes('report-lifecycle'))
+  assert.equal(result.decision, 'allow')
 })

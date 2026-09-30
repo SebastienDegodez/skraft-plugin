@@ -87,18 +87,15 @@ export const continuationAfter = (finishedAgent, dispatchState, config) => {
   const { currentPhase } = dispatchState
   if (!target || target.phase !== currentPhase) return null
   const phaseAgents = config.phaseAgents[currentPhase]
-  const next = nextPhaseAfter(currentPhase, config) ?? 'DONE'
   const cli = 'node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs"'
 
   const handoff = (agent) => `\`${cli} handoff --agent "${agent}"\``
-  const nextSpecialist = config.phaseAgents[next]?.specialist
-  const nextDispatch = nextSpecialist ? `; dispatch ${nextSpecialist} with the block ${handoff(nextSpecialist)} prints` : ''
 
   if (target.role === 'specialist') {
     if (!phaseAgents.reviewer) {
       return {
         kind: 'CLOSE',
-        context: `SKRAFT G6 — ${finishedAgent} returned for ${currentPhase}. Record each artefact it produced with \`${cli} record-artifact --phase ${currentPhase} --path <tracking-relative path>\`, then close the phase with \`${cli} close-phase --phase ${currentPhase} --verdict APPROVED\` (next: ${next})${nextDispatch}.`
+        context: `SKRAFT G6 — ${finishedAgent} returned for ${currentPhase}. Record each artefact it produced with \`${cli} record-artifact --phase ${currentPhase} --path <tracking-relative path>\`, then close the phase with \`${cli} close-phase --phase ${currentPhase} --verdict APPROVED\`. Follow the orchestrator's interlocks before any next-phase dispatch.`
       }
     }
     return {
@@ -108,9 +105,10 @@ export const continuationAfter = (finishedAgent, dispatchState, config) => {
   }
 
   const exhausted = dispatchState.retries >= dispatchState.maxRetries
+  const next = nextPhaseAfter(currentPhase, config) ?? 'DONE'
   return {
     kind: 'VERDICT',
-    context: `SKRAFT G6 — ${finishedAgent} returned for ${currentPhase}. Record its review file with \`${cli} record-review-artifact --phase ${currentPhase} --path <tracking-relative path>\`, then its verdict: APPROVED → \`record-verdict --verdict APPROVED\` and \`transition --to ${next}\`${nextDispatch}; NEEDS_REWORK → \`record-verdict --verdict CHANGES_REQUESTED\`, ${exhausted ? `retry budget exhausted (${dispatchState.retries}/${dispatchState.maxRetries}): stop and escalate to the user` : `\`incr-retry\` and re-dispatch ${phaseAgents.specialist} with the findings and the rework block ${handoff(phaseAgents.specialist)} prints`}; REJECTED → \`record-verdict --verdict CHANGES_REQUESTED\` and stop.`
+    context: `SKRAFT G6 — ${finishedAgent} returned for ${currentPhase}. Record its review file with \`${cli} record-review-artifact --phase ${currentPhase} --path <tracking-relative path>\`, then its verdict: APPROVED → \`record-verdict --verdict APPROVED\`; complete the orchestrator's ratification/interlocks, then \`${cli} transition --to ${next}\` and let the orchestrator dispatch only after its pre-dispatch interlocks. NEEDS_REWORK → \`record-verdict --verdict CHANGES_REQUESTED\`, ${exhausted ? `retry budget exhausted (${dispatchState.retries}/${dispatchState.maxRetries}): stop and escalate to the user` : `\`incr-retry\` and re-dispatch ${phaseAgents.specialist} with the findings and the rework block ${handoff(phaseAgents.specialist)} prints`}; REJECTED → \`record-verdict --verdict CHANGES_REQUESTED\` and stop.`
   }
 }
 

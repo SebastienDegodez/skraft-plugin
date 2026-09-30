@@ -49,8 +49,9 @@ reports as gate evidence. StrykerJS uses native `thresholds.break`; do not trans
 .NET flags. This narrow adapter rejects source suppressions and ignored/error
 mutants; equivalent-mutant suppression below applies only when adapter supports it.
 
-`--since` selects changed files from the Git merge-base through `HEAD`; it is a
-differential result, not a full-repository score. `--overlay` is repeatable and
+`--since` selects changed files from the Git merge-base through the working tree,
+including staged, unstaged and untracked changes; it is a differential result, not a
+full-repository score. `--overlay` is repeatable and
 diagnostic-only. Overlays cannot change thresholds, source scopes, reporters, or
 report paths. CI evidence uses checked-in configuration without overlays.
 

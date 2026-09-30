@@ -130,7 +130,8 @@ test('continuationAfter: a reviewer-less specialist is told to close its phase',
   const c = continuationAfter('solution-researcher', at('RESEARCH'), CONFIG)
   assert.equal(c.kind, 'CLOSE')
   assert.match(c.context, /close-phase --phase RESEARCH --verdict APPROVED/)
-  assert.match(c.context, /\(next: DESIGN\); dispatch solution-architect with the block `[^`]*handoff --agent "solution-architect"` prints/)
+  assert.match(c.context, /follow the orchestrator's interlocks before any next-phase dispatch/i)
+  assert.doesNotMatch(c.context, /dispatch solution-architect/)
 })
 
 test('continuationAfter: a returning reviewer is told how to record each verdict', () => {
@@ -142,9 +143,11 @@ test('continuationAfter: a returning reviewer is told how to record each verdict
   assert.doesNotMatch(c.context, /transition --to DONE`; dispatch/)
 })
 
-test('continuationAfter: an approved phase names the handoff of the next specialist', () => {
-  const c = continuationAfter('acceptance-designer-reviewer', at('DISTILL'), CONFIG)
-  assert.match(c.context, /transition --to DELIVER`; dispatch software-engineer with the block `[^`]*handoff --agent "software-engineer"` prints/)
+test('continuationAfter: an approved phase leaves next-phase dispatch to orchestrator interlocks', () => {
+  const c = continuationAfter('solution-architect-reviewer', at('DESIGN'), CONFIG)
+  assert.match(c.context, /APPROVED → `record-verdict --verdict APPROVED`; complete the orchestrator's ratification\/interlocks, then `[^`]*transition --to DISTILL`/)
+  assert.match(c.context, /let the orchestrator dispatch only after its pre-dispatch interlocks/)
+  assert.doesNotMatch(c.context, /dispatch acceptance-designer/)
 })
 
 test('continuationAfter: an exhausted retry budget turns the rework path into an escalation', () => {

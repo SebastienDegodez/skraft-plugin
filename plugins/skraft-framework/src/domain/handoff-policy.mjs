@@ -114,9 +114,10 @@ export const evaluateHandoff = ({ agent, state, config, prompt }) => {
   const text = normalisePrompt(prompt)
   const names = (path) => text.includes(path)
 
-  const missing = handoff.value.required
-    .filter((input) => input.resolved && !input.paths.some(names))
-    .map((input) => ({ input: input.input, expected: input.paths }))
+  const missing = handoff.value.required.flatMap((input) =>
+    input.resolved
+      ? input.paths.filter((path) => !names(path)).map((path) => ({ input: input.input, expected: [path] }))
+      : [])
   if (handoff.value.previousReview && !names(handoff.value.previousReview)) {
     missing.push({ input: 'previous review with the findings', expected: [handoff.value.previousReview] })
   }

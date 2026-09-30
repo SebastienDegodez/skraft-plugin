@@ -134,6 +134,29 @@ test('evaluateHandoff: a prompt without the test plan is refused and names it', 
   assert.match(result.error.reason, /handoff --agent "engineer"/)
 })
 
+test('evaluateHandoff: every path resolved by a tracked pattern is required', () => {
+  const stateWithTwoPlans = state({
+    phaseArtifacts: {
+      ...state().phaseArtifacts,
+      DISTILL: [
+        ...state().phaseArtifacts.DISTILL,
+        'details/2026-09-30/test-plan-43.md',
+      ],
+    },
+  })
+  const result = evaluateHandoff({
+    agent: 'engineer',
+    state: stateWithTwoPlans,
+    config: CONFIG,
+    prompt: 'features/billing-checkout.feature details/2026-09-30/test-plan-42.md',
+  })
+  assert.equal(result.ok, false)
+  assert.deepEqual(result.error.missing, [{
+    input: `${T}details/{date}/test-plan-{story}.md`,
+    expected: ['details/2026-09-30/test-plan-43.md'],
+  }])
+})
+
 test('evaluateHandoff: a rework dispatch must also name the previous review', () => {
   const reworkState = state({
     verdicts: { DELIVER: 'CHANGES_REQUESTED' },

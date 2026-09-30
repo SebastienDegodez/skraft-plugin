@@ -38,12 +38,107 @@ export const isScannableSource = (path) => {
   return segments.at(-1).includes('.') && SOURCE_EXTENSIONS.has(extension)
 }
 
+const maskNonCode = (content, path) => {
+  const chars = content.split('')
+  const extension = typeof path === 'string' ? path.split('.').at(-1).toLowerCase() : ''
+  const hashComments = new Set(['py', 'rb', 'php'])
+  let state = 'code'
+  let quote = ''
+  let verbatim = false
+  let blockEnd = '*/'
+  for (let index = 0; index < chars.length; index++) {
+    const current = chars[index]
+    const next = chars[index + 1]
+    const preserve = current === '\n' || current === '\r'
+    if (state === 'line-comment') {
+      if (preserve) state = 'code'
+      else chars[index] = ' '
+      continue
+    }
+    if (state === 'block-comment') {
+      if (current === blockEnd[0] && next === blockEnd[1]) {
+        chars[index] = ' '
+        chars[index + 1] = ' '
+        index++
+        state = 'code'
+      } else if (!preserve) chars[index] = ' '
+      continue
+    }
+    if (state === 'string' || state === 'triple-string') {
+      const closing = state === 'triple-string'
+        ? current === quote && chars[index + 1] === quote && chars[index + 2] === quote
+        : current === quote
+      if (current === '\\' && !verbatim) {
+        chars[index] = ' '
+        if (next && next !== '\n' && next !== '\r') chars[++index] = ' '
+      } else if (verbatim && current === quote && next === quote) {
+        chars[index] = ' '
+        chars[++index] = ' '
+      } else if (closing) {
+        chars[index] = ' '
+        if (state === 'triple-string') {
+          chars[++index] = ' '
+          chars[++index] = ' '
+        }
+        state = 'code'
+        verbatim = false
+      } else if (!preserve) chars[index] = ' '
+      continue
+    }
+    if (current === '/' && next === '/') {
+      chars[index] = ' '
+      chars[++index] = ' '
+      state = 'line-comment'
+    } else if (current === '/' && next === '*') {
+      chars[index] = ' '
+      chars[++index] = ' '
+      blockEnd = '*/'
+      state = 'block-comment'
+    } else if (extension === 'fs' && current === '(' && next === '*') {
+      chars[index] = ' '
+      chars[++index] = ' '
+      blockEnd = '*)'
+      state = 'block-comment'
+    } else if (hashComments.has(extension) && current === '#') {
+      chars[index] = ' '
+      state = 'line-comment'
+    } else if (extension === 'vb' && current === "'") {
+      chars[index] = ' '
+      state = 'line-comment'
+    } else if (current === '@' && next === '"') {
+      chars[index] = ' '
+      chars[++index] = ' '
+      quote = '"'
+      verbatim = true
+      state = 'string'
+    } else if (current === '"' && next === '"' && chars[index + 2] === '"') {
+      chars[index] = ' '
+      chars[++index] = ' '
+      chars[++index] = ' '
+      quote = '"'
+      state = 'triple-string'
+    } else if (current === "'" && next === "'" && chars[index + 2] === "'") {
+      chars[index] = ' '
+      chars[++index] = ' '
+      chars[++index] = ' '
+      quote = "'"
+      state = 'triple-string'
+    } else if (current === '"' || current === "'" || current === '`') {
+      chars[index] = ' '
+      quote = current
+      state = 'string'
+    }
+  }
+  return chars.join('')
+}
+
 // Every signature hit in one file: { commitment, path, line, text }.
 export const scanSource = (path, content) => {
   if (typeof content !== 'string') return []
+  const code = maskNonCode(content, path).split(/\r?\n/)
   return content.split(/\r?\n/).flatMap((text, index) =>
     STRUCTURAL_SIGNATURES
-      .filter(({ pattern }) => pattern.test(text))
+      .filter(({ pattern }) => pattern.test(code[index]))
       .map(({ commitment }) => ({ commitment, path, line: index + 1, text: text.trim().slice(0, MAX_LINE_LENGTH) })))
 }
 

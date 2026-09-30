@@ -63,7 +63,8 @@ node "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-javascript/scripts/run-gates.mjs"
 ```
 
 For a PR differential run, add `--since <base-ref>`. The runner resolves the Git
-merge-base, records it in the manifest, and mutates changed files that belong to each
+merge-base, records it in the manifest, and mutates changed files in the working tree
+(including staged, unstaged and untracked changes) that belong to each
 durable scope. A differential score is not a full-repository score. Inside a TDD cycle,
 `<base-ref>` is the previous cycle's last commit (DELIVER `baseSha` for the first cycle),
 with `--core-only`, and the run is skipped when the cycle changed no core production

@@ -107,7 +107,7 @@ Dispatch exactly these four registered ids before synthesis: `quality-gates-lens
 |------|-----------|-------|
 | quality-gates | [quality-gates-lens](quality-gates-lens.agent.md) | The `qg-verify` result and the commit messages written above + patch and file list + journal + checklist + `test-plan-{story}.md` + raw quality-evidence, outcome, forecast, change-log and manifest refs + `qa-reporting` skill name |
 | architecture-boundaries | [architecture-boundaries-lens](architecture-boundaries-lens.agent.md) | Patch and file list + `contracts-{story}.md` + `docs/adr/decisions-index.md` |
-| test-integrity | [test-integrity-lens](test-integrity-lens.agent.md) | Patch and file list + `test-plan-{story}.md` + `.feature` file(s) |
+| test-integrity | [test-integrity-lens](test-integrity-lens.agent.md) | Patch and file list + `test-plan-{story}.md` + `.feature` file(s) + execution journal |
 | cold-reader | [cold-reader-lens](cold-reader-lens.agent.md) | Patch and file list ONLY (NO journal, NO checklist, NO plan, NO contract) |
 
 **Conditional lenses (spawn ONLY when the diff matches).** These cover the

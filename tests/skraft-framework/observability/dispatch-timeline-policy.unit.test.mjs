@@ -103,6 +103,7 @@ test('buildTimeline: splits each phase between its specialist, reviewer, sub-age
   // reviewer stop before any reviewer start is unmatched.
   assert.deepEqual(design.specialist, { dispatches: 1, ms: 10 * 60000 })
   assert.deepEqual(design.reviewer, { dispatches: 1, ms: 8 * 60000 })
+  assert.deepEqual(design.subagents.byAgent, {})
   assert.equal(design.skillBlocks, 1)
   assert.equal(design.outsideAgentsMs, 12 * 60000)
   assert.deepEqual(design.mutation, { runs: 0, ms: 0, byRef: [] })
@@ -124,4 +125,5 @@ test('buildTimeline: a phase not started yet reports no wall time', () => {
     { status: 'pending', startedAt: null }, { status: 'pending', startedAt: null },
   ])
   assert.equal(pending.totalMs, 0)
+  assert.deepEqual(pending.phases.map(({ attempts }) => attempts), [0, 0])
 })

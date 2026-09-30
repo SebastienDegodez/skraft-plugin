@@ -1,4 +1,4 @@
-import { mandatorySkillsFor, onDemandSkillsFor, isEagerSkill } from '../domain/skill-policy.mjs'
+import { mandatorySkillsFor, isEagerSkill } from '../domain/skill-policy.mjs'
 import { canonicalAgentName } from '../domain/instruction-policy.mjs'
 import { allow, additionalContext } from '../adapters/api/hooks/decision.mjs'
 
@@ -8,10 +8,6 @@ const buildDirective = (skillEntries) => {
   const names = skillEntries.map((s) => s.name).join(', ')
   return `The following skills are MANDATORY: ${names}. Load each with your skill tool, by name, before any other work; a skill you only name or read about is not loaded, and the agent cannot stop until it is.`
 }
-
-// On-demand skills are named, never required: loaded at the step that needs them.
-const buildOnDemandNote = (skillEntries) =>
-  `Load these skills only at the step that needs them, never up-front: ${skillEntries.map((s) => s.name).join(', ')}.`
 
 // SubagentStart guard (G2). Injects the mandatory-skill directive into the subagent's
 // context so skills are loaded up-front. Skills with policy 'eager' have their SKILL.md
@@ -26,13 +22,9 @@ export const createSubagentStartService = ({
   handle: async ({ agentName } = {}) => {
     const canonicalName = canonicalAgentName(agentName, config)
     const skillEntries = mandatorySkillsFor(canonicalName, config)
-    const onDemand = onDemandSkillsFor(canonicalName, config)
-    if (skillEntries.length === 0 && onDemand.length === 0) return allow()
+    if (skillEntries.length === 0) return allow()
 
-    const parts = [
-      ...(skillEntries.length > 0 ? [buildDirective(skillEntries)] : []),
-      ...(onDemand.length > 0 ? [buildOnDemandNote(onDemand)] : []),
-    ]
+    const parts = [buildDirective(skillEntries)]
 
     const eagerSkills = skillEntries.filter(isEagerSkill)
     for (const skill of eagerSkills) {

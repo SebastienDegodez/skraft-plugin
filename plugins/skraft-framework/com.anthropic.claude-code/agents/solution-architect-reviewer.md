@@ -61,7 +61,7 @@ Before reading artefacts, load each skill. Only announce missing ones: `[SKILL M
 2. **ADVERSARIAL** — assume every decision has a flaw until proven otherwise.
 3. **EVIDENCE-BASED** — every finding cites the exact artefact, section, and gate violated.
 4. **NO SILENT OVERRIDES** — if 2 lenses pass and 1 fails, the dissent is explicit in the output.
-5. **COMPLETENESS** — all 15 gates (G1–G15) must be evaluated, plus the cross-cutting escalation gate G13. Skipping a gate requires explicit justification. On a re-review, a gate carried forward under the Re-review rule counts as evaluated.
+5. **COMPLETENESS** — all 16 gates (G1–G16) must be evaluated, plus the cross-cutting escalation gate G13. Skipping a gate requires explicit justification. On a re-review, a gate carried forward under the Re-review rule counts as evaluated.
 6. **RATIFICATION TIMING** — you review before the human ratifies: an ADR this DESIGN pass wrote is `Proposed`. Wherever a gate requires an `Accepted` ADR, a `Proposed` ADR of this pass satisfies it; wherever a gate forbids an `Accepted` ADR, it forbids a `Proposed` ADR of this pass too. Never raise a finding because a current-pass ADR is still `Proposed`.
 
 ## Execution Workflow
@@ -144,6 +144,7 @@ Evaluate gates:
 | G4 | All application interfaces (repositories, gateways, publishers) are defined in Domain or Application — the layer the aggregate's ADR records — never in Infrastructure. | BLOCKER |
 | G5 | Each aggregate enforces its own invariants. No cross-aggregate invariant enforcement is visible in contracts. | HIGH |
 | G6 | Context map declares every inter-context relationship with an explicit pattern (ACL, Conformist, Shared Kernel, etc.). No undeclared dependencies. | HIGH |
+| G16 | Comparable interfaces, ports or hooks for similar responsibilities follow the same state, return and error-shape convention unless an ADR justifies the divergence. | HIGH |
 
 **How to check G3:** Review contracts — confirm no interface in Domain imports types from Infrastructure or API namespaces.
 
@@ -152,6 +153,8 @@ Evaluate gates:
 **How to check G5:** Review aggregate definitions in diagrams — confirm no aggregate holds a reference to another aggregate root (only IDs are allowed across aggregate boundaries).
 
 **How to check G6:** Review context-map.md — confirm every arrow between contexts carries a labelled relationship pattern.
+
+**How to check G16:** Compare each interface, port or hook in the contracts with existing accepted interfaces for similar responsibilities. Confirm matching state/return/error shapes and exposed field names, or a supporting `Accepted` ADR or `Proposed` ADR of this pass. Record the compared pair and evidence for any finding.
 
 ---
 

@@ -43,6 +43,23 @@ test('scanSource: direct handler injection without a bus is the CQS baseline, no
   assert.deepEqual(scanSource('src/a.cs', 'public class X(ICommandHandler<PlaceOrder> handler) {}'), [])
 })
 
+test('scanSource ignores signatures in line comments, block comments and string literals', () => {
+  const content = [
+    '// CommandBus and Saga',
+    'const message = "CommandBus";',
+    '/* IEventStore',
+    '   ShippingSaga */',
+    'var note = @"QueryBus";',
+    'public class ShippingSagaHandler(CommandBus bus) {}',
+  ].join('\n')
+  assert.deepEqual(scanSource('src/a.cs', content), [
+    { commitment: 'cqrs-bus', path: 'src/a.cs', line: 6, text: 'public class ShippingSagaHandler(CommandBus bus) {}' },
+    { commitment: 'saga', path: 'src/a.cs', line: 6, text: 'public class ShippingSagaHandler(CommandBus bus) {}' },
+  ])
+  assert.deepEqual(scanSource('src/a.py', '# CommandBus'), [])
+  assert.deepEqual(scanSource('src/a.vb', "' CommandBus"), [])
+})
+
 test('scanSource detects Apply of an event and handles CRLF and non-string content', () => {
   const hits = scanSource('src/a.ts', 'x\r\n  apply()\r\n  this.Apply(new OrderPlacedEvent())')
   assert.deepEqual(hits.map((h) => [h.commitment, h.line]), [['event-sourcing', 3]])

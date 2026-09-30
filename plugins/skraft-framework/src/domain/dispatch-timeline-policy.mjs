@@ -108,9 +108,11 @@ export const buildTimeline = ({ state, events = [], config = {}, mutations = [] 
       const bucket = buckets[start.role] ?? buckets.subagent
       bucket.dispatches += 1
       bucket.ms += ms
-      const agent = (byAgent[start.agentName] ??= emptyBucket())
-      agent.dispatches += 1
-      agent.ms += ms
+      if (bucket === buckets.subagent) {
+        const agent = (byAgent[start.agentName] ??= emptyBucket())
+        agent.dispatches += 1
+        agent.ms += ms
+      }
     }
     const skillBlocks = dispatches.filter((event) =>
       event.eventType === DISPATCH_STOPPED && event.phase === phase && event.decision === 'BLOCK').length
@@ -124,7 +126,7 @@ export const buildTimeline = ({ state, events = [], config = {}, mutations = [] 
       startedAt: history.startedAt ?? null,
       completedAt: history.completedAt ?? null,
       wallMs,
-      attempts: (state?.retryCount?.[phase] ?? 0) + 1,
+      attempts: startedMs === null ? 0 : (state?.retryCount?.[phase] ?? 0) + 1,
       reworks: state?.reworkCount?.[phase] ?? 0,
       specialist: buckets.specialist,
       reviewer: buckets.reviewer,
