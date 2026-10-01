@@ -55,10 +55,12 @@ async function smoke() {
   const workspace = mkdtempSync(join(tmpdir(), 'commit-convention-'))
   let checks = 0
   const check = (s, mode, pass = true) => {
-    const run = () => verify(mode, context, s.scenario, s.base, dirname(s.root))
-    if (pass) run()
-    else assert.throws(run, assert.AssertionError)
-    checks++
+    for (const workspace of [dirname(s.root), s.root]) {
+      const run = () => verify(mode, context, s.scenario, s.base, workspace)
+      if (pass) run()
+      else assert.throws(run, assert.AssertionError)
+      checks++
+    }
   }
   try {
     // Vally may already own a repository. Never reset or adopt its index.
@@ -81,9 +83,11 @@ async function smoke() {
       check(s, 'message', false)
       commit(s)
       for (const grader of stimulus.graders.filter(g => g.type === 'run-command')) {
-        const result = await new RunCommandGrader().grade({ trajectory: { workDir: directory }, config: grader.config })
-        assert.ok(result.passed, grader.name + ': ' + result.evidence)
-        checks++
+        for (const workDir of [directory, s.root]) {
+          const result = await new RunCommandGrader().grade({ trajectory: { workDir }, config: grader.config })
+          assert.ok(result.passed, grader.name + ': ' + result.evidence)
+          checks++
+        }
       }
       console.log(scenario + ': pinned seed ' + s.base + '; staged fixture and Vally graders passed')
     }

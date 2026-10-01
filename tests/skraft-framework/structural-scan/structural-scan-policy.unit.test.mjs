@@ -23,6 +23,18 @@ test('isScannableSource keeps source files and skips build, dependency and track
 test('isScannableSource judges the directory segments, not the file name', () => {
   assert.equal(isScannableSource('src/build.ts'), true)
   assert.equal(isScannableSource('src\\Orders\\obj\\Orders.cs'), false)
+  for (const extension of [
+    'cs', 'fs', 'vb', 'java', 'kt', 'scala', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs',
+    'py', 'go', 'rb', 'php', 'rs', 'swift',
+  ]) {
+    assert.equal(isScannableSource(`src/file.${extension}`), true)
+  }
+  for (const segment of [
+    '.git', 'node_modules', 'bin', 'obj', 'dist', 'build', 'out', 'target', 'vendor',
+    '.copilot-tracking', 'coverage', 'reports', 'StrykerOutput',
+  ]) {
+    assert.equal(isScannableSource(`src/${segment}/file.ts`), false)
+  }
 })
 
 test('scanSource reports each signature with its path, 1-based line and trimmed text', () => {
@@ -86,6 +98,17 @@ test('scanSource ignores signatures in line comments, block comments and string 
   assert.deepEqual(scanSource('src/a.cs', 'var s = """"text""""" ;\npublic class Saga {}'), [
     { commitment: 'saga', path: 'src/a.cs', line: 2, text: 'public class Saga {}' },
   ])
+})
+
+test('scanSource masks escaped, verbatim and multiline string literals', () => {
+  for (const [path, content] of [
+    ['src/a.js', String.raw`const text = "CommandBus \" Saga";`],
+    ['src/a.cs', 'var text = @"QueryBus "" Saga";'],
+    ['src/a.py', 'text = """CommandBus\nSaga\nIEventStore"""'],
+    ['src/a.py', "text = '''CommandBus\nSaga\nIEventStore'''"],
+  ]) {
+    assert.deepEqual(scanSource(path, content), [])
+  }
 })
 
 test('scanSource detects Apply of an event and handles CRLF and non-string content', () => {
