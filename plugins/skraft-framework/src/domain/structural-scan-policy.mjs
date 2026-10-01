@@ -178,7 +178,10 @@ const maskNonCode = (content, path) => {
       while (chars[quoteAt] === '#') quoteAt++
       if (chars[quoteAt] === '"') startRawString(start, quoteAt, quoteAt - rawPrefix - 1, false, 1)
     } else if (extension === 'cs' && current === '"' && next === '"') {
-      startRawString(index, index, 0, true)
+      if (!startRawString(index, index, 0, true)) {
+        chars[index] = ' '
+        chars[++index] = ' '
+      }
     } else if (current === '@' && next === '"') {
       chars[index] = ' '
       chars[++index] = ' '

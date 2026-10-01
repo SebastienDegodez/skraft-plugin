@@ -4,8 +4,6 @@ import {
   isScannableSource,
   scanSource,
   summariseScan,
-  STRUCTURAL_SIGNATURES,
-  MANUAL_REVIEW,
 } from '../../../plugins/skraft-framework/src/domain/structural-scan-policy.mjs'
 
 test('isScannableSource keeps source files and skips build, dependency and tracking directories', () => {
@@ -51,6 +49,18 @@ test('scanSource reports each signature with its path, 1-based line and trimmed 
   ])
 })
 
+test('scanSource detects each documented structural-signature family', () => {
+  const cases = [
+    ['src/a.ts', 'const bus: IQueryBus = service;', 'cqrs-bus'],
+    ['src/a.ts', 'const stream: EventStream = source;', 'event-sourcing'],
+    ['src/a.ts', 'class PaymentProcessManager {}', 'saga'],
+    ['src/a.rs', 'struct Order(ICorrelatedBy);', 'saga'],
+  ]
+  for (const [path, content, commitment] of cases) {
+    assert.equal(scanSource(path, content)[0].commitment, commitment)
+  }
+})
+
 test('scanSource: direct handler injection without a bus is the CQS baseline, not a commitment', () => {
   assert.deepEqual(scanSource('src/a.cs', 'public class X(ICommandHandler<PlaceOrder> handler) {}'), [])
 })
@@ -69,6 +79,7 @@ test('scanSource ignores signatures in line comments, block comments and string 
     { commitment: 'saga', path: 'src/a.cs', line: 6, text: 'public class ShippingSagaHandler(CommandBus bus) {}' },
   ])
   assert.deepEqual(scanSource('src/a.py', '# CommandBus'), [])
+  assert.deepEqual(scanSource('src/a.CS', '// CommandBus'), [])
   assert.deepEqual(scanSource('src/a.py', 'pages = len(items) // 2; bus = CommandBus()'), [
     { commitment: 'cqrs-bus', path: 'src/a.py', line: 1, text: 'pages = len(items) // 2; bus = CommandBus()' },
   ])
@@ -88,6 +99,7 @@ test('scanSource ignores signatures in line comments, block comments and string 
     ['src/a.swift', 'let text = ##"" Saga"##;'],
     ['src/a.swift', 'let text = ##"""a " Saga"""##;'],
     ['src/a.swift', 'let text = #"""\n Saga\n"""#;'],
+    ['src/a.swift', 'let text = #"""\r\n Saga\r\n"""#;'],
     ['src/a.cs', 'var text = """"a """ Saga"""";'],
   ]) {
     assert.deepEqual(scanSource(path, literal), [])
@@ -100,21 +112,46 @@ test('scanSource ignores signatures in line comments, block comments and string 
   ])
 })
 
+test('scanSource applies slash comment rules to each supported source extension', () => {
+  for (const extension of [
+    'cs', 'fs', 'java', 'kt', 'scala', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs',
+    'go', 'php', 'rs', 'swift',
+  ]) {
+    assert.deepEqual(scanSource(`src/a.${extension}`, '// CommandBus\n'), [])
+    assert.deepEqual(scanSource(`src/a.${extension}`, '/* QueryBus */'), [])
+  }
+  for (const extension of ['py', 'rb', 'php']) {
+    assert.deepEqual(scanSource(`src/a.${extension}`, '# CommandBus\n'), [])
+  }
+})
+
 test('scanSource masks escaped, verbatim and multiline string literals', () => {
   for (const [path, content] of [
     ['src/a.js', String.raw`const text = "CommandBus \" Saga";`],
+    ['src/a.js', 'const text = `CommandBus Saga`;'],
+    ['src/a.js', String.raw`const text = "start\
+CommandBus";`],
     ['src/a.cs', 'var text = @"QueryBus "" Saga";'],
+    ['src/a.cs', 'var empty = "";'],
     ['src/a.py', 'text = """CommandBus\nSaga\nIEventStore"""'],
+    ['src/a.py', 'text = """CommandBus "" Saga"""'],
     ['src/a.py', "text = '''CommandBus\nSaga\nIEventStore'''"],
+    ['src/a.py', "text = '''QueryBus '' Saga'''"],
+    ['src/a.swift', 'let text = #"""\n " Saga\n"""#;'],
+    ['src/a.rs', 'let bytes = br#"a " CommandBus"#;'],
   ]) {
     assert.deepEqual(scanSource(path, content), [])
   }
+  assert.deepEqual(scanSource('src/a.cs', 'var empty = ""; public class Saga {}'), [
+    { commitment: 'saga', path: 'src/a.cs', line: 1, text: 'var empty = ""; public class Saga {}' },
+  ])
 })
 
 test('scanSource detects Apply of an event and handles CRLF and non-string content', () => {
   const hits = scanSource('src/a.ts', 'x\r\n  apply()\r\n  this.Apply(new OrderPlacedEvent())')
   assert.deepEqual(hits.map((h) => [h.commitment, h.line]), [['event-sourcing', 3]])
   assert.deepEqual(scanSource('src/a.ts', undefined), [])
+  assert.deepEqual(scanSource(undefined, 'const bus: CommandBus = service;')[0].commitment, 'cqrs-bus')
 })
 
 test('scanSource truncates a long line to 160 characters', () => {
@@ -136,8 +173,16 @@ test('summariseScan lists every commitment, detected or not, with capped hits an
     { path: 'src/a.cs', line: 1, text: 'Saga' },
     { path: 'src/a.cs', line: 2, text: 'Saga' },
   ])
-  assert.deepEqual(report.manualReview, [...MANUAL_REVIEW])
-  assert.equal(report.commitments[0].label, STRUCTURAL_SIGNATURES[0].label)
+  assert.deepEqual(report.manualReview, [
+    'Anti-Corruption Layer',
+    'Bounded-context split or merge',
+    'Aggregate crossing an existing boundary',
+  ])
+  assert.deepEqual(report.commitments.map(({ commitment, label }) => [commitment, label]), [
+    ['cqrs-bus', 'CQRS + dispatch bus'],
+    ['event-sourcing', 'Event Sourcing'],
+    ['saga', 'Saga / Process Manager'],
+  ])
 })
 
 test('summariseScan defaults: no revision, zero files, 20 hits per commitment', () => {
