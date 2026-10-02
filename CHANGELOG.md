@@ -3,6 +3,19 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.8.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.7.1...v1.8.0) (2026-10-02)
+
+### ✨ Features
+
+* **eng:** add flaky state for agent conformance verdicts ([9f01d53](https://github.com/SebastienDegodez/skraft-plugin/commit/9f01d53fe544d763d560cf24130a5d1c3c5a5598))
+* **skills:** lead outside-in-tdd and quality-gates-javascript with triggers ([91db9c9](https://github.com/SebastienDegodez/skraft-plugin/commit/91db9c9fd467e70e42429e2ca566dc5b603fa894))
+
+### 🐛 Bug Fixes
+
+* **agents:** resolve review findings on SKRAFT agent chaining ([bcbc7df](https://github.com/SebastienDegodez/skraft-plugin/commit/bcbc7df6a9def1919c06899aa851884f5fc922c7))
+* **skraft-framework:** normalize review verdict spelling in artifact CLI ([2faec32](https://github.com/SebastienDegodez/skraft-plugin/commit/2faec32c60d27d2f9b46dc71e9389bef0366eb05))
+* **skraft-framework:** stop stray quotes from masking structural scan code ([258591e](https://github.com/SebastienDegodez/skraft-plugin/commit/258591e0b5ed44e67852519f10cbd99491332c06))
+
 ## [1.7.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.7.0...v1.7.1) (2026-09-29)
 
 ### 🐛 Bug Fixes
