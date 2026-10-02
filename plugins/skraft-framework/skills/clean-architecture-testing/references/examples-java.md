@@ -16,10 +16,12 @@ digraph maven_modules {
 
     api -> infra -> app -> domain;
     unit -> app;
-    it -> infra;
+    it -> api;
     third -> infra [style=dashed, color=red, label="forbidden: third test module"];
 }
 ```
+
+`orders-integration-test` depends on `orders-api` so `@SpringBootTest` finds the `@SpringBootApplication`. Set `<classifier>exec</classifier>` on the `spring-boot-maven-plugin` `repackage` goal in `orders-api`; the repackaged jar hides its classes from dependents.
 
 ## Domain — pure unit test (rare, extracted rule only)
 
@@ -85,14 +87,20 @@ class OrderRepositoryTest {
     @Container
     static final PostgreSQLContainer<?> db = new PostgreSQLContainer<>("postgres:16-alpine");
 
+    private static DataSource dataSource;
     private OrderRepository sut;
 
-    @BeforeEach
-    void migrate() {
-        var dataSource = DataSourceBuilder.create()
-                .url(db.getJdbcUrl()).username(db.getUsername()).password(db.getPassword()).build();
+    @BeforeAll
+    static void migrate() {
+        dataSource = new DriverManagerDataSource(db.getJdbcUrl(), db.getUsername(), db.getPassword());
         Flyway.configure().dataSource(dataSource).load().migrate();
-        sut = new JdbcOrderRepository(new JdbcTemplate(dataSource));
+    }
+
+    @BeforeEach
+    void emptyTables() {
+        var jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("TRUNCATE TABLE orders");
+        sut = new JdbcOrderRepository(jdbc);
     }
 
     @Test
@@ -137,7 +145,7 @@ class OrdersEndpointTest {
 }
 ```
 
-For E2E tests that hit a DB, override the `DataSource` bean with a Testcontainers-backed one via `@DynamicPropertySource`. Downstream HTTP calls to external APIs → route them to a contract mock server (Microcks).
+For E2E tests that hit a DB, point `spring.datasource.*` at a Testcontainers database via `@DynamicPropertySource` (or `@ServiceConnection`). Downstream HTTP calls to external APIs → route them to a contract mock server (Microcks).
 
 ## Architecture guard
 
@@ -163,8 +171,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 class LayerDependencyTest {
 
     private static final String ROOT = "com.example.orders";
-    private static final Pattern INTERNAL_DEPENDENCY =
-            Pattern.compile("<dependency>\\s*<groupId>" + Pattern.quote(ROOT) + "</groupId>\\s*<artifactId>([^<]+)</artifactId>");
+    private static final Pattern INTERNAL_DEPENDENCY = Pattern.compile(
+            "<dependency>(?:(?!</dependency>).)*?<artifactId>(orders-[a-z-]+)</artifactId>", Pattern.DOTALL);
     private static final JavaClasses PRODUCTION = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackages(ROOT);
