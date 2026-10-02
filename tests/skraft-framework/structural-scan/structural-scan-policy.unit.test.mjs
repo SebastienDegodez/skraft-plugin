@@ -129,8 +129,7 @@ test('scanSource masks escaped, verbatim and multiline string literals', () => {
   for (const [path, content] of [
     ['src/a.js', String.raw`const text = "CommandBus \" Saga";`],
     ['src/a.js', 'const text = `CommandBus Saga`;'],
-    ['src/a.js', String.raw`const text = "start\
-CommandBus";`],
+    ['src/a.js', 'const text = `start\nCommandBus`;'],
     ['src/a.cs', 'var text = @"QueryBus "" Saga";'],
     ['src/a.cs', 'var empty = "";'],
     ['src/a.py', 'text = """CommandBus\nSaga\nIEventStore"""'],
@@ -144,6 +143,64 @@ CommandBus";`],
   }
   assert.deepEqual(scanSource('src/a.cs', 'var empty = ""; public class Saga {}'), [
     { commitment: 'saga', path: 'src/a.cs', line: 1, text: 'var empty = ""; public class Saga {}' },
+  ])
+})
+
+test('scanSource keeps Rust lifetimes and detects code after ordinary strings', () => {
+  const content = [
+    'const NAME: &\'static str = "orders";',
+    "fn borrow<'a>(x: &'a str) -> &'a str { x }",
+    'pub struct OrderSaga;',
+    'let bus = CommandBus::new();',
+  ].join('\n')
+  assert.deepEqual(scanSource('src/a.rs', content), [
+    { commitment: 'saga', path: 'src/a.rs', line: 3, text: 'pub struct OrderSaga;' },
+    { commitment: 'cqrs-bus', path: 'src/a.rs', line: 4, text: 'let bus = CommandBus::new();' },
+  ])
+})
+
+test('scanSource keeps F# generic apostrophes and detects following types', () => {
+  const content = [
+    "let id (x: 'T) = x",
+    'type OrderSaga()',
+  ].join('\n')
+  assert.deepEqual(scanSource('src/A.fs', content), [
+    { commitment: 'saga', path: 'src/A.fs', line: 2, text: 'type OrderSaga()' },
+  ])
+})
+
+test('scanSource ends TSX apostrophe masking at the JSX text line', () => {
+  const content = [
+    "<p>Don't retry</p>",
+    'const bus = new CommandBus()',
+    'class CheckoutSaga {}',
+  ].join('\n')
+  assert.deepEqual(scanSource('src/Help.tsx', content), [
+    { commitment: 'cqrs-bus', path: 'src/Help.tsx', line: 2, text: 'const bus = new CommandBus()' },
+    { commitment: 'saga', path: 'src/Help.tsx', line: 3, text: 'class CheckoutSaga {}' },
+  ])
+})
+
+test('scanSource treats C# at-dollar strings as verbatim interpolated strings', () => {
+  const content = [
+    String.raw`var dir = @$"C:\temp\{name}\";`,
+    'services.AddSingleton<ICommandBus, CommandBus>();',
+  ].join('\n')
+  assert.deepEqual(scanSource('src/Program.cs', content), [
+    { commitment: 'cqrs-bus', path: 'src/Program.cs', line: 2, text: 'services.AddSingleton<ICommandBus, CommandBus>();' },
+  ])
+})
+
+test('scanSource ends ordinary quote masking at newlines', () => {
+  const content = [
+    'const text = "CommandBus',
+    'class CheckoutSaga {}',
+    "const other = 'QueryBus",
+    'const bus = CommandBus.create()',
+  ].join('\n')
+  assert.deepEqual(scanSource('src/a.ts', content), [
+    { commitment: 'saga', path: 'src/a.ts', line: 2, text: 'class CheckoutSaga {}' },
+    { commitment: 'cqrs-bus', path: 'src/a.ts', line: 4, text: 'const bus = CommandBus.create()' },
   ])
 })
 

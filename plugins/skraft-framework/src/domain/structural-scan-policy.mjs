@@ -37,6 +37,7 @@ const SLASH_BLOCK_COMMENT_EXTENSIONS = new Set([
 ])
 const HASH_COMMENT_EXTENSIONS = new Set(['py', 'rb', 'php'])
 const NESTED_BLOCK_COMMENT_EXTENSIONS = new Set(['fs', 'scala', 'rs', 'swift'])
+const SINGLE_QUOTE_CHAR_LITERAL_EXTENSIONS = new Set(['fs', 'rs'])
 
 // True when the path is source code worth scanning: a known source extension, outside
 // dependency, build and tracking directories.
@@ -60,7 +61,20 @@ const maskNonCode = (content, path) => {
   let nestedBlock = false
   let rawQuoteCount = 0
   let rawHashCount = 0
+  let stringMultiline = false
   let index = 0
+  const maskSingleQuoteCharLiteral = (start) => {
+    const literal = chars[start + 1]
+    const closing = literal === '\\' ? start + 3 : start + 2
+    if (!literal || literal === '\n' || literal === '\r' || chars[closing] !== "'") return false
+    if (literal === '\\') {
+      const escaped = chars[start + 2]
+      if (!escaped || escaped === '\n' || escaped === '\r') return false
+    } else if (literal === "'") return false
+    for (let cursor = start; cursor <= closing; cursor++) chars[cursor] = ' '
+    index = closing
+    return true
+  }
   const startRawString = (start, quoteAt, hashes, allowTriple = false, fixedQuoteCount = null) => {
     let quoteCount = fixedQuoteCount ?? 0
     if (fixedQuoteCount === null) {
@@ -116,6 +130,11 @@ const maskNonCode = (content, path) => {
       continue
     }
     if (state === 'string' || state === 'triple-string') {
+      if (state === 'string' && !stringMultiline && preserve) {
+        state = 'code'
+        quote = ''
+        continue
+      }
       const closing = state === 'triple-string'
         ? current === quote && chars[index + 1] === quote && chars[index + 2] === quote
         : current === quote
@@ -133,6 +152,7 @@ const maskNonCode = (content, path) => {
         }
         state = 'code'
         verbatim = false
+        stringMultiline = false
       } else if (!preserve) chars[index] = ' '
       continue
     }
@@ -182,11 +202,20 @@ const maskNonCode = (content, path) => {
         chars[index] = ' '
         chars[++index] = ' '
       }
+    } else if (extension === 'cs' && current === '@' && next === '$' && chars[index + 2] === '"') {
+      chars[index] = ' '
+      chars[++index] = ' '
+      chars[++index] = ' '
+      quote = '"'
+      verbatim = true
+      stringMultiline = true
+      state = 'string'
     } else if (current === '@' && next === '"') {
       chars[index] = ' '
       chars[++index] = ' '
       quote = '"'
       verbatim = true
+      stringMultiline = true
       state = 'string'
     } else if (current === '"' && next === '"' && chars[index + 2] === '"') {
       chars[index] = ' '
@@ -200,9 +229,12 @@ const maskNonCode = (content, path) => {
       chars[++index] = ' '
       quote = "'"
       state = 'triple-string'
+    } else if (current === "'" && SINGLE_QUOTE_CHAR_LITERAL_EXTENSIONS.has(extension)) {
+      maskSingleQuoteCharLiteral(index)
     } else if (current === '"' || current === "'" || current === '`') {
       chars[index] = ' '
       quote = current
+      stringMultiline = current === '`'
       state = 'string'
     }
   }
