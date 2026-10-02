@@ -66,7 +66,9 @@ On rework, the engineer changes only what the previous review's findings name. O
 re-review, the reviewer re-runs the lenses or gates that failed, were inconclusive or had
 changed inputs, and carries forward the other passing results in the verdict YAML. If the
 only issue is an environment-caused inconclusive gate, the orchestrator escalates the cause
-and command to the user instead of re-dispatching the engineer.
+and command to the user instead of sending the engineer into rework. Once the user reports
+the environment fixed, the engineer re-runs only those inconclusive gates, changes no code
+and consumes no retry, then the reviewer re-reviews.
 
 ## From evidence to outcome
 

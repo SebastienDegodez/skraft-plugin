@@ -9,6 +9,8 @@ tools:
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer
+  on_demand_skills:
+    - clean-architecture-testing
 ---
 
 # Architecture Boundaries Lens

@@ -143,6 +143,12 @@ test('continuationAfter: a returning reviewer is told how to record each verdict
   assert.doesNotMatch(c.context, /transition --to DONE`; dispatch/)
 })
 
+test('continuationAfter: an environment escalation keeps the retry budget and routes to the re-gate', () => {
+  const c = continuationAfter('software-engineer-reviewer', at('DELIVER', { retries: 1 }), CONFIG)
+  assert.match(c.context, /NEEDS_REWORK with `escalation: environment` → `record-verdict --verdict CHANGES_REQUESTED` and leave the retry count unchanged/)
+  assert.match(c.context, /environment re-gate\. Other NEEDS_REWORK → `record-verdict --verdict CHANGES_REQUESTED`, `incr-retry`/)
+})
+
 test('continuationAfter: an approved phase leaves next-phase dispatch to orchestrator interlocks', () => {
   const c = continuationAfter('solution-architect-reviewer', at('DESIGN'), CONFIG)
   assert.match(c.context, /APPROVED → `record-verdict --verdict APPROVED`; complete the orchestrator's ratification\/interlocks, then `[^`]*transition --to DISTILL`/)

@@ -149,8 +149,10 @@ Populate two G6 entries, one per scope:
 - At the start of each TDD cycle, record `PREV=$(git rev-parse HEAD)` — the previous
   cycle's last commit (for the first cycle it equals `phaseHistory.DELIVER.baseSha` from
   `state.mjs get --field phaseHistory`).
-- In the cycle's COMMIT & VERIFY, skip mutation when `git diff --name-only "$PREV" HEAD`
-  lists no core production file. Otherwise run the core wrapper with `--since "$PREV"`:
+- In the cycle's COMMIT & VERIFY, before the cycle's commit, skip mutation when neither
+  `git diff --name-only "$PREV"` (staged and unstaged changes) nor
+  `git ls-files --others --exclude-standard` (new files) lists a core production file.
+  Otherwise run the core wrapper with `--since "$PREV"`:
   it mutates only what this cycle changed, and passes when no core mutant changed. Its
   evidence is a checkpoint, never the G6 entry — write it to a scratch directory, not
   `$EV`.

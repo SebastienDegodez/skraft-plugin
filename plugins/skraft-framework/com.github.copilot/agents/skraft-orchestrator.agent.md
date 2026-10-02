@@ -153,7 +153,7 @@ For DESIGN and DISTILL:
 **Step 1 — Dispatch specialist agent**
 Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slug} --phase {P}`: it records `startedAt` and the `baseSha` that bounds the phase's commits (retries keep the first). Take the current phase from your last `state.mjs` output (no whole-file re-read). Dispatch the appropriate agent with the Dispatch context header above and its handoff block. When you need one field, fetch just that field: `state.mjs get --slug {slug} --field {name}`.
 
-**DESIGN only — structural scan, once per phase.** Before the architect's first DESIGN dispatch, run `node "$SKRAFT_PLUGIN_ROOT/src/cli/structural-scan.mjs" --out .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json`, then `state.mjs record-artifact --phase DESIGN --path details/{date}/structural-scan.json`. The handoff blocks then hand it to the architect and the DESIGN reviewer. Never re-run it on a DESIGN retry. It is the only tool you run yourself besides `state.mjs`, `report.mjs` and `git`; never run a build, a test or a quality gate.
+**DESIGN only — structural scan, once per phase.** Before the architect's first DESIGN dispatch, run `node "$SKRAFT_PLUGIN_ROOT/src/cli/structural-scan.mjs" --out .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json`, then `state.mjs record-artifact --phase RESEARCH --path details/{date}/structural-scan.json` — never `--phase DESIGN`, where a recorded artefact counts as the architect's output. The handoff blocks then hand it to the architect and the DESIGN reviewer. Never re-run it on a DESIGN retry. Never run a build, a test or a quality gate yourself.
 
 **Step 2 — Collect output**
 Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
@@ -166,7 +166,7 @@ Dispatch the reviewer with the Dispatch context header and its handoff block: th
 | Verdict | Action |
 |---|---|
 | `APPROVED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict APPROVED`, route any report due under Report feedback, then `state.mjs transition --to {NEXT}` (refused with `PHASE_GATE` while a required artefact is unrecorded or the review does not record APPROVED; for DELIVER, while no commit exists since the phase started). **DESIGN only:** before `transition`, run the ADR ratification checkpoint below — DESIGN does not advance to DISTILL on `APPROVED` alone. |
-| `NEEDS_REWORK` with `escalation: environment` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Do NOT `incr-retry` and do NOT re-dispatch the specialist. Stop and show the user the environment cause and the command the review names. When the user reports the environment fixed, re-dispatch the reviewer only, with its handoff block. |
+| `NEEDS_REWORK` with `escalation: environment` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Do NOT `incr-retry` and do NOT re-dispatch the specialist. Stop and show the user the environment cause and the command the review names. When the user reports the environment fixed: in DESIGN or DISTILL, re-dispatch the reviewer only, with its handoff block; in DELIVER, re-dispatch the engineer with its handoff block and the addendum `Environment re-gate: re-run only the gates the previous review names inconclusive; change no code.`, then the reviewer with its handoff block. |
 | `NEEDS_REWORK` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`, then `state.mjs incr-retry --phase {P}`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch the specialist with the Retry prompt template below. Else: stop, surface to user. |
 | `REJECTED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Stop pipeline immediately. Surface blockage to user; no unsolicited remote phase comment. |
 
@@ -277,7 +277,7 @@ DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from 
 
    Require engineer-owned quality evidence, change log, actual-impact outcome data and frontend manifest on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
 3. Record the engineer's change log and quality-evidence log with `state.mjs record-artifact --phase DELIVER`, then dispatch `Skraft - Software Engineer Reviewer` with the Dispatch context header, its handoff block (it carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, contracts and decisions index), and the raw outcome, forecast, quality-evidence, change-log and manifest refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
-4. Handle verdict using `userPreferences.maxRetriesPerPhase + 1` total attempts.
+4. Handle the verdict with the Step 4 verdict table, using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED` or blocked DELIVER, record the persisted review and route the outcome below. Engineer owns capture and change-log production, never you. Mark pipeline complete only on engineering approval; publication failure does not change that verdict.
 
 ## Report feedback
@@ -294,7 +294,7 @@ At report boundaries, load `qa-reporting` before handling producer data or rende
 
 ## Retry prompt template
 
-When the reviewer returns `NEEDS_REWORK`, run `incr-retry`, then `state.mjs handoff --agent "{specialist}"`, and re-dispatch the specialist with the Dispatch context header, the complete handoff block (its mode line reads `rework`) and this addendum. Never replace the block with the findings alone: the specialist needs every original input — in DELIVER, `test-plan-{story}.md` and `impl-plan-{story}.md` included.
+When the reviewer returns `NEEDS_REWORK`, after the verdict table's single `incr-retry`, run `state.mjs handoff --agent "{specialist}"`, and re-dispatch the specialist with the Dispatch context header, the complete handoff block (its mode line reads `rework`) and this addendum. Never replace the block with the findings alone: the specialist needs every original input — in DELIVER, `test-plan-{story}.md` and `impl-plan-{story}.md` included.
 
 ```
 ## Reviewer findings (attempt {N} of {maxAttempts})

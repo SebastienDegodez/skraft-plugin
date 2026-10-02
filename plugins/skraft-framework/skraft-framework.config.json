@@ -143,7 +143,12 @@
         "policy": "on-demand"
       }
     ],
-    "architecture-boundaries-lens": [],
+    "architecture-boundaries-lens": [
+      {
+        "name": "clean-architecture-testing",
+        "policy": "on-demand"
+      }
+    ],
     "Skraft - Backlog Discoverer Reviewer": [
       {
         "name": "discovery-review-criteria",
@@ -246,8 +251,16 @@
     "planning-invest-lens": [],
     "quality-gates-lens": [
       {
-        "name": "qa-reporting",
+        "name": "quality-gates-evidence-contract",
         "policy": "verify"
+      },
+      {
+        "name": "skraft-quality-bar",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
+        "policy": "on-demand"
       }
     ],
     "refactoring-worker": [],
@@ -330,6 +343,10 @@
       },
       {
         "name": "qa-reporting",
+        "policy": "on-demand"
+      },
+      {
+        "name": "playwright-evidence",
         "policy": "on-demand"
       }
     ],

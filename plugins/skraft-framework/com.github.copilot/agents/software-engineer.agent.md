@@ -1,7 +1,7 @@
 ---
 name: Skraft - Software Engineer
 description: "[Internal subagent — dispatched by Skraft - Orchestrator only] Delivers code via Outside-In TDD and Clean Architecture. Full PREPARE → RED → SYNTHESIZE-GREEN → COMMIT cycle with Object Calisthenics, mutation testing gates, and strict test integrity."
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 user-invocable: false
 tools:
   - execute/getTerminalOutput
@@ -36,6 +36,7 @@ metadata:
     - quality-gates-javascript
     - resolving-stack-commands
     - qa-reporting
+    - playwright-evidence
   inputs:
     required:
       - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
@@ -117,7 +118,7 @@ These are owned by the skills — load them, do not inline rules here.
 
 ### Prepared documentation-only handoff
 
-Use this path only when the handoff explicitly says the change is documentation-only, already prepared and staged, has no applicable executable tests/build/mutation targets, and requests no other deliverable. When the checkout is nested, enter the repository named by the handoff; run every repository command there, never in its parent workspace.
+Use this path only when the dispatch carries no `state.mjs handoff` block and the request or the handoff it names explicitly says the change is documentation-only, already prepared and staged, has no applicable executable tests/build/mutation targets, and requests no other deliverable. A SKRAFT DELIVER dispatch always takes the full workflow below. When the checkout is nested, enter the repository named by the handoff; run every repository command there, never in its parent workspace.
 
 1. Read the handoff, run `git status --short` and `git diff --cached --name-only`, and inspect the patch. Confirm only the approved document is staged or changed, no untracked files exist, and its wording matches the approved text; stop if any check fails.
 2. Run `git diff --cached --check` and `git diff --check`. If both pass, commit only the prepared change with `git commit -s` and `docs({feature-scope}): {concise subject}`. For a known issue, use final body line `Refs: #N` for intermediate work or `Closes #N` only when the handoff confirms the entire issue is complete; omit issue references when unknown.
@@ -180,7 +181,8 @@ When the handoff block's mode line reads `rework`, the previous review's finding
 2. Fix each finding with the smallest change. A production change still goes RED → SYNTHESIZE-GREEN → COMMIT through a test.
 3. Re-run only the gates your change invalidates:
    - production or test code changed → the affected tests, then the full core and boundary mutation runs and a new evidence log — no differential run first;
-   - only commit messages, the change log or evidence metadata changed → regenerate the evidence log from the existing captures, commit it, and re-run `qg-verify`; never re-run tests or mutation.
+   - only commit messages, the change log or evidence metadata changed → regenerate the evidence log from the existing captures, commit it, and re-run `qg-verify`; never re-run tests or mutation;
+   - the dispatch carries `Environment re-gate` → change no code; re-run only the gate captures the previous review names inconclusive, regenerate the evidence log, commit it, and re-run `qg-verify`.
 4. Keep every captured output your change does not invalidate.
 
 ## Test-wiring workers (fan-out, B1)

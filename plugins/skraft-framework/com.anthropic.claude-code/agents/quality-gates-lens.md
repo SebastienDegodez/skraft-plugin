@@ -11,6 +11,9 @@ metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer
   skills:
+    - quality-gates-evidence-contract
+    - skraft-quality-bar
+  on_demand_skills:
     - qa-reporting
 ---
 

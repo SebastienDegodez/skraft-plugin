@@ -67,7 +67,9 @@ re-review, le reviewer relance les lentilles ou gates qui ont échoué, étaient
 `inconclusive` ou dont les entrées ont changé, et reporte les autres résultats passants
 dans le YAML de verdict. Si le seul problème est une gate `inconclusive` causée par
 l'environnement, l'orchestrateur escalade la cause et la commande à l'utilisateur au lieu
-de re-dispatcher l'engineer.
+d'envoyer l'engineer en rework. Une fois l'environnement réparé par l'utilisateur,
+l'engineer relance uniquement ces gates `inconclusive`, sans modifier le code ni consommer
+de retry, puis le reviewer refait sa revue.
 
 ## Des preuves au rapport de résultat
 
