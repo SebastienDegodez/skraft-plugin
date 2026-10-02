@@ -55,7 +55,7 @@ test('tierForClass rejects an unknown class', () => {
 
 test('modelForTier returns the preferred model of each tier', () => {
   assert.equal(modelForTier(ModelTier('economy')), 'GPT-5.6 Luna')
-  assert.equal(modelForTier(ModelTier('standard')), 'Claude Sonnet 5')
+  assert.equal(modelForTier(ModelTier('standard')), 'Claude Sonnet 5.5')
   assert.equal(modelForTier(ModelTier('frontier')), 'Claude Opus 5')
 })
 
@@ -131,13 +131,13 @@ test('resolveModel maps a plain reviewer to economy', () => {
 test('resolveModel maps an implementer to standard', () => {
   const resolved = resolveModel({ costRoleClass: 'implementer' })
   assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'Claude Sonnet 5')
+  assert.equal(resolved.model, 'Claude Sonnet 5.5')
 })
 
 test('resolveModel maps a researcher to standard', () => {
   const resolved = resolveModel({ costRoleClass: 'researcher' })
   assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'Claude Sonnet 5')
+  assert.equal(resolved.model, 'Claude Sonnet 5.5')
 })
 
 test('resolveModel maps a planner to frontier', () => {
@@ -149,14 +149,14 @@ test('resolveModel maps a planner to frontier', () => {
 test('resolveModel raises a reviewer to standard when a Sonnet floor applies (override branch)', () => {
   const resolved = resolveModel({ costRoleClass: 'reviewer', modelRequirement: 'Sonnet-class or above.' })
   assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'Claude Sonnet 5')
+  assert.equal(resolved.model, 'Claude Sonnet 5.5')
   assert.ok(!resolved.accepted.includes('GPT-5.6 Luna'), 'the floor must exclude the economy models')
 })
 
 test('resolveModel keeps an implementer at standard when a Sonnet floor applies (no downgrade)', () => {
   const resolved = resolveModel({ costRoleClass: 'implementer', modelRequirement: 'Sonnet-class or above.' })
   assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'Claude Sonnet 5')
+  assert.equal(resolved.model, 'Claude Sonnet 5.5')
 })
 
 test('resolveModel does not lower a planner below frontier despite a Sonnet floor', () => {

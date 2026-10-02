@@ -17,7 +17,7 @@ type: capability
 defaults:
   executor: skraft-agent-runner
   timeout: 10m
-  model: claude-sonnet-5
+  model: claude-sonnet-5.5
   runs: 3
 scoring:
   # 0.9, not 1.0. A trial that misses one grader and a trial that misses six

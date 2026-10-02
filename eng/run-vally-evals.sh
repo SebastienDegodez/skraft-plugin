@@ -118,7 +118,7 @@ fi
 # The repository default, used by any eval whose spec does not pin its own
 # `defaults.model`. Sonnet 5 is what the shipped `software-engineer` descriptor
 # declares, so this is the model the framework is actually evaluated on.
-DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-5}"
+DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-5.5}"
 # Empty unless the caller forced one: resolution happens per eval, below.
 MODEL="${MODEL:-}"
 JUDGE_MODEL="${JUDGE_MODEL:-gpt-5.6-luna}"
