@@ -135,6 +135,22 @@ test('renderArtifact: renders the semantic review-verdict payload as YAML', () =
   assert.doesNotMatch(output, /lensCount|lensScore|score:|index:/)
 })
 
+test('review-verdict: a re-review keeps its reviewed commit, carried-forward lenses and escalation', () => {
+  const reReview = {
+    status: 'NEEDS_REWORK',
+    lens_results: [{ lens: 'quality-gates', verdict: 'fail', defects: [] }],
+    summary: 'qg-verify inconclusive: the test host is unreachable.',
+    reviewed_sha: '0a1b2c3',
+    carried_forward: ['test-integrity', 'cold-reader'],
+    escalation: 'environment',
+  }
+  assert.deepEqual(validate('review-verdict', reReview).missing, [])
+  const output = renderArtifact('review-verdict', reReview)
+  assert.match(output, /reviewed_sha: "0a1b2c3"/)
+  assert.match(output, /carried_forward:/)
+  assert.match(output, /escalation: "environment"/)
+})
+
 const fullComment = () => ({
   phase: 'DISCUSS',
   icon: '✅',

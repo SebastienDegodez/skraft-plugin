@@ -5,6 +5,7 @@ const [, , , configPath, mode = 'pass'] = process.argv
 const options = JSON.parse(await readFile(configPath, 'utf8'))
 const destination = options.jsonReporter.fileName
 const value = report(options, process.cwd())
+for (const file of options.mutate) value.files[file].source = await readFile(file, 'utf8')
 process.stdout.write('fixture runner stdout\n')
 process.stderr.write('fixture runner stderr\n')
 if (mode === 'missing') process.exit(0)

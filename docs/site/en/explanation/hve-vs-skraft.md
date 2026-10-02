@@ -50,7 +50,7 @@ graph LR
 | Orchestrated engineering | DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` |
 | Orchestrated engineering | DELIVER | `software-engineer` | `software-engineer-reviewer` |
 
-> **Jargon**: a *gate* is a quality checkpoint that blocks progression when quality is not met. A *reviewer* is a read-only agent that emits a verdict without modifying artifacts. The [active grid of 48 gates]({{ "/en/reference/gates" | relative_url }}) details current contracts.
+> **Jargon**: a *gate* is a quality checkpoint that blocks progression when quality is not met. A *reviewer* is a read-only agent that emits a verdict without modifying artifacts. The [active grid of 49 gates]({{ "/en/reference/gates" | relative_url }}) details current contracts.
 
 ## HVE vs SKRAFT: comparison table
 
@@ -60,7 +60,7 @@ graph LR
 | Review | Human and manual | Adversarial assisted before human review |
 | Traceability | Limited | `state.json`, artifacts, timestamped verdicts |
 | Lenses | None | 4 adversarial lenses (architecture, cold-reader, quality-gates, test-integrity) |
-| Gates | None | 48 explicit, non-negotiable gates |
+| Gates | None | 49 explicit, non-negotiable gates |
 | Scalability | Solo / pair | Team, full backlog |
 
 ## What stays the same

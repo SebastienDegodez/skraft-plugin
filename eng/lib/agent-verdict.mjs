@@ -153,8 +153,8 @@ export function agentByStimulus(specContent) {
  * A verdict is only credible when every trial actually ran: an errored trial
  * proves nothing about the agent, so the suite is reported as inconclusive
  * rather than counted as a pass. A trial that ran and scored below the spec's
- * threshold is a conformance break — the agent no longer does what its suite
- * says it does — and is published as a regression.
+ * threshold is a conformance break. Breaks spread thinly across scenarios are
+ * published as flaky; a scenario below the two-thirds floor is a regression.
  *
  * @param {object[]} records Vally JSONL records from one agent eval run
  * @param {{ agents: Map<string, string>, threshold?: number, sourcePath?: (id: string) => string }} options
@@ -188,10 +188,6 @@ function verdictFor(id, trials, threshold, sourcePath) {
   const conforming = ran.filter(conforms).length
   const breaking = ran.length - conforming
 
-  const conclusive = trialCount > 0 && erroredCount === 0
-  const passed = conclusive && breaking === 0
-  const regressed = conclusive && breaking > 0
-
   const scenarios = [...new Set(trials.map((trial) => trial.stimulus))].map((stimulus) => {
     const scenarioTrials = trials.filter((trial) => trial.stimulus === stimulus)
     const scenarioRan = scenarioTrials.filter((trial) => trial.status === 'success')
@@ -212,6 +208,12 @@ function verdictFor(id, trials, threshold, sourcePath) {
     }
   })
 
+  const everyScenarioMeetsFloor = scenarios.every((scenario) => scenario.conforming * 3 >= scenario.trialCount * 2)
+  const conclusive = trialCount > 0 && erroredCount === 0
+  const passed = conclusive && breaking === 0
+  const flaky = conclusive && breaking > 0 && everyScenarioMeetsFloor
+  const regressed = conclusive && breaking > 0 && !everyScenarioMeetsFloor
+
   return {
     subject: { kind: 'agent', name: id, path: sourcePath(id) },
     descriptorSha: descriptorShaOf(trials),
@@ -220,6 +222,7 @@ function verdictFor(id, trials, threshold, sourcePath) {
     // graders on a single trial already say whether the agent conformed.
     underpowered: false,
     passed,
+    flaky,
     regressed,
     conformance: { threshold, conforming, breaking, trialCount },
     graders: graderTally(trials),
@@ -229,15 +232,16 @@ function verdictFor(id, trials, threshold, sourcePath) {
     trialCount,
     erroredCount,
     scenarios,
-    reason: reasonFor({ conclusive, passed, trialCount, erroredCount, conforming, breaking, threshold }),
+    reason: reasonFor({ conclusive, passed, flaky, trialCount, erroredCount, conforming, breaking, threshold }),
   }
 }
 
 const average = (values) => (values.length ? values.reduce((total, value) => total + value, 0) / values.length : null)
 
-function reasonFor({ conclusive, passed, trialCount, erroredCount, conforming, breaking, threshold }) {
+function reasonFor({ conclusive, passed, flaky, trialCount, erroredCount, conforming, breaking, threshold }) {
   if (!trialCount) return 'no trial was recorded'
   if (!conclusive) return `incomplete run (${erroredCount} of ${trialCount} trial(s) errored)`
   if (passed) return `conforms on every trial (${conforming}/${trialCount} at or above ${threshold})`
+  if (flaky) return `conforms on ${conforming} of ${trialCount} trial(s); every scenario at or above 2/3 (threshold ${threshold})`
   return `broke conformance on ${breaking} of ${trialCount} trial(s) (threshold ${threshold})`
 }

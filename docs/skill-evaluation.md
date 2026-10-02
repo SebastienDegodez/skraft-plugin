@@ -108,7 +108,7 @@ waiting for the next scheduled dashboard run:
    PR** — always a fresh comment, not an edited one, so the comment history
    doubles as a run history.
 4. `eng/check-pr-regressions.mjs` fails the job only when a **skill** verdict is a
-   credible `regression`. `inconclusive`, `no-improvement`, and `pass` never
+   credible `regression`. `inconclusive`, `no-improvement`, `flaky`, and `pass` never
    block merge — the gate exists to catch a proven regression, not to demand
    proof of improvement on every single PR. Agent verdicts are advisory: a suite
    runs a single real agent session, so one flaky run must not block an
@@ -134,7 +134,8 @@ the run as a conformance tally instead.
 | State | Meaning |
 | --- | --- |
 | `pass` | every trial ran and scored at or above the suite's `scoring.threshold` |
-| `regression` | every trial ran, and at least one scored below the threshold |
+| `flaky` | every trial ran, at least one scored below the threshold, and every scenario kept at least two thirds conforming trials |
+| `regression` | every trial ran, and at least one scenario fell below two thirds conforming trials |
 | `inconclusive` | a trial errored, so it proves nothing about the agent |
 
 `eng/vally-adapter/adapt-agent.mjs` writes those verdicts to the same
@@ -547,6 +548,8 @@ test, because a suite has no baseline:
 - **🔴 regression** on an agent: the agent stopped doing what its suite asserts.
   Advisory — it does not block the merge, but it is the one row worth opening the
   recorded session for.
+- **⚠️ flaky** on an agent: some trials broke, but every scenario stayed at or
+  above two thirds. Advisory — open the checks that gave way before deciding.
 - **✅ pass**: Merge confidently; the skill helps.
 - **➖ no-improvement, ⚪ inconclusive**: Safe to merge; just don't claim success yet.
 

@@ -67,6 +67,6 @@ mkdirSync(directory, { recursive: true })
 writeFileSync(join(directory, 'results.json'), `${JSON.stringify(result, null, 2)}\n`)
 
 for (const verdict of verdicts) {
-  const icon = verdict.passed ? '✅' : verdict.conclusive ? '❌' : '⚠️'
+  const icon = verdict.passed ? '✅' : verdict.flaky || !verdict.conclusive ? '⚠️' : '❌'
   console.log(`${icon} ${verdict.subject.name}: ${verdict.reason}`)
 }

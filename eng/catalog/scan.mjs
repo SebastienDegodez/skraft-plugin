@@ -123,7 +123,7 @@ const agents = walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((pat
     costRoleClass: metadata.cost_role_class ? String(metadata.cost_role_class) : null,
     phase: metadata.phase ? String(metadata.phase) : null,
     phases: asArray(metadata.phases).map(String),
-    skills: asArray(metadata.skills).map(String),
+    skills: [...asArray(metadata.skills), ...asArray(metadata.on_demand_skills)].map(String),
     inputs: asArray(metadata.inputs?.required).map(String),
     outputs: asArray(metadata.outputs).map(String),
     childRefs: asArray(structured.agents).map(String),

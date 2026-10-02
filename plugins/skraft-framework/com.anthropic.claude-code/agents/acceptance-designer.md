@@ -20,8 +20,9 @@ metadata:
     - bdd-methodology
     - test-design-mandates
     - outside-in-tdd
-    - skraft-quality-bar
     - craft-discipline
+  on_demand_skills:
+    - skraft-quality-bar
     - resolving-stack-commands
     - qa-reporting
   inputs:
@@ -33,11 +34,14 @@ metadata:
       - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md
       - docs/adr/decisions-index.md
       - docs/adr/adr-{NNN}-{slug}.md
+      - .copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md
   outputs:
     - .copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md
     - tests/**/{Feature}AcceptanceTests.cs
+    - .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md (optional, build/test commands resolved once for later agents)
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.* (optional, RED proof of the acceptance tests)
 ---
 
 # Acceptance-Designer Agent
@@ -63,10 +67,15 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
-- [bdd-methodology](../../skills/bdd-methodology/SKILL.md)
-- [test-design-mandates](../../skills/test-design-mandates/SKILL.md)
-- [outside-in-tdd](../../skills/outside-in-tdd/SKILL.md) — **scoped: PREPARE and RED only.** That skill describes the whole cycle, including SYNTHESIZE-GREEN and the mutation gate. Those phases belong to the software-engineer in DELIVER. You read it for the boundary rules, Step 2 (let the domain emerge), Concentric Circle Expansion, and One Acceptance Test at a Time. You stop at RED — Boundary #2 below overrides anything in that skill that reads as an instruction to implement.
-- [craft-discipline](../../skills/craft-discipline/SKILL.md) — **scoped: C5 only.** Step 6 already holds you to it; this is where it is defined. C5 lists the placeholder assertions that make a test compile and fail while asserting nothing — `throw new NotImplementedException()` among them, which is the most tempting way to satisfy "stub only to compile". A stub that trips C5 gives you a RED that proves nothing, so read C5 before writing one. C1 and the rest of that skill are commit-time gates and belong to the software-engineer, who never sees your stub.
+- `bdd-methodology`
+- `test-design-mandates`
+- `outside-in-tdd` — **scoped: PREPARE and RED only.** That skill describes the whole cycle, including SYNTHESIZE-GREEN and the mutation gate. Those phases belong to the software-engineer in DELIVER. You read it for the boundary rules, Step 2 (let the domain emerge), Concentric Circle Expansion, and One Acceptance Test at a Time. You stop at RED — Boundary #2 below overrides anything in that skill that reads as an instruction to implement.
+- `craft-discipline` — **scoped: C5 only.** Step 6 already holds you to it; this is where it is defined. C5 lists the placeholder assertions that make a test compile and fail while asserting nothing — `throw new NotImplementedException()` among them, which is the most tempting way to satisfy "stub only to compile". A stub that trips C5 gives you a RED that proves nothing, so read C5 before writing one. C1 and the rest of that skill are commit-time gates and belong to the software-engineer, who never sees your stub.
+
+### Load on demand (never at startup)
+- `resolving-stack-commands` — at Step 6, only when the stack-commands file is absent or one of its commands fails.
+- `skraft-quality-bar` — at Step 4, only when a test-plan row needs a threshold.
+- `qa-reporting` — at Step 8.
 
 ## Boundaries (Non-Negotiable)
 
@@ -75,7 +84,7 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 3. **DO NOT write inner unit tests** — domain/unit tests belong to the software-engineer's inner loop in DELIVER.
 4. **DO NOT modify design** — if a design artefact is wrong, report it and stop.
 5. **DO NOT refine stories** — if an AC is ambiguous, flag it and escalate to DISCUSS.
-6. **DO NOT skip prior phase reading** — ALL artefacts from DISCUSS + DESIGN must be read before writing one line of Gherkin.
+6. **DO NOT skip prior phase reading** — ALL artefacts from DISCUSS + DESIGN must be read before writing one line of Gherkin on a first pass; in rework mode, read the findings and every artefact they name.
 
 ## Edge-Case Routing (who owns which test)
 
@@ -99,6 +108,7 @@ Read ALL available artefacts in this order:
 3. `contracts-{story}.md` — use case boundaries and application interfaces
 4. `event-model-{story}.md` — event flow (commands → events → read models)
 5. `docs/adr/decisions-index.md` — read the digest for each ADR's verdicts (status, chosen option, one-line decision); load a full `adr-{n}-{slug}.md` body only for rationale. The index is the cheap verdict surface — do not re-read every body.
+6. The research document's `Project conventions` section, when the handoff block lists it — test framework, project layout and naming. Take them as settled; do not re-derive them from the code.
 
 **Reconciliation gate:** If any contradiction is found between DISCUSS and DESIGN artefacts, STOP and report:
 
@@ -173,7 +183,8 @@ Author the executable Application-layer acceptance test (Step 1 of the impl-plan
 2. **Copy values VERBATIM** from each scenario in the `.feature` / `ac-draft`. Every input and expected outcome must match the AC character-for-character. Add a traceability comment on each case: `// {Scenario title}`.
 3. **Parametrize** AC tables with `[Theory]` / `[InlineData]` (see test-design-mandates); one `[InlineData]` row per example line.
 4. **Stub only to compile** — add the minimum production signature(s) so the test compiles. Write NO behavior.
-5. **Run and confirm RED**: execute the test suite (resolve the command via the `resolving-stack-commands` skill — never hardcode it here). The first scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If it fails for setup reasons, fix the harness — never weaken the assertion.
+5. **Run and confirm RED**: take the build and test commands from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md` when the handoff block lists it. When the file is absent or one of its commands fails, resolve the commands via the `resolving-stack-commands` skill — never hardcode them — and write the file per that skill's stack-commands file contract. Run only the new acceptance test, filtered to it. The first scenario MUST fail on a **business assertion**, NOT on a compile or setup error. If it fails for setup reasons, fix the harness — never weaken the assertion.
+   Capture that run as the RED proof the engineer reuses: its stdout to `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.stdout`, its exit code to `acceptance-red.exit`, and `git rev-parse HEAD` to `acceptance-red.rev` beside them.
 6. Author the executable test for the **first** scenario only, and leave it actively RED. Do NOT write tests for the remaining scenarios yet, and never mark one `Skip` / `[Ignore]` to park it — a skipped test asserts nothing and carries a false green through every commit (`craft-discipline` C1/C5). The remaining scenarios stay recorded in the `.feature` file and in `impl-plan-{story}.md`; the software-engineer authors each one's test when its slice starts (`outside-in-tdd` — One Acceptance Test at a Time).
 
 **Self-check before persisting** (output the result):
@@ -191,12 +202,18 @@ Write only the declared artefacts under `.copilot-tracking/skraft-plans/{project
 - `features/{bounded-context}-{feature}.feature` — Gherkin scenarios (one file per bounded context feature)
 - `details/{date}/test-plan-{story}.md` — coverage matrix with layer assignment
 - `details/{date}/impl-plan-{story}.md` — sequenced implementation plan (outside-in order)
+- `details/{date}/stack-commands.md` — only when you resolved or corrected the commands at Step 6
+- `evidence/{date}/{story}/acceptance-red.stdout`, `.exit`, `.rev` — the RED proof of Step 6
 
 The outer acceptance test file lives under `tests/**` (committed alongside the plan), not under `.copilot-tracking/`.
 
+### Rework mode (handoff mode `rework`)
+
+When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass. Read the review the block names, skip Steps 1–2, and edit only the artefacts and the acceptance test the findings name, in place. Re-run the RED proof only when the acceptance test changed. Keep every other artefact as it is.
+
 ### 8. FORECAST HANDOFF
 
-Load [qa-reporting](../../skills/qa-reporting/SKILL.md) before preparing
+Load `qa-reporting` before preparing
 DISTILL reporting data. Write forecast JSON in the dispatched output directory,
 projecting the existing test/implementation plans: AC-to-test mapping and expected
 impact cited to approved sources. Label tests planned, never passed; no new plan,

@@ -21,12 +21,13 @@
 //   0  success
 //   1  usage / read / render error
 //   2  validation failed — a JSON error is printed to stderr listing the missing
-//      required fields, so the calling agent can fill them and re-run.
+//      required fields and the enum fields holding a value outside their allowed
+//      set, so the calling agent can fix them and re-run.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseYaml } from '../domain/yaml-parser.mjs'
-import { ARTIFACTS, validate } from '../domain/artifact-registry.mjs'
+import { ARTIFACTS, normalize, validate } from '../domain/artifact-registry.mjs'
 import { renderArtifact } from '../application/render-artifact.mjs'
 
 // Resolve the plugin root the same way regardless of install location: this file
@@ -51,11 +52,17 @@ const fail = (msg) => {
 
 // Emit a machine-readable validation error the calling agent can parse + correct.
 const failValidation = (result) => {
+  const error = result.unknownType
+    ? 'unknown_artifact_type'
+    : result.missing.length
+      ? 'missing_required_fields'
+      : 'invalid_field_values'
   process.stderr.write(
     JSON.stringify({
-      error: result.unknownType ? 'unknown_artifact_type' : 'missing_required_fields',
+      error,
       artifact: result.type,
       missing: result.missing,
+      invalid: result.invalid ?? [],
       known_types: Object.keys(ARTIFACTS),
     }) + '\n',
   )
@@ -120,7 +127,7 @@ const main = () => {
 
   let data
   try {
-    data = parsePayload(raw, opts.data)
+    data = normalize(opts.type, parsePayload(raw, opts.data))
   } catch (err) {
     fail(`cannot parse payload: ${err.message}`)
   }

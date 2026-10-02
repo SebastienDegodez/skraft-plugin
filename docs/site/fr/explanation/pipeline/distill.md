@@ -17,7 +17,7 @@ La phase DISTILL transforme les décisions d'architecture en spécifications ex�
 |---|---|
 | **Vient de** | **DESIGN** — l'ADR et le modèle d'événements |
 | **Ce qui entre** | Décisions d'architecture à spécifier |
-| **Ce qui sort** | Scénarios Gherkin + plan de tests + plan d'implémentation ; le flux de reporting approuvé ajoute un rapport prévisionnel |
+| **Ce qui sort** | Scénarios Gherkin + plan de tests + plan d'implémentation + commandes de stack + preuve RED d'acceptation ; le flux de reporting approuvé ajoute un rapport prévisionnel |
 | **Va vers** | **DELIVER** — qui les implémente en TDD |
 | **Agent responsable** | `acceptance-designer` |
 | **Reviewer associé** | `acceptance-designer-reviewer` |
@@ -41,6 +41,16 @@ L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherki
 - Matrice de couverture liant chaque critère d'acceptation à un scénario.
 - Plan d'implémentation ordonnant les tests par couche (Domain, Application, Infrastructure, API).
 - Identification des Test Double nécessaires par frontière.
+- `details/{date}/stack-commands.md`, quand les commandes ont dû être résolues ou corrigées.
+- `evidence/{date}/{story}/acceptance-red.stdout`, `.exit` et `.rev`, prouvant que le premier test d'acceptation a échoué en RED.
+
+## Comment DELIVER reçoit la preuve d'exécution
+
+DISTILL résout les commandes de build, test et mutation une seule fois dans
+`stack-commands.md` au lieu de laisser l'engineer les redécouvrir. Il capture aussi le
+premier run RED d'acceptation : stdout, code de sortie non nul et révision source. Quand
+DELIVER démarre et que `HEAD` correspond encore à cette révision, le software engineer
+réutilise cette preuve au lieu de relancer le même test d'acceptation pendant PREPARE.
 
 ## Du plan approuvé au rapport prévisionnel
 

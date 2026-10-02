@@ -1,6 +1,6 @@
 ---
 name: quality-gates-javascript
-description: Use when resolving JavaScript test/build commands or running Node TAP mutation gates after a green baseline. Owns sequential core/boundary StrykerJS execution and fresh evidence. Supports installed StrykerJS 9.6.1 with TAP only; not frontend, TypeScript compilation, coverage enforcement, or other mutation runners.
+description: Use in a JavaScript/Node.js project when running its existing package tests or build scripts, when running StrykerJS mutation gates after a green baseline, or when judging whether a recorded JavaScript test or mutation result is enough to call delivery verified. Owns command resolution from checked-in package scripts, sequential core/boundary StrykerJS 9.6.1 TAP execution and fresh evidence. Not for explaining test code, frontend, TypeScript compilation, coverage enforcement, or other mutation runners.
 ---
 
 # JavaScript quality gates
@@ -63,8 +63,12 @@ node "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-javascript/scripts/run-gates.mjs"
 ```
 
 For a PR differential run, add `--since <base-ref>`. The runner resolves the Git
-merge-base, records it in the manifest, and mutates changed files that belong to each
-durable scope. A differential score is not a full-repository score. For local diagnosis,
+merge-base, records it in the manifest, and mutates changed files in the working tree
+(including staged, unstaged and untracked changes) that belong to each
+durable scope. A differential score is not a full-repository score. Inside a TDD cycle,
+`<base-ref>` is the previous cycle's last commit (DELIVER `baseSha` for the first cycle),
+with `--core-only`, and the run is skipped when the cycle changed no core production
+file; it is a checkpoint, never G6 evidence. For local diagnosis,
 add one or more `--overlay <json-config>` arguments; overlays apply in order and cannot
 change `mutate`, test selection, thresholds, reporters, or report paths. CI must use the
 checked-in configs without overlays.

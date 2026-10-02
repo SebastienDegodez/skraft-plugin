@@ -66,9 +66,10 @@ Le framework est dans `plugins/skraft-framework/src/` à la racine du repo :
 plugins/skraft-framework/src/
   domain/                ← politiques pures (aucune IO)
     pipeline-policy.mjs        ordre de dispatch, provenance, continuation (G1, G6)
-    skill-policy.mjs           skills obligatoires, chargements lus dans un transcript (G2, G3)
+    skill-policy.mjs           skills obligatoires/on-demand, chargements lus dans un transcript (G2, G3)
     phase-gate-policy.mjs      règles de clôture de phase (G4, G5)
     session-guard-policy.mjs   protection de l'état suivi, écritures DELIVER (G7, G8)
+    handoff-policy.mjs         complétude du handoff de dispatch (G9)
     state-machine.mjs          transitions qu'applique le CLI d'état
     result.mjs, value-objects.mjs, …
 
@@ -77,10 +78,11 @@ plugins/skraft-framework/src/
     infrastructure/      interfaces sortantes (audit, état, transcript…)
 
   application/           ← un service par préoccupation de hook
-    pre-tool-use-composite.mjs   G1, provenance et G7/G8, combinés en fail-closed
+    pre-tool-use-composite.mjs   décisions G1, provenance et G7/G8/G9
     subagent-start-service.mjs   G2
     subagent-stop-service.mjs    G3
     post-tool-use-service.mjs    trace G3, G6
+    handoff-guard-service.mjs    G9
     state-service.mjs, phase-gate-service.mjs   le CLI d'état et sa porte
 
   adapters/
@@ -168,14 +170,26 @@ Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après
 | G6 continuation | Hook `PostToolUse` | Fail-open | Aucune |
 | G7 état suivi | Hook `PreToolUse` | Fail-closed | Dernier passage enregistré : Copilot CLI 1.0.83 a refusé une écriture shell |
 | G8 écritures DELIVER | Hook `PreToolUse` | Fail-open si l'état est illisible | Aucune |
+| G9 handoff | Hook `PreToolUse` sur dispatch d'agent de phase | Fail-open si l'état est illisible ou en erreur interne | Aucune |
 
 Chaque garde est couverte par des tests unitaires et d'acceptation. Une preuve en session
 réelle ne vient que d'une vraie session (`scripts/copilot-hook-smoke.mjs`,
 `scripts/claude-plugin-smoke.mjs`) ; les évaluations Vally ne chargent pas les hooks du plugin.
 
-`SubagentStart` n'injecte que les skills obligatoires de l'agent qui démarre. Les règles ne
-sont pas injectées : Copilot découvre nativement les règles path-scoped, et l'orchestrateur,
-seul lecteur de ces règles, les charge lui-même.
+`SubagentStart` n'injecte que les skills obligatoires de l'agent qui démarre. Un skill
+déclaré `on-demand` n'est pas injecté au démarrage et n'est pas exigé par `SubagentStop` ;
+sa lecture éventuelle reste tracée par G3. Les règles ne sont pas injectées : Copilot
+découvre nativement les règles path-scoped, et l'orchestrateur, seul lecteur de ces règles,
+les charge lui-même.
+
+G9 garde le handoff de dispatch plutôt que le raisonnement du sous-agent. Pour un agent de
+phase du pipeline, le hook `PreToolUse` vérifie que le prompt nomme au moins un chemin
+enregistré pour chaque entrée suivie obligatoire déjà présente dans l'état ; en rework ou
+re-review, il exige aussi le chemin de la revue précédente. Un refus demande à
+l'orchestrateur de coller le bloc imprimé par
+`node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" handoff --agent "<agent>"`. La garde ne
+s'applique pas aux lentilles, workers, agents produit, ni au spécialiste re-dispatché après
+une phase DESIGN approuvée pour la ratification des ADR.
 
 ## Économie de tokens — l'angle des hooks
 
@@ -214,9 +228,10 @@ importantes doivent être énoncées explicitement.
 Le garde-fou G2 injecte les skills obligatoires à `SubagentStart`. G3 consigne les lectures
 de skills et renvoie au travail un sous-agent dont le transcript ne montre aucun chargement
 d'un skill obligatoire : un appel de l'outil skill ou une lecture de son `SKILL.md`, jamais
-une simple mention. Tous deux sont fail-open si le hook échoue afin qu'une erreur interne du
-runtime ne fige pas le pipeline. Ils prouvent qu'un skill a été chargé, pas que l'agent l'a
-bien appliqué.
+une simple mention. Les skills marqués `on-demand` sortent de cet ensemble obligatoire : ils
+ne déclenchent ni injection au démarrage ni blocage de conformité à l'arrêt. Tous deux sont
+fail-open si le hook échoue afin qu'une erreur interne du runtime ne fige pas le pipeline.
+Ils prouvent qu'un skill a été chargé, pas que l'agent l'a bien appliqué.
 
 ### Violations structurelles vs. hallucinations factuelles
 

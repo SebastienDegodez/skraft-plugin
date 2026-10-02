@@ -134,3 +134,33 @@ test('the directive tells the subagent to load each skill with its skill tool', 
   const result = await service.handle({ agentName: 'a' })
   assert.equal(result.context, 'The following skills are MANDATORY: bdd-methodology, outside-in-tdd. Load each with your skill tool, by name, before any other work; a skill you only name or read about is not loaded, and the agent cannot stop until it is.')
 })
+
+// on-demand skills —————————————————————————————————————————————————————
+
+const ON_DEMAND_CONFIG = {
+  agentSkills: {
+    'software-engineer': [
+      { name: 'outside-in-tdd', policy: 'verify' },
+      { name: 'mutation-testing', policy: 'on-demand' },
+      { name: 'qa-reporting', policy: 'on-demand' }
+    ],
+    'skraft-orchestrator': [
+      { name: 'report-lifecycle', policy: 'on-demand' }
+    ]
+  }
+}
+
+test('on-demand skills are not injected into the SubagentStart context', async () => {
+  const service = createSubagentStartService({ config: ON_DEMAND_CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
+  const result = await service.handle({ agentName: 'software-engineer' })
+  assert.equal(result.decision, 'additionalContext')
+  assert.ok(result.context.includes('The following skills are MANDATORY: outside-in-tdd.'),
+    `only verify skills are mandatory; got: "${result.context}"`)
+  assert.doesNotMatch(result.context, /mutation-testing|qa-reporting/)
+})
+
+test('an agent with only on-demand skills gets no SubagentStart context', async () => {
+  const service = createSubagentStartService({ config: ON_DEMAND_CONFIG, skillFileReader: nullSkillFileReader, auditWriter: nullAuditWriter, clock })
+  const result = await service.handle({ agentName: 'skraft-orchestrator' })
+  assert.equal(result.decision, 'allow')
+})

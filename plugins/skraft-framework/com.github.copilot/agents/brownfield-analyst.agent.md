@@ -1,7 +1,7 @@
 ---
 name: Skraft - Brownfield Analyst
 description: "Use when the human chooses to analyze an existing/brownfield or legacy codebase that has no product docs or backlog — reverse-engineer it and produce a structured PRD (docs/prds/) that backlog tooling can turn into issues and user stories. Activate on 'analyze this codebase', 'bootstrap a PRD', 'reverse-engineer a PRD', 'document this legacy system', 'produce a PRD from existing code', 'no docs, start from the code'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
-model: claude-sonnet-5
+model: claude-sonnet-5.5
 user-invocable: true
 tools:
   - read/readFile

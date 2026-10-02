@@ -54,10 +54,11 @@ stimuli:
             - --input-type=module
             - -e
             - |
-              const { readFileSync } = await import('node:fs')
+              const { existsSync, readFileSync } = await import('node:fs')
               const { createHash } = await import('node:crypto')
+              const fixtureRoot = existsSync('.fixture-input') ? '.fixture-input' : '../.fixture-input'
               const read = (name, sha) => {
-                const bytes = readFileSync('.fixture-input/' + name)
+                const bytes = readFileSync(fixtureRoot + '/' + name)
                 if (createHash('sha256').update(bytes).digest('hex') !== sha) throw new Error('Oracle input changed: ' + name)
                 return bytes
               }
@@ -69,10 +70,10 @@ stimuli:
           env:
             CHECK: sentinel
             SCENARIO: intermediate
-            BASE_SHA: &intermediate-base 082693446d4f59c0f80ad6961de52c31de77c85a
-            SETUP_SHA: &setup-sha db9fdf9f947f8fbe7760dd43508753b70a93d3b38dff8fb0ed049b9dc9374505
-            ORACLE_SHA: &oracle-sha 67895451ed3653299430e539358bc3f29193173bfd859d6ae2670737df0819de
-            CONTEXT_SHA: &context-sha 56b763c3cb1f42800198684cd08244b79be83f9f9676dc3ae44d48f09dbe5334
+            BASE_SHA: &intermediate-base ab806b5f82966ef22cafdde89b9f5af083162621
+            SETUP_SHA: &setup-sha bb75ab4a5e9e66bd52ed178a57dd80abfc543ed4d229d666bb2e10e31f15cbd0
+            ORACLE_SHA: &oracle-sha 920bfc795097dff135e93d102c3cd00744a04495babb7d37b895942e6177512a
+            CONTEXT_SHA: &context-sha d8d535d5433e23be04004e3a99c7717c64900095e2236ad9366008cc3fd74348
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -131,7 +132,7 @@ stimuli:
           env:
             CHECK: sentinel
             SCENARIO: completion
-            BASE_SHA: &completion-base c19e751bc615a52bec93bb112448f15824f951e3
+            BASE_SHA: &completion-base 196d995816784ed22bc94b326dd6c72c2086a828
             SETUP_SHA: *setup-sha
             ORACLE_SHA: *oracle-sha
             CONTEXT_SHA: *context-sha
@@ -192,7 +193,7 @@ stimuli:
           env:
             CHECK: sentinel
             SCENARIO: unknown
-            BASE_SHA: &unknown-base ea4b1efa0484a62e3b9a8140ff9940e433d2c9cb
+            BASE_SHA: &unknown-base 4ba392891b8a373d245164d7fca2d0fad4009153
             SETUP_SHA: *setup-sha
             ORACLE_SHA: *oracle-sha
             CONTEXT_SHA: *context-sha

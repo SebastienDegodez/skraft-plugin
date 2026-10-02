@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { loadEvalSpec } from '@microsoft/vally'
 
 const RESOLVER = new URL('../../eng/resolve-eval-model.mjs', import.meta.url).pathname
-const DEFAULT_MODEL = 'claude-sonnet-5'
+const DEFAULT_MODEL = 'claude-sonnet-5.5'
 
 const resolve = (specPath, env = {}) =>
   execFileSync('node', [RESOLVER, specPath, DEFAULT_MODEL], {
@@ -57,7 +57,7 @@ test('resolver: a blank or whitespace pin is not a pin', () => {
 // from one place, and the judge must not silently follow the agent model.
 test('runner: declares the sonnet default and keeps the judge pinned separately', () => {
   const sh = readFileSync(new URL('../../eng/run-vally-evals.sh', import.meta.url), 'utf8')
-  assert.match(sh, /DEFAULT_MODEL="\$\{DEFAULT_MODEL:-claude-sonnet-5\}"/)
+  assert.match(sh, /DEFAULT_MODEL="\$\{DEFAULT_MODEL:-claude-sonnet-5\.5\}"/)
   assert.match(sh, /JUDGE_MODEL="\$\{JUDGE_MODEL:-gpt-5\.6-luna\}"/)
   assert.match(sh, /^MODEL="\$\{MODEL:-\}"$/m, 'MODEL must default to empty so resolution happens per eval')
   // Both eval paths must resolve, or one of them silently keeps a stale global.

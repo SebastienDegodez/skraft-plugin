@@ -48,6 +48,12 @@ high-class model recomputed from scratch would. Tool surface and per-scenario di
 both narrow the decision surface inside a single turn, which shortens responses and
 reduces the context window required.
 
+The runtime now adds three smaller form levers. The handoff manifest passes recorded
+artifact paths forward so phase agents do not re-derive settled context. Skills marked
+`on-demand` stay out of startup prompts and stop-time compliance checks until a step needs
+them. Rework and re-review prompts scope retries to prior findings, changed inputs and
+carried-forward passes instead of replaying the whole phase.
+
 ## Measured results
 
 The first two levers — cache discipline and model class — were measured on a real run

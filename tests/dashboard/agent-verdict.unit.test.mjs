@@ -59,6 +59,15 @@ describe('agentByStimulus', () => {
 
 describe('agentSuiteVerdicts', () => {
   const agents = agentByStimulus(spec)
+  const multiScenarioAgents = new Map([
+    ['Absent criteria halt the distillation', 'software-engineer'],
+    ['Agreed criteria become an executable specification', 'software-engineer'],
+  ])
+  const scenarioTrial = (stimulus, conforms) =>
+    trial({
+      stimulus,
+      gradeResult: { passed: conforms, score: conforms ? 1 : 0.5 },
+    })
 
   it('passes when every trial conforms', () => {
     const [result] = agentSuiteVerdicts([trial(), trial()], { agents })
@@ -78,6 +87,39 @@ describe('agentSuiteVerdicts', () => {
     strictEqual(verdictState(result), 'regression')
     strictEqual(result.conformance.breaking, 1)
     strictEqual(result.netWin, 0)
+  })
+
+  it('reports flaky when every scenario stays at or above two thirds', () => {
+    const [result] = agentSuiteVerdicts([
+      scenarioTrial('Absent criteria halt the distillation', true),
+      scenarioTrial('Absent criteria halt the distillation', true),
+      scenarioTrial('Absent criteria halt the distillation', false),
+      scenarioTrial('Agreed criteria become an executable specification', true),
+      scenarioTrial('Agreed criteria become an executable specification', true),
+      scenarioTrial('Agreed criteria become an executable specification', false),
+    ], { agents: multiScenarioAgents, threshold: 0.9 })
+
+    strictEqual(verdictState(result), 'flaky')
+    strictEqual(result.flaky, true)
+    strictEqual(result.regressed, false)
+    strictEqual(result.conformance.conforming, 4)
+    strictEqual(result.reason, 'conforms on 4 of 6 trial(s); every scenario at or above 2/3 (threshold 0.9)')
+  })
+
+  it('reports a regression when one scenario falls below two thirds even if the total is four of six', () => {
+    const [result] = agentSuiteVerdicts([
+      scenarioTrial('Absent criteria halt the distillation', true),
+      scenarioTrial('Absent criteria halt the distillation', false),
+      scenarioTrial('Absent criteria halt the distillation', false),
+      scenarioTrial('Agreed criteria become an executable specification', true),
+      scenarioTrial('Agreed criteria become an executable specification', true),
+      scenarioTrial('Agreed criteria become an executable specification', true),
+    ], { agents: multiScenarioAgents, threshold: 0.9 })
+
+    strictEqual(verdictState(result), 'regression')
+    strictEqual(result.flaky, false)
+    strictEqual(result.regressed, true)
+    strictEqual(result.conformance.conforming, 4)
   })
 
   it('is inconclusive when a trial errored, because it proves nothing', () => {
