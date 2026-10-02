@@ -380,7 +380,7 @@ jobs:
                 const { verdicts = [] } = require('./$result');
                 for (const verdict of verdicts) {
                   const state = !verdict.conclusive || verdict.underpowered ? 'inconclusive'
-                    : verdict.regressed ? 'regression' : verdict.passed ? 'pass' : 'no improvement';
+                    : verdict.passed ? 'pass' : verdict.flaky ? 'flaky' : verdict.regressed ? 'regression' : 'no improvement';
                   console.log(\`| \${verdict.subject.kind}: \${verdict.subject.name} | \${state} | \${verdict.reason} |\`);
                 }
               "
@@ -536,7 +536,7 @@ jobs:
                 const run = require('./$result');
                 for (const verdict of run.verdicts ?? []) {
                   const state = !verdict.conclusive || verdict.underpowered ? 'inconclusive'
-                    : verdict.regressed ? 'regression' : verdict.passed ? 'pass' : 'no improvement';
+                    : verdict.passed ? 'pass' : verdict.flaky ? 'flaky' : verdict.regressed ? 'regression' : 'no improvement';
                   const quality = verdict.metrics?.quality ?? {};
                   const tokens = verdict.metrics?.efficiency?.tokenDeltaPercent;
                   const show = (value, digits = 3) => value == null ? '—' : value.toFixed(digits);

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Render the changed-skill verdicts from a PR run as a PR comment.
+// Render the changed-skill and changed-agent verdicts from a PR run as a PR comment.
 //
 //   node eng/build-pr-comment.mjs --results-dir eval-results [--out file]
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
