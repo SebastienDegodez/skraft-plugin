@@ -35,6 +35,59 @@ test('isScannableSource judges the directory segments, not the file name', () =>
   }
 })
 
+test('isScannableSource reads the extension after the last dot and requires one', () => {
+  assert.equal(isScannableSource('src/Orders.Domain.cs'), true)
+  assert.equal(isScannableSource('src/cs'), false)
+})
+
+test('scanSource blanks masked spans instead of removing them', () => {
+  for (const [path, content] of [
+    ['src/a.ts', 'Command/* x */Bus'],
+    ['src/a.ts', 'Command"x"Bus'],
+    ['src/a.ts', "Command'x'Bus"],
+    ['src/a.ts', 'Command`x`Bus'],
+    ['src/a.ts', String.raw`Command"\"x"Bus`],
+    ['src/a.fs', 'Command(* x *)Bus'],
+    ['src/a.fs', 'Command/* a /* b */ c */Bus'],
+    ['src/a.rs', 'Command/* a /* b */ c */Bus'],
+    ['src/a.rs', "Command'x'Bus"],
+    ['src/a.rs', String.raw`Command'\n'Bus`],
+    ['src/a.rs', 'Commandr#"x"#Bus'],
+    ['src/a.swift', 'Command#"x"#Bus'],
+    ['src/a.py', 'Command"""x"""Bus'],
+    ['src/a.py', "Command'''x'''Bus"],
+    ['src/a.cs', 'Command""Bus'],
+    ['src/a.cs', 'Command"""x"""Bus'],
+    ['src/a.cs', 'Command@"a""b"Bus'],
+    ['src/a.cs', 'Command@$"x"Bus'],
+  ]) {
+    assert.deepEqual(scanSource(path, content), [], `${path}: ${content}`)
+  }
+})
+
+test('scanSource reads the comment syntax from the last extension of a dotted file name', () => {
+  assert.deepEqual(scanSource('src/Orders.Domain.cs', '// CommandBus'), [])
+})
+
+test('scanSource keeps single-quote char literals and lifetimes on the code line', () => {
+  for (const [path, content] of [
+    ['src/a.rs', "fn run<'a>(bus: CommandBus) {}"],
+    ['src/a.rs', String.raw`let c = '\''; let bus = CommandBus::new();`],
+    ['src/a.rs', String.raw`let c = '\n'; let bus = CommandBus::new();`],
+    ['src/a.rs', "let c = 'x'; let bus = CommandBus::new();"],
+    ['src/a.fs', "let id (x: 'T) (bus: CommandBus) = x"],
+  ]) {
+    assert.deepEqual(scanSource(path, content).map(({ commitment }) => commitment), ['cqrs-bus'], `${path}: ${content}`)
+  }
+})
+
+test('scanSource keeps C# at-dollar strings open across lines', () => {
+  const content = ['var text = @$"first', 'CommandBus";', 'public class Saga {}'].join('\n')
+  assert.deepEqual(scanSource('src/a.cs', content), [
+    { commitment: 'saga', path: 'src/a.cs', line: 3, text: 'public class Saga {}' },
+  ])
+})
+
 test('scanSource reports each signature with its path, 1-based line and trimmed text', () => {
   const content = [
     'namespace Orders;',
