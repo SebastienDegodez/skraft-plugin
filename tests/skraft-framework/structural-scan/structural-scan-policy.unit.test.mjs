@@ -182,6 +182,7 @@ test('scanSource resumes detection after comment and string terminators', () => 
     ['src/a.vb', "' Saga\nDim bus = New CommandBus()", 2, 'Dim bus = New CommandBus()'],
     ['src/a.cs', 'var text = @"hidden QueryBus "" Saga"; var bus = new CommandBus();', 1, 'var text = @"hidden QueryBus "" Saga"; var bus = new CommandBus();'],
     ['src/a.cs', 'var text = """hidden Saga""";\nvar bus = new CommandBus();', 2, 'var bus = new CommandBus();'],
+    ['src/a.cs', 'var text = """""hidden """" Saga""""";\nvar bus = new CommandBus();', 2, 'var bus = new CommandBus();'],
     ['src/a.js', 'const text = "hidden Saga"; const bus = CommandBus.create()', 1, 'const text = "hidden Saga"; const bus = CommandBus.create()'],
   ]) {
     assert.deepEqual(scanSource(path, content), [
