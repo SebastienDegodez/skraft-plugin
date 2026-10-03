@@ -146,6 +146,51 @@ test('scanSource masks escaped, verbatim and multiline string literals', () => {
   ])
 })
 
+test('scanSource keeps Swift raw multiline strings open across quote-hash sequences', () => {
+  for (const newline of ['\n', '\r\n']) {
+    for (const [opening, embedded, closing, code] of [
+      ['let text = #"""', 'embedded "# Saga', '"""#', 'let bus = CommandBus.create()'],
+      ['let text = ##"""', 'embedded """# Saga', '"""##', 'let query = QueryBus.create()'],
+    ]) {
+      const content = [opening, embedded, closing, code].join(newline)
+      assert.deepEqual(scanSource('src/a.swift', content), [
+        { commitment: 'cqrs-bus', path: 'src/a.swift', line: 4, text: code },
+      ])
+    }
+  }
+})
+
+test('scanSource keeps Rust raw strings open across shorter quote runs', () => {
+  for (const [content, code] of [
+    ['let text = r#"embedded ""\nSaga"#;\nlet bus = CommandBus::new();', 'let bus = CommandBus::new();'],
+    ['let text = br##"embedded ""\nQueryBus"##;\nlet query = QueryBus::new();', 'let query = QueryBus::new();'],
+  ]) {
+    assert.deepEqual(scanSource('src/a.rs', content), [
+      { commitment: 'cqrs-bus', path: 'src/a.rs', line: 3, text: code },
+    ])
+  }
+})
+
+test('scanSource resumes detection after comment and string terminators', () => {
+  for (const [path, content, line, text] of [
+    ['src/a.ts', '// Saga\nconst bus = CommandBus.create()', 2, 'const bus = CommandBus.create()'],
+    ['src/a.rs', '/* Saga */\nlet bus = CommandBus::new();', 2, 'let bus = CommandBus::new();'],
+    ['src/a.fs', '(* outer (* Saga *) still hidden *)\nlet bus = CommandBus.create()', 2, 'let bus = CommandBus.create()'],
+    ['src/a.py', 'text = """hidden Saga"""; bus = CommandBus()', 1, 'text = """hidden Saga"""; bus = CommandBus()'],
+    ['src/a.py', "text = '''hidden QueryBus'''; bus = CommandBus()", 1, "text = '''hidden QueryBus'''; bus = CommandBus()"],
+    ['src/a.py', '# Saga\nbus = CommandBus()', 2, 'bus = CommandBus()'],
+    ['src/a.vb', "' Saga\nDim bus = New CommandBus()", 2, 'Dim bus = New CommandBus()'],
+    ['src/a.cs', 'var text = @"hidden QueryBus "" Saga"; var bus = new CommandBus();', 1, 'var text = @"hidden QueryBus "" Saga"; var bus = new CommandBus();'],
+    ['src/a.cs', 'var text = """hidden Saga""";\nvar bus = new CommandBus();', 2, 'var bus = new CommandBus();'],
+    ['src/a.cs', 'var text = """""hidden """" Saga""""";\nvar bus = new CommandBus();', 2, 'var bus = new CommandBus();'],
+    ['src/a.js', 'const text = "hidden Saga"; const bus = CommandBus.create()', 1, 'const text = "hidden Saga"; const bus = CommandBus.create()'],
+  ]) {
+    assert.deepEqual(scanSource(path, content), [
+      { commitment: 'cqrs-bus', path, line, text },
+    ])
+  }
+})
+
 test('scanSource keeps Rust lifetimes and detects code after ordinary strings', () => {
   const content = [
     'const NAME: &\'static str = "orders";',
@@ -208,6 +253,8 @@ test('scanSource detects Apply of an event and handles CRLF and non-string conte
   const hits = scanSource('src/a.ts', 'x\r\n  apply()\r\n  this.Apply(new OrderPlacedEvent())')
   assert.deepEqual(hits.map((h) => [h.commitment, h.line]), [['event-sourcing', 3]])
   assert.deepEqual(scanSource('src/a.ts', undefined), [])
+  assert.deepEqual(scanSource('src/a.ts', null), [])
+  assert.deepEqual(scanSource('src/a.ts', 1), [])
   assert.deepEqual(scanSource(undefined, 'const bus: CommandBus = service;')[0].commitment, 'cqrs-bus')
 })
 
@@ -248,4 +295,12 @@ test('summariseScan defaults: no revision, zero files, 20 hits per commitment', 
   assert.equal(report.revision, null)
   assert.equal(report.scannedFiles, 0)
   assert.equal(report.commitments[0].hits.length, 20)
+})
+
+test('summariseScan can report detected commitments without locations', () => {
+  const report = summariseScan([{ commitment: 'saga', path: 'a.cs', line: 1, text: 'Saga' }], { maxHits: 0 })
+  const saga = report.commitments.find(({ commitment }) => commitment === 'saga')
+  assert.equal(saga.detected, true)
+  assert.equal(saga.hitCount, 1)
+  assert.deepEqual(saga.hits, [])
 })

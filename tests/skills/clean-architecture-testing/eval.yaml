@@ -5,7 +5,9 @@ description: |
   layer guard is a CI gate rather than part of the tight loop, and an in-memory
   substitute never stands in for the engine an adapter has to prove itself
   against. Guards the Iron Rule against over-application, and the boundary with
-  the TDD cycle that outside-in-tdd owns.
+  the TDD cycle that outside-in-tdd owns. The Spring Boot stimuli replay the
+  same decisions on a Maven multi-module build, where the framework's own test
+  idioms pull the other way.
 type: capability
 defaults:
   timeout: 4m
@@ -115,6 +117,56 @@ stimuli:
         name: The fast suite did not take on the adapter
         config:
           pattern: '(?m)^diff --git a/tests/PaymentAuthorization\.UnitTest/(?!bin/|obj/).*\.cs '
+      - type: run-command
+        name: A test fails when the refusal is no longer read as a decline
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              find . -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +
+              adapter=src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+              suite=tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+              grep -q 'HttpStatusCode.PaymentRequired' "$adapter" || { echo "adapter source changed; probe cannot apply"; exit 2; }
+              dotnet test "$suite" >/dev/null 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              sed -i.orig 's/HttpStatusCode.PaymentRequired/HttpStatusCode.Conflict/' "$adapter"
+              if dotnet test "$suite" >/dev/null 2>&1; then
+                echo "refusal handling changed and every test stayed green"
+                exit 1
+              fi
+              echo "a test caught the broken refusal handling"
+          expected_exit_code: 0
+          timeout: 6m
+      - type: run-command
+        name: A test fails when the request body no longer matches the provider's contract
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              find . -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +
+              adapter=src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+              suite=tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+              grep -q 'JsonPropertyName("reference")' "$adapter" || { echo "adapter source changed; probe cannot apply"; exit 2; }
+              dotnet test "$suite" >/dev/null 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              sed -i.orig 's/JsonPropertyName("reference")/JsonPropertyName("ref")/' "$adapter"
+              if dotnet test "$suite" >/dev/null 2>&1; then
+                echo "the request body changed shape and every test stayed green"
+                exit 1
+              fi
+              echo "a test caught the broken request body"
+          expected_exit_code: 0
+          timeout: 6m
       - type: prompt
         config:
           scoring: scale_1_10
@@ -127,7 +179,6 @@ stimuli:
       - Exercises the adapter's own HTTP client against a stand-in server rather than replacing that client with something that answers in its place.
       - Covers a refusal from the provider as well as an approval.
       - Asserts what the adapter sends, not only what it hands back.
-      - Leaves the suite developers run on every save as fast as it was.
 
   # Forced-concept decider. The developer names the substitution outright; that
   # pressure is the behaviour under evaluation, which is the one case
@@ -158,6 +209,12 @@ stimuli:
       - Separates the tests that genuinely need a database from those that never did, instead of treating the suite as one block.
       - Does not present the substitution as an acceptable default for adapter tests.
 
+  # Deterministic decider, .NET twin of the Spring layer-guard stimulus. It ran
+  # on an empty workspace until Stage C, where both arms found nothing to set up
+  # and asked for clarification. The payment-authorization solution is staged
+  # instead. The leak probe injects a base-library HTTP client into Application
+  # in a scratch copy: a guard that only forbids the solution's other projects
+  # lets it through, so an existing but hollow guard cannot pass.
   - name: Stop layer violations at the build without slowing the fast suite
     prompt: |
       Layer violations keep slipping through review here — someone reaches for a
@@ -166,7 +223,120 @@ stimuli:
 
       Set that up. One thing I care about: the suite the team runs on every save
       has to stay as quick as it is today.
+    constraints:
+      max_duration: 12m
+      max_agent_duration: 8m
+    environment:
+      files:
+        - src: fixtures/payment/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment/Directory.Build.props
+          dest: Directory.Build.props
+        - src: fixtures/payment/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: fixtures/payment/PaymentAuthorization.slnx
+          dest: PaymentAuthorization.slnx
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+          dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+          dest: src/PaymentAuthorization.Domain/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+          dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+          dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+          dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+          dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+          dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+          dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+      commands:
+        - 'dotnet restore PaymentAuthorization.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - type: run-command
+        name: 'Sentinel: the solution still builds'
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet build PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 3m
+      - type: run-command
+        name: Every test in the solution is green
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet test PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 4m
+      - type: run-command
+        name: The bounded context still has exactly two test projects
+        config:
+          command: bash
+          args:
+            - -c
+            - 'test "$(ls -d tests/*/ | wc -l | tr -d " ")" = "2"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The guard landed in the slow suite
+        config:
+          pattern: '(?m)^diff --git a/tests/PaymentAuthorization\.IntegrationTest/(?!bin/|obj/).*\.cs '
+      - type: diff-not-contains
+        name: The fast suite did not take on the guard
+        config:
+          pattern: '(?m)^diff --git a/tests/PaymentAuthorization\.UnitTest/(?!bin/|obj/)'
+      - type: run-command
+        name: The build fails when the business code reaches for an HTTP client
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              log="$work/out.log"
+              dotnet test PaymentAuthorization.slnx >"$log" 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              cat > src/PaymentAuthorization.Application/ProviderShortcut.cs <<'CS'
+              namespace PaymentAuthorization.Application;
+
+              public sealed class ProviderShortcut(System.Net.Http.HttpClient client)
+              {
+                  public Task<string> PingAsync() => client.GetStringAsync("/ping");
+              }
+              CS
+              dotnet build src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj >"$log" 2>&1 || { echo "injected leak does not compile; probe is broken"; exit 3; }
+              if dotnet test PaymentAuthorization.slnx >"$log" 2>&1; then
+                echo "business code reached for an HTTP client and the build stayed green"
+                exit 1
+              fi
+              echo "the build failed on the injected layer violation"
+          expected_exit_code: 0
+          timeout: 6m
       - type: prompt
         config:
           scoring: scale_1_10
@@ -176,9 +346,9 @@ stimuli:
           required:
             - clean-architecture-testing
     rubric:
-      - Adds an automated check that fails the build when the business code depends on a technical detail.
-      - Places that check with the slower suite that runs on the way in, not in the suite developers run on every save.
-      - Does not propose a dedicated new test project for the check; the existing slower suite hosts it.
+      - Adds an automated check that fails the build when the business code depends on a technical framework or transport detail.
+      - Keeps that check out of the suite developers run on every save, which runs exactly as before.
+      - Hosts the check in the existing slower test project instead of a new dedicated one.
       - Says when the check runs, so the team can see it is a gate and not part of the tight loop.
 
   # Regression guard. The baseline already answers this well, so a tie is the
@@ -240,3 +410,378 @@ stimuli:
       - Adds no behaviour beyond what the scenario states.
       - Does not reopen where the test should live or which project it belongs in.
       - Does not propose further layers of testing before the current one is green.
+
+  # ---------------------------------------------------------------------------
+  # Spring Boot stimuli. Java instead of C# on purpose: the decisions are the
+  # same, but a Maven multi-module build pulls the other way — a new module per
+  # concern, Failsafe-only suites, and Spring's in-process transport mocks are
+  # all one idiomatic step away. Every name starts with "Spring Boot:" so
+  # `STIMULI="Spring Boot:"` pilots this block alone, and no name shares a
+  # fragment with a .NET stimulus (STIMULI matching is case-insensitive).
+  # ---------------------------------------------------------------------------
+
+  # Deterministic decider. The fixture already carries one fast and one slow
+  # test module, both green. The leak probe injects a Spring HTTP client into the
+  # application module of a scratch copy, so a guard that exists but catches
+  # nothing cannot pass.
+  - name: 'Spring Boot: the Maven build rejects a layer leak, the save loop stays fast'
+    prompt: |
+      Layer violations keep slipping through review here — someone reaches for a
+      technical detail from the middle of the business code and nobody catches it
+      until much later. I want the build to catch it instead of us.
+
+      Set that up. One thing I care about: the suite the team runs on every save
+      has to stay as quick as it is today.
+    constraints:
+      max_duration: 16m
+      max_agent_duration: 11m
+    environment:
+      files:
+        - src: fixtures/payment-spring/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-spring/pom.xml
+          dest: pom.xml
+        - src: fixtures/payment-spring/payment-domain/pom.xml
+          dest: payment-domain/pom.xml
+        - src: fixtures/payment-spring/payment-domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: fixtures/payment-spring/payment-application/pom.xml
+          dest: payment-application/pom.xml
+        - src: fixtures/payment-spring/payment-application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: fixtures/payment-spring/payment-application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: fixtures/payment-spring/payment-infrastructure/pom.xml
+          dest: payment-infrastructure/pom.xml
+        - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: fixtures/payment-spring/payment-app/pom.xml
+          dest: payment-app/pom.xml
+        - src: fixtures/payment-spring/payment-app/PaymentApplication.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: fixtures/payment-spring/payment-app/PaymentConfiguration.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: fixtures/payment-spring/payment-app/application.properties
+          dest: payment-app/src/main/resources/application.properties
+        - src: fixtures/payment-spring/payment-unit-test/pom.xml
+          dest: payment-unit-test/pom.xml
+        - src: fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
+          dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: fixtures/payment-spring/payment-integration-test/pom.xml
+          dest: payment-integration-test/pom.xml
+        - src: fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
+          dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+      commands:
+        - 'mvn -B -q -ntp verify'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      # Build-infrastructure sentinel: a wrecked pom surfaces as a harness
+      # failure, never as a quiet loss on architecture.
+      - type: run-command
+        name: 'Sentinel: the Maven build still resolves'
+        config:
+          command: mvn
+          args: [-B, -q, -o, validate]
+          expected_exit_code: 0
+          timeout: 2m
+      # Output goes to a scratch file: a guard that logs heavily while green
+      # must not fail on Vally's output buffer.
+      - type: run-command
+        name: Every test in the build is green
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - type: run-command
+        name: The fast suite is still green on its own
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -o test -pl payment-unit-test -am >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 3m
+      # Structural sentinel: the two-speed suite does not grow a third home for
+      # tests, whether as a new module or as a module-local src/test.
+      - type: run-command
+        name: Tests still live in exactly two places
+        config:
+          command: bash
+          args:
+            - -c
+            - 'test "$(find . -type d -path "*/src/test" -not -path "./.git/*" -not -path "*/target/*" | wc -l | tr -d " ")" = "2"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The guard landed in the slow suite
+        config:
+          pattern: '(?m)^diff --git a/payment-integration-test/src/test/'
+      - type: diff-not-contains
+        name: The fast suite did not take on the guard
+        config:
+          pattern: '(?m)^diff --git a/payment-unit-test/src/'
+      - type: run-command
+        name: The build fails when the business code reaches for an HTTP client
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              mvn -B -q -o verify >/dev/null 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              perl -0pi -e 's#</dependencies>#  <dependency>\n      <groupId>org.springframework</groupId>\n      <artifactId>spring-web</artifactId>\n    </dependency>\n  </dependencies>#' payment-application/pom.xml
+              leak=payment-application/src/main/java/com/example/payment/application/shortcut
+              mkdir -p "$leak"
+              cat > "$leak/ProviderShortcut.java" <<'JAVA'
+              package com.example.payment.application.shortcut;
+
+              import org.springframework.web.client.RestClient;
+
+              public final class ProviderShortcut {
+                  private final RestClient client;
+
+                  public ProviderShortcut(RestClient client) {
+                      this.client = client;
+                  }
+
+                  public String ping() {
+                      return client.get().uri("/ping").retrieve().body(String.class);
+                  }
+              }
+              JAVA
+              mvn -B -q -o -Denforcer.skip=true compile >/dev/null 2>&1 || { echo "injected leak does not compile; probe is broken"; exit 3; }
+              if mvn -B -q -o verify >/dev/null 2>&1; then
+                echo "business code reached for an HTTP client and the build stayed green"
+                exit 1
+              fi
+              echo "the build failed on the injected layer violation"
+          expected_exit_code: 0
+          timeout: 6m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-testing
+    rubric:
+      - Adds an automated check that fails the build when the business code depends on a technical framework or transport detail.
+      - Keeps that check out of the suite developers run on every save, which runs exactly as before.
+      - Hosts the check in the existing slower suite instead of a new dedicated test module.
+      - Says when the check runs, so the team can see it is a gate and not part of the tight loop.
+
+  # Regression guard. Same trap as the .NET adapter stimulus: the adapter takes
+  # its RestClient by constructor, and Spring ships an in-process mock of the
+  # transport one import away. The baseline passed every deterministic grader in
+  # Stage A and in 4/4 Stage C trials, so a tie is the expected result and a loss
+  # is the finding: the skill degrading adapter coverage the baseline gets right.
+  # Placement is proved by the diff, coverage of the refusal and of the request
+  # body by mutating a scratch copy of the adapter.
+  - name: 'Spring Boot: first tests for the REST payment adapter'
+    tags:
+      role: regression-guard
+    prompt: |
+      Our payment step goes out to the provider's REST API. Nothing covers that
+      part today, so if the provider changes the shape of its answer, or we send
+      it something it does not accept, we find out in production.
+
+      Cover it. The coverage has to prove that what we send and what we read back
+      are handled correctly, including when the provider refuses the payment.
+    constraints:
+      max_duration: 16m
+      max_agent_duration: 11m
+    environment:
+      files:
+        - src: fixtures/payment-spring/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-spring/pom.xml
+          dest: pom.xml
+        - src: fixtures/payment-spring/payment-domain/pom.xml
+          dest: payment-domain/pom.xml
+        - src: fixtures/payment-spring/payment-domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: fixtures/payment-spring/payment-application/pom.xml
+          dest: payment-application/pom.xml
+        - src: fixtures/payment-spring/payment-application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: fixtures/payment-spring/payment-application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: fixtures/payment-spring/payment-infrastructure/pom.xml
+          dest: payment-infrastructure/pom.xml
+        - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: fixtures/payment-spring/payment-app/pom.xml
+          dest: payment-app/pom.xml
+        - src: fixtures/payment-spring/payment-app/PaymentApplication.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: fixtures/payment-spring/payment-app/PaymentConfiguration.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: fixtures/payment-spring/payment-app/application.properties
+          dest: payment-app/src/main/resources/application.properties
+        - src: fixtures/payment-spring/payment-unit-test/pom.xml
+          dest: payment-unit-test/pom.xml
+        - src: fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
+          dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: fixtures/payment-spring/payment-integration-test/pom.xml
+          dest: payment-integration-test/pom.xml
+        - src: fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
+          dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+      commands:
+        - 'mvn -B -q -ntp verify'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the Maven build still resolves'
+        config:
+          command: mvn
+          args: [-B, -q, -o, validate]
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: Every test in the build is green
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - type: run-command
+        name: Tests still live in exactly two places
+        config:
+          command: bash
+          args:
+            - -c
+            - 'test "$(find . -type d -path "*/src/test" -not -path "./.git/*" -not -path "*/target/*" | wc -l | tr -d " ")" = "2"'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: diff-contains
+        name: The new coverage landed in the slow suite
+        config:
+          pattern: '(?m)^diff --git a/payment-integration-test/src/test/.*\.java '
+      - type: diff-not-contains
+        name: The fast suite did not take on the adapter
+        config:
+          pattern: '(?m)^diff --git a/payment-unit-test/src/'
+      - type: diff-not-contains
+        name: The adapter was covered, not rewritten
+        config:
+          pattern: '(?m)^diff --git a/payment-(?:domain|application|infrastructure|app)/src/main/'
+      - type: run-command
+        name: A test fails when the refusal is no longer read as a decline
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              adapter=payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+              grep -q 'value() == 402' "$adapter" || { echo "adapter source changed; probe cannot apply"; exit 2; }
+              mvn -B -q -o verify -pl payment-integration-test -am >/dev/null 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              sed -i.orig 's/value() == 402/value() == 409/' "$adapter"
+              if mvn -B -q -o verify -pl payment-integration-test -am >/dev/null 2>&1; then
+                echo "refusal handling changed and every test stayed green"
+                exit 1
+              fi
+              echo "a test caught the broken refusal handling"
+          expected_exit_code: 0
+          timeout: 6m
+      - type: run-command
+        name: A test fails when the request body no longer matches the provider's contract
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              set -eu
+              work="$(mktemp -d)"
+              trap 'rm -rf "$work"' EXIT
+              cp -R . "$work/repo"
+              cd "$work/repo"
+              adapter=payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+              grep -q 'record AuthorizationRequest(String reference,' "$adapter" || { echo "adapter source changed; probe cannot apply"; exit 2; }
+              mvn -B -q -o verify -pl payment-integration-test -am >/dev/null 2>&1 || { echo "clean build is not green; probe cannot run"; exit 2; }
+              sed -i.orig 's/record AuthorizationRequest(String reference,/record AuthorizationRequest(String ref,/' "$adapter"
+              if mvn -B -q -o verify -pl payment-integration-test -am >/dev/null 2>&1; then
+                echo "the request body changed shape and every test stayed green"
+                exit 1
+              fi
+              echo "a test caught the broken request body"
+          expected_exit_code: 0
+          timeout: 6m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-testing
+    rubric:
+      - Exercises the adapter's own HTTP client over a real connection to a stand-in server, rather than replacing the client or its transport with something that answers in its place.
+      - Enters through the adapter itself and checks what crosses the wire, without booting the whole application to reach it.
+
+  # Regression guard. Sonnet 5 already picks the real engine here without the
+  # skill, so a tie is the expected result and a loss is the finding: it would
+  # mean the skill pushed a baseline that got this right towards something worse.
+  # Exempt from discrimination ranking. Postgres and Spring Data JPA are the
+  # repository's context, not a hint. The request asks for the approach, not a
+  # file: with no repository staged, "write the test" was graded on whether an
+  # unverifiable template compiled.
+  - name: 'Spring Boot: test the JPA order repository adapter'
+    tags:
+      role: regression-guard
+    prompt: |
+      Our Spring Boot 3.5 service stores orders in PostgreSQL through a Spring Data
+      JPA adapter: JpaOrderRepository implements the application's OrderRepository
+      port and maps the Order aggregate to an OrderEntity. It also has a custom JPQL
+      query, findOpenOrdersOlderThan(Instant cutoff). Nothing tests that adapter yet.
+
+      Before anyone writes it, tell me how that adapter should be tested.
+    graders:
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-testing
+    rubric:
+      - Runs the adapter's tests against the same database engine as production, not an embedded or in-memory substitute.
+      - Makes sure the test cannot silently run against a different database than the one it declares.
+      - Exercises the custom query with cases on both sides of its cutoff and of its status filter.
+      - Keeps the test with the slower suite, away from the tests developers run on every save.
+      - Is judged on the proposed approach; the absence of a repository to run it against is not a defect.

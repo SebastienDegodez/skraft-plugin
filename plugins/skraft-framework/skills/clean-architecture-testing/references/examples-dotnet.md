@@ -221,40 +221,52 @@ For E2E tests that hit a DB, override services in `WebApplicationFactory<Program
 ```csharp
 public sealed class ArchitectureTests
 {
+    // Allow-list: a guard limited to the solution's own layers lets every framework through.
     [Fact]
-    public void Domain_ShouldNotDependOn_Infrastructure()
-        => AssertNoDependency(typeof(IDomainMarker).Assembly, "MyApp.Infrastructure");
+    public void Domain_DependsOnlyOnItselfAndTheLanguageCore()
+        => AssertOnly(typeof(IDomainMarker).Assembly, "MyApp.Domain");
 
     [Fact]
-    public void Domain_ShouldNotDependOn_Application()
-        => AssertNoDependency(typeof(IDomainMarker).Assembly, "MyApp.Application");
+    public void Application_DependsOnlyOnInnerLayersAndTheLanguageCore()
+        => AssertOnly(typeof(IApplicationMarker).Assembly, "MyApp.Application", "MyApp.Domain");
 
-    [Fact]
-    public void Application_ShouldNotDependOn_Infrastructure()
-        => AssertNoDependency(typeof(IApplicationMarker).Assembly, "MyApp.Infrastructure");
-
-    [Fact]
-    public void Application_ShouldNotDependOn_Api()
-        => AssertNoDependency(typeof(IApplicationMarker).Assembly, "MyApp.Api");
-
-    [Fact]
-    public void Api_ShouldNotDependOn_Application_Directly()
+    [Theory]
+    [InlineData("MyApp.Domain")]
+    [InlineData("MyApp.Application", "MyApp.Domain")]
+    [InlineData("MyApp.Infrastructure", "MyApp.Application")]
+    [InlineData("MyApp.Api", "MyApp.Infrastructure")]
+    public void Project_ReferencesOnlyItsInnerNeighbour(string project, params string[] allowed)
     {
-        // API goes through Infrastructure DI; direct Application reference is forbidden.
-        var result = Types.InAssembly(typeof(IApiMarker).Assembly)
-            .That().DoNotHaveName("Program")
-            .Should().NotHaveDependencyOn("MyApp.Application")
-            .GetResult();
+        // The reference graph is the rule; transitive types (Domain in Infrastructure, Application in Api) may be imported.
+        var references = XDocument.Load(Path.Combine(SolutionRoot(), "src", project, $"{project}.csproj"))
+            .Descendants("ProjectReference")
+            .Select(reference => Path.GetFileNameWithoutExtension(((string)reference.Attribute("Include")!).Replace('\\', '/')))
+            .Order()
+            .ToArray();
 
-        result.IsSuccessful.Should().BeTrue(Format(result));
+        references.Should().Equal(allowed.Order());
     }
 
-    private static void AssertNoDependency(Assembly assembly, string forbidden)
+    private static string SolutionRoot()
     {
-        var result = Types.InAssembly(assembly)
-            .Should().NotHaveDependencyOn(forbidden)
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !directory.EnumerateFiles("*.sln*").Any())
+            directory = directory.Parent;
+        return directory!.FullName;
+    }
+
+    // `System` is the base library; I/O, network and persistence inside it are technical details too.
+    private static void AssertOnly(Assembly assembly, params string[] layers)
+    {
+        var frameworks = Types.InAssembly(assembly)
+            .Should().OnlyHaveDependenciesOn([.. layers, "System"])
             .GetResult();
-        result.IsSuccessful.Should().BeTrue(Format(result));
+        var io = Types.InAssembly(assembly)
+            .Should().NotHaveDependencyOnAny("System.IO", "System.Net", "System.Data")
+            .GetResult();
+
+        frameworks.IsSuccessful.Should().BeTrue(Format(frameworks));
+        io.IsSuccessful.Should().BeTrue(Format(io));
     }
 
     private static string Format(TestResult result)
