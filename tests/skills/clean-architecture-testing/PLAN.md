@@ -394,14 +394,14 @@ d'environnement.
 | Tentative | Échec | Nature | Suite |
 |---|---|---|---|
 | 1 | `Could not resolve a @github/copilot platform package (tried @github/copilot-darwin-arm64)` | outillage | `@github/copilot-darwin-arm64@1.0.81` a supprimé l'export `./sdk` attendu par `@github/copilot-sdk@1.0.9` → épinglage à 1.0.78 |
-| 2 | `/Users/a239hz/OneDrive: No such file or directory` | outillage | `$VALLY` non quoté dans le runner → tableau bash |
+| 2 | `/Users/<user>/OneDrive: No such file or directory` | outillage | `$VALLY` non quoté dans le runner → tableau bash |
 | 3 | idem 1, réapparu | outillage | `npm install --no-save` avait élagué le paquet épinglé ; réinstallé avec le CLI |
 | 4 | `ProxyResponseError: HTTP 403 response does not appear to originate from GitHub` | **environnement** | non contournable depuis cette machine |
 
 Diagnostic du blocage n° 4 : `GET https://api.github.com/copilot_internal/v2/token` avec le token
-`gh` actif renvoie une page 403 anti-scraping. Le compte actif (`fdescamps`) n'a pas
+`gh` actif renvoie une page 403 anti-scraping. Le compte actif n'a pas
 d'habilitation Copilot sur ce chemin, et le compte Copilot d'entreprise
-(`francois-descamps_axaghcop`) est en échec d'authentification dans le trousseau
+est en échec d'authentification dans le trousseau
 (`gh auth status` : *Failed to log in*).
 
 **Pour débloquer**, au choix :
@@ -474,3 +474,242 @@ La commande de couverture des graders — `dotnet test … /p:Threshold=100
 > **Portée de la mesure.** Ce déplacement change l'environnement de départ de plusieurs stimuli
 > de `outside-in-tdd`. Son verdict publié a été obtenu sur l'ancienne fixture ; il faudra le
 > rejouer avant de comparer un futur résultat à celui-là.
+
+## 15. Extension Spring Boot — J1 à J3
+
+Tranche 0 du support Java/Spring Boot : vérifier, avant d'écrire la moindre skill Java, si la
+skill agnostique suffit déjà sur un build Maven multi-module, et si Sonnet 5 sans skill ne gère
+pas déjà ces décisions.
+
+### Sondes préalables (indicatives, pas un verdict)
+
+Sous-agents Sonnet 5, fixture `payment-spring`, 1–2 runs par cellule, contexte
+de harness non isolé (instructions du dépôt visibles). Signal de direction uniquement.
+
+| Sonde | Sans skill | Avec `clean-architecture-testing` |
+|---|---|---|
+| Couvrir l'adaptateur HTTP | 2/2 bon module ; 1/2 `MockRestServiceServer` (transport simulé in-process) | 2/2 WireMock, vrai HTTP |
+| Adaptateur JPA (piège H2) | 2/2 Testcontainers Postgres + `Replace.NONE` | 1/1 idem |
+| Garde de couches | 1/1 **troisième module** `payment-architecture-test` (Failsafe) | 1/1 ArchUnit dans `payment-integration-test` |
+| Gate de mutation (100 % cœur / 80 % adaptateurs) | 2/2 PIT cross-module correct, gate réel | non sondé |
+
+Lecture : l'outillage Java/Spring est maîtrisé sans skill. L'écart porte sur la politique — deux
+modules de test, serveur de substitution plutôt que transport simulé — et la skill agnostique le
+corrige déjà. Aucune skill Java de placement n'est écrite tant que Vally ne montre pas de trou.
+La sonde mutation relève de la future `quality-gates-java`, pas de cette skill : coupée ici.
+
+### Stimuli
+
+| # | Stimulus | Classe | Preuve | Hypothèse |
+|---|---|---|---|---|
+| J1 | `Spring Boot: the Maven build rejects a layer leak, the save loop stays fast` | décideur | déterministe : sentinelle `mvn -o validate`, `verify` vert, suite rapide verte seule, exactement deux `src/test`, diff dans `payment-integration-test/src/test/`, rien dans `payment-unit-test/src/`, **sonde de fuite** (copie jetable, `spring-web` + `RestClient` injectés dans `payment-application`, `verify` doit échouer) ; rubrique | victoire traitement (sonde P3) |
+| J2 | `Spring Boot: first tests for the REST payment adapter` | décideur | déterministe : sentinelle, `verify` vert, deux `src/test`, diff dans le module lent, production intacte, **sonde refus** (402 → 409 doit casser un test), **sonde requête** (champ JSON `reference` → `ref` doit casser un test) ; rubrique pour le vrai fil HTTP | victoire partielle (sonde P1) |
+| J3 | `Spring Boot: test the JPA order repository adapter` | garde-fou de régression | rubrique | **égalité attendue** ; une défaite est le constat (sonde P2) |
+
+Le near miss S5 couvre la non-activation pour tout le spec. Le S2 .NET (forced-concept
+in-memory) n'est pas rejoué en Java : P2 montre que la base choisit déjà le vrai moteur, J3 garde
+cette tranche. Les noms ne partagent aucun fragment avec les stimuli .NET : `STIMULI` est
+insensible à la casse, et `STIMULI="Spring Boot:"` isole le bloc Java.
+
+### Fixture `fixtures/payment-spring/`
+
+Exception assumée à la règle « C# d'abord » : le comportement évalué est propre à Maven/Spring
+(module par préoccupation, suites Failsafe, mocks de transport Spring).
+
+- Spring Boot 3.5.14, Java 21, Maven multi-module, un sous-projet par couche :
+  `payment-domain` (aucune dépendance), `payment-application` (→ domain),
+  `payment-infrastructure` (→ application, `spring-web`, Jackson),
+  `payment-app` (racine de composition `@SpringBootApplication`).
+- Deux sous-projets de test existants et verts : `payment-unit-test` (cas d'usage, stubs
+  écrits à la main) et `payment-integration-test` (adaptateur fichier réel).
+- Piège J2 : `HttpPaymentGateway` reçoit son `RestClient` par constructeur.
+- Aucun Docker requis. Setup : `mvn -B -q -ntp verify` en ligne (réchauffe `~/.m2`), puis graders
+  hors ligne (`-o`) et bornés.
+- Stockage à plat, `<module>/<fichier>` : l'arborescence Maven (`src/main/java/com/example/…`)
+  dépasse le budget de 145 caractères des chemins suivis (installation marketplace sous Windows).
+  Les `dest:` de `eval.yaml` la reconstruisent ; la fixture ne se construit donc qu'une fois
+  mise en place, jamais dans le dépôt.
+
+### Budget
+
+`defaults.runs` vaut 4 pour tout le spec (§7) : 3 × 4 = **12 essais Java par bras**, 32 avec le
+bloc .NET. Écart assumé avec les 5 runs proposés : changer `defaults.runs` déplacerait aussi le
+budget .NET. Avec ~50 % d'égalités, le bloc Java seul vise 4–6 paires discordantes, sous le
+seuil de 6 : son verdict se lit poolé avec le .NET.
+
+### Dépense étagée
+
+1. **A — harnais** : 1 essai de J2 (le plus destructeur : edits de pom, dépendances, transport).
+   `STIMULI="Spring Boot: first tests" PILOT_RUNS=1 eng/run-vally-evals.sh clean-architecture-testing`
+2. **B — pilote** : J1, 4 runs.
+   `STIMULI="Spring Boot: the Maven build" PILOT_RUNS=4 eng/run-vally-evals.sh clean-architecture-testing`
+3. **C — bras complet** : tout le spec, après un pilote qui montre une direction.
+
+Prérequis : JDK 21+ et Maven 3.9 sur la machine qui exécute. Le workflow CI d'évaluation n'installe
+pas Java : suivi séparé.
+
+### Validations statiques réalisées
+
+- `vally lint --eval-spec … --strict` : valide ; `loadEvalSpec` : 8 stimuli, rubriques à côté des
+  graders, `skill-invocation` partout, `scale_1_10`, aucun `scoring.weights`, 20 chemins de
+  fixture présents, destinations sûres.
+- Fixture : `mvn -B verify` vert (2 tests unitaires, 1 d'intégration).
+- Rejeu des graders déterministes : fixture intacte → J1 échoue placement + sonde de fuite, J2
+  échoue placement + deux sondes ; P3-t1 passe tout J1 ; P3-b1 échoue exactement les deux graders
+  structurels ; les quatre espaces P1 passent tout J2 déterministe — seul le juge sépare P1-b2.
+
+### Limites connues
+
+- J2 : le « vrai fil HTTP » n'est jugé que par la rubrique.
+- Essais parallèles sur un `~/.m2` partagé ; les graders construisent en réacteur (`-am`), jamais
+  depuis un artefact installé par un autre essai.
+- Les modifications non commitées de `references/architecture-rules.md` et `examples-dotnet.md`
+  présentes dans l'arbre de travail changent le bras traitement : à trancher avant toute mesure.
+
+### Étape A — harnais validé (2026-09-28)
+
+1 essai de J2, deux bras. Harnais sain : sentinelle tenue, poms intacts, les 8 graders déterministes
+passent dans les deux bras, `skill-invocation` chargée côté traitement seulement, ~2,5–3 min par
+bras. Sortie dans `eval-results-pilot/`, jamais un verdict.
+
+Deux défauts d'instrument trouvés et corrigés avant toute mesure :
+
+- Les ancres YAML `&spring-fixture-*` ne survivaient pas à `make-pilot-spec.mjs`, qui extrait les
+  blocs de stimulus comme texte : liste de fixture et setup écrits en toutes lettres dans J1 et J2.
+- La défaite du seul essai (juge 6,7 contre 8,9) venait entièrement de l'item « couvre un
+  changement de forme de la réponse », que la skill n'enseigne pas : bruit hors skill. Remplacé
+  par « entre par l'adaptateur et vérifie ce qui passe sur le fil, sans démarrer l'application ».
+
+Observation : la base a cette fois choisi un vrai serveur HTTP (WireMock). J2 risque de produire
+surtout des égalités ; J1 reste le décideur attendu.
+
+### Étape B — pilote J1 (2026-09-28, 4 runs, non publiable)
+
+Premier passage perdu : le bras traitement a échoué 4/4 à l'authentification (panne réseau,
+`api.github.com/copilot_internal/user`). Rejoué avec `BASELINE_CACHE=1` sur cache vide : bras de
+base frais, résultat marqué `publishable: false`.
+
+| Grader | Base | Traitement |
+|---|---|---|
+| Tests toujours à deux endroits | 0/4 | 4/4 |
+| Garde dans la suite lente | 0/4 | 4/4 |
+| Fuite injectée rejetée par le build | 2/4 | 3/4 |
+| Skill chargée | 0/4 | 4/4 |
+
+Juge : 4 victoires / 0 égalité / 0 défaite, écart moyen +0,55 [IC 95 % +0,07 ; +1,03]. Direction
+nette. La base crée un module `payment-architecture-test` à chaque essai (4/4). La sonde de fuite
+sépare garde complète et garde partielle : l'échec traitement bannit Spring dans `domain..`
+seulement, pas dans `application..`.
+
+Mesuré avec l'arbre de travail de l'époque : références `architecture-rules.md` /
+`examples-dotnet.md` / `pattern-catalog.md` non commitées, remplacées depuis (ci-dessous). L'étape C
+doit tourner sur la version commitée.
+
+### Règle de dépendance clarifiée (2026-09-28)
+
+La règle porte sur les **références de projet**, pas sur les imports : Api → Infrastructure →
+Application → Domain, une seule référence vers la couche voisine. Les types atteints par référence
+transitive peuvent être importés (Domain dans Infrastructure, Application dans Api). La fixture
+Spring était déjà conforme au niveau des `pom.xml` : aucune modification.
+
+### Étape C, bloc Spring Boot (2026-09-28, 4 runs, pilote non publiable)
+
+Skill commitée `b688e78`, bras frais des deux côtés. `STIMULI="Spring Boot:"`, 12 essais par bras.
+
+Verdict poolé : **aucune amélioration crédible**. Graders 5V/5E/2D (signe p = 0,45), juge 3V/3E/6D
+(moyenne −0,10, IC 95 % [−0,32 ; +0,12]). Cellules par stimulus : descriptives uniquement.
+
+| Stimulus | Graders | Lecture |
+|---|---|---|
+| J1 garde de couches | 4V | Placement : base 0/4, traitement 4/4. Fuite injectée rejetée : base **4/4**, traitement **1/4**. |
+| J2 adaptateur REST | 4E au plafond | Les deux bras utilisent un vrai serveur HTTP ; la base gère déjà ce cas. |
+| J3 adaptateur JPA (garde) | 2E / 2D | Défaites de 1 point, causées par le juge (« espace vide, gabarit non vérifiable ») dans les deux bras ; les deux choisissent Postgres. Bruit d'instrument, pas une dégradation de la skill. |
+
+Constat principal, J1 : trois gardes traitement sur quatre se limitent à
+`layeredArchitecture().consideringOnlyDependenciesInLayers()` — dépendances entre couches internes
+seulement, aucune interdiction de framework dans `domain..` / `application..`. La base interdit
+Spring/Jackson ou restreint à `java..` dans 4/4. La skill enseigne où placer la garde, pas ce
+qu'elle doit couvrir hors .NET : sa table de règles par type ne nomme que `Microsoft.*`, et la
+règle de références de projet mise en tête depuis `b688e78` pousse vers une garde interne.
+Tendance au pilote B (anciennes références) : 3/4 ; ici 1/4. n = 4, non attribuable avec certitude.
+
+Suites, chacune dans une itération approuvée séparément :
+
+- skill : règle agnostique en liste blanche (Domain et Application ne dépendent que d'eux-mêmes,
+  des couches internes et de la bibliothèque standard) + exemple Java ;
+- J2 : plafond atteint, à remplacer ou requalifier en garde-fou de régression ;
+- J3 : le prompt « écris le test » sans dépôt fait noter la délivrabilité ; reformuler.
+
+### Itération skill — liste blanche (`936f0f5`) et pilote J1 (2026-09-28, 4 runs, non publiable)
+
+Skill : Domain et Application ne dépendent que d'eux-mêmes, des couches internes et du cœur du
+langage (sans I/O, réseau, persistance) ; `references/examples-java.md` ajouté ; exemples .NET
+passés de liste noire à liste blanche. Extraits Java et .NET exécutés avant commit : verts sur un
+projet propre, rouges sur fuite framework, fuite I/O de la bibliothèque standard et référence de
+projet sautant une couche.
+
+| Grader | Base | Traitement |
+|---|---|---|
+| Tests toujours à deux endroits | 0/4 | 4/4 |
+| Garde dans la suite lente | 0/4 | 4/4 |
+| Fuite injectée rejetée par le build | 4/4 | **4/4** (1/4 à l'itération précédente) |
+| Build entier vert | 4/4 | 3/4 → 4/4 après correction du grader |
+
+Graders 4V/0E/0D (signe p = 0,125 : 4 paires discordantes, sous le seuil de 6). Juge 3V/0E/0D, une
+comparaison du juge en erreur exclue. Direction nette, verdict impossible à cette taille.
+
+Défaut d'instrument corrigé : l'échec « build entier vert » de l'essai traitement 0 était un
+dépassement du tampon de sortie de Vally (1,2 Mo de traces journalisées par la garde ArchUnit,
+tests verts). Rejoué sur le diff : vert. Les graders `mvn verify` / `mvn test` écrivent désormais
+dans un fichier temporaire et n'affichent que les 40 dernières lignes en cas d'échec ; vérifié sur
+un build vert bruyant (passe) et un build rouge (échoue, trace visible).
+
+### Instrument avant l'étape C complète (2026-09-28)
+
+- J2 requalifié **garde-fou de régression** (`role: regression-guard`) : la base a passé tous les
+  graders déterministes à l'étape A et en 4/4 à l'étape C Spring. Égalité attendue ; une défaite
+  signalerait une dégradation de la couverture d'adaptateur par la skill.
+- J3 : le prompt demande l'approche de test plutôt que le fichier (« Before anyone writes it, tell
+  me how that adapter should be tested. ») ; item de rubrique ajouté : l'absence de dépôt n'est pas
+  un défaut. Toujours garde-fou, égalité attendue.
+- Portefeuille : décideurs S1, S2, S3, J1 (16 essais) ; garde-fous S4, J2, J3 et near miss S5
+  (16 essais, égalités attendues). 32 essais par bras, 8–12 paires discordantes visées.
+
+### Étape C complète (2026-09-29, instrument `a43da8a`, skill `936f0f5`, bras frais, publiable)
+
+Verdict : **comparaison incomplète** (2 essais en erreur, 4 paires exclues faute d'activation) —
+ni réussite, ni régression. Graders 10V/11E/5D, 15 paires discordantes, signe p = 0,30 ;
+Wilcoxon p = 0,019 ; juge 10V/14E/6D, moyenne +0,07 [IC 95 % −0,05 ; +0,20]. Cellules
+descriptives uniquement.
+
+| Stimulus | Rôle | Paires | Lecture |
+|---|---|---|---|
+| J1 Spring, garde de couches | décideur | 4V (0,71 → 0,99) | Placement et fuite injectée tenus 4/4 côté traitement ; la base crée un troisième module 4/4. |
+| S2 .NET, moteur in-memory | décideur | 2V 2E | — |
+| S3 .NET, garde de couches | décideur | 1V 1E(plancher) 2 erreurs | **Défaut d'instrument** : espace vide, « Set that up » ; les deux bras constatent le vide et demandent des précisions (juge 0). Deux essais traitement en délai dépassé (4 min). |
+| S1 .NET, adaptateur HTTP | décideur | 4 exclues | **Skill jamais chargée (0/4)** alors que son jumeau Java J2, même prompt, la charge 4/4. Écarts juge 0,02–0,07 entre deux bras sans skill : bruit de référence. |
+| J3 Spring, JPA | garde-fou | 2V 2E | Reformulation efficace : plus de pénalité « gabarit non vérifiable ». |
+| J2 Spring, adaptateur REST | garde-fou | 3D (1,00 → 0,99) 1E | Graders déterministes identiques ; le juge retire un point sur l'item « suite rapide » en lisant le démarrage de WireMock comme un coût de boucle courte, alors que le test est dans le module lent dans les deux bras. Ambiguïté de rubrique, pas une dégradation. |
+| S4 .NET, 40 cas IBAN | garde-fou | 3E(plafond) 1D | Une réponse traitement propose un faux pour la règle de validation dans les tests de cas d'usage — contraire à la skill (objets du domaine réels). Isolé. |
+| S5 near miss | non-activation | 2E 1V 1D | Skill non chargée 4/4 comme attendu. |
+
+Causes à traiter dans une itération approuvée séparément, sans achat de runs rétroactif :
+
+1. S3 : espace vide pour une demande d'implémentation → demander l'approche (comme J3) ou monter
+   la fixture .NET ; J1 couvre déjà la version exécutable.
+2. S1 : écart d'activation → la `description` ne nomme pas le cas « adaptateur vers une API
+   externe » ; à vérifier contre le near miss S5.
+3. J2 : l'item « suite rapide » est déjà prouvé par les graders de diff ; le retirer de la rubrique.
+
+### Itération après l'étape C (2026-09-29)
+
+- S3 : la fixture .NET `payment-authorization` est désormais montée. Graders déterministes
+  calqués sur J1 : build (sentinelle), suite verte, deux projets de test, garde dans
+  IntegrationTest, rien dans UnitTest. La sonde de fuite injecte un `System.Net.Http.HttpClient`
+  dans Application sur une copie jetable. Rejoué sur trois états : fixture intacte → placement et
+  fuite en échec ; liste blanche NetArchTest dans IntegrationTest → tout vert ; troisième projet
+  avec une liste noire limitée aux projets voisins → deux projets, placement et fuite en échec.
+- S1 : la `description` de la skill nomme désormais la couverture d'un adaptateur vers une API
+  externe, une base ou le système de fichiers (0/4 activations à l'étape C).
+- S1 et J2 : le critère « suite rapide » est retiré de la rubrique ; les graders de diff le
+  prouvent déjà, et le juge l'appliquait au démarrage de WireMock dans le module lent.

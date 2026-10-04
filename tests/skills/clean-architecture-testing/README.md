@@ -60,10 +60,14 @@ S1 is the deterministic decider; the other four are judged against their rubrics
 | exactly two directories under `tests/` | a third project grown to park the new test in |
 | `diff-contains` on `IntegrationTest/**.cs` | the coverage landed in the slow suite |
 | `diff-not-contains` on `UnitTest/**.cs` | the fast suite did not take on the adapter |
+| 402 read as `Conflict` → a test fails | the coverage reaches the adapter's refusal handling |
+| `"reference"` renamed `"ref"` → a test fails | the coverage asserts what the adapter sends |
 
-The paired diff graders are what make S1 decidable without a judge: placement is
-a fact about the diff, not an opinion. Because the new test must also be **green
-against the real adapter**, a hollow test cannot satisfy them.
+The paired diff graders make placement decidable without a judge: it is a fact
+about the diff, not an opinion. They only prove *some* test file changed in the
+slow suite, so a hollow test, an edit to the receipt-store test or a deleted file
+would satisfy them. The two mutation probes close that gap: each breaks the
+adapter in a scratch copy, and a test the agent wrote has to go red.
 
 ## What was cut, and why
 

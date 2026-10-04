@@ -41,14 +41,16 @@ Organise code into concentric layers where inner layers have no knowledge of out
 
 ### Dependency Rule
 
-**Source code dependencies point inward only.**
+**Project references point inward only, one layer at a time.**
 
-| Layer | May depend on | Must NOT depend on |
+| Layer | References | Must NOT reference |
 |---|---|---|
 | Domain | Nothing | Application, Infrastructure, API |
 | Application | Domain | Infrastructure, API |
-| Infrastructure | Application, Domain | API |
-| API | Application | Domain directly, Infrastructure |
+| Infrastructure | Application | Domain, API |
+| API | Infrastructure | Application, Domain |
+
+Types reachable through a transitive reference may be imported: Infrastructure uses the Domain types an Application port exposes, and API composes Application use cases through its Infrastructure reference. The rule constrains project references, never imports.
 
 **The dependency rule is non-negotiable.** Any violation is a BLOCKER in the architecture review.
 
