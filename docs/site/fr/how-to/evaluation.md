@@ -178,7 +178,8 @@ Les agents personnalisés sont couverts, mais pas de la même façon que les ski
 | Verdict | Ce qu'il signifie |
 |---|---|
 | `pass` | tous les essais ont tourné et scoré au niveau ou au-dessus du `scoring.threshold` de la suite |
-| `regression` | tous les essais ont tourné, et au moins un a scoré sous le seuil |
+| `flaky` | tous les essais ont tourné, au moins un a scoré sous le seuil, et chaque scénario garde au moins deux tiers d'essais conformes |
+| `regression` | tous les essais ont tourné, et au moins un scénario tombe sous deux tiers d'essais conformes |
 | `inconclusive` | un essai est parti en erreur, donc il ne prouve rien sur l'agent |
 
 Ces verdicts sont publiés sur le tableau de bord et dans le commentaire de PR à côté des skills, mais ils restent **indicatifs** : une suite joue une seule session d'agent réel, et un run instable ne doit pas bloquer une fusion sans rapport.

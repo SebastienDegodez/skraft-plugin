@@ -1,9 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ARTIFACTS, validate } from '../../../plugins/skraft-framework/src/domain/artifact-registry.mjs'
+import { ARTIFACTS, normalize, validate } from '../../../plugins/skraft-framework/src/domain/artifact-registry.mjs'
+import { parseReviewVerdict } from '../../../plugins/skraft-framework/src/domain/artifact-policy.mjs'
 import { renderArtifact } from '../../../plugins/skraft-framework/src/application/render-artifact.mjs'
 
 // Mirrors how plugins/skraft-framework/src/cli/artifact.mjs resolves templates at runtime: relative
@@ -11,6 +14,7 @@ import { renderArtifact } from '../../../plugins/skraft-framework/src/applicatio
 // exact shipped codepath an agent hits via `${CLAUDE_PLUGIN_ROOT}/src/cli/artifact.mjs`.
 const pluginRoot = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
 const readTemplate = (templatePath) => readFileSync(join(pluginRoot, templatePath), 'utf8')
+const cliPath = join(pluginRoot, 'src/cli/artifact.mjs')
 
 const fullComment = () => ({
   phase: 'DISCUSS',
@@ -58,4 +62,52 @@ test('validate: unknown artifact type is flagged, not thrown', () => {
   const result = validate('frobnicate', {})
   assert.equal(result.ok, false)
   assert.equal(result.unknownType, true)
+})
+
+const reviewVerdict = (verdict) => ({
+  verdict,
+  lenses: { coverage: { status: 'fail', findings: [] } },
+  synthesis: { blocking_findings: [], recommendations: [], dissent: 'None.' },
+})
+
+test('normalize: a review verdict differing only by case, spaces or hyphens takes its canonical spelling', () => {
+  for (const [given, canonical] of [['rejected', 'REJECTED'], ['Needs rework', 'NEEDS_REWORK'], ['needs-rework', 'NEEDS_REWORK'], [' approved ', 'APPROVED']]) {
+    assert.equal(normalize('review-verdict', reviewVerdict(given)).verdict, canonical)
+  }
+  assert.equal(normalize('review-verdict', { status: 'rejected' }).status, 'REJECTED')
+})
+
+test('normalize: leaves non-enum fields and other artifact types untouched', () => {
+  const data = reviewVerdict('rejected')
+  assert.equal(normalize('review-verdict', data).lenses, data.lenses)
+  assert.equal(normalize('adr', { status: 'proposed' }).status, 'proposed')
+})
+
+test('validate: a review verdict outside APPROVED, NEEDS_REWORK and REJECTED is invalid', () => {
+  const result = validate('review-verdict', normalize('review-verdict', reviewVerdict('maybe')))
+  assert.equal(result.ok, false)
+  assert.deepEqual(result.missing, [])
+  assert.deepEqual(result.invalid, [{ field: 'verdict', value: 'maybe', allowed: ['APPROVED', 'NEEDS_REWORK', 'REJECTED'] }])
+})
+
+test('artifact CLI: a lower-case verdict is written in the spelling the phase gate reads', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'artifact-cli-'))
+  const out = join(dir, 'distill-review-1.md')
+  const run = spawnSync(process.execPath, [cliPath, 'review-verdict', '--out', out], {
+    input: JSON.stringify(reviewVerdict('rejected')),
+    encoding: 'utf8',
+  })
+  assert.equal(run.status, 0, run.stderr)
+  assert.equal(parseReviewVerdict(readFileSync(out, 'utf8')), 'REJECTED')
+})
+
+test('artifact CLI: an unknown verdict exits 2 and names the allowed values', () => {
+  const run = spawnSync(process.execPath, [cliPath, 'review-verdict'], {
+    input: JSON.stringify(reviewVerdict('maybe')),
+    encoding: 'utf8',
+  })
+  assert.equal(run.status, 2)
+  const error = JSON.parse(run.stderr)
+  assert.equal(error.error, 'invalid_field_values')
+  assert.deepEqual(error.invalid[0].allowed, ['APPROVED', 'NEEDS_REWORK', 'REJECTED'])
 })

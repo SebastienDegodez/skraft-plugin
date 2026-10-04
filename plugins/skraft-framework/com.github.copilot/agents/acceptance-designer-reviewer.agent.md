@@ -74,7 +74,7 @@ Evaluate 4 lenses independently. Each lens sees only its designated inputs — f
 
 | Gate | Definition | Severity if violated |
 |---|---|---|
-| G1 | Every AC has ≥1 scenario. No orphan scenario exists. | BLOCKER |
+| G1 | Every AC has ≥1 scenario; no orphan exists; every business input and expected value in each scenario matches its source AC exactly. Name both values and the AC for any drift. | BLOCKER |
 | G2 | Boundary conditions and negative cases are represented per domain examples. | HIGH |
 
 ---

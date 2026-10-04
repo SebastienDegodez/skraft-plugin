@@ -101,10 +101,9 @@ Every test targets exactly one Clean Architecture layer. The layer determines th
 **Project:** `tests/{Context}.IntegrationTest/`
 
 **Assert:**
-- Domain has no outward dependencies (no Infrastructure, no Application)
-- Application depends only on Domain (no Infrastructure, no API)
-- Infrastructure depends on Application interfaces only (implements them, does not define them)
-- API depends on Application (not on Infrastructure or Domain directly)
+- Each project references only its inner neighbour: API → Infrastructure → Application → Domain
+- Domain and Application depend on nothing outside their inner layers and the language core (no framework, I/O, network or persistence)
+- Infrastructure implements Application interfaces and does not define them
 
 ---
 

@@ -127,23 +127,28 @@
         "policy": "verify"
       },
       {
-        "name": "skraft-quality-bar",
-        "policy": "verify"
-      },
-      {
         "name": "craft-discipline",
         "policy": "verify"
       },
       {
+        "name": "skraft-quality-bar",
+        "policy": "on-demand"
+      },
+      {
         "name": "resolving-stack-commands",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "qa-reporting",
-        "policy": "verify"
+        "policy": "on-demand"
       }
     ],
-    "architecture-boundaries-lens": [],
+    "architecture-boundaries-lens": [
+      {
+        "name": "clean-architecture-testing",
+        "policy": "on-demand"
+      }
+    ],
     "Skraft - Backlog Discoverer Reviewer": [
       {
         "name": "discovery-review-criteria",
@@ -246,31 +251,39 @@
     "planning-invest-lens": [],
     "quality-gates-lens": [
       {
-        "name": "qa-reporting",
+        "name": "quality-gates-evidence-contract",
         "policy": "verify"
+      },
+      {
+        "name": "skraft-quality-bar",
+        "policy": "verify"
+      },
+      {
+        "name": "qa-reporting",
+        "policy": "on-demand"
       }
     ],
     "refactoring-worker": [],
     "Skraft - Orchestrator": [
       {
         "name": "adversarial-review-lenses",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "contract-testing",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "playwright-evidence",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "github-search-protocol",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "qa-reporting",
-        "policy": "verify"
+        "policy": "on-demand"
       }
     ],
     "Skraft - Software Engineer Reviewer": [
@@ -280,7 +293,7 @@
       },
       {
         "name": "qa-reporting",
-        "policy": "verify"
+        "policy": "on-demand"
       }
     ],
     "Skraft - Software Engineer": [
@@ -289,48 +302,52 @@
         "policy": "verify"
       },
       {
-        "name": "clean-architecture-testing",
-        "policy": "verify"
-      },
-      {
-        "name": "test-design-mandates",
-        "policy": "verify"
-      },
-      {
         "name": "craft-discipline",
         "policy": "verify"
       },
       {
+        "name": "clean-architecture-testing",
+        "policy": "on-demand"
+      },
+      {
+        "name": "test-design-mandates",
+        "policy": "on-demand"
+      },
+      {
         "name": "test-refactoring-catalog",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "mutation-testing",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "skraft-quality-bar",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "quality-gates-evidence-contract",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "quality-gates-dotnet",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "quality-gates-javascript",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "resolving-stack-commands",
-        "policy": "verify"
+        "policy": "on-demand"
       },
       {
         "name": "qa-reporting",
-        "policy": "verify"
+        "policy": "on-demand"
+      },
+      {
+        "name": "playwright-evidence",
+        "policy": "on-demand"
       }
     ],
     "Skraft - Solution Architect Reviewer": [
@@ -377,7 +394,9 @@
         ".copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md",
-        "tests/**/{Feature}AcceptanceTests.cs"
+        "tests/**/{Feature}AcceptanceTests.cs",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md (optional, build/test commands resolved once for later agents)",
+        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.* (optional, RED proof of the acceptance tests)"
       ]
     },
     "architecture-boundaries-lens": {
@@ -530,10 +549,17 @@
     "Skraft - Software Engineer Reviewer": {
       "inputs": [
         "Source code commits produced by software-engineer",
-        "Test files referenced in the commits"
+        "Test files referenced in the commits",
+        ".copilot-tracking/skraft-plans/{projectSlug}/features/{bounded-context}-{feature}.feature",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/test-plan-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/impl-plan-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
+        "docs/adr/decisions-index.md"
       ],
       "outputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md"
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch (optional, Phase 2 diff the lenses read)",
+        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/files-{story}.txt (optional, Phase 2 changed-file list)"
       ]
     },
     "Skraft - Software Engineer": {
@@ -565,7 +591,8 @@
     "Skraft - Solution Architect": {
       "inputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
+        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md",
+        ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md"
       ],
       "outputs": [
         ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md",
@@ -589,5 +616,92 @@
       "inputs": [],
       "outputs": []
     }
+  },
+  "agentContext": {
+    "Skraft - Acceptance Designer Reviewer": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md"
+    ],
+    "Skraft - Acceptance Designer": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md",
+      "docs/adr/decisions-index.md",
+      "docs/adr/adr-{NNN}-{slug}.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md"
+    ],
+    "architecture-boundaries-lens": [],
+    "Skraft - Backlog Discoverer Reviewer": [
+      "GitHub repository (to verify issue labels via MCP)"
+    ],
+    "Skraft - Backlog Discoverer": [
+      "GitHub milestones",
+      "git log (for artifact-driven mode)"
+    ],
+    "Skraft - Backlog Planner Reviewer": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md"
+    ],
+    "Skraft - Backlog Planner": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-ingest-{date}.md (when DISCOVER was skipped via an upstream handoff)"
+    ],
+    "Skraft - Brownfield Analyst": [
+      "depth preference (quick/deep/exhaustive; default deep)",
+      "focus directories (optional)",
+      "product name (optional; asked if not provided)"
+    ],
+    "Skraft - Brownfield Harness Builder": [
+      "existing contract file, if known"
+    ],
+    "Skraft - Brownfield Refactorer": [],
+    "cold-reader-lens": [],
+    "contract-fidelity-lens": [],
+    "contract-testing-worker": [
+      "contract artifacts (OpenAPI / .apiexamples / .apimetadata) if present",
+      ".copilot-tracking/skraft-plans/{projectSlug}/state.json",
+      "the run prompt (may request the Microcks opt-in)",
+      ".github/instructions/skraft.instructions.md (consumer repo, testing.contract.*)"
+    ],
+    "discovery-completeness-lens": [],
+    "discovery-duplicate-lens": [],
+    "discovery-prioritization-lens": [],
+    "mock-fidelity-lens": [],
+    "mock-integration-worker": [
+      "the run prompt (may carry a strategy/library override)",
+      ".github/instructions/skraft.instructions.md (consumer repo, testing.mocking.*)"
+    ],
+    "planning-ac-quality-lens": [],
+    "planning-coherence-lens": [],
+    "planning-dor-lens": [],
+    "planning-invest-lens": [],
+    "quality-gates-lens": [],
+    "refactoring-worker": [],
+    "Skraft - Orchestrator": [],
+    "Skraft - Software Engineer Reviewer": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md"
+    ],
+    "Skraft - Software Engineer": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/contracts-{story}.md",
+      "docs/adr/decisions-index.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/acceptance-red.*"
+    ],
+    "Skraft - Solution Architect Reviewer": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md",
+      "docs/adr/supersessions.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/blockers/{date}/decision-drift-*.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json"
+    ],
+    "Skraft - Solution Architect": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json"
+    ],
+    "Skraft - Solution Researcher": [
+      ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
+      "existing codebase and instructions files"
+    ],
+    "test-integrity-lens": []
   }
 }

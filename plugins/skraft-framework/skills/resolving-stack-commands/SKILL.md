@@ -50,6 +50,35 @@ context:
   needed: test
 ```
 
+## Stack-commands file (resolve once per pipeline)
+
+Inside a SKRAFT pipeline, resolved commands live in one file every later agent reads:
+`.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/stack-commands.md`.
+
+- **Read before resolving.** When the handoff block lists the file, take the commands
+  from it and do not run the detection above.
+- **Resolve only when** the file is absent, a command in it fails to start or to build
+  (a test that fails on its assertion is not a command failure), or the stack markers
+  changed since the recorded revision.
+- **Write:** the first agent that resolves writes the whole file; a later agent that
+  re-resolves rewrites only the failing rows and the revision line.
+- Never record credentials, tokens or environment-variable values in it.
+
+```markdown
+<!-- markdownlint-disable-file -->
+# Stack commands
+- Stack: {stack} — adapter `quality-gates-{tech}`
+- Resolved at: {output of git rev-parse HEAD}
+
+| Purpose | Command | Working directory |
+|---|---|---|
+| build | {command} | {dir} |
+| test — full suite | {command} | {dir} |
+| test — one test (filter placeholder `{TestName}`) | {command} | {dir} |
+| mutation — core (adapter script) | {command} | {dir} |
+| mutation — boundary (adapter script) | {command} | {dir} |
+```
+
 ## Contract for callers
 
 - Resolve the command (build / test / mutation) from the matching `quality-gates-<tech>` adapter; do not embed it in workflow steps.

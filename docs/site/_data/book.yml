@@ -505,8 +505,8 @@ parts:
     sidebar_position: 4
     title_fr: "Référence — consulter"
     title_en: "Reference — look up"
-    intro_fr: "Tout le factuel : agents, skills, les 48 gates, lentilles, patterns, citations, glossaire, changelog."
-    intro_en: "All the facts: agents, skills, the 48 gates, lenses, patterns, citations, glossary, changelog."
+    intro_fr: "Tout le factuel : agents, skills, les 49 gates, lentilles, patterns, citations, glossaire, changelog."
+    intro_en: "All the facts: agents, skills, the 49 gates, lenses, patterns, citations, glossary, changelog."
     # Menu a 3 niveaux : partie -> section -> page. Le catalogue dashboard couvre
     # agents, skills, workers et lentilles sans materialiser une page Markdown par
     # source. Les autres sections conservent leurs pages handbook explicites.

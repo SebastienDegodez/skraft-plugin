@@ -38,7 +38,7 @@ level, no warning level, no override and no rationale that buys an exemption —
 `skraft-quality-bar` skill owns the enforcement level of every gate and the value of
 every threshold, and nothing downstream restates them.
 
-Total: **48 gates** across product workflows and engineering phases. What follows is the full grid, exactly as
+Total: **49 gates** across product workflows and engineering phases. What follows is the full grid, exactly as
 each reviewer applies it.
 
 ---
@@ -106,16 +106,21 @@ and the sprint plan.
 
 ---
 
-## DESIGN — G1 to G15
+## DESIGN — G1 to G16
 
 Reviewer: `solution-architect-reviewer`. 3 lenses + 1 cross-cutting escalation gate.
-Checks ADRs, the supersession registry, diagrams, contracts, consistency matrices.
+Checks ADRs, the supersession registry, diagrams, contracts, consistency matrices and
+the structural scan.
+
+Ratification timing: DESIGN review runs before human ADR ratification. A current-pass
+`Proposed` ADR satisfies gates that require an `Accepted` ADR, and gates that forbid an
+`Accepted` ADR also forbid a current-pass `Proposed` ADR.
 
 ### Lens 1 — Consistency
 
 | ID | What the gate checks | Pass condition | Severity |
 | --- | --- | --- | --- |
-| **G1** | Every structural commitment — visible in a diagram or detected in code (command/query bus, event store, saga, cross-context ACL) — is justified by a traceable `Accepted` ADR. | Each structural element references ≥ 1 accepted ADR. | BLOCKER |
+| **G1** | Every structural commitment — visible in a diagram or detected by the structural scan (command/query bus, event store, saga; cross-context ACL by manual review) — is justified by a traceable ADR. | Each structural element references ≥ 1 `Accepted` ADR or current-pass `Proposed` ADR. | BLOCKER |
 | **G2** | No two ADRs contradict each other; every supersession is recorded both in the new ADR body AND in the append-only `supersessions.md` registry. | Zero contradicting decision, complete supersession links. | BLOCKER |
 | **G10** | A consistency matrix exists per story and its `consistency-gate` line is `PASS`; the back-propagation journal explains every rewrite. | One matrix per story, all PASS. | BLOCKER |
 | **G12** | Every supersession-plan row is realised (ADR body, registry row, no artefact still citing the superseded ADR as source of truth). | All three conditions hold per supersession. | BLOCKER |
@@ -126,7 +131,7 @@ Checks ADRs, the supersession registry, diagrams, contracts, consistency matrice
 | ID | What the gate checks | Pass condition | Severity |
 | --- | --- | --- | --- |
 | **G3** | Dependency rule: Domain and Application layers depend on neither Infrastructure nor API. | Zero Infrastructure/API import in Domain or Application. | BLOCKER |
-| **G4** | All application interfaces (repositories, gateways, publishers) are defined in the Application layer, never in Infrastructure. | Zero infrastructure-defined interface. | BLOCKER |
+| **G4** | All application interfaces (repositories, gateways, publishers) are defined in Domain or Application — the layer the aggregate ADR records — never in Infrastructure. | Zero infrastructure-defined interface; every interface matches the layer recorded by its ADR. | BLOCKER |
 | **G5** | Each aggregate enforces its own invariants, not another aggregate's. | Zero cross-aggregate invariant. | HIGH |
 | **G6** | The context map declares every inter-context relationship with an explicit pattern (ACL, Conformist, Shared Kernel, Partnership, OHS, Published Language) and every label is admissible. | Zero unlabelled arrow, zero inadmissible label. | HIGH |
 
@@ -138,7 +143,8 @@ Checks ADRs, the supersession registry, diagrams, contracts, consistency matrice
 | **G8** | Every **Command** has at least one corresponding domain event; Queries are exempt. | Zero command without an event. | HIGH |
 | **G9** | No aggregate, context, Event Sourcing adoption or Saga is introduced without story justification. | Zero unjustified architectural element. | MEDIUM |
 | **G11** | Every ADR adopting a complexity-adding pattern (CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL) cites an admissible force AND evaluates the "do without" option. | Admissible force + "do without" alternative per complexity-adding ADR. | HIGH |
-| **G15** | No ADR ratifies a constraint that is the project's **enforced baseline** (method-level CQS, Clean Architecture boundaries, convention-based DI, repository). Deviations and additions remain valid. | Zero `Accepted` ADR restating an enforced baseline. | HIGH |
+| **G15** | No ADR ratifies a constraint that is the project's **enforced baseline** (method-level CQS, Clean Architecture boundaries, convention-based DI, repository). Deviations and additions remain valid. | Zero `Accepted` ADR, and zero current-pass `Proposed` ADR, restating an enforced baseline. | HIGH |
+| **G16** | Comparable interfaces, ports or hooks in `contracts-{story}.md` follow the same state / return / error shape convention unless an ADR justifies divergence. | Same shape convention for every comparable pair, or divergence covered by an `Accepted` ADR or current-pass `Proposed` ADR. | HIGH |
 
 ### Cross-cutting — Escalation
 
@@ -205,11 +211,11 @@ repository owner accepted that trade deliberately — quality is not negotiable.
 | **G3** | The build passes. | Compilation / type-check succeeded. |
 | **G4** | Static analysis passes. | Linter/analyzer reported no blocking issue. |
 | **G5** | Architecture rules pass. | Dependency-direction tests (Clean Architecture) pass. |
-| **G6** | Mutation score meets the bar. | Both sequenced mutation scripts exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 80%). |
+| **G6** | Mutation score meets the bar. | The final full mutation evidence exited `0`: core first (Domain and Application, 100%), then boundary (API and Infrastructure, 80%). |
 | **G7** | No mocks in the Domain/Application core. | Grep-based attestation: zero mock-framework symbol in those layers. |
 | **G8** | Full conventional commit message. | Each covered commit uses the feature scope, sign-off and known issue reference; closure requires genuinely finished work and all required gates passed. |
 | **G9** | No test tampering (RED→GREEN integrity). | For each cycle, the test file changed only by **addition** between RED and GREEN snapshots. |
-| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each cycle, a RED stdout captured at RED time and hashed by sha256, plus a recorded **non-zero** exit code. |
+| **G10** | RED observed: the test ran and **failed** before the implementation landed. | For each cycle, a RED stdout captured in the software-engineer dispatch at RED time and hashed by sha256, plus a recorded **non-zero** exit code. |
 | **G11** | Line coverage meets the bar. | The coverage runner, invoked with the bar's threshold flags (100% line on Domain and Application), exited `0`. |
 
 **G8 policy:** inline commit rules in the existing agents, on both native clients
@@ -226,14 +232,16 @@ repository owner accepted that trade deliberately — quality is not negotiable.
   unchanged; the standalone subject audit remains a syntax check, not proof of
   completion.
 
-> **G6 is an exit code, not a number.** Each `quality-gates-<tech>` adapter bundles two
-> sequenced mutation scripts — `mutation-core.sh` then `mutation-boundary.sh` on .NET.
-> Each script carries its own expected value and passes it to the runner's `--break-at`,
-> so the runner exits non-zero below the bar and **that exit code is the verdict**. Core
-> runs first and short-circuits: there is nothing to learn from mutating adapters while
-> the domain is unproven. A score read from a report and judged in prose is an opinion
-> about a gate, not a gate — and G11 is attested the same way, by the coverage runner's
-> own threshold flags.
+> **G6 is an exit code, not a number.** During a cycle, mutation may run in differential
+> core mode since the previous cycle's last commit, and is skipped when no core production
+> file changed; that is feedback, not evidence. Each `quality-gates-<tech>` adapter bundles
+> two final sequenced mutation scripts — `mutation-core.sh` then `mutation-boundary.sh` on
+> .NET. Each script carries its own expected value and passes it to the runner's
+> `--break-at`, so the runner exits non-zero below the bar and **that exit code is the
+> verdict**. Core runs first and short-circuits: there is nothing to learn from mutating
+> adapters while the domain is unproven. A score read from a report and judged in prose is
+> an opinion about a gate, not a gate — and G11 is attested the same way, by the coverage
+> runner's own threshold flags.
 
 > A genuinely irrelevant gate is marked `not_applicable` **with a rationale** — never
 > as a substitute for `fail` or missing evidence. A gate that *cannot* run — no mutation

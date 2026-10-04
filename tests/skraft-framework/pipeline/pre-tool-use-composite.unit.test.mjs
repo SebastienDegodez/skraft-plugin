@@ -104,3 +104,25 @@ test('no guards configured yields a safe allow (never undefined)', async () => {
   const result = await svc.handle({ toolName: 'Bash' })
   assert.equal(result.decision, 'allow')
 })
+
+// ─── G9 handoff guard ─────────────────────────────────────────────────────────
+
+test('runs the handoff guard with the dispatch prompt only for a tracked agent dispatch', async () => {
+  const handoffGuard = recordingGuard(ALLOW)
+  const svc = createPreToolUseCompositeService({ sessionGuard: recordingGuard(ALLOW), handoffGuard })
+
+  await svc.handle({ projectSlug: 'proj', toolName: 'Agent', toolInput: { subagentType: 'software-engineer', prompt: 'test-plan-42.md' } })
+  await svc.handle({ toolName: 'Agent', toolInput: { subagentType: 'software-engineer', prompt: 'no pipeline' } })
+  await svc.handle({ projectSlug: 'proj', toolName: 'Bash', toolInput: { command: 'ls' } })
+  assert.deepEqual(handoffGuard.calls, [{ requestedAgent: 'software-engineer', projectSlug: 'proj', prompt: 'test-plan-42.md' }])
+})
+
+test('a handoff refusal denies the dispatch even when every other guard allows', async () => {
+  const svc = createPreToolUseCompositeService({
+    dispatchGuard: recordingGuard(ALLOW),
+    sessionGuard: recordingGuard(ALLOW),
+    handoffGuard: recordingGuard({ decision: 'deny', message: 'omits the test plan' }),
+  })
+  const result = await svc.handle({ projectSlug: 'proj', requestedAgent: 'software-engineer' })
+  assert.deepEqual(result, { decision: 'deny', message: 'omits the test plan' })
+})

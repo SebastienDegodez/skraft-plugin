@@ -49,6 +49,13 @@ dispatch par scénario des paliers les plus durs bornent la surface de décision
 l'intérieur de chaque tour, ce qui raccourcit la réponse et réduit la fenêtre de
 contexte nécessaire.
 
+Le runtime ajoute maintenant trois leviers de forme plus petits. Le manifeste de handoff
+transmet les chemins d'artefacts enregistrés pour que les agents de phase ne re-déduisent
+pas le contexte déjà fixé. Les skills marqués `on-demand` restent hors des prompts de
+démarrage et des contrôles de conformité à l'arrêt jusqu'à l'étape qui en a besoin. Les
+prompts de rework et de re-review bornent les retries aux findings précédents, aux entrées
+changées et aux résultats passants reportés, au lieu de rejouer toute la phase.
+
 ## Mesures réelles
 
 Les deux premiers leviers — discipline de cache et classe de modèle — ont été mesurés

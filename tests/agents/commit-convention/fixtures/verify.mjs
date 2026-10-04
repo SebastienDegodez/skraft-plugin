@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { lstatSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 // Loaded only after the spec authenticates its bytes. No target-agent helper,
@@ -9,7 +9,7 @@ export function verify(mode, context, scenario, base, workspace = process.cwd())
   assert.ok(['sentinel', 'tree', 'message'].includes(mode), 'Unknown check')
   assert.ok(Object.hasOwn(context.cases, scenario), 'Unknown scenario')
   assert.match(base, /^[a-f0-9]{40}$/)
-  const root = join(workspace, 'checkout')
+  const root = existsSync(join(workspace, 'handoff.txt')) ? workspace : join(workspace, 'checkout')
   const env = { ...process.env, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' }
   for (const key of Object.keys(env)) {
     if (/^GIT_(?:AUTHOR_|COMMITTER_|DIR$|WORK_TREE$|INDEX_FILE$|COMMON_DIR$|OBJECT_DIRECTORY$|ALTERNATE_OBJECT_DIRECTORIES$|CONFIG_(?:COUNT|KEY_|VALUE_))/.test(key)) delete env[key]

@@ -83,11 +83,26 @@ fi
 
 SKRAFT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
-if [ -n "${VALLY:-}" ]; then
-  VALLY="$VALLY"
+# Two shapes have to survive here. A command carrying its own arguments
+# (`npx --yes …`, `node fake-vally.mjs`) must word-split; a path to one binary
+# must NOT — on a checkout under a directory whose name contains a space
+# ("OneDrive - AXA"), splitting it produced
+# `/Users/…/OneDrive: No such file or directory` on every arm. A caller-supplied
+# VALLY that names an existing file is that path; anything else is a command.
+# So: an array for invoking, and the string only for the `--vally` flag the node
+# adapters parse.
+if [ -n "${VALLY:-}" ] && [ -e "$VALLY" ]; then
+  VALLY_CMD=("$VALLY")
+  # adapt.mjs re-splits that string on whitespace, keeping double-quoted runs
+  # whole, so a path with spaces has to reach it already quoted.
+  case "$VALLY" in *[[:space:]]*) VALLY="\"$VALLY\"" ;; esac
+elif [ -n "${VALLY:-}" ]; then
+  read -r -a VALLY_CMD <<< "$VALLY"
 elif command -v vally >/dev/null 2>&1 && [ "$(vally --version)" = "0.12.0" ]; then
+  VALLY_CMD=(vally)
   VALLY="vally"
 else
+  VALLY_CMD=(npx --yes "$VALLY_PACKAGE")
   VALLY="npx --yes $VALLY_PACKAGE"
 fi
 STIMULI="${STIMULI:-}"
@@ -103,7 +118,7 @@ fi
 # The repository default, used by any eval whose spec does not pin its own
 # `defaults.model`. Sonnet 5 is what the shipped `software-engineer` descriptor
 # declares, so this is the model the framework is actually evaluated on.
-DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-5}"
+DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-5.5}"
 # Empty unless the caller forced one: resolution happens per eval, below.
 MODEL="${MODEL:-}"
 JUDGE_MODEL="${JUDGE_MODEL:-gpt-5.6-luna}"
@@ -312,7 +327,7 @@ run_agent_eval() {
   open_log_fd "$LOG"
   {
     echo "=== $EVAL_NAME (agent) ==="
-    if $VALLY eval \
+    if "${VALLY_CMD[@]}" eval \
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$SKRAFT_ROOT/plugins/skraft-framework/skills" \
       --executor-plugin "$EXECUTOR" \
@@ -494,7 +509,7 @@ run_one_eval() {
     else
       echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline..." >&2
       echo "--- Baseline run ---"
-      $VALLY eval \
+      "${VALLY_CMD[@]}" eval \
         --eval-spec "$BASELINE_SPEC" \
         --skill-dir "$EMPTY_SKILL_DIR" \
         --model "$MODEL" \
@@ -510,7 +525,7 @@ run_one_eval() {
 
     # Skilled: target skill, optionally scoped with declared companion skills.
     echo "--- Skilled run ---"
-    $VALLY eval \
+    "${VALLY_CMD[@]}" eval \
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$SKILLED_SKILL_DIR" \
       --model "$MODEL" \

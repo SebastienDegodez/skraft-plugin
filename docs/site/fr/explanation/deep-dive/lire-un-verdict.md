@@ -210,10 +210,16 @@ s'active pas, doubler le budget double simplement le nombre de paires jetées.
 
 ## 8. Le tableau de lecture
 
+Les évaluations de skill utilisent `no-improvement` pour un résultat nul mesuré.
+Les suites agent sont mono-bras, donc elles n'émettent jamais `no-improvement` ;
+elles peuvent émettre `flaky` quand un run conclusif casse au moins un essai,
+tandis que chaque scénario reste au moins à deux tiers de conformité.
+
 | Verdict | Ce que ça veut dire | Ce qu'on en fait |
 |---|---|---|
 | ✅ `pass` | Amélioration crédible : les deux tests passent, plus de victoires que de défaites | Rien — la skill gagne sa place |
-| 🔴 `regression` | Dégradation crédible | **Bloque la fusion.** Seul état qui le fait |
+| ⚠️ `flaky` | Suite agent seulement : au moins un essai casse, mais chaque scénario reste au moins à 2/3 | Ouvrir le replay et les checks qui ont cédé ; indicatif, jamais bloquant |
+| 🔴 `regression` | Dégradation crédible pour une skill, ou scénario agent sous 2/3 | **Bloque la fusion pour les skills seulement.** Les lignes agent restent indicatives |
 | ➖ `no improvement` | Mesuré proprement, l'écart ne se distingue pas du hasard | Regarder l'ampleur et l'activation avant de conclure |
 | ⚪ `inconclusive` | La mesure n'a pas pu décider | Lire la cause : essais en erreur, non appariés, ou budget trop faible |
 

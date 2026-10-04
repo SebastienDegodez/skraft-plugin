@@ -34,7 +34,7 @@ dependency, tested boundary-to-boundary and hardened with mutation testing.
 - 🤖 **Specialized phase agents**: `backlog-discoverer`, `backlog-planner`, `solution-architect`, `acceptance-designer`, `software-engineer` — each with its dedicated **adversarial reviewer**.
 - 🔬 **Independent reviewer lenses** (quality-gates, architecture-boundaries, test-integrity, cold-reader) synthesized into a weighted verdict.
 - 📚 **Discipline skills**: Outside-In TDD, Clean Architecture testing, BDD/Gherkin, mutation testing, contract testing, ADR, issue refinement…
-- 🛡️ **Mechanical guardrails G1–G8** (fail-closed hooks): dispatch ordering, forced skill loading + JSONL audit, artifact/verdict/commit verification, state protection.
+- 🛡️ **Mechanical guardrails G1–G9** (fail-closed hooks): dispatch ordering, forced skill loading + JSONL audit, artifact/verdict/commit verification, state protection, complete handoff of recorded inputs.
 - 🎯 **Harness-specific packaging**: shared sources with native adapters; validation limits in [docs/architecture.md](docs/architecture.md#compatibility).
 - 💸 **Token economy**: state write-through model (rehydration once per session), model routing by cost class, structural phase pruning from confirmed upstream evidence.
 
@@ -130,7 +130,7 @@ All documentation lives in [`docs/`](./docs/).
 | Specialized phase agents (`backlog-*`, `solution-architect*`, `acceptance-designer*`, `software-engineer*`) | ✅ Implemented |
 | Reviewer lenses (`quality-gates`, `architecture-boundaries`, `test-integrity`, `cold-reader`) | ✅ Implemented |
 | Operational skills (`plugins/skraft-framework/skills/*`) | ✅ Implemented |
-| Runtime guardrails G1–G8 (hooks; G4/G5 in the state CLI) | ✅ Implemented and tested; live harness receipt for G7 only |
+| Runtime guardrails G1–G9 (hooks; G4/G5 in the state CLI) | ✅ Implemented and tested; live harness receipt for G7 only |
 | Observability (health check, housekeeping) and recovery (`diagnose`, `rollback`, `resolve-stale`) | ✅ Implemented — see the [roadmap](./docs/roadmap.md) |
 
 ## Development

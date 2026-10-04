@@ -262,12 +262,14 @@ graph LR
 
 ### Dependency Rule
 
-**Source code dependencies point inward only.**
+**Project references point inward only, one layer at a time.**
 
-- Domain → no dependencies
-- Application → depends on Domain only
-- Infrastructure → depends on Application (implements its interfaces)
-- API → depends on Application (invokes use cases)
+- Domain → references nothing
+- Application → references Domain only
+- Infrastructure → references Application only (implements its interfaces)
+- API → references Infrastructure only (composes use cases through it)
+
+Types reachable through a transitive reference may be imported; never add a direct reference to reach them.
 
 ### Use Case Boundary
 

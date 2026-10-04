@@ -10,6 +10,9 @@ metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer
   skills:
+    - quality-gates-evidence-contract
+    - skraft-quality-bar
+  on_demand_skills:
     - qa-reporting
 ---
 
@@ -26,8 +29,8 @@ create a report verdict.
 
 Load before any review work. If missing, announce `[SKILL MISSING] {name}` and continue.
 
-- [quality-gates-evidence-contract](../../skills/quality-gates-evidence-contract/SKILL.md) — authoritative schema versions, falsification surface and full gate taxonomy including G11.
-- [skraft-quality-bar](../../skills/skraft-quality-bar/SKILL.md) — authoritative thresholds and enforcement.
+- `quality-gates-evidence-contract` — authoritative schema versions, falsification surface and full gate taxonomy including G11.
+- `skraft-quality-bar` — authoritative thresholds and enforcement.
 
 ## Inputs (handed by `software-engineer-reviewer`)
 
@@ -35,8 +38,9 @@ Load before any review work. If missing, announce `[SKILL MISSING] {name}` and c
 - The covered commits' full messages: `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/commits-{story}.txt`.
 - The evidence log: `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json`.
 - Approved feature scope and linked issue when known; never infer them from a producer's commit subject.
-- Code + tests + change log (already in the parent reviewer's hand-off; you may search them but not modify).
-- Outcome/forecast data and frontend manifest when supplied: load [qa-reporting](../../skills/qa-reporting/SKILL.md) before checking data; use exact returned repository-root-relative refs, not current-date paths.
+- The patch and file list since the DELIVER base: `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch` and `files-{story}.txt`, plus the change log. Read the patch; open a whole file only when the patch lacks the context a finding needs. Never modify anything.
+- `test-plan-{story}.md`: the reference for every AC-to-test check in section 3. A planned test the patch does not contain is a defect unless the execution journal, evidence log or a commit message records a `PLAN_DEVIATION` for it.
+- Outcome/forecast data and frontend manifest when supplied: load `qa-reporting` before checking data; use exact returned repository-root-relative refs, not current-date paths.
 
 You DO NOT receive the cold-reader's output, nor do you receive any other lens's findings.
 
@@ -50,7 +54,12 @@ snapshot or re-derive a Git fact yourself: `qg-verify` did it against the tree, 
 
 Report each finding as a defect: its `code`, `gate` and `detail` verbatim; severity `blocker` for
 `TEST_TAMPERED` and `RED_NEVER_FAILED`, `high` for any other `fail` finding, `medium` for an
-`inconclusive` one.
+`inconclusive` one the engineer can fix (missing, malformed or altered evidence).
+
+Environment exception: when an `inconclusive` finding comes from the environment — the cited stdout
+shows the tool, SDK, network or service failing to start, install or connect, not a test, build or
+mutation result — report it `low` with a `description` that starts `environment:` and names the cause
+and the command to re-run. Keep the lens verdict `inconclusive`.
 
 ### 2. Commit policy beyond syntax (G8)
 
@@ -62,7 +71,7 @@ A verified violation is a `high` defect and fails G8; a message you cannot find 
 
 ### 3. Outcome consistency (when supplied)
 
-Check story/revision, AC-to-test/evidence refs, expected versus actual impact,
+Check story/revision, AC-to-test/evidence refs against `test-plan-{story}.md`, expected versus actual impact,
 change log and local/remote media claims against supplied sources. Missing proof
 is unverified, not success; screenshots alone never establish a gate. No upload
 or publication retry. Report contradictions in existing defects; absent

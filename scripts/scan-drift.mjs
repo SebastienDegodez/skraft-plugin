@@ -103,7 +103,7 @@ function catalogueTopology(root, book) {
         userInvocable: fm['user-invocable'] === true || fm.userInvocable === true,
         phase: metadata.phase ? String(metadata.phase) : null,
         phases: asArray(metadata.phases).map(String),
-        skills: asArray(metadata.skills).map(String),
+        skills: [...asArray(metadata.skills), ...asArray(metadata.on_demand_skills)].map(String),
         inputs: asArray(metadata.inputs?.required).map(String),
         outputs: asArray(metadata.outputs).map(String),
         childRefs: asArray(fm.agents).map(String),

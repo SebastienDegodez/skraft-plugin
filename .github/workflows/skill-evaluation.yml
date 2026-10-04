@@ -207,6 +207,14 @@ jobs:
             echo 'PR_SUITES_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      # The Spring Boot fixtures run `mvn verify` at setup and compile for Java 21;
+      # the runner image's default JDK is not guaranteed to be 21.
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        if: steps.changed.outputs.skills != ''
+        with:
+          distribution: temurin
+          java-version: '21'
+
       # Skill and agent-suite executors drive a real agent through
       # @github/copilot-sdk, so the CLI, the SDK and Vally must share one
       # resolution root. See the `env` block for why that root is the project
@@ -312,6 +320,13 @@ jobs:
         with:
           node-version: '22'
 
+      # The Spring Boot fixtures run `mvn verify` at setup and compile for Java 21;
+      # the runner image's default JDK is not guaranteed to be 21.
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
       # The agent executor drives a real agent through @github/copilot-sdk, a
       # devDependency: without it an agent suite cannot start at all. See the
       # `env` block for why the toolchain goes in the project tree, not `-g`.
@@ -380,7 +395,7 @@ jobs:
                 const { verdicts = [] } = require('./$result');
                 for (const verdict of verdicts) {
                   const state = !verdict.conclusive || verdict.underpowered ? 'inconclusive'
-                    : verdict.regressed ? 'regression' : verdict.passed ? 'pass' : 'no improvement';
+                    : verdict.passed ? 'pass' : verdict.flaky ? 'flaky' : verdict.regressed ? 'regression' : 'no improvement';
                   console.log(\`| \${verdict.subject.kind}: \${verdict.subject.name} | \${state} | \${verdict.reason} |\`);
                 }
               "
@@ -436,6 +451,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
+
+      # The Spring Boot fixtures run `mvn verify` at setup and compile for Java 21;
+      # the runner image's default JDK is not guaranteed to be 21.
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: '21'
 
       # See the `env` block: the project tree is the only layout where the SDK
       # can resolve the @github/copilot platform binary.
@@ -536,7 +558,7 @@ jobs:
                 const run = require('./$result');
                 for (const verdict of run.verdicts ?? []) {
                   const state = !verdict.conclusive || verdict.underpowered ? 'inconclusive'
-                    : verdict.regressed ? 'regression' : verdict.passed ? 'pass' : 'no improvement';
+                    : verdict.passed ? 'pass' : verdict.flaky ? 'flaky' : verdict.regressed ? 'regression' : 'no improvement';
                   const quality = verdict.metrics?.quality ?? {};
                   const tokens = verdict.metrics?.efficiency?.tokenDeltaPercent;
                   const show = (value, digits = 3) => value == null ? '—' : value.toFixed(digits);

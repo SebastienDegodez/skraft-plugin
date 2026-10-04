@@ -1,6 +1,6 @@
 ---
 name: clean-architecture-testing
-description: Use when it is unclear where a test belongs and what it is allowed to talk to — which test project and layer it goes in, whether it gets a real database, an in-memory fake, or no double at all, and whether a value object or a constructor is worth a test of its own. Also use when layer dependencies must be enforced by the build instead of by review.
+description: Use when it is unclear where a test belongs and what it is allowed to talk to — which test project and layer it goes in, whether it gets a real database, an in-memory fake, or no double at all, and whether a value object or a constructor is worth a test of its own. Also use when covering an adapter that calls an external API, a database or the file system, and when layer dependencies must be enforced by the build instead of by review.
 ---
 
 # Clean Architecture Testing
@@ -36,11 +36,6 @@ A test asserting `new PolicyNumber("abc").value == "abc"` is noise. It tests the
 |---|---|---|
 | `<Context>.UnitTest` | Domain + Application | Domain unit tests (rare, extracted rules) + Application acceptance tests (mocks on output gateways, in-memory fakes) |
 | `<Context>.IntegrationTest` | Infrastructure + API + Architecture | Infrastructure integration tests (real containers), API end-to-end tests (in-process app host), architecture tests |
-
-**Rationale:**
-- `UnitTest` must stay **fast** (< 1 s for the whole suite on a laptop). No I/O, no containers, no network. Run on every save.
-- `IntegrationTest` is **slow by design** (containers boot, DB migrations, HTTP). Run on commit / CI.
-- **Architecture tests** go into `IntegrationTest` — they are a CI gate, not a tight-loop test.
 
 ### Per-language mapping
 
@@ -96,7 +91,7 @@ not "which ticket created it?"
 | Role | Use for | Never for |
 |---|---|---|
 | **Real domain object** | Always, at every layer that touches Domain | — |
-| **Mock / stub on output gateway** | Output gateways at Application level (repository, dispatcher, external service interfaces) (repositories, dispatchers, external service interfaces) | Domain objects, Application handlers |
+| **Mock / stub on output gateway** | Output gateways at Application level (repository, dispatcher, external service interfaces) | Domain objects, Application handlers |
 | **Hand-written in-memory fake** | Reusable across many Application tests, stateful scenarios | One-off single-test cases |
 | **Real container** (DB, broker) | Infrastructure adapter tests exclusively | Application or Domain tests |
 | **Contract mock server** (for external APIs / brokers) | Infrastructure adapter tests against externals; API E2E with downstream externals | Internal domain logic, Application handlers |
@@ -107,7 +102,7 @@ Pick one mocking library per solution and stick to it. Same for the app host fac
 
 ## Per-Layer Examples (pseudo-code)
 
-Full runnable .NET examples: [examples-dotnet.md](references/examples-dotnet.md). Same patterns translate directly to Java, Python, TypeScript — the roles are identical.
+Full runnable examples: [examples-dotnet.md](references/examples-dotnet.md) (.NET) and [examples-java.md](references/examples-java.md) (Java / Spring Boot, Maven). The roles are identical across languages.
 
 ### Application — acceptance test
 
@@ -150,9 +145,15 @@ then response.status == 201
 ### Architecture — layer rule
 
 ```
-assert types in DomainAssembly have no dependency on "MyApp.Infrastructure"
-  else fail with "Domain must not reference Infrastructure. Violations: ..."
+assert each project references only its inner neighbour
+  (Api → Infrastructure → Application → Domain)
+
+assert types in Domain depend only on Domain and the language core
+assert types in Application depend only on Application, Domain and the language core
+  else fail with "Violations: ..."
 ```
+
+The language core excludes I/O, network and persistence. Allow-list the business code: a rule that only forbids the other layers lets every framework through.
 
 ## External Contract Mocks (Infrastructure & API)
 
@@ -169,28 +170,24 @@ Out of scope for this skill — see `api-contract-testing` *(upcoming)* for the 
 
 ```dot
 digraph which_layer {
-    "What is the change?" [shape=diamond];
-    "Use case orchestration\n(load/save/publish)" [shape=box];
-    "Gateway adapter\n(DB, HTTP, broker)" [shape=box];
-    "HTTP endpoint wiring" [shape=box];
-    "Complex reusable rule\n(many edge cases)" [shape=box];
-    "Layer boundary rule" [shape=box];
-    "Application acceptance test\n(mocks on output gateways)" [shape=box, style=filled];
-    "Infrastructure integration test\n(real container / contract mock)" [shape=box, style=filled];
-    "API end-to-end test\n(in-process app host)" [shape=box, style=filled];
-    "Domain unit test\n(pure)" [shape=box, style=filled];
-    "Architecture test\n(static scan)" [shape=box, style=filled];
+    node [shape=box];
+    change [shape=diamond, label="What is the change?"];
+    usecase [label="Use case orchestration\n(load/save/publish)"];
+    gateway [label="Gateway adapter\n(DB, HTTP, broker)"];
+    http [label="HTTP endpoint wiring"];
+    rule [label="Complex reusable rule\n(many edge cases)"];
+    boundary [label="Layer boundary rule"];
+    app_test [style=filled, label="Application acceptance test\n(mocks on output gateways)"];
+    infra_test [style=filled, label="Infrastructure integration test\n(real container / contract mock)"];
+    api_test [style=filled, label="API end-to-end test\n(in-process app host)"];
+    domain_test [style=filled, label="Domain unit test\n(pure)"];
+    arch_test [style=filled, label="Architecture test\n(static scan)"];
 
-    "What is the change?" -> "Use case orchestration\n(load/save/publish)";
-    "What is the change?" -> "Gateway adapter\n(DB, HTTP, broker)";
-    "What is the change?" -> "HTTP endpoint wiring";
-    "What is the change?" -> "Complex reusable rule\n(many edge cases)";
-    "What is the change?" -> "Layer boundary rule";
-    "Use case orchestration\n(load/save/publish)" -> "Application acceptance test\n(mocks on output gateways)";
-    "Gateway adapter\n(DB, HTTP, broker)" -> "Infrastructure integration test\n(real container / contract mock)";
-    "HTTP endpoint wiring" -> "API end-to-end test\n(in-process app host)";
-    "Complex reusable rule\n(many edge cases)" -> "Domain unit test\n(pure)";
-    "Layer boundary rule" -> "Architecture test\n(static scan)";
+    change -> usecase -> app_test;
+    change -> gateway -> infra_test;
+    change -> http -> api_test;
+    change -> rule -> domain_test;
+    change -> boundary -> arch_test;
 }
 ```
 
@@ -206,6 +203,7 @@ Extended tree with tie-breakers: [doubles-decision-tree.md](references/doubles-d
 | Shared global container across test classes | One container per test class, isolated lifecycle. |
 | In-process app host used to test a handler | Switch to an Application-level test with mocks. |
 | No architecture test guarding layer references | Add the rule. Layer discipline must be enforced by CI, not reviews. |
+| Architecture test that only forbids the other layers | Allow-list what Domain and Application may depend on; a framework or an I/O client passes a layer-only rule. |
 | In-memory fake DB provider used as Infrastructure test | Infrastructure tests MUST use the real provider via real container. In-memory providers silently accept invalid SQL. |
 | One acceptance test covers 5 rules | Split: one Gherkin scenario = one test. |
 | Duplicating acceptance coverage with a Domain test on the same rule | Delete the Domain test unless the rule was extracted. |
@@ -226,5 +224,6 @@ These thoughts signal you're about to violate the policy:
 ## References
 
 - [examples-dotnet.md](references/examples-dotnet.md) — full runnable .NET examples (FakeItEasy, Testcontainers, in-process app host, architecture scanner)
-- [architecture-rules.md](references/architecture-rules.md) — complete architecture rule set (.NET flavour; rules themselves are language-agnostic)
+- [examples-java.md](references/examples-java.md) — full runnable Java / Spring Boot examples (JUnit 5, Mockito, Testcontainers, ArchUnit)
+- [architecture-rules.md](references/architecture-rules.md) — complete architecture rule set (project references + allow-list; .NET implementation)
 - [doubles-decision-tree.md](references/doubles-decision-tree.md) — extended decision tree with tie-breakers

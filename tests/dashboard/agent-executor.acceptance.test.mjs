@@ -142,7 +142,7 @@ describe('Vally real-agent executor', () => {
       name: 'Skraft - Software Engineer',
       path: relativeAgentPath,
       sha256: expectedHash,
-      declaredModel: 'claude-sonnet-5',
+      declaredModel: 'claude-sonnet-5.5',
     })
     deepStrictEqual(trajectory.events[0], {
       type: 'custom',
@@ -287,8 +287,12 @@ describe('Vally real-agent executor', () => {
     ])
     deepStrictEqual(trajectory.metadata.subagents.map(({ id }) => id), lenses)
     deepStrictEqual(trajectory.metadata.skillsConfigured, ['adversarial-review-lenses', 'qa-reporting'])
-    deepStrictEqual(trajectory.metadata.subagentSkillsConfigured,
-      Object.fromEntries(lenses.map((id) => [id, id === 'quality-gates-lens' ? ['qa-reporting'] : []])))
+    deepStrictEqual(trajectory.metadata.subagentSkillsConfigured, {
+      'quality-gates-lens': ['quality-gates-evidence-contract', 'skraft-quality-bar', 'qa-reporting'],
+      'architecture-boundaries-lens': ['clean-architecture-testing'],
+      'test-integrity-lens': [],
+      'cold-reader-lens': [],
+    })
   })
 
   it('names the registered chain in the prompt so a descriptor link is not the only route to a dispatch', async () => {

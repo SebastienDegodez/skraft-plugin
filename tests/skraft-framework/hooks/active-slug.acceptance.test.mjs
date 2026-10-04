@@ -35,14 +35,14 @@ const hook = (env, args, payload) => {
 }
 
 // A Claude Code PreToolUse payload for a subagent dispatch, as sent on stdin.
-const agentDispatch = (subagentType) => ({
+const agentDispatch = (subagentType, prompt = '…') => ({
   session_id: 's-1',
   transcript_path: '/tmp/t.jsonl',
   cwd: '/tmp',
   hook_event_name: 'PreToolUse',
   permission_mode: 'default',
   tool_name: 'Agent',
-  tool_input: { subagent_type: subagentType, description: 'phase work', prompt: '…' },
+  tool_input: { subagent_type: subagentType, description: 'phase work', prompt },
 })
 
 test('init records the active pipeline and G1 then governs a real dispatch payload', () => {
@@ -92,7 +92,8 @@ test('SKRAFT_PROJECT_SLUG overrides the recorded pointer; a malformed pointer is
     producePhase({ root, slug: 'other', phase: 'RESEARCH', cli: fixtureCli({ root }) })
     state(pinned, 'close-phase', '--phase', 'RESEARCH', '--verdict', 'APPROVED')
     assert.equal(state(env, 'get', '--slug', 'other', '--field', 'currentPhase').out.trim(), 'DESIGN')
-    assert.equal(hook(pinned, ['PreToolUse', 'Agent'], agentDispatch('solution-architect')), undefined)
+    const handoff = state(pinned, 'handoff', '--agent', 'solution-architect').out
+    assert.equal(hook(pinned, ['PreToolUse', 'Agent'], agentDispatch('solution-architect', handoff)), undefined)
 
     writeFileSync(join(root, '.active-slug'), '../../etc\n')
     assert.equal(hook(env, ['PreToolUse', 'Agent'], agentDispatch('software-engineer')), undefined, 'no valid slug: G1 stays out')

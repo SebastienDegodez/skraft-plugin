@@ -105,7 +105,7 @@ export const loadAgentDescriptor = (repoRoot, id) => {
   const name = String(data.name ?? '')
   if (!name) throw new Error(`Agent has no name: ${relativePath}`)
 
-  const sourceSkills = metadataSequence(content, 'skills')
+  const sourceSkills = [...metadataSequence(content, 'skills'), ...metadataSequence(content, 'on_demand_skills')]
   const skills = configuredSkills(normalizedRoot, name)
   if (!sameValues(sourceSkills, skills)) throw new Error(`Agent skill declarations drift from framework config: ${id}`)
 

@@ -78,7 +78,7 @@ ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 - **Mission :** modéliser l'architecture (Event Modeling, DDD) et tracer les décisions en ADR.
 - **Reçoit :** la story INVEST.
 - **Passe le relais :** un ADR + un modèle d'événements + des contrats.
-- **Contrôlé par :** `solution-architect-reviewer` (gates G1–G15).
+- **Contrôlé par :** `solution-architect-reviewer` (gates G1–G16).
 
 ### 5. `acceptance-designer` — le spécificateur (DISTILL)
 
