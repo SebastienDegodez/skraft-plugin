@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-02T12:41:42.134Z",
+  "generated": "2026-10-05T10:21:57.067Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -1560,6 +1560,2398 @@
         "2026-09-28"
       ],
       "mtime": 1790586588351.7808
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "2026-10-05"
+      ],
+      "mtime": 1791193625990.007
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "2026-10-05"
+      ],
+      "mtime": 1791193641045.799
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "2026-10-05"
+      ],
+      "mtime": 1791193656863.5754
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "2026-10-05"
+      ],
+      "mtime": 1791193768329.9521
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "2026-10-05"
+      ],
+      "mtime": 1791193892355.006
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "2026-10-05"
+      ],
+      "mtime": 1791193964281.2998
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "2026-10-05"
+      ],
+      "mtime": 1791194069690.4775
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "2026-10-05"
+      ],
+      "mtime": 1791194173682.4004
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "2026-10-05"
+      ],
+      "mtime": 1791194254822.4363
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 0)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "2026-10-05"
+      ],
+      "mtime": 1791193639360.581
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 1)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "2026-10-05"
+      ],
+      "mtime": 1791193675613.2747
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 2)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "2026-10-05"
+      ],
+      "mtime": 1791193712930.5984
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 0)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "2026-10-05"
+      ],
+      "mtime": 1791193746282.133
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 1)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "2026-10-05"
+      ],
+      "mtime": 1791193780606.7563
+    },
+    {
+      "id": "scheduled/2026-10-05/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 2)",
+      "url": "sessions/scheduled/2026-10-05/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "2026-10-05"
+      ],
+      "mtime": 1791193815889.1875
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run0",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "2026-10-05"
+      ],
+      "mtime": 1791193729534.3267
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run1",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "2026-10-05"
+      ],
+      "mtime": 1791193727775.8132
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run2",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "2026-10-05"
+      ],
+      "mtime": 1791193729666.709
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run3",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "2026-10-05"
+      ],
+      "mtime": 1791193842767.1633
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run0",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "2026-10-05"
+      ],
+      "mtime": 1791193741245.3474
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run1",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "2026-10-05"
+      ],
+      "mtime": 1791193740553.1797
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run2",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "2026-10-05"
+      ],
+      "mtime": 1791193751516.4854
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run3",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "2026-10-05"
+      ],
+      "mtime": 1791193752018.756
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run0",
+      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-first-tests-for-the-rest-payment-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791193949344.4956
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run1",
+      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-first-tests-for-the-rest-payment-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791193949177.9282
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run2",
+      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-first-tests-for-the-rest-payment-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791193986405.2383
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run3",
+      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-first-tests-for-the-rest-payment-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791194118547.1226
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run0",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791193970253.6128
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run1",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791193992875.515
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run2",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791194006188.8967
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run3",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791194013648.8013
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run0",
+      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
+        "2026-10-05"
+      ],
+      "mtime": 1791194370033.974
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run1",
+      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
+        "2026-10-05"
+      ],
+      "mtime": 1791194369633.6055
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run2",
+      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
+        "2026-10-05"
+      ],
+      "mtime": 1791194382732.3757
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run3",
+      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
+        "2026-10-05"
+      ],
+      "mtime": 1791194469480.9875
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run0",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "2026-10-05"
+      ],
+      "mtime": 1791194433948.8147
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run1",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "2026-10-05"
+      ],
+      "mtime": 1791194484356.8484
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run2",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "2026-10-05"
+      ],
+      "mtime": 1791194524720.9497
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run3",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "2026-10-05"
+      ],
+      "mtime": 1791194596157.2405
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run0",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "2026-10-05"
+      ],
+      "mtime": 1791194511276.566
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run1",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "2026-10-05"
+      ],
+      "mtime": 1791194537569.8435
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run2",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "2026-10-05"
+      ],
+      "mtime": 1791194548994.077
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run3",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "2026-10-05"
+      ],
+      "mtime": 1791194564863.3474
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run0",
+      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "the-failing-test-is-already-in-the-right-place",
+        "2026-10-05"
+      ],
+      "mtime": 1791194561685.2688
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run1",
+      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "the-failing-test-is-already-in-the-right-place",
+        "2026-10-05"
+      ],
+      "mtime": 1791194572954.902
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run2",
+      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "the-failing-test-is-already-in-the-right-place",
+        "2026-10-05"
+      ],
+      "mtime": 1791194577957.8037
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run3",
+      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "baseline",
+        "the-failing-test-is-already-in-the-right-place",
+        "2026-10-05"
+      ],
+      "mtime": 1791194586414.6875
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run0",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "2026-10-05"
+      ],
+      "mtime": 1791194751843.126
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run1",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "2026-10-05"
+      ],
+      "mtime": 1791194745563.469
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run2",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "2026-10-05"
+      ],
+      "mtime": 1791194752548.0693
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run3",
+      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "cover-the-payment-adapter-that-nothing-tests-yet",
+        "2026-10-05"
+      ],
+      "mtime": 1791194853355.6082
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run0",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "2026-10-05"
+      ],
+      "mtime": 1791194765403.4597
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run1",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "2026-10-05"
+      ],
+      "mtime": 1791194767145.546
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run2",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "2026-10-05"
+      ],
+      "mtime": 1791194777653.7432
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run3",
+      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "forty-validation-cases-for-a-rule-three-use-cases-share",
+        "2026-10-05"
+      ],
+      "mtime": 1791194780841.2893
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run0",
+      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-first-tests-for-the-rest-payment-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791194956713.48
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run1",
+      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-first-tests-for-the-rest-payment-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791195004968.3633
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run2",
+      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-first-tests-for-the-rest-payment-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791195008060.7534
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run3",
+      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-first-tests-for-the-rest-payment-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791195064478.3457
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run0",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791195024458.1116
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run1",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791195026201.3296
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run2",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791195040925.4692
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run3",
+      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-test-the-jpa-order-repository-adapter",
+        "2026-10-05"
+      ],
+      "mtime": 1791195043360.4055
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run0",
+      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
+        "2026-10-05"
+      ],
+      "mtime": 1791195184537.9038
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run1",
+      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
+        "2026-10-05"
+      ],
+      "mtime": 1791195172563.2249
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run2",
+      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
+        "2026-10-05"
+      ],
+      "mtime": 1791195196062.9248
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run3",
+      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
+        "2026-10-05"
+      ],
+      "mtime": 1791195283932.7651
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run0",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "2026-10-05"
+      ],
+      "mtime": 1791195302191.254
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run1",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "2026-10-05"
+      ],
+      "mtime": 1791195286346.7654
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run2",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "2026-10-05"
+      ],
+      "mtime": 1791195356620.4153
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run3",
+      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
+        "2026-10-05"
+      ],
+      "mtime": 1791195357888.8862
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run0",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "2026-10-05"
+      ],
+      "mtime": 1791195328594.2976
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run1",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "2026-10-05"
+      ],
+      "mtime": 1791195350425.876
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run2",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "2026-10-05"
+      ],
+      "mtime": 1791195372898.4424
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run3",
+      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "swap-the-database-engine-out-of-the-repository-tests",
+        "2026-10-05"
+      ],
+      "mtime": 1791195377484.0876
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run0",
+      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "the-failing-test-is-already-in-the-right-place",
+        "2026-10-05"
+      ],
+      "mtime": 1791195368438.2065
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run1",
+      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "the-failing-test-is-already-in-the-right-place",
+        "2026-10-05"
+      ],
+      "mtime": 1791195378792.5376
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run2",
+      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "the-failing-test-is-already-in-the-right-place",
+        "2026-10-05"
+      ],
+      "mtime": 1791195382941.8625
+    },
+    {
+      "id": "scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run3",
+      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "clean-architecture-testing",
+        "skilled",
+        "the-failing-test-is-already-in-the-right-place",
+        "2026-10-05"
+      ],
+      "mtime": 1791195387386.2607
+    },
+    {
+      "id": "scheduled/2026-10-05/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/scheduled/2026-10-05/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "2026-10-05"
+      ],
+      "mtime": 1791193628215.6516
+    },
+    {
+      "id": "scheduled/2026-10-05/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/scheduled/2026-10-05/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "2026-10-05"
+      ],
+      "mtime": 1791193648541.619
+    },
+    {
+      "id": "scheduled/2026-10-05/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/scheduled/2026-10-05/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "2026-10-05"
+      ],
+      "mtime": 1791193671228.1848
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791193701470.9026
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791193704168.6858
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791193704835.008
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791193715412.6394
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-10-05"
+      ],
+      "mtime": 1791193721575.724
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-10-05"
+      ],
+      "mtime": 1791193722980.3208
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-10-05"
+      ],
+      "mtime": 1791193733022.6252
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-10-05"
+      ],
+      "mtime": 1791193737017.9263
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791193734362.1628
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791193743437.7383
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791193743557.2505
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791193748170.8613
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-10-05"
+      ],
+      "mtime": 1791193848158.8123
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-10-05"
+      ],
+      "mtime": 1791193855259.451
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-10-05"
+      ],
+      "mtime": 1791193860169.3833
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-10-05"
+      ],
+      "mtime": 1791193962712.737
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-10-05"
+      ],
+      "mtime": 1791193869384.218
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-10-05"
+      ],
+      "mtime": 1791193873101.9465
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-10-05"
+      ],
+      "mtime": 1791193880904.744
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
+      "name": "outside-in-tdd / Prove the first route through a new feature (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-10-05"
+      ],
+      "mtime": 1791193887211.2769
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-10-05"
+      ],
+      "mtime": 1791193951904.8533
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-10-05"
+      ],
+      "mtime": 1791193954649.3936
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-10-05"
+      ],
+      "mtime": 1791194003188.721
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-10-05"
+      ],
+      "mtime": 1791194005155.67
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194070330.1877
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194125343.1565
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194088640.569
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194165865.7556
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194165004.229
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194199590.612
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194250777.7937
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194254303.2627
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194349077.4119
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194372179.767
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194369237.443
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "baseline",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194414140.5256
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194436663.279
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194435170.286
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194435972.5242
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
+      "name": "outside-in-tdd / Do not invent an unresolved business outcome (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "do-not-invent-an-unresolved-business-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194447609.6477
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-10-05"
+      ],
+      "mtime": 1791194454729.7073
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-10-05"
+      ],
+      "mtime": 1791194453936.1892
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-10-05"
+      ],
+      "mtime": 1791194463961.4539
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
+      "name": "outside-in-tdd / Hand off a TDD slice to an unattended worker (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "hand-off-a-tdd-slice-to-an-unattended-worker",
+        "2026-10-05"
+      ],
+      "mtime": 1791194471528.2092
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194467845.607
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194477892.5977
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194481279.7036
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
+      "name": "outside-in-tdd / Keep wider integration work behind the failing behavior (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "keep-wider-integration-work-behind-the-failing-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194483907.722
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-10-05"
+      ],
+      "mtime": 1791194566137.945
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-10-05"
+      ],
+      "mtime": 1791194571679.4595
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-10-05"
+      ],
+      "mtime": 1791194575108.1982
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
+      "name": "outside-in-tdd / Make the domain emerge from an approved scenario (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "make-the-domain-emerge-from-an-approved-scenario",
+        "2026-10-05"
+      ],
+      "mtime": 1791194629797.0845
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-10-05"
+      ],
+      "mtime": 1791194584949.0938
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-10-05"
+      ],
+      "mtime": 1791194587753.4736
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-10-05"
+      ],
+      "mtime": 1791194597998.6235
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
+      "name": "outside-in-tdd / Prove the first route through a new feature (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "prove-the-first-route-through-a-new-feature",
+        "2026-10-05"
+      ],
+      "mtime": 1791194600341.4773
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-10-05"
+      ],
+      "mtime": 1791194644496.6072
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-10-05"
+      ],
+      "mtime": 1791194639952.4072
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-10-05"
+      ],
+      "mtime": 1791194678004.527
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
+      "name": "outside-in-tdd / Reach a failure that witnesses the missing behaviour (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "reach-a-failure-that-witnesses-the-missing-behaviour",
+        "2026-10-05"
+      ],
+      "mtime": 1791194699655.902
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194762270.5906
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194768431.9497
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194788342.2632
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
+      "name": "outside-in-tdd / Replace a fixture-provided discount with production behavior (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "replace-a-fixture-provided-discount-with-production-behavior",
+        "2026-10-05"
+      ],
+      "mtime": 1791194829939.4807
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194826092.4985
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194844253.1897
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194888671.43
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
+      "name": "outside-in-tdd / Tidy a green test class without inventing new work (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "tidy-a-green-test-class-without-inventing-new-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194893536.32
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194970989.9504
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194982123.1436
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791194991821.173
+    },
+    {
+      "id": "scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
+      "name": "outside-in-tdd / Turn an untrustworthy failure into evidence of the approved outcome (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "outside-in-tdd",
+        "skilled",
+        "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
+        "2026-10-05"
+      ],
+      "mtime": 1791195037482.8738
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193843922.307
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193848823.2302
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193853717.6548
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193867654.6262
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 4)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193870064.3154
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791193871735.4512
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791193890047.6929
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791193894501.8623
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791193894239.9116
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 4)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791193916034.201
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 0)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791193917687.6777
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 1)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791193925067.6287
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 2)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791193942645.6667
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 3)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791193941680.7627
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 4)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791193953114.7727
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193981573.3462
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193980031.4617
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193998565.8262
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791194002587.6675
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 4)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "2026-10-05"
+      ],
+      "mtime": 1791193995658.2227
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791194016753.934
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791194021188.202
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791194029708.8345
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791194042447.4402
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 4)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "2026-10-05"
+      ],
+      "mtime": 1791194049618.1775
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 0)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194053275.2837
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 1)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194073459.0679
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 2)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194073581.1343
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 3)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194082585.7065
+    },
+    {
+      "id": "scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 4)",
+      "url": "sessions/scheduled/2026-10-05/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4.jsonl",
+      "tags": [
+        "scheduled",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "2026-10-05"
+      ],
+      "mtime": 1791194100800.3818
     }
   ]
 }
