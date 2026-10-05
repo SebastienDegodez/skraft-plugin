@@ -69,8 +69,9 @@ export function buildPairProjection({ root, list, read, exists }) {
   for (const path of list('com.github.copilot/hooks', true)) {
     if (path !== 'com.github.copilot/hooks/hooks.json') extra.push(path)
   }
-  files.push({ source: 'hooks/hooks.json', target: 'com.github.copilot/hooks/hooks.json', content: hook })
-  plan('com.github.copilot/hooks/hooks.json', hook)
+  const copilotHook = withoutClaudeMods(hook)
+  files.push({ source: 'hooks/hooks.json', target: 'com.github.copilot/hooks/hooks.json', content: copilotHook })
+  plan('com.github.copilot/hooks/hooks.json', copilotHook)
   const content = JSON.stringify({ version: 2, pairs }, null, 2) + '\n'
   // Preserve formatting of an otherwise identical baseline.
   const unchanged = Object.keys(baseline.pairs).length === Object.keys(pairs).length &&
@@ -78,4 +79,15 @@ export function buildPairProjection({ root, list, read, exists }) {
       ['body', 'description'].every((field) => baseline.pairs[id]?.[side]?.[field] === pair[side][field])))
   plan('.agent-sync.json', oldBaseline && unchanged ? oldBaseline : Buffer.from(content))
   return { root, files, writes, removed: [], conflicts, missing: missing.sort(), stale: stale.sort(), extra: extra.sort() }
+}
+
+// hooks/hooks.json is Claude Code's: besides the settings hooks Copilot shares, it names
+// the Claude Code mod (`modules`), which Copilot CLI does not load. Copilot gets the
+// settings hooks alone; with no mod declared the bytes are copied as they are.
+export function withoutClaudeMods(hook) {
+  let parsed
+  try { parsed = JSON.parse(hook.toString('utf8')) } catch { return hook }
+  if (!parsed || typeof parsed !== 'object' || !('modules' in parsed)) return hook
+  const { modules: _claudeOnly, ...shared } = parsed
+  return Buffer.from(JSON.stringify(shared, null, 2) + '\n')
 }

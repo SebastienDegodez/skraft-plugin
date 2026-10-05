@@ -88,10 +88,13 @@ test('plugin packaging: no manifest declares a hooks pointer', () => {
 })
 
 test('plugin packaging: namespaced hooks preserve Claude shape and plugin-root commands', () => {
-  const source = readFileSync(join(pluginRoot, 'hooks/hooks.json'))
-  assert.deepEqual(readFileSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json')), source)
-  const manifest = JSON.parse(source.toString('utf8'))
+  const source = JSON.parse(readFileSync(join(pluginRoot, 'hooks/hooks.json'), 'utf8'))
+  // Claude Code's file also names the mod; Copilot's carries the same settings hooks only.
+  assert.deepEqual(Object.keys(source), ['modules', 'hooks'])
+  assert.deepEqual(source.modules, ['./skraft-mod.mjs'])
+  const manifest = JSON.parse(readFileSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json'), 'utf8'))
   assert.deepEqual(Object.keys(manifest), ['hooks'])
+  assert.deepEqual(manifest.hooks, source.hooks)
   assert.ok(manifest.hooks.SessionStart?.length > 0)
   assert.ok(manifest.hooks.PreToolUse?.length > 0)
   for (const [event, groups] of Object.entries(manifest.hooks)) {
