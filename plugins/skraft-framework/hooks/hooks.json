@@ -1,4 +1,7 @@
 {
+  "modules": [
+    "./skraft-mod.mjs"
+  ],
   "hooks": {
     "SessionStart": [
       {

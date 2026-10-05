@@ -89,13 +89,15 @@ test('plugin packaging: no manifest declares a hooks pointer', () => {
 
 // VS Code detects the v1 manifest, loads the namespaced copy and interpolates only
 // ${PLUGIN_ROOT}; a literal ${CLAUDE_PLUGIN_ROOT} there sends node to /src/cli/hook.mjs.
+// Claude Code's file also names the mod; Copilot's carries the same settings hooks only.
 test('plugin packaging: namespaced hooks preserve Claude shape and resolve each surface root', () => {
-  const source = readFileSync(join(pluginRoot, 'hooks/hooks.json'), 'utf8')
-  const copy = readFileSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json'), 'utf8')
-  assert.equal(copy, source.replaceAll('${CLAUDE_PLUGIN_ROOT}', '${PLUGIN_ROOT}'))
-  for (const [text, root, foreign] of [[source, 'CLAUDE_PLUGIN_ROOT', /\$\{PLUGIN_ROOT\}/], [copy, 'PLUGIN_ROOT', /CLAUDE_PLUGIN_ROOT/]]) {
-    const manifest = JSON.parse(text)
-    assert.deepEqual(Object.keys(manifest), ['hooks'])
+  const source = JSON.parse(readFileSync(join(pluginRoot, 'hooks/hooks.json'), 'utf8'))
+  assert.deepEqual(Object.keys(source), ['modules', 'hooks'])
+  assert.deepEqual(source.modules, ['./skraft-mod.mjs'])
+  const copy = JSON.parse(readFileSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json'), 'utf8'))
+  assert.deepEqual(Object.keys(copy), ['hooks'])
+  assert.deepEqual(copy.hooks, JSON.parse(JSON.stringify(source.hooks).replaceAll('${CLAUDE_PLUGIN_ROOT}', '${PLUGIN_ROOT}')))
+  for (const [manifest, root, foreign] of [[source, 'CLAUDE_PLUGIN_ROOT', /\$\{PLUGIN_ROOT\}/], [copy, 'PLUGIN_ROOT', /CLAUDE_PLUGIN_ROOT/]]) {
     assert.ok(manifest.hooks.SessionStart?.length > 0)
     assert.ok(manifest.hooks.PreToolUse?.length > 0)
     for (const [event, groups] of Object.entries(manifest.hooks)) {

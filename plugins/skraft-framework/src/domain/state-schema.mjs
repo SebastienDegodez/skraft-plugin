@@ -1,15 +1,15 @@
-import { createRequire } from 'node:module'
 import { Ok, Err } from './result.mjs'
 import { schemaViolations } from './schema-validator.mjs'
+import STATE_SCHEMA_DOCUMENT from './state-schema-document.mjs'
 
 // state.schema.json beside this module is the contract of state.json: the reader below
-// enforces it, and STATE_SCHEMA takes the field set and owners from it. Loaded through
-// require, which reads JSON on every supported Node version without a warning.
+// enforces it, and STATE_SCHEMA takes the field set and owners from it. Read from its
+// generated ES-module copy, so this module needs no Node API (the mod runtime has none).
 //
 // owner (x-owner):
 //   'invariant'    — owned by the state machine; an absent one reads as empty.
 //   'orchestrator' — written by the orchestrator through state.mjs set or phase events.
-export const STATE_JSON_SCHEMA = Object.freeze(createRequire(import.meta.url)('./state.schema.json'))
+export const STATE_JSON_SCHEMA = Object.freeze(STATE_SCHEMA_DOCUMENT)
 
 export const STATE_SCHEMA = Object.freeze(Object.fromEntries(
   Object.entries(STATE_JSON_SCHEMA.properties)

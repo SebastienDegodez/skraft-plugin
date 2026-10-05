@@ -8,6 +8,7 @@
   "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
   "repository": "https://github.com/SebastienDegodez/skraft-plugin",
   "license": "GPL-3.0-or-later",
+  "types": "./types/index.d.ts",
   "agents": [
     "./com.anthropic.claude-code/agents/acceptance-designer-reviewer.md",
     "./com.anthropic.claude-code/agents/acceptance-designer.md",
