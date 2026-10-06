@@ -97,6 +97,7 @@ reviewers.
 | Claude Code (mod) | `/skraft close <slug> [findings]` | même fichier | `CloseManually` |
 | GitHub Copilot | « Run the skraft-pipeline dynamic workflow… » ou `copilot workflow run skraft-pipeline --args '{"slug":"checkout"}'` | [`com.github.copilot/extensions/skraft-pipeline/extension.mjs`](../plugins/skraft-framework/com.github.copilot/extensions/skraft-pipeline/extension.mjs) | `RunPipeline` |
 | GitHub Copilot | outils `skraft_decide`, `skraft_close_phase` | même extension | `RecordDecision`, `CloseManually` |
+| Copilot app | canvas « Skraft pipeline » (« Open the Skraft pipeline canvas for checkout »), ses boutons et ses actions `get_pipeline`, `decide`, `show_phase`, `refresh` | même extension, [`adapters/api/copilot-canvas/`](../plugins/skraft-framework/src/adapters/api/copilot-canvas/) | `ObservePipeline`, `RecordDecision` |
 
 La ligne `/skraft` est découpée par [`adapters/api/claude-code-mod/command-args.mjs`](../plugins/skraft-framework/src/adapters/api/claude-code-mod/command-args.mjs) ;
 les appels du SDK Copilot par [`adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs`](../plugins/skraft-framework/src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs).
@@ -111,10 +112,10 @@ et appellent un cas d'usage. Il n'y a plus de script hors de cette architecture 
 ```mermaid
 flowchart TB
   E["<b>Points d'entrée — composition</b><br/>hooks/skraft-mod.mjs · extensions/skraft-pipeline/extension.mjs"]
-  API["<b>adapters/api — adaptateurs pilotes</b><br/>copilot-workflow/skraft-pipeline-workflow.mjs · pipeline/node-dependencies.mjs · claude-code-mod/command-args.mjs"]
-  APP["<b>application — cas d'usage</b><br/>pipeline/run-pipeline · recover-pipeline · report-boundaries · close-manually · record-decision<br/>structural-scan-service · evidence-verification-service · report-publication-service"]
-  DOM["<b>domain — règles pures</b><br/>pipeline/step-policy · expected-outputs · dispatch-brief · manual-closure · progress-inference<br/>recovery · reporting-consent · report-boundary · report-publication-scope · handoff · pipeline-policy"]
-  PORTS["<b>ports — contrats</b><br/>api/run-pipeline, record-decision, close-manually<br/>infrastructure/* : 17 ports pilotés"]
+  API["<b>adapters/api — adaptateurs pilotes</b><br/>copilot-workflow/skraft-pipeline-workflow.mjs · copilot-canvas/* · pipeline/node-dependencies.mjs · claude-code-mod/command-args.mjs"]
+  APP["<b>application — cas d'usage</b><br/>pipeline/run-pipeline · recover-pipeline · report-boundaries · run-journal · close-manually · record-decision · observe-pipeline<br/>structural-scan-service · evidence-verification-service · report-publication-service"]
+  DOM["<b>domain — règles pures</b><br/>pipeline/step-policy · expected-outputs · dispatch-brief · manual-closure · progress-inference · run-journal · pipeline-view<br/>recovery · reporting-consent · report-boundary · report-publication-scope · handoff · pipeline-policy"]
+  PORTS["<b>ports — contrats</b><br/>api/run-pipeline, record-decision, close-manually, observe-pipeline<br/>infrastructure/* : 17 ports pilotés"]
   INFRA["<b>adapters/infrastructure — adaptateurs pilotés</b><br/>git/* · source-tree/* · state/* · pipeline/fs-* · reporting/agent-report-transport<br/>web-crypto-hasher · templates/* · copilot-workflow/* · claude-code-mod/mod-helpers"]
 
   E -->|compose| API
@@ -154,6 +155,9 @@ Règle de dépendance ([ADR-002](adr/adr-002-hexagonal-architecture.md)), vérif
 | Application | `pipeline/report-boundaries.mjs` | Consentement, addendum, rendu, publication, reprise |
 | Application | `pipeline/close-manually.mjs` | Cas d'usage `CloseManually` |
 | Application | `pipeline/record-decision.mjs` | Cas d'usage `RecordDecision` |
+| Application | `pipeline/run-journal.mjs` | Tient `run.json` à jour : décore `PipelineProgress` et `HumanInteraction` |
+| Application | `pipeline/observe-pipeline.mjs` | Cas d'usage `ObservePipeline` : la vue d'un pipeline, en lecture seule |
+| Domaine | `pipeline/run-journal-policy.mjs`, `pipeline/pipeline-view-policy.mjs` | Le journal d'un run ; la vue (statut de chaque phase, tentatives, reviews, question, rapports) |
 | Application | `structural-scan-service.mjs`, `evidence-verification-service.mjs`, `report-publication-service.mjs` | Services en process, partagés avec les commandes |
 
 ---
@@ -175,7 +179,7 @@ Chaque contrat est décrit dans son fichier sous
 | `SourceTree` | `listFiles()`, `readSource(path, maxBytes)` | `source-tree/node-source-tree.mjs` | `source-tree/git-source-tree.mjs` sur `$.fs.stat/read` | liste fixe |
 | `Hasher` | `sha256(text)`, `sha256Sync(text)` | `web-crypto-hasher.mjs` | le même | `node:crypto` |
 | `TemplateReader` | `read(pluginRelativePath)` | `templates/node-template-reader.mjs` | `$.fs` sous `$.plugin.root` | fichier réel |
-| `ActivePipeline` | `activate(slug)` | `pipeline/fs-active-pipeline.mjs` (`.active-slug`) | `$.fs.write` (dans le mod) | tableau |
+| `ActivePipeline` | `activate(slug)`, `current()` | `pipeline/fs-active-pipeline.mjs` (`.active-slug`) | `$.fs` (dans le mod) | tableau |
 | `AgentRunner` | `run({ agent, phase, role, label, prompt })` → `{ ok, text }` ; `agent: null` = agent général | `copilot-workflow/workflow-agent-runner.mjs` (`ctx.agent`) | `$.agent.spawn` + `turn.complete` (dans le mod) | LLM simulé |
 | `ReportTransport` | `observe({ packet })`, `publish({ packet, decision })` | `reporting/agent-report-transport.mjs` sur `AgentRunner` | le même | GitHub simulé |
 | `HumanInteraction` | `ask({ key, question, options })` → réponse ou `null` | `copilot-workflow/workflow-human-interaction.mjs` (`ctx.pause`) | `$.ui.ask` (dans le mod) | réponses par clé |
@@ -395,6 +399,62 @@ données avec le gabarit `review-verdict`, et `CLOSE_PHASE` à travers la phase 
 
 ---
 
+### 6.7 Suivre un run : le journal et le canvas de la Copilot app
+
+Le run tient un **journal**, `{tracking}/{slug}/run.json` : statut (`running`,
+`awaiting-human`, `done`, `blocked`, `error`), phase, raison, question ouverte, story, et les
+200 dernières lignes de log. `run-journal.mjs` l'écrit en décorant les deux ports qui voient
+déjà tout — `PipelineProgress` et `HumanInteraction` —, sans toucher aux étapes. Une pause
+Copilot (`ctx.pause`) laisse donc le journal sur la question posée.
+
+**`ObservePipeline`** lit, sans rien écrire, `state.json`, le journal, les reviews (avec leur
+verdict), les décisions et les reçus de publication, et en tire une vue
+(`pipeline-view-policy.mjs`) : chaque phase avec son statut (`done`, `active`, `awaiting`,
+`blocked`, `open`, `pending`), sa tentative sur le budget, son verdict, ses durées, ses
+artefacts et ses reviews ; la question en attente et si une réponse l'attend déjà ; les
+rapports et où ils sont publiés ; le log récent.
+
+Le **canvas « Skraft pipeline »** de la Copilot app dessine cette vue en direct. La Copilot app
+rend un canvas à partir de l'URL que donne son extension ; chaque instance ouverte démarre donc
+son propre petit serveur sur `127.0.0.1`, port choisi par le système, protégé par un jeton
+(et par les en-têtes Host, Origin et Sec-Fetch-Site).
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as Humain
+  participant App as Copilot app
+  participant C as Canvas (skraft-pipeline-canvas)
+  participant S as Serveur local (canvas-server)
+  participant O as ObservePipeline
+  participant RD as RecordDecision
+  participant W as Workflow skraft-pipeline
+
+  U->>App: « Open the Skraft pipeline canvas for checkout »
+  App->>C: open({ slug })
+  C->>S: démarre sur 127.0.0.1:port
+  C-->>App: { url (jeton), title, status }
+  App->>S: GET / puis /api/events
+  loop toutes les 1,5 s, tant que la page écoute
+    S->>O: snapshot(slug)
+    S-->>App: event: view (si la vue a changé)
+  end
+  W->>W: le run écrit run.json, state.json, les reviews
+  U->>App: clic « rework »
+  App->>S: POST /api/decide { key, answer }
+  S->>RD: record(...)
+  S-->>App: event: view (question marquée répondue)
+  U->>App: « Ask Copilot to resume the run »
+  App->>S: POST /api/ask { intent: resume }
+  S->>App: session.send(prompt fixe) → le chat reprend le workflow
+```
+
+La page ne fait passer dans le chat que deux prompts fixes (reprendre, expliquer) ; tout ce
+qu'elle affiche vient de fichiers écrits par les agents et est posé en texte, jamais en HTML.
+Elle n'ouvre que les fichiers Markdown et JSON que la vue liste, jamais `state.json`. L'agent
+a les mêmes moyens par les actions du canvas : `get_pipeline`, `decide`, `show_phase`,
+`refresh`. Sans `slug`, le canvas suit le pipeline actif (`ActivePipeline.current()`).
+
 ## 7. Cohabitation avec les settings hooks
 
 Restent dans `hooks/hooks.json` : la **provenance** des dispatchs, **G7/G8** (session guard :
@@ -414,6 +474,7 @@ pipeline contre lequel le session guard juge les écritures. Le journal d'audit 
 |---|---|---|
 | `{tracking}/{slug}/state.json` (+ `.bak.*`, `.invalid.*`, `.corrupted.*`) | `StateWriter`, `StateArchive`, `StateReader` | à chaque événement ; sauvegardes selon l'hôte |
 | `{tracking}/.active-slug` | `ActivePipeline` | au démarrage de chaque run |
+| `{tracking}/{slug}/run.json` | journal du run | à chaque phase, ligne de log, question, réponse et fin de run |
 | `{tracking}/{slug}/details/{date}/structural-scan.json` | `StructuralScan` | avant le premier passage de l'architecte |
 | `{tracking}/{slug}/reviews/{date}/{phase}-review-{N}.md` | le reviewer | `{N}` = reviews déjà enregistrées + 1 |
 | `{tracking}/{slug}/reviews/{date}/manual-close.md` | `CloseManually` | clôture manuelle |
@@ -440,6 +501,8 @@ pipeline contre lequel le session guard juge les écritures. Le journal d'audit 
 | Adaptateurs pilotés | `pipeline-adapters.unit.test.mjs`, `quality-gates/git-source-control.unit.test.mjs` | vrais dépôts git, dossiers temporaires, `ctx` simulé |
 | Workflow Copilot de bout en bout | `copilot-workflow-adapter.integration.test.mjs` | vrai dépôt, consentement, ADR, forecast, preuves, hooks, clôture |
 | Mod Claude Code | `plugins/skraft-framework/hooks/skraft-mod.test.ts` | runtime réel des mods (`claude plugin test`) |
+| Vue d'un pipeline | `observe-pipeline.use-case.test.mjs` | vue construite après de vrais runs du cas d'usage |
+| Canvas de la Copilot app | `copilot-canvas.integration.test.mjs` | vrai serveur local, HTTP et server-sent events, jeton, actions de l'agent |
 | Règle de dépendance | `tests/skraft-framework/architecture/pipeline-dependency-rule.test.mjs` | lecture des imports |
 
 ```bash
@@ -474,5 +537,8 @@ claude plugin test plugins/skraft-framework
   (`{}`), pas supprimé.
 - **Reporting** : pas de création de PR (une cible sans numéro reste `pending`) ; le
   numéro de PR se donne dans la réponse au consentement (`pr=#N`).
+- **Canvas** : l'API canvas du SDK Copilot est expérimentale ; seule la Copilot app dessine
+  les canvases (pas la CLI). La page suit les fichiers par sondage (1,5 s), pas par
+  notification.
 - **Décisions persistées** : une réponse enregistrée resservira si la même clé revient.
   `/skraft decide` la remplace ; supprimer `decisions/<clé>.json` force la question.

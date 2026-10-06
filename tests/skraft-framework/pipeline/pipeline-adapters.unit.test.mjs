@@ -320,8 +320,12 @@ test('fs-active-pipeline: writes the pointer the hooks read, replacing a stale o
   try {
     const store = createActiveSlugStore(root)
     store.write('old-story')
-    await createFsActivePipeline({ trackingRoot: root }).activate('checkout')
+    const active = createFsActivePipeline({ trackingRoot: root })
+    await active.activate('checkout')
     assert.equal(store.read(), 'checkout')
+    assert.equal(await active.current(), 'checkout')
+    await writeFile(join(root, '.active-slug'), '../etc\n')
+    assert.equal(await active.current(), null, 'a malformed pointer is no pipeline')
   } finally {
     await rm(root, { recursive: true, force: true })
   }

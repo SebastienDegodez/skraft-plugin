@@ -48,6 +48,9 @@ You can also launch the pipeline directly:
   `copilot workflow run skraft-pipeline --args '{"slug":"checkout","issue":42}'`.
   Answer checkpoints with `skraft_decide`, resume with `/workflows` → R, and use
   `skraft_close_phase` to close a phase by hand.
+- In GitHub Copilot app, ask to open the **Skraft pipeline** canvas (`{ "slug": "checkout" }`,
+  or the active pipeline): phases, attempts, reviews and verdicts, the question the run waits
+  for with one-click answers, decisions, reports and the run log, live.
 
 ```mermaid
 flowchart LR

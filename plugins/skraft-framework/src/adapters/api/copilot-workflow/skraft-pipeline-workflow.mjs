@@ -45,6 +45,7 @@ export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, env }) =
   if (typeof slug !== 'string' || !SLUG.test(slug)) {
     return { status: 'blocked', phase: null, reason: `slug must be kebab-case, got ${JSON.stringify(slug)}` }
   }
+  ctx.log(`Follow ${slug} live in the Copilot app: open the "Skraft pipeline" canvas.`)
   const agentRunner = createWorkflowAgentRunner({ ctx, agentIds })
   const pipeline = createRunPipeline({
     ...createNodePipelineDependencies({ cwd, env, pluginRoot }),

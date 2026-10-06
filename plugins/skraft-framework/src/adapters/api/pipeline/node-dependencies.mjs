@@ -15,8 +15,8 @@ import { createWebCryptoHasher } from '../../infrastructure/web-crypto-hasher.mj
 import { createTrackingDecisionStore } from '../../infrastructure/pipeline/tracking-decision-store.mjs'
 import { createFsActivePipeline } from '../../infrastructure/pipeline/fs-active-pipeline.mjs'
 
-// Composition of the driven adapters every Node host shares (the Copilot workflow, the
-// decide command): state and its backups, tracking directory, repository, git, source
+// Composition of the driven adapters every Node host shares (the Copilot workflow, its
+// tools and its canvas): state and its backups, tracking directory, repository, git, source
 // tree, hasher, decisions, templates, clock. A host adds what is its own: agentRunner, humanInteraction,
 // progress. Wiring only — no decision is taken here.
 export const loadPipelineConfig = (pluginRoot) =>

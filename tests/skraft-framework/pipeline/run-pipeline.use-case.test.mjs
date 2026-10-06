@@ -265,3 +265,32 @@ test('run-pipeline: a dispatch the state does not allow (G1) never leaves the co
   assert.match(outcome.reason, /^dispatch order \(G1\): out-of-order dispatch of Skraft - Solution Architect Reviewer/)
   assert.ok(!host.agentsCalled().includes(P.DESIGN.reviewer))
 })
+
+test('run-pipeline: the run journal (run.json) follows the run — phases, log, the open question, the outcome', async () => {
+  const host = createFakeHost({ verdicts: { DESIGN: ['REJECTED'] } })
+  const paused = await runOnce(host)
+  assert.equal(paused.status, 'awaiting-human')
+  const waiting = JSON.parse(host.tracking(SLUG, 'run.json'))
+  assert.equal(waiting.status, 'awaiting-human')
+  assert.equal(waiting.phase, 'DESIGN')
+  assert.deepEqual(waiting.checkpoint, { key: 'rejected:DESIGN:1', question: paused.checkpoint.question, options: ['rework', 'stop'] })
+  assert.deepEqual(waiting.story, STORY)
+  assert.ok(waiting.log.some((l) => l.message === 'phase RESEARCH'))
+  assert.ok(waiting.log.some((l) => l.message === 'waiting for an answer to rejected:DESIGN:1'))
+
+  host.decisions.set('rejected:DESIGN:1', 'stop')
+  const stopped = await runOnce(host)
+  const over = JSON.parse(host.tracking(SLUG, 'run.json'))
+  assert.equal(over.status, 'blocked')
+  assert.equal(over.reason, stopped.reason)
+  assert.equal(over.checkpoint, null)
+  assert.equal(over.log.filter((l) => l.message === 'run started').length, 2, 'one journal across runs, bounded')
+})
+
+test('run-pipeline: a question answered in the dialog shows as answered in the journal', async () => {
+  const host = createFakeHost({ verdicts: { DESIGN: ['REJECTED'] }, answers: { 'rejected:DESIGN': ['rework'] } })
+  await runOnce(host)
+  const journal = JSON.parse(host.tracking(SLUG, 'run.json'))
+  assert.equal(journal.status, 'done')
+  assert.ok(journal.log.some((l) => l.message === 'answer recorded for rejected:DESIGN:1'))
+})

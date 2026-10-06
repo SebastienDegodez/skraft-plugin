@@ -228,7 +228,7 @@ export const createFakeHost = (options = {}) => {
       },
     },
     templateReader: { read: async (path) => readFileSync(join(PLUGIN_ROOT, path), 'utf8') },
-    activePipeline: { activate: async (s) => { activations.push(s) } },
+    activePipeline: { activate: async (s) => { activations.push(s) }, current: async () => activations.at(-1) ?? null },
     agentRunner: {
       run: async (dispatch) => {
         dispatches.push(dispatch)
@@ -245,7 +245,11 @@ export const createFakeHost = (options = {}) => {
     },
     decisionStore: {
       read: async (s, k) => decisions.get(k) ?? null,
-      write: async (s, k, answer) => { decisions.set(k, answer) },
+      // also on disk, as tracking-decision-store.mjs writes it
+      write: async (s, k, answer, by = 'human') => {
+        decisions.set(k, answer)
+        writeTracking(s, `decisions/${String(k).replace(/[^A-Za-z0-9._-]+/g, '_')}.json`, JSON.stringify({ key: k, answer, by, at: `${TODAY}T10:00:00.000Z` }))
+      },
     },
     progress: { phase: (t) => phases.push(t), log: (m) => logs.push(m) },
     time: { now: () => new Date(`${TODAY}T10:00:00.000Z`), isoString: () => `${TODAY}T10:00:00.000Z` },
