@@ -299,10 +299,10 @@ Run architecture tests in every build:
 
 ## Quick Start
 
-Use the [clean-architecture-dotnet skill](../.github/skills/clean-architecture-dotnet/SKILL.md) to generate a complete project with NetArchTest tests pre-configured.
+Use the [clean-architecture-dotnet skill](../SKILL.md) to generate a complete project with NetArchTest tests pre-configured.
 
 ```bash
-./.github/skills/clean-architecture-dotnet/scripts/init-project.sh "MyProject"
+./scripts/init-project.sh "MyProject"
 ```
 
 This creates all architecture rules and tests automatically.
@@ -339,5 +339,5 @@ Clear, actionable feedback → fix immediately.
 
 ## Related Skills
 
-- [clean-architecture-dotnet](../.github/skills/clean-architecture-dotnet/SKILL.md): Complete project setup with NetArchTest
-- [outside-in-tdd](../.github/skills/outside-in-tdd/SKILL.md): Testing Application and Domain layers
+- [clean-architecture-dotnet](../SKILL.md): Complete project setup with NetArchTest
+- [outside-in-tdd](../../outside-in-tdd/SKILL.md): Testing Application and Domain layers
