@@ -1,7 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  continuationAfter,
   evaluateDispatch,
   evaluateDispatchProvenance,
   isPipelineAgent,
@@ -115,56 +114,6 @@ test('evaluateDispatch: a phase outside the published order or without a special
   const r = evaluateDispatch('solution-architect-reviewer', at('DESIGN'), noSpecialist)
   assert.equal(r.error.code, 'INVALID_STATE')
   assert.equal(r.error.reason, 'phase DESIGN is not in the published phase order')
-})
-
-// ─── continuationAfter (G6) ─────────────────────────────────────────────────────
-
-test('continuationAfter: a returning specialist is told to record its artefacts, then dispatch its reviewer', () => {
-  const c = continuationAfter('solution-architect', at('DESIGN'), CONFIG)
-  assert.equal(c.kind, 'REVIEW')
-  assert.match(c.context, /record-artifact --phase DESIGN/)
-  assert.match(c.context, /then dispatch solution-architect-reviewer with the block `[^`]*state\.mjs" handoff --agent "solution-architect-reviewer"` prints\.$/)
-})
-
-test('continuationAfter: a reviewer-less specialist is told to close its phase', () => {
-  const c = continuationAfter('solution-researcher', at('RESEARCH'), CONFIG)
-  assert.equal(c.kind, 'CLOSE')
-  assert.match(c.context, /close-phase --phase RESEARCH --verdict APPROVED/)
-  assert.match(c.context, /follow the orchestrator's interlocks before any next-phase dispatch/i)
-  assert.doesNotMatch(c.context, /dispatch solution-architect/)
-})
-
-test('continuationAfter: a returning reviewer is told how to record each verdict', () => {
-  const c = continuationAfter('software-engineer-reviewer', at('DELIVER', { retries: 1 }), CONFIG)
-  assert.equal(c.kind, 'VERDICT')
-  assert.match(c.context, /record-review-artifact --phase DELIVER/)
-  assert.match(c.context, /transition --to DONE/)
-  assert.match(c.context, /incr-retry` and re-dispatch software-engineer with the findings and the rework block `[^`]*handoff --agent "software-engineer"` prints/)
-  assert.doesNotMatch(c.context, /transition --to DONE`; dispatch/)
-})
-
-test('continuationAfter: an environment escalation keeps the retry budget and routes to the re-gate', () => {
-  const c = continuationAfter('software-engineer-reviewer', at('DELIVER', { retries: 1 }), CONFIG)
-  assert.match(c.context, /NEEDS_REWORK with `escalation: environment` → `record-verdict --verdict CHANGES_REQUESTED` and leave the retry count unchanged/)
-  assert.match(c.context, /environment re-gate\. Other NEEDS_REWORK → `record-verdict --verdict CHANGES_REQUESTED`, `incr-retry`/)
-})
-
-test('continuationAfter: an approved phase leaves next-phase dispatch to orchestrator interlocks', () => {
-  const c = continuationAfter('solution-architect-reviewer', at('DESIGN'), CONFIG)
-  assert.match(c.context, /APPROVED → `record-verdict --verdict APPROVED`; complete the orchestrator's ratification\/interlocks, then `[^`]*transition --to DISTILL`/)
-  assert.match(c.context, /let the orchestrator dispatch only after its pre-dispatch interlocks/)
-  assert.doesNotMatch(c.context, /dispatch acceptance-designer/)
-})
-
-test('continuationAfter: an exhausted retry budget turns the rework path into an escalation', () => {
-  const c = continuationAfter('solution-architect-reviewer', at('DESIGN', { retries: 2, maxRetries: 2 }), CONFIG)
-  assert.match(c.context, /retry budget exhausted \(2\/2\): stop and escalate to the user/)
-  assert.doesNotMatch(c.context, /incr-retry/)
-})
-
-test('continuationAfter: nothing to say for a non-phase agent or an agent of another phase', () => {
-  assert.equal(continuationAfter('cold-reader-lens', at('DELIVER'), CONFIG), null)
-  assert.equal(continuationAfter('solution-architect', at('DELIVER'), CONFIG), null)
 })
 
 // ─── evaluateDispatchProvenance ─────────────────────────────────────────────────

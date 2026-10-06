@@ -11,7 +11,7 @@
 // the hook's own failure path can still refuse it.
 export const TRACKED_STATE_WRITE_RE = /skraft-plans[/\\][^"'\s]*state\.json/
 
-// The tools a PreToolUse guard inspects: dispatch guards (G1, G9, provenance) and the
+// The tools a PreToolUse guard inspects: dispatch provenance and the
 // session guard (G7 Bash command or file write, G8 workspace write).
 const PRE_TOOL_USE_TOOLS = new Set(['Agent', 'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 
@@ -28,7 +28,6 @@ const readsSkillFile = (payload) =>
 export const isHookRelevant = ({ event, payload = {}, raw = '' } = {}) => {
   if (event !== 'PreToolUse' && event !== 'PostToolUse') return true
   if (typeof raw === 'string' && TRACKED_STATE_WRITE_RE.test(raw)) return true
-  if (isText(payload.requestedAgent)) return true
-  if (event === 'PreToolUse') return PRE_TOOL_USE_TOOLS.has(payload.toolName)
-  return payload.toolName === 'Agent' || readsSkillFile(payload)
+  if (event === 'PreToolUse') return isText(payload.requestedAgent) || PRE_TOOL_USE_TOOLS.has(payload.toolName)
+  return readsSkillFile(payload)
 }

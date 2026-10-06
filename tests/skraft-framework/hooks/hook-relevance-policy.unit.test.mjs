@@ -20,7 +20,6 @@ test('hook-relevance: a PreToolUse read, search or unknown tool is irrelevant', 
 
 test('hook-relevance: a dispatch is relevant whatever the tool is called', () => {
   assert.equal(isHookRelevant({ event: 'PreToolUse', payload: { toolName: 'runSubagent', requestedAgent: 'Skraft - Software Engineer' } }), true)
-  assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolName: 'runSubagent', requestedAgent: 'Skraft - Software Engineer' } }), true)
   assert.equal(isHookRelevant({ event: 'PreToolUse', payload: { toolName: 'runSubagent', requestedAgent: '' } }), false)
 })
 
@@ -32,8 +31,9 @@ test('hook-relevance: a tool call naming a tracked state.json always reaches the
   assert.doesNotMatch('skraft-plans/p/notes.md', TRACKED_STATE_WRITE_RE)
 })
 
-test('hook-relevance: PostToolUse keeps agent returns and skill reads only', () => {
-  assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolName: 'Agent' } }), true)
+test('hook-relevance: PostToolUse keeps skill reads but skips agent returns recorded by RunPipeline', () => {
+  assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolName: 'Agent' } }), false)
+  assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolName: 'runSubagent', requestedAgent: 'Skraft - Software Engineer' } }), false)
   assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolName: 'Read', filePath: '/p/skills/outside-in-tdd/SKILL.md' } }), true)
   assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolName: 'view', toolInput: { path: '/p/skills/x/skill.md' } } }), true)
   assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolName: 'Read', toolInput: { file_path: '/p/skills/x/SKILL.md' } } }), true)

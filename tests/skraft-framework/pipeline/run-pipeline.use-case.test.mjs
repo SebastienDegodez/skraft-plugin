@@ -252,8 +252,16 @@ test('run-pipeline: the run marks its pipeline active, so the settings hooks gua
   assert.deepEqual(host.activations, [SLUG])
 })
 
-test('run-pipeline: every dispatch starts with the code-driven marker the hooks read', async () => {
+test('run-pipeline: a dispatch the state does not allow (G1) never leaves the code', async () => {
   const host = createFakeHost()
-  await runOnce(host)
-  assert.ok(host.dispatches.every((d) => d.prompt.startsWith('<!-- skraft-dispatch: run-pipeline -->\n')))
+  const dependencies = host.dependencies(SLUG)
+  // A state store that loses the architect's recorded artefacts: by the state, DESIGN's
+  // specialist produced nothing, so its reviewer may not run.
+  const write = dependencies.stateWriter.write
+  dependencies.stateWriter = { write: (slug, state) => write(slug, { ...state, phaseArtifacts: { ...state.phaseArtifacts, DESIGN: [] } }) }
+  const outcome = await createRunPipeline(dependencies).run({ slug: SLUG, story: STORY })
+
+  assert.equal(outcome.status, 'blocked')
+  assert.match(outcome.reason, /^dispatch order \(G1\): out-of-order dispatch of Skraft - Solution Architect Reviewer/)
+  assert.ok(!host.agentsCalled().includes(P.DESIGN.reviewer))
 })

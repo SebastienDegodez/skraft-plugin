@@ -1,6 +1,7 @@
-// Acceptance — a real harness dispatch is refused when its prompt drops an input an
-// earlier phase recorded, and allowed once the prompt carries the handoff block. The
-// dispatch journal records every subagent start for the timeline.
+// Acceptance — the settings hooks around a real harness dispatch, now that the pipeline
+// is code: the handoff completeness (G9) and the dispatch order (G1) are RunPipeline's
+// checks, so the hooks no longer refuse a dispatch for them; the dispatch journal still
+// records every subagent start for the timeline.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
@@ -47,21 +48,20 @@ const dispatch = (prompt) => ({
   tool_input: { subagent_type: 'skraft:software-engineer', description: 'deliver', prompt },
 })
 
-test('a DELIVER dispatch that omits the test-plan is refused and told what is missing', () => {
-  withPipelineInDeliver(({ env }) => {
-    const denied = hook(env, ['PreToolUse', 'Agent'], dispatch('Implement the story.'))
-
-    assert.equal(denied.hookSpecificOutput.permissionDecision, 'deny')
-    assert.match(denied.hookSpecificOutput.permissionDecisionReason, /HANDOFF_INCOMPLETE|test-plan/)
-    assert.match(denied.hookSpecificOutput.permissionDecisionReason, /state\.mjs handoff/)
+test('a dispatch the prose would have refused for its handoff or its order passes the hooks: RunPipeline checks both', () => {
+  withPipelineInDeliver(({ env, auditLog }) => {
+    assert.equal(hook(env, ['PreToolUse', 'Agent'], dispatch('Implement the story.')), undefined)
+    const researcher = { ...dispatch('Research again.'), tool_input: { subagent_type: 'skraft:solution-researcher', description: 'research', prompt: 'Research again.' } }
+    assert.equal(hook(env, ['PreToolUse', 'Agent'], researcher), undefined)
+    const audit = readFileSync(auditLog, 'utf8')
+    assert.doesNotMatch(audit, /DispatchEvaluated|HandoffEvaluated/)
   })
 })
 
-test('a DELIVER dispatch that pastes the handoff block is allowed', () => {
-  withPipelineInDeliver(({ env, cli }) => {
-    const block = cli('handoff', '--slug', 'demo', '--agent', 'software-engineer')
-
-    assert.equal(hook(env, ['PreToolUse', 'Agent'], dispatch(`Implement the story.\n\n${block}`)), undefined)
+test('a returning agent gets no continuation reminder (G6 left the hooks)', () => {
+  withPipelineInDeliver(({ env }) => {
+    const returned = { ...dispatch('Implement the story.'), hook_event_name: 'PostToolUse', tool_response: 'done' }
+    assert.equal(hook(env, ['PostToolUse', 'Agent'], returned), undefined)
   })
 })
 

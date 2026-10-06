@@ -67,3 +67,7 @@ test('real-hook-audit: hooks.json declares no unexpected top-level events', () =
     assert.ok(expectedEvents.includes(event), `unexpected event ${event} declared in hooks.json but not audited here`)
   }
 })
+
+test('real-hook-audit: PostToolUse(Agent|Task) is no longer routed — RunPipeline records what an agent returns', () => {
+  for (const matcher of ['Agent', 'Task']) assert.equal(findEntry(hooksManifest, 'PostToolUse', matcher), undefined)
+})

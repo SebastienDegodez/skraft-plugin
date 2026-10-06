@@ -1,5 +1,6 @@
-import { buildHandoff } from '../../domain/handoff-policy.mjs'
-import { nextPhaseAfter } from '../../domain/pipeline-policy.mjs'
+import { buildHandoff, evaluateHandoff } from '../../domain/handoff-policy.mjs'
+import { evaluateDispatch, nextPhaseAfter } from '../../domain/pipeline-policy.mjs'
+import { projectDispatchState } from '../../domain/state-schema.mjs'
 import { composeDispatchBrief, reviewOutputPath } from '../../domain/pipeline/dispatch-brief.mjs'
 import { readReviewOutcome } from '../../domain/pipeline/review-outcome.mjs'
 import {
@@ -114,7 +115,14 @@ export const createRunPipeline = (deps) => {
   }
 
   // ── Dispatch ──────────────────────────────────────────────────────────────
+  // Before every dispatch, the two checks the settings hooks used to make (G1, G9) run
+  // here, on the state the code itself wrote: the agent belongs to the open phase, in
+  // order, and the prompt names every input an earlier phase recorded.
   const dispatch = async (slug, story, state, agent, { outputs = [], addenda = [], label }) => {
+    const projected = projectDispatchState(state)
+    if (!projected.ok) throw blocked(state.currentPhase, `cannot dispatch ${agent}: ${projected.error.reason}`)
+    const order = evaluateDispatch(agent, projected.value, config)
+    if (!order.ok) throw blocked(state.currentPhase, `dispatch order (G1): ${order.error.reason}`)
     const handoff = buildHandoff({ agent, state, config })
     if (!handoff.ok) throw blocked(state.currentPhase, `cannot hand off to ${agent}: ${handoff.error.reason}`)
     // DISTILL and DELIVER specialists get the reporting addendum on every dispatch, rework included.
@@ -127,6 +135,8 @@ export const createRunPipeline = (deps) => {
       outputs,
       addenda: reporting ? [reporting, ...addenda] : addenda,
     })
+    const complete = evaluateHandoff({ agent, state, config, prompt })
+    if (!complete.ok) throw blocked(state.currentPhase, `handoff (G9): ${complete.error.reason}`)
     progress.log(`→ ${agent} (${handoff.value.mode}, attempt ${handoff.value.attempt}/${handoff.value.maxAttempts})`)
     const answer = await agentRunner.run({ agent, phase: handoff.value.phase, role: handoff.value.role, label, prompt })
     if (!answer?.ok) progress.log(`  ${agent} returned no answer`)
@@ -402,8 +412,8 @@ export const createRunPipeline = (deps) => {
       await recover(slug)
       const init = await stateService.init(slug)
       if (!init.ok) throw blocked(null, `state.json for ${slug}: ${init.error.code}`)
-      // The settings hooks (G1, G8, G9) guard the pipeline this pointer names: without it they
-      // stand down in silence, and a stale one makes them refuse this run's dispatches.
+      // The settings hooks (G7/G8 session guard) read the pipeline this pointer names:
+      // without it the DELIVER write check stands down, a stale one judges the wrong phase.
       await activePipeline.activate(slug)
       await reports.ensureConsent(slug, story)
       for (let i = 0; i < maxPhases; i += 1) {

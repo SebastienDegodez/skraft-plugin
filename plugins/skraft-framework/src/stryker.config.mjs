@@ -16,7 +16,6 @@ export default {
     'plugins/skraft-framework/src/domain/dispatch-policy.mjs',
     'plugins/skraft-framework/src/domain/state-schema.mjs',
     'plugins/skraft-framework/src/domain/pipeline-policy.mjs',
-    'plugins/skraft-framework/src/application/pre-tool-use-service.mjs',
     'plugins/skraft-framework/src/application/pre-tool-use-composite.mjs',
     // US4 — G2/G3 skill-loading guardrail (#50)
     'plugins/skraft-framework/src/domain/skill-policy.mjs',
@@ -79,9 +78,8 @@ export default {
     // qg-verify: deterministic evidence verification
     'plugins/skraft-framework/src/domain/evidence-verification-policy.mjs',
     'plugins/skraft-framework/src/application/evidence-verification-service.mjs',
-    // G9 handoff guard + dispatch timeline
+    // Handoff policy (G9, checked by RunPipeline) + dispatch timeline
     'plugins/skraft-framework/src/domain/handoff-policy.mjs',
-    'plugins/skraft-framework/src/application/handoff-guard-service.mjs',
     'plugins/skraft-framework/src/domain/dispatch-timeline-policy.mjs',
     'plugins/skraft-framework/src/application/dispatch-journal-service.mjs',
     'plugins/skraft-framework/src/domain/structural-scan-policy.mjs',

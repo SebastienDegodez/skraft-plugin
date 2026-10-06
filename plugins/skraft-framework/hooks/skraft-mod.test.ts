@@ -132,7 +132,7 @@ describe('skraft mod', () => {
     expect(state.phaseArtifacts.RESEARCH).toContain(`details/${TODAY}/structural-scan.json`)
     // the settings hooks guard this run
     expect(files.get(`${CWD}/.copilot-tracking/skraft-plans/.active-slug`)).toBe('checkout\n')
-    expect(spawns.every((s) => s.prompt.startsWith('<!-- skraft-dispatch: run-pipeline -->'))).toBe(true)
+    expect(spawns.every((s) => s.prompt.startsWith('## Skraft dispatch — '))).toBe(true)
     // the scan ran in the mod; the state was written with $.fs, one backup per phase change
     expect(JSON.parse(files.get(`${TRACK}/details/${TODAY}/structural-scan.json`) ?? '{}').revision).toBe('sha1')
     expect(processes).toEqual([])
