@@ -148,7 +148,8 @@ export const createRunPipeline = (deps) => {
     if (!complete.ok) throw blocked(state.currentPhase, `handoff (G9): ${complete.error.reason}`)
     progress.log(`→ ${agent} (${handoff.value.mode}, attempt ${handoff.value.attempt}/${handoff.value.maxAttempts})`)
     const answer = await agentRunner.run({ agent, phase: handoff.value.phase, role: handoff.value.role, label, prompt })
-    if (!answer?.ok) progress.log(`  ${agent} returned no answer`)
+    if (answer?.unavailable) throw blocked(state.currentPhase, answer.error ?? `${agent} is not available on this host`)
+    if (!answer?.ok) progress.log(`  ${agent} returned no answer${answer?.error ? ` — ${answer.error}` : ''}`)
     return answer
   }
 

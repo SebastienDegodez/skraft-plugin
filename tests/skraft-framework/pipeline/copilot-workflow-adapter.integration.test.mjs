@@ -20,6 +20,9 @@ const fakeContext = (repo) => {
   const calls = []
   const today = new Date().toISOString().slice(0, 10)
   const tracking = join(repo, '.copilot-tracking/skraft-plans', SLUG)
+  const registered = Object.entries(CONFIG.agentAliases)
+    .filter(([alias, name]) => /^[a-z0-9-]+$/.test(alias) && alias !== name)
+    .map(([alias, name]) => ({ id: `skraft:${alias}`, name: alias, displayName: name }))
   const ctx = {
     args: { slug: SLUG },
     signal: new AbortController().signal,
@@ -35,9 +38,12 @@ const fakeContext = (repo) => {
       error.name = 'AbortError'
       throw error
     },
+    // A Copilot app session: plugin agents registered as "skraft:<file id>", named for display.
+    session: { rpc: { agent: { list: async () => ({ agents: registered }) } } },
     agent: async (prompt, options) => {
       calls.push({ prompt, ...options })
-      const agent = options.agent
+      const agent = registered.find((entry) => entry.id === options.agent)?.displayName
+      assert.ok(agent, `called by its registered id, not "${options.agent}"`)
       if (/-reviewer$|Reviewer$/.test(agent)) {
         const out = prompt.match(/`\.copilot-tracking\/skraft-plans\/checkout\/(reviews\/[^`]+)`/)
         await mkdir(join(tracking, out[1], '..'), { recursive: true })
@@ -106,7 +112,7 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     assert.equal(state1.adrRatification.checkpointStatus, 'awaiting_human')
     assert.ok(state1.phaseArtifacts.RESEARCH.some((p) => p.endsWith('structural-scan.json')), 'real structural scan recorded')
     assert.deepEqual(ctx.phases, ['RESEARCH', 'DESIGN'])
-    assert.equal(ctx.calls[0].agent, 'Skraft - Solution Researcher', 'Copilot agents are addressed by their .agent.md name')
+    assert.equal(ctx.calls[0].agent, 'skraft:solution-researcher', 'Copilot agents are called by the id the session registered them under')
 
     assert.equal(state1.userPreferences.reporting.destinations.chat, true)
     // The human answers through the skraft_decide tool.
@@ -122,12 +128,12 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     assert.deepEqual(state2.phasesCompleted, ['RESEARCH', 'DESIGN', 'DISTILL'])
     assert.equal(state2.currentPhase, 'DELIVER')
     assert.ok(ctx.logs.some((line) => /^qg-verify evidence\/.+qg-s1\.json: inconclusive$/.test(line)), ctx.logs.join('\n'))
-    assert.ok(!ctx.calls.slice(1).some((c) => c.agent === 'Skraft - Solution Researcher'), 'RESEARCH is not redone on resume')
+    assert.ok(!ctx.calls.slice(1).some((c) => c.agent === 'skraft:solution-researcher'), 'RESEARCH is not redone on resume')
     // The forecast was rendered after DISTILL from the designer's data, and summarised in chat.
     const forecastMd = ctx.logs.find((line) => /^forecast report for checkout: /.test(line))
     assert.ok(forecastMd, ctx.logs.join('\n'))
     assert.match(await readFile(join(repo, forecastMd.split(': ')[1]), 'utf8'), /AC-1/)
-    const engineerBrief = ctx.calls.findLast((c) => c.agent === 'Skraft - Software Engineer').prompt
+    const engineerBrief = ctx.calls.findLast((c) => c.agent === 'skraft:software-engineer').prompt
     assert.match(engineerBrief, /## Reporting \(qa-reporting\)/)
     assert.match(engineerBrief, /Approved forecast data: `\.copilot-tracking\/skraft-plans\/checkout\/reporting\/[\d-]+\/forecast-data\.json`/)
     assert.match(engineerBrief, /distill-handoff\.md/)
@@ -135,7 +141,7 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     // The settings hooks now guard this run: the pointer names it, and the hooks that
     // remain (provenance, G7/G8) let its DELIVER specialist through; no G6 reminder follows.
     assert.equal((await readFile(join(repo, '.copilot-tracking/skraft-plans/.active-slug'), 'utf8')).trim(), SLUG)
-    const engineerPrompt = ctx.calls.findLast((c) => c.agent === 'Skraft - Software Engineer').prompt
+    const engineerPrompt = ctx.calls.findLast((c) => c.agent === 'skraft:software-engineer').prompt
     const hook = (args, payload) => execFileSync(process.execPath, [join(PLUGIN_ROOT, 'src/cli/hook.mjs'), ...args], {
       cwd: repo,
       env: { ...env, CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, SKRAFT_AUDIT_LOG: join(repo, 'audit.jsonl') },

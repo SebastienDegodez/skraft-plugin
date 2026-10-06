@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { createRunPipeline } from '../../../application/pipeline/run-pipeline.mjs'
 import { createRecordDecision } from '../../../application/pipeline/record-decision.mjs'
 import { createCloseManually } from '../../../application/pipeline/close-manually.mjs'
@@ -40,6 +42,11 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
   },
 })
 
+// The plugin's name (plugin.json): how a session prefixes its agents when it cannot list them.
+const pluginNameOf = (pluginRoot) => {
+  try { return JSON.parse(readFileSync(join(pluginRoot, 'plugin.json'), 'utf8')).name ?? null } catch { return null }
+}
+
 // The workflow body: ctx is the SDK's WorkflowContext.
 export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, env }) => {
   const { slug, issue, title, agentIds } = ctx.args ?? {}
@@ -47,9 +54,10 @@ export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, env }) =
     return { status: 'blocked', phase: null, reason: `slug must be kebab-case, got ${JSON.stringify(slug)}` }
   }
   ctx.log(`Follow ${slug} live in the Copilot app: open the "Skraft pipeline" canvas.`)
-  const agentRunner = createWorkflowAgentRunner({ ctx, agentIds })
+  const deps = createNodePipelineDependencies({ cwd, env, pluginRoot })
+  const agentRunner = createWorkflowAgentRunner({ ctx, agentIds, aliases: deps.config.agentAliases, pluginName: pluginNameOf(pluginRoot) })
   const pipeline = createRunPipeline({
-    ...createNodePipelineDependencies({ cwd, env, pluginRoot }),
+    ...deps,
     agentRunner,
     reportTransportOf: (runner) => createAgentReportTransport({ agentRunner: runner, pluginRoot }),
     humanInteraction: createWorkflowHumanInteraction({ ctx }),
