@@ -1,6 +1,6 @@
 {
   "name": "skraft",
-  "version": "1.14.0",
+  "version": "2.0.0-alpha",
   "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture, backlog discovery and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline.",
   "author": {
     "name": "SebastienDegodez",
