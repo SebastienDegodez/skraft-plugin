@@ -131,7 +131,22 @@ function writeSuccess(data) {
   }
 }
 
+// The prose orchestrator drove the pipeline through these subcommands. The pipeline is
+// code now (RunPipeline: the Claude Code mod's /skraft, the Copilot skraft-pipeline
+// workflow), which calls the same services in process. They stay, unchanged, for manual
+// repair and for the fixtures of the tests, and are marked obsolete; `get`, `handoff` and
+// `timeline` remain current (agents and people read them). The notice goes to a terminal
+// only: the JSON on stderr that callers parse stays as it was.
+const OBSOLETE_SUBCOMMANDS = new Set([
+  'init', 'select', 'transition', 'record-verdict', 'record-artifact', 'record-review-artifact',
+  'mark-phase-started', 'incr-retry', 'incr-rework', 'close-phase', 'set', 'scan-commits',
+  'diagnose', 'rollback', 'reset', 'resolve-stale',
+])
+
 async function run() {
+  if (OBSOLETE_SUBCOMMANDS.has(subcommand) && process.stderr.isTTY) {
+    process.stderr.write(`state.mjs ${subcommand}: obsolete — the pipeline runs as code (/skraft in Claude Code, the skraft-pipeline workflow in Copilot); kept for manual repair only.\n`)
+  }
   const explicitSlug = arg('slug')
   if (explicitSlug !== undefined && !isValidProjectSlug(explicitSlug)) {
     writeError('INVALID_ARGUMENT', `--slug must be a kebab-case project slug, got: ${explicitSlug}`)
