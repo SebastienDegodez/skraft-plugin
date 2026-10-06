@@ -7,7 +7,7 @@ import { mkdtemp, rm, readFile, mkdir, writeFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createCliStateWriter } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/cli-state-writer.mjs'
+import { createSnapshotStateWriter } from '../../../plugins/skraft-framework/src/adapters/infrastructure/state/snapshot-state-writer.mjs'
 import { createTrackingDecisionStore, decisionPath } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
 import { createFsTrackingStore } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-tracking-store.mjs'
 import { createFsRepositoryReader } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-repository-reader.mjs'
@@ -18,14 +18,13 @@ import { createProcessGitRunner } from '../../../plugins/skraft-framework/src/ad
 import { createGitSourceTree } from '../../../plugins/skraft-framework/src/adapters/infrastructure/source-tree/git-source-tree.mjs'
 import { createNodeSourceTree } from '../../../plugins/skraft-framework/src/adapters/infrastructure/source-tree/node-source-tree.mjs'
 import { createWebCryptoHasher } from '../../../plugins/skraft-framework/src/adapters/infrastructure/web-crypto-hasher.mjs'
-import { createNodeProcessRunner } from '../../../plugins/skraft-framework/src/adapters/infrastructure/process/node-process-runner.mjs'
 import { createWorkflowAgentRunner } from '../../../plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/workflow-agent-runner.mjs'
 import { createWorkflowHumanInteraction } from '../../../plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/workflow-human-interaction.mjs'
 import { createWorkflowProgress } from '../../../plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/workflow-progress.mjs'
 import { claudeAgentId, walkFiles, askable } from '../../../plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
 import { parseSkraftArgs } from '../../../plugins/skraft-framework/src/adapters/api/claude-code-mod/command-args.mjs'
 import { createRecordDecision } from '../../../plugins/skraft-framework/src/application/pipeline/record-decision.mjs'
-import { CONFIG, PLUGIN_ROOT } from './fake-host.mjs'
+import { CONFIG } from './fake-host.mjs'
 
 const recordingRunner = (answer) => {
   const calls = []
@@ -53,40 +52,48 @@ const memoryTracking = () => {
 }
 const fixedTime = { now: () => new Date('2026-10-06T08:00:00.000Z'), isoString: () => '2026-10-06T08:00:00.000Z' }
 
-// ── StateWriter ─────────────────────────────────────────────────────────────
+// ── StateWriter (the Claude Code mod's) ────────────────────────────────────
 
-test('cli-state-writer: sends the state on stdin to state-io and answers Ok', async () => {
-  const runner = recordingRunner({ exitCode: 0, stdout: '', stderr: '' })
-  const result = await createCliStateWriter({ runProcess: runner.run, pluginRoot: '/plugin', trackingRoot: '/repo/.t' })
-    .write('checkout', { currentPhase: 'DESIGN' })
-  assert.deepEqual(runner.calls[0].argv, ['node', '/plugin/src/cli/state-io.mjs', 'write', '--root', '/repo/.t', '--slug', 'checkout'])
-  assert.equal(runner.calls[0].opts.stdin, '{"currentPhase":"DESIGN"}')
-  assert.deepEqual(result, { ok: true, value: undefined })
-})
-
-test('cli-state-writer: a refused state is CORRUPTED_STATE, an IO failure IO_ERROR, a throw IO_ERROR', async () => {
-  const write = (answer) => createCliStateWriter({ runProcess: recordingRunner(answer).run, pluginRoot: '/p', trackingRoot: '/t' }).write('s', {})
-  assert.equal((await write({ exitCode: 1, stdout: '', stderr: 'bad' })).error.code, 'CORRUPTED_STATE')
-  assert.equal((await write({ exitCode: 2, stdout: '', stderr: '' })).error.code, 'IO_ERROR')
-  assert.equal((await write(new Error('boom'))).error.code, 'IO_ERROR')
-})
-
-test('state-io command: writes a valid state atomically and refuses an invalid one', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skraft-state-io-'))
-  try {
-    const writer = createCliStateWriter({ runProcess: createNodeProcessRunner(), pluginRoot: PLUGIN_ROOT, trackingRoot: root })
-    const ok = await writer.write('checkout', { currentPhase: 'RESEARCH' })
-    assert.equal(ok.ok, true)
-    assert.equal(JSON.parse(await readFile(join(root, 'checkout/state.json'), 'utf8')).currentPhase, 'RESEARCH')
-    const refused = await writer.write('checkout', { currentPhase: 42 })
-    assert.equal(refused.ok, false)
-    assert.equal(refused.error.code, 'CORRUPTED_STATE')
-  } finally {
-    await rm(root, { recursive: true, force: true })
+const memoryFiles = (initial = {}) => {
+  const files = new Map(Object.entries(initial))
+  return {
+    files,
+    exists: async (path) => files.has(path),
+    read: async (path) => {
+      if (!files.has(path)) throw Object.assign(new Error('absent'), { code: 'ENOENT' })
+      return files.get(path)
+    },
+    write: async (path, text) => { files.set(path, text) },
   }
+}
+
+test('snapshot-state-writer: writes state.json, backing the previous one up only when the phase changes', async () => {
+  let clock = 1000
+  const fs = memoryFiles()
+  const writer = createSnapshotStateWriter({ files: fs, trackingRoot: '/r', now: () => clock++ })
+  assert.deepEqual(await writer.write('checkout', { currentPhase: 'RESEARCH', n: 1 }), { ok: true, value: undefined })
+  await writer.write('checkout', { currentPhase: 'RESEARCH', n: 2 })
+  await writer.write('checkout', { currentPhase: 'DESIGN', n: 3 })
+  assert.deepEqual(JSON.parse(fs.files.get('/r/checkout/state.json')), { currentPhase: 'DESIGN', n: 3 })
+  assert.deepEqual([...fs.files.keys()].sort(), ['/r/checkout/state.json', '/r/checkout/state.json.bak.1000'])
+  assert.deepEqual(JSON.parse(fs.files.get('/r/checkout/state.json.bak.1000')), { currentPhase: 'RESEARCH', n: 2 })
 })
 
-// ── DecisionStore ─────────────────────────────────────────────────────────────
+test('snapshot-state-writer: a torn write or a failing file system is IO_ERROR, never a throw', async () => {
+  const torn = { ...memoryFiles(), read: async () => '{"currentPhase":"RES' }
+  const tornResult = await createSnapshotStateWriter({ files: torn, trackingRoot: '/r', now: () => 1 }).write('s', { currentPhase: 'RESEARCH' })
+  assert.equal(tornResult.ok, false)
+  assert.equal(tornResult.error.code, 'IO_ERROR')
+  const failing = { exists: async () => false, read: async () => '', write: async () => { throw new Error('EACCES') } }
+  const failed = await createSnapshotStateWriter({ files: failing, trackingRoot: '/r', now: () => 1 }).write('s', {})
+  assert.deepEqual(failed, { ok: false, error: { code: 'IO_ERROR', reason: 'EACCES' } })
+})
+
+test('snapshot-state-writer: an unreadable previous state is backed up before it is replaced', async () => {
+  const fs = memoryFiles({ '/r/s/state.json': '{ torn' })
+  await createSnapshotStateWriter({ files: fs, trackingRoot: '/r', now: () => 7 }).write('s', { currentPhase: 'RESEARCH' })
+  assert.equal(fs.files.get('/r/s/state.json.bak.7'), '{ torn')
+})
 
 test('tracking-decision-store: write then read the answer, under decisions/<key>.json', async () => {
   const tracking = memoryTracking()

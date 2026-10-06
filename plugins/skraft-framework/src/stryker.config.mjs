@@ -93,6 +93,7 @@ export default {
     'plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/*.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/*.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/git/git-source-control.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/state/snapshot-state-writer.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/git/process-git-runner.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/source-tree/git-source-tree.mjs',
   ],

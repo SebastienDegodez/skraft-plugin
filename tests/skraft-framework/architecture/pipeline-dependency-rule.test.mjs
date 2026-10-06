@@ -42,9 +42,8 @@ test('pipeline core names no command line, plugin path, process or exit code', (
   assert.deepEqual(offenders, [])
 })
 
-test('pipeline infrastructure adapters never import a use case', () => {
-  const dirs = ['adapters/infrastructure/pipeline', 'adapters/infrastructure/process', 'adapters/infrastructure/copilot-workflow', 'adapters/infrastructure/claude-code-mod']
-  const offenders = dirs.flatMap((dir) => filesUnder(join(SRC, dir))).flatMap((file) =>
+test('driven (infrastructure) adapters never import a use case', () => {
+  const offenders = filesUnder(join(SRC, 'adapters/infrastructure')).flatMap((file) =>
     importsOf(file).filter(({ target }) => target && layerOf(target) === 'application').map(({ spec }) => `${show(file)} → ${spec}`))
   assert.deepEqual(offenders, [])
 })
