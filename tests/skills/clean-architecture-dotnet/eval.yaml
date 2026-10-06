@@ -1,0 +1,775 @@
+name: clean-architecture-dotnet
+description: |
+  Verifies the .NET Clean Architecture guidance on features asked for in plain
+  terms, never by pattern name: commands that return nothing and receive their
+  id, queries that return a read model, aggregates built by a factory with a
+  typed id, access rules split between use case and aggregate. Two regression
+  guards protect what the model already does unaided and what a shorter skill
+  must not break: no dispatch bus for a couple of use cases, and a second
+  bounded context that shares no concrete type. Probes (Sonnet, 2 runs per
+  cell) without the skill failed the deciders' rules 0/4 each; with the bus
+  guidance removed from the skill, a bus appeared in 2/4 runs.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 4
+scoring:
+  threshold: 1
+
+stimuli:
+  # Deterministic decider. Baseline probes: the create use case returned the
+  # stored entity and generated the id, the fetch returned the domain object.
+  - name: '.NET: contacts, created and fetched over HTTP'
+    prompt: |
+      Add a contacts feature: create a contact (name, email) and get a contact by
+      id, over HTTP (POST /contacts, GET /contacts/{id}), with minimal APIs.
+      Contacts have no business rules. Keep them in memory for now. Production
+      code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+          dest: .gitignore
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+          dest: Directory.Build.props
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+          dest: PaymentAuthorization.slnx
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+          dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+          dest: src/PaymentAuthorization.Domain/Money.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+          dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+          dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+          dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+          dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+          dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+          dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+      commands:
+        - 'dotnet restore PaymentAuthorization.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: The solution builds
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet build PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 4m
+      - type: run-command
+        name: Creating a contact returns nothing and receives the new id
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const creates = inLayer('Application').flatMap(methods)
+                .filter(m => /^(Create|Add|Register)/.test(m.name) || (/^(Handle|Execute|Invoke)(Async)?$/.test(m.name) && /^(Create|Add|Register)/.test(m.cls)));
+              if (!creates.length) { console.log('no create entry point in Application'); process.exit(1); }
+              const records = Object.fromEntries(sources.flatMap(s => [...s.text.matchAll(/record\s+(?:class\s+)?(\w+)\s*\(([^)]*)\)/g)].map(m => [m[1], m[2]])));
+              const carriesId = m => /\b\w*Id\b|\bid\b/.test(m.params)
+                || [...m.params.matchAll(/([A-Z]\w+)\s+\w+/g)].some(t => /\b\w*Id\b/.test(records[t[1]] || ''));
+              const bad = creates.filter(m => !/^(Task|ValueTask|void)$/.test(m.ret) || !carriesId(m)).map(m => `${m.cls}.${m.name}(${m.params.trim()}) returns ${m.ret}`);
+              if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
+              console.log('create returns nothing and receives the new id');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Fetching a contact returns a read model, not the domain object
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const domainTypes = new Set(inLayer('Domain').flatMap(s => [...s.text.matchAll(/\b(?:class|record|struct|enum)\s+(\w+)/g)].map(m => m[1])));
+              const queries = inLayer('Application').flatMap(methods)
+                .filter(m => /^(Get|Find|View|Consult|Load)/.test(m.name) || (/^(Handle|Execute|Invoke)(Async)?$/.test(m.name) && /^(Get|Find|View|Consult|Load)/.test(m.cls)));
+              if (!queries.length) { console.log('no query entry point in Application'); process.exit(1); }
+              const bad = queries.filter(m => !/ViewModel\b/.test(m.ret) || m.ret.match(/\w+/g).some(t => domainTypes.has(t))).map(m => `${m.cls}.${m.name} returns ${m.ret}`);
+              if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
+              console.log('queries return a *ViewModel, never a domain type');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Contacts without rules stay plain data, not an aggregate
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const contact = sources.find(s => /\b(class|record)\s+Contact\b/.test(s.text));
+              if (!contact) { console.log('no Contact type'); process.exit(1); }
+              const def = contact.text.slice(contact.text.search(/\b(class|record)\s+Contact\b/));
+              const problems = [];
+              if (/\b(class|record)\s+Contact\b[^{;]*:\s*[^{;]*\b(AggregateRoot|Entity)\b/.test(def)) problems.push('Contact derives from an aggregate or entity base');
+              if (/\b(AddDomainEvent|RaiseDomainEvent|DomainEvents)\b/.test(def)) problems.push('Contact raises domain events');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('Contact is plain data, no aggregate machinery');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: diff-not-contains
+        name: No command or query bus for two use cases
+        config:
+          pattern: '(?m)^\+.*\b(ICommandBus|IQueryBus|IMediator|MediatR)\b'
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-dotnet
+    rubric:
+      - Lets the endpoint choose the new contact's id and hand it to the use case, which returns nothing.
+      - Returns a read model built for the caller from the fetch, never the stored object itself.
+      - Adds no rule about contacts that the request did not state.
+
+  # Deterministic decider. Baseline probes: a public constructor and a raw Guid
+  # id 4/4; the "only the owner may cancel" check sat in the use case 2/2.
+  - name: '.NET: customers see and cancel only their own orders'
+    prompt: |
+      Add order consultation and cancellation for customers, with minimal APIs:
+      GET /orders/{id} returns an order and POST /orders/{id}/cancel cancels it. A
+      customer may only see and cancel their own orders; an order can only be
+      cancelled while it is pending. Authentication is already handled upstream:
+      each request carries the authenticated customer id in the X-Customer-Id
+      header. Create whatever order model you need and keep orders in memory.
+      Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+          dest: .gitignore
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+          dest: Directory.Build.props
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+          dest: PaymentAuthorization.slnx
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+          dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+          dest: src/PaymentAuthorization.Domain/Money.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+          dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+          dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+          dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+          dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+          dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+          dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+      commands:
+        - 'dotnet restore PaymentAuthorization.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: The solution builds
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet build PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 4m
+      - type: run-command
+        name: An order is built by a factory and identified by a typed id
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const order = inLayer('Domain').find(s => /\bclass\s+Order\b/.test(s.text));
+              if (!order) { console.log('no Order class in Domain'); process.exit(1); }
+              const problems = [];
+              if (!/private\s+Order\s*\(/.test(order.text)) problems.push('Order has no private constructor');
+              if (!/static\s+Order\s+\w+\s*\(/.test(order.text)) problems.push('Order has no static factory');
+              if (/public\s+Order\s*\(/.test(order.text) || /class\s+Order\s*\(/.test(order.text)) problems.push('Order has a public constructor');
+              if (!inLayer('Domain').some(s => /\brecord\s+(struct\s+)?OrderId\b|\b(class|struct)\s+OrderId\b/.test(s.text))) problems.push('no OrderId type in Domain');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('Order is built by a factory over a private constructor and identified by OrderId');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Who may cancel is an aggregate rule, who may read is a use-case check
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const order = inLayer('Domain').find(s => /\b(class|record)\s+Order\b/.test(s.text));
+              const cancel = order && order.text.match(/\bCancel\w*\s*\(([^)]*)\)/);
+              if (!cancel || !cancel[1].trim()) { console.log('Order.Cancel takes no caller: who may cancel is not an aggregate rule'); process.exit(1); }
+              const getter = inLayer('Application').find(s => /\bclass\s+(Get|Find|View|Consult|Load)\w*/.test(s.text));
+              if (!getter || !/(IsOwnedBy|OwnedBy|OwnerId|CustomerId\s*(!=|==)|\.Equals\()/.test(getter.text)) { console.log('the read use case does not check who may see the order'); process.exit(1); }
+              const leak = inLayer('Api').filter(s => /(IsOwnedBy|CustomerId\s*(!=|==)|OwnerId\s*(!=|==))/.test(s.text)).map(s => s.file);
+              if (leak.length) { console.log(`endpoint checks ownership itself: ${leak.join(', ')}`); process.exit(1); }
+              console.log('read restriction in the use case, change restriction in the aggregate');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Domain classes are sealed
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const strip = t => t.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+              const domain = inLayer('Domain').map(s => strip(s.text)).join('\n');
+              const classes = [...domain.matchAll(/^\s*((?:public|internal|private|protected|file)\s+)?((?:sealed|static|abstract|partial|readonly|record)\s+)*class\s+(\w+)/gm)];
+              const open = classes.filter(m => !/\b(sealed|static|abstract)\b/.test(m[0]))
+                .map(m => m[3])
+                .filter(name => !new RegExp(`:\\s*(?:[\\w.<>]+\\s*,\\s*)*${name}\\b`).test(domain));
+              if (open.length) { console.log(`Domain classes neither sealed, static nor abstract: ${open.join(', ')}`); process.exit(1); }
+              console.log('every Domain class is sealed, static, abstract, or a base of another');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: diff-not-contains
+        name: No command or query bus for two use cases
+        config:
+          pattern: '(?m)^\+.*\b(ICommandBus|IQueryBus|IMediator|MediatR)\b'
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-dotnet
+    rubric:
+      - Refuses a cancellation by another customer inside the order itself, from the caller's id it receives.
+      - Hides another customer's order in the read use case, without the order knowing who asks.
+      - Keeps the endpoint to reading the caller and calling the use cases.
+      - Answers a foreign order the same way as a missing one.
+
+  # Regression guard for the bus guidance. Baseline and full skill: no bus 4/4.
+  # With the guidance removed, a bus appeared 2/4: the skill's own CQRS examples
+  # pull towards one. A tie is expected; a loss means the guard was weakened.
+  - name: '.NET: orders with a pending-only cancel and a confirmation email'
+    tags:
+      role: regression-guard
+    prompt: |
+      Add orders. A customer places an order (one or more lines: product code and
+      quantity) through POST /orders, and can cancel it through
+      POST /orders/{id}/cancel, but only while it is still pending; use minimal APIs.
+      When an order is placed, the customer must get a confirmation email; an
+      email-sending interface is enough, no real mail server. Keep orders in memory
+      for now. Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+          dest: .gitignore
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+          dest: Directory.Build.props
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+          dest: PaymentAuthorization.slnx
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+          dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+          dest: src/PaymentAuthorization.Domain/Money.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+          dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+          dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+          dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+          dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+          dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+          dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+      commands:
+        - 'dotnet restore PaymentAuthorization.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: The solution builds
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet build PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 4m
+      - type: diff-not-contains
+        name: No command or query bus for two use cases
+        config:
+          pattern: '(?m)^\+.*\b(ICommandBus|IQueryBus|IMediator|MediatR)\b'
+      - type: run-command
+        name: The pending rule is enforced by the order, not the use case
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const strip = t => t.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+              const leak = inLayer('Application').filter(s => /\bif\b[^;{]*\bPending\b[^;]*?(throw|return)/.test(strip(s.text))).map(s => s.file);
+              const owned = inLayer('Domain').some(s => /\bCancel\w*\s*\(/.test(s.text) && /\bPending\b/.test(s.text) && /\bthrow\b/.test(s.text));
+              if (leak.length || !owned) { console.log(leak.length ? `pending check in the use case: ${leak.join(', ')}` : 'Order does not refuse a non-pending cancel itself'); process.exit(1); }
+              console.log('the pending rule is enforced by the order');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Domain classes are sealed
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const strip = t => t.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+              const domain = inLayer('Domain').map(s => strip(s.text)).join('\n');
+              const classes = [...domain.matchAll(/^\s*((?:public|internal|private|protected|file)\s+)?((?:sealed|static|abstract|partial|readonly|record)\s+)*class\s+(\w+)/gm)];
+              const open = classes.filter(m => !/\b(sealed|static|abstract)\b/.test(m[0]))
+                .map(m => m[3])
+                .filter(name => !new RegExp(`:\\s*(?:[\\w.<>]+\\s*,\\s*)*${name}\\b`).test(domain));
+              if (open.length) { console.log(`Domain classes neither sealed, static nor abstract: ${open.join(', ')}`); process.exit(1); }
+              console.log('every Domain class is sealed, static, abstract, or a base of another');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Placing an order returns nothing and receives the new id
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const creates = inLayer('Application').flatMap(methods)
+                .filter(m => /^(Create|Add|Register|Place)/.test(m.name) || (/^(Handle|Execute|Invoke)(Async)?$/.test(m.name) && /^(Create|Add|Register|Place)/.test(m.cls)));
+              if (!creates.length) { console.log('no create entry point in Application'); process.exit(1); }
+              const records = Object.fromEntries(sources.flatMap(s => [...s.text.matchAll(/record\s+(?:class\s+)?(\w+)\s*\(([^)]*)\)/g)].map(m => [m[1], m[2]])));
+              const carriesId = m => /\b\w*Id\b|\bid\b/.test(m.params)
+                || [...m.params.matchAll(/([A-Z]\w+)\s+\w+/g)].some(t => /\b\w*Id\b/.test(records[t[1]] || ''));
+              const bad = creates.filter(m => !/^(Task|ValueTask|void)$/.test(m.ret) || !carriesId(m)).map(m => `${m.cls}.${m.name}(${m.params.trim()}) returns ${m.ret}`);
+              if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
+              console.log('create returns nothing and receives the new id');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-dotnet
+    rubric:
+      - Lets the endpoints call the place and cancel use cases directly, with no dispatcher in between.
+      - Refuses a non-pending cancel inside the order.
+      - Sends the email from the use case once the order is stored.
+
+  # Regression guard for the shared-kernel guidance, which every probe arm got
+  # right with or without the skill. A loss means a shorter skill pushed Billing
+  # to share Payment's types, or let a shared project hold concrete types or
+  # reference another project.
+  - name: '.NET: a Billing context beside Payment'
+    tags:
+      role: regression-guard
+    prompt: |
+      Add a Billing context beside the payment one, in this same solution: it
+      issues an invoice (invoice number, amount, currency) for each payment that is
+      authorized. Keep the two contexts independent of each other. Keep invoices in
+      memory. Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+          dest: .gitignore
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+          dest: Directory.Build.props
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+          dest: PaymentAuthorization.slnx
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+          dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+          dest: src/PaymentAuthorization.Domain/Money.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+          dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+          dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+          dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+          dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+          dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+          dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+      commands:
+        - 'dotnet restore PaymentAuthorization.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: The solution builds
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet build PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 4m
+      - type: run-command
+        name: Billing owns its value objects and references nothing from Payment
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const all = walk('.').map(f => f.split(path.sep).join('/'));
+              const sources = all.filter(f => f.endsWith('.cs') && !f.startsWith('tests/'))
+                .map(f => ({ file: f, text: fs.readFileSync(f, 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`\\.${layer}/`).test(s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:async\s+|static\s+|virtual\s+|override\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !/\b(class|record|struct|interface|new|return)\b/.test(m.ret));
+
+              const projects = all.filter(f => f.endsWith('.csproj')).map(f => ({ file: f, dir: path.dirname(f), text: fs.readFileSync(f, 'utf8') }));
+              const sharedMoney = projects.filter(p => /shared|common|kernel/i.test(p.dir))
+                .filter(p => sources.some(s => s.file.startsWith(p.dir + '/') && /\b(record|class|struct)\s+(struct\s+)?Money\b/.test(s.text)));
+              const billing = projects.filter(p => /(^|\/)Billing\.[^/]*$/.test(p.dir));
+              if (!billing.length) { console.log('no Billing project'); process.exit(1); }
+              const coupled = billing.filter(p => /PaymentAuthorization\./.test(p.text));
+              const sharedRefs = projects.filter(p => /shared|common|kernel/i.test(p.dir) && /<ProjectReference/.test(p.text));
+              const problems = [...sharedMoney.map(p => `concrete Money in shared project ${p.dir}`), ...sharedRefs.map(p => `shared project ${p.dir} references another project`), ...coupled.map(p => `${p.file} references the payment context`)];
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('Billing owns its value objects and references nothing from Payment');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-dotnet
+    rubric:
+      - Gives Billing its own amount and currency type rather than reusing the payment one.
+      - Connects an authorized payment to an invoice in one place outside both contexts' business code.
+      - Creates no shared project holding concrete business types.
+
+  # Near miss. A change in the same solution that touches no layer decision.
+  - name: '.NET: a configurable timeout on the provider client'
+    tags:
+      intent: non-activation
+    prompt: |
+      Calls to the payment provider sometimes hang. Make them give up after 2
+      seconds by default, with the delay configurable per environment.
+    environment:
+      files:
+        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+          dest: .gitignore
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+          dest: Directory.Build.props
+        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+          dest: Directory.Packages.props
+        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+          dest: PaymentAuthorization.slnx
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+          dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+          dest: src/PaymentAuthorization.Domain/Money.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+          dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+          dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+          dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+          dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+          dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+          dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+      commands:
+        - 'dotnet restore PaymentAuthorization.slnx'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: The solution builds
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; dotnet build PaymentAuthorization.slnx >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 4m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - clean-architecture-dotnet
+    rubric:
+      - Sets a timeout on the client that calls the provider.
+      - Reads the delay from configuration with a 2-second default.
+      - Changes nothing outside the client's configuration.
