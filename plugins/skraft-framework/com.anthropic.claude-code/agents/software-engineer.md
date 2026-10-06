@@ -21,6 +21,7 @@ metadata:
     - outside-in-tdd
     - craft-discipline
   on_demand_skills:
+    - clean-architecture-dotnet
     - clean-architecture-java
     - clean-architecture-testing
     - test-design-mandates
@@ -85,6 +86,7 @@ Load each skill below only when its trigger fires, never at startup.
 
 | Skill | Load when... |
 |-------|--------------|
+| `clean-architecture-dotnet` | Repo is a .NET solution (`*.sln` / `*.slnx` / `*.csproj`) and you add or move a production class, a project or a `<ProjectReference>` |
 | `clean-architecture-java` | Repo is a Java build (`pom.xml`) and you add or move a production class, a module or a `<dependency>` |
 | `clean-architecture-testing` | Deciding test level, boundary placement, or doubles policy |
 | `test-design-mandates` | Deciding whether a Domain unit test is authorized |

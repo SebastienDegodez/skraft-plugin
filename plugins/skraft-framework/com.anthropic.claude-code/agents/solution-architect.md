@@ -22,6 +22,7 @@ metadata:
     - architecture-patterns
     - architecture-decisions
   on_demand_skills:
+    - clean-architecture-dotnet
     - clean-architecture-java
   assets:
     - plugins/skraft-framework/assets/consistency-matrix.template.md
