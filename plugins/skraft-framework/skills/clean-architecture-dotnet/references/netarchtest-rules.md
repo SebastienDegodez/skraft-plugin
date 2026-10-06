@@ -340,4 +340,4 @@ Clear, actionable feedback → fix immediately.
 ## Related Skills
 
 - [clean-architecture-dotnet](../SKILL.md): Complete project setup with NetArchTest
-- [outside-in-tdd](../../outside-in-tdd/SKILL.md): Testing Application and Domain layers
+- the `outside-in-tdd` skill: Testing Application and Domain layers

@@ -26,14 +26,14 @@ The layer rules are those of `architecture-patterns`. This skill maps them onto 
 - A command method returns `void`; the caller creates the new id and passes it in. A query returns a `*ViewModel` record built in Application, never a domain object.
 - Application declares an interface only where it calls out (repository, gateway). A repository interface sits in Domain when it persists an aggregate, in Application otherwise.
 - Who may *read* a resource is checked in the use case. Who may *change* it is an aggregate rule: the mutation method takes the caller's id and throws.
-
-## Domain
-
-- An aggregate is created through a static factory over a `private` constructor, and identified by a typed id record (`OrderId`), never a raw `String` or `UUID`.
 - Wire every class with `@Bean` methods in `-api`; Domain and Application classes carry no Spring annotation.
 - One transaction per use-case call, opened in `-api` (`TransactionTemplate` around the call, or `@Transactional` on the controller method). Never add an interface to a use case to decorate it.
 - Name packages by feature inside each module (`…application.loan`). No `port`, `adapter`, `in` or `out` packages, and no "port" in type names or comments.
 
+## Domain
+
+- An aggregate is created through a static factory over a `private` constructor, and identified by a typed id record (`OrderId`), never a raw `String` or `UUID`.
+
 ## Guard
 
-The module graph and the Spring-free core are enforced by the pom and ArchUnit tests in `clean-architecture-testing` — [examples-java.md](../clean-architecture-testing/references/examples-java.md).
+The module graph and the Spring-free core are enforced by the pom and ArchUnit tests of the `clean-architecture-testing` skill (its `references/examples-java.md`).
