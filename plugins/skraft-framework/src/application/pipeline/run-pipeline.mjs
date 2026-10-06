@@ -29,6 +29,8 @@ import {
 } from '../../domain/pipeline/adr-ratification-policy.mjs'
 import { createStateService } from '../state-service.mjs'
 import { createPhaseGate } from '../phase-gate-service.mjs'
+import { verifyEvidenceLog } from '../evidence-verification-service.mjs'
+import { createStructuralScan } from '../structural-scan-service.mjs'
 
 // Use case RunPipeline (ports/api/run-pipeline.mjs): the SKRAFT orchestrator as code,
 // the same for every host. It sequences RESEARCH → DESIGN → DISTILL → DELIVER, runs each
@@ -40,16 +42,18 @@ import { createPhaseGate } from '../phase-gate-service.mjs'
 //   stateReader, stateWriter   state.json (through the existing state service, so every
 //                              transition still passes the state machine and the phase gate)
 //   trackingStore              the project's tracking directory
-//   repositoryReader           docs/adr/decisions-index.md
-//   sourceControl              HEAD, for the DELIVER base commit
+//   repositoryReader           repository files: the ADR index, the evidence a log cites
+//   sourceControl              git facts: the DELIVER base commit, the commits a log claims
+//   sourceTree                 the source files the structural scan reads
+//   hasher                     SHA-256 of the evidence a log cites
 //   activePipeline             the pointer the settings hooks read to guard this run
 //   agentRunner                one subagent dispatch
-//   qualityGateVerifier        the G1–G11 evidence check of DELIVER
-//   structuralScanner          the repository scan DESIGN reads
 //   humanInteraction           a checkpoint question
 //   decisionStore              answers recorded against a checkpoint key
 //   progress                   phase and log lines for the person watching
 //   time                       TimeProvider
+// The G1–G11 evidence check of DELIVER and the structural scan DESIGN reads run in
+// process (EvidenceVerification, StructuralScan): no command line, no child process.
 // plus `config`, the published skraft-framework.config.json (ADR-005).
 //
 // Outcome: { status: 'done' | 'blocked' | 'awaiting-human', phase, reason, checkpoint? }
@@ -73,10 +77,10 @@ export const createRunPipeline = (deps) => {
     trackingStore,
     repositoryReader,
     sourceControl,
+    sourceTree,
+    hasher,
     activePipeline,
     agentRunner,
-    qualityGateVerifier,
-    structuralScanner,
     humanInteraction,
     decisionStore,
     progress,
@@ -89,6 +93,7 @@ export const createRunPipeline = (deps) => {
     phaseOrder,
     phaseGate: createPhaseGate({ config, trackingFiles: trackingStore, git: sourceControl }),
   })
+  const structuralScan = createStructuralScan({ sourceTree, sourceControl, time })
   const today = () => time.isoString().slice(0, 10)
   const now = () => time.isoString()
 
@@ -201,27 +206,50 @@ export const createRunPipeline = (deps) => {
     throw blocked('DESIGN', `ADR ratification did not converge after ${MAX_RATIFICATION_ROUNDS} rounds`)
   }
 
-  // ── Deterministic tools, behind their ports ─────────────────────────────────
+  // ── Deterministic checks, in process ────────────────────────────────────────
   const ensureStructuralScan = async (slug) => {
     if (hasStructuralScan(await readState(slug))) return
     const outputPath = structuralScanPath(today())
-    const scan = await structuralScanner.scan({ slug, outputPath })
-    if (scan.ok && (await trackingStore.exists(slug, outputPath))) {
-      await apply(slug, { type: 'RECORD_ARTIFACT', phase: 'RESEARCH', path: outputPath })
-      progress.log(`structural scan recorded: ${outputPath}`)
-    } else {
-      progress.log(`structural scan skipped${scan.reason ? `: ${scan.reason}` : ''}`)
+    try {
+      const report = await structuralScan.scan()
+      await trackingStore.write(slug, outputPath, `${JSON.stringify(report, null, 2)}\n`)
+    } catch (error) {
+      progress.log(`structural scan skipped: ${error?.message ?? error}`)
+      return
     }
+    await apply(slug, { type: 'RECORD_ARTIFACT', phase: 'RESEARCH', path: outputPath })
+    progress.log(`structural scan recorded: ${outputPath}`)
   }
+
+  // The evidence a log cites lives in the repository; an absent file is the ENOENT the
+  // evidence service reads as a missing reference.
+  const repositoryFiles = Object.freeze({
+    read: async (path) => {
+      const text = await repositoryReader.read(path)
+      if (text === null) throw Object.assign(new Error(`${path} is not on disk`), { code: 'ENOENT' })
+      return text
+    },
+  })
 
   const verifyQualityGates = async (slug, state) => {
     const evidenceLog = latestEvidenceLog(state.phaseArtifacts?.DELIVER ?? [])
     if (!evidenceLog) {
       return { outcome: 'fail', findings: 'No quality-gate evidence log (evidence/{date}/{story}/qg-{story}.json) was produced.' }
     }
-    const verified = await qualityGateVerifier.verify({ slug, evidenceLog, baseSha: state.phaseHistory?.DELIVER?.baseSha ?? null })
-    progress.log(`qg-verify ${evidenceLog}: ${verified.outcome}`)
-    return verified
+    let verified
+    try {
+      verified = await verifyEvidenceLog({
+        logPath: `${trackingStore.prefix(slug)}${evidenceLog}`,
+        base: state.phaseHistory?.DELIVER?.baseSha ?? undefined,
+        files: repositoryFiles,
+        git: sourceControl,
+        hasher,
+      })
+    } catch (error) {
+      return { outcome: 'error', findings: `the evidence check could not run: ${error?.message ?? error}` }
+    }
+    progress.log(`qg-verify ${evidenceLog}: ${verified.verdict}`)
+    return { outcome: verified.verdict, findings: JSON.stringify(verified.findings, null, 2) }
   }
 
   // ── One phase ───────────────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Deterministic verification of a quality-gates evidence log against the files it cites
 // and the Git history it claims. Prints { verdict, findings } as JSON.
+// Thin driving adapter of the EvidenceVerification service, which RunPipeline also runs in
+// process before the DELIVER review; this command stays for the quality-gates lens.
 // Exit: 0 pass · 1 fail · 2 inconclusive · 3 usage error.
 //
 //   node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log <repo-relative qg-{story}.json> [--root <repo>] [--base <sha>]
@@ -9,7 +11,8 @@
 import { readFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
-import { createGitRepository } from '../adapters/infrastructure/git-repository.mjs'
+import { createNodeSourceControl } from '../adapters/infrastructure/git/node-source-control.mjs'
+import { createWebCryptoHasher } from '../adapters/infrastructure/web-crypto-hasher.mjs'
 import { createActiveSlugStore } from '../adapters/infrastructure/active-slug-store.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
 import { verifyEvidenceLog } from '../application/evidence-verification-service.mjs'
@@ -47,7 +50,8 @@ const result = await verifyEvidenceLog({
   logPath,
   base: values.base ?? (await recordedBase()),
   files: { read: (path) => readFile(join(root, path), 'utf8') },
-  git: createGitRepository({ cwd: root }),
+  git: createNodeSourceControl({ cwd: root }),
+  hasher: createWebCryptoHasher(),
 })
 process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
 process.exitCode = EXIT[result.verdict]

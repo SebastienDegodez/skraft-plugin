@@ -67,7 +67,7 @@ test('every module the Claude Code mod loads is free of Node APIs', () => {
 })
 
 test('each driven port of the pipeline has a contract under ports/infrastructure/', () => {
-  const ports = ['agent-runner', 'human-interaction', 'decision-store', 'pipeline-progress', 'quality-gate-verifier', 'structural-scanner', 'tracking-store', 'repository-reader', 'source-control', 'active-pipeline', 'state-reader', 'state-writer', 'time-provider']
+  const ports = ['agent-runner', 'human-interaction', 'decision-store', 'pipeline-progress', 'tracking-store', 'repository-reader', 'source-control', 'source-tree', 'hasher', 'active-pipeline', 'state-reader', 'state-writer', 'time-provider']
   const missing = ports.filter((port) => !filesUnder(join(SRC, 'ports/infrastructure')).some((file) => file.endsWith(`/${port}.mjs`)))
   assert.deepEqual(missing, [])
 })

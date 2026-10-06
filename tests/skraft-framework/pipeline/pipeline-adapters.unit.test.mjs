@@ -7,15 +7,17 @@ import { mkdtemp, rm, readFile, mkdir, writeFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createCliQualityGateVerifier, qualityGateOutcomeOf } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/cli-quality-gate-verifier.mjs'
-import { createCliStructuralScanner } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/cli-structural-scanner.mjs'
 import { createCliStateWriter } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/cli-state-writer.mjs'
 import { createTrackingDecisionStore, decisionPath } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
 import { createFsTrackingStore } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-tracking-store.mjs'
 import { createFsRepositoryReader } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-repository-reader.mjs'
 import { createFsActivePipeline } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-active-pipeline.mjs'
 import { createActiveSlugStore } from '../../../plugins/skraft-framework/src/adapters/infrastructure/active-slug-store.mjs'
-import { createGitSourceControl } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/git-source-control.mjs'
+import { createNodeSourceControl } from '../../../plugins/skraft-framework/src/adapters/infrastructure/git/node-source-control.mjs'
+import { createProcessGitRunner } from '../../../plugins/skraft-framework/src/adapters/infrastructure/git/process-git-runner.mjs'
+import { createGitSourceTree } from '../../../plugins/skraft-framework/src/adapters/infrastructure/source-tree/git-source-tree.mjs'
+import { createNodeSourceTree } from '../../../plugins/skraft-framework/src/adapters/infrastructure/source-tree/node-source-tree.mjs'
+import { createWebCryptoHasher } from '../../../plugins/skraft-framework/src/adapters/infrastructure/web-crypto-hasher.mjs'
 import { createNodeProcessRunner } from '../../../plugins/skraft-framework/src/adapters/infrastructure/process/node-process-runner.mjs'
 import { createWorkflowAgentRunner } from '../../../plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/workflow-agent-runner.mjs'
 import { createWorkflowHumanInteraction } from '../../../plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/workflow-human-interaction.mjs'
@@ -51,58 +53,7 @@ const memoryTracking = () => {
 }
 const fixedTime = { now: () => new Date('2026-10-06T08:00:00.000Z'), isoString: () => '2026-10-06T08:00:00.000Z' }
 
-// ── QualityGateVerifier ───────────────────────────────────────────────────────
-
-test('cli-quality-gate-verifier: runs qg-verify on the repository-relative log, with the base commit', async () => {
-  const runner = recordingRunner({ exitCode: 0, stdout: '{"verdict":"pass"}', stderr: '' })
-  const verifier = createCliQualityGateVerifier({ runProcess: runner.run, pluginRoot: '/plugin', trackingStore })
-  const result = await verifier.verify({ slug: 'checkout', evidenceLog: 'evidence/d/s1/qg-s1.json', baseSha: 'abc1234' })
-
-  assert.deepEqual(runner.calls[0].argv, [
-    'node', '/plugin/src/cli/qg-verify.mjs',
-    '--log', '.copilot-tracking/skraft-plans/checkout/evidence/d/s1/qg-s1.json',
-    '--base', 'abc1234',
-  ])
-  assert.deepEqual(result, { outcome: 'pass', findings: '{"verdict":"pass"}' })
-})
-
-test('cli-quality-gate-verifier: no --base when none was recorded', async () => {
-  const runner = recordingRunner({ exitCode: 2, stdout: '', stderr: 'REVISION_STALE' })
-  const result = await createCliQualityGateVerifier({ runProcess: runner.run, pluginRoot: '/p', trackingStore })
-    .verify({ slug: 's', evidenceLog: 'e.json', baseSha: null })
-  assert.ok(!runner.calls[0].argv.includes('--base'))
-  assert.deepEqual(result, { outcome: 'inconclusive', findings: 'REVISION_STALE' })
-})
-
-test('cli-quality-gate-verifier: exit codes map to pass, fail, inconclusive, and error otherwise', () => {
-  assert.deepEqual([0, 1, 2, 3, 124, 127].map(qualityGateOutcomeOf), ['pass', 'fail', 'inconclusive', 'error', 'error', 'error'])
-})
-
-test('cli-quality-gate-verifier: a runner that throws is outcome error, never a rejection', async () => {
-  const runner = recordingRunner(new Error('spawn ENOENT'))
-  const result = await createCliQualityGateVerifier({ runProcess: runner.run, pluginRoot: '/p', trackingStore })
-    .verify({ slug: 's', evidenceLog: 'e.json', baseSha: null })
-  assert.equal(result.outcome, 'error')
-  assert.match(result.findings, /spawn ENOENT/)
-})
-
-// ── StructuralScanner ─────────────────────────────────────────────────────────
-
-test('cli-structural-scanner: runs structural-scan with the repository-relative output', async () => {
-  const runner = recordingRunner({ exitCode: 0, stdout: '', stderr: '' })
-  const result = await createCliStructuralScanner({ runProcess: runner.run, pluginRoot: '/plugin', trackingStore })
-    .scan({ slug: 'checkout', outputPath: 'details/d/structural-scan.json' })
-  assert.deepEqual(runner.calls[0].argv, ['node', '/plugin/src/cli/structural-scan.mjs', '--out', '.copilot-tracking/skraft-plans/checkout/details/d/structural-scan.json'])
-  assert.deepEqual(result, { ok: true })
-})
-
-test('cli-structural-scanner: a failing scan is ok:false with the exit code and stderr', async () => {
-  const runner = recordingRunner({ exitCode: 1, stdout: '', stderr: 'no src/ directory\n' })
-  const result = await createCliStructuralScanner({ runProcess: runner.run, pluginRoot: '/p', trackingStore }).scan({ slug: 's', outputPath: 'o.json' })
-  assert.deepEqual(result, { ok: false, reason: 'structural-scan exit 1: no src/ directory' })
-})
-
-// ── StateWriter for the mod ───────────────────────────────────────────────────
+// ── StateWriter ─────────────────────────────────────────────────────────────
 
 test('cli-state-writer: sends the state on stdin to state-io and answers Ok', async () => {
   const runner = recordingRunner({ exitCode: 0, stdout: '', stderr: '' })
@@ -175,28 +126,68 @@ test('fs-tracking-store: lists every file posix-style, writes nested paths, pref
   }
 })
 
-test('fs-repository-reader and git-source-control read the session repository', async () => {
+test('fs-repository-reader and the Node git source control read the session repository', async () => {
   const repo = await mkdtemp(join(tmpdir(), 'skraft-repo-'))
   try {
     await mkdir(join(repo, 'docs/adr'), { recursive: true })
     await writeFile(join(repo, 'docs/adr/decisions-index.md'), '| ADR |')
     assert.equal(await createFsRepositoryReader({ cwd: repo }).read('docs/adr/decisions-index.md'), '| ADR |')
     assert.equal(await createFsRepositoryReader({ cwd: repo }).read('missing.md'), null)
-    assert.equal(await createGitSourceControl({ cwd: repo }).headSha(), null)
+    assert.equal(await createNodeSourceControl({ cwd: repo }).headSha(), null)
     execFileSync('git', ['init', '-q'], { cwd: repo })
     execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'chore(repo): init'], { cwd: repo })
-    assert.match(await createGitSourceControl({ cwd: repo }).headSha(), /^[0-9a-f]{40}$/)
+    assert.match(await createNodeSourceControl({ cwd: repo }).headSha(), /^[0-9a-f]{40}$/)
   } finally {
     await rm(repo, { recursive: true, force: true })
   }
 })
 
-test('node-process-runner: exit code, stdin, a missing command (127) and a timeout (124)', async () => {
-  const run = createNodeProcessRunner()
-  const echoed = await run(['node', '-e', 'process.stdin.pipe(process.stdout); process.on("exit", () => { process.exitCode = 3 })'], { stdin: 'hello' })
-  assert.deepEqual(echoed, { exitCode: 3, stdout: 'hello', stderr: '' })
-  assert.equal((await run(['skraft-no-such-command'])).exitCode, 127)
-  assert.equal((await run(['node', '-e', 'setTimeout(() => {}, 5000)'], { timeoutMs: 100 })).exitCode, 124)
+test('process-git-runner: git through any process runner; a failure, a throw or a cut output is null', async () => {
+  const runner = recordingRunner({ exitCode: 0, stdout: 'abc\n', stderr: '', isStdoutTruncated: false })
+  assert.equal(await createProcessGitRunner({ runProcess: runner.run })(['rev-parse', 'HEAD']), 'abc\n')
+  assert.deepEqual(runner.calls[0].argv, ['git', 'rev-parse', 'HEAD'])
+  assert.equal(await createProcessGitRunner({ runProcess: recordingRunner({ exitCode: 128, stdout: '' }).run })(['log']), null)
+  assert.equal(await createProcessGitRunner({ runProcess: recordingRunner({ exitCode: 0, stdout: 'x', isStdoutTruncated: true }).run })(['show']), null)
+  assert.equal(await createProcessGitRunner({ runProcess: recordingRunner(new Error('timeout')).run })(['log']), null)
+})
+
+test('git-source-tree: git ls-files when git answers, the fallback walk otherwise; large or absent sources read null', async () => {
+  const sizes = { 'a.cs': 10, 'big.cs': 2048 }
+  const tree = (git) => createGitSourceTree({
+    git,
+    sizeOf: async (path) => sizes[path] ?? null,
+    readText: async (path) => `// ${path}`,
+    listAll: async () => ['dir\\b.cs'],
+  })
+  assert.deepEqual(await tree(async () => 'a.cs\0big.cs\0').listFiles(), ['a.cs', 'big.cs'])
+  assert.deepEqual(await tree(async () => null).listFiles(), ['dir/b.cs'])
+  const reader = tree(async () => null)
+  assert.equal(await reader.readSource('a.cs', 1024), '// a.cs')
+  assert.equal(await reader.readSource('big.cs', 1024), null)
+  assert.equal(await reader.readSource('missing.cs', 1024), null)
+})
+
+test('node-source-tree: tracked and untracked-not-ignored files of a repository, and their text', async () => {
+  const repo = await mkdtemp(join(tmpdir(), 'skraft-tree-'))
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: repo })
+    await mkdir(join(repo, 'src'), { recursive: true })
+    await writeFile(join(repo, 'src/Order.cs'), 'class Order {}')
+    await writeFile(join(repo, '.gitignore'), 'bin/\n')
+    await mkdir(join(repo, 'bin'), { recursive: true })
+    await writeFile(join(repo, 'bin/Order.dll'), 'x')
+    const tree = createNodeSourceTree({ cwd: repo })
+    assert.deepEqual((await tree.listFiles()).sort(), ['.gitignore', 'src/Order.cs'])
+    assert.equal(await tree.readSource('src/Order.cs', 1024), 'class Order {}')
+    assert.equal(await tree.readSource('src', 1024), null, 'a directory is not a source')
+  } finally {
+    await rm(repo, { recursive: true, force: true })
+  }
+})
+
+test('web-crypto-hasher: the SHA-256 of a text, in hex', async () => {
+  assert.equal(await createWebCryptoHasher().sha256(''), 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
+  assert.equal(await createWebCryptoHasher().sha256('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
 })
 
 // ── Copilot workflow adapters ─────────────────────────────────────────────────
