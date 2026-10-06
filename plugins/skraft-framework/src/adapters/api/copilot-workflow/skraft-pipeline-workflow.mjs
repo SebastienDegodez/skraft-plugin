@@ -50,7 +50,7 @@ export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, env }) =
   const pipeline = createRunPipeline({
     ...createNodePipelineDependencies({ cwd, env, pluginRoot }),
     agentRunner,
-    reportTransport: createAgentReportTransport({ agentRunner, pluginRoot }),
+    reportTransportOf: (runner) => createAgentReportTransport({ agentRunner: runner, pluginRoot }),
     humanInteraction: createWorkflowHumanInteraction({ ctx }),
     progress: createWorkflowProgress({ ctx }),
   })

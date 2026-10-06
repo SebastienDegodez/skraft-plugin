@@ -115,6 +115,79 @@ button, input { font: inherit; }
 .stage[data-status="awaiting"] .pip[data-used="true"] { background: var(--waiting); border-color: var(--waiting); }
 .stage[data-status="blocked"] .pip[data-used="true"] { background: var(--blocked); border-color: var(--blocked); }
 
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin: 26px 0 0;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.tabs [role="tab"] {
+  all: unset;
+  cursor: pointer;
+  padding: 8px 14px 9px;
+  color: var(--muted);
+  font-weight: 550;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.tabs [role="tab"]:hover { color: var(--ink); }
+.tabs [role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--active); }
+.tabs [role="tab"]:focus-visible { outline: 2px solid var(--active); outline-offset: -2px; }
+.badge:empty { display: none; }
+.badge { font-size: 0.75rem; font-weight: 650; line-height: 1; padding: 3px 6px; border-radius: 9px; background: var(--line); color: var(--ink); }
+.badge[data-tone="done"] { background: var(--done); color: var(--paper); }
+.badge[data-tone="failed"] { background: var(--blocked); color: var(--paper); }
+.badge[data-tone="waiting"] { background: var(--waiting); color: var(--paper); }
+[role="tabpanel"] { padding-top: 6px; }
+[role="tabpanel"]:focus-visible { outline: none; }
+
+/* ── Check marks ───────────────────────────────────────────────────────── */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.steps li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
+.mark {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: inline-grid; place-items: center;
+  font-size: 0.75rem; font-weight: 700; line-height: 1;
+  border: 1.5px solid var(--line); color: var(--muted);
+}
+.mark[data-status="done"] { background: var(--done); border-color: var(--done); color: var(--paper); }
+.mark[data-status="failed"] { background: var(--blocked); border-color: var(--blocked); color: var(--paper); }
+.mark[data-status="waiting"] { border-color: var(--waiting); color: var(--waiting); }
+.mark[data-status="running"] { border-color: var(--active); color: var(--active); }
+.mark[data-status="skipped"] { border-style: dashed; }
+.step-text { display: grid; }
+.step-text small { color: var(--muted); font-size: 0.8125rem; }
+.steps li[data-status="pending"] .step-text, .steps li[data-status="skipped"] .step-text { color: var(--muted); }
+.step-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px 24px; }
+.step-columns h3 { font-size: 0.9375rem; margin: 0 0 8px; }
+
+.glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 24px; margin: 24px 0 0; }
+.glance div { border-left: 3px solid var(--line); padding-left: 10px; }
+.glance dt { color: var(--muted); font-size: 0.8125rem; }
+.glance dd { margin: 2px 0 0; font-size: 1.125rem; font-weight: 600; }
+.amount { display: grid; }
+.amount small { font-size: 0.8125rem; font-weight: 500; color: var(--muted); }
+.glance div[data-tone="done"] { border-left-color: var(--done); }
+.glance div[data-tone="failed"] { border-left-color: var(--blocked); }
+.glance div[data-tone="waiting"] { border-left-color: var(--waiting); }
+
+/* ── Tests ─────────────────────────────────────────────────────────────── */
+.verdict-line { display: flex; gap: 12px; align-items: center; margin: 16px 0 6px; font-size: 1.0625rem; font-weight: 600; }
+.verdict-line .mark { width: 28px; height: 28px; font-size: 0.9375rem; }
+.counts { color: var(--muted); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Cost ──────────────────────────────────────────────────────────────── */
+.bar { display: block; height: 6px; border-radius: 3px; background: var(--active); min-width: 2px; }
+.bar-cell { width: 30%; }
+
 /* ── The question band ──────────────────────────────────────────────────── */
 .question {
   margin-top: 24px;

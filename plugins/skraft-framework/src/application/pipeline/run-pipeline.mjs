@@ -54,7 +54,8 @@ import { createRunJournal } from './run-journal.mjs'
 //   hasher                     SHA-256 of the evidence a log cites
 //   activePipeline             the pointer the settings hooks read to guard this run
 //   agentRunner                one subagent dispatch
-//   reportTransport            the remote side of report publication (a delegated agent)
+//   reportTransportOf(runner)  the remote side of report publication, built on the run's
+//                              agent runner so its cost is journaled (or reportTransport)
 //   templateReader             the plugin's templates (reports, closing reviews)
 //   humanInteraction           a checkpoint question
 //   decisionStore              answers recorded against a checkpoint key
@@ -79,7 +80,6 @@ export const createRunPipeline = (deps) => {
     sourceTree,
     hasher,
     activePipeline,
-    agentRunner,
     decisionStore,
     time,
   } = deps
@@ -89,6 +89,10 @@ export const createRunPipeline = (deps) => {
   const journal = createRunJournal({ trackingStore, time })
   const progress = journal.observeProgress(deps.progress)
   const humanInteraction = journal.observeQuestions(deps.humanInteraction)
+  // Every agent the run starts — phase agents and the report transport — is journaled
+  // with its duration and what it cost.
+  const agentRunner = journal.observeAgents(deps.agentRunner)
+  const reportTransport = deps.reportTransportOf ? deps.reportTransportOf(agentRunner) : deps.reportTransport
   const structuralScan = createStructuralScan({ sourceTree, sourceControl, time })
   const today = () => time.isoString().slice(0, 10)
   const now = () => time.isoString()
@@ -152,7 +156,7 @@ export const createRunPipeline = (deps) => {
   // A recorded answer wins; otherwise the human is asked and the answer recorded.
   // No answer now (headless, or a host that suspends) stops the run as awaiting-human.
   const { ask, tryAsk } = createCheckpoint({ decisionStore, humanInteraction })
-  const reports = createReportBoundaries({ ...deps, stateService, tryAsk, progress, time })
+  const reports = createReportBoundaries({ ...deps, reportTransport, stateService, tryAsk, progress, time })
   const { recover } = createPipelineRecovery({
     recovery: createRecoveryService({
       stateReader: deps.stateReader,
@@ -268,6 +272,7 @@ export const createRunPipeline = (deps) => {
       return { outcome: 'error', findings: `the evidence check could not run: ${error?.message ?? error}` }
     }
     progress.log(`qg-verify ${evidenceLog}: ${verified.verdict}`)
+    await journal.recordVerification({ evidenceLog, verdict: verified.verdict, findings: verified.findings })
     return { outcome: verified.verdict, findings: JSON.stringify(verified.findings, null, 2) }
   }
 
@@ -326,7 +331,7 @@ export const createRunPipeline = (deps) => {
         case 'rejected': {
           const answer = await ask(slug, phase, {
             key: checkpointKeys.rejected(phase, recordedReviews),
-            question: `${reviewer} REJECTED ${phase}. Resolve the blocker (for DESIGN G13: write the -resolution.md beside the decision-drift file), then answer "rework" to retry, or "stop".`,
+            question: `${reviewer} REJECTED ${phase}. Resolve the blocker${phase === 'DESIGN' ? ' (for G13: write the -resolution.md beside the decision-drift file)' : ''}, then answer "rework" to retry, or "stop".`,
             options: ['rework', 'stop'],
           })
           step = stepAfterRejection(answer, step.findings)

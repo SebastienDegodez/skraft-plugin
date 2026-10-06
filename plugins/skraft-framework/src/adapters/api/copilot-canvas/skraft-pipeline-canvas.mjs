@@ -20,6 +20,13 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export const SKRAFT_CANVAS_ID = 'skraft-pipeline'
 
+// The euro rate the cost is shown with: SKRAFT_EUR_PER_USD (e.g. 0.86), set by the person
+// who knows the day's rate. Absent or malformed: no euros, credits and dollars only.
+export const eurPerUsdOf = (env = {}) => {
+  const rate = Number.parseFloat(String(env.SKRAFT_EUR_PER_USD ?? '').replace(',', '.'))
+  return Number.isFinite(rate) && rate > 0 ? rate : null
+}
+
 export class CanvasRequestError extends Error {
   constructor(code, message) {
     super(message)
@@ -41,7 +48,8 @@ export const createSkraftPipelineCanvas = ({ cwd, pluginRoot, env, sendPrompt, m
 
   const useCases = (workingDirectory) => {
     const deps = createNodePipelineDependencies({ cwd: workingDirectory, env, pluginRoot })
-    return { deps, observe: createObservePipeline(deps), recordDecision: createRecordDecision(deps) }
+    const pricing = { eurPerUsd: eurPerUsdOf(env) }
+    return { deps, observe: createObservePipeline({ ...deps, pricing }), recordDecision: createRecordDecision(deps) }
   }
   const instanceOf = (ctx) => {
     const instance = instances.get(ctx.instanceId)

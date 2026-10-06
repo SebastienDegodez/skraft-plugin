@@ -180,8 +180,8 @@ Chaque contrat est décrit dans son fichier sous
 | `Hasher` | `sha256(text)`, `sha256Sync(text)` | `web-crypto-hasher.mjs` | le même | `node:crypto` |
 | `TemplateReader` | `read(pluginRelativePath)` | `templates/node-template-reader.mjs` | `$.fs` sous `$.plugin.root` | fichier réel |
 | `ActivePipeline` | `activate(slug)`, `current()` | `pipeline/fs-active-pipeline.mjs` (`.active-slug`) | `$.fs` (dans le mod) | tableau |
-| `AgentRunner` | `run({ agent, phase, role, label, prompt })` → `{ ok, text }` ; `agent: null` = agent général | `copilot-workflow/workflow-agent-runner.mjs` (`ctx.agent`) | `$.agent.spawn` + `turn.complete` (dans le mod) | LLM simulé |
-| `ReportTransport` | `observe({ packet })`, `publish({ packet, decision })` | `reporting/agent-report-transport.mjs` sur `AgentRunner` | le même | GitHub simulé |
+| `AgentRunner` | `run({ agent, phase, role, label, prompt })` → `{ ok, text, usage? }` ; `agent: null` = agent général ; `usage` = tokens, crédits IA ou dollars | `copilot-workflow/workflow-agent-runner.mjs` (`ctx.agent` ; coût : événements `assistant.usage` du sous-agent) | `$.agent.spawn` + `turn.complete` (tokens) + écart de `$.session.usage().cost` (dollars), dans le mod | LLM simulé |
+| `ReportTransport` | `observe({ packet })`, `publish({ packet, decision })` | `reporting/agent-report-transport.mjs`, construit par l'hôte (`reportTransportOf`) sur l'`AgentRunner` du run, pour que son coût soit journalisé | le même | GitHub simulé |
 | `HumanInteraction` | `ask({ key, question, options })` → réponse ou `null` | `copilot-workflow/workflow-human-interaction.mjs` (`ctx.pause`) | `$.ui.ask` (dans le mod) | réponses par clé |
 | `DecisionStore` | `read(slug, key)`, `write(slug, key, answer, by)` | `pipeline/tracking-decision-store.mjs` | le même | `Map` |
 | `PipelineProgress` | `phase(title)`, `log(message)` | `copilot-workflow/workflow-progress.mjs` | atom `$.state` + pane + `$.ui.status` | tableaux |
@@ -402,19 +402,30 @@ données avec le gabarit `review-verdict`, et `CLOSE_PHASE` à travers la phase 
 ### 6.7 Suivre un run : le journal et le canvas de la Copilot app
 
 Le run tient un **journal**, `{tracking}/{slug}/run.json` : statut (`running`,
-`awaiting-human`, `done`, `blocked`, `error`), phase, raison, question ouverte, story, et les
-200 dernières lignes de log. `run-journal.mjs` l'écrit en décorant les deux ports qui voient
-déjà tout — `PipelineProgress` et `HumanInteraction` —, sans toucher aux étapes. Une pause
-Copilot (`ctx.pause`) laisse donc le journal sur la question posée.
+`awaiting-human`, `done`, `blocked`, `error`), phase, raison, question ouverte, story, les
+200 dernières lignes de log, **chaque agent lancé** (phase, rôle, durée, coût) et **la dernière
+vérification des preuves de tests** par le code (verdict, constats). `run-journal.mjs` l'écrit
+en décorant les trois ports qui voient déjà tout — `PipelineProgress`, `HumanInteraction` et
+`AgentRunner` —, sans toucher aux étapes. Une pause Copilot (`ctx.pause`) laisse donc le
+journal sur la question posée.
 
 **`ObservePipeline`** lit, sans rien écrire, `state.json`, le journal, les reviews (avec leur
 verdict), les décisions et les reçus de publication, et en tire une vue
 (`pipeline-view-policy.mjs`) : chaque phase avec son statut (`done`, `active`, `awaiting`,
 `blocked`, `open`, `pending`), sa tentative sur le budget, son verdict, ses durées, ses
-artefacts et ses reviews ; la question en attente et si une réponse l'attend déjà ; les
-rapports et où ils sont publiés ; le log récent.
+artefacts et ses reviews, et **ses étapes cochées** (`phase-steps-policy.mjs`) ; la question en
+attente et si une réponse l'attend déjà ; **les tests** (`test-results-policy.mjs`) ; **le coût**
+(`cost-policy.mjs`) ; les rapports et où ils sont publiés ; le log récent.
 
-Le **canvas « Skraft pipeline »** de la Copilot app dessine cette vue en direct. La Copilot app
+| Vue | D'où ça vient | Ce qu'on lit |
+|---|---|---|
+| Étapes | statut de la phase, artefacts, reviews, vérification des preuves, ratification ADR, rapports | ✓ réussi, ✕ échoué, ! en attente de toi, … en cours, – sauté, ○ pas atteint — par ex. en DELIVER : sorties de l'ingénieur, quality gates vérifiées par le code, review approuvée, rapport outcome, phase close |
+| Tests | log de preuves `evidence/{date}/{story}/qg-{story}.json` (gates G1–G11, `metrics.tests_total/passed/failed`, cycles RED → GREEN) + verdict de `verifyEvidenceLog` journalisé | que les tests ont tourné, combien sont passés, et si le code a pu croire le log (`pass`, `fail`, `inconclusive`) |
+| Coût | `usage` de chaque agent dans le journal | crédits IA (Copilot : nano-AIU ÷ 10⁹, 1 crédit = 0,01 $), dollars (Claude Code), euros si `SKRAFT_EUR_PER_USD` est fixé ; par phase et par agent, tokens et temps |
+
+Le **canvas « Skraft pipeline »** de la Copilot app dessine cette vue en direct, en onglets :
+**Overview** (question en attente, chiffres clés, étapes cochées de chaque phase), **Phases**,
+**Tests**, **Cost**, **Reports**, **Journal** (décisions et log). La Copilot app
 rend un canvas à partir de l'URL que donne son extension ; chaque instance ouverte démarre donc
 son propre petit serveur sur `127.0.0.1`, port choisi par le système, protégé par un jeton
 (et par les en-têtes Host, Origin et Sec-Fetch-Site).
@@ -540,5 +551,9 @@ claude plugin test plugins/skraft-framework
 - **Canvas** : l'API canvas du SDK Copilot est expérimentale ; seule la Copilot app dessine
   les canvases (pas la CLI). La page suit les fichiers par sondage (1,5 s), pas par
   notification.
+- **Coût** : il est attribué à un agent parce que le pipeline n'en lance qu'un à la fois ; un
+  autre travail dans la même session pendant ce temps s'y ajouterait. La conversion nano-AIU →
+  crédits (÷ 10⁹) suit la documentation du SDK Copilot ; un agent rejoué à la reprise ne coûte
+  rien et n'est pas compté. Les euros dépendent du taux que tu fixes.
 - **Décisions persistées** : une réponse enregistrée resservira si la même clé revient.
   `/skraft decide` la remplace ; supprimer `decisions/<clé>.json` force la question.

@@ -91,6 +91,8 @@ test('canvas: opens on a local page that only its token reads, and shows the pip
     assert.equal(view.slug, SLUG)
     assert.deepEqual(view.phases.map((p) => p.status), ['done', 'awaiting', 'pending', 'pending'])
     assert.deepEqual(view.checkpoint, { key: 'rejected:DESIGN:1', question: 'DESIGN was rejected. Rework?', options: ['rework', 'stop'], answered: false })
+    assert.deepEqual(view.phases[1].steps.map((s) => `${s.id}:${s.status}`), ['structural-scan:pending', 'outputs:done', 'review:failed', 'adr-ratification:pending', 'closed:waiting'])
+    assert.deepEqual([view.tests.evidenceLog, view.cost.total.dispatches], [null, 0])
 
     assert.match(await (await api(opened.url, `/api/file?path=reviews/${TODAY}/design-review-1.md`)).text(), /G13: decision drift/)
     assert.equal((await api(opened.url, '/api/file?path=state.json')).status, 404)

@@ -2,16 +2,18 @@ import { buildPipelineView, isViewableTrackedFile } from '../../domain/pipeline/
 import { RUN_JOURNAL_PATH } from '../../domain/pipeline/run-journal-policy.mjs'
 import { PENDING_PATH } from '../../domain/report-boundary-policy.mjs'
 import { readReviewOutcome } from '../../domain/pipeline/review-outcome.mjs'
+import { latestEvidenceLog } from '../../domain/pipeline/expected-outputs.mjs'
 
 // Use case ObservePipeline (ports/api/observe-pipeline.mjs): what a person following a
 // pipeline sees, read-only, whether a run is going on, paused or over. It reads state.json,
 // the run journal, the reviews, the recorded decisions and the report receipts through
 // the driven ports, and builds the view with the domain (pipeline-view-policy).
-// Driven ports: StateReader, TrackingStore, TimeProvider; plus `config`.
+// Driven ports: StateReader, TrackingStore, TimeProvider; plus `config`, and `pricing`
+// ({ eurPerUsd }) when the cost is to be shown in euros.
 const DECISION = /^decisions\/[^/]+\.json$/
 const RECEIPT = /^reporting\/(forecast|outcome)\/[^/]+\.json$/
 
-export const createObservePipeline = ({ config, stateReader, trackingStore, time }) => {
+export const createObservePipeline = ({ config, stateReader, trackingStore, time, pricing = {} }) => {
   const readJson = async (slug, path) => {
     try { return JSON.parse(await trackingStore.read(slug, path)) } catch { return null }
   }
@@ -36,7 +38,14 @@ export const createObservePipeline = ({ config, stateReader, trackingStore, time
       const receipt = await readJson(slug, path)
       if (receipt) receipts.push(receipt)
     }
+    const evidenceLog = latestEvidenceLog([
+      ...(state?.phaseArtifacts?.DELIVER ?? []),
+      ...files.filter((file) => /^evidence\/.+\/qg-[^/]+\.json$/.test(file)),
+    ])
     return buildPipelineView({
+      evidenceLog,
+      evidence: evidenceLog ? await readJson(slug, evidenceLog) : null,
+      eurPerUsd: pricing.eurPerUsd ?? null,
       slug,
       config,
       state,

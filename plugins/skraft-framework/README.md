@@ -61,8 +61,10 @@ driven by a Claude Code mod and by a GitHub Copilot dynamic workflow.
   checkpoints with the `skraft_decide` tool and resume with `/workflows` → R;
   `skraft_close_phase` closes a phase by hand.
 - **GitHub Copilot app** — ask to open the **Skraft pipeline** canvas (`{ "slug": "checkout" }`,
-  or the active pipeline): phases, attempts, reviews and verdicts, the question the run waits
-  for with one-click answers, decisions, reports and the run log, live.
+  or the active pipeline), live, in tabs: the question the run waits for with one-click
+  answers and every step checked (Overview), phases with their reviews (Phases), the tests that
+  ran and the code's check of their evidence (Tests), what each agent cost in AI credits,
+  dollars, or euros with `SKRAFT_EUR_PER_USD` set (Cost), reports, decisions and the run log.
 - Or select `skraft-orchestrator` and give it one refined story: it is a launcher that
   makes the call above and relays the checkpoints.
 

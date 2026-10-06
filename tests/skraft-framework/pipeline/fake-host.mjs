@@ -43,7 +43,8 @@ export const evidenceOf = (outcome, rev) => {
   const gates = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'].map((id) => {
     files[`${dir}/${id}.out`] = `${id} ok`
     files[`${dir}/${id}.exit`] = '0'
-    return { id, label: id, status: 'pass', stdout_ref: `${dir}/${id}.out`, stdout_sha256: sha256(`${id} ok`), exit_code_ref: `${dir}/${id}.exit` }
+    const metrics = { G1: { tests_total: 3, tests_passed: 3, tests_failed: 0 }, G2: { tests_total: 42, tests_passed: 42, tests_failed: 0 } }[id]
+    return { id, label: id, status: 'pass', stdout_ref: `${dir}/${id}.out`, stdout_sha256: sha256(`${id} ok`), exit_code_ref: `${dir}/${id}.exit`, ...(metrics ? { metrics } : {}) }
   })
   files[`${dir}/G7.out`] = ''
   gates.push(
@@ -233,7 +234,8 @@ export const createFakeHost = (options = {}) => {
       run: async (dispatch) => {
         dispatches.push(dispatch)
         behave(dispatch, slug)
-        return { ok: true, text: 'done' }
+        // what a Copilot host reports for one dispatch (options.usage: false for a host that reports none)
+        return { ok: true, text: 'done', ...(options.usage === false ? {} : { usage: { model: 'fake-model', requests: 2, inputTokens: 12000, outputTokens: 1500, cacheReadTokens: 8000, cacheWriteTokens: 0, credits: 1.25 } }) }
       },
     },
     humanInteraction: {
