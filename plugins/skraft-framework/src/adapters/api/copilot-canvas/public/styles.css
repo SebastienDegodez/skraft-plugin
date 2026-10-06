@@ -1,0 +1,214 @@
+/* Skraft pipeline canvas. One memorable element: the gate track (four phases, their
+   attempts as pips, the reviewer gate between them). Everything else stays quiet. */
+
+:root {
+  color-scheme: light dark;
+  --paper: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #1e2430;
+  --muted: #5a6474;
+  --line: #d5dae2;
+  --active: #2f5bea;
+  --waiting: #a86a12;
+  --waiting-wash: #fbf0dc;
+  --done: #3e7b4f;
+  --blocked: #b4483b;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #15181e;
+    --surface: #1d2129;
+    --ink: #e4e8ef;
+    --muted: #9aa3b2;
+    --line: #2e3440;
+    --active: #7c9bff;
+    --waiting: #e0a84a;
+    --waiting-wash: #2c2416;
+    --done: #6fb585;
+    --blocked: #e0786a;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 20px clamp(16px, 4vw, 40px) 48px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.5 var(--sans);
+  font-variant-numeric: tabular-nums;
+  max-width: 920px;
+}
+
+h1 { font-size: 1.5rem; line-height: 1.2; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+h2 { font-size: 1rem; margin: 32px 0 10px; font-weight: 650; }
+p { margin: 0; }
+button, input { font: inherit; }
+:focus-visible { outline: 2px solid var(--active); outline-offset: 2px; }
+
+.top { display: grid; gap: 2px; }
+.story { color: var(--muted); }
+.summary { margin-top: 10px; font-size: 1.125rem; font-weight: 550; }
+.summary[data-tone="waiting"] { color: var(--waiting); }
+.summary[data-tone="blocked"] { color: var(--blocked); }
+.summary[data-tone="done"] { color: var(--done); }
+.freshness { color: var(--muted); font-size: 0.8125rem; }
+
+/* ── The gate track ─────────────────────────────────────────────────────── */
+.track {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+}
+.stage { position: relative; padding: 0 10px 0 0; }
+.stage button {
+  all: unset;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  cursor: pointer;
+}
+.rail { position: relative; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.stage[data-status="done"] .rail { background: var(--done); }
+.stage[data-status="active"] .rail,
+.stage[data-status="open"] .rail { background: color-mix(in srgb, var(--active) 35%, var(--line)); }
+.stage[data-status="active"] .rail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--active);
+  border-radius: 5px;
+  animation: travel 2.4s ease-in-out infinite alternate;
+}
+.stage[data-status="awaiting"] .rail { background: var(--waiting); }
+.stage[data-status="blocked"] .rail { background: var(--blocked); }
+@keyframes travel { from { transform: translateX(-10%); } to { transform: translateX(160%); } }
+
+/* the reviewer gate, drawn where a phase hands over to the next */
+.stage:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: 3px;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--ink);
+  opacity: 0.25;
+}
+.stage[data-status="done"]:not(:last-child)::after { background: var(--done); opacity: 1; }
+
+.stage-name { font-weight: 650; }
+.stage-meta { color: var(--muted); font-size: 0.8125rem; min-height: 1.3em; }
+.pips { display: flex; gap: 4px; }
+.pip { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--muted); }
+.pip[data-used="true"] { background: var(--muted); }
+.stage[data-status="done"] .pip[data-used="true"] { background: var(--done); border-color: var(--done); }
+.stage[data-status="awaiting"] .pip[data-used="true"] { background: var(--waiting); border-color: var(--waiting); }
+.stage[data-status="blocked"] .pip[data-used="true"] { background: var(--blocked); border-color: var(--blocked); }
+
+/* ── The question band ──────────────────────────────────────────────────── */
+.question {
+  margin-top: 24px;
+  padding: 16px 18px;
+  border-left: 4px solid var(--waiting);
+  background: var(--waiting-wash);
+  border-radius: 0 8px 8px 0;
+}
+.question h2 { margin: 0 0 6px; color: var(--waiting); }
+.question-text { white-space: pre-wrap; max-width: 72ch; }
+.options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.options button, .free-answer button, .actions button {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.options button + button { background: transparent; color: var(--ink); }
+.free-answer { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.free-answer label { color: var(--muted); font-size: 0.875rem; }
+.free-answer input {
+  flex: 1 1 200px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.free-answer button { background: transparent; color: var(--ink); }
+.key { margin-top: 10px; color: var(--muted); font-size: 0.8125rem; }
+.key code, .path { font-family: var(--mono); font-size: 0.8125rem; }
+.note { margin-top: 10px; font-size: 0.875rem; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 20px; }
+.actions button.quiet { background: transparent; color: var(--ink); }
+.actions .note { flex-basis: 100%; margin: 0; color: var(--muted); }
+button:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Phase details ──────────────────────────────────────────────────────── */
+details.phase { border-top: 1px solid var(--line); padding: 10px 0; }
+details.phase:last-child { border-bottom: 1px solid var(--line); }
+details.phase summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+details.phase summary strong { min-width: 6.5em; }
+.state { font-size: 0.875rem; }
+.state[data-status="done"] { color: var(--done); }
+.state[data-status="awaiting"] { color: var(--waiting); }
+.state[data-status="blocked"] { color: var(--blocked); }
+.state[data-status="active"], .state[data-status="open"] { color: var(--active); }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 12px 0 0; font-size: 0.875rem; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.files { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.files button { all: unset; cursor: pointer; font-family: var(--mono); font-size: 0.8125rem; color: var(--active); overflow-wrap: anywhere; }
+.files button:hover { text-decoration: underline; }
+.files button:focus-visible { outline: 2px solid var(--active); }
+.verdict { font-size: 0.8125rem; margin-left: 6px; }
+.verdict[data-verdict="APPROVED"] { color: var(--done); }
+.verdict[data-verdict="NEEDS_REWORK"] { color: var(--waiting); }
+.verdict[data-verdict="REJECTED"] { color: var(--blocked); }
+
+.empty { color: var(--muted); font-size: 0.875rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; }
+a { color: var(--active); }
+
+.log { list-style: none; margin: 0; padding: 0; font-size: 0.8125rem; max-height: 320px; overflow: auto; border-top: 1px solid var(--line); }
+.log li { display: grid; grid-template-columns: max-content 1fr; gap: 12px; padding: 3px 0; }
+.log time { white-space: nowrap; }
+.log time { color: var(--muted); }
+.log span { overflow-wrap: anywhere; white-space: pre-wrap; }
+
+dialog {
+  width: min(860px, 94vw);
+  max-height: 86vh;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+dialog::backdrop { background: rgb(0 0 0 / 0.35); }
+dialog header { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+dialog h2 { margin: 0; font-family: var(--mono); font-size: 0.875rem; font-weight: 500; overflow-wrap: anywhere; }
+dialog pre { margin: 0; padding: 16px; overflow: auto; max-height: calc(86vh - 60px); font: 0.8125rem/1.55 var(--mono); white-space: pre-wrap; }
+dialog header button { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+
+@media (max-width: 560px) {
+  .track { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 18px; }
+  .facts { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage[data-status="active"] .rail::after { animation: none; width: 100%; opacity: 0.6; }
+}

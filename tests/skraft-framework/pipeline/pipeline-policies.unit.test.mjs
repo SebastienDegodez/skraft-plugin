@@ -206,3 +206,42 @@ test('report boundaries: dated data and notes, the newest first; the addendum on
     'forecast report for s: p.md\n  pr: published https://u\n  issue: pending — r',
   )
 })
+
+// ── Run journal and pipeline view ─────────────────────────────────────────────
+
+test('run journal: started keeps the previous log, bounded; awaiting, answered and finished move the status', async () => {
+  const j = await import('../../../plugins/skraft-framework/src/domain/pipeline/run-journal-policy.mjs')
+  const old = { log: Array.from({ length: j.MAX_JOURNAL_LINES }, (_, i) => ({ at: 't', message: `old ${i}` })), story: { issue: 1 } }
+  let journal = j.journalStarted(old, { at: 't1' })
+  assert.equal(journal.log.length, j.MAX_JOURNAL_LINES)
+  assert.equal(journal.log.at(-1).message, 'run started')
+  assert.deepEqual(journal.story, { issue: 1 })
+  journal = j.journalAwaiting(j.journalPhase(journal, 'DESIGN', 't2'), { key: 'k', question: 'Q?', options: ['a'] }, 't3')
+  assert.deepEqual([journal.status, journal.phase, journal.checkpoint], ['awaiting-human', 'DESIGN', { key: 'k', question: 'Q?', options: ['a'] }])
+  journal = j.journalAnswered(journal, 'k', 't4')
+  assert.deepEqual([journal.status, journal.checkpoint], ['running', null])
+  journal = j.journalFinished(journal, { status: 'blocked', phase: 'DESIGN', reason: 'budget' }, 't5')
+  assert.deepEqual([journal.status, journal.reason, journal.updatedAt, journal.log.at(-1).message], ['blocked', 'budget', 't5', 'blocked — budget'])
+})
+
+test('pipeline view: the open phase takes the run status; durations run to now while open', async () => {
+  const { buildPipelineView, isViewableTrackedFile } = await import('../../../plugins/skraft-framework/src/domain/pipeline/pipeline-view-policy.mjs')
+  const state = {
+    currentPhase: 'DISTILL', retryCount: { DISTILL: 5 }, userPreferences: { maxRetriesPerPhase: 2 },
+    phaseHistory: { DISTILL: { startedAt: '2026-10-06T10:00:00.000Z' }, DESIGN: { startedAt: '2026-10-06T09:00:00.000Z', completedAt: '2026-10-06T09:30:00.000Z' } },
+  }
+  const view = (run) => buildPipelineView({ slug: 's', config: CONFIG, state, run, now: '2026-10-06T10:05:00.000Z' })
+  for (const [status, expected] of [['running', 'active'], ['blocked', 'blocked'], ['error', 'blocked'], ['done', 'open']]) {
+    assert.equal(view({ status, phase: 'DISTILL', log: [] }).phases[2].status, expected, status)
+  }
+  assert.equal(view(null).phases[2].status, 'open')
+  assert.equal(view({ status: 'running', phase: 'DESIGN', log: [] }).phases[2].status, 'active', 'a run elsewhere still runs')
+  const v = view(null)
+  assert.equal(v.phases[2].durationMs, 5 * 60 * 1000)
+  assert.equal(v.phases[1].durationMs, 30 * 60 * 1000)
+  assert.equal(v.phases[2].attempt, 3, 'capped at the attempts the budget allows')
+  assert.equal(v.phases[3].durationMs, null)
+  assert.equal(isViewableTrackedFile('reviews/a.md', ['reviews/a.md']), true)
+  assert.equal(isViewableTrackedFile('state.json', ['state.json']), false)
+  assert.equal(isViewableTrackedFile('evidence/x.txt', ['evidence/x.txt']), false)
+})

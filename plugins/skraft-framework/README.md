@@ -60,6 +60,9 @@ driven by a Claude Code mod and by a GitHub Copilot dynamic workflow.
   (`copilot workflow run skraft-pipeline --args '{"slug":"checkout","issue":42}'`); answer
   checkpoints with the `skraft_decide` tool and resume with `/workflows` → R;
   `skraft_close_phase` closes a phase by hand.
+- **GitHub Copilot app** — ask to open the **Skraft pipeline** canvas (`{ "slug": "checkout" }`,
+  or the active pipeline): phases, attempts, reviews and verdicts, the question the run waits
+  for with one-click answers, decisions, reports and the run log, live.
 - Or select `skraft-orchestrator` and give it one refined story: it is a launcher that
   makes the call above and relays the checkpoints.
 

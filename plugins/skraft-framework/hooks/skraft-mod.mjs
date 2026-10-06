@@ -147,7 +147,17 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
     }),
     hasher: createWebCryptoHasher(),
     // ActivePipeline: the pointer file the settings hooks read (written as cli/state.mjs select does)
-    activePipeline: { activate: (s) => $.fs.write(joinPath(trackingRoot, '.active-slug'), `${s}\n`) },
+    activePipeline: {
+      activate: (s) => $.fs.write(joinPath(trackingRoot, '.active-slug'), `${s}\n`),
+      current: async () => {
+        try {
+          const slug = (await $.fs.read(joinPath(trackingRoot, '.active-slug'))).trim()
+          return SLUG.test(slug) ? slug : null
+        } catch {
+          return null
+        }
+      },
+    },
     agentRunner,
     // ReportTransport: a general-purpose subagent, which sees the session's MCP tools
     reportTransport: createAgentReportTransport({ agentRunner, pluginRoot: $.plugin.root }),

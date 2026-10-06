@@ -34,6 +34,7 @@ import { Halt, awaiting, blocked, createCheckpoint } from './checkpoint.mjs'
 import { createPipelineRecovery } from './recover-pipeline.mjs'
 import { createPipelineStateService } from './pipeline-state.mjs'
 import { createReportBoundaries } from './report-boundaries.mjs'
+import { createRunJournal } from './run-journal.mjs'
 
 // Use case RunPipeline (ports/api/run-pipeline.mjs): the SKRAFT orchestrator as code,
 // the same for every host. It sequences RESEARCH → DESIGN → DISTILL → DELIVER, runs each
@@ -57,7 +58,8 @@ import { createReportBoundaries } from './report-boundaries.mjs'
 //   templateReader             the plugin's templates (reports, closing reviews)
 //   humanInteraction           a checkpoint question
 //   decisionStore              answers recorded against a checkpoint key
-//   progress                   phase and log lines for the person watching
+//   progress                   phase and log lines for the person watching (also kept in
+//                              {slug}/run.json by the run journal, with the open question)
 //   time                       TimeProvider
 // The G1–G11 evidence check of DELIVER and the structural scan DESIGN reads run in
 // process (EvidenceVerification, StructuralScan): no command line, no child process.
@@ -78,12 +80,15 @@ export const createRunPipeline = (deps) => {
     hasher,
     activePipeline,
     agentRunner,
-    humanInteraction,
     decisionStore,
-    progress,
     time,
   } = deps
   const { stateService, phaseOrder } = createPipelineStateService(deps)
+  // The run journal ({slug}/run.json) sees what the person watching sees: it wraps the
+  // progress and question ports every step below uses.
+  const journal = createRunJournal({ trackingStore, time })
+  const progress = journal.observeProgress(deps.progress)
+  const humanInteraction = journal.observeQuestions(deps.humanInteraction)
   const structuralScan = createStructuralScan({ sourceTree, sourceControl, time })
   const today = () => time.isoString().slice(0, 10)
   const now = () => time.isoString()
@@ -408,6 +413,20 @@ export const createRunPipeline = (deps) => {
 
   // ── The run ─────────────────────────────────────────────────────────────────
   const run = async ({ slug, story = null, maxPhases = 10 } = {}) => {
+    await journal.begin(slug, story)
+    try {
+      const outcome = await runToOutcome({ slug, story, maxPhases })
+      await journal.finish(outcome)
+      return outcome
+    } catch (error) {
+      // A Copilot pause (AbortError) leaves the journal awaiting the human it asked.
+      if (error?.name !== 'AbortError') await journal.finish({ status: 'error', reason: String(error?.message ?? error) })
+      await journal.flush()
+      throw error
+    }
+  }
+
+  const runToOutcome = async ({ slug, story, maxPhases }) => {
     try {
       await recover(slug)
       const init = await stateService.init(slug)
