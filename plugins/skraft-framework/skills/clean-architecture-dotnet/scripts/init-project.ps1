@@ -68,13 +68,11 @@ Write-Host "`n🔗 Configuring project references..." -ForegroundColor Yellow
 # Application -> Domain
 dotnet add "src/$ProjectName.Application/$ProjectName.Application.csproj" reference "src/$ProjectName.Domain/$ProjectName.Domain.csproj"
 
-# Infrastructure -> Application, Domain
+# Infrastructure -> Application only (Domain is transitive — do NOT add a direct reference)
 dotnet add "src/$ProjectName.Infrastructure/$ProjectName.Infrastructure.csproj" reference "src/$ProjectName.Application/$ProjectName.Application.csproj"
-dotnet add "src/$ProjectName.Infrastructure/$ProjectName.Infrastructure.csproj" reference "src/$ProjectName.Domain/$ProjectName.Domain.csproj"
 
-# API -> Infrastructure, Domain (NOT Application)
+# API -> Infrastructure only (Application and Domain are transitive — do NOT add direct references)
 dotnet add "src/$ProjectName.Api/$ProjectName.Api.csproj" reference "src/$ProjectName.Infrastructure/$ProjectName.Infrastructure.csproj"
-dotnet add "src/$ProjectName.Api/$ProjectName.Api.csproj" reference "src/$ProjectName.Domain/$ProjectName.Domain.csproj"
 
 # UnitTests -> Application, Domain
 dotnet add "tests/$ProjectName.UnitTests/$ProjectName.UnitTests.csproj" reference "src/$ProjectName.Application/$ProjectName.Application.csproj"
@@ -88,6 +86,9 @@ dotnet add "tests/$ProjectName.IntegrationTests/$ProjectName.IntegrationTests.cs
 
 # Add NuGet packages
 Write-Host "`n📦 Adding NuGet packages..." -ForegroundColor Yellow
+
+# Infrastructure packages (IServiceCollection, AddScoped, GetRequiredService)
+dotnet add "src/$ProjectName.Infrastructure/$ProjectName.Infrastructure.csproj" package Microsoft.Extensions.DependencyInjection.Abstractions
 
 # UnitTests packages
 dotnet add "tests/$ProjectName.UnitTests/$ProjectName.UnitTests.csproj" package FakeItEasy
@@ -159,14 +160,6 @@ public interface ICommandHandler<in TCommand>
 {
     Task HandleAsync(TCommand command, CancellationToken cancellationToken = default);
 }
-
-/// <summary>
-/// Handler for commands that return a result.
-/// </summary>
-public interface ICommandHandler<in TCommand, TResult>
-{
-    Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default);
-}
 "@
 Set-Content -Path "src/$ProjectName.Application/Shared/ICommandHandler.cs" -Value $commandHandler
 
@@ -195,7 +188,6 @@ namespace $ProjectName.Application.Shared;
 public interface ICommandBus
 {
     Task PublishAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default);
-    Task<TResult> PublishAsync<TCommand, TResult>(TCommand command, CancellationToken cancellationToken = default);
 }
 "@
 Set-Content -Path "src/$ProjectName.Application/Shared/ICommandBus.cs" -Value $commandBus
@@ -241,13 +233,6 @@ public sealed class CommandBus : ICommandBus
         ArgumentNullException.ThrowIfNull(command);
         var handler = _serviceProvider.GetRequiredService<ICommandHandler<TCommand>>();
         await handler.HandleAsync(command, cancellationToken);
-    }
-
-    public async Task<TResult> PublishAsync<TCommand, TResult>(TCommand command, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        var handler = _serviceProvider.GetRequiredService<ICommandHandler<TCommand, TResult>>();
-        return await handler.HandleAsync(command, cancellationToken);
     }
 }
 "@
@@ -304,7 +289,6 @@ public static class DependencyInjection
         var handlerInterfaces = handlerType.GetInterfaces()
             .Where(i => i.IsGenericType &&
                    (i.GetGenericTypeDefinition() == typeof(ICommandHandler<>) ||
-                    i.GetGenericTypeDefinition() == typeof(ICommandHandler<,>) ||
                     i.GetGenericTypeDefinition() == typeof(IQueryHandler<,>)));
 
         foreach (var @interface in handlerInterfaces)
@@ -329,7 +313,6 @@ public static class DependencyInjection
             var handlerInterfaces = type.GetInterfaces()
                 .Where(i => i.IsGenericType &&
                        (i.GetGenericTypeDefinition() == typeof(ICommandHandler<>) ||
-                        i.GetGenericTypeDefinition() == typeof(ICommandHandler<,>) ||
                         i.GetGenericTypeDefinition() == typeof(IQueryHandler<,>)));
 
             foreach (var @interface in handlerInterfaces)

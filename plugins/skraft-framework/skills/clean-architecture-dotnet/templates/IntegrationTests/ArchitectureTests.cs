@@ -36,7 +36,7 @@ public sealed class ArchitectureTests
     {
        var result = Types
             .InAssembly(DomainAssembly)
-            .That().AreClasses()
+            .That().AreClasses().And().AreNotAbstract()
             .Should().BeSealed()
             .GetResult();
  

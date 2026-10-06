@@ -80,9 +80,8 @@ echo "🔗 Configuring project references..."
 # Application -> Domain
 dotnet add "src/$PROJECT_NAME.Application/$PROJECT_NAME.Application.csproj" reference "src/$PROJECT_NAME.Domain/$PROJECT_NAME.Domain.csproj"
 
-# Infrastructure -> Application, Domain
+# Infrastructure -> Application only (Domain is transitive — do NOT add a direct reference)
 dotnet add "src/$PROJECT_NAME.Infrastructure/$PROJECT_NAME.Infrastructure.csproj" reference "src/$PROJECT_NAME.Application/$PROJECT_NAME.Application.csproj"
-dotnet add "src/$PROJECT_NAME.Infrastructure/$PROJECT_NAME.Infrastructure.csproj" reference "src/$PROJECT_NAME.Domain/$PROJECT_NAME.Domain.csproj"
 
 # API -> Infrastructure only (Application and Domain are transitive — do NOT add direct references)
 dotnet add "src/$PROJECT_NAME.Api/$PROJECT_NAME.Api.csproj" reference "src/$PROJECT_NAME.Infrastructure/$PROJECT_NAME.Infrastructure.csproj"
@@ -100,6 +99,9 @@ dotnet add "tests/$PROJECT_NAME.IntegrationTests/$PROJECT_NAME.IntegrationTests.
 # Add NuGet packages
 echo ""
 echo "📦 Adding NuGet packages..."
+
+# Infrastructure packages (IServiceCollection, AddScoped, GetRequiredService)
+dotnet add "src/$PROJECT_NAME.Infrastructure/$PROJECT_NAME.Infrastructure.csproj" package Microsoft.Extensions.DependencyInjection.Abstractions
 
 # UnitTests packages
 dotnet add "tests/$PROJECT_NAME.UnitTests/$PROJECT_NAME.UnitTests.csproj" package FakeItEasy
