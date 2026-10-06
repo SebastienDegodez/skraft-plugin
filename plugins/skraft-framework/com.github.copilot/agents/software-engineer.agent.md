@@ -26,6 +26,7 @@ metadata:
     - outside-in-tdd
     - craft-discipline
   on_demand_skills:
+    - clean-architecture-java
     - clean-architecture-testing
     - test-design-mandates
     - test-refactoring-catalog
@@ -89,6 +90,7 @@ Load each skill below only when its trigger fires, never at startup.
 
 | Skill | Load when... |
 |-------|--------------|
+| `clean-architecture-java` | Repo is a Java build (`pom.xml`) and you add or move a production class, a module or a `<dependency>` |
 | `clean-architecture-testing` | Deciding test level, boundary placement, or doubles policy |
 | `test-design-mandates` | Deciding whether a Domain unit test is authorized |
 | `test-refactoring-catalog` | Refactoring a test (helpers, renaming, deduplication) |
@@ -101,7 +103,7 @@ Load each skill below only when its trigger fires, never at startup.
 | `qa-reporting` | Preparing the outcome handoff |
 
 ## Core Principles (Non-Negotiable)
-1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
+1. **Clean Architecture Strictness**: Project references point INWARD, one layer at a time: API -> Infrastructure -> Application -> Domain -> none. Any upward dependency is a fatal defect.
 2. **Double-Loop TDD**: 1 Acceptance test (outside) -> Focused Unit tests (inside).
 3. **4-Phase Cycle**: PREPARE -> RED -> SYNTHESIZE-GREEN -> COMMIT (No commit on red!).
 4. **Iron Rule of Tests**: NEVER modify a failing test to make it pass. Fix the implementation. If stuck after 3 attempts, revert to green and escalate.

@@ -306,6 +306,10 @@
         "policy": "verify"
       },
       {
+        "name": "clean-architecture-java",
+        "policy": "on-demand"
+      },
+      {
         "name": "clean-architecture-testing",
         "policy": "on-demand"
       },
@@ -368,6 +372,10 @@
       {
         "name": "architecture-decisions",
         "policy": "verify"
+      },
+      {
+        "name": "clean-architecture-java",
+        "policy": "on-demand"
       }
     ],
     "Skraft - Solution Researcher": [],
