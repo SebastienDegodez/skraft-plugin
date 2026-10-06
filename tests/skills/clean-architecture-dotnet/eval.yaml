@@ -35,41 +35,41 @@ stimuli:
       max_agent_duration: 10m
     environment:
       files:
-        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+        - src: fixtures/payment/.gitignore
           dest: .gitignore
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+        - src: fixtures/payment/Directory.Build.props
           dest: Directory.Build.props
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+        - src: fixtures/payment/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+        - src: fixtures/payment/PaymentAuthorization.slnx
           dest: PaymentAuthorization.slnx
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
           dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
           dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
           dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
           dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
           dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
           dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
           dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
           dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
           dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
           dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
       commands:
         - 'dotnet restore PaymentAuthorization.slnx'
@@ -223,41 +223,41 @@ stimuli:
       max_agent_duration: 10m
     environment:
       files:
-        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+        - src: fixtures/payment/.gitignore
           dest: .gitignore
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+        - src: fixtures/payment/Directory.Build.props
           dest: Directory.Build.props
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+        - src: fixtures/payment/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+        - src: fixtures/payment/PaymentAuthorization.slnx
           dest: PaymentAuthorization.slnx
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
           dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
           dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
           dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
           dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
           dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
           dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
           dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
           dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
           dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
           dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
       commands:
         - 'dotnet restore PaymentAuthorization.slnx'
@@ -415,41 +415,41 @@ stimuli:
       max_agent_duration: 10m
     environment:
       files:
-        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+        - src: fixtures/payment/.gitignore
           dest: .gitignore
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+        - src: fixtures/payment/Directory.Build.props
           dest: Directory.Build.props
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+        - src: fixtures/payment/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+        - src: fixtures/payment/PaymentAuthorization.slnx
           dest: PaymentAuthorization.slnx
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
           dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
           dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
           dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
           dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
           dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
           dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
           dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
           dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
           dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
           dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
       commands:
         - 'dotnet restore PaymentAuthorization.slnx'
@@ -602,41 +602,41 @@ stimuli:
       max_agent_duration: 10m
     environment:
       files:
-        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+        - src: fixtures/payment/.gitignore
           dest: .gitignore
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+        - src: fixtures/payment/Directory.Build.props
           dest: Directory.Build.props
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+        - src: fixtures/payment/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+        - src: fixtures/payment/PaymentAuthorization.slnx
           dest: PaymentAuthorization.slnx
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
           dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
           dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
           dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
           dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
           dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
           dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
           dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
           dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
           dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
           dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
       commands:
         - 'dotnet restore PaymentAuthorization.slnx'
@@ -713,41 +713,41 @@ stimuli:
       seconds by default, with the delay configurable per environment.
     environment:
       files:
-        - src: ../clean-architecture-testing/fixtures/payment/.gitignore
+        - src: fixtures/payment/.gitignore
           dest: .gitignore
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Build.props
+        - src: fixtures/payment/Directory.Build.props
           dest: Directory.Build.props
-        - src: ../clean-architecture-testing/fixtures/payment/Directory.Packages.props
+        - src: fixtures/payment/Directory.Packages.props
           dest: Directory.Packages.props
-        - src: ../clean-architecture-testing/fixtures/payment/PaymentAuthorization.slnx
+        - src: fixtures/payment/PaymentAuthorization.slnx
           dest: PaymentAuthorization.slnx
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
           dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
           dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
           dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
           dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
           dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
           dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: ../clean-architecture-testing/fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
           dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
           dest: tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
           dest: tests/PaymentAuthorization.IntegrationTest/PaymentAuthorization.IntegrationTest.csproj
-        - src: ../clean-architecture-testing/fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
+        - src: fixtures/payment/tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
           dest: tests/PaymentAuthorization.IntegrationTest/ReceiptStore/FileSystemReceiptStoreTests.cs
       commands:
         - 'dotnet restore PaymentAuthorization.slnx'
