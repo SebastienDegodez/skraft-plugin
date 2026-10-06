@@ -999,32 +999,6 @@
   "agents": {
     "software-engineer": [
       {
-        "id": "33375540675:agent:software-engineer:2026-08-31T09:01:46.235Z",
-        "timestamp": "2026-08-31T09:01:46.235Z",
-        "commit": "f2a11d9952bb8c4956326e1ea69e917b18648067",
-        "run": "33375540675",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/33375540675",
-        "runner": "vally-agent",
-        "model": "gpt-5.6-luna",
-        "judgeModel": "none",
-        "state": "inconclusive",
-        "reason": "incomplete run (3 of 3 trial(s) errored)",
-        "netWin": 0,
-        "trialCount": 3,
-        "meanScore": 0,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "34096438353:agent:software-engineer:2026-09-07T07:39:32.037Z",
         "timestamp": "2026-09-07T07:39:32.037Z",
         "commit": "f2a11d9952bb8c4956326e1ea69e917b18648067",
@@ -1263,6 +1237,33 @@
           "pValue": null
         },
         "metrics": null
+      },
+      {
+        "id": "37536790356:agent:software-engineer:2026-10-06T22:10:09.489Z",
+        "timestamp": "2026-10-06T22:10:09.489Z",
+        "commit": "933dd8c6215d401524d31c5b4a430385cc86d201",
+        "run": "37536790356",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/37536790356",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "pass",
+        "reason": "conforms on every trial (3/3 at or above 1)",
+        "descriptorSha": "3b54ea7791f9722b0f49701629f5ffe509b3ad866760c3a354b3da6869ed442a",
+        "netWin": 1,
+        "trialCount": 3,
+        "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
       }
     ],
     "acceptance-designer-reviewer": [
@@ -1427,6 +1428,33 @@
           "pValue": null
         },
         "metrics": null
+      },
+      {
+        "id": "37536790356:agent:acceptance-designer-reviewer:2026-10-06T22:09:09.378Z",
+        "timestamp": "2026-10-06T22:09:09.378Z",
+        "commit": "933dd8c6215d401524d31c5b4a430385cc86d201",
+        "run": "37536790356",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/37536790356",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "flaky",
+        "reason": "conforms on 5 of 6 trial(s); every scenario at or above 2/3 (threshold 0.9)",
+        "descriptorSha": "0db52d4675f91f588ec34cbd27c049f9616174f4f9cdd70b7d5e056fb71caadc",
+        "netWin": 0.6666666666666666,
+        "trialCount": 6,
+        "meanScore": 0.979,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
       }
     ],
     "acceptance-designer": [
@@ -1580,6 +1608,33 @@
         "netWin": 1,
         "trialCount": 9,
         "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "37536790356:agent:acceptance-designer:2026-10-06T22:06:17.043Z",
+        "timestamp": "2026-10-06T22:06:17.043Z",
+        "commit": "933dd8c6215d401524d31c5b4a430385cc86d201",
+        "run": "37536790356",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/37536790356",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "flaky",
+        "reason": "conforms on 8 of 9 trial(s); every scenario at or above 2/3 (threshold 0.9)",
+        "descriptorSha": "e638ae6fe13d74ef6e834bdc75d76ea6669c2f7d04cb2faf905f9ec207ad1e81",
+        "netWin": 0.7777777777777778,
+        "trialCount": 9,
+        "meanScore": 0.986,
         "confidenceInterval": {
           "low": null,
           "high": null
