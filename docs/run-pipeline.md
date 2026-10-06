@@ -97,7 +97,7 @@ reviewers.
 | Claude Code (mod) | `/skraft close <slug> [findings]` | même fichier | `CloseManually` |
 | GitHub Copilot | « Run the skraft-pipeline dynamic workflow… » ou `copilot workflow run skraft-pipeline --args '{"slug":"checkout"}'` | [`com.github.copilot/extensions/skraft-pipeline/extension.mjs`](../plugins/skraft-framework/com.github.copilot/extensions/skraft-pipeline/extension.mjs) | `RunPipeline` |
 | GitHub Copilot | outils `skraft_decide`, `skraft_close_phase` | même extension | `RecordDecision`, `CloseManually` |
-| Copilot app | canvas « Skraft pipeline » (« Open the Skraft pipeline canvas », pour la branche courante, ou « … for checkout »), ses boutons et ses actions `get_pipeline`, `select_pipeline`, `decide`, `show_phase`, `refresh` | même extension, [`adapters/api/copilot-canvas/`](../plugins/skraft-framework/src/adapters/api/copilot-canvas/) | `ObservePipeline`, `RecordDecision` |
+| Copilot app | canvas « Skraft pipeline » (« Open the Skraft pipeline canvas » : le pipeline actif de la copie de travail), ses boutons et ses actions `get_pipeline`, `decide`, `show_phase`, `refresh` | même extension, [`adapters/api/copilot-canvas/`](../plugins/skraft-framework/src/adapters/api/copilot-canvas/) | `ObservePipeline`, `RecordDecision` |
 
 La ligne `/skraft` est découpée par [`adapters/api/claude-code-mod/command-args.mjs`](../plugins/skraft-framework/src/adapters/api/claude-code-mod/command-args.mjs) ;
 les appels du SDK Copilot par [`adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs`](../plugins/skraft-framework/src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs).
@@ -441,8 +441,8 @@ sequenceDiagram
   participant RD as RecordDecision
   participant W as Workflow skraft-pipeline
 
-  U->>App: « Open the Skraft pipeline canvas for checkout »
-  App->>C: open({ slug })
+  U->>App: « Open the Skraft pipeline canvas »
+  App->>C: open({}) — le pipeline de .active-slug
   C->>S: démarre sur 127.0.0.1:port
   C-->>App: { url (jeton), title, status }
   App->>S: GET / puis /api/events
@@ -463,22 +463,22 @@ sequenceDiagram
 La page ne fait passer dans le chat que deux prompts fixes (reprendre, expliquer) ; tout ce
 qu'elle affiche vient de fichiers écrits par les agents et est posé en texte, jamais en HTML.
 Elle n'ouvre que les fichiers Markdown et JSON que la vue liste, jamais `state.json`. L'agent
-a les mêmes moyens par les actions du canvas : `get_pipeline`, `select_pipeline`, `decide`,
-`show_phase`, `refresh`.
+a les mêmes moyens par les actions du canvas : `get_pipeline`, `decide`, `show_phase`,
+`refresh`.
 
-Sans `slug`, le canvas s'ouvre toujours (`ObservePipeline.locate`, politique
-`pipeline-selection-policy`). Il choisit, dans cet ordre :
+**Un pipeline par copie de travail.** Le dossier de suivi est sous la copie de travail : chaque
+worktree a donc son propre `{tracking}/.active-slug`, écrit par `RunPipeline` au démarrage.
+C'est la seule façon de désigner « le pipeline » (`application/pipeline/active-pipeline.mjs`,
+politique `active-pipeline-policy`) : le canvas, `skraft_decide`, `skraft_close_phase`,
+`/skraft decide` et `/skraft close` agissent sur ce pipeline-là, refusent un autre slug
+(`NOT_THE_ACTIVE_PIPELINE`) et ne devinent rien (ni par la branche, ni par « le seul pipeline
+du dossier »). Sans pointeur (`NO_ACTIVE_PIPELINE`), les outils refusent et le canvas
+s'ouvre sur « aucun pipeline actif dans cette copie de travail », avec son chemin ; il relit
+le pointeur à chaque rafraîchissement et affiche le run dès qu'il démarre. Le canvas lit la
+copie de travail de la session (`session.workingDirectory`), pas celle du processus.
 
-1. le pipeline dont le dernier run a démarré sur la branche courante (`run.json` garde la
-   branche) ou dont le scope de reporting vise cette branche ;
-2. le pipeline dont le slug est un mot entier du nom de branche (`feat/123-checkout` →
-   `checkout`, le plus long gagne) ;
-3. le pipeline actif (`.active-slug`), s'il existe encore ;
-4. le seul pipeline du dépôt.
-
-Sinon, il affiche la liste des pipelines (phase, état du run, story, branche, dernière
-activité) : un clic, ou l'action `select_pipeline`, choisit celui à suivre. Un dépôt sans
-pipeline ouvre une liste vide, qui bascule d'elle-même sur le premier pipeline démarré.
+Attention : `SKRAFT_TRACKING_ROOT` (chemin absolu) partage le dossier de suivi, donc le
+pointeur, entre tous les worktrees ; ne le fixez pas si vous en lancez plusieurs.
 
 ## 7. Cohabitation avec les settings hooks
 

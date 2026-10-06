@@ -14,14 +14,14 @@ import { join } from 'node:path'
 //   GET  /api/file?path=    a review, report or decision      token
 //   POST /api/decide        { key, answer } → RecordDecision  token
 //   POST /api/ask           { intent: resume | explain }      token
-//   POST /api/select        { slug } → show that pipeline     token
-//
-// No pipeline chosen yet (none on this branch, several tracked): /api/view answers the
-// chooser view (ObservePipeline.locate) and the page lists the pipelines to pick from.
 //
 // Every /api call must carry the instance token (header x-skraft-token, or ?token= for
 // EventSource, which sends no header), come for the bound host, and be same-origin.
 // The page reaches the chat only through fixed prompts; it never sends free text.
+//
+// The pipeline shown is the working copy's active one (.active-slug), read again on every
+// refresh: a run started in this worktree shows up by itself. No pointer: /api/view
+// answers { idle: true, reason, where } and the page says so; nothing else is guessed.
 
 const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
@@ -35,9 +35,7 @@ const DEFAULT_POLL_MS = 1500
 export const askPrompt = (intent, slug) => (slug ? {
   resume: `Resume the skraft-pipeline dynamic workflow for slug "${slug}": continue the paused run if there is one, otherwise start it again with { "slug": "${slug}" }.`,
   explain: `Read the Skraft pipeline canvas for slug "${slug}" (get_pipeline action) and explain in a few sentences where the pipeline stands, what it waits for, and the next step. Change nothing.`,
-} : {
-  explain: 'Read the Skraft pipeline canvas (get_pipeline action): no pipeline is chosen. List the SKRAFT pipelines it shows and say which one matches the current branch, if any. Change nothing.',
-})[intent] ?? null
+} : {})[intent] ?? null
 
 const send = (res, status, body, type = 'application/json; charset=utf-8') => {
   res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' })
@@ -66,10 +64,11 @@ export const isAuthorized = (req, url, { host, origin, token }) => {
 }
 
 // observe — ObservePipeline; recordDecision — RecordDecision; sendPrompt(prompt) → the chat;
-// slug — the pipeline shown, or null to open on the chooser.
-export const startCanvasServer = async ({ slug: initialSlug = null, observe, recordDecision, sendPrompt, publicDir, pollMs = DEFAULT_POLL_MS }) => {
+// activeSlug() → Ok(slug) | Err({ reason }) — the working copy's pipeline (.active-slug);
+// where — the working copy, shown while no pipeline is active.
+export const startCanvasServer = async ({ activeSlug, where = '', observe, recordDecision, sendPrompt, publicDir, pollMs = DEFAULT_POLL_MS }) => {
   const token = randomBytes(24).toString('hex')
-  let slug = initialSlug
+  let slug = null
   const clients = new Set()
   let last = ''
   let timer = null
@@ -81,21 +80,11 @@ export const startCanvasServer = async ({ slug: initialSlug = null, observe, rec
       try { client.write(payload) } catch { clients.delete(client) }
     }
   }
-  // The pipeline view, or the chooser while none is chosen (a pipeline may appear meanwhile:
-  // the chooser follows the branch and the pipelines on disk).
+  // The active pipeline's view, or the idle view while the working copy has none.
   const viewNow = async () => {
-    if (slug) return observe.snapshot(slug)
-    const located = await observe.locate()
-    if (!located.slug) return located.chooser
-    slug = located.slug
-    return observe.snapshot(slug)
-  }
-  const select = async (next) => {
-    const known = await observe.pipelines()
-    if (!known.some((pipeline) => pipeline.slug === next)) return false
-    slug = next
-    await publish(true)
-    return true
+    const active = await activeSlug()
+    slug = active.ok ? active.value : null
+    return slug ? observe.snapshot(slug) : { idle: true, reason: active.error.reason, where }
   }
   const publish = async (force = false) => {
     const view = await viewNow()
@@ -134,12 +123,9 @@ export const startCanvasServer = async ({ slug: initialSlug = null, observe, rec
       res.write(`event: view\ndata: ${last}\n\n`)
       return undefined
     }
-    if (req.method === 'POST' && url.pathname === '/api/select') {
-      const selected = await select((await readBody(req)).slug)
-      return selected ? send(res, 200, { slug }) : send(res, 400, { error: 'not a pipeline of this repository' })
-    }
     if (req.method === 'POST' && url.pathname === '/api/decide') {
-      if (!slug) return send(res, 400, { error: 'no pipeline chosen' })
+      await viewNow()
+      if (!slug) return send(res, 409, { error: 'no pipeline is active in this working copy' })
       const { key, answer } = await readBody(req)
       const recorded = await recordDecision.record({ slug, key, answer, by: 'human' })
       if (!recorded.ok) return send(res, 400, { error: recorded.error.reason })
@@ -147,6 +133,7 @@ export const startCanvasServer = async ({ slug: initialSlug = null, observe, rec
       return send(res, 200, { recorded: key })
     }
     if (req.method === 'POST' && url.pathname === '/api/ask') {
+      await viewNow()
       const prompt = askPrompt((await readBody(req)).intent, slug)
       if (!prompt) return send(res, 400, { error: 'unknown intent' })
       await sendPrompt(prompt)
@@ -183,8 +170,6 @@ export const startCanvasServer = async ({ slug: initialSlug = null, observe, rec
 
   return Object.freeze({
     url: `${entry.origin}/?token=${token}`,
-    slug: () => slug,
-    select,
     refresh: () => publish(true),
     focus: (phase) => emit('focus', { phase }),
     close: () => new Promise((resolve) => {

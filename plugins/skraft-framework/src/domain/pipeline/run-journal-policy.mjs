@@ -5,7 +5,6 @@
 //
 //   { status: 'running' | 'awaiting-human' | 'done' | 'blocked' | 'error',
 //     phase, reason, checkpoint: { key, question, options } | null, story,
-//     branch (the git branch the last run started on, or null),
 //     startedAt, updatedAt, log: [{ at, message }]          (newest last, bounded)
 //     dispatches: [{ at, phase, role, agent, label, durationMs, ok, usage? }]  (every run)
 //     qualityGates: { evidenceLog, verdict, findings, at } | null  (the code's last check) }
@@ -17,13 +16,12 @@ export const MAX_JOURNAL_DISPATCHES = 500
 const bounded = (log) => log.slice(-MAX_JOURNAL_LINES)
 const line = (at, message) => Object.freeze({ at, message: String(message) })
 
-export const journalStarted = (previous, { at, story = null, branch = null }) => ({
+export const journalStarted = (previous, { at, story = null }) => ({
   status: 'running',
   phase: previous?.phase ?? null,
   reason: '',
   checkpoint: null,
   story: story ?? previous?.story ?? null,
-  branch: branch ?? previous?.branch ?? null,
   startedAt: at,
   updatedAt: at,
   log: bounded([...(Array.isArray(previous?.log) ? previous.log : []), line(at, 'run started')]),

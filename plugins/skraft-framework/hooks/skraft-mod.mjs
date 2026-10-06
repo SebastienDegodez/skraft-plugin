@@ -27,6 +27,7 @@ import { atom, read, update } from 'claude-code'
 import { createRunPipeline } from '../src/application/pipeline/run-pipeline.mjs'
 import { createRecordDecision } from '../src/application/pipeline/record-decision.mjs'
 import { createCloseManually } from '../src/application/pipeline/close-manually.mjs'
+import { activePipelineSlug } from '../src/application/pipeline/active-pipeline.mjs'
 import { stateBaseSegments, resolveTrackingLayout } from '../src/domain/tracking-layout-policy.mjs'
 import { createSystemTime } from '../src/adapters/infrastructure/system-time.mjs'
 import { createGitSourceControl } from '../src/adapters/infrastructure/git/git-source-control.mjs'
@@ -115,15 +116,6 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
     exists: (s, rel) => $.fs.exists(joinPath(trackingDir(s), rel)),
     read: (s, rel) => $.fs.read(joinPath(trackingDir(s), rel)),
     list: (s) => walkFiles((dir) => $.fs.list(dir), trackingDir(s)),
-    projects: async () => {
-      let entries = []
-      try { entries = await $.fs.list(trackingRoot) } catch { return [] }
-      const out = []
-      for (const entry of entries.filter((candidate) => candidate.kind === 'dir')) {
-        if (await $.fs.exists(joinPath(trackingDir(entry.name), 'state.json')) || await $.fs.exists(joinPath(trackingDir(entry.name), 'run.json'))) out.push(entry.name)
-      }
-      return out.sort()
-    },
     write: (s, rel, text) => $.fs.write(joinPath(trackingDir(s), rel), text),
     prefix: (s) => `${relativeToCwd(trackingDir(s))}/`,
   }
@@ -253,8 +245,10 @@ async function start($, args) {
 // RecordDecision: an answer recorded now is read by the next run at that checkpoint.
 async function decide($, { slug, key, answer }) {
   if (!SLUG.test(slug ?? '') || !key || !answer) return 'Usage: /skraft decide <slug> <checkpoint-key> <answer>'
-  const { decisionStore } = await sessionDependencies($, slug)
-  const recorded = await createRecordDecision({ decisionStore }).record({ slug, key, answer, by: 'human' })
+  const deps = await sessionDependencies($, slug)
+  const bound = await activePipelineSlug(deps, slug) // one pipeline per working copy: .active-slug
+  if (!bound.ok) return `Refused: ${bound.error.reason}`
+  const recorded = await createRecordDecision(deps).record({ slug, key, answer, by: 'human' })
   return recorded.ok ? `Recorded "${answer}" for ${key}. Resume with /skraft ${slug}.` : `Refused: ${recorded.error.reason}`
 }
 
@@ -262,7 +256,10 @@ async function decide($, { slug, key, answer }) {
 async function closeManually($, { slug, findings }) {
   if (!SLUG.test(slug ?? '')) return 'Usage: /skraft close <slug> [findings fixed by the rework]'
   if (active === slug) return `skraft is running ${slug}; wait for it to stop before closing a phase by hand.`
-  const closed = await createCloseManually(await sessionDependencies($, slug)).close({ slug, findings })
+  const deps = await sessionDependencies($, slug)
+  const bound = await activePipelineSlug(deps, slug) // one pipeline per working copy: .active-slug
+  if (!bound.ok) return `Refused (${bound.error.code}): ${bound.error.reason}`
+  const closed = await createCloseManually(deps).close({ slug, findings })
   return closed.ok
     ? `${closed.value.phase} closed by human validation (${closed.value.review}); next: ${closed.value.next}. Resume with /skraft ${slug}.`
     : `Refused (${closed.error.code}): ${closed.error.reason}`

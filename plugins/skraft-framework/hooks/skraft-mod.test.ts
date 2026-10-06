@@ -161,6 +161,8 @@ describe('skraft mod', () => {
     const key = 'rejected:DESIGN:1'
     expect(status.text).toMatch(/awaiting-human/)
 
+    const elsewhere = await $.command.run({ command: 'skraft', args: `decide refund ${key} stop` } as any)
+    expect(elsewhere.text).toMatch(/^Refused: "refund" is not the pipeline of this working copy: \.active-slug names "checkout"/)
     const decided = await $.command.run({ command: 'skraft', args: `decide checkout ${key} stop` } as any)
     expect(decided.text).toMatch(new RegExp(`Recorded "stop" for ${key}`))
     expect([...files.keys()].some((path) => path.includes('/decisions/'))).toBe(true)

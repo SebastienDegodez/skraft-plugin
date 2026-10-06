@@ -25,11 +25,11 @@ export const createRunJournal = ({ trackingStore, time }) => {
   const update = (change) => (journal ? save(change(journal)) : pending)
 
   return Object.freeze({
-    begin: async (runSlug, story, branch = null) => {
+    begin: async (runSlug, story) => {
       slug = runSlug
       let previous = null
       try { previous = JSON.parse(await trackingStore.read(runSlug, RUN_JOURNAL_PATH)) } catch { /* first run */ }
-      await save(journalStarted(previous, { at: now(), story, branch }))
+      await save(journalStarted(previous, { at: now(), story }))
     },
     finish: (outcome) => update((j) => journalFinished(j, outcome, now())),
     recordVerification: (verification) => update((j) => journalVerification(j, verification, now())),

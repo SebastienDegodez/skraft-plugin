@@ -113,17 +113,3 @@ test('observe: a host that reports no usage shows the agents run and no amount',
   assert.equal(view.cost.total.usd, null)
   assert.equal(view.cost.eurPerUsd, null)
 })
-
-test('observe: locate finds the pipeline of the current branch, else lists the pipelines to choose from', async () => {
-  const host = createFakeHost({ branch: 'feat/42-checkout' })
-  await runOnce(host)
-  const observer = observe(host)
-  assert.deepEqual(await observer.locate(), { slug: SLUG, reason: 'branch', chooser: null }, 'the run recorded the branch it started on')
-  assert.deepEqual((await observer.pipelines()).map((p) => [p.slug, p.branch, p.story?.issue]), [[SLUG, 'feat/42-checkout', 42]])
-  assert.deepEqual(await observer.locate('refund'), { slug: 'refund', reason: 'requested', chooser: null })
-
-  const empty = createObservePipeline(createFakeHost({ branch: 'main' }).dependencies(SLUG))
-  const located = await empty.locate()
-  assert.equal(located.slug, null)
-  assert.deepEqual(located.chooser, { chooser: true, branch: 'main', reason: 'none', pipelines: [] })
-})

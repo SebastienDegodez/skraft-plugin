@@ -110,7 +110,8 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
 
     assert.equal(state1.userPreferences.reporting.destinations.chat, true)
     // The human answers through the skraft_decide tool.
-    assert.match(await decide.handler({ slug: SLUG, key: 'adr-ratification:007', answer: 'accept all' }), /^Recorded "accept all"/)
+    assert.match(await decide.handler({ slug: 'refund', key: 'adr-ratification:007', answer: 'accept all' }), /^Refused: "refund" is not the pipeline of this working copy: \.active-slug names "checkout"/)
+    assert.match(await decide.handler({ key: 'adr-ratification:007', answer: 'accept all' }), /^Recorded "accept all"/, 'no slug: the active pipeline')
 
     // Attempt 2 (resume): the recorded answer ratifies, DISTILL and DELIVER run, and the
     // code runs the real qg-verify on the engineer's (bogus) evidence log: inconclusive,
@@ -150,7 +151,13 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
 
     // The human validated their own reworks: skraft_close_phase closes DELIVER.
     const close = createSkraftClosePhaseTool({ cwd: () => repo, pluginRoot: PLUGIN_ROOT, env })
-    assert.match(await close.handler({ slug: SLUG, phase: 'DELIVER', findings: 2 }), /^DELIVER closed by human validation \(reviews\/.+\/manual-close\.md\); next: DONE/)
+    assert.match(await close.handler({ slug: 'refund', phase: 'DELIVER' }), /^Refused \(NOT_THE_ACTIVE_PIPELINE\)/)
+    const pointer = join(repo, '.copilot-tracking/skraft-plans/.active-slug')
+    const recorded = await readFile(pointer, 'utf8')
+    await rm(pointer)
+    assert.match(await close.handler({ slug: SLUG, phase: 'DELIVER' }), /^Refused \(NO_ACTIVE_PIPELINE\): No SKRAFT pipeline is active in this working copy/)
+    await writeFile(pointer, recorded)
+    assert.match(await close.handler({ phase: 'DELIVER', findings: 2 }), /^DELIVER closed by human validation \(reviews\/.+\/manual-close\.md\); next: DONE/)
     assert.match(await readFile(join(repo, `.copilot-tracking/skraft-plans/${SLUG}/reviews/${new Date().toISOString().slice(0, 10)}/manual-close.md`), 'utf8'), /verdict: "APPROVED"/)
   } finally {
     await rm(repo, { recursive: true, force: true })
