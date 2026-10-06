@@ -65,11 +65,11 @@ Le framework est dans `plugins/skraft-framework/src/` à la racine du repo :
 ```
 plugins/skraft-framework/src/
   domain/                ← politiques pures (aucune IO)
-    pipeline-policy.mjs        ordre de dispatch, provenance, continuation (G1, G6)
+    pipeline-policy.mjs        ordre de dispatch (G1, vérifié par RunPipeline), provenance
     skill-policy.mjs           skills obligatoires/on-demand, chargements lus dans un transcript (G2, G3)
     phase-gate-policy.mjs      règles de clôture de phase (G4, G5)
     session-guard-policy.mjs   protection de l'état suivi, écritures DELIVER (G7, G8)
-    handoff-policy.mjs         complétude du handoff de dispatch (G9)
+    handoff-policy.mjs         complétude du handoff de dispatch (G9, vérifiée par RunPipeline)
     state-machine.mjs          transitions qu'applique le CLI d'état
     result.mjs, value-objects.mjs, …
 
@@ -78,11 +78,11 @@ plugins/skraft-framework/src/
     infrastructure/      interfaces sortantes (audit, état, transcript…)
 
   application/           ← un service par préoccupation de hook
-    pre-tool-use-composite.mjs   décisions G1, provenance et G7/G8/G9
+    pre-tool-use-composite.mjs   décisions provenance et G7/G8
     subagent-start-service.mjs   G2
     subagent-stop-service.mjs    G3
-    post-tool-use-service.mjs    trace G3, G6
-    handoff-guard-service.mjs    G9
+    post-tool-use-service.mjs    trace G3
+    pipeline/run-pipeline.mjs    le pipeline lui-même, G1 et G9 avant chaque dispatch
     state-service.mjs, phase-gate-service.mjs   le CLI d'état et sa porte
 
   adapters/
@@ -164,16 +164,16 @@ Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après
 
 | Garde | Appliquée par | Mode d'échec | Preuve en session réelle |
 |-------|---------------|--------------|--------------------------|
-| G1 ordre de dispatch | Hook `PreToolUse` | Fail-closed pour un agent de phase | Aucune |
+| G1 ordre de dispatch | RunPipeline, avant chaque dispatch | Fail-closed : le run s'arrête `blocked` | Pas un hook |
 | Provenance du dispatch | Hook `PreToolUse` | Fail-open | Aucune |
 | G2 skills obligatoires | Hook `SubagentStart` | Fail-open | Aucune |
 | G3 chargement des skills | Hooks `PostToolUse` et `SubagentStop` | Fail-open | Aucune |
 | G4 artefacts de phase | CLI d'état, à la clôture de phase | Fail-closed | Pas un hook |
 | G5 verdict et commit DELIVER | CLI d'état, à la clôture de phase | Fail-closed | Pas un hook |
-| G6 continuation | Hook `PostToolUse` | Fail-open | Aucune |
+| G6 continuation | Supprimé : RunPipeline enregistre ce que rend un agent | — | — |
 | G7 état suivi | Hook `PreToolUse` | Fail-closed | Dernier passage enregistré : Copilot CLI 1.0.83 a refusé une écriture shell |
 | G8 écritures DELIVER | Hook `PreToolUse` | Fail-open si l'état est illisible | Aucune |
-| G9 handoff | Hook `PreToolUse` sur dispatch d'agent de phase | Fail-open si l'état est illisible ou en erreur interne | Aucune |
+| G9 complétude du handoff | RunPipeline, sur le prompt composé | Fail-closed : le run s'arrête `blocked` | Pas un hook |
 
 Chaque garde est couverte par des tests unitaires et d'acceptation. Une preuve en session
 réelle ne vient que d'une vraie session (`scripts/copilot-hook-smoke.mjs`,
@@ -182,17 +182,16 @@ réelle ne vient que d'une vraie session (`scripts/copilot-hook-smoke.mjs`,
 `SubagentStart` n'injecte que les skills obligatoires de l'agent qui démarre. Un skill
 déclaré `on-demand` n'est pas injecté au démarrage et n'est pas exigé par `SubagentStop` ;
 sa lecture éventuelle reste tracée par G3. Les règles ne sont pas injectées : Copilot
-découvre nativement les règles path-scoped, et l'orchestrateur, seul lecteur de ces règles,
-les charge lui-même.
+découvre nativement les règles path-scoped.
 
-G9 garde le handoff de dispatch plutôt que le raisonnement du sous-agent. Pour un agent de
-phase du pipeline, le hook `PreToolUse` vérifie que le prompt nomme au moins un chemin
-enregistré pour chaque entrée suivie obligatoire déjà présente dans l'état ; en rework ou
-re-review, il exige aussi le chemin de la revue précédente. Un refus demande à
-l'orchestrateur de coller le bloc imprimé par
-`node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" handoff --agent "<agent>"`. La garde ne
-s'applique pas aux lentilles, workers, agents produit, ni au spécialiste re-dispatché après
-une phase DESIGN approuvée pour la ratification des ADR.
+Le pipeline tourne en code ([RunPipeline](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/run-pipeline.md),
+ADR-010) : un mod Claude Code et un workflow dynamique Copilot le pilotent. Les gardes qui
+ne surveillaient que l'orchestrateur en prose ont quitté les hooks. G1 (ordre de dispatch)
+et G9 (complétude du handoff) tournent dans le cas d'usage avant chaque dispatch, sur l'état
+qu'il a lui-même écrit ; un refus arrête le run avant tout envoi. G6 (le rappel PostToolUse
+des étapes à enregistrer) a disparu : le code enregistre artefacts et verdicts. Les hooks
+gardent ce qu'aucun chemin de code ne voit — les écritures des agents (G7/G8), les skills
+qu'ils chargent (G2/G3), qui dispatche qui (provenance).
 
 ## Économie de tokens — l'angle des hooks
 

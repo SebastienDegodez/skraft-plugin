@@ -14,14 +14,15 @@ sidebar_position: 1
 |------|---------|-------|-----------------|------------------------|
 | `SessionStart` | — | — | Exporte `SKRAFT_PLUGIN_ROOT` vers les appels Bash suivants (Claude Code, via `CLAUDE_ENV_FILE`) ; indique le chemin du plugin et le pipeline actif dans le contexte de session ; purge le journal d'audit et les signaux d'état obsolètes | Autorise |
 | `SubagentStart` | — | G2 | Indique à l'agent qui démarre ses skills obligatoires (`verify` ou `eager`) ; intègre le contenu des skills `eager` ; exclut les skills `on-demand` | Autorise |
-| `PreToolUse` | `Agent`, `Task` | G1 | Un agent de phase n'est dispatché que si la phase enregistrée le permet : le spécialiste dans la phase ouverte, son reviewer une fois un artefact enregistré | Bloque, pour un agent de phase |
 | `PreToolUse` | `Agent`, `Task` | Provenance | Aucun agent ne se dispatche lui-même ; un agent au dispatcher déclaré n'est dispatché que par lui | Autorise |
-| `PreToolUse` | `Agent`, `Task` | G9 | Le prompt de dispatch d'un agent de phase du pipeline nomme au moins un chemin enregistré pour chaque entrée suivie obligatoire déjà présente dans l'état, et la revue précédente en rework ou re-review | Autorise |
 | `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | Aucune écriture directe dans le `state.json` d'un pipeline, son journal d'exécution ou le pointeur `.active-slug`, quelle que soit la phase | Refuse si le payload nomme un `state.json` suivi |
 | `PreToolUse` | idem | G8 | En DELIVER, `src/` et `tests/` ne sont écrits que par les agents DELIVER et les agents qu'ils dispatchent | Autorise |
-| `PostToolUse` | `Agent`, `Task` | G6 | Au retour d'un agent de phase, l'orchestrateur reçoit quoi enregistrer et quoi dispatcher ensuite | Autorise |
 | `PostToolUse` | `Read` | G3 | Chaque lecture d'un `SKILL.md` est inscrite au journal d'audit | Autorise |
 | `SubagentStop` | — | G3 | Un sous-agent dont le transcript ne montre aucun chargement d'un skill obligatoire (appel de l'outil skill, ou lecture de son `SKILL.md`) est renvoyé au travail ; les skills `on-demand` ne sont pas obligatoires ; un sous-agent déjà renvoyé est laissé partir | Autorise |
+
+G1 (ordre de dispatch), G6 (continuation) et G9 (handoff) ne sont plus des hooks : le
+pipeline tourne en code (RunPipeline, ADR-010), qui vérifie G1 et G9 avant chaque dispatch et
+enregistre ce que rend chaque agent. Voir `docs/run-pipeline.md` dans le dépôt.
 
 Les deux manifestes du plugin portent les mêmes entrées, et chaque entrée exécute
 `src/cli/hook.mjs` (`src/cli/housekeeping.mjs` pour `SessionStart`). Copilot CLI envoie ses
@@ -187,10 +188,9 @@ Les hooks et les CLI lisent ces variables ; aucune n'est obligatoire.
 | `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Constructeurs de décision (vocabulaire interne) |
 | `plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs` | Décision → format de fil harness |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Routage par type d'événement |
-| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | G1, provenance et G7/G8/G9 sur `PreToolUse` |
-| `plugins/skraft-framework/src/application/handoff-guard-service.mjs` | Garde de handoff G9 |
-| `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Ordre de dispatch, provenance, continuation |
-| `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Manifeste de handoff des entrées obligatoires et évaluation G9 |
+| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | Provenance et G7/G8 sur `PreToolUse` |
+| `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Ordre de dispatch (G1, vérifié par RunPipeline), provenance |
+| `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Manifeste de handoff des entrées obligatoires et évaluation G9 (vérifiée par RunPipeline) |
 | `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Protection de l'état suivi et écritures DELIVER |
 | `plugins/skraft-framework/src/domain/skill-policy.mjs` | Politique des skills obligatoires et `on-demand` |
 | `plugins/skraft-framework/src/domain/phase-gate-policy.mjs` | Règles de clôture de phase |

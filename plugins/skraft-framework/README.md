@@ -4,7 +4,7 @@ Deterministic agentic software delivery for Claude Code and GitHub Copilot.
 
 Give SKRAFT one refined story. Specialist agents research it, design it, turn it into
 acceptance tests and deliver tested code, each phase challenged by a read-only reviewer.
-Runtime hooks — not the model's goodwill — enforce the phase order, the skills each agent
+The pipeline code and runtime hooks enforce the phase order, the skills each agent
 must load, the artifacts a phase must produce, the verdicts and the commits.
 
 ## Why SKRAFT
@@ -32,9 +32,22 @@ must load, the artifacts a phase must produce, the verdicts and the commits.
 
 ## Run a story
 
-1. Select `skraft-orchestrator`.
-2. Give it one refined story with acceptance criteria.
-3. Review the artifacts and commits it produces; it resumes where it stopped.
+1. Select `skraft-orchestrator` and give it one refined story with acceptance criteria.
+2. It launches [RunPipeline](../../docs/run-pipeline.md), the pipeline use case running as
+   code through a Claude Code mod or a GitHub Copilot dynamic workflow.
+3. Answer checkpoints, then review the artifacts and commits it produces; it resumes
+   where it stopped.
+
+You can also launch the pipeline directly:
+
+- In Claude Code, `/skraft <slug> [#issue] [title]` starts or resumes the pipeline in the
+  Skraft pane. `/skraft decide <slug> <key> <answer>` answers a checkpoint;
+  `/skraft close <slug> [findings]` closes a phase after human-validated reworks;
+  `/skraft` shows run status.
+- In GitHub Copilot CLI, run
+  `copilot workflow run skraft-pipeline --args '{"slug":"checkout","issue":42}'`.
+  Answer checkpoints with `skraft_decide`, resume with `/workflows` → R, and use
+  `skraft_close_phase` to close a phase by hand.
 
 ```mermaid
 flowchart LR
@@ -77,6 +90,9 @@ guesses a command or skips a gate.
 
 ## Guarantees
 
+RunPipeline checks dispatch order (G1) and handoff completeness (G9) before dispatching,
+and records agent results itself. Hooks retain skill loading, provenance and write guards.
+
 | Guard | What you get |
 |---|---|
 | G1 | A phase agent dispatched out of order is blocked before it runs |
@@ -111,11 +127,22 @@ node "<plugin-root>/src/cli/health-check.mjs"
 Repository settings live in `skraft-config.json`; quality thresholds and engineering
 invariants are deliberately not user-relaxable.
 
+`handoff` prints the block the pipeline puts into a phase dispatch: the recorded inputs
+the agent must read instead of re-deriving them, and on a retry the rework or re-review
+mode with the previous review. `timeline` reports, per phase, specialist and reviewer time
+and the number of attempts from the dispatch journal. At DESIGN start the pipeline runs the
+structural scan once, in process; the architect and the DESIGN reviewer read its JSON report
+instead of re-grepping the code. The pipeline applies state events in process.
+
 ## Reports in pull requests (in progress)
 
 SKRAFT is gaining two stable PR comments per story: a forecast from the approved scenarios and
 test plan, and an outcome from the delivered code, evidence and review. The scope, the current
 state and what remains unverified are in [REPORTING.md](REPORTING.md).
+
+The pipeline renders reports and runs the publication protocol in code; only host MCP
+calls are delegated. [github-search-protocol](skills/github-search-protocol/SKILL.md)
+owns GitHub transport, including its announced `gh` fallback.
 
 ## Documentation
 

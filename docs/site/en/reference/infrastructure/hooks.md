@@ -14,14 +14,15 @@ sidebar_position: 1
 |------|---------|-------|------------------|---------------------|
 | `SessionStart` | — | — | Exports `SKRAFT_PLUGIN_ROOT` to later Bash calls (Claude Code, through `CLAUDE_ENV_FILE`); states the plugin path and the active pipeline in the session context; trims the audit log and purges stale state signals | Allow |
 | `SubagentStart` | — | G2 | Tells the starting agent which skills are mandatory (`verify` or `eager`); inlines the `eager` ones; excludes `on-demand` skills | Allow |
-| `PreToolUse` | `Agent`, `Task` | G1 | A phase agent is dispatched only when the recorded phase allows it: the specialist in the open phase, its reviewer once an artifact is recorded | Block, for a phase agent |
 | `PreToolUse` | `Agent`, `Task` | Provenance | No agent dispatches itself; an agent with a declared dispatcher is dispatched by that agent alone | Allow |
-| `PreToolUse` | `Agent`, `Task` | G9 | A pipeline phase-agent dispatch prompt names at least one recorded path for every required tracked input already in state, and the previous review path on rework or re-review | Allow |
 | `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | No direct write to a pipeline's `state.json`, its execution log or the `.active-slug` pointer, whatever the phase | Deny when the payload names a tracked `state.json` |
 | `PreToolUse` | same | G8 | During DELIVER, `src/` and `tests/` are written only by the DELIVER agents and the agents they dispatch | Allow |
-| `PostToolUse` | `Agent`, `Task` | G6 | After a phase agent returns, the orchestrator is told what to record and what to dispatch next | Allow |
 | `PostToolUse` | `Read` | G3 | Each `SKILL.md` read is written to the audit log | Allow |
 | `SubagentStop` | — | G3 | A subagent whose transcript shows no load of a mandatory skill (a skill tool call, or a read of its `SKILL.md`) is sent back; `on-demand` skills are not mandatory; one already sent back is let go | Allow |
+
+G1 (dispatch order), G6 (continuation) and G9 (handoff) are no longer hooks: the pipeline
+runs as code (RunPipeline, ADR-010), which checks G1 and G9 before every dispatch and records
+what each agent returns. See `docs/run-pipeline.md` in the repository.
 
 Both plugin manifests carry the same entries, and every entry runs `src/cli/hook.mjs`
 (`src/cli/housekeeping.mjs` for `SessionStart`). Copilot CLI sends its own tool names
@@ -184,10 +185,9 @@ The hooks and the CLIs read these variables; none is required.
 | `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Decision constructors (internal vocabulary) |
 | `plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs` | Decision → harness wire format |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Route by event type |
-| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | G1, provenance and G7/G8/G9 on `PreToolUse` |
-| `plugins/skraft-framework/src/application/handoff-guard-service.mjs` | G9 handoff guard |
-| `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Dispatch order, provenance, continuation |
-| `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Required-input handoff manifest and G9 evaluation |
+| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | Provenance and G7/G8 on `PreToolUse` |
+| `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Dispatch order (G1, checked by RunPipeline), provenance |
+| `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Required-input handoff manifest and G9 evaluation (checked by RunPipeline) |
 | `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Tracked-state protection and DELIVER writes |
 | `plugins/skraft-framework/src/domain/skill-policy.mjs` | Mandatory and `on-demand` skill policy |
 | `plugins/skraft-framework/src/domain/phase-gate-policy.mjs` | Phase closure rules |
