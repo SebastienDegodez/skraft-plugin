@@ -218,7 +218,7 @@ graph LR
 **Definition:** Abstracts the storage mechanism for an aggregate.
 
 - One per aggregate — `IEligibilityRepository`, not `IGenericRepository<T>`
-- Interface defined in Application layer — never in Domain or Infrastructure
+- Interface defined in Domain when it persists an aggregate, Application for a CRUD entity or a read model — never Infrastructure; the aggregate's ADR records the choice
 - No ORM/LINQ leakage in the interface — domain-friendly method names (`GetEligibleDrivers`, not `FindAll(x => x.Status == "Eligible")`)
 
 ### Domain Service
@@ -277,7 +277,7 @@ The Application layer is the entry point for all external requests. Controllers 
 
 ### Application Interface
 
-Any I/O abstraction (repository, message publisher, external gateway) is defined as an interface in the Application layer. Infrastructure provides the implementation. This keeps the Application layer testable without real infrastructure.
+Any I/O abstraction (message publisher, external gateway, read model) is defined as an interface in the Application layer; a repository follows the Repository rule above. Infrastructure provides the implementation. This keeps the Application layer testable without real infrastructure.
 
 ---
 
