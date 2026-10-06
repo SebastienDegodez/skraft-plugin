@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { proposedAdrs, interpretRatification } from '../../../plugins/skraft-framework/src/domain/pipeline/adr-ratification-policy.mjs'
-import { readReviewOutcome, qualityGateOutcome } from '../../../plugins/skraft-framework/src/domain/pipeline/review-outcome.mjs'
+import { readReviewOutcome } from '../../../plugins/skraft-framework/src/domain/pipeline/review-outcome.mjs'
 import { reviewOutputPath } from '../../../plugins/skraft-framework/src/domain/pipeline/dispatch-brief.mjs'
 import STATE_SCHEMA_DOCUMENT from '../../../plugins/skraft-framework/src/domain/state-schema-document.mjs'
 import { ADR_INDEX_HEADER, review, PLUGIN_ROOT } from './fake-host.mjs'
@@ -36,9 +36,6 @@ test('review-outcome: verdict and escalation come from the file, nested lens sta
   assert.equal(readReviewOutcome(null).verdict, null)
 })
 
-test('review-outcome: qg-verify exit codes map to pass/fail/inconclusive/error', () => {
-  assert.deepEqual([0, 1, 2, 3, 127].map(qualityGateOutcome), ['pass', 'fail', 'inconclusive', 'error', 'error'])
-})
 
 test('dispatch-brief: {N} is the next review number of the phase', () => {
   assert.equal(reviewOutputPath({ phase: 'DESIGN', date: '2026-10-05', recordedReviews: 0 }), 'reviews/2026-10-05/design-review-1.md')

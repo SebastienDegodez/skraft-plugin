@@ -1,6 +1,6 @@
-// In-memory host for the run-pipeline use case: plain dictionaries, no mock library
-// (testing doctrine: InMemory doubles only). The "LLM" is simulated by scripted agents
-// that write what a real subagent would leave on disk.
+// In-memory doubles of every RunPipeline driven port: plain dictionaries and queues, no
+// mock library (testing doctrine). The "LLM" is the AgentRunner double: scripted agents
+// that leave on disk what a real subagent would.
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -11,10 +11,6 @@ const here = dirname(fileURLToPath(import.meta.url))
 export const PLUGIN_ROOT = join(here, '../../../plugins/skraft-framework')
 export const CONFIG = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'skraft-framework.config.json'), 'utf8'))
 export const TODAY = '2026-10-05'
-
-const RESEARCHER = CONFIG.phaseAgents.RESEARCH.specialist
-const ARCHITECT = CONFIG.phaseAgents.DESIGN.specialist
-const ENGINEER = CONFIG.phaseAgents.DELIVER.specialist
 
 // A concrete path for a descriptor pattern, as an agent would choose it.
 export const concretePath = (pattern, slug) => pattern
@@ -38,32 +34,35 @@ export const review = (verdict, { escalation, findings = '' } = {}) => [
 export const ADR_INDEX_HEADER = '| ADR | Title | Status | Chosen | Decision (1 line) | Ratified by | Date |\n|---|---|---|---|---|---|---|\n'
 
 // options:
-//   verdicts:   { [phase]: string[] } — review verdicts a reviewer writes, in order (default APPROVED)
-//   reviews:    { [phase]: string[] } — full review bodies instead of plain verdicts
-//   skipOutputs:{ [agent]: number }   — first N dispatches of that agent write nothing
-//   qgExits:    number[]              — qg-verify exit codes, in order (default 0)
-//   answers:    { [keyPrefix]: (string|null)[] } — human answers by checkpoint key prefix
-//   adrIndex:   string                — docs/adr/decisions-index.md
+//   verdicts:    { [phase]: string[] }  review verdicts a reviewer writes, in order (default APPROVED)
+//   reviews:     { [phase]: string[] }  full review bodies instead of plain verdicts
+//   skipOutputs: { [agent]: number }    first N dispatches of that agent write nothing
+//   gates:       string[]               QualityGateVerifier outcomes, in order (default 'pass')
+//   answers:     { [keyPrefix]: (string|null)[] }  HumanInteraction answers by key prefix
+//   decisions:   { [key]: string }      answers already recorded in the DecisionStore
+//   adrIndex:    string                 docs/adr/decisions-index.md
 export const createFakeHost = (options = {}) => {
   const tracking = new Map()
   const states = new Map()
   const repository = new Map()
+  const decisions = new Map(Object.entries(options.decisions ?? {}))
   if (options.adrIndex) repository.set('docs/adr/decisions-index.md', options.adrIndex)
   let head = 1
   const dispatches = []
-  const commands = []
-  const checkpoints = []
+  const verifications = []
+  const scans = []
+  const questions = []
   const logs = []
   const phases = []
   const counters = {}
   const take = (queue, fallback) => (queue && queue.length > 0 ? queue.shift() : fallback)
   const verdictQueues = Object.fromEntries(Object.entries(options.verdicts ?? {}).map(([k, v]) => [k, [...v]]))
   const reviewQueues = Object.fromEntries(Object.entries(options.reviews ?? {}).map(([k, v]) => [k, [...v]]))
-  const qgExits = [...(options.qgExits ?? [])]
+  const gates = [...(options.gates ?? [])]
   const answers = Object.fromEntries(Object.entries(options.answers ?? {}).map(([k, v]) => [k, [...v]]))
-
   const key = (slug, path) => `${slug}::${path}`
   const writeTracking = (slug, path, text) => tracking.set(key(slug, path), text)
+  const prefix = (slug) => `.copilot-tracking/skraft-plans/${slug}/`
 
   // The simulated LLM.
   const behave = ({ agent, role, phase, prompt }, slug) => {
@@ -84,21 +83,20 @@ export const createFakeHost = (options = {}) => {
     for (const pattern of requiredTrackedOutputs(agent, CONFIG)) {
       writeTracking(slug, concretePath(pattern, slug), `# ${agent} output`)
     }
-    if (agent === ENGINEER) head += 1
+    if (agent === CONFIG.phaseAgents.DELIVER.specialist) head += 1
   }
 
-  const ports = (slug) => ({
+  // Every driven port of RunPipeline (ports/infrastructure/), in memory.
+  const dependencies = (slug) => ({
     config: CONFIG,
-    pluginRoot: '/plugin',
-    trackingPrefix: (s) => `.copilot-tracking/skraft-plans/${s}/`,
     stateReader: {
       read: async (s) => {
         if (!states.has(s)) throw Object.assign(new Error('absent'), { code: 'ENOENT' })
         return structuredClone(states.get(s))
       },
     },
-    stateWriter: { write: async (s, state) => { states.set(s, structuredClone(state)); return Ok(state) } },
-    trackingFiles: {
+    stateWriter: { write: async (s, state) => { states.set(s, structuredClone(state)); return Ok(undefined) } },
+    trackingStore: {
       exists: async (s, path) => tracking.has(key(s, path)),
       read: async (s, path) => {
         if (!tracking.has(key(s, path))) throw Object.assign(new Error('absent'), { code: 'ENOENT' })
@@ -106,53 +104,58 @@ export const createFakeHost = (options = {}) => {
       },
       list: async (s) => [...tracking.keys()].filter((k) => k.startsWith(`${s}::`)).map((k) => k.slice(s.length + 2)),
       write: async (s, path, text) => writeTracking(s, path, text),
+      prefix,
     },
-    repositoryFiles: { read: async (path) => repository.get(path) ?? null },
-    git: { headSha: async () => `sha${head}` },
-    agents: {
+    repositoryReader: { read: async (path) => repository.get(path) ?? null },
+    sourceControl: { headSha: async () => `sha${head}` },
+    agentRunner: {
       run: async (dispatch) => {
         dispatches.push(dispatch)
         behave(dispatch, slug)
         return { ok: true, text: 'done' }
       },
     },
-    commands: {
-      run: async (argv) => {
-        commands.push(argv)
-        if (argv[1].endsWith('structural-scan.mjs')) {
-          const out = argv[argv.indexOf('--out') + 1].replace(/^\.copilot-tracking\/skraft-plans\/[^/]+\//, '')
-          writeTracking(slug, out, '{}')
-          return { exitCode: 0, stdout: '', stderr: '' }
-        }
-        if (argv[1].endsWith('qg-verify.mjs')) {
-          const exitCode = take(qgExits, 0)
-          return { exitCode, stdout: exitCode === 0 ? '{"verdict":"pass"}' : `{"verdict":"${exitCode === 1 ? 'fail' : 'inconclusive'}","findings":["G6 mutation 92%"]}`, stderr: '' }
-        }
-        return { exitCode: 127, stdout: '', stderr: 'unknown command' }
+    qualityGateVerifier: {
+      verify: async (request) => {
+        verifications.push(request)
+        const outcome = take(gates, 'pass')
+        return { outcome, findings: outcome === 'pass' ? '' : 'G6 mutation 92%' }
       },
     },
-    interaction: {
-      decide: async (checkpoint) => {
-        checkpoints.push(checkpoint)
-        const prefix = Object.keys(answers).find((p) => checkpoint.key.startsWith(p))
-        return prefix ? take(answers[prefix], null) : null
+    structuralScanner: {
+      scan: async ({ slug: s, outputPath }) => {
+        scans.push(outputPath)
+        writeTracking(s, outputPath, '{}')
+        return { ok: true }
       },
+    },
+    humanInteraction: {
+      ask: async (checkpoint) => {
+        questions.push(checkpoint)
+        const match = Object.keys(answers).find((p) => checkpoint.key.startsWith(p))
+        return match ? take(answers[match], null) : null
+      },
+    },
+    decisionStore: {
+      read: async (s, k) => decisions.get(k) ?? null,
+      write: async (s, k, answer) => { decisions.set(k, answer) },
     },
     progress: { phase: (t) => phases.push(t), log: (m) => logs.push(m) },
-    clock: { today: () => TODAY, now: () => `${TODAY}T10:00:00.000Z` },
+    time: { now: () => new Date(`${TODAY}T10:00:00.000Z`), isoString: () => `${TODAY}T10:00:00.000Z` },
   })
 
   return {
-    ports,
+    dependencies,
     dispatches,
-    commands,
-    checkpoints,
+    verifications,
+    scans,
+    questions,
+    decisions,
     logs,
     phases,
     state: (slug) => states.get(slug),
     tracking: (slug, path) => tracking.get(key(slug, path)),
     repository,
     agentsCalled: () => dispatches.map((d) => d.agent),
-    names: { RESEARCHER, ARCHITECT, ENGINEER },
   }
 }

@@ -85,6 +85,12 @@ export default {
     'plugins/skraft-framework/src/domain/dispatch-timeline-policy.mjs',
     'plugins/skraft-framework/src/application/dispatch-journal-service.mjs',
     'plugins/skraft-framework/src/domain/structural-scan-policy.mjs',
+    // V2 — orchestrator as code (RunPipeline) and its driven adapters
+    'plugins/skraft-framework/src/domain/pipeline/*.mjs',
+    'plugins/skraft-framework/src/application/pipeline/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/pipeline/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/*.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

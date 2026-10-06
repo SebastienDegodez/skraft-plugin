@@ -1,15 +1,26 @@
 import { buildHandoff } from '../../domain/handoff-policy.mjs'
 import { nextPhaseAfter } from '../../domain/pipeline-policy.mjs'
-import { parseOutputEntry } from '../../domain/phase-gate-policy.mjs'
-import { artifactPatternToRegExp } from '../../domain/artifact-policy.mjs'
 import { DEFAULT_PHASE_ORDER } from '../../domain/state-machine.mjs'
+import { composeDispatchBrief, reviewOutputPath } from '../../domain/pipeline/dispatch-brief.mjs'
+import { readReviewOutcome } from '../../domain/pipeline/review-outcome.mjs'
 import {
-  composeDispatchBrief,
-  reviewOutputPath,
-  reworkAddendum,
-  ENVIRONMENT_REGATE_ADDENDUM,
-} from '../../domain/pipeline/dispatch-brief.mjs'
-import { readReviewOutcome, qualityGateOutcome } from '../../domain/pipeline/review-outcome.mjs'
+  expectedTrackedOutputs,
+  matchOutputs,
+  latestEvidenceLog,
+  structuralScanPath,
+  hasStructuralScan,
+} from '../../domain/pipeline/expected-outputs.mjs'
+import {
+  REVIEWER,
+  reworkStep,
+  stepOnEntry,
+  stepAfterReview,
+  stepAfterMissingOutputs,
+  stepAfterQualityGates,
+  stepAfterEnvironmentFixed,
+  stepAfterRejection,
+  checkpointKeys,
+} from '../../domain/pipeline/step-policy.mjs'
 import {
   proposedAdrs,
   ratificationQuestion,
@@ -19,21 +30,28 @@ import {
 import { createStateService } from '../state-service.mjs'
 import { createPhaseGate } from '../phase-gate-service.mjs'
 
-// The SKRAFT orchestrator as code: one generic use case, the same for every host.
-// A Claude Code mod and a Copilot dynamic workflow are thin adapters around it
-// (src/adapters/hosts/): they supply the ports (src/ports/pipeline/host-ports.mjs)
-// and render its progress; every decision is taken here.
+// Use case RunPipeline (ports/api/run-pipeline.mjs): the SKRAFT orchestrator as code,
+// the same for every host. It sequences RESEARCH → DESIGN → DISTILL → DELIVER, runs each
+// phase's specialist then reviewer, and asks the human at the checkpoints. The rules —
+// which step comes next, which outputs are due, which review number — are domain
+// policies (domain/pipeline/); this module only runs them against the driven ports.
 //
-// It replays skraft-orchestrator.md: RESEARCH → DESIGN → DISTILL → DELIVER, one
-// specialist then one reviewer per phase, the reviewer's verdict read from the review
-// file on disk, reworks bounded by maxRetriesPerPhase, the ADR ratification and
-// environment checkpoints asked to the human. State lives in state.json through the
-// existing state service, so every transition still passes the state machine and the
-// phase gate, and a stopped run resumes where state.json says it stopped.
+// Driven ports (ports/infrastructure/), injected by the composition root of each host:
+//   stateReader, stateWriter   state.json (through the existing state service, so every
+//                              transition still passes the state machine and the phase gate)
+//   trackingStore              the project's tracking directory
+//   repositoryReader           docs/adr/decisions-index.md
+//   sourceControl              HEAD, for the DELIVER base commit
+//   agentRunner                one subagent dispatch
+//   qualityGateVerifier        the G1–G11 evidence check of DELIVER
+//   structuralScanner          the repository scan DESIGN reads
+//   humanInteraction           a checkpoint question
+//   decisionStore              answers recorded against a checkpoint key
+//   progress                   phase and log lines for the person watching
+//   time                       TimeProvider
+// plus `config`, the published skraft-framework.config.json (ADR-005).
 //
 // Outcome: { status: 'done' | 'blocked' | 'awaiting-human', phase, reason, checkpoint? }
-
-const TRACKING_PREFIX = /^\.copilot-tracking\/skraft-plans\/\{projectSlug\}\//
 
 class Halt extends Error {
   constructor(outcome) {
@@ -45,24 +63,34 @@ class Halt extends Error {
 const blocked = (phase, reason, detail) => new Halt({ status: 'blocked', phase, reason, ...(detail ? { detail } : {}) })
 const awaiting = (phase, checkpoint) => new Halt({ status: 'awaiting-human', phase, reason: checkpoint.question, checkpoint })
 
-// Tracking-relative output patterns an agent writes, each { pattern, optional }.
-const trackedOutputs = (agent, config) =>
-  (config.agentArtifacts?.[agent]?.outputs ?? [])
-    .map(parseOutputEntry)
-    .filter((entry) => entry && TRACKING_PREFIX.test(entry.pattern))
-    .map((entry) => ({ pattern: entry.pattern.replace(TRACKING_PREFIX, ''), optional: entry.optional }))
+const MAX_STEPS_PER_PHASE = 50
+const MAX_RATIFICATION_ROUNDS = 3
 
-export const createRunPipeline = (ports) => {
-  const { config, progress, clock } = ports
+export const createRunPipeline = (deps) => {
+  const {
+    config,
+    trackingStore,
+    repositoryReader,
+    sourceControl,
+    agentRunner,
+    qualityGateVerifier,
+    structuralScanner,
+    humanInteraction,
+    decisionStore,
+    progress,
+    time,
+  } = deps
   const phaseOrder = config.phaseOrder ?? DEFAULT_PHASE_ORDER
-  const phaseGate = createPhaseGate({ config, trackingFiles: ports.trackingFiles, git: ports.git })
   const stateService = createStateService({
-    stateReader: ports.stateReader,
-    stateWriter: ports.stateWriter,
+    stateReader: deps.stateReader,
+    stateWriter: deps.stateWriter,
     phaseOrder,
-    phaseGate,
+    phaseGate: createPhaseGate({ config, trackingFiles: trackingStore, git: sourceControl }),
   })
+  const today = () => time.isoString().slice(0, 10)
+  const now = () => time.isoString()
 
+  // ── State ─────────────────────────────────────────────────────────────────
   const apply = async (slug, event) => {
     const result = await stateService.applyEvent(slug, event)
     if (!result.ok) throw result.error
@@ -75,8 +103,17 @@ export const createRunPipeline = (ports) => {
     return result.value
   }
 
-  const readTracking = async (slug, path) => {
-    try { return await ports.trackingFiles.read(slug, path) } catch { return null }
+  const readTracked = async (slug, path) => {
+    try { return await trackingStore.read(slug, path) } catch { return null }
+  }
+
+  const recordArtifacts = async (slug, phase, paths) => {
+    let state = await readState(slug)
+    for (const path of paths) {
+      if ((state.phaseArtifacts?.[phase] ?? []).includes(path)) continue
+      state = await apply(slug, { type: 'RECORD_ARTIFACT', phase, path })
+    }
+    return state
   }
 
   // ── Dispatch ──────────────────────────────────────────────────────────────
@@ -87,91 +124,34 @@ export const createRunPipeline = (ports) => {
       handoff: handoff.value,
       slug,
       story,
-      trackingPrefix: ports.trackingPrefix(slug),
+      trackingPrefix: trackingStore.prefix(slug),
       outputs,
       addenda,
     })
     progress.log(`→ ${agent} (${handoff.value.mode}, attempt ${handoff.value.attempt}/${handoff.value.maxAttempts})`)
-    const answer = await ports.agents.run({
-      agent,
-      phase: handoff.value.phase,
-      role: handoff.value.role,
-      label,
-      prompt,
-    })
+    const answer = await agentRunner.run({ agent, phase: handoff.value.phase, role: handoff.value.role, label, prompt })
     if (!answer?.ok) progress.log(`  ${agent} returned no answer`)
     return answer
   }
 
-  // Outputs of `agent` on disk, matched against its published descriptor.
-  const producedOutputs = async (slug, agent) => {
-    const files = await ports.trackingFiles.list(slug)
-    const found = []
-    const missing = []
-    for (const { pattern, optional } of trackedOutputs(agent, config)) {
-      const re = artifactPatternToRegExp(pattern)
-      const matches = files.filter((file) => re.test(file)).sort()
-      if (matches.length > 0) found.push(...matches)
-      else if (!optional) missing.push(pattern)
-    }
-    return { found: [...new Set(found)], missing }
-  }
-
-  const recordOutputs = async (slug, phase, paths) => {
-    let state = await readState(slug)
-    for (const path of paths) {
-      if ((state.phaseArtifacts?.[phase] ?? []).includes(path)) continue
-      state = await apply(slug, { type: 'RECORD_ARTIFACT', phase, path })
-    }
-    return state
-  }
-
-  // ── Deterministic tools ─────────────────────────────────────────────────────
-  const ensureStructuralScan = async (slug, state) => {
-    if ((state.phaseArtifacts?.RESEARCH ?? []).some((path) => path.endsWith('structural-scan.json'))) return
-    const path = `details/${clock.today()}/structural-scan.json`
-    const run = await ports.commands.run(
-      ['node', `${ports.pluginRoot}/src/cli/structural-scan.mjs`, '--out', `${ports.trackingPrefix(slug)}${path}`],
-      { timeoutMs: 120_000 },
-    )
-    if (run.exitCode === 0 && (await ports.trackingFiles.exists(slug, path))) {
-      await apply(slug, { type: 'RECORD_ARTIFACT', phase: 'RESEARCH', path })
-      progress.log(`structural scan recorded: ${path}`)
-    } else {
-      progress.log(`structural scan skipped (exit ${run.exitCode})`)
-    }
-  }
-
-  const verifyQualityGates = async (slug, state, produced) => {
-    const log = produced.filter((path) => /(^|\/)qg-[^/]+\.json$/.test(path)).sort().at(-1)
-    if (!log) return { outcome: 'fail', findings: 'No quality-gate evidence log (evidence/{date}/{story}/qg-{story}.json) was produced.' }
-    const baseSha = state.phaseHistory?.DELIVER?.baseSha
-    const run = await ports.commands.run(
-      [
-        'node', `${ports.pluginRoot}/src/cli/qg-verify.mjs`,
-        '--log', `${ports.trackingPrefix(slug)}${log}`,
-        ...(baseSha ? ['--base', baseSha] : []),
-      ],
-      { timeoutMs: 600_000 },
-    )
-    const outcome = qualityGateOutcome(run.exitCode)
-    progress.log(`qg-verify ${log}: ${outcome}`)
-    return { outcome, findings: [run.stdout, run.stderr].filter(Boolean).join('\n').slice(-8_000) }
-  }
-
-  // ── Checkpoints ─────────────────────────────────────────────────────────────
-  const ask = async (phase, checkpoint) => {
-    const answer = await ports.interaction.decide(checkpoint)
-    if (answer === null || answer === undefined) throw awaiting(phase, checkpoint)
+  // ── Checkpoints ───────────────────────────────────────────────────────────
+  // A recorded answer wins; otherwise the human is asked and the answer recorded.
+  // No answer now (headless, or a host that suspends) stops the run as awaiting-human.
+  const ask = async (slug, phase, checkpoint) => {
+    const recorded = await decisionStore.read(slug, checkpoint.key)
+    if (recorded) return recorded
+    const answer = await humanInteraction.ask(checkpoint)
+    if (answer === null || answer === undefined || String(answer).trim() === '') throw awaiting(phase, checkpoint)
+    await decisionStore.write(slug, checkpoint.key, String(answer).trim(), 'human')
     return String(answer).trim()
   }
 
   const ratifyAdrs = async (slug, story) => {
-    for (let round = 1; round <= 3; round += 1) {
+    for (let round = 1; round <= MAX_RATIFICATION_ROUNDS; round += 1) {
       const state = await readState(slug)
       if (state.adrRatification?.checkpointStatus === 'resolved') return
-      const pending = proposedAdrs(await ports.repositoryFiles.read('docs/adr/decisions-index.md'))
       const ratified = state.adrRatification?.ratified ?? []
+      const pending = proposedAdrs(await repositoryReader.read('docs/adr/decisions-index.md'))
       if (pending.length === 0) {
         await apply(slug, { type: 'SET_METADATA', field: 'adrRatification', value: { checkpointStatus: 'resolved', pending: [], ratified } })
         return
@@ -186,11 +166,11 @@ export const createRunPipeline = (ports) => {
         },
       })
       const checkpoint = {
-        key: `adr-ratification:${pending.map(({ adr }) => adr).join(',')}`,
+        key: checkpointKeys.adrRatification(pending),
         question: ratificationQuestion(pending),
         options: [...RATIFICATION_OPTIONS],
       }
-      const decision = interpretRatification(await ask('DESIGN', checkpoint), pending)
+      const decision = interpretRatification(await ask(slug, 'DESIGN', checkpoint), pending)
       if (decision.kind === 'pause') throw awaiting('DESIGN', checkpoint)
 
       const verdictLines = [
@@ -201,53 +181,68 @@ export const createRunPipeline = (ports) => {
         label: `DESIGN:ratify:${round}`,
         addenda: [{ title: 'Ratify mode — human verdicts', body: `Apply ratify-mode to these verdicts, then commit:\n${verdictLines}` }],
       })
-      const remaining = new Set(proposedAdrs(await ports.repositoryFiles.read('docs/adr/decisions-index.md')).map(({ adr }) => adr))
+      const remaining = new Set(proposedAdrs(await repositoryReader.read('docs/adr/decisions-index.md')).map(({ adr }) => adr))
       const nowRatified = [
         ...ratified,
         ...decision.verdicts.filter(({ adr }) => !remaining.has(adr)).map(({ adr, verdict }) => ({ adr, verdict, by: 'human' })),
       ]
-      if (remaining.size === 0) {
-        await apply(slug, { type: 'SET_METADATA', field: 'adrRatification', value: { checkpointStatus: 'resolved', pending: [], ratified: nowRatified } })
-        return
-      }
+      const after = await readState(slug)
       await apply(slug, {
         type: 'SET_METADATA',
         field: 'adrRatification',
-        value: { ...(await readState(slug)).adrRatification, ratified: nowRatified },
+        value: remaining.size === 0
+          ? { checkpointStatus: 'resolved', pending: [], ratified: nowRatified }
+          : { ...after.adrRatification, ratified: nowRatified },
       })
+      if (remaining.size === 0) return
     }
-    throw blocked('DESIGN', 'ADR ratification did not converge after 3 rounds')
+    throw blocked('DESIGN', `ADR ratification did not converge after ${MAX_RATIFICATION_ROUNDS} rounds`)
   }
 
-  // Where a phase resumes, read from state.json and the latest review on disk.
-  const entryStep = async (slug, state, phase) => {
-    const verdict = state.verdicts?.[phase]
-    if (verdict === 'APPROVED') return { kind: 'advance' }
-    if (verdict !== 'CHANGES_REQUESTED') return { kind: 'specialist', addenda: [] }
-    const lastReview = (state.reviewArtifacts?.[phase] ?? []).at(-1)
-    const outcome = readReviewOutcome(lastReview ? await readTracking(slug, lastReview) : null)
-    if (outcome.verdict === 'REJECTED') return { kind: 'rejected', findings: outcome.findings }
-    if (outcome.escalation === 'environment') return { kind: 'environment', detail: outcome.findings }
-    return { kind: 'specialist', addenda: outcome.findings ? [reworkAddendum({
-      attempt: (state.retryCount?.[phase] ?? 0) + 1,
-      maxAttempts: (state.userPreferences?.maxRetriesPerPhase ?? 2) + 1,
-      findings: outcome.findings,
-    })] : [] }
+  // ── Deterministic tools, behind their ports ─────────────────────────────────
+  const ensureStructuralScan = async (slug) => {
+    if (hasStructuralScan(await readState(slug))) return
+    const outputPath = structuralScanPath(today())
+    const scan = await structuralScanner.scan({ slug, outputPath })
+    if (scan.ok && (await trackingStore.exists(slug, outputPath))) {
+      await apply(slug, { type: 'RECORD_ARTIFACT', phase: 'RESEARCH', path: outputPath })
+      progress.log(`structural scan recorded: ${outputPath}`)
+    } else {
+      progress.log(`structural scan skipped${scan.reason ? `: ${scan.reason}` : ''}`)
+    }
+  }
+
+  const verifyQualityGates = async (slug, state) => {
+    const evidenceLog = latestEvidenceLog(state.phaseArtifacts?.DELIVER ?? [])
+    if (!evidenceLog) {
+      return { outcome: 'fail', findings: 'No quality-gate evidence log (evidence/{date}/{story}/qg-{story}.json) was produced.' }
+    }
+    const verified = await qualityGateVerifier.verify({ slug, evidenceLog, baseSha: state.phaseHistory?.DELIVER?.baseSha ?? null })
+    progress.log(`qg-verify ${evidenceLog}: ${verified.outcome}`)
+    return verified
   }
 
   // ── One phase ───────────────────────────────────────────────────────────────
   const runPhase = async (slug, story, phase) => {
-    const { specialist, reviewer } = config.phaseAgents?.[phase] ?? {}
-    if (!specialist) throw blocked(phase, `${phase} has no specialist in skraft-framework.config.json`)
+    const { specialist: specialistAgent, reviewer } = config.phaseAgents?.[phase] ?? {}
+    if (!specialistAgent) throw blocked(phase, `${phase} has no specialist in skraft-framework.config.json`)
     progress.phase(phase)
 
-    await apply(slug, { type: 'MARK_PHASE_STARTED', phase, at: clock.now(), baseSha: await ports.git.headSha() })
-    if (phase === 'DESIGN') await ensureStructuralScan(slug, await readState(slug))
+    await apply(slug, { type: 'MARK_PHASE_STARTED', phase, at: now(), baseSha: await sourceControl.headSha() })
+    if (phase === 'DESIGN') await ensureStructuralScan(slug)
 
-    let step = await entryStep(slug, await readState(slug), phase)
+    const entry = await readState(slug)
+    const lastReviewPath = (entry.reviewArtifacts?.[phase] ?? []).at(-1)
+    let step = stepOnEntry({
+      verdict: entry.verdicts?.[phase],
+      lastReview: lastReviewPath ? readReviewOutcome(await readTracked(slug, lastReviewPath)) : null,
+      attempt: (entry.retryCount?.[phase] ?? 0) + 1,
+      maxAttempts: (entry.userPreferences?.maxRetriesPerPhase ?? 2) + 1,
+    })
     let reviewerRedispatched = false
+    let environmentOccurrence = 0
 
-    for (let guard = 0; guard < 50; guard += 1) {
+    for (let guard = 0; guard < MAX_STEPS_PER_PHASE; guard += 1) {
       const state = await readState(slug)
       const maxAttempts = (state.userPreferences?.maxRetriesPerPhase ?? 2) + 1
       const recordedReviews = (state.reviewArtifacts?.[phase] ?? []).length
@@ -257,7 +252,7 @@ export const createRunPipeline = (ports) => {
           if (phase === 'DESIGN') await ratifyAdrs(slug, story)
           const target = nextPhaseAfter(phase, { ...config, phaseOrder }) ?? 'DONE'
           try {
-            await apply(slug, { type: 'ADVANCE', targetPhase: target, at: clock.now() })
+            await apply(slug, { type: 'ADVANCE', targetPhase: target, at: now() })
           } catch (error) {
             throw blocked(phase, `${phase} cannot close: ${error.reason ?? error.message}`, error.violations)
           }
@@ -273,75 +268,74 @@ export const createRunPipeline = (ports) => {
             throw error
           }
           const next = await readState(slug)
-          step = {
-            kind: 'specialist',
-            addenda: [reworkAddendum({ attempt: (next.retryCount?.[phase] ?? 0) + 1, maxAttempts, findings: step.findings })],
-          }
+          step = reworkStep({ findings: step.findings, attempt: (next.retryCount?.[phase] ?? 0) + 1, maxAttempts })
           break
         }
 
         case 'rejected': {
-          const answer = await ask(phase, {
-            key: `rejected:${phase}:${recordedReviews}`,
+          const answer = await ask(slug, phase, {
+            key: checkpointKeys.rejected(phase, recordedReviews),
             question: `${reviewer} REJECTED ${phase}. Resolve the blocker (for DESIGN G13: write the -resolution.md beside the decision-drift file), then answer "rework" to retry, or "stop".`,
             options: ['rework', 'stop'],
           })
-          if (answer.toLowerCase() !== 'rework') throw blocked(phase, `${phase} rejected; stopped by the human`)
-          step = { kind: 'retry', findings: step.findings }
+          step = stepAfterRejection(answer, step.findings)
+          if (!step) throw blocked(phase, `${phase} rejected; stopped by the human`)
           break
         }
 
         case 'environment': {
-          const answer = await ask(phase, {
-            key: `environment:${phase}:${recordedReviews}:${step.source ?? 'review'}`,
+          environmentOccurrence += 1
+          const answer = await ask(slug, phase, {
+            key: checkpointKeys.environment(phase, {
+              source: step.source,
+              recordedReviews,
+              retries: state.retryCount?.[phase] ?? 0,
+              occurrence: environmentOccurrence,
+            }),
             question: `${phase} is blocked by the environment, not by the code:\n${step.detail}\nFix the environment, then answer "fixed" (or "stop").`,
             options: ['fixed', 'stop'],
           })
           if (answer.toLowerCase() !== 'fixed') throw blocked(phase, 'environment escalation; stopped by the human')
-          step = phase === 'DELIVER' ? { kind: 'specialist', addenda: [ENVIRONMENT_REGATE_ADDENDUM] } : { kind: 'reviewer' }
+          step = stepAfterEnvironmentFixed(phase)
           break
         }
 
         case 'specialist': {
-          await dispatch(slug, story, state, specialist, {
+          await dispatch(slug, story, state, specialistAgent, {
             label: `${phase}:specialist:${state.retryCount?.[phase] ?? 0}:${recordedReviews}:${step.addenda.map((a) => a.title).join('|')}`,
             addenda: step.addenda,
           })
-          const { found, missing } = await producedOutputs(slug, specialist)
-          let after = await recordOutputs(slug, phase, found)
+          const { found, missing } = matchOutputs(await trackingStore.list(slug), expectedTrackedOutputs(specialistAgent, config))
+          const after = await recordArtifacts(slug, phase, found)
           if (missing.length > 0) {
             await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: 'CHANGES_REQUESTED' })
-            step = { kind: 'retry', findings: `Artefact missing: ${missing.join(', ')}. Write every required output at its dated path.` }
+            step = stepAfterMissingOutputs(missing)
             break
           }
           if (phase === 'DELIVER') {
-            const gates = await verifyQualityGates(slug, after, after.phaseArtifacts?.DELIVER ?? [])
-            if (gates.outcome === 'fail') {
-              await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: 'CHANGES_REQUESTED' })
-              step = { kind: 'retry', findings: `qg-verify failed — fix these before review:\n${gates.findings}` }
-              break
-            }
-            if (gates.outcome !== 'pass') {
-              step = { kind: 'environment', source: 'qg-verify', detail: gates.findings }
+            const gateStep = stepAfterQualityGates(await verifyQualityGates(slug, after))
+            if (gateStep) {
+              if (gateStep.kind === 'retry') await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: 'CHANGES_REQUESTED' })
+              step = gateStep
               break
             }
           }
           if (!reviewer) {
-            after = await apply(slug, { type: 'CLOSE_PHASE', phase, verdict: 'APPROVED', at: clock.now() })
-            progress.log(`${phase} closed (no reviewer) → ${after.currentPhase}`)
+            const closed = await apply(slug, { type: 'CLOSE_PHASE', phase, verdict: 'APPROVED', at: now() })
+            progress.log(`${phase} closed (no reviewer) → ${closed.currentPhase}`)
             return
           }
-          step = { kind: 'reviewer' }
+          step = REVIEWER
           break
         }
 
         case 'reviewer': {
-          const reviewPath = reviewOutputPath({ phase, date: clock.today(), recordedReviews })
+          const reviewPath = reviewOutputPath({ phase, date: today(), recordedReviews })
           await dispatch(slug, story, state, reviewer, {
             label: `${phase}:reviewer:${recordedReviews + 1}${reviewerRedispatched ? ':again' : ''}`,
             outputs: [reviewPath],
           })
-          const content = await readTracking(slug, reviewPath)
+          const content = await readTracked(slug, reviewPath)
           if (content === null) {
             if (reviewerRedispatched) throw blocked(phase, `${reviewer} wrote no review at ${reviewPath}`)
             reviewerRedispatched = true
@@ -351,20 +345,10 @@ export const createRunPipeline = (ports) => {
           await apply(slug, { type: 'RECORD_REVIEW_ARTIFACT', phase, path: reviewPath })
           const outcome = readReviewOutcome(content)
           progress.log(`${reviewer}: ${outcome.verdict ?? 'no verdict'}${outcome.escalation ? ` (escalation: ${outcome.escalation})` : ''}`)
-          if (outcome.verdict === 'APPROVED') {
-            await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: 'APPROVED' })
-            step = { kind: 'advance' }
-          } else if (outcome.verdict === 'NEEDS_REWORK') {
-            await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: 'CHANGES_REQUESTED' })
-            step = outcome.escalation === 'environment'
-              ? { kind: 'environment', detail: outcome.findings }
-              : { kind: 'retry', findings: outcome.findings }
-          } else if (outcome.verdict === 'REJECTED') {
-            await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: 'CHANGES_REQUESTED' })
-            step = { kind: 'rejected', findings: outcome.findings }
-          } else {
-            throw blocked(phase, `${reviewPath} carries no parseable verdict`)
-          }
+          const next = stepAfterReview(outcome)
+          if (!next.step) throw blocked(phase, `${reviewPath} carries no parseable verdict`)
+          await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: next.stateVerdict })
+          step = next.step
           break
         }
 
@@ -402,3 +386,4 @@ export const createRunPipeline = (ports) => {
 
   return Object.freeze({ run })
 }
+

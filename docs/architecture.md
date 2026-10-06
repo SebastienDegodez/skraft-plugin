@@ -6,6 +6,7 @@ composants.
 
 > **Conventions** : voir [`conventions.md`](./conventions.md).
 > **Roadmap** : voir [`roadmap.md`](./roadmap.md).
+> **Orchestrateur en code (RunPipeline)** : voir [`run-pipeline.md`](./run-pipeline.md).
 
 ---
 

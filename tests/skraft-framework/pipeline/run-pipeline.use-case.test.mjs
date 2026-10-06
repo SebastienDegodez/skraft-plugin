@@ -10,7 +10,7 @@ const SLUG = 'checkout'
 const STORY = { issue: 42, title: 'Pay by card' }
 const P = CONFIG.phaseAgents
 
-const runOnce = async (host) => createRunPipeline(host.ports(SLUG)).run({ slug: SLUG, story: STORY })
+const runOnce = async (host) => createRunPipeline(host.dependencies(SLUG)).run({ slug: SLUG, story: STORY })
 
 test('run-pipeline: every phase approved — dispatches each specialist then its reviewer and reaches DONE', async () => {
   const host = createFakeHost()
@@ -34,22 +34,21 @@ test('run-pipeline: the structural scan runs once, before the architect, and is 
   const host = createFakeHost()
   await runOnce(host)
 
-  const scans = host.commands.filter((argv) => argv[1].endsWith('structural-scan.mjs'))
-  assert.equal(scans.length, 1)
+  assert.deepEqual(host.scans, [`details/${TODAY}/structural-scan.json`])
   assert.ok(host.state(SLUG).phaseArtifacts.RESEARCH.includes(`details/${TODAY}/structural-scan.json`))
 })
 
 test('run-pipeline: every dispatch satisfies the handoff guard (G9) and names the story and scope', async () => {
   const host = createFakeHost()
   const seen = []
-  const ports = host.ports(SLUG)
-  const original = ports.agents.run
-  ports.agents.run = async (dispatch) => {
-    const state = await ports.stateReader.read(SLUG)
+  const dependencies = host.dependencies(SLUG)
+  const original = dependencies.agentRunner.run
+  dependencies.agentRunner.run = async (dispatch) => {
+    const state = await dependencies.stateReader.read(SLUG)
     seen.push({ dispatch, verdict: evaluateHandoff({ agent: dispatch.agent, state, config: CONFIG, prompt: dispatch.prompt }) })
     return original(dispatch)
   }
-  await createRunPipeline(ports).run({ slug: SLUG, story: STORY })
+  await createRunPipeline(dependencies).run({ slug: SLUG, story: STORY })
 
   assert.equal(seen.length, 7)
   for (const { dispatch, verdict } of seen) {
@@ -60,14 +59,15 @@ test('run-pipeline: every dispatch satisfies the handoff guard (G9) and names th
   }
 })
 
-test('run-pipeline: DELIVER runs qg-verify itself, against the base commit recorded at phase start', async () => {
+test('run-pipeline: DELIVER asks the QualityGateVerifier, with the evidence log and the base commit recorded at phase start', async () => {
   const host = createFakeHost()
   await runOnce(host)
 
-  const qg = host.commands.find((argv) => argv[1].endsWith('qg-verify.mjs'))
-  assert.ok(qg, 'qg-verify was not run')
-  assert.equal(qg[qg.indexOf('--log') + 1], `.copilot-tracking/skraft-plans/${SLUG}/evidence/${TODAY}/s1/qg-s1.json`)
-  assert.equal(qg[qg.indexOf('--base') + 1], host.state(SLUG).phaseHistory.DELIVER.baseSha)
+  assert.deepEqual(host.verifications, [{
+    slug: SLUG,
+    evidenceLog: `evidence/${TODAY}/s1/qg-s1.json`,
+    baseSha: host.state(SLUG).phaseHistory.DELIVER.baseSha,
+  }])
 })
 
 test('run-pipeline: NEEDS_REWORK sends the findings back to the specialist, then re-reviews', async () => {
@@ -107,8 +107,8 @@ test('run-pipeline: a missing required artefact is a rework without spending a r
   assert.match(researcher[1].prompt, /Artefact missing: research\/\{date\}\/\{slug\}-research\.md/)
 })
 
-test('run-pipeline: qg-verify fail goes back to the engineer before any review', async () => {
-  const host = createFakeHost({ qgExits: [1, 0] })
+test('run-pipeline: failed quality gates go back to the engineer before any review', async () => {
+  const host = createFakeHost({ gates: ['fail', 'pass'] })
   const outcome = await runOnce(host)
 
   assert.equal(outcome.status, 'done')
@@ -118,8 +118,8 @@ test('run-pipeline: qg-verify fail goes back to the engineer before any review',
   assert.equal(host.dispatches.filter((d) => d.agent === P.DELIVER.reviewer).length, 1)
 })
 
-test('run-pipeline: qg-verify inconclusive asks the human; "fixed" re-gates the engineer without a retry', async () => {
-  const host = createFakeHost({ qgExits: [2, 0], answers: { 'environment:DELIVER': ['fixed'] } })
+test('run-pipeline: inconclusive quality gates ask the human; "fixed" re-gates the engineer without a retry', async () => {
+  const host = createFakeHost({ gates: ['inconclusive', 'pass'], answers: { 'environment:DELIVER': ['fixed'] } })
   const outcome = await runOnce(host)
 
   assert.equal(outcome.status, 'done')
@@ -139,7 +139,7 @@ test('run-pipeline: an environment escalation from a DESIGN review re-dispatches
   assert.equal(outcome.status, 'done')
   assert.equal(host.dispatches.filter((d) => d.agent === P.DESIGN.specialist).length, 1)
   assert.equal(host.dispatches.filter((d) => d.agent === P.DESIGN.reviewer).length, 2)
-  assert.match(host.checkpoints[0].question, /dotnet SDK missing/)
+  assert.match(host.questions[0].question, /dotnet SDK missing/)
 })
 
 test('run-pipeline: nobody to answer a checkpoint stops the run as awaiting-human with a stable key', async () => {
@@ -165,9 +165,8 @@ test('run-pipeline: ADR ratification — paused when unanswered, then resumed wi
   const before = host.dispatches.length
 
   // The human answers; a new run (next session, or a resumed workflow) picks it up.
-  const ports = host.ports(SLUG)
-  ports.interaction.decide = async () => 'accept all'
-  const second = await createRunPipeline(ports).run({ slug: SLUG, story: STORY })
+  host.decisions.set('adr-ratification:007', 'accept all') // e.g. recorded by the decide command
+  const second = await runOnce(host)
 
   assert.equal(second.status, 'done')
   const resumed = host.dispatches.slice(before).map((d) => d.agent)
@@ -188,9 +187,9 @@ test('run-pipeline: a run resumes at the phase state.json records', async () => 
   assert.equal(first.status, 'awaiting-human')
   const before = host.dispatches.length
 
-  const ports = host.ports(SLUG)
-  ports.interaction.decide = async () => 'rework'
-  const second = await createRunPipeline(ports).run({ slug: SLUG, story: STORY })
+  const dependencies = host.dependencies(SLUG)
+  dependencies.humanInteraction.ask = async () => 'rework'
+  const second = await createRunPipeline(dependencies).run({ slug: SLUG, story: STORY })
 
   assert.equal(second.status, 'done')
   const resumed = host.dispatches.slice(before).map((d) => d.agent)
@@ -206,4 +205,34 @@ test('run-pipeline: a DONE pipeline dispatches nothing', async () => {
   const again = await runOnce(host)
   assert.equal(again.status, 'done')
   assert.equal(host.dispatches.length, before)
+})
+
+test('run-pipeline: an answer given in the dialog is recorded, so a later run does not ask again', async () => {
+  const host = createFakeHost({ reviews: { DISTILL: [review('REJECTED')] }, answers: { 'rejected:DISTILL': ['rework'] } })
+  const outcome = await runOnce(host)
+
+  assert.equal(outcome.status, 'done')
+  assert.equal(host.decisions.get('rejected:DISTILL:1'), 'rework')
+  assert.equal(host.questions.length, 1)
+})
+
+test('run-pipeline: a recorded decision is used without asking the human', async () => {
+  const host = createFakeHost({
+    reviews: { DESIGN: [review('REJECTED')] },
+    decisions: { 'rejected:DESIGN:1': 'rework' },
+  })
+  const outcome = await runOnce(host)
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(host.questions, [])
+})
+
+test('run-pipeline: a second environment escalation in the same phase gets its own checkpoint key', async () => {
+  const host = createFakeHost({ gates: ['inconclusive', 'inconclusive', 'pass'], answers: { 'environment:DELIVER': ['fixed', 'fixed'] } })
+  const outcome = await runOnce(host)
+
+  assert.equal(outcome.status, 'done')
+  const keys = host.questions.map((q) => q.key)
+  assert.equal(keys.length, 2)
+  assert.notEqual(keys[0], keys[1])
 })

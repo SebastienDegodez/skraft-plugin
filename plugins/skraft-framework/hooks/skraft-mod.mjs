@@ -1,33 +1,33 @@
-// SKRAFT pipeline as a Claude Code mod. A thin adapter: it builds the Claude Code ports
-// and hands over to the host-neutral use case src/application/pipeline/run-pipeline.mjs —
-// the same code the Copilot dynamic workflow runs
-// (com.github.copilot/extensions/skraft-pipeline/extension.mjs).
+// SKRAFT pipeline as a Claude Code mod — composition root of the RunPipeline use case
+// (src/application/pipeline/run-pipeline.mjs) for Claude Code. See docs/run-pipeline.md.
 //
 //   /skraft <slug> [#issue] [title…]   start (or resume) the pipeline, progress in a pane
 //   /skraft                            where the pipeline stands
 //   mcp__skraft__run_pipeline          the same, for the main agent
 //
-// The ports are written in this file because the mods engine follows `$` only into
-// functions declared in the same file. Each one translates; none decides.
-//   agents       $.agent.spawn, the answer awaited on the subagent's turn.complete
-//   commands     $.process.run (10-minute ceiling: long mutation runs stay in the
-//                engineer's own Bash, run_in_background, as today)
-//   state        read with $.fs, written through src/cli/state-io.mjs (the CLI's atomic
-//                writer: temp file, backup, rename), which $.fs cannot do
-//   interaction  a recorded decision first, else the engine's own question dialog
-// The run outlives the command that started it: it is driven from a $.clock timer.
-// The settings hooks (hooks.json `hooks`) keep enforcing G1–G9 meanwhile.
+// Driven adapters that touch `$` are declared in this file: the mods engine follows `$`
+// only into functions of the hooks module, never across an import. Each one translates a
+// port onto `$`; none decides:
+//   StateReader, TrackingStore, RepositoryReader   $.fs
+//   SourceControl                                  git through $.process.run
+//   AgentRunner                                    $.agent.spawn + the subagent's turn.complete
+//   HumanInteraction                               $.ui.ask (null when nothing draws)
+//   PipelineProgress                               $.state atom + pane + $.ui.status
+// The adapters that only need a process runner come from src/adapters/infrastructure/
+// (QualityGateVerifier, StructuralScanner, StateWriter, DecisionStore); this file hands
+// them a runner built on $.process.run. The run outlives the command that started it: it
+// is driven from a $.clock timer. The settings hooks (hooks.json `hooks`) keep enforcing
+// G1–G9 meanwhile.
 import { atom, read, update } from 'claude-code'
 import { createRunPipeline } from '../src/application/pipeline/run-pipeline.mjs'
-import { createDecisionInbox } from '../src/application/pipeline/decision-inbox.mjs'
 import { stateBaseSegments, resolveTrackingLayout } from '../src/domain/tracking-layout-policy.mjs'
-import {
-  joinPath,
-  claudeAgentId,
-  walkFiles,
-  parseSkraftArgs,
-  askable,
-} from '../src/adapters/hosts/claude-code-mod-helpers.mjs'
+import { createSystemTime } from '../src/adapters/infrastructure/system-time.mjs'
+import { createCliQualityGateVerifier } from '../src/adapters/infrastructure/pipeline/cli-quality-gate-verifier.mjs'
+import { createCliStructuralScanner } from '../src/adapters/infrastructure/pipeline/cli-structural-scanner.mjs'
+import { createCliStateWriter } from '../src/adapters/infrastructure/pipeline/cli-state-writer.mjs'
+import { createTrackingDecisionStore } from '../src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
+import { joinPath, claudeAgentId, walkFiles, askable } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
+import { parseSkraftArgs } from '../src/adapters/api/claude-code-mod/command-args.mjs'
 
 /** @typedef {import('claude-code').Register} Register */
 
@@ -50,6 +50,7 @@ const waitForAgent = (agentId) => {
   return new Promise((resolve) => waiting.set(agentId, resolve))
 }
 
+// The process runner every runProcess-based adapter receives.
 async function processRun($, cwd, argv, { timeoutMs = 600_000, stdin } = {}) {
   try {
     const result = await $.process.run(argv, { cwd, timeoutMs: Math.min(timeoutMs, 600_000), ...(stdin === undefined ? {} : { stdin }) })
@@ -69,25 +70,28 @@ async function trackingRootOf($, cwd) {
   return [cwd, ...stateBaseSegments(resolveTrackingLayout(layout))].join('/')
 }
 
-async function modPorts($, { config, cwd, trackingRoot, slug }) {
+// Composition: the RunPipeline dependencies for this session.
+async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
   const pluginRoot = $.plugin.root
   const pluginName = $.plugin.name
+  const time = createSystemTime()
+  const runProcess = (argv, opts) => processRun($, cwd, argv, opts)
   const trackingDir = (s) => joinPath(trackingRoot, s)
   const relativeToCwd = (path) => (path.startsWith(`${cwd}/`) ? path.slice(cwd.length + 1) : path)
-  const trackingFiles = {
+  const log = (line) => update($, run, (view) => ({ ...view, log: [...view.log, line].slice(-60) }))
+
+  // TrackingStore on $.fs
+  const trackingStore = {
     exists: (s, rel) => $.fs.exists(joinPath(trackingDir(s), rel)),
     read: (s, rel) => $.fs.read(joinPath(trackingDir(s), rel)),
     list: (s) => walkFiles((dir) => $.fs.list(dir), trackingDir(s)),
     write: (s, rel, text) => $.fs.write(joinPath(trackingDir(s), rel), text),
+    prefix: (s) => `${relativeToCwd(trackingDir(s))}/`,
   }
-  const inbox = createDecisionInbox({ trackingFiles, slug })
-  const canAsk = async () => (await $.session.surfaces()).length > 0
-  const log = (line) => update($, run, (view) => ({ ...view, log: [...view.log, line].slice(-60) }))
 
   return {
     config,
-    pluginRoot,
-    trackingPrefix: (s) => `${relativeToCwd(trackingDir(s))}/`,
+    // StateReader on $.fs (ENOENT and CORRUPTED_STATE as the state service expects)
     stateReader: {
       read: async (s) => {
         const path = joinPath(trackingDir(s), 'state.json')
@@ -97,25 +101,19 @@ async function modPorts($, { config, cwd, trackingRoot, slug }) {
         }
       },
     },
-    stateWriter: {
-      write: async (s, state) => {
-        const result = await processRun($, cwd,
-          ['node', `${pluginRoot}/src/cli/state-io.mjs`, 'write', '--root', trackingRoot, '--slug', s],
-          { timeoutMs: 30_000, stdin: JSON.stringify(state) })
-        return result.exitCode === 0
-          ? { ok: true, value: state }
-          : { ok: false, error: { code: 'IO_ERROR', reason: result.stderr.trim() || `state-io exit ${result.exitCode}` } }
-      },
-    },
-    trackingFiles,
-    repositoryFiles: { read: async (rel) => { try { return await $.fs.read(joinPath(cwd, rel)) } catch { return null } } },
-    git: {
+    stateWriter: createCliStateWriter({ runProcess, pluginRoot, trackingRoot }),
+    trackingStore,
+    // RepositoryReader on $.fs
+    repositoryReader: { read: async (rel) => { try { return await $.fs.read(joinPath(cwd, rel)) } catch { return null } } },
+    // SourceControl: git through the process runner
+    sourceControl: {
       headSha: async () => {
-        const { exitCode, stdout } = await processRun($, cwd, ['git', 'rev-parse', 'HEAD'], { timeoutMs: 10_000 })
+        const { exitCode, stdout } = await runProcess(['git', 'rev-parse', 'HEAD'], { timeoutMs: 10_000 })
         return exitCode === 0 ? stdout.trim() || null : null
       },
     },
-    agents: {
+    // AgentRunner on $.agent.spawn
+    agentRunner: {
       run: async ({ agent, label, prompt }) => {
         const spawned = await $.agent.spawn({
           prompt,
@@ -127,21 +125,21 @@ async function modPorts($, { config, cwd, trackingRoot, slug }) {
         return { ok: answer.reason === 'answer' && answer.text.length > 0, text: answer.text }
       },
     },
-    commands: { run: (argv, opts) => processRun($, cwd, argv, opts) },
-    interaction: {
-      decide: async ({ key, question, options }) => {
-        const recorded = await inbox.read(key)
-        if (recorded) return recorded
-        if (!(await canAsk())) return null
+    qualityGateVerifier: createCliQualityGateVerifier({ runProcess, pluginRoot, trackingStore }),
+    structuralScanner: createCliStructuralScanner({ runProcess, pluginRoot, trackingStore }),
+    // HumanInteraction on the engine's question dialog; null when nothing draws
+    humanInteraction: {
+      ask: async ({ question, options }) => {
+        if ((await $.session.surfaces()).length === 0) return null
         try {
-          const answer = await $.ui.ask(askable(question), { options: options.slice(0, 4), header: 'Skraft' })
-          await inbox.write(key, answer)
-          return answer
+          return await $.ui.ask(askable(question), { options: options.slice(0, 4), header: 'Skraft' })
         } catch {
           return null
         }
       },
     },
+    decisionStore: createTrackingDecisionStore({ trackingStore, time }),
+    // PipelineProgress on the $.state atom the pane draws, and the status line
     progress: {
       phase: (title) => {
         $.ui.status(`skraft ${slug} · ${title}`)
@@ -149,16 +147,16 @@ async function modPorts($, { config, cwd, trackingRoot, slug }) {
       },
       log: (message) => void log(message),
     },
-    clock: { today: () => new Date().toISOString().slice(0, 10), now: () => new Date().toISOString() },
+    time,
   }
 }
 
 async function drive($, { slug, story }) {
   const cwd = await $.session.cwd()
   const config = JSON.parse(await $.fs.read(joinPath($.plugin.root, 'skraft-framework.config.json')))
-  const ports = await modPorts($, { config, cwd, trackingRoot: await trackingRootOf($, cwd), slug })
+  const dependencies = await pipelineDependencies($, { config, cwd, trackingRoot: await trackingRootOf($, cwd), slug })
 
-  const outcome = await createRunPipeline(ports).run({ slug, story })
+  const outcome = await createRunPipeline(dependencies).run({ slug, story })
   await update($, run, (view) => ({
     ...view,
     status: outcome.status,
@@ -252,7 +250,7 @@ export const register = (on) => {
     const text = await start($, { slug: e.slug, story })
     void $.ui.open({ id: PANE, title: 'Skraft' })
     return { result: { text } }
-  })
+  }).catch(($, e, next) => ({ result: { text: `skraft could not start: ${next.error.message}` } }))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)
