@@ -71,9 +71,14 @@ export const ADR_INDEX_HEADER = '| ADR | Title | Status | Chosen | Decision (1 l
 //   answers:     { [keyPrefix]: (string|null)[] }  HumanInteraction answers by key prefix
 //   decisions:   { [key]: string }      answers already recorded in the DecisionStore
 //   adrIndex:    string                 docs/adr/decisions-index.md
+//   states:      { [slug]: object | 'corrupted' }   state.json already on disk
+//   backups:     { [slug]: Array<{ name, timestamp, raw }> }  state.json.bak.* on disk
+//   files:       { [slug]: { [path]: string } }  tracking files already on disk
+//   commits:     Array<{ sha, subject }>  recent commits, newest first (SourceControl.listRecent)
 export const createFakeHost = (options = {}) => {
   const tracking = new Map()
-  const states = new Map()
+  const states = new Map(Object.entries(options.states ?? {}))
+  const archived = []
   const repository = new Map()
   const decisions = new Map(Object.entries(options.decisions ?? {}))
   if (options.adrIndex) repository.set('docs/adr/decisions-index.md', options.adrIndex)
@@ -94,6 +99,9 @@ export const createFakeHost = (options = {}) => {
   const key = (slug, path) => `${slug}::${path}`
   const writeTracking = (slug, path, text) => tracking.set(key(slug, path), text)
   const prefix = (slug) => `.copilot-tracking/skraft-plans/${slug}/`
+  for (const [s, files] of Object.entries(options.files ?? {})) {
+    for (const [path, text] of Object.entries(files)) writeTracking(s, path, text)
+  }
 
   // The simulated LLM.
   const behave = ({ agent, role, phase, prompt }, slug) => {
@@ -126,10 +134,13 @@ export const createFakeHost = (options = {}) => {
     stateReader: {
       read: async (s) => {
         if (!states.has(s)) throw Object.assign(new Error('absent'), { code: 'ENOENT' })
+        if (states.get(s) === 'corrupted') throw Object.assign(new Error('Unexpected token'), { code: 'CORRUPTED_STATE' })
         return structuredClone(states.get(s))
       },
     },
     stateWriter: { write: async (s, state) => { states.set(s, structuredClone(state)); return Ok(undefined) } },
+    stateBackups: { list: async (s) => structuredClone(options.backups?.[s] ?? []) },
+    stateArchive: { setAside: async (s) => { archived.push(s); return Ok(`state.json.invalid.1`) } },
     trackingStore: {
       exists: async (s, path) => tracking.has(key(s, path)),
       read: async (s, path) => {
@@ -157,13 +168,14 @@ export const createFakeHost = (options = {}) => {
       commit: async (sha) => (/^sha\d+$/.test(sha ?? '') ? { exists: true, subject: 'feat(checkout): pay', message: 'feat(checkout): pay\n\nSigned-off-by: E <e@x>', files: [] } : { exists: false }),
       range: async (base, rev) => { ranges.push({ base, rev }); return [] },
       show: async () => null,
-      listRecent: async () => [],
+      listRecent: async (count) => (options.commits ?? []).slice(0, count),
     },
     sourceTree: {
       listFiles: async () => { scans.push(`sha${head}`); return ['src/Checkout/Payment.cs'] },
       readSource: async () => 'public sealed class Payment {}\n',
     },
     hasher: { sha256: async (text) => sha256(text) },
+    templateReader: { read: async (path) => readFileSync(join(PLUGIN_ROOT, path), 'utf8') },
     activePipeline: { activate: async (s) => { activations.push(s) } },
     agentRunner: {
       run: async (dispatch) => {
@@ -197,6 +209,7 @@ export const createFakeHost = (options = {}) => {
     logs,
     phases,
     activations,
+    archived,
     state: (slug) => states.get(slug),
     tracking: (slug, path) => tracking.get(key(slug, path)),
     repository,

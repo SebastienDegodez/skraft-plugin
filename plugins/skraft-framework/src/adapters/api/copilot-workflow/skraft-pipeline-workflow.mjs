@@ -1,14 +1,16 @@
 import { createRunPipeline } from '../../../application/pipeline/run-pipeline.mjs'
 import { createRecordDecision } from '../../../application/pipeline/record-decision.mjs'
+import { createCloseManually } from '../../../application/pipeline/close-manually.mjs'
 import { createNodePipelineDependencies } from '../pipeline/node-dependencies.mjs'
 import { createWorkflowAgentRunner } from '../../infrastructure/copilot-workflow/workflow-agent-runner.mjs'
 import { createWorkflowHumanInteraction } from '../../infrastructure/copilot-workflow/workflow-human-interaction.mjs'
 import { createWorkflowProgress } from '../../infrastructure/copilot-workflow/workflow-progress.mjs'
 
-// Driving adapter: the Copilot dynamic workflow `skraft-pipeline` and its `skraft_decide`
-// tool. The extension entry (com.github.copilot/extensions/skraft-pipeline/extension.mjs)
-// only registers them with the SDK; this module translates the SDK's calls into the
-// RunPipeline and RecordDecision use cases.
+// Driving adapter: the Copilot dynamic workflow `skraft-pipeline` and its tools
+// `skraft_decide` and `skraft_close_phase`. The extension entry
+// (com.github.copilot/extensions/skraft-pipeline/extension.mjs) only registers them with
+// the SDK; this module translates the SDK's calls into the RunPipeline, RecordDecision and
+// CloseManually use cases.
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -76,5 +78,29 @@ export const createSkraftDecideTool = ({ cwd, pluginRoot, env }) => Object.freez
     return recorded.ok
       ? `Recorded "${answer}" for ${key}. Resume the paused skraft-pipeline run with /workflows → R.`
       : `Refused: ${recorded.error.reason}`
+  },
+})
+
+export const createSkraftClosePhaseTool = ({ cwd, pluginRoot, env }) => Object.freeze({
+  name: 'skraft_close_phase',
+  description:
+    'Close the open, reviewed phase of a SKRAFT pipeline after the human validated their own reworks, ' +
+    'instead of a reviewer APPROVED. Use only when the human asks for it. DELIVER refuses while a recent commit ' +
+    'is not type(scope): subject. Then tell them to run the skraft-pipeline workflow again to resume.',
+  parameters: {
+    type: 'object',
+    properties: {
+      slug: { type: 'string', description: 'Pipeline slug (feature scope)' },
+      phase: { type: 'string', description: 'The open phase, as a guard (optional)' },
+      findings: { type: 'integer', minimum: 0, description: 'Findings the human rework fixed (default 0)' },
+    },
+    required: ['slug'],
+  },
+  handler: async ({ slug, phase, findings = 0 }) => {
+    const closed = await createCloseManually(createNodePipelineDependencies({ cwd: cwd(), env, pluginRoot }))
+      .close({ slug, phase, findings })
+    return closed.ok
+      ? `${closed.value.phase} closed by human validation (${closed.value.review}); next: ${closed.value.next}. Run skraft-pipeline again to resume.`
+      : `Refused (${closed.error.code}): ${closed.error.reason}`
   },
 })
