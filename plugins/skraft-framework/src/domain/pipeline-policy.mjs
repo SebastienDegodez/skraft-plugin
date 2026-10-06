@@ -1,5 +1,6 @@
 import { Ok, Err } from './result.mjs'
 import { canonicalAgentName } from './instruction-policy.mjs'
+import { isPipelineDispatcher } from './pipeline/pipeline-definition.mjs'
 
 // Pure pipeline dispatch policy. No IO. Decides whether a requested agent may run
 // now, from the dispatch projection of state.json (see state-schema.projectDispatchState)
@@ -92,6 +93,12 @@ export const evaluateDispatchProvenance = (callerAgent, requestedAgent, config) 
     return Err({ code: 'SELF_DISPATCH', reason: `${caller} dispatches itself; do the work, or dispatch the agent that owns it` })
   }
   const dispatcher = config.agentDispatchers?.[requested]
+  if (isPipelineDispatcher(dispatcher)) {
+    return Err({
+      code: 'PIPELINE_DISPATCH',
+      reason: `${requested} is dispatched by the SKRAFT pipeline, which runs as code: start or resume it (the skraft-pipeline workflow, /skraft <slug>) instead of dispatching a phase agent yourself`,
+    })
+  }
   if (!dispatcher || canonicalAgentName(dispatcher, config) === caller) return Ok({ reason: 'declared dispatch' })
   return Err({
     code: 'FOREIGN_DISPATCHER',

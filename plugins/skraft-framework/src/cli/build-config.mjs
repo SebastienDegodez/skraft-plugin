@@ -24,7 +24,7 @@ export const parseAgentDescriptor = (content, { id } = {}) => {
     name: fm.name,
     phase: meta.phase,
     dispatchedBy: meta.dispatched_by,
-    phases: asArray(meta.phases),
+    phases: asArray(meta.phases), // obsolete: the phase order is declared in code; validateDispatch refuses it
     userInvocable: fm['user-invocable'] === true,
     skills: asArray(meta.skills).map(String),
     onDemandSkills: asArray(meta.on_demand_skills).map(String),

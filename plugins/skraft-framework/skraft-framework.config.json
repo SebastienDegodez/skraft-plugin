@@ -1,4 +1,8 @@
 {
+  "pipeline": {
+    "dispatcher": "skraft-pipeline",
+    "launcher": "Skraft - Orchestrator"
+  },
   "phaseOrder": [
     "RESEARCH",
     "DESIGN",
@@ -72,8 +76,8 @@
     "test-integrity-lens": "test-integrity-lens"
   },
   "agentDispatchers": {
-    "Skraft - Acceptance Designer Reviewer": "Skraft - Orchestrator",
-    "Skraft - Acceptance Designer": "Skraft - Orchestrator",
+    "Skraft - Acceptance Designer Reviewer": "skraft-pipeline",
+    "Skraft - Acceptance Designer": "skraft-pipeline",
     "architecture-boundaries-lens": "Skraft - Software Engineer Reviewer",
     "Skraft - Backlog Discoverer Reviewer": "Skraft - Backlog Discoverer",
     "Skraft - Backlog Planner Reviewer": "Skraft - Backlog Planner",
@@ -91,11 +95,11 @@
     "planning-invest-lens": "Skraft - Backlog Planner Reviewer",
     "quality-gates-lens": "Skraft - Software Engineer Reviewer",
     "refactoring-worker": "Skraft - Brownfield Refactorer",
-    "Skraft - Software Engineer Reviewer": "Skraft - Orchestrator",
-    "Skraft - Software Engineer": "Skraft - Orchestrator",
-    "Skraft - Solution Architect Reviewer": "Skraft - Orchestrator",
-    "Skraft - Solution Architect": "Skraft - Orchestrator",
-    "Skraft - Solution Researcher": "Skraft - Orchestrator",
+    "Skraft - Software Engineer Reviewer": "skraft-pipeline",
+    "Skraft - Software Engineer": "skraft-pipeline",
+    "Skraft - Solution Architect Reviewer": "skraft-pipeline",
+    "Skraft - Solution Architect": "skraft-pipeline",
+    "Skraft - Solution Researcher": "skraft-pipeline",
     "test-integrity-lens": "Skraft - Software Engineer Reviewer"
   },
   "agentSkills": {

@@ -42,18 +42,15 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
   const agentByName = new Map([...nameGroups].filter(([, matches]) => matches.length === 1).map(([name, matches]) => [name, matches[0]]))
   const resolveAgent = (reference) => agentByName.get(String(reference)) ?? agentById.get(String(reference)) ?? null
 
-  const orchestrators = agents.filter((agent) => agent.phases.length > 0)
-  if (orchestrators.length > 1) {
-    findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_AMBIGUOUS', orchestrators.map((agent) => agent.path).join(', '), 'More than one agent declares an ordered phase list'))
-  }
-  const orchestrator = orchestrators.length === 1 ? orchestrators[0] : null
-  const phaseOrder = orchestrator?.phases ?? []
-
-  if (orchestrator && frameworkConfig) {
-    const configured = frameworkConfig.phaseOrder ?? []
-    if (JSON.stringify(configured) !== JSON.stringify(phaseOrder)) {
-      findings.push(finding('error', 'ENGINEERING_PHASE_ORDER_MISMATCH', orchestrator.path, `Descriptor phases ${phaseOrder.join(' -> ')} do not match generated config ${configured.join(' -> ')}`))
-    }
+  // The engineering pipeline runs as code: its phase order, the dispatcher its phase agents
+  // name and the launcher agent come from the generated config (pipeline-definition.mjs),
+  // never from an agent. The launcher is the entry point shown; the phase agents hang under it.
+  const pipelineDefinition = frameworkConfig?.pipeline ?? null
+  const pipelineDispatcher = pipelineDefinition?.dispatcher ?? null
+  const orchestrator = pipelineDefinition?.launcher ? resolveAgent(pipelineDefinition.launcher) : null
+  const phaseOrder = pipelineDefinition ? [...(frameworkConfig.phaseOrder ?? [])] : []
+  for (const agent of agents.filter((candidate) => asArray(candidate.phases).length > 0)) {
+    findings.push(finding('error', 'ENGINEERING_PHASES_IN_AGENT', agent.path, `${agent.name} declares metadata.phases; the phase order is declared in code`))
   }
 
   const dispatchEdges = new Map()
@@ -88,6 +85,10 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
 
   for (const child of agents) {
     if (!child.dispatchedByRef) continue
+    if (pipelineDispatcher && child.dispatchedByRef === pipelineDispatcher) {
+      if (orchestrator) addDispatchEdge(orchestrator.id, child.id, 'pipeline')
+      continue
+    }
     const parent = resolveAgent(child.dispatchedByRef)
     if (!parent) {
       findings.push(finding('error', 'DISPATCH_PARENT_MISSING', child.path, `${child.name} declares unknown dispatcher '${child.dispatchedByRef}'`))
@@ -154,7 +155,7 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
   const backlogPlanner = enrichedById.get('backlog-planner')
   if (!backlogDiscoverer) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', "Required product preflight agent 'backlog-discoverer' is missing"))
   if (!backlogPlanner) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', "Required product preflight agent 'backlog-planner' is missing"))
-  if (!orchestrator) findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', 'No agent declares the engineering phase order'))
+  if (!orchestrator) findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_MISSING', 'plugins/skraft-framework/skraft-framework.config.json', 'No pipeline launcher: the generated config names no agent as pipeline.launcher'))
   for (const agent of [backlogDiscoverer, backlogPlanner].filter(Boolean)) {
     if (!agent.userInvocable || !agent.root) {
       findings.push(finding('error', 'PRODUCT_PREFLIGHT_NOT_STANDALONE', agent.path, `${agent.name} must be a directly invocable root`))

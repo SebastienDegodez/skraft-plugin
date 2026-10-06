@@ -10,7 +10,7 @@ tools:
   - Bash
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
-  dispatched_by: Skraft - Orchestrator
+  dispatched_by: skraft-pipeline  # the pipeline (runs as code) dispatches this agent
   phase: DESIGN
   genesis_patterns:
     - A7 ADVERSARIAL REVIEW
