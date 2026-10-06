@@ -49,12 +49,22 @@ pipeline targets Claude Code and GitHub Copilot.
 
 ## Run the engineering pipeline
 
-1. Select `skraft-orchestrator` in the agent picker.
-2. Give it one refined story with acceptance criteria.
-3. Let it resume or initialize the work item.
-4. Review the artifacts and commits produced during each phase.
+The pipeline runs as code ([RunPipeline](../../docs/run-pipeline.md)): one use case,
+driven by a Claude Code mod and by a GitHub Copilot dynamic workflow.
 
-The orchestrator owns only engineering work:
+- **Claude Code** — `/skraft <slug> [#issue] [title]` starts or resumes the pipeline; it
+  reports in the Skraft pane. `/skraft decide <slug> <key> <answer>` answers a checkpoint,
+  `/skraft close <slug> [findings]` closes the open phase after human-validated reworks,
+  `/skraft` shows where the run stands.
+- **GitHub Copilot CLI** — run the `skraft-pipeline` dynamic workflow
+  (`copilot workflow run skraft-pipeline --args '{"slug":"checkout","issue":42}'`); answer
+  checkpoints with the `skraft_decide` tool and resume with `/workflows` → R;
+  `skraft_close_phase` closes a phase by hand.
+- Or select `skraft-orchestrator` and give it one refined story: it is a launcher that
+  makes the call above and relays the checkpoints.
+
+Review the artifacts and commits produced during each phase. The pipeline owns only
+engineering work:
 
 ```mermaid
 flowchart LR
@@ -123,8 +133,9 @@ and a suitable operation exposed by the host; any push requires separate scoped 
 and real branch changes. The reporting CLI does neither. Once a PR/MR exists, its
 confirmed identity is saved again before publication.
 
-The [reporting CLI](src/cli/report.mjs) renders and validates locally; the orchestrator
-owns remote publication through the host. For GitHub, the shipped
+The pipeline renders the forecast and outcome reports itself and runs the publication
+protocol in code; only the host's MCP calls are delegated, to a general-purpose agent. The
+[reporting CLI](src/cli/report.mjs) is obsolete, kept for a manual repair. For GitHub, the shipped
 [github-search-protocol](skills/github-search-protocol/SKILL.md) is the canonical
 transport procedure: MCP first, announced host `gh` fallback only when MCP or a
 required capability is unavailable under the skill's policy. No external companion
@@ -210,12 +221,13 @@ node "<plugin-root>/src/cli/state.mjs" timeline
 node "<plugin-root>/src/cli/health-check.mjs"
 ```
 
-`handoff` prints the block the orchestrator pastes into a phase dispatch: the recorded
-inputs the agent must read instead of re-deriving them, and on a retry the rework or
-re-review mode with the previous review. `timeline` reports, per phase, specialist and
-reviewer time and the number of attempts from the dispatch journal. At DESIGN start the
-orchestrator runs `src/cli/structural-scan.mjs` once; the architect and the DESIGN reviewer
-read its JSON report instead of re-grepping the code.
+`handoff` prints the block the pipeline puts into a phase dispatch: the recorded inputs
+the agent must read instead of re-deriving them, and on a retry the rework or re-review
+mode with the previous review. `timeline` reports, per phase, specialist and reviewer time
+and the number of attempts from the dispatch journal. At DESIGN start the pipeline runs the
+structural scan once, in process; the architect and the DESIGN reviewer read its JSON report
+instead of re-grepping the code. The other `state.mjs` subcommands are obsolete: the
+pipeline applies the same events in process.
 
 Run these from the consumer repository so SKRAFT resolves that repository's tracking
 state. Hook commands use `CLAUDE_PLUGIN_ROOT`; actual Copilot CLI 1.0.83 fixtures verified
