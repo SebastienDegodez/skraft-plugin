@@ -61,7 +61,17 @@ const main = ([mode, path, count]) => {
     return 0
   }
   if (mode === 'tail') {
-    annotate(`Last lines of ${path}`, lines.filter(Boolean).slice(-(Number(count) || 60)).join('\n'))
+    const meaningful = lines.filter((line) => line && !/^\s+at /.test(line))
+    // Stryker's initial test run lists the tests that failed in its sandbox: all of them.
+    const dryRun = meaningful.findIndex((line) => /One or more tests failed in the initial test run/.test(line))
+    if (dryRun >= 0) {
+      const block = meaningful.slice(dryRun).join('\n')
+      for (let start = 0, part = 1; start < block.length && part < MAX_ANNOTATIONS; start += MAX_CHARS, part += 1) {
+        annotate(`Stryker initial test run (${part})`, block.slice(start, start + MAX_CHARS))
+      }
+      return 0
+    }
+    annotate(`Last lines of ${path}`, meaningful.slice(-(Number(count) || 60)).join('\n'))
     return 0
   }
   console.error('usage: ci-failure-annotations.mjs node-test|tail <log> [n]')
