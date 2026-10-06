@@ -16,6 +16,15 @@
     <p id="freshness" class="freshness"></p>
   </header>
 
+  <section id="chooser" class="chooser" hidden aria-labelledby="chooser-title">
+    <h2 id="chooser-title">Choose a pipeline</h2>
+    <p id="chooser-why" class="note"></p>
+    <ul id="chooser-list" class="chooser-list"></ul>
+    <p id="chooser-empty" class="empty" hidden>No SKRAFT pipeline in this repository yet. Start one with the <code>skraft-pipeline</code> workflow, or ask the Skraft - Orchestrator agent; it shows up here by itself.</p>
+    <p id="chooser-note" class="note" hidden></p>
+  </section>
+
+  <div id="pipeline">
   <ol id="track" class="track" aria-label="Phases"></ol>
 
   <div class="tabs" role="tablist" aria-label="Pipeline details">
@@ -74,6 +83,7 @@
     <h2>Run log</h2>
     <ol id="log" class="log"></ol>
   </section>
+  </div>
 
   <dialog id="viewer" aria-labelledby="viewer-title">
     <header>

@@ -285,3 +285,30 @@ dialog header button { border: 1px solid var(--line); background: transparent; c
 @media (prefers-reduced-motion: reduce) {
   .stage[data-status="active"] .rail::after { animation: none; width: 100%; opacity: 0.6; }
 }
+
+/* ── No pipeline chosen: the list to pick from ─────────────────────────────── */
+.chooser { margin-top: 1rem; }
+.chooser-list { list-style: none; margin: .75rem 0 0; padding: 0; display: grid; gap: .5rem; }
+.pipeline-choice {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .15rem 1rem;
+  text-align: left;
+  padding: .75rem 1rem;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+}
+.pipeline-choice:hover { border-color: var(--active); }
+.pipeline-choice:disabled { opacity: .6; cursor: progress; }
+.choice-slug { font: 600 .95rem/1.4 var(--mono); overflow-wrap: anywhere; }
+.choice-state { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+.choice-state[data-tone="waiting"] { color: var(--waiting); font-weight: 600; }
+.choice-state[data-tone="running"] { color: var(--active); }
+.choice-state[data-tone="done"] { color: var(--done); }
+.choice-story { grid-column: 1 / -1; }
+.choice-facts { grid-column: 1 / -1; color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }

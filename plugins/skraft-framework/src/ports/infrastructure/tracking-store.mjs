@@ -5,6 +5,8 @@
 //   read(slug, path)   => Promise<string>     rejects when absent
 //   list(slug)         => Promise<string[]>   every file, tracking-relative, '/'-separated
 //   write(slug, path, text) => Promise<void>
+//   projects()         => Promise<string[]>   the slugs whose directory holds a state.json or
+//                                             a run.json (how a viewer lists the pipelines)
 //   prefix(slug)       => string              repository-relative directory, ending in '/'
 //                                             (how agents are told where to write)
 export const TRACKING_STORE_PORT = 'TrackingStore'

@@ -14,6 +14,10 @@ import { join } from 'node:path'
 //   GET  /api/file?path=    a review, report or decision      token
 //   POST /api/decide        { key, answer } → RecordDecision  token
 //   POST /api/ask           { intent: resume | explain }      token
+//   POST /api/select        { slug } → show that pipeline     token
+//
+// No pipeline chosen yet (none on this branch, several tracked): /api/view answers the
+// chooser view (ObservePipeline.locate) and the page lists the pipelines to pick from.
 //
 // Every /api call must carry the instance token (header x-skraft-token, or ?token= for
 // EventSource, which sends no header), come for the bound host, and be same-origin.
@@ -28,9 +32,11 @@ const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; connect-sr
 const BODY_LIMIT = 16 * 1024
 const DEFAULT_POLL_MS = 1500
 
-export const askPrompt = (intent, slug) => ({
+export const askPrompt = (intent, slug) => (slug ? {
   resume: `Resume the skraft-pipeline dynamic workflow for slug "${slug}": continue the paused run if there is one, otherwise start it again with { "slug": "${slug}" }.`,
   explain: `Read the Skraft pipeline canvas for slug "${slug}" (get_pipeline action) and explain in a few sentences where the pipeline stands, what it waits for, and the next step. Change nothing.`,
+} : {
+  explain: 'Read the Skraft pipeline canvas (get_pipeline action): no pipeline is chosen. List the SKRAFT pipelines it shows and say which one matches the current branch, if any. Change nothing.',
 })[intent] ?? null
 
 const send = (res, status, body, type = 'application/json; charset=utf-8') => {
@@ -59,9 +65,11 @@ export const isAuthorized = (req, url, { host, origin, token }) => {
   return (req.headers['x-skraft-token'] ?? url.searchParams.get('token')) === token
 }
 
-// observe — ObservePipeline; recordDecision — RecordDecision; sendPrompt(prompt) → the chat
-export const startCanvasServer = async ({ slug, observe, recordDecision, sendPrompt, publicDir, pollMs = DEFAULT_POLL_MS }) => {
+// observe — ObservePipeline; recordDecision — RecordDecision; sendPrompt(prompt) → the chat;
+// slug — the pipeline shown, or null to open on the chooser.
+export const startCanvasServer = async ({ slug: initialSlug = null, observe, recordDecision, sendPrompt, publicDir, pollMs = DEFAULT_POLL_MS }) => {
   const token = randomBytes(24).toString('hex')
+  let slug = initialSlug
   const clients = new Set()
   let last = ''
   let timer = null
@@ -73,8 +81,24 @@ export const startCanvasServer = async ({ slug, observe, recordDecision, sendPro
       try { client.write(payload) } catch { clients.delete(client) }
     }
   }
+  // The pipeline view, or the chooser while none is chosen (a pipeline may appear meanwhile:
+  // the chooser follows the branch and the pipelines on disk).
+  const viewNow = async () => {
+    if (slug) return observe.snapshot(slug)
+    const located = await observe.locate()
+    if (!located.slug) return located.chooser
+    slug = located.slug
+    return observe.snapshot(slug)
+  }
+  const select = async (next) => {
+    const known = await observe.pipelines()
+    if (!known.some((pipeline) => pipeline.slug === next)) return false
+    slug = next
+    await publish(true)
+    return true
+  }
   const publish = async (force = false) => {
-    const view = await observe.snapshot(slug)
+    const view = await viewNow()
     const text = JSON.stringify(view)
     if (force || text !== last) {
       last = text
@@ -94,9 +118,9 @@ export const startCanvasServer = async ({ slug, observe, recordDecision, sendPro
   }
 
   const api = async (req, res, url) => {
-    if (req.method === 'GET' && url.pathname === '/api/view') return send(res, 200, await observe.snapshot(slug))
+    if (req.method === 'GET' && url.pathname === '/api/view') return send(res, 200, await viewNow())
     if (req.method === 'GET' && url.pathname === '/api/file') {
-      const text = await observe.readTracked(slug, url.searchParams.get('path'))
+      const text = slug ? await observe.readTracked(slug, url.searchParams.get('path')) : null
       return text === null ? send(res, 404, { error: 'not a file of this pipeline' }) : send(res, 200, text, 'text/plain; charset=utf-8')
     }
     if (req.method === 'GET' && url.pathname === '/api/events') {
@@ -105,12 +129,17 @@ export const startCanvasServer = async ({ slug, observe, recordDecision, sendPro
       clients.add(res)
       req.on('close', () => { clients.delete(res); unwatch() })
       watch()
-      const view = await observe.snapshot(slug)
+      const view = await viewNow()
       last = JSON.stringify(view)
       res.write(`event: view\ndata: ${last}\n\n`)
       return undefined
     }
+    if (req.method === 'POST' && url.pathname === '/api/select') {
+      const selected = await select((await readBody(req)).slug)
+      return selected ? send(res, 200, { slug }) : send(res, 400, { error: 'not a pipeline of this repository' })
+    }
     if (req.method === 'POST' && url.pathname === '/api/decide') {
+      if (!slug) return send(res, 400, { error: 'no pipeline chosen' })
       const { key, answer } = await readBody(req)
       const recorded = await recordDecision.record({ slug, key, answer, by: 'human' })
       if (!recorded.ok) return send(res, 400, { error: recorded.error.reason })
@@ -153,8 +182,9 @@ export const startCanvasServer = async ({ slug, observe, recordDecision, sendPro
   entry.origin = `http://${entry.host}`
 
   return Object.freeze({
-    url: `${entry.origin}/?token=${token}&slug=${encodeURIComponent(slug)}`,
-    slug,
+    url: `${entry.origin}/?token=${token}`,
+    slug: () => slug,
+    select,
     refresh: () => publish(true),
     focus: (phase) => emit('focus', { phase }),
     close: () => new Promise((resolve) => {

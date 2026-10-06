@@ -393,8 +393,57 @@ const drawJournal = (v) => {
 }
 
 // ── All of it ────────────────────────────────────────────────────────────────
+// ── No pipeline chosen: the list to pick from ────────────────────────────────
+const CHOOSER_WHY = {
+  none: (branch) => `No pipeline yet${branch ? ` (branch ${branch})` : ''}.`,
+  ambiguous: (branch) => (branch
+    ? `None of these pipelines is on branch ${branch}, and none is active. Pick the one to follow.`
+    : 'Several pipelines and none active. Pick the one to follow.'),
+}
+const choose = async (slug, button) => {
+  button.disabled = true
+  const response = await fetch('/api/select', { method: 'POST', headers, body: JSON.stringify({ slug }) })
+  if (response.ok) return
+  const note = $('chooser-note')
+  note.hidden = false
+  note.textContent = `Could not open ${slug}: ${(await response.json().catch(() => ({}))).error ?? response.status}`
+  button.disabled = false
+}
+const pipelineState = (pipeline) => {
+  if (pipeline.done) return ['done', 'done']
+  const phase = pipeline.currentPhase ? PHASE_LABEL[pipeline.currentPhase] ?? pipeline.currentPhase : 'not started'
+  const run = { running: 'running', 'awaiting-human': 'waiting for you', blocked: 'stopped', error: 'stopped' }[pipeline.runStatus]
+  return [run ? `${phase} · ${run}` : phase, pipeline.runStatus === 'awaiting-human' ? 'waiting' : pipeline.runStatus === 'running' ? 'running' : 'pending']
+}
+const drawChooser = (next) => {
+  $('slug').textContent = 'Skraft pipelines'
+  $('story').textContent = next.branch ? `Branch ${next.branch}` : ''
+  $('summary').textContent = next.pipelines.length ? `${next.pipelines.length} pipelines in this repository` : 'No pipeline yet'
+  $('summary').dataset.tone = 'pending'
+  $('chooser-why').textContent = (CHOOSER_WHY[next.reason] ?? CHOOSER_WHY.ambiguous)(next.branch)
+  $('chooser-empty').hidden = next.pipelines.length > 0
+  $('chooser-list').replaceChildren(...next.pipelines.map((pipeline) => {
+    const [state, tone] = pipelineState(pipeline)
+    const story = pipeline.story ? [pipeline.story.issue ? `#${pipeline.story.issue}` : null, pipeline.story.title].filter(Boolean).join(' ') : ''
+    const facts = [pipeline.branch ?? pipeline.reportingBranch, pipeline.updatedAt ? ago(pipeline.updatedAt) : null].filter(Boolean).join(' · ')
+    return el('li', {}, [el('button', { type: 'button', class: 'pipeline-choice', onclick: (event) => choose(pipeline.slug, event.currentTarget) }, [
+      el('span', { class: 'choice-slug', text: pipeline.slug }),
+      el('span', { class: 'choice-state', data: { tone }, text: state }),
+      story ? el('span', { class: 'choice-story', text: story }) : null,
+      facts ? el('span', { class: 'choice-facts', text: facts }) : null,
+    ].filter(Boolean))])
+  }))
+}
+
 const draw = (next) => {
   view = next
+  $('chooser').hidden = !next.chooser
+  $('pipeline').hidden = Boolean(next.chooser)
+  if (next.chooser) {
+    drawChooser(next)
+    $('freshness').textContent = ''
+    return
+  }
   $('slug').textContent = `Skraft · ${next.slug}`
   const story = next.story
   $('story').textContent = story ? [story.issue ? `#${story.issue}` : null, story.title].filter(Boolean).join(' ') : ''
@@ -418,6 +467,7 @@ const draw = (next) => {
 }
 
 const tick = () => {
+  if (view?.chooser) return
   $('freshness').textContent = view?.run?.updatedAt ? `Last activity ${ago(view.run.updatedAt)}` : ''
 }
 

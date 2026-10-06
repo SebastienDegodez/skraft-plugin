@@ -97,7 +97,7 @@ reviewers.
 | Claude Code (mod) | `/skraft close <slug> [findings]` | même fichier | `CloseManually` |
 | GitHub Copilot | « Run the skraft-pipeline dynamic workflow… » ou `copilot workflow run skraft-pipeline --args '{"slug":"checkout"}'` | [`com.github.copilot/extensions/skraft-pipeline/extension.mjs`](../plugins/skraft-framework/com.github.copilot/extensions/skraft-pipeline/extension.mjs) | `RunPipeline` |
 | GitHub Copilot | outils `skraft_decide`, `skraft_close_phase` | même extension | `RecordDecision`, `CloseManually` |
-| Copilot app | canvas « Skraft pipeline » (« Open the Skraft pipeline canvas for checkout »), ses boutons et ses actions `get_pipeline`, `decide`, `show_phase`, `refresh` | même extension, [`adapters/api/copilot-canvas/`](../plugins/skraft-framework/src/adapters/api/copilot-canvas/) | `ObservePipeline`, `RecordDecision` |
+| Copilot app | canvas « Skraft pipeline » (« Open the Skraft pipeline canvas », pour la branche courante, ou « … for checkout »), ses boutons et ses actions `get_pipeline`, `select_pipeline`, `decide`, `show_phase`, `refresh` | même extension, [`adapters/api/copilot-canvas/`](../plugins/skraft-framework/src/adapters/api/copilot-canvas/) | `ObservePipeline`, `RecordDecision` |
 
 La ligne `/skraft` est découpée par [`adapters/api/claude-code-mod/command-args.mjs`](../plugins/skraft-framework/src/adapters/api/claude-code-mod/command-args.mjs) ;
 les appels du SDK Copilot par [`adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs`](../plugins/skraft-framework/src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs).
@@ -463,8 +463,22 @@ sequenceDiagram
 La page ne fait passer dans le chat que deux prompts fixes (reprendre, expliquer) ; tout ce
 qu'elle affiche vient de fichiers écrits par les agents et est posé en texte, jamais en HTML.
 Elle n'ouvre que les fichiers Markdown et JSON que la vue liste, jamais `state.json`. L'agent
-a les mêmes moyens par les actions du canvas : `get_pipeline`, `decide`, `show_phase`,
-`refresh`. Sans `slug`, le canvas suit le pipeline actif (`ActivePipeline.current()`).
+a les mêmes moyens par les actions du canvas : `get_pipeline`, `select_pipeline`, `decide`,
+`show_phase`, `refresh`.
+
+Sans `slug`, le canvas s'ouvre toujours (`ObservePipeline.locate`, politique
+`pipeline-selection-policy`). Il choisit, dans cet ordre :
+
+1. le pipeline dont le dernier run a démarré sur la branche courante (`run.json` garde la
+   branche) ou dont le scope de reporting vise cette branche ;
+2. le pipeline dont le slug est un mot entier du nom de branche (`feat/123-checkout` →
+   `checkout`, le plus long gagne) ;
+3. le pipeline actif (`.active-slug`), s'il existe encore ;
+4. le seul pipeline du dépôt.
+
+Sinon, il affiche la liste des pipelines (phase, état du run, story, branche, dernière
+activité) : un clic, ou l'action `select_pipeline`, choisit celui à suivre. Un dépôt sans
+pipeline ouvre une liste vide, qui bascule d'elle-même sur le premier pipeline démarré.
 
 ## 7. Cohabitation avec les settings hooks
 
