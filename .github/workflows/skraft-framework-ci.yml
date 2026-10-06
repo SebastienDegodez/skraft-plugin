@@ -3,6 +3,7 @@ name: skraft-framework CI
 on:
   push:
     paths:
+      - 'scripts/ci-mutation-survivors.mjs'
       - 'scripts/ci-failure-annotations.mjs'
       - 'plugins/skraft-framework/src/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
@@ -28,6 +29,7 @@ on:
       - '.github/workflows/skraft-framework-ci.yml'
   pull_request:
     paths:
+      - 'scripts/ci-mutation-survivors.mjs'
       - 'scripts/ci-failure-annotations.mjs'
       - 'plugins/skraft-framework/src/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
@@ -169,6 +171,9 @@ jobs:
     name: Mutation Testing
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
+      checks: write # publishes the surviving mutants as check runs
 
     steps:
       - uses: actions/checkout@v4
@@ -194,10 +199,31 @@ jobs:
         if: failure()
         run: node scripts/ci-failure-annotations.mjs tail stryker.log 80
 
+      # The mutants the tests let live, worst file first, with the line each one changed:
+      # readable on the pull request's checks (and through the API) without the artifact.
+      - name: Publish the surviving mutants
+        if: always() && hashFiles('reports/mutation/mutation.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node scripts/ci-mutation-survivors.mjs reports/mutation/mutation.json mutation-pages
+          total=$(ls mutation-pages/page-*.md 2>/dev/null | wc -l)
+          for i in $(seq 1 "$total"); do
+            gh api "repos/${{ github.repository }}/check-runs" -X POST \
+              -f name="Mutation survivors ($i/$total)" -f head_sha="$HEAD_SHA" \
+              -f status=completed -f conclusion=neutral \
+              -f "output[title]=Surviving mutants, page $i of $total" \
+              -F "output[summary]=@mutation-pages/summary.md" \
+              -F "output[text]=@mutation-pages/page-$i.md" > /dev/null
+          done
+
       - name: Upload mutation report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mutation-report
-          path: reports/mutation/mutation.html
+          path: |
+            reports/mutation/mutation.html
+            reports/mutation/mutation.json
           if-no-files-found: ignore
