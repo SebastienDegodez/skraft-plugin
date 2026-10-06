@@ -26,6 +26,19 @@ export const createFsTrackingStore = ({ trackingRoot, cwd }) => Object.freeze({
   },
   read: (slug, path) => readFile(join(trackingRoot, slug, path), 'utf8'),
   list: (slug) => listFiles(join(trackingRoot, slug)),
+  projects: async () => {
+    let entries
+    try { entries = await readdir(trackingRoot, { withFileTypes: true }) } catch { return [] }
+    const out = []
+    for (const entry of entries.filter((candidate) => candidate.isDirectory())) {
+      for (const marker of ['state.json', 'run.json']) {
+        try {
+          if ((await stat(join(trackingRoot, entry.name, marker))).isFile()) { out.push(entry.name); break }
+        } catch { /* not this marker */ }
+      }
+    }
+    return out.sort()
+  },
   write: async (slug, path, text) => {
     const target = join(trackingRoot, slug, path)
     await mkdir(dirname(target), { recursive: true })

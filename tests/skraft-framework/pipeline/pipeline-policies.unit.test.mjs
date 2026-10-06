@@ -308,3 +308,27 @@ test('phase steps: a check mark per step, failed, waiting, running or skipped wh
   assert.deepEqual(ids(phaseSteps(phase('DESIGN', 'pending', { artifacts: [] }), { ...ctx, structuralScan: false })),
     ['structural-scan:pending', 'outputs:pending', 'review:pending', 'adr-ratification:pending', 'closed:pending'])
 })
+
+test('pipeline selection: requested, then the branch (run or reporting), the slug the branch names, the active one, the only one', async () => {
+  const { selectPipeline, summarizePipeline, pipelineChooserView, isPipelineSlug } = await import('../../../plugins/skraft-framework/src/domain/pipeline/pipeline-selection-policy.mjs')
+  const p = (slug, extra = {}) => ({ slug, branch: null, reportingBranch: null, updatedAt: null, ...extra })
+  const pipelines = [p('checkout'), p('checkout-pay', { updatedAt: '2026-10-06T10:00:00Z' }), p('refund', { reportingBranch: 'fix/money-back' }), p('gift', { branch: 'feat/vouchers' })]
+  assert.deepEqual(selectPipeline({ requested: 'anything', pipelines }), { slug: 'anything', reason: 'requested' })
+  assert.deepEqual(selectPipeline({ branch: 'feat/vouchers', pipelines }), { slug: 'gift', reason: 'branch' })
+  assert.deepEqual(selectPipeline({ branch: 'fix/money-back', pipelines }), { slug: 'refund', reason: 'branch' })
+  assert.deepEqual(selectPipeline({ branch: 'feat/42-checkout-pay', pipelines }), { slug: 'checkout-pay', reason: 'name' }, 'the longest slug named wins')
+  assert.deepEqual(selectPipeline({ branch: 'feat/42-checkout', pipelines }), { slug: 'checkout', reason: 'name' })
+  assert.deepEqual(selectPipeline({ branch: 'feat/checkouts', active: 'refund', pipelines }), { slug: 'refund', reason: 'active' }, 'a word, not a substring')
+  assert.deepEqual(selectPipeline({ branch: 'main', active: 'gone', pipelines }), { slug: null, reason: 'ambiguous' }, 'an active pointer to no pipeline is ignored')
+  assert.deepEqual(selectPipeline({ branch: 'main', pipelines: [p('only')] }), { slug: 'only', reason: 'only' })
+  assert.deepEqual(selectPipeline({ branch: null, pipelines: [] }), { slug: null, reason: 'none' })
+
+  const summary = summarizePipeline({
+    slug: 'checkout',
+    state: { currentPhase: 'DESIGN', userPreferences: { reporting: { branch: 'feat/x' } }, phaseHistory: { DESIGN: { startedAt: '2026-10-06T09:00:00Z' } } },
+    run: { status: 'awaiting-human', story: { issue: 42 }, branch: 'feat/x' },
+  })
+  assert.deepEqual(summary, { slug: 'checkout', currentPhase: 'DESIGN', done: false, runStatus: 'awaiting-human', story: { issue: 42 }, branch: 'feat/x', reportingBranch: 'feat/x', updatedAt: '2026-10-06T09:00:00Z' })
+  assert.deepEqual(pipelineChooserView({ branch: 'main', reason: 'ambiguous', pipelines }).pipelines.map((x) => x.slug)[0], 'checkout-pay', 'newest first')
+  assert.deepEqual(['checkout-pay', 'Checkout', '../x', '', null].map(isPipelineSlug), [true, false, false, false, false])
+})

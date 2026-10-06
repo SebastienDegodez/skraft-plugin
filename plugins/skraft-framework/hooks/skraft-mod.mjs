@@ -115,6 +115,15 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
     exists: (s, rel) => $.fs.exists(joinPath(trackingDir(s), rel)),
     read: (s, rel) => $.fs.read(joinPath(trackingDir(s), rel)),
     list: (s) => walkFiles((dir) => $.fs.list(dir), trackingDir(s)),
+    projects: async () => {
+      let entries = []
+      try { entries = await $.fs.list(trackingRoot) } catch { return [] }
+      const out = []
+      for (const entry of entries.filter((candidate) => candidate.kind === 'dir')) {
+        if (await $.fs.exists(joinPath(trackingDir(entry.name), 'state.json')) || await $.fs.exists(joinPath(trackingDir(entry.name), 'run.json'))) out.push(entry.name)
+      }
+      return out.sort()
+    },
     write: (s, rel, text) => $.fs.write(joinPath(trackingDir(s), rel), text),
     prefix: (s) => `${relativeToCwd(trackingDir(s))}/`,
   }
