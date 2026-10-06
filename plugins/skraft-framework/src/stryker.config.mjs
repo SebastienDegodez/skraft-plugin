@@ -87,6 +87,12 @@ export default {
     'plugins/skraft-framework/src/domain/structural-scan-policy.mjs',
     // One unfiltered hook entry per tool event: relevance filter before any guard loads
     'plugins/skraft-framework/src/domain/hook-relevance-policy.mjs',
+    // V2 — orchestrator as code (RunPipeline) and its driven adapters
+    'plugins/skraft-framework/src/domain/pipeline/*.mjs',
+    'plugins/skraft-framework/src/application/pipeline/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/pipeline/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/*.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

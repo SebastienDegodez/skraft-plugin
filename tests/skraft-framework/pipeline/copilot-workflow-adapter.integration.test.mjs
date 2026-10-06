@@ -8,8 +8,7 @@ import { mkdtemp, rm, mkdir, writeFile, readFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createRunPipeline } from '../../../plugins/skraft-framework/src/application/pipeline/run-pipeline.mjs'
-import { createCopilotWorkflowPorts } from '../../../plugins/skraft-framework/src/adapters/hosts/copilot-workflow-ports.mjs'
+import { runSkraftPipelineWorkflow } from '../../../plugins/skraft-framework/src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { requiredTrackedOutputs } from '../../../plugins/skraft-framework/src/domain/phase-gate-policy.mjs'
 import { CONFIG, PLUGIN_ROOT, ADR_INDEX_HEADER, review } from './fake-host.mjs'
 
@@ -22,6 +21,7 @@ const fakeContext = (repo) => {
   const today = new Date().toISOString().slice(0, 10)
   const tracking = join(repo, '.copilot-tracking/skraft-plans', SLUG)
   const ctx = {
+    args: { slug: SLUG },
     signal: new AbortController().signal,
     phases: [],
     logs: [],
@@ -65,7 +65,7 @@ const fakeContext = (repo) => {
   return ctx
 }
 
-test('copilot adapter: pauses durably at the ADR checkpoint, resumes with the recorded answer, and runs qg-verify itself', async () => {
+test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the recorded answer, and runs qg-verify itself', async () => {
   const repo = await mkdtemp(join(tmpdir(), 'skraft-copilot-'))
   try {
     git(repo, 'init', '-q')
@@ -77,10 +77,10 @@ test('copilot adapter: pauses durably at the ADR checkpoint, resumes with the re
     const env = { ...process.env, SKRAFT_TRACKING_ROOT: '' }
     delete env.SKRAFT_TRACKING_ROOT
     const ctx = fakeContext(repo)
-    const ports = () => createCopilotWorkflowPorts(ctx, { cwd: repo, pluginRoot: PLUGIN_ROOT, slug: SLUG, env })
+    const run = () => runSkraftPipelineWorkflow(ctx, { cwd: repo, pluginRoot: PLUGIN_ROOT, env })
 
     // Attempt 1: the DESIGN checkpoint pauses the run (ctx.pause throws AbortError).
-    await assert.rejects(createRunPipeline(ports()).run({ slug: SLUG }), { name: 'AbortError', message: 'paused at adr-ratification:007' })
+    await assert.rejects(run(), { name: 'AbortError', message: 'paused at adr-ratification:007' })
     const state1 = JSON.parse(await readFile(join(repo, '.copilot-tracking/skraft-plans/checkout/state.json'), 'utf8'))
     assert.equal(state1.adrRatification.checkpointStatus, 'awaiting_human')
     assert.ok(state1.phaseArtifacts.RESEARCH.some((p) => p.endsWith('structural-scan.json')), 'real structural scan recorded')
@@ -93,7 +93,7 @@ test('copilot adapter: pauses durably at the ADR checkpoint, resumes with the re
     // Attempt 2 (resume): the recorded answer ratifies, DISTILL and DELIVER run, and the
     // code runs the real qg-verify on the engineer's (bogus) evidence log: inconclusive,
     // so the run pauses again at the environment checkpoint.
-    await assert.rejects(createRunPipeline(ports()).run({ slug: SLUG }), { name: 'AbortError', message: /paused at environment:DELIVER/ })
+    await assert.rejects(run(), { name: 'AbortError', message: /paused at environment:DELIVER/ })
     const state2 = JSON.parse(await readFile(join(repo, '.copilot-tracking/skraft-plans/checkout/state.json'), 'utf8'))
     assert.equal(state2.adrRatification.checkpointStatus, 'resolved')
     assert.deepEqual(state2.phasesCompleted, ['RESEARCH', 'DESIGN', 'DISTILL'])

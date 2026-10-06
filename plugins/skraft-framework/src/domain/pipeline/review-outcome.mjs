@@ -13,11 +13,3 @@ export const readReviewOutcome = (content) => {
     findings: content.length > MAX_FINDINGS_CHARS ? `${content.slice(0, MAX_FINDINGS_CHARS)}\n…(truncated)` : content,
   })
 }
-
-// qg-verify's exit code (src/cli/qg-verify.mjs) mapped onto the pipeline's vocabulary.
-export const qualityGateOutcome = (exitCode) => {
-  if (exitCode === 0) return 'pass'
-  if (exitCode === 1) return 'fail'
-  if (exitCode === 2) return 'inconclusive'
-  return 'error'
-}
