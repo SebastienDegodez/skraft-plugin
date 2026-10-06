@@ -42,6 +42,7 @@ import { createPhaseGate } from '../phase-gate-service.mjs'
 //   trackingStore              the project's tracking directory
 //   repositoryReader           docs/adr/decisions-index.md
 //   sourceControl              HEAD, for the DELIVER base commit
+//   activePipeline             the pointer the settings hooks read to guard this run
 //   agentRunner                one subagent dispatch
 //   qualityGateVerifier        the G1–G11 evidence check of DELIVER
 //   structuralScanner          the repository scan DESIGN reads
@@ -72,6 +73,7 @@ export const createRunPipeline = (deps) => {
     trackingStore,
     repositoryReader,
     sourceControl,
+    activePipeline,
     agentRunner,
     qualityGateVerifier,
     structuralScanner,
@@ -364,6 +366,9 @@ export const createRunPipeline = (deps) => {
     try {
       const init = await stateService.init(slug)
       if (!init.ok) throw blocked(null, `state.json for ${slug}: ${init.error.code}`)
+      // The settings hooks (G1, G8, G9) guard the pipeline this pointer names: without it they
+      // stand down in silence, and a stale one makes them refuse this run's dispatches.
+      await activePipeline.activate(slug)
       for (let i = 0; i < maxPhases; i += 1) {
         const state = await readState(slug)
         if (state.currentPhase === 'DONE') {

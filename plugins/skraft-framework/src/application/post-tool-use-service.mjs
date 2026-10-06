@@ -7,6 +7,7 @@ import { allow, additionalContext } from '../adapters/api/hooks/decision.mjs'
 import { projectDispatchState } from '../domain/state-schema.mjs'
 import { continuationAfter } from '../domain/pipeline-policy.mjs'
 import { isOk } from '../domain/result.mjs'
+import { isCodeDrivenDispatch } from '../domain/pipeline/dispatch-brief.mjs'
 
 const SKILL_MD_PATH_RE =
   /(?:plugins\/skraft-framework\/skills|\.agents\/skills|\.github\/skills|\.copilot\/skills)\/([^/]+)\/SKILL\.md$/i
@@ -49,6 +50,13 @@ export const createPostToolUseService = ({ auditWriter, clock, stateReader, conf
         if (toolName === AGENT_TOOL) {
           // The returning agent is the one the tool dispatched, not the hook's caller.
           const finishedAgent = requestedAgent ?? toolInput?.subagentType ?? toolInput?.subagent_type
+          // RunPipeline (the Claude Code mod, the Copilot workflow) records the artefacts and
+          // the verdict itself: the prose orchestrator's next steps would make the main agent
+          // race the code on state.json.
+          if (isCodeDrivenDispatch(toolInput?.prompt)) {
+            await auditWriter.write({ eventType: 'ContinuationSkipped', agentName: finishedAgent, reason: 'code-driven dispatch', timestamp: clock.now() }).catch(() => {})
+            return allow()
+          }
           return await continuationFor({ agentName: finishedAgent, projectSlug })
         }
 

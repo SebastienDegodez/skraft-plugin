@@ -10,6 +10,7 @@
 // port onto `$`; none decides:
 //   StateReader, TrackingStore, RepositoryReader   $.fs
 //   SourceControl                                  git through $.process.run
+//   ActivePipeline                                 $.fs ({trackingRoot}/.active-slug)
 //   AgentRunner                                    $.agent.spawn + the subagent's turn.complete
 //   HumanInteraction                               $.ui.ask (null when nothing draws)
 //   PipelineProgress                               $.state atom + pane + $.ui.status
@@ -112,6 +113,8 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
         return exitCode === 0 ? stdout.trim() || null : null
       },
     },
+    // ActivePipeline: the pointer file the settings hooks read (written as cli/state.mjs select does)
+    activePipeline: { activate: (s) => $.fs.write(joinPath(trackingRoot, '.active-slug'), `${s}\n`) },
     // AgentRunner on $.agent.spawn
     agentRunner: {
       run: async ({ agent, label, prompt }) => {

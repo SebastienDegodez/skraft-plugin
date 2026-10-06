@@ -76,6 +76,9 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
 
     const env = { ...process.env, SKRAFT_TRACKING_ROOT: '' }
     delete env.SKRAFT_TRACKING_ROOT
+    // A previous pipeline left the hooks' pointer behind.
+    await mkdir(join(repo, '.copilot-tracking/skraft-plans'), { recursive: true })
+    await writeFile(join(repo, '.copilot-tracking/skraft-plans/.active-slug'), 'old-story\n')
     const ctx = fakeContext(repo)
     const run = () => runSkraftPipelineWorkflow(ctx, { cwd: repo, pluginRoot: PLUGIN_ROOT, env })
 
@@ -100,6 +103,23 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     assert.equal(state2.currentPhase, 'DELIVER')
     assert.ok(ctx.logs.some((line) => /^qg-verify evidence\/.+qg-s1\.json: inconclusive$/.test(line)), ctx.logs.join('\n'))
     assert.ok(!ctx.calls.slice(1).some((c) => c.agent === 'Skraft - Solution Researcher'), 'RESEARCH is not redone on resume')
+
+    // The settings hooks now guard this run: the pointer names it, G1 lets its DELIVER
+    // specialist through, and G6 injects no prose-orchestrator steps after a code dispatch.
+    assert.equal((await readFile(join(repo, '.copilot-tracking/skraft-plans/.active-slug'), 'utf8')).trim(), SLUG)
+    const engineerPrompt = ctx.calls.findLast((c) => c.agent === 'Skraft - Software Engineer').prompt
+    const hook = (args, payload) => execFileSync(process.execPath, [join(PLUGIN_ROOT, 'src/cli/hook.mjs'), ...args], {
+      cwd: repo,
+      env: { ...env, CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, SKRAFT_AUDIT_LOG: join(repo, 'audit.jsonl') },
+      input: JSON.stringify({ ...payload, cwd: repo, session_id: 's', transcript_path: '' }),
+      encoding: 'utf8',
+    })
+    const agentCall = { tool_name: 'Agent', tool_input: { subagent_type: 'skraft:software-engineer', description: 'DELIVER', prompt: engineerPrompt } }
+    assert.equal(hook(['PreToolUse', 'Agent'], { hook_event_name: 'PreToolUse', ...agentCall }), '', 'G1/G9 allow the DELIVER specialist')
+    assert.doesNotMatch(hook(['PostToolUse', 'Agent'], { hook_event_name: 'PostToolUse', ...agentCall, tool_response: 'done' }), /SKRAFT G6/)
+    const audit = (await readFile(join(repo, 'audit.jsonl'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line))
+    assert.ok(audit.some((e) => e.event === 'DispatchEvaluated' && e.projectSlug === SLUG && e.decision === 'ALLOW'))
+    assert.ok(audit.some((e) => e.eventType === 'ContinuationSkipped'))
   } finally {
     await rm(repo, { recursive: true, force: true })
   }

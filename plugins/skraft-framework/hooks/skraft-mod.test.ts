@@ -128,6 +128,9 @@ describe('skraft mod', () => {
     expect(state.currentPhase).toBe('DONE')
     expect(state.phasesCompleted).toEqual(['RESEARCH', 'DESIGN'])
     expect(state.phaseArtifacts.RESEARCH).toContain(`details/${TODAY}/structural-scan.json`)
+    // the settings hooks guard this run
+    expect(files.get(`${CWD}/.copilot-tracking/skraft-plans/.active-slug`)).toBe('checkout\n')
+    expect(spawns.every((s) => s.prompt.startsWith('<!-- skraft-dispatch: run-pipeline -->'))).toBe(true)
   })
 
   test('a rejected phase with nobody to ask stops as awaiting-human and keeps the key', { timeoutMs: 20_000 } as any, async ($, on) => {

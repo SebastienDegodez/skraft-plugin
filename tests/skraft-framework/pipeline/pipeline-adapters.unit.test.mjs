@@ -13,6 +13,8 @@ import { createCliStateWriter } from '../../../plugins/skraft-framework/src/adap
 import { createTrackingDecisionStore, decisionPath } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
 import { createFsTrackingStore } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-tracking-store.mjs'
 import { createFsRepositoryReader } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-repository-reader.mjs'
+import { createFsActivePipeline } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-active-pipeline.mjs'
+import { createActiveSlugStore } from '../../../plugins/skraft-framework/src/adapters/infrastructure/active-slug-store.mjs'
 import { createGitSourceControl } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/git-source-control.mjs'
 import { createNodeProcessRunner } from '../../../plugins/skraft-framework/src/adapters/infrastructure/process/node-process-runner.mjs'
 import { createWorkflowAgentRunner } from '../../../plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/workflow-agent-runner.mjs'
@@ -262,4 +264,16 @@ test('record-decision: validates, trims and stores through the DecisionStore por
   assert.equal((await recordDecision.record({ slug: 's', key: '', answer: 'a' })).error.code, 'INVALID_KEY')
   assert.equal((await recordDecision.record({ slug: 's', key: 'k', answer: ' ' })).error.code, 'INVALID_ANSWER')
   assert.equal(stored.length, 1)
+})
+
+test('fs-active-pipeline: writes the pointer the hooks read, replacing a stale one', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skraft-active-'))
+  try {
+    const store = createActiveSlugStore(root)
+    store.write('old-story')
+    await createFsActivePipeline({ trackingRoot: root }).activate('checkout')
+    assert.equal(store.read(), 'checkout')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })
