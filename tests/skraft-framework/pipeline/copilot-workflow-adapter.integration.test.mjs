@@ -131,8 +131,8 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     assert.match(engineerBrief, /Approved forecast data: `\.copilot-tracking\/skraft-plans\/checkout\/reporting\/[\d-]+\/forecast-data\.json`/)
     assert.match(engineerBrief, /distill-handoff\.md/)
 
-    // The settings hooks now guard this run: the pointer names it, G1 lets its DELIVER
-    // specialist through, and G6 injects no prose-orchestrator steps after a code dispatch.
+    // The settings hooks now guard this run: the pointer names it, and the hooks that
+    // remain (provenance, G7/G8) let its DELIVER specialist through; no G6 reminder follows.
     assert.equal((await readFile(join(repo, '.copilot-tracking/skraft-plans/.active-slug'), 'utf8')).trim(), SLUG)
     const engineerPrompt = ctx.calls.findLast((c) => c.agent === 'Skraft - Software Engineer').prompt
     const hook = (args, payload) => execFileSync(process.execPath, [join(PLUGIN_ROOT, 'src/cli/hook.mjs'), ...args], {
@@ -142,11 +142,11 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
       encoding: 'utf8',
     })
     const agentCall = { tool_name: 'Agent', tool_input: { subagent_type: 'skraft:software-engineer', description: 'DELIVER', prompt: engineerPrompt } }
-    assert.equal(hook(['PreToolUse', 'Agent'], { hook_event_name: 'PreToolUse', ...agentCall }), '', 'G1/G9 allow the DELIVER specialist')
-    assert.doesNotMatch(hook(['PostToolUse', 'Agent'], { hook_event_name: 'PostToolUse', ...agentCall, tool_response: 'done' }), /SKRAFT G6/)
+    assert.equal(hook(['PreToolUse', 'Agent'], { hook_event_name: 'PreToolUse', ...agentCall }), '', 'the remaining guards allow the DELIVER specialist')
+    assert.equal(hook(['PostToolUse', 'Agent'], { hook_event_name: 'PostToolUse', ...agentCall, tool_response: 'done' }), '')
     const audit = (await readFile(join(repo, 'audit.jsonl'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line))
-    assert.ok(audit.some((e) => e.event === 'DispatchEvaluated' && e.projectSlug === SLUG && e.decision === 'ALLOW'))
-    assert.ok(audit.some((e) => e.eventType === 'ContinuationSkipped'))
+    assert.ok(audit.some((e) => e.event === 'SessionGuardEvaluated' && e.decision === 'ALLOW'), JSON.stringify(audit))
+    assert.ok(!audit.some((e) => e.event === 'DispatchEvaluated' || /^Continuation/.test(e.eventType ?? '')))
 
     // The human validated their own reworks: skraft_close_phase closes DELIVER.
     const close = createSkraftClosePhaseTool({ cwd: () => repo, pluginRoot: PLUGIN_ROOT, env })

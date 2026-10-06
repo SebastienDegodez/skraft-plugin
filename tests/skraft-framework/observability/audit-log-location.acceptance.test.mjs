@@ -30,6 +30,6 @@ test('the hooks write the audit log of the project they run in', () => {
       encoding: 'utf8',
     })
     const auditLog = join(project, '.git', 'skraft', 'skill-audit.jsonl')
-    assert.match(readFileSync(auditLog, 'utf8'), /DispatchEvaluated/)
+    assert.match(readFileSync(auditLog, 'utf8'), /SessionGuardEvaluated/)
   })
 })

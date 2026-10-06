@@ -1,5 +1,5 @@
-// Acceptance — the guards act on the pipeline the state CLI opened, with nothing but the
-// payload a harness really sends. No harness sends a project slug: the state CLI records
+// Acceptance — the guards act on the pipeline the state CLI (or RunPipeline) opened, with
+// nothing but the payload a harness really sends. No harness sends a project slug: the state CLI records
 // the active one beside the tracked projects, and the hook reads it back.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -29,6 +29,10 @@ const state = (env, ...args) => {
   }
 }
 
+// The session guard's audit lines: which pipeline it judged the call against.
+const judged = (auditLog) => (existsSync(auditLog) ? readFileSync(auditLog, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line)) : [])
+  .filter((record) => record.event === 'SessionGuardEvaluated')
+
 const hook = (env, args, payload) => {
   const stdout = execFileSync('node', [HOOK_CLI, ...args], { input: JSON.stringify(payload), encoding: 'utf8', env })
   return stdout.trim() ? JSON.parse(stdout) : undefined
@@ -45,16 +49,13 @@ const agentDispatch = (subagentType, prompt = '…') => ({
   tool_input: { subagent_type: subagentType, description: 'phase work', prompt },
 })
 
-test('init records the active pipeline and G1 then governs a real dispatch payload', () => {
+test('init records the active pipeline, and the session guard then judges a real payload against it', () => {
   withTrackingRoot(({ root, env }) => {
     assert.equal(state(env, 'init', '--slug', 'pricing').code, 0)
     assert.equal(readFileSync(join(root, '.active-slug'), 'utf8').trim(), 'pricing')
 
-    const denied = hook(env, ['PreToolUse', 'Agent'], agentDispatch('skraft:software-engineer'))
-    assert.equal(denied.hookSpecificOutput.permissionDecision, 'deny')
-    assert.match(denied.hookSpecificOutput.permissionDecisionReason, /RESEARCH/)
-
-    assert.equal(hook(env, ['PreToolUse', 'Agent'], agentDispatch('skraft:solution-researcher')), undefined)
+    assert.equal(hook(env, ['PreToolUse', 'Agent'], agentDispatch('skraft:software-engineer')), undefined, 'the dispatch order is RunPipeline\'s check now')
+    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => [r.projectSlug, r.decision, r.code]), [['pricing', 'ALLOW', 'CONFORMING']])
   })
 })
 
@@ -92,11 +93,13 @@ test('SKRAFT_PROJECT_SLUG overrides the recorded pointer; a malformed pointer is
     producePhase({ root, slug: 'other', phase: 'RESEARCH', cli: fixtureCli({ root }) })
     state(pinned, 'close-phase', '--phase', 'RESEARCH', '--verdict', 'APPROVED')
     assert.equal(state(env, 'get', '--slug', 'other', '--field', 'currentPhase').out.trim(), 'DESIGN')
-    const handoff = state(pinned, 'handoff', '--agent', 'solution-architect').out
-    assert.equal(hook(pinned, ['PreToolUse', 'Agent'], agentDispatch('solution-architect', handoff)), undefined)
+    hook(pinned, ['PreToolUse', 'Agent'], agentDispatch('solution-architect'))
+    assert.equal(judged(env.SKRAFT_AUDIT_LOG).at(-1).projectSlug, 'other')
 
     writeFileSync(join(root, '.active-slug'), '../../etc\n')
-    assert.equal(hook(env, ['PreToolUse', 'Agent'], agentDispatch('software-engineer')), undefined, 'no valid slug: G1 stays out')
+    const before = judged(env.SKRAFT_AUDIT_LOG).length
+    assert.equal(hook(env, ['PreToolUse', 'Agent'], agentDispatch('software-engineer')), undefined)
+    assert.equal(judged(env.SKRAFT_AUDIT_LOG).length, before, 'no valid slug: no pipeline to judge against')
   })
 })
 
@@ -114,20 +117,20 @@ test('the hook resolves the tracking root from the payload cwd, not its own work
   inProject(({ project, env }) => {
     execFileSync('node', [STATE_CLI, 'init', '--slug', 'pricing'], { cwd: project, env, stdio: 'ignore' })
     const payload = { ...agentDispatch('software-engineer'), cwd: project }
-    const denied = hook(env, ['PreToolUse', 'Agent'], payload)
-    assert.equal(denied?.hookSpecificOutput?.permissionDecision, 'deny')
+    hook(env, ['PreToolUse', 'Agent'], payload)
+    assert.equal(judged(env.SKRAFT_AUDIT_LOG).at(-1)?.projectSlug, 'pricing')
   })
 })
 
-test('a corrupted state blocks a phase dispatch without leaving a snapshot per hook call', () => {
+test('a corrupted state is reported by the session guard without leaving a snapshot per hook call', () => {
   inProject(({ project, env }) => {
     execFileSync('node', [STATE_CLI, 'init', '--slug', 'pricing'], { cwd: project, env, stdio: 'ignore' })
     const dir = join(project, '.copilot-tracking', 'skraft-plans', 'pricing')
     writeFileSync(join(dir, 'state.json'), '{ truncated')
     const payload = { ...agentDispatch('solution-researcher'), cwd: project }
     hook(env, ['PreToolUse', 'Agent'], payload)
-    const blocked = hook(env, ['PreToolUse', 'Agent'], payload)
-    assert.equal(blocked.hookSpecificOutput.permissionDecision, 'deny')
+    hook(env, ['PreToolUse', 'Agent'], payload)
+    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => r.code), ['UNREADABLE_STATE', 'UNREADABLE_STATE'])
     const snapshots = readdirSync(dir).filter((f) => f.includes('.corrupted.'))
     assert.deepEqual(snapshots, [])
   })

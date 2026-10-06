@@ -20,7 +20,6 @@ const EXPECTED_ROUTES = [
   { event: 'PreToolUse', matcher: 'Bash' },
   { event: 'SubagentStart', matcher: undefined },
   { event: 'SubagentStop', matcher: undefined },
-  { event: 'PostToolUse', matcher: 'Agent' },
   { event: 'PostToolUse', matcher: 'Read' }
 ]
 
@@ -68,4 +67,8 @@ test('real-hook-audit: hooks.json declares no unexpected top-level events', () =
   for (const event of declaredEvents) {
     assert.ok(expectedEvents.includes(event), `unexpected event ${event} declared in hooks.json but not audited here`)
   }
+})
+
+test('real-hook-audit: PostToolUse(Agent|Task) is no longer routed — RunPipeline records what an agent returns', () => {
+  for (const matcher of ['Agent', 'Task']) assert.equal(findEntry(hooksManifest, 'PostToolUse', matcher), undefined)
 })

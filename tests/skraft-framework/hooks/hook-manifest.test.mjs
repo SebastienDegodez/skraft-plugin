@@ -47,9 +47,8 @@ test('hook-manifest: the declared routes cover every guardrail event', () => {
     'node <pluginRoot>/src/cli/hook.mjs PreToolUse NotebookEdit',
     'node <pluginRoot>/src/cli/hook.mjs PreToolUse Write',
   ])
+  // PostToolUse(Agent|Task) left with G6: RunPipeline records what an agent returns.
   assert.deepEqual(routes('PostToolUse'), [
-    'node <pluginRoot>/src/cli/hook.mjs PostToolUse Agent',
-    'node <pluginRoot>/src/cli/hook.mjs PostToolUse Agent',
     'node <pluginRoot>/src/cli/hook.mjs PostToolUse Read',
   ])
   assert.deepEqual(routes('SubagentStart'), ['node <pluginRoot>/src/cli/hook.mjs SubagentStart'])

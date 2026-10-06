@@ -90,8 +90,6 @@ const ROUTES = [
   { args: ['PreToolUse', 'NotebookEdit'], payload: { tool_name: 'NotebookEdit', tool_input: { notebook_path: 'analysis.ipynb', new_source: 'x = 1' } } },
   { args: ['SubagentStart'], payload: { agentName: 'Skraft - Software Engineer' } },
   { args: ['SubagentStop'], payload: { agentName: 'Skraft - Software Engineer' } },
-  { args: ['PostToolUse', 'Agent'], payload: { agentName: 'Skraft - Solution Researcher' } },
-  { args: ['PostToolUse', 'Agent'], matcher: 'Task', label: 'legacy Task alias', payload: { tool_name: 'Task', tool_input: { subagent_type: 'solution-researcher' } } },
   { args: ['PostToolUse', 'Read'], payload: { toolInput: { path: '/x/skills/outside-in-tdd/SKILL.md' } } },
 ]
 
