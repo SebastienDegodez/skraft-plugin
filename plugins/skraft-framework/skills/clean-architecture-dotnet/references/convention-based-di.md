@@ -28,11 +28,6 @@ public interface ICommandHandler<in TCommand>
     Task HandleAsync(TCommand command, CancellationToken cancellationToken = default);
 }
 
-public interface ICommandHandler<in TCommand, TResult>
-{
-    Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default);
-}
-
 public interface IQueryHandler<in TQuery, TResult>
 {
     Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken = default);
@@ -50,7 +45,6 @@ namespace MyProject.Application.Shared;
 public interface ICommandBus
 {
     Task PublishAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default);
-    Task<TResult> PublishAsync<TCommand, TResult>(TCommand command, CancellationToken cancellationToken = default);
 }
 
 // Application/Shared/IQueryBus.cs
@@ -70,7 +64,7 @@ Handlers are discovered by their **interface implementation**, not by name. Any 
 // Application/Orders/Commands/PlaceOrder/PlaceOrderCommandHandler.cs
 namespace MyProject.Application.Orders.Commands.PlaceOrder;
 
-public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, OrderId>
+public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand>
 {
     private readonly IOrderRepository _orderRepository;
     
@@ -79,14 +73,13 @@ public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand
         _orderRepository = orderRepository;
     }
     
-    public async Task<OrderId> HandleAsync(
+    public async Task HandleAsync(
         PlaceOrderCommand command,
         CancellationToken cancellationToken = default)
     {
         var order = Order.Create(command.OrderId, command.CustomerId);
         // ... business logic
         await _orderRepository.AddAsync(order, cancellationToken);
-        return order.Id;
     }
 }
 ```
@@ -118,7 +111,6 @@ public static class DependencyInjection
         var handlerInterfaces = handlerType.GetInterfaces()
             .Where(i => i.IsGenericType &&
                    (i.GetGenericTypeDefinition() == typeof(ICommandHandler<>) ||
-                    i.GetGenericTypeDefinition() == typeof(ICommandHandler<,>) ||
                     i.GetGenericTypeDefinition() == typeof(IQueryHandler<,>)));
 
         foreach (var @interface in handlerInterfaces)
@@ -170,13 +162,6 @@ public sealed class CommandBus : ICommandBus
         ArgumentNullException.ThrowIfNull(command);
         var handler = _serviceProvider.GetRequiredService<ICommandHandler<TCommand>>();
         await handler.HandleAsync(command, cancellationToken);
-    }
-
-    public async Task<TResult> PublishAsync<TCommand, TResult>(TCommand command, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        var handler = _serviceProvider.GetRequiredService<ICommandHandler<TCommand, TResult>>();
-        return await handler.HandleAsync(command, cancellationToken);
     }
 }
 
@@ -233,12 +218,13 @@ public static class OrdersEndpoints
     }
     
     private static async Task<IResult> PlaceOrder(
-        PlaceOrderCommand command,
+        PlaceOrderRequest request,
         ICommandBus bus,
         CancellationToken cancellationToken)
     {
-        var orderId = await bus.PublishAsync<PlaceOrderCommand, OrderId>(command, cancellationToken);
-        return Results.Created($"/api/orders/{orderId.Value}", orderId);
+        var orderId = OrderId.New();               // the caller creates the id
+        await bus.PublishAsync(new PlaceOrderCommand(orderId, request.CustomerId), cancellationToken);
+        return Results.Created($"/api/orders/{orderId.Value}", null);
     }
     
     private static async Task<IResult> GetOrder(
@@ -310,7 +296,7 @@ public async Task PlaceOrder_ShouldResolveHandlerFromDI()
     
     var command = new PlaceOrderCommand(/*...*/);
     
-    // Act - DI resolves ICommandHandler<PlaceOrderCommand, OrderId>
+    // Act - DI resolves ICommandHandler<PlaceOrderCommand>
     var response = await client.PostAsJsonAsync("/api/orders", command);
     
     // Assert

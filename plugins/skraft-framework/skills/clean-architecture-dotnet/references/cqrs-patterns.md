@@ -3,10 +3,10 @@
 ## Handler Interfaces
 
 ```csharp
-// Application/Shared/ICommandHandler.cs
-public interface ICommandHandler<in TCommand, TResult>
+// Application/Shared/ICommandHandler.cs — commands return nothing
+public interface ICommandHandler<in TCommand>
 {
-    Task<TResult> HandleAsync(TCommand command, CancellationToken ct = default);
+    Task HandleAsync(TCommand command, CancellationToken ct = default);
 }
 
 // Application/Shared/IQueryHandler.cs  
@@ -22,17 +22,16 @@ public interface IQueryHandler<in TQuery, TResult>
 // Application/Features/Orders/PlaceOrderCommand.cs
 public sealed record PlaceOrderCommand(OrderId OrderId, string CustomerName);
 
-public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, OrderId>
+public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand>
 {
     private readonly IOrderRepository _repository;
     
     public PlaceOrderCommandHandler(IOrderRepository repository) => _repository = repository;
     
-    public async Task<OrderId> HandleAsync(PlaceOrderCommand cmd, CancellationToken ct)
+    public async Task HandleAsync(PlaceOrderCommand cmd, CancellationToken ct)
     {
         var order = Order.Create(cmd.OrderId, cmd.CustomerName);
         await _repository.AddAsync(order, ct);
-        return order.Id;
     }
 }
 ```
@@ -81,11 +80,12 @@ builder.Services.AddInfrastructure();
 ```csharp
 // Always inject ICommandBus / IQueryBus — never ICommandHandler<,> directly
 app.MapPost("/orders", async (
-    PlaceOrderCommand cmd,
+    PlaceOrderRequest request,
     ICommandBus bus) =>
 {
-    var id = await bus.PublishAsync<PlaceOrderCommand, OrderId>(cmd);
-    return Results.Created($"/api/orders/{id}", id);
+    var id = OrderId.New();                       // the caller creates the id
+    await bus.PublishAsync(new PlaceOrderCommand(id, request.CustomerName));
+    return Results.Created($"/api/orders/{id}", null);
 });
 ```
 

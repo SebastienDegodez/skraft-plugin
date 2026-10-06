@@ -369,7 +369,7 @@ public sealed class Order : AggregateRoot  // Inherits from SharedKernel
 using SharedKernel.Abstractions;
 
 public sealed class PlaceOrderCommandHandler 
-    : ICommandHandler<PlaceOrderCommand, OrderId> { }
+    : ICommandHandler<PlaceOrderCommand> { }
 ```
 
 Without SharedKernel, define `AggregateRoot` in each domain project.

@@ -1,17 +1,9 @@
 namespace [ProjectName].Application.Shared;
 
 /// <summary>
-/// Handler for commands that don't return a result (void operations).
+/// Handler for a command. Commands return nothing; the caller supplies any new id in the command.
 /// </summary>
 public interface ICommandHandler<in TCommand>
 {
     Task HandleAsync(TCommand command, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Handler for commands that return a result.
-/// </summary>
-public interface ICommandHandler<in TCommand, TResult>
-{
-    Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default);
 }

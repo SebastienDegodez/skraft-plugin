@@ -151,7 +151,7 @@ public sealed record PlaceOrderCommand(
 );
 
 // Application/Orders/Commands/PlaceOrder/PlaceOrderCommandHandler.cs
-public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand, OrderId>
+public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand>
 {
     private readonly IOrderRepository _orderRepository; // Interface from Domain
     private readonly IInventoryService _inventoryService; // Interface from Domain or Application
@@ -164,7 +164,7 @@ public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand
         _inventoryService = inventoryService;
     }
     
-    public async Task<OrderId> HandleAsync(
+    public async Task HandleAsync(
         PlaceOrderCommand command,
         CancellationToken ct = default)
     {
@@ -180,8 +180,6 @@ public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand
         // 3. Orchestrate Infrastructure calls
         await _inventoryService.ReserveItemsAsync(order.OrderLines, ct);
         await _orderRepository.AddAsync(order, ct);
-        
-        return order.Id;
     }
 }
 
@@ -331,12 +329,13 @@ public static class OrdersEndpoints
     }
     
     private static async Task<IResult> PlaceOrder(
-        PlaceOrderCommand command,
-        ICommandHandler<PlaceOrderCommand, OrderId> handler, // Injected by DI (from Infrastructure)
+        PlaceOrderRequest request,
+        ICommandHandler<PlaceOrderCommand> handler, // Injected by DI (from Infrastructure)
         CancellationToken ct)
     {
-        var orderId = await handler.HandleAsync(command, ct);
-        return Results.Created($"/api/orders/{orderId.Value}", orderId);
+        var orderId = OrderId.New();               // the caller creates the id
+        await handler.HandleAsync(new PlaceOrderCommand(orderId, request.CustomerId, request.OrderLines), ct);
+        return Results.Created($"/api/orders/{orderId.Value}", null);
     }
     
     private static async Task<IResult> GetOrder(

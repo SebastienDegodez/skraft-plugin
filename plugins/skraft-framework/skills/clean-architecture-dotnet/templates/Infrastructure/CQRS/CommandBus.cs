@@ -21,11 +21,4 @@ public sealed class CommandBus : ICommandBus
         var handler = _serviceProvider.GetRequiredService<ICommandHandler<TCommand>>();
         await handler.HandleAsync(command, cancellationToken);
     }
-
-    public async Task<TResult> PublishAsync<TCommand, TResult>(TCommand command, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        var handler = _serviceProvider.GetRequiredService<ICommandHandler<TCommand, TResult>>();
-        return await handler.HandleAsync(command, cancellationToken);
-    }
 }
