@@ -14,6 +14,11 @@ type: capability
 defaults:
   timeout: 4m
   runs: 4
+  # Pinned to Sonnet even though it is the repository default: the probes that
+  # sized these stimuli and their graders ran on Sonnet, and the verdict must stay
+  # comparable if DEFAULT_MODEL moves. MODEL in the environment still overrides it
+  # for the compare-models matrix.
+  model: claude-sonnet-5.5
 scoring:
   threshold: 1
 
