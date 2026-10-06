@@ -6,7 +6,7 @@
 //
 // Run it:  "Run the skraft-pipeline dynamic workflow for slug checkout, issue 42"
 //     or:  copilot workflow run skraft-pipeline --args '{"slug":"checkout","issue":42}'
-// Follow it in the Copilot app: "Open the Skraft pipeline canvas for checkout"
+// Follow it in the Copilot app: "Open the Skraft pipeline canvas" (the working copy's .active-slug)
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { CanvasError, createCanvas, defineWorkflow, joinSession } from '@github/copilot-sdk/extension'

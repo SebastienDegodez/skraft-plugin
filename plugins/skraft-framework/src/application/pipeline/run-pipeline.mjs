@@ -418,8 +418,7 @@ export const createRunPipeline = (deps) => {
 
   // ── The run ─────────────────────────────────────────────────────────────────
   const run = async ({ slug, story = null, maxPhases = 10 } = {}) => {
-    // The branch lets a viewer opened without a slug find this pipeline from the checkout.
-    await journal.begin(slug, story, await sourceControl.currentBranch().catch(() => null))
+    await journal.begin(slug, story)
     try {
       const outcome = await runToOutcome({ slug, story, maxPhases })
       await journal.finish(outcome)

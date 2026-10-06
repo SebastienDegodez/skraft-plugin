@@ -3,19 +3,20 @@ import { createObservePipeline } from '../../../application/pipeline/observe-pip
 import { createRecordDecision } from '../../../application/pipeline/record-decision.mjs'
 import { createNodePipelineDependencies } from '../pipeline/node-dependencies.mjs'
 import { startCanvasServer } from './canvas-server.mjs'
-import { isPipelineSlug } from '../../../domain/pipeline/pipeline-selection-policy.mjs'
+import { activePipelineSlug } from '../../../application/pipeline/active-pipeline.mjs'
+import { NOT_THE_ACTIVE_PIPELINE } from '../../../domain/pipeline/active-pipeline-policy.mjs'
 
 // Driving adapter: the `skraft-pipeline` canvas of the GitHub Copilot app. Returns the
 // options of the SDK's createCanvas — the extension entry passes them through — so this
 // module needs no SDK and is tested as is. Each open instance gets its own local server
-// (canvas-server.mjs) showing one pipeline, or the list to choose from; the agent reaches
-// the same use cases through the canvas actions.
+// (canvas-server.mjs) showing the working copy's active pipeline (.active-slug, one per
+// worktree); the agent reaches the same use cases through the canvas actions.
 //
-//   open    { slug? }              → { url, title, status }; no slug: the pipeline of the
-//                                    current branch, else the active one, else the only
-//                                    one, else the list of pipelines (it always opens)
-//   actions get_pipeline           → the pipeline view (ObservePipeline), or the list
-//           select_pipeline { slug } → show that pipeline
+//   open    { slug? }              → { url, title, status }; the active pipeline, always.
+//                                    A slug that is not the active one is refused; no
+//                                    active pipeline yet: the page says so and shows the
+//                                    run as soon as one starts in this working copy
+//   actions get_pipeline           → the pipeline view (ObservePipeline)
 //           decide { key, answer } → RecordDecision, then the page shows it answered
 //           show_phase { phase }   → the page scrolls to that phase
 //           refresh                → the page redraws now
@@ -30,7 +31,7 @@ export const eurPerUsdOf = (env = {}) => {
   return Number.isFinite(rate) && rate > 0 ? rate : null
 }
 
-const titleOf = (slug) => (slug ? `Skraft · ${slug}` : 'Skraft pipelines')
+const titleOf = (view) => (view.idle ? 'Skraft pipeline' : `Skraft · ${view.slug}`)
 
 export class CanvasRequestError extends Error {
   constructor(code, message) {
@@ -40,7 +41,7 @@ export class CanvasRequestError extends Error {
 }
 
 const statusLine = (view) => {
-  if (view.chooser) return view.pipelines.length ? `${view.pipelines.length} pipelines — choose one` : 'no pipeline yet'
+  if (view.idle) return 'no active pipeline'
   if (!view.started) return 'not started'
   if (view.done) return 'DONE'
   const run = view.run?.status ? ` · ${view.run.status}` : ''
@@ -50,12 +51,18 @@ const statusLine = (view) => {
 // cwd() — the session working directory when the host gives none; sendPrompt(prompt) —
 // the chat of the session; makeError(code, message) — the SDK's CanvasError.
 export const createSkraftPipelineCanvas = ({ cwd, pluginRoot, env, sendPrompt, makeError = (code, message) => new CanvasRequestError(code, message), pollMs }) => {
-  const instances = new Map() // instanceId → { server, observe, recordDecision }
+  const instances = new Map() // instanceId → { server, deps, observe, recordDecision }
 
   const useCases = (workingDirectory) => {
     const deps = createNodePipelineDependencies({ cwd: workingDirectory, env, pluginRoot })
     const pricing = { eurPerUsd: eurPerUsdOf(env) }
-    return { observe: createObservePipeline({ ...deps, pricing }), recordDecision: createRecordDecision(deps) }
+    return { deps, observe: createObservePipeline({ ...deps, pricing }), recordDecision: createRecordDecision(deps) }
+  }
+  // The pipeline an action acts on: the active one, or the reason there is none.
+  const activeOf = async (instance) => {
+    const active = await activePipelineSlug(instance.deps)
+    if (!active.ok) throw makeError('pipeline_unknown', active.error.reason)
+    return active.value
   }
   const instanceOf = (ctx) => {
     const instance = instances.get(ctx.instanceId)
@@ -71,7 +78,7 @@ export const createSkraftPipelineCanvas = ({ cwd, pluginRoot, env, sendPrompt, m
       type: 'object',
       additionalProperties: false,
       properties: {
-        slug: { type: 'string', description: 'Pipeline slug (kebab-case feature scope). Omitted: the pipeline of the current branch, else the active or only one, else the list to choose from.' },
+        slug: { type: 'string', description: "Optional: the pipeline you expect. The canvas shows this working copy's active pipeline (.active-slug) and refuses another one." },
       },
     },
     actions: [
@@ -81,23 +88,7 @@ export const createSkraftPipelineCanvas = ({ cwd, pluginRoot, env, sendPrompt, m
         inputSchema: { type: 'object', additionalProperties: false, properties: {} },
         handler: async (ctx) => {
           const instance = instanceOf(ctx)
-          const slug = instance.server.slug()
-          return slug ? instance.observe.snapshot(slug) : (await instance.observe.locate()).chooser
-        },
-      },
-      {
-        name: 'select_pipeline',
-        description: 'Show another pipeline of this repository in the canvas (one of those get_pipeline lists when none is chosen).',
-        inputSchema: {
-          type: 'object',
-          additionalProperties: false,
-          properties: { slug: { type: 'string', description: 'Pipeline slug (kebab-case)' } },
-          required: ['slug'],
-        },
-        handler: async (ctx) => {
-          const instance = instanceOf(ctx)
-          if (!(await instance.server.select(ctx.input?.slug))) throw makeError('pipeline_unknown', `No pipeline "${ctx.input?.slug}" in this repository.`)
-          return { slug: instance.server.slug() }
+          return instance.observe.snapshot(await activeOf(instance))
         },
       },
       {
@@ -114,9 +105,7 @@ export const createSkraftPipelineCanvas = ({ cwd, pluginRoot, env, sendPrompt, m
         },
         handler: async (ctx) => {
           const instance = instanceOf(ctx)
-          const slug = instance.server.slug()
-          if (!slug) throw makeError('pipeline_unknown', 'No pipeline is shown: choose one first (select_pipeline).')
-          const recorded = await instance.recordDecision.record({ slug, key: ctx.input?.key, answer: ctx.input?.answer, by: 'human' })
+          const recorded = await instance.recordDecision.record({ slug: await activeOf(instance), key: ctx.input?.key, answer: ctx.input?.answer, by: 'human' })
           if (!recorded.ok) throw makeError('decision_refused', recorded.error.reason)
           await instance.server.refresh()
           return { recorded: recorded.value.key }
@@ -151,19 +140,19 @@ export const createSkraftPipelineCanvas = ({ cwd, pluginRoot, env, sendPrompt, m
       const existing = instances.get(ctx.instanceId)
       if (existing) {
         const view = await existing.server.refresh()
-        return { url: existing.server.url, title: titleOf(existing.server.slug()), status: statusLine(view) }
-      }
-      const requested = ctx.input?.slug
-      if (requested !== undefined && requested !== null && requested !== '' && !isPipelineSlug(requested)) {
-        throw makeError('invalid_slug', `"${requested}" is not a pipeline slug (kebab-case, e.g. checkout-payment).`)
+        return { url: existing.server.url, title: titleOf(view), status: statusLine(view) }
       }
       const workingDirectory = ctx.session?.workingDirectory ?? cwd()
-      const { observe, recordDecision } = useCases(workingDirectory)
-      const located = await observe.locate(requested || null)
-      const server = await startCanvasServer({ slug: located.slug, observe, recordDecision, sendPrompt, publicDir: PUBLIC_DIR, pollMs })
-      instances.set(ctx.instanceId, { server, observe, recordDecision })
-      const view = located.slug ? await observe.snapshot(located.slug) : located.chooser
-      return { url: server.url, title: titleOf(located.slug), status: statusLine(view) }
+      const { deps, observe, recordDecision } = useCases(workingDirectory)
+      const active = await activePipelineSlug(deps, ctx.input?.slug)
+      if (!active.ok && active.error.code === NOT_THE_ACTIVE_PIPELINE) throw makeError('pipeline_not_active', active.error.reason)
+      const server = await startCanvasServer({
+        activeSlug: () => activePipelineSlug(deps), where: workingDirectory,
+        observe, recordDecision, sendPrompt, publicDir: PUBLIC_DIR, pollMs,
+      })
+      instances.set(ctx.instanceId, { server, deps, observe, recordDecision })
+      const view = await server.refresh()
+      return { url: server.url, title: titleOf(view), status: statusLine(view) }
     },
 
     onClose: async (ctx) => {

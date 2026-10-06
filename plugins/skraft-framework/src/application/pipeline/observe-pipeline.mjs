@@ -3,19 +3,17 @@ import { RUN_JOURNAL_PATH } from '../../domain/pipeline/run-journal-policy.mjs'
 import { PENDING_PATH } from '../../domain/report-boundary-policy.mjs'
 import { readReviewOutcome } from '../../domain/pipeline/review-outcome.mjs'
 import { latestEvidenceLog } from '../../domain/pipeline/expected-outputs.mjs'
-import { pipelineChooserView, selectPipeline, summarizePipeline } from '../../domain/pipeline/pipeline-selection-policy.mjs'
 
 // Use case ObservePipeline (ports/api/observe-pipeline.mjs): what a person following a
 // pipeline sees, read-only, whether a run is going on, paused or over. It reads state.json,
 // the run journal, the reviews, the recorded decisions and the report receipts through
 // the driven ports, and builds the view with the domain (pipeline-view-policy).
-// Driven ports: StateReader, TrackingStore, TimeProvider; SourceControl and ActivePipeline
-// to find the pipeline of the current branch; plus `config`, and `pricing` ({ eurPerUsd })
-// when the cost is to be shown in euros.
+// Driven ports: StateReader, TrackingStore, TimeProvider; plus `config`, and `pricing`
+// ({ eurPerUsd }) when the cost is to be shown in euros.
 const DECISION = /^decisions\/[^/]+\.json$/
 const RECEIPT = /^reporting\/(forecast|outcome)\/[^/]+\.json$/
 
-export const createObservePipeline = ({ config, stateReader, trackingStore, time, sourceControl = null, activePipeline = null, pricing = {} }) => {
+export const createObservePipeline = ({ config, stateReader, trackingStore, time, pricing = {} }) => {
   const readJson = async (slug, path) => {
     try { return JSON.parse(await trackingStore.read(slug, path)) } catch { return null }
   }
@@ -69,28 +67,5 @@ export const createObservePipeline = ({ config, stateReader, trackingStore, time
     try { return await trackingStore.read(slug, path) } catch { return null }
   }
 
-  // Every pipeline the repository tracks, newest first, as a chooser lists them.
-  const pipelines = async () => {
-    const slugs = await trackingStore.projects?.().catch(() => []) ?? []
-    const out = []
-    for (const slug of slugs) {
-      let state = null
-      try { state = await stateReader.read(slug) } catch { /* run.json only, or unreadable */ }
-      out.push(summarizePipeline({ slug, state, run: await readJson(slug, RUN_JOURNAL_PATH) }))
-    }
-    return out
-  }
-
-  // The pipeline to show: { slug, reason } — slug null when none fits, with the chooser
-  // view (the pipelines and the current branch) to show instead.
-  const locate = async (requested = null) => {
-    if (requested !== null && requested !== undefined) return { ...selectPipeline({ requested }), chooser: null }
-    const known = await pipelines()
-    const branch = await sourceControl?.currentBranch().catch(() => null) ?? null
-    const active = await activePipeline?.current().catch(() => null) ?? null
-    const selected = selectPipeline({ branch, active, pipelines: known })
-    return { ...selected, chooser: selected.slug ? null : pipelineChooserView({ branch, reason: selected.reason, pipelines: known }) }
-  }
-
-  return Object.freeze({ snapshot, readTracked, pipelines, locate })
+  return Object.freeze({ snapshot, readTracked })
 }

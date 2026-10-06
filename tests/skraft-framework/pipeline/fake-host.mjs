@@ -164,7 +164,6 @@ export const createFakeHost = (options = {}) => {
         return tracking.get(key(s, path))
       },
       list: async (s) => [...tracking.keys()].filter((k) => k.startsWith(`${s}::`)).map((k) => k.slice(s.length + 2)),
-      projects: async () => [...new Set([...states.keys(), ...[...tracking.keys()].filter((k) => k.endsWith('::run.json')).map((k) => k.split('::')[0])])].sort(),
       write: async (s, path, text) => writeTracking(s, path, text),
       prefix,
     },

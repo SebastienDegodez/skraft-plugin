@@ -1,6 +1,7 @@
 import { createRunPipeline } from '../../../application/pipeline/run-pipeline.mjs'
 import { createRecordDecision } from '../../../application/pipeline/record-decision.mjs'
 import { createCloseManually } from '../../../application/pipeline/close-manually.mjs'
+import { activePipelineSlug } from '../../../application/pipeline/active-pipeline.mjs'
 import { createNodePipelineDependencies } from '../pipeline/node-dependencies.mjs'
 import { createWorkflowAgentRunner } from '../../infrastructure/copilot-workflow/workflow-agent-runner.mjs'
 import { createAgentReportTransport } from '../../infrastructure/reporting/agent-report-transport.mjs'
@@ -70,15 +71,17 @@ export const createSkraftDecideTool = ({ cwd, pluginRoot, env }) => Object.freez
   parameters: {
     type: 'object',
     properties: {
-      slug: { type: 'string', description: 'Pipeline slug (feature scope)' },
+      slug: { type: 'string', description: "Optional: the pipeline you expect. The tool acts on this working copy's active pipeline (.active-slug) and refuses another one." },
       key: { type: 'string', description: 'Checkpoint key the workflow logged' },
       answer: { type: 'string', description: "The human's answer, verbatim" },
     },
-    required: ['slug', 'key', 'answer'],
+    required: ['key', 'answer'],
   },
   handler: async ({ slug, key, answer }) => {
-    const { decisionStore } = createNodePipelineDependencies({ cwd: cwd(), env, pluginRoot })
-    const recorded = await createRecordDecision({ decisionStore }).record({ slug, key, answer })
+    const deps = createNodePipelineDependencies({ cwd: cwd(), env, pluginRoot })
+    const active = await activePipelineSlug(deps, slug)
+    if (!active.ok) return `Refused: ${active.error.reason}`
+    const recorded = await createRecordDecision(deps).record({ slug: active.value, key, answer })
     return recorded.ok
       ? `Recorded "${answer}" for ${key}. Resume the paused skraft-pipeline run with /workflows → R.`
       : `Refused: ${recorded.error.reason}`
@@ -94,15 +97,17 @@ export const createSkraftClosePhaseTool = ({ cwd, pluginRoot, env }) => Object.f
   parameters: {
     type: 'object',
     properties: {
-      slug: { type: 'string', description: 'Pipeline slug (feature scope)' },
+      slug: { type: 'string', description: "Optional: the pipeline you expect. The tool acts on this working copy's active pipeline (.active-slug) and refuses another one." },
       phase: { type: 'string', description: 'The open phase, as a guard (optional)' },
       findings: { type: 'integer', minimum: 0, description: 'Findings the human rework fixed (default 0)' },
     },
-    required: ['slug'],
+    required: [],
   },
-  handler: async ({ slug, phase, findings = 0 }) => {
-    const closed = await createCloseManually(createNodePipelineDependencies({ cwd: cwd(), env, pluginRoot }))
-      .close({ slug, phase, findings })
+  handler: async ({ slug, phase, findings = 0 } = {}) => {
+    const deps = createNodePipelineDependencies({ cwd: cwd(), env, pluginRoot })
+    const active = await activePipelineSlug(deps, slug)
+    if (!active.ok) return `Refused (${active.error.code}): ${active.error.reason}`
+    const closed = await createCloseManually(deps).close({ slug: active.value, phase, findings })
     return closed.ok
       ? `${closed.value.phase} closed by human validation (${closed.value.review}); next: ${closed.value.next}. Run skraft-pipeline again to resume.`
       : `Refused (${closed.error.code}): ${closed.error.reason}`

@@ -3,7 +3,6 @@
 // by a real local server, read and answered over real HTTP and server-sent events.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -30,6 +29,7 @@ const withProject = async (fn) => {
     startedAt: `${TODAY}T09:00:00.000Z`, updatedAt: `${TODAY}T09:10:00.000Z`, log: [{ at: `${TODAY}T09:10:00.000Z`, message: 'waiting' }],
   })
   await writeFile(join(tracking, 'run.json'), journal('awaiting-human'))
+  await writeFile(join(repo, '.copilot-tracking/skraft-plans/.active-slug'), `${SLUG}\n`) // what RunPipeline records
   const prompts = []
   const canvas = createSkraftPipelineCanvas({
     cwd: () => repo, pluginRoot: PLUGIN_ROOT, env: { ...process.env, SKRAFT_TRACKING_ROOT: '' }, pollMs: 40,
@@ -64,76 +64,33 @@ const nextEvent = async (reader, type) => {
   }
 }
 
-test('canvas: declared for createCanvas with its actions; opened without a slug it shows the only pipeline', async () => {
+test('canvas: declared for createCanvas with its actions; it shows the active pipeline of the working copy and refuses another', async () => {
   await withProject(async ({ repo, canvas }) => {
     assert.equal(canvas.id, 'skraft-pipeline')
-    assert.deepEqual(canvas.actions.map((a) => a.name), ['get_pipeline', 'select_pipeline', 'decide', 'show_phase', 'refresh'])
-    await assert.rejects(open(canvas, repo, { slug: '../x' }), (error) => error instanceof CanvasRequestError && error.code === 'invalid_slug')
+    assert.deepEqual(canvas.actions.map((a) => a.name), ['get_pipeline', 'decide', 'show_phase', 'refresh'])
+    await assert.rejects(open(canvas, repo, { slug: 'refund' }), (error) => error instanceof CanvasRequestError && error.code === 'pipeline_not_active' && /\.active-slug names "checkout"/.test(error.message))
     await assert.rejects(canvas.actions[0].handler({ instanceId: 'nope' }), { code: 'canvas_not_open' })
-    const opened = await open(canvas, repo, {})
-    assert.deepEqual([opened.title, opened.status], ['Skraft · checkout', 'DESIGN · awaiting-human'])
+    assert.deepEqual(await open(canvas, repo, {}).then(({ title, status }) => [title, status]), ['Skraft · checkout', 'DESIGN · awaiting-human'])
   })
 })
 
-// A second pipeline beside checkout, its run started on `branch`.
-const addPipeline = async (repo, slug, { branch = null, phase = 'RESEARCH' } = {}) => {
-  const dir = join(repo, '.copilot-tracking/skraft-plans', slug)
-  await mkdir(dir, { recursive: true })
-  await writeFile(join(dir, 'state.json'), JSON.stringify({ currentPhase: phase, phasesCompleted: [], verdicts: {}, retryCount: {}, phaseArtifacts: {}, reviewArtifacts: {}, phaseHistory: {}, userPreferences: {} }))
-  await writeFile(join(dir, 'run.json'), JSON.stringify({ status: 'blocked', phase, branch, story: null, startedAt: `${TODAY}T08:00:00.000Z`, updatedAt: `${TODAY}T08:00:00.000Z`, log: [] }))
-}
-const git = (repo, ...args) => execFileSync('git', args, { cwd: repo, stdio: 'ignore' })
-
-test('canvas: several pipelines and none on this branch — it opens on the list, and the person picks one', async () => {
+test('canvas: a working copy with no .active-slug opens on "no active pipeline", then shows the run that writes it', async () => {
   await withProject(async ({ repo, canvas }) => {
-    await addPipeline(repo, 'refund')
+    const pointer = join(repo, '.copilot-tracking/skraft-plans/.active-slug')
+    await rm(pointer)
     const opened = await open(canvas, repo, {})
-    assert.deepEqual([opened.title, opened.status], ['Skraft pipelines', '2 pipelines — choose one'])
-    const chooser = await (await api(opened.url, '/api/view')).json()
-    assert.equal(chooser.chooser, true)
-    assert.deepEqual(chooser.pipelines.map((p) => [p.slug, p.currentPhase, p.runStatus]), [['checkout', 'DESIGN', 'awaiting-human'], ['refund', 'RESEARCH', 'blocked']])
-    assert.equal((await api(opened.url, '/api/decide', { method: 'POST', body: JSON.stringify({ key: 'k', answer: 'a' }) })).status, 400, 'nothing to answer yet')
-    assert.equal((await api(opened.url, '/api/file?path=state.json')).status, 404)
+    assert.deepEqual([opened.title, opened.status], ['Skraft pipeline', 'no active pipeline'])
+    const idle = await (await api(opened.url, '/api/view')).json()
+    assert.deepEqual([idle.idle, idle.where], [true, repo])
+    assert.match(idle.reason, /no \.active-slug/)
+    assert.equal((await api(opened.url, '/api/decide', { method: 'POST', body: JSON.stringify({ key: 'rejected:DESIGN:1', answer: 'rework' }) })).status, 409)
+    assert.equal((await api(opened.url, `/api/file?path=reviews/${TODAY}/design-review-1.md`)).status, 404, 'no pipeline, no file')
+    await assert.rejects(canvas.actions[0].handler({ instanceId: 'i-1', input: {} }), { code: 'pipeline_unknown' })
+    await assert.rejects(canvas.actions[1].handler({ instanceId: 'i-1', input: { key: 'rejected:DESIGN:1', answer: 'rework' } }), { code: 'pipeline_unknown' })
 
-    const [getPipeline, selectPipeline, decide] = canvas.actions
-    const ctx = (input) => ({ instanceId: 'i-1', input })
-    assert.equal((await getPipeline.handler(ctx({}))).chooser, true)
-    await assert.rejects(decide.handler(ctx({ key: 'k', answer: 'a' })), { code: 'pipeline_unknown' })
-    await assert.rejects(selectPipeline.handler(ctx({ slug: 'nope' })), { code: 'pipeline_unknown' })
-    assert.equal((await api(opened.url, '/api/select', { method: 'POST', body: JSON.stringify({ slug: '../etc' }) })).status, 400)
-
-    assert.equal((await api(opened.url, '/api/select', { method: 'POST', body: JSON.stringify({ slug: 'refund' }) })).status, 200)
-    assert.equal((await (await api(opened.url, '/api/view')).json()).slug, 'refund')
-    assert.deepEqual(await selectPipeline.handler(ctx({ slug: 'checkout' })), { slug: 'checkout' })
-    assert.equal((await getPipeline.handler(ctx({}))).currentPhase, 'DESIGN')
+    await writeFile(pointer, `${SLUG}\n`)
+    assert.equal((await (await api(opened.url, '/api/view')).json()).slug, SLUG, 'the run started here shows up by itself')
   })
-})
-
-test('canvas: opened without a slug on a feature branch, it shows that branch\'s pipeline', async () => {
-  await withProject(async ({ repo, canvas }) => {
-    await addPipeline(repo, 'refund')
-    await addPipeline(repo, 'gift-card', { branch: 'feat/77-vouchers' })
-    git(repo, 'init', '-q', '-b', 'feat/123-refund')
-    assert.equal((await open(canvas, repo, {})).title, 'Skraft · refund', 'the branch names the pipeline')
-    await canvas.onClose({ instanceId: 'i-1' })
-    git(repo, 'checkout', '-q', '-b', 'feat/77-vouchers')
-    assert.equal((await open(canvas, repo, {})).title, 'Skraft · gift-card', 'the last run started on this branch')
-  })
-})
-
-test('canvas: a repository with no pipeline yet still opens, and the list fills once a run starts', async () => {
-  const repo = await mkdtemp(join(tmpdir(), 'skraft-canvas-empty-'))
-  const canvas = createSkraftPipelineCanvas({ cwd: () => repo, pluginRoot: PLUGIN_ROOT, env: { ...process.env, SKRAFT_TRACKING_ROOT: '' }, pollMs: 40, sendPrompt: async () => {} })
-  try {
-    const opened = await open(canvas, repo, {})
-    assert.deepEqual([opened.title, opened.status], ['Skraft pipelines', 'no pipeline yet'])
-    assert.deepEqual((await (await api(opened.url, '/api/view')).json()).pipelines, [])
-    await addPipeline(repo, 'refund')
-    assert.equal((await (await api(opened.url, '/api/view')).json()).slug, 'refund', 'the first pipeline shows up by itself')
-  } finally {
-    await canvas.onClose({ instanceId: 'i-1' })
-    await rm(repo, { recursive: true, force: true })
-  }
 })
 
 test('canvas: opens on a local page that only its token reads, and shows the pipeline', async () => {
@@ -191,7 +148,7 @@ test('canvas: the page follows the run live, and the agent reads, answers, scrol
     await writeFile(join(tracking, 'run.json'), journal('running'))
     assert.equal((await nextEvent(reader, 'view')).run.status, 'running', 'a change on disk reaches the page')
 
-    const [getPipeline, , decide, showPhase, refresh] = canvas.actions
+    const [getPipeline, decide, showPhase, refresh] = canvas.actions
     const ctx = (input) => ({ instanceId: 'i-1', input })
     assert.equal((await getPipeline.handler(ctx({}))).currentPhase, 'DESIGN')
     await assert.rejects(decide.handler(ctx({ key: 'rejected:DESIGN:1' })), { code: 'decision_refused' })

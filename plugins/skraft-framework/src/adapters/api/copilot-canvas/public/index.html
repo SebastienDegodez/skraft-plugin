@@ -16,12 +16,11 @@
     <p id="freshness" class="freshness"></p>
   </header>
 
-  <section id="chooser" class="chooser" hidden aria-labelledby="chooser-title">
-    <h2 id="chooser-title">Choose a pipeline</h2>
-    <p id="chooser-why" class="note"></p>
-    <ul id="chooser-list" class="chooser-list"></ul>
-    <p id="chooser-empty" class="empty" hidden>No SKRAFT pipeline in this repository yet. Start one with the <code>skraft-pipeline</code> workflow, or ask the Skraft - Orchestrator agent; it shows up here by itself.</p>
-    <p id="chooser-note" class="note" hidden></p>
+  <section id="idle" class="idle" hidden aria-labelledby="idle-title">
+    <h2 id="idle-title">No pipeline is active in this working copy</h2>
+    <p id="idle-reason" class="note"></p>
+    <p class="note">Working copy: <code id="idle-where"></code></p>
+    <p class="note">Start one here with the <code>skraft-pipeline</code> workflow (or the Skraft - Orchestrator agent): it records <code>.active-slug</code> and the run shows up on this page by itself.</p>
   </section>
 
   <div id="pipeline">
