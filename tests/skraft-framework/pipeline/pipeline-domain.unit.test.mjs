@@ -61,7 +61,8 @@ test('run-pipeline: its whole import graph uses no Node built-in', () => {
       if (spec.startsWith('.')) visit(resolve(dirname(file), spec))
       else offenders.push(`${file.replace(PLUGIN_ROOT, '')} → ${spec}`)
     }
-    if (/\brequire\(|import\(|process\.|createRequire/.test(source.replace(/\/\/.*$/gm, ''))) offenders.push(`${file.replace(PLUGIN_ROOT, '')} uses require/import()/process`)
+    // Node's `process` global, not a property (Stryker's instrumentation reads g.process.env).
+    if (/\brequire\(|\bimport\(|(?<![.\w$])process\.|createRequire/.test(source.replace(/\/\/.*$/gm, ''))) offenders.push(`${file.replace(PLUGIN_ROOT, '')} uses require/import()/process`)
   }
   visit(entry)
   assert.deepEqual(offenders, [])
