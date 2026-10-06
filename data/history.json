@@ -999,32 +999,6 @@
   "agents": {
     "software-engineer": [
       {
-        "id": "34096438353:agent:software-engineer:2026-09-07T07:39:32.037Z",
-        "timestamp": "2026-09-07T07:39:32.037Z",
-        "commit": "f2a11d9952bb8c4956326e1ea69e917b18648067",
-        "run": "34096438353",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/34096438353",
-        "runner": "vally-agent",
-        "model": "gpt-5.6-luna",
-        "judgeModel": "none",
-        "state": "inconclusive",
-        "reason": "incomplete run (3 of 3 trial(s) errored)",
-        "netWin": 0,
-        "trialCount": 3,
-        "meanScore": 0,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "34821607907:agent:software-engineer:2026-09-14T08:14:52.090Z",
         "timestamp": "2026-09-14T08:14:52.090Z",
         "commit": "f2a11d9952bb8c4956326e1ea69e917b18648067",
@@ -1264,6 +1238,33 @@
           "pValue": null
         },
         "metrics": null
+      },
+      {
+        "id": "37540941583:agent:software-engineer:2026-10-06T22:43:17.222Z",
+        "timestamp": "2026-10-06T22:43:17.222Z",
+        "commit": "8374553deed04a13026792e11a60c18d407a4133",
+        "run": "37540941583",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/37540941583",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "regression",
+        "reason": "broke conformance on 1 of 3 trial(s) (threshold 1)",
+        "descriptorSha": "b2f4b1cdd034770d77a57371e073fd72ee2526af8d9f015c825b390672ef30ee",
+        "netWin": 0.3333333333333333,
+        "trialCount": 3,
+        "meanScore": 0.917,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
       }
     ],
     "acceptance-designer-reviewer": [
@@ -1455,6 +1456,33 @@
           "pValue": null
         },
         "metrics": null
+      },
+      {
+        "id": "37540941583:agent:acceptance-designer-reviewer:2026-10-06T22:42:19.862Z",
+        "timestamp": "2026-10-06T22:42:19.862Z",
+        "commit": "8374553deed04a13026792e11a60c18d407a4133",
+        "run": "37540941583",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/37540941583",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "pass",
+        "reason": "conforms on every trial (6/6 at or above 0.9)",
+        "descriptorSha": "d00c1577c9ab80dc318394e65a03289b9aa62a25326605f0c2f99ff260f9eb7a",
+        "netWin": 1,
+        "trialCount": 6,
+        "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
       }
     ],
     "acceptance-designer": [
@@ -1635,6 +1663,33 @@
         "netWin": 0.7777777777777778,
         "trialCount": 9,
         "meanScore": 0.986,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "37540941583:agent:acceptance-designer:2026-10-06T22:39:08.690Z",
+        "timestamp": "2026-10-06T22:39:08.690Z",
+        "commit": "8374553deed04a13026792e11a60c18d407a4133",
+        "run": "37540941583",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/37540941583",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "pass",
+        "reason": "conforms on every trial (9/9 at or above 0.9)",
+        "descriptorSha": "d5e3ead7ee717c30a7eba511fc29053827731700e646f2afb23b51d1ba8197ee",
+        "netWin": 1,
+        "trialCount": 9,
+        "meanScore": 1,
         "confidenceInterval": {
           "low": null,
           "high": null
