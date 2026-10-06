@@ -6,7 +6,9 @@ export const joinPath = (...parts) => parts.join('/').replace(/\/{2,}/g, '/')
 
 // AgentRunner id mapping: "Skraft - Software Engineer" → "skraft:software-engineer", the
 // alias key of agentAliases that is not the display name, under the plugin's namespace.
+// null (the report transport) is Claude Code's general-purpose agent, which sees MCP tools.
 export const claudeAgentId = (canonical, config, pluginName) => {
+  if (canonical === null) return 'general-purpose'
   const kebab = Object.entries(config.agentAliases ?? {})
     .find(([alias, target]) => target === canonical && /^[a-z0-9-]+$/.test(alias))?.[0]
   return kebab ? `${pluginName}:${kebab}` : canonical

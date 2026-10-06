@@ -26,6 +26,8 @@ export const createGitSourceControl = ({ git }) => {
     },
     range: async (base, rev) => (isSha(base) && isSha(rev) ? lines(await git(['rev-list', '--no-merges', `${base}..${rev}`])) : []),
     show: async (sha, path) => (isSha(sha) && typeof path === 'string' && path.length > 0 ? git(['show', `${sha}:${path}`]) : null),
+    currentBranch: async () => (await git(['symbolic-ref', '--quiet', '--short', 'HEAD']))?.trim() || null,
+    remoteUrl: async () => (await git(['remote', 'get-url', 'origin']))?.trim() || null,
     listRecent: async (count) => lines(await git(['log', '-n', String(count), '--pretty=format:%H%x1f%s']))
       .map((line) => {
         const [sha, subject] = line.split('\x1f')

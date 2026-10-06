@@ -17,35 +17,35 @@ export function isRootReference(ref) {
 }
 
 export function validateReportData(data) {
-  const require = (condition, field) => {
+  const requireField = (condition, field) => {
     if (!condition) throw new TypeError(`Invalid report ${field}`)
   }
-  require(object(data), 'data')
-  require(['forecast', 'outcome'].includes(data.kind), 'kind')
-  require(identifier(data.story), 'story')
+  requireField(object(data), 'data')
+  requireField(['forecast', 'outcome'].includes(data.kind), 'kind')
+  requireField(identifier(data.story), 'story')
   for (const field of ['runId', 'reportId']) {
-    if (data[field] !== undefined) require(identifier(data[field]), field)
+    if (data[field] !== undefined) requireField(identifier(data[field]), field)
   }
-  require(revision(data.revision), 'revision')
-  require(text(data.title), 'title')
-  require(['en', 'fr'].includes(data.language), 'language')
-  require(Number.isSafeInteger(data.maxMedia) && data.maxMedia >= 0, 'maxMedia')
-  require(object(data.impact) && typeof data.impact.expected === 'string'
+  requireField(revision(data.revision), 'revision')
+  requireField(text(data.title), 'title')
+  requireField(['en', 'fr'].includes(data.language), 'language')
+  requireField(Number.isSafeInteger(data.maxMedia) && data.maxMedia >= 0, 'maxMedia')
+  requireField(object(data.impact) && typeof data.impact.expected === 'string'
     && (data.impact.actual === undefined || typeof data.impact.actual === 'string'), 'impact')
-  require(Array.isArray(data.criteria), 'criteria')
+  requireField(Array.isArray(data.criteria), 'criteria')
   const ids = new Set()
   for (const criterion of data.criteria) {
-    require(object(criterion) && identifier(criterion.id) && !ids.has(criterion.id), 'criterion id')
+    requireField(object(criterion) && identifier(criterion.id) && !ids.has(criterion.id), 'criterion id')
     ids.add(criterion.id)
-    require(text(criterion.description) && text(criterion.test), 'criterion text')
-    require(criterion.evidence === undefined || typeof criterion.evidence === 'string', 'criterion evidence')
+    requireField(text(criterion.description) && text(criterion.test), 'criterion text')
+    requireField(criterion.evidence === undefined || typeof criterion.evidence === 'string', 'criterion evidence')
   }
-  require(Array.isArray(data.limitations) && data.limitations.every((item) => typeof item === 'string'), 'limitations')
-  require(Array.isArray(data.media) && data.media.every((item) => object(item) && text(item.label)
+  requireField(Array.isArray(data.limitations) && data.limitations.every((item) => typeof item === 'string'), 'limitations')
+  requireField(Array.isArray(data.media) && data.media.every((item) => object(item) && text(item.label)
     && (item.url === undefined || typeof item.url === 'string')
     && (item.path === undefined || typeof item.path === 'string')), 'media')
   for (const field of ['testPlanRef', 'qualityEvidenceRef', 'reviewRef', 'changeLogRef']) {
-    require(data[field] === undefined || isRootReference(data[field]), field)
+    requireField(data[field] === undefined || isRootReference(data[field]), field)
   }
 }
 

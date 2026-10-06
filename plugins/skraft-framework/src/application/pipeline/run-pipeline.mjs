@@ -32,6 +32,7 @@ import { createRecoveryService } from '../recovery-service.mjs'
 import { Halt, awaiting, blocked, createCheckpoint } from './checkpoint.mjs'
 import { createPipelineRecovery } from './recover-pipeline.mjs'
 import { createPipelineStateService } from './pipeline-state.mjs'
+import { createReportBoundaries } from './report-boundaries.mjs'
 
 // Use case RunPipeline (ports/api/run-pipeline.mjs): the SKRAFT orchestrator as code,
 // the same for every host. It sequences RESEARCH → DESIGN → DISTILL → DELIVER, runs each
@@ -51,6 +52,8 @@ import { createPipelineStateService } from './pipeline-state.mjs'
 //   hasher                     SHA-256 of the evidence a log cites
 //   activePipeline             the pointer the settings hooks read to guard this run
 //   agentRunner                one subagent dispatch
+//   reportTransport            the remote side of report publication (a delegated agent)
+//   templateReader             the plugin's templates (reports, closing reviews)
 //   humanInteraction           a checkpoint question
 //   decisionStore              answers recorded against a checkpoint key
 //   progress                   phase and log lines for the person watching
@@ -114,13 +117,15 @@ export const createRunPipeline = (deps) => {
   const dispatch = async (slug, story, state, agent, { outputs = [], addenda = [], label }) => {
     const handoff = buildHandoff({ agent, state, config })
     if (!handoff.ok) throw blocked(state.currentPhase, `cannot hand off to ${agent}: ${handoff.error.reason}`)
+    // DISTILL and DELIVER specialists get the reporting addendum on every dispatch, rework included.
+    const reporting = handoff.value.role === 'specialist' ? await reports.addendum(slug, handoff.value.phase) : null
     const prompt = composeDispatchBrief({
       handoff: handoff.value,
       slug,
       story,
       trackingPrefix: trackingStore.prefix(slug),
       outputs,
-      addenda,
+      addenda: reporting ? [reporting, ...addenda] : addenda,
     })
     progress.log(`→ ${agent} (${handoff.value.mode}, attempt ${handoff.value.attempt}/${handoff.value.maxAttempts})`)
     const answer = await agentRunner.run({ agent, phase: handoff.value.phase, role: handoff.value.role, label, prompt })
@@ -131,7 +136,8 @@ export const createRunPipeline = (deps) => {
   // ── Checkpoints ───────────────────────────────────────────────────────────
   // A recorded answer wins; otherwise the human is asked and the answer recorded.
   // No answer now (headless, or a host that suspends) stops the run as awaiting-human.
-  const { ask } = createCheckpoint({ decisionStore, humanInteraction })
+  const { ask, tryAsk } = createCheckpoint({ decisionStore, humanInteraction })
+  const reports = createReportBoundaries({ ...deps, stateService, tryAsk, progress, time })
   const { recover } = createPipelineRecovery({
     recovery: createRecoveryService({
       stateReader: deps.stateReader,
@@ -278,6 +284,8 @@ export const createRunPipeline = (deps) => {
       switch (step.kind) {
         case 'advance': {
           if (phase === 'DESIGN') await ratifyAdrs(slug, story)
+          if (phase === 'DISTILL') await reports.report(slug, 'forecast', (state.reviewArtifacts?.[phase] ?? []).at(-1))
+          if (phase === 'DELIVER') await reports.report(slug, 'outcome', (state.reviewArtifacts?.[phase] ?? []).at(-1))
           const target = nextPhaseAfter(phase, { ...config, phaseOrder }) ?? 'DONE'
           try {
             await apply(slug, { type: 'ADVANCE', targetPhase: target, at: now() })
@@ -329,10 +337,11 @@ export const createRunPipeline = (deps) => {
         }
 
         case 'specialist': {
-          await dispatch(slug, story, state, specialistAgent, {
+          const answer = await dispatch(slug, story, state, specialistAgent, {
             label: `${phase}:specialist:${state.retryCount?.[phase] ?? 0}:${recordedReviews}:${step.addenda.map((a) => a.title).join('|')}`,
             addenda: step.addenda,
           })
+          if (phase === 'DISTILL' && answer?.ok) await reports.keepHandoff(slug, answer.text)
           const { found, missing } = matchOutputs(await trackingStore.list(slug), expectedTrackedOutputs(specialistAgent, config))
           const after = await recordArtifacts(slug, phase, found)
           if (missing.length > 0) {
@@ -396,13 +405,24 @@ export const createRunPipeline = (deps) => {
       // The settings hooks (G1, G8, G9) guard the pipeline this pointer names: without it they
       // stand down in silence, and a stale one makes them refuse this run's dispatches.
       await activePipeline.activate(slug)
+      await reports.ensureConsent(slug, story)
       for (let i = 0; i < maxPhases; i += 1) {
         const state = await readState(slug)
         if (state.currentPhase === 'DONE') {
+          await reports.resumePending(slug)
           progress.log(`${slug}: pipeline DONE`)
           return Object.freeze({ status: 'done', phase: 'DONE', reason: 'every phase approved' })
         }
-        await runPhase(slug, story, state.currentPhase)
+        try {
+          await runPhase(slug, story, state.currentPhase)
+        } catch (error) {
+          // A blocked DELIVER still reports its outcome; the report never changes the verdict.
+          if (error instanceof Halt && error.outcome.status === 'blocked' && state.currentPhase === 'DELIVER') {
+            const latest = await readState(slug)
+            await reports.report(slug, 'outcome', (latest.reviewArtifacts?.DELIVER ?? []).at(-1))
+          }
+          throw error
+        }
       }
       throw blocked(null, 'phase guard reached')
     } catch (error) {

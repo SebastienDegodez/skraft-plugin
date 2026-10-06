@@ -49,6 +49,17 @@ const fakeContext = (repo) => {
         await writeFile(index, (await readFile(index, 'utf8')).replace('| Proposed |', '| Accepted |'))
         return 'ratified'
       }
+      // The acceptance designer writes its forecast data where the reporting addendum says.
+      const forecast = prompt.match(/`(\.copilot-tracking\/skraft-plans\/checkout\/reporting\/[\d-]+\/forecast-data\.json)`/)
+      if (agent === CONFIG.phaseAgents.DISTILL.specialist && forecast) {
+        await mkdir(join(repo, forecast[1], '..'), { recursive: true })
+        await writeFile(join(repo, forecast[1]), JSON.stringify({
+          kind: 'forecast', story: SLUG, title: 'Pay by card', revision: String(git(repo, 'rev-parse', 'HEAD')).trim(), language: 'en',
+          impact: { expected: 'Card payments accepted; source: test plan' },
+          criteria: [{ id: 'AC-1', description: 'Pay by card', test: 'Checkout accepts a valid card' }],
+          limitations: [], media: [], maxMedia: 0,
+        }))
+      }
       for (const pattern of requiredTrackedOutputs(agent, CONFIG)) {
         const path = join(tracking, pattern.replace(/\{date\}/g, today).replace(/\{slug\}/g, SLUG).replace(/\{story\}/g, 's1').replace(/\{[^}]+\}/g, 'x'))
         await mkdir(join(path, '..'), { recursive: true })
@@ -82,6 +93,13 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     const ctx = fakeContext(repo)
     const run = () => runSkraftPipelineWorkflow(ctx, { cwd: repo, pluginRoot: PLUGIN_ROOT, env })
 
+    // Attempt 0: the reporting consent pauses the run before any dispatch; the human
+    // answers with the skraft_decide tool.
+    const decide = createSkraftDecideTool({ cwd: () => repo, pluginRoot: PLUGIN_ROOT, env })
+    await assert.rejects(run(), { name: 'AbortError', message: 'paused at reporting:consent' })
+    assert.equal(ctx.calls.length, 0)
+    assert.match(await decide.handler({ slug: SLUG, key: 'reporting:consent', answer: 'chat' }), /^Recorded "chat"/)
+
     // Attempt 1: the DESIGN checkpoint pauses the run (ctx.pause throws AbortError).
     await assert.rejects(run(), { name: 'AbortError', message: 'paused at adr-ratification:007' })
     const state1 = JSON.parse(await readFile(join(repo, '.copilot-tracking/skraft-plans/checkout/state.json'), 'utf8'))
@@ -90,8 +108,8 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     assert.deepEqual(ctx.phases, ['RESEARCH', 'DESIGN'])
     assert.equal(ctx.calls[0].agent, 'Skraft - Solution Researcher', 'Copilot agents are addressed by their .agent.md name')
 
+    assert.equal(state1.userPreferences.reporting.destinations.chat, true)
     // The human answers through the skraft_decide tool.
-    const decide = createSkraftDecideTool({ cwd: () => repo, pluginRoot: PLUGIN_ROOT, env })
     assert.match(await decide.handler({ slug: SLUG, key: 'adr-ratification:007', answer: 'accept all' }), /^Recorded "accept all"/)
 
     // Attempt 2 (resume): the recorded answer ratifies, DISTILL and DELIVER run, and the
@@ -104,6 +122,14 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     assert.equal(state2.currentPhase, 'DELIVER')
     assert.ok(ctx.logs.some((line) => /^qg-verify evidence\/.+qg-s1\.json: inconclusive$/.test(line)), ctx.logs.join('\n'))
     assert.ok(!ctx.calls.slice(1).some((c) => c.agent === 'Skraft - Solution Researcher'), 'RESEARCH is not redone on resume')
+    // The forecast was rendered after DISTILL from the designer's data, and summarised in chat.
+    const forecastMd = ctx.logs.find((line) => /^forecast report for checkout: /.test(line))
+    assert.ok(forecastMd, ctx.logs.join('\n'))
+    assert.match(await readFile(join(repo, forecastMd.split(': ')[1]), 'utf8'), /AC-1/)
+    const engineerBrief = ctx.calls.findLast((c) => c.agent === 'Skraft - Software Engineer').prompt
+    assert.match(engineerBrief, /## Reporting \(qa-reporting\)/)
+    assert.match(engineerBrief, /Approved forecast data: `\.copilot-tracking\/skraft-plans\/checkout\/reporting\/[\d-]+\/forecast-data\.json`/)
+    assert.match(engineerBrief, /distill-handoff\.md/)
 
     // The settings hooks now guard this run: the pointer names it, G1 lets its DELIVER
     // specialist through, and G6 injects no prose-orchestrator steps after a code dispatch.

@@ -9,4 +9,6 @@
 //   range(base, rev)      => Promise<string[]>           rev-list base..rev, no merges
 //   show(sha, path)       => Promise<string | null>      file content at a revision
 //   listRecent(count)     => Promise<Array<{ sha, subject }>>   newest first
+//   currentBranch()       => Promise<string | null>      short name; null when detached
+//   remoteUrl()           => Promise<string | null>      URL of the `origin` remote
 export const SOURCE_CONTROL_PORT = 'SourceControl'

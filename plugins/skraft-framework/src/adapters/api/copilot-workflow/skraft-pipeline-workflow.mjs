@@ -3,6 +3,7 @@ import { createRecordDecision } from '../../../application/pipeline/record-decis
 import { createCloseManually } from '../../../application/pipeline/close-manually.mjs'
 import { createNodePipelineDependencies } from '../pipeline/node-dependencies.mjs'
 import { createWorkflowAgentRunner } from '../../infrastructure/copilot-workflow/workflow-agent-runner.mjs'
+import { createAgentReportTransport } from '../../infrastructure/reporting/agent-report-transport.mjs'
 import { createWorkflowHumanInteraction } from '../../infrastructure/copilot-workflow/workflow-human-interaction.mjs'
 import { createWorkflowProgress } from '../../infrastructure/copilot-workflow/workflow-progress.mjs'
 
@@ -44,9 +45,11 @@ export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, env }) =
   if (typeof slug !== 'string' || !SLUG.test(slug)) {
     return { status: 'blocked', phase: null, reason: `slug must be kebab-case, got ${JSON.stringify(slug)}` }
   }
+  const agentRunner = createWorkflowAgentRunner({ ctx, agentIds })
   const pipeline = createRunPipeline({
     ...createNodePipelineDependencies({ cwd, env, pluginRoot }),
-    agentRunner: createWorkflowAgentRunner({ ctx, agentIds }),
+    agentRunner,
+    reportTransport: createAgentReportTransport({ agentRunner, pluginRoot }),
     humanInteraction: createWorkflowHumanInteraction({ ctx }),
     progress: createWorkflowProgress({ ctx }),
   })
