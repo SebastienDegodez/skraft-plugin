@@ -2,7 +2,9 @@ name: clean-architecture-java
 description: |
   Verifies that a Java / Spring Boot service is laid out as Clean Architecture
   and stays that way: one Maven module per layer, each referencing only its inner
-  neighbour, use cases as plain classes, and no port or adapter vocabulary.
+  neighbour, use cases as plain classes, and no port or adapter vocabulary;
+  commands that return nothing, queries that return a read model, aggregates
+  built by a factory, and access rules split between use case and aggregate.
   Probes without the skill (Sonnet, 2 runs per case) followed an existing
   layered build every time, but on an empty repository asked for "Clean
   Architecture" they produced one Maven module, a use-case interface with a
@@ -429,6 +431,339 @@ stimuli:
       - Adds the refund call to the existing modules, following the layout already there.
       - Lets the endpoint call the refund use case class directly, with no interface standing in front of it.
       - Reads a 409 from the provider as a refusal rather than an error.
+
+  # Deterministic decider. Probes without the skill, 2 runs, Java and .NET alike:
+  # the create use case returned the stored entity and generated the id itself,
+  # and the read use case returned the domain object.
+  - name: 'Java existing build: contacts, created and fetched over HTTP'
+    prompt: |
+      Add a contacts feature: create a contact (name, email) and get a contact by
+      id, over HTTP (POST /contacts, GET /contacts/{id}). Contacts have no business
+      rules. Keep them in memory for now. Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: ../clean-architecture-testing/fixtures/payment-spring/.gitignore
+          dest: .gitignore
+        - src: ../clean-architecture-testing/fixtures/payment-spring/pom.xml
+          dest: pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-domain/pom.xml
+          dest: payment-domain/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-application/pom.xml
+          dest: payment-application/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-infrastructure/pom.xml
+          dest: payment-infrastructure/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-app/pom.xml
+          dest: payment-app/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-app/PaymentApplication.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-app/PaymentConfiguration.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-app/application.properties
+          dest: payment-app/src/main/resources/application.properties
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-unit-test/pom.xml
+          dest: payment-unit-test/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
+          dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-integration-test/pom.xml
+          dest: payment-integration-test/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
+          dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+      commands:
+        - 'mvn -B -q -ntp verify'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the Maven build still resolves'
+        config:
+          command: mvn
+          args: [-B, -q, -o, validate]
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: Every test in the build is green
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1
+          expected_exit_code: 0
+          timeout: 5m
+      - type: diff-not-contains
+        name: The module graph is unchanged
+        config:
+          pattern: '(?m)^diff --git a/(?:[^ ]*/)?pom\.xml '
+      - type: run-command
+        name: Creating a contact returns nothing and receives the new id
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/'))
+                .map(f => ({ file: f.slice(1), text: fs.readFileSync(f.slice(1), 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`[-/.]${layer}[/.]`).test('/' + s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:final\s+|static\s+|synchronized\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !['class', 'record', 'new', 'return'].includes(m.ret));
+
+              const app = inLayer('application');
+              const all = app.flatMap(methods);
+              const creates = all.filter(m => /^(create|add|register)/i.test(m.name) || (/^(handle|execute|invoke)$/i.test(m.name) && /^(Create|Add|Register)/.test(m.cls)));
+              if (!creates.length) { console.log('no create entry point in Application'); process.exit(1); }
+              const records = Object.fromEntries(sources.flatMap(s => [...s.text.matchAll(/record\s+(\w+)\s*\(([^)]*)\)/g)].map(m => [m[1], m[2]])));
+              const carriesId = m => /\b\w*Id\b|\bid\b/.test(m.params)
+                || [...m.params.matchAll(/([A-Z]\w+)\s+\w+/g)].some(t => /\b\w*Id\b|\bid\b/.test(records[t[1]] || ''));
+              const bad = creates.filter(m => m.ret !== 'void' || !carriesId(m)).map(m => `${m.cls}.${m.name}(${m.params.trim()}) returns ${m.ret}`);
+              if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
+              console.log('create returns nothing and receives the new id');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Fetching a contact returns a read model, not the domain object
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/'))
+                .map(f => ({ file: f.slice(1), text: fs.readFileSync(f.slice(1), 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`[-/.]${layer}[/.]`).test('/' + s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:final\s+|static\s+|synchronized\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !['class', 'record', 'new', 'return'].includes(m.ret));
+
+              const domainTypes = new Set(inLayer('domain').flatMap(s => [...s.text.matchAll(/\b(?:class|record|enum)\s+(\w+)/g)].map(m => m[1])));
+              const queries = inLayer('application').flatMap(methods)
+                .filter(m => /^(get|find|view|consult|load)/i.test(m.name) || (/^(handle|execute|invoke)$/i.test(m.name) && /^(Get|Find|View|Consult|Load)/.test(m.cls)));
+              if (!queries.length) { console.log('no query entry point in Application'); process.exit(1); }
+              const bad = queries.filter(m => !/ViewModel\b/.test(m.ret) || m.ret.match(/\w+/g).some(t => domainTypes.has(t))).map(m => `${m.cls}.${m.name} returns ${m.ret}`);
+              if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
+              console.log('queries return a *ViewModel, never a domain type');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-java
+    rubric:
+      - Lets the endpoint choose the new contact's id and hand it to the use case, which returns nothing.
+      - Returns a read model built for the caller from the fetch, never the stored object itself.
+      - Adds no rule about contacts that the request did not state.
+
+  # Deterministic decider. Probes without the skill, 2 runs: a public constructor
+  # and raw String ids 2/2; the "only the owner may cancel" check sat in the use
+  # case or the read check in the aggregate, never both right.
+  - name: 'Java existing build: customers see and cancel only their own orders'
+    prompt: |
+      Add order consultation and cancellation for customers: GET /orders/{id}
+      returns an order and POST /orders/{id}/cancel cancels it. A customer may only
+      see and cancel their own orders; an order can only be cancelled while it is
+      pending. Authentication is already handled upstream: each request carries the
+      authenticated customer id in the X-Customer-Id header. Create whatever order
+      model you need and keep orders in memory. Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: ../clean-architecture-testing/fixtures/payment-spring/.gitignore
+          dest: .gitignore
+        - src: ../clean-architecture-testing/fixtures/payment-spring/pom.xml
+          dest: pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-domain/pom.xml
+          dest: payment-domain/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-application/pom.xml
+          dest: payment-application/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-infrastructure/pom.xml
+          dest: payment-infrastructure/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-app/pom.xml
+          dest: payment-app/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-app/PaymentApplication.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-app/PaymentConfiguration.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-app/application.properties
+          dest: payment-app/src/main/resources/application.properties
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-unit-test/pom.xml
+          dest: payment-unit-test/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
+          dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-integration-test/pom.xml
+          dest: payment-integration-test/pom.xml
+        - src: ../clean-architecture-testing/fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
+          dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+      commands:
+        - 'mvn -B -q -ntp verify'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the Maven build still resolves'
+        config:
+          command: mvn
+          args: [-B, -q, -o, validate]
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: Every test in the build is green
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1
+          expected_exit_code: 0
+          timeout: 5m
+      - type: diff-not-contains
+        name: The module graph is unchanged
+        config:
+          pattern: '(?m)^diff --git a/(?:[^ ]*/)?pom\.xml '
+      - type: run-command
+        name: An order is built by a factory and identified by a typed id
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/'))
+                .map(f => ({ file: f.slice(1), text: fs.readFileSync(f.slice(1), 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`[-/.]${layer}[/.]`).test('/' + s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:final\s+|static\s+|synchronized\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !['class', 'record', 'new', 'return'].includes(m.ret));
+
+              const order = inLayer('domain').find(s => /\b(?:final\s+)?class\s+Order\b/.test(s.text));
+              if (!order) { console.log('no Order class in Domain (a record exposes a public constructor)'); process.exit(1); }
+              const problems = [];
+              if (!/private\s+Order\s*\(/.test(order.text)) problems.push('Order has no private constructor');
+              if (!/static\s+Order\s+\w+\s*\(/.test(order.text)) problems.push('Order has no static factory');
+              if (/public\s+Order\s*\(/.test(order.text)) problems.push('Order has a public constructor');
+              if (!inLayer('domain').some(s => /\b(record|class)\s+OrderId\b/.test(s.text))) problems.push('no OrderId type in Domain');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('Order is built by a factory over a private constructor and identified by OrderId');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Who may cancel is an aggregate rule, who may read is a use-case check
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/'))
+                .map(f => ({ file: f.slice(1), text: fs.readFileSync(f.slice(1), 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(`[-/.]${layer}[/.]`).test('/' + s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:final\s+|static\s+|synchronized\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !['class', 'record', 'new', 'return'].includes(m.ret));
+
+              const order = inLayer('domain').find(s => /\b(class|record)\s+Order\b/.test(s.text));
+              const cancel = order && order.text.match(/(?:public\s+)?[\w<>]+\s+cancel\s*\(([^)]*)\)/);
+              if (!cancel || !cancel[1].trim()) { console.log('Order.cancel takes no caller: who may cancel is not an aggregate rule'); process.exit(1); }
+              const getter = inLayer('application').find(s => /\b(class)\s+(Get|Find|View|Consult|Load)\w*\b/.test(s.text));
+              if (!getter || !/(isOwnedBy|owner|Owner|ownedBy|customerId\(\)\s*\.equals|\.equals\()/.test(getter.text)) { console.log('the read use case does not check who may see the order'); process.exit(1); }
+              const api = sources.filter(s => /@(Rest)?Controller\b/.test(s.text));
+              const leak = api.filter(s => /(isOwnedBy|customerId\(\)\s*\.equals|ownerId)/.test(s.text)).map(s => s.file);
+              if (leak.length) { console.log(`endpoint checks ownership itself: ${leak.join(', ')}`); process.exit(1); }
+              console.log('read restriction in the use case, change restriction in the aggregate');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-java
+    rubric:
+      - Refuses a cancellation by another customer inside the order itself, from the caller's id it receives.
+      - Hides another customer's order in the read use case, without the order knowing who asks.
+      - Keeps the endpoint to reading the header and calling the use cases.
+      - Answers a foreign order the same way as a missing one.
 
   # Near miss. A Spring Boot change in the same build that touches no layer
   # decision: the skill must stay out of the way.
