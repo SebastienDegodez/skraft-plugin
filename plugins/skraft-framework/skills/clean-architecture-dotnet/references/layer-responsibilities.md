@@ -281,8 +281,7 @@ public static class DependencyInjection
 
 ### Authority
 
-> "The infrastructure layer contains adapters that translate between the domain model and external systems."  
-> — Eric Evans, *Domain-Driven Design* (2003)
+Infrastructure implements the interfaces Domain and Application declare, and is the only layer that talks to external systems.
 
 ---
 
