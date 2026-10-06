@@ -8,15 +8,16 @@
 // Driven adapters that touch `$` are declared in this file: the mods engine follows `$`
 // only into functions of the hooks module, never across an import. Each one translates a
 // port onto `$`; none decides:
-//   StateReader, TrackingStore, RepositoryReader   $.fs
+//   StateReader, StateWriter, TrackingStore,
+//   RepositoryReader                               $.fs
 //   SourceTree                                     git ls-files through $.process.run, $.fs
 //   ActivePipeline                                 $.fs ({trackingRoot}/.active-slug)
 //   AgentRunner                                    $.agent.spawn + the subagent's turn.complete
 //   HumanInteraction                               $.ui.ask (null when nothing draws)
 //   PipelineProgress                               $.state atom + pane + $.ui.status
 // The adapters that need no `$` of their own come from src/adapters/infrastructure/
-// (SourceControl on a git runner, Hasher on Web Crypto, StateWriter, DecisionStore); this
-// file hands them a runner built on $.process.run. The quality-gate evidence check and the
+// (SourceControl on a git runner, Hasher on Web Crypto, the snapshot StateWriter on
+// file functions, DecisionStore); this file hands them functions built on `$`. The quality-gate evidence check and the
 // structural scan run in process, inside RunPipeline: no command line. The run outlives the command that started it: it
 // is driven from a $.clock timer. The settings hooks (hooks.json `hooks`) keep enforcing
 // G1–G9 meanwhile.
@@ -28,7 +29,7 @@ import { createGitSourceControl } from '../src/adapters/infrastructure/git/git-s
 import { createProcessGitRunner } from '../src/adapters/infrastructure/git/process-git-runner.mjs'
 import { createGitSourceTree } from '../src/adapters/infrastructure/source-tree/git-source-tree.mjs'
 import { createWebCryptoHasher } from '../src/adapters/infrastructure/web-crypto-hasher.mjs'
-import { createCliStateWriter } from '../src/adapters/infrastructure/pipeline/cli-state-writer.mjs'
+import { createSnapshotStateWriter } from '../src/adapters/infrastructure/state/snapshot-state-writer.mjs'
 import { createTrackingDecisionStore } from '../src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
 import { joinPath, claudeAgentId, walkFiles, askable } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
 import { parseSkraftArgs } from '../src/adapters/api/claude-code-mod/command-args.mjs'
@@ -54,7 +55,7 @@ const waitForAgent = (agentId) => {
   return new Promise((resolve) => waiting.set(agentId, resolve))
 }
 
-// The process runner every runProcess-based adapter receives.
+// The process runner the git runner receives: git is the only process the mod starts.
 async function processRun($, cwd, argv, { timeoutMs = 600_000, stdin } = {}) {
   try {
     const result = await $.process.run(argv, { cwd, timeoutMs: Math.min(timeoutMs, 600_000), ...(stdin === undefined ? {} : { stdin }) })
@@ -76,7 +77,6 @@ async function trackingRootOf($, cwd) {
 
 // Composition: the RunPipeline dependencies for this session.
 async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
-  const pluginRoot = $.plugin.root
   const pluginName = $.plugin.name
   const time = createSystemTime()
   const runProcess = (argv, opts) => processRun($, cwd, argv, opts)
@@ -106,7 +106,16 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
         }
       },
     },
-    stateWriter: createCliStateWriter({ runProcess, pluginRoot, trackingRoot }),
+    // StateWriter on $.fs: a backup per phase change, read-back check (no rename here)
+    stateWriter: createSnapshotStateWriter({
+      files: {
+        exists: (path) => $.fs.exists(path),
+        read: (path) => $.fs.read(path),
+        write: (path, text) => $.fs.write(path, text),
+      },
+      trackingRoot,
+      now: () => time.now().getTime(),
+    }),
     trackingStore,
     // RepositoryReader on $.fs
     repositoryReader: { read: async (rel) => { try { return await $.fs.read(joinPath(cwd, rel)) } catch { return null } } },

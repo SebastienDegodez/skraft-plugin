@@ -40,6 +40,7 @@ type Spawn = { prompt: string; subagentType?: string }
 const world = ($: any, on: any, { reviewVerdict = 'APPROVED' } = {}) => {
   const files = new Map<string, string>()
   const spawns: Spawn[] = []
+  const processes: string[][] = []
   let head = 1
   let nextAgent = 0
   files.set('/plugin/skraft-framework.config.json', JSON.stringify(CONFIG))
@@ -71,18 +72,13 @@ const world = ($: any, on: any, { reviewVerdict = 'APPROVED' } = {}) => {
     }
     return { value: [...names].map(([name, kind]) => ({ name, kind, size: 0 })) }
   })
+  // Only git reaches a process now: the state, the evidence check and the scan run in the mod.
   on('process.run', ($$: any, e: any) => {
-    const [cmd, script, ...rest] = e.argv
+    const [cmd, sub] = e.argv
     const ok = (stdout = '') => ({ value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
-    if (cmd === 'git') return ok(`sha${head}\n`)
-    if (String(script).endsWith('state-io.mjs')) {
-      files.set(`${TRACK}/state.json`, e.init.stdin)
-      return ok()
-    }
-    if (String(script).endsWith('structural-scan.mjs')) {
-      files.set(`${CWD}/${rest[rest.indexOf('--out') + 1]}`, '{}')
-      return ok()
-    }
+    if (cmd === 'git' && sub === 'rev-parse') return ok(`sha${head}\n`)
+    if (cmd === 'git' && sub === 'ls-files') return ok('')
+    processes.push(e.argv)
     return { value: { exitCode: 127, stdout: '', stderr: 'unknown', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   // The simulated LLM: each subagent leaves its artefacts, then its turn completes.
@@ -101,7 +97,7 @@ const world = ($: any, on: any, { reviewVerdict = 'APPROVED' } = {}) => {
     return { model: 'test', agentId }
   })
   on('turn.complete', () => ({ text: '' }))
-  return { files, spawns }
+  return { files, spawns, processes }
 }
 
 const runPipeline = async ($: any, clock: any) => {
@@ -114,7 +110,7 @@ const runPipeline = async ($: any, clock: any) => {
 describe('skraft mod', () => {
   test('runs the configured phases through the generic use case and records them in state.json', { timeoutMs: 20_000 } as any, async ($, on) => {
     const clock = mock.clock(on)
-    const { files, spawns } = world($, on)
+    const { files, spawns, processes } = world($, on)
     const started = await runPipeline($, clock)
 
     expect(started.text).toMatch(/skraft checkout started/)
@@ -131,6 +127,12 @@ describe('skraft mod', () => {
     // the settings hooks guard this run
     expect(files.get(`${CWD}/.copilot-tracking/skraft-plans/.active-slug`)).toBe('checkout\n')
     expect(spawns.every((s) => s.prompt.startsWith('<!-- skraft-dispatch: run-pipeline -->'))).toBe(true)
+    // the scan ran in the mod; the state was written with $.fs, one backup per phase change
+    expect(JSON.parse(files.get(`${TRACK}/details/${TODAY}/structural-scan.json`) ?? '{}').revision).toBe('sha1')
+    expect(processes).toEqual([])
+    const backups = [...files.keys()].filter((path) => /\/state\.json\.bak\.\d+$/.test(path))
+    expect(backups.length).toBeGreaterThan(0)
+    expect(backups.length).toBeLessThanOrEqual(3)
   })
 
   test('a rejected phase with nobody to ask stops as awaiting-human and keeps the key', { timeoutMs: 20_000 } as any, async ($, on) => {
