@@ -160,7 +160,7 @@ stimuli:
       Clean Architecture. Its first feature: an employee submits an expense claim
       through POST /claims (body: employeeId, amount, currency). The amount is
       converted to EUR with the exchange-rate provider's REST API
-      (GET /rates/{currency} returns {"rate": 1.08}). A claim above 1000 EUR waits
+      (GET /rates/:currency answers with a JSON body holding the rate, for example 1.08). A claim above 1000 EUR waits
       for a manager's approval; any other claim is approved at once. Keep claims in
       memory for now.
 
@@ -289,11 +289,11 @@ stimuli:
     tags:
       role: regression-guard
     prompt: |
-      We need refunds. Add an HTTP endpoint POST /payments/{reference}/refunds (body:
+      We need refunds. Add an HTTP endpoint POST /payments/:reference/refunds (body:
       amount, currency) that asks the payment provider to refund an authorized
       payment and keeps a receipt of the provider's answer, like authorization
-      already does. The provider's API: POST /refunds with JSON
-      {"reference","amount","currency"}; it answers 200 when refunded and 409 when the
+      already does. The provider's API: POST /refunds with a JSON
+      body of reference, amount and currency; it answers 200 when refunded and 409 when the
       payment cannot be refunded.
 
       Implement it in production code; no new tests needed.
@@ -443,7 +443,7 @@ stimuli:
   - name: 'Java existing build: contacts, created and fetched over HTTP'
     prompt: |
       Add a contacts feature: create a contact (name, email) and get a contact by
-      id, over HTTP (POST /contacts, GET /contacts/{id}). Contacts have no business
+      id, over HTTP (POST /contacts, GET /contacts/:id). Contacts have no business
       rules. Keep them in memory for now. Production code only, no tests.
     constraints:
       max_duration: 14m
@@ -606,8 +606,8 @@ stimuli:
   # case or the read check in the aggregate, never both right.
   - name: 'Java existing build: customers see and cancel only their own orders'
     prompt: |
-      Add order consultation and cancellation for customers: GET /orders/{id}
-      returns an order and POST /orders/{id}/cancel cancels it. A customer may only
+      Add order consultation and cancellation for customers: GET /orders/:id
+      returns an order and POST /orders/:id/cancel cancels it. A customer may only
       see and cancel their own orders; an order can only be cancelled while it is
       pending. Authentication is already handled upstream: each request carries the
       authenticated customer id in the X-Customer-Id header. Create whatever order

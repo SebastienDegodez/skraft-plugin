@@ -27,7 +27,7 @@ stimuli:
   - name: '.NET: contacts, created and fetched over HTTP'
     prompt: |
       Add a contacts feature: create a contact (name, email) and get a contact by
-      id, over HTTP (POST /contacts, GET /contacts/{id}), with minimal APIs.
+      id, over HTTP (POST /contacts, GET /contacts/:id), with minimal APIs.
       Contacts have no business rules. Keep them in memory for now. Production
       code only, no tests.
     constraints:
@@ -212,7 +212,7 @@ stimuli:
   - name: '.NET: customers see and cancel only their own orders'
     prompt: |
       Add order consultation and cancellation for customers, with minimal APIs:
-      GET /orders/{id} returns an order and POST /orders/{id}/cancel cancels it. A
+      GET /orders/:id returns an order and POST /orders/:id/cancel cancels it. A
       customer may only see and cancel their own orders; an order can only be
       cancelled while it is pending. Authentication is already handled upstream:
       each request carries the authenticated customer id in the X-Customer-Id
@@ -406,7 +406,7 @@ stimuli:
     prompt: |
       Add orders. A customer places an order (one or more lines: product code and
       quantity) through POST /orders, and can cancel it through
-      POST /orders/{id}/cancel, but only while it is still pending; use minimal APIs.
+      POST /orders/:id/cancel, but only while it is still pending; use minimal APIs.
       When an order is placed, the customer must get a confirmation email; an
       email-sending interface is enough, no real mail server. Keep orders in memory
       for now. Production code only, no tests.
