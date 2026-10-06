@@ -3,8 +3,14 @@
 // so a resumed run gets finished dispatches back without re-running them; the label keeps
 // distinct dispatches distinct. A failure resolves null, never throws.
 //
-// A Copilot plugin agent is addressed by its .agent.md `name` ("Skraft - Software
-// Engineer"), which is the canonical name of the config; agentIds overrides it per agent.
+// Agent ids: the config names an agent canonically ("Skraft - Solution Researcher"); a
+// session registers a plugin agent under its own id ("skraft:solution-researcher"), and an
+// unknown name makes ctx.agent answer nothing. So the id is resolved, once per run, in order:
+//   1. agentIds[canonical]                       the workflow argument, explicit
+//   2. the session's agent list (session.agent.list) — the entry whose id, name or
+//      displayName is the canonical name or its kebab alias, or whose id ends in ":<alias>"
+//   3. "<plugin>:<alias>"                        when the session cannot list its agents
+// An agent the session lists nowhere is not dispatched: the run says which and why.
 // agent null runs the session's default agent (the report transport).
 //
 // Usage: while the dispatch runs, every `assistant.usage` event of a subagent (it carries
@@ -29,9 +35,48 @@ export const sumCopilotUsage = (events) => {
   })
 }
 
-export const createWorkflowAgentRunner = ({ ctx, agentIds = {} }) => Object.freeze({
-  run: async ({ agent, label, prompt }) => {
-    const name = agent === null ? undefined : (agentIds[agent] ?? agent)
+// The kebab alias of a canonical name: the agent file id ("solution-researcher").
+const kebabAliasOf = (canonical, aliases) => Object.entries(aliases ?? {})
+  .find(([alias, target]) => target === canonical && /^[a-z0-9-]+$/.test(alias))?.[0] ?? null
+
+// Pure: the session agent to call for a canonical name, or null when none is listed.
+export const resolveCopilotAgentId = (canonical, { listed = null, aliases = {}, pluginName = null } = {}) => {
+  const kebab = kebabAliasOf(canonical, aliases)
+  if (Array.isArray(listed)) {
+    const names = new Set([canonical, kebab].filter(Boolean))
+    const exact = listed.find((entry) => [entry.id, entry.name, entry.displayName].some((value) => names.has(value)))
+    if (exact) return exact.id ?? exact.name
+    const prefixed = kebab ? listed.find((entry) => String(entry.id ?? '').endsWith(`:${kebab}`)) : null
+    return prefixed ? prefixed.id : null
+  }
+  return kebab && pluginName ? `${pluginName}:${kebab}` : canonical
+}
+
+// The session's agents, or null when this host cannot list them.
+const listAgents = async (ctx) => {
+  const list = ctx.session?.rpc?.agent?.list
+  if (typeof list !== 'function') return null
+  try {
+    const answer = await list.call(ctx.session.rpc.agent, {})
+    return Array.isArray(answer?.agents) ? answer.agents : null
+  } catch {
+    return null
+  }
+}
+
+export const createWorkflowAgentRunner = ({ ctx, agentIds = {}, aliases = {}, pluginName = null }) => {
+  let listed
+  const idOf = async (agent) => {
+    if (agentIds[agent]) return agentIds[agent]
+    if (listed === undefined) listed = listAgents(ctx)
+    return resolveCopilotAgentId(agent, { listed: await listed, aliases, pluginName })
+  }
+  return Object.freeze({ run: async ({ agent, label, prompt }) => {
+    const name = agent === null ? undefined : await idOf(agent)
+    if (agent !== null && !name) {
+      const known = ((await listed) ?? []).map((entry) => entry.id ?? entry.name).join(', ')
+      return Object.freeze({ ok: false, unavailable: true, text: '', error: `agent "${agent}" is not available in this Copilot session (agents: ${known || 'none'}); install or enable the skraft plugin, or pass agentIds` })
+    }
     const events = []
     const stop = typeof ctx.session?.on === 'function'
       ? ctx.session.on('assistant.usage', (event) => { if (event?.agentId) events.push(event) })
@@ -43,10 +88,12 @@ export const createWorkflowAgentRunner = ({ ctx, agentIds = {} }) => Object.free
       stop()
     }
     const usage = sumCopilotUsage(events)
+    const answered = typeof text === 'string' && text.length > 0
     return Object.freeze({
-      ok: typeof text === 'string' && text.length > 0,
+      ok: answered,
       text: typeof text === 'string' ? text : '',
+      ...(answered ? {} : { error: `${name} answered nothing` }),
       ...(usage ? { usage } : {}),
     })
-  },
-})
+  } })
+}

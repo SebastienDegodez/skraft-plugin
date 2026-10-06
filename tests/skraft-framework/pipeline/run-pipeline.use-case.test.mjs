@@ -63,6 +63,22 @@ test('run-pipeline: every dispatch satisfies the handoff guard (G9) and names th
   }
 })
 
+test('run-pipeline: an agent the host does not have stops the run at once, saying which — no retry', async () => {
+  const host = createFakeHost()
+  const dependencies = host.dependencies(SLUG)
+  const tried = []
+  dependencies.agentRunner.run = async (dispatch) => {
+    tried.push(dispatch.agent)
+    return { ok: false, unavailable: true, text: '', error: `agent "${dispatch.agent}" is not available in this Copilot session (agents: none)` }
+  }
+  const outcome = await createRunPipeline(dependencies).run({ slug: SLUG, story: STORY })
+
+  assert.equal(outcome.status, 'blocked')
+  assert.equal(outcome.phase, 'RESEARCH')
+  assert.match(outcome.reason, /^agent "Skraft - Solution Researcher" is not available in this Copilot session/)
+  assert.deepEqual(tried, [P.RESEARCH.specialist], 'one try, not three')
+})
+
 test('run-pipeline: DELIVER verifies the evidence log in process, against the commits made since the base recorded at phase start', async () => {
   const host = createFakeHost()
   await runOnce(host)

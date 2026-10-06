@@ -250,9 +250,47 @@ test('workflow-agent-runner: ctx.agent with the label and the agent name, or the
   const ctx = { agent: async (prompt, options) => { calls.push({ prompt, ...options }); return options.label === 'fail' ? null : 'done' } }
   const runner = createWorkflowAgentRunner({ ctx, agentIds: { 'Skraft - Solution Architect': 'skraft/solution-architect' } })
   assert.deepEqual(await runner.run({ agent: 'Skraft - Solution Researcher', label: 'RESEARCH:specialist', prompt: 'p' }), { ok: true, text: 'done' })
-  assert.deepEqual(await runner.run({ agent: 'Skraft - Solution Architect', label: 'fail', prompt: 'p' }), { ok: false, text: '' })
+  assert.deepEqual(await runner.run({ agent: 'Skraft - Solution Architect', label: 'fail', prompt: 'p' }), { ok: false, text: '', error: 'skraft/solution-architect answered nothing' })
   assert.deepEqual(calls.map((c) => c.agent), ['Skraft - Solution Researcher', 'skraft/solution-architect'])
   assert.equal(calls[0].label, 'RESEARCH:specialist')
+})
+
+test('workflow-agent-runner: calls each agent by the id the session registered it under, listed once per run', async () => {
+  const calls = []
+  let listings = 0
+  const session = {
+    rpc: { agent: { list: async () => {
+      listings += 1
+      return { agents: [
+        { id: 'skraft:solution-researcher', name: 'solution-researcher', displayName: 'Skraft - Solution Researcher' },
+        { id: 'skraft:solution-architect', name: 'skraft:solution-architect', displayName: 'Solution architect' },
+        { id: 'skraft:software-engineer', name: 'software-engineer', displayName: 'Engineer' },
+      ] }
+    } } },
+  }
+  const ctx = { session, agent: async (prompt, options) => { calls.push(options.agent); return 'done' } }
+  const runner = createWorkflowAgentRunner({ ctx, aliases: CONFIG.agentAliases, pluginName: 'skraft' })
+  for (const agent of ['Skraft - Solution Researcher', 'Skraft - Solution Architect', 'Skraft - Software Engineer']) {
+    assert.equal((await runner.run({ agent, label: agent, prompt: 'p' })).ok, true, agent)
+  }
+  assert.deepEqual(calls, ['skraft:solution-researcher', 'skraft:solution-architect', 'skraft:software-engineer'], 'by display name, by name, by ":<file id>"')
+  assert.equal(listings, 1)
+
+  const missing = await runner.run({ agent: 'Skraft - Acceptance Designer', label: 'DISTILL', prompt: 'p' })
+  assert.equal(missing.ok, false)
+  assert.equal(missing.unavailable, true)
+  assert.match(missing.error, /^agent "Skraft - Acceptance Designer" is not available in this Copilot session \(agents: skraft:solution-researcher, skraft:solution-architect, skraft:software-engineer\)/)
+  assert.equal(calls.length, 3, 'an agent the session does not have is never called')
+})
+
+test('workflow-agent-runner: a session that cannot list its agents gets the plugin id "<plugin>:<file id>"', async () => {
+  const { resolveCopilotAgentId } = await import('../../../plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/workflow-agent-runner.mjs')
+  assert.equal(resolveCopilotAgentId('Skraft - Solution Researcher', { aliases: CONFIG.agentAliases, pluginName: 'skraft' }), 'skraft:solution-researcher')
+  assert.equal(resolveCopilotAgentId('Skraft - Solution Researcher', { listed: [], aliases: CONFIG.agentAliases }), null)
+  const calls = []
+  const ctx = { session: { rpc: { agent: { list: async () => { throw new Error('unsupported') } } } }, agent: async (prompt, options) => { calls.push(options.agent); return 'done' } }
+  await createWorkflowAgentRunner({ ctx, aliases: CONFIG.agentAliases, pluginName: 'skraft' }).run({ agent: 'Skraft - Software Engineer', label: 'l', prompt: 'p' })
+  assert.deepEqual(calls, ['skraft:software-engineer'])
 })
 
 test('workflow-human-interaction: logs the question and pauses durably; a resumed pause answers null', async () => {
