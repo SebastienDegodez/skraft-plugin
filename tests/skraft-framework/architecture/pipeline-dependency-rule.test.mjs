@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
@@ -20,8 +20,10 @@ const bodyOf = (source) => withoutComments(source).replace(/^\s*(?:import|export
 const NODE_PROCESS = /(?<![.\w$])process\./
 const importsOf = (file) => [...readFileSync(file, 'utf8').matchAll(/^\s*(?:import|export)\s[^'"]*?from\s+['"]([^'"]+)['"]/gm)]
   .map(([, spec]) => ({ spec, target: spec.startsWith('.') ? resolve(dirname(file), spec) : null }))
-const layerOf = (path) => relative(SRC, path).split('/')[0]
-const show = (file) => relative(ROOT, file)
+// Paths compare with '/' whatever the OS writes (Windows: '\\').
+const segments = (path) => path.split(/[\\/]/)
+const layerOf = (path) => segments(relative(SRC, path))[0]
+const show = (file) => segments(relative(ROOT, file)).join('/')
 
 test('pipeline domain imports nothing outside domain/', () => {
   const offenders = filesUnder(join(SRC, 'domain/pipeline')).flatMap((file) =>
@@ -67,6 +69,6 @@ test('every module the Claude Code mod loads is free of Node APIs', () => {
 
 test('each driven port of the pipeline has a contract under ports/infrastructure/', () => {
   const ports = ['agent-runner', 'human-interaction', 'decision-store', 'pipeline-progress', 'tracking-store', 'repository-reader', 'source-control', 'source-tree', 'hasher', 'template-reader', 'state-backup-reader', 'state-archive', 'report-transport', 'active-pipeline', 'state-reader', 'state-writer', 'time-provider']
-  const missing = ports.filter((port) => !filesUnder(join(SRC, 'ports/infrastructure')).some((file) => file.endsWith(`/${port}.mjs`)))
+  const missing = ports.filter((port) => !filesUnder(join(SRC, 'ports/infrastructure')).some((file) => basename(file) === `${port}.mjs`))
   assert.deepEqual(missing, [])
 })
