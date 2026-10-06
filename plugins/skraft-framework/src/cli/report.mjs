@@ -163,6 +163,12 @@ async function publicationCommand(command, options, { files, tracking, reporting
 }
 
 async function run() {
+	// Obsolete: RunPipeline renders and publishes the reports itself (report-boundaries.mjs,
+	// report-publication-service.mjs), reading and writing the same files. Kept for a
+	// manual publication repair. The notice goes to a terminal only (callers parse stderr).
+	if (process.stderr.isTTY) {
+		process.stderr.write('report.mjs: obsolete — the pipeline renders and publishes reports itself; kept for manual repair only.\n')
+	}
 	const parsed = parse(process.argv.slice(2))
 	if (parsed.help) return help
 	const { command, options } = parsed
