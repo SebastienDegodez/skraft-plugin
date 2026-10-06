@@ -34,7 +34,11 @@ test('run-pipeline: the structural scan runs once, before the architect, and is 
   const host = createFakeHost()
   await runOnce(host)
 
-  assert.deepEqual(host.scans, [`details/${TODAY}/structural-scan.json`])
+  assert.equal(host.scans.length, 1)
+  const report = JSON.parse(host.tracking(SLUG, `details/${TODAY}/structural-scan.json`))
+  assert.equal(report.revision, 'sha1')
+  assert.equal(report.scannedFiles, 1)
+  assert.equal(report.generatedAt, `${TODAY}T10:00:00.000Z`)
   assert.ok(host.state(SLUG).phaseArtifacts.RESEARCH.includes(`details/${TODAY}/structural-scan.json`))
 })
 
@@ -59,15 +63,20 @@ test('run-pipeline: every dispatch satisfies the handoff guard (G9) and names th
   }
 })
 
-test('run-pipeline: DELIVER asks the QualityGateVerifier, with the evidence log and the base commit recorded at phase start', async () => {
+test('run-pipeline: DELIVER verifies the evidence log in process, against the commits made since the base recorded at phase start', async () => {
   const host = createFakeHost()
   await runOnce(host)
 
-  assert.deepEqual(host.verifications, [{
-    slug: SLUG,
-    evidenceLog: `evidence/${TODAY}/s1/qg-s1.json`,
-    baseSha: host.state(SLUG).phaseHistory.DELIVER.baseSha,
-  }])
+  assert.deepEqual(host.ranges, [{ base: host.state(SLUG).phaseHistory.DELIVER.baseSha, rev: 'sha2' }])
+  assert.ok(host.logs.includes(`qg-verify evidence/${TODAY}/s1/qg-s1.json: pass`))
+})
+
+test('run-pipeline: an evidence log the engineer altered is inconclusive, not a pass', async () => {
+  const host = createFakeHost({ gates: ['inconclusive'], answers: { 'environment:DELIVER': [null] } })
+  const outcome = await runOnce(host)
+
+  assert.equal(outcome.status, 'awaiting-human')
+  assert.match(host.questions[0].question, /STDOUT_MISSING/)
 })
 
 test('run-pipeline: NEEDS_REWORK sends the findings back to the specialist, then re-reviews', async () => {

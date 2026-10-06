@@ -9,22 +9,25 @@
 // only into functions of the hooks module, never across an import. Each one translates a
 // port onto `$`; none decides:
 //   StateReader, TrackingStore, RepositoryReader   $.fs
-//   SourceControl                                  git through $.process.run
+//   SourceTree                                     git ls-files through $.process.run, $.fs
 //   ActivePipeline                                 $.fs ({trackingRoot}/.active-slug)
 //   AgentRunner                                    $.agent.spawn + the subagent's turn.complete
 //   HumanInteraction                               $.ui.ask (null when nothing draws)
 //   PipelineProgress                               $.state atom + pane + $.ui.status
-// The adapters that only need a process runner come from src/adapters/infrastructure/
-// (QualityGateVerifier, StructuralScanner, StateWriter, DecisionStore); this file hands
-// them a runner built on $.process.run. The run outlives the command that started it: it
+// The adapters that need no `$` of their own come from src/adapters/infrastructure/
+// (SourceControl on a git runner, Hasher on Web Crypto, StateWriter, DecisionStore); this
+// file hands them a runner built on $.process.run. The quality-gate evidence check and the
+// structural scan run in process, inside RunPipeline: no command line. The run outlives the command that started it: it
 // is driven from a $.clock timer. The settings hooks (hooks.json `hooks`) keep enforcing
 // G1–G9 meanwhile.
 import { atom, read, update } from 'claude-code'
 import { createRunPipeline } from '../src/application/pipeline/run-pipeline.mjs'
 import { stateBaseSegments, resolveTrackingLayout } from '../src/domain/tracking-layout-policy.mjs'
 import { createSystemTime } from '../src/adapters/infrastructure/system-time.mjs'
-import { createCliQualityGateVerifier } from '../src/adapters/infrastructure/pipeline/cli-quality-gate-verifier.mjs'
-import { createCliStructuralScanner } from '../src/adapters/infrastructure/pipeline/cli-structural-scanner.mjs'
+import { createGitSourceControl } from '../src/adapters/infrastructure/git/git-source-control.mjs'
+import { createProcessGitRunner } from '../src/adapters/infrastructure/git/process-git-runner.mjs'
+import { createGitSourceTree } from '../src/adapters/infrastructure/source-tree/git-source-tree.mjs'
+import { createWebCryptoHasher } from '../src/adapters/infrastructure/web-crypto-hasher.mjs'
 import { createCliStateWriter } from '../src/adapters/infrastructure/pipeline/cli-state-writer.mjs'
 import { createTrackingDecisionStore } from '../src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
 import { joinPath, claudeAgentId, walkFiles, askable } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
@@ -55,7 +58,7 @@ const waitForAgent = (agentId) => {
 async function processRun($, cwd, argv, { timeoutMs = 600_000, stdin } = {}) {
   try {
     const result = await $.process.run(argv, { cwd, timeoutMs: Math.min(timeoutMs, 600_000), ...(stdin === undefined ? {} : { stdin }) })
-    return { exitCode: result.exitCode, stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
+    return { exitCode: result.exitCode, stdout: result.stdout ?? '', stderr: result.stderr ?? '', isStdoutTruncated: result.isStdoutTruncated === true }
   } catch (error) {
     return { exitCode: 124, stdout: '', stderr: String(error?.message ?? error) }
   }
@@ -80,6 +83,7 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
   const trackingDir = (s) => joinPath(trackingRoot, s)
   const relativeToCwd = (path) => (path.startsWith(`${cwd}/`) ? path.slice(cwd.length + 1) : path)
   const log = (line) => update($, run, (view) => ({ ...view, log: [...view.log, line].slice(-60) }))
+  const git = createProcessGitRunner({ runProcess })
 
   // TrackingStore on $.fs
   const trackingStore = {
@@ -107,12 +111,18 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
     // RepositoryReader on $.fs
     repositoryReader: { read: async (rel) => { try { return await $.fs.read(joinPath(cwd, rel)) } catch { return null } } },
     // SourceControl: git through the process runner
-    sourceControl: {
-      headSha: async () => {
-        const { exitCode, stdout } = await runProcess(['git', 'rev-parse', 'HEAD'], { timeoutMs: 10_000 })
-        return exitCode === 0 ? stdout.trim() || null : null
+    sourceControl: createGitSourceControl({ git }),
+    // SourceTree: git ls-files, sizes and text on $.fs
+    sourceTree: createGitSourceTree({
+      git,
+      sizeOf: async (rel) => {
+        const stat = await $.fs.stat(joinPath(cwd, rel))
+        return stat.kind === 'file' ? stat.size : null
       },
-    },
+      readText: (rel) => $.fs.read(joinPath(cwd, rel)),
+      listAll: async () => (await walkFiles((dir) => $.fs.list(dir), cwd)),
+    }),
+    hasher: createWebCryptoHasher(),
     // ActivePipeline: the pointer file the settings hooks read (written as cli/state.mjs select does)
     activePipeline: { activate: (s) => $.fs.write(joinPath(trackingRoot, '.active-slug'), `${s}\n`) },
     // AgentRunner on $.agent.spawn
@@ -128,8 +138,6 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
         return { ok: answer.reason === 'answer' && answer.text.length > 0, text: answer.text }
       },
     },
-    qualityGateVerifier: createCliQualityGateVerifier({ runProcess, pluginRoot, trackingStore }),
-    structuralScanner: createCliStructuralScanner({ runProcess, pluginRoot, trackingStore }),
     // HumanInteraction on the engine's question dialog; null when nothing draws
     humanInteraction: {
       ask: async ({ question, options }) => {

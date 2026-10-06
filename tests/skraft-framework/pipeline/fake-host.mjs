@@ -1,6 +1,7 @@
 // In-memory doubles of every RunPipeline driven port: plain dictionaries and queues, no
 // mock library (testing doctrine). The "LLM" is the AgentRunner double: scripted agents
 // that leave on disk what a real subagent would.
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -31,13 +32,42 @@ export const review = (verdict, { escalation, findings = '' } = {}) => [
   findings,
 ].join('\n')
 
+const sha256 = (text) => createHash('sha256').update(text).digest('hex')
+
+// The quality-gates evidence a DELIVER engineer leaves: the log and every file it cites.
+// outcome 'pass' — a log every claim of which checks out; 'fail' — G1 records a failure;
+// 'inconclusive' — G1's captured stdout is not on disk.
+export const evidenceOf = (outcome, rev) => {
+  const dir = `evidence/${TODAY}/s1`
+  const files = {}
+  const gates = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'].map((id) => {
+    files[`${dir}/${id}.out`] = `${id} ok`
+    files[`${dir}/${id}.exit`] = '0'
+    return { id, label: id, status: 'pass', stdout_ref: `${dir}/${id}.out`, stdout_sha256: sha256(`${id} ok`), exit_code_ref: `${dir}/${id}.exit` }
+  })
+  files[`${dir}/G7.out`] = ''
+  gates.push(
+    { id: 'G7', label: 'no mocks', status: 'pass', stdout_ref: `${dir}/G7.out`, stdout_sha256: sha256('') },
+    { id: 'G8', label: 'commits', status: 'pass' },
+    { id: 'G9', label: 'test integrity', status: 'pass' },
+  )
+  if (outcome === 'fail') gates[0].status = 'fail'
+  if (outcome === 'inconclusive') delete files[`${dir}/G1.out`]
+  const log = {
+    $schema: 'quality-gates-evidence/v1', story: 's1', produced_at: `${TODAY}T10:00:00Z`, tech_adapter: 'dotnet',
+    repo_root_rev: rev, commits_covered: [], gates, test_integrity: { cycles: [] },
+  }
+  return { [`${dir}/qg-s1.json`]: JSON.stringify(log), ...files }
+}
+
 export const ADR_INDEX_HEADER = '| ADR | Title | Status | Chosen | Decision (1 line) | Ratified by | Date |\n|---|---|---|---|---|---|---|\n'
 
 // options:
 //   verdicts:    { [phase]: string[] }  review verdicts a reviewer writes, in order (default APPROVED)
 //   reviews:     { [phase]: string[] }  full review bodies instead of plain verdicts
 //   skipOutputs: { [agent]: number }    first N dispatches of that agent write nothing
-//   gates:       string[]               QualityGateVerifier outcomes, in order (default 'pass')
+//   gates:       string[]               evidence each DELIVER engineer leaves: 'pass' | 'fail' |
+//                                       'inconclusive', in order (default 'pass'); see evidenceOf
 //   answers:     { [keyPrefix]: (string|null)[] }  HumanInteraction answers by key prefix
 //   decisions:   { [key]: string }      answers already recorded in the DecisionStore
 //   adrIndex:    string                 docs/adr/decisions-index.md
@@ -49,7 +79,7 @@ export const createFakeHost = (options = {}) => {
   if (options.adrIndex) repository.set('docs/adr/decisions-index.md', options.adrIndex)
   let head = 1
   const dispatches = []
-  const verifications = []
+  const ranges = []
   const scans = []
   const questions = []
   const logs = []
@@ -84,7 +114,10 @@ export const createFakeHost = (options = {}) => {
     for (const pattern of requiredTrackedOutputs(agent, CONFIG)) {
       writeTracking(slug, concretePath(pattern, slug), `# ${agent} output`)
     }
-    if (agent === CONFIG.phaseAgents.DELIVER.specialist) head += 1
+    if (agent === CONFIG.phaseAgents.DELIVER.specialist) {
+      head += 1
+      for (const [path, text] of Object.entries(evidenceOf(take(gates, 'pass'), `sha${head}`))) writeTracking(slug, path, text)
+    }
   }
 
   // Every driven port of RunPipeline (ports/infrastructure/), in memory.
@@ -107,28 +140,36 @@ export const createFakeHost = (options = {}) => {
       write: async (s, path, text) => writeTracking(s, path, text),
       prefix,
     },
-    repositoryReader: { read: async (path) => repository.get(path) ?? null },
-    sourceControl: { headSha: async () => `sha${head}` },
+    // The repository: its own files, and the tracking directory under it.
+    repositoryReader: {
+      read: async (path) => {
+        const tracked = path.match(/^\.copilot-tracking\/skraft-plans\/([^/]+)\/(.+)$/)
+        if (tracked) return tracking.get(key(tracked[1], tracked[2])) ?? null
+        return repository.get(path) ?? null
+      },
+    },
+    // Commits are sha1, sha2, … — HEAD moves when the DELIVER engineer commits.
+    sourceControl: {
+      headSha: async () => `sha${head}`,
+      head: async () => `sha${head}`,
+      parentOf: async () => null,
+      filesOf: async () => [],
+      commit: async (sha) => (/^sha\d+$/.test(sha ?? '') ? { exists: true, subject: 'feat(checkout): pay', message: 'feat(checkout): pay\n\nSigned-off-by: E <e@x>', files: [] } : { exists: false }),
+      range: async (base, rev) => { ranges.push({ base, rev }); return [] },
+      show: async () => null,
+      listRecent: async () => [],
+    },
+    sourceTree: {
+      listFiles: async () => { scans.push(`sha${head}`); return ['src/Checkout/Payment.cs'] },
+      readSource: async () => 'public sealed class Payment {}\n',
+    },
+    hasher: { sha256: async (text) => sha256(text) },
     activePipeline: { activate: async (s) => { activations.push(s) } },
     agentRunner: {
       run: async (dispatch) => {
         dispatches.push(dispatch)
         behave(dispatch, slug)
         return { ok: true, text: 'done' }
-      },
-    },
-    qualityGateVerifier: {
-      verify: async (request) => {
-        verifications.push(request)
-        const outcome = take(gates, 'pass')
-        return { outcome, findings: outcome === 'pass' ? '' : 'G6 mutation 92%' }
-      },
-    },
-    structuralScanner: {
-      scan: async ({ slug: s, outputPath }) => {
-        scans.push(outputPath)
-        writeTracking(s, outputPath, '{}')
-        return { ok: true }
       },
     },
     humanInteraction: {
@@ -149,7 +190,7 @@ export const createFakeHost = (options = {}) => {
   return {
     dependencies,
     dispatches,
-    verifications,
+    ranges,
     scans,
     questions,
     decisions,

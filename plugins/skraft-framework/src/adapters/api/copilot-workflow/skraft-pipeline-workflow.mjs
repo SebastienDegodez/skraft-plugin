@@ -43,7 +43,7 @@ export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, env }) =
     return { status: 'blocked', phase: null, reason: `slug must be kebab-case, got ${JSON.stringify(slug)}` }
   }
   const pipeline = createRunPipeline({
-    ...createNodePipelineDependencies({ cwd, env, pluginRoot, signal: ctx.signal }),
+    ...createNodePipelineDependencies({ cwd, env, pluginRoot }),
     agentRunner: createWorkflowAgentRunner({ ctx, agentIds }),
     humanInteraction: createWorkflowHumanInteraction({ ctx }),
     progress: createWorkflowProgress({ ctx }),

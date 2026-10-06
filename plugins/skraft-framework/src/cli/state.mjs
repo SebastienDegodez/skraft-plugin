@@ -11,7 +11,7 @@ import { createStateService } from '../application/state-service.mjs'
 import { createPhaseGate } from '../application/phase-gate-service.mjs'
 import { createTrackingFiles } from '../adapters/infrastructure/tracking-files.mjs'
 import { createRecoveryService } from '../application/recovery-service.mjs'
-import { createGitCommitLogReader } from '../adapters/infrastructure/git-commit-log-reader.mjs'
+import { createNodeSourceControl } from '../adapters/infrastructure/git/node-source-control.mjs'
 import { createCommitScanService } from '../application/commit-scan-service.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
 import { createActiveSlugStore } from '../adapters/infrastructure/active-slug-store.mjs'
@@ -66,7 +66,7 @@ const recoveryService = createRecoveryService({
   stateReader, stateWriter, backupReader, stateArchive: createJsonStateArchive(basePath), stateService: service,
 })
 const commitScanService = createCommitScanService({
-  commitLogReader: createGitCommitLogReader({ cwd: process.cwd() })
+  commitLogReader: createNodeSourceControl({ cwd: process.cwd() })
 })
 
 const argv = process.argv.slice(2)

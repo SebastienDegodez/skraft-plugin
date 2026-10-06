@@ -1,16 +1,15 @@
-import { createHash } from 'node:crypto'
 import { evidenceReferences, verifyEvidence } from '../domain/evidence-verification-policy.mjs'
-
-const sha256 = (content) => createHash('sha256').update(content).digest('hex')
 
 // Resolves every file and Git fact a quality-gates evidence log points at, then judges
 // it with the pure policy. Ports:
 //   files.read(repoRelativePath) → string | throws
-//   git — see adapters/infrastructure/git-repository.mjs
+//   git — SourceControl (ports/infrastructure/source-control.mjs); sync or async
+//   hasher — Hasher (ports/infrastructure/hasher.mjs)
+// Used in process by RunPipeline (DELIVER) and by the qg-verify command (engineer, reviewer).
 // `logPath` is repository-relative (…/skraft-plans/{slug}/evidence/{date}/{story}/qg-*.json);
 // the log's references are relative to the project's tracking directory, the part of
 // that path before /evidence/.
-export const verifyEvidenceLog = async ({ logPath, base, files, git }) => {
+export const verifyEvidenceLog = async ({ logPath, base, files, git, hasher }) => {
   let text
   try { text = await files.read(logPath) } catch {
     return { verdict: 'inconclusive', findings: [{ severity: 'inconclusive', code: 'LOG_MISSING', detail: `${logPath} is not on disk` }] }
@@ -28,18 +27,19 @@ export const verifyEvidenceLog = async ({ logPath, base, files, git }) => {
   for (const ref of evidenceReferences(log)) {
     try {
       const content = await files.read(resolve(ref))
-      fileFacts.set(ref, { content, sha256: sha256(content) })
+      fileFacts.set(ref, { content, sha256: await hasher.sha256(content) })
     } catch { /* absent: the policy reports it */ }
   }
 
-  const head = git.head()
+  const head = await git.head()
   const shas = new Set([log?.repo_root_rev, ...(Array.isArray(log?.commits_covered) ? log.commits_covered.map((c) => c?.sha) : [])])
-  const commits = new Map([...shas].filter(Boolean).map((sha) => [sha, git.commit(sha)]))
+  const commits = new Map()
+  for (const sha of [...shas].filter(Boolean)) commits.set(sha, await git.commit(sha))
   const shows = new Map()
   for (const cycle of Array.isArray(log?.test_integrity?.cycles) ? log.test_integrity.cycles : []) {
     const testFile = cycle?.test_files?.[0]
     for (const commit of [cycle?.red_commit, cycle?.green_commit]) {
-      const content = git.show(commit, testFile)
+      const content = await git.show(commit, testFile)
       if (content !== null) shows.set(`${commit}:${testFile}`, content)
     }
   }
@@ -49,10 +49,10 @@ export const verifyEvidenceLog = async ({ logPath, base, files, git }) => {
     evidenceDir: logPath.slice(0, logPath.lastIndexOf('/')),
     git: {
       head,
-      headParent: git.parentOf(head),
-      headFiles: git.filesOf(head),
+      headParent: await git.parentOf(head),
+      headFiles: await git.filesOf(head),
       commits,
-      range: base ? git.range(base, log?.repo_root_rev) : undefined,
+      range: base ? await git.range(base, log?.repo_root_rev) : undefined,
       shows,
     },
   })
