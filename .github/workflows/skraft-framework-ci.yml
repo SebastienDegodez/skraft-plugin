@@ -3,6 +3,7 @@ name: skraft-framework CI
 on:
   push:
     paths:
+      - 'scripts/ci-failure-annotations.mjs'
       - 'plugins/skraft-framework/src/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
@@ -27,6 +28,7 @@ on:
       - '.github/workflows/skraft-framework-ci.yml'
   pull_request:
     paths:
+      - 'scripts/ci-failure-annotations.mjs'
       - 'plugins/skraft-framework/src/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
@@ -103,7 +105,15 @@ jobs:
 
       - name: Run tests
         shell: bash
-        run: node --test "tests/skraft-framework/**/*.test.mjs"
+        run: |
+          node --test "tests/skraft-framework/**/*.test.mjs" 2>&1 | tee node-test.log
+          exit "${PIPESTATUS[0]}"
+
+      # The failing tests and their errors, readable on the check run without the raw log.
+      - name: Annotate the failing tests
+        if: failure()
+        shell: bash
+        run: node scripts/ci-failure-annotations.mjs node-test node-test.log
 
   model-policy:
     name: Agent model policy (B12)
@@ -175,7 +185,14 @@ jobs:
       - name: Run mutation tests
         run: |
           node plugins/skraft-framework/src/node_modules/.bin/stryker run \
-            plugins/skraft-framework/src/stryker.config.mjs
+            plugins/skraft-framework/src/stryker.config.mjs 2>&1 | tee stryker.log
+          exit "${PIPESTATUS[0]}"
+
+      # Why Stryker stopped (a crash, or the score under the break threshold), readable on
+      # the check run without the raw log.
+      - name: Annotate the mutation failure
+        if: failure()
+        run: node scripts/ci-failure-annotations.mjs tail stryker.log 80
 
       - name: Upload mutation report
         if: always()
