@@ -236,3 +236,15 @@ test('run-pipeline: a second environment escalation in the same phase gets its o
   assert.equal(keys.length, 2)
   assert.notEqual(keys[0], keys[1])
 })
+
+test('run-pipeline: the run marks its pipeline active, so the settings hooks guard this run and not a previous one', async () => {
+  const host = createFakeHost()
+  await runOnce(host)
+  assert.deepEqual(host.activations, [SLUG])
+})
+
+test('run-pipeline: every dispatch starts with the code-driven marker the hooks read', async () => {
+  const host = createFakeHost()
+  await runOnce(host)
+  assert.ok(host.dispatches.every((d) => d.prompt.startsWith('<!-- skraft-dispatch: run-pipeline -->\n')))
+})

@@ -11,6 +11,7 @@ import { createGitSourceControl } from '../../infrastructure/pipeline/git-source
 import { createCliQualityGateVerifier } from '../../infrastructure/pipeline/cli-quality-gate-verifier.mjs'
 import { createCliStructuralScanner } from '../../infrastructure/pipeline/cli-structural-scanner.mjs'
 import { createTrackingDecisionStore } from '../../infrastructure/pipeline/tracking-decision-store.mjs'
+import { createFsActivePipeline } from '../../infrastructure/pipeline/fs-active-pipeline.mjs'
 
 // Composition of the driven adapters every Node host shares (the Copilot workflow, the
 // decide command): state, tracking directory, repository, git, quality gates, structural
@@ -31,6 +32,7 @@ export const createNodePipelineDependencies = ({ cwd, env = process.env, pluginR
     trackingStore,
     repositoryReader: createFsRepositoryReader({ cwd }),
     sourceControl: createGitSourceControl({ cwd }),
+    activePipeline: createFsActivePipeline({ trackingRoot }),
     qualityGateVerifier: createCliQualityGateVerifier({ runProcess, pluginRoot, trackingStore }),
     structuralScanner: createCliStructuralScanner({ runProcess, pluginRoot, trackingStore }),
     decisionStore: createTrackingDecisionStore({ trackingStore, time }),

@@ -5,6 +5,12 @@ import { renderHandoff } from '../handoff-policy.mjs'
 // used to assemble by hand (skraft-orchestrator.md "Dispatch payload") is composed here
 // once, so every host sends the same words and the handoff guard (G9) always passes.
 
+// First line of every prompt RunPipeline dispatches. The settings hooks read it: G6 stays
+// silent for these dispatches, because the code records the artefacts and the verdict itself.
+export const CODE_DRIVEN_DISPATCH_MARKER = '<!-- skraft-dispatch: run-pipeline -->'
+export const isCodeDrivenDispatch = (prompt) =>
+  typeof prompt === 'string' && prompt.trimStart().startsWith(CODE_DRIVEN_DISPATCH_MARKER)
+
 const MARKDOWN_CONVENTION = 'Markdown artefacts start with `<!-- markdownlint-disable-file -->`.'
 const COMMIT_CONVENTION = 'Commits: `git commit -s`, subject `type(feature): subject`, body ending with `Refs: #N` (or `Closes #N`).'
 
@@ -22,6 +28,7 @@ const storyLine = (story) => {
 // addenda — extra sections appended verbatim, each { title, body }.
 export const composeDispatchBrief = ({ handoff, slug, story, trackingPrefix, outputs = [], addenda = [] }) => {
   const lines = [
+    CODE_DRIVEN_DISPATCH_MARKER,
     `## Skraft dispatch — ${handoff.agent} (${handoff.phase} ${handoff.role})`,
     `- Story: ${storyLine(story)}`,
     `- Feature scope: ${slug}`,

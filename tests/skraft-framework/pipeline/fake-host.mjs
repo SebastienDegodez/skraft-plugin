@@ -54,6 +54,7 @@ export const createFakeHost = (options = {}) => {
   const questions = []
   const logs = []
   const phases = []
+  const activations = []
   const counters = {}
   const take = (queue, fallback) => (queue && queue.length > 0 ? queue.shift() : fallback)
   const verdictQueues = Object.fromEntries(Object.entries(options.verdicts ?? {}).map(([k, v]) => [k, [...v]]))
@@ -108,6 +109,7 @@ export const createFakeHost = (options = {}) => {
     },
     repositoryReader: { read: async (path) => repository.get(path) ?? null },
     sourceControl: { headSha: async () => `sha${head}` },
+    activePipeline: { activate: async (s) => { activations.push(s) } },
     agentRunner: {
       run: async (dispatch) => {
         dispatches.push(dispatch)
@@ -153,6 +155,7 @@ export const createFakeHost = (options = {}) => {
     decisions,
     logs,
     phases,
+    activations,
     state: (slug) => states.get(slug),
     tracking: (slug, path) => tracking.get(key(slug, path)),
     repository,

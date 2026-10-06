@@ -198,3 +198,21 @@ test('G6: fail-open allow when config is not wired', async () => {
   const result = await service.handle(agentReturned('solution-architect'))
   assert.equal(result?.decision, 'allow')
 })
+
+// G6 stands down for dispatches RunPipeline made: the code records them itself ————
+
+test('G6: no continuation for a dispatch RunPipeline made; the skip is audited', async () => {
+  const audit = collectingWriter()
+  const state = { currentPhase: 'DELIVER', phasesCompleted: ['RESEARCH', 'DESIGN', 'DISTILL'], phaseArtifacts: {}, verdicts: {}, reviewArtifacts: {}, retryCount: {}, userPreferences: { maxRetriesPerPhase: 2 } }
+  const config = { phaseOrder: ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'], phaseAgents: { DELIVER: { specialist: 'Skraft - Software Engineer', reviewer: 'Skraft - Software Engineer Reviewer' } }, agentAliases: { 'software-engineer': 'Skraft - Software Engineer' } }
+  const service = createPostToolUseService({ auditWriter: audit, clock, stateReader: { read: async () => state }, config })
+  const handle = (prompt) => service.handle({ toolName: 'Agent', requestedAgent: 'Skraft - Software Engineer', toolInput: { prompt }, projectSlug: 'checkout' })
+
+  const codeDriven = await handle('<!-- skraft-dispatch: run-pipeline -->\n## Skraft dispatch — Skraft - Software Engineer')
+  assert.equal(codeDriven?.decision, 'allow')
+  assert.equal(codeDriven?.additionalContext, undefined)
+  assert.deepEqual(audit.entries.map((e) => [e.eventType, e.reason]), [['ContinuationSkipped', 'code-driven dispatch']])
+
+  const proseDriven = await handle('## Handoff ...')
+  assert.match(JSON.stringify(proseDriven), /SKRAFT G6/)
+})

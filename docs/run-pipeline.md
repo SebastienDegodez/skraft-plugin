@@ -63,7 +63,7 @@ flowchart TB
   API["<b>adapters/api — adaptateurs pilotes</b><br/>copilot-workflow/skraft-pipeline-workflow.mjs · pipeline/node-dependencies.mjs · claude-code-mod/command-args.mjs"]
   APP["<b>application/pipeline — cas d'usage</b><br/>run-pipeline.mjs · record-decision.mjs<br/>(+ state-service, phase-gate-service existants)"]
   DOM["<b>domain/pipeline — règles pures</b><br/>step-policy · expected-outputs · dispatch-brief · review-outcome · adr-ratification-policy"]
-  PORTS["<b>ports — contrats</b><br/>api/run-pipeline, api/record-decision<br/>infrastructure/* : 12 ports pilotés"]
+  PORTS["<b>ports — contrats</b><br/>api/run-pipeline, api/record-decision<br/>infrastructure/* : 13 ports pilotés"]
   INFRA["<b>adapters/infrastructure — adaptateurs pilotés</b><br/>pipeline/cli-* (qg-verify, structural-scan, state-io) · pipeline/fs-* · git-source-control<br/>copilot-workflow/* · claude-code-mod/mod-helpers · process/node-process-runner"]
 
   E -->|compose| API
@@ -107,6 +107,7 @@ Chaque contrat est décrit dans son fichier sous
 | `TrackingStore` | `exists`, `read`, `list`, `write`, `prefix(slug)` | `pipeline/fs-tracking-store.mjs` | `$.fs` (dans le mod) | `Map` |
 | `RepositoryReader` | `read(path)` → texte ou `null` | `pipeline/fs-repository-reader.mjs` | `$.fs` (dans le mod) | `Map` |
 | `SourceControl` | `headSha()` | `pipeline/git-source-control.mjs` | `git rev-parse` via `$.process.run` | compteur |
+| `ActivePipeline` | `activate(slug)` | `pipeline/fs-active-pipeline.mjs` (`.active-slug`) | `$.fs.write` (dans le mod) | tableau |
 | `AgentRunner` | `run({ agent, phase, role, label, prompt })` → `{ ok, text }` | `copilot-workflow/workflow-agent-runner.mjs` (`ctx.agent`) | `$.agent.spawn` + `turn.complete` (dans le mod) | LLM simulé |
 | `QualityGateVerifier` | `verify({ slug, evidenceLog, baseSha })` → `{ outcome, findings }` | `pipeline/cli-quality-gate-verifier.mjs` → `cli/qg-verify.mjs` | le même adaptateur, avec `$.process.run` | file d'issues |
 | `StructuralScanner` | `scan({ slug, outputPath })` → `{ ok, reason? }` | `pipeline/cli-structural-scanner.mjs` → `cli/structural-scan.mjs` | le même adaptateur, avec `$.process.run` | écrit `{}` |
@@ -277,6 +278,24 @@ Clés des checkpoints (stables à la reprise, distinctes à chaque occurrence) :
 | Phase rejetée | `rejected:DESIGN:2` (nombre de reviews) | `rework`, `stop` |
 | Environnement | `environment:DELIVER:qg-verify:r0:t1:n1` (source, reviews, retries, occurrence) | `fixed`, `stop` |
 
+### 5.4 Cohabitation avec les settings hooks (G1–G9)
+
+Les hooks de `hooks/hooks.json` restent actifs pendant un run piloté par le code :
+ils gardent les sous-agents (G1 ordre, G8 écritures `src/` et `tests/` en DELIVER,
+G9 handoff). Deux règles rendent la cohabitation sûre :
+
+- **Pointeur actif.** Au démarrage, `RunPipeline` appelle `ActivePipeline.activate(slug)`,
+  qui écrit `{tracking}/.active-slug`. Sans ce pointeur, les hooks se désactivent en
+  silence ; avec celui d'un pipeline précédent, G1 refuse les dispatchs du run.
+- **G6 muet pour le code.** Chaque prompt dispatché commence par
+  `<!-- skraft-dispatch: run-pipeline -->`. G6 (PostToolUse Agent) ne donne alors pas
+  les consignes de l'orchestrateur en prose (`record-artifact`, `transition`…) : le code
+  les exécute déjà, et l'agent principal ne doit pas écrire `state.json` en parallèle.
+  L'audit trace `ContinuationSkipped`.
+
+Le journal d'audit des hooks est dans `.git/skraft/skill-audit.jsonl` (ou
+`SKRAFT_AUDIT_LOG`).
+
 ---
 
 ## 6. Ce que le pipeline écrit
@@ -284,6 +303,7 @@ Clés des checkpoints (stables à la reprise, distinctes à chaque occurrence) :
 | Fichier | Écrit par | Quand |
 |---|---|---|
 | `{tracking}/{slug}/state.json` | `StateWriter` (via le state service) | à chaque événement |
+| `{tracking}/.active-slug` | `ActivePipeline` | au démarrage de chaque run |
 | `{tracking}/{slug}/details/{date}/structural-scan.json` | `StructuralScanner` | avant le premier passage de l'architecte |
 | `{tracking}/{slug}/reviews/{date}/{phase}-review-{N}.md` | le reviewer | `{N}` = nombre de reviews déjà enregistrées pour la phase + 1 |
 | `{tracking}/{slug}/decisions/{clé}.json` | `DecisionStore` | à chaque réponse humaine : `{ key, answer, by, at }` |
