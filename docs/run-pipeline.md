@@ -11,9 +11,11 @@ le domaine et les cas d'usage ([ADR-010](adr/adr-010-pipeline-runs-as-code.md)).
 > Contrats d'entrée : [`src/ports/api/`](../plugins/skraft-framework/src/ports/api/) — `run-pipeline`, `record-decision`, `close-manually`
 
 L'agent `skraft-orchestrator` n'est plus qu'un **lanceur** : il appelle l'entrée de son
-hôte et relaie les checkpoints. Sa prose (Phase 0, appels `state.mjs`, tableau des
-verdicts, Report feedback) est **obsolète** ; la section 2 dit où chacune de ses
-responsabilités vit maintenant.
+hôte et relaie les checkpoints. Il ne déclare plus rien du pipeline : ni l'ordre des
+phases, ni ses agents. Le pipeline est déclaré dans le code
+([`domain/pipeline/pipeline-definition.mjs`](../plugins/skraft-framework/src/domain/pipeline/pipeline-definition.mjs)),
+les agents de phase déclarent `dispatched_by: skraft-pipeline`, et la section 2 dit où
+chacune des anciennes responsabilités de l'orchestrateur vit maintenant.
 
 ---
 
@@ -59,6 +61,8 @@ par le humain (section 5.6).
 
 | Responsabilité (prose de `skraft-orchestrator.md`) | Maintenant | Fichier |
 |---|---|---|
+| Déclarer l'ordre des phases (`metadata.phases`) | `PIPELINE_PHASES` ; `config:build` en tire `phaseOrder` et refuse un agent qui déclare encore `metadata.phases` (`PHASES_IN_AGENT`) | `domain/pipeline/pipeline-definition.mjs`, `domain/framework-config-policy.mjs`, `domain/dispatch-policy.mjs` |
+| Lister et lancer les agents de phase (`agents`, `Agent(...)`, `dispatched_by: Skraft - Orchestrator`) | les agents de phase déclarent `dispatched_by: skraft-pipeline` (`PIPELINE_DISPATCHER`) ; un agent qui en dispatche un lui-même est refusé (`PIPELINE_DISPATCH`) | `pipeline-definition.mjs`, `domain/pipeline-policy.mjs` (provenance) |
 | Phase 0 : créer ou relire l'état, reprendre | `stateService.init` + `stepOnEntry` | `application/pipeline/run-pipeline.mjs`, `domain/pipeline/step-policy.mjs` |
 | Recovery : `diagnose`, `rollback`, `reset`, `resolve-stale`, reconstruire depuis les fichiers | `PipelineRecovery`, `recoveryStepOf`, `inferCompletedPhases` | `application/pipeline/recover-pipeline.mjs`, `domain/recovery-policy.mjs`, `domain/pipeline/progress-inference-policy.mjs` |
 | `mark-phase-started` (base SHA) | `MARK_PHASE_STARTED` | `run-pipeline.mjs` |
@@ -180,7 +184,7 @@ Chaque contrat est décrit dans son fichier sous
 | `Hasher` | `sha256(text)`, `sha256Sync(text)` | `web-crypto-hasher.mjs` | le même | `node:crypto` |
 | `TemplateReader` | `read(pluginRelativePath)` | `templates/node-template-reader.mjs` | `$.fs` sous `$.plugin.root` | fichier réel |
 | `ActivePipeline` | `activate(slug)`, `current()` | `pipeline/fs-active-pipeline.mjs` (`.active-slug`) | `$.fs` (dans le mod) | tableau |
-| `AgentRunner` | `run({ agent, phase, role, label, prompt })` → `{ ok, text, usage? }` ; `agent: null` = agent général ; `usage` = tokens, crédits IA ou dollars | `copilot-workflow/workflow-agent-runner.mjs` (`ctx.agent` ; coût : événements `assistant.usage` du sous-agent) | `$.agent.spawn` + `turn.complete` (tokens) + écart de `$.session.usage().cost` (dollars), dans le mod | LLM simulé |
+| `AgentRunner` | `run({ agent, phase, role, label, prompt })` → `{ ok, text, error?, unavailable?, usage? }` ; `unavailable` : l'hôte n'a pas cet agent, le run s'arrête ; `agent: null` = agent général ; `usage` = tokens, crédits IA ou dollars | `copilot-workflow/workflow-agent-runner.mjs` (`ctx.agent` ; coût : événements `assistant.usage` du sous-agent) | `$.agent.spawn` + `turn.complete` (tokens) + écart de `$.session.usage().cost` (dollars), dans le mod | LLM simulé |
 | `ReportTransport` | `observe({ packet })`, `publish({ packet, decision })` | `reporting/agent-report-transport.mjs`, construit par l'hôte (`reportTransportOf`) sur l'`AgentRunner` du run, pour que son coût soit journalisé | le même | GitHub simulé |
 | `HumanInteraction` | `ask({ key, question, options })` → réponse ou `null` | `copilot-workflow/workflow-human-interaction.mjs` (`ctx.pause`) | `$.ui.ask` (dans le mod) | réponses par clé |
 | `DecisionStore` | `read(slug, key)`, `write(slug, key, answer, by)` | `pipeline/tracking-decision-store.mjs` | le même | `Map` |
@@ -554,8 +558,12 @@ claude plugin test plugins/skraft-framework
 ## 11. Limites connues
 
 - **Copilot** : workflows dynamiques et extensions sont en public preview (CLI lancée
-  avec `--experimental`). L'identifiant d'agent attendu par `ctx.agent` n'a pas encore été
-  vérifié sur une vraie CLI ; `args.agentIds` permet de le surcharger.
+  avec `--experimental`). Une session enregistre les agents du plugin sous son propre
+  identifiant (`skraft:solution-researcher`), et `ctx.agent` ne répond rien pour un nom
+  qu'elle ne connaît pas. Le runner résout donc l'identifiant une fois par run :
+  `args.agentIds`, sinon la liste des agents de la session (`session.agent.list` : `id`,
+  `name` ou `displayName`, ou un `id` en `:<fichier>`), sinon `<plugin>:<fichier>`. Un agent
+  que la session n'a pas arrête le run aussitôt, en le nommant, sans les trois essais.
 - **Mod** : `$.process.run` plafonne à 10 minutes et à 4 Mio de sortie (une sortie git
   coupée vaut absence) ; `$.fs` n'a ni rename ni delete : l'état est écrit en place, relu,
   et sauvegardé à chaque changement de phase ; `reporting/pending.json` terminé est vidé

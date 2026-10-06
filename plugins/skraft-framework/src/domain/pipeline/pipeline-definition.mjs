@@ -1,0 +1,16 @@
+// The SKRAFT engineering pipeline, declared where it runs: in code (RunPipeline, driven by
+// the Copilot `skraft-pipeline` workflow and the Claude Code `/skraft` command). Agents
+// no longer declare it — the launcher agent only starts it.
+//
+//   PIPELINE_PHASES      the phase order; skraft-framework.config.json::phaseOrder is built
+//                        from it (cli/build-config.mjs)
+//   PIPELINE_DISPATCHER  what a phase agent names as its `metadata.dispatched_by`: the
+//                        pipeline dispatches the phase agents, no agent does
+//   PIPELINE_LAUNCHER    the agent a person picks to start the pipeline (file id); the
+//                        catalogue shows it as the engineering entry point
+// No import: the state machine and the policies read the order from here.
+export const PIPELINE_PHASES = Object.freeze(['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+export const PIPELINE_DISPATCHER = 'skraft-pipeline'
+export const PIPELINE_LAUNCHER = 'skraft-orchestrator'
+
+export const isPipelineDispatcher = (reference) => reference === PIPELINE_DISPATCHER

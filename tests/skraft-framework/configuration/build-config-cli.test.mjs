@@ -18,7 +18,7 @@ const specialist = ({ name, phase, skills = [], inputs = [], outputs = [] }) =>
     `name: ${name}`,
     'description: "x"',
     'metadata:',
-    `  dispatched_by: skraft-orchestrator`,
+    `  dispatched_by: skraft-pipeline`,
     `  phase: ${phase}`,
     ...(skills.length ? ['  skills:', ...skills.map((s) => `    - ${s}`)] : []),
     '  inputs:',
@@ -31,14 +31,14 @@ const specialist = ({ name, phase, skills = [], inputs = [], outputs = [] }) =>
     '# body',
   ].join('\n')
 
-const orchestrator = (phases) =>
+// The launcher: a user-invocable root; the pipeline it starts is declared in code.
+const launcher = ({ phases = [] } = {}) =>
   [
     '---',
     'name: skraft-orchestrator',
     'description: "x"',
-    'metadata:',
-    '  phases:',
-    ...phases.map((p) => `    - ${p}`),
+    'user-invocable: true',
+    ...(phases.length ? ['metadata:', '  phases:', ...phases.map((p) => `    - ${p}`)] : []),
     '---',
     '',
     '# body',
@@ -60,15 +60,16 @@ test('parseAgentDescriptor extracts identity, phase, dispatch, skills and artifa
   assert.equal(d.id, 'solution-architect')
   assert.equal(d.name, 'solution-architect')
   assert.equal(d.phase, 'DESIGN')
-  assert.equal(d.dispatchedBy, 'skraft-orchestrator')
+  assert.equal(d.dispatchedBy, 'skraft-pipeline')
   assert.deepEqual(d.skills, ['architecture-patterns', 'architecture-decisions'])
   assert.deepEqual(d.inputs, ['stories.md'])
   assert.deepEqual(d.outputs, ['adr.md', 'diagrams.md'])
 })
 
-test('parseAgentDescriptor reads the orchestrator phase order from metadata.phases', () => {
-  const d = parseAgentDescriptor(orchestrator(['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']))
-  assert.deepEqual(d.phases, ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER'])
+test('parseAgentDescriptor still reads an obsolete metadata.phases, so the build can refuse it', () => {
+  const d = parseAgentDescriptor(launcher({ phases: ['DESIGN', 'DELIVER'] }))
+  assert.deepEqual(d.phases, ['DESIGN', 'DELIVER'])
+  assert.equal(d.userInvocable, true)
 })
 
 test('parseAgentDescriptor reads on-demand skills and merges context with recommended inputs', () => {
@@ -77,7 +78,7 @@ test('parseAgentDescriptor reads on-demand skills and merges context with recomm
     'name: software-engineer',
     'description: "x"',
     'metadata:',
-    '  dispatched_by: skraft-orchestrator',
+    '  dispatched_by: skraft-pipeline',
     '  phase: DELIVER',
     '  skills:',
     '    - outside-in-tdd',
@@ -116,7 +117,7 @@ async function fixtureDir() {
   const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-build-'))
   const agents = join(dir, 'agents')
   await mkdir(agents, { recursive: true })
-  await writeFile(join(agents, 'orch.md'), orchestrator(['DESIGN', 'DELIVER']))
+  await writeFile(join(agents, 'skraft-orchestrator.md'), launcher())
   await writeFile(
     join(agents, 'arch.md'),
     specialist({ name: 'solution-architect', phase: 'DESIGN', skills: ['architecture-patterns'] }),
@@ -133,7 +134,8 @@ test('main --apply writes a config JSON derived from the agent descriptors', asy
   const code = main(['--apply', '--dir', agents, '--out', out], capture().io)
   assert.equal(code, 0)
   const config = JSON.parse(await readFile(out, 'utf8'))
-  assert.deepEqual(config.phaseOrder, ['DESIGN', 'DELIVER'])
+  assert.deepEqual(config.phaseOrder, ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'], 'the order is the code\'s')
+  assert.deepEqual(config.pipeline, { dispatcher: 'skraft-pipeline', launcher: 'skraft-orchestrator' })
   assert.deepEqual(config.phaseAgents.DESIGN, {
     specialist: 'solution-architect',
     reviewer: 'solution-architect-reviewer',
@@ -171,6 +173,16 @@ test('main --check returns 1 when no committed config exists yet', async () => {
   await rm(dir, { recursive: true, force: true })
 })
 
+test('main fails (exit 1) when an agent declares a phase order: the pipeline\'s is declared in code', async () => {
+  const { dir, agents, out } = await fixtureDir()
+  await writeFile(join(agents, 'skraft-orchestrator.md'), launcher({ phases: ['DESIGN', 'DELIVER'] }))
+  const { io, errs } = capture()
+  const code = main(['--apply', '--dir', agents, '--out', out], io)
+  assert.equal(code, 1)
+  assert.ok(errs.some((l) => /skraft-orchestrator/.test(l) && /PHASES_IN_AGENT/.test(l)), errs.join('\n'))
+  await rm(dir, { recursive: true, force: true })
+})
+
 test('main fails (exit 1) and names the orphan when an agent declares no parent', async () => {
   const { dir, agents, out } = await fixtureDir()
   await writeFile(
@@ -190,7 +202,7 @@ test('main fails (exit 1) and names the skill an agent lists as both mandatory a
     join(agents, 'eng.md'),
     [
       '---', 'name: software-engineer', 'description: "x"', 'metadata:',
-      '  dispatched_by: skraft-orchestrator', '  phase: DELIVER',
+      '  dispatched_by: skraft-pipeline', '  phase: DELIVER',
       '  skills:', '    - outside-in-tdd', '    - mutation-testing',
       '  on_demand_skills:', '    - mutation-testing',
       '---', '', '# body',
@@ -209,6 +221,7 @@ test('main --emit --json prints the config without writing a file', async () => 
   const code = main(['--emit', '--json', '--dir', agents], io)
   assert.equal(code, 0)
   const config = JSON.parse(logs.join('\n'))
-  assert.deepEqual(config.phaseOrder, ['DESIGN', 'DELIVER'])
+  assert.deepEqual(config.phaseOrder, ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'], 'the order is the code\'s')
+  assert.deepEqual(config.pipeline, { dispatcher: 'skraft-pipeline', launcher: 'skraft-orchestrator' })
   await rm(dir, { recursive: true, force: true })
 })

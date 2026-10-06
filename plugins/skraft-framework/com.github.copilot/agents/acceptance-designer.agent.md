@@ -16,7 +16,7 @@ tools:
   - graphify/*
 metadata:
   cost_role_class: implementer  # B12 target class (genesis token-economy)
-  dispatched_by: Skraft - Orchestrator
+  dispatched_by: skraft-pipeline  # the pipeline (runs as code) dispatches this agent
   phase: DISTILL
   skills:
     - bdd-methodology
