@@ -132,3 +132,13 @@ test('listRecent: newest-first { sha, subject } pairs, bounded by count, empty o
 test('headSha: the same as head, the vocabulary RunPipeline and the structural scan use', async () => {
   assert.equal(await repo.headSha(), sha.merge)
 })
+
+test('currentBranch and remoteUrl: the checked-out branch and origin, null when detached or absent', async () => {
+  assert.equal(await repo.currentBranch(), 'main')
+  assert.equal(await repo.remoteUrl(), null)
+  execFileSync('git', ['remote', 'add', 'origin', 'https://github.com/acme/shop.git'], { cwd: root })
+  assert.equal(await repo.remoteUrl(), 'https://github.com/acme/shop.git')
+  execFileSync('git', ['checkout', '-q', '--detach'], { cwd: root })
+  assert.equal(await repo.currentBranch(), null)
+  execFileSync('git', ['checkout', '-q', 'main'], { cwd: root })
+})

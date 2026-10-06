@@ -16,13 +16,23 @@ export const blocked = (phase, reason, detail) => new Halt({ status: 'blocked', 
 export const awaiting = (phase, checkpoint) => new Halt({ status: 'awaiting-human', phase, reason: checkpoint.question, checkpoint })
 
 // ask(slug, phase, { key, question, options }) => Promise<string>, or throws awaiting.
-export const createCheckpoint = ({ decisionStore, humanInteraction }) => Object.freeze({
-  ask: async (slug, phase, checkpoint) => {
+// tryAsk: the same, null when nobody answers now — for a question that must not stop the
+// run (reporting consent: engineering goes on, reports stay local).
+export const createCheckpoint = ({ decisionStore, humanInteraction }) => {
+  const tryAsk = async (slug, checkpoint) => {
     const recorded = await decisionStore.read(slug, checkpoint.key)
     if (recorded) return recorded
     const answer = await humanInteraction.ask(checkpoint)
-    if (answer === null || answer === undefined || String(answer).trim() === '') throw awaiting(phase, checkpoint)
+    if (answer === null || answer === undefined || String(answer).trim() === '') return null
     await decisionStore.write(slug, checkpoint.key, String(answer).trim(), 'human')
     return String(answer).trim()
-  },
-})
+  }
+  return Object.freeze({
+    tryAsk,
+    ask: async (slug, phase, checkpoint) => {
+      const answer = await tryAsk(slug, checkpoint)
+      if (answer === null) throw awaiting(phase, checkpoint)
+      return answer
+    },
+  })
+}

@@ -153,3 +153,56 @@ test('manual closure: the review it renders, its path, and what it refuses', asy
   assert.equal(manualClosureRefusal({ currentPhase: 'RESEARCH' }).code, 'NO_REVIEWER')
   assert.equal(manualClosureRefusal({ phase: 'DISTILL', currentPhase: 'DESIGN', reviewer: 'R' }).code, 'PHASE_MISMATCH')
 })
+
+// ── Reporting ────────────────────────────────────────────────────────────────
+
+test('remoteScopeOf: github, gitlab and Azure DevOps remotes, https or ssh; anything else is unknown', async () => {
+  const { remoteScopeOf } = await import('../../../plugins/skraft-framework/src/domain/reporting-consent-policy.mjs')
+  assert.deepEqual(remoteScopeOf('git@github.com:acme/shop.git'), { provider: 'github', host: 'github.com', repo: 'acme/shop' })
+  assert.deepEqual(remoteScopeOf('https://token@github.com/acme/shop'), { provider: 'github', host: 'github.com', repo: 'acme/shop' })
+  assert.deepEqual(remoteScopeOf('https://gitlab.com/group/sub/shop.git'), { provider: 'gitlab', host: 'gitlab.com', repo: 'group/sub/shop' })
+  assert.deepEqual(remoteScopeOf('https://dev.azure.com/org/proj/_git/shop'), { provider: 'azure-devops', host: 'dev.azure.com', organization: 'org', project: 'proj', repo: 'shop' })
+  assert.deepEqual(remoteScopeOf('git@ssh.dev.azure.com:v3/org/proj/shop'), { provider: 'azure-devops', host: 'dev.azure.com', organization: 'org', project: 'proj', repo: 'shop' })
+  assert.equal(remoteScopeOf('https://example.com/acme/shop.git'), null)
+  assert.equal(remoteScopeOf('https://github.com/acme'), null)
+  assert.equal(remoteScopeOf(null), null)
+})
+
+test('interpretConsent: destinations, numbers, media and draft; refusals never fall back to defaults', async () => {
+  const { interpretConsent } = await import('../../../plugins/skraft-framework/src/domain/reporting-consent-policy.mjs')
+  const scope = { provider: 'github', host: 'github.com', repo: 'acme/shop' }
+  const context = { scope, branch: 'feature/x', issueNumber: 42 }
+  const prefs = (answer, ctx = context) => interpretConsent(answer, ctx)
+  assert.deepEqual(prefs('PR + Issue, chat pr=#7 media=3 draft').preferences, {
+    confirmed: true, ...scope, branch: 'feature/x', prNumber: 7, issueNumber: 42,
+    destinations: { pr: true, issue: 'link', chat: true }, maxMedia: 3, allowDraftPr: true,
+  })
+  assert.deepEqual(prefs('issue').preferences.destinations, { pr: false, issue: 'full', chat: false })
+  assert.equal(prefs('issue=#9').preferences.issueNumber, 9)
+  assert.deepEqual(prefs('local').preferences.destinations, { pr: false, issue: 'none', chat: false })
+  assert.equal(prefs('chat').preferences.repo, null)
+  for (const [answer, reason] of [
+    ['', /no destination/], ['everywhere', /not a destination/], ['pr=abc', /not understood/],
+    ['local+chat', /excludes/], ['pr=#0', /positive/], ['issue', /requires an issue number/],
+  ]) {
+    assert.match(prefs(answer, answer === 'issue' ? { ...context, issueNumber: null } : context).reason, reason, answer)
+  }
+  assert.match(prefs('pr', { ...context, scope: null }).reason, /recognised origin/)
+})
+
+test('report boundaries: dated data and notes, the newest first; the addendum only for DISTILL and DELIVER', async () => {
+  const policy = await import('../../../plugins/skraft-framework/src/domain/report-boundary-policy.mjs')
+  const files = ['reporting/2026-10-01/forecast-data.json', 'reporting/2026-10-03/forecast-data.json', 'reporting/2026-10-02/outcome-data.json', 'reporting/x/forecast-data.json']
+  assert.equal(policy.latestReportData('forecast', files), 'reporting/2026-10-03/forecast-data.json')
+  assert.equal(policy.latestReportData('outcome', files), 'reporting/2026-10-02/outcome-data.json')
+  assert.equal(policy.latestHandoffNotes(files), null)
+  assert.equal(policy.reportingAddendum({ phase: 'DESIGN' }), null)
+  assert.equal(policy.isRepositoryRef('../etc/passwd'), false)
+  assert.equal(policy.isRepositoryRef('.copilot-tracking/a.md'), true)
+  assert.deepEqual(policy.boundReportData({ maxMedia: 4 }, {}), { maxMedia: 4 })
+  assert.deepEqual(policy.boundReportData({}, { reviewRef: 'r.md', maxMedia: 1 }), { reviewRef: 'r.md', maxMedia: 1 })
+  assert.equal(
+    policy.chatSummary({ kind: 'forecast', story: 's', markdownPath: 'p.md', results: [{ destination: 'pr', status: 'published', url: 'https://u' }, { destination: 'issue', status: 'pending', reason: 'r' }] }),
+    'forecast report for s: p.md\n  pr: published https://u\n  issue: pending — r',
+  )
+})

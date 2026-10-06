@@ -70,17 +70,28 @@ export const ADR_INDEX_HEADER = '| ADR | Title | Status | Chosen | Decision (1 l
 //                                       'inconclusive', in order (default 'pass'); see evidenceOf
 //   answers:     { [keyPrefix]: (string|null)[] }  HumanInteraction answers by key prefix
 //   decisions:   { [key]: string }      answers already recorded in the DecisionStore
+//   consent:     string | null          the recorded reporting:consent answer (default 'local');
+//                                       null: not recorded, so the run asks
 //   adrIndex:    string                 docs/adr/decisions-index.md
 //   states:      { [slug]: object | 'corrupted' }   state.json already on disk
 //   backups:     { [slug]: Array<{ name, timestamp, raw }> }  state.json.bak.* on disk
 //   files:       { [slug]: { [path]: string } }  tracking files already on disk
 //   commits:     Array<{ sha, subject }>  recent commits, newest first (SourceControl.listRecent)
+//   reportData:  { forecast?, outcome? }  report data the DISTILL / DELIVER specialist writes
+//                                       where its reporting addendum says (default: none)
+//   transport:   'up' | 'down'          the remote side of publication (default 'up')
 export const createFakeHost = (options = {}) => {
   const tracking = new Map()
   const states = new Map(Object.entries(options.states ?? {}))
   const archived = []
+  const remote = new Map() // 'pr#12' → comments, the simulated GitHub
+  let nextComment = 100
+  const transportCalls = []
   const repository = new Map()
-  const decisions = new Map(Object.entries(options.decisions ?? {}))
+  // Reporting consent is answered "local" unless a test asks for it (consent: null) or
+  // gives another answer.
+  const consent = options.consent === undefined ? { 'reporting:consent': 'local' } : options.consent === null ? {} : { 'reporting:consent': options.consent }
+  const decisions = new Map(Object.entries({ ...consent, ...(options.decisions ?? {}) }))
   if (options.adrIndex) repository.set('docs/adr/decisions-index.md', options.adrIndex)
   let head = 1
   const dispatches = []
@@ -119,6 +130,10 @@ export const createFakeHost = (options = {}) => {
       return
     }
     if ((options.skipOutputs?.[agent] ?? 0) >= counters[agent]) return
+    for (const kind of ['forecast', 'outcome']) {
+      const at = prompt.match(new RegExp(`\`\\.copilot-tracking/skraft-plans/[^/]+/(reporting/[\\d-]+/${kind}-data\\.json)\``))
+      if (at && options.reportData?.[kind]) writeTracking(slug, at[1], JSON.stringify(options.reportData[kind]))
+    }
     for (const pattern of requiredTrackedOutputs(agent, CONFIG)) {
       writeTracking(slug, concretePath(pattern, slug), `# ${agent} output`)
     }
@@ -169,12 +184,49 @@ export const createFakeHost = (options = {}) => {
       range: async (base, rev) => { ranges.push({ base, rev }); return [] },
       show: async () => null,
       listRecent: async (count) => (options.commits ?? []).slice(0, count),
+      currentBranch: async () => options.branch ?? 'feature/checkout',
+      remoteUrl: async () => options.remote ?? 'https://github.com/acme/shop.git',
     },
     sourceTree: {
       listFiles: async () => { scans.push(`sha${head}`); return ['src/Checkout/Payment.cs'] },
       readSource: async () => 'public sealed class Payment {}\n',
     },
-    hasher: { sha256: async (text) => sha256(text) },
+    hasher: { sha256: async (text) => sha256(text), sha256Sync: (text) => sha256(text) },
+    // The remote side of publication: a GitHub whose viewer is skraft-bot.
+    reportTransport: {
+      observe: async ({ packet }) => {
+        transportCalls.push(['observe', packet.destination])
+        if ((options.transport ?? 'up') === 'down') return null
+        const { target } = packet
+        return {
+          target, branch: packet.branch, viewer: 'skraft-bot', complete: true,
+          comments: structuredClone(remote.get(`${target.type}#${target.number}`) ?? []),
+          capabilities: { read: true, create: true, update: true },
+          provenance: { server: 'github', tool: 'issue_read' },
+        }
+      },
+      publish: async ({ packet, decision }) => {
+        transportCalls.push([decision.action, packet.destination])
+        if ((options.transport ?? 'up') === 'down') return null
+        const { target } = packet
+        const key = `${target.type}#${target.number}`
+        const comments = remote.get(key) ?? []
+        let comment = comments.find((c) => c.id === decision.commentId)
+        if (decision.action === 'create') {
+          nextComment += 1
+          comment = { id: nextComment, body: packet.body, author: 'skraft-bot', url: `https://github.com/${target.repo}/${target.type === 'pr' ? 'pull' : 'issues'}/${target.number}#issuecomment-${nextComment}` }
+          remote.set(key, [...comments, comment])
+        } else if (decision.action === 'update') {
+          comment.body = packet.body
+        }
+        return {
+          target, branch: packet.branch, viewer: 'skraft-bot',
+          provenance: { server: 'github', tool: 'issue_read' },
+          comment: structuredClone(comment),
+          ...(decision.action === 'unchanged' ? {} : { writeResult: { id: comment.id } }),
+        }
+      },
+    },
     templateReader: { read: async (path) => readFileSync(join(PLUGIN_ROOT, path), 'utf8') },
     activePipeline: { activate: async (s) => { activations.push(s) } },
     agentRunner: {
@@ -210,6 +262,8 @@ export const createFakeHost = (options = {}) => {
     phases,
     activations,
     archived,
+    remote,
+    transportCalls,
     state: (slug) => states.get(slug),
     tracking: (slug, path) => tracking.get(key(slug, path)),
     repository,

@@ -33,6 +33,7 @@ import { createGitSourceControl } from '../src/adapters/infrastructure/git/git-s
 import { createProcessGitRunner } from '../src/adapters/infrastructure/git/process-git-runner.mjs'
 import { createGitSourceTree } from '../src/adapters/infrastructure/source-tree/git-source-tree.mjs'
 import { createWebCryptoHasher } from '../src/adapters/infrastructure/web-crypto-hasher.mjs'
+import { createAgentReportTransport } from '../src/adapters/infrastructure/reporting/agent-report-transport.mjs'
 import { createSnapshotStateWriter } from '../src/adapters/infrastructure/state/snapshot-state-writer.mjs'
 import { createFileStateReader, createFileStateBackupReader, createFileStateArchive } from '../src/adapters/infrastructure/state/file-state-store.mjs'
 import { createTrackingDecisionStore } from '../src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
@@ -108,6 +109,20 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
     prefix: (s) => `${relativeToCwd(trackingDir(s))}/`,
   }
 
+  // AgentRunner on $.agent.spawn
+  const agentRunner = {
+    run: async ({ agent, label, prompt }) => {
+      const spawned = await $.agent.spawn({
+        prompt,
+        subagentType: claudeAgentId(agent, config, pluginName),
+        description: label.slice(0, 60),
+      })
+      if (spawned.deny || !spawned.agentId) return { ok: false, text: spawned.deny ?? 'not started' }
+      const answer = await waitForAgent(spawned.agentId)
+      return { ok: answer.reason === 'answer' && answer.text.length > 0, text: answer.text }
+    },
+  }
+
   return {
     config,
     stateReader: createFileStateReader({ files, trackingRoot, now }),
@@ -133,19 +148,9 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
     hasher: createWebCryptoHasher(),
     // ActivePipeline: the pointer file the settings hooks read (written as cli/state.mjs select does)
     activePipeline: { activate: (s) => $.fs.write(joinPath(trackingRoot, '.active-slug'), `${s}\n`) },
-    // AgentRunner on $.agent.spawn
-    agentRunner: {
-      run: async ({ agent, label, prompt }) => {
-        const spawned = await $.agent.spawn({
-          prompt,
-          subagentType: claudeAgentId(agent, config, pluginName),
-          description: label.slice(0, 60),
-        })
-        if (spawned.deny || !spawned.agentId) return { ok: false, text: spawned.deny ?? 'not started' }
-        const answer = await waitForAgent(spawned.agentId)
-        return { ok: answer.reason === 'answer' && answer.text.length > 0, text: answer.text }
-      },
-    },
+    agentRunner,
+    // ReportTransport: a general-purpose subagent, which sees the session's MCP tools
+    reportTransport: createAgentReportTransport({ agentRunner, pluginRoot: $.plugin.root }),
     // HumanInteraction on the engine's question dialog; null when nothing draws
     humanInteraction: {
       ask: async ({ question, options }) => {

@@ -8,7 +8,8 @@ import { createStateService } from '../application/state-service.mjs'
 import { renderReport } from '../application/render-report.mjs'
 import { preparePublication, decidePublication, recordPublication } from '../application/report-publication-handoff.mjs'
 import { validateReportingPreferences } from '../domain/reporting-preferences.mjs'
-import { normalizeMcpTarget, sameMcpScope, validateMcpPacket } from '../domain/report-mcp-policy.mjs'
+import { sameMcpScope, validateMcpPacket } from '../domain/report-mcp-policy.mjs'
+import { configuredTarget, isDestinationSelected, scopedReceipt } from '../domain/report-publication-scope.mjs'
 import { validateReportData } from '../domain/reporting-presentation.mjs'
 import { createReportFiles } from '../adapters/infrastructure/report-files.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
@@ -71,24 +72,7 @@ function readOptional(files, path) {
 	}
 }
 
-const selected = (preferences, destination) => destination === 'pr'
-	? preferences.destinations.pr : preferences.destinations.issue !== 'none'
-const configuredTarget = (preferences, destination) => normalizeMcpTarget(preferences, destination,
-	destination === 'pr' ? preferences.prNumber : preferences.issueNumber)
-
-function scopedReceipt(receipt, preferences, story, kind) {
-	if (receipt?.story !== story || receipt?.kind !== kind) return undefined
-	const targets = {}
-	for (const destination of ['pr', 'issue']) {
-		const entry = receipt.targets?.[destination]
-		if (!entry || !selected(preferences, destination)) continue
-		const number = destination === 'pr' ? preferences.prNumber : preferences.issueNumber
-		if (number !== null && sameMcpScope(entry.target, configuredTarget(preferences, destination))) {
-			targets[destination] = entry
-		}
-	}
-	return { story, kind, targets }
-}
+const selected = isDestinationSelected
 
 function assertCurrentPacket(packet, preferences, previousReceipt, currentBranch) {
 	validateMcpPacket(packet, hashText)
@@ -212,7 +196,8 @@ async function run() {
 	if (command === 'status') {
 		const receipt = readOptional(tracking, resolve(reportingPath, 'publication.json'))
 		const pending = readOptional(tracking, resolve(reportingPath, 'pending.json'))
-		if (!pending) return receipt ?? { status: 'idle' }
+		// A pending file without a packet is a finished attempt (RunPipeline cannot delete it).
+		if (!pending?.packet) return receipt ?? { status: 'idle' }
 		const state = unwrap(await service.get(slug))
 		const preferences = state?.userPreferences?.reporting
 		unwrap(validateReportingPreferences(preferences))

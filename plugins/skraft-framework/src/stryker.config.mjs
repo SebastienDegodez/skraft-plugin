@@ -86,6 +86,11 @@ export default {
     'plugins/skraft-framework/src/application/dispatch-journal-service.mjs',
     'plugins/skraft-framework/src/domain/structural-scan-policy.mjs',
     'plugins/skraft-framework/src/application/structural-scan-service.mjs',
+    // V2 — reporting run by code: consent, boundaries, publication protocol
+    'plugins/skraft-framework/src/domain/reporting-consent-policy.mjs',
+    'plugins/skraft-framework/src/domain/report-boundary-policy.mjs',
+    'plugins/skraft-framework/src/domain/report-publication-scope.mjs',
+    'plugins/skraft-framework/src/application/report-publication-service.mjs',
     // V2 — orchestrator as code (RunPipeline) and its driven adapters
     'plugins/skraft-framework/src/domain/pipeline/*.mjs',
     'plugins/skraft-framework/src/application/pipeline/*.mjs',
@@ -95,6 +100,7 @@ export default {
     'plugins/skraft-framework/src/adapters/infrastructure/git/git-source-control.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/state/snapshot-state-writer.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/state/file-state-store.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/reporting/agent-report-transport.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/git/process-git-runner.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/source-tree/git-source-tree.mjs',
   ],

@@ -326,3 +326,44 @@ test('fs-active-pipeline: writes the pointer the hooks read, replacing a stale o
     await rm(root, { recursive: true, force: true })
   }
 })
+
+// ── Reporting transport and hasher ────────────────────────────────────────────
+
+test('agent-report-transport: a general-purpose agent observes read-only, then writes the exact body; its JSON is the answer', async () => {
+  const { createAgentReportTransport, parseAgentJson } = await import('../../../plugins/skraft-framework/src/adapters/infrastructure/reporting/agent-report-transport.mjs')
+  const runs = []
+  const answers = ['Done.\n```json\n{"viewer":"bot","comments":[]}\n```', '```json\n{"unavailable":"no create tool"}\n```']
+  const transport = createAgentReportTransport({
+    agentRunner: { run: async (dispatch) => { runs.push(dispatch); return { ok: true, text: answers.shift() } } },
+    pluginRoot: '/plugin',
+  })
+  const packet = {
+    kind: 'forecast', destination: 'pr', branch: 'feature/x', marker: '<!-- m -->', body: '<!-- m -->\n\nBody `x`', digest: 'f'.repeat(64),
+    target: { provider: 'github', host: 'github.com', repo: 'acme/shop', type: 'pr', number: 12 },
+  }
+  assert.deepEqual(await transport.observe({ packet }), { viewer: 'bot', comments: [] })
+  assert.equal(await transport.publish({ packet, decision: { action: 'create' } }), null, 'unavailable is no readback')
+  assert.equal(runs[0].agent, null)
+  assert.match(runs[0].prompt, /observe \(read-only\)[\s\S]*Write nothing[\s\S]*head branch must be: feature\/x[\s\S]*\/plugin\/skills\/github-search-protocol\/SKILL\.md/)
+  assert.match(runs[1].prompt, /Create ONE new comment[\s\S]*````markdown\n<!-- m -->\n\nBody `x`\n````/)
+  assert.notEqual(runs[0].label, runs[1].label)
+  assert.equal(parseAgentJson('no json here'), null)
+  assert.deepEqual(parseAgentJson('{"a":1}'), { a: 1 })
+  assert.deepEqual(parseAgentJson('```json\n{"a":1}\n```\ntext\n```json\n{"a":2}\n```'), { a: 2 }, 'the last block wins')
+  assert.equal(parseAgentJson('```json\n[1]\n```'), null)
+})
+
+test('agent runners: a null agent is the host\'s general-purpose agent', async () => {
+  assert.equal(claudeAgentId(null, CONFIG, 'skraft'), 'general-purpose')
+  const calls = []
+  const runner = createWorkflowAgentRunner({ ctx: { agent: async (prompt, options) => { calls.push(options); return 'ok' } } })
+  await runner.run({ agent: null, label: 'report', prompt: 'p' })
+  assert.deepEqual(calls, [{ label: 'report' }])
+})
+
+test('web-crypto-hasher: sha256Sync is the same digest as sha256, for any text', async () => {
+  const hasher = createWebCryptoHasher()
+  for (const text of ['', 'abc', 'é'.repeat(300), 'x'.repeat(55), 'x'.repeat(64), 'y'.repeat(10_000)]) {
+    assert.equal(hasher.sha256Sync(text), await hasher.sha256(text))
+  }
+})

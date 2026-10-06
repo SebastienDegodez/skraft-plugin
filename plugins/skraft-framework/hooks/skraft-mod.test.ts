@@ -76,12 +76,14 @@ const world = ($: any, on: any, { reviewVerdict = 'APPROVED' } = {}) => {
     }
     return { value: [...names].map(([name, kind]) => ({ name, kind, size: 0 })) }
   })
-  // Only git reaches a process now: the state, the evidence check and the scan run in the mod.
+  // Only git reaches a process: the state, the evidence check and the scan run in the mod.
   on('process.run', ($$: any, e: any) => {
     const [cmd, sub] = e.argv
     const ok = (stdout = '') => ({ value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
     if (cmd === 'git' && sub === 'rev-parse') return ok(`sha${head}\n`)
     if (cmd === 'git' && sub === 'ls-files') return ok('')
+    if (cmd === 'git' && sub === 'symbolic-ref') return ok('feature/checkout\n')
+    if (cmd === 'git' && sub === 'remote') return { value: { exitCode: 2, stdout: '', stderr: 'no origin', isStdoutTruncated: false, isStderrTruncated: false } }
     processes.push(e.argv)
     return { value: { exitCode: 127, stdout: '', stderr: 'unknown', isStdoutTruncated: false, isStderrTruncated: false } }
   })
