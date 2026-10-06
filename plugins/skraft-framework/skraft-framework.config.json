@@ -264,28 +264,7 @@
       }
     ],
     "refactoring-worker": [],
-    "Skraft - Orchestrator": [
-      {
-        "name": "adversarial-review-lenses",
-        "policy": "on-demand"
-      },
-      {
-        "name": "contract-testing",
-        "policy": "on-demand"
-      },
-      {
-        "name": "playwright-evidence",
-        "policy": "on-demand"
-      },
-      {
-        "name": "github-search-protocol",
-        "policy": "on-demand"
-      },
-      {
-        "name": "qa-reporting",
-        "policy": "on-demand"
-      }
-    ],
+    "Skraft - Orchestrator": [],
     "Skraft - Software Engineer Reviewer": [
       {
         "name": "adversarial-review-lenses",
