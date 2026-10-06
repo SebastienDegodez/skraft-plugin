@@ -104,6 +104,8 @@ export default {
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },
-  reporters: ['html', 'clear-text', 'progress'],
+  reporters: ['html', 'clear-text', 'progress', 'json'],
   htmlReporter: { fileName: 'reports/mutation/mutation.html' },
+  // Read by scripts/ci-mutation-survivors.mjs: the CI publishes the surviving mutants.
+  jsonReporter: { fileName: 'reports/mutation/mutation.json' },
 }
