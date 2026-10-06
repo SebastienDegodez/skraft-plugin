@@ -18,42 +18,60 @@
 
   <ol id="track" class="track" aria-label="Phases"></ol>
 
-  <section id="question" class="question" hidden aria-labelledby="question-title">
-    <h2 id="question-title">The pipeline is waiting for you</h2>
-    <p id="question-text" class="question-text"></p>
-    <div id="question-options" class="options"></div>
-    <form id="question-form" class="free-answer">
-      <label for="question-free">Another answer</label>
-      <input id="question-free" name="answer" autocomplete="off">
-      <button type="submit">Record answer</button>
-    </form>
-    <p id="question-key" class="key"></p>
-    <p id="question-note" class="note" hidden></p>
+  <div class="tabs" role="tablist" aria-label="Pipeline details">
+    <button role="tab" id="tab-overview" aria-controls="panel-overview" data-tab="overview">Overview<span class="badge" id="badge-overview"></span></button>
+    <button role="tab" id="tab-phases" aria-controls="panel-phases" data-tab="phases">Phases</button>
+    <button role="tab" id="tab-tests" aria-controls="panel-tests" data-tab="tests">Tests<span class="badge" id="badge-tests"></span></button>
+    <button role="tab" id="tab-cost" aria-controls="panel-cost" data-tab="cost">Cost<span class="badge" id="badge-cost"></span></button>
+    <button role="tab" id="tab-reports" aria-controls="panel-reports" data-tab="reports">Reports</button>
+    <button role="tab" id="tab-journal" aria-controls="panel-journal" data-tab="journal">Journal</button>
+  </div>
+
+  <section role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" tabindex="0">
+    <section id="question" class="question" hidden aria-labelledby="question-title">
+      <h2 id="question-title">The pipeline is waiting for you</h2>
+      <p id="question-text" class="question-text"></p>
+      <div id="question-options" class="options"></div>
+      <form id="question-form" class="free-answer">
+        <label for="question-free">Another answer</label>
+        <input id="question-free" name="answer" autocomplete="off">
+        <button type="submit">Record answer</button>
+      </form>
+      <p id="question-key" class="key"></p>
+      <p id="question-note" class="note" hidden></p>
+    </section>
+
+    <div class="actions">
+      <button id="ask-resume" type="button">Ask Copilot to resume the run</button>
+      <button id="ask-explain" type="button" class="quiet">Ask Copilot where it stands</button>
+      <p id="ask-note" class="note" hidden></p>
+    </div>
+
+    <dl id="glance" class="glance"></dl>
+    <h2>Steps</h2>
+    <div id="overview-steps" class="step-columns"></div>
   </section>
 
-  <section class="actions" aria-label="Ask Copilot">
-    <button id="ask-resume" type="button">Ask Copilot to resume the run</button>
-    <button id="ask-explain" type="button" class="quiet">Ask Copilot where it stands</button>
-    <p id="ask-note" class="note" hidden></p>
-  </section>
-
-  <section aria-labelledby="phases-title">
-    <h2 id="phases-title">Phases</h2>
+  <section role="tabpanel" id="panel-phases" aria-labelledby="tab-phases" tabindex="0" hidden>
     <div id="phases"></div>
   </section>
 
-  <section aria-labelledby="reports-title">
-    <h2 id="reports-title">Reports</h2>
+  <section role="tabpanel" id="panel-tests" aria-labelledby="tab-tests" tabindex="0" hidden>
+    <div id="tests"></div>
+  </section>
+
+  <section role="tabpanel" id="panel-cost" aria-labelledby="tab-cost" tabindex="0" hidden>
+    <div id="cost"></div>
+  </section>
+
+  <section role="tabpanel" id="panel-reports" aria-labelledby="tab-reports" tabindex="0" hidden>
     <div id="reports"></div>
   </section>
 
-  <section aria-labelledby="decisions-title">
-    <h2 id="decisions-title">Decisions</h2>
+  <section role="tabpanel" id="panel-journal" aria-labelledby="tab-journal" tabindex="0" hidden>
+    <h2>Decisions</h2>
     <div id="decisions"></div>
-  </section>
-
-  <section aria-labelledby="log-title">
-    <h2 id="log-title">Run log</h2>
+    <h2>Run log</h2>
     <ol id="log" class="log"></ol>
   </section>
 

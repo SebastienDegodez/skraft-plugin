@@ -1,11 +1,12 @@
 import {
-  RUN_JOURNAL_PATH, journalAnswered, journalAwaiting, journalFinished, journalLine, journalPhase, journalStarted,
+  RUN_JOURNAL_PATH, journalAnswered, journalAwaiting, journalDispatch, journalFinished, journalLine, journalPhase,
+  journalStarted, journalVerification,
 } from '../../domain/pipeline/run-journal-policy.mjs'
 
 // Step of RunPipeline: keeps {tracking}/{slug}/run.json (domain run-journal-policy) as the
-// run goes. It decorates two ports the use case already has — PipelineProgress (phases and
-// log lines) and HumanInteraction (a question asked, then answered) — so the journal sees
-// exactly what the person watching sees. Writes are chained in order; a failed write is
+// run goes. It decorates three ports the use case already has — PipelineProgress (phases
+// and log lines), HumanInteraction (a question asked, then answered) and AgentRunner (each
+// dispatch, its duration and cost) — so the journal sees exactly what happened. Writes are chained in order; a failed write is
 // dropped, never surfaced: the journal must not change a run.
 export const createRunJournal = ({ trackingStore, time }) => {
   let slug = null
@@ -31,10 +32,28 @@ export const createRunJournal = ({ trackingStore, time }) => {
       await save(journalStarted(previous, { at: now(), story }))
     },
     finish: (outcome) => update((j) => journalFinished(j, outcome, now())),
+    recordVerification: (verification) => update((j) => journalVerification(j, verification, now())),
     flush: () => pending,
     observeProgress: (progress) => Object.freeze({
       phase: (title) => { progress.phase(title); void update((j) => journalPhase(j, title, now())) },
       log: (message) => { progress.log(message); void update((j) => journalLine(j, message, now())) },
+    }),
+    observeAgents: (agentRunner) => Object.freeze({
+      run: async (dispatch) => {
+        const started = time.now()
+        const answer = await agentRunner.run(dispatch)
+        await update((j) => journalDispatch(j, {
+          phase: dispatch.phase ?? null,
+          role: dispatch.role ?? null,
+          agent: dispatch.agent,
+          label: dispatch.label,
+          startedAt: started.toISOString(),
+          durationMs: time.now() - started,
+          ok: answer?.ok,
+          usage: answer?.usage,
+        }))
+        return answer
+      },
     }),
     observeQuestions: (humanInteraction) => Object.freeze({
       ask: async (checkpoint) => {

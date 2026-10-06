@@ -1,4 +1,7 @@
 import { reviewFilesOf } from './progress-inference-policy.mjs'
+import { phaseSteps } from './phase-steps-policy.mjs'
+import { testResults } from './test-results-policy.mjs'
+import { pipelineCost } from './cost-policy.mjs'
 import { DEFAULT_PHASE_ORDER } from '../state-machine.mjs'
 
 // Pure: what a person following a pipeline sees — one view model built from state.json,
@@ -37,8 +40,11 @@ const REPORT = /^reporting\/(\d{4}-\d{2}-\d{2})\/(forecast|outcome)\.md$/
 // decisions      [{ key, answer, by, at }]
 // receipts       [{ kind, story, targets: { pr?, issue? } }]  (report.mjs / ReportPublication shape)
 // pending        reporting/pending.json, or null
+// evidenceLog    the DELIVER quality-gates log (tracking path), evidence its parsed content
+// eurPerUsd      exchange rate for the cost in euros, or null
 export const buildPipelineView = ({
   slug, config, state, run = null, files = [], reviewVerdicts = {}, decisions = [], receipts = [], pending = null, now,
+  evidenceLog = null, evidence = null, eurPerUsd = null,
 }) => {
   const phaseOrder = (config?.phaseOrder ?? DEFAULT_PHASE_ORDER).filter((phase) => phase !== 'DONE')
   const done = state?.currentPhase === 'DONE'
@@ -75,6 +81,15 @@ export const buildPipelineView = ({
       reviews,
     }
   })
+
+  const reportsOnDisk = files.filter((path) => REPORT.test(path)).map((path) => ({ kind: REPORT.exec(path)[2] }))
+  const stepContext = {
+    structuralScan: (state?.phaseArtifacts?.RESEARCH ?? []).some((path) => path.endsWith('structural-scan.json')),
+    adrRatification: state?.adrRatification ?? null,
+    qualityGates: run?.qualityGates ?? null,
+    reports: reportsOnDisk,
+  }
+  for (const phase of phases) phase.steps = phaseSteps(phase, stepContext)
 
   const answered = new Set(decisions.map((decision) => decision.key))
   const checkpoint = run?.checkpoint
@@ -114,6 +129,8 @@ export const buildPipelineView = ({
       : null,
     checkpoint,
     phases,
+    tests: testResults({ evidenceLog, evidence, verification: run?.qualityGates ?? null }),
+    cost: pipelineCost({ dispatches: Array.isArray(run?.dispatches) ? run.dispatches : [], phases: phaseOrder, eurPerUsd }),
     adrRatification: state?.adrRatification ?? null,
     decisions: [...decisions].sort((a, b) => String(a.at ?? '').localeCompare(String(b.at ?? ''))),
     reporting: {

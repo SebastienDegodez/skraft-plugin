@@ -30,3 +30,19 @@ export const walkFiles = async (listDirectory, dir, prefix = '') => {
 
 // HumanInteraction: the engine's question dialog wants a question ending in '?'.
 export const askable = (question) => (question.trimEnd().endsWith('?') ? question : `${question.trimEnd()}\nYour answer?`)
+
+// AgentRunner usage from a subagent's turn.complete usage (tokens, model) and the session's
+// dollar cost before and after it ($.session.usage().cost.usd). The difference is the
+// dispatch's when nothing else spent meanwhile — RunPipeline dispatches one agent at a time.
+export const claudeUsage = (turnUsage, usdBefore, usdAfter) => {
+  const usd = typeof usdBefore === 'number' && typeof usdAfter === 'number' && usdAfter >= usdBefore ? usdAfter - usdBefore : undefined
+  if (!turnUsage && usd === undefined) return undefined
+  return Object.freeze({
+    model: turnUsage?.model ?? null,
+    inputTokens: turnUsage?.input_tokens ?? 0,
+    outputTokens: turnUsage?.output_tokens ?? 0,
+    cacheReadTokens: turnUsage?.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: turnUsage?.cache_creation_input_tokens ?? 0,
+    ...(usd === undefined ? {} : { usd }),
+  })
+}

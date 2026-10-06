@@ -371,3 +371,46 @@ test('web-crypto-hasher: sha256Sync is the same digest as sha256, for any text',
     assert.equal(hasher.sha256Sync(text), await hasher.sha256(text))
   }
 })
+
+// ── What a dispatch cost ──────────────────────────────────────────────────────
+
+test('workflow-agent-runner: sums the subagent usage events of its own call into AI credits', async () => {
+  const { sumCopilotUsage } = await import('../../../plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/workflow-agent-runner.mjs')
+  const listeners = new Set()
+  const emit = (event) => { for (const listener of listeners) listener(event) }
+  const usageEvent = (agentId, nano, extra = {}) => ({ agentId, data: { model: 'gpt-x', inputTokens: 100, outputTokens: 10, copilotUsage: { totalNanoAiu: nano }, ...extra } })
+  const ctx = {
+    session: { on: (type, listener) => { assert.equal(type, 'assistant.usage'); listeners.add(listener); return () => listeners.delete(listener) } },
+    agent: async () => {
+      emit(usageEvent('sub-1', 1_500_000_000))
+      emit(usageEvent(undefined, 9_000_000_000)) // the main agent: not this dispatch's
+      emit(usageEvent('sub-2', 500_000_000, { cacheReadTokens: 40 }))
+      return 'done'
+    },
+  }
+  const answer = await createWorkflowAgentRunner({ ctx }).run({ agent: 'A', label: 'l', prompt: 'p' })
+  assert.deepEqual(answer.usage, { model: 'gpt-x', requests: 2, inputTokens: 200, outputTokens: 20, cacheReadTokens: 40, cacheWriteTokens: 0, credits: 2 })
+  assert.equal(listeners.size, 0, 'unsubscribed once the call is over')
+  emit(usageEvent('sub-3', 1))
+  const memoized = await createWorkflowAgentRunner({ ctx: { session: ctx.session, agent: async () => 'replayed' } }).run({ agent: 'A', label: 'l', prompt: 'p' })
+  assert.equal(memoized.usage, undefined, 'a replayed call spent nothing')
+  assert.equal(sumCopilotUsage([{ agentId: 'a', data: { model: 'm', inputTokens: 5 } }]).credits, undefined, 'no copilotUsage: no credits claimed')
+})
+
+test('mod helpers: a Claude subagent usage is its tokens and the session cost difference', async () => {
+  const { claudeUsage } = await import('../../../plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs')
+  const turn = { model: 'claude-x', input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 5000, cache_creation_input_tokens: 10 }
+  assert.deepEqual(claudeUsage(turn, 1.25, 1.75), { model: 'claude-x', inputTokens: 1000, outputTokens: 200, cacheReadTokens: 5000, cacheWriteTokens: 10, usd: 0.5 })
+  assert.equal(claudeUsage(turn, null, 2).usd, undefined, 'no ledger: no dollars claimed')
+  assert.equal(claudeUsage(turn, 2, 1).usd, undefined, 'a ledger that went back is not a cost')
+  assert.equal(claudeUsage(undefined, null, null), undefined)
+})
+
+test('canvas: the euro rate is the one the person set, never a default', async () => {
+  const { eurPerUsdOf } = await import('../../../plugins/skraft-framework/src/adapters/api/copilot-canvas/skraft-pipeline-canvas.mjs')
+  assert.equal(eurPerUsdOf({ SKRAFT_EUR_PER_USD: '0.86' }), 0.86)
+  assert.equal(eurPerUsdOf({ SKRAFT_EUR_PER_USD: '0,91' }), 0.91)
+  assert.equal(eurPerUsdOf({}), null)
+  assert.equal(eurPerUsdOf({ SKRAFT_EUR_PER_USD: 'cheap' }), null)
+  assert.equal(eurPerUsdOf({ SKRAFT_EUR_PER_USD: '-1' }), null)
+})

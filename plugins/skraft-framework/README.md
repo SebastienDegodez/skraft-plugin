@@ -49,8 +49,10 @@ You can also launch the pipeline directly:
   Answer checkpoints with `skraft_decide`, resume with `/workflows` → R, and use
   `skraft_close_phase` to close a phase by hand.
 - In GitHub Copilot app, ask to open the **Skraft pipeline** canvas (`{ "slug": "checkout" }`,
-  or the active pipeline): phases, attempts, reviews and verdicts, the question the run waits
-  for with one-click answers, decisions, reports and the run log, live.
+  or the active pipeline), live, in tabs: the question the run waits for with one-click
+  answers and every step checked (Overview), phases with their reviews (Phases), the tests that
+  ran and the code's check of their evidence (Tests), what each agent cost in AI credits,
+  dollars, or euros with `SKRAFT_EUR_PER_USD` set (Cost), reports, decisions and the run log.
 
 ```mermaid
 flowchart LR

@@ -37,7 +37,7 @@ import { createAgentReportTransport } from '../src/adapters/infrastructure/repor
 import { createSnapshotStateWriter } from '../src/adapters/infrastructure/state/snapshot-state-writer.mjs'
 import { createFileStateReader, createFileStateBackupReader, createFileStateArchive } from '../src/adapters/infrastructure/state/file-state-store.mjs'
 import { createTrackingDecisionStore } from '../src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
-import { joinPath, claudeAgentId, walkFiles, askable } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
+import { joinPath, claudeAgentId, walkFiles, askable, claudeUsage } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
 import { parseSkraftArgs } from '../src/adapters/api/claude-code-mod/command-args.mjs'
 
 /** @typedef {import('claude-code').Register} Register */
@@ -68,6 +68,16 @@ async function processRun($, cwd, argv, { timeoutMs = 600_000, stdin } = {}) {
     return { exitCode: result.exitCode, stdout: result.stdout ?? '', stderr: result.stderr ?? '', isStdoutTruncated: result.isStdoutTruncated === true }
   } catch (error) {
     return { exitCode: 124, stdout: '', stderr: String(error?.message ?? error) }
+  }
+}
+
+// The session's cost so far, in US dollars, as /cost totals it; null where none is kept.
+async function sessionCostUsd($) {
+  try {
+    const usd = (await $.session.usage()).cost?.usd
+    return typeof usd === 'number' ? usd : null
+  } catch {
+    return null
   }
 }
 
@@ -112,6 +122,8 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
   // AgentRunner on $.agent.spawn
   const agentRunner = {
     run: async ({ agent, label, prompt }) => {
+      // What the dispatch cost: the subagent's tokens, and the session's dollar cost before and after.
+      const costBefore = await sessionCostUsd($)
       const spawned = await $.agent.spawn({
         prompt,
         subagentType: claudeAgentId(agent, config, pluginName),
@@ -119,7 +131,8 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
       })
       if (spawned.deny || !spawned.agentId) return { ok: false, text: spawned.deny ?? 'not started' }
       const answer = await waitForAgent(spawned.agentId)
-      return { ok: answer.reason === 'answer' && answer.text.length > 0, text: answer.text }
+      const usage = claudeUsage(answer.usage, costBefore, await sessionCostUsd($))
+      return { ok: answer.reason === 'answer' && answer.text.length > 0, text: answer.text, ...(usage ? { usage } : {}) }
     },
   }
 
@@ -160,7 +173,7 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
     },
     agentRunner,
     // ReportTransport: a general-purpose subagent, which sees the session's MCP tools
-    reportTransport: createAgentReportTransport({ agentRunner, pluginRoot: $.plugin.root }),
+    reportTransportOf: (runner) => createAgentReportTransport({ agentRunner: runner, pluginRoot: $.plugin.root }),
     // HumanInteraction on the engine's question dialog; null when nothing draws
     humanInteraction: {
       ask: async ({ question, options }) => {
@@ -280,7 +293,7 @@ export const register = (on) => {
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     if (e.agentId) {
-      const answer = { reason: e.reason, text: e.answer ?? '' }
+      const answer = { reason: e.reason, text: e.answer ?? '', usage: e.usage }
       const resolve = waiting.get(e.agentId)
       if (resolve) {
         waiting.delete(e.agentId)

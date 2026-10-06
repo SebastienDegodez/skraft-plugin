@@ -245,3 +245,66 @@ test('pipeline view: the open phase takes the run status; durations run to now w
   assert.equal(isViewableTrackedFile('state.json', ['state.json']), false)
   assert.equal(isViewableTrackedFile('evidence/x.txt', ['evidence/x.txt']), false)
 })
+
+// ── Steps, tests, cost ─────────────────────────────────────────────────────────
+
+test('cost: credits and dollars per dispatch, phase and pipeline; euros only with a rate', async () => {
+  const { pipelineCost, usdOf } = await import('../../../plugins/skraft-framework/src/domain/pipeline/cost-policy.mjs')
+  assert.equal(usdOf({ credits: 250 }), 2.5)
+  assert.equal(usdOf({ usd: 0.4, credits: 999 }), 0.4, 'dollars reported win')
+  assert.equal(usdOf({}), null)
+  const dispatches = [
+    { phase: 'DESIGN', role: 'specialist', agent: 'A', durationMs: 1000, ok: true, usage: { credits: 100, inputTokens: 10, outputTokens: 5, requests: 2 } },
+    { phase: 'DESIGN', role: 'reviewer', agent: 'R', durationMs: 500, ok: true, usage: { usd: 0.5, inputTokens: 1, outputTokens: 1 } },
+    { phase: 'DELIVER', role: 'specialist', agent: 'E', durationMs: 200, ok: false },
+    { phase: 'REPORT', role: 'transport', agent: null, durationMs: 100, ok: true, usage: { credits: 10 } },
+  ]
+  const cost = pipelineCost({ dispatches, phases: ['DESIGN', 'DELIVER'], eurPerUsd: 0.9 })
+  assert.deepEqual(cost.total, { dispatches: 4, reported: 3, credits: 110, usd: 1.6, eur: 1.44, inputTokens: 11, outputTokens: 6, cacheReadTokens: 0, requests: 2, durationMs: 1800 })
+  assert.deepEqual(cost.byPhase.map((p) => [p.phase, p.credits, p.usd, p.dispatches]), [['DESIGN', 100, 1.5, 2], ['DELIVER', null, null, 1], ['REPORT', 10, 0.1, 1]])
+  assert.deepEqual(cost.dispatches[1], { at: undefined, phase: 'DESIGN', role: 'reviewer', agent: 'R', durationMs: 500, ok: true, model: null, tokens: 2, credits: null, usd: 0.5, eur: 0.45 })
+  assert.equal(pipelineCost({ dispatches, eurPerUsd: null }).total.eur, null)
+  assert.equal(pipelineCost({ dispatches, eurPerUsd: 0 }).eurPerUsd, null)
+})
+
+test('test results: gates and test counts from the evidence log, the verdict from the code that checked it', async () => {
+  const { testResults } = await import('../../../plugins/skraft-framework/src/domain/pipeline/test-results-policy.mjs')
+  const evidence = {
+    $schema: 'quality-gates-evidence/v4', produced_at: 't0', repo_root_rev: 'abc',
+    gates: [
+      { id: 'G1', label: 'Acceptance', status: 'pass', metrics: { tests_total: 3, tests_passed: 3, tests_failed: 0 } },
+      { id: 'G2', label: 'Unit', status: 'fail', metrics: { tests_total: 10, tests_passed: 8, tests_failed: 2 } },
+      { id: 'G6', scope: 'core', label: 'Mutation', status: 'pass' },
+      { id: 'G11', label: 'Coverage', status: 'not_applicable', rationale: 'no code' },
+      null,
+    ],
+    test_integrity: { cycles: [{}, {}] },
+  }
+  const verification = { evidenceLog: 'evidence/d/s/qg-s.json', verdict: 'fail', at: 't1', findings: [{ severity: 'fail', code: 'GATE_FAILED', detail: 'G2 records status fail', gate: 'G2' }] }
+  const results = testResults({ evidenceLog: 'evidence/d/s/qg-s.json', evidence, verification })
+  assert.deepEqual(results.tests, { total: 13, passed: 11, failed: 2 })
+  assert.deepEqual(results.gates.map((g) => [g.id, g.status, g.rationale]), [['G1', 'pass', null], ['G2', 'fail', null], ['G6/core', 'pass', null], ['G11', 'not_applicable', 'no code']])
+  assert.deepEqual([results.verdict, results.verifiedAt, results.cycles, results.producedAt], ['fail', 't1', 2, 't0'])
+  assert.deepEqual(results.findings, [{ severity: 'fail', code: 'GATE_FAILED', detail: 'G2 records status fail', gate: 'G2' }])
+  assert.equal(testResults({ evidenceLog: 'evidence/other/qg-x.json', evidence, verification }).verdict, null, 'a check of another log is not this one')
+  assert.deepEqual(testResults({}), { evidenceLog: null, producedAt: null, revision: null, schema: null, gates: [], tests: null, cycles: null, verdict: null, verifiedAt: null, findings: [] })
+})
+
+test('phase steps: a check mark per step, failed, waiting, running or skipped where it applies', async () => {
+  const { phaseSteps } = await import('../../../plugins/skraft-framework/src/domain/pipeline/phase-steps-policy.mjs')
+  const phase = (name, status, extra = {}) => ({ name, status, specialist: 'S', reviewer: 'R', artifacts: ['a.md'], reviews: [], ...extra })
+  const ctx = { structuralScan: true, adrRatification: null, qualityGates: null, reports: [] }
+  const ids = (steps) => steps.map((s) => `${s.id}:${s.status}`)
+
+  assert.deepEqual(ids(phaseSteps(phase('DESIGN', 'awaiting', { reviews: [{ verdict: 'REJECTED' }] }), { ...ctx, adrRatification: { checkpointStatus: 'awaiting_human' } })),
+    ['structural-scan:done', 'outputs:done', 'review:failed', 'adr-ratification:waiting', 'closed:waiting'])
+  assert.deepEqual(ids(phaseSteps(phase('DELIVER', 'active', { reviews: [{ verdict: 'NEEDS_REWORK' }] }), { ...ctx, qualityGates: { verdict: 'inconclusive' } })),
+    ['outputs:done', 'quality-gates:failed', 'review:running', 'outcome-report:pending', 'closed:pending'])
+  assert.deepEqual(ids(phaseSteps(phase('DISTILL', 'done', { reviews: [{ verdict: 'APPROVED' }] }), ctx)),
+    ['outputs:done', 'review:done', 'forecast-report:skipped', 'closed:done'])
+  assert.deepEqual(ids(phaseSteps(phase('DISTILL', 'done', { reviews: [{ verdict: 'APPROVED' }] }), { ...ctx, reports: [{ kind: 'forecast' }] }))[2], 'forecast-report:done')
+  assert.deepEqual(ids(phaseSteps(phase('RESEARCH', 'active', { reviewer: null, artifacts: [] }), ctx)), ['outputs:running', 'closed:pending'])
+  assert.deepEqual(ids(phaseSteps(phase('DELIVER', 'blocked', { artifacts: [] }), ctx)), ['outputs:pending', 'quality-gates:pending', 'review:pending', 'outcome-report:pending', 'closed:failed'])
+  assert.deepEqual(ids(phaseSteps(phase('DESIGN', 'pending', { artifacts: [] }), { ...ctx, structuralScan: false })),
+    ['structural-scan:pending', 'outputs:pending', 'review:pending', 'adr-ratification:pending', 'closed:pending'])
+})
