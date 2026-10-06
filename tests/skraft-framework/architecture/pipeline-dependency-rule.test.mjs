@@ -14,8 +14,12 @@ const SRC = join(ROOT, 'src')
 const filesUnder = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
   entry.isDirectory() ? filesUnder(join(dir, entry.name)) : entry.name.endsWith('.mjs') ? [join(dir, entry.name)] : [])
 const withoutComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+// Under mutation testing a module on disk is Stryker's instrumented copy (marker
+// stryNS_9fa48): its regenerated text says nothing of the source, so the text rules skip
+// it there. The normal test run checks the real source.
+const instrumented = (source) => source.includes('stryNS_9fa48')
 // The code a module runs: comments and import/export-from lines left out.
-const bodyOf = (source) => withoutComments(source).replace(/^\s*(?:import|export)\s[^'"]*?from\s+['"][^'"]+['"]\s*$/gm, '')
+const bodyOf = (source) => (instrumented(source) ? '' : withoutComments(source).replace(/^\s*(?:import|export)\s[^'"]*?from\s+['"][^'"]+['"]\s*$/gm, ''))
 // The Node `process` global, not `$.process` of the mods API.
 const NODE_PROCESS = /(?<![.\w$])process\./
 const importsOf = (file) => [...readFileSync(file, 'utf8').matchAll(/^\s*(?:import|export)\s[^'"]*?from\s+['"]([^'"]+)['"]/gm)]
