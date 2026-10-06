@@ -41,7 +41,7 @@ Ask yourself these 3 questions to route a test to the right layer:
 **2. Am I testing a use case?**
 → **Sociable Acceptance test**
 - Real Domain objects
-- External ports (repositories, services) faked/in-memory
+- Output gateways (repositories, external services) faked/in-memory
 
 **3. Am I testing a technical integration?**
 → **Integration test** — full stack, real infrastructure (Testcontainers, HTTP client).

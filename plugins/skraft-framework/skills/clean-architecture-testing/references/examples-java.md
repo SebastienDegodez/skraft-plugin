@@ -8,7 +8,7 @@ digraph maven_modules {
     node [shape=box];
     api [label="orders-api\n@SpringBootApplication"];
     infra [label="orders-infrastructure\nadapters"];
-    app [label="orders-application\nuse cases, ports"];
+    app [label="orders-application\nuse cases, interfaces"];
     domain [label="orders-domain"];
     unit [label="orders-unit-test\nno container, no Spring context", style=filled];
     it [label="orders-integration-test\nadapters, API e2e, architecture guard", style=filled];

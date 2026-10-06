@@ -44,9 +44,9 @@ determines the verdict.
 ### Q1: Is this choice already enforced by a project skill or automated architecture test?
 
 **Examples of baseline (NOT ADR-worthy):**
-- "Pure domain service with no IO" → ADR-002 hexagonal baseline enforces this
+- "Pure domain service with no IO" → Clean Architecture layering, enforced by the `clean-architecture-*` skill and architecture tests
 - "CQS at method level" (one handler per command/query) → `clean-architecture-*` skill
-- "Validation at the boundary, keep core pure" → hexagonal baseline + tactical DDD
+- "Validation at the boundary, keep core pure" → Clean Architecture layering + tactical DDD
 - "Convention-based DI registration" → project skill baseline
 - "Value Object + pure validator" → tactical DDD baseline
 
@@ -139,7 +139,7 @@ Reason: <1-line citation to Q1-Q5 + skill/ADR section>
 ```
 Candidate: Pure domain service with no IO
 Verdict: NOT ELIGIBLE
-Reason: Q1 YES — ADR-002 hexagonal baseline enforces purity
+Reason: Q1 YES — Clean Architecture layering enforces purity
 
 Candidate: Fail-closed posture for dispatch gate
 Verdict: ELIGIBLE
@@ -147,7 +147,7 @@ Reason: Q1 NO, Q2 NO, Q3 YES (cross-cutting error strategy), Q4 YES (AC-04), Q5 
 
 Candidate: VO + validation at boundary
 Verdict: NOT ELIGIBLE
-Reason: Q1 YES — hexagonal baseline + tactical DDD enforce this
+Reason: Q1 YES — Clean Architecture layering + tactical DDD enforce this
 
 Candidate: No hardcoded phase names
 Verdict: NOT ELIGIBLE (as framed)
@@ -192,11 +192,11 @@ Run this gate on **existing ADRs** to verify calibration:
 | ADR | Expected Verdict | Actual Q-path |
 |---|---|---|
 | ADR-001 (Result type) | ELIGIBLE | Q1 NO, Q3 YES, Q4 YES (#47), Q5 YES |
-| ADR-002 (Hexagonal) | ELIGIBLE | Q1 NO (first in project), Q3 YES, Q4 YES (#47), Q5 YES |
+| ADR-002 (Layering) | ELIGIBLE | Q1 NO (first in project), Q3 YES, Q4 YES (#47), Q5 YES |
 | ADR-003 (Config cascade) | ELIGIBLE | Q1 NO, Q3 YES, Q4 YES (#47), Q5 YES |
 | ADR-004 (pure service, US3) | NOT ELIGIBLE | Q1 YES — ADR-002 baseline |
 | ADR-005 (fail-closed, US3) | ELIGIBLE | Q1 NO, Q3 YES (cross-cutting), Q4 YES, Q5 YES |
-| ADR-006 (VO + validation, US3) | NOT ELIGIBLE | Q1 YES — hexagonal + DDD baseline |
+| ADR-006 (VO + validation, US3) | NOT ELIGIBLE | Q1 YES — layering + DDD baseline |
 | ADR-007 (no hardcoding, US3) | NOT ELIGIBLE (as framed) / ELIGIBLE (reframed) | Q2 YES (good practice) / Q3 YES (Published Language) |
 
 **If the gate yields unexpected verdicts on ADR-001..003, recalibrate Q1/Q3.**
@@ -215,7 +215,7 @@ Run this gate on **existing ADRs** to verify calibration:
 ### Content evals
 
 1. **Candidate:** "pure domain service with no IO"  
-   **Expected:** `NOT ELIGIBLE — ADR-002 hexagonal baseline`
+   **Expected:** `NOT ELIGIBLE — Clean Architecture layering baseline`
 
 2. **Candidate:** "fail-closed posture for a security gate"  
    **Expected:** `ELIGIBLE — Q3 YES (cross-cutting concern), Q5 YES`

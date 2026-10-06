@@ -206,7 +206,7 @@ For each bounded context:
 3. Define **Domain Events** — past tense, raised by aggregate root, minimal payload
 4. Define **Repository interfaces** — one per aggregate. **Decide the layer deliberately by studying the case**, then record the choice and its rationale in the aggregate's ADR:
    - **Domain** — the aggregate owns its persistence contract (DDD-purist; Domain stays the dependency centre). Prefer when the repository returns the aggregate and guards its invariants.
-   - **Application** — the use case declares the port it needs (ports-and-adapters / Clean Architecture). Prefer for CRUD entities without invariants or for read-oriented contracts.
+   - **Application** — the use case declares the interface it needs. Prefer for CRUD entities without invariants or for read-oriented contracts.
    - **NEVER Infrastructure** — the interface is a contract, not an implementation; Infrastructure only *implements* it. Placing the interface in Infrastructure violates the Dependency Rule and is the one invalid choice.
 
    Apply the chosen layer consistently across ADR, diagrams, and contracts (Phase 9 enforces this). If a `clean-architecture-<language>` skill was loaded, conform the placement to its interface-placement guidance for the project's stack.
@@ -255,9 +255,9 @@ For every structural commitment candidate (from the story set, event model, or c
 **Only draft ADR bodies for `ELIGIBLE` candidates.** If all candidates are `NOT ELIGIBLE`, the story requires **zero ADRs** — document the choices in the event model / Technical Notes instead.
 
 **Example (US3 case study):**
-- `pure domain service` → `NOT ELIGIBLE` (Q1: ADR-002 baseline)
+- `pure domain service` → `NOT ELIGIBLE` (Q1: Clean Architecture layering baseline)
 - `fail-closed posture` → `ELIGIBLE` (Q3: cross-cutting concern, Q5: trade-offs)
-- `VO + validation at boundary` → `NOT ELIGIBLE` (Q1: hexagonal baseline + DDD)
+- `VO + validation at boundary` → `NOT ELIGIBLE` (Q1: Clean Architecture layering + tactical DDD)
 - `no hardcoding` → `NOT ELIGIBLE` (Q2: good practice) OR `ELIGIBLE` if reframed as Published Language
 
 **After the gate passes for N candidates, draft N ADRs. If zero pass, draft zero ADRs.**
@@ -281,7 +281,7 @@ Detection signatures (disjoint — each pattern is identified by its dispatch / 
 | **CQRS + dispatch bus** | `ICommandBus\|IQueryBus\|CommandBus\|QueryBus` | The **bus** is the marker, not `ICommandHandler` / `IQueryHandler` alone — handler interfaces may be the materialisation of the project's CQS baseline. Bus present → ADR required. No bus, handlers injected directly → baseline CQS Application Service, no ADR. |
 | **Event Sourcing** | `IEventStore\|EventStream\|Apply\(.*Event` | |
 | **Saga / Process Manager** | `Saga\|ProcessManager\|ICorrelatedBy` | |
-| **Anti-Corruption Layer** | directory-level scan for adapters between two named contexts | Cross-check with context-map. |
+| **Anti-Corruption Layer** | directory-level scan for a translation layer between two named contexts | Cross-check with context-map. |
 | **Bounded-context split/merge** | directory restructure since last ADR | Cross-check with context-map. |
 | **Aggregate crossing an existing boundary** | revue manuelle — pas de signature code fiable | |
 

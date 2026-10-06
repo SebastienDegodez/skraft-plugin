@@ -165,8 +165,8 @@ Derive the outside-in order from the test plan. The software-engineer runs the s
 - Test: `tests/MyContext.UnitTest/Domain/{Policy}PolicyTests.cs`
 - Extracted from: RED phase of Step 1
 
-## Step 3 — Infrastructure adapter
-- Test: `tests/MyContext.IntegrationTest/Infrastructure/{Adapter}Tests.cs`
+## Step 3 — Infrastructure implementation
+- Test: `tests/MyContext.IntegrationTest/Infrastructure/{Implementation}Tests.cs`
 - Real: PostgreSQL via Testcontainers
 
 ## Step 4 — Acceptance test for the next scenario

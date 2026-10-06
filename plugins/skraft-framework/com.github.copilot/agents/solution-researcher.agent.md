@@ -96,7 +96,7 @@ Identify the viable implementation approaches. For each: principles, advantages,
 
 ## Handoff to DESIGN
 - Recommended approach + the decisions DESIGN must ratify.
-- Existing aggregates, use cases, ports and structural patterns DESIGN reuses: {{name}} -> {{path}}
+- Existing aggregates, use cases, interfaces and structural patterns DESIGN reuses: {{name}} -> {{path}}
 - Open questions that remain for the architect.
 ````
 
