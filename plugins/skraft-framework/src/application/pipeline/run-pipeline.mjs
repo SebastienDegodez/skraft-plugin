@@ -1,6 +1,5 @@
 import { buildHandoff } from '../../domain/handoff-policy.mjs'
 import { nextPhaseAfter } from '../../domain/pipeline-policy.mjs'
-import { DEFAULT_PHASE_ORDER } from '../../domain/state-machine.mjs'
 import { composeDispatchBrief, reviewOutputPath } from '../../domain/pipeline/dispatch-brief.mjs'
 import { readReviewOutcome } from '../../domain/pipeline/review-outcome.mjs'
 import {
@@ -27,10 +26,12 @@ import {
   RATIFICATION_OPTIONS,
   interpretRatification,
 } from '../../domain/pipeline/adr-ratification-policy.mjs'
-import { createStateService } from '../state-service.mjs'
-import { createPhaseGate } from '../phase-gate-service.mjs'
 import { verifyEvidenceLog } from '../evidence-verification-service.mjs'
 import { createStructuralScan } from '../structural-scan-service.mjs'
+import { createRecoveryService } from '../recovery-service.mjs'
+import { Halt, awaiting, blocked, createCheckpoint } from './checkpoint.mjs'
+import { createPipelineRecovery } from './recover-pipeline.mjs'
+import { createPipelineStateService } from './pipeline-state.mjs'
 
 // Use case RunPipeline (ports/api/run-pipeline.mjs): the SKRAFT orchestrator as code,
 // the same for every host. It sequences RESEARCH → DESIGN → DISTILL → DELIVER, runs each
@@ -41,6 +42,8 @@ import { createStructuralScan } from '../structural-scan-service.mjs'
 // Driven ports (ports/infrastructure/), injected by the composition root of each host:
 //   stateReader, stateWriter   state.json (through the existing state service, so every
 //                              transition still passes the state machine and the phase gate)
+//   stateBackups, stateArchive state.json.bak.* to roll back to, state.json.invalid.* kept
+//                              on a reset (RecoveryService, run before every start)
 //   trackingStore              the project's tracking directory
 //   repositoryReader           repository files: the ADR index, the evidence a log cites
 //   sourceControl              git facts: the DELIVER base commit, the commits a log claims
@@ -57,16 +60,6 @@ import { createStructuralScan } from '../structural-scan-service.mjs'
 // plus `config`, the published skraft-framework.config.json (ADR-005).
 //
 // Outcome: { status: 'done' | 'blocked' | 'awaiting-human', phase, reason, checkpoint? }
-
-class Halt extends Error {
-  constructor(outcome) {
-    super(outcome.reason)
-    this.outcome = outcome
-  }
-}
-
-const blocked = (phase, reason, detail) => new Halt({ status: 'blocked', phase, reason, ...(detail ? { detail } : {}) })
-const awaiting = (phase, checkpoint) => new Halt({ status: 'awaiting-human', phase, reason: checkpoint.question, checkpoint })
 
 const MAX_STEPS_PER_PHASE = 50
 const MAX_RATIFICATION_ROUNDS = 3
@@ -86,13 +79,7 @@ export const createRunPipeline = (deps) => {
     progress,
     time,
   } = deps
-  const phaseOrder = config.phaseOrder ?? DEFAULT_PHASE_ORDER
-  const stateService = createStateService({
-    stateReader: deps.stateReader,
-    stateWriter: deps.stateWriter,
-    phaseOrder,
-    phaseGate: createPhaseGate({ config, trackingFiles: trackingStore, git: sourceControl }),
-  })
+  const { stateService, phaseOrder } = createPipelineStateService(deps)
   const structuralScan = createStructuralScan({ sourceTree, sourceControl, time })
   const today = () => time.isoString().slice(0, 10)
   const now = () => time.isoString()
@@ -144,14 +131,25 @@ export const createRunPipeline = (deps) => {
   // ── Checkpoints ───────────────────────────────────────────────────────────
   // A recorded answer wins; otherwise the human is asked and the answer recorded.
   // No answer now (headless, or a host that suspends) stops the run as awaiting-human.
-  const ask = async (slug, phase, checkpoint) => {
-    const recorded = await decisionStore.read(slug, checkpoint.key)
-    if (recorded) return recorded
-    const answer = await humanInteraction.ask(checkpoint)
-    if (answer === null || answer === undefined || String(answer).trim() === '') throw awaiting(phase, checkpoint)
-    await decisionStore.write(slug, checkpoint.key, String(answer).trim(), 'human')
-    return String(answer).trim()
-  }
+  const { ask } = createCheckpoint({ decisionStore, humanInteraction })
+  const { recover } = createPipelineRecovery({
+    recovery: createRecoveryService({
+      stateReader: deps.stateReader,
+      stateWriter: deps.stateWriter,
+      backupReader: deps.stateBackups,
+      stateArchive: deps.stateArchive,
+      stateService,
+    }),
+    stateService,
+    trackingStore,
+    config,
+    phaseOrder,
+    ask,
+    apply,
+    readState: (slug) => readState(slug),
+    progress,
+    now,
+  })
 
   const ratifyAdrs = async (slug, story) => {
     for (let round = 1; round <= MAX_RATIFICATION_ROUNDS; round += 1) {
@@ -392,6 +390,7 @@ export const createRunPipeline = (deps) => {
   // ── The run ─────────────────────────────────────────────────────────────────
   const run = async ({ slug, story = null, maxPhases = 10 } = {}) => {
     try {
+      await recover(slug)
       const init = await stateService.init(slug)
       if (!init.ok) throw blocked(null, `state.json for ${slug}: ${init.error.code}`)
       // The settings hooks (G1, G8, G9) guard the pipeline this pointer names: without it they

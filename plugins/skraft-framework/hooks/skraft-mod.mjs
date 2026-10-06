@@ -1,28 +1,32 @@
 // SKRAFT pipeline as a Claude Code mod — composition root of the RunPipeline use case
 // (src/application/pipeline/run-pipeline.mjs) for Claude Code. See docs/run-pipeline.md.
 //
-//   /skraft <slug> [#issue] [title…]   start (or resume) the pipeline, progress in a pane
-//   /skraft                            where the pipeline stands
-//   mcp__skraft__run_pipeline          the same, for the main agent
+//   /skraft <slug> [#issue] [title…]          start (or resume) the pipeline, progress in a pane
+//   /skraft                                   where the pipeline stands
+//   /skraft decide <slug> <key> <answer…>     answer a checkpoint, then /skraft <slug> resumes
+//   /skraft close <slug> [findings]           close the open phase after human-validated reworks
+//   mcp__skraft__run_pipeline                 start or resume, for the main agent
 //
 // Driven adapters that touch `$` are declared in this file: the mods engine follows `$`
 // only into functions of the hooks module, never across an import. Each one translates a
 // port onto `$`; none decides:
-//   StateReader, StateWriter, TrackingStore,
-//   RepositoryReader                               $.fs
+//   TrackingStore, RepositoryReader, TemplateReader $.fs
 //   SourceTree                                     git ls-files through $.process.run, $.fs
 //   ActivePipeline                                 $.fs ({trackingRoot}/.active-slug)
 //   AgentRunner                                    $.agent.spawn + the subagent's turn.complete
 //   HumanInteraction                               $.ui.ask (null when nothing draws)
 //   PipelineProgress                               $.state atom + pane + $.ui.status
 // The adapters that need no `$` of their own come from src/adapters/infrastructure/
-// (SourceControl on a git runner, Hasher on Web Crypto, the snapshot StateWriter on
-// file functions, DecisionStore); this file hands them functions built on `$`. The quality-gate evidence check and the
+// (SourceControl on a git runner, Hasher on Web Crypto, the state adapters on file
+// functions — reader, snapshot writer, backups, archive — and DecisionStore); this file
+// hands them functions built on `$`. The quality-gate evidence check and the
 // structural scan run in process, inside RunPipeline: no command line. The run outlives the command that started it: it
 // is driven from a $.clock timer. The settings hooks (hooks.json `hooks`) keep enforcing
 // G1–G9 meanwhile.
 import { atom, read, update } from 'claude-code'
 import { createRunPipeline } from '../src/application/pipeline/run-pipeline.mjs'
+import { createRecordDecision } from '../src/application/pipeline/record-decision.mjs'
+import { createCloseManually } from '../src/application/pipeline/close-manually.mjs'
 import { stateBaseSegments, resolveTrackingLayout } from '../src/domain/tracking-layout-policy.mjs'
 import { createSystemTime } from '../src/adapters/infrastructure/system-time.mjs'
 import { createGitSourceControl } from '../src/adapters/infrastructure/git/git-source-control.mjs'
@@ -30,6 +34,7 @@ import { createProcessGitRunner } from '../src/adapters/infrastructure/git/proce
 import { createGitSourceTree } from '../src/adapters/infrastructure/source-tree/git-source-tree.mjs'
 import { createWebCryptoHasher } from '../src/adapters/infrastructure/web-crypto-hasher.mjs'
 import { createSnapshotStateWriter } from '../src/adapters/infrastructure/state/snapshot-state-writer.mjs'
+import { createFileStateReader, createFileStateBackupReader, createFileStateArchive } from '../src/adapters/infrastructure/state/file-state-store.mjs'
 import { createTrackingDecisionStore } from '../src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
 import { joinPath, claudeAgentId, walkFiles, askable } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
 import { parseSkraftArgs } from '../src/adapters/api/claude-code-mod/command-args.mjs'
@@ -85,6 +90,15 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
   const log = (line) => update($, run, (view) => ({ ...view, log: [...view.log, line].slice(-60) }))
   const git = createProcessGitRunner({ runProcess })
 
+  // The file functions the host-neutral state adapters take, on $.fs
+  const files = {
+    exists: (path) => $.fs.exists(path),
+    read: (path) => $.fs.read(path),
+    write: (path, text) => $.fs.write(path, text),
+    list: async (dir) => (await $.fs.list(dir)).filter((entry) => entry.kind === 'file').map((entry) => entry.name),
+  }
+  const now = () => time.now().getTime()
+
   // TrackingStore on $.fs
   const trackingStore = {
     exists: (s, rel) => $.fs.exists(joinPath(trackingDir(s), rel)),
@@ -96,26 +110,11 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
 
   return {
     config,
-    // StateReader on $.fs (ENOENT and CORRUPTED_STATE as the state service expects)
-    stateReader: {
-      read: async (s) => {
-        const path = joinPath(trackingDir(s), 'state.json')
-        if (!(await $.fs.exists(path))) throw Object.assign(new Error(`${path} absent`), { code: 'ENOENT' })
-        try { return JSON.parse(await $.fs.read(path)) } catch (error) {
-          throw Object.assign(new Error(error.message), { code: 'CORRUPTED_STATE' })
-        }
-      },
-    },
-    // StateWriter on $.fs: a backup per phase change, read-back check (no rename here)
-    stateWriter: createSnapshotStateWriter({
-      files: {
-        exists: (path) => $.fs.exists(path),
-        read: (path) => $.fs.read(path),
-        write: (path, text) => $.fs.write(path, text),
-      },
-      trackingRoot,
-      now: () => time.now().getTime(),
-    }),
+    stateReader: createFileStateReader({ files, trackingRoot, now }),
+    // StateWriter: a backup per phase change, read-back check (no rename on $.fs)
+    stateWriter: createSnapshotStateWriter({ files, trackingRoot, now }),
+    stateBackups: createFileStateBackupReader({ files, trackingRoot }),
+    stateArchive: createFileStateArchive({ files, trackingRoot, now }),
     trackingStore,
     // RepositoryReader on $.fs
     repositoryReader: { read: async (rel) => { try { return await $.fs.read(joinPath(cwd, rel)) } catch { return null } } },
@@ -159,6 +158,8 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
       },
     },
     decisionStore: createTrackingDecisionStore({ trackingStore, time }),
+    // TemplateReader on $.fs, under the plugin root
+    templateReader: { read: (path) => $.fs.read(joinPath($.plugin.root, path)) },
     // PipelineProgress on the $.state atom the pane draws, and the status line
     progress: {
       phase: (title) => {
@@ -171,12 +172,14 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
   }
 }
 
-async function drive($, { slug, story }) {
+async function sessionDependencies($, slug) {
   const cwd = await $.session.cwd()
   const config = JSON.parse(await $.fs.read(joinPath($.plugin.root, 'skraft-framework.config.json')))
-  const dependencies = await pipelineDependencies($, { config, cwd, trackingRoot: await trackingRootOf($, cwd), slug })
+  return pipelineDependencies($, { config, cwd, trackingRoot: await trackingRootOf($, cwd), slug })
+}
 
-  const outcome = await createRunPipeline(dependencies).run({ slug, story })
+async function drive($, { slug, story }) {
+  const outcome = await createRunPipeline(await sessionDependencies($, slug)).run({ slug, story })
   await update($, run, (view) => ({
     ...view,
     status: outcome.status,
@@ -189,7 +192,7 @@ async function drive($, { slug, story }) {
   $.ui.log(summary)
   $.ui.toast(summary)
   if (outcome.status === 'awaiting-human') {
-    $.ui.log(`Answer later: node "${$.plugin.root}/src/cli/decide.mjs" --slug ${slug} --key "${outcome.checkpoint.key}" --answer "<answer>", then /skraft ${slug}`)
+    $.ui.log(`Answer later: /skraft decide ${slug} ${outcome.checkpoint.key} <answer>, then /skraft ${slug}`)
   }
   return outcome
 }
@@ -210,6 +213,24 @@ async function start($, args) {
   return `skraft ${args.slug} started — progress in the Skraft pane.`
 }
 
+// RecordDecision: an answer recorded now is read by the next run at that checkpoint.
+async function decide($, { slug, key, answer }) {
+  if (!SLUG.test(slug ?? '') || !key || !answer) return 'Usage: /skraft decide <slug> <checkpoint-key> <answer>'
+  const { decisionStore } = await sessionDependencies($, slug)
+  const recorded = await createRecordDecision({ decisionStore }).record({ slug, key, answer, by: 'human' })
+  return recorded.ok ? `Recorded "${answer}" for ${key}. Resume with /skraft ${slug}.` : `Refused: ${recorded.error.reason}`
+}
+
+// CloseManually: never while this session's run drives the same pipeline.
+async function closeManually($, { slug, findings }) {
+  if (!SLUG.test(slug ?? '')) return 'Usage: /skraft close <slug> [findings fixed by the rework]'
+  if (active === slug) return `skraft is running ${slug}; wait for it to stop before closing a phase by hand.`
+  const closed = await createCloseManually(await sessionDependencies($, slug)).close({ slug, findings })
+  return closed.ok
+    ? `${closed.value.phase} closed by human validation (${closed.value.review}); next: ${closed.value.next}. Resume with /skraft ${slug}.`
+    : `Refused (${closed.error.code}): ${closed.error.reason}`
+}
+
 const describe = (view) => view.slug
   ? `skraft ${view.slug}: ${view.status}${view.phase ? ` at ${view.phase}` : ''}${view.reason ? ` — ${view.reason}` : ''}`
   : 'skraft: no pipeline run in this session. Start one with /skraft <slug> [#issue] [title].'
@@ -221,7 +242,7 @@ export const register = (on) => {
     await $.command.register({
       name: 'skraft',
       description: 'Run or resume the SKRAFT pipeline for one refined story',
-      argumentHint: '<slug> [#issue] [title]',
+      argumentHint: '<slug> [#issue] [title] | decide <slug> <key> <answer> | close <slug> [findings]',
     })
     await $.tool.register({
       name: 'run_pipeline',
@@ -259,11 +280,13 @@ export const register = (on) => {
 
   on('command.run', { command: 'skraft' }, async ($, e) => {
     const args = parseSkraftArgs(e.args)
-    if (!args.slug) return { text: describe(await read($, run)) }
+    if (args.command === 'status') return { text: describe(await read($, run)) }
+    if (args.command === 'decide') return { text: await decide($, args) }
+    if (args.command === 'close') return { text: await closeManually($, args) }
     const text = await start($, args)
     await $.ui.open({ id: PANE, title: 'Skraft' })
     return { text }
-  })
+  }).catch(($, e, next) => ({ text: `skraft: ${next.error.message}` }))
 
   on('tool.call', { tool: 'mcp__skraft__run_pipeline' }, async ($, e) => {
     const story = e.issue || e.title ? { issue: e.issue ?? null, title: e.title ?? null } : null

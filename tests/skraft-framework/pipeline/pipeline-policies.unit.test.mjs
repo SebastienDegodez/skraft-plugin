@@ -19,7 +19,7 @@ import {
   structuralScanPath,
   hasStructuralScan,
 } from '../../../plugins/skraft-framework/src/domain/pipeline/expected-outputs.mjs'
-import { CONFIG } from './fake-host.mjs'
+import { CONFIG, concretePath } from './fake-host.mjs'
 
 // ── step-policy ───────────────────────────────────────────────────────────────
 
@@ -100,4 +100,56 @@ test('expected-outputs: latest evidence log, structural scan path and presence',
   assert.equal(structuralScanPath('2026-10-06'), 'details/2026-10-06/structural-scan.json')
   assert.equal(hasStructuralScan({ phaseArtifacts: { RESEARCH: ['details/d/structural-scan.json'] } }), true)
   assert.equal(hasStructuralScan({ phaseArtifacts: {} }), false)
+})
+
+// ── Recovery, progress inference, manual closure ───────────────────────────────
+
+test('recoveryStepOf: the step each diagnosis calls for', async () => {
+  const { recoveryStepOf, buildRecoveryGuidance } = await import('../../../plugins/skraft-framework/src/domain/recovery-policy.mjs')
+  assert.equal(recoveryStepOf({ code: 'HEALTHY' }), 'none')
+  assert.equal(recoveryStepOf({ code: 'MISSING_STATE' }), 'init')
+  assert.equal(recoveryStepOf({ code: 'MISSING_STATE', backupCount: 1 }), 'rollback')
+  assert.equal(recoveryStepOf({ code: 'CORRUPTED_STATE' }), 'reset')
+  assert.equal(recoveryStepOf({ code: 'INVALID_STATE', backupCount: 2 }), 'rollback')
+  assert.equal(recoveryStepOf({ code: 'STALE' }), 'resolve-stale')
+  assert.equal(recoveryStepOf({ code: 'IO_ERROR' }), 'halt')
+  assert.equal(buildRecoveryGuidance({ code: 'CORRUPTED_STATE', slug: 's', backupCount: 1 }).step, 'rollback')
+})
+
+test('reviewFilesOf: a phase\'s reviews, newest date then highest number first', async () => {
+  const { reviewFilesOf } = await import('../../../plugins/skraft-framework/src/domain/pipeline/progress-inference-policy.mjs')
+  const files = [
+    'reviews/2026-10-01/design-review-2.md', 'reviews/2026-10-02/design-review-1.md',
+    'reviews/2026-10-01/design-review-10.md', 'reviews/2026-10-02/distill-review-1.md', 'reviews/2026-10-02/manual-close.md',
+  ]
+  assert.deepEqual(reviewFilesOf('DESIGN', files), [
+    'reviews/2026-10-02/design-review-1.md', 'reviews/2026-10-01/design-review-10.md', 'reviews/2026-10-01/design-review-2.md',
+  ])
+})
+
+test('inferCompletedPhases: phases in order while outputs and, when reviewed, an APPROVED review are there', async () => {
+  const { inferCompletedPhases } = await import('../../../plugins/skraft-framework/src/domain/pipeline/progress-inference-policy.mjs')
+  const { requiredTrackedOutputs } = await import('../../../plugins/skraft-framework/src/domain/phase-gate-policy.mjs')
+  const outputs = (phase) => requiredTrackedOutputs(CONFIG.phaseAgents[phase].specialist, CONFIG).map((p) => concretePath(p, 'checkout'))
+  const phaseOrder = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'DONE']
+  const files = [...outputs('RESEARCH'), ...outputs('DESIGN'), ...outputs('DISTILL')]
+  const approved = { DESIGN: 'reviews/d/design-review-1.md' }
+  const completed = inferCompletedPhases({ phaseOrder, config: CONFIG, files, approvedReview: (phase) => approved[phase] ?? null })
+
+  assert.deepEqual(completed.map(({ phase, review }) => [phase, review]), [['RESEARCH', null], ['DESIGN', 'reviews/d/design-review-1.md']])
+  assert.deepEqual(inferCompletedPhases({ phaseOrder, config: CONFIG, files: [], approvedReview: () => 'x' }), [])
+})
+
+test('manual closure: the review it renders, its path, and what it refuses', async () => {
+  const { manualClosureReview, manualClosePath, manualClosureRefusal } = await import('../../../plugins/skraft-framework/src/domain/pipeline/manual-closure-policy.mjs')
+  const { validate } = await import('../../../plugins/skraft-framework/src/domain/artifact-registry.mjs')
+  assert.equal(validate('review-verdict', manualClosureReview()).ok, true)
+  const weights = Object.values(manualClosureReview().synthesis.questions).reduce((sum, q) => sum + q.weight, 0)
+  assert.equal(Math.round(weights * 100), 100)
+  assert.equal(manualClosePath('2026-10-06'), 'reviews/2026-10-06/manual-close.md')
+  assert.equal(manualClosureRefusal({ currentPhase: 'DESIGN', reviewer: 'R' }), null)
+  assert.equal(manualClosureRefusal({ phase: 'DESIGN', currentPhase: 'DESIGN', reviewer: 'R' }), null)
+  assert.equal(manualClosureRefusal({ currentPhase: 'DONE' }).code, 'PIPELINE_DONE')
+  assert.equal(manualClosureRefusal({ currentPhase: 'RESEARCH' }).code, 'NO_REVIEWER')
+  assert.equal(manualClosureRefusal({ phase: 'DISTILL', currentPhase: 'DESIGN', reviewer: 'R' }).code, 'PHASE_MISMATCH')
 })

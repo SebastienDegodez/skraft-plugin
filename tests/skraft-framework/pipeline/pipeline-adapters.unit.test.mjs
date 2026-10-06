@@ -7,6 +7,8 @@ import { mkdtemp, rm, readFile, mkdir, writeFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createFileStateReader, createFileStateBackupReader, createFileStateArchive } from '../../../plugins/skraft-framework/src/adapters/infrastructure/state/file-state-store.mjs'
+import { createNodeTemplateReader } from '../../../plugins/skraft-framework/src/adapters/infrastructure/templates/node-template-reader.mjs'
 import { createSnapshotStateWriter } from '../../../plugins/skraft-framework/src/adapters/infrastructure/state/snapshot-state-writer.mjs'
 import { createTrackingDecisionStore, decisionPath } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
 import { createFsTrackingStore } from '../../../plugins/skraft-framework/src/adapters/infrastructure/pipeline/fs-tracking-store.mjs'
@@ -24,7 +26,7 @@ import { createWorkflowProgress } from '../../../plugins/skraft-framework/src/ad
 import { claudeAgentId, walkFiles, askable } from '../../../plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
 import { parseSkraftArgs } from '../../../plugins/skraft-framework/src/adapters/api/claude-code-mod/command-args.mjs'
 import { createRecordDecision } from '../../../plugins/skraft-framework/src/application/pipeline/record-decision.mjs'
-import { CONFIG } from './fake-host.mjs'
+import { CONFIG, PLUGIN_ROOT } from './fake-host.mjs'
 
 const recordingRunner = (answer) => {
   const calls = []
@@ -93,6 +95,50 @@ test('snapshot-state-writer: an unreadable previous state is backed up before it
   const fs = memoryFiles({ '/r/s/state.json': '{ torn' })
   await createSnapshotStateWriter({ files: fs, trackingRoot: '/r', now: () => 7 }).write('s', { currentPhase: 'RESEARCH' })
   assert.equal(fs.files.get('/r/s/state.json.bak.7'), '{ torn')
+})
+
+const listing = (fs) => async (dir) => {
+  const names = [...fs.files.keys()].filter((path) => path.startsWith(`${dir}/`)).map((path) => path.slice(dir.length + 1))
+  if (names.length === 0) throw Object.assign(new Error('absent'), { code: 'ENOENT' })
+  return names.filter((name) => !name.includes('/'))
+}
+
+test('file-state-reader: ENOENT when absent; invalid JSON kept as state.json.corrupted.{ms}, then CORRUPTED_STATE', async () => {
+  const fs = memoryFiles({ '/r/s/state.json': '{ torn' })
+  const reader = createFileStateReader({ files: fs, trackingRoot: '/r', now: () => 5 })
+  await assert.rejects(reader.read('absent'), { code: 'ENOENT' })
+  await assert.rejects(reader.read('s'), { code: 'CORRUPTED_STATE' })
+  assert.equal(fs.files.get('/r/s/state.json.corrupted.5'), '{ torn')
+  fs.files.set('/r/s/state.json', '{"currentPhase":"DESIGN"}')
+  assert.deepEqual(await reader.read('s'), { currentPhase: 'DESIGN' })
+})
+
+test('file-state-backup-reader: state.json.bak.{ms} newest first, unreadable ones raw null, none for a missing folder', async () => {
+  const fs = memoryFiles({
+    '/r/s/state.json': '{}',
+    '/r/s/state.json.bak.10': '{"currentPhase":"RESEARCH"}',
+    '/r/s/state.json.bak.20': 'torn',
+    '/r/s/state.json.corrupted.30': '{}',
+  })
+  const reader = createFileStateBackupReader({ files: { ...fs, list: listing(fs) }, trackingRoot: '/r' })
+  assert.deepEqual(await reader.list('s'), [
+    { name: 'state.json.bak.20', timestamp: 20, raw: null },
+    { name: 'state.json.bak.10', timestamp: 10, raw: { currentPhase: 'RESEARCH' } },
+  ])
+  assert.deepEqual(await reader.list('absent'), [])
+})
+
+test('file-state-archive: keeps state.json as state.json.invalid.{ms}; a failure is IO_ERROR', async () => {
+  const fs = memoryFiles({ '/r/s/state.json': '{"currentPhase":42}' })
+  const archive = createFileStateArchive({ files: fs, trackingRoot: '/r', now: () => 9 })
+  assert.deepEqual(await archive.setAside('s'), { ok: true, value: 'state.json.invalid.9' })
+  assert.equal(fs.files.get('/r/s/state.json.invalid.9'), '{"currentPhase":42}')
+  assert.equal((await archive.setAside('absent')).error.code, 'IO_ERROR')
+})
+
+test('node-template-reader: reads a template under the plugin root', async () => {
+  assert.match(await createNodeTemplateReader({ pluginRoot: PLUGIN_ROOT }).read('assets/templates/review-verdict.template.md'), /\{\{payload\}\}/)
+  await assert.rejects(createNodeTemplateReader({ pluginRoot: PLUGIN_ROOT }).read('assets/templates/none.md'))
 })
 
 test('tracking-decision-store: write then read the answer, under decisions/<key>.json', async () => {
@@ -246,9 +292,14 @@ test('mod helpers: agent ids, recursive listing, askable questions, command argu
   assert.deepEqual(await walkFiles(async () => { throw new Error('ENOENT') }, '/none'), [])
   assert.equal(askable('Ready?'), 'Ready?')
   assert.equal(askable('Fix it.'), 'Fix it.\nYour answer?')
-  assert.deepEqual(parseSkraftArgs('checkout #42 Pay by card'), { slug: 'checkout', story: { issue: 42, title: 'Pay by card' } })
-  assert.deepEqual(parseSkraftArgs('checkout'), { slug: 'checkout', story: null })
-  assert.deepEqual(parseSkraftArgs(''), { slug: null, story: null })
+  assert.deepEqual(parseSkraftArgs('checkout #42 Pay by card'), { command: 'run', slug: 'checkout', story: { issue: 42, title: 'Pay by card' } })
+  assert.deepEqual(parseSkraftArgs('checkout'), { command: 'run', slug: 'checkout', story: null })
+  assert.deepEqual(parseSkraftArgs('  '), { command: 'status' })
+  assert.deepEqual(parseSkraftArgs('decide checkout rejected:DESIGN:1 rework now'), { command: 'decide', slug: 'checkout', key: 'rejected:DESIGN:1', answer: 'rework now' })
+  assert.deepEqual(parseSkraftArgs('decide checkout'), { command: 'decide', slug: 'checkout', key: null, answer: null })
+  assert.deepEqual(parseSkraftArgs('close checkout 3'), { command: 'close', slug: 'checkout', findings: 3 })
+  assert.deepEqual(parseSkraftArgs('close checkout'), { command: 'close', slug: 'checkout', findings: 0 })
+  assert.ok(Number.isNaN(parseSkraftArgs('close checkout many').findings))
 })
 
 // ── RecordDecision use case ───────────────────────────────────────────────────

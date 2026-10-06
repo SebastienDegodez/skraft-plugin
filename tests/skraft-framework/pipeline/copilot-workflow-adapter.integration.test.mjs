@@ -8,7 +8,7 @@ import { mkdtemp, rm, mkdir, writeFile, readFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runSkraftPipelineWorkflow } from '../../../plugins/skraft-framework/src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs'
+import { runSkraftPipelineWorkflow, createSkraftDecideTool, createSkraftClosePhaseTool } from '../../../plugins/skraft-framework/src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { requiredTrackedOutputs } from '../../../plugins/skraft-framework/src/domain/phase-gate-policy.mjs'
 import { CONFIG, PLUGIN_ROOT, ADR_INDEX_HEADER, review } from './fake-host.mjs'
 
@@ -90,8 +90,9 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     assert.deepEqual(ctx.phases, ['RESEARCH', 'DESIGN'])
     assert.equal(ctx.calls[0].agent, 'Skraft - Solution Researcher', 'Copilot agents are addressed by their .agent.md name')
 
-    // The human answers through the CLI (the skraft_decide tool writes the same file).
-    execFileSync(process.execPath, [join(PLUGIN_ROOT, 'src/cli/decide.mjs'), '--slug', SLUG, '--key', 'adr-ratification:007', '--answer', 'accept all'], { cwd: repo, env })
+    // The human answers through the skraft_decide tool.
+    const decide = createSkraftDecideTool({ cwd: () => repo, pluginRoot: PLUGIN_ROOT, env })
+    assert.match(await decide.handler({ slug: SLUG, key: 'adr-ratification:007', answer: 'accept all' }), /^Recorded "accept all"/)
 
     // Attempt 2 (resume): the recorded answer ratifies, DISTILL and DELIVER run, and the
     // code runs the real qg-verify on the engineer's (bogus) evidence log: inconclusive,
@@ -120,6 +121,11 @@ test('copilot workflow: pauses durably at the ADR checkpoint, resumes with the r
     const audit = (await readFile(join(repo, 'audit.jsonl'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line))
     assert.ok(audit.some((e) => e.event === 'DispatchEvaluated' && e.projectSlug === SLUG && e.decision === 'ALLOW'))
     assert.ok(audit.some((e) => e.eventType === 'ContinuationSkipped'))
+
+    // The human validated their own reworks: skraft_close_phase closes DELIVER.
+    const close = createSkraftClosePhaseTool({ cwd: () => repo, pluginRoot: PLUGIN_ROOT, env })
+    assert.match(await close.handler({ slug: SLUG, phase: 'DELIVER', findings: 2 }), /^DELIVER closed by human validation \(reviews\/.+\/manual-close\.md\); next: DONE/)
+    assert.match(await readFile(join(repo, `.copilot-tracking/skraft-plans/${SLUG}/reviews/${new Date().toISOString().slice(0, 10)}/manual-close.md`), 'utf8'), /verdict: "APPROVED"/)
   } finally {
     await rm(repo, { recursive: true, force: true })
   }

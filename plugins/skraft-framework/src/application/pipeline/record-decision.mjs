@@ -1,7 +1,7 @@
 import { Ok, Err } from '../../domain/result.mjs'
 
 // Use case RecordDecision (ports/api/record-decision.mjs): the human answers a pipeline
-// checkpoint outside the run that asked — from the decide command or the
+// checkpoint outside the run that asked — from /skraft decide (Claude Code mod) or the
 // Copilot skraft_decide tool. The next run, or the resumed Copilot run, reads it
 // through the DecisionStore port instead of asking again.
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/

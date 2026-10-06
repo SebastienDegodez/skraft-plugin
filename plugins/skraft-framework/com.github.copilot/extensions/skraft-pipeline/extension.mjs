@@ -1,5 +1,5 @@
 // Copilot CLI extension entry: registers the `skraft-pipeline` dynamic workflow and the
-// `skraft_decide` tool with the SDK. Composition root only — the driving adapter is
+// `skraft_decide` and `skraft_close_phase` tools with the SDK. Composition root only — the driving adapter is
 // src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs, the use case
 // src/application/pipeline/run-pipeline.mjs. See docs/run-pipeline.md.
 //
@@ -12,6 +12,7 @@ import {
   SKRAFT_PIPELINE_META,
   runSkraftPipelineWorkflow,
   createSkraftDecideTool,
+  createSkraftClosePhaseTool,
 } from '../../../src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs'
 
 const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..')
@@ -24,5 +25,8 @@ const skraftPipeline = defineWorkflow({
 
 await joinSession({
   workflows: [skraftPipeline],
-  tools: [createSkraftDecideTool({ ...host, cwd: () => process.cwd() })],
+  tools: [
+    createSkraftDecideTool({ ...host, cwd: () => process.cwd() }),
+    createSkraftClosePhaseTool({ ...host, cwd: () => process.cwd() }),
+  ],
 })

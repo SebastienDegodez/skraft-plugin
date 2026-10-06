@@ -58,6 +58,10 @@ const world = ($: any, on: any, { reviewVerdict = 'APPROVED' } = {}) => {
   on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) }))
   on('fs.read', ($$: any, e: any) => {
     if (!files.has(e.path) && e.path.endsWith('skraft-framework.config.json')) return { value: JSON.stringify(CONFIG) }
+    // The plugin's review-verdict template, as assets/templates/review-verdict.template.md has it
+    if (!files.has(e.path) && e.path.endsWith('/assets/templates/review-verdict.template.md')) {
+      return { value: '<!-- markdownlint-disable-file -->\n# Review verdict\n\n```yaml\n{{payload}}\n```\n' }
+    }
     if (!files.has(e.path)) return { deny: `ENOENT ${e.path}` }
     return { value: files.get(e.path) }
   })
@@ -145,6 +149,25 @@ describe('skraft mod', () => {
     const state = JSON.parse(files.get(`${TRACK}/state.json`) ?? '{}')
     expect(state.currentPhase).toBe('DESIGN')
     expect(state.verdicts.DESIGN).toBe('CHANGES_REQUESTED')
+  })
+
+  test('/skraft decide records an answer, /skraft close closes the open phase by human validation', { timeoutMs: 20_000 } as any, async ($, on) => {
+    const clock = mock.clock(on)
+    const { files } = world($, on, { reviewVerdict: 'REJECTED' })
+    await runPipeline($, clock)
+    const status = await $.command.run({ command: 'skraft', args: '' } as any)
+    const key = 'rejected:DESIGN:1'
+    expect(status.text).toMatch(/awaiting-human/)
+
+    const decided = await $.command.run({ command: 'skraft', args: `decide checkout ${key} stop` } as any)
+    expect(decided.text).toMatch(new RegExp(`Recorded "stop" for ${key}`))
+    expect([...files.keys()].some((path) => path.includes('/decisions/'))).toBe(true)
+
+    const closed = await $.command.run({ command: 'skraft', args: 'close checkout 2' } as any)
+    expect(closed.text).toMatch(/DESIGN closed by human validation \(reviews\/.+\/manual-close\.md\); next: DONE/)
+    const state = JSON.parse(files.get(`${TRACK}/state.json`) ?? '{}')
+    expect(state.findingsResolved.DESIGN).toBe(2)
+    expect(files.get(`${TRACK}/reviews/${TODAY}/manual-close.md`)).toMatch(/verdict: "APPROVED"/)
   })
 
   test('the pane shows the phases and the outcome', { timeoutMs: 20_000 } as any, async ($, on) => {
