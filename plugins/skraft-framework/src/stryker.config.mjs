@@ -44,6 +44,7 @@ export default {
     'plugins/skraft-framework/src/adapters/infrastructure/execution-log/json-execution-log-writer.mjs',
     // US11 — G7/G8 state protection + session guard (#57)
     'plugins/skraft-framework/src/domain/session-guard-policy.mjs',
+    'plugins/skraft-framework/src/domain/shell-command-reading.mjs',
     'plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs',
     // US12 — Observabilité (timeout/stale + health-check + housekeeping) (#58)
     'plugins/skraft-framework/src/domain/observability-policy.mjs',
