@@ -9,7 +9,7 @@ tools:
 metadata:
   cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer
-  on_demand_skills:
+  skills:
     - clean-architecture-testing
 ---
 
@@ -25,8 +25,8 @@ A placement an `Accepted` or `Proposed` ADR in the decisions index or the contra
 
 ## Skill Loading
 
-Load on demand (C1 LAZY ASSET):
-- `clean-architecture-testing` — for layer boundary rules
+Load at startup:
+- `clean-architecture-testing` — the layer boundary rules every gate below checks
 
 ## Gates
 

@@ -1,6 +1,6 @@
 ---
 name: clean-architecture-dotnet
-description: Use when domain logic leaks into API/Infrastructure, project references violate layer boundaries, or you need to decide between CQS (always), CQRS bus (complex domains), and DDD patterns (invariants and events).
+description: Use when laying out or extending a .NET / ASP.NET Core solution split into Domain, Application, Infrastructure and Api projects — which project a class belongs in, which project may reference which, how an endpoint reaches a use case, and whether a feature needs plain CQS, a CQRS bus or DDD aggregates.
 ---
 
 # Clean Architecture in .NET

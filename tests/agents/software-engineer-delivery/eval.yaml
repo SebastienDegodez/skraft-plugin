@@ -153,6 +153,7 @@ stimuli:
             - outside-in-tdd
             - craft-discipline
             - clean-architecture-testing
+            - clean-architecture-dotnet
             - mutation-testing
             - quality-gates-evidence-contract
             - quality-gates-dotnet

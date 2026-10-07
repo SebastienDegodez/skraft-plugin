@@ -23,6 +23,7 @@ metadata:
     - test-design-mandates
     - outside-in-tdd
     - craft-discipline
+    - clean-architecture-testing
   on_demand_skills:
     - skraft-quality-bar
     - resolving-stack-commands
@@ -73,6 +74,7 @@ Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {s
 - `test-design-mandates`
 - `outside-in-tdd` — **scoped: PREPARE and RED only.** That skill describes the whole cycle, including SYNTHESIZE-GREEN and the mutation gate. Those phases belong to the software-engineer in DELIVER. You read it for the boundary rules, Step 2 (let the domain emerge), Concentric Circle Expansion, and One Acceptance Test at a Time. You stop at RED — Boundary #2 below overrides anything in that skill that reads as an instruction to implement.
 - `craft-discipline` — **scoped: C5 only.** Step 6 already holds you to it; this is where it is defined. C5 lists the placeholder assertions that make a test compile and fail while asserting nothing — `throw new NotImplementedException()` among them, which is the most tempting way to satisfy "stub only to compile". A stub that trips C5 gives you a RED that proves nothing, so read C5 before writing one. C1 and the rest of that skill are commit-time gates and belong to the software-engineer, who never sees your stub.
+- `clean-architecture-testing` — where the outer acceptance test lives and what it may talk to, and the test level of each test-plan row.
 
 ### Load on demand (never at startup)
 - `resolving-stack-commands` — at Step 6, only when the stack-commands file is absent or one of its commands fails.

@@ -25,10 +25,10 @@ metadata:
   skills:
     - outside-in-tdd
     - craft-discipline
+    - clean-architecture-testing
   on_demand_skills:
     - clean-architecture-dotnet
     - clean-architecture-java
-    - clean-architecture-testing
     - test-design-mandates
     - test-refactoring-catalog
     - mutation-testing
@@ -84,6 +84,7 @@ Load each skill by name. Only announce missing ones: `[SKILL MISSING] {skill-nam
 ### Always load at startup (before PREPARE)
 - `outside-in-tdd`
 - `craft-discipline`
+- `clean-architecture-testing` — every test you add or move: its test project and layer, and what it may talk to
 
 ### Load on demand (trigger-based)
 
@@ -93,7 +94,6 @@ Load each skill below only when its trigger fires, never at startup.
 |-------|--------------|
 | `clean-architecture-dotnet` | Repo is a .NET solution (`*.sln` / `*.slnx` / `*.csproj`) and you add or move a production class, a project or a `<ProjectReference>` |
 | `clean-architecture-java` | Repo is a Java build (`pom.xml`) and you add or move a production class, a module or a `<dependency>` |
-| `clean-architecture-testing` | Deciding test level, boundary placement, or doubles policy |
 | `test-design-mandates` | Deciding whether a Domain unit test is authorized |
 | `test-refactoring-catalog` | Refactoring a test (helpers, renaming, deduplication) |
 | `mutation-testing` | Entering phase 4 (COMMIT & VERIFY) |
