@@ -27,7 +27,8 @@ const TOOL_NAMES = new Map([
   ['agent', 'Agent'],
   ['task', 'Agent'],
   ['read', 'Read'],
-  ['view', 'Read']
+  ['view', 'Read'],
+  ['read_file', 'Read']
 ])
 
 const canonicalToolName = (name) =>

@@ -38,31 +38,22 @@ test('hook-manifest: the declared routes cover every guardrail event', () => {
   ])
 
   assert.deepEqual(routes('SessionStart'), ['node <pluginRoot>/src/cli/housekeeping.mjs'])
-  assert.deepEqual(routes('PreToolUse'), [
-    'node <pluginRoot>/src/cli/hook.mjs PreToolUse Agent',
-    'node <pluginRoot>/src/cli/hook.mjs PreToolUse Agent',
-    'node <pluginRoot>/src/cli/hook.mjs PreToolUse Bash',
-    'node <pluginRoot>/src/cli/hook.mjs PreToolUse Edit',
-    'node <pluginRoot>/src/cli/hook.mjs PreToolUse MultiEdit',
-    'node <pluginRoot>/src/cli/hook.mjs PreToolUse NotebookEdit',
-    'node <pluginRoot>/src/cli/hook.mjs PreToolUse Write',
-  ])
-  assert.deepEqual(routes('PostToolUse'), [
-    'node <pluginRoot>/src/cli/hook.mjs PostToolUse Agent',
-    'node <pluginRoot>/src/cli/hook.mjs PostToolUse Agent',
-    'node <pluginRoot>/src/cli/hook.mjs PostToolUse Read',
-  ])
+  assert.deepEqual(routes('PreToolUse'), ['node <pluginRoot>/src/cli/hook.mjs PreToolUse'])
+  assert.deepEqual(routes('PostToolUse'), ['node <pluginRoot>/src/cli/hook.mjs PostToolUse'])
   assert.deepEqual(routes('SubagentStart'), ['node <pluginRoot>/src/cli/hook.mjs SubagentStart'])
   assert.deepEqual(routes('SubagentStop'), ['node <pluginRoot>/src/cli/hook.mjs SubagentStop'])
 })
 
-test('hook-manifest: native tools and legacy Task each reach the guard with canonical CLI arguments', () => {
-  for (const [matcher, argument] of [['Agent', 'Agent'], ['Task', 'Agent'], ['Bash', 'Bash'], ['Write', 'Write'], ['Edit', 'Edit']]) {
-    const entries = claude.hooks.PreToolUse.filter((entry) => entry.matcher === matcher)
-    assert.equal(entries.length, 1, `${matcher} must have one guard route`)
-    assert.deepEqual(entries[0].hooks.map((hook) => routeOf(hook.command)), [
-      `node <pluginRoot>/src/cli/hook.mjs PreToolUse ${argument}`,
-    ])
+// VS Code runs every entry of an event on every tool call and ignores matchers: one entry
+// per matched tool spawned seven PreToolUse and three PostToolUse processes per call.
+// hook.mjs filters by the payload's tool name instead, so each tool event keeps exactly
+// one entry, and no matcher a harness could read differently.
+test('hook-manifest: each tool event has one unfiltered entry', () => {
+  for (const event of ['PreToolUse', 'PostToolUse']) {
+    const entries = claude.hooks[event]
+    assert.equal(entries.length, 1, `${event} must declare one entry`)
+    assert.equal(entries[0].matcher, undefined, `${event} must not declare a matcher`)
+    assert.equal(entries[0].hooks.length, 1, `${event} must run one command`)
   }
 })
 

@@ -93,6 +93,9 @@ const ROUTES = [
   { args: ['PostToolUse', 'Agent'], payload: { agentName: 'Skraft - Solution Researcher' } },
   { args: ['PostToolUse', 'Agent'], matcher: 'Task', label: 'legacy Task alias', payload: { tool_name: 'Task', tool_input: { subagent_type: 'solution-researcher' } } },
   { args: ['PostToolUse', 'Read'], payload: { toolInput: { path: '/x/skills/outside-in-tdd/SKILL.md' } } },
+  { args: ['PreToolUse'], label: 'manifest form, tool in payload', payload: { tool_name: 'Bash', tool_input: { command: 'echo "{}" > .copilot-tracking/skraft-plans/p/state.json' } } },
+  { args: ['PreToolUse'], label: 'VS Code read', payload: { tool_name: 'read_file', tool_input: { filePath: 'src/Foo.cs' } } },
+  { args: ['PostToolUse'], label: 'VS Code skill read', payload: { tool_name: 'read_file', tool_input: { filePath: '/x/skills/outside-in-tdd/SKILL.md' } } },
 ]
 
 for (const { args, payload, label } of ROUTES) {
@@ -103,12 +106,10 @@ for (const { args, payload, label } of ROUTES) {
 }
 
 test('hook wire format: every manifest route is covered here', () => {
-  const declared = Object.entries(manifest.hooks)
-    .filter(([event]) => event !== 'SessionStart') // housekeeping CLI, not hook.mjs
-    .flatMap(([event, entries]) => entries.map((entry) => [event, entry.matcher].filter(Boolean).join('/')))
+  const declared = Object.keys(manifest.hooks)
+    .filter((event) => event !== 'SessionStart') // housekeeping CLI, not hook.mjs
     .sort()
-  const covered = [...new Set(ROUTES.map(({ args, matcher }) =>
-    matcher ? [args[0], matcher].join('/') : args.join('/')))].sort()
+  const covered = [...new Set(ROUTES.map(({ args }) => args[0]))].sort()
 
   assert.deepEqual(covered, declared, 'a manifest route with no wire-format test can regress unnoticed')
 })
