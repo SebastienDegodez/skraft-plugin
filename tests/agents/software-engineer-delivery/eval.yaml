@@ -157,6 +157,11 @@ stimuli:
             - mutation-testing
             - quality-gates-evidence-contract
             - quality-gates-dotnet
+      - type: skill-invocation
+        name: The Java Clean Architecture skill stayed out of a .NET solution
+        config:
+          disallowed:
+            - clean-architecture-java
       - type: run-command
         name: New Git commits use signed feature-scoped messages without invented issues
         config:

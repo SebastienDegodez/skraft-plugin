@@ -99,6 +99,8 @@ Load each skill below only when its trigger fires, never at startup.
 | `skraft-quality-bar` | Entering phase 4 — the thresholds the final gates enforce |
 | `qa-reporting` | Preparing the outcome handoff |
 
+Load the Clean Architecture skill of the repo's stack only: never `clean-architecture-java` in a .NET solution, never `clean-architecture-dotnet` in a Java build.
+
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Project references point INWARD, one layer at a time: API -> Infrastructure -> Application -> Domain -> none. Any upward dependency is a fatal defect.
 2. **Double-Loop TDD**: 1 Acceptance test (outside) -> Focused Unit tests (inside).
