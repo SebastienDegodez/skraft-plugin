@@ -3,6 +3,36 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.10.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.9.0...v1.10.0) (2026-10-07)
+
+### ✨ Features
+
+* **agents:** load clean-architecture-dotnet in DESIGN and DELIVER ([8359880](https://github.com/SebastienDegodez/skraft-plugin/commit/835988095f09234828105bdae60d308827e7efaa))
+* **agents:** load clean-architecture-java in DESIGN and DELIVER ([3ef52f1](https://github.com/SebastienDegodez/skraft-plugin/commit/3ef52f1366227b56c5f8dd52d22cbfb066c78cc7))
+* **skills:** add a minimal clean-architecture-java skill ([009466c](https://github.com/SebastienDegodez/skraft-plugin/commit/009466c121a34d73deee804896275d21d8b234eb))
+* **skills:** carry CQS, read models, aggregate creation and access rules in Java ([557c412](https://github.com/SebastienDegodez/skraft-plugin/commit/557c4125eff02992b3481eecfb8283a0f0acb6f3))
+* **skills:** import clean-architecture-dotnet from copilot-instructions ([74021b1](https://github.com/SebastienDegodez/skraft-plugin/commit/74021b13560ed159d6e4ee8d239ddf96582c6b2e))
+
+### 🐛 Bug Fixes
+
+* **agents,skills:** read clean-architecture-testing at startup, make skills trigger on feature requests ([413caa5](https://github.com/SebastienDegodez/skraft-plugin/commit/413caa51d0b0ca87e5d276c98ac76b2bf690444e))
+* **agents:** load only the Clean Architecture skill of the repo's stack ([385d4c9](https://github.com/SebastienDegodez/skraft-plugin/commit/385d4c923f413038e119b73aa7ab3d71f33d98a4))
+* **evals:** keep braces out of the clean-architecture prompts ([3c4e576](https://github.com/SebastienDegodez/skraft-plugin/commit/3c4e5765c8227453855a22fe963f29edcc559a7a))
+* **evals:** pass vally lint --strict and close the review gaps ([b633817](https://github.com/SebastienDegodez/skraft-plugin/commit/b633817093bf477666b15b122dbab4439a27a564))
+* **evals:** stage the clean-architecture fixtures beside their specs ([1588051](https://github.com/SebastienDegodez/skraft-plugin/commit/158805140ebd8988b0a96a8f62e1a7eed7a51738))
+* **skills:** make every .NET command return nothing, as the skill teaches ([d776934](https://github.com/SebastienDegodez/skraft-plugin/commit/d7769346e67dd905e458e044e2cad2a59a5a8d0b))
+* **skills:** make the .NET scaffold build and follow the reference graph ([8acb0e3](https://github.com/SebastienDegodez/skraft-plugin/commit/8acb0e300fd905826094fc58ea0242aeef93dce8))
+* **skills:** name cross-skill references instead of linking them ([0a2d8ff](https://github.com/SebastienDegodez/skraft-plugin/commit/0a2d8ffea37214951cc85c67b6de32ffa56669d6))
+* **skills:** place repository interfaces by one rule across the guidance ([a7b018f](https://github.com/SebastienDegodez/skraft-plugin/commit/a7b018fff8083b4eeb744c25b42d2ea6656b10ee))
+* **skills:** point the .NET NetArchTest links inside the plugin ([5c5ba91](https://github.com/SebastienDegodez/skraft-plugin/commit/5c5ba9134035870c00b7a40114e0f8884f4ef85d))
+
+### ♻️ Refactoring
+
+* **agents:** use Clean Architecture vocabulary instead of ports and adapters ([c95ab93](https://github.com/SebastienDegodez/skraft-plugin/commit/c95ab93dff469ea6fb080e7c05be89b0be368147))
+* **skills:** drop .NET guidance the model already follows unaided ([b2df96a](https://github.com/SebastienDegodez/skraft-plugin/commit/b2df96a05c0ac5a404f660327ec7da0978760dc3))
+* **skills:** drop the adapter wording from the .NET layer reference ([a7717a5](https://github.com/SebastienDegodez/skraft-plugin/commit/a7717a5a8385e631808646b0e9f681163fda8b15))
+* **skills:** shape clean-architecture-dotnet like the Java skill, details in references ([db16271](https://github.com/SebastienDegodez/skraft-plugin/commit/db162718f104e069cd826b9024614e7c430fb130))
+
 ## [1.9.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.8.0...v1.9.0) (2026-10-04)
 
 ### ✨ Features
