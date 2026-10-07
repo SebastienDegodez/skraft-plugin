@@ -156,8 +156,8 @@ Do not enter PREPARE, RED, SYNTHESIZE-GREEN, or code COMMIT & VERIFY for this pa
 
 ### 4. COMMIT & VERIFY
 - **Post-GREEN Wiring Verification — FIRST, before anything else in this phase.** Run `git diff --name-only`. Every production file the behavior required MUST appear. If only test files changed while the suite flipped RED → GREEN, that is **Fixture Theater**: BLOCK the commit, go back and write the production code. Then apply the deletion test — revert the production change mentally; if the tests still pass, they are exercising fixture state, not behavior. (`outside-in-tdd` → Post-GREEN Wiring Verification.)
-- Run static checks, formatting, and Mutation Testing.
-- **Gate**: inside the cycle, run the stack adapter's core mutation script in differential mode since the previous cycle's commit (`phaseHistory.DELIVER.baseSha` for the first cycle) — feedback, not evidence. Skip it when the cycle changed no core production file. After the story's last work commit, run the full core then boundary scripts: their exit code is the verdict and the only G6 evidence; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
+- Run static checks and formatting.
+- **Gate**: run no mutation inside a cycle. Once, after the story's last work commit, run the full core then boundary scripts: their exit code is the verdict and the only G6 evidence; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
 - Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
 - **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v4) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`). Run each gate command or script into `evidence/{date}/{story}/`, capture RED→GREEN snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
@@ -221,7 +221,10 @@ Always print a trace of your cycle directly into the chat/console output exclusi
 **PREPARE**: impl-plan step `<N>`, test-plan row `<scenario>`. Target boundary `<Class/Method>`. (`PLAN_DEVIATION: …` when one applies.)
 **RED**: Wrote `<TestName>`. Failed because `<reason>`.
 **GREEN**: Implemented `<Classes/Files>`. All green.
-**COMMIT**: <Hash/Message>. Mutation gate: <core exit> / <boundary exit>.
+**COMMIT**: <Hash/Message>.
+
+### Mutation (once, after the last cycle)
+**MUTATION**: <core exit> / <boundary exit>.
 ```
 
 ## Constraints
