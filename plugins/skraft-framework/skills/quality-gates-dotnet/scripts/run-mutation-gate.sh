@@ -225,9 +225,11 @@ fi
 
 printf '%s\n' "$STATUS" > "$EV/$PREFIX.exit"
 sha256 "$STDOUT" > "$EV/$PREFIX.stdout.sha256"
-printf '{"gate":"mutation","scope":"%s","expected":%s,"solution":"%s","config":"%s","report":"%s","passed":%s,"exit":%s}\n' \
+SINCE_JSON=null
+[ -z "$SINCE" ] || SINCE_JSON="\"$(json_escape "$SINCE")\""
+printf '{"gate":"mutation","scope":"%s","expected":%s,"solution":"%s","config":"%s","report":"%s","since":%s,"passed":%s,"exit":%s}\n' \
   "$SCOPE" "$EXPECTED" "$(json_escape "$SOLUTION")" "$(json_escape "$CONFIG")" \
-  "$(json_escape "$REPORT")" "$([ "$STATUS" -eq 0 ] && echo true || echo false)" "$STATUS" > "$MANIFEST"
+  "$(json_escape "$REPORT")" "$SINCE_JSON" "$([ "$STATUS" -eq 0 ] && echo true || echo false)" "$STATUS" > "$MANIFEST"
 cat "$MANIFEST"
 
 [ "$STATUS" -eq 0 ] || exit 1

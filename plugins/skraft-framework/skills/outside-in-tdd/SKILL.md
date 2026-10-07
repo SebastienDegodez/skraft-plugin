@@ -294,8 +294,8 @@ After both test streams are green and before merge, run the `mutation-testing` s
 the mechanics: what the run covers, how a surviving mutant is classified, and what happens to a
 test that kills nothing.
 
-Run no mutation inside a cycle. The full coverage and mutation runs happen once, after the
-story's last work commit, and only they close the gate.
+Run no mutation inside a cycle. The coverage run and the mutation runs since the delivery's base
+commit happen once, after the story's last work commit, and only they close the gate.
 
 The gate is closed when coverage and both mutation runs meet the bar and every survivor is
 resolved. If the gate has not run, the work is not complete — that is sequence, and it holds for
