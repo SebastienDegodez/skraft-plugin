@@ -43,14 +43,34 @@ export const selectRollbackTarget = (backups) => {
   return candidates.length > 0 ? candidates[0] : null
 }
 
+// The recovery step a diagnosis calls for, for code that runs it rather than prints it
+// (RunPipeline): the same choice as the `action` of buildRecoveryGuidance below.
+//   none | init | rollback | reset | resolve-stale | halt
+export const recoveryStepOf = ({ code, backupCount = 0 }) => {
+  const hasBackup = backupCount > 0
+  switch (code) {
+    case DIAGNOSIS.HEALTHY: return 'none'
+    case DIAGNOSIS.MISSING_STATE: return hasBackup ? 'rollback' : 'init'
+    case DIAGNOSIS.CORRUPTED_STATE:
+    case DIAGNOSIS.INVALID_STATE: return hasBackup ? 'rollback' : 'reset'
+    case DIAGNOSIS.STALE: return 'resolve-stale'
+    default: return 'halt'
+  }
+}
+
 // Guidance `action` strings reference the CLI by the bare `state.mjs {subcommand}`
 // form; they are indicative next-steps for the orchestrator, not literal argv (the real entry is $CLAUDE_PLUGIN_ROOT/src/cli/state.mjs).
 const CLI = 'state.mjs'
 
 // Produces actionable guidance for a diagnosis, structured as WHY / HOW / ACTION.
 //   diagnosis: { code, slug, reason, backupCount, phase }
-// Returns { code, why, how: string[], action: string }.
-export const buildRecoveryGuidance = (diagnosis) => {
+// Returns { code, why, how: string[], action: string, step } — `step` is recoveryStepOf.
+export const buildRecoveryGuidance = (diagnosis) => ({
+  ...guidanceOf(diagnosis),
+  step: recoveryStepOf({ code: diagnosis?.code, backupCount: diagnosis?.backupCount }),
+})
+
+const guidanceOf = (diagnosis) => {
   const { code, slug = '{slug}', reason, backupCount = 0, phase } = diagnosis ?? {}
   const hasBackup = backupCount > 0
   const rollbackAction = `${CLI} rollback --slug ${slug}`

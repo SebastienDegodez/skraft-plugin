@@ -14,24 +14,38 @@ sidebar_position: 1
 |------|---------|-------|-----------------|------------------------|
 | `SessionStart` | — | — | Exporte `SKRAFT_PLUGIN_ROOT` vers les appels Bash suivants (Claude Code, via `CLAUDE_ENV_FILE`) ; indique le chemin du plugin et le pipeline actif dans le contexte de session ; purge le journal d'audit et les signaux d'état obsolètes | Autorise |
 | `SubagentStart` | — | G2 | Indique à l'agent qui démarre ses skills obligatoires (`verify` ou `eager`) ; intègre le contenu des skills `eager` ; exclut les skills `on-demand` | Autorise |
-| `PreToolUse` | `Agent`, `Task` | G1 | Un agent de phase n'est dispatché que si la phase enregistrée le permet : le spécialiste dans la phase ouverte, son reviewer une fois un artefact enregistré | Bloque, pour un agent de phase |
 | `PreToolUse` | `Agent`, `Task` | Provenance | Aucun agent ne se dispatche lui-même ; un agent au dispatcher déclaré n'est dispatché que par lui | Autorise |
-| `PreToolUse` | `Agent`, `Task` | G9 | Le prompt de dispatch d'un agent de phase du pipeline nomme au moins un chemin enregistré pour chaque entrée suivie obligatoire déjà présente dans l'état, et la revue précédente en rework ou re-review | Autorise |
-| `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | Aucune écriture directe dans le `state.json` d'un pipeline, son journal d'exécution ou le pointeur `.active-slug`, quelle que soit la phase | Refuse si le payload nomme un `state.json` suivi |
+| `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | Aucune écriture directe dans le `state.json` d'un pipeline, son journal d'exécution ou le pointeur `.active-slug`, quelle que soit la phase | Refuse si le fichier, ou une commande shell lue comme le shell la lit, écrit ou supprime un `state.json` suivi |
 | `PreToolUse` | idem | G8 | En DELIVER, `src/` et `tests/` ne sont écrits que par les agents DELIVER et les agents qu'ils dispatchent | Autorise |
-| `PostToolUse` | `Agent`, `Task` | G6 | Au retour d'un agent de phase, l'orchestrateur reçoit quoi enregistrer et quoi dispatcher ensuite | Autorise |
 | `PostToolUse` | `Read` | G3 | Chaque lecture d'un `SKILL.md` est inscrite au journal d'audit | Autorise |
 | `SubagentStop` | — | G3 | Un sous-agent dont le transcript ne montre aucun chargement d'un skill obligatoire (appel de l'outil skill, ou lecture de son `SKILL.md`) est renvoyé au travail ; les skills `on-demand` ne sont pas obligatoires ; un sous-agent déjà renvoyé est laissé partir | Autorise |
+
+G1 (ordre de dispatch), G6 (continuation) et G9 (handoff) ne sont plus des hooks : le
+pipeline tourne en code (RunPipeline, ADR-010), qui vérifie G1 et G9 avant chaque dispatch et
+enregistre ce que rend chaque agent. Voir `docs/run-pipeline.md` dans le dépôt.
 
 Les deux manifestes du plugin portent les mêmes entrées, et chaque entrée exécute
 `src/cli/hook.mjs` (`src/cli/housekeeping.mjs` pour `SessionStart`). Copilot CLI envoie ses
 propres noms d'outils (`bash`, `create`, `str_replace`, `view`, …) ;
 `adapters/api/hooks/harness-input.mjs` les traduit vers les noms ci-dessus avant toute garde.
 
-G7 et G8 lisent une commande shell à sa forme : redirections, `tee`, verbes qui réécrivent
-ou copient, `sed` et `perl` en place, scripts en ligne `node -e` ou `python -c`, derrière
-des affectations `VAR=valeur` et des enveloppes comme `sudo` ou `env`. Une écriture cachée
-derrière `bash -c`, une variable, un sous-shell ou `find -delete` n'est pas reconnue.
+G7 et G8 lisent une commande shell comme le shell la découpe
+(`domain/shell-command-reading.mjs`) : guillemets et échappements retirés (`'state.json'`,
+`"state".json`, `state\.json`), variables affectées par la ligne substituées, `cd` et
+`pushd` suivis depuis le répertoire de session que donne le hook, et les commandes lancées
+par `$( )`, les backquotes, `sh -c`, `eval`, `env -S`, `find -exec` et `xargs` lues aussi.
+Elles reconnaissent les redirections, `tee`, les verbes qui réécrivent, suppriment ou
+copient (y compris `cp -t` et une destination répertoire), `sed`, `perl` et `awk` en place,
+les scripts en ligne `node -e` ou `python -c`, `git checkout`, `restore`, `rm`, `mv` et
+`clean`, et `find -delete`, derrière les affectations, les mots-clés du shell et les
+enveloppes avec leurs options (`sudo -u`, `env -u`, `timeout 5`…). Supprimer un répertoire
+qui contient l'état suivi, ou un glob qui peut le désigner, compte. Un chemin que G7 ne
+peut pas résoudre (variable ou répertoire inconnu) compte s'il finit par un nom de fichier
+protégé.
+
+Restent invisibles : les alias, les fonctions shell définies dans une commande précédente,
+les scripts lancés depuis un fichier (`bash x.sh`, `source x`) et les programmes qui
+écrivent le fichier d'eux-mêmes.
 
 ## Politiques de skills
 
@@ -182,10 +196,9 @@ Les hooks et les CLI lisent ces variables ; aucune n'est obligatoire.
 | `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Constructeurs de décision (vocabulaire interne) |
 | `plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs` | Décision → format de fil harness |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Routage par type d'événement |
-| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | G1, provenance et G7/G8/G9 sur `PreToolUse` |
-| `plugins/skraft-framework/src/application/handoff-guard-service.mjs` | Garde de handoff G9 |
-| `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Ordre de dispatch, provenance, continuation |
-| `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Manifeste de handoff des entrées obligatoires et évaluation G9 |
+| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | Provenance et G7/G8 sur `PreToolUse` |
+| `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Ordre de dispatch (G1, vérifié par RunPipeline), provenance |
+| `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Manifeste de handoff des entrées obligatoires et évaluation G9 (vérifiée par RunPipeline) |
 | `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Protection de l'état suivi et écritures DELIVER |
 | `plugins/skraft-framework/src/domain/skill-policy.mjs` | Politique des skills obligatoires et `on-demand` |
 | `plugins/skraft-framework/src/domain/phase-gate-policy.mjs` | Règles de clôture de phase |

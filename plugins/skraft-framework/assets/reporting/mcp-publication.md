@@ -1,5 +1,12 @@
 # Host publication lifecycle
 
+> **Run by code.** RunPipeline now performs this lifecycle itself — consent, render,
+> prepare, decide, record, and the retry at DONE (`src/application/pipeline/report-boundaries.mjs`,
+> `src/application/report-publication-service.mjs`). Only the host-side observation and
+> write are delegated, to an agent that reads this page for the observation contract
+> (`src/adapters/infrastructure/reporting/agent-report-transport.mjs`). The `report.mjs`
+> steps below are obsolete, kept for a manual repair.
+
 Load in the orchestrator at reporting startup, report boundaries and publication-only
 resume. Keep producer/reviewer ownership and renderer data in
 [reporting contract](../../skills/qa-reporting/references/report-contract.md) unchanged.

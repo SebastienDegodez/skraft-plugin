@@ -66,3 +66,14 @@ test('an unknown caller or an agent with no declared dispatcher is not judged', 
     assert.equal(dispatch({ caller, requested }).output, undefined, `${caller} → ${requested}`)
   }
 })
+
+test('a phase agent is dispatched by the pipeline (code): an agent that dispatches one itself is refused', () => {
+  for (const caller of ['skraft:skraft-orchestrator', 'skraft:backlog-planner', 'skraft:solution-architect']) {
+    const { output, audit } = dispatch({ caller, requested: 'skraft:software-engineer' })
+    assert.equal(output.hookSpecificOutput.permissionDecision, 'deny', caller)
+    assert.match(output.hookSpecificOutput.permissionDecisionReason, /dispatched by the SKRAFT pipeline, which runs as code: start or resume it/)
+    assert.equal(audit.find((entry) => entry.event === 'DispatchProvenanceEvaluated')?.code, 'PIPELINE_DISPATCH')
+  }
+  // The pipeline's own spawns come from no agent: they are not judged.
+  assert.equal(dispatch({ caller: undefined, requested: 'skraft:software-engineer' }).output, undefined)
+})

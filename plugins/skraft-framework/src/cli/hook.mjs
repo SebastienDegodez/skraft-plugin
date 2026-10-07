@@ -43,25 +43,20 @@ const sessionCwd = (payload) =>
 const SERVICES = {
   PreToolUse: async ({ config, stateReader, trackingRoot }) => {
     const [
-      { createPreToolUseService },
       { createPreToolUseSessionGuardService },
       { createPreToolUseCompositeService },
       { createDispatchProvenanceService },
-      { createHandoffGuardService },
     ] = await Promise.all([
-      import('../application/pre-tool-use-service.mjs'),
       import('../application/pre-tool-use-session-guard-service.mjs'),
       import('../application/pre-tool-use-composite.mjs'),
       import('../application/dispatch-provenance-service.mjs'),
-      import('../application/handoff-guard-service.mjs'),
     ])
-    // PreToolUse composite: G1 dispatch order, G9 handoff, provenance and G7/G8 (see composite).
+    // PreToolUse composite: provenance and G7/G8 (see composite). The dispatch order (G1)
+    // and the handoff completeness (G9) are checked by RunPipeline before it dispatches.
     return {
       preToolUse: createPreToolUseCompositeService({
-        dispatchGuard: createPreToolUseService({ stateReader, auditWriter, config, clock }),
         sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
         provenanceGuard: createDispatchProvenanceService({ config, auditWriter, clock }),
-        handoffGuard: createHandoffGuardService({ stateReader, auditWriter, config, clock }),
       }),
     }
   },
@@ -84,9 +79,9 @@ const SERVICES = {
     const journal = createDispatchJournal({ auditWriter, stateReader, config, clock })
     return { subagentStop: journal.stopped(createSubagentStopService({ config, transcriptReaderFactory: createJsonlTranscriptReader, auditWriter, clock })) }
   },
-  PostToolUse: async ({ config, stateReader }) => {
+  PostToolUse: async () => {
     const { createPostToolUseService } = await import('../application/post-tool-use-service.mjs')
-    return { postToolUse: createPostToolUseService({ auditWriter, clock, stateReader, config }) }
+    return { postToolUse: createPostToolUseService({ auditWriter, clock }) }
   },
 }
 

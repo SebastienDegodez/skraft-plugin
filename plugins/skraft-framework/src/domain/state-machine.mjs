@@ -3,10 +3,11 @@ import { validatePipelineState } from './state-schema.mjs'
 import { nextPhaseAfter } from './pipeline-policy.mjs'
 import { validateMetadataField } from './orchestrator-metadata-policy.mjs'
 import { toTrackingPath } from './phase-gate-policy.mjs'
+import { PIPELINE_PHASES } from './pipeline/pipeline-definition.mjs'
 
-// Fallback phase order when the caller supplies none. The published order lives in
-// skraft-framework.config.json::phaseOrder and is injected by the application layer.
-export const DEFAULT_PHASE_ORDER = Object.freeze(['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
+// Fallback phase order when the caller supplies none: the pipeline's own
+// (pipeline/pipeline-definition.mjs), which skraft-framework.config.json::phaseOrder is built from.
+export const DEFAULT_PHASE_ORDER = PIPELINE_PHASES
 
 const STATE_VERDICTS = new Set(['APPROVED', 'CHANGES_REQUESTED'])
 

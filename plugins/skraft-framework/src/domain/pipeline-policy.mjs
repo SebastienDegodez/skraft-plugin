@@ -1,5 +1,6 @@
 import { Ok, Err } from './result.mjs'
 import { canonicalAgentName } from './instruction-policy.mjs'
+import { isPipelineDispatcher } from './pipeline/pipeline-definition.mjs'
 
 // Pure pipeline dispatch policy. No IO. Decides whether a requested agent may run
 // now, from the dispatch projection of state.json (see state-schema.projectDispatchState)
@@ -78,40 +79,6 @@ export const evaluateDispatch = (requestedAgent, dispatchState, config) => {
   return Ok({ requestedAgent, expectedAgent: phaseAgents[target.role], stage, reason: `${requestedAgent} runs as ${currentPhase} ${target.role}` })
 }
 
-// G6. What the orchestrator must record after a phase agent returns. Hooks fire before
-// the orchestrator writes anything, so the reminder is derived from the returning agent's
-// role, never from a state it has not written yet. Null for a non-phase agent or a phase
-// that is not open.
-export const continuationAfter = (finishedAgent, dispatchState, config) => {
-  const target = phaseRoleOf(finishedAgent, config)
-  const { currentPhase } = dispatchState
-  if (!target || target.phase !== currentPhase) return null
-  const phaseAgents = config.phaseAgents[currentPhase]
-  const cli = 'node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs"'
-
-  const handoff = (agent) => `\`${cli} handoff --agent "${agent}"\``
-
-  if (target.role === 'specialist') {
-    if (!phaseAgents.reviewer) {
-      return {
-        kind: 'CLOSE',
-        context: `SKRAFT G6 — ${finishedAgent} returned for ${currentPhase}. Record each artefact it produced with \`${cli} record-artifact --phase ${currentPhase} --path <tracking-relative path>\`, then close the phase with \`${cli} close-phase --phase ${currentPhase} --verdict APPROVED\`. Follow the orchestrator's interlocks before any next-phase dispatch.`
-      }
-    }
-    return {
-      kind: 'REVIEW',
-      context: `SKRAFT G6 — ${finishedAgent} returned for ${currentPhase}. Record each artefact it produced with \`${cli} record-artifact --phase ${currentPhase} --path <tracking-relative path>\`, then dispatch ${phaseAgents.reviewer} with the block ${handoff(phaseAgents.reviewer)} prints.`
-    }
-  }
-
-  const exhausted = dispatchState.retries >= dispatchState.maxRetries
-  const next = nextPhaseAfter(currentPhase, config) ?? 'DONE'
-  return {
-    kind: 'VERDICT',
-    context: `SKRAFT G6 — ${finishedAgent} returned for ${currentPhase}. Record its review file with \`${cli} record-review-artifact --phase ${currentPhase} --path <tracking-relative path>\`, then its verdict: APPROVED → \`record-verdict --verdict APPROVED\`; complete the orchestrator's ratification/interlocks, then \`${cli} transition --to ${next}\` and let the orchestrator dispatch only after its pre-dispatch interlocks. NEEDS_REWORK with \`escalation: environment\` → \`record-verdict --verdict CHANGES_REQUESTED\` and leave the retry count unchanged: stop, show the user the cause, and once it is fixed follow the orchestrator's environment re-gate. Other NEEDS_REWORK → \`record-verdict --verdict CHANGES_REQUESTED\`, ${exhausted ? `retry budget exhausted (${dispatchState.retries}/${dispatchState.maxRetries}): stop and escalate to the user` : `\`incr-retry\` and re-dispatch ${phaseAgents.specialist} with the findings and the rework block ${handoff(phaseAgents.specialist)} prints`}; REJECTED → \`record-verdict --verdict CHANGES_REQUESTED\` and stop.`
-  }
-}
-
 // Who may dispatch whom, from the dispatch tree the descriptors declare (dispatched_by,
 // published as config.agentDispatchers). Claude Code ignores a subagent definition's
 // Agent(...) allowlist, so this is where the tree is enforced. Judged only when the
@@ -126,6 +93,12 @@ export const evaluateDispatchProvenance = (callerAgent, requestedAgent, config) 
     return Err({ code: 'SELF_DISPATCH', reason: `${caller} dispatches itself; do the work, or dispatch the agent that owns it` })
   }
   const dispatcher = config.agentDispatchers?.[requested]
+  if (isPipelineDispatcher(dispatcher)) {
+    return Err({
+      code: 'PIPELINE_DISPATCH',
+      reason: `${requested} is dispatched by the SKRAFT pipeline, which runs as code: start or resume it (the skraft-pipeline workflow, /skraft <slug>) instead of dispatching a phase agent yourself`,
+    })
+  }
   if (!dispatcher || canonicalAgentName(dispatcher, config) === caller) return Ok({ reason: 'declared dispatch' })
   return Err({
     code: 'FOREIGN_DISPATCHER',

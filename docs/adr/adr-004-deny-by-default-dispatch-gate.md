@@ -2,7 +2,7 @@
 ---
 adr: 4
 title: Deny-by-default (fail-closed) posture for the dispatch gate
-status: Accepted
+status: Superseded by ADR-010
 chosen: fail-closed deny-by-default, realised by a type:command preToolUse(Agent) hook
 decision: >
   We will make the dispatch gate deny-by-default and realise it as a type:command preToolUse hook
@@ -17,7 +17,7 @@ ratified_by: sebastiendegodez (human ratification, 2026-06-28)
 # ADR-004 — Deny-by-default (fail-closed) posture for the dispatch gate
 
 **Date:** 2026-06-28
-**Status:** Accepted
+**Status:** Superseded by [ADR-010](adr-010-pipeline-runs-as-code.md) — the gate is now a check of RunPipeline
 **Deciders:** Solution Architect (US3)
 
 ## Context

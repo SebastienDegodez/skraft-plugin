@@ -1,20 +1,15 @@
 import { allow } from '../adapters/api/hooks/decision.mjs'
 
-// PreToolUse composite: one event, two guards. The manifest routes both PreToolUse(Agent)
-// and PreToolUse(Bash) to a single hook entry, but two independent guards govern that event:
+// PreToolUse composite: one event, two guards.
 //
-//   G1  dispatch-order guard  — runs ONLY for orchestrator-tracked agent dispatches
-//                               (a projectSlug AND a requestedAgent are present). Skipping
-//                               it when there is no pipeline context is what keeps a
-//                               directly-invoked standalone agent from being fail-closed
-//                               blocked on a missing state file.
-//   G7/G8 session guard        — always runs (G7 protected-artifact ban is unconditional;
-//                               G8 workspace-write check applies during DELIVER).
 //   provenance guard           — runs on every agent dispatch, pipeline or not: no
 //                               self-dispatch, no dispatch outside the declared tree.
-//   G9  handoff guard          — runs with G1: a phase-agent dispatch must name every
-//                               recorded required input (test plan, research, previous
-//                               review on a retry) in its prompt.
+//   G7/G8 session guard        — always runs (G7 protected-artifact ban is unconditional;
+//                               G8 workspace-write check applies during DELIVER).
+//
+// The dispatch-order guard (G1) and the handoff guard (G9) are gone from the hooks: the
+// pipeline is code (RunPipeline), which checks both before every dispatch it makes
+// (domain evaluateDispatch, evaluateHandoff).
 //
 // Decisions combine FAIL-CLOSED: block > deny > allow. A missing guard is a safe allow.
 
@@ -26,25 +21,16 @@ const combine = (decisions) =>
     ?? decisions.find((d) => d.decision === 'deny')
     ?? allow()
 
-export const createPreToolUseCompositeService = ({ dispatchGuard, sessionGuard, provenanceGuard, handoffGuard } = {}) => ({
+export const createPreToolUseCompositeService = ({ sessionGuard, provenanceGuard } = {}) => ({
   handle: async (payload = {}) => {
     const decisions = []
-
     const requestedAgent = requestedAgentOf(payload)
     if (provenanceGuard && requestedAgent) {
       decisions.push(await provenanceGuard.handle({ agentName: payload.agentName, requestedAgent }))
     }
-    if (dispatchGuard && payload.projectSlug && requestedAgent) {
-      decisions.push(await dispatchGuard.handle({ requestedAgent, projectSlug: payload.projectSlug }))
-    }
-    if (handoffGuard && payload.projectSlug && requestedAgent) {
-      decisions.push(await handoffGuard.handle({ requestedAgent, projectSlug: payload.projectSlug, prompt: payload.toolInput?.prompt }))
-    }
-
     if (sessionGuard) {
       decisions.push(await sessionGuard.handle(payload))
     }
-
     return combine(decisions)
   }
 })

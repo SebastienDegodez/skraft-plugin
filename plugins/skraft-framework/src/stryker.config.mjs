@@ -16,7 +16,6 @@ export default {
     'plugins/skraft-framework/src/domain/dispatch-policy.mjs',
     'plugins/skraft-framework/src/domain/state-schema.mjs',
     'plugins/skraft-framework/src/domain/pipeline-policy.mjs',
-    'plugins/skraft-framework/src/application/pre-tool-use-service.mjs',
     'plugins/skraft-framework/src/application/pre-tool-use-composite.mjs',
     // US4 — G2/G3 skill-loading guardrail (#50)
     'plugins/skraft-framework/src/domain/skill-policy.mjs',
@@ -45,6 +44,7 @@ export default {
     'plugins/skraft-framework/src/adapters/infrastructure/execution-log/json-execution-log-writer.mjs',
     // US11 — G7/G8 state protection + session guard (#57)
     'plugins/skraft-framework/src/domain/session-guard-policy.mjs',
+    'plugins/skraft-framework/src/domain/shell-command-reading.mjs',
     'plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs',
     // US12 — Observabilité (timeout/stale + health-check + housekeeping) (#58)
     'plugins/skraft-framework/src/domain/observability-policy.mjs',
@@ -79,15 +79,34 @@ export default {
     // qg-verify: deterministic evidence verification
     'plugins/skraft-framework/src/domain/evidence-verification-policy.mjs',
     'plugins/skraft-framework/src/application/evidence-verification-service.mjs',
-    // G9 handoff guard + dispatch timeline
+    // Handoff policy (G9, checked by RunPipeline) + dispatch timeline
     'plugins/skraft-framework/src/domain/handoff-policy.mjs',
-    'plugins/skraft-framework/src/application/handoff-guard-service.mjs',
     'plugins/skraft-framework/src/domain/dispatch-timeline-policy.mjs',
     'plugins/skraft-framework/src/application/dispatch-journal-service.mjs',
     'plugins/skraft-framework/src/domain/structural-scan-policy.mjs',
+    'plugins/skraft-framework/src/application/structural-scan-service.mjs',
+    // V2 — reporting run by code: consent, boundaries, publication protocol
+    'plugins/skraft-framework/src/domain/reporting-consent-policy.mjs',
+    'plugins/skraft-framework/src/domain/report-boundary-policy.mjs',
+    'plugins/skraft-framework/src/domain/report-publication-scope.mjs',
+    'plugins/skraft-framework/src/application/report-publication-service.mjs',
+    // V2 — orchestrator as code (RunPipeline) and its driven adapters
+    'plugins/skraft-framework/src/domain/pipeline/*.mjs',
+    'plugins/skraft-framework/src/application/pipeline/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/pipeline/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/copilot-workflow/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/*.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/git/git-source-control.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/state/snapshot-state-writer.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/state/file-state-store.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/reporting/agent-report-transport.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/git/process-git-runner.mjs',
+    'plugins/skraft-framework/src/adapters/infrastructure/source-tree/git-source-tree.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },
-  reporters: ['html', 'clear-text', 'progress'],
+  reporters: ['html', 'clear-text', 'progress', 'json'],
   htmlReporter: { fileName: 'reports/mutation/mutation.html' },
+  // Read by scripts/ci-mutation-survivors.mjs: the CI publishes the surviving mutants.
+  jsonReporter: { fileName: 'reports/mutation/mutation.json' },
 }

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { fromHarnessInput } from '../../../plugins/skraft-framework/src/adapters/api/hooks/harness-input.mjs'
 import { createPreToolUseCompositeService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-composite.mjs'
-import { createPreToolUseService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-service.mjs'
+import { evaluateDispatch } from '../../../plugins/skraft-framework/src/domain/pipeline-policy.mjs'
 import { createPreToolUseSessionGuardService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs'
 
 const pluginRoot = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
@@ -16,55 +16,45 @@ const config = JSON.parse(await readFile(configPath, 'utf8'))
 const manifest = JSON.parse(await readFile(join(pluginRoot, 'hooks/hooks.json'), 'utf8'))
 const projectSlug = 'native-guard-regression'
 const clock = { now: () => '2026-09-16T00:00:00.000Z' }
-const researchState = () => ({ currentPhase: 'RESEARCH', phasesCompleted: [], phaseArtifacts: {}, verdicts: {} })
 
-// Observe adapter -> composite at its dispatch port, with native and existing wire keys.
+// Observe adapter -> composite at its provenance port, with native and existing wire keys.
 for (const field of ['subagent_type', 'subagentType']) {
-  test(`Claude Agent ${field} reaches dispatch guard with requestedAgent and supplied projectSlug`, async () => {
+  test(`Claude Agent ${field} reaches the provenance guard with the caller and requestedAgent`, async () => {
     const calls = []
     const requestedAgent = config.phaseAgents.DELIVER.specialist
-    const refusal = { decision: 'deny', message: 'RESEARCH specialist must run first' }
+    const refusal = { decision: 'deny', message: 'outside the dispatch tree' }
     const composite = createPreToolUseCompositeService({
-      dispatchGuard: { handle: async (input) => { calls.push(input); return refusal } },
+      provenanceGuard: { handle: async (input) => { calls.push(input); return refusal } },
       sessionGuard: { handle: async () => ({ decision: 'allow' }) }
     })
 
     const result = await composite.handle(fromHarnessInput({
-      hook_event_name: 'PreToolUse', tool_name: 'Agent', projectSlug,
+      hook_event_name: 'PreToolUse', tool_name: 'Agent', agent_type: 'skraft:skraft-orchestrator', projectSlug,
       tool_input: { [field]: requestedAgent, prompt: 'Implement the approved story' }
     }, { env: {} }))
 
-    assert.deepEqual(calls, [{ requestedAgent, projectSlug }])
+    assert.deepEqual(calls, [{ agentName: 'skraft:skraft-orchestrator', requestedAgent }])
     assert.deepEqual(result, refusal)
   })
 }
 
-// Exercise real dispatch policy through application boundary; mock only IO ports.
+// The dispatch order RunPipeline checks (G1, domain evaluateDispatch) tells plugin
+// namespaces apart: a foreign software-engineer is not governed.
 for (const requestedAgent of [
   config.phaseAgents.DELIVER.specialist,
   `skraft:${config.phaseAgents.DELIVER.specialist}`,
   'skraft:software-engineer',
   'other:software-engineer'
 ]) {
-  test(`RESEARCH dispatch classifies ${requestedAgent} without confusing plugin namespaces`, async () => {
-    const reads = []
-    const records = []
-    const guard = createPreToolUseService({
-      config, clock,
-      stateReader: { read: async (slug) => { reads.push(slug); return researchState() } },
-      auditWriter: { write: async (record) => { records.push(record) } }
-    })
-
-    const result = await guard.handle({ requestedAgent, projectSlug })
+  test(`RESEARCH dispatch classifies ${requestedAgent} without confusing plugin namespaces`, () => {
+    const result = evaluateDispatch(requestedAgent, { currentPhase: 'RESEARCH', specialistDone: false, reviewerVerdict: null }, config)
     const foreign = requestedAgent === 'other:software-engineer'
-
-    assert.deepEqual(reads, foreign ? [] : [projectSlug])
-    assert.equal(result.decision, foreign ? 'allow' : 'deny')
-    assert.equal(records.length, 1)
-    assert.equal(records[0].code, foreign ? 'UNGOVERNED' : 'OUT_OF_ORDER')
-    assert.equal(records[0].decision, foreign ? 'ALLOW' : 'DENY')
-    assert.equal(records[0].expectedAgent, foreign ? null : config.phaseAgents.RESEARCH.specialist)
-    assert.equal(records[0].projectSlug, projectSlug)
+    assert.equal(result.ok, foreign)
+    if (foreign) assert.equal(result.value.stage, 'UNGOVERNED')
+    else {
+      assert.equal(result.error.code, 'OUT_OF_ORDER')
+      assert.equal(result.error.expectedAgent, config.phaseAgents.RESEARCH.specialist)
+    }
   })
 }
 
@@ -73,17 +63,11 @@ for (const requestedAgent of [
   `skraft:${config.phaseAgents.DELIVER.specialist}`,
   'skraft:software-engineer'
 ]) {
-  test(`DELIVER dispatch recognizes conforming ${requestedAgent}`, async () => {
-    const records = []
-    const guard = createPreToolUseService({
-      config, clock,
-      stateReader: { read: async () => ({ ...researchState(), currentPhase: 'DELIVER' }) },
-      auditWriter: { write: async (record) => { records.push(record) } }
-    })
-    assert.equal((await guard.handle({ requestedAgent, projectSlug })).decision, 'allow')
-    assert.equal(records[0].code, 'CONFORMING')
-    assert.equal(records[0].requestedAgent, requestedAgent)
-    assert.equal(records[0].expectedAgent, config.phaseAgents.DELIVER.specialist)
+  test(`DELIVER dispatch recognizes conforming ${requestedAgent}`, () => {
+    const result = evaluateDispatch(requestedAgent, { currentPhase: 'DELIVER', specialistDone: false, reviewerVerdict: null }, config)
+    assert.equal(result.ok, true)
+    assert.equal(result.value.stage, 'SPECIALIST')
+    assert.equal(result.value.expectedAgent, config.phaseAgents.DELIVER.specialist)
   })
 }
 

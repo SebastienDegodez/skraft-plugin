@@ -5,6 +5,7 @@ import { verifyEvidenceLog } from '../../../plugins/skraft-framework/src/applica
 
 const LOG = 'track/skraft-plans/p/evidence/d/s/qg-s.json'
 const sha256 = (text) => createHash('sha256').update(text).digest('hex')
+const hasher = { sha256: async (text) => sha256(text) }
 
 const filesOf = (entries) => ({
   read: async (path) => {
@@ -28,8 +29,8 @@ const gitOf = (overrides = {}) => {
 
 test('a missing or malformed log is inconclusive without touching git', async () => {
   const git = gitOf()
-  assert.deepEqual((await verifyEvidenceLog({ logPath: LOG, files: filesOf({}), git })).findings.map((f) => f.code), ['LOG_MISSING'])
-  assert.deepEqual((await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: '{ nope' }), git })).findings.map((f) => f.code), ['LOG_MALFORMED'])
+  assert.deepEqual((await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf({}), git })).findings.map((f) => f.code), ['LOG_MISSING'])
+  assert.deepEqual((await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf({ [LOG]: '{ nope' }), git })).findings.map((f) => f.code), ['LOG_MALFORMED'])
   assert.deepEqual(git.calls, [])
 })
 
@@ -47,24 +48,24 @@ test('references resolve under the tracking directory, hashes are computed from 
     entries[`track/skraft-plans/p/evidence/d/s/${id}.exit`] = '0\n'
   }
   const git = gitOf()
-  const result = await verifyEvidenceLog({ logPath: LOG, base: 'ccccccc', files: filesOf(entries), git })
+  const result = await verifyEvidenceLog({ hasher, logPath: LOG, base: 'ccccccc', files: filesOf(entries), git })
   assert.deepEqual(result, { verdict: 'pass', findings: [] })
   assert.deepEqual(git.calls, [['parentOf', 'aaaaaaa'], ['filesOf', 'aaaaaaa'], ['range', 'ccccccc', 'aaaaaaa']])
 
   const noBase = gitOf()
-  await verifyEvidenceLog({ logPath: LOG, files: filesOf(entries), git: noBase })
+  await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf(entries), git: noBase })
   assert.equal(noBase.calls.some(([name]) => name === 'range'), false, 'no base, no completeness check')
 })
 
 test('a log outside any evidence directory resolves its references as given', async () => {
   const log = { $schema: 'quality-gates-evidence/v1', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'aaaaaaa', commits_covered: [], gates: [{ id: 'G1', label: 'x', status: 'pass', stdout_ref: 'out.txt', stdout_sha256: sha256('x'), exit_code_ref: 'evidence/d/s/exit.txt' }], test_integrity: { cycles: [] } }
-  const result = await verifyEvidenceLog({ logPath: 'qg.json', files: filesOf({ 'qg.json': JSON.stringify(log), 'out.txt': 'x', 'evidence/d/s/exit.txt': '0' }), git: gitOf() })
+  const result = await verifyEvidenceLog({ hasher, logPath: 'qg.json', files: filesOf({ 'qg.json': JSON.stringify(log), 'out.txt': 'x', 'evidence/d/s/exit.txt': '0' }), git: gitOf() })
   assert.equal(result.findings.some((f) => f.gate === 'G1'), false)
 })
 
 test('a JSON log that is not an object is inconclusive, never a crash', async () => {
   for (const text of ['null', '42', '[]']) {
-    const result = await verifyEvidenceLog({ logPath: LOG, base: 'ccccccc', files: filesOf({ [LOG]: text }), git: gitOf() })
+    const result = await verifyEvidenceLog({ hasher, logPath: LOG, base: 'ccccccc', files: filesOf({ [LOG]: text }), git: gitOf() })
     assert.deepEqual({ verdict: result.verdict, codes: result.findings.map((f) => f.code) }, { verdict: 'inconclusive', codes: ['SCHEMA_UNSUPPORTED'] }, text)
   }
 })
@@ -77,34 +78,34 @@ test('each commit the log cites is looked up once; a log without cycles asks git
     show: (...args) => { showCalls.push(args); return null },
   })
   const log = { $schema: 'quality-gates-evidence/v1', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'eeeeeee', commits_covered: [{ sha: 'aaaaaaa' }, { sha: 'ddddddd' }, { sha: 'aaaaaaa' }], gates: [] }
-  await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(log) }), git })
+  await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(log) }), git })
   assert.deepEqual(commitCalls.sort(), ['aaaaaaa', 'ddddddd', 'eeeeeee'])
   assert.deepEqual(showCalls, [])
 
   commitCalls.length = 0
   const { commits_covered: _, ...uncovered } = log
-  await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(uncovered) }), git })
+  await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(uncovered) }), git })
   assert.deepEqual(commitCalls, ['eeeeeee'], 'without covered commits, only the recorded revision')
   assert.deepEqual(showCalls, [])
 })
 
 test('a cycle that names no test file is judged on its snapshots, not a crash', async () => {
   const log = { $schema: 'quality-gates-evidence/v1', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'aaaaaaa', commits_covered: [], gates: [], test_integrity: { cycles: [{ cycle: 1, red_commit: 'bbbbbbb', green_commit: 'aaaaaaa' }] } }
-  const result = await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(log) }), git: gitOf() })
+  const result = await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(log) }), git: gitOf() })
   assert.equal(result.findings.some((f) => f.code === 'SNAPSHOT_MISSING'), true)
 })
 
 test('log problems are reported with the path', async () => {
-  const missing = await verifyEvidenceLog({ logPath: LOG, files: filesOf({}), git: gitOf() })
+  const missing = await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf({}), git: gitOf() })
   assert.deepEqual(missing, { verdict: 'inconclusive', findings: [{ severity: 'inconclusive', code: 'LOG_MISSING', detail: `${LOG} is not on disk` }] })
-  const malformed = await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: 'x' }), git: gitOf() })
+  const malformed = await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf({ [LOG]: 'x' }), git: gitOf() })
   assert.deepEqual(malformed, { verdict: 'inconclusive', findings: [{ severity: 'inconclusive', code: 'LOG_MALFORMED', detail: `${LOG} is not JSON` }] })
 })
 
 test('an evidence-only HEAD is judged against the directory holding the log', async () => {
   const log = { $schema: 'quality-gates-evidence/v1', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'aaaaaaa', commits_covered: [], gates: [], test_integrity: { cycles: [] } }
   const onTop = (files) => gitOf({ head: () => 'ccccccc', parentOf: () => 'aaaaaaa', filesOf: () => files })
-  const judged = async (git) => (await verifyEvidenceLog({ logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(log) }), git })).findings.map((f) => f.code)
+  const judged = async (git) => (await verifyEvidenceLog({ hasher, logPath: LOG, files: filesOf({ [LOG]: JSON.stringify(log) }), git })).findings.map((f) => f.code)
   assert.equal((await judged(onTop(['track/skraft-plans/p/evidence/d/s/qg-s.json']))).includes('REVISION_STALE'), false)
   assert.equal((await judged(onTop(['track/skraft-plans/p/evidence/d/s']))).includes('REVISION_STALE'), true)
   assert.equal((await judged(onTop(['track/skraft-plans/p/evidence/d/other/qg.json']))).includes('REVISION_STALE'), true)
@@ -120,7 +121,7 @@ test('only real SHAs and cycles reach git; a reference outside evidence/ is read
     test_integrity: { cycles: [null] },
   }
   const files = { read: async (path) => { reads.push(path); if (path === LOG) return JSON.stringify(log); throw new Error('ENOENT') } }
-  await verifyEvidenceLog({ logPath: LOG, files, git: gitOf({ commit: (sha) => { commitCalls.push(sha); return { exists: true, subject: 'feat(s): x', message: '', files: [] } } }) })
+  await verifyEvidenceLog({ hasher, logPath: LOG, files, git: gitOf({ commit: (sha) => { commitCalls.push(sha); return { exists: true, subject: 'feat(s): x', message: '', files: [] } } }) })
   assert.deepEqual(commitCalls, ['aaaaaaa'])
   assert.deepEqual(reads, [LOG, 'other/out.txt', 'track/skraft-plans/p/evidence/d/s/exit'])
 })

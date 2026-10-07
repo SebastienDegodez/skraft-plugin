@@ -36,19 +36,19 @@ before(() => {
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'),
-    ['---', 'name: Skraft - Orchestrator', 'description: Runs engineering.', 'user-invocable: true', 'agents:', '  - Research Specialist', '  - Delivery Specialist', '  - Delivery Reviewer', 'metadata:', '  phases:', '    - RESEARCH', '    - DELIVER', '  skills:', '    - demo-skill', '  inputs:', '    required:', '      - refined-story', '  outputs:', '    - evidence', '---', ''].join('\n'),
+    ['---', 'name: Skraft - Orchestrator', 'description: Runs engineering.', 'user-invocable: true', 'metadata:', '  skills:', '    - demo-skill', '  inputs:', '    required:', '      - refined-story', '  outputs:', '    - evidence', '---', ''].join('\n'),
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/research-specialist.agent.md'),
-    ['---', 'name: Research Specialist', 'description: Researches.', 'userInvocable: false', 'metadata:', '  phase: RESEARCH', '  dispatched_by: Skraft - Orchestrator', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+    ['---', 'name: Research Specialist', 'description: Researches.', 'userInvocable: false', 'metadata:', '  phase: RESEARCH', '  dispatched_by: skraft-pipeline', '  skills:', '    - demo-skill', '---', ''].join('\n'),
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/delivery-specialist.agent.md'),
-    ['---', 'name: Delivery Specialist', 'description: Delivers.', 'metadata:', '  phase: DELIVER', '  dispatched_by: Skraft - Orchestrator', '  skills:', '    - demo-skill', '---', ''].join('\n'),
+    ['---', 'name: Delivery Specialist', 'description: Delivers.', 'metadata:', '  phase: DELIVER', '  dispatched_by: skraft-pipeline', '  skills:', '    - demo-skill', '---', ''].join('\n'),
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/delivery-reviewer.agent.md'),
-    ['---', 'name: Delivery Reviewer', 'description: Reviews delivery.', 'agents:', '  - Demo Lens', 'metadata:', '  phase: DELIVER-REVIEW', '  dispatched_by: Skraft - Orchestrator', '---', ''].join('\n'),
+    ['---', 'name: Delivery Reviewer', 'description: Reviews delivery.', 'agents:', '  - Demo Lens', 'metadata:', '  phase: DELIVER-REVIEW', '  dispatched_by: skraft-pipeline', '---', ''].join('\n'),
   )
   write(
     join(workspace, 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md'),
@@ -68,7 +68,7 @@ before(() => {
   )
   write(
     join(workspace, 'plugins/skraft-framework/skraft-framework.config.json'),
-    JSON.stringify({ phaseOrder: ['RESEARCH', 'DELIVER'] }),
+    JSON.stringify({ pipeline: { dispatcher: 'skraft-pipeline', launcher: 'Skraft - Orchestrator' }, phaseOrder: ['RESEARCH', 'DELIVER'] }),
   )
   write(
     join(workspace, 'tests/skills/demo-skill/eval.yaml'),
@@ -118,7 +118,9 @@ describe('catalogue scan', () => {
     ])
     ok(report.topology.edges.some((edge) => edge.type === 'dispatch' && edge.from === 'delivery-specialist' && edge.to === 'demo-worker'))
     ok(report.topology.edges.some((edge) => edge.type === 'dispatch' && edge.from === 'delivery-reviewer' && edge.to === 'demo-lens'))
-    deepStrictEqual(report.topology.edges.filter((edge) => edge.type === 'dispatch' && edge.from === 'skraft-orchestrator').map((edge) => edge.order), [0, 1, 2])
+    deepStrictEqual(report.topology.edges.filter((edge) => edge.type === 'dispatch' && edge.from === 'skraft-orchestrator').map((edge) => [edge.to, edge.sources]), [
+      ['delivery-reviewer', ['pipeline']], ['delivery-specialist', ['pipeline']], ['research-specialist', ['pipeline']],
+    ], 'the pipeline the launcher starts dispatches the phase agents')
     strictEqual(report.agents.find((agent) => agent.id === 'backlog-discoverer').userInvocable, true)
     strictEqual(report.agents.find((agent) => agent.id === 'backlog-planner').userInvocable, true)
     deepStrictEqual(report.agents.find((agent) => agent.id === 'skraft-orchestrator').artifacts, { inputs: ['refined-story'], outputs: ['evidence'] })

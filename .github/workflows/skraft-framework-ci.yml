@@ -3,6 +3,8 @@ name: skraft-framework CI
 on:
   push:
     paths:
+      - 'scripts/ci-mutation-survivors.mjs'
+      - 'scripts/ci-failure-annotations.mjs'
       - 'plugins/skraft-framework/src/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
@@ -27,6 +29,8 @@ on:
       - '.github/workflows/skraft-framework-ci.yml'
   pull_request:
     paths:
+      - 'scripts/ci-mutation-survivors.mjs'
+      - 'scripts/ci-failure-annotations.mjs'
       - 'plugins/skraft-framework/src/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.anthropic.claude-code/agents/**'
@@ -103,7 +107,15 @@ jobs:
 
       - name: Run tests
         shell: bash
-        run: node --test "tests/skraft-framework/**/*.test.mjs"
+        run: |
+          node --test "tests/skraft-framework/**/*.test.mjs" 2>&1 | tee node-test.log
+          exit "${PIPESTATUS[0]}"
+
+      # The failing tests and their errors, readable on the check run without the raw log.
+      - name: Annotate the failing tests
+        if: failure()
+        shell: bash
+        run: node scripts/ci-failure-annotations.mjs node-test node-test.log
 
   model-policy:
     name: Agent model policy (B12)
@@ -159,6 +171,9 @@ jobs:
     name: Mutation Testing
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
+      checks: write # publishes the surviving mutants as check runs
 
     steps:
       - uses: actions/checkout@v4
@@ -175,12 +190,40 @@ jobs:
       - name: Run mutation tests
         run: |
           node plugins/skraft-framework/src/node_modules/.bin/stryker run \
-            plugins/skraft-framework/src/stryker.config.mjs
+            plugins/skraft-framework/src/stryker.config.mjs 2>&1 | tee stryker.log
+          exit "${PIPESTATUS[0]}"
+
+      # Why Stryker stopped (a crash, or the score under the break threshold), readable on
+      # the check run without the raw log.
+      - name: Annotate the mutation failure
+        if: failure()
+        run: node scripts/ci-failure-annotations.mjs tail stryker.log 80
+
+      # The mutants the tests let live, worst file first, with the line each one changed:
+      # readable on the pull request's checks (and through the API) without the artifact.
+      - name: Publish the surviving mutants
+        if: always() && hashFiles('reports/mutation/mutation.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node scripts/ci-mutation-survivors.mjs reports/mutation/mutation.json mutation-pages
+          total=$(ls mutation-pages/page-*.md 2>/dev/null | wc -l)
+          for i in $(seq 1 "$total"); do
+            gh api "repos/${{ github.repository }}/check-runs" -X POST \
+              -f name="Mutation survivors ($i/$total)" -f head_sha="$HEAD_SHA" \
+              -f status=completed -f conclusion=neutral \
+              -f "output[title]=Surviving mutants, page $i of $total" \
+              -F "output[summary]=@mutation-pages/summary.md" \
+              -F "output[text]=@mutation-pages/page-$i.md" > /dev/null
+          done
 
       - name: Upload mutation report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mutation-report
-          path: reports/mutation/mutation.html
+          path: |
+            reports/mutation/mutation.html
+            reports/mutation/mutation.json
           if-no-files-found: ignore

@@ -23,16 +23,19 @@ const agent = (id, overrides = {}) => ({
 const validAgents = () => [
   agent('backlog-discoverer', { name: 'Discovery entry', userInvocable: true }),
   agent('backlog-planner', { name: 'Planning entry', userInvocable: true }),
-  agent('skraft-orchestrator', { name: 'Engineering entry', userInvocable: true, phases: ['RESEARCH'], childRefs: ['Display label impossible to derive'] }),
-  agent('researcher', { name: 'Display label impossible to derive', phase: 'RESEARCH', dispatchedByRef: 'Engineering entry', skills: ['research-skill'] }),
+  agent('skraft-orchestrator', { name: 'Engineering entry', userInvocable: true }),
+  agent('researcher', { name: 'Display label impossible to derive', phase: 'RESEARCH', dispatchedByRef: 'skraft-pipeline', skills: ['research-skill'] }),
 ]
+// The pipeline is declared in code; the generated config carries it.
+const pipelineConfig = (overrides = {}) => ({ pipeline: { dispatcher: 'skraft-pipeline', launcher: 'Engineering entry' }, phaseOrder: ['RESEARCH'], ...overrides })
 
 describe('catalogue topology', () => {
   it('resolves dispatch labels through descriptors and keeps stable IDs and skill order', () => {
-    const topology = buildCatalogueTopology({ skills: [skill('research-skill')], agents: validAgents(), frameworkConfig: { phaseOrder: ['RESEARCH'] } })
+    const topology = buildCatalogueTopology({ skills: [skill('research-skill')], agents: validAgents(), frameworkConfig: pipelineConfig() })
 
     deepStrictEqual(topology.roots, ['backlog-discoverer', 'backlog-planner', 'skraft-orchestrator'])
-    deepStrictEqual(topology.journeys.engineering.phases, [{ phase: 'RESEARCH', specialist: 'researcher', reviewer: null }])
+    deepStrictEqual(topology.journeys.engineering, { entrypoint: 'skraft-orchestrator', phases: [{ phase: 'RESEARCH', specialist: 'researcher', reviewer: null }] })
+    deepStrictEqual(topology.agents.find(({ id }) => id === 'researcher').parents, ['skraft-orchestrator'], 'the pipeline the launcher starts dispatches it')
     deepStrictEqual(topology.agents.find(({ id }) => id === 'researcher').skills, ['research-skill'])
     equal(topology.findings.some(({ code }) => code === 'DISPATCH_TARGET_MISSING'), false)
   })
@@ -50,14 +53,15 @@ describe('catalogue topology', () => {
     ok(codes.includes('DISPATCH_PARENT_MISSING'))
   })
 
-  it('blocks generated phase, specialist, skill and artifact divergence', () => {
+  it('blocks a phase order declared by an agent, and generated specialist, skill and artifact divergence', () => {
     const agents = validAgents()
     agents[3].inputs = ['source']
+    agents[2].phases = ['RESEARCH']
     const topology = buildCatalogueTopology({
       skills: [skill('research-skill')],
       agents,
       frameworkConfig: {
-        phaseOrder: ['DELIVER'],
+        ...pipelineConfig(),
         phaseAgents: { RESEARCH: { specialist: 'wrong', reviewer: null } },
         agentSkills: { 'Display label impossible to derive': [{ name: 'wrong' }] },
         agentArtifacts: { 'Display label impossible to derive': { inputs: ['wrong'], outputs: [] } },
@@ -65,7 +69,7 @@ describe('catalogue topology', () => {
     })
     const codes = topology.findings.map(({ code }) => code)
 
-    ok(codes.includes('ENGINEERING_PHASE_ORDER_MISMATCH'))
+    ok(codes.includes('ENGINEERING_PHASES_IN_AGENT'))
     ok(codes.includes('ENGINEERING_PHASE_AGENT_MISMATCH'))
     ok(codes.includes('AGENT_SKILLS_CONFIG_MISMATCH'))
     ok(codes.includes('AGENT_ARTIFACTS_CONFIG_MISMATCH'))
@@ -76,7 +80,7 @@ describe('catalogue topology', () => {
     agents[2].childRefs.unshift('Discovery entry')
     agents[0].dispatchedByRef = 'Engineering entry'
 
-    const topology = buildCatalogueTopology({ skills: [skill('research-skill')], agents })
+    const topology = buildCatalogueTopology({ skills: [skill('research-skill')], agents, frameworkConfig: pipelineConfig() })
 
     ok(topology.findings.some(({ code }) => code === 'PRODUCT_PREFLIGHT_NOT_STANDALONE'))
     ok(topology.findings.some(({ code }) => code === 'PRODUCT_PREFLIGHT_ORCHESTRATED'))

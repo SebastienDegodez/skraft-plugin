@@ -1,4 +1,7 @@
 {
+  "modules": [
+    "./skraft-mod.mjs"
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -96,24 +99,6 @@
       }
     ],
     "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse Agent"
-          }
-        ],
-        "matcher": "Agent"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse Agent"
-          }
-        ],
-        "matcher": "Task"
-      },
       {
         "hooks": [
           {

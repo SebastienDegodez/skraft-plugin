@@ -11,7 +11,7 @@ tools:
   - graphify/*
 metadata:
   cost_role_class: planner  # B12 target class — cross-cutting reasoning warrants planner capacity (genesis token-economy)
-  dispatched_by: Skraft - Orchestrator
+  dispatched_by: skraft-pipeline  # the pipeline (runs as code) dispatches this agent
   phase: DESIGN
   genesis_patterns:
     - A3 ORCHESTRATOR-SAGA

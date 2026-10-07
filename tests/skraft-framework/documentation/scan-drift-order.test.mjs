@@ -36,21 +36,19 @@ ${retire ? '        retire:\n          - "docs/site/fr/reference/agents/*.md"\n'
 const orchestratorAgent = `---
 name: Engineering entry
 user-invocable: true
-agents:
-  - ${RESEARCHER_LABEL}
 metadata:
-  phases:
-    - RESEARCH
   skills:
     - routing
 ---
 `
+// The pipeline is declared in code; the generated config carries it.
+const frameworkConfig = JSON.stringify({ pipeline: { dispatcher: 'skraft-pipeline', launcher: 'Engineering entry' }, phaseOrder: ['RESEARCH'] })
 
 const researcherAgent = `---
 name: ${RESEARCHER_LABEL}
 metadata:
   phase: RESEARCH
-  dispatched_by: Engineering entry
+  dispatched_by: skraft-pipeline
   skills:
     - routing
 ---
@@ -82,7 +80,8 @@ async function withFixture({ brokenParent = false, retire = false, enDashboardBo
   await writeFile(join(root, 'docs/site/en/dashboard/index.md'), `---\nlayout: dashboard\nlang: en\n---\n${enDashboardBody}`)
   await writeFile(join(root, 'plugins/skraft-framework/skills/routing/SKILL.md'), '---\nname: routing\n---\n')
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/skraft-orchestrator.agent.md'), orchestratorAgent)
-  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'), brokenParent ? researcherAgent.replace('Engineering entry', 'Missing dispatcher') : researcherAgent)
+  await writeFile(join(root, 'plugins/skraft-framework/skraft-framework.config.json'), frameworkConfig)
+  await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/solution-researcher.agent.md'), brokenParent ? researcherAgent.replace('skraft-pipeline', 'Missing dispatcher') : researcherAgent)
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/backlog-discoverer.agent.md'), productAgent('Product discovery'))
   await writeFile(join(root, 'plugins/skraft-framework/com.github.copilot/agents/backlog-planner.agent.md'), productAgent('Product planning'))
 

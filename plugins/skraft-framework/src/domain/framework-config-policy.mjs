@@ -2,10 +2,12 @@
 // configuration the hooks consume. No IO, no YAML, no filesystem — the input is
 // already-parsed descriptors, the output is a frozen plain object.
 //
-// A descriptor is: { id?, name, phase?, dispatchedBy?, phases?, skills[],
-// onDemandSkills[], inputs[], context[], outputs[] }.
-// Only the orchestrator carries `phases` (the pipeline order); pipeline specialists
-// and reviewers carry `phase` and are `dispatchedBy: <the orchestrator's own name>`.
+// A descriptor is: { id?, name, phase?, dispatchedBy?, skills[], onDemandSkills[],
+// inputs[], context[], outputs[] }.
+// The pipeline is declared in code (pipeline/pipeline-definition.mjs): its phase order,
+// and the dispatcher its phase agents name — specialists and reviewers carry `phase` and
+// are `dispatchedBy: skraft-pipeline`.
+import { PIPELINE_DISPATCHER, PIPELINE_LAUNCHER, PIPELINE_PHASES } from './pipeline/pipeline-definition.mjs'
 
 export const DEFAULT_SKILL_POLICY = 'verify'
 // A skill the agent loads only at the step that needs it: never injected at start,
@@ -31,22 +33,9 @@ const deepFreeze = (value) => {
   return value
 }
 
-// The phase order is whatever the orchestrator declares — single source of truth.
-// The orchestrator is identified structurally (it's the descriptor that declares
-// `phases`), never by a hardcoded name literal — so renaming it requires no change here.
-const orchestratorOf = (descriptors) => descriptors.find((d) => Array.isArray(d.phases) && d.phases.length > 0)
-
-const phaseOrderOf = (descriptors) => {
-  const orchestrator = orchestratorOf(descriptors)
-  return orchestrator ? [...orchestrator.phases] : []
-}
-
-// For each phase, pick the one orchestrator-dispatched specialist and its reviewer.
+// For each phase, pick the one pipeline-dispatched specialist and its reviewer.
 const phaseAgentsOf = (descriptors, phaseOrder) => {
-  const orchestrator = orchestratorOf(descriptors)
-  const pipeline = orchestrator
-    ? descriptors.filter((d) => d.dispatchedBy === orchestrator.name && d.phase)
-    : []
+  const pipeline = descriptors.filter((d) => d.dispatchedBy === PIPELINE_DISPATCHER && d.phase)
   return Object.fromEntries(
     phaseOrder.map((phase) => {
       const inPhase = pipeline.filter((d) => basePhase(d.phase) === phase)
@@ -115,9 +104,11 @@ const agentDispatchersOf = (descriptors, aliases) => Object.fromEntries(
 )
 
 export const buildFrameworkConfig = (descriptors) => {
-  const phaseOrder = phaseOrderOf(descriptors)
+  const phaseOrder = [...PIPELINE_PHASES]
   const agentAliases = agentAliasesOf(descriptors)
+  const launcher = descriptors.find((d) => d.id === PIPELINE_LAUNCHER)?.name ?? null
   return deepFreeze({
+    pipeline: { dispatcher: PIPELINE_DISPATCHER, launcher },
     phaseOrder,
     phaseAgents: phaseAgentsOf(descriptors, phaseOrder),
     agentAliases,

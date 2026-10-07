@@ -11,7 +11,7 @@ tools:
   - graphify/*
 metadata:
   cost_role_class: researcher  # B12 target class — read-heavy investigation, no code authoring (genesis token-economy)
-  dispatched_by: Skraft - Orchestrator
+  dispatched_by: skraft-pipeline  # the pipeline (runs as code) dispatches this agent
   phase: RESEARCH
   genesis_patterns:
     - A2 PIPELINE
