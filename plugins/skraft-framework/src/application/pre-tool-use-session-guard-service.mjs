@@ -74,7 +74,9 @@ export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, 
     })
 
     // G7 — protected-artifact write ban (always enforced, state-independent).
-    const protectedResult = guardProtectedArtifact({ command, filePath, trackingDir })
+    // The session directory: a relative path (rm state.json after a cd) resolves from it.
+    const cwd = typeof payload.cwd === 'string' && payload.cwd.length > 0 ? payload.cwd : undefined
+    const protectedResult = guardProtectedArtifact({ command, filePath, trackingDir, cwd })
     if (isErr(protectedResult)) {
       await record({ decision: 'DENY', code: protectedResult.error.code, reason: protectedResult.error.reason })
       return deny(protectedResult.error.reason)
