@@ -145,12 +145,12 @@ The reaction is handled by a Saga or an Application-layer event handler — neve
 
 ### Definition
 
-An abstraction over the storage mechanism for an aggregate. The repository interface is defined in the Application layer; the implementation lives in Infrastructure.
+An abstraction over the storage mechanism for an aggregate. The repository interface is defined in Domain when it persists an aggregate, Application for a CRUD entity or a read model — never Infrastructure; the implementation lives in Infrastructure.
 
 ### Rules
 
 1. **One per aggregate** — `IEligibilityRepository`, not `IRepository<Eligibility>`
-2. **Interface in Application layer** — the interface knows nothing about databases, ORMs, or SQL
+2. **Interface in Domain or Application** — Domain for an aggregate, Application for a CRUD entity; the interface knows nothing about databases, ORMs, or SQL
 3. **Domain-friendly API** — use business method names: `GetByDriverId`, `FindEligibleDrivers`. Avoid generic query expressions in the interface.
 4. **Returns domain objects** — the repository returns aggregate root instances, not DTOs or ORM entities
 5. **No ORM leakage in domain** — LINQ expressions, EF navigation properties, and database IDs must not appear in the domain or Application interface

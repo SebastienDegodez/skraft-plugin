@@ -13,7 +13,7 @@ Each project references exactly its inner neighbour. The reference graph is the 
 | Application | Domain | Infrastructure, Api |
 | Domain | Nothing | Application, Infrastructure, Api |
 
-Types reachable through a transitive reference MAY be imported: Infrastructure uses the Domain types an Application port exposes, Api composes Application use cases through its Infrastructure reference. Never add a direct reference to reach them.
+Types reachable through a transitive reference MAY be imported: Infrastructure uses the Domain types an Application interface exposes, Api composes Application use cases through its Infrastructure reference. Never add a direct reference to reach them.
 
 ## Type Dependency Rules
 

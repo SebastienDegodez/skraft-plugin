@@ -135,6 +135,10 @@
         "policy": "verify"
       },
       {
+        "name": "clean-architecture-testing",
+        "policy": "verify"
+      },
+      {
         "name": "skraft-quality-bar",
         "policy": "on-demand"
       },
@@ -150,7 +154,7 @@
     "architecture-boundaries-lens": [
       {
         "name": "clean-architecture-testing",
-        "policy": "on-demand"
+        "policy": "verify"
       }
     ],
     "Skraft - Backlog Discoverer Reviewer": [
@@ -290,6 +294,14 @@
       },
       {
         "name": "clean-architecture-testing",
+        "policy": "verify"
+      },
+      {
+        "name": "clean-architecture-dotnet",
+        "policy": "on-demand"
+      },
+      {
+        "name": "clean-architecture-java",
         "policy": "on-demand"
       },
       {
@@ -351,6 +363,14 @@
       {
         "name": "architecture-decisions",
         "policy": "verify"
+      },
+      {
+        "name": "clean-architecture-dotnet",
+        "policy": "on-demand"
+      },
+      {
+        "name": "clean-architecture-java",
+        "policy": "on-demand"
       }
     ],
     "Skraft - Solution Researcher": [],

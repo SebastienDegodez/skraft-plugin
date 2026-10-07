@@ -59,7 +59,7 @@ they pass the compile gate but assert nothing.
 Check UnitTest files:
 - No `A.Fake<>()`, `Mock<>()`, `Substitute.For<>()`
   on a Domain or Application type.
-- Mocks allowed ONLY on driven ports (repositories, gateways).
+- Mocks allowed ONLY on output gateways (repositories, external services).
 
 ### C7 — Business language verified
 

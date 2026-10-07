@@ -25,8 +25,10 @@ metadata:
   skills:
     - outside-in-tdd
     - craft-discipline
-  on_demand_skills:
     - clean-architecture-testing
+  on_demand_skills:
+    - clean-architecture-dotnet
+    - clean-architecture-java
     - test-design-mandates
     - test-refactoring-catalog
     - mutation-testing
@@ -82,6 +84,7 @@ Load each skill by name. Only announce missing ones: `[SKILL MISSING] {skill-nam
 ### Always load at startup (before PREPARE)
 - `outside-in-tdd`
 - `craft-discipline`
+- `clean-architecture-testing` — every test you add or move: its test project and layer, and what it may talk to
 
 ### Load on demand (trigger-based)
 
@@ -89,7 +92,8 @@ Load each skill below only when its trigger fires, never at startup.
 
 | Skill | Load when... |
 |-------|--------------|
-| `clean-architecture-testing` | Deciding test level, boundary placement, or doubles policy |
+| `clean-architecture-dotnet` | Repo is a .NET solution (`*.sln` / `*.slnx` / `*.csproj`) and you add or move a production class, a project or a `<ProjectReference>` |
+| `clean-architecture-java` | Repo is a Java build (`pom.xml`) and you add or move a production class, a module or a `<dependency>` |
 | `test-design-mandates` | Deciding whether a Domain unit test is authorized |
 | `test-refactoring-catalog` | Refactoring a test (helpers, renaming, deduplication) |
 | `mutation-testing` | Entering phase 4 (COMMIT & VERIFY) |
@@ -100,8 +104,10 @@ Load each skill below only when its trigger fires, never at startup.
 | `skraft-quality-bar` | Entering phase 4 — the thresholds the final gates enforce |
 | `qa-reporting` | Preparing the outcome handoff |
 
+Load the Clean Architecture skill of the repo's stack only: never `clean-architecture-java` in a .NET solution, never `clean-architecture-dotnet` in a Java build.
+
 ## Core Principles (Non-Negotiable)
-1. **Clean Architecture Strictness**: Dependencies point INWARD. Domain -> none. Application -> Domain. API/Infra -> Application. Any upward dependency is a fatal defect.
+1. **Clean Architecture Strictness**: Project references point INWARD, one layer at a time: API -> Infrastructure -> Application -> Domain -> none. Any upward dependency is a fatal defect.
 2. **Double-Loop TDD**: 1 Acceptance test (outside) -> Focused Unit tests (inside).
 3. **4-Phase Cycle**: PREPARE -> RED -> SYNTHESIZE-GREEN -> COMMIT (No commit on red!).
 4. **Iron Rule of Tests**: NEVER modify a failing test to make it pass. Fix the implementation. If stuck after 3 attempts, revert to green and escalate.

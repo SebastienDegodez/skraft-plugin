@@ -143,7 +143,7 @@ Evaluate gates:
 | G4 | All application interfaces (repositories, gateways, publishers) are defined in Domain or Application — the layer the aggregate's ADR records — never in Infrastructure. | BLOCKER |
 | G5 | Each aggregate enforces its own invariants. No cross-aggregate invariant enforcement is visible in contracts. | HIGH |
 | G6 | Context map declares every inter-context relationship with an explicit pattern (ACL, Conformist, Shared Kernel, etc.). No undeclared dependencies. | HIGH |
-| G16 | Comparable interfaces, ports or hooks for similar responsibilities follow the same state, return and error-shape convention unless an ADR justifies the divergence. | HIGH |
+| G16 | Comparable interfaces or hooks for similar responsibilities follow the same state, return and error-shape convention unless an ADR justifies the divergence. | HIGH |
 
 **How to check G3:** Review contracts — confirm no interface in Domain imports types from Infrastructure or API namespaces.
 
@@ -153,7 +153,7 @@ Evaluate gates:
 
 **How to check G6:** Review context-map.md — confirm every arrow between contexts carries a labelled relationship pattern.
 
-**How to check G16:** Compare each interface, port or hook in the contracts with existing accepted interfaces for similar responsibilities. Confirm matching state/return/error shapes and exposed field names, or a supporting `Accepted` ADR or `Proposed` ADR of this pass. Record the compared pair and evidence for any finding.
+**How to check G16:** Compare each interface or hook in the contracts with existing accepted interfaces for similar responsibilities. Confirm matching state/return/error shapes and exposed field names, or a supporting `Accepted` ADR or `Proposed` ADR of this pass. Record the compared pair and evidence for any finding.
 
 ---
 

@@ -1,14 +1,13 @@
 {
   "name": "skraft",
-  "description": "skraft SDLC pipeline \u2014 agents, skills and instructions for outside-in TDD, Clean Architecture, backlog discovery and the RESEARCH\u2192DESIGN\u2192DISTILL\u2192DELIVER engineering pipeline.",
-  "version": "1.10.0-dev",
+  "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture, backlog discovery and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline.",
+  "version": "1.10.0",
   "author": {
     "name": "SebastienDegodez"
   },
   "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
   "repository": "https://github.com/SebastienDegodez/skraft-plugin",
   "license": "GPL-3.0-or-later",
-  "types": "./types/index.d.ts",
   "agents": [
     "./com.anthropic.claude-code/agents/acceptance-designer-reviewer.md",
     "./com.anthropic.claude-code/agents/acceptance-designer.md",
