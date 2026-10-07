@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-07T23:12:02.326Z",
+  "generated": "2026-10-07T23:52:36.966Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -3964,7 +3964,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-189"
       ],
-      "mtime": 1791414719975.474
+      "mtime": 1791417154538.7766
     },
     {
       "id": "pr/189/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
@@ -3977,7 +3977,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-189"
       ],
-      "mtime": 1791414719982.6997
+      "mtime": 1791417154544.7766
     },
     {
       "id": "pr/189/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
@@ -3990,7 +3990,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-189"
       ],
-      "mtime": 1791414719997.474
+      "mtime": 1791417154556.7766
     },
     {
       "id": "pr/189/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
@@ -4003,7 +4003,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-189"
       ],
-      "mtime": 1791414720000.474
+      "mtime": 1791417154587.7769
     },
     {
       "id": "pr/189/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
@@ -4016,7 +4016,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-189"
       ],
-      "mtime": 1791414719999.474
+      "mtime": 1791417154590.7769
     },
     {
       "id": "pr/189/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
@@ -4029,7 +4029,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-189"
       ],
-      "mtime": 1791414720003.474
+      "mtime": 1791417154588.7769
     },
     {
       "id": "pr/189/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
@@ -4042,7 +4042,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-189"
       ],
-      "mtime": 1791414720002.474
+      "mtime": 1791417154591.777
     },
     {
       "id": "pr/189/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
@@ -4055,7 +4055,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-189"
       ],
-      "mtime": 1791414720002.474
+      "mtime": 1791417154593.777
     },
     {
       "id": "pr/189/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
@@ -4068,7 +4068,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-189"
       ],
-      "mtime": 1791414720002.474
+      "mtime": 1791417154594.777
     },
     {
       "id": "pr/189/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
@@ -4081,7 +4081,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154710.778
     },
     {
       "id": "pr/189/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
@@ -4094,7 +4094,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-189"
       ],
-      "mtime": 1791414720128.4744
+      "mtime": 1791417154719.778
     },
     {
       "id": "pr/189/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
@@ -4107,7 +4107,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154719.778
     },
     {
       "id": "pr/189/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
@@ -4120,7 +4120,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-189"
       ],
-      "mtime": 1791414720119.4744
+      "mtime": 1791417154720.778
     },
     {
       "id": "pr/189/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
@@ -4133,7 +4133,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154720.778
     },
     {
       "id": "pr/189/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
@@ -4146,7 +4146,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-189"
       ],
-      "mtime": 1791414720126.4744
+      "mtime": 1791417154720.778
     },
     {
       "id": "pr/189/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
@@ -4159,7 +4159,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-189"
       ],
-      "mtime": 1791414720133.4744
+      "mtime": 1791417154741.7783
     },
     {
       "id": "pr/189/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
@@ -4172,7 +4172,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-189"
       ],
-      "mtime": 1791414720132.4744
+      "mtime": 1791417154740.7783
     },
     {
       "id": "pr/189/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
@@ -4185,7 +4185,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-189"
       ],
-      "mtime": 1791414720132.4744
+      "mtime": 1791417154741.7783
     },
     {
       "id": "pr/189/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
@@ -4198,7 +4198,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720110.4744
+      "mtime": 1791417154717.778
     },
     {
       "id": "pr/189/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
@@ -4211,7 +4211,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154711.778
     },
     {
       "id": "pr/189/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
@@ -4224,7 +4224,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154711.778
     },
     {
       "id": "pr/189/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
@@ -4237,7 +4237,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154711.778
     },
     {
       "id": "pr/189/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
@@ -4250,7 +4250,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-189"
       ],
-      "mtime": 1791414720114.4744
+      "mtime": 1791417154711.778
     },
     {
       "id": "pr/189/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
@@ -4263,7 +4263,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154703.7778
     },
     {
       "id": "pr/189/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
@@ -4276,7 +4276,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154712.778
     },
     {
       "id": "pr/189/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
@@ -4289,7 +4289,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-189"
       ],
-      "mtime": 1791414720123.4744
+      "mtime": 1791417154712.778
     },
     {
       "id": "pr/189/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
@@ -4302,7 +4302,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720114.4744
+      "mtime": 1791417154703.7778
     },
     {
       "id": "pr/189/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
@@ -4315,7 +4315,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154712.778
     },
     {
       "id": "pr/189/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
@@ -4328,7 +4328,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154717.778
     },
     {
       "id": "pr/189/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
@@ -4341,7 +4341,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154712.778
     },
     {
       "id": "pr/189/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
@@ -4354,7 +4354,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154738.7783
     },
     {
       "id": "pr/189/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
@@ -4367,7 +4367,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-189"
       ],
-      "mtime": 1791414720128.4744
+      "mtime": 1791417154732.778
     },
     {
       "id": "pr/189/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
@@ -4380,7 +4380,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-189"
       ],
-      "mtime": 1791414720126.4744
+      "mtime": 1791417154732.778
     },
     {
       "id": "pr/189/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
@@ -4393,7 +4393,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-189"
       ],
-      "mtime": 1791414720126.4744
+      "mtime": 1791417154738.7783
     },
     {
       "id": "pr/189/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
@@ -4406,7 +4406,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-189"
       ],
-      "mtime": 1791414720114.4744
+      "mtime": 1791417154704.7778
     },
     {
       "id": "pr/189/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
@@ -4419,7 +4419,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154713.778
     },
     {
       "id": "pr/189/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
@@ -4432,7 +4432,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154718.778
     },
     {
       "id": "pr/189/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
@@ -4445,7 +4445,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154713.778
     },
     {
       "id": "pr/189/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
@@ -4458,7 +4458,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-189"
       ],
-      "mtime": 1791414720115.4744
+      "mtime": 1791417154704.7778
     },
     {
       "id": "pr/189/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
@@ -4471,7 +4471,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-189"
       ],
-      "mtime": 1791414720120.4744
+      "mtime": 1791417154713.778
     },
     {
       "id": "pr/189/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
@@ -4484,7 +4484,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154714.778
     },
     {
       "id": "pr/189/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
@@ -4497,7 +4497,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154713.778
     },
     {
       "id": "pr/189/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
@@ -4510,7 +4510,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154733.778
     },
     {
       "id": "pr/189/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
@@ -4523,7 +4523,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154733.778
     },
     {
       "id": "pr/189/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
@@ -4536,7 +4536,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720121.4744
+      "mtime": 1791417154714.778
     },
     {
       "id": "pr/189/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
@@ -4549,7 +4549,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720126.4744
+      "mtime": 1791417154718.778
     },
     {
       "id": "pr/189/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
@@ -4562,7 +4562,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-189"
       ],
-      "mtime": 1791414720115.4744
+      "mtime": 1791417154718.778
     },
     {
       "id": "pr/189/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
@@ -4575,7 +4575,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154733.778
     },
     {
       "id": "pr/189/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
@@ -4588,7 +4588,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-189"
       ],
-      "mtime": 1791414720121.4744
+      "mtime": 1791417154714.778
     },
     {
       "id": "pr/189/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
@@ -4601,7 +4601,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-189"
       ],
-      "mtime": 1791414720121.4744
+      "mtime": 1791417154714.778
     },
     {
       "id": "pr/189/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
@@ -4614,7 +4614,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720126.4744
+      "mtime": 1791417154738.7783
     },
     {
       "id": "pr/189/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
@@ -4627,7 +4627,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720121.4744
+      "mtime": 1791417154733.778
     },
     {
       "id": "pr/189/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
@@ -4640,7 +4640,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720128.4744
+      "mtime": 1791417154733.778
     },
     {
       "id": "pr/189/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
@@ -4653,7 +4653,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720129.4744
+      "mtime": 1791417154733.778
     },
     {
       "id": "pr/189/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
@@ -4666,7 +4666,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720115.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
@@ -4679,7 +4679,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720126.4744
+      "mtime": 1791417154808.7788
     },
     {
       "id": "pr/189/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
@@ -4692,7 +4692,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154808.7788
     },
     {
       "id": "pr/189/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
@@ -4705,7 +4705,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154809.7788
     },
     {
       "id": "pr/189/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
@@ -4718,7 +4718,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-189"
       ],
-      "mtime": 1791414720119.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
@@ -4731,7 +4731,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
@@ -4744,7 +4744,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
@@ -4757,7 +4757,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154809.7788
     },
     {
       "id": "pr/189/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
@@ -4770,7 +4770,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720119.4744
+      "mtime": 1791417154803.7788
     },
     {
       "id": "pr/189/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
@@ -4783,7 +4783,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154809.7788
     },
     {
       "id": "pr/189/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
@@ -4796,7 +4796,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
@@ -4809,7 +4809,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720124.4744
+      "mtime": 1791417154809.7788
     },
     {
       "id": "pr/189/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
@@ -4822,7 +4822,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-189"
       ],
-      "mtime": 1791414720131.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
@@ -4835,7 +4835,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-189"
       ],
-      "mtime": 1791414720129.4744
+      "mtime": 1791417154809.7788
     },
     {
       "id": "pr/189/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
@@ -4848,7 +4848,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-189"
       ],
-      "mtime": 1791414720129.4744
+      "mtime": 1791417154812.7788
     },
     {
       "id": "pr/189/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
@@ -4861,7 +4861,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-189"
       ],
-      "mtime": 1791414720129.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
@@ -4874,7 +4874,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-189"
       ],
-      "mtime": 1791414720119.4744
+      "mtime": 1791417154797.7788
     },
     {
       "id": "pr/189/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
@@ -4887,7 +4887,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154803.7788
     },
     {
       "id": "pr/189/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
@@ -4900,7 +4900,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154803.7788
     },
     {
       "id": "pr/189/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
@@ -4913,7 +4913,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154803.7788
     },
     {
       "id": "pr/189/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
@@ -4926,7 +4926,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154797.7788
     },
     {
       "id": "pr/189/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
@@ -4939,7 +4939,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154803.7788
     },
     {
       "id": "pr/189/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
@@ -4952,7 +4952,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154803.7788
     },
     {
       "id": "pr/189/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
@@ -4965,7 +4965,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154803.7788
     },
     {
       "id": "pr/189/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
@@ -4978,7 +4978,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720122.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
@@ -4991,7 +4991,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154810.7788
     },
     {
       "id": "pr/189/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
@@ -5004,7 +5004,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154810.7788
     },
     {
       "id": "pr/189/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
@@ -5017,7 +5017,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154808.7788
     },
     {
       "id": "pr/189/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
@@ -5030,7 +5030,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154797.7788
     },
     {
       "id": "pr/189/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
@@ -5043,7 +5043,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154804.7788
     },
     {
       "id": "pr/189/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
@@ -5056,7 +5056,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154804.7788
     },
     {
       "id": "pr/189/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
@@ -5069,7 +5069,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-189"
       ],
-      "mtime": 1791414720127.4744
+      "mtime": 1791417154808.7788
     },
     {
       "id": "pr/189/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
@@ -5082,7 +5082,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720125.4744
+      "mtime": 1791417154808.7788
     },
     {
       "id": "pr/189/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
@@ -5095,7 +5095,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720129.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
@@ -5108,7 +5108,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720129.4744
+      "mtime": 1791417154810.7788
     },
     {
       "id": "pr/189/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
@@ -5121,7 +5121,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-189"
       ],
-      "mtime": 1791414720131.4744
+      "mtime": 1791417154811.7788
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0",
@@ -5134,7 +5134,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154884.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1",
@@ -5147,7 +5147,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154890.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2",
@@ -5160,7 +5160,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154890.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3",
@@ -5173,7 +5173,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154890.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4",
@@ -5186,7 +5186,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154890.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0",
@@ -5199,7 +5199,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720177.4746
+      "mtime": 1791417154884.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1",
@@ -5212,7 +5212,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154887.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2",
@@ -5225,7 +5225,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154887.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3",
@@ -5238,7 +5238,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154888.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4",
@@ -5251,7 +5251,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154888.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0",
@@ -5264,7 +5264,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720174.4746
+      "mtime": 1791417154887.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1",
@@ -5277,7 +5277,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154887.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2",
@@ -5290,7 +5290,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154887.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3",
@@ -5303,7 +5303,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154887.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4",
@@ -5316,7 +5316,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0",
@@ -5329,7 +5329,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720173.3865
+      "mtime": 1791417154879.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1",
@@ -5342,7 +5342,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2",
@@ -5355,7 +5355,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3",
@@ -5368,7 +5368,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720173.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4",
@@ -5381,7 +5381,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-189"
       ],
-      "mtime": 1791414720173.4746
+      "mtime": 1791417154885.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0",
@@ -5394,7 +5394,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720173.4746
+      "mtime": 1791417154885.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1",
@@ -5407,7 +5407,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154890.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2",
@@ -5420,7 +5420,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3",
@@ -5433,7 +5433,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720176.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4",
@@ -5446,7 +5446,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-189"
       ],
-      "mtime": 1791414720177.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0",
@@ -5459,7 +5459,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720177.4746
+      "mtime": 1791417154888.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1",
@@ -5472,7 +5472,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720175.4746
+      "mtime": 1791417154890.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2",
@@ -5485,7 +5485,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720177.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3",
@@ -5498,7 +5498,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720177.4746
+      "mtime": 1791417154889.7795
     },
     {
       "id": "pr/189/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4",
@@ -5511,7 +5511,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-189"
       ],
-      "mtime": 1791414720177.4746
+      "mtime": 1791417154889.7795
     }
   ]
 }
