@@ -8,6 +8,10 @@ import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { createReportFiles } from '../../../plugins/skraft-framework/src/adapters/infrastructure/report-files.mjs'
 
+// Windows has no ENOTDIR for a path under a file (it answers ENOENT) and refuses to rename
+// over an existing file: the tests of those POSIX behaviours do not run there.
+const ON_WINDOWS = process.platform === 'win32'
+
 // In-process unit tests for the confined report file adapter. Every test works
 // in a fresh canonical temp directory (realpath, so no symlinked ancestors).
 
@@ -45,7 +49,7 @@ test('createReportFiles: a missing root is reported as uninitialized tracking st
   })
 }))
 
-test('createReportFiles: a non-ENOENT failure resolving the root is rethrown as is', () => withBase((base) => {
+test('createReportFiles: a non-ENOENT failure resolving the root is rethrown as is', { skip: ON_WINDOWS && 'POSIX ENOTDIR' }, () => withBase((base) => {
   writeFileSync(join(base, 'file.txt'), 'x')
   assert.throws(() => createReportFiles(join(base, 'file.txt', 'sub')), (error) => {
     assert.equal(error.code, 'ENOTDIR')
@@ -153,7 +157,7 @@ test('pathFor: missing components stop the walk without error', () => withRoot((
   assert.equal(files.pathFor('missing/deeper/x.txt'), join(root, 'missing', 'deeper', 'x.txt'))
 }))
 
-test('pathFor: a non-ENOENT lstat failure is rethrown', () => withRoot((root) => {
+test('pathFor: a non-ENOENT lstat failure is rethrown', { skip: ON_WINDOWS && 'POSIX ENOTDIR' }, () => withRoot((root) => {
   writeFileSync(join(root, 'file.txt'), 'x')
   const files = createReportFiles(root)
   assert.throws(() => files.pathFor('file.txt/sub'), { code: 'ENOTDIR' })
@@ -312,7 +316,7 @@ test('acquirePublicationLock: a second acquire while held fails, release frees i
   assert.equal(existsSync(join(root, 'publish.lock')), false)
 }))
 
-test('acquirePublicationLock: release never deletes a lock file it does not own', () => withRoot((root) => {
+test('acquirePublicationLock: release never deletes a lock file it does not own', { skip: ON_WINDOWS && 'Windows refuses to rename over an existing file' }, () => withRoot((root) => {
   const files = createReportFiles(root)
   const lockPath = join(root, 'publish.lock')
   const release = files.acquirePublicationLock('publish.lock')
