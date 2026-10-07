@@ -9,12 +9,20 @@ import { parseYaml } from '../../yaml-parser.mjs'
 export const LENS_VERDICTS = Object.freeze(['pass', 'fail', 'inconclusive'])
 export const SEVERITIES = Object.freeze(['blocker', 'high', 'medium', 'low'])
 
-const FENCED = /```(?:ya?ml)?[ \t]*\n([\s\S]*?)\n```/i
+// Fenced blocks open and close at the start of a line; the tag says what they hold.
+const FENCE = /^```([\w-]*)[ \t]*\n([\s\S]*?)\n```[ \t]*$/gm
+const YAML_TAG = /^ya?ml$/i
 
-// The YAML of an answer: its first fenced block, else the whole text.
-export const lensDocumentOf = (text) => {
+// The YAML documents an answer may carry, last first: its `yaml` blocks, else its untagged
+// blocks, else the whole text. A lens that quotes code in a tagged block (```cs) or
+// corrects itself in a second block is still read right.
+export const lensDocumentsOf = (text) => {
   const source = String(text ?? '')
-  return (source.match(FENCED)?.[1] ?? source).trim()
+  const blocks = [...source.matchAll(FENCE)].map(([, tag, body]) => ({ tag, body: body.trim() }))
+  const yaml = blocks.filter(({ tag }) => YAML_TAG.test(tag))
+  const untagged = blocks.filter(({ tag }) => tag === '')
+  const chosen = yaml.length > 0 ? yaml : untagged
+  return chosen.length > 0 ? chosen.map(({ body }) => body).reverse() : [source.trim()]
 }
 
 const text = (value) => (value === null || value === undefined ? '' : String(value))
@@ -28,9 +36,17 @@ const defectOf = (raw, index) => Object.freeze({
   ...(raw.suggestion ? { suggestion: text(raw.suggestion) } : {}),
 })
 
-// Ok({ lens, verdict, defects }) or Err(reason).
+// Ok({ lens, verdict, defects }) or Err(reason): the last document naming the lens is read;
+// when none names it, the reason is the last document's.
 export const parseLensResult = (answer, expectedLens) => {
-  const source = lensDocumentOf(answer)
+  const documents = lensDocumentsOf(answer)
+  const named = documents.find((source) => {
+    try { return parseYaml(source)?.lens === expectedLens } catch { return false }
+  })
+  return parseLensDocument(named ?? documents[0], expectedLens)
+}
+
+const parseLensDocument = (source, expectedLens) => {
   if (source === '') return Err('the lens returned no YAML document')
   let document
   try { document = parseYaml(source) } catch (error) { return Err(`the YAML does not parse: ${error?.message ?? error}`) }

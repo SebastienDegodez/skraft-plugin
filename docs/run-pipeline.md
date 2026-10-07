@@ -503,14 +503,18 @@ n'envoie plus `Skraft - Software Engineer Reviewer`. `RunReview` :
 
 1. **prépare** ce que les lentilles lisent, à côté de la review : `qg-verify-{story}.json` (le
    résultat de la vérification des preuves que le pipeline vient de faire), `commits-{story}.txt`,
-   `diff-{story}.patch` et `files-{story}.txt` depuis le `baseSha` de DELIVER ;
+   `diff-{story}.patch` et `files-{story}.txt` depuis le `baseSha` de DELIVER. Le plan de test
+   et les contrats retenus sont ceux de la story du log de preuves ; les données outcome et
+   forecast présentes sous `reporting/` vont à `quality-gates` ;
 2. **planifie** les lentilles (`review-lenses.mjs`) : les quatre lentilles de base
    (`quality-gates`, `architecture-boundaries`, `test-integrity`, `cold-reader`), plus
    `mock-fidelity` et `contract-fidelity` quand un chemin modifié ou une ligne ajoutée du patch
    les déclenche ;
 3. **lance** chaque lentille avec ses seules entrées (`cold-reader` : le patch et la liste,
-   rien du producteur). Une réponse qui n'est pas le document `{ lens, verdict, defects }`
-   est refusée une fois, avec la raison ; refusée deux fois, la lentille est `inconclusive` ;
+   à l'aveugle, sans story, périmètre ni phase). La réponse est lue dans son dernier bloc
+   ` ```yaml ` qui nomme la lentille. Une réponse qui n'est pas le document
+   `{ lens, verdict, defects }` est refusée une fois, avec la raison ; refusée deux fois, la
+   lentille est `inconclusive` ;
 4. **décide** avec la matrice de sévérité (`review-verdict-policy.mjs`) : un blocker, un high,
    un medium, une lentille `fail` ou `inconclusive` donnent `NEEDS_REWORK` ; seuls des `low`
    ou des `pass` donnent `APPROVED`. `escalation: environment` quand toutes les raisons sont
@@ -519,8 +523,12 @@ n'envoie plus `Skraft - Software Engineer Reviewer`. `RunReview` :
    `status`, `lens_results`, `dissent_analysis`, `summary`, `reviewed_sha`, `escalation`.
 
 La suite ne change pas : `readReviewOutcome`, `stepAfterReview`, le budget de retries et la
-phase gate lisent ce fichier comme celui d'un reviewer. Une lentille absente de l'hôte arrête
-le run (`blocked`), comme un agent de phase absent. Chaque lentille est journalisée avec le
+phase gate lisent ce fichier comme celui d'un reviewer.
+
+Ce que l'ingénieur ne peut pas corriger arrête le run (`blocked`) au lieu de devenir un rework :
+pas de `baseSha` ou de `HEAD`, un diff que git ne produit pas (`REVIEW_INPUTS`), une lentille
+absente de l'hôte (`LENS_UNAVAILABLE`), une lentille qui ne répond rien deux fois
+(`LENS_NO_ANSWER`). On corrige, puis on relance le pipeline. Chaque lentille est journalisée avec le
 rôle `lens`, sa durée et son coût. Les lentilles tournent l'une après l'autre ; le parallèle
 viendra avec `AgentRunner.runMany`.
 

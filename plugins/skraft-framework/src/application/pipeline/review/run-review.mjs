@@ -23,10 +23,15 @@ import { renderArtifact } from '../../render-artifact.mjs'
 //   5. render reviews/{date}/{phase}-review-{N}.md with the review-verdict template
 // The agents only report defects: the plan, the verdict and the review file are this code.
 //
-// Driven ports: trackingStore, sourceControl (headSha, range, commit, diff, changedFiles),
+// Driven ports: trackingStore (list, write, prefix), sourceControl (headSha, range, commit, diff, changedFiles),
 // agentRunner (the run's journaled runner), templateReader, progress.
 // Outcome: Ok({ status, escalation, lenses }) once the review file is written;
-//          Err({ code: 'LENS_UNAVAILABLE' | 'INVALID_REVIEW', reason }) otherwise.
+//          Err({ code, reason }) otherwise, and the run stops — none of these is the
+//          engineer's to fix, so none becomes a rework:
+//            REVIEW_INPUTS     no phase base, no HEAD, or git could not produce the diff
+//            LENS_UNAVAILABLE  the host does not have the lens
+//            LENS_NO_ANSWER    the lens answered nothing, twice
+//            INVALID_REVIEW    the review data does not validate
 
 const MAX_LENS_ATTEMPTS = 2
 const ADR_INDEX = 'docs/adr/decisions-index.md'
@@ -35,28 +40,25 @@ export const createRunReview = ({ trackingStore, sourceControl, agentRunner, tem
   const prepareInputs = async ({ slug, phase, state, date, verification }) => {
     const base = state.phaseHistory?.[phase]?.baseSha ?? null
     const head = await sourceControl.headSha()
-    const recorded = recordedLensInputs(state.phaseArtifacts)
+    if (!base || !head) return Err({ code: 'REVIEW_INPUTS', reason: `the ${phase} review needs the phase base and HEAD (base ${base ?? 'none'}, HEAD ${head ?? 'none'}); check the repository's git state, then resume` })
+    const patch = await sourceControl.diff(base, head)
+    const nameStatus = await sourceControl.changedFiles(base, head)
+    if (patch === null || nameStatus === null) return Err({ code: 'REVIEW_INPUTS', reason: `git could not produce the diff ${base}..${head} the ${phase} lenses read; check the repository, then resume` })
+
+    const recorded = recordedLensInputs(state.phaseArtifacts, await trackingStore.list(slug))
     const paths = reviewInputPaths({ date, story: storyOfEvidenceLog(recorded.evidenceLog) })
     const written = {}
     const write = async (kind, text) => {
       await trackingStore.write(slug, paths[kind], text)
       written[kind] = paths[kind]
     }
-
     if (verification) await write('qgVerify', `${JSON.stringify({ verdict: verification.verdict, findings: verification.findings }, null, 2)}\n`)
-    let patch = ''
-    let nameStatus = ''
-    if (base && head) {
-      const shas = await sourceControl.range(base, head)
-      const messages = []
-      for (const sha of shas) messages.push(`commit ${sha}\n${(await sourceControl.commit(sha))?.message ?? ''}`)
-      await write('commits', messages.length > 0 ? `${messages.join('\n')}\n` : `no commit between ${base} and ${head}\n`)
-      patch = (await sourceControl.diff(base, head)) ?? ''
-      nameStatus = (await sourceControl.changedFiles(base, head)) ?? ''
-      if (patch) await write('patch', patch)
-      if (nameStatus) await write('files', nameStatus)
-    }
-    return { head, recorded, written, patch, nameStatus }
+    const messages = []
+    for (const sha of await sourceControl.range(base, head)) messages.push(`commit ${sha}\n${(await sourceControl.commit(sha))?.message ?? ''}`)
+    await write('commits', messages.length > 0 ? `${messages.join('\n')}\n` : `no commit between ${base} and ${head}\n`)
+    await write('patch', patch)
+    await write('files', nameStatus)
+    return Ok({ head, recorded, written, patch, nameStatus })
   }
 
   // [{ kind, path }] a lens reads, repository-relative; path null when nothing is on record.
@@ -70,17 +72,22 @@ export const createRunReview = ({ trackingStore, sourceControl, agentRunner, tem
     })
   }
 
+  // A malformed answer is refused once, then the lens is inconclusive (the reviewer's rule);
+  // a lens that answers nothing at all, twice, stops the review: that is the host's failure.
   const runLens = async (lens, { slug, story, phase, label, inputs }) => {
     let refused = null
+    let answered = false
     for (let attempt = 1; attempt <= MAX_LENS_ATTEMPTS; attempt += 1) {
       const prompt = composeLensBrief({ lens, phase, slug, story, inputs, retry: refused })
       const answer = await agentRunner.run({ agent: lens.agent, phase, role: 'lens', label: `${label}:${lens.name}:${attempt}`, prompt })
       if (answer?.unavailable) return Err({ code: 'LENS_UNAVAILABLE', reason: answer.error ?? `${lens.agent} is not available on this host` })
+      answered ||= Boolean(answer?.ok)
       const parsed = answer?.ok ? parseLensResult(answer.text, lens.name) : Err(`the lens returned no answer${answer?.error ? ` — ${answer.error}` : ''}`)
       if (parsed.ok) return parsed
       refused = parsed.error
       progress.log(`  ${lens.name}: answer refused (${refused})`)
     }
+    if (!answered) return Err({ code: 'LENS_NO_ANSWER', reason: `${lens.agent} answered nothing in ${MAX_LENS_ATTEMPTS} dispatches (${refused}); check the host, then resume` })
     return Ok(inconclusiveLens(lens.name, refused))
   }
 
@@ -95,7 +102,9 @@ export const createRunReview = ({ trackingStore, sourceControl, agentRunner, tem
   // reviewPath — tracking-relative path of the review to write; label — unique per review,
   // so a host that memoizes identical dispatches keeps each lens call of each review apart.
   const review = async ({ slug, story = null, state, phase, reviewPath, date, label, verification = null }) => {
-    const prepared = await prepareInputs({ slug, phase, state, date, verification })
+    const inputs = await prepareInputs({ slug, phase, state, date, verification })
+    if (!inputs.ok) return inputs
+    const prepared = inputs.value
     const lenses = planLenses({ phase, nameStatus: prepared.nameStatus, patch: prepared.patch })
     progress.log(`review (code): ${lenses.map(({ name }) => name).join(', ')}`)
     const results = []

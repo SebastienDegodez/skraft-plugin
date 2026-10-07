@@ -13,7 +13,7 @@ import {
   reviewModeOf,
   storyOfEvidenceLog,
 } from '../../../plugins/skraft-framework/src/domain/pipeline/review/review-lenses.mjs'
-import { inconclusiveLens, lensDocumentOf, parseLensResult } from '../../../plugins/skraft-framework/src/domain/pipeline/review/lens-result.mjs'
+import { inconclusiveLens, lensDocumentsOf, parseLensResult } from '../../../plugins/skraft-framework/src/domain/pipeline/review/lens-result.mjs'
 import { codeReviewData, decideReview } from '../../../plugins/skraft-framework/src/domain/pipeline/review/review-verdict-policy.mjs'
 import { composeLensBrief } from '../../../plugins/skraft-framework/src/domain/pipeline/review/lens-brief.mjs'
 import { renderArtifact } from '../../../plugins/skraft-framework/src/application/render-artifact.mjs'
@@ -47,7 +47,13 @@ test('plan: mock-fidelity joins when a changed path or an added line names a moc
   assert.ok(!names(planLenses({ phase: 'DELIVER', patch: '+++ b/WireMock.cs\n' })).includes('mock-fidelity'), 'the file header is not an added line')
 })
 
+test('plan: a mock named in a context line of the patch counts; a removed one does not', () => {
+  assert.ok(names(planLenses({ phase: 'DELIVER', patch: '@@ -1,2 +1,3 @@\n     var server = WireMockServer.Start();\n+    server.Given(x);\n' })).includes('mock-fidelity'))
+  assert.ok(!names(planLenses({ phase: 'DELIVER', patch: '--- a/WireMockSetup.cs\n' })).includes('mock-fidelity'))
+})
+
 test('plan: contract-fidelity joins on a contract file or a provider verification', () => {
+  assert.ok(names(planLenses({ phase: 'DELIVER', patch: '+using PactNet.Verifier;\n' })).includes('contract-fidelity'))
   assert.ok(names(planLenses({ phase: 'DELIVER', nameStatus: 'A\tcontracts/payment.apiexamples\n' })).includes('contract-fidelity'))
   assert.ok(names(planLenses({ phase: 'DELIVER', nameStatus: 'R100\told.cs\tsrc/PaymentContractTests.cs\n' })).includes('contract-fidelity'), 'a rename target counts')
   assert.ok(names(planLenses({ phase: 'DELIVER', patch: '+        await verifier.VerifyAsync();\n' })).includes('contract-fidelity'))
@@ -58,6 +64,16 @@ test('plan: contract-fidelity joins on a contract file or a provider verificatio
 test('changed paths: every path of a name-status list, both sides of a rename', () => {
   assert.deepEqual(changedPaths('M\ta.cs\nR087\told.cs\tnew.cs\n\nD\tgone.cs'), ['a.cs', 'old.cs', 'new.cs', 'gone.cs'])
   assert.deepEqual(changedPaths(null), [])
+})
+
+test('lens inputs: cold-reader reads the patch and file list only, blind; quality-gates gets the reporting data', () => {
+  const lenses = Object.fromEntries(planLenses({ phase: 'DELIVER' }).map((l) => [l.name, l]))
+  assert.deepEqual(lenses['cold-reader'].inputs, ['patch', 'files'])
+  assert.equal(lenses['cold-reader'].blind, true)
+  assert.ok(Object.values(lenses).filter(({ name }) => name !== 'cold-reader').every(({ blind }) => blind === false))
+  assert.deepEqual(lenses['quality-gates'].inputs, ['qgVerify', 'commits', 'evidenceLog', 'patch', 'files', 'changeLog', 'testPlan', 'outcomeData', 'forecastData'])
+  assert.deepEqual(lenses['architecture-boundaries'].inputs, ['patch', 'files', 'contracts', 'adrIndex'])
+  assert.deepEqual(lenses['test-integrity'].inputs, ['patch', 'files', 'testPlan', 'feature', 'changeLog'])
 })
 
 test('every lens the plan can run is an agent the config knows', () => {
@@ -91,6 +107,21 @@ test('recorded inputs: the latest of each kind across phases, every feature file
   assert.deepEqual(recordedLensInputs(undefined).feature, [])
 })
 
+test('recorded inputs: the test plan and contracts of the evidence log\'s story first; reporting data from the files on disk', () => {
+  const inputs = recordedLensInputs({
+    DESIGN: ['details/2026-10-01/contracts-s1.md', 'details/2026-10-02/contracts-s2.md'],
+    DISTILL: ['details/2026-10-01/test-plan-s1.md', 'details/2026-10-02/test-plan-s2.md'],
+    DELIVER: ['evidence/2026-10-04/s1/qg-s1.json'],
+  }, ['reporting/2026-10-01/outcome-data.json', 'reporting/2026-10-04/outcome-data.json', 'reporting/2026-10-02/forecast-data.json', 'old/reporting/2026-10-09/outcome-data.json'])
+  assert.equal(inputs.testPlan, 'details/2026-10-01/test-plan-s1.md')
+  assert.equal(inputs.contracts, 'details/2026-10-01/contracts-s1.md')
+  assert.equal(inputs.outcomeData, 'reporting/2026-10-04/outcome-data.json')
+  assert.equal(inputs.forecastData, 'reporting/2026-10-02/forecast-data.json')
+  const otherStory = recordedLensInputs({ DISTILL: ['details/2026-10-02/test-plan-s2.md'], DELIVER: ['evidence/2026-10-04/s.1/qg-s.1.json'] })
+  assert.equal(otherStory.testPlan, 'details/2026-10-02/test-plan-s2.md', 'no plan of that story: the latest of any')
+  assert.equal(otherStory.outcomeData, null)
+})
+
 test('lens answer: a fenced YAML document is read, its defects normalized', () => {
   const answer = `Here is my analysis.\n${lensDocument('test-integrity', { verdict: 'fail', defects: [{ severity: 'blocker', description: 'tautological: Assert.True(true)' }] })}\nDone.`
   const parsed = parseLensResult(answer, 'test-integrity')
@@ -106,7 +137,24 @@ test('lens answer: an unfenced document is read whole; a missing id or gate gets
   const parsed = parseLensResult('lens: cold-reader\nverdict: fail\ndefects:\n  - severity: high\n    description: "unclear name"\n    suggestion: "rename"', 'cold-reader')
   assert.equal(parsed.ok, true)
   assert.deepEqual(parsed.value.defects, [{ id: 'D1', gate: 'meta', severity: 'high', location: '', description: 'unclear name', suggestion: 'rename' }])
-  assert.equal(lensDocumentOf('```\nlens: x\n```'), 'lens: x')
+  assert.deepEqual(lensDocumentsOf('```\nlens: x\n```'), ['lens: x'])
+})
+
+test('lens answer: a defects list written at the key\'s own indent is read as that key\'s list', () => {
+  const parsed = parseLensResult('lens: test-integrity\nverdict: fail\ndefects:\n- id: D1\n  severity: blocker\n  description: "a # in text, \\"quoted\\""\n- id: D2\n  severity: low\n  description: \'it\'\'s minor\'', 'test-integrity')
+  assert.equal(parsed.ok, true, parsed.error)
+  assert.deepEqual(parsed.value.defects.map(({ severity, description }) => [severity, description]), [['blocker', 'a # in text, "quoted"'], ['low', "it's minor"]])
+})
+
+test('lens answer: code quoted in a tagged block before the YAML, or a corrected second document, is read right', () => {
+  const quoted = 'The test reads:\n```cs\nAssert.True(true);\n```\nMy answer:\n' + lensDocument('test-integrity', { verdict: 'fail', defects: [{ severity: 'blocker', description: 'tautological' }] })
+  assert.equal(parseLensResult(quoted, 'test-integrity').value.verdict, 'fail')
+  const corrected = `${lensDocument('cold-reader', { verdict: 'pass' })}\nCorrection:\n${lensDocument('cold-reader', { verdict: 'fail', defects: [{ severity: 'high', description: 'unclear' }] })}`
+  assert.equal(parseLensResult(corrected, 'cold-reader').value.verdict, 'fail', 'the last document wins')
+  const otherThenMine = `${lensDocument('cold-reader')}\n\`\`\`yaml\nlens: other\nverdict: pass\n\`\`\``
+  assert.equal(parseLensResult(otherThenMine, 'cold-reader').ok, true, 'the last document naming the lens')
+  assert.deepEqual(lensDocumentsOf('```yaml\na: 1\n```\n```\nb: 2\n```'), ['a: 1'], 'a yaml block outranks an untagged one')
+  assert.deepEqual(lensDocumentsOf('  plain  '), ['plain'])
 })
 
 test('lens answer: refused when empty, prose, another lens, or outside the enums', () => {
@@ -144,6 +192,15 @@ test('verdict: a blocker, a high, a medium or an inconclusive lens — NEEDS_REW
   assert.equal(decideReview([result('quality-gates', 'inconclusive', [defect('medium', 'evidence missing')])]).status, 'NEEDS_REWORK')
 })
 
+test('verdict: a lens that says pass yet reports a blocker, high or medium defect blocks, and is named', () => {
+  for (const severity of ['blocker', 'high', 'medium']) {
+    const decision = decideReview([result('quality-gates'), result('cold-reader', 'pass', [defect(severity)])])
+    assert.equal(decision.status, 'NEEDS_REWORK', severity)
+    assert.equal(decision.summary, `NEEDS_REWORK: cold-reader pass (1 ${severity}).`)
+    assert.match(decision.dissent, /^Minority upheld: cold-reader pass/)
+  }
+})
+
 test('verdict: a failing lens with no blocking defect still blocks approval', () => {
   assert.equal(decideReview([result('quality-gates'), result('cold-reader', 'fail')]).status, 'NEEDS_REWORK')
   assert.equal(decideReview([result('cold-reader', 'fail', [defect('low')])]).status, 'NEEDS_REWORK')
@@ -169,8 +226,14 @@ test('dissent: a minority that does not pass is upheld and named, with the lense
     result('quality-gates'), result('architecture-boundaries'), result('cold-reader'),
     result('test-integrity', 'fail', [defect('blocker'), defect('high'), defect('high')]),
   ])
-  assert.equal(dissent, 'Minority upheld: test-integrity fail (1 blocker, 2 high). quality-gates, architecture-boundaries, cold-reader passed; the severity matrix keeps every blocker, high and medium defect and every inconclusive lens, whatever the majority.')
+  assert.equal(dissent, 'Minority upheld: test-integrity fail (1 blocker, 2 high). quality-gates, architecture-boundaries, cold-reader passed; the severity matrix keeps every blocker, high and medium defect and every inconclusive lens, whatever the count.')
   assert.equal(summary, 'NEEDS_REWORK: test-integrity fail (1 blocker, 2 high).')
+})
+
+test('dissent: when more lenses object than pass, the text says the majority objects', () => {
+  const { dissent } = decideReview([result('quality-gates', 'fail', [defect('high')]), result('test-integrity', 'inconclusive', [defect('medium')]), result('cold-reader')])
+  assert.match(dissent, /^Majority objects: quality-gates fail \(1 high\); test-integrity inconclusive \(1 medium\)\. cold-reader passed;/)
+  assert.match(decideReview([result('a', 'fail', [defect('high')]), result('b')]).dissent, /^Minority upheld/, 'a tie is a minority upheld')
 })
 
 test('review data: rendered with the review-verdict template, read back by the phase gate', () => {
@@ -195,15 +258,19 @@ test('lens brief: the inputs and nothing else, absent ones said so, the answer i
     story: { issue: 42, title: 'Pay by card' },
     inputs: [{ kind: 'patch', path: '.t/reviews/d/diff-s1.patch' }, { kind: 'files', path: null }],
   })
-  assert.match(brief, /^## Skraft review lens — cold-reader \(DELIVER\)$/m)
-  assert.match(brief, /- Story: #42 — Pay by card/)
+  assert.match(brief, /^## Skraft review lens — cold-reader$/m)
+  assert.doesNotMatch(brief, /Story|Pay by card|Feature scope|checkout|DELIVER\)/, 'blind: nothing of the producer')
   assert.match(brief, /Patch since the DELIVER base .*: `\.t\/reviews\/d\/diff-s1\.patch`/)
   assert.match(brief, /Changed-file list \(git diff --name-status\): absent — none was recorded/)
   assert.match(brief, /keys: lens, verdict, defects\. Quote every free-text value\./)
   assert.match(brief, /`lens` is exactly `cold-reader`/)
   assert.doesNotMatch(brief, /Previous answer refused/)
   assert.match(composeLensBrief({ lens: coldReader, phase: 'DELIVER', slug: 'checkout', story: null, inputs: [], retry: 'verdict "ok" is not one of pass, fail, inconclusive' }),
-    /- Story: none[\s\S]*## Previous answer refused\nverdict "ok" is not one of pass, fail, inconclusive\. Answer again/)
+    /## Previous answer refused\nverdict "ok" is not one of pass, fail, inconclusive\. Answer again/)
+  const [quality] = planLenses({ phase: 'DELIVER' })
+  const sighted = composeLensBrief({ lens: quality, phase: 'DELIVER', slug: 'checkout', story: { issue: 42, title: 'Pay by card' }, inputs: [{ kind: 'outcomeData', path: 'o.json' }] })
+  assert.match(sighted, /^## Skraft review lens — quality-gates \(DELIVER\)\n- Story: #42 — Pay by card\n- Feature scope: checkout$/m)
+  assert.match(sighted, /Outcome data \(load the qa-reporting skill before checking it\): `o\.json`/)
 })
 
 test('lens brief: a story by issue or by title alone; an input kind with no label is shown by its name', () => {

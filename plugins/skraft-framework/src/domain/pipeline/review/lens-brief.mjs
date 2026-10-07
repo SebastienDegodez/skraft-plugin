@@ -14,6 +14,8 @@ const INPUT_LABELS = Object.freeze({
   feature: 'Feature file',
   contracts: 'Contracts',
   adrIndex: 'ADR index',
+  outcomeData: 'Outcome data (load the qa-reporting skill before checking it)',
+  forecastData: 'Approved forecast data (load the qa-reporting skill before checking it)',
 })
 
 const storyLine = (story) => {
@@ -24,11 +26,11 @@ const storyLine = (story) => {
 // inputs — [{ kind, path }] repository-relative, in the lens's order; a kind with no file
 // on record is listed as absent so the lens reports it instead of searching for it.
 // retry — the reason the previous answer was refused, on the one retry.
+// A blind lens (cold-reader) gets no story, scope or phase: nothing of the producer's intent.
 export const composeLensBrief = ({ lens, phase, slug, story, inputs, retry = null }) => {
   const lines = [
-    `## Skraft review lens — ${lens.name} (${phase})`,
-    `- Story: ${storyLine(story)}`,
-    `- Feature scope: ${slug}`,
+    lens.blind ? `## Skraft review lens — ${lens.name}` : `## Skraft review lens — ${lens.name} (${phase})`,
+    ...(lens.blind ? [] : [`- Story: ${storyLine(story)}`, `- Feature scope: ${slug}`]),
     '- Read only these inputs; do not explore the repository for others:',
     ...inputs.map(({ kind, path }) => `  - ${INPUT_LABELS[kind] ?? kind}: ${path ? `\`${path}\`` : 'absent — none was recorded'}`),
     '- Write no file. Dispatch no agent.',

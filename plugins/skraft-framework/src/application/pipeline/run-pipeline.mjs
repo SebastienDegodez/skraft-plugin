@@ -410,7 +410,7 @@ export const createRunPipeline = (deps) => {
             const reviewed = await codeReview.review({
               slug, story, state, phase, reviewPath, date: today(),
               label: `${phase}:review:${recordedReviews + 1}`,
-              verification: verification ?? (phase === 'DELIVER' ? (await verifyQualityGates(slug, state)).verified ?? null : null),
+              verification,
             })
             if (!reviewed.ok) throw blocked(phase, reviewed.error.reason)
           } else {

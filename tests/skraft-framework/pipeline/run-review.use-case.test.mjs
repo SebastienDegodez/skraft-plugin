@@ -64,7 +64,7 @@ test('run-review: what the lenses read is written beside the review, and each le
   const cold = lensPrompt(host, 'cold-reader-lens')
   assert.match(cold, new RegExp(`\`${PREFIX}reviews/${TODAY}/diff-s1\\.patch\``))
   assert.match(cold, new RegExp(`\`${PREFIX}reviews/${TODAY}/files-s1\\.txt\``))
-  assert.doesNotMatch(cold, /test-plan|contracts|change-log|qg-verify|\.feature/, 'the cold reader gets no producer context')
+  assert.doesNotMatch(cold, /test-plan|contracts|change-log|qg-verify|\.feature|decisions-index|commits-|evidence\/|Pay by card|Feature scope/, 'the cold reader gets no producer context')
 
   const quality = lensPrompt(host, 'quality-gates-lens')
   for (const path of [`reviews/${TODAY}/qg-verify-s1.json`, `reviews/${TODAY}/commits-s1.txt`, `evidence/${TODAY}/s1/qg-s1.json`]) {
@@ -173,12 +173,13 @@ const DELIVER_STATE = {
 }
 
 // An in-memory host for RunReview alone: tracking files in a Map, scripted lens answers.
-const reviewHost = ({ head = 'bbb2222', shas = [], diff = 'diff --git a/a.cs b/a.cs\n', nameStatus = 'M\ta.cs\n', answer } = {}) => {
+const reviewHost = ({ head = 'bbb2222', shas = [], diff = 'diff --git a/a.cs b/a.cs\n', nameStatus = 'M\ta.cs\n', answer, tracked = [] } = {}) => {
   const files = new Map()
   const dispatches = []
   const logs = []
   const deps = {
     trackingStore: {
+      list: async () => [...tracked, ...files.keys()],
       write: async (slug, path, text) => { files.set(path, text) },
       prefix: (slug) => `.copilot-tracking/skraft-plans/${slug}/`,
     },
@@ -217,25 +218,35 @@ test('run-review alone: the covered commits are written with their full messages
   assert.ok(host.logs.includes('review (code): quality-gates, architecture-boundaries, test-integrity, cold-reader'))
 })
 
-test('run-review alone: no phase base — no commits, patch or file list; the lenses are told they are absent', async () => {
-  const host = reviewHost({ head: null })
-  const state = { ...DELIVER_STATE, phaseHistory: {} }
-  const result = await host.review(reviewArgs(state))
+test('run-review alone: no phase base or no HEAD stops the review before any lens — not the engineer\'s to fix', async () => {
+  const noBase = reviewHost()
+  const result = await noBase.review(reviewArgs({ ...DELIVER_STATE, phaseHistory: {} }))
+  assert.equal(result.error.code, 'REVIEW_INPUTS')
+  assert.match(result.error.reason, /needs the phase base and HEAD \(base none, HEAD bbb2222\)/)
+  assert.deepEqual(noBase.dispatches, [])
+  assert.equal(noBase.files.size, 0)
 
-  assert.equal(result.ok, true)
-  assert.deepEqual([...host.files.keys()], [`reviews/${TODAY}/deliver-review-1.md`], 'only the review')
-  const quality = host.dispatches.find((d) => d.agent === 'quality-gates-lens').prompt
-  assert.match(quality, /qg-verify result .*: absent — none was recorded/)
-  assert.match(quality, /Patch since the DELIVER base .*: absent — none was recorded/)
-  assert.doesNotMatch(host.files.get(`reviews/${TODAY}/deliver-review-1.md`), /reviewed_sha/, 'no HEAD, no reviewed SHA')
+  const noHead = reviewHost({ head: null })
+  assert.match((await noHead.review(reviewArgs())).error.reason, /\(base aaa1111, HEAD none\)/)
 })
 
-test('run-review alone: a diff git cannot produce leaves the patch and file list out', async () => {
-  const host = reviewHost({ diff: null, nameStatus: null })
+test('run-review alone: a diff or file list git cannot produce stops the review', async () => {
+  for (const broken of [{ diff: null }, { nameStatus: null }]) {
+    const host = reviewHost(broken)
+    const result = await host.review(reviewArgs())
+    assert.equal(result.error.code, 'REVIEW_INPUTS')
+    assert.equal(result.error.reason, 'git could not produce the diff aaa1111..bbb2222 the DELIVER lenses read; check the repository, then resume')
+    assert.deepEqual(host.dispatches, [])
+  }
+})
+
+test('run-review alone: an empty diff is written empty, not called absent', async () => {
+  const host = reviewHost({ diff: '', nameStatus: '' })
   await host.review(reviewArgs())
 
-  assert.ok(!host.files.has(`reviews/${TODAY}/diff-s1.patch`))
-  assert.ok(!host.files.has(`reviews/${TODAY}/files-s1.txt`))
+  assert.equal(host.files.get(`reviews/${TODAY}/diff-s1.patch`), '')
+  assert.equal(host.files.get(`reviews/${TODAY}/files-s1.txt`), '')
+  assert.match(host.dispatches.find((d) => d.agent === 'cold-reader-lens').prompt, new RegExp(`diff-s1\\.patch\``))
   assert.equal(host.files.get(`reviews/${TODAY}/commits-s1.txt`), 'no commit between aaa1111 and bbb2222\n')
 })
 
@@ -244,17 +255,35 @@ test('run-review alone: no feature on record is said absent; no evidence log key
   await host.review(reviewArgs({ ...DELIVER_STATE, phaseArtifacts: {} }))
 
   assert.match(host.dispatches.find((d) => d.agent === 'test-integrity-lens').prompt, /Feature file: absent — none was recorded/)
+  assert.match(host.dispatches.find((d) => d.agent === 'quality-gates-lens').prompt, /qg-verify result .*: absent — none was recorded/)
   assert.ok(host.files.has(`reviews/${TODAY}/diff-story.patch`))
 })
 
-test('run-review alone: a lens that answers nothing twice says why in its refused reason', async () => {
+test('run-review alone: the reporting data on disk reaches the quality-gates lens', async () => {
+  const host = reviewHost({ tracked: [`reporting/${TODAY}/outcome-data.json`, `reporting/${TODAY}/forecast-data.json`] })
+  await host.review(reviewArgs())
+
+  const quality = host.dispatches.find((d) => d.agent === 'quality-gates-lens').prompt
+  assert.match(quality, new RegExp(`Outcome data .*: \`\\.copilot-tracking/skraft-plans/checkout/reporting/${TODAY}/outcome-data\\.json\``))
+  assert.match(quality, new RegExp(`Approved forecast data .*: \`[^\`]+forecast-data\\.json\``))
+})
+
+test('run-review alone: a lens that answers nothing twice stops the review, saying why', async () => {
   const host = reviewHost({ answer: (d, lens) => (lens === 'cold-reader' ? { ok: false, text: '', error: 'session closed' } : { ok: true, text: lensDocument(lens) }) })
   const result = await host.review(reviewArgs())
 
-  assert.equal(result.value.status, 'NEEDS_REWORK')
+  assert.deepEqual(result.error, { code: 'LENS_NO_ANSWER', reason: 'cold-reader-lens answered nothing in 2 dispatches (the lens returned no answer — session closed); check the host, then resume' })
   assert.match(host.dispatches.filter((d) => d.agent === 'cold-reader-lens')[1].prompt, /the lens returned no answer — session closed\. Answer again/)
-  const cold = result.value.lenses.find(({ lens }) => lens === 'cold-reader')
-  assert.equal(cold.defects[0].description, 'lens output unusable after one retry: the lens returned no answer — session closed')
+  assert.ok(!host.files.has(`reviews/${TODAY}/deliver-review-1.md`))
+})
+
+test('run-review alone: no answer, then a malformed one — the lens did answer, so it is inconclusive', async () => {
+  let calls = 0
+  const host = reviewHost({ answer: (d, lens) => (lens !== 'cold-reader' ? { ok: true, text: lensDocument(lens) } : (calls += 1) === 1 ? { ok: false } : { ok: true, text: 'verdict: pass' }) })
+  const result = await host.review(reviewArgs())
+
+  assert.equal(result.value.status, 'NEEDS_REWORK')
+  assert.equal(result.value.lenses.find(({ lens }) => lens === 'cold-reader').defects[0].description, 'lens output unusable after one retry: lens is null, expected "cold-reader"')
 })
 
 test('run-review alone: an unavailable lens without a reason is named by its agent id', async () => {

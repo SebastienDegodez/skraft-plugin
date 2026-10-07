@@ -27,6 +27,9 @@ const describe = (result) => {
   return `${result.lens} ${result.verdict}${tally.length > 0 ? ` (${tally.join(', ')})` : ''}`
 }
 
+// A lens objects when it does not pass, or when it passes yet reports a defect that blocks.
+const objects = ({ verdict, defects }) => verdict !== 'pass' || defects.some((defect) => BLOCKING.has(defect.severity))
+
 // lensResults — [{ lens, verdict, defects[] }]. Returns { status, escalation, summary, dissent }.
 export const decideReview = (lensResults) => {
   const results = [...lensResults]
@@ -37,17 +40,17 @@ export const decideReview = (lensResults) => {
     ? 'environment'
     : null
 
-  const failing = results.filter((result) => result.verdict !== 'pass')
-  const passing = results.filter((result) => result.verdict === 'pass')
-  const dissent = failing.length > 0 && passing.length > 0
-    ? `Minority upheld: ${failing.map(describe).join('; ')}. ${passing.map(({ lens }) => lens).join(', ')} passed; the severity matrix keeps every blocker, high and medium defect and every inconclusive lens, whatever the majority.`
+  const objecting = results.filter(objects)
+  const agreeing = results.filter((result) => !objects(result))
+  const dissent = objecting.length > 0 && agreeing.length > 0
+    ? `${objecting.length <= agreeing.length ? 'Minority upheld' : 'Majority objects'}: ${objecting.map(describe).join('; ')}. ${agreeing.map(({ lens }) => lens).join(', ')} passed; the severity matrix keeps every blocker, high and medium defect and every inconclusive lens, whatever the count.`
     : 'no dissent'
 
   const reason = results.length === 0
     ? 'no lens ran'
     : status === 'APPROVED'
       ? `${results.length} lenses pass${count(results, 'low') > 0 ? `, ${count(results, 'low')} low defect(s) left as notes` : ''}`
-      : failing.map(describe).join('; ')
+      : objecting.map(describe).join('; ')
   const summary = `${status}${escalation ? ' (environment)' : ''}: ${reason}.`
   return Object.freeze({ status, escalation, summary, dissent })
 }
