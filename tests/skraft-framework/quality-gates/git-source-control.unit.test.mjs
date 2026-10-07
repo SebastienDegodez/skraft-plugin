@@ -90,6 +90,17 @@ test('range: the non-merge commits reachable from rev and not from base', async 
   assert.deepEqual(await repo.range(sha.root, 'release-1234567'), [], 'rev must be a SHA')
 })
 
+test('diff and changedFiles: the patch and the name-status list of base..rev, null for anything that is not a SHA', async () => {
+  const patch = await repo.diff(sha.root, sha.nested)
+  assert.match(patch, /^diff --git a\/src\/Orders\/Discount\.cs b\/src\/Orders\/Discount\.cs/m)
+  assert.match(patch, /^\+class Discount \{\}$/m)
+  assert.equal(await repo.changedFiles(sha.root, sha.nested), 'A\tsrc/Orders/Discount.cs\n')
+  assert.equal(await repo.changedFiles(sha.nested, sha.main), 'M\tREADME.md\n')
+  assert.equal(await repo.diff(sha.merge, sha.merge), '', 'no change: an empty patch')
+  assert.equal(await repo.diff('release-1234567', sha.merge), null, 'base must be a SHA')
+  assert.equal(await repo.changedFiles(sha.root, 'HEAD'), null, 'rev must be a SHA')
+})
+
 test('a SHA-256 repository: its 64-digit commit ids are SHAs too', async () => {
   const sha256Root = realpathSync(mkdtempSync(join(tmpdir(), 'skraft-git-sha256-')))
   try {

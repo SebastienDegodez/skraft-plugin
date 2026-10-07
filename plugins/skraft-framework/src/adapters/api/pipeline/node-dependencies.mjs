@@ -28,6 +28,8 @@ export const createNodePipelineDependencies = ({ cwd, env = process.env, pluginR
   const trackingStore = createFsTrackingStore({ trackingRoot, cwd })
   return Object.freeze({
     config: loadPipelineConfig(pluginRoot),
+    // 'code': the DELIVER review runs as code (RunReview) instead of the reviewer agent
+    reviewMode: env.SKRAFT_REVIEW_MODE,
     stateReader: createJsonStateReader(trackingRoot),
     stateWriter: createJsonStateWriter(trackingRoot),
     stateBackups: createJsonStateBackupReader(trackingRoot),

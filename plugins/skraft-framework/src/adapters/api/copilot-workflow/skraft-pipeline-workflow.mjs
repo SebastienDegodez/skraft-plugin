@@ -23,7 +23,8 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
   description:
     'SKRAFT engineering pipeline for one refined story: RESEARCH → DESIGN → DISTILL → DELIVER, ' +
     'each phase a specialist subagent then its reviewer, gates checked by code, resumable from state.json. ' +
-    'args: { slug: string (kebab-case feature scope), issue?: number, title?: string }.',
+    'args: { slug: string (kebab-case feature scope), issue?: number, title?: string, ' +
+    'reviewMode?: "agent" | "code" (code: the DELIVER review runs its lenses from code) }.',
   phases: [
     { title: 'RESEARCH', detail: 'Solution Researcher' },
     { title: 'DESIGN', detail: 'Solution Architect + reviewer, ADR ratification' },
@@ -38,6 +39,7 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
       issue: { type: 'integer' },
       title: { type: 'string' },
       agentIds: { type: 'object' },
+      reviewMode: { type: 'string', enum: ['agent', 'code'] },
     },
   },
 })
@@ -49,7 +51,7 @@ const pluginNameOf = (pluginRoot) => {
 
 // The workflow body: ctx is the SDK's WorkflowContext.
 export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, env }) => {
-  const { slug, issue, title, agentIds } = ctx.args ?? {}
+  const { slug, issue, title, agentIds, reviewMode } = ctx.args ?? {}
   if (typeof slug !== 'string' || !SLUG.test(slug)) {
     return { status: 'blocked', phase: null, reason: `slug must be kebab-case, got ${JSON.stringify(slug)}` }
   }
@@ -58,6 +60,7 @@ export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot, env }) =
   const agentRunner = createWorkflowAgentRunner({ ctx, agentIds, aliases: deps.config.agentAliases, pluginName: pluginNameOf(pluginRoot) })
   const pipeline = createRunPipeline({
     ...deps,
+    reviewMode: reviewMode ?? deps.reviewMode,
     agentRunner,
     reportTransportOf: (runner) => createAgentReportTransport({ agentRunner: runner, pluginRoot }),
     humanInteraction: createWorkflowHumanInteraction({ ctx }),

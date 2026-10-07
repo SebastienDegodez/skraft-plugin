@@ -31,6 +31,8 @@ Pour une story identifiée par son `slug`, `RunPipeline` :
    l'**ordre des dispatchs** (G1) et la **complétude du handoff** (G9) ;
 4. vérifie sur disque que le spécialiste a laissé les sorties attendues ;
 5. lit le verdict dans le **fichier de review**, jamais dans la réponse du sous-agent ;
+   en mode de revue `code`, la revue DELIVER est elle-même du code (`RunReview`,
+   section 6.8) : le pipeline lance les lentilles, calcule le verdict et écrit ce fichier ;
 6. renvoie les findings au spécialiste tant que le budget de retries le permet
    (`maxRetriesPerPhase`, 2 par défaut, soit 3 tentatives) ;
 7. en DESIGN, fait le **scan structurel** avant l'architecte, puis la **ratification des
@@ -79,6 +81,7 @@ par le humain (section 5.6).
 | Contexte de reporting des dispatchs DISTILL/DELIVER (données, médias, forecast, tests d'acceptation) | `reportingAddendum` | `domain/report-boundary-policy.mjs` |
 | `report.mjs render` après DISTILL et DELIVER | `report` (lit les références d'abord, puis `renderReport`) | `report-boundaries.mjs` |
 | `report.mjs prepare / decide / record`, reprise à DONE | `ReportPublication` | `application/report-publication-service.mjs` |
+| Revue DELIVER (prose de `software-engineer-reviewer.md`) : préparer patch, liste des fichiers, commits et résultat `qg-verify`, lancer les lentilles, matrice de sévérité, escalade environnement, fichier de review | en mode `code` : `RunReview` (le reviewer agent reste le mode par défaut) | `application/pipeline/review/run-review.mjs`, `domain/pipeline/review/*` |
 | Appels MCP de publication (lecture, écriture, relecture) | **délégués** à un agent général via le port `ReportTransport` | `adapters/infrastructure/reporting/agent-report-transport.mjs` |
 
 Les sous-commandes de `state.mjs` que seule la prose utilisait (`init`, `select`,
@@ -163,6 +166,11 @@ Règle de dépendance ([ADR-002](adr/adr-002-hexagonal-architecture.md)), vérif
 | Application | `pipeline/observe-pipeline.mjs` | Cas d'usage `ObservePipeline` : la vue d'un pipeline, en lecture seule |
 | Domaine | `pipeline/run-journal-policy.mjs`, `pipeline/pipeline-view-policy.mjs` | Le journal d'un run ; la vue (statut de chaque phase, tentatives, reviews, question, rapports) |
 | Application | `structural-scan-service.mjs`, `evidence-verification-service.mjs`, `report-publication-service.mjs` | Services en process, partagés avec les commandes |
+| Domaine | `pipeline/review/review-lenses.mjs` | Mode de revue ; lentilles d'une phase et leurs entrées ; déclencheurs des lentilles conditionnelles ; chemins des entrées préparées |
+| Domaine | `pipeline/review/lens-brief.mjs` | Le prompt d'une lentille : ses entrées, rien d'autre, et le document attendu |
+| Domaine | `pipeline/review/lens-result.mjs` | Lecture et contrôle de la réponse d'une lentille ; lentille inconclusive |
+| Domaine | `pipeline/review/review-verdict-policy.mjs` | Matrice de sévérité, escalade environnement, dissidence, données du fichier de review |
+| Application | `pipeline/review/run-review.mjs` | Cas d'usage `RunReview` : la revue d'une phase en code |
 
 ---
 
@@ -179,7 +187,7 @@ Chaque contrat est décrit dans son fichier sous
 | `StateArchive` | `setAside(slug)` → `state.json.invalid.*` | `state/json-state-archive.mjs` | `state/file-state-store.mjs` | tableau |
 | `TrackingStore` | `exists`, `read`, `list`, `write`, `prefix(slug)` | `pipeline/fs-tracking-store.mjs` | `$.fs` (dans le mod) | `Map` |
 | `RepositoryReader` | `read(path)` → texte ou `null` | `pipeline/fs-repository-reader.mjs` | `$.fs` (dans le mod) | `Map` |
-| `SourceControl` | `headSha`, `parentOf`, `filesOf`, `commit`, `range`, `show`, `listRecent`, `currentBranch`, `remoteUrl` | `git/git-source-control.mjs` + `git/node-git-runner.mjs` | le même + `git/process-git-runner.mjs` sur `$.process.run` | dépôt simulé |
+| `SourceControl` | `headSha`, `parentOf`, `filesOf`, `commit`, `range`, `show`, `diff`, `changedFiles`, `listRecent`, `currentBranch`, `remoteUrl` | `git/git-source-control.mjs` + `git/node-git-runner.mjs` | le même + `git/process-git-runner.mjs` sur `$.process.run` | dépôt simulé |
 | `SourceTree` | `listFiles()`, `readSource(path, maxBytes)` | `source-tree/node-source-tree.mjs` | `source-tree/git-source-tree.mjs` sur `$.fs.stat/read` | liste fixe |
 | `Hasher` | `sha256(text)`, `sha256Sync(text)` | `web-crypto-hasher.mjs` | le même | `node:crypto` |
 | `TemplateReader` | `read(pluginRelativePath)` | `templates/node-template-reader.mjs` | `$.fs` sous `$.plugin.root` | fichier réel |
@@ -484,6 +492,38 @@ copie de travail de la session (`session.workingDirectory`), pas celle du proces
 Attention : `SKRAFT_TRACKING_ROOT` (chemin absolu) partage le dossier de suivi, donc le
 pointeur, entre tous les worktrees ; ne le fixez pas si vous en lancez plusieurs.
 
+### 6.8 La revue DELIVER en code (`RunReview`)
+
+Le mode de revue se choisit par hôte : `SKRAFT_REVIEW_MODE=code` dans l'environnement du mod
+Claude Code ou de la CLI Copilot, ou `reviewMode: "code"` dans les `args` du workflow
+`skraft-pipeline`. Sans réglage, rien ne change : le reviewer agent de la phase écrit la review.
+
+En mode `code`, l'étape reviewer de DELIVER garde sa place (même contrôle d'ordre G1) mais
+n'envoie plus `Skraft - Software Engineer Reviewer`. `RunReview` :
+
+1. **prépare** ce que les lentilles lisent, à côté de la review : `qg-verify-{story}.json` (le
+   résultat de la vérification des preuves que le pipeline vient de faire), `commits-{story}.txt`,
+   `diff-{story}.patch` et `files-{story}.txt` depuis le `baseSha` de DELIVER ;
+2. **planifie** les lentilles (`review-lenses.mjs`) : les quatre lentilles de base
+   (`quality-gates`, `architecture-boundaries`, `test-integrity`, `cold-reader`), plus
+   `mock-fidelity` et `contract-fidelity` quand un chemin modifié ou une ligne ajoutée du patch
+   les déclenche ;
+3. **lance** chaque lentille avec ses seules entrées (`cold-reader` : le patch et la liste,
+   rien du producteur). Une réponse qui n'est pas le document `{ lens, verdict, defects }`
+   est refusée une fois, avec la raison ; refusée deux fois, la lentille est `inconclusive` ;
+4. **décide** avec la matrice de sévérité (`review-verdict-policy.mjs`) : un blocker, un high,
+   un medium, une lentille `fail` ou `inconclusive` donnent `NEEDS_REWORK` ; seuls des `low`
+   ou des `pass` donnent `APPROVED`. `escalation: environment` quand toutes les raisons sont
+   des lentilles inconclusives dont chaque défaut est un `low` commençant par `environment:` ;
+5. **écrit** `reviews/{date}/deliver-review-{N}.md` avec le gabarit `review-verdict` :
+   `status`, `lens_results`, `dissent_analysis`, `summary`, `reviewed_sha`, `escalation`.
+
+La suite ne change pas : `readReviewOutcome`, `stepAfterReview`, le budget de retries et la
+phase gate lisent ce fichier comme celui d'un reviewer. Une lentille absente de l'hôte arrête
+le run (`blocked`), comme un agent de phase absent. Chaque lentille est journalisée avec le
+rôle `lens`, sa durée et son coût. Les lentilles tournent l'une après l'autre ; le parallèle
+viendra avec `AgentRunner.runMany`.
+
 ## 7. Cohabitation avec les settings hooks
 
 Restent dans `hooks/hooks.json` : la **provenance** des dispatchs, **G7/G8** (session guard :
@@ -507,6 +547,7 @@ pipeline contre lequel le session guard juge les écritures. Le journal d'audit 
 | `{tracking}/{slug}/details/{date}/structural-scan.json` | `StructuralScan` | avant le premier passage de l'architecte |
 | `{tracking}/{slug}/reviews/{date}/{phase}-review-{N}.md` | le reviewer | `{N}` = reviews déjà enregistrées + 1 |
 | `{tracking}/{slug}/reviews/{date}/manual-close.md` | `CloseManually` | clôture manuelle |
+| `{tracking}/{slug}/reviews/{date}/{qg-verify-{story}.json, commits-{story}.txt, diff-{story}.patch, files-{story}.txt}` | `RunReview` | avant les lentilles, en mode de revue `code` |
 | `{tracking}/{slug}/decisions/{clé}.json` | `DecisionStore` | à chaque réponse humaine |
 | `{tracking}/{slug}/reporting/{date}/{forecast,outcome}-data.json` | le designer, l'ingénieur | à leur dispatch |
 | `{tracking}/{slug}/reporting/{date}/distill-handoff.md` | `ReportBoundaries` | après le designer |
@@ -526,6 +567,7 @@ pipeline contre lequel le session guard juge les écritures. Le journal d'audit 
 | Recovery | `pipeline-recovery.use-case.test.mjs` | états corrompus, invalides, sans budget, reconstruits |
 | Reporting | `reporting.use-case.test.mjs` | consentement, addendum, rendu, GitHub simulé, reprise |
 | Clôture manuelle | `close-manually.use-case.test.mjs` | rejet puis clôture, commits non conventionnels |
+| Revue en code | `run-review.use-case.test.mjs`, `review-policies.unit.test.mjs` | lentilles simulées : verdicts, réponse refusée puis acceptée, lentille inconclusive, escalade environnement, lentille absente, lentille conditionnelle ; matrice et lecture des réponses |
 | Règles du domaine | `pipeline-policies.unit.test.mjs`, `pipeline-domain.unit.test.mjs` | fonctions pures |
 | Adaptateurs pilotés | `pipeline-adapters.unit.test.mjs`, `quality-gates/git-source-control.unit.test.mjs` | vrais dépôts git, dossiers temporaires, `ctx` simulé |
 | Workflow Copilot de bout en bout | `copilot-workflow-adapter.integration.test.mjs` | vrai dépôt, consentement, ADR, forecast, preuves, hooks, clôture |

@@ -27,6 +27,7 @@ import {
   RATIFICATION_OPTIONS,
   interpretRatification,
 } from '../../domain/pipeline/adr-ratification-policy.mjs'
+import { hasCodeReview, reviewModeOf } from '../../domain/pipeline/review/review-lenses.mjs'
 import { verifyEvidenceLog } from '../evidence-verification-service.mjs'
 import { createStructuralScan } from '../structural-scan-service.mjs'
 import { createRecoveryService } from '../recovery-service.mjs'
@@ -35,6 +36,7 @@ import { createPipelineRecovery } from './recover-pipeline.mjs'
 import { createPipelineStateService } from './pipeline-state.mjs'
 import { createReportBoundaries } from './report-boundaries.mjs'
 import { createRunJournal } from './run-journal.mjs'
+import { createRunReview } from './review/run-review.mjs'
 
 // Use case RunPipeline (ports/api/run-pipeline.mjs): the SKRAFT orchestrator as code,
 // the same for every host. It sequences RESEARCH → DESIGN → DISTILL → DELIVER, runs each
@@ -62,6 +64,9 @@ import { createRunJournal } from './run-journal.mjs'
 //   progress                   phase and log lines for the person watching (also kept in
 //                              {slug}/run.json by the run journal, with the open question)
 //   time                       TimeProvider
+// and `reviewMode` ('agent' by default): 'code' runs the review of a phase that has one in
+// code (RunReview: lenses dispatched by the pipeline, verdict and review file by the code)
+// instead of dispatching the phase reviewer agent. DELIVER only for now.
 // The G1–G11 evidence check of DELIVER and the structural scan DESIGN reads run in
 // process (EvidenceVerification, StructuralScan): no command line, no child process.
 // plus `config`, the published skraft-framework.config.json (ADR-005).
@@ -94,6 +99,8 @@ export const createRunPipeline = (deps) => {
   const agentRunner = journal.observeAgents(deps.agentRunner)
   const reportTransport = deps.reportTransportOf ? deps.reportTransportOf(agentRunner) : deps.reportTransport
   const structuralScan = createStructuralScan({ sourceTree, sourceControl, time })
+  const reviewMode = reviewModeOf(deps.reviewMode)
+  const codeReview = createRunReview({ trackingStore, sourceControl, agentRunner, templateReader: deps.templateReader, progress })
   const today = () => time.isoString().slice(0, 10)
   const now = () => time.isoString()
 
@@ -127,11 +134,15 @@ export const createRunPipeline = (deps) => {
   // Before every dispatch, the two checks the settings hooks used to make (G1, G9) run
   // here, on the state the code itself wrote: the agent belongs to the open phase, in
   // order, and the prompt names every input an earlier phase recorded.
-  const dispatch = async (slug, story, state, agent, { outputs = [], addenda = [], label }) => {
+  const checkOrder = (state, agent) => {
     const projected = projectDispatchState(state)
     if (!projected.ok) throw blocked(state.currentPhase, `cannot dispatch ${agent}: ${projected.error.reason}`)
     const order = evaluateDispatch(agent, projected.value, config)
     if (!order.ok) throw blocked(state.currentPhase, `dispatch order (G1): ${order.error.reason}`)
+  }
+
+  const dispatch = async (slug, story, state, agent, { outputs = [], addenda = [], label }) => {
+    checkOrder(state, agent)
     const handoff = buildHandoff({ agent, state, config })
     if (!handoff.ok) throw blocked(state.currentPhase, `cannot hand off to ${agent}: ${handoff.error.reason}`)
     // DISTILL and DELIVER specialists get the reporting addendum on every dispatch, rework included.
@@ -274,7 +285,7 @@ export const createRunPipeline = (deps) => {
     }
     progress.log(`qg-verify ${evidenceLog}: ${verified.verdict}`)
     await journal.recordVerification({ evidenceLog, verdict: verified.verdict, findings: verified.findings })
-    return { outcome: verified.verdict, findings: JSON.stringify(verified.findings, null, 2) }
+    return { outcome: verified.verdict, findings: JSON.stringify(verified.findings, null, 2), verified }
   }
 
   // ── One phase ───────────────────────────────────────────────────────────────
@@ -295,6 +306,7 @@ export const createRunPipeline = (deps) => {
       maxAttempts: (entry.userPreferences?.maxRetriesPerPhase ?? 2) + 1,
     })
     let reviewerRedispatched = false
+    let verification = null
     let environmentOccurrence = 0
 
     for (let guard = 0; guard < MAX_STEPS_PER_PHASE; guard += 1) {
@@ -371,7 +383,9 @@ export const createRunPipeline = (deps) => {
             break
           }
           if (phase === 'DELIVER') {
-            const gateStep = stepAfterQualityGates(await verifyQualityGates(slug, after))
+            const gates = await verifyQualityGates(slug, after)
+            verification = gates.verified ?? null
+            const gateStep = stepAfterQualityGates(gates)
             if (gateStep) {
               if (gateStep.kind === 'retry') await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: 'CHANGES_REQUESTED' })
               step = gateStep
@@ -389,12 +403,25 @@ export const createRunPipeline = (deps) => {
 
         case 'reviewer': {
           const reviewPath = reviewOutputPath({ phase, date: today(), recordedReviews })
-          await dispatch(slug, story, state, reviewer, {
-            label: `${phase}:reviewer:${recordedReviews + 1}${reviewerRedispatched ? ':again' : ''}`,
-            outputs: [reviewPath],
-          })
+          const inCode = reviewMode === 'code' && hasCodeReview(phase)
+          if (inCode) {
+            // The review takes the reviewer's slot in the phase: same order check (G1).
+            checkOrder(state, reviewer)
+            const reviewed = await codeReview.review({
+              slug, story, state, phase, reviewPath, date: today(),
+              label: `${phase}:review:${recordedReviews + 1}`,
+              verification: verification ?? (phase === 'DELIVER' ? (await verifyQualityGates(slug, state)).verified ?? null : null),
+            })
+            if (!reviewed.ok) throw blocked(phase, reviewed.error.reason)
+          } else {
+            await dispatch(slug, story, state, reviewer, {
+              label: `${phase}:reviewer:${recordedReviews + 1}${reviewerRedispatched ? ':again' : ''}`,
+              outputs: [reviewPath],
+            })
+          }
           const content = await readTracked(slug, reviewPath)
           if (content === null) {
+            if (inCode) throw blocked(phase, `the review could not be read back at ${reviewPath}`)
             if (reviewerRedispatched) throw blocked(phase, `${reviewer} wrote no review at ${reviewPath}`)
             reviewerRedispatched = true
             break
@@ -402,7 +429,7 @@ export const createRunPipeline = (deps) => {
           reviewerRedispatched = false
           await apply(slug, { type: 'RECORD_REVIEW_ARTIFACT', phase, path: reviewPath })
           const outcome = readReviewOutcome(content)
-          progress.log(`${reviewer}: ${outcome.verdict ?? 'no verdict'}${outcome.escalation ? ` (escalation: ${outcome.escalation})` : ''}`)
+          progress.log(`${inCode ? 'review (code)' : reviewer}: ${outcome.verdict ?? 'no verdict'}${outcome.escalation ? ` (escalation: ${outcome.escalation})` : ''}`)
           const next = stepAfterReview(outcome)
           if (!next.step) throw blocked(phase, `${reviewPath} carries no parseable verdict`)
           await apply(slug, { type: 'RECORD_VERDICT', phase, verdict: next.stateVerdict })

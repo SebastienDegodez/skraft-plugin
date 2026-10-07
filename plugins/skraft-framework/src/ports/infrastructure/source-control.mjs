@@ -8,6 +8,8 @@
 //   commit(sha)           => Promise<{ exists, subject?, message?, files? }>
 //   range(base, rev)      => Promise<string[]>           rev-list base..rev, no merges
 //   show(sha, path)       => Promise<string | null>      file content at a revision
+//   diff(base, rev)       => Promise<string | null>      git diff base..rev (the patch a review reads)
+//   changedFiles(base, rev) => Promise<string | null>    git diff --name-status base..rev
 //   listRecent(count)     => Promise<Array<{ sha, subject }>>   newest first
 //   currentBranch()       => Promise<string | null>      short name; null when detached
 //   remoteUrl()           => Promise<string | null>      URL of the `origin` remote
