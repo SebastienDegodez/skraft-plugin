@@ -73,21 +73,19 @@ eligibility.Check(driverHistory, riskScore, requestedAt)
 
 ---
 
-## V-DDD-04: Repository Defined in Domain Layer
+## V-DDD-04: Repository Layer Diverges From Its ADR
 
 **ID:** V-DDD-04
 **Severity:** BLOCKER
 
-**Description:** A repository interface is defined in the Domain layer rather than in the Application layer.
+**Description:** A repository interface sits in a layer other than the one its aggregate's ADR records, or the ADR records no layer.
 
 **How to detect in artefacts:**
-- Contracts list `IEligibilityRepository` under Domain layer (not Application)
-- Diagram shows an arrow from Domain to a repository interface that is positioned outside the Application layer
-- ADR does not address where application interfaces are defined
+- Contracts list `IEligibilityRepository` under Domain while the ADR records Application, or the reverse
+- A repository for a CRUD entity without invariants is listed under Domain
+- No ADR records where the aggregate's repository is defined
 
-**Severity:** BLOCKER — the Domain layer must have zero external dependencies. If a repository interface is in Domain, the Domain layer is coupled to the Application layer's abstraction, and the domain cannot be tested in isolation.
-
-**Correct approach:** Repository interfaces belong in the Application layer. The Domain layer knows nothing about persistence — it raises events and enforces invariants. The Application layer defines the contract for fetching and saving aggregates.
+**Correct approach:** Repository interfaces live in Domain when it persists an aggregate, Application for a CRUD entity or a read model — never Infrastructure. Record the layer in the aggregate's ADR and list the interface under that layer in contracts and diagrams.
 
 ---
 

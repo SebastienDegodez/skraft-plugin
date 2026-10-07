@@ -80,6 +80,7 @@ stimuli:
             - bdd-methodology
             - test-design-mandates
             - outside-in-tdd
+            - clean-architecture-testing
       - type: output-not-matches
         name: No mandatory skill is reported as unavailable
         config:

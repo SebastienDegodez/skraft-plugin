@@ -78,8 +78,8 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 4. Flag any `@visual` scenario whose only planned coverage is a unit/jsdom test
 
 **Checking G10:**
-1. List every client-side consumer (hook/adapter) named in `impl-plan-{story}.md` and the port it wraps.
-2. Scan sibling `impl-plan-*.md` files (other stories in the same or prior milestones) for a consumer wrapping a comparable port (same shape class: list query, single-item query, command with optimistic update, ...).
+1. List every client-side consumer (hook or client wrapper) named in `impl-plan-{story}.md` and the interface it wraps.
+2. Scan sibling `impl-plan-*.md` files (other stories in the same or prior milestones) for a consumer wrapping a comparable interface (same shape class: list query, single-item query, command with optimistic update, ...).
 3. When a comparable prior consumer exists, confirm `impl-plan-{story}.md` names it and states either "same convention as `{prior}`" or cites the `contracts-{story}.md` divergence note.
 4. No comparable prior consumer in scope → gate is vacuously satisfied (nothing to compare against).
 5. A named prior consumer with no convention statement, or a silent state-shape difference undetected by the plan → G10 HIGH fail.

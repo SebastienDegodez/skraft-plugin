@@ -161,7 +161,7 @@ Apply the decision heuristic: "Does knowing the history of state changes provide
 
 **Name:** Leaky Abstraction
 
-**Problem:** The Application layer interface (repository, gateway) exposes infrastructure-specific types. `IEligibilityRepository` returns `IQueryable<EligibilityEntity>` or accepts `Expression<Func<Eligibility, bool>>` predicates.
+**Problem:** An inner-layer interface (repository, gateway) exposes infrastructure-specific types. `IEligibilityRepository` returns `IQueryable<EligibilityEntity>` or accepts `Expression<Func<Eligibility, bool>>` predicates.
 
 **Why it happens:**
 - The repository interface was generated from an ORM or copied from an Infrastructure-first codebase
