@@ -12,26 +12,31 @@ const TRACKING = '/repo/tracking'
 
 // Hand-written filesystem double: a flat map of files, directory listings derived from
 // it, every call recorded, and per-operation failures injectable.
+// The service joins paths with node:path (backslashes on Windows); the double keys them
+// with '/' whatever the OS.
+const slash = (path) => path.replace(/\\/g, '/')
 const fakeFs = (files, failures = {}) => {
   const store = new Map(Object.entries(files))
   const calls = []
   const fail = (op, path) => {
     const f = failures[op]
-    if (f && (f === true || f === path)) throw new Error(`${op} boom`)
+    if (f && (f === true || slash(f) === path)) throw new Error(`${op} boom`)
   }
   return {
     calls,
     store,
-    exists: async (path) => { calls.push(['exists', path]); return store.has(path) },
-    readFile: async (path) => {
+    exists: async (raw) => { const path = slash(raw); calls.push(['exists', path]); return store.has(path) },
+    readFile: async (raw) => {
+      const path = slash(raw)
       calls.push(['readFile', path])
       fail('readFile', path)
       if (!store.has(path)) throw new Error(`ENOENT ${path}`)
       const v = store.get(path)
       return typeof v === 'string' ? v : v.content
     },
-    writeFile: async (path, content) => { calls.push(['writeFile', path, content]); store.set(path, content) },
-    listDir: async (dir) => {
+    writeFile: async (raw, content) => { const path = slash(raw); calls.push(['writeFile', path, content]); store.set(path, content) },
+    listDir: async (raw) => {
+      const dir = slash(raw)
       calls.push(['listDir', dir])
       fail('listDir', dir)
       const prefix = `${dir}/`
@@ -39,13 +44,14 @@ const fakeFs = (files, failures = {}) => {
       for (const key of store.keys()) if (key.startsWith(prefix)) names.add(key.slice(prefix.length).split('/')[0])
       return [...names]
     },
-    stat: async (path) => {
+    stat: async (raw) => {
+      const path = slash(raw)
       calls.push(['stat', path])
       fail('stat', path)
       const v = store.get(path)
       return { mtimeMs: v.mtimeMs }
     },
-    remove: async (path) => { calls.push(['remove', path]); fail('remove', path); store.delete(path) },
+    remove: async (raw) => { const path = slash(raw); calls.push(['remove', path]); fail('remove', path); store.delete(path) },
   }
 }
 

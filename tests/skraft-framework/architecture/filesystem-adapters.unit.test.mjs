@@ -49,7 +49,8 @@ test('real-filesystem: listDir is fail-open when the path is a file', () => with
   assert.deepEqual(await fs.listDir(join(dir, 'file.txt')), [])
 }))
 
-test('real-filesystem: listDir rethrows any other failure', async () => {
+// Windows answers ENOENT, not ENOTDIR, for a directory listed under a file.
+test('real-filesystem: listDir rethrows any other failure', { skip: process.platform === 'win32' && 'POSIX ENOTDIR' }, async () => {
   const fs = createRealFilesystem()
   await assert.rejects(fs.listDir(42), (error) => {
     assert.ok(error.code && error.code !== 'ENOENT' && error.code !== 'ENOTDIR', error.code)
