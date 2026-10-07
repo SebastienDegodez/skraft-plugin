@@ -40,6 +40,7 @@ tests/agents/<suite>/eval.yaml     # which agent to dispatch, and what must hold
 eng/
   run-vally-evals.sh               # local runner: two isolated runs + comparison
   detect-changed-skills.mjs        # PR diff        → changed skill / suite name(s)
+  plan-eval-matrix.mjs             # PR diff or catalogue → CI matrix, one cell per subject
   build-pr-comment.mjs             # results.json*  → PR comment markdown
   check-pr-regressions.mjs         # results.json*  → non-zero exit on a regression
   catalog/scan.mjs                 # source tree  → artifacts/catalog/report.json
@@ -68,10 +69,12 @@ permission:
 | Job | Runs on | Blocking | Calls a model |
 | --- | --- | --- | --- |
 | `lint` | every pull request touching skills, specs or `eng/` | yes | no |
-| `evaluate-pr` | every pull request that changed a skill or an agent suite (same repo, not a fork) | only on a skill regression | yes |
+| `plan` | every same-repo pull request, schedule and dispatch — lists the subjects to evaluate, skip list applied | no | no |
+| `evaluate-subject` | one runner per planned subject, all in parallel (at most 8 at once) | a skill cell that errors fails; an agent cell never does | yes |
+| `evaluate-pr` | after the cells of a pull request — merges their evidence, updates the PR comment | only on a skill regression | no |
 | `publish-pr` | after a PR evaluation produced evidence | yes, if verdicts and trajectories cannot be published together | no |
 | `cleanup-pr-replay` | when a pull request closes | no | no |
-| `evaluate` | schedule (Monday 03:00 UTC) and manual dispatch | no | yes |
+| `publish` | after the cells of a scheduled or dispatched run — publishes to `dashboard-data` | no | no |
 
 The `lint` job runs the dashboard tooling tests, scans the catalogue, lints every
 eval spec with `--strict`, and plans the experiment with `--dry-run`. That last
@@ -95,8 +98,12 @@ waiting for the next scheduled dashboard run:
    re-runs every suite, because no path links a descriptor to the suites that
    exercise it. Only what the PR touched is evaluated — never the whole
    catalogue, so the job's model cost scales with the PR, not the repo.
-2. `eng/run-vally-evals.sh` runs baseline-vs-skilled for each changed skill, and
-   each changed agent suite once. **No job sets `RUNS`**: each spec budgets its
+2. `eng/plan-eval-matrix.mjs` turns that list into a matrix — leaving out
+   whatever `skip-evals.txt` parks, before any runner starts — and
+   `evaluate-subject` gives every subject its own runner, so the subjects run
+   side by side rather than one after another. On each runner,
+   `eng/run-vally-evals.sh` runs baseline-vs-skilled for a skill — both arms at
+   the same time (`ARMS_PARALLEL=1`) — or an agent suite once. **No job sets `RUNS`**: each spec budgets its
    own trials through `defaults.runs`, so the pre-merge run is exactly as deep as
    the spec asks. `eng/lib/verdict.mjs` needs at least `MIN_CREDIBLE_TRIALS = 5`
    trials before it calls a skill verdict `pass` or `regression`, so a spec with
@@ -104,9 +111,13 @@ waiting for the next scheduled dashboard run:
    underpowered, not the runner. Raise `defaults.runs` in the spec to fix it.
 3. `eng/build-pr-comment.mjs` renders every produced verdict as a markdown table
    — skills with score, sign test and quality/efficiency deltas; agents with
-   their conformance tally — and the workflow posts it as a **new comment on the
-   PR** — always a fresh comment, not an edited one, so the comment history
-   doubles as a run history.
+   their conformance tally — and the workflow keeps **one comment on the PR up to
+   date**: a hidden `<!-- skraft:skill-evaluation -->` marker finds it again, and
+   each evaluation replaces its body, stamped with the commit it evaluated. A
+   comment posted before the marker existed is adopted rather than duplicated.
+   Each run also writes the same table to its own run summary, so earlier
+   verdicts stay reachable from the Actions history. A new push cancels a PR
+   evaluation still in progress: its verdict would describe a stale commit.
 4. `eng/check-pr-regressions.mjs` fails the job only when a **skill** verdict is a
    credible `regression`. `inconclusive`, `no-improvement`, `flaky`, and `pass` never
    block merge — the gate exists to catch a proven regression, not to demand
@@ -281,7 +292,7 @@ directory the dashboard publishes. A pilot answers *does this move anything at
 all*, not *does this skill pass*: it has neither the stimuli nor the pairs for a
 verdict, and its tally must never be reported as one.
 
-`PARALLEL`, `RUNS`, `WORKERS`, `MODEL`, `JUDGE_MODEL` and `RESULTS_DIR` tune the
+`PARALLEL`, `ARMS_PARALLEL`, `RUNS`, `WORKERS`, `MODEL`, `JUDGE_MODEL` and `RESULTS_DIR` tune the
 run; `eng/vally-adapter/skip-evals.txt`, when present, lists eval directories to
 leave out. Each eval keeps its own `eval-results/<skill>/eval.log`.
 

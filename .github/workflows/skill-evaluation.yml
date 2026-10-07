@@ -4,14 +4,17 @@ name: Skill evaluation
 #
 #   lint        — on every pull request. Structural checks only, no model is
 #                 called, so it never consumes Copilot quota.
-#   evaluate-pr — on every pull request that changed a skill or an agent suite.
-#                 Evaluates only what the PR touched and posts the verdict as a
-#                 PR comment; blocks merge only on a credible skill regression.
-#                 Skipped for fork PRs (no secrets available there anyway).
+#   plan        — lists the subjects to evaluate: what a PR changed, or every
+#                 spec on a schedule. Skipped for fork PRs (no secrets there).
+#   evaluate-subject — one runner per subject, all in parallel, each running
+#                 its baseline and skilled arms side by side.
+#   evaluate-pr — gathers the PR's cells, keeps ONE verdict comment on the PR
+#                 up to date, and blocks merge only on a credible skill
+#                 regression.
 #   A companion workflow publishes complete PR verdicts and trajectories from
 #   trusted default-branch code, then removes trajectories when the PR closes.
-#   evaluate    — scheduled or dispatched. Runs every skill twice (baseline vs
-#                 skilled), runs every agent suite once, judges the pairs, and
+#   publish     — scheduled or dispatched. Gathers the cells (every skill run
+#                 twice, baseline vs skilled; every agent suite once) and
 #                 publishes verdicts and recorded agent sessions to the
 #                 `dashboard-data` branch.
 #   compare-*   — dispatched with `models`. Runs the same skill(s) once per
@@ -59,7 +62,11 @@ permissions:
 
 concurrency:
   group: skill-evaluation-${{ github.ref }}
-  cancel-in-progress: false
+  # A new push makes a running PR evaluation stale: its verdict would describe a
+  # commit nobody will merge. Cancel it instead of queueing the fresh run behind
+  # up to 150 minutes of obsolete work. Scheduled and dispatched runs are never
+  # cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   VALLY_PACKAGE: '@microsoft/vally-cli@0.12.0'
@@ -158,158 +165,274 @@ jobs:
             echo "::endgroup::"
           done
 
-  evaluate-pr:
-    name: Pre-merge evaluation (changed skills and agent suites only)
+  # ── One runner per subject ──────────────────────────────────────────────────
+  # PR, scheduled and dispatched runs share the same three steps: plan which
+  # subjects to run, evaluate each one on its own runner, then gather every
+  # cell's evidence in one job that alone posts or publishes it. Running the
+  # cells side by side is what turns "sum of every eval" into "longest eval":
+  # a PR touching three skills used to wait for three skill evals in a row.
+
+  plan:
+    name: Plan the evaluation matrix
     # Fork PRs have no access to COPILOT_GITHUB_TOKEN, so skip rather than fail.
-    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
-    # A spec the linter rejects still runs, and still bills an hour of live model
-    # time, to produce a verdict about an instrument that was never wired. The
-    # `rubric` under `graders[].config` was exactly that: silently ignored by
-    # Vally, silently replaced by its default rubric, and only caught by a lint
-    # job that finished forty minutes before the evaluation it should have
-    # stopped. Gate the spend on the static check.
-    needs: lint
+    # A dispatch that names models wants the comparison below, not this path.
+    if: >-
+      (github.event_name == 'pull_request' && github.event.action != 'closed'
+        && github.event.pull_request.head.repo.full_name == github.repository)
+      || (github.event_name != 'pull_request' && inputs.models == '')
     runs-on: ubuntu-latest
-    timeout-minutes: 150
-    # Ordinary runs resolve MODEL from each eval spec. Keeping it explicitly
-    # blank here prevents a workflow-level default from overriding every spec.
-    env:
-      MODEL: ''
     permissions:
       contents: read
-      pull-requests: write
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          fetch-depth: 0
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
 
-      - name: Detect which skill(s) this PR changed
-        id: changed
+      # The skip list is applied here, so a parked suite never costs a runner.
+      - name: List the subjects to evaluate
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          # Read from the environment, never interpolated into the shell.
+          SKILL: ${{ inputs.skill }}
         run: |
           set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            node eng/plan-eval-matrix.mjs --base "$BASE" --head "$HEAD" > matrix.json
+          elif [ -n "${SKILL:-}" ]; then
+            node eng/plan-eval-matrix.mjs --subject "$SKILL" > matrix.json
+          else
+            node eng/plan-eval-matrix.mjs --all > matrix.json
+          fi
+          count=$(node -p 'require("./matrix.json").include.length')
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
           {
-            echo 'skills<<PR_SKILLS_EOF'
-            node eng/detect-changed-skills.mjs --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}"
-            echo 'PR_SKILLS_EOF'
-          } >> "$GITHUB_OUTPUT"
+            echo "## Evaluation plan — $count subject(s)"
+            echo
+            node -e 'for (const { kind, name } of require("./matrix.json").include) console.log(`- ${kind}: \`${name}\``)'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Detect which agent suite(s) this PR changed
-        id: changed-agents
-        run: |
-          set -euo pipefail
-          {
-            echo 'suites<<PR_SUITES_EOF'
-            node eng/detect-changed-skills.mjs --kind agents --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}"
-            echo 'PR_SUITES_EOF'
-          } >> "$GITHUB_OUTPUT"
+  evaluate-subject:
+    name: Evaluate ${{ matrix.kind }} · ${{ matrix.name }}
+    # A spec the linter rejects still runs, and still bills an hour of live model
+    # time, to produce a verdict about an instrument that was never wired. The
+    # `rubric` under `graders[].config` was exactly that: silently ignored by
+    # Vally, silently replaced by its default rubric, and only caught by a lint
+    # job that finished forty minutes before the evaluation it should have
+    # stopped. Gate the spend on the static check. `plan` runs beside `lint`, so
+    # waiting on both costs nothing extra.
+    needs: [lint, plan]
+    if: needs.plan.outputs.count != '0'
+    runs-on: ubuntu-latest
+    # Each spec budgets its own trials, so the wall clock follows the spec, not
+    # a flat one-trial-per-stimulus floor.
+    timeout-minutes: 150
+    # Ordinary runs resolve MODEL from each eval spec. Keeping it explicitly
+    # blank here prevents a workflow-level default from overriding every spec.
+    # Only compare-models below is allowed to force MODEL.
+    env:
+      MODEL: ''
+    permissions:
+      contents: read
+    strategy:
+      # One subject erroring must not cancel the subjects that would have
+      # produced evidence; the aggregation job reports every cell.
+      fail-fast: false
+      # Every cell runs two arms × WORKERS agent sessions at once against the
+      # same Copilot token. Cap the fan-out so a PR that touches every agent
+      # descriptor does not trade wall clock for rate-limit retries.
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
 
       # The Spring Boot fixtures run `mvn verify` at setup and compile for Java 21;
-      # the runner image's default JDK is not guaranteed to be 21.
+      # the runner image's default JDK is not guaranteed to be 21. Caching the
+      # local Maven repository spares every cell the same dependency download.
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
-        if: steps.changed.outputs.skills != ''
+        if: matrix.kind == 'skill'
         with:
           distribution: temurin
           java-version: '21'
+          cache: maven
+          cache-dependency-path: 'tests/skills/**/fixtures/**/pom.xml'
+
+      # No lockfile, so setup-node's own npm cache cannot be used. Keying on the
+      # three pins means a toolchain bump never restores a stale tree.
+      - name: Cache the npm download cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.npm
+          key: npm-eval-${{ runner.os }}-${{ hashFiles('package.json') }}-${{ env.VALLY_PACKAGE }}-${{ env.COPILOT_SDK_PACKAGE }}-${{ env.COPILOT_CLI_PACKAGE }}
+          restore-keys: |
+            npm-eval-${{ runner.os }}-
 
       # Skill and agent-suite executors drive a real agent through
       # @github/copilot-sdk, so the CLI, the SDK and Vally must share one
       # resolution root. See the `env` block for why that root is the project
       # tree and never the global prefix.
       - name: Install the evaluation toolchain
-        if: steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != ''
         run: |
-          npm install --no-save "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
+          npm install --no-save --prefer-offline --no-audit --no-fund \
+            "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
           echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
 
-      - name: Run each changed skill twice and judge the pair
-        if: steps.changed.outputs.skills != ''
+      - name: Run the ${{ matrix.kind }} evaluation
         env:
-          # See the `evaluate` job below for why this specific token is needed.
+          # A fine-grained PAT with the "Copilot Requests" account permission.
+          # The auto-generated GITHUB_TOKEN cannot reach Copilot. The runner
+          # re-exports it under every name Vally 0.12.0 and the spawned Copilot
+          # runtime read.
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          SKILLS: ${{ steps.changed.outputs.skills }}
-        run: |
-          set -euo pipefail
-          while IFS= read -r skill; do
-            [ -n "$skill" ] || continue
-            ./eng/run-vally-evals.sh "$skill"
-          done <<< "$SKILLS"
-
-      - name: Run each changed agent suite
-        if: steps.changed-agents.outputs.suites != ''
-        env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          SUITES: ${{ steps.changed-agents.outputs.suites }}
+          # `skills <name>` or `agents <name>`, built by eng/plan-eval-matrix.mjs.
+          RUNNER_ARGS: ${{ matrix.args }}
+          KIND: ${{ matrix.kind }}
+          NAME: ${{ matrix.name }}
         run: |
           set -uo pipefail
+          read -r -a args <<< "$RUNNER_ARGS"
+          ./eng/run-vally-evals.sh "${args[@]}"
+          status=$?
           # A suite scoring under its threshold makes the runner exit non-zero.
-          # Under `set -e` that aborted the loop at the first such suite and
-          # left every later suite unrun — one 79.9% reviewer suite silently
-          # cancelled twelve others, and skipped the skill regression gate
-          # below with it. Agent verdicts are advisory by contract, so record
-          # the failure and keep going; the comment reports every suite.
-          unrun=0
-          while IFS= read -r suite; do
-            [ -n "$suite" ] || continue
-            ./eng/run-vally-evals.sh agents "$suite" || {
-              unrun=$((unrun + 1))
-              echo "::warning::Agent suite $suite did not meet its threshold or errored; see the PR comment."
-            }
-          done <<< "$SUITES"
-          echo "$unrun suite(s) reported a non-zero exit."
+          # Agent verdicts are advisory by contract, so record it and let the
+          # comment report it; a skill cell that errors still fails.
+          if [ "$status" -ne 0 ] && [ "$KIND" = "agent" ]; then
+            echo "::warning::Agent suite $NAME did not meet its threshold or errored; see the evaluation report."
+            exit 0
+          fi
+          exit "$status"
 
+      - name: Upload this subject's evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ matrix.artifact }}
+          path: eval-results/
+          if-no-files-found: warn
+          # Only the aggregation job below reads it; the merged artifact is the
+          # one that is kept.
+          retention-days: 1
+          overwrite: true
+
+  evaluate-pr:
+    # Same job id and name as before the matrix split, so a required status
+    # check keeps pointing at the job that carries the regression gate.
+    name: Pre-merge evaluation (changed skills and agent suites only)
+    needs: [plan, evaluate-subject]
+    # Runs when a cell failed too: the cells that did finish are still evidence,
+    # and the comment must say which subject errored.
+    if: >-
+      !cancelled() && github.event_name == 'pull_request'
+      && needs.plan.result == 'success' && needs.plan.outputs.count != '0'
+      && needs.evaluate-subject.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+
+      # Every cell wrote eval-results/<subject>/, so merging them rebuilds the
+      # exact layout a single sequential run used to produce.
+      - name: Collect every subject
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: eval-part-*
+          path: eval-results
+          merge-multiple: true
+
+      # evaluation-evidence.yml looks for exactly this name to publish the PR's
+      # verdicts and trajectories from trusted code.
       - name: Upload trajectories
-        if: always() && (steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != '')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: eval-results-pr-${{ github.event.pull_request.number }}
           path: eval-results/
           if-no-files-found: warn
           retention-days: 3
+          overwrite: true
 
       - name: Build the PR comment
-        if: always() && (steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != '')
-        run: node eng/build-pr-comment.mjs --results-dir eval-results --out pr-comment.md
+        run: |
+          node eng/build-pr-comment.mjs --results-dir eval-results --out pr-comment.md
+          # The PR comment is replaced on every run; the run summary keeps this
+          # run's verdicts for anyone comparing pushes.
+          cat pr-comment.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Post the PR comment
-        if: always() && (steps.changed.outputs.skills != '' || steps.changed-agents.outputs.suites != '')
+      # One evaluation comment per PR, updated in place. A hidden marker finds
+      # it again; a comment posted before the marker existed is adopted rather
+      # than duplicated.
+      - name: Post or update the PR comment
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const fs = require('fs')
-            const body = fs.readFileSync('pr-comment.md', 'utf8')
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body,
+            const marker = '<!-- skraft:skill-evaluation -->'
+            const { owner, repo } = context.repo
+            const issue_number = context.issue.number
+            const sha = context.payload.pull_request.head.sha
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`
+            const body = [
+              marker,
+              fs.readFileSync('pr-comment.md', 'utf8').trimEnd(),
+              '',
+              `<sub>Evaluated at \`${sha.slice(0, 7)}\` · [workflow run](${runUrl}) · ${new Date().toISOString()} — ` +
+                'this comment is replaced by every new evaluation of this PR; each run summary keeps its own verdicts.</sub>',
+            ].join('\n')
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100,
             })
+            const fromThisWorkflow = (comment) => comment.user?.login === 'github-actions[bot]'
+            const tagged = comments.filter((comment) => fromThisWorkflow(comment) && comment.body?.includes(marker))
+            const legacy = comments.filter((comment) => fromThisWorkflow(comment) &&
+              /^## (Skill evaluation — baseline vs skilled|Agent conformance)/.test(comment.body ?? ''))
+            const target = (tagged.length ? tagged : legacy).at(-1)
+
+            if (target) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: target.id, body })
+              core.info(`Updated ${target.html_url}`)
+            } else {
+              const { data } = await github.rest.issues.createComment({ owner, repo, issue_number, body })
+              core.info(`Created ${data.html_url}`)
+            }
 
       - name: Fail on a regression
-        if: steps.changed.outputs.skills != ''
+        if: ${{ !cancelled() }}
         run: node eng/check-pr-regressions.mjs --results-dir eval-results
 
-  evaluate:
-    name: Skills versus baseline, agents against their suites
-    # A dispatch that names models wants the comparison below, not this job.
-    if: github.event_name != 'pull_request' && inputs.models == ''
-    # Same reason as evaluate-pr: no live spend on a spec the linter rejects.
-    needs: lint
+  publish:
+    name: Publish verdicts and sessions
+    needs: [plan, evaluate-subject]
+    # Runs even when a cell failed: the subjects that did finish are evidence.
+    if: >-
+      !cancelled() && github.event_name != 'pull_request'
+      && needs.plan.result == 'success' && needs.plan.outputs.count != '0'
+      && needs.evaluate-subject.result != 'skipped'
     runs-on: ubuntu-latest
-    # Each spec budgets its own trials, so the wall clock follows the specs, not
-    # a flat one-trial-per-stimulus floor.
-    timeout-minutes: 150
-    # Same invariant as evaluate-pr: ordinary runs use each spec's model. Only
-    # compare-models below is allowed to force MODEL.
-    env:
-      MODEL: ''
     permissions:
       contents: write
     # Shared with dashboard-data-compact.yml: a publication and a history
-    # compaction must never interleave on the evidence branch.
+    # compaction must never interleave on the evidence branch. Only this short
+    # job holds the lock now, not the hours of evaluation before it.
     concurrency:
       group: dashboard-data
       cancel-in-progress: false
@@ -320,44 +443,23 @@ jobs:
         with:
           node-version: '22'
 
-      # The Spring Boot fixtures run `mvn verify` at setup and compile for Java 21;
-      # the runner image's default JDK is not guaranteed to be 21.
-      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+      - name: Collect every subject
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          distribution: temurin
-          java-version: '21'
-
-      # The agent executor drives a real agent through @github/copilot-sdk, a
-      # devDependency: without it an agent suite cannot start at all. See the
-      # `env` block for why the toolchain goes in the project tree, not `-g`.
-      - name: Install the evaluation toolchain
-        run: |
-          npm install --no-save "$VALLY_PACKAGE" "$COPILOT_SDK_PACKAGE" "$COPILOT_CLI_PACKAGE"
-          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
-
-      - name: Run every eval and judge the pairs
-        env:
-          # A fine-grained PAT with the "Copilot Requests" account permission.
-          # The auto-generated GITHUB_TOKEN cannot reach Copilot. The runner
-          # re-exports it under every name Vally 0.12.0 and the spawned Copilot
-          # runtime read.
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          # Passed through the environment and quoted at the call site so a
-          # dispatch input can never be interpreted as shell.
-          SKILL: ${{ inputs.skill }}
-        run: ./eng/run-vally-evals.sh ${SKILL:+"$SKILL"}
+          pattern: eval-part-*
+          path: eval-results
+          merge-multiple: true
 
       - name: Upload trajectories
-        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: eval-results
           path: eval-results/
           if-no-files-found: warn
           retention-days: 14
+          overwrite: true
 
       - name: Publish verdicts and sessions to the data branch
-        if: always()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
