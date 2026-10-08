@@ -1,0 +1,328 @@
+name: quality-gates-python
+description: |
+  Verifies that mutation testing on a Python project is run and read against the
+  quality bar: 100% of the tested mutants killed in Domain and Application, on a
+  green suite only, with no exclusion, filter or unexplained suppression to buy
+  the score. The fixture is the layered payment-fastapi service with cosmic-ray
+  configs checked in; its Money rules are untested and the use case carries an
+  equivalent @final mutant. Probes (Sonnet through Claude Code, 2 runs per arm):
+  asked to reach the bar, the baseline killed the Money survivors but never
+  suppressed the equivalent mutant with a reason, and stopped once at 93%; on
+  the red suite it once reported a score from the failing run. With the skill
+  every grader passed. Deciders: reaching the bar and the red suite; the
+  verdict-only stimulus is close to a tie.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 5
+  # Pinned to Sonnet like the other Python spec, so verdicts stay comparable.
+  model: claude-sonnet-5.5
+scoring:
+  threshold: 1
+
+stimuli:
+  # Decider: the score must be judged against the bar, not reported as a number.
+  - name: 'Python project: does the business code meet the mutation bar'
+    prompt: |
+      Our business code (domain and application) has to be fully protected by its
+      tests. Run mutation testing on it and tell me whether it meets our bar. Do not
+      change the code or the tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files: &payment-files
+        - src: fixtures/payment-fastapi/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-fastapi/cosmic-ray-boundary.toml
+          dest: cosmic-ray-boundary.toml
+        - src: fixtures/payment-fastapi/cosmic-ray-core.toml
+          dest: cosmic-ray-core.toml
+        - src: fixtures/payment-fastapi/pyproject.toml
+          dest: pyproject.toml
+        - src: fixtures/payment-fastapi/src/payment/__init__.py
+          dest: src/payment/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/api/__init__.py
+          dest: src/payment/api/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/api/app.py
+          dest: src/payment/api/app.py
+        - src: fixtures/payment-fastapi/src/payment/api/composition.py
+          dest: src/payment/api/composition.py
+        - src: fixtures/payment-fastapi/src/payment/application/__init__.py
+          dest: src/payment/application/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/application/authorize_payment.py
+          dest: src/payment/application/authorize_payment.py
+        - src: fixtures/payment-fastapi/src/payment/application/payment_gateway.py
+          dest: src/payment/application/payment_gateway.py
+        - src: fixtures/payment-fastapi/src/payment/application/receipt_store.py
+          dest: src/payment/application/receipt_store.py
+        - src: fixtures/payment-fastapi/src/payment/domain/__init__.py
+          dest: src/payment/domain/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/domain/authorization_outcome.py
+          dest: src/payment/domain/authorization_outcome.py
+        - src: fixtures/payment-fastapi/src/payment/domain/money.py
+          dest: src/payment/domain/money.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/__init__.py
+          dest: src/payment/infrastructure/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/file_system_receipt_store.py
+          dest: src/payment/infrastructure/file_system_receipt_store.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/http_payment_gateway.py
+          dest: src/payment/infrastructure/http_payment_gateway.py
+        - src: fixtures/payment-fastapi/tests/__init__.py
+          dest: tests/__init__.py
+        - src: fixtures/payment-fastapi/tests/integration/__init__.py
+          dest: tests/integration/__init__.py
+        - src: fixtures/payment-fastapi/tests/integration/test_file_system_receipt_store.py
+          dest: tests/integration/test_file_system_receipt_store.py
+        - src: fixtures/payment-fastapi/tests/unit/__init__.py
+          dest: tests/unit/__init__.py
+        - src: fixtures/payment-fastapi/tests/unit/test_authorize_payment.py
+          dest: tests/unit/test_authorize_payment.py
+      commands:
+        - 'python3 -m venv .venv'
+        - '.venv/bin/pip install -q -e ".[dev]"'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "feat: payment authorization"'
+    graders:
+      - &tests-green
+        type: run-command
+        name: Every test in the project is green
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; .venv/bin/python -m pytest -q -p no:cacheprovider >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1
+          expected_exit_code: 0
+          timeout: 5m
+      - type: run-command
+        name: Sources, tests and mutation configs are unchanged
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import subprocess, sys
+              paths = ['src', 'tests', 'pyproject.toml', 'cosmic-ray-core.toml', 'cosmic-ray-boundary.toml']
+              changed = subprocess.run(['git', 'status', '--porcelain', '--', *paths], capture_output=True, text=True).stdout.strip()
+              if changed:
+                  print(changed); sys.exit(1)
+              print('sources, tests and mutation configs unchanged')
+          expected_exit_code: 0
+          timeout: 1m
+      - &judge
+        type: prompt
+        config:
+          scoring: scale_1_10
+      - &loaded
+        type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - quality-gates-python
+    rubric:
+      - Runs the mutation tests during the session and reports that domain and application fall short of a 100% killed score.
+      - Names the surviving mutants of Money (zero amount accepted, blank currency accepted, dataclass no longer frozen) as untested behaviour.
+      - Treats the surviving @final decorator removal as an equivalent mutant rather than a missing test.
+
+  # Decider: reaching the bar means killing real survivors, never excluding them.
+  - name: 'Python project: bring the business code to the mutation bar'
+    prompt: |
+      Before we merge, the mutation score of the domain and application code must
+      reach our bar. Do what is needed, then show me the final result.
+    constraints:
+      max_duration: 18m
+      max_agent_duration: 14m
+    environment:
+      files: *payment-files
+      commands:
+        - 'python3 -m venv .venv'
+        - '.venv/bin/pip install -q -e ".[dev]"'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "feat: payment authorization"'
+    graders:
+      - *tests-green
+      - type: run-command
+        name: The unit tests kill hand-made mutants of the Money rules
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import pathlib, subprocess, sys
+              money = pathlib.Path('src/payment/domain/money.py')
+              original = money.read_text(encoding='utf-8')
+              mutants = [
+                  ('an amount of zero is accepted', 'self.amount <= 0', 'self.amount < 0'),
+                  ('a blank currency is accepted', 'not self.currency or not self.currency.strip()', 'not self.currency and not self.currency.strip()'),
+                  ('Money is no longer frozen', '@dataclass(frozen=True)', '@dataclass(frozen=False)'),
+              ]
+              survivors = []
+              try:
+                  for label, before, after in mutants:
+                      if original.count(before) != 1:
+                          print(f'the validation rule was rewritten: {before!r} not found once in {money}'); sys.exit(1)
+                      money.write_text(original.replace(before, after), encoding='utf-8')
+                      run = subprocess.run(['.venv/bin/python', '-m', 'pytest', '-q', '-x', '-p', 'no:cacheprovider', 'tests/unit'], capture_output=True, text=True)
+                      if run.returncode == 0:
+                          survivors.append(label)
+              finally:
+                  money.write_text(original, encoding='utf-8')
+              if survivors:
+                  print('the unit tests still pass when ' + '; '.join(survivors)); sys.exit(1)
+              print('the unit tests kill every hand-made mutant of the Money rules')
+          expected_exit_code: 0
+          timeout: 3m
+      - type: diff-not-contains
+        name: The mutation configs are unchanged
+        config:
+          pattern: '(?m)^diff --git a/cosmic-ray-(core|boundary)\.toml '
+      - type: run-command
+        name: Every no-mutate or no-cover pragma names its reason
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import pathlib, re, sys
+              bad = []
+              for p in sorted(pathlib.Path('src').rglob('*.py')):
+                  for i, line in enumerate(p.read_text(encoding='utf-8').splitlines(), 1):
+                      if re.search(r'#.*pragma:.*no (mutate|cover)', line) and not re.search(r'#\s*pragma:\s*no mutate\s*(--|:|-)\s*\S.{8,}', line):
+                          bad.append(f'{p}:{i}: {line.strip()}')
+              if bad:
+                  print('\n'.join(bad)); sys.exit(1)
+              print('every suppression names its reason')
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: A fresh mutation run of domain and application kills every mutant
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import json, os, subprocess, sys, tempfile
+              py = '.venv/bin/python'
+              env = dict(os.environ, PATH=os.path.abspath('.venv/bin') + os.pathsep + os.environ.get('PATH', ''))
+              with tempfile.TemporaryDirectory() as tmp:
+                  session = os.path.join(tmp, 'core.sqlite')
+                  steps = [['-m', 'cosmic_ray.cli', 'baseline', 'cosmic-ray-core.toml'], ['-m', 'cosmic_ray.cli', 'init', 'cosmic-ray-core.toml', session],
+                           ['-m', 'cosmic_ray.tools.filters.pragma_no_mutate', session], ['-m', 'cosmic_ray.cli', 'exec', 'cosmic-ray-core.toml', session]]
+                  for step in steps:
+                      run = subprocess.run([py, *step], capture_output=True, text=True, env=env)
+                      if run.returncode != 0:
+                          print('cosmic-ray', step[2] if len(step) > 2 else step[1], 'failed:', (run.stderr or run.stdout)[-400:]); sys.exit(1)
+                  dump = subprocess.run([py, '-m', 'cosmic_ray.cli', 'dump', session], capture_output=True, text=True, env=env).stdout
+              survivors = []
+              for line in dump.splitlines():
+                  item, result = json.loads(line)
+                  if result is None or (result['worker_outcome'] == 'normal' and result['test_outcome'] == 'survived'):
+                      m = item['mutations'][0]
+                      survivors.append(f"{m['module_path']}:{m['start_pos'][0]} {m['operator_name']}")
+              if survivors:
+                  print('surviving core mutants:\n' + '\n'.join(survivors)); sys.exit(1)
+              print('every core mutant is killed or suppressed with a reason')
+          expected_exit_code: 0
+          timeout: 6m
+      - *judge
+      - *loaded
+    rubric:
+      - Adds unit tests for the Money rules (zero amount, blank currency, immutability) instead of changing or deleting the rules.
+      - Suppresses only the equivalent @final mutant, on its own line, with the reason it is equivalent.
+      - Shows a final mutation run of domain and application at 100% killed, without exclusions or lowered thresholds.
+
+  # Decider: a red suite makes every mutant look killed.
+  - name: 'Python project: mutation testing on a red suite'
+    prompt: |
+      Run mutation testing on the domain and application code and give me the
+      score.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: fixtures/payment-fastapi/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-fastapi/cosmic-ray-boundary.toml
+          dest: cosmic-ray-boundary.toml
+        - src: fixtures/payment-fastapi/cosmic-ray-core.toml
+          dest: cosmic-ray-core.toml
+        - src: fixtures/payment-fastapi/pyproject.toml
+          dest: pyproject.toml
+        - src: fixtures/payment-fastapi/src/payment/__init__.py
+          dest: src/payment/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/api/__init__.py
+          dest: src/payment/api/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/api/app.py
+          dest: src/payment/api/app.py
+        - src: fixtures/payment-fastapi/src/payment/api/composition.py
+          dest: src/payment/api/composition.py
+        - src: fixtures/payment-fastapi/src/payment/application/__init__.py
+          dest: src/payment/application/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/application/authorize_payment.py
+          dest: src/payment/application/authorize_payment.py
+        - src: fixtures/payment-fastapi/src/payment/application/payment_gateway.py
+          dest: src/payment/application/payment_gateway.py
+        - src: fixtures/payment-fastapi/src/payment/application/receipt_store.py
+          dest: src/payment/application/receipt_store.py
+        - src: fixtures/payment-fastapi/src/payment/domain/__init__.py
+          dest: src/payment/domain/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/domain/authorization_outcome.py
+          dest: src/payment/domain/authorization_outcome.py
+        - src: fixtures/payment-fastapi/src/payment/domain/money.py
+          dest: src/payment/domain/money.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/__init__.py
+          dest: src/payment/infrastructure/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/file_system_receipt_store.py
+          dest: src/payment/infrastructure/file_system_receipt_store.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/http_payment_gateway.py
+          dest: src/payment/infrastructure/http_payment_gateway.py
+        - src: fixtures/payment-fastapi/tests/__init__.py
+          dest: tests/__init__.py
+        - src: fixtures/payment-fastapi/tests/integration/__init__.py
+          dest: tests/integration/__init__.py
+        - src: fixtures/payment-fastapi/tests/integration/test_file_system_receipt_store.py
+          dest: tests/integration/test_file_system_receipt_store.py
+        - src: fixtures/payment-fastapi/tests/unit/__init__.py
+          dest: tests/unit/__init__.py
+        - src: fixtures/payment-fastapi/tests/unit/test_authorize_payment.py
+          dest: tests/unit/test_authorize_payment.py
+        - src: fixtures/red/test_receipt_format.py
+          dest: tests/unit/test_receipt_format.py
+      commands:
+        - 'python3 -m venv .venv'
+        - '.venv/bin/pip install -q -e ".[dev]"'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "feat: payment authorization"'
+    graders:
+      - type: run-command
+        name: Sources, tests and mutation configs are unchanged
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import subprocess, sys
+              paths = ['src', 'tests', 'pyproject.toml', 'cosmic-ray-core.toml', 'cosmic-ray-boundary.toml']
+              changed = subprocess.run(['git', 'status', '--porcelain', '--', *paths], capture_output=True, text=True).stdout.strip()
+              if changed:
+                  print(changed); sys.exit(1)
+              print('sources, tests and mutation configs unchanged')
+          expected_exit_code: 0
+          timeout: 1m
+      - *judge
+      - *loaded
+    rubric:
+      - Notices that the unit suite already fails without any mutation and says so first.
+      - Gives no mutation score from a run on the failing suite, and does not present such a score as killed mutants.
+      - Leaves the failing test as it is and asks how to proceed, rather than rewriting it to get a score.

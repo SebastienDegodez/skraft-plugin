@@ -26,8 +26,9 @@ testing:
     # microcks  -> mock from the OpenAPI/examples contract (DEFAULT, overridable)
     # inprocess -> in-process test double injected into the test host DI
     strategy: microcks
-    # Only read when strategy == inprocess. One of: fakeiteasy | nsubstitute | moq
-    # When omitted, preference order is: fakeiteasy > nsubstitute > moq.
+    # Only read when strategy == inprocess. .NET: fakeiteasy | nsubstitute | moq;
+    # Python: respx | responses | fake. When omitted, the stack adapter's order applies
+    # (.NET: fakeiteasy > nsubstitute > moq; Python: respx > responses > fake).
     library: fakeiteasy
 
   # --- Provider-side contract testing of THIS service's API ---
