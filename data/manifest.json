@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-08T22:10:06.382Z",
+  "generated": "2026-10-08T22:43:17.004Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -3964,7 +3964,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-202"
       ],
-      "mtime": 1791497342641.1433
+      "mtime": 1791499393284.6255
     },
     {
       "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
@@ -3977,7 +3977,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-202"
       ],
-      "mtime": 1791497342669.1436
+      "mtime": 1791499393329.6252
     },
     {
       "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
@@ -3990,7 +3990,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-202"
       ],
-      "mtime": 1791497342701.1436
+      "mtime": 1791499393373.6248
     },
     {
       "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
@@ -4003,7 +4003,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-202"
       ],
-      "mtime": 1791497342704.1436
+      "mtime": 1791499393378.6248
     },
     {
       "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
@@ -4016,7 +4016,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-202"
       ],
-      "mtime": 1791497342729.1436
+      "mtime": 1791499393419.6243
     },
     {
       "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
@@ -4029,7 +4029,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-202"
       ],
-      "mtime": 1791497342759.267
+      "mtime": 1791499393422.6243
     },
     {
       "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
@@ -4042,7 +4042,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-202"
       ],
-      "mtime": 1791497342763.1436
+      "mtime": 1791499393464.624
     },
     {
       "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
@@ -4055,7 +4055,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-202"
       ],
-      "mtime": 1791497342762.1436
+      "mtime": 1791499393465.624
     },
     {
       "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
@@ -4068,7 +4068,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-202"
       ],
-      "mtime": 1791497342788.1438
+      "mtime": 1791499393511.6235
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
@@ -4081,7 +4081,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-202"
       ],
-      "mtime": 1791497342823.1438
+      "mtime": 1791499393563.623
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
@@ -4094,7 +4094,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-202"
       ],
-      "mtime": 1791497342824.472
+      "mtime": 1791499393564.623
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
@@ -4107,7 +4107,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-202"
       ],
-      "mtime": 1791497342850.2864
+      "mtime": 1791499393564.623
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
@@ -4120,7 +4120,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-202"
       ],
-      "mtime": 1791497342851.2449
+      "mtime": 1791499393564.623
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
@@ -4133,7 +4133,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-202"
       ],
-      "mtime": 1791497342851.2449
+      "mtime": 1791499393605.6226
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
@@ -4146,7 +4146,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-202"
       ],
-      "mtime": 1791497342851.2449
+      "mtime": 1791499393606.6226
     },
     {
       "id": "pr/202/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
@@ -4159,7 +4159,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-202"
       ],
-      "mtime": 1791497342853.1438
+      "mtime": 1791499393608.6226
     },
     {
       "id": "pr/202/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
@@ -4172,7 +4172,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-202"
       ],
-      "mtime": 1791497342852.8052
+      "mtime": 1791499393608.6226
     },
     {
       "id": "pr/202/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
@@ -4185,7 +4185,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-202"
       ],
-      "mtime": 1791497342879.1438
+      "mtime": 1791499393609.6226
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0",
@@ -4198,7 +4198,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342881.1438
+      "mtime": 1791499393655.622
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1",
@@ -4211,7 +4211,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342883.2202
+      "mtime": 1791499393655.622
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2",
@@ -4224,7 +4224,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342883.2202
+      "mtime": 1791499393654.6223
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3",
@@ -4237,7 +4237,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342883.2202
+      "mtime": 1791499393656.622
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4",
@@ -4250,7 +4250,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342883.2202
+      "mtime": 1791499393655.622
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0",
@@ -4263,7 +4263,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342910.144
+      "mtime": 1791499393655.622
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1",
@@ -4276,7 +4276,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342915.883
+      "mtime": 1791499393656.622
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2",
@@ -4289,7 +4289,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342914.631
+      "mtime": 1791499393655.622
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3",
@@ -4302,7 +4302,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342915.883
+      "mtime": 1791499393656.622
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4",
@@ -4315,7 +4315,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342915.883
+      "mtime": 1791499393656.622
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0",
@@ -4328,7 +4328,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342914.631
+      "mtime": 1791499393655.622
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1",
@@ -4341,7 +4341,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342914.631
+      "mtime": 1791499393702.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2",
@@ -4354,7 +4354,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342914.631
+      "mtime": 1791499393704.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3",
@@ -4367,7 +4367,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342914.631
+      "mtime": 1791499393704.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4",
@@ -4380,7 +4380,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342914.631
+      "mtime": 1791499393703.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0",
@@ -4393,7 +4393,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342914.631
+      "mtime": 1791499393704.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1",
@@ -4406,7 +4406,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342937.144
+      "mtime": 1791499393704.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2",
@@ -4419,7 +4419,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342940.7207
+      "mtime": 1791499393705.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3",
@@ -4432,7 +4432,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342940.7207
+      "mtime": 1791499393705.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4",
@@ -4445,7 +4445,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791497342939.8877
+      "mtime": 1791499393705.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0",
@@ -4458,7 +4458,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393705.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1",
@@ -4471,7 +4471,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393705.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2",
@@ -4484,7 +4484,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393705.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3",
@@ -4497,7 +4497,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393705.6218
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4",
@@ -4510,7 +4510,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393736.6213
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0",
@@ -4523,7 +4523,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393739.6213
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1",
@@ -4536,7 +4536,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393739.6213
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2",
@@ -4549,7 +4549,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393739.6213
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3",
@@ -4562,7 +4562,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393739.6213
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4",
@@ -4575,7 +4575,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791497342941.144
+      "mtime": 1791499393739.6213
     }
   ]
 }
