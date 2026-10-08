@@ -60,7 +60,7 @@ variants:
         - ../../plugins/skraft-framework/skills/contract-testing-roster
         - ../../plugins/skraft-framework/skills/craft-discipline
         - ../../plugins/skraft-framework/skills/discovery-review-criteria
-        - ../../plugins/skraft-framework/skills/github-search-protocol
+        - ../../plugins/skraft-framework/skills/github-publication
         - ../../plugins/skraft-framework/skills/issue-refinement
         - ../../plugins/skraft-framework/skills/issue-triage
         - ../../plugins/skraft-framework/skills/mikado-method

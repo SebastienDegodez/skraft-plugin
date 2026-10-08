@@ -125,7 +125,7 @@ confirmed identity is saved again before publication.
 
 The [reporting CLI](src/cli/report.mjs) renders and validates locally; the orchestrator
 owns remote publication through the host. For GitHub, the shipped
-[github-search-protocol](skills/github-search-protocol/SKILL.md) is the canonical
+[github-publication](skills/github-publication/SKILL.md) is the canonical
 transport procedure: MCP first, announced host `gh` fallback only when MCP or a
 required capability is unavailable under the skill's policy. No external companion
 skill is required. Azure DevOps/GitLab remain MCP-only reporting targets, not a promise

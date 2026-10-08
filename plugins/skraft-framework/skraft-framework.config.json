@@ -165,7 +165,7 @@
     ],
     "Skraft - Backlog Discoverer": [
       {
-        "name": "github-search-protocol",
+        "name": "github-issue-search",
         "policy": "verify"
       },
       {
@@ -282,7 +282,7 @@
         "policy": "on-demand"
       },
       {
-        "name": "github-search-protocol",
+        "name": "github-publication",
         "policy": "on-demand"
       },
       {

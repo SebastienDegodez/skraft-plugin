@@ -19,7 +19,7 @@ export const COPIES = [
 	// The reporting pair links to each other, so they always travel together.
 	...['mcp-publication.md', 'report-contract.md'].map((name) => ({
 		source: `skills/qa-reporting/references/${name}`,
-		targets: [`assets/reporting/${name}`, `skills/github-search-protocol/references/${name}`, `skills/playwright-evidence/references/${name}`],
+		targets: [`assets/reporting/${name}`, `skills/github-publication/references/${name}`, `skills/playwright-evidence/references/${name}`],
 	})),
 ]
 

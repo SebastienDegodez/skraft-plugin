@@ -1,31 +1,27 @@
 ---
-name: github-search-protocol
-description: "Use when finding GitHub issues to work on, exploring a backlog by labels, milestones or assignees, finding issues related to changed files, or publishing already-prepared Markdown to PR conversation or issue comments, including updates and interrupted-publication retries. Covers issue discovery queries, pagination and ranking, plus MCP-first publication with host gh fallback when MCP capability is unavailable. Not for authoring Markdown, generating reports or judging their content."
+name: github-issue-search
+description: "Use when finding GitHub issues to work on, exploring a backlog by labels, milestones or assignees, finding issues related to changed files, or writing a triage label or a refinement comment on an existing issue. Covers issue discovery queries, pagination and ranking, and the write route for each host: safe outputs in a GitHub Agentic Workflows run, MCP, or gh. Not for publishing pipeline reports or PR comments."
 ---
 
-# GitHub Search Protocol
+# GitHub Issue Search
 
 ## Existing issue content is read-only
 
 Never change the `title` or `body` of an existing issue, through MCP, CLI or any
 other transport, even when the installed tool exposes those fields. Omit both
 fields from issue-update payloads; do not resend their current values.
-Publish refinements, acceptance criteria, reports and proposed wording in comments
-or local artifacts instead. A comment's `body` is distinct from the issue's `body`:
-only the selected comment may be created or updated under the publication protocol.
+Put refinements, acceptance criteria and proposed wording in a comment or a local
+artefact. A comment's `body` is distinct from the issue's `body`.
 
 ## Route by intent
 
-- **Publish prepared Markdown** to a GitHub PR conversation or issue comment, update it,
-  or reconcile an interrupted attempt: load [GitHub publication](references/github-publication.md)
-  and follow that path only. Stop here; do not run discovery or apply its result caps.
+- **Write a comment or labels** on an existing issue: load
+  [issue write routes](references/issue-write-routes.md) and follow it.
 - **Discover issues**: continue below. Before a search or triage MCP call, load
   [MCP tool patterns](references/mcp-tool-patterns.md) for host schema binding,
   parameters, responses and errors. For qualifiers or query recipes beyond this page,
   load [search syntax](references/github-search-syntax.md). When extracting domain terms
   from changed files, load [artifact-driven heuristics](references/artifact-driven-heuristics.md).
-- **Author Markdown or generate reports**: return to the owning producer; this skill
-  transports prepared content, not its authorship or approval.
 
 ## Overview
 
@@ -198,9 +194,6 @@ actual exposed host tools and schemas, never manufacture a callable namespace.
 
 ## Pagination Pattern
 
-DISCOVER only: bounded issue search is not exhaustive publication reconciliation.
-Publication must read every relevant comment page; use its routed reference instead.
-
 ```
 page = 1
 results = []
@@ -252,3 +245,4 @@ After fetching, rank results for triage priority:
 - [github-search-syntax.md](references/github-search-syntax.md) — complete qualifier cheatsheet and query recipes
 - [mcp-tool-patterns.md](references/mcp-tool-patterns.md) — tool parameters, response shapes, pagination examples
 - [artifact-driven-heuristics.md](references/artifact-driven-heuristics.md) — domain term extraction algorithm with auto-insurance examples
+- [issue-write-routes.md](references/issue-write-routes.md) — comment and label writes through safe outputs, MCP or gh
