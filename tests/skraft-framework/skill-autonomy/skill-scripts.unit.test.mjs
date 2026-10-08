@@ -47,7 +47,8 @@ test('snapshot writes the exact bytes of a file at a revision', async (t) => {
 	const dir = await scratch(t)
 	execFileSync('git', ['init', '-q', dir])
 	await writeFile(join(dir, 'Tests.cs'), 'first\r\nline é\n')
-	execFileSync('git', ['-C', dir, 'add', '.'])
+	// The blob keeps its CRLF whatever the runner's core.autocrlf: snapshot must return it unchanged.
+	execFileSync('git', ['-C', dir, '-c', 'core.autocrlf=false', 'add', '.'])
 	execFileSync('git', ['-C', dir, '-c', 'user.name=T', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'red'], { env: { ...process.env, HUSKY: '0' } })
 	await writeFile(join(dir, 'Tests.cs'), 'changed\n')
 	const path = snapshot({ evidence: join(dir, 'ev'), name: 'red-1-Tests.cs', file: 'Tests.cs', root: dir })
