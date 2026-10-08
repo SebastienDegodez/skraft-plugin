@@ -24,6 +24,23 @@ const targets = [
   'plugins/skraft-backlog/.codex-plugin/plugin.json',
 ];
 
+// Text files that carry the version for a reader that cannot open a manifest: the
+// refinement marker and the skraft-refine workflow compare it to decide whether to redo work.
+const stamped = [
+  ['plugins/skraft-backlog/skills/refinement-proposal/scripts/version.mjs', /export const VERSION = '[^']*'/, `export const VERSION = '${version}'`],
+];
+
+for (const [rel, pattern, replacement] of stamped) {
+  const path = join(repoRoot, rel);
+  const text = readFileSync(path, 'utf8');
+  if (!pattern.test(text)) {
+    console.error(`no version to stamp in ${rel}`);
+    process.exit(1);
+  }
+  writeFileSync(path, text.replace(pattern, replacement));
+  console.log(`set version ${version} in ${rel}`);
+}
+
 for (const rel of targets) {
   const path = join(repoRoot, rel);
   const json = JSON.parse(readFileSync(path, 'utf8'));
