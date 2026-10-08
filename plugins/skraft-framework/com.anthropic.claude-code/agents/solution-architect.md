@@ -25,6 +25,7 @@ metadata:
     - clean-architecture-dotnet
     - clean-architecture-java
     - clean-architecture-python
+    - clean-architecture-react
   assets:
     - plugins/skraft-framework/assets/consistency-matrix.template.md
   inputs:
@@ -73,7 +74,7 @@ Load startup skills before starting; consult other skills at their stated trigge
 - `architecture-decisions`
 
 ### Load on demand (Phase 6 — language-specific layering)
-- `clean-architecture-<language>` (e.g. `clean-architecture-java`, `clean-architecture-dotnet`, `clean-architecture-python`) — OPTIONAL. Take the project's primary language from the research `Project conventions` section (Phase 1) and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.
+- `clean-architecture-<language>` (e.g. `clean-architecture-java`, `clean-architecture-dotnet`, `clean-architecture-python`, and `clean-architecture-react` for a React front end) — OPTIONAL. Take the project's primary language from the research `Project conventions` section (Phase 1) and, if a matching skill exists, load it to ground layer-placement decisions (repository / service interface placement, dependency rule, naming) in the stack's conventions. If no matching skill exists, announce `[SKILL OPTIONAL-MISSING] clean-architecture-<language>` and proceed with the generic DDD / Clean Architecture rules in this agent.
 
 ### Load on demand (Phase 9 RECONCILE & VERIFY)
 - `$SKRAFT_PLUGIN_ROOT/assets/consistency-matrix.template.md` — matrix body + cause table + BLOCKER JSON shape + blocker/resolution file shapes.

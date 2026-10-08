@@ -326,6 +326,10 @@
         "policy": "on-demand"
       },
       {
+        "name": "clean-architecture-react",
+        "policy": "on-demand"
+      },
+      {
         "name": "test-design-mandates",
         "policy": "on-demand"
       },
@@ -399,6 +403,10 @@
       },
       {
         "name": "clean-architecture-python",
+        "policy": "on-demand"
+      },
+      {
+        "name": "clean-architecture-react",
         "policy": "on-demand"
       }
     ],

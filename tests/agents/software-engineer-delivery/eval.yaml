@@ -158,11 +158,12 @@ stimuli:
             - quality-gates-evidence-contract
             - quality-gates-dotnet
       - type: skill-invocation
-        name: The Java and Python Clean Architecture skills stayed out of a .NET solution
+        name: The Java, Python and React Clean Architecture skills stayed out of a .NET solution
         config:
           disallowed:
             - clean-architecture-java
             - clean-architecture-python
+            - clean-architecture-react
       - type: run-command
         name: New Git commits use signed feature-scoped messages without invented issues
         config:
