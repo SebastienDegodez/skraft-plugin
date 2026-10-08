@@ -109,11 +109,14 @@ Les hooks du plugin installé partagent une source canonique, livrée sur deux s
 | Surface | Rôle |
 |---|---|
 | [Hooks racine](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/hooks/hooks.json) | Source canonique et compatibilité Claude |
-| [Hooks du namespace Copilot](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Copie générée exacte octet pour octet pour Copilot v1 |
+| [Hooks du namespace Copilot](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Copie générée pour Copilot v1 ; seul le jeton de racine du plugin diffère |
 
 Aucun pointeur `hooks` supplémentaire dans les manifestes n'est nécessaire. Les deux surfaces
-invoquent le runtime partagé via `CLAUDE_PLUGIN_ROOT` ; ce sont des adaptateurs de distribution,
-pas des logiques de garde-fous distinctes. Le manifeste racine canonique déclare Agent Plugins v1
+invoquent le même runtime partagé ; ce sont des adaptateurs de distribution, pas des logiques de
+garde-fous distinctes. La source racine résout via `${CLAUDE_PLUGIN_ROOT}` ; le générateur réécrit
+ce jeton en `${PLUGIN_ROOT}` dans la copie Copilot, car VS Code charge la copie du namespace v1 et
+n'y interpole que `${PLUGIN_ROOT}`. Laissé littéral, `${CLAUDE_PLUGIN_ROOT}` s'étend à vide et node
+cherche `/src/cli/hook.mjs` (`C:\src\cli\hook.mjs` sous PowerShell Windows). Le manifeste racine canonique déclare Agent Plugins v1
 sans liste `agents` racine. Exactement deux arbres d'exécution éditables sont distribués :
 31 fichiers Copilot `.agent.md` à plat dans `com.github.copilot/agents/` et 31 fichiers Claude
 natifs `.md` à plat dans `com.anthropic.claude-code/agents/`. Corps et description se synchronisent
@@ -130,8 +133,8 @@ avec la CLI exacte **1.0.83** épinglée via `--cli` et un `COPILOT_HOME` isolé
 **PASS allowed** (1 entrée d'audit de hook), **PASS denied** (1 entrée d'audit de hook), écriture
 interdite absente. Ce refus SKRAFT observé ne valide ni le sélecteur complet des six racines
 ni l'invocation de sous-agents masqués. Le code source
-réel de **VS Code 1.126** utilise actuellement le repli `.plugin` puis `.claude-plugin` ; la
-validation v1 complète en session réelle reste **non vérifiée**. Aucun de ces résultats ne justifie
+actuel de **VS Code** détecte d'abord le `$schema` v1, puis se replie sur `.plugin` puis
+`.claude-plugin` ; la validation v1 complète en session réelle reste **non vérifiée**. Aucun de ces résultats ne justifie
 une garantie globale de compatibilité ni l'ancien contournement sans schéma.
 
 Sources : [générateur d'adaptateurs](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/project-plugin-adapters.mjs),

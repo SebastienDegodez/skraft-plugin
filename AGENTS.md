@@ -40,7 +40,7 @@ plugins/
       infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
     cli/               ← Composition root: hook.mjs wires all services
     hooks/hooks.json     ← Canonical hook source; Claude compatibility surface
-    com.github.copilot/hooks/hooks.json  ← Generated exact copy for Copilot v1
+    com.github.copilot/hooks/hooks.json  ← Generated copy for Copilot v1 (`${PLUGIN_ROOT}`)
     com.github.copilot/agents/           ← 31 flat editable `.agent.md` descriptors
     com.anthropic.claude-code/agents/    ← 31 flat editable native `.md` descriptors
     stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)

@@ -218,8 +218,9 @@ orchestrator runs `src/cli/structural-scan.mjs` once; the architect and the DESI
 read its JSON report instead of re-grepping the code.
 
 Run these from the consumer repository so SKRAFT resolves that repository's tracking
-state. Hook commands use `CLAUDE_PLUGIN_ROOT`; actual Copilot CLI 1.0.83 fixtures verified
-its expansion, including paths with spaces. Full live VS Code v1 validation remains unverified.
+state. Root hook commands use `CLAUDE_PLUGIN_ROOT`; the generated Copilot v1 copy uses
+`PLUGIN_ROOT`, the only root VS Code interpolates for v1 plugins. Actual Copilot CLI 1.0.83
+fixtures verified `CLAUDE_PLUGIN_ROOT` expansion, including paths with spaces. Full live VS Code v1 validation remains unverified.
 
 Repository configuration lives in `skraft-config.json`. The supported tracking layout is
 `namespaced`; quality thresholds and engineering invariants are deliberately not user-relaxable.
@@ -234,7 +235,7 @@ plugins/skraft-framework/
 ├── .claude-plugin/plugin.json        explicit registration of all 31 agents
 ├── com.github.copilot/
 │   ├── agents/                      31 flat `.agent.md` synchronized descriptors
-│   └── hooks/hooks.json             generated exact copy of root hooks
+│   └── hooks/hooks.json             generated copy of root hooks, `${PLUGIN_ROOT}`
 ├── com.anthropic.claude-code/
 │   └── agents/                      31 flat editable native Claude `.md` descriptors
 ├── hooks/hooks.json                 canonical source; Claude compatibility
@@ -260,7 +261,8 @@ and `brownfield-refactorer`. Internal agents remain available for delegation.
 Shared agents use a scalar `model` value. VS Code's fallback-array syntax is not
 portable to Copilot CLI and can silently remove an agent from discovery.
 
-VS Code **1.126** actual source currently falls back through `.plugin` then `.claude-plugin`.
+Current VS Code source detects the v1 `$schema` first, loads `com.github.copilot/hooks/hooks.json`
+and interpolates only `${PLUGIN_ROOT}` there, then falls back through `.plugin` then `.claude-plugin`.
 Full live v1 validation is unverified; this is not a reason to omit the root `$schema`.
 The `rules` field is retained for VS Code; Claude Code ignores it and reports a
 validation warning. Claude rule injection remains the responsibility of the hooks.

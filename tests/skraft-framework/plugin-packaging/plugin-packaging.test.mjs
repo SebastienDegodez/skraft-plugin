@@ -87,21 +87,27 @@ test('plugin packaging: no manifest declares a hooks pointer', () => {
   }
 })
 
-test('plugin packaging: namespaced hooks preserve Claude shape and plugin-root commands', () => {
-  const source = readFileSync(join(pluginRoot, 'hooks/hooks.json'))
-  assert.deepEqual(readFileSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json')), source)
-  const manifest = JSON.parse(source.toString('utf8'))
-  assert.deepEqual(Object.keys(manifest), ['hooks'])
-  assert.ok(manifest.hooks.SessionStart?.length > 0)
-  assert.ok(manifest.hooks.PreToolUse?.length > 0)
-  for (const [event, groups] of Object.entries(manifest.hooks)) {
-    assert.match(event, /^[A-Z]/)
-    assert.ok(Array.isArray(groups) && groups.length > 0)
-    for (const group of groups) {
-      assert.ok(Array.isArray(group.hooks) && group.hooks.length > 0)
-      for (const hook of group.hooks) {
-        assert.equal(hook.type, 'command')
-        assert.match(hook.command, /\$\{CLAUDE_PLUGIN_ROOT\}/)
+// VS Code detects the v1 manifest, loads the namespaced copy and interpolates only
+// ${PLUGIN_ROOT}; a literal ${CLAUDE_PLUGIN_ROOT} there sends node to /src/cli/hook.mjs.
+test('plugin packaging: namespaced hooks preserve Claude shape and resolve each surface root', () => {
+  const source = readFileSync(join(pluginRoot, 'hooks/hooks.json'), 'utf8')
+  const copy = readFileSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json'), 'utf8')
+  assert.equal(copy, source.replaceAll('${CLAUDE_PLUGIN_ROOT}', '${PLUGIN_ROOT}'))
+  for (const [text, root, foreign] of [[source, 'CLAUDE_PLUGIN_ROOT', /\$\{PLUGIN_ROOT\}/], [copy, 'PLUGIN_ROOT', /CLAUDE_PLUGIN_ROOT/]]) {
+    const manifest = JSON.parse(text)
+    assert.deepEqual(Object.keys(manifest), ['hooks'])
+    assert.ok(manifest.hooks.SessionStart?.length > 0)
+    assert.ok(manifest.hooks.PreToolUse?.length > 0)
+    for (const [event, groups] of Object.entries(manifest.hooks)) {
+      assert.match(event, /^[A-Z]/)
+      assert.ok(Array.isArray(groups) && groups.length > 0)
+      for (const group of groups) {
+        assert.ok(Array.isArray(group.hooks) && group.hooks.length > 0)
+        for (const hook of group.hooks) {
+          assert.equal(hook.type, 'command')
+          assert.ok(hook.command.includes(`"\${${root}}/src/cli/`), `${event}: ${hook.command}`)
+          assert.doesNotMatch(hook.command, foreign)
+        }
       }
     }
   }

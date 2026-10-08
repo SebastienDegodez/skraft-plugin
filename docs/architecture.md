@@ -34,7 +34,7 @@ skraft-plugin/
 │   ├── .claude-plugin/                    ← enregistrement explicite des 31 agents Claude
 │   ├── com.github.copilot/
 │   │   ├── agents/                        ← 31 agents éditables à plat `.agent.md`
-│   │   └── hooks/hooks.json               ← copie exacte générée du hook racine
+│   │   └── hooks/hooks.json               ← copie générée du hook racine, `${PLUGIN_ROOT}`
 │   ├── com.anthropic.claude-code/
 │   │   └── agents/                        ← 31 agents Claude natifs éditables à plat `.md`
 │   ├── hooks/hooks.json                   ← source canonique, compatibilité Claude
@@ -117,8 +117,10 @@ Copilot sont `skraft-orchestrator`, `backlog-discoverer`, `backlog-planner`, `br
   d'audit de hook), **PASS denied** (1 entrée d'audit de hook), écriture interdite absente.
   Ce refus SKRAFT observé ne valide ni le sélecteur complet des six racines ni l'invocation
   de sous-agents masqués.
-- **VS Code 1.126** : le code source réel utilise actuellement le repli `.plugin` puis
-  `.claude-plugin`. La validation v1 complète en session réelle reste **non vérifiée**.
+- **VS Code** : le code source actuel détecte d'abord le `$schema` v1, charge
+  `com.github.copilot/hooks/hooks.json` et n'y interpole que `${PLUGIN_ROOT}` ; repli ensuite sur
+  `.plugin` puis `.claude-plugin`. La copie générée réécrit donc `${CLAUDE_PLUGIN_ROOT}` en
+  `${PLUGIN_ROOT}`. La validation v1 complète en session réelle reste **non vérifiée**.
   Le manifeste racine conserve son `$schema` ; l'ancien contournement sans schéma n'est plus courant.
 - Découverte et événements de fixture ne prouvent ni les permissions, ni les modèles, ni
   l'exécution complète du pipeline. Aucune garantie globale de compatibilité entre clients.
