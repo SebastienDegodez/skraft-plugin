@@ -31,6 +31,8 @@ The language core excludes I/O, network and persistence (.NET: `System` minus `S
 | Infrastructure | Api | Infrastructure implements Application interfaces, never transport |
 | SharedKernel | Anything | SharedKernel depends on nothing |
 
+Inside Application, one feature never depends on another (`architecture-patterns`, Feature Folders): `MyApp.Application.Loans` may use `MyApp.Application.Shared`, never `MyApp.Application.Invoicing`.
+
 ## Implementation Pattern
 
 ```csharp
@@ -61,6 +63,29 @@ public sealed class ArchitectureTests
 
     [Fact] public void Application_DependsOnlyOnInnerLayersAndTheLanguageCore()
         => AssertOnly(ApplicationAssembly, "MyApp.Application", "MyApp.Domain");
+
+    // A feature namespace never uses another feature's; Shared is for what two features need.
+    [Fact] public void ApplicationFeatures_DoNotDependOnEachOther()
+    {
+        const string root = "MyApp.Application.";
+        var features = ApplicationAssembly.GetTypes()
+            .Select(type => type.Namespace)
+            .Where(ns => ns is not null && ns.StartsWith(root, StringComparison.Ordinal))
+            .Select(ns => ns![root.Length..].Split('.')[0])
+            .Where(feature => feature != "Shared")
+            .Distinct()
+            .ToArray();
+        foreach (var feature in features)
+        {
+            var others = features.Where(other => other != feature).Select(other => root + other).ToArray();
+            if (others.Length == 0) continue;
+            var result = Types.InAssembly(ApplicationAssembly)
+                .That().ResideInNamespace(root + feature)
+                .ShouldNot().HaveDependencyOnAny(others)
+                .GetResult();
+            Assert.True(result.IsSuccessful, Format(result));
+        }
+    }
 
     // ----- Infrastructure -----
 
