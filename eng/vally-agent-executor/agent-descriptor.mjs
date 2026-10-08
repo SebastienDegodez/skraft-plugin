@@ -42,7 +42,6 @@ const AGENT_PATHS = new Map([
   // without paying for the lead's whole TDD loop around it.
   ['contract-testing-worker', pluginAgent('workers/contract-testing/contract-testing-worker')],
   ['mock-integration-worker', pluginAgent('workers/mocking/mock-integration-worker')],
-  ['refactoring-worker', pluginAgent('workers/refactoring/refactoring-worker')],
   // The handbook reconciler chain. It lives under .github/agents/ rather than
   // plugins/: it maintains the documentation of the plugin and is not itself part
   // of what ships to a consumer repository. The four specialists are here so a
