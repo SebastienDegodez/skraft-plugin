@@ -29,6 +29,7 @@ metadata:
   on_demand_skills:
     - clean-architecture-dotnet
     - clean-architecture-java
+    - clean-architecture-python
     - test-design-mandates
     - test-refactoring-catalog
     - mutation-testing
@@ -94,6 +95,7 @@ Load each skill below only when its trigger fires, never at startup.
 |-------|--------------|
 | `clean-architecture-dotnet` | Repo is a .NET solution (`*.sln` / `*.slnx` / `*.csproj`) and you add or move a production class, a project or a `<ProjectReference>` |
 | `clean-architecture-java` | Repo is a Java build (`pom.xml`) and you add or move a production class, a module or a `<dependency>` |
+| `clean-architecture-python` | Repo is a Python project (`pyproject.toml`) and you add or move a production module, a package or an import between layers |
 | `test-design-mandates` | Deciding whether a Domain unit test is authorized |
 | `test-refactoring-catalog` | Refactoring a test (helpers, renaming, deduplication) |
 | `mutation-testing` | Entering phase 4 (COMMIT & VERIFY) |
@@ -104,7 +106,7 @@ Load each skill below only when its trigger fires, never at startup.
 | `skraft-quality-bar` | Entering phase 4 — the thresholds the final gates enforce |
 | `qa-reporting` | Preparing the outcome handoff |
 
-Load the Clean Architecture skill of the repo's stack only: never `clean-architecture-java` in a .NET solution, never `clean-architecture-dotnet` in a Java build.
+Load the Clean Architecture skill of the repo's stack only: never `clean-architecture-java` in a .NET solution or a Python project, never `clean-architecture-dotnet` in a Java build or a Python project, never `clean-architecture-python` outside a Python project.
 
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Project references point INWARD, one layer at a time: API -> Infrastructure -> Application -> Domain -> none. Any upward dependency is a fatal defect.

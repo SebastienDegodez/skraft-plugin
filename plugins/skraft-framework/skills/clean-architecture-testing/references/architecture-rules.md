@@ -1,6 +1,6 @@
 # Architecture Rules
 
-Layer discipline enforced by CI. Every rule is one test. Failure message must list violating types. The rules are language-agnostic; the implementation below is .NET (NetArchTest), the Java one is in [examples-java.md](examples-java.md).
+Layer discipline enforced by CI. Every rule is one test. Failure message must list violating types. The rules are language-agnostic; the implementation below is .NET (NetArchTest), the Java one is in [examples-java.md](examples-java.md), the Python one (import-linter) in [examples-python.md](examples-python.md).
 
 ## Project References — the dependency rule
 
@@ -24,7 +24,7 @@ Correct references still let the business code import a framework, an I/O type o
 | Domain | Domain, the language core | frameworks, I/O, network, persistence, every other layer |
 | Application | Application, Domain, the language core | frameworks, I/O, network, persistence, Infrastructure, Api |
 
-The language core excludes I/O, network and persistence (.NET: `System` minus `System.IO`, `System.Net`, `System.Data`; Java: `java.lang`, `java.util`, `java.time`, `java.math`).
+The language core excludes I/O, network and persistence (.NET: `System` minus `System.IO`, `System.Net`, `System.Data`; Java: `java.lang`, `java.util`, `java.time`, `java.math`; Python: the standard library minus I/O, network and database modules).
 
 | Source layer | Forbidden target | Reason |
 |---|---|---|
