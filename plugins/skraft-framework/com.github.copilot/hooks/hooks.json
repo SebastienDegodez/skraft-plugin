@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/housekeeping.mjs\""
+            "command": "node \"${PLUGIN_ROOT}/src/cli/housekeeping.mjs\""
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse"
+            "command": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PreToolUse"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" SubagentStart"
+            "command": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" SubagentStart"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" SubagentStop"
+            "command": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" SubagentStop"
           }
         ]
       }
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse"
+            "command": "node \"${PLUGIN_ROOT}/src/cli/hook.mjs\" PostToolUse"
           }
         ]
       }

@@ -2,6 +2,11 @@ import { basename, dirname } from 'node:path'
 import { agentAliases, claudeAgents, copilotAgents, translateAgentLinks } from './agent-links.mjs'
 import { mergeAgentPair, parseBaseline } from './agent-sync.mjs'
 
+// VS Code loads the Agent Plugins v1 hook copy and interpolates/injects only
+// ${PLUGIN_ROOT}; ${CLAUDE_PLUGIN_ROOT} would stay literal and expand to nothing.
+export const copilotHookManifest = (canonical) =>
+  Buffer.from(canonical.toString('utf8').replaceAll('${CLAUDE_PLUGIN_ROOT}', '${PLUGIN_ROOT}'))
+
 // IO is injected by the containment-checked adapter. Every conflict is collected
 // before its caller can write descriptors, hooks or baseline.
 export function buildPairProjection({ root, list, read, exists }) {
@@ -69,8 +74,9 @@ export function buildPairProjection({ root, list, read, exists }) {
   for (const path of list('com.github.copilot/hooks', true)) {
     if (path !== 'com.github.copilot/hooks/hooks.json') extra.push(path)
   }
-  files.push({ source: 'hooks/hooks.json', target: 'com.github.copilot/hooks/hooks.json', content: hook })
-  plan('com.github.copilot/hooks/hooks.json', hook)
+  const copilotHook = copilotHookManifest(hook)
+  files.push({ source: 'hooks/hooks.json', target: 'com.github.copilot/hooks/hooks.json', content: copilotHook })
+  plan('com.github.copilot/hooks/hooks.json', copilotHook)
   const content = JSON.stringify({ version: 2, pairs }, null, 2) + '\n'
   // Preserve formatting of an otherwise identical baseline.
   const unchanged = Object.keys(baseline.pairs).length === Object.keys(pairs).length &&

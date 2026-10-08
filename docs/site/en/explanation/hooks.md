@@ -107,10 +107,14 @@ Installed plugin hooks share one canonical source but ship on two physical surfa
 | Surface | Role |
 |---|---|
 | [Root hooks](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/hooks/hooks.json) | Canonical source and Claude compatibility |
-| [Copilot namespace hooks](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Generated exact byte copy for Copilot v1 |
+| [Copilot namespace hooks](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Generated copy for Copilot v1; only the plugin-root token differs |
 
-No extra manifest `hooks` pointers are needed. Both surfaces invoke the shared runtime
-through `CLAUDE_PLUGIN_ROOT`; they are distribution adapters, not separate guardrail logic.
+No extra manifest `hooks` pointers are needed. Both surfaces invoke the same shared runtime;
+they are distribution adapters, not separate guardrail logic. The root source resolves through
+`${CLAUDE_PLUGIN_ROOT}`; the generator rewrites that token to `${PLUGIN_ROOT}` in the Copilot
+copy, because VS Code loads the v1 namespace copy and interpolates only `${PLUGIN_ROOT}` there.
+Left literal, `${CLAUDE_PLUGIN_ROOT}` expands to nothing and node looks for `/src/cli/hook.mjs`
+(`C:\src\cli\hook.mjs` under Windows PowerShell).
 The canonical root manifest declares Agent Plugins v1 with no root `agents` list.
 Exactly two editable runtime trees ship: 31 flat Copilot `.agent.md` files in
 `com.github.copilot/agents/` and 31 flat native Claude `.md` files in
@@ -127,8 +131,8 @@ also **passed** against the current migrated plugin installed from the local mar
 checkout, with exact CLI **1.0.83** pinned via `--cli` and an isolated `COPILOT_HOME`:
 **PASS allowed** (1 hook audit entry), **PASS denied** (1 hook audit entry), forbidden write
 absent. This verifies the probed SKRAFT refusal, not the full six-root picker or
-hidden-subagent invocation. **VS Code 1.126** actual source
-currently falls back through `.plugin` then `.claude-plugin`; full live v1 validation is
+hidden-subagent invocation. Current **VS Code** source detects the v1 `$schema` first, then
+falls back through `.plugin` then `.claude-plugin`; full live v1 validation is
 **unverified**. These results do not support a blanket compatibility claim or the obsolete
 no-schema workaround.
 

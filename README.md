@@ -86,7 +86,7 @@ Hooks have **one canonical source, two physical plugin surfaces**, with no extra
 | Surface | Hook manifest |
 |---|---|
 | Canonical source; Claude compatibility | [plugins/skraft-framework/hooks/hooks.json](plugins/skraft-framework/hooks/hooks.json) |
-| Generated Copilot namespace; exact byte copy | [plugins/skraft-framework/com.github.copilot/hooks/hooks.json](plugins/skraft-framework/com.github.copilot/hooks/hooks.json) |
+| Generated Copilot namespace; copy with `${PLUGIN_ROOT}` | [plugins/skraft-framework/com.github.copilot/hooks/hooks.json](plugins/skraft-framework/com.github.copilot/hooks/hooks.json) |
 | Separate repository-checkout integration | [.github/hooks/skraft-framework.json](.github/hooks/skraft-framework.json) |
 
 Actual Copilot CLI **1.0.83** fixture tests passed namespaced agent discovery and `SessionStart` /
