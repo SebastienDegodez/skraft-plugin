@@ -1,25 +1,18 @@
 name: clean-architecture-python
 description: |
-  Verifies that a Python / FastAPI service is laid out as Clean Architecture and
-  stays that way: one package per layer with imports pointing inward, checked by
-  an import-linter contract; use cases as plain classes with no interface in
-  front of them and no port or adapter vocabulary; a framework-free core;
-  commands that return nothing, queries that return a read model, aggregates
-  built by a factory, and access rules split between use case and aggregate.
-  Graders are Python AST checks, so they run wherever python3 does. The
-  existing project carries its own import-linter contract, checked by its test
-  suite. Probes without the skill (Sonnet, 2 runs per case) extended the layered
-  project correctly for refunds, but on an empty repository wrote flat modules
-  (service.py, models.py, once ports.py / adapters.py) with no import contract;
-  their contacts use case returned the id or the entity, and their orders had no
-  factory, no typed id and a cancel that ignored the caller. The greenfield
-  stimuli and the three existing-project deciders carry the verdict; refunds is
-  a regression guard.
-  Feature folders: the fixture is laid out by feature inside each layer
-  (authorization, shared) and its import-linter independence contract forbids
-  one application feature importing another. Probes wrote greenfield modules at
-  the layer root 0/4 without the skill and 0/4 with its former "modules by
-  feature" line, 4/4 once it asked for a sub-package per feature.
+  Verifies that a Python / FastAPI service is laid out as Clean Architecture:
+  one package per layer, one sub-package per feature inside it, imports pointing
+  inward and no feature importing another, all checked by import-linter; use
+  cases as plain classes with no interface in front and no port or adapter
+  vocabulary; a framework-free core; commands that return nothing, queries that
+  return a read model, aggregates built by a factory, access rules split between
+  use case and aggregate. Graders are Python AST checks. Probes without the skill
+  (Sonnet, 2 runs per case) extended the existing project correctly for refunds
+  but wrote flat modules with no import contract on an empty repository, returned
+  the id or the entity from contacts, and gave orders no factory, no typed id and
+  a cancel that ignored the caller; greenfield modules sat at the layer root 4/4.
+  The greenfields and the three existing-project deciders carry the verdict;
+  refunds is a regression guard.
 type: capability
 defaults:
   timeout: 4m

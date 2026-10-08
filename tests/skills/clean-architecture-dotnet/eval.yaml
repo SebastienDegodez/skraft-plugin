@@ -870,6 +870,9 @@ stimuli:
               console.log('Domain, Application and Infrastructure projects, references pointing inward');
           expected_exit_code: 0
           timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
       - type: skill-invocation
         name: The skill under test is loaded
         config:
