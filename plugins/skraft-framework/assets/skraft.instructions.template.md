@@ -27,8 +27,9 @@ testing:
     # inprocess -> in-process test double injected into the test host DI
     strategy: microcks
     # Only read when strategy == inprocess. .NET: fakeiteasy | nsubstitute | moq;
-    # Python: respx | responses | fake. When omitted, the stack adapter's order applies
-    # (.NET: fakeiteasy > nsubstitute > moq; Python: respx > responses > fake).
+    # Python: respx | responses | fake; TypeScript: msw | fake. When omitted, the stack
+    # adapter's order applies (.NET: fakeiteasy > nsubstitute > moq; Python: respx >
+    # responses > fake; TypeScript: msw > fake).
     library: fakeiteasy
 
   # --- Provider-side contract testing of THIS service's API ---

@@ -80,7 +80,7 @@ Announce any missing skill as `[SKILL MISSING] {name}` and continue.
 ```yaml
 status: ok
 capability: contract-testing
-stack: dotnet | python
+stack: dotnet | python | react-frontend
 microcks: false | true
 files:
   - <relative paths created>

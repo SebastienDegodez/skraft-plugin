@@ -46,6 +46,7 @@ flag internally:
 |---|---|---|
 | .NET | [contract-testing-dotnet](../contract-testing-dotnet/SKILL.md) | supported |
 | Python | [contract-testing-python](../contract-testing-python/SKILL.md) | supported |
+| React front end (exposes no API) | _none needed_ | not applicable: return `status: ok` with no file and the note `front end exposes no API`; its gateways are tested against the provider's contract through the mocking roster |
 | Java | _(contract-testing-java not yet provided)_ | NOT SUPPORTED |
 
 Adding a stack = add ONE `contract-testing-<stack>` adapter and the row here,
