@@ -28,7 +28,27 @@ Extensions view, or register a clone with `chat.pluginLocations`.
 | 7 lenses | Read-only reviewers the two producers dispatch at their review gate (3 for discovery, 4 for planning). |
 
 Skills: `github-issue-search`, `issue-triage`, `issue-refinement`, `sprint-planning`,
-`discovery-review-criteria`, `planning-review-criteria`, `backlog-review-lenses`.
+`discovery-review-criteria`, `planning-review-criteria`, `backlog-review-lenses`,
+`refinement-proposal`.
+
+## Refinement proposal for one issue
+
+`refinement-proposal` reviews a single issue and posts its proposal as one comment, in the
+issue's language: the Definition of Ready of the issue as written, a ready or
+needs-refinement verdict, a Fibonacci size with its capacity days, the problems in the current
+acceptance criteria (vague, not testable, technical…), a proposed story with domain examples
+and Given/When/Then criteria, related issues, and the gaps against the PRD or BRD the issue
+links under `docs/`. A document the issue does not link is listed as one to confirm, never
+used.
+
+Its scripts do everything that must not depend on the model:
+
+| Script | Does |
+|---|---|
+| `refine-marker.mjs` | Decides whether the issue still needs a proposal: a trusted comment carries a hidden marker with the plugin version and a hash of the issue's title and body. |
+| `resolve-docs.mjs` | Finds the PRD and BRD under `docs/`: linked ones are used, related ones are candidates. |
+| `check-proposal.mjs` | Validates the proposal and derives readiness, the DoR tally and the capacity days. |
+| `render-comment.mjs` | Renders the comment in French or English headings, Gherkin keywords in the issue's language, with the marker first. |
 
 ## The review gate
 

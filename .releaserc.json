@@ -55,7 +55,8 @@
           "plugins/skraft-framework/src/package.json",
           "plugins/skraft-backlog/plugin.json",
           "plugins/skraft-backlog/.claude-plugin/plugin.json",
-          "plugins/skraft-backlog/.codex-plugin/plugin.json"
+          "plugins/skraft-backlog/.codex-plugin/plugin.json",
+          "plugins/skraft-backlog/skills/refinement-proposal/scripts/version.mjs"
         ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }

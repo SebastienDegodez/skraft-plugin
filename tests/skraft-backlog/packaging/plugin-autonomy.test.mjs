@@ -87,3 +87,8 @@ test('every marketplace lists the plugin from its own folder', () => {
     assert.equal(typeof entry.source === 'string' ? entry.source : entry.source.path, './plugins/skraft-backlog', path)
   }
 })
+
+test('the version the refinement marker carries is the plugin version', async () => {
+  const { VERSION } = await import('../../../plugins/skraft-backlog/skills/refinement-proposal/scripts/version.mjs')
+  assert.equal(VERSION, json('plugin.json').version)
+})

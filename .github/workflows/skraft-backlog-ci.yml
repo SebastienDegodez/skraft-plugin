@@ -64,5 +64,11 @@ jobs:
         run: node scripts/project-plugin-adapters.mjs --check --plugin-root plugins/skraft-backlog
       - name: Dispatch tree and declared skills are valid
         run: node plugins/skraft-framework/src/cli/build-config-bin.mjs --emit --dir plugins/skraft-backlog/com.github.copilot/agents > /dev/null
+      - name: Skill script coverage floor
+        run: |
+          node --test --experimental-test-coverage \
+            '--test-coverage-include=plugins/skraft-backlog/**' \
+            --test-coverage-lines=95 --test-coverage-branches=85 --test-coverage-functions=90 \
+            "tests/skraft-backlog/**/*.test.mjs"
       - name: Agent model assignment matches the cost_role_class policy
         run: node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check --dir plugins/skraft-backlog/com.github.copilot/agents
