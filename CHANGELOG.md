@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.10.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.10.0...v1.10.1) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* hooks cost vscode ([#189](https://github.com/SebastienDegodez/skraft-plugin/issues/189)) ([5f34c52](https://github.com/SebastienDegodez/skraft-plugin/commit/5f34c52611b07fb3eb734d55c3214b21ebceab01))
+
 ## [1.10.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.9.0...v1.10.0) (2026-10-07)
 
 ### ✨ Features
