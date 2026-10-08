@@ -6,15 +6,15 @@ import { BUNDLES, bundleFiles, check, pluginRoot } from '../../../scripts/sync-s
 
 const skills = join(pluginRoot, 'skills')
 
-// Stryker rewrites the sources it copies into its sandbox (instrumentation, type-check
-// pragmas), so faithful copies read as stale there; the copy check runs outside it.
-const inStrykerSandbox = pluginRoot.split(sep).includes('.stryker-tmp')
+// Stryker rewrites the sources it copies into its sandbox (instrumented literals, type-check
+// pragmas): copies read as stale and imports stop parsing there, so these run outside it.
+const outsideSandbox = { skip: pluginRoot.split(sep).includes('.stryker-tmp') && 'sources are rewritten in the Stryker sandbox' }
 
-test('every copied script and document matches its source (npm run skills:sync)', { skip: inStrykerSandbox && 'sources are rewritten in the Stryker sandbox' }, () => {
+test('every copied script and document matches its source (npm run skills:sync)', outsideSandbox, () => {
 	assert.deepEqual(check(), [])
 })
 
-test('a bundle holds its CLI and every module that CLI imports', () => {
+test('a bundle holds its CLI and every module that CLI imports', outsideSandbox, () => {
 	const files = bundleFiles('src/cli/qg-verify.mjs')
 	assert.ok(files.includes('cli/qg-verify.mjs'))
 	assert.ok(files.includes('domain/evidence-verification-policy.mjs'))
