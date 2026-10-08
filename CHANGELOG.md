@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.11.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.10.2...v1.11.0) (2026-10-08)
+
+### ✨ Features
+
+* **skills:** clean-architecture-python, with its Vally spec ([#198](https://github.com/SebastienDegodez/skraft-plugin/issues/198)) ([193dd3e](https://github.com/SebastienDegodez/skraft-plugin/commit/193dd3e8dedac64ab2f9c4e63b63eee1f12172e5))
+
 ## [1.10.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.10.1...v1.10.2) (2026-10-08)
 
 ### 🐛 Bug Fixes
