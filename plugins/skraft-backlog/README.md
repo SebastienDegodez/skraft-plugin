@@ -41,6 +41,9 @@ and Given/When/Then criteria, related issues, and the gaps against the PRD or BR
 links under `docs/`. A document the issue does not link is listed as one to confirm, never
 used.
 
+Run it yourself with the `/skraft-refine <issue number>` command (Claude Code, Copilot CLI,
+VS Code), on your own model and credentials; add `--force` to redo an issue already covered.
+
 Its scripts do everything that must not depend on the model:
 
 | Script | Does |
