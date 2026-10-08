@@ -20,11 +20,14 @@ for (const { entry, targets } of BUNDLES) {
 	for (const target of targets) {
 		test(`${target} passes the acceptance suite of ${entry}`, () => {
 			const files = suite.files.map((file) => fileURLToPath(new URL(file, import.meta.url)))
-			const run = spawnSync(process.execPath, ['--test', ...files], {
-				encoding: 'utf8',
-				env: { ...process.env, [suite.variable]: join(pluginRoot, target, suite.cli) },
-			})
-			assert.equal(run.status, 0, run.stdout.split('\n').filter((line) => /^not ok|# (pass|fail)/.test(line.trim())).join('\n') + run.stderr.slice(-2000))
+			// Inside a test, NODE_TEST_CONTEXT makes a nested `node --test` run nothing and exit 0.
+			const env = { ...process.env, [suite.variable]: join(pluginRoot, target, suite.cli) }
+			delete env.NODE_TEST_CONTEXT
+			const run = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...files], { encoding: 'utf8', env })
+			const summary = run.stdout.split('\n').filter((line) => /^not ok|^# (pass|fail)/.test(line.trim())).join('\n')
+			assert.equal(run.status, 0, summary + run.stderr.slice(-2000))
+			assert.match(run.stdout, /^# pass [1-9]\d*$/m, `the suite ran no test:\n${run.stdout.slice(-2000)}${run.stderr.slice(-2000)}`)
+			assert.match(run.stdout, /^# fail 0$/m)
 		})
 	}
 }

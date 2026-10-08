@@ -2,12 +2,25 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { test } from 'node:test'
-import { BUNDLES, bundleFiles, check, pluginRoot } from '../../../scripts/sync-skill-copies.mjs'
+import { BUNDLES, COPIES, bundleFiles, check, pluginRoot } from '../../../scripts/sync-skill-copies.mjs'
 
 const skills = join(pluginRoot, 'skills')
 
+// Stryker instruments the plugin sources in its sandbox; their faithful copies then read as stale.
+function sourceOf(target) {
+	for (const { source, targets } of COPIES) if (targets.includes(target)) return join(pluginRoot, source)
+	for (const { targets } of BUNDLES) {
+		for (const root of targets) if (target.startsWith(`${root}/`)) return join(pluginRoot, 'src', target.slice(root.length + 1))
+	}
+	return null
+}
+const instrumented = (problem) => {
+	const source = problem.startsWith('stale: ') ? sourceOf(problem.slice('stale: '.length)) : null
+	return source !== null && existsSync(source) && readFileSync(source, 'utf8').includes('stryMutAct_9fa48')
+}
+
 test('every copied script and document matches its source (npm run skills:sync)', () => {
-	assert.deepEqual(check(), [])
+	assert.deepEqual(check().filter((problem) => !instrumented(problem)), [])
 })
 
 test('a bundle holds its CLI and every module that CLI imports', () => {
