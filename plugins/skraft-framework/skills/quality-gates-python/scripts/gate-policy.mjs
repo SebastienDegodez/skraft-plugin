@@ -80,6 +80,17 @@ export function renderConfig({ modulePaths, timeout, testCommand }) {
 	].join('\n')
 }
 
+// cosmic-ray splits test-command with POSIX shlex and spawns it without a shell. A bare
+// `python` there resolves beside the running interpreter on Windows (the base install, not
+// the venv), so a leading `python`/`python3` becomes the project interpreter, single-quoted
+// so shlex keeps Windows backslashes.
+export function bindInterpreter(testCommand, python) {
+	const match = testCommand.match(/^\s*python3?(?=\s|$)/)
+	if (!match) return testCommand
+	ensure(!python.includes("'"), `The interpreter path cannot hold a single quote: ${python}`)
+	return `'${python}'${testCommand.slice(match[0].length)}`
+}
+
 export function selectChanged(files, changed) {
 	const wanted = new Set(changed.map((name) => name.replaceAll('\\', '/')))
 	return files.filter((file) => wanted.has(file))

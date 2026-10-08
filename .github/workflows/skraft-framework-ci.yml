@@ -13,6 +13,9 @@ on:
       - 'plugins/skraft-framework/.codex-plugin/**'
       - 'scripts/project-plugin-adapters.mjs'
       - 'scripts/dotnet-quality-gates-smoke.mjs'
+      - 'scripts/python-quality-gates-smoke.mjs'
+      - 'scripts/sync-skill-copies.mjs'
+      - 'scripts/lib/gh-annotations-reporter.mjs'
       - 'scripts/lib/agent-*.mjs'
       - 'scripts/lib/native-claude-agent.mjs'
       - 'plugins/skraft-framework/.agent-sync.json'
@@ -37,6 +40,9 @@ on:
       - 'plugins/skraft-framework/.codex-plugin/**'
       - 'scripts/project-plugin-adapters.mjs'
       - 'scripts/dotnet-quality-gates-smoke.mjs'
+      - 'scripts/python-quality-gates-smoke.mjs'
+      - 'scripts/sync-skill-copies.mjs'
+      - 'scripts/lib/gh-annotations-reporter.mjs'
       - 'scripts/lib/agent-*.mjs'
       - 'scripts/lib/native-claude-agent.mjs'
       - 'plugins/skraft-framework/.agent-sync.json'
@@ -66,6 +72,9 @@ jobs:
 
       - name: Check generated plugin adapters
         run: node scripts/project-plugin-adapters.mjs --check
+
+      - name: Check the copies that keep every skill self-contained
+        run: node scripts/sync-skill-copies.mjs --check
 
       # The JavaScript quality-gates runner tests resolve the pinned Stryker packages.
       - name: Install the framework's dev dependencies
@@ -135,9 +144,15 @@ jobs:
       - name: Check skraft-framework.config.json matches the agent descriptors
         run: node plugins/skraft-framework/src/cli/build-config-bin.mjs --check
 
-  dotnet-gates:
-    name: .NET quality-gate scripts (real Stryker.NET)
-    runs-on: ubuntu-latest
+  skill-scripts:
+    name: Skill scripts (${{ matrix.os }})
+    # Every skill ships its own Node scripts and runs them on the user's machine:
+    # each one must work, unchanged, on Linux, macOS and Windows.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -152,8 +167,38 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Run the gate scripts on a real solution
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+
+      - name: Check the copies that keep every skill self-contained
+        run: node scripts/sync-skill-copies.mjs --check
+
+      # The JavaScript quality-gates runner tests resolve the pinned Stryker packages.
+      - name: Install the framework's dev dependencies
+        working-directory: plugins/skraft-framework/src
+        run: npm ci
+
+      - name: Run the skill script suites
+        shell: bash
+        run: >-
+          node --test
+          --test-reporter=spec --test-reporter-destination=stdout
+          --test-reporter=./scripts/lib/gh-annotations-reporter.mjs --test-reporter-destination=stdout
+          "tests/skraft-framework/skill-autonomy/*.test.mjs"
+          "tests/skraft-framework/quality-gates/*.test.mjs"
+          "tests/skraft-framework/mikado-method/*.test.mjs"
+          "tests/skraft-framework/clean-architecture-dotnet/*.test.mjs"
+          "tests/skraft-framework/reporting/*.test.mjs"
+
+      - name: Run the .NET gate scripts on a real solution (real Stryker.NET)
+        if: always()
         run: node scripts/dotnet-quality-gates-smoke.mjs
+
+      - name: Run the Python gate scripts on a real project (real cosmic-ray)
+        if: always()
+        run: node scripts/python-quality-gates-smoke.mjs
 
   mutation:
     name: Mutation Testing
