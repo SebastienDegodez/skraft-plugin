@@ -53,7 +53,7 @@ invokes declared reviewers, and applies their verdicts. It invokes neither
 - **Mission:** turn a raw stream of issues into a prioritised triage report.
 - **Receives:** issues, a milestone.
 - **Hands off:** a triage report.
-- **Checked by:** `backlog-discoverer-reviewer` (gates G1–G6).
+- **Checked by:** its own review gate — 3 lenses, verdict computed by `review-verdict.mjs` (gates G1–G6).
 - **Invoked by:** the developer, outside `skraft-orchestrator`.
 
 ### 2. `backlog-planner` — the refiner (DISCUSS)
@@ -61,7 +61,7 @@ invokes declared reviewers, and applies their verdicts. It invokes neither
 - **Mission:** turn a triaged issue into an INVEST story with acceptance criteria.
 - **Receives:** the triage report.
 - **Hands off:** a ready, unambiguous story.
-- **Checked by:** `backlog-planner-reviewer` (gates G1–G8).
+- **Checked by:** its own review gate — 4 lenses, verdict computed by `review-verdict.mjs` (gates G1–G8).
 - **Invoked by:** the developer, outside `skraft-orchestrator`.
 
 ## The four engineering executors

@@ -20,7 +20,7 @@ The DISCUSS phase refines triaged issues into structured stories, ready for arch
 | **What exits** | INVEST story + verifiable acceptance criteria |
 | **Goes to** | **DESIGN** — which designs its architecture |
 | **Responsible agent** | `backlog-planner` |
-| **Associated reviewer** | `backlog-planner-reviewer` |
+| **Associated reviewer** | none: the planner dispatches 4 lenses and the `review-verdict.mjs` script decides (skraft-backlog plugin) |
 
 ## Why this phase exists
 

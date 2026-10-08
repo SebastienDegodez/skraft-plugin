@@ -43,8 +43,8 @@ graph LR
 
 | Layer | Step | Executor agent | Independent reviewer |
 |-------|------|---------------|----------------------|
-| Standalone product | DISCOVER | `backlog-discoverer` | `backlog-discoverer-reviewer` |
-| Standalone product | DISCUSS | `backlog-planner` | `backlog-planner-reviewer` |
+| Standalone product (skraft-backlog) | DISCOVER | `backlog-discoverer` | 3 lenses + `review-verdict.mjs` |
+| Standalone product (skraft-backlog) | DISCUSS | `backlog-planner` | 4 lenses + `review-verdict.mjs` |
 | Orchestrated engineering | RESEARCH | `solution-researcher` | no declared phase reviewer |
 | Orchestrated engineering | DESIGN | `solution-architect` | `solution-architect-reviewer` |
 | Orchestrated engineering | DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` |

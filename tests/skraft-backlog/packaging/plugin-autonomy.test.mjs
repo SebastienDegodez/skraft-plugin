@@ -101,3 +101,26 @@ test('the /skraft-refine command ships for Claude and Copilot, and runs the refi
   }
   assert.ok(skills.includes('refinement-proposal'))
 })
+
+test('the VS Code automation templates are well-formed and name agents this plugin ships', () => {
+  const agentNames = readdirSync(join(root, 'com.github.copilot/agents'))
+    .map((file) => /^name:\s*(.+)$/m.exec(read(`com.github.copilot/agents/${file}`))[1].trim())
+  const templates = readdirSync(join(root, 'automations'))
+  assert.ok(templates.length >= 2)
+  const ids = new Set()
+  for (const file of templates) {
+    assert.match(file, /\.automation\.md$/)
+    const text = read(`automations/${file}`)
+    const [, frontmatter, prompt] = text.split('---\n')
+    assert.match(frontmatter, /^version: 1$/m, file)
+    const id = /^id: ([a-z0-9.-]{1,64})$/m.exec(frontmatter)?.[1]
+    assert.ok(id && !ids.has(id), `${file}: id missing, invalid or duplicated`)
+    ids.add(id)
+    assert.match(frontmatter, /^name: .+$/m, file)
+    assert.match(frontmatter, /schedule:\n\s+kind: (manual|hourly|cron)/, file)
+    if (/kind: cron/.test(frontmatter)) {
+      assert.match(frontmatter, /expression: "\d+ \d+ \* \* [\d*]"\n\s+timeZone: local/, `${file}: only daily or weekly local cron`)
+    }
+    for (const [, agent] of prompt.matchAll(/`(Skraft - [^`]+)`/g)) assert.ok(agentNames.includes(agent), `${file} names ${agent}`)
+  }
+})
