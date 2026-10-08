@@ -12,6 +12,9 @@ import { allow } from '../adapters/api/hooks/decision.mjs'
 //                               G8 workspace-write check applies during DELIVER).
 //   provenance guard           — runs on every agent dispatch, pipeline or not: no
 //                               self-dispatch, no dispatch outside the declared tree.
+//   G9  handoff guard          — runs with G1: a phase-agent dispatch must name every
+//                               recorded required input (test plan, research, previous
+//                               review on a retry) in its prompt.
 //
 // Decisions combine FAIL-CLOSED: block > deny > allow. A missing guard is a safe allow.
 
@@ -23,7 +26,7 @@ const combine = (decisions) =>
     ?? decisions.find((d) => d.decision === 'deny')
     ?? allow()
 
-export const createPreToolUseCompositeService = ({ dispatchGuard, sessionGuard, provenanceGuard } = {}) => ({
+export const createPreToolUseCompositeService = ({ dispatchGuard, sessionGuard, provenanceGuard, handoffGuard } = {}) => ({
   handle: async (payload = {}) => {
     const decisions = []
 
@@ -33,6 +36,9 @@ export const createPreToolUseCompositeService = ({ dispatchGuard, sessionGuard, 
     }
     if (dispatchGuard && payload.projectSlug && requestedAgent) {
       decisions.push(await dispatchGuard.handle({ requestedAgent, projectSlug: payload.projectSlug }))
+    }
+    if (handoffGuard && payload.projectSlug && requestedAgent) {
+      decisions.push(await handoffGuard.handle({ requestedAgent, projectSlug: payload.projectSlug, prompt: payload.toolInput?.prompt }))
     }
 
     if (sessionGuard) {

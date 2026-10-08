@@ -180,7 +180,8 @@ Custom agents are covered, but not the way skills are. A skill comparison is **t
 | Verdict | Meaning |
 |---|---|
 | `pass` | every trial ran and scored at or above the suite's `scoring.threshold` |
-| `regression` | every trial ran, and at least one scored below the threshold |
+| `flaky` | every trial ran, at least one scored below the threshold, and every scenario kept at least two thirds conforming trials |
+| `regression` | every trial ran, and at least one scenario fell below two thirds conforming trials |
 | `inconclusive` | a trial errored, so it proves nothing about the agent |
 
 Those verdicts are published to the dashboard and to the PR comment alongside the skills, but they stay **advisory**: a suite runs a single real agent session, and one flaky run must not block an unrelated merge.

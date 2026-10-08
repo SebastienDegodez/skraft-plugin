@@ -15,8 +15,8 @@ La phase DELIVER implémente le code fonctionnel, guidé par les tests, avec une
 
 | | |
 |---|---|
-| **Vient de** | **DISTILL** — les scénarios Gherkin + le plan |
-| **Ce qui entre** | Spécifications exécutables à implémenter ; rapport prévisionnel du flux de reporting approuvé |
+| **Vient de** | **DISTILL** — les scénarios Gherkin, le plan de tests, le plan d'implémentation et le test d'acceptation RED |
+| **Ce qui entre** | Spécifications exécutables à implémenter, dans l'ordre du plan d'implémentation, avec la couche et le double du plan de tests pour chaque scénario ; contrats, index ADR, conventions de recherche, commandes de stack et rapport prévisionnel du flux de reporting approuvé |
 | **Ce qui sort** | Code testé + évidence qualité (mutation, RED→GREEN) ; rapport de résultat à la fin ou au blocage |
 | **Va vers** | La **Pull Request** — revue humaine puis livraison |
 | **Agent responsable** | `software-engineer` |
@@ -41,6 +41,35 @@ Le scénario entre. DELIVER implémente le calcul du total et l'attribution des 
 - Tests d'acceptation passants liés aux scénarios Gherkin.
 - Tests unitaires couvrant les invariants du Domain.
 - Mutation Score comme preuve empirique de la qualité des tests.
+- Journal d'évidence des quality gates, journal de changements et données de résultat pour le reviewer.
+
+## Handoff, RED et rework
+
+DELIVER démarre depuis le bloc `state.mjs handoff`, pas depuis une reconstruction fraîche.
+Le bloc porte le `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`,
+`contracts-{story}.md`, `docs/adr/decisions-index.md`, les conventions de recherche,
+`stack-commands.md` et l'évidence RED d'acceptation. Les retries portent le même bloc, donc
+le plan de tests et le plan d'implémentation restent présents pendant le rework.
+
+L'inspection RED a lieu dans le dispatch du software-engineer : la capture G10 enregistrée
+est l'inspection, et l'engineer continue RED → GREEN → COMMIT sans second dispatch. La
+mutation par cycle est différentielle depuis le dernier commit du cycle précédent et est
+sautée quand aucun fichier de production cœur n'a changé. Seul le run final complet cœur
+puis frontière constitue l'évidence G6.
+
+Le reviewer prépare `diff-{story}.patch` et `files-{story}.txt` une seule fois, puis donne
+ces chemins aux lentilles. `quality-gates` reçoit aussi le plan de tests, `test-integrity`
+reçoit le plan de tests et le `.feature`, `architecture-boundaries` reçoit les contrats et
+l'index ADR, et `cold-reader` ne reçoit que le patch et la liste de fichiers.
+
+En rework, l'engineer ne change que ce que les findings de la revue précédente nomment. En
+re-review, le reviewer relance les lentilles ou gates qui ont échoué, étaient
+`inconclusive` ou dont les entrées ont changé, et reporte les autres résultats passants
+dans le YAML de verdict. Si le seul problème est une gate `inconclusive` causée par
+l'environnement, l'orchestrateur escalade la cause et la commande à l'utilisateur au lieu
+d'envoyer l'engineer en rework. Une fois l'environnement réparé par l'utilisateur,
+l'engineer relance uniquement ces gates `inconclusive`, sans modifier le code ni consommer
+de retry, puis le reviewer refait sa revue.
 
 ## Des preuves au rapport de résultat
 

@@ -3,6 +3,104 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.10.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.10.0...v1.10.1) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* hooks cost vscode ([#189](https://github.com/SebastienDegodez/skraft-plugin/issues/189)) ([5f34c52](https://github.com/SebastienDegodez/skraft-plugin/commit/5f34c52611b07fb3eb734d55c3214b21ebceab01))
+
+## [1.10.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.9.0...v1.10.0) (2026-10-07)
+
+### ✨ Features
+
+* **agents:** load clean-architecture-dotnet in DESIGN and DELIVER ([8359880](https://github.com/SebastienDegodez/skraft-plugin/commit/835988095f09234828105bdae60d308827e7efaa))
+* **agents:** load clean-architecture-java in DESIGN and DELIVER ([3ef52f1](https://github.com/SebastienDegodez/skraft-plugin/commit/3ef52f1366227b56c5f8dd52d22cbfb066c78cc7))
+* **skills:** add a minimal clean-architecture-java skill ([009466c](https://github.com/SebastienDegodez/skraft-plugin/commit/009466c121a34d73deee804896275d21d8b234eb))
+* **skills:** carry CQS, read models, aggregate creation and access rules in Java ([557c412](https://github.com/SebastienDegodez/skraft-plugin/commit/557c4125eff02992b3481eecfb8283a0f0acb6f3))
+* **skills:** import clean-architecture-dotnet from copilot-instructions ([74021b1](https://github.com/SebastienDegodez/skraft-plugin/commit/74021b13560ed159d6e4ee8d239ddf96582c6b2e))
+
+### 🐛 Bug Fixes
+
+* **agents,skills:** read clean-architecture-testing at startup, make skills trigger on feature requests ([413caa5](https://github.com/SebastienDegodez/skraft-plugin/commit/413caa51d0b0ca87e5d276c98ac76b2bf690444e))
+* **agents:** load only the Clean Architecture skill of the repo's stack ([385d4c9](https://github.com/SebastienDegodez/skraft-plugin/commit/385d4c923f413038e119b73aa7ab3d71f33d98a4))
+* **evals:** keep braces out of the clean-architecture prompts ([3c4e576](https://github.com/SebastienDegodez/skraft-plugin/commit/3c4e5765c8227453855a22fe963f29edcc559a7a))
+* **evals:** pass vally lint --strict and close the review gaps ([b633817](https://github.com/SebastienDegodez/skraft-plugin/commit/b633817093bf477666b15b122dbab4439a27a564))
+* **evals:** stage the clean-architecture fixtures beside their specs ([1588051](https://github.com/SebastienDegodez/skraft-plugin/commit/158805140ebd8988b0a96a8f62e1a7eed7a51738))
+* **skills:** make every .NET command return nothing, as the skill teaches ([d776934](https://github.com/SebastienDegodez/skraft-plugin/commit/d7769346e67dd905e458e044e2cad2a59a5a8d0b))
+* **skills:** make the .NET scaffold build and follow the reference graph ([8acb0e3](https://github.com/SebastienDegodez/skraft-plugin/commit/8acb0e300fd905826094fc58ea0242aeef93dce8))
+* **skills:** name cross-skill references instead of linking them ([0a2d8ff](https://github.com/SebastienDegodez/skraft-plugin/commit/0a2d8ffea37214951cc85c67b6de32ffa56669d6))
+* **skills:** place repository interfaces by one rule across the guidance ([a7b018f](https://github.com/SebastienDegodez/skraft-plugin/commit/a7b018fff8083b4eeb744c25b42d2ea6656b10ee))
+* **skills:** point the .NET NetArchTest links inside the plugin ([5c5ba91](https://github.com/SebastienDegodez/skraft-plugin/commit/5c5ba9134035870c00b7a40114e0f8884f4ef85d))
+
+### ♻️ Refactoring
+
+* **agents:** use Clean Architecture vocabulary instead of ports and adapters ([c95ab93](https://github.com/SebastienDegodez/skraft-plugin/commit/c95ab93dff469ea6fb080e7c05be89b0be368147))
+* **skills:** drop .NET guidance the model already follows unaided ([b2df96a](https://github.com/SebastienDegodez/skraft-plugin/commit/b2df96a05c0ac5a404f660327ec7da0978760dc3))
+* **skills:** drop the adapter wording from the .NET layer reference ([a7717a5](https://github.com/SebastienDegodez/skraft-plugin/commit/a7717a5a8385e631808646b0e9f681163fda8b15))
+* **skills:** shape clean-architecture-dotnet like the Java skill, details in references ([db16271](https://github.com/SebastienDegodez/skraft-plugin/commit/db162718f104e069cd826b9024614e7c430fb130))
+
+## [1.9.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.8.0...v1.9.0) (2026-10-04)
+
+### ✨ Features
+
+* **skills:** allow-list the business code in the architecture guard ([d745e45](https://github.com/SebastienDegodez/skraft-plugin/commit/d745e45f8810488e3f74db61db48de1f1fd0f14a))
+* **skills:** trigger clean-architecture-testing on adapter coverage ([6c38cf9](https://github.com/SebastienDegodez/skraft-plugin/commit/6c38cf95ced251288e702afc9d10fb21fed347ac))
+
+### 🐛 Bug Fixes
+
+* **evals:** inline the Spring fixture list so a single-stimulus pilot resolves ([52bfbe7](https://github.com/SebastienDegodez/skraft-plugin/commit/52bfbe728b1c3de61f1517cc2f07524c3bcaa252))
+* **evals:** keep Maven graders off Vally's output buffer ([13f6fa9](https://github.com/SebastienDegodez/skraft-plugin/commit/13f6fa9cbdc9e74db5d1814c63027e72259917c3))
+* **evals:** store the Spring fixture under the Windows path budget ([6d3df94](https://github.com/SebastienDegodez/skraft-plugin/commit/6d3df94e4f10dfb048298232187faf9419c9594b))
+* **skills:** make project references the layer dependency rule ([d13e0c3](https://github.com/SebastienDegodez/skraft-plugin/commit/d13e0c3319e17a299e27cf213ef0e5eaf99cba3f))
+* **skills:** make the Java examples runnable and close the pom guard gap ([a2d052f](https://github.com/SebastienDegodez/skraft-plugin/commit/a2d052f74a1b7e7fd0ab59fc65dfd4bdf9c8f069))
+
+### ♻️ Refactoring
+
+* **skills:** condense the Java example into a module graph ([17cb8b4](https://github.com/SebastienDegodez/skraft-plugin/commit/17cb8b48527967466cb1e92f5848cfe64d16e516))
+
+### 📝 Documentation
+
+* **evals:** drop personal account names from the run notes ([5b61647](https://github.com/SebastienDegodez/skraft-plugin/commit/5b61647ae950395760c1344071f6026f466e6a9b))
+* **evals:** record the full Stage C result and its three instrument defects ([8379b83](https://github.com/SebastienDegodez/skraft-plugin/commit/8379b83ff471fd831023c6fd8d3c8cf67675bd38))
+* **evals:** record the Spring Boot block pilot and the framework-leak gap ([53ea8dd](https://github.com/SebastienDegodez/skraft-plugin/commit/53ea8ddb012a72ef5d95d81b01376fcbade3add0))
+* **evals:** record the Spring Boot Stage B pilot and the reference rule ([043d427](https://github.com/SebastienDegodez/skraft-plugin/commit/043d42753e43f9d2d8dc194212c0f0531c203d68))
+* **skills:** add self-contained Java examples for clean-architecture-testing ([c991619](https://github.com/SebastienDegodez/skraft-plugin/commit/c99161974bde8ff3905d9e701654d57e8e9b27a4))
+* **skills:** state one project-reference graph across the guidance ([062ef0e](https://github.com/SebastienDegodez/skraft-plugin/commit/062ef0e566136ee35a4b076c4b8cf9a1b610937e))
+* **skills:** trim redundant text and shrink decision-tree graphs ([4f6979e](https://github.com/SebastienDegodez/skraft-plugin/commit/4f6979e4e0cbb9113a68eb16fb3e9879ce6e62f0))
+
+## [1.8.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.7.1...v1.8.0) (2026-10-02)
+
+### ✨ Features
+
+* **eng:** add flaky state for agent conformance verdicts ([9f01d53](https://github.com/SebastienDegodez/skraft-plugin/commit/9f01d53fe544d763d560cf24130a5d1c3c5a5598))
+* **skills:** lead outside-in-tdd and quality-gates-javascript with triggers ([91db9c9](https://github.com/SebastienDegodez/skraft-plugin/commit/91db9c9fd467e70e42429e2ca566dc5b603fa894))
+
+### 🐛 Bug Fixes
+
+* **agents:** resolve review findings on SKRAFT agent chaining ([bcbc7df](https://github.com/SebastienDegodez/skraft-plugin/commit/bcbc7df6a9def1919c06899aa851884f5fc922c7))
+* **skraft-framework:** normalize review verdict spelling in artifact CLI ([2faec32](https://github.com/SebastienDegodez/skraft-plugin/commit/2faec32c60d27d2f9b46dc71e9389bef0366eb05))
+* **skraft-framework:** stop stray quotes from masking structural scan code ([258591e](https://github.com/SebastienDegodez/skraft-plugin/commit/258591e0b5ed44e67852519f10cbd99491332c06))
+
+## [1.7.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.7.0...v1.7.1) (2026-09-29)
+
+### 🐛 Bug Fixes
+
+* **evals:** keep a command-shaped VALLY word-split ([577a4fe](https://github.com/SebastienDegodez/skraft-plugin/commit/577a4fe45d353b81ee04e86e07c5ac1904112fc6)), closes [#160](https://github.com/SebastienDegodez/skraft-plugin/issues/160)
+* **evals:** move the fixtures' architecture tests out of the fast suite ([ae58cea](https://github.com/SebastienDegodez/skraft-plugin/commit/ae58ceab27ec8d94d7655b48b56c95634f324c64))
+* **evals:** repair the two breaks that stop a run before it starts ([e3f8027](https://github.com/SebastienDegodez/skraft-plugin/commit/e3f8027cc490d4f50c831e73acdac30c64b696af))
+* **evals:** shorten the clean-architecture-testing fixture path ([4f810a8](https://github.com/SebastienDegodez/skraft-plugin/commit/4f810a8a035dfc0f0119b2273e328ccf18ad1ce7)), closes [#176](https://github.com/SebastienDegodez/skraft-plugin/issues/176)
+
+### 📝 Documentation
+
+* **evals:** record why an instrument is shaped the way it is ([6ef9cd8](https://github.com/SebastienDegodez/skraft-plugin/commit/6ef9cd8d1c990c040e538479852f00f12f46e9a8))
+* **evals:** record why the clean-architecture-testing measurement did not run ([839c12f](https://github.com/SebastienDegodez/skraft-plugin/commit/839c12ff1321744f11f14a3b448bed00c953edcf))
+
+## [1.7.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.6.1...v1.7.0) (2026-09-28)
+
+### ✨ Features
+
+* **deliver:** make the software engineer consume the DISTILL test plan ([42f0204](https://github.com/SebastienDegodez/skraft-plugin/commit/42f020487133c045e3f3b522a51f87c12b5aabd8))
+
 ## [1.6.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.6.0...v1.6.1) (2026-09-25)
 
 ### 🐛 Bug Fixes

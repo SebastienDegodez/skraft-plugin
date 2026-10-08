@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: Use when an approved scenario, Gherkin example, worked example, or expected result has to become working software through outside-in / double-loop TDD -- start from an acceptance or application-boundary test, get a trustworthy RED before implementation, let domain logic emerge only from failing behavior, and drive one walking skeleton or first delivery slice at a time. Also use to decide what belongs in first delivery and what stays out of scope, when checking whether a failing suite proves a missing approved behavior or is false evidence, when replacing fixture-provided or test-provided false greens with production behavior, when wider HTTP/DB/infrastructure tests should wait behind an inner failing behavior, and when splitting RED and GREEN across workers or subagents with inspection between them. Finish with post-GREEN wiring verification, mutation/coverage gates, and never commit on red.
+description: Use when an approved behaviour (scenario, Gherkin example, worked example, expected result) must become working software, or when a test suite is not trustworthy evidence of it — the suite is green while the real runtime behaviour is wrong or missing because fixtures or tests supply the value, or the suite already fails but that failure may not prove the missing approved outcome. Drives outside-in / double-loop TDD with an acceptance or application-boundary test first, a trustworthy RED before any implementation, domain logic emerging only from failing behaviour, one walking skeleton or delivery slice at a time. Also decides what belongs in first delivery, keeps wider HTTP/DB/infrastructure tests behind an inner failing behaviour, and keeps the RED inspection point when RED and GREEN are split across workers or subagents. Finishes with post-GREEN wiring verification and mutation/coverage gates; never commits on red.
 ---
 
 # Outside-In TDD
@@ -104,11 +104,23 @@ the list and enforces it at commit time.
 the implementation — before any production code exists. What is inspected is the RED output itself,
 never a promise that it exists.
 
-**Who inspects, and how, is MODE.** In an interactive session the developer reviews and explicitly
-validates the test before you continue. Under an autonomous dispatch the inspection belongs to the
-orchestrator and happens between two separate dispatches (see *When Orchestrating Subagents*): a
-subagent instructed to act autonomously does not satisfy this by asking anyway — it reports the
-failing test and stops there. Either way, no implementation is written until the inspection happened.
+**Who inspects, and how, is MODE.**
+
+- **Interactive session:** the developer reviews and explicitly validates the test before you
+  continue.
+- **Autonomous dispatch of a single TDD slice:** the inspection belongs to the orchestrator and
+  happens between two separate dispatches (see *When Orchestrating Subagents*): a subagent
+  instructed to act autonomously does not satisfy this by asking anyway — it reports the failing
+  test and stops there.
+- **SKRAFT DELIVER (the software engineer, dispatched once per story):** the inspection is the
+  recorded RED run. Capture the failing run narrowed to the new test (quality gate G10) before any
+  production code exists, then continue to SYNTHESIZE GREEN in the same dispatch — never stop after
+  RED to wait for an inspection. `qg-verify` rejects a cycle whose RED capture is missing or exited
+  zero, and the DELIVER reviewer's `test-integrity` lens inspects every captured RED against the
+  test plan.
+
+In every mode, no implementation is written until the inspection — or, in SKRAFT DELIVER, the RED
+capture — exists.
 
 Orient design before synthesis: which pattern (specification, factory, builder), which layer owns
 the logic, immutability and return values vs mutations.
@@ -282,9 +294,8 @@ After both test streams are green and before merge, run the `mutation-testing` s
 the mechanics: what the run covers, how a surviving mutant is classified, and what happens to a
 test that kills nothing.
 
-Inside a cycle, mutate only what changed since the delivery started (the adapter's differential
-mode): fast feedback, never evidence. The full coverage and mutation runs happen once, after the
-story's last work commit, and only they close the gate.
+Run no mutation inside a cycle. The coverage run and the mutation runs since the delivery's base
+commit happen once, after the story's last work commit, and only they close the gate.
 
 The gate is closed when coverage and both mutation runs meet the bar and every survivor is
 resolved. If the gate has not run, the work is not complete — that is sequence, and it holds for
@@ -344,6 +355,10 @@ A scenario whose test has not been written yet is not "skipped" — it is not st
 `.feature` file already records that it is owed.
 
 ## When Orchestrating Subagents (MANDATORY)
+
+Scope: an orchestrator that dispatches individual TDD slices. The SKRAFT orchestrator dispatches a
+whole story to the software engineer, whose RED inspection is the recorded G10 capture (see
+*Between RED and GREEN*); it never splits RED and GREEN into two dispatches.
 
 If you dispatch subagents to carry out a TDD slice — whatever the orchestration mechanism:
 

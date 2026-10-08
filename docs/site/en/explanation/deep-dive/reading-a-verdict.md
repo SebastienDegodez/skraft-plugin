@@ -206,10 +206,16 @@ doubling the budget simply doubles the number of discarded pairs.
 
 ## 8. The reading table
 
+Skill evaluations use `no-improvement` for a measured null. Agent suites are
+single-arm, so they never emit `no-improvement`; they can emit `flaky` when a
+conclusive run breaks at least one trial while every scenario stays at or above
+two-thirds conformance.
+
 | Verdict | What it means | What to do |
 |---|---|---|
 | ✅ `pass` | Credible improvement: both tests clear, more wins than losses | Nothing — the skill earns its place |
-| 🔴 `regression` | Credible harm | **Blocks the merge.** The only state that does |
+| ⚠️ `flaky` | Agent suite only: at least one trial broke, but every scenario stayed at or above 2/3 | Open the replay and the checks that gave way; advisory, never blocking |
+| 🔴 `regression` | Credible harm for a skill, or an agent scenario below 2/3 | **Blocks the merge for skills only.** Agent rows stay advisory |
 | ➖ `no improvement` | Measured properly, the gap is indistinguishable from chance | Check magnitude and activation before concluding |
 | ⚪ `inconclusive` | The measurement could not decide | Read the cause: errored trials, unmatched trials, or too small a budget |
 

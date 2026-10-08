@@ -64,9 +64,10 @@ The framework lives under `plugins/skraft-framework/src/` at the repo root:
 plugins/skraft-framework/src/
   domain/                ← pure policies (no IO)
     pipeline-policy.mjs        dispatch order, provenance, continuation (G1, G6)
-    skill-policy.mjs           mandatory skills, loads read from a transcript (G2, G3)
+    skill-policy.mjs           mandatory/on-demand skills, loads read from a transcript (G2, G3)
     phase-gate-policy.mjs      phase closure rules (G4, G5)
     session-guard-policy.mjs   tracked-state protection, DELIVER writes (G7, G8)
+    handoff-policy.mjs         dispatch handoff completeness (G9)
     state-machine.mjs          transitions the state CLI applies
     result.mjs, value-objects.mjs, …
 
@@ -75,10 +76,11 @@ plugins/skraft-framework/src/
     infrastructure/      outbound interfaces (audit writer, state, transcript…)
 
   application/           ← one service per hook concern
-    pre-tool-use-composite.mjs   G1, provenance and G7/G8, combined fail-closed
+    pre-tool-use-composite.mjs   G1, provenance and G7/G8/G9 decisions
     subagent-start-service.mjs   G2
     subagent-stop-service.mjs    G3
     post-tool-use-service.mjs    G3 trace, G6
+    handoff-guard-service.mjs    G9
     state-service.mjs, phase-gate-service.mjs   the state CLI and its gate
 
   adapters/
@@ -166,14 +168,24 @@ Without a hook, the call would pass silently; review would catch it *after*.
 | G6 continuation | `PostToolUse` hook | Fail open | None |
 | G7 tracked state | `PreToolUse` hook | Fail closed | Last recorded run: Copilot CLI 1.0.83 refused a shell write |
 | G8 DELIVER writes | `PreToolUse` hook | Fail open on unreadable state | None |
+| G9 handoff guard | `PreToolUse` hook on phase-agent dispatch | Fail open on unreadable state or internal error | None |
 
 Every guard is covered by unit and acceptance tests. A live receipt comes only from a real
 session (`scripts/copilot-hook-smoke.mjs`, `scripts/claude-plugin-smoke.mjs`); Vally
 evaluations do not load plugin hooks.
 
-`SubagentStart` injects the starting agent's mandatory skills only. Rules are not injected:
-Copilot discovers path-scoped rules natively, and the orchestrator, the rules' only reader,
-loads them itself.
+`SubagentStart` injects the starting agent's mandatory skills only. A skill declared
+`on-demand` is not injected at start and is not required by `SubagentStop`; its eventual
+read is still traced by G3. Rules are not injected: Copilot discovers path-scoped rules
+natively, and the orchestrator, the rules' only reader, loads them itself.
+
+G9 guards the dispatch handoff rather than the subagent's reasoning. For a pipeline phase
+agent, the `PreToolUse` hook checks that the prompt names at least one recorded path for
+every required tracked input that already exists in state; on rework or re-review it also
+requires the previous review path. A denial tells the orchestrator to paste the block printed
+by `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" handoff --agent "<agent>"`. The guard is
+not applied to lenses, workers, product agents, or the specialist dispatched after an
+approved DESIGN phase for ADR ratification.
 
 ## Token economy — the hook angle
 
@@ -210,9 +222,10 @@ anti-hallucination system, and two important limits must be stated explicitly.
 
 Guardrail G2 injects mandatory skills at `SubagentStart`. G3 records skill reads and
 sends a subagent back when its transcript shows no load of a mandatory skill: a skill tool
-call or a read of its `SKILL.md`, never a mention. Both fail open on hook failure so an
-internal runtime error cannot freeze the pipeline. They prove a skill was loaded, not that
-the agent applied it correctly.
+call or a read of its `SKILL.md`, never a mention. Skills marked `on-demand` are outside
+that mandatory set, so they do not trigger a start injection or a stop-time compliance
+block. Both fail open on hook failure so an internal runtime error cannot freeze the
+pipeline. They prove a skill was loaded, not that the agent applied it correctly.
 
 ### Structural violations vs. factual hallucinations
 

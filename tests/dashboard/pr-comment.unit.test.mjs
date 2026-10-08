@@ -207,6 +207,29 @@ describe('buildPrComment', () => {
     ok(!comment.includes('Mandatory review skills are loaded` 3/3'))
   })
 
+  it('renders a flaky agent badge and still names which check gave way', () => {
+    const agentVerdict = {
+      subject: { kind: 'agent', name: 'acceptance-designer' },
+      conclusive: true,
+      passed: false,
+      flaky: true,
+      regressed: false,
+      conformance: { threshold: 0.9, conforming: 4, breaking: 2, trialCount: 6 },
+      trialCount: 6,
+      meanScore: 0.92,
+      graders: [
+        { name: 'Required skills are loaded', passed: 6, total: 6, evidence: null },
+        { name: 'The handoff keeps the acceptance criteria', passed: 4, total: 6, evidence: 'missing criteria block' },
+      ],
+      reason: 'conforms on 4 of 6 trial(s); every scenario at or above 2/3 (threshold 0.9)',
+    }
+    const comment = buildPrComment(results(agentVerdict))
+
+    ok(comment.includes('⚠️ flaky'))
+    ok(comment.includes('Which checks gave way'))
+    ok(comment.includes('The handoff keeps the acceptance criteria` 4/6'))
+  })
+
   it('shows which scenario broke, so one bad behaviour is not read as flakiness', () => {
     const agentVerdict = {
       subject: { kind: 'agent', name: 'acceptance-designer' },

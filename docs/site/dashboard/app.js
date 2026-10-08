@@ -47,7 +47,7 @@ const messages = {
     orchestration: 'Orchestration', agentsTitle: 'Agents, workers and review lenses', agentsDescription: 'Who runs the pipeline, which sub-agents they fan out to, and which lenses review the result.', browseSources: 'Browse sources',
     zoomQuality: 'View quality', zoomEfficiency: 'View efficiency', zoomModels: 'Compare models',
     allModels: 'All evaluated models',
-    states: { pass: 'pass', regression: 'regression', inconclusive: 'inconclusive', 'no-improvement': 'no improvement', 'no-data': 'no data', 'no-eval': 'not evaluated', neutral: 'neutral' },
+    states: { pass: 'pass', flaky: 'flaky', regression: 'regression', inconclusive: 'inconclusive', 'no-improvement': 'no improvement', 'no-data': 'no data', 'no-eval': 'not evaluated', neutral: 'neutral' },
   },
   fr: {
     skills: 'Skills distribués', agents: 'Agents, workers et lentilles de revue', evaluated: "Skills avec une spec d'évaluation", evidence: "Sujets avec preuves d'exécution publiées",
@@ -71,7 +71,7 @@ const messages = {
     orchestration: 'Orchestration', agentsTitle: 'Agents, workers et lentilles de revue', agentsDescription: 'Qui exécute le pipeline, vers quels sous-agents le travail est distribué et quelles lentilles relisent le résultat.', browseSources: 'Voir les sources',
     zoomQuality: 'Voir la qualité', zoomEfficiency: "Voir l'efficacité", zoomModels: 'Comparer les modèles',
     allModels: 'Tous les modèles évalués',
-    states: { pass: 'validé', regression: 'régression', inconclusive: 'non concluant', 'no-improvement': "pas d'amélioration", 'no-data': 'aucune donnée', 'no-eval': 'non évalué', neutral: 'neutre' },
+    states: { pass: 'validé', flaky: 'instable', regression: 'régression', inconclusive: 'non concluant', 'no-improvement': "pas d'amélioration", 'no-data': 'aucune donnée', 'no-eval': 'non évalué', neutral: 'neutre' },
   },
 }
 const t = messages[lang]

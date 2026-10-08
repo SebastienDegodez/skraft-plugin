@@ -92,24 +92,24 @@ Evaluates: diagrams + contracts + event models
 4. Check diagrams for arrows pointing outward (Domain → Infrastructure, Application → Infrastructure in the wrong direction).
 
 **Auto-fail examples:**
-- `IEligibilityRepository` is listed under Domain layer in contracts and imports `SqlConnection` from Infrastructure. → G3 BLOCKER fail.
+- `IEligibilityRepository` imports `SqlConnection` from Infrastructure. → G3 BLOCKER fail.
 - `CheckEligibilityCommandHandler` (Application layer) directly instantiates `EligibilityDbContext` (Infrastructure type). → G3 BLOCKER fail.
 
 **Pass examples:**
-- `IEligibilityRepository` is listed under Application layer. `EligibilityRepository` (Infrastructure) implements it. Contracts show no Infrastructure types in Domain or Application. → G3 pass.
+- `IEligibilityRepository` is listed under Domain, as the aggregate's ADR records. `EligibilityRepository` (Infrastructure) implements it. Contracts show no Infrastructure types in Domain or Application. → G3 pass.
 
 ---
 
-### G4 — Application Interfaces Defined in Application Layer
+### G4 — Application Interfaces Defined in an Inner Layer
 
 **Lens:** architecture-compliance-lens
 **Severity:** BLOCKER
 
-**Definition:** All application interfaces — repositories, gateways, event publishers, external service abstractions — must be defined in the Application layer. None may be defined in Infrastructure.
+**Definition:** All application interfaces — repositories, gateways, event publishers, external service abstractions — must be defined in Domain or Application — a repository in the layer its aggregate's ADR records, every other interface in Application. None may be defined in Infrastructure.
 
 **Step-by-step check:**
 1. List all interface types (names starting with `I`) in `contracts-{story}.md`.
-2. For each interface, verify it is explicitly assigned to the Application layer in the contracts.
+2. For each interface, verify it is explicitly assigned to Domain or Application in the contracts, and that a repository's layer matches its aggregate's ADR.
 3. Check for any interface defined in the Infrastructure layer. → fail for each one found.
 
 **Auto-fail examples:**
@@ -117,7 +117,7 @@ Evaluates: diagrams + contracts + event models
 - An `IEventPublisher` interface is described as "defined in the messaging Infrastructure project." → G4 BLOCKER fail.
 
 **Pass examples:**
-- `contracts-eligibility.md` lists `IEligibilityRepository`, `IDriverHistoryGateway`, and `IEventPublisher` all under Application layer. Infrastructure implementations listed separately. → G4 pass.
+- `contracts-eligibility.md` lists `IEligibilityRepository` under Domain (as its ADR records), `IDriverHistoryGateway` and `IEventPublisher` under Application. Infrastructure implementations listed separately. → G4 pass.
 
 ---
 
@@ -345,21 +345,21 @@ Admissible forces:
 **Lens:** consistency-lens
 **Severity:** HIGH
 
-**Definition:** When `contracts-{story}.md` introduces an interface, port, or hook that plays the same role as one already `Accepted` in a prior story for a comparable consumer category (e.g. two React hooks each wrapping a query port, two repository adapters for sibling aggregates, two API controllers exposing the same CRUD shape), the newer one must follow the same state/return/error convention as the existing one — same loading/error/data shape, same Result-vs-throw choice, same naming for the exposed fields. A divergence is admissible only when an `Accepted` ADR explicitly documents and justifies it.
+**Definition:** When `contracts-{story}.md` introduces an interface or hook that plays the same role as one already `Accepted` in a prior story for a comparable consumer category (e.g. two React hooks each wrapping a query interface, two repository implementations for sibling aggregates, two API controllers exposing the same CRUD shape), the newer one must follow the same state/return/error convention as the existing one — same loading/error/data shape, same Result-vs-throw choice, same naming for the exposed fields. A divergence is admissible only when an `Accepted` ADR explicitly documents and justifies it.
 
 **Why:** cross-artefact drift between comparable components (e.g. one hook returning `{ data, error, loading }` while a sibling hook returns `{ result, isError, pending }` for an equivalent responsibility) is easy to introduce independently in DESIGN and is otherwise only caught by a human during DELIVER integration — after the cost of writing both implementations has already been paid.
 
 **Step-by-step check:**
-1. Open `contracts-{story}.md` for the story under review AND for any prior story whose contracts are still `Accepted`. List every interface/port/hook grouped by consumer category (e.g. "React hook wrapping a query port").
+1. Open `contracts-{story}.md` for the story under review AND for any prior story whose contracts are still `Accepted`. List every interface/hook grouped by consumer category (e.g. "React hook wrapping a query interface").
 2. Within each group, compare the shape of the exposed state/return value and the error-handling convention (thrown exception vs `Result`/`Either` vs status flag).
 3. Flag any pair in the same group whose shape or convention differs.
 4. For each flagged pair, search the ADR set for one that names both components (or the category) and justifies the divergence. If found → pass for that pair. If not found → G16 fail.
 
 **Auto-fail examples:**
-- `useDriverEligibility` (contracts-US-01.md, Accepted) returns `{ data, error, loading }`. `useDriverHistory` (contracts-US-04.md, under review) — same category, wraps a comparable query port — returns `{ result, isError, pending }` with no ADR documenting the rename. → G16 HIGH fail.
+- `useDriverEligibility` (contracts-US-01.md, Accepted) returns `{ data, error, loading }`. `useDriverHistory` (contracts-US-04.md, under review) — same category, wraps a comparable query interface — returns `{ result, isError, pending }` with no ADR documenting the rename. → G16 HIGH fail.
 - `IEligibilityRepository.find()` returns `Result<Eligibility, NotFoundError>`. `IPolicyRepository.find()` (sibling aggregate, same story batch) throws `PolicyNotFoundException` instead, with no ADR justifying the split convention. → G16 HIGH fail.
 
 **Pass examples:**
-- Both `useDriverEligibility` and `useDriverHistory` return `{ data, error, loading }` for their respective query ports. → G16 pass.
+- Both `useDriverEligibility` and `useDriverHistory` return `{ data, error, loading }` for their respective query interfaces. → G16 pass.
 - `IEligibilityRepository.find()` and `IPolicyRepository.find()` both return `Result<T, NotFoundError>`. → G16 pass.
 - `useDriverHistory` deliberately returns a paginated shape (`{ pages, error, loading }`) and ADR-011 documents why pagination changes the contract vs the non-paginated `useDriverEligibility`. → G16 pass.

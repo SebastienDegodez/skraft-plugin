@@ -78,7 +78,7 @@ invokes declared reviewers, and applies their verdicts. It invokes neither
 - **Mission:** model the architecture (Event Modeling, DDD) and trace decisions in ADRs.
 - **Receives:** the INVEST story.
 - **Hands off:** an ADR + an event model + contracts.
-- **Checked by:** `solution-architect-reviewer` (gates G1–G15).
+- **Checked by:** `solution-architect-reviewer` (gates G1–G16).
 
 ### 5. `acceptance-designer` — the specifier (DISTILL)
 

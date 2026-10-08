@@ -84,6 +84,7 @@ Identify the viable implementation approaches. For each: principles, advantages,
 - {{tool}}: {{query_or_url}} -> {{finding}} (Source: {{url}})
 ### Project conventions
 - {{conventions_and_instructions_followed}}
+- Stack, test framework, project layout, and the files that declare build/test commands: {{paths}}
 
 ## Key discoveries
 {{patterns_examples_pitfalls}}
@@ -96,6 +97,7 @@ Identify the viable implementation approaches. For each: principles, advantages,
 
 ## Handoff to DESIGN
 - Recommended approach + the decisions DESIGN must ratify.
+- Existing aggregates, use cases, interfaces and structural patterns DESIGN reuses: {{name}} -> {{path}}
 - Open questions that remain for the architect.
 ````
 

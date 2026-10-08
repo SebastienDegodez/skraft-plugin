@@ -65,7 +65,7 @@ using Microcks.Testcontainers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using MonAssurance.Application.Ports;
+using MonAssurance.Application.Eligibility;
 
 namespace MonAssurance.IntegrationTests.Infrastructure;
 

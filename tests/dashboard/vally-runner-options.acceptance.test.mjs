@@ -46,8 +46,12 @@ import { dirname, join, resolve } from 'node:path'
 import { parse } from 'yaml'
 const args = process.argv.slice(2)
 const value = (flag) => args[args.indexOf(flag) + 1]
-const call = { args }
+const call = { args, start: Date.now() }
 if (args[0] === 'eval') {
+  // Lets a test hold an arm open long enough to observe whether the other arm
+  // ran beside it or after it.
+  const sleep = Number(process.env.FAKE_SLEEP_MS || 0)
+  if (sleep) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, sleep)
   call.spec = parse(readFileSync(value('--eval-spec'), 'utf8'))
   call.fixtures = call.spec.stimuli.flatMap((stimulus) =>
     (stimulus.environment?.files ?? []).map(({ src }) =>
@@ -63,6 +67,7 @@ if (args[0] === 'eval') {
     summary: { wins: 0, ties: 1, losses: 0, trialCount: 1, erroredCount: 0 }, stimuli: []
   }) + '\\n')
 }
+call.end = Date.now()
 appendFileSync(process.env.FAKE_CALLS, JSON.stringify(call) + '\\n')
 `)
   const env = {
@@ -94,6 +99,14 @@ appendFileSync(process.env.FAKE_CALLS, JSON.stringify(call) + '\\n')
 
 const value = (args, flag) => args[args.indexOf(flag) + 1]
 
+// The arms may run concurrently, so the order Vally was called in says nothing
+// about which arm a call was. Its output directory does.
+const arm = (evals, name) => {
+  const found = evals.filter(({ args }) => value(args, '--output-dir').endsWith(`/${name}`))
+  strictEqual(found.length, 1, `expected exactly one ${name} arm`)
+  return found[0]
+}
+
 describe('skill runner options with synthetic specs and a fake Vally', () => {
   for (const retries of [undefined, '0', '3']) {
     it(`passes retries ${retries ?? '(unset)'} to both arms without changing model or depth`, (t) => {
@@ -108,7 +121,7 @@ describe('skill runner options with synthetic specs and a fake Vally', () => {
         strictEqual(args.includes('--runs'), false)
         deepStrictEqual(spec, parse(source))
       }
-      strictEqual(value(result.evals[1].args, '--skill-dir'), join(f.workspace, 'plugins/skraft-framework/skills/synthetic-runner'))
+      strictEqual(value(arm(result.evals, 'skilled').args, '--skill-dir'), join(f.workspace, 'plugins/skraft-framework/skills/synthetic-runner'))
     })
   }
 
@@ -149,11 +162,38 @@ describe('skill runner options with synthetic specs and a fake Vally', () => {
     const result = f.run({ BASELINE_CACHE: '1', SKILL_MAX_RETRIES: '0' })
     strictEqual(result.status, 0, result.stdout + result.stderr)
     strictEqual(result.evals.length, 2)
-    strictEqual(value(result.evals[0].args, '--eval-spec'), join(dirname(f.spec), '.baseline-cache.eval.yaml'))
-    deepStrictEqual(result.evals[0].spec.stimuli, [parse(source).stimuli[1]])
-    deepStrictEqual(result.evals[0].fixtures, ['synthetic fixture'])
-    deepStrictEqual(result.evals[1].spec, parse(source))
+    const baseline = arm(result.evals, 'baseline')
+    strictEqual(value(baseline.args, '--eval-spec'), join(dirname(f.spec), '.baseline-cache.eval.yaml'))
+    deepStrictEqual(baseline.spec.stimuli, [parse(source).stimuli[1]])
+    deepStrictEqual(baseline.fixtures, ['synthetic fixture'])
+    deepStrictEqual(arm(result.evals, 'skilled').spec, parse(source))
     for (const { args } of result.evals) strictEqual(value(args, '--max-retries'), '0')
     strictEqual(existsSync(join(dirname(f.spec), '.baseline-cache.eval.yaml')), false)
+  })
+
+  it('runs the baseline and skilled arms side by side by default', (t) => {
+    const f = fixture(t)
+    const result = f.run({ FAKE_SLEEP_MS: '800' })
+    strictEqual(result.status, 0, result.stdout + result.stderr)
+    const baseline = arm(result.evals, 'baseline')
+    const skilled = arm(result.evals, 'skilled')
+    strictEqual(baseline.start < skilled.end && skilled.start < baseline.end, true, 'the arms did not overlap')
+    // Pairing waits for both: the verdict exists and was built from both arms.
+    strictEqual(existsSync(join(f.env.RESULTS_DIR, 'synthetic-runner/results.json')), true)
+    const log = readFileSync(join(f.env.RESULTS_DIR, 'synthetic-runner/eval.log'), 'utf8')
+    strictEqual(log.includes('missing baseline or skilled records'), false)
+  })
+
+  it('runs the arms one after the other with ARMS_PARALLEL=0', (t) => {
+    const f = fixture(t)
+    const result = f.run({ FAKE_SLEEP_MS: '300', ARMS_PARALLEL: '0' })
+    strictEqual(result.status, 0, result.stdout + result.stderr)
+    strictEqual(arm(result.evals, 'baseline').end <= arm(result.evals, 'skilled').start, true)
+  })
+
+  it('rejects an ARMS_PARALLEL value other than 0 or 1 before any Vally invocation', (t) => {
+    const result = fixture(t).run({ ARMS_PARALLEL: 'yes' })
+    strictEqual(result.status, 2, result.stdout + result.stderr)
+    deepStrictEqual(result.calls, [])
   })
 })

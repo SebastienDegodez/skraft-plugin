@@ -37,7 +37,7 @@ Violations of Clean Architecture principles detectable in DESIGN artefacts — i
 
 **Severity:** BLOCKER — the Application layer must depend only on abstractions (interfaces it defines). Depending on Infrastructure concrete types prevents substitution for testing and alternative implementations.
 
-**Correct approach:** Command and query handlers depend on Application-layer interfaces (`IEligibilityRepository`, `IEventPublisher`). The Infrastructure implementations are injected via DI at the composition root — never imported directly by the Application layer.
+**Correct approach:** Command and query handlers depend on inner-layer interfaces (`IEligibilityRepository`, `IEventPublisher`). The Infrastructure implementations are injected via DI at the composition root — never imported directly by the Application layer.
 
 ---
 
@@ -46,16 +46,16 @@ Violations of Clean Architecture principles detectable in DESIGN artefacts — i
 **ID:** V-CA-03
 **Severity:** BLOCKER
 
-**Description:** A repository or gateway interface is defined in the Infrastructure layer rather than in the Application layer.
+**Description:** A repository or gateway interface is defined in the Infrastructure layer rather than in Domain or Application.
 
 **How to detect in artefacts:**
 - Contracts explicitly list `IEligibilityRepository` under the Infrastructure layer section
 - Diagram shows the repository interface inside the Infrastructure boundary, with the Application layer importing from Infrastructure
-- No repository interfaces appear in the Application layer contracts
+- No repository interface appears in the Domain or Application contracts
 
-**Severity:** BLOCKER — if the interface is in Infrastructure, the Application layer must import from Infrastructure to use it, violating the dependency rule (V-CA-02). The interface must be defined in the layer that depends on it — the Application layer.
+**Severity:** BLOCKER — if the interface is in Infrastructure, the Application layer must import from Infrastructure to use it, violating the dependency rule (V-CA-02). The interface must be defined in an inner layer: Domain for an aggregate's repository, Application otherwise.
 
-**Correct approach:** Define `IEligibilityRepository` in the Application layer. The Infrastructure project references Application to implement the interface. Application never references Infrastructure.
+**Correct approach:** Define `IEligibilityRepository` in Domain (aggregate) or Application (CRUD entity, read model), as the aggregate's ADR records. Infrastructure implements it through its Application reference. Application never references Infrastructure.
 
 ---
 

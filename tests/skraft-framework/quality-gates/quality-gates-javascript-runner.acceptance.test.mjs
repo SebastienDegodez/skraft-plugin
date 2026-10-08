@@ -27,10 +27,13 @@ async function fixture(t) {
   for (const scope of ['core', 'boundary']) {
     await put(`${scope}.json`, JSON.stringify(config(scope)))
     await put(`src/${scope}.mjs`, source)
+    if (scope === 'core') {
+      await put('core-differential.json', JSON.stringify({ ...config(scope), mutate: ['src/*.mjs'] }))
+    }
   }
   await put('tests/smoke.test.mjs', "import { test } from 'node:test'; test('smoke', () => {})\n")
   execFileSync('git', ['init', '-q', root])
-  execFileSync('git', ['-C', root, 'add', 'core.json', 'boundary.json', 'src', 'tests', 'pkg/package.json'])
+  execFileSync('git', ['-C', root, 'add', 'core.json', 'core-differential.json', 'boundary.json', 'src', 'tests', 'pkg/package.json'])
   execFileSync('git', ['-C', root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'fixture'], { env: { ...process.env, HUSKY: '0' } })
   return { root, package: 'pkg', core: 'core.json', boundary: 'boundary.json', evidence: 'evidence', coreOnly: false }
 }
@@ -98,6 +101,30 @@ test('boundary failure fails combined run; core-only is explicitly diagnostic', 
   assert.equal(debug.status, 'core-only')
   assert.equal(debug.combinedPass, false)
   assert.equal(debug.gates.length, 1)
+})
+
+test('--since includes production changes in the working tree before they are committed', async (t) => {
+  const input = await fixture(t)
+  await writeFile(join(input.root, 'src/core.mjs'), 'export const answer = () => 43\n')
+  const result = await runGates({ ...input, coreOnly: true, boundary: undefined, since: 'HEAD' }, { execute: testPort([]) })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  const effectiveConfig = JSON.parse(await readFile(result.gates[0].config_ref, 'utf8'))
+  assert.deepEqual(effectiveConfig.mutate, ['src/core.mjs'])
+})
+
+test('--since includes untracked production files', async (t) => {
+  const input = await fixture(t)
+  await writeFile(join(input.root, 'src/new-core.mjs'), 'export const answer = () => 43\n')
+  const result = await runGates({
+    ...input,
+    core: 'core-differential.json',
+    coreOnly: true,
+    boundary: undefined,
+    since: 'HEAD',
+  }, { execute: testPort([]) })
+  assert.equal(result.exitCode, 0, JSON.stringify(result))
+  const effectiveConfig = JSON.parse(await readFile(result.gates[0].config_ref, 'utf8'))
+  assert.deepEqual(effectiveConfig.mutate, ['src/new-core.mjs'])
 })
 
 for (const defect of ['untracked', 'unsupported', 'missing', 'empty-glob', 'excluded', 'overlap', 'outside', 'suppressed']) {

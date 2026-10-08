@@ -171,8 +171,9 @@ metadata:
 <persona, principes, workflow, contraintes…>
 ```
 
-Le frontmatter `metadata.skills` **déclare** les skills que l'agent peut
-charger. Le chargement effectif se fait à l'exécution (cf. §5).
+Le frontmatter `metadata.skills` (obligatoires) et `metadata.on_demand_skills` (à la
+demande) **déclarent** les skills que l'agent peut charger. Le chargement effectif se fait
+à l'exécution (cf. §5).
 
 ---
 
@@ -208,6 +209,17 @@ L'agent `software-engineer` distingue deux modes de chargement :
 |---|---|---|
 | **Mandatory at startup** | Chargé avant la phase PREPARE. | Log `[SKILL MISSING] <name>` et l'agent continue. |
 | **Trigger-based** | Chargé à la volée selon le déclencheur. | Idem : log et continuation. |
+
+Côté hooks, chaque skill de `metadata.skills` est obligatoire (injectée au SubagentStart,
+exigée au SubagentStop). Chaque skill de `metadata.on_demand_skills` reçoit la politique
+`on-demand` dans `agentSkills` : tracée mais jamais exigée. Les deux listes sont disjointes ;
+`build-config-bin.mjs` refuse un skill déclaré dans les deux (`SKILL_DECLARED_TWICE`). Pour
+`software-engineer`, `metadata.skills` ne contient que `outside-in-tdd` et `craft-discipline`.
+
+Les entrées passent d'un agent à l'autre par le bloc que `state.mjs handoff --agent <nom>`
+calcule depuis les artefacts enregistrés (`phaseArtifacts`) et `agentArtifacts[agent].inputs`.
+Le garde G9 (PreToolUse) refuse un dispatch d'agent de phase qui omet une entrée requise
+enregistrée ou, en reprise, la revue précédente.
 
 Voir la fiche [`agents/software-engineer.md`](./agents/software-engineer.md)
 pour la matrice complète des skills consommés.

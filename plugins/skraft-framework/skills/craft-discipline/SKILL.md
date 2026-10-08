@@ -59,7 +59,7 @@ they pass the compile gate but assert nothing.
 Check UnitTest files:
 - No `A.Fake<>()`, `Mock<>()`, `Substitute.For<>()`
   on a Domain or Application type.
-- Mocks allowed ONLY on driven ports (repositories, gateways).
+- Mocks allowed ONLY on output gateways (repositories, external services).
 
 ### C7 — Business language verified
 
@@ -102,6 +102,8 @@ Multiple input variants for the same behavior MUST be a single parameterized tes
 not duplicated test methods. One test method per behavior, one row per case.
 
 ## When to Execute
+
+A pre-approved, staged documentation-only change with no applicable executable tests, build, or mutation targets is not a code COMMIT & VERIFY cycle. Check the exact approved content and changed paths, run applicable whitespace checks, and apply C9; do not invent code-gate results or create code-evidence artifacts.
 
 | TDD Phase | Applicable Checkpoints |
 |-----------|------------------------|

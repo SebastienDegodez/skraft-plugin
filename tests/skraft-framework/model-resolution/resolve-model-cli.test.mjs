@@ -87,7 +87,7 @@ test('planAgent treats a model list containing the resolved model as compliant (
     agentWithModelList({ name: 'a', items: ['Claude Sonnet 5', 'claude-sonnet-5', 'Claude Sonnet 4.6'], cls: 'implementer' }),
     { allowList: new Set() },
   )
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5')
+  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
   assert.equal(plan.changed, false)
 })
 
@@ -131,12 +131,12 @@ test('planAgent applies the Sonnet floor override for a reviewer with a requirem
     agent({ name: 'se-rev', cls: 'reviewer', requirement: 'Sonnet-class or above.' }),
     { allowList: new Set() },
   )
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5')
+  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
 })
 
-test('planAgent resolves a researcher to Sonnet 5', () => {
+test('planAgent resolves a researcher to Sonnet 5.5', () => {
   const plan = planAgent(agent({ name: 'res', cls: 'researcher' }), { allowList: new Set() })
-  assert.equal(plan.resolvedModel, 'Claude Sonnet 5')
+  assert.equal(plan.resolvedModel, 'Claude Sonnet 5.5')
 })
 
 test('planAgent skips an allow-listed agent', () => {
@@ -225,7 +225,7 @@ test('main --apply pins models, leaves the orchestrator on inherit, then --check
   assert.equal(main(['--apply', '--dir', agents], capture().io), 0)
 
   assert.match(await readFile(join(agents, 'rev.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
-  assert.match(await readFile(join(agents, 'impl.md'), 'utf8'), /^model: Claude Sonnet 5$/m)
+  assert.match(await readFile(join(agents, 'impl.md'), 'utf8'), /^model: Claude Sonnet 5\.5$/m)
   assert.match(await readFile(join(agents, 'nested', 'lens.md'), 'utf8'), /^model: GPT-5\.6 Luna$/m)
   assert.match(await readFile(join(agents, 'orch.md'), 'utf8'), /^model: inherit$/m)
 
@@ -253,7 +253,7 @@ test('main --emit --json lists resolved models and omits allow-listed agents', a
   const rows = JSON.parse(out.join('\n'))
   const byName = Object.fromEntries(rows.map((r) => [r.name, r.resolvedModel]))
   assert.equal(byName.rev, 'GPT-5.6 Luna')
-  assert.equal(byName.impl, 'Claude Sonnet 5')
+  assert.equal(byName.impl, 'Claude Sonnet 5.5')
   assert.equal(byName.lens, 'GPT-5.6 Luna')
   assert.ok(!('skraft-orchestrator' in byName))
   await rm(dir, { recursive: true, force: true })
@@ -265,7 +265,7 @@ test('main --emit without --json prints a tab-separated table', async () => {
   main(['--emit', '--dir', agents], io)
   const text = out.join('\n')
   assert.match(text, /^rev\tGPT-5\.6 Luna$/m)
-  assert.match(text, /^impl\tClaude Sonnet 5$/m)
+  assert.match(text, /^impl\tClaude Sonnet 5\.5$/m)
   assert.doesNotMatch(text, /skraft-orchestrator/)
   await rm(dir, { recursive: true, force: true })
 })

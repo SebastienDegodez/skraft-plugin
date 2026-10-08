@@ -1,0 +1,875 @@
+name: clean-architecture-java
+description: |
+  Verifies that a Java / Spring Boot service is laid out as Clean Architecture
+  and stays that way: one Maven module per layer, each referencing only its inner
+  neighbour, use cases as plain classes, and no port or adapter vocabulary;
+  commands that return nothing, queries that return a read model, aggregates
+  built by a factory, and access rules split between use case and aggregate.
+  Probes without the skill (Sonnet, 2 runs per case) followed an existing
+  layered build every time, but on an empty repository asked for "Clean
+  Architecture" they produced one Maven module, a use-case interface with a
+  *Service implementation, and port vocabulary. The greenfield stimuli are the
+  deciders; the existing build is a regression guard.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 4
+  # Pinned to Sonnet even though it is the repository default: the probes that
+  # sized these stimuli and their graders ran on Sonnet, and the verdict must stay
+  # comparable if DEFAULT_MODEL moves. MODEL in the environment still overrides it
+  # for the compare-models matrix.
+  model: claude-sonnet-5.5
+scoring:
+  threshold: 1
+
+stimuli:
+  # Deterministic decider. Empty repository: nothing to imitate, so the layout
+  # is the agent's own call. The prompt names no architecture style. A compile
+  # sentinel, online since an empty repository warms no Maven cache, keeps a
+  # broken build from scoring as a good layout.
+  - name: 'Java greenfield: a library loan service with persistence'
+    prompt: |
+      Start a new Java 21 / Spring Boot 3.5 service, built with Maven. Its first feature: a library member borrows a book
+      through POST /loans (body: memberId, isbn). A member may hold at most 3 loans
+      at a time; a book already on loan cannot be borrowed. Loans are stored in
+      PostgreSQL through Spring Data JPA.
+
+      Write the production code for this first feature and the build files. No
+      tests for now.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git commit --quiet --allow-empty -m "chore: empty repository"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the generated build compiles'
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -ntp -DskipTests compile >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 8m
+      - type: run-command
+        name: Each layer is a Maven module that references only its inner neighbour
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const files = walk('.');
+              const modules = files.filter(f => path.basename(f) === 'pom.xml' && path.dirname(f) !== '.').map(p => {
+                const pom = fs.readFileSync(p, 'utf8').replace(/<parent>[\s\S]*?<\/parent>/, '').replace(/<dependencyManagement>[\s\S]*?<\/dependencyManagement>/, '');
+                return { dir: path.dirname(p), id: (pom.match(/<artifactId>([^<]+)<\/artifactId>/) || [])[1], pom };
+              });
+              const ids = new Set(modules.map(m => m.id));
+              const internal = m => [...m.pom.matchAll(/<dependency>([\s\S]*?)<\/dependency>/g)]
+                .filter(d => !/<scope>test<\/scope>/.test(d[1]))
+                .map(d => (d[1].match(/<artifactId>([^<]+)<\/artifactId>/) || [])[1])
+                .filter(a => ids.has(a)).sort();
+              const layer = suffix => modules.find(m => new RegExp(('(^|-)' + (suffix) + '$')).test(m.id));
+              const [domain, application, infrastructure] = ['domain', 'application', 'infrastructure'].map(layer);
+              const boot = modules.find(m => ![domain, application, infrastructure].includes(m)
+                && files.some(f => f.startsWith(m.dir + path.sep) && f.endsWith('.java') && fs.readFileSync(f, 'utf8').includes('@SpringBootApplication')));
+              const missing = Object.entries({ domain, application, infrastructure, 'Spring Boot entry point': boot }).filter(([, m]) => !m).map(([n]) => n);
+              if (missing.length) { console.log(('no Maven module of its own for: ' + (missing.join(', ')))); process.exit(1); }
+              const expected = [[domain, []], [application, [domain.id]], [infrastructure, [application.id]], [boot, [infrastructure.id]]];
+              const wrong = expected.filter(([m, want]) => JSON.stringify(internal(m)) !== JSON.stringify(want))
+                .map(([m, want]) => ((m.id) + ' references [' + (internal(m)) + '], expected [' + (want) + ']'));
+              if (wrong.length) { console.log(wrong.join('\n')); process.exit(1); }
+              console.log('one module per layer, each referencing only its inner neighbour');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: A use case is not hidden behind an interface implemented in Application
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/') && /[-\/.]application[\/.]/.test(f))
+                .map(f => f.slice(1));
+              const text = sources.map(f => fs.readFileSync(f, 'utf8')).join('\n');
+              const interfaces = [...text.matchAll(/\binterface\s+(\w+)/g)].map(m => m[1]);
+              const implemented = interfaces.filter(i => new RegExp(('\\bimplements\\b[^{]*\\b' + (i) + '\\b')).test(text));
+              if (implemented.length) { console.log(('use cases hidden behind an interface implemented in Application: ' + (implemented.join(', ')))); process.exit(1); }
+              console.log('no Application interface is implemented inside Application');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: No port or adapter package, and no port vocabulary in the code
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              dirs="$(find . -path ./.git -prune -o -path '*/target' -prune -o -type d \( -iname port -o -iname ports -o -iname adapter -o -iname adapters \) -print)"
+              words="$(grep -rniIE --include=*.java --exclude-dir=target --exclude-dir=.git '^package .*\.(ports?|adapters?)(\.|;)|\b(input|output|inbound|outbound|driving|driven|primary|secondary) ports?\b|\bports? (and|&) adapters?\b|hexagonal' . || true)"
+              [ -z "$dirs$words" ] && exit 0
+              printf '%s\n%s\n' "$dirs" "$words" | head -n 20
+              exit 1
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Domain and Application import neither Spring nor Jakarta
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              hits="$(grep -rlE --include=*.java '^import (static )?(org\.springframework|jakarta\.)' . | grep -E '/src/main/' | grep -E '(^|[-/.])(domain|application)([/.]|$)' || true)"
+              [ -z "$hits" ] && exit 0
+              echo "$hits" | head -n 20
+              exit 1
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-java
+    rubric:
+      - Builds each layer as its own Maven module, so the build rejects a reference that skips or reverses a layer.
+      - Puts the HTTP endpoint in the module that boots the application, not beside the persistence code.
+      - Lets the endpoint call the use case class directly, with no interface standing in front of it.
+      - Keeps Spring and JPA out of the business rules and the use case.
+
+  # Deterministic decider, second domain: no database, one outbound HTTP call,
+  # so the layout decision is not tied to the JPA case.
+  - name: 'Java greenfield: expense claims converted through a rates provider'
+    prompt: |
+      Start a new Java 21 / Spring Boot 3.5 service, built with Maven. Its first feature: an employee submits an expense claim
+      through POST /claims (body: employeeId, amount, currency). The amount is
+      converted to EUR with the exchange-rate provider's REST API
+      (GET /rates/:currency answers with a JSON body holding the rate, for example 1.08). A claim above 1000 EUR waits
+      for a manager's approval; any other claim is approved at once. Keep claims in
+      memory for now.
+
+      Write the production code for this first feature and the build files. No
+      tests for now.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git commit --quiet --allow-empty -m "chore: empty repository"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the generated build compiles'
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; mvn -B -q -ntp -DskipTests compile >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 8m
+      - type: run-command
+        name: Each layer is a Maven module that references only its inner neighbour
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const files = walk('.');
+              const modules = files.filter(f => path.basename(f) === 'pom.xml' && path.dirname(f) !== '.').map(p => {
+                const pom = fs.readFileSync(p, 'utf8').replace(/<parent>[\s\S]*?<\/parent>/, '').replace(/<dependencyManagement>[\s\S]*?<\/dependencyManagement>/, '');
+                return { dir: path.dirname(p), id: (pom.match(/<artifactId>([^<]+)<\/artifactId>/) || [])[1], pom };
+              });
+              const ids = new Set(modules.map(m => m.id));
+              const internal = m => [...m.pom.matchAll(/<dependency>([\s\S]*?)<\/dependency>/g)]
+                .filter(d => !/<scope>test<\/scope>/.test(d[1]))
+                .map(d => (d[1].match(/<artifactId>([^<]+)<\/artifactId>/) || [])[1])
+                .filter(a => ids.has(a)).sort();
+              const layer = suffix => modules.find(m => new RegExp(('(^|-)' + (suffix) + '$')).test(m.id));
+              const [domain, application, infrastructure] = ['domain', 'application', 'infrastructure'].map(layer);
+              const boot = modules.find(m => ![domain, application, infrastructure].includes(m)
+                && files.some(f => f.startsWith(m.dir + path.sep) && f.endsWith('.java') && fs.readFileSync(f, 'utf8').includes('@SpringBootApplication')));
+              const missing = Object.entries({ domain, application, infrastructure, 'Spring Boot entry point': boot }).filter(([, m]) => !m).map(([n]) => n);
+              if (missing.length) { console.log(('no Maven module of its own for: ' + (missing.join(', ')))); process.exit(1); }
+              const expected = [[domain, []], [application, [domain.id]], [infrastructure, [application.id]], [boot, [infrastructure.id]]];
+              const wrong = expected.filter(([m, want]) => JSON.stringify(internal(m)) !== JSON.stringify(want))
+                .map(([m, want]) => ((m.id) + ' references [' + (internal(m)) + '], expected [' + (want) + ']'));
+              if (wrong.length) { console.log(wrong.join('\n')); process.exit(1); }
+              console.log('one module per layer, each referencing only its inner neighbour');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: A use case is not hidden behind an interface implemented in Application
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/') && /[-\/.]application[\/.]/.test(f))
+                .map(f => f.slice(1));
+              const text = sources.map(f => fs.readFileSync(f, 'utf8')).join('\n');
+              const interfaces = [...text.matchAll(/\binterface\s+(\w+)/g)].map(m => m[1]);
+              const implemented = interfaces.filter(i => new RegExp(('\\bimplements\\b[^{]*\\b' + (i) + '\\b')).test(text));
+              if (implemented.length) { console.log(('use cases hidden behind an interface implemented in Application: ' + (implemented.join(', ')))); process.exit(1); }
+              console.log('no Application interface is implemented inside Application');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: No port or adapter package, and no port vocabulary in the code
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              dirs="$(find . -path ./.git -prune -o -path '*/target' -prune -o -type d \( -iname port -o -iname ports -o -iname adapter -o -iname adapters \) -print)"
+              words="$(grep -rniIE --include=*.java --exclude-dir=target --exclude-dir=.git '^package .*\.(ports?|adapters?)(\.|;)|\b(input|output|inbound|outbound|driving|driven|primary|secondary) ports?\b|\bports? (and|&) adapters?\b|hexagonal' . || true)"
+              [ -z "$dirs$words" ] && exit 0
+              printf '%s\n%s\n' "$dirs" "$words" | head -n 20
+              exit 1
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Domain and Application import neither Spring nor Jakarta
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              hits="$(grep -rlE --include=*.java '^import (static )?(org\.springframework|jakarta\.)' . | grep -E '/src/main/' | grep -E '(^|[-/.])(domain|application)([/.]|$)' || true)"
+              [ -z "$hits" ] && exit 0
+              echo "$hits" | head -n 20
+              exit 1
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-java
+    rubric:
+      - Builds each layer as its own Maven module, so the build rejects a reference that skips or reverses a layer.
+      - Declares the rate lookup as an interface the use case owns and implements the HTTP call outside the business layers.
+      - Puts the HTTP endpoint in the module that boots the application and lets it call the use case class directly.
+      - Keeps the 1000 EUR rule with the business code, out of the endpoint and the HTTP client.
+
+  # Regression guard. The fixture is already layered; the baseline extended it
+  # correctly 2/2 in the probes. A tie is expected; a loss means the skill
+  # pushed a correct extension towards something worse.
+  - name: 'Java existing build: add refunds to the payment service'
+    tags:
+      role: regression-guard
+    prompt: |
+      We need refunds. Add an HTTP endpoint POST /payments/:reference/refunds (body:
+      amount, currency) that asks the payment provider to refund an authorized
+      payment and keeps a receipt of the provider's answer, like authorization
+      already does. The provider's API: POST /refunds with a JSON
+      body of reference, amount and currency; it answers 200 when refunded and 409 when the
+      payment cannot be refunded.
+
+      Implement it in production code; no new tests needed.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: fixtures/payment-spring/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-spring/pom.xml
+          dest: pom.xml
+        - src: fixtures/payment-spring/payment-domain/pom.xml
+          dest: payment-domain/pom.xml
+        - src: fixtures/payment-spring/payment-domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: fixtures/payment-spring/payment-application/pom.xml
+          dest: payment-application/pom.xml
+        - src: fixtures/payment-spring/payment-application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: fixtures/payment-spring/payment-application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: fixtures/payment-spring/payment-infrastructure/pom.xml
+          dest: payment-infrastructure/pom.xml
+        - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: fixtures/payment-spring/payment-app/pom.xml
+          dest: payment-app/pom.xml
+        - src: fixtures/payment-spring/payment-app/PaymentApplication.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: fixtures/payment-spring/payment-app/PaymentConfiguration.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: fixtures/payment-spring/payment-app/application.properties
+          dest: payment-app/src/main/resources/application.properties
+        - src: fixtures/payment-spring/payment-unit-test/pom.xml
+          dest: payment-unit-test/pom.xml
+        - src: fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
+          dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: fixtures/payment-spring/payment-integration-test/pom.xml
+          dest: payment-integration-test/pom.xml
+        - src: fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
+          dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+      commands:
+        - 'mvn -B -q -ntp verify'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the Maven build still resolves'
+        config:
+          command: mvn
+          args: [-B, -q, -o, validate]
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: Every test in the build is green
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1
+          expected_exit_code: 0
+          timeout: 5m
+      - type: diff-not-contains
+        name: The module graph is unchanged
+        config:
+          pattern: '(?m)^diff --git a/(?:[^ ]*/)?pom\.xml '
+      - type: run-command
+        name: A use case is not hidden behind an interface implemented in Application
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/') && /[-\/.]application[\/.]/.test(f))
+                .map(f => f.slice(1));
+              const text = sources.map(f => fs.readFileSync(f, 'utf8')).join('\n');
+              const interfaces = [...text.matchAll(/\binterface\s+(\w+)/g)].map(m => m[1]);
+              const implemented = interfaces.filter(i => new RegExp(('\\bimplements\\b[^{]*\\b' + (i) + '\\b')).test(text));
+              if (implemented.length) { console.log(('use cases hidden behind an interface implemented in Application: ' + (implemented.join(', ')))); process.exit(1); }
+              console.log('no Application interface is implemented inside Application');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: No port or adapter package, and no port vocabulary in the code
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              dirs="$(find . -path ./.git -prune -o -path '*/target' -prune -o -type d \( -iname port -o -iname ports -o -iname adapter -o -iname adapters \) -print)"
+              words="$(grep -rniIE --include=*.java --exclude-dir=target --exclude-dir=.git '^package .*\.(ports?|adapters?)(\.|;)|\b(input|output|inbound|outbound|driving|driven|primary|secondary) ports?\b|\bports? (and|&) adapters?\b|hexagonal' . || true)"
+              [ -z "$dirs$words" ] && exit 0
+              printf '%s\n%s\n' "$dirs" "$words" | head -n 20
+              exit 1
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Domain and Application import neither Spring nor Jakarta
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              hits="$(grep -rlE --include=*.java '^import (static )?(org\.springframework|jakarta\.)' . | grep -E '/src/main/' | grep -E '(^|[-/.])(domain|application)([/.]|$)' || true)"
+              [ -z "$hits" ] && exit 0
+              echo "$hits" | head -n 20
+              exit 1
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-java
+    rubric:
+      - Adds the refund call to the existing modules, following the layout already there.
+      - Lets the endpoint call the refund use case class directly, with no interface standing in front of it.
+      - Reads a 409 from the provider as a refusal rather than an error.
+
+  # Deterministic decider. Probes without the skill, 2 runs, Java and .NET alike:
+  # the create use case returned the stored entity and generated the id itself,
+  # and the read use case returned the domain object.
+  - name: 'Java existing build: contacts, created and fetched over HTTP'
+    prompt: |
+      Add a contacts feature: create a contact (name, email) and get a contact by
+      id, over HTTP (POST /contacts, GET /contacts/:id). Contacts have no business
+      rules. Keep them in memory for now. Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: fixtures/payment-spring/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-spring/pom.xml
+          dest: pom.xml
+        - src: fixtures/payment-spring/payment-domain/pom.xml
+          dest: payment-domain/pom.xml
+        - src: fixtures/payment-spring/payment-domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: fixtures/payment-spring/payment-application/pom.xml
+          dest: payment-application/pom.xml
+        - src: fixtures/payment-spring/payment-application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: fixtures/payment-spring/payment-application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: fixtures/payment-spring/payment-infrastructure/pom.xml
+          dest: payment-infrastructure/pom.xml
+        - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: fixtures/payment-spring/payment-app/pom.xml
+          dest: payment-app/pom.xml
+        - src: fixtures/payment-spring/payment-app/PaymentApplication.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: fixtures/payment-spring/payment-app/PaymentConfiguration.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: fixtures/payment-spring/payment-app/application.properties
+          dest: payment-app/src/main/resources/application.properties
+        - src: fixtures/payment-spring/payment-unit-test/pom.xml
+          dest: payment-unit-test/pom.xml
+        - src: fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
+          dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: fixtures/payment-spring/payment-integration-test/pom.xml
+          dest: payment-integration-test/pom.xml
+        - src: fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
+          dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+      commands:
+        - 'mvn -B -q -ntp verify'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the Maven build still resolves'
+        config:
+          command: mvn
+          args: [-B, -q, -o, validate]
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: Every test in the build is green
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1
+          expected_exit_code: 0
+          timeout: 5m
+      - type: diff-not-contains
+        name: The module graph is unchanged
+        config:
+          pattern: '(?m)^diff --git a/(?:[^ ]*/)?pom\.xml '
+      - type: run-command
+        name: Creating a contact returns nothing and receives the new id
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/'))
+                .map(f => ({ file: f.slice(1), text: fs.readFileSync(f.slice(1), 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(('[-/.]' + (layer) + '[/.]')).test('/' + s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:final\s+|static\s+|synchronized\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !['class', 'record', 'new', 'return'].includes(m.ret));
+
+              const app = inLayer('application');
+              const all = app.flatMap(methods);
+              const creates = all.filter(m => /^(create|add|register)/i.test(m.name) || (/^(handle|execute|invoke)$/i.test(m.name) && /^(Create|Add|Register)/.test(m.cls)));
+              if (!creates.length) { console.log('no create entry point in Application'); process.exit(1); }
+              const records = Object.fromEntries(sources.flatMap(s => [...s.text.matchAll(/record\s+(\w+)\s*\(([^)]*)\)/g)].map(m => [m[1], m[2]])));
+              const carriesId = m => /\b\w*Id\b|\bid\b/.test(m.params)
+                || [...m.params.matchAll(/([A-Z]\w+)\s+\w+/g)].some(t => /\b\w*Id\b|\bid\b/.test(records[t[1]] || ''));
+              const bad = creates.filter(m => m.ret !== 'void' || !carriesId(m)).map(m => ((m.cls) + '.' + (m.name) + '(' + (m.params.trim()) + ') returns ' + (m.ret)));
+              if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
+              console.log('create returns nothing and receives the new id');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Fetching a contact returns a read model, not the domain object
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/'))
+                .map(f => ({ file: f.slice(1), text: fs.readFileSync(f.slice(1), 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(('[-/.]' + (layer) + '[/.]')).test('/' + s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:final\s+|static\s+|synchronized\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !['class', 'record', 'new', 'return'].includes(m.ret));
+
+              const domainTypes = new Set(inLayer('domain').flatMap(s => [...s.text.matchAll(/\b(?:class|record|enum)\s+(\w+)/g)].map(m => m[1])));
+              const queries = inLayer('application').flatMap(methods)
+                .filter(m => /^(get|find|view|consult|load)/i.test(m.name) || (/^(handle|execute|invoke)$/i.test(m.name) && /^(Get|Find|View|Consult|Load)/.test(m.cls)));
+              if (!queries.length) { console.log('no query entry point in Application'); process.exit(1); }
+              const bad = queries.filter(m => !/ViewModel\b/.test(m.ret) || m.ret.match(/\w+/g).some(t => domainTypes.has(t))).map(m => ((m.cls) + '.' + (m.name) + ' returns ' + (m.ret)));
+              if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
+              console.log('queries return a *ViewModel, never a domain type');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-java
+    rubric:
+      - Lets the endpoint choose the new contact's id and hand it to the use case, which returns nothing.
+      - Returns a read model built for the caller from the fetch, never the stored object itself.
+      - Adds no rule about contacts that the request did not state.
+
+  # Deterministic decider. Probes without the skill, 2 runs: a public constructor
+  # and raw String ids 2/2; the "only the owner may cancel" check sat in the use
+  # case or the read check in the aggregate, never both right.
+  - name: 'Java existing build: customers see and cancel only their own orders'
+    prompt: |
+      Add order consultation and cancellation for customers: GET /orders/:id
+      returns an order and POST /orders/:id/cancel cancels it. A customer may only
+      see and cancel their own orders; an order can only be cancelled while it is
+      pending. Authentication is already handled upstream: each request carries the
+      authenticated customer id in the X-Customer-Id header. Create whatever order
+      model you need and keep orders in memory. Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: fixtures/payment-spring/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-spring/pom.xml
+          dest: pom.xml
+        - src: fixtures/payment-spring/payment-domain/pom.xml
+          dest: payment-domain/pom.xml
+        - src: fixtures/payment-spring/payment-domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: fixtures/payment-spring/payment-application/pom.xml
+          dest: payment-application/pom.xml
+        - src: fixtures/payment-spring/payment-application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: fixtures/payment-spring/payment-application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: fixtures/payment-spring/payment-infrastructure/pom.xml
+          dest: payment-infrastructure/pom.xml
+        - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: fixtures/payment-spring/payment-app/pom.xml
+          dest: payment-app/pom.xml
+        - src: fixtures/payment-spring/payment-app/PaymentApplication.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: fixtures/payment-spring/payment-app/PaymentConfiguration.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: fixtures/payment-spring/payment-app/application.properties
+          dest: payment-app/src/main/resources/application.properties
+        - src: fixtures/payment-spring/payment-unit-test/pom.xml
+          dest: payment-unit-test/pom.xml
+        - src: fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
+          dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: fixtures/payment-spring/payment-integration-test/pom.xml
+          dest: payment-integration-test/pom.xml
+        - src: fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
+          dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+      commands:
+        - 'mvn -B -q -ntp verify'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the Maven build still resolves'
+        config:
+          command: mvn
+          args: [-B, -q, -o, validate]
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: Every test in the build is green
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1
+          expected_exit_code: 0
+          timeout: 5m
+      - type: diff-not-contains
+        name: The module graph is unchanged
+        config:
+          pattern: '(?m)^diff --git a/(?:[^ ]*/)?pom\.xml '
+      - type: run-command
+        name: An order is built by a factory and identified by a typed id
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/'))
+                .map(f => ({ file: f.slice(1), text: fs.readFileSync(f.slice(1), 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(('[-/.]' + (layer) + '[/.]')).test('/' + s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:final\s+|static\s+|synchronized\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !['class', 'record', 'new', 'return'].includes(m.ret));
+
+              const order = inLayer('domain').find(s => /\b(?:final\s+)?class\s+Order\b/.test(s.text));
+              if (!order) { console.log('no Order class in Domain (a record exposes a public constructor)'); process.exit(1); }
+              const problems = [];
+              if (!/private\s+Order\s*\(/.test(order.text)) problems.push('Order has no private constructor');
+              if (!/static\s+Order\s+\w+\s*\(/.test(order.text)) problems.push('Order has no static factory');
+              if (/public\s+Order\s*\(/.test(order.text)) problems.push('Order has a public constructor');
+              if (!inLayer('domain').some(s => /\b(record|class)\s+OrderId\b/.test(s.text))) problems.push('no OrderId type in Domain');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('Order is built by a factory over a private constructor and identified by OrderId');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Who may cancel is an aggregate rule, who may read is a use-case check
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'target', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p);
+                }
+                return acc;
+              };
+              const sources = walk('.').map(f => '/' + f.split(path.sep).join('/'))
+                .filter(f => f.endsWith('.java') && f.includes('/src/main/'))
+                .map(f => ({ file: f.slice(1), text: fs.readFileSync(f.slice(1), 'utf8') }));
+              const inLayer = layer => sources.filter(s => new RegExp(('[-/.]' + (layer) + '[/.]')).test('/' + s.file));
+              const methods = s => [...s.text.matchAll(/public\s+(?:final\s+|static\s+|synchronized\s+)*([\w<>\[\], ?.]+?)\s+(\w+)\s*\(([^)]*)\)/g)]
+                .map(m => ({ ret: m[1].trim(), name: m[2], params: m[3], cls: (s.text.match(/\b(?:class|record)\s+(\w+)/) || [])[1] || '' }))
+                .filter(m => !['class', 'record', 'new', 'return'].includes(m.ret));
+
+              const order = inLayer('domain').find(s => /\b(class|record)\s+Order\b/.test(s.text));
+              const cancel = order && order.text.match(/(?:public\s+)?[\w<>]+\s+cancel\s*\(([^)]*)\)/);
+              if (!cancel || !cancel[1].trim()) { console.log('Order.cancel takes no caller: who may cancel is not an aggregate rule'); process.exit(1); }
+              const getter = inLayer('application').find(s => /\b(class)\s+(Get|Find|View|Consult|Load)\w*\b/.test(s.text));
+              if (!getter || !/(isOwnedBy|owner|Owner|ownedBy|customerId\(\)\s*\.equals|\.equals\()/.test(getter.text)) { console.log('the read use case does not check who may see the order'); process.exit(1); }
+              const api = sources.filter(s => /@(Rest)?Controller\b/.test(s.text));
+              const leak = api.filter(s => /(isOwnedBy|customerId\(\)\s*\.equals|ownerId)/.test(s.text)).map(s => s.file);
+              if (leak.length) { console.log(('endpoint checks ownership itself: ' + (leak.join(', ')))); process.exit(1); }
+              console.log('read restriction in the use case, change restriction in the aggregate');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-java
+    rubric:
+      - Refuses a cancellation by another customer inside the order itself, from the caller's id it receives.
+      - Hides another customer's order in the read use case, without the order knowing who asks.
+      - Keeps the endpoint to reading the header and calling the use cases.
+
+  # Near miss. A Spring Boot change in the same build that touches no layer
+  # decision: the skill must stay out of the way.
+  - name: 'Java existing build: a configurable timeout on the provider client'
+    tags:
+      intent: non-activation
+    prompt: |
+      Calls to the payment provider sometimes hang. Make them give up after 2
+      seconds by default, with the delay configurable per environment.
+    environment:
+      files:
+        - src: fixtures/payment-spring/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-spring/pom.xml
+          dest: pom.xml
+        - src: fixtures/payment-spring/payment-domain/pom.xml
+          dest: payment-domain/pom.xml
+        - src: fixtures/payment-spring/payment-domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+        - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+        - src: fixtures/payment-spring/payment-application/pom.xml
+          dest: payment-application/pom.xml
+        - src: fixtures/payment-spring/payment-application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+        - src: fixtures/payment-spring/payment-application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+        - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+        - src: fixtures/payment-spring/payment-infrastructure/pom.xml
+          dest: payment-infrastructure/pom.xml
+        - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+        - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+        - src: fixtures/payment-spring/payment-app/pom.xml
+          dest: payment-app/pom.xml
+        - src: fixtures/payment-spring/payment-app/PaymentApplication.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentApplication.java
+        - src: fixtures/payment-spring/payment-app/PaymentConfiguration.java
+          dest: payment-app/src/main/java/com/example/payment/app/PaymentConfiguration.java
+        - src: fixtures/payment-spring/payment-app/application.properties
+          dest: payment-app/src/main/resources/application.properties
+        - src: fixtures/payment-spring/payment-unit-test/pom.xml
+          dest: payment-unit-test/pom.xml
+        - src: fixtures/payment-spring/payment-unit-test/AuthorizePaymentTest.java
+          dest: payment-unit-test/src/test/java/com/example/payment/unittest/authorizepayment/AuthorizePaymentTest.java
+        - src: fixtures/payment-spring/payment-integration-test/pom.xml
+          dest: payment-integration-test/pom.xml
+        - src: fixtures/payment-spring/payment-integration-test/FileSystemReceiptStoreTest.java
+          dest: payment-integration-test/src/test/java/com/example/payment/integrationtest/receiptstore/FileSystemReceiptStoreTest.java
+      commands:
+        - 'mvn -B -q -ntp verify'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - type: run-command
+        name: 'Sentinel: the Maven build still resolves'
+        config:
+          command: mvn
+          args: [-B, -q, -o, validate]
+          expected_exit_code: 0
+          timeout: 2m
+      - type: run-command
+        name: Every test in the build is green
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; mvn -B -q -o verify >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1
+          expected_exit_code: 0
+          timeout: 5m
+      - type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - clean-architecture-java
+    rubric:
+      - Sets both the connect and the read timeout on the client that calls the provider.
+      - Reads the delay from configuration with a 2-second default.
+      - Changes nothing outside the client's configuration.

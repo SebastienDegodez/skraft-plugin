@@ -1,11 +1,19 @@
 // Pure domain: skill-loading policy helpers. No IO.
 
+const ON_DEMAND = 'on-demand'
+
+const skillEntriesFor = (agentName, config) =>
+  (config?.agentSkills?.[agentName] ?? []).map((s) => (typeof s === 'string' ? { name: s, policy: 'verify' } : s))
+
 // Returns the SkillEntry[] the agent must load, derived from config.agentSkills.
-// Each entry: { name: string, policy: 'verify' | 'eager' }
-export const mandatorySkillsFor = (agentName, config) => {
-  const skills = config?.agentSkills?.[agentName] ?? []
-  return skills.map((s) => (typeof s === 'string' ? { name: s, policy: 'verify' } : s))
-}
+// Each entry: { name: string, policy: 'verify' | 'eager' }. An 'on-demand' skill is
+// never mandatory: the agent loads it at the step that needs it.
+export const mandatorySkillsFor = (agentName, config) =>
+  skillEntriesFor(agentName, config).filter((s) => s.policy !== ON_DEMAND)
+
+// Returns the SkillEntry[] the agent loads only at the step that needs them.
+export const onDemandSkillsFor = (agentName, config) =>
+  skillEntriesFor(agentName, config).filter((s) => s.policy === ON_DEMAND)
 
 // Returns true when the skill entry has policy 'eager'.
 export const isEagerSkill = (skill) => skill?.policy === 'eager'

@@ -20,7 +20,12 @@
 #   RUNS=             Trials per stimulus. Unset — the default — lets each spec's
 #                     own `defaults.runs` decide, so the trial budget lives with
 #                     the eval it belongs to. Set it only to override every spec.
-#   WORKERS=3         Concurrent stimuli within a skill eval (default: 3)
+#   WORKERS=3         Concurrent stimuli within each arm of a skill eval (default: 3)
+#   ARMS_PARALLEL=1   Run the baseline and skilled arms of a skill eval at the
+#                     same time (default: 1). The arms share nothing but the
+#                     read-only spec, so this halves the wall clock at the cost
+#                     of 2×WORKERS concurrent agent sessions. Set 0 to run them
+#                     one after the other.
 #   SKILL_MAX_RETRIES Optional nonnegative integer; 0 disables stimulus retries
 #                     for both skill arms, including fresh cache misses. Unset
 #                     preserves Vally's default (2 in 0.12.0). Agent suites use
@@ -83,11 +88,26 @@ fi
 
 SKRAFT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
-if [ -n "${VALLY:-}" ]; then
-  VALLY="$VALLY"
+# Two shapes have to survive here. A command carrying its own arguments
+# (`npx --yes …`, `node fake-vally.mjs`) must word-split; a path to one binary
+# must NOT — on a checkout under a directory whose name contains a space
+# ("OneDrive - AXA"), splitting it produced
+# `/Users/…/OneDrive: No such file or directory` on every arm. A caller-supplied
+# VALLY that names an existing file is that path; anything else is a command.
+# So: an array for invoking, and the string only for the `--vally` flag the node
+# adapters parse.
+if [ -n "${VALLY:-}" ] && [ -e "$VALLY" ]; then
+  VALLY_CMD=("$VALLY")
+  # adapt.mjs re-splits that string on whitespace, keeping double-quoted runs
+  # whole, so a path with spaces has to reach it already quoted.
+  case "$VALLY" in *[[:space:]]*) VALLY="\"$VALLY\"" ;; esac
+elif [ -n "${VALLY:-}" ]; then
+  read -r -a VALLY_CMD <<< "$VALLY"
 elif command -v vally >/dev/null 2>&1 && [ "$(vally --version)" = "0.12.0" ]; then
+  VALLY_CMD=(vally)
   VALLY="vally"
 else
+  VALLY_CMD=(npx --yes "$VALLY_PACKAGE")
   VALLY="npx --yes $VALLY_PACKAGE"
 fi
 STIMULI="${STIMULI:-}"
@@ -103,7 +123,7 @@ fi
 # The repository default, used by any eval whose spec does not pin its own
 # `defaults.model`. Sonnet 5 is what the shipped `software-engineer` descriptor
 # declares, so this is the model the framework is actually evaluated on.
-DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-5}"
+DEFAULT_MODEL="${DEFAULT_MODEL:-claude-sonnet-5.5}"
 # Empty unless the caller forced one: resolution happens per eval, below.
 MODEL="${MODEL:-}"
 JUDGE_MODEL="${JUDGE_MODEL:-gpt-5.6-luna}"
@@ -119,6 +139,11 @@ RUNS="${RUNS:-}"
 RUNS_ARGS=()
 [ -n "$RUNS" ] && RUNS_ARGS=(--runs "$RUNS")
 WORKERS="${WORKERS:-3}"
+ARMS_PARALLEL="${ARMS_PARALLEL:-1}"
+case "$ARMS_PARALLEL" in
+  0|1) ;;
+  *) echo "ARMS_PARALLEL must be 0 or 1." >&2; exit 2 ;;
+esac
 AGENT_WORKERS="${AGENT_WORKERS:-1}"
 AGENT_MAX_RETRIES="${AGENT_MAX_RETRIES:-0}"
 PARALLEL="${PARALLEL:-4}"
@@ -281,6 +306,22 @@ load_skill_companions() {
   ' "$SIDE_CAR"
 }
 
+# One Vally arm of a skill comparison. Every line is prefixed with the arm name
+# so two arms streaming into the same eval.log at once stay readable. It never
+# fails the caller: an arm that errors leaves no results.jsonl, and the pairing
+# step reports that far more precisely than an exit code would. awk, not
+# `sed -u`: BSD sed has no -u, and an unflushed prefixer would hold a live log
+# back until the arm ends.
+run_arm() {
+  local ARM="$1"
+  shift
+  local LABEL
+  LABEL="$(printf '%s' "${ARM:0:1}" | tr '[:lower:]' '[:upper:]')${ARM:1}"
+  if ! "${VALLY_CMD[@]}" eval "$@" 2>&1 | awk -v arm="$ARM" '{ print "[" arm "] " $0; fflush() }'; then
+    echo "[$ARM] WARNING: $LABEL eval failed"
+  fi
+}
+
 run_agent_eval() {
   local EVAL_SPEC="$1"
   local EVAL_DIR="$(dirname "$EVAL_SPEC")"
@@ -312,7 +353,7 @@ run_agent_eval() {
   open_log_fd "$LOG"
   {
     echo "=== $EVAL_NAME (agent) ==="
-    if $VALLY eval \
+    if "${VALLY_CMD[@]}" eval \
       --eval-spec "$EVAL_SPEC" \
       --skill-dir "$SKRAFT_ROOT/plugins/skraft-framework/skills" \
       --executor-plugin "$EXECUTOR" \
@@ -489,37 +530,47 @@ run_one_eval() {
       fi
     fi
 
+    # Everything both arms share. Only the spec (a cache-narrowed baseline),
+    # the skill set and the output directory may differ between them.
+    local -a ARM_ARGS=(
+      --model "$MODEL"
+      ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS"
+      ${SKILL_RETRY_ARGS[@]+"${SKILL_RETRY_ARGS[@]}"}
+      --skip-validate
+      --judge-model "$JUDGE_MODEL"
+    )
+
+    # The two arms are independent — separate skill dirs, separate output dirs,
+    # the same read-only spec — so with ARMS_PARALLEL=1 the baseline runs in the
+    # background while the skilled arm runs, roughly halving the wall clock of a
+    # skill eval. Pairing only starts once both have finished.
+    local BASELINE_PID=""
     if [ "$CACHE_MODE" = "hit" ]; then
       echo "--- Baseline run skipped: every stimulus served from cache ---"
     else
-      echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline..." >&2
       echo "--- Baseline run ---"
-      $VALLY eval \
-        --eval-spec "$BASELINE_SPEC" \
-        --skill-dir "$EMPTY_SKILL_DIR" \
-        --model "$MODEL" \
-        ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
-        ${SKILL_RETRY_ARGS[@]+"${SKILL_RETRY_ARGS[@]}"} \
-        --skip-validate \
-        --judge-model "$JUDGE_MODEL" \
-        --output-dir "$BASELINE_DIR" \
-        2>&1 || echo "WARNING: Baseline eval failed"
+      if [ "$ARMS_PARALLEL" = "1" ]; then
+        echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline and skilled in parallel..." >&2
+        run_arm baseline --eval-spec "$BASELINE_SPEC" --skill-dir "$EMPTY_SKILL_DIR" \
+          "${ARM_ARGS[@]}" --output-dir "$BASELINE_DIR" &
+        BASELINE_PID=$!
+      else
+        echo -e "  ${BOLD}▶${NC} $EVAL_NAME — baseline..." >&2
+        run_arm baseline --eval-spec "$BASELINE_SPEC" --skill-dir "$EMPTY_SKILL_DIR" \
+          "${ARM_ARGS[@]}" --output-dir "$BASELINE_DIR"
+      fi
     fi
 
-    echo -e "  ${BOLD}▶${NC} $EVAL_NAME — skilled..." >&2
+    [ -n "$BASELINE_PID" ] || echo -e "  ${BOLD}▶${NC} $EVAL_NAME — skilled..." >&2
 
     # Skilled: target skill, optionally scoped with declared companion skills.
     echo "--- Skilled run ---"
-    $VALLY eval \
-      --eval-spec "$EVAL_SPEC" \
-      --skill-dir "$SKILLED_SKILL_DIR" \
-      --model "$MODEL" \
-      ${RUNS_ARGS[@]+"${RUNS_ARGS[@]}"} --workers "$WORKERS" \
-      ${SKILL_RETRY_ARGS[@]+"${SKILL_RETRY_ARGS[@]}"} \
-      --skip-validate \
-      --judge-model "$JUDGE_MODEL" \
-      --output-dir "$SKILLED_DIR" \
-      2>&1 || echo "WARNING: Skilled eval failed"
+    run_arm skilled --eval-spec "$EVAL_SPEC" --skill-dir "$SKILLED_SKILL_DIR" \
+      "${ARM_ARGS[@]}" --output-dir "$SKILLED_DIR"
+
+    if [ -n "$BASELINE_PID" ]; then
+      wait "$BASELINE_PID" || true
+    fi
 
     # Adapt
     # Session logging also emits events.jsonl and OpenTelemetry JSONL streams.
@@ -581,8 +632,9 @@ run_one_eval() {
 
 export -f run_one_eval
 export -f run_agent_eval
+export -f run_arm
 export -f open_log_fd
-export SKRAFT_ROOT VALLY RESULTS_ROOT MODEL JUDGE_MODEL RUNS WORKERS AGENT_WORKERS AGENT_MAX_RETRIES STATUS_DIR LIVE_LOGS
+export SKRAFT_ROOT VALLY RESULTS_ROOT MODEL JUDGE_MODEL RUNS WORKERS ARMS_PARALLEL AGENT_WORKERS AGENT_MAX_RETRIES STATUS_DIR LIVE_LOGS
 export GREEN RED YELLOW CYAN BOLD NC
 
 # ---- Run in parallel --------------------------------------------------------

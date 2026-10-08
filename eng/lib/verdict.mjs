@@ -266,8 +266,9 @@ export function comparisonVerdict(report, subject, trials) {
 /** Publishable state of a verdict, as rendered on the dashboard. */
 export function verdictState(verdict) {
   if (verdict.conclusive === false || verdict.underpowered === true) return 'inconclusive'
-  if (verdict.regressed === true) return 'regression'
   if (verdict.passed === true) return 'pass'
+  if (verdict.flaky === true) return 'flaky'
+  if (verdict.regressed === true) return 'regression'
   return 'no-improvement'
 }
 
