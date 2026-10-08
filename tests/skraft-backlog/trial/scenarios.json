@@ -1,0 +1,41 @@
+{
+  "docs": "docs",
+  "scenarios": [
+    {
+      "name": "ready-issue",
+      "title": "Refuse a young driver whose licence was suspended",
+      "body": "As an underwriter reviewing a quote for a driver under 25, I want a suspended licence in the last 3 years to refuse eligibility with the reason \"licence suspended\", so that I do not issue a policy the PRD forbids.\n\nExamples:\n1. Inès, 24, licence suspended in March 2024 → refused, reason \"licence suspended\".\n2. Hugo, 19, no suspension, licence since 2025 → not refused for this rule.\n3. Léa, 22, suspended in 2021 → not refused for this rule (older than 3 years).\n\nAcceptance criteria:\n- Given Inès, 24, licence suspended in March 2024, when she requests eligibility, then she is refused with the reason \"licence suspended\".\n- Given Hugo, 19, never suspended, when he requests eligibility, then this rule does not refuse him.\n- Given Léa, 22, suspended in 2021, when she requests eligibility, then this rule does not refuse her.\n\nTechnical notes: rule lives in the eligibility check. Dependencies: none.\n\nRules: docs/prd/eligibilite-jeunes-conducteurs.md",
+      "expect": ["^<!-- skraft-refine v=", "Refinement proposal", "Reviewed against: `docs/prd/eligibilite-jeunes-conducteurs.md`"]
+    },
+    {
+      "name": "vague-criteria-fr",
+      "title": "Vérifier l'éligibilité des jeunes conducteurs",
+      "body": "En tant qu'utilisateur, je veux savoir si je suis éligible.\n\nCritères :\n- la vérification est rapide\n- le serveur renvoie 422 quand le permis est invalide\n\nVoir docs/prd/eligibilite-jeunes-conducteurs.md",
+      "expect": ["Proposition de refinement — à retravailler", "Problèmes des critères d'acceptation actuels", "\\*\\*Étant donné\\*\\*", "Revue faite contre : `docs/prd/eligibilite-jeunes-conducteurs.md`"]
+    },
+    {
+      "name": "too-big",
+      "title": "Young driver offer: eligibility, pricing, documents and payment",
+      "body": "We need the whole young driver offer: eligibility check, surcharge pricing for three years, upload of licence and ID documents, card payment, and the welcome email.",
+      "expect": ["(13|21) points", "Proposed split"]
+    },
+    {
+      "name": "english-issue",
+      "title": "Show the surcharge to a young driver before payment",
+      "body": "As a driver in my first year of licence I want to see the surcharge applied to my premium before I pay.",
+      "expect": ["Refinement proposal", "\\*\\*Given\\*\\*"]
+    },
+    {
+      "name": "ambiguous-prd",
+      "title": "Surprime des jeunes conducteurs",
+      "body": "La surprime doit baisser chaque année pour les jeunes conducteurs.",
+      "expect": ["À confirmer — non utilisé : `docs/", "Proposition de refinement"],
+      "reject": ["Revue faite contre"]
+    }
+  ],
+  "rerun": {
+    "name": "already-refined",
+    "of": "english-issue",
+    "expectSkipped": true
+  }
+}

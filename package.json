@@ -23,7 +23,9 @@
     "release:dry": "semantic-release --dry-run --no-ci",
     "skills:sync": "node scripts/sync-skill-copies.mjs --apply",
     "skills:check": "node scripts/sync-skill-copies.mjs --check",
-    "test:backlog": "node --test \"tests/skraft-backlog/**/*.test.mjs\""
+    "test:backlog": "node --test \"tests/skraft-backlog/**/*.test.mjs\"",
+    "backlog:sync": "node scripts/sync-backlog-copies.mjs --apply",
+    "backlog:check": "node scripts/sync-backlog-copies.mjs --check"
   },
   "devDependencies": {
     "@github/copilot": "1.0.78",

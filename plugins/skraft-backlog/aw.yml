@@ -1,0 +1,17 @@
+# gh-aw package: `gh aw add SebastienDegodez/skraft-plugin/plugins/skraft-backlog@<tag>`
+# installs the skraft-refine workflow, its shared APM import and the marker check it runs
+# before the agent, and creates the label that triggers it.
+manifest-version: "1"
+name: SKRAFT backlog refinement
+emoji: 🧭
+description: Comments a refinement proposal on each new GitHub issue — Definition of Ready, Fibonacci size, proposed story, examples and acceptance criteria — in the issue's language.
+includes:
+  - workflows/skraft-refine.md
+resources:
+  - source: workflows/shared/skraft-refine-marker.mjs
+    destination: .github/workflows/shared/skraft-refine-marker.mjs
+config:
+  - type: repo-label
+    name: skraft-refine
+    description: Ask skraft-backlog for a refinement proposal on this issue
+    color: 1f6feb

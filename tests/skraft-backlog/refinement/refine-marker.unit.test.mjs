@@ -105,7 +105,7 @@ test('main prints todo, writes it to GITHUB_OUTPUT, honours SKRAFT_REFINE_FORCE 
   const io = { run: gh.run, log: (line) => logs.push(line), append: (path, text) => outputs.push([path, text]), env: { GITHUB_OUTPUT: '/tmp/out' } }
   assert.equal(await main(['check', '--repo', 'a/b', '--issue', '1'], io), 0)
   assert.deepEqual(logs.slice(0, 1), ['todo=false'])
-  assert.deepEqual(outputs, [['/tmp/out', 'todo=false\n']])
+  assert.deepEqual(outputs, [['/tmp/out', 'todo=false\nissue=1\n']])
 
   logs.length = 0
   assert.equal(await main(['check', '--repo', 'a/b', '--issue', '1'], { ...io, env: { SKRAFT_REFINE_FORCE: 'true' } }), 0)

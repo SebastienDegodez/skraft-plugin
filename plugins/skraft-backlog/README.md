@@ -64,6 +64,42 @@ missing or inconclusive lens never reads as approval. Three refused attempts sto
 The producers dispatch the lenses themselves, so no sub-agent dispatches another: the gate works
 in VS Code with `chat.subagents.allowInvocationsFromSubagents` left at its default.
 
+## The skraft-refine agentic workflow
+
+The same refinement, as a [GitHub Agentic Workflow](https://github.github.com/gh-aw/). Install
+it in a repository with:
+
+```sh
+gh aw add SebastienDegodez/skraft-plugin/plugins/skraft-backlog@v<version>
+```
+
+`gh aw add` reads [aw.yml](aw.yml): it installs `workflows/skraft-refine.md`, its import
+`shared/apm.md` (Microsoft APM, which brings the plugin's skills to the runner, pinned to the
+same tag) and `.github/workflows/shared/skraft-refine-marker.mjs`, creates the `skraft-refine`
+label, and compiles the workflow. Set the engine secret (`COPILOT_GITHUB_TOKEN` for the
+Copilot engine) in the repository or the organization.
+
+| Trigger | How |
+|---|---|
+| New issue | `issues: opened` |
+| Label | add `skraft-refine`; it is removed again so it can be re-added |
+| Comment | `/skraft-refine`, or `/skraft-refine --force` |
+| By hand | Actions → skraft-refine → Run workflow, with `issue_number` and `force`; or `gh workflow run skraft-refine.lock.yml -f issue_number=42 -f force=true` |
+
+The workflow reacts 👀, then a pre-activation step runs the marker check: an issue a trusted
+proposal already covers, for its current title, body and the installed version, is skipped.
+The agent's GitHub tools are read-only; its only write is one comment through safe outputs,
+and older proposals of the workflow are hidden. The slash command and the label go through the
+`agentic_commands.yml` dispatcher that `gh aw compile` generates next to it.
+
+Who pays: a workflow run uses the repository's or organization's engine secret. To run a
+refinement on your own subscription, use `/skraft-refine` in your editor; the comment carries the
+same marker, so the workflow then skips the issue.
+
+By default only users with write access or above trigger gh-aw workflows: an issue opened by an
+outside contributor starts nothing until a maintainer adds the label or comments the command.
+Opening `roles` to everyone exposes the agent to whatever an issue body says.
+
 ## Hand-off to the engineering pipeline
 
 The two plugins share files, not code. `backlog-planner` writes, under
