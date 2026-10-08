@@ -6,6 +6,8 @@ on:
       - 'plugins/skraft-backlog/**'
       - 'tests/skraft-backlog/**'
       - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/sync-backlog-copies.mjs'
+      - 'scripts/set-version.mjs'
       - 'scripts/lib/agent-*.mjs'
       - 'plugins/skraft-framework/src/cli/build-config*.mjs'
       - 'plugins/skraft-framework/src/cli/resolve-model*.mjs'
@@ -20,6 +22,8 @@ on:
       - 'plugins/skraft-backlog/**'
       - 'tests/skraft-backlog/**'
       - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/sync-backlog-copies.mjs'
+      - 'scripts/set-version.mjs'
       - 'scripts/lib/agent-*.mjs'
       - 'plugins/skraft-framework/src/cli/build-config*.mjs'
       - 'plugins/skraft-framework/src/cli/resolve-model*.mjs'
@@ -60,6 +64,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: The workflow's copy of the marker check is the skill's
+        run: node scripts/sync-backlog-copies.mjs --check
       - name: Both agent trees in sync with their baseline
         run: node scripts/project-plugin-adapters.mjs --check --plugin-root plugins/skraft-backlog
       - name: Dispatch tree and declared skills are valid
@@ -72,3 +78,26 @@ jobs:
             "tests/skraft-backlog/**/*.test.mjs"
       - name: Agent model assignment matches the cost_role_class policy
         run: node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check --dir plugins/skraft-backlog/com.github.copilot/agents
+
+  workflow:
+    name: skraft-refine compiles with gh-aw
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install gh-aw
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install github/gh-aw
+      # Compile it as `gh aw add` lays it out in a consumer repository: the workflow, its
+      # shared APM import and the marker check under .github/workflows/.
+      - name: Compile the workflow in a consumer layout
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          consumer="$RUNNER_TEMP/consumer"
+          mkdir -p "$consumer/.github/workflows/shared"
+          cp plugins/skraft-backlog/workflows/skraft-refine.md "$consumer/.github/workflows/"
+          cp plugins/skraft-backlog/workflows/shared/apm.md plugins/skraft-backlog/workflows/shared/skraft-refine-marker.mjs "$consumer/.github/workflows/shared/"
+          cd "$consumer"
+          git init -q
+          gh aw compile skraft-refine

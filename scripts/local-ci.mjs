@@ -46,6 +46,7 @@ const fastGates = [
   { name: 'Backlog plugin tests (node --test)', cmd: 'node', args: testArgs('tests/skraft-backlog') },
   { name: 'Backlog plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check', '--plugin-root', 'plugins/skraft-backlog'] },
   { name: 'Backlog dispatch tree and skills', cmd: 'node', args: ['plugins/skraft-framework/src/cli/build-config-bin.mjs', '--emit', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'], quiet: true },
+  { name: 'Backlog copies in sync', cmd: 'node', args: ['scripts/sync-backlog-copies.mjs', '--check'] },
   { name: 'Backlog agent model policy (B12)', cmd: 'node', args: ['plugins/skraft-framework/src/cli/resolve-model-bin.mjs', '--check', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'] },
 ]
 

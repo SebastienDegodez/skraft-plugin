@@ -28,6 +28,9 @@ const targets = [
 // refinement marker and the skraft-refine workflow compare it to decide whether to redo work.
 const stamped = [
   ['plugins/skraft-backlog/skills/refinement-proposal/scripts/version.mjs', /export const VERSION = '[^']*'/, `export const VERSION = '${version}'`],
+  ['plugins/skraft-backlog/workflows/skraft-refine.md', /SKRAFT_BACKLOG_VERSION: "[^"]*"/, `SKRAFT_BACKLOG_VERSION: "${version}"`],
+  // The skills the workflow installs, pinned to the release tag that ships this workflow.
+  ['plugins/skraft-backlog/workflows/skraft-refine.md', /(\/plugins\/skraft-backlog\/skills\/[\w-]+)#v[^\s]+/g, `$1#v${version}`],
 ];
 
 for (const [rel, pattern, replacement] of stamped) {
@@ -37,6 +40,7 @@ for (const [rel, pattern, replacement] of stamped) {
     console.error(`no version to stamp in ${rel}`);
     process.exit(1);
   }
+  pattern.lastIndex = 0;
   writeFileSync(path, text.replace(pattern, replacement));
   console.log(`set version ${version} in ${rel}`);
 }
