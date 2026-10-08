@@ -18,7 +18,7 @@ tool is missing is `status: "fail"` with the captured output, never `not_applica
   during a gate run.
 - Python 3.11 or later.
 
-`$Q` is `$SKRAFT_PLUGIN_ROOT/skills/quality-gates-python/scripts`. `$EV` is
+`$Q` is `$SKRAFT_PLUGIN_ROOT/skills/quality-gates-python/scripts`, or the `scripts/` folder beside this file when that variable is empty. `$EV` is
 `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`; log references drop
 the `.copilot-tracking/skraft-plans/{projectSlug}/` prefix. Every script runs with `node`
 and no shell, so the same line works in bash and PowerShell.

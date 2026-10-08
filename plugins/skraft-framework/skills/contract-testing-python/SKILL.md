@@ -1,6 +1,6 @@
 ---
 name: contract-testing-python
-description: Use when the contract-testing-roster resolved a Python stack for a provider-side contract test. Always provides the baseline FastAPI TestClient integration test through the app factory; when the Microcks opt-in is enabled, additionally boots the service on a real port with uvicorn and has a Microcks container replay the published contract against it (OPEN_API_SCHEMA runner). Emits test wiring only; the business TDD cycle stays with the software-engineer lead.
+description: Use when the contract-testing-roster resolved a Python stack for a provider-side contract test. Always provides the baseline FastAPI TestClient integration test through the app factory; when the Microcks opt-in is enabled, additionally boots the service on a real port with uvicorn and has a MicrocksContainer (unofficial microcks-testcontainers binding, pinned) replay the published contract against it (OPEN_API_SCHEMA runner). Emits test wiring only; the business TDD cycle stays with the software-engineer lead.
 ---
 
 # Contract Testing — Python adapter (baseline + optional Microcks)
@@ -41,25 +41,22 @@ validates each response. A `TestClient` serves the app in-process and exposes no
 boot the same app factory with uvicorn on a real port the container can reach. Load the
 artifacts authored per the generic `contract-testing` skill.
 
-Dev dependencies: `testcontainers>=4.14`, `uvicorn`, `httpx`.
+Dev dependencies: `microcks-testcontainers @ git+https://github.com/Caesarsage/microcks-testcontainers-python@b61580e9b8dd18be6ea98d3a24ad6248971656dd` (unofficial binding, not on PyPI: pin the commit),
+`testcontainers>=4.14`, `uvicorn`.
 
 ```python
 # tests/integration/contract/test_{api}_contract_verification.py
 import socket
 import threading
 import time
-from pathlib import Path
 
-import httpx
 import uvicorn
-from testcontainers.core.container import DockerContainer
-from testcontainers.core.wait_strategies import LogMessageWaitStrategy
+from microcks_testcontainers import MicrocksContainer, TestRequest, TestRunnerType
 
 from {context}.api.app import create_app
 from {context}.api.composition import build_in_memory
 
 MICROCKS_IMAGE = "quay.io/microcks/microcks-uber:1.14.0-native"
-ARTIFACTS = ["contracts/{api}.yaml", "contracts/{api}.apiexamples.yaml", "contracts/{api}.apimetadata.yaml"]
 
 
 def free_port() -> int:
@@ -77,37 +74,24 @@ def test_the_service_satisfies_the_published_contract() -> None:
     while not server.started:
         time.sleep(0.05)
 
-    # 2. Start Microcks with a route back to the host.
-    container = (
-        DockerContainer(MICROCKS_IMAGE)
-        .with_exposed_ports(8080)
+    # 2. Start Microcks seeded from the contract artifacts, with a route back to the host.
+    microcks = (
+        MicrocksContainer(MICROCKS_IMAGE)
+        .with_main_artifacts(["contracts/{api}.yaml"])
+        .with_secondary_artifacts(["contracts/{api}.apiexamples.yaml", "contracts/{api}.apimetadata.yaml"])
         .with_kwargs(extra_hosts={"host.docker.internal": "host-gateway"})
-        .waiting_for(LogMessageWaitStrategy("Started MicrocksApplication"))
     )
     try:
-        with container:
-            microcks = f"http://{container.get_container_host_ip()}:{container.get_exposed_port(8080)}"
-            for index, artifact in enumerate(ARTIFACTS):
-                path = Path(artifact)
-                query = "" if index == 0 else "?mainArtifact=false"
-                upload = httpx.post(f"{microcks}/api/artifact/upload{query}", files={"file": (path.name, path.read_bytes())})
-                assert upload.status_code == 201, upload.text
-
+        with microcks:
             # 3. Microcks replays every example against the running service.
-            launched = httpx.post(f"{microcks}/api/tests", json={
-                "serviceId": "{API Title}:1.0.0",          # info.title:info.version
-                "testEndpoint": f"http://host.docker.internal:{port}",
-                "runnerType": "OPEN_API_SCHEMA",
-                "timeout": 5000,
-            })
-            assert launched.status_code == 201, launched.text
-            result = launched.json()
-            deadline = time.time() + 30
-            while result.get("inProgress", True) and time.time() < deadline:
-                time.sleep(0.5)
-                result = httpx.get(f"{microcks}/api/tests/{result['id']}").json()
+            result = microcks.test_endpoint(TestRequest(
+                service_id="{API Title}:1.0.0",          # info.title:info.version
+                runner_type=TestRunnerType.OPEN_API_SCHEMA,
+                test_endpoint=f"http://host.docker.internal:{port}",
+                timeout=5000,                            # milliseconds
+            ))
 
-            assert result["success"], result
+            assert result.success, result
     finally:
         server.should_exit = True
         thread.join(timeout=5)
@@ -116,8 +100,9 @@ def test_the_service_satisfies_the_published_contract() -> None:
 The `OPEN_API_SCHEMA` runner checks every response code, header and body against the
 contract. Never suppress a failing result (`success == false`).
 
-`GET /api/metrics/invocations/...` counts how often a MOCK was called — a consumer-side
-concern, not provider conformance.
+`microcks.verify(name, version)` is a DIFFERENT method: it returns a `bool` checking how many
+times a MOCK was invoked — a consumer-side concern. It is NOT provider conformance. Use
+`test_endpoint` here.
 
 ## Structured result back to the lead
 
@@ -140,5 +125,6 @@ notes: baseline TestClient always ; Microcks OPEN_API_SCHEMA replay against uvic
 - ALWAYS emit Layer 1, regardless of the opt-in. Add Layer 2 ONLY when `microcks: true`.
 - Layer 2 needs a real port: run the app factory under uvicorn on `0.0.0.0`, reach it from the
   container through `host.docker.internal` mapped to `host-gateway`.
-- Upload the main artifact first, the examples and metadata with `?mainArtifact=false`.
+- Load the contract with `with_main_artifacts`, the examples and metadata with `with_secondary_artifacts`.
+- Layer 2 is `test_endpoint(TestRequest(runner_type=OPEN_API_SCHEMA))`, never `verify`.
 - Use `resolving-stack-commands` for the test command — never hardcode `pytest`.
