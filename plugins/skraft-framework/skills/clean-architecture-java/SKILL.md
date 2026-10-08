@@ -28,7 +28,8 @@ The layer rules are those of `architecture-patterns`. This skill maps them onto 
 - Who may *read* a resource is checked in the use case. Who may *change* it is an aggregate rule: the mutation method takes the caller's id and throws.
 - Wire every class with `@Bean` methods in `-api`; Domain and Application classes carry no Spring annotation.
 - One transaction per use-case call, opened in `-api` (`TransactionTemplate` around the call, or `@Transactional` on the controller method). Never add an interface to a use case to decorate it.
-- Name packages by feature inside each module (`…application.loan`). No `port`, `adapter`, `in` or `out` packages, and no "port" in type names or comments.
+- Inside each module, one package per feature (`…application.loan`, `…infrastructure.loan`), never a technical one (`repository`, `service`, `persistence`). A use case imports no other feature's package; what two features use moves to a `shared` package of that module.
+- No `port`, `adapter`, `in` or `out` packages, and no "port" in type names or comments.
 
 ## Domain
 

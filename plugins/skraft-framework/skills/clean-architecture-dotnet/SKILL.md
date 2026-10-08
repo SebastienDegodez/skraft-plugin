@@ -16,6 +16,7 @@ The layer rules are those of `architecture-patterns`. This skill maps them onto 
 | `<Context>.Infrastructure` | implementations of those interfaces, DI registration (`AddInfrastructure()`) | `<Context>.Application` |
 | `<Context>.Api` | endpoints, `Program.cs` | `<Context>.Infrastructure` |
 
+- Inside each project, one folder per feature (`Application/Loans/BorrowBookUseCase.cs`, `Infrastructure/Loans/SqlLoanRepository.cs`), never a technical one (`Persistence`, `Repositories`, `Services`). The `DbContext` and `DependencyInjection.cs` stay at the project root. A feature uses no other feature's Application namespace; what two features use moves to a `Shared` folder.
 - Use types reached transitively; never add a `<ProjectReference>` to reach them.
 - EF Core, ASP.NET Core and `HttpClient` appear only in Infrastructure and Api. Domain uses nothing beyond the BCL.
 - Tests live in the test projects `clean-architecture-testing` defines, never in a layer project.

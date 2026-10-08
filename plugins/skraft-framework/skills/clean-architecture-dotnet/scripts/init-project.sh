@@ -119,11 +119,9 @@ mkdir -p "src/$PROJECT_NAME.Domain/Shared"
 
 # Application  
 mkdir -p "src/$PROJECT_NAME.Application/Shared"
-mkdir -p "src/$PROJECT_NAME.Application/Features"
 
 # Infrastructure
-mkdir -p "src/$PROJECT_NAME.Infrastructure/Persistence/Repositories"
-mkdir -p "src/$PROJECT_NAME.Infrastructure/Services"
+mkdir -p "src/$PROJECT_NAME.Infrastructure/Shared"
 
 # API
 # No additional directories needed
@@ -166,7 +164,7 @@ echo "✅ Clean Architecture CQRS project initialized successfully!"
 echo ""
 echo "Next steps:"
 echo "  1. Review src/$PROJECT_NAME.Domain for business logic"
-echo "  2. Create Commands/Queries in src/$PROJECT_NAME.Application/Features/"
+echo "  2. Add each feature as a folder in every layer project (src/$PROJECT_NAME.Application/<Feature>/, ...)"
 echo "  3. Implement handlers with *CommandHandler/*QueryHandler suffix"
 echo "  4. Run architecture tests: dotnet test --filter 'FullyQualifiedName~IntegrationTests'"
 echo ""

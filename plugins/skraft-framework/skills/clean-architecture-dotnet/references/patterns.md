@@ -162,10 +162,10 @@ Use when the domain has invariants, state transitions, or events. CQRS bus is op
 **CQS rule for commands:** a command must be void — it does not return a value. The caller is responsible for generating the ID and including it in the command.
 
 ```csharp
-// Application/Features/Orders/PlaceOrderCommand.cs — ID is part of the command
+// Application/Orders/PlaceOrderCommand.cs — ID is part of the command
 public sealed record PlaceOrderCommand(OrderId OrderId, string CustomerName);
 
-// Application/Features/Orders/PlaceOrderCommandHandler.cs
+// Application/Orders/PlaceOrderCommandHandler.cs
 public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand>
 {
     private readonly IOrderRepository _repository; // IOrderRepository defined in Domain (write path) — see Interface Placement
@@ -237,7 +237,7 @@ public sealed class Order : AggregateRoot
     }
 }
 
-// Application/Features/PlaceOrder/PlaceOrderCommandHandler.cs — handler dispatches
+// Application/Orders/PlaceOrderCommandHandler.cs — handler dispatches
 public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand>
 {
     private readonly IOrderRepository _repository;

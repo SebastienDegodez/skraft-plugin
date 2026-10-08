@@ -28,23 +28,19 @@ Domain/
 ```
 Application/
   IApplicationMarker.cs
-  Shared/
-    ICommandHandler.cs
-    IQueryHandler.cs
-  Features/
-    PlaceOrder/
-      PlaceOrderCommand.cs
-      PlaceOrderCommandHandler.cs
-    GetOrder/
-      GetOrderQuery.cs
-      GetOrderQueryHandler.cs
-      OrderViewModel.cs
+  Orders/                       ← one folder per feature
+    PlaceOrderUseCase.cs
+    GetOrderUseCase.cs
+    OrderViewModel.cs
+    IPaymentGateway.cs          ← interface this feature calls out through
+  Shared/                       ← only what two features both use
 ```
 
 **Rules:**
 - References Domain only
 - No Infrastructure implementations
 - Orchestrates use cases
+- A feature folder never uses another feature's namespace
 
 ---
 
@@ -53,13 +49,12 @@ Application/
 ```
 Infrastructure/
   IInfrastructureMarker.cs
-  Persistence/
-    OrderingDbContext.cs
-    Repositories/
-      OrderRepository.cs        ← Implements IOrderRepository
-  Services/
-    InventoryService.cs         ← Implements IInventoryService
-  DependencyInjection.cs        ← Convention-based DI registration
+  OrderingDbContext.cs          ← shared by every feature, at the root
+  DependencyInjection.cs        ← DI registration, at the root
+  Orders/
+    SqlOrderRepository.cs       ← Implements IOrderRepository
+    OrderConfiguration.cs       ← EF Core mapping of Order
+    HttpPaymentGateway.cs       ← Implements IPaymentGateway
 ```
 
 **Rules:**

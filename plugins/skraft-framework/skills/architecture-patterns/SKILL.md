@@ -271,6 +271,10 @@ graph LR
 
 Types reachable through a transitive reference may be imported; never add a direct reference to reach them.
 
+### Feature Folders
+
+Inside each layer, code is grouped by feature (`Loans`, `Invoicing`), never by technical kind (`Repositories`, `Services`, `Persistence`). A feature's use cases import no other feature's application code; what two features both need moves to a `Shared` folder of that layer.
+
 ### Use Case Boundary
 
 The Application layer is the entry point for all external requests. Controllers never touch Domain objects directly — they go through use cases.

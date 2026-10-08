@@ -233,7 +233,7 @@ Contains **implementation details** and **external dependencies**:
 ### Example Code
 
 ```csharp
-// Infrastructure/Persistence/OrderRepository.cs
+// Infrastructure/Orders/OrderRepository.cs
 public sealed class OrderRepository : IOrderRepository
 {
     private readonly OrderingDbContext _context;

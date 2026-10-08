@@ -29,7 +29,8 @@ The layer rules are those of `architecture-patterns`. This skill maps them onto 
 - Who may *read* a resource is checked in the use case. Who may *change* it is an aggregate rule: the mutation method takes the caller's id and raises.
 - Wire every class by hand in `api` (one composition module); FastAPI `Depends` appears only in `api`. No DI container.
 - One transaction per use-case call, opened and committed in `api` around the call.
-- Name modules by feature inside each layer. No `ports` or `adapters` package, and no "port" in module, class or docstring.
+- Inside each layer, one sub-package per feature (`application/loans/borrow_book.py`, `infrastructure/loans/sql_loan_repository.py`), never a module at the layer root or a technical package (`repositories`, `services`, `models`). A feature imports no other feature; what two features use moves to a `shared` sub-package of that layer.
+- No `ports` or `adapters` package, and no "port" in module, class or docstring.
 
 ## Domain
 
@@ -54,4 +55,11 @@ name = "Domain and application import no framework"
 type = "forbidden"
 source_modules = ["<context>.domain", "<context>.application"]
 forbidden_modules = ["fastapi", "starlette", "pydantic", "sqlalchemy", "httpx"]
+
+[[tool.importlinter.contracts]]
+name = "Application features never import each other"
+type = "independence"
+modules = ["<context>.application.*"]
+ignore_imports = ["<context>.application.** -> <context>.application.shared.**"]
+unmatched_ignore_imports_alerting = "none"
 ```
