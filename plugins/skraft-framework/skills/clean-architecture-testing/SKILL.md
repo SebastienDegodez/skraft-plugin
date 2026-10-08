@@ -102,7 +102,7 @@ Pick one mocking library per solution and stick to it. Same for the app host fac
 
 ## Per-Layer Examples (pseudo-code)
 
-Full runnable examples: [examples-dotnet.md](references/examples-dotnet.md) (.NET) and [examples-java.md](references/examples-java.md) (Java / Spring Boot, Maven). The roles are identical across languages.
+Full runnable examples: [examples-dotnet.md](references/examples-dotnet.md) (.NET), [examples-java.md](references/examples-java.md) (Java / Spring Boot, Maven) and [examples-python.md](references/examples-python.md) (Python, pytest). The roles are identical across languages.
 
 ### Application — acceptance test
 
@@ -225,5 +225,6 @@ These thoughts signal you're about to violate the policy:
 
 - [examples-dotnet.md](references/examples-dotnet.md) — full runnable .NET examples (FakeItEasy, Testcontainers, in-process app host, architecture scanner)
 - [examples-java.md](references/examples-java.md) — full runnable Java / Spring Boot examples (JUnit 5, Mockito, Testcontainers, ArchUnit)
+- [examples-python.md](references/examples-python.md) — runnable Python examples (pytest, hand-written fakes, testcontainers, FastAPI `TestClient`, import-linter)
 - [architecture-rules.md](references/architecture-rules.md) — complete architecture rule set (project references + allow-list; .NET implementation)
 - [doubles-decision-tree.md](references/doubles-decision-tree.md) — extended decision tree with tie-breakers

@@ -1,0 +1,997 @@
+name: clean-architecture-python
+description: |
+  Verifies that a Python / FastAPI service is laid out as Clean Architecture and
+  stays that way: one package per layer with imports pointing inward, checked by
+  an import-linter contract; use cases as plain classes with no interface in
+  front of them and no port or adapter vocabulary; a framework-free core;
+  commands that return nothing, queries that return a read model, aggregates
+  built by a factory, and access rules split between use case and aggregate.
+  Graders are Python AST checks, so they run wherever python3 does. The
+  existing project carries its own import-linter contract, checked by its test
+  suite. Probes without the skill (Sonnet, 2 runs per case) extended the layered
+  project correctly for refunds, but on an empty repository wrote flat modules
+  (service.py, models.py, once ports.py / adapters.py) with no import contract;
+  their contacts use case returned the id or the entity, and their orders had no
+  factory, no typed id and a cancel that ignored the caller. The greenfield
+  stimuli and the three existing-project deciders carry the verdict; refunds is
+  a regression guard.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 4
+  # Pinned to Sonnet: the probes that sized these stimuli ran on Sonnet, and the
+  # verdict must stay comparable if DEFAULT_MODEL moves. MODEL in the environment
+  # still overrides it for the compare-models matrix.
+  model: claude-sonnet-5.5
+scoring:
+  threshold: 1
+
+stimuli:
+  # Deterministic decider. Empty repository: nothing to imitate, so the layout is
+  # the agent's own call. The prompt names no architecture style. The install
+  # sentinel keeps a project that does not install or import from scoring as a
+  # good layout.
+  - name: 'Python greenfield: a library loan service with persistence'
+    prompt: |
+      Start a new Python 3.12 service with FastAPI, packaged with a pyproject.toml.
+      Its first feature: a library member borrows a book through POST /loans
+      (body: member_id, isbn). A member may hold at most 3 loans at a time; a book
+      already on loan cannot be borrowed. Loans are stored in PostgreSQL through
+      SQLAlchemy 2.
+
+      Write the production code for this first feature and the build files. No
+      tests for now.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git commit --quiet --allow-empty -m "chore: empty repository"'
+    graders:
+      - &install-sentinel
+        type: run-command
+        name: 'Sentinel: the generated project installs and imports'
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; venv="$(mktemp -d)"
+              python3 -m venv "$venv" >"$log" 2>&1 || { tail -n 20 "$log"; exit 1; }
+              if [ -f pyproject.toml ]; then "$venv/bin/pip" install -q . >>"$log" 2>&1 || { tail -n 40 "$log"; exit 1; }
+              elif [ -f requirements.txt ]; then "$venv/bin/pip" install -q -r requirements.txt >>"$log" 2>&1 || { tail -n 40 "$log"; exit 1; }
+              else echo 'no pyproject.toml or requirements.txt'; exit 1; fi
+              PYTHONPATH="src:." "$venv/bin/python" - <<'PY'
+              import importlib, pathlib, sys
+              failures = []
+              for p in sorted(pathlib.Path('.').rglob('*.py')):
+                  parts = p.parts
+                  if set(parts) & {'.git', '.venv', 'venv', 'build', 'dist', 'alembic', 'migrations'} or p.name in ('setup.py', 'noxfile.py'):
+                      continue
+                  if any(x in ('tests', 'test') or x.startswith('test_') or x == 'conftest.py' for x in parts):
+                      continue
+                  rel = parts[1:] if parts[0] == 'src' else parts
+                  name = '.'.join(rel)[:-3].removesuffix('.__init__')
+                  try:
+                      importlib.import_module(name)
+                  except Exception as e:
+                      if type(e).__name__ in ('OperationalError', 'InterfaceError', 'ConnectionRefusedError'):
+                          continue
+                      failures.append(f'{name}: {type(e).__name__}: {e}')
+              if failures:
+                  print('\n'.join(failures[:20])); sys.exit(1)
+              print('the project installs and every module imports')
+              PY
+          expected_exit_code: 0
+          timeout: 6m
+      - &layers
+        type: run-command
+        name: Each layer is a package of its own and imports point inward only
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              mods = modules()
+              roots = {(m[0].parts[1] if m[0].parts[0] == 'src' and len(m[0].parts) > 1 else m[0].parts[0]).removesuffix('.py') for m in mods}
+              def dotted(p):
+                  parts = list(p.parts[1:] if p.parts[0] == 'src' else p.parts)
+                  parts[-1] = parts[-1].removesuffix('.py')
+                  return parts[:-1] if parts[-1] == '__init__' else parts
+              def imports(p, tree):
+                  here = dotted(p)
+                  pkg = here if p.name == '__init__.py' else here[:-1]
+                  for n in ast.walk(tree):
+                      if isinstance(n, ast.Import):
+                          for a in n.names:
+                              yield a.name.split('.')
+                      elif isinstance(n, ast.ImportFrom):
+                          base = (pkg[:len(pkg) - n.level + 1] if n.level else []) + (n.module.split('.') if n.module else [])
+                          if n.module:
+                              yield base
+                          else:
+                              for a in n.names:
+                                  yield base + [a.name]
+              def routes(tree):
+                  for f in ast.walk(tree):
+                      if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                          for d in f.decorator_list:
+                              if isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr in ('get', 'post', 'put', 'patch', 'delete', 'api_route'):
+                                  return True
+                  return False
+              domain = in_layer(mods, 'domain')
+              if not domain:
+                  print('no domain package'); sys.exit(1)
+              context = domain[0][0].parts[:domain[0][0].parts.index(next(x for x in domain[0][0].parts if x.removesuffix('.py') == 'domain'))]
+              entry = set()
+              for p, tree, _ in mods:
+                  if routes(tree):
+                      rest = p.parts[len(context):] if p.parts[:len(context)] == context else ()
+                      if len(rest) < 2:
+                          print(f'{p}: HTTP endpoints have no package of their own'); sys.exit(1)
+                      entry.add(rest[0])
+              if not entry:
+                  print('no HTTP endpoint found'); sys.exit(1)
+              if entry & set(CORE):
+                  print('HTTP endpoints sit in ' + ', '.join(sorted(entry & set(CORE)))); sys.exit(1)
+              rank = {'domain': 0, 'application': 1, 'infrastructure': 2, **{e: 3 for e in entry}}
+              missing = [l for l in ('domain', 'application', 'infrastructure') if not in_layer(mods, l)]
+              if missing:
+                  print('no package of its own for: ' + ', '.join(missing)); sys.exit(1)
+              def layer(segments):
+                  return next((s for s in segments if s in rank), None)
+              wrong = []
+              for p, tree, _ in mods:
+                  own = layer([x.removesuffix('.py') for x in p.parts[len(context):]]) if p.parts[:len(context)] == context else None
+                  if own is None:
+                      continue
+                  for target in imports(p, tree):
+                      if target and target[0] in roots:
+                          other = layer(target)
+                          if other is not None and rank[other] > rank[own]:
+                              wrong.append(f'{p} ({own}) imports {".".join(target)} ({other})')
+              if wrong:
+                  print('\n'.join(sorted(set(wrong))[:20])); sys.exit(1)
+              print('one package per layer, imports point inward only')
+          expected_exit_code: 0
+          timeout: 1m
+      - &import-contract
+        type: run-command
+        name: The build rejects an import that points outward
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              import tomllib, configparser
+              contracts = []
+              if pathlib.Path('pyproject.toml').exists():
+                  data = tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))
+                  contracts += data.get('tool', {}).get('importlinter', {}).get('contracts', [])
+              for ini in ('.importlinter', 'setup.cfg', 'tox.ini'):
+                  if pathlib.Path(ini).exists():
+                      cp = configparser.ConfigParser()
+                      cp.read(ini, encoding='utf-8')
+                      for s in cp.sections():
+                          if s.startswith('importlinter:contract'):
+                              c = dict(cp[s])
+                              c['layers'] = [x.strip() for x in c.get('layers', '').splitlines() if x.strip()]
+                              contracts.append(c)
+              def last(name):
+                  return name.replace('(', '').replace(')', '').strip().split('.')[-1]
+              for c in contracts:
+                  if c.get('type') != 'layers':
+                      continue
+                  order = [last(x) for x in c.get('layers', [])]
+                  core = [x for x in order if x in ('domain', 'application', 'infrastructure')]
+                  if core == ['infrastructure', 'application', 'domain'] and order.index('infrastructure') > 0:
+                      print('import-linter layers contract: ' + ' > '.join(order)); sys.exit(0)
+              print('no import-linter layers contract putting an entry layer above infrastructure > application > domain')
+              sys.exit(1)
+          expected_exit_code: 0
+          timeout: 1m
+      - &no-use-case-interface
+        type: run-command
+        name: A use case is not hidden behind an interface implemented in application
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              app = in_layer(modules(), 'application')
+              if not app:
+                  print('no application package'); sys.exit(1)
+              cls = [c for _, tree, _ in app for c in classes(tree)]
+              abstract = {c.name for c in cls if is_abstract(c)}
+              bad = [f'{c.name} implements {b} inside the application layer' for c in cls if not is_abstract(c) for b in base_names(c) if b in abstract]
+              bad += [f'{n} is an interface in front of a use case' for n in abstract if re.search(r'(UseCase|Service|Interactor|Handler|InputBoundary)$', n)]
+              bad += [f'{c.name} is an implementation class' for c in cls if re.search(r'Impl(ementation)?$', c.name)]
+              if bad:
+                  print('\n'.join(sorted(set(bad)))); sys.exit(1)
+              print('no application interface is implemented inside application')
+          expected_exit_code: 0
+          timeout: 1m
+      - &no-port-vocabulary
+        type: run-command
+        name: No port or adapter package, and no port vocabulary in the code
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              hits = []
+              for p in sorted(pathlib.Path('.').rglob('*')):
+                  if SKIP & set(p.parts):
+                      continue
+                  stem = p.name.removesuffix('.py').lower()
+                  if (p.is_dir() or p.suffix == '.py') and (stem in ('port', 'ports', 'adapter', 'adapters') or re.search(r'_(port|ports|adapter|adapters)$', stem)):
+                      hits.append(f'{p}: port/adapter module')
+                  if p.suffix == '.py':
+                      text = p.read_text(encoding='utf-8', errors='ignore')
+                      for i, line in enumerate(text.splitlines(), 1):
+                          if re.search(r'\bclass\s+(\w*[a-z])?Port\b', line) or re.search(r'\b(input|output|inbound|outbound|driving|driven|primary|secondary)\s+ports?\b|\bports?\s+(and|&)\s+adapters?\b|hexagonal', line, re.I):
+                              hits.append(f'{p}:{i}: {line.strip()[:100]}')
+              if hits:
+                  print('\n'.join(hits[:20])); sys.exit(1)
+              print('no port or adapter vocabulary')
+          expected_exit_code: 0
+          timeout: 1m
+      - &framework-free-core
+        type: run-command
+        name: Domain and application import no framework
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              FRAMEWORKS = {'fastapi', 'starlette', 'pydantic', 'pydantic_settings', 'sqlalchemy', 'sqlmodel', 'alembic', 'httpx', 'requests', 'aiohttp', 'urllib3',
+                            'flask', 'django', 'psycopg', 'psycopg2', 'asyncpg', 'uvicorn', 'dependency_injector', 'injector', 'punq', 'lagom', 'marshmallow'}
+              hits = []
+              for p, tree, _ in in_layer(modules(), 'domain') + in_layer(modules(), 'application'):
+                  for n in ast.walk(tree):
+                      names = [a.name for a in n.names] if isinstance(n, ast.Import) else [n.module] if isinstance(n, ast.ImportFrom) and n.module and not n.level else []
+                      hits += [f'{p}: imports {x}' for x in names if x.split('.')[0] in FRAMEWORKS]
+              if hits:
+                  print('\n'.join(hits[:20])); sys.exit(1)
+              print('domain and application import no framework')
+          expected_exit_code: 0
+          timeout: 1m
+      - &judge
+        type: prompt
+        config:
+          scoring: scale_1_10
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-python
+    rubric:
+      - Gives each layer its own package and makes the build reject an import that skips or reverses a layer.
+      - Puts the HTTP endpoint in its own package, not beside the persistence code.
+      - Lets the endpoint call the use case class directly, with no interface standing in front of it.
+      - Keeps FastAPI, Pydantic and SQLAlchemy out of the business rules and the use case.
+
+  # Deterministic decider, second domain: no database, one outbound HTTP call, so
+  # the layout decision is not tied to the SQLAlchemy case.
+  - name: 'Python greenfield: expense claims converted through a rates provider'
+    prompt: |
+      Start a new Python 3.12 service with FastAPI, packaged with a pyproject.toml.
+      Its first feature: an employee submits an expense claim through POST /claims
+      (body: employee_id, amount, currency). The amount is converted to EUR with
+      the exchange-rate provider's REST API (GET /rates/{currency} answers with a
+      JSON body holding the rate, for example 1.08). A claim above 1000 EUR waits
+      for a manager's approval; any other claim is approved at once. Keep claims in
+      memory for now.
+
+      Write the production code for this first feature and the build files. No
+      tests for now.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git commit --quiet --allow-empty -m "chore: empty repository"'
+    graders:
+      - *install-sentinel
+      - *layers
+      - *import-contract
+      - *no-use-case-interface
+      - *no-port-vocabulary
+      - *framework-free-core
+      - *judge
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-python
+    rubric:
+      - Gives each layer its own package and makes the build reject an import that skips or reverses a layer.
+      - Calls the rates provider from a class outside the business code, behind an interface the use case owns.
+      - Keeps the 1000 EUR rule with the business code, out of the endpoint and the HTTP client.
+
+  # Regression guard. The fixture is already layered and guarded by import-linter.
+  # A tie is expected; a loss means the skill pushed a correct extension towards
+  # something worse.
+  - name: 'Python existing project: add refunds to the payment service'
+    tags:
+      role: regression-guard
+    prompt: |
+      We need refunds. Add an HTTP endpoint POST /payments/{reference}/refunds
+      (body: amount, currency) that asks the payment provider to refund an
+      authorized payment and keeps a receipt of the provider's answer, like
+      authorization already does. The provider's API: POST /refunds with a JSON
+      body of reference, amount and currency; it answers 200 when refunded and 409
+      when the payment cannot be refunded.
+
+      Implement it in production code; no new tests needed.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files: &payment-files
+        - src: fixtures/payment-fastapi/.gitignore
+          dest: .gitignore
+        - src: fixtures/payment-fastapi/pyproject.toml
+          dest: pyproject.toml
+        - src: fixtures/payment-fastapi/src/payment/__init__.py
+          dest: src/payment/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/api/__init__.py
+          dest: src/payment/api/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/api/app.py
+          dest: src/payment/api/app.py
+        - src: fixtures/payment-fastapi/src/payment/api/composition.py
+          dest: src/payment/api/composition.py
+        - src: fixtures/payment-fastapi/src/payment/application/__init__.py
+          dest: src/payment/application/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/application/authorize_payment.py
+          dest: src/payment/application/authorize_payment.py
+        - src: fixtures/payment-fastapi/src/payment/application/payment_gateway.py
+          dest: src/payment/application/payment_gateway.py
+        - src: fixtures/payment-fastapi/src/payment/application/receipt_store.py
+          dest: src/payment/application/receipt_store.py
+        - src: fixtures/payment-fastapi/src/payment/domain/__init__.py
+          dest: src/payment/domain/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/domain/authorization_outcome.py
+          dest: src/payment/domain/authorization_outcome.py
+        - src: fixtures/payment-fastapi/src/payment/domain/money.py
+          dest: src/payment/domain/money.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/__init__.py
+          dest: src/payment/infrastructure/__init__.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/file_system_receipt_store.py
+          dest: src/payment/infrastructure/file_system_receipt_store.py
+        - src: fixtures/payment-fastapi/src/payment/infrastructure/http_payment_gateway.py
+          dest: src/payment/infrastructure/http_payment_gateway.py
+        - src: fixtures/payment-fastapi/tests/__init__.py
+          dest: tests/__init__.py
+        - src: fixtures/payment-fastapi/tests/integration/__init__.py
+          dest: tests/integration/__init__.py
+        - src: fixtures/payment-fastapi/tests/integration/test_architecture.py
+          dest: tests/integration/test_architecture.py
+        - src: fixtures/payment-fastapi/tests/integration/test_file_system_receipt_store.py
+          dest: tests/integration/test_file_system_receipt_store.py
+        - src: fixtures/payment-fastapi/tests/unit/__init__.py
+          dest: tests/unit/__init__.py
+        - src: fixtures/payment-fastapi/tests/unit/test_authorize_payment.py
+          dest: tests/unit/test_authorize_payment.py
+      commands: &payment-setup
+        - 'python3 -m venv .venv'
+        - '.venv/bin/pip install -q -e ".[dev]"'
+        - '.venv/bin/python -m pytest -q -p no:cacheprovider'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: payment authorization walking skeleton"'
+    graders:
+      - &tests-green
+        type: run-command
+        name: Every test in the project is green, import contracts included
+        config:
+          command: bash
+          args:
+            - -c
+            - |
+              log="$(mktemp)"; .venv/bin/python -m pytest -q -p no:cacheprovider >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1
+          expected_exit_code: 0
+          timeout: 5m
+      - &build-file-unchanged
+        type: diff-not-contains
+        name: The build file and its import contracts are unchanged
+        config:
+          pattern: '(?m)^diff --git a/pyproject\.toml '
+      - *no-use-case-interface
+      - *no-port-vocabulary
+      - *framework-free-core
+      - *judge
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-python
+    rubric:
+      - Adds the refund call to the existing packages, following the layout already there.
+      - Lets the endpoint call the refund use case class directly, with no interface standing in front of it.
+      - Reads a 409 from the provider as a refusal rather than an error.
+
+  # Deterministic decider: the create use case must return nothing and receive
+  # the new id; the read use case must return a read model, not the stored object.
+  - name: 'Python existing project: contacts, created and fetched over HTTP'
+    prompt: |
+      Add a contacts feature: create a contact (name, email) and get a contact by
+      id, over HTTP (POST /contacts, GET /contacts/{id}). Contacts have no
+      business rules. Keep them in memory for now. Production code only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files: *payment-files
+      commands: *payment-setup
+    graders:
+      - *tests-green
+      - *build-file-unchanged
+      - type: run-command
+        name: Creating a contact returns nothing and receives the new id
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              mods = modules()
+              fields = {}
+              for _, tree, _ in mods:
+                  for c in classes(tree):
+                      names = [s.target.id for s in c.body if isinstance(s, ast.AnnAssign) and isinstance(s.target, ast.Name)]
+                      init = next((f for f in methods(c) if f.name == '__init__'), None)
+                      names += [a.arg for a in params(init)] if init else []
+                      fields[c.name] = names
+              ID = re.compile(r'^(id|\w+_id)$')
+              def carries_id(fn):
+                  for a in params(fn):
+                      ann = ast.unparse(a.annotation) if a.annotation else ''
+                      if ID.match(a.arg) or re.search(r'Id\b', ann) or any(ID.match(f) for t in re.findall(r'\w+', ann) for f in fields.get(t, [])):
+                          return True
+                  return False
+              def returns_value(fn):
+                  if fn.returns is not None:
+                      return ast.unparse(fn.returns) not in ('None', "'None'")
+                  return any(isinstance(r, ast.Return) and r.value is not None and not (isinstance(r.value, ast.Constant) and r.value.value is None) for r in ast.walk(fn))
+              creates = []
+              for _, tree, _ in in_layer(mods, 'application'):
+                  for c in classes(tree):
+                      if is_abstract(c):
+                          continue
+                      for f in methods(c):
+                          if re.match(r'(create|add|register)', f.name) or (f.name in ('execute', 'handle', '__call__', 'run', 'invoke') and re.match(r'(Create|Add|Register)', c.name)):
+                              creates.append((c.name, f))
+              if not creates:
+                  print('no create entry point in application'); sys.exit(1)
+              bad = [f'{c}.{f.name}({", ".join(a.arg for a in params(f))}) -> {ast.unparse(f.returns) if f.returns else "?"}' for c, f in creates if returns_value(f) or not carries_id(f)]
+              if bad:
+                  print('\n'.join(bad)); sys.exit(1)
+              print('create returns nothing and receives the new id')
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Fetching a contact returns a read model built in application, not the domain object
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              mods = modules()
+              def defined(layer):
+                  names = set()
+                  for _, tree, _ in in_layer(mods, layer):
+                      names |= {c.name for c in classes(tree)}
+                      names |= {t.id for n in ast.walk(tree) if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
+                  return names
+              domain_types, app_types = defined('domain'), defined('application')
+              queries = []
+              for _, tree, _ in in_layer(mods, 'application'):
+                  for c in classes(tree):
+                      if is_abstract(c):
+                          continue
+                      for f in methods(c):
+                          if re.match(r'(get|find|view|fetch|load|read|consult)', f.name) or (f.name in ('execute', 'handle', '__call__', 'run', 'invoke') and re.match(r'(Get|Find|View|Fetch|Load|Read|Consult)', c.name)):
+                              queries.append((c.name, f))
+              if not queries:
+                  print('no query entry point in application'); sys.exit(1)
+              bad = []
+              for c, f in queries:
+                  ret = ast.unparse(f.returns) if f.returns else ''
+                  tokens = re.findall(r'\w+', ret)
+                  vms = [t for t in tokens if t.endswith('ViewModel')]
+                  if not vms or any(t in domain_types for t in tokens) or not all(v in app_types for v in vms):
+                      bad.append(f'{c}.{f.name} returns {ret or "an unannotated value"}')
+              if bad:
+                  print('\n'.join(bad)); sys.exit(1)
+              print('queries return a *ViewModel built in application, never a domain type')
+          expected_exit_code: 0
+          timeout: 1m
+      - *judge
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-python
+    rubric:
+      - Lets the endpoint choose the new contact's id and hand it to the use case, which returns nothing.
+      - Returns a read model built for the caller from the fetch, never the stored object itself.
+      - Adds no rule about contacts that the request did not state.
+
+  # Deterministic decider: aggregate built by a factory with a typed id; the
+  # "only the owner may cancel" rule in the aggregate, the read check in the use
+  # case, neither in the endpoint.
+  - name: 'Python existing project: customers see and cancel only their own orders'
+    prompt: |
+      Add order consultation and cancellation for customers: GET /orders/{id}
+      returns an order and POST /orders/{id}/cancel cancels it. A customer may
+      only see and cancel their own orders; an order can only be cancelled while
+      it is pending. Authentication is already handled upstream: each request
+      carries the authenticated customer id in the X-Customer-Id header. Create
+      whatever order model you need and keep orders in memory. Production code
+      only, no tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files: *payment-files
+      commands: *payment-setup
+    graders:
+      - *tests-green
+      - *build-file-unchanged
+      - type: run-command
+        name: An order is built by a factory and identified by a typed id
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              mods = modules()
+              domain = in_layer(mods, 'domain')
+              order = next((c for _, tree, _ in domain for c in classes(tree) if c.name == 'Order'), None)
+              if order is None:
+                  print('no Order class in domain'); sys.exit(1)
+              problems = []
+              def is_factory(f):
+                  deco = {ast.unparse(d) for d in f.decorator_list}
+                  if not deco & {'classmethod', 'staticmethod'}:
+                      return False
+                  ret = ast.unparse(f.returns) if f.returns else ''
+                  builds = any(isinstance(n, ast.Call) and ast.unparse(n.func) in ('cls', 'Order') for n in ast.walk(f))
+                  return builds or re.search(r'\b(Order|Self)\b', ret)
+              if not any(is_factory(f) for f in methods(order)):
+                  problems.append('Order has no factory class method')
+              typed = any(c.name == 'OrderId' for _, tree, _ in domain for c in classes(tree)) or any(
+                  isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'OrderId' for t in n.targets) for _, tree, _ in domain for n in ast.walk(tree))
+              if not typed:
+                  problems.append('no OrderId type in domain')
+              elif 'OrderId' not in ast.unparse(order):
+                  problems.append('Order is not identified by OrderId')
+              direct = [f'{p}: calls Order(...) directly' for p, tree, _ in mods if layer_of(p.parts) != 'domain'
+                        for n in ast.walk(tree) if isinstance(n, ast.Call) and ast.unparse(n.func).split('.')[-1] == 'Order']
+              problems += direct
+              if problems:
+                  print('\n'.join(problems[:20])); sys.exit(1)
+              print('Order is built by a factory and identified by OrderId')
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: Who may cancel is an aggregate rule, who may read is a use-case check
+        config:
+          command: python3
+          args:
+            - -c
+            - |
+              import ast, pathlib, re, sys
+              SKIP = {'.git', '.venv', 'venv', 'env', 'node_modules', '__pycache__', 'build', 'dist', '.tox', 'site-packages'}
+              CORE = ('domain', 'application', 'infrastructure')
+              def is_test(p):
+                  return any(part in ('tests', 'test') or part.startswith('test_') or part == 'conftest.py' for part in p.parts)
+              def modules():
+                  out = []
+                  for p in sorted(pathlib.Path('.').rglob('*.py')):
+                      if SKIP & set(p.parts) or is_test(p):
+                          continue
+                      try:
+                          out.append((p, ast.parse(p.read_text(encoding='utf-8')), p.read_text(encoding='utf-8')))
+                      except (SyntaxError, UnicodeDecodeError):
+                          pass
+                  return out
+              def layer_of(parts):
+                  for part in parts:
+                      name = part[:-3] if part.endswith('.py') else part
+                      if name in CORE:
+                          return name
+                  return None
+              def in_layer(mods, name):
+                  return [m for m in mods if layer_of(m[0].parts) == name]
+              def classes(tree):
+                  return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+              def base_names(cls):
+                  names = [ast.unparse(b).split('.')[-1].split('[')[0] for b in cls.bases]
+                  names += [ast.unparse(k.value).split('.')[-1] for k in cls.keywords if k.arg == 'metaclass']
+                  return names
+              def is_abstract(cls):
+                  if {'Protocol', 'ABC', 'ABCMeta'} & set(base_names(cls)):
+                      return True
+                  return any(isinstance(d, (ast.Name, ast.Attribute)) and ast.unparse(d).endswith('abstractmethod')
+                             for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              def methods(cls):
+                  return [f for f in cls.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))]
+              def params(fn):
+                  a = fn.args
+                  return [x for x in a.posonlyargs + a.args + a.kwonlyargs if x.arg not in ('self', 'cls')]
+              mods = modules()
+              order = next((c for _, tree, _ in in_layer(mods, 'domain') for c in classes(tree) if c.name == 'Order'), None)
+              cancel = next((f for f in methods(order) if f.name == 'cancel'), None) if order else None
+              if cancel is None or not params(cancel):
+                  print('Order.cancel takes no caller: who may cancel is not an aggregate rule'); sys.exit(1)
+              OWN = r'is_owned_by|owned_by|belongs_to|owner|customer_id\s*(==|!=)|(==|!=)\s*\w*\.?customer_id'
+              readers = [ast.unparse(c) for _, tree, _ in in_layer(mods, 'application') for c in classes(tree)
+                         if not is_abstract(c) and re.match(r'(Get|Find|View|Consult|Load|Read|Fetch)', c.name)]
+              readers += [ast.unparse(f) for _, tree, _ in in_layer(mods, 'application') for c in classes(tree) if not is_abstract(c)
+                          for f in methods(c) if re.match(r'(get|find|view|consult|load|read|fetch)', f.name)]
+              if not any(re.search(OWN, r) for r in readers):
+                  print('the read use case does not check who may see the order'); sys.exit(1)
+              def routes(tree):
+                  return any(isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr in ('get', 'post', 'put', 'patch', 'delete')
+                             for f in ast.walk(tree) if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) for d in f.decorator_list)
+              leak = [str(p) for p, tree, text in mods if routes(tree) and re.search(r'is_owned_by|owned_by|\.customer_id\s*(==|!=)|(==|!=)\s*\w+\.customer_id|owner_id\s*(==|!=)', text)]
+              if leak:
+                  print('endpoint checks ownership itself: ' + ', '.join(leak)); sys.exit(1)
+              print('read restriction in the use case, change restriction in the aggregate')
+          expected_exit_code: 0
+          timeout: 1m
+      - *judge
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-python
+    rubric:
+      - Refuses a cancellation by another customer inside the order itself, from the caller's id it receives.
+      - Hides another customer's order in the read use case, without the order knowing who asks.
+      - Keeps the endpoint to reading the header and calling the use cases.
+
+  # Near miss. A change in the same project that touches no layer decision: the
+  # skill must stay out of the way.
+  - name: 'Python existing project: a configurable timeout on the provider client'
+    tags:
+      intent: non-activation
+    prompt: |
+      Calls to the payment provider sometimes hang. Make them give up after 2
+      seconds by default, with the delay configurable per environment.
+    environment:
+      files: *payment-files
+      commands: *payment-setup
+    graders:
+      - *tests-green
+      - *judge
+      - type: skill-invocation
+        name: The skill under test stays out of the way
+        config:
+          disallowed:
+            - clean-architecture-python
+    rubric:
+      - Sets a timeout on the HTTP client that calls the provider.
+      - Reads the delay from configuration with a 2-second default.
+      - Changes nothing outside the client's construction and its configuration.

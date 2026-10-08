@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "payment"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "httpx>=0.27",
+    "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "import-linter>=2.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "payment"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers import inward only"
+type = "layers"
+layers = [
+    "payment.api",
+    "payment.infrastructure",
+    "payment.application",
+    "payment.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain and application import no framework"
+type = "forbidden"
+source_modules = ["payment.domain", "payment.application"]
+forbidden_modules = ["fastapi", "starlette", "pydantic", "httpx", "uvicorn"]

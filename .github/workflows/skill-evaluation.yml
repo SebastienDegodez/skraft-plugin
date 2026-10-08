@@ -271,6 +271,15 @@ jobs:
           cache: maven
           cache-dependency-path: 'tests/skills/**/fixtures/**/pom.xml'
 
+      # The Python fixtures install themselves into a virtual environment at setup
+      # (`pip install -e ".[dev]"`); the pip cache spares every cell the download.
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        if: matrix.kind == 'skill'
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: 'tests/skills/**/fixtures/**/pyproject.toml'
+
       # No lockfile, so setup-node's own npm cache cannot be used. Keying on the
       # three pins means a toolchain bump never restores a stale tree.
       - name: Cache the npm download cache

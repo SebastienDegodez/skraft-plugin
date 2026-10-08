@@ -24,6 +24,7 @@ metadata:
   on_demand_skills:
     - clean-architecture-dotnet
     - clean-architecture-java
+    - clean-architecture-python
     - test-design-mandates
     - test-refactoring-catalog
     - mutation-testing
@@ -31,6 +32,7 @@ metadata:
     - quality-gates-evidence-contract
     - quality-gates-dotnet
     - quality-gates-javascript
+    - quality-gates-python
     - resolving-stack-commands
     - qa-reporting
     - playwright-evidence
@@ -89,17 +91,19 @@ Load each skill below only when its trigger fires, never at startup.
 |-------|--------------|
 | `clean-architecture-dotnet` | Repo is a .NET solution (`*.sln` / `*.slnx` / `*.csproj`) and you add or move a production class, a project or a `<ProjectReference>` |
 | `clean-architecture-java` | Repo is a Java build (`pom.xml`) and you add or move a production class, a module or a `<dependency>` |
+| `clean-architecture-python` | Repo is a Python project (`pyproject.toml`) and you add or move a production module, a package or an import between layers |
 | `test-design-mandates` | Deciding whether a Domain unit test is authorized |
 | `test-refactoring-catalog` | Refactoring a test (helpers, renaming, deduplication) |
 | `mutation-testing` | Entering phase 4 (COMMIT & VERIFY) |
 | `quality-gates-evidence-contract` | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
 | `quality-gates-dotnet` | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
 | `quality-gates-javascript` | Repo has a Node package (`package.json`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
+| `quality-gates-python` | Repo has a Python project (`pyproject.toml`) — Python gates and cosmic-ray mutation, run from the project's `.venv` |
 | `resolving-stack-commands` | Needing a build or test command the stack-commands file does not hold, or one of its commands fails — never hardcode one |
 | `skraft-quality-bar` | Entering phase 4 — the thresholds the final gates enforce |
 | `qa-reporting` | Preparing the outcome handoff |
 
-Load the Clean Architecture skill of the repo's stack only: never `clean-architecture-java` in a .NET solution, never `clean-architecture-dotnet` in a Java build.
+Load the Clean Architecture skill of the repo's stack only: never `clean-architecture-java` in a .NET solution or a Python project, never `clean-architecture-dotnet` in a Java build or a Python project, never `clean-architecture-python` outside a Python project.
 
 ## Core Principles (Non-Negotiable)
 1. **Clean Architecture Strictness**: Project references point INWARD, one layer at a time: API -> Infrastructure -> Application -> Domain -> none. Any upward dependency is a fatal defect.
@@ -155,7 +159,7 @@ Do not enter PREPARE, RED, SYNTHESIZE-GREEN, or code COMMIT & VERIFY for this pa
 - **Gate**: run no mutation inside a cycle. Once, after the story's last work commit, run the core then boundary scripts with `--since` set to `phaseHistory.DELIVER.baseSha` (without `--since` when no base is recorded): their exit code is the verdict and the only G6 evidence; `skraft-quality-bar` states the bar. If a test kills no mutants, DELETE IT.
 - Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
 - Append a one-line entry per commit to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v4) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`). Run each gate command or script into `evidence/{date}/{story}/`, capture RED→GREEN snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
+- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v4) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`). Run each gate command or script into `evidence/{date}/{story}/`, capture RED→GREEN snapshots via `git show <commit>:<path>`, then assemble `evidence/{date}/{story}/qg-{story}.json` per that contract. Commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`: hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
 
 ### Outcome handoff (success or blockage)
 

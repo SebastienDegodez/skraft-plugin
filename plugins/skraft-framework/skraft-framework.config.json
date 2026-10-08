@@ -322,6 +322,10 @@
         "policy": "on-demand"
       },
       {
+        "name": "clean-architecture-python",
+        "policy": "on-demand"
+      },
+      {
         "name": "test-design-mandates",
         "policy": "on-demand"
       },
@@ -347,6 +351,10 @@
       },
       {
         "name": "quality-gates-javascript",
+        "policy": "on-demand"
+      },
+      {
+        "name": "quality-gates-python",
         "policy": "on-demand"
       },
       {
@@ -387,6 +395,10 @@
       },
       {
         "name": "clean-architecture-java",
+        "policy": "on-demand"
+      },
+      {
+        "name": "clean-architecture-python",
         "policy": "on-demand"
       }
     ],

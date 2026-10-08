@@ -30,9 +30,10 @@ build / test / mutation commands and their evidence mapping):
 | Node JavaScript, TAP | Selected `package.json` declares installed StrykerJS core + TAP 9.6.1; explicit checked-in core/boundary configs use `testRunner: 'tap'` | [quality-gates-javascript](../quality-gates-javascript/SKILL.md): checked-in scripts/native Node tests and sequential mutation runner | narrow support; no G11 coverage enforcement |
 | Node JavaScript without StrykerJS core + TAP 9.6.1 | A `package.json` that the row above does not match (Stryker absent, other runner or version) | No matching supported adapter | NOT SUPPORTED — a missing mutation runner is a blocker, never an exemption |
 | Frontend, TypeScript, other JavaScript mutation runners | Browser/TS build or non-TAP Stryker runner | No matching supported adapter | NOT SUPPORTED |
+| Python | `pyproject.toml` | [quality-gates-python](../quality-gates-python/SKILL.md) (`{python} -m pytest` / `{python} -m compileall` / cosmic-ray through `mutation-gate.mjs`, run from `.venv`) | supported; no `.venv` and no `--python` is a blocker |
 | Java | `pom.xml`, `build.gradle`, `build.gradle.kts` | _(quality-gates-java not yet provided)_ | NOT SUPPORTED |
 
-Every `package.json` and every .NET solution in the repository is a stack to resolve. If multiple stacks coexist, run each adapter and aggregate results; an unsupported one blocks the whole delivery, even when another stack passes.
+Every `package.json`, every `pyproject.toml` and every .NET solution in the repository is a stack to resolve. If multiple stacks coexist, run each adapter and aggregate results; an unsupported one blocks the whole delivery, even when another stack passes.
 
 ## Unsupported stack → stop, never guess
 

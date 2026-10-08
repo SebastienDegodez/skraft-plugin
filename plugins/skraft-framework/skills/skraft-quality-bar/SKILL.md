@@ -61,6 +61,11 @@ repository root. [mutation-core.sh](../quality-gates-dotnet/scripts/mutation-cor
 and [mutation-boundary.sh](../quality-gates-dotnet/scripts/mutation-boundary.sh) validate
 and execute them. Checked-in configs are also local-debug and CI/CD interface.
 
+For Python, [configure-mutation.mjs](../quality-gates-python/scripts/configure-mutation.mjs)
+scaffolds `cosmic-ray-core.toml` and `cosmic-ray-boundary.toml`;
+[mutation-gate.mjs](../quality-gates-python/scripts/mutation-gate.mjs) runs one scope per call
+and carries both thresholds as literals.
+
 ## Threshold flags
 
 Stated once so recipes copy rather than invent. Adapter scripts and the config scaffold
