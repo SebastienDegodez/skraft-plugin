@@ -92,3 +92,12 @@ test('the version the refinement marker carries is the plugin version', async ()
   const { VERSION } = await import('../../../plugins/skraft-backlog/skills/refinement-proposal/scripts/version.mjs')
   assert.equal(VERSION, json('plugin.json').version)
 })
+
+test('the /skraft-refine command ships for Claude and Copilot, and runs the refinement-proposal skill', () => {
+  for (const path of ['commands/skraft-refine.md', 'com.github.copilot/commands/skraft-refine.md']) {
+    const text = read(path)
+    assert.match(text, /^---\ndescription: .+\nargument-hint: <issue number> \[--force\]\n---\n/, path)
+    assert.match(text, /`refinement-proposal` skill/, path)
+  }
+  assert.ok(skills.includes('refinement-proposal'))
+})
