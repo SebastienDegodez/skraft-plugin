@@ -1,6 +1,7 @@
-using PaymentAuthorization.Domain;
+using PaymentAuthorization.Domain.Authorization;
+using PaymentAuthorization.Domain.Shared;
 
-namespace PaymentAuthorization.Application;
+namespace PaymentAuthorization.Application.Authorization;
 
 /// <summary>Authorizes one payment and keeps a receipt of what the provider answered.</summary>
 public sealed class AuthorizePayment(IPaymentGateway gateway, IReceiptStore receipts)

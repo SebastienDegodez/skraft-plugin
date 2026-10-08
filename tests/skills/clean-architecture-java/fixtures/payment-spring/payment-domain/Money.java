@@ -1,4 +1,4 @@
-package com.example.payment.domain;
+package com.example.payment.domain.shared;
 
 import java.math.BigDecimal;
 import java.util.Locale;

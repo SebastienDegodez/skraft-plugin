@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from payment.api.composition import build_authorize_payment
-from payment.domain.money import Money
+from payment.domain.shared.money import Money
 
 
 class AuthorizationRequest(BaseModel):

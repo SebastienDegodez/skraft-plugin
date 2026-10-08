@@ -1,9 +1,10 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using PaymentAuthorization.Application;
-using PaymentAuthorization.Domain;
+using PaymentAuthorization.Application.Authorization;
+using PaymentAuthorization.Domain.Authorization;
+using PaymentAuthorization.Domain.Shared;
 
-namespace PaymentAuthorization.Infrastructure;
+namespace PaymentAuthorization.Infrastructure.Authorization;
 
 /// <summary>
 /// Talks to the provider's REST API: POST /v1/authorizations, and read back the decision.

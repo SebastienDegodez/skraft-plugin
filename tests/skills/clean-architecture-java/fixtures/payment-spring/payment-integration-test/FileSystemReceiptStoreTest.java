@@ -2,7 +2,7 @@ package com.example.payment.integrationtest.receiptstore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.payment.infrastructure.FileSystemReceiptStore;
+import com.example.payment.infrastructure.authorization.FileSystemReceiptStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;

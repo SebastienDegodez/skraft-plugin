@@ -1,9 +1,9 @@
 from typing import final
 
-from payment.application.payment_gateway import PaymentGateway
-from payment.application.receipt_store import ReceiptStore
-from payment.domain.authorization_outcome import AuthorizationOutcome
-from payment.domain.money import Money
+from payment.application.authorization.payment_gateway import PaymentGateway
+from payment.application.authorization.receipt_store import ReceiptStore
+from payment.domain.authorization.authorization_outcome import AuthorizationOutcome
+from payment.domain.shared.money import Money
 
 
 @final

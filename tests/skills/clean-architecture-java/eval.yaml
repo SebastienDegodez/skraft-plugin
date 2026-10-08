@@ -10,6 +10,10 @@ description: |
   Architecture" they produced one Maven module, a use-case interface with a
   *Service implementation, and port vocabulary. The greenfield stimuli are the
   deciders; the existing build is a regression guard.
+  Feature folders: the fixture is laid out by feature inside each module
+  (authorization, shared). Probes without the skill wrote every greenfield class
+  at the root of its layer package 0/4, and both arms reused the authorization
+  gateway from refunds 0/2 until the skill said to move shared types to shared.
 type: capability
 defaults:
   timeout: 4m
@@ -46,6 +50,69 @@ stimuli:
         - 'git config user.name "SKRAFT Eval"'
         - 'git commit --quiet --allow-empty -m "chore: empty repository"'
     graders:
+      - &feature-folders
+        type: run-command
+        name: Each new layer file sits in a feature folder; no application feature imports another
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path'), { execSync } = require('child_process');
+              const sh = c => { try { return execSync(c, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return null; } };
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'target', 'node_modules', '.venv', '__pycache__'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p.split(path.sep).join('/'));
+                }
+                return acc;
+              };
+              // Files the agent added: new tracked files since HEAD plus untracked ones. No HEAD: everything.
+              const added = sh('git rev-parse --verify -q HEAD') === null
+                ? walk('.').map(f => f.replace(/^\.\//, ''))
+                : [...(sh('git diff --name-only --diff-filter=AR HEAD') || '').split('\n'), ...(sh('git ls-files --others --exclude-standard') || '').split('\n')].filter(Boolean);
+              const TECHNICAL = /^(ports?|adapters?|services?|repositor(y|ies)|persistence|models?|entit(y|ies)|dtos?|use_?cases?|commands?|quer(y|ies)|handlers?|controllers?|endpoints?|routers?|interfaces?|abstractions?|contracts?|gateways?|clients?|http|web|rest|api|jpa|db|database|events?|exceptions?|errors?|value_?objects?|aggregates?|mappers?|impl|inbound|outbound|in|out|core|internal)$/i;
+              const SHARED = /^(shared|common)$/i;
+              // Map a source file to { layer, rest } where rest is its path below the layer root.
+              const locate = f => {
+                let m;
+                if (f.endsWith('.cs') && (m = f.match(/(?:^|\/)[\w.]+\.(Domain|Application|Infrastructure)\/(.+)$/))) return { layer: m[1].toLowerCase(), rest: m[2], lang: 'cs' };
+                if (f.endsWith('.java') && f.includes('/src/main/java/') && (m = f.match(/\/(domain|application|infrastructure)\/((?:(?!\/(?:domain|application|infrastructure)\/).)+)$/))) return { layer: m[1], rest: m[2], lang: 'java' };
+                if (f.endsWith('.py') && !/(^|\/)tests?\//.test(f) && (m = f.match(/(?:^|\/)(domain|application|infrastructure)\/(.+)$/))) return { layer: m[1], rest: m[2], lang: 'py' };
+                return null;
+              };
+              const AT_ROOT_OK = /^(__init__\.py|DependencyInjection\.cs|\w*ServiceCollectionExtensions\.cs|\w*DbContext\.cs|GlobalUsings\.cs|AssemblyInfo\.cs|I\w*Marker\.cs|package-info\.java)$/;
+              const featureOf = rest => {
+                const parts = rest.split('/');
+                if (/^features$/i.test(parts[0])) parts.shift();
+                return parts.length > 1 ? parts[0] : null;
+              };
+              const problems = [];
+              const located = added.map(f => ({ f, at: locate(f) })).filter(x => x.at);
+              if (!located.length) { console.log('no new source file in domain, application or infrastructure'); process.exit(1); }
+              for (const { f, at } of located) {
+                const feature = featureOf(at.rest);
+                if (!feature) { if (!AT_ROOT_OK.test(path.basename(f))) problems.push(f + ': at the root of the ' + at.layer + ' layer, not in a feature folder'); continue; }
+                if (TECHNICAL.test(feature)) problems.push(f + ': in a technical folder (' + feature + '), not a feature folder');
+                // An application feature never reaches into another application feature; shared/ is for both.
+                if (at.layer !== 'application' || SHARED.test(feature)) continue;
+                const text = fs.readFileSync(f, 'utf8');
+                const refs = at.lang === 'cs' ? [...text.matchAll(/\.Application\.(?:Features\.)?(\w+)\b/g)].map(m => m[1])
+                  : at.lang === 'java' ? [...text.matchAll(/^\s*import\s+(?:static\s+)?[\w.]*\.application\.(\w+)\./gm)].map(m => m[1])
+                  : [...text.matchAll(/^\s*(?:from|import)\s+[\w.]*\.application\.(\w+)/gm), ...text.matchAll(/^\s*from\s+\.\.(\w+)/gm)].map(m => m[1]);
+                const root = f.slice(0, f.length - at.rest.length);
+                const siblings = new Set(fs.readdirSync(root, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name.toLowerCase()));
+                if (fs.existsSync(root + 'Features')) for (const e of fs.readdirSync(root + 'Features', { withFileTypes: true })) if (e.isDirectory()) siblings.add(e.name.toLowerCase());
+                for (const other of new Set(refs)) {
+                  if (!siblings.has(other.toLowerCase()) || other.toLowerCase() === feature.toLowerCase() || SHARED.test(other)) continue;
+                  problems.push(f + ': application feature ' + feature + ' imports application feature ' + other);
+                }
+              }
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log(located.length + ' new layer files, each in a feature folder; no application feature imports another');
+          expected_exit_code: 0
+          timeout: 1m
       - type: run-command
         name: 'Sentinel: the generated build compiles'
         config:
@@ -184,6 +251,7 @@ stimuli:
         - 'git config user.name "SKRAFT Eval"'
         - 'git commit --quiet --allow-empty -m "chore: empty repository"'
     graders:
+      - *feature-folders
       - type: run-command
         name: 'Sentinel: the generated build compiles'
         config:
@@ -326,23 +394,23 @@ stimuli:
         - src: fixtures/payment-spring/payment-domain/pom.xml
           dest: payment-domain/pom.xml
         - src: fixtures/payment-spring/payment-domain/Money.java
-          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/shared/Money.java
         - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
-          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/authorization/AuthorizationOutcome.java
         - src: fixtures/payment-spring/payment-application/pom.xml
           dest: payment-application/pom.xml
         - src: fixtures/payment-spring/payment-application/PaymentGateway.java
-          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/PaymentGateway.java
         - src: fixtures/payment-spring/payment-application/ReceiptStore.java
-          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/ReceiptStore.java
         - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
-          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/AuthorizePayment.java
         - src: fixtures/payment-spring/payment-infrastructure/pom.xml
           dest: payment-infrastructure/pom.xml
         - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
-          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/authorization/HttpPaymentGateway.java
         - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
-          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/authorization/FileSystemReceiptStore.java
         - src: fixtures/payment-spring/payment-app/pom.xml
           dest: payment-app/pom.xml
         - src: fixtures/payment-spring/payment-app/PaymentApplication.java
@@ -367,6 +435,7 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - *feature-folders
       - type: run-command
         name: 'Sentinel: the Maven build still resolves'
         config:
@@ -450,7 +519,7 @@ stimuli:
           required:
             - clean-architecture-java
     rubric:
-      - Adds the refund call to the existing modules, following the layout already there.
+      - Adds the refund call to the existing modules, in a feature package of each layer, without one application feature importing another.
       - Lets the endpoint call the refund use case class directly, with no interface standing in front of it.
       - Reads a 409 from the provider as a refusal rather than an error.
 
@@ -474,23 +543,23 @@ stimuli:
         - src: fixtures/payment-spring/payment-domain/pom.xml
           dest: payment-domain/pom.xml
         - src: fixtures/payment-spring/payment-domain/Money.java
-          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/shared/Money.java
         - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
-          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/authorization/AuthorizationOutcome.java
         - src: fixtures/payment-spring/payment-application/pom.xml
           dest: payment-application/pom.xml
         - src: fixtures/payment-spring/payment-application/PaymentGateway.java
-          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/PaymentGateway.java
         - src: fixtures/payment-spring/payment-application/ReceiptStore.java
-          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/ReceiptStore.java
         - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
-          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/AuthorizePayment.java
         - src: fixtures/payment-spring/payment-infrastructure/pom.xml
           dest: payment-infrastructure/pom.xml
         - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
-          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/authorization/HttpPaymentGateway.java
         - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
-          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/authorization/FileSystemReceiptStore.java
         - src: fixtures/payment-spring/payment-app/pom.xml
           dest: payment-app/pom.xml
         - src: fixtures/payment-spring/payment-app/PaymentApplication.java
@@ -515,6 +584,7 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - *feature-folders
       - type: run-command
         name: 'Sentinel: the Maven build still resolves'
         config:
@@ -641,23 +711,23 @@ stimuli:
         - src: fixtures/payment-spring/payment-domain/pom.xml
           dest: payment-domain/pom.xml
         - src: fixtures/payment-spring/payment-domain/Money.java
-          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/shared/Money.java
         - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
-          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/authorization/AuthorizationOutcome.java
         - src: fixtures/payment-spring/payment-application/pom.xml
           dest: payment-application/pom.xml
         - src: fixtures/payment-spring/payment-application/PaymentGateway.java
-          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/PaymentGateway.java
         - src: fixtures/payment-spring/payment-application/ReceiptStore.java
-          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/ReceiptStore.java
         - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
-          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/AuthorizePayment.java
         - src: fixtures/payment-spring/payment-infrastructure/pom.xml
           dest: payment-infrastructure/pom.xml
         - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
-          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/authorization/HttpPaymentGateway.java
         - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
-          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/authorization/FileSystemReceiptStore.java
         - src: fixtures/payment-spring/payment-app/pom.xml
           dest: payment-app/pom.xml
         - src: fixtures/payment-spring/payment-app/PaymentApplication.java
@@ -682,6 +752,7 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - *feature-folders
       - type: run-command
         name: 'Sentinel: the Maven build still resolves'
         config:
@@ -803,23 +874,23 @@ stimuli:
         - src: fixtures/payment-spring/payment-domain/pom.xml
           dest: payment-domain/pom.xml
         - src: fixtures/payment-spring/payment-domain/Money.java
-          dest: payment-domain/src/main/java/com/example/payment/domain/Money.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/shared/Money.java
         - src: fixtures/payment-spring/payment-domain/AuthorizationOutcome.java
-          dest: payment-domain/src/main/java/com/example/payment/domain/AuthorizationOutcome.java
+          dest: payment-domain/src/main/java/com/example/payment/domain/authorization/AuthorizationOutcome.java
         - src: fixtures/payment-spring/payment-application/pom.xml
           dest: payment-application/pom.xml
         - src: fixtures/payment-spring/payment-application/PaymentGateway.java
-          dest: payment-application/src/main/java/com/example/payment/application/PaymentGateway.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/PaymentGateway.java
         - src: fixtures/payment-spring/payment-application/ReceiptStore.java
-          dest: payment-application/src/main/java/com/example/payment/application/ReceiptStore.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/ReceiptStore.java
         - src: fixtures/payment-spring/payment-application/AuthorizePayment.java
-          dest: payment-application/src/main/java/com/example/payment/application/AuthorizePayment.java
+          dest: payment-application/src/main/java/com/example/payment/application/authorization/AuthorizePayment.java
         - src: fixtures/payment-spring/payment-infrastructure/pom.xml
           dest: payment-infrastructure/pom.xml
         - src: fixtures/payment-spring/payment-infrastructure/HttpPaymentGateway.java
-          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/HttpPaymentGateway.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/authorization/HttpPaymentGateway.java
         - src: fixtures/payment-spring/payment-infrastructure/FileSystemReceiptStore.java
-          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/FileSystemReceiptStore.java
+          dest: payment-infrastructure/src/main/java/com/example/payment/infrastructure/authorization/FileSystemReceiptStore.java
         - src: fixtures/payment-spring/payment-app/pom.xml
           dest: payment-app/pom.xml
         - src: fixtures/payment-spring/payment-app/PaymentApplication.java

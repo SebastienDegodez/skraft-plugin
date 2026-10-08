@@ -8,7 +8,11 @@ description: |
   must not break: no dispatch bus for a couple of use cases, and a second
   bounded context that shares no concrete type. Probes (Sonnet, 2 runs per
   cell) without the skill failed the deciders' rules 0/4 each; with the bus
-  guidance removed from the skill, a bus appeared in 2/4 runs.
+  guidance removed from the skill, a bus appeared in 2/4 runs. The fixture is
+  laid out by feature inside each project (Authorization/, Shared/); the
+  feature-folder grader passed every existing-solution run with or without the
+  skill, while the greenfield put the EF Core code in Persistence/ 3/3 without
+  it and 3/3 with the skill's former Persistence/ example, 2/2 once fixed.
 type: capability
 defaults:
   timeout: 4m
@@ -45,24 +49,24 @@ stimuli:
           dest: PaymentAuthorization.slnx
         - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
-          dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Shared/Money.cs
+          dest: src/PaymentAuthorization.Domain/Shared/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
         - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
-          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
-          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
-          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
         - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
@@ -79,6 +83,69 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - &feature-folders
+        type: run-command
+        name: Each new layer file sits in a feature folder; no application feature imports another
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path'), { execSync } = require('child_process');
+              const sh = c => { try { return execSync(c, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { return null; } };
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'target', 'node_modules', '.venv', '__pycache__'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p.split(path.sep).join('/'));
+                }
+                return acc;
+              };
+              // Files the agent added: new tracked files since HEAD plus untracked ones. No HEAD: everything.
+              const added = sh('git rev-parse --verify -q HEAD') === null
+                ? walk('.').map(f => f.replace(/^\.\//, ''))
+                : [...(sh('git diff --name-only --diff-filter=AR HEAD') || '').split('\n'), ...(sh('git ls-files --others --exclude-standard') || '').split('\n')].filter(Boolean);
+              const TECHNICAL = /^(ports?|adapters?|services?|repositor(y|ies)|persistence|models?|entit(y|ies)|dtos?|use_?cases?|commands?|quer(y|ies)|handlers?|controllers?|endpoints?|routers?|interfaces?|abstractions?|contracts?|gateways?|clients?|http|web|rest|api|jpa|db|database|events?|exceptions?|errors?|value_?objects?|aggregates?|mappers?|impl|inbound|outbound|in|out|core|internal)$/i;
+              const SHARED = /^(shared|common)$/i;
+              // Map a source file to { layer, rest } where rest is its path below the layer root.
+              const locate = f => {
+                let m;
+                if (f.endsWith('.cs') && (m = f.match(/(?:^|\/)[\w.]+\.(Domain|Application|Infrastructure)\/(.+)$/))) return { layer: m[1].toLowerCase(), rest: m[2], lang: 'cs' };
+                if (f.endsWith('.java') && f.includes('/src/main/java/') && (m = f.match(/\/(domain|application|infrastructure)\/((?:(?!\/(?:domain|application|infrastructure)\/).)+)$/))) return { layer: m[1], rest: m[2], lang: 'java' };
+                if (f.endsWith('.py') && !/(^|\/)tests?\//.test(f) && (m = f.match(/(?:^|\/)(domain|application|infrastructure)\/(.+)$/))) return { layer: m[1], rest: m[2], lang: 'py' };
+                return null;
+              };
+              const AT_ROOT_OK = /^(__init__\.py|DependencyInjection\.cs|\w*ServiceCollectionExtensions\.cs|\w*DbContext\.cs|GlobalUsings\.cs|AssemblyInfo\.cs|I\w*Marker\.cs|package-info\.java)$/;
+              const featureOf = rest => {
+                const parts = rest.split('/');
+                if (/^features$/i.test(parts[0])) parts.shift();
+                return parts.length > 1 ? parts[0] : null;
+              };
+              const problems = [];
+              const located = added.map(f => ({ f, at: locate(f) })).filter(x => x.at);
+              if (!located.length) { console.log('no new source file in domain, application or infrastructure'); process.exit(1); }
+              for (const { f, at } of located) {
+                const feature = featureOf(at.rest);
+                if (!feature) { if (!AT_ROOT_OK.test(path.basename(f))) problems.push(f + ': at the root of the ' + at.layer + ' layer, not in a feature folder'); continue; }
+                if (TECHNICAL.test(feature)) problems.push(f + ': in a technical folder (' + feature + '), not a feature folder');
+                // An application feature never reaches into another application feature; shared/ is for both.
+                if (at.layer !== 'application' || SHARED.test(feature)) continue;
+                const text = fs.readFileSync(f, 'utf8');
+                const refs = at.lang === 'cs' ? [...text.matchAll(/\.Application\.(?:Features\.)?(\w+)\b/g)].map(m => m[1])
+                  : at.lang === 'java' ? [...text.matchAll(/^\s*import\s+(?:static\s+)?[\w.]*\.application\.(\w+)\./gm)].map(m => m[1])
+                  : [...text.matchAll(/^\s*(?:from|import)\s+[\w.]*\.application\.(\w+)/gm), ...text.matchAll(/^\s*from\s+\.\.(\w+)/gm)].map(m => m[1]);
+                const root = f.slice(0, f.length - at.rest.length);
+                const siblings = new Set(fs.readdirSync(root, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name.toLowerCase()));
+                if (fs.existsSync(root + 'Features')) for (const e of fs.readdirSync(root + 'Features', { withFileTypes: true })) if (e.isDirectory()) siblings.add(e.name.toLowerCase());
+                for (const other of new Set(refs)) {
+                  if (!siblings.has(other.toLowerCase()) || other.toLowerCase() === feature.toLowerCase() || SHARED.test(other)) continue;
+                  problems.push(f + ': application feature ' + feature + ' imports application feature ' + other);
+                }
+              }
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log(located.length + ' new layer files, each in a feature folder; no application feature imports another');
+          expected_exit_code: 0
+          timeout: 1m
       - type: run-command
         name: The solution builds
         config:
@@ -242,24 +309,24 @@ stimuli:
           dest: PaymentAuthorization.slnx
         - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
-          dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Shared/Money.cs
+          dest: src/PaymentAuthorization.Domain/Shared/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
         - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
-          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
-          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
-          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
         - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
@@ -276,6 +343,7 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - *feature-folders
       - type: run-command
         name: The solution builds
         config:
@@ -442,24 +510,24 @@ stimuli:
           dest: PaymentAuthorization.slnx
         - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
-          dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Shared/Money.cs
+          dest: src/PaymentAuthorization.Domain/Shared/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
         - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
-          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
-          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
-          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
         - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
@@ -476,6 +544,7 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - *feature-folders
       - type: run-command
         name: The solution builds
         config:
@@ -638,24 +707,24 @@ stimuli:
           dest: PaymentAuthorization.slnx
         - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
-          dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Shared/Money.cs
+          dest: src/PaymentAuthorization.Domain/Shared/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
         - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
-          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
-          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
-          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
         - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs
@@ -672,6 +741,7 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "test: payment authorization walking skeleton"'
     graders:
+      - *feature-folders
       - type: run-command
         name: The solution builds
         config:
@@ -739,6 +809,76 @@ stimuli:
       - Connects an authorized payment to an invoice in one place outside both contexts' business code.
       - Creates no shared project holding concrete business types.
 
+  # Deterministic decider for the layout. Empty repository: nothing to imitate.
+  # Baseline probes on Java and Python wrote every class at the root of its layer.
+  - name: '.NET greenfield: a library loan service with persistence'
+    prompt: |
+      Start a new .NET 10 service with ASP.NET Core minimal APIs. Its first
+      feature: a library member borrows a book through POST /loans (body:
+      memberId, isbn). A member may hold at most 3 loans at a time; a book
+      already on loan cannot be borrowed. Loans are stored in PostgreSQL through
+      EF Core.
+
+      Write the production code for this first feature and the project files.
+      No tests for now.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      commands:
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git commit --quiet --allow-empty -m "chore: empty repository"'
+    graders:
+      - *feature-folders
+      - type: run-command
+        name: The solution builds
+        config:
+          command: bash
+          args:
+            - -c
+            - 'sln="$(ls *.slnx *.sln 2>/dev/null | head -n 1)"; [ -n "$sln" ] || { echo "no solution file at the root"; exit 1; }; log="$(mktemp)"; dotnet build "$sln" >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - type: run-command
+        name: One project per layer, each referencing only inward
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d, acc = []) => {
+                for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+                  if (['.git', 'bin', 'obj', 'node_modules'].includes(e.name)) continue;
+                  const p = path.join(d, e.name);
+                  e.isDirectory() ? walk(p, acc) : acc.push(p.split(path.sep).join('/'));
+                }
+                return acc;
+              };
+              const projects = walk('.').filter(f => f.endsWith('.csproj')).map(f => ({
+                name: path.basename(f, '.csproj'),
+                refs: [...fs.readFileSync(f, 'utf8').matchAll(/<ProjectReference\s+Include="([^"]+)"/g)].map(m => path.basename(m[1].replace(/\\/g, '/'), '.csproj')),
+              }));
+              const layerOf = n => (n.match(/\.(Domain|Application|Infrastructure|Api|WebApi|Web)$/) || [])[1];
+              const rank = { Domain: 0, Application: 1, Infrastructure: 2, Api: 3, WebApi: 3, Web: 3 };
+              const missing = ['Domain', 'Application', 'Infrastructure'].filter(l => !projects.some(p => layerOf(p.name) === l));
+              if (missing.length) { console.log('no project for: ' + missing.join(', ')); process.exit(1); }
+              const outward = projects.filter(p => layerOf(p.name)).flatMap(p => p.refs.filter(r => layerOf(r) && rank[layerOf(r)] >= rank[layerOf(p.name)]).map(r => p.name + ' references ' + r));
+              if (outward.length) { console.log(outward.join('\n')); process.exit(1); }
+              console.log('Domain, Application and Infrastructure projects, references pointing inward');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - clean-architecture-dotnet
+    rubric:
+      - Puts each class of the loan feature in a loan folder of its layer project.
+      - Keeps the loan limit and the already-on-loan rule in the domain, not in the endpoint.
+
   # Near miss. A change in the same solution that touches no layer decision.
   - name: '.NET: a configurable timeout on the provider client'
     tags:
@@ -758,24 +898,24 @@ stimuli:
           dest: PaymentAuthorization.slnx
         - src: fixtures/payment/src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
           dest: src/PaymentAuthorization.Domain/PaymentAuthorization.Domain.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/Money.cs
-          dest: src/PaymentAuthorization.Domain/Money.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
-          dest: src/PaymentAuthorization.Domain/AuthorizationOutcome.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Shared/Money.cs
+          dest: src/PaymentAuthorization.Domain/Shared/Money.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
+          dest: src/PaymentAuthorization.Domain/Authorization/AuthorizationOutcome.cs
         - src: fixtures/payment/src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
           dest: src/PaymentAuthorization.Application/PaymentAuthorization.Application.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IPaymentGateway.cs
-          dest: src/PaymentAuthorization.Application/IPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/IReceiptStore.cs
-          dest: src/PaymentAuthorization.Application/IReceiptStore.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Application/AuthorizePayment.cs
-          dest: src/PaymentAuthorization.Application/AuthorizePayment.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+          dest: src/PaymentAuthorization.Application/Authorization/IReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
+          dest: src/PaymentAuthorization.Application/Authorization/AuthorizePayment.cs
         - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
           dest: src/PaymentAuthorization.Infrastructure/PaymentAuthorization.Infrastructure.csproj
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-          dest: src/PaymentAuthorization.Infrastructure/HttpPaymentGateway.cs
-        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
-          dest: src/PaymentAuthorization.Infrastructure/FileSystemReceiptStore.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/HttpPaymentGateway.cs
+        - src: fixtures/payment/src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
+          dest: src/PaymentAuthorization.Infrastructure/Authorization/FileSystemReceiptStore.cs
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
           dest: tests/PaymentAuthorization.UnitTest/PaymentAuthorization.UnitTest.csproj
         - src: fixtures/payment/tests/PaymentAuthorization.UnitTest/AuthorizePayment/AuthorizePaymentTests.cs

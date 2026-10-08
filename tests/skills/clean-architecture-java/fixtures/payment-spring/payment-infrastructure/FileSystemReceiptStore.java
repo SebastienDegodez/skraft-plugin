@@ -1,6 +1,6 @@
-package com.example.payment.infrastructure;
+package com.example.payment.infrastructure.authorization;
 
-import com.example.payment.application.ReceiptStore;
+import com.example.payment.application.authorization.ReceiptStore;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;

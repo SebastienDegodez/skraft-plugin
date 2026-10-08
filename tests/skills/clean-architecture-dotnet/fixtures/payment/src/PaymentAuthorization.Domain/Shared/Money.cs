@@ -1,4 +1,4 @@
-namespace PaymentAuthorization.Domain;
+namespace PaymentAuthorization.Domain.Shared;
 
 /// <summary>An amount and the currency it is expressed in.</summary>
 public readonly record struct Money
