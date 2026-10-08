@@ -21,7 +21,7 @@ metadata:
     - C2 PERSONA PRELOAD
     - B4 PLAN MEMENTO
   skills:
-    - github-search-protocol
+    - github-issue-search
     - issue-triage
   inputs:
     required:
@@ -57,7 +57,7 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 Load each skill before starting. Only announce missing ones: `[SKILL MISSING] {skill-name}` and continue.
 
 ### Always load at startup
-- [github-search-protocol](../../skills/github-search-protocol/SKILL.md)
+- [github-issue-search](../../skills/github-issue-search/SKILL.md)
 - [issue-triage](../../skills/issue-triage/SKILL.md)
 
 ## Boundaries (Non-Negotiable)
@@ -104,7 +104,7 @@ Three modes are available. Determine mode from user intent. Default to **user-as
 4. Note any capacity constraint if provided (team-days for sprint proposal)
 
 ### Phase 2: DISCOVERY
-*(loads github-search-protocol skill)*
+*(loads github-issue-search skill)*
 
 1. Build query string from selected mode
 2. Call `mcp_github_search_issues` with `per_page=20, page=1`

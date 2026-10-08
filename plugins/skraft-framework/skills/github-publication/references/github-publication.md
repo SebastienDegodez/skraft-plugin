@@ -1,7 +1,7 @@
 # GitHub prepared-Markdown publication
 
 Load for publishing/updating prepared Markdown in PR conversation or issue comments,
-including publication-only retry. `github-search-protocol` owns GitHub transport
+including publication-only retry. `github-publication` owns GitHub transport
 mapping and host `gh` fallback; no companion skill or external discovery dependency.
 Load [shared publication lifecycle](mcp-publication.md)
 for consent, local prepare/decide/record commands, normalized observations, receipts
@@ -32,7 +32,7 @@ Use read-only probes for identity, confirmed host/repository, target number/type
 PR head branch. Reject PRs returned for issue-only targets. Normalize viewer and
 comment authors to the same stable GitHub identity, never display names. Retain raw
 responses and contributing call/page references under the shared observation contract.
-DISCOVER's three-page/20-result caps do not apply: read every relevant comment page,
+Read every relevant comment page,
 unfiltered, before claiming completeness. Missing/truncated data stays incomplete.
 Inspect create/update support separately; unknown capabilities stay false. Never
 probe write access with a throwaway comment or fabricate a successful empty listing.

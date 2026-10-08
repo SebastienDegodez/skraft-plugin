@@ -49,7 +49,8 @@ skraft-plugin/
 │       ├── contract-testing/
 │       ├── craft-discipline/
 │       ├── discovery-review-criteria/
-│       ├── github-search-protocol/
+│       ├── github-issue-search/
+│       ├── github-publication/
 │       ├── issue-refinement/
 │       ├── issue-triage/
 │       ├── mutation-testing/

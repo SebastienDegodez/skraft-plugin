@@ -73,7 +73,7 @@ Assigner labels, priorité, estimation d'effort et détecter les doublons. Le `b
 
 ### Détection de doublons & artifact-driven discovery
 
-Avant de créer une story, on cherche dans l'historique Git et les issues existantes pour éviter la redondance. Skill : [github-search-protocol]({{ "/fr/dashboard/" | relative_url }}#skill-github-search-protocol) (syntaxe de recherche GitHub, pagination, ranking).
+Avant de créer une story, on cherche dans l'historique Git et les issues existantes pour éviter la redondance. Skill : [github-issue-search]({{ "/fr/dashboard/" | relative_url }}#skill-github-issue-search) (syntaxe de recherche GitHub, pagination, ranking).
 
 ---
 

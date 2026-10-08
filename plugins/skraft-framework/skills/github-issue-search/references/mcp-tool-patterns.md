@@ -166,18 +166,17 @@ This table states agent policy, not the installed tool's technical capabilities.
 | `milestone` | Yes | Use milestone `number` (integer ID), not title string |
 | `assignees` | Yes | Full replacement |
 | `title` | No | Omit from issue-update payloads under the linked content rule |
-| `body` | No | Omit from issue-update payloads; comment publication is a different operation |
+| `body` | No | Omit from issue-update payloads; a comment is a different operation |
 | `state` (open/close) | Schema-dependent | Only if exposed by installed issue-update operation and authorized |
 
-For prepared Markdown comment publication, use [GitHub publication](github-publication.md),
+To write a comment or labels, follow [issue write routes](issue-write-routes.md),
 not issue metadata/body updates.
 
 ---
 
 ## Pagination Pattern
 
-DISCOVER caps below apply to issue triage only. Publication reconciliation must
-read all relevant comment pages without this page/result cap or ranking filter.
+These caps apply to issue triage only. Checking an issue's own comments reads every page.
 
 ```
 def paginated_search(query, owner, repo, cap=20):

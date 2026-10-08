@@ -85,7 +85,7 @@ reporting scripts create no PR and push nothing.
 The forecast is the first of two stable PR comments; the second records completion or
 blockage. Scripts render and validate locally; the orchestrator handles remote
 publication through the host. For GitHub, the shipped
-[github-search-protocol]({{ "/en/dashboard/#skill-github-search-protocol" | relative_url }})
+[github-publication]({{ "/en/dashboard/#skill-github-publication" | relative_url }})
 owns the procedure: MCP first, announced host `gh` fallback only when MCP or a required
 capability is unavailable under the skill's policy. No external companion skill is
 required. Azure DevOps/GitLab remain MCP-only reporting targets, not full-pipeline support.

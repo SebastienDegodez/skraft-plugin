@@ -12,7 +12,7 @@ to GitHub, Azure DevOps and GitLab, not portability of the whole engineering pip
 Invoke registered MCP tools directly through the orchestrator's host. Local
 scripts cannot call the host's registered tools. Keep the reporting CLI local:
 setup, render, prepare, decide, record, status, abandon. When `provider` is `github`,
-load `github-search-protocol` for
+load `github-publication` for
 publication transport selection, operation mappings and probes. Azure DevOps/GitLab
 use exposed MCP tools. Do not add an MCP SDK/client, provider HTTP transport,
 network adapter or reporter agent. Do not install servers, configure clients,
@@ -96,7 +96,7 @@ servers differ; unresolved read/write gaps leave the destination pending.
 
 | Provider reference | Target/identity and comment reads | Comment writes |
 |---|---|---|
-| GitHub | `github-search-protocol` | — |
+| GitHub | `github-publication` | — |
 | [Official Azure DevOps toolset](https://github.com/microsoft/azure-devops-mcp/blob/main/docs/TOOLSET.md) | `repo_pull_request` (`get`); `repo_pull_request_thread` (`list`, `list_comments`); `wit_work_item` (`get`, `list_comments`). Discover authenticated identity independently; identity search is not proof of current viewer | `repo_pull_request_thread_write` (`create`, `update`); `wit_work_item_comment_write` (`add`, `update`) |
 | [Community GitLab MCP server](https://github.com/zereight/gitlab-mcp) | Discover current-user, MR/issue, notes and pagination operations in the installed catalog | Discover note create/update operations; no guaranteed operation names or official-server parity |
 

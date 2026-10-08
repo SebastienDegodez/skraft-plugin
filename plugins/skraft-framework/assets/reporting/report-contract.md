@@ -106,8 +106,8 @@ At startup, report boundaries or publication-only resume, the router loads
 [host publication lifecycle](mcp-publication.md) for consent, CLI commands,
 observation/readback schemas, reconciliation and receipt semantics. When the selected
 provider is `github`, also load
-`github-search-protocol` for its
-publication route; do not run issue discovery to publish prepared Markdown.
+`github-publication` for its
+publication route.
 
 Publication status is separate from engineering approval. Approved DISTILL supplies
 forecast; approved or blocked DELIVER supplies factual outcome and available evidence.

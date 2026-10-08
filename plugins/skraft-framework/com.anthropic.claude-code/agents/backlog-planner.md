@@ -188,10 +188,10 @@ Write only the declared output artefacts under `.copilot-tracking/skraft-plans/{
 - Technical notes
 - DoR checklist (all items marked ✅)
 
-Before any GitHub write, load [github-search-protocol](../../skills/github-search-protocol/SKILL.md)
-and apply its existing-issue content rule. Publish the refined story statement and
-ACs as a comment using its publication route; if publication is unavailable, retain
-the local artefacts and report pending publication. Update only issue metadata:
+Before any GitHub write, load [github-issue-search](../../skills/github-issue-search/SKILL.md)
+and apply its existing-issue content rule. Post the refined story statement and
+ACs as a comment through its write route; when no route is available, keep the local
+artefacts and report the comment as pending. Update only issue metadata:
 - Label: `status/ready` (if DoR passed), `status/needs-refinement` (if DoR failed)
 - Milestone assignment
 - Effort label: `effort/1`, `effort/2`, `effort/3`, `effort/5`, `effort/8`
