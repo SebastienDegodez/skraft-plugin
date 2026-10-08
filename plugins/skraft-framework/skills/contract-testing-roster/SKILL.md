@@ -9,7 +9,7 @@ The single place that resolves **how** a provider-side contract test is built.
 A baseline in-process integration test (the app started in-memory, exercised over
 real HTTP) is ALWAYS produced. A Microcks contract-verification layer is an
 ADDITIVE opt-in, stacked on top — never a replacement, never a default. The
-concrete harness (e.g. WebApplicationFactory, @SpringBootTest, supertest) and the
+concrete harness (e.g. WebApplicationFactory, @SpringBootTest, FastAPI TestClient, supertest) and the
 concrete Microcks call are owned by the per-stack adapter, NOT by this roster.
 
 This mirrors `resolving-stack-commands`: the roster owns routing + the opt-in
@@ -45,6 +45,7 @@ flag internally:
 | Stack | Adapter | Status |
 |---|---|---|
 | .NET | [contract-testing-dotnet](../contract-testing-dotnet/SKILL.md) | supported |
+| Python | [contract-testing-python](../contract-testing-python/SKILL.md) | supported |
 | Java | _(contract-testing-java not yet provided)_ | NOT SUPPORTED |
 
 Adding a stack = add ONE `contract-testing-<stack>` adapter and the row here,

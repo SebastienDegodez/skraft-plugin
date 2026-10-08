@@ -29,7 +29,7 @@ thin adapter.
 Read the strategy by tool-call, never from recall. Precedence, first writer wins:
 
 1. **Explicit prompt** — the run prompt names a strategy/library
-   (e.g. "mock with Moq", "use Microcks here"). Highest priority.
+   (e.g. "mock with Moq", "mock with respx", "use Microcks here"). Highest priority.
 2. **Repo instruction file** — read
    `.github/instructions/skraft.instructions.md` field
    `testing.mocking.strategy` (and `testing.mocking.library` when
@@ -53,6 +53,8 @@ Detect the stack from markers at the repo root (delegate to
 |---|---|---|---|
 | microcks | .NET | [mocking-microcks-dotnet](../mocking-microcks-dotnet/SKILL.md) | supported |
 | inprocess | .NET | [mocking-inprocess-dotnet](../mocking-inprocess-dotnet/SKILL.md) | supported |
+| microcks | Python | [mocking-microcks-python](../mocking-microcks-python/SKILL.md) | supported |
+| inprocess | Python | [mocking-inprocess-python](../mocking-inprocess-python/SKILL.md) | supported |
 | microcks | Java | _(mocking-microcks-java not yet provided)_ | NOT SUPPORTED |
 | inprocess | Java | _(mocking-inprocess-java not yet provided)_ | NOT SUPPORTED |
 
@@ -62,7 +64,8 @@ here, with zero edits to the worker or the orchestrator.
 ## Unknown value -> stop, never guess
 
 If the resolved strategy is outside `{microcks, inprocess}`, or the library is
-outside `{moq, fakeiteasy, nsubstitute}` when `strategy: inprocess`, or the
+not a row of the resolved adapter's Library table when `strategy: inprocess`
+(.NET: `moq`, `fakeiteasy`, `nsubstitute`; Python: `respx`, `responses`, `fake`), or the
 detected stack has no adapter, STOP and emit a structured blocker. Never invent
 a wiring:
 

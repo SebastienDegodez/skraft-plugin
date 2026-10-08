@@ -78,8 +78,8 @@ Announce any missing skill as `[SKILL MISSING] {name}` and continue.
 status: ok
 capability: mocking
 strategy: microcks | inprocess
-stack: dotnet
-library: fakeiteasy | nsubstitute | moq   # only when strategy == inprocess (preference order)
+stack: dotnet | python
+library: fakeiteasy | nsubstitute | moq | respx | responses | fake   # only when strategy == inprocess (the adapter's preference order)
 files:
   - <relative paths created>
 testCommand: <resolved test command>

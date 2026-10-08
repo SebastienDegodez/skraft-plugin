@@ -1,6 +1,6 @@
 ---
 name: mutation-testing
-description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing supported Stryker.NET or Node TAP StrykerJS reports after the test baseline is green
+description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing supported Stryker.NET, Node TAP StrykerJS or Python cosmic-ray results after the test baseline is green
 ---
 
 # Mutation Testing
@@ -55,6 +55,15 @@ not the whole repository. `--overlay` is repeatable and
 diagnostic-only. Overlays cannot change thresholds, source scopes, reporters, or
 report paths. CI evidence uses checked-in configuration without overlays.
 
+## Python / cosmic-ray
+
+For a `pyproject.toml` project, load [quality-gates-python](../quality-gates-python/SKILL.md).
+`mutation-gate.mjs` runs one scope per call, core then boundary, from the checked-in
+`cosmic-ray-core.toml` / `cosmic-ray-boundary.toml`, with `--since <DELIVER baseSha>`; it runs
+the suite unmutated first and lists each survivor as `survived: <file>:<line> <operator>`.
+The only suppression is `# pragma: no mutate -- <reason>` on the mutated line; no
+`excluded-modules`, no filters, no threshold.
+
 ## Classify Survivors
 
 | Category | Action |
@@ -89,7 +98,7 @@ For each real survivor:
 
 ## Accept Proven Equivalent Mutants
 
-Use only runner-supported, source-level, single-construct suppression. For Stryker.NET:
+Use only runner-supported, source-level, single-construct suppression (cosmic-ray: `# pragma: no mutate -- <reason>`). For Stryker.NET:
 
 ```csharp
 // Stryker disable once Arithmetic: equivalent because normalized value is never observed
