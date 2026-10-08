@@ -18,6 +18,10 @@ const targets = [
   'plugins/skraft-framework/.claude-plugin/plugin.json',
   'plugins/skraft-framework/.codex-plugin/plugin.json',
   'plugins/skraft-framework/src/package.json',
+  // skraft-backlog ships in lockstep with the engineering plugin: one release, one tag.
+  'plugins/skraft-backlog/plugin.json',
+  'plugins/skraft-backlog/.claude-plugin/plugin.json',
+  'plugins/skraft-backlog/.codex-plugin/plugin.json',
 ];
 
 for (const rel of targets) {

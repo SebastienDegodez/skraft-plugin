@@ -1,7 +1,7 @@
 {
   "name": "skraft",
   "version": "1.10.2",
-  "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture, backlog discovery and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline.",
+  "description": "skraft SDLC pipeline — agents, skills and hooks for outside-in TDD, Clean Architecture and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline.",
   "author": {
     "name": "SebastienDegodez",
     "url": "https://github.com/SebastienDegodez"
@@ -32,11 +32,10 @@
   "interface": {
     "displayName": "SKRAFT SDLC Pipeline",
     "shortDescription": "Deterministic agentic SDLC pipeline with adversarial reviewers and fail-closed guardrails.",
-    "longDescription": "skraft turns a coding assistant into a disciplined software production line. Each lifecycle phase (DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER) is driven by a specialized agent, reviewed by a dedicated adversarial reviewer, and locked down by deterministic guardrails that block any out-of-sequence dispatch, any mandatory skill left unloaded, and any progression without a real artifact, an APPROVED verdict and a verified git commit.",
+    "longDescription": "skraft turns a coding assistant into a disciplined software production line. Each engineering phase (RESEARCH → DESIGN → DISTILL → DELIVER) is driven by a specialized agent, reviewed by a dedicated adversarial reviewer, and locked down by deterministic guardrails that block any out-of-sequence dispatch, any mandatory skill left unloaded, and any progression without a real artifact, an APPROVED verdict and a verified git commit.",
     "defaultPrompt": [
       "Run the skraft pipeline on this issue.",
-      "Refine this backlog item with the skraft discovery agent.",
-      "Review my implementation against the skraft quality bar."
+            "Review my implementation against the skraft quality bar."
     ],
     "developerName": "SebastienDegodez",
     "category": "Developer Tools",

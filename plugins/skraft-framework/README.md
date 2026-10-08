@@ -1,4 +1,3 @@
-│   ├── agents/                      31 flat `.agent.md` synchronized descriptors
 # SKRAFT plugin
 
 Deterministic agentic software delivery for Claude Code and GitHub Copilot.
@@ -58,8 +57,7 @@ The orchestrator owns only engineering work:
 
 ```mermaid
 flowchart LR
-    D[Backlog Discoverer] --> P[Backlog Planner]
-    P -. optional refined story .-> O[skraft-orchestrator]
+    P[skraft-backlog plugin, or any story writer] -. stories + acceptance criteria .-> O[skraft-orchestrator]
 
     subgraph Engineering pipeline
         R[RESEARCH] --> A[DESIGN]
@@ -70,9 +68,10 @@ flowchart LR
     O --> R
 ```
 
-`backlog-discoverer` and `backlog-planner` are optional, directly invocable product
-workflows. They are not orchestrator children. Invoke them in that order when both are
-needed, then pass the refined story to `skraft-orchestrator`.
+Backlog discovery and story refinement live in the separate
+[skraft-backlog](../skraft-backlog/README.md) plugin. The orchestrator reads the story files
+it writes (`plans/{date}/stories-{milestone}.md`, `plans/{date}/ac-draft-{story}.md`), and
+the same files written by any other tool or by hand.
 
 Brownfield agents are also direct entry points:
 
@@ -232,12 +231,12 @@ One canonical source set feeds native packaging surfaces:
 ```text
 plugins/skraft-framework/
 ├── plugin.json                      canonical v1 schema; no root agents list
-├── .claude-plugin/plugin.json        explicit registration of all 31 agents
+├── .claude-plugin/plugin.json        explicit registration of all 20 agents
 ├── com.github.copilot/
-│   ├── agents/                      31 flat `.agent.md` synchronized descriptors
+│   ├── agents/                      20 flat `.agent.md` synchronized descriptors
 │   └── hooks/hooks.json             generated copy of root hooks, `${PLUGIN_ROOT}`
 ├── com.anthropic.claude-code/
-│   └── agents/                      31 flat editable native Claude `.md` descriptors
+│   └── agents/                      20 flat editable native Claude `.md` descriptors
 ├── hooks/hooks.json                 canonical source; Claude compatibility
 ├── skills/                         shared skills
 └── src/                            shared zero-dependency runtime
@@ -248,15 +247,14 @@ canonical agent identity and injects only rules declared by that agent. Catalogu
 configuration, and evaluation scans read the Copilot runtime tree only, preserving
 original provenance metadata without counting a logical agent twice.
 
-The Claude [manifest](.claude-plugin/plugin.json) must enumerate **all 31** individual
+The Claude [manifest](.claude-plugin/plugin.json) must enumerate **all 20** individual
 native runtime agents, including workers and reviewer lenses, for registration and delegation.
 Claude rejects directory paths in `agents`. Never delete internal agents from this list to hide
 them. Internal `user-invocable: false` flags remain byte-preserved, but that field is not
 documented for Claude **subagents**; it does not promise hiding in Claude's picker.
 
-Six standalone roots are intended public Copilot entry points: `skraft-orchestrator`,
-`backlog-discoverer`, `backlog-planner`, `brownfield-analyst`, `brownfield-harness-builder`,
-and `brownfield-refactorer`. Internal agents remain available for delegation.
+Four standalone roots are intended public Copilot entry points: `skraft-orchestrator`,
+`brownfield-analyst`, `brownfield-harness-builder`, and `brownfield-refactorer`. Internal agents remain available for delegation.
 
 Shared agents use a scalar `model` value. VS Code's fallback-array syntax is not
 portable to Copilot CLI and can silently remove an agent from discovery.
@@ -273,7 +271,7 @@ Actual Copilot CLI **1.0.83** fixture tests **passed** namespaced agent discover
 the current migrated plugin installed from the local marketplace checkout, with exact CLI
 **1.0.83** pinned via `--cli` and an isolated `COPILOT_HOME`: **PASS allowed** (1 hook audit
 entry), **PASS denied** (1 hook audit entry), forbidden write absent. This verifies the probed
-SKRAFT refusal, not the full six-root picker, hidden-subagent invocation, model IDs, general
+SKRAFT refusal, not the full four-root picker, hidden-subagent invocation, model IDs, general
 tool permissions, or the full engineering pipeline. Full live VS Code validation remains unverified.
 
 Hooks have one source and two physical surfaces: canonical [hooks/hooks.json](hooks/hooks.json)

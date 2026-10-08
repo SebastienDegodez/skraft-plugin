@@ -29,14 +29,6 @@
     "acceptance-designer": "Skraft - Acceptance Designer",
     "Skraft - Acceptance Designer": "Skraft - Acceptance Designer",
     "architecture-boundaries-lens": "architecture-boundaries-lens",
-    "backlog-discoverer-reviewer": "Skraft - Backlog Discoverer Reviewer",
-    "Skraft - Backlog Discoverer Reviewer": "Skraft - Backlog Discoverer Reviewer",
-    "backlog-discoverer": "Skraft - Backlog Discoverer",
-    "Skraft - Backlog Discoverer": "Skraft - Backlog Discoverer",
-    "backlog-planner-reviewer": "Skraft - Backlog Planner Reviewer",
-    "Skraft - Backlog Planner Reviewer": "Skraft - Backlog Planner Reviewer",
-    "backlog-planner": "Skraft - Backlog Planner",
-    "Skraft - Backlog Planner": "Skraft - Backlog Planner",
     "brownfield-analyst": "Skraft - Brownfield Analyst",
     "Skraft - Brownfield Analyst": "Skraft - Brownfield Analyst",
     "brownfield-harness-builder": "Skraft - Brownfield Harness Builder",
@@ -46,15 +38,8 @@
     "cold-reader-lens": "cold-reader-lens",
     "contract-fidelity-lens": "contract-fidelity-lens",
     "contract-testing-worker": "contract-testing-worker",
-    "discovery-completeness-lens": "discovery-completeness-lens",
-    "discovery-duplicate-lens": "discovery-duplicate-lens",
-    "discovery-prioritization-lens": "discovery-prioritization-lens",
     "mock-fidelity-lens": "mock-fidelity-lens",
     "mock-integration-worker": "mock-integration-worker",
-    "planning-ac-quality-lens": "planning-ac-quality-lens",
-    "planning-coherence-lens": "planning-coherence-lens",
-    "planning-dor-lens": "planning-dor-lens",
-    "planning-invest-lens": "planning-invest-lens",
     "quality-gates-lens": "quality-gates-lens",
     "refactoring-worker": "refactoring-worker",
     "skraft-orchestrator": "Skraft - Orchestrator",
@@ -75,20 +60,11 @@
     "Skraft - Acceptance Designer Reviewer": "Skraft - Orchestrator",
     "Skraft - Acceptance Designer": "Skraft - Orchestrator",
     "architecture-boundaries-lens": "Skraft - Software Engineer Reviewer",
-    "Skraft - Backlog Discoverer Reviewer": "Skraft - Backlog Discoverer",
-    "Skraft - Backlog Planner Reviewer": "Skraft - Backlog Planner",
     "cold-reader-lens": "Skraft - Software Engineer Reviewer",
     "contract-fidelity-lens": "Skraft - Software Engineer Reviewer",
     "contract-testing-worker": "Skraft - Software Engineer",
-    "discovery-completeness-lens": "Skraft - Backlog Discoverer Reviewer",
-    "discovery-duplicate-lens": "Skraft - Backlog Discoverer Reviewer",
-    "discovery-prioritization-lens": "Skraft - Backlog Discoverer Reviewer",
     "mock-fidelity-lens": "Skraft - Software Engineer Reviewer",
     "mock-integration-worker": "Skraft - Software Engineer",
-    "planning-ac-quality-lens": "Skraft - Backlog Planner Reviewer",
-    "planning-coherence-lens": "Skraft - Backlog Planner Reviewer",
-    "planning-dor-lens": "Skraft - Backlog Planner Reviewer",
-    "planning-invest-lens": "Skraft - Backlog Planner Reviewer",
     "quality-gates-lens": "Skraft - Software Engineer Reviewer",
     "refactoring-worker": "Skraft - Brownfield Refactorer",
     "Skraft - Software Engineer Reviewer": "Skraft - Orchestrator",
@@ -153,46 +129,6 @@
         "policy": "verify"
       }
     ],
-    "Skraft - Backlog Discoverer Reviewer": [
-      {
-        "name": "discovery-review-criteria",
-        "policy": "verify"
-      },
-      {
-        "name": "adversarial-review-lenses",
-        "policy": "verify"
-      }
-    ],
-    "Skraft - Backlog Discoverer": [
-      {
-        "name": "github-issue-search",
-        "policy": "verify"
-      },
-      {
-        "name": "issue-triage",
-        "policy": "verify"
-      }
-    ],
-    "Skraft - Backlog Planner Reviewer": [
-      {
-        "name": "planning-review-criteria",
-        "policy": "verify"
-      },
-      {
-        "name": "adversarial-review-lenses",
-        "policy": "verify"
-      }
-    ],
-    "Skraft - Backlog Planner": [
-      {
-        "name": "issue-refinement",
-        "policy": "verify"
-      },
-      {
-        "name": "sprint-planning",
-        "policy": "verify"
-      }
-    ],
     "Skraft - Brownfield Analyst": [
       {
         "name": "characterize-brownfield",
@@ -235,9 +171,6 @@
         "policy": "verify"
       }
     ],
-    "discovery-completeness-lens": [],
-    "discovery-duplicate-lens": [],
-    "discovery-prioritization-lens": [],
     "mock-fidelity-lens": [],
     "mock-integration-worker": [
       {
@@ -249,10 +182,6 @@
         "policy": "verify"
       }
     ],
-    "planning-ac-quality-lens": [],
-    "planning-coherence-lens": [],
-    "planning-dor-lens": [],
-    "planning-invest-lens": [],
     "quality-gates-lens": [
       {
         "name": "quality-gates-evidence-contract",
@@ -435,43 +364,6 @@
       "inputs": [],
       "outputs": []
     },
-    "Skraft - Backlog Discoverer Reviewer": {
-      "inputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md"
-      ],
-      "outputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discover-review-{N}.md"
-      ]
-    },
-    "Skraft - Backlog Discoverer": {
-      "inputs": [
-        "GitHub repository issues (via MCP tools)"
-      ],
-      "outputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/triage-{YYYY-MM-DD}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/research/{YYYY-MM-DD}/sprint-proposal.md"
-      ]
-    },
-    "Skraft - Backlog Planner Reviewer": {
-      "inputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
-      ],
-      "outputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{N}.md"
-      ]
-    },
-    "Skraft - Backlog Planner": {
-      "inputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md",
-        "GitHub issues with triage labels"
-      ],
-      "outputs": [
-        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
-        ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/ac-draft-{story}.md"
-      ]
-    },
     "Skraft - Brownfield Analyst": {
       "inputs": [
         "repository path"
@@ -519,18 +411,6 @@
         "structured result block (stack, microcks, files[], testCommand) — NO commit"
       ]
     },
-    "discovery-completeness-lens": {
-      "inputs": [],
-      "outputs": []
-    },
-    "discovery-duplicate-lens": {
-      "inputs": [],
-      "outputs": []
-    },
-    "discovery-prioritization-lens": {
-      "inputs": [],
-      "outputs": []
-    },
     "mock-fidelity-lens": {
       "inputs": [],
       "outputs": []
@@ -543,22 +423,6 @@
       "outputs": [
         "structured result block (strategy, stack, files[], testCommand) — NO commit"
       ]
-    },
-    "planning-ac-quality-lens": {
-      "inputs": [],
-      "outputs": []
-    },
-    "planning-coherence-lens": {
-      "inputs": [],
-      "outputs": []
-    },
-    "planning-dor-lens": {
-      "inputs": [],
-      "outputs": []
-    },
-    "planning-invest-lens": {
-      "inputs": [],
-      "outputs": []
     },
     "quality-gates-lens": {
       "inputs": [],
@@ -662,20 +526,6 @@
       ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md"
     ],
     "architecture-boundaries-lens": [],
-    "Skraft - Backlog Discoverer Reviewer": [
-      "GitHub repository (to verify issue labels via MCP)"
-    ],
-    "Skraft - Backlog Discoverer": [
-      "GitHub milestones",
-      "git log (for artifact-driven mode)"
-    ],
-    "Skraft - Backlog Planner Reviewer": [
-      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-{date}.md"
-    ],
-    "Skraft - Backlog Planner": [
-      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/sprint-proposal.md",
-      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/triage-ingest-{date}.md (when DISCOVER was skipped via an upstream handoff)"
-    ],
     "Skraft - Brownfield Analyst": [
       "depth preference (quick/deep/exhaustive; default deep)",
       "focus directories (optional)",
@@ -693,18 +543,11 @@
       "the run prompt (may request the Microcks opt-in)",
       ".github/instructions/skraft.instructions.md (consumer repo, testing.contract.*)"
     ],
-    "discovery-completeness-lens": [],
-    "discovery-duplicate-lens": [],
-    "discovery-prioritization-lens": [],
     "mock-fidelity-lens": [],
     "mock-integration-worker": [
       "the run prompt (may carry a strategy/library override)",
       ".github/instructions/skraft.instructions.md (consumer repo, testing.mocking.*)"
     ],
-    "planning-ac-quality-lens": [],
-    "planning-coherence-lens": [],
-    "planning-dor-lens": [],
-    "planning-invest-lens": [],
     "quality-gates-lens": [],
     "refactoring-worker": [],
     "Skraft - Orchestrator": [],
