@@ -143,7 +143,7 @@ notes: baseline WAF+HttpClient always ; Microcks TestEndpointAsync(OPEN_API_SCHE
 ## Deep-dive references (generic skill)
 
 For contract authoring, dispatcher rules, and sample formats, see the generic
-[contract-testing](../contract-testing/SKILL.md) skill and its `references/`.
+`contract-testing` skill and its `references/`.
 
 ## Rules
 

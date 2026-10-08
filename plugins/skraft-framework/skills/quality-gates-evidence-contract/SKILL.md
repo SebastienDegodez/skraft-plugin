@@ -12,7 +12,7 @@ A tech-agnostic schema that attests quality gates as **falsifiable references**,
 Truth #6 (HARNESSES BRIDGE): the LLM cannot prove a test passed by saying so.
 The producer (software-engineer) MUST cite **substrate the verifier can re-resolve**:
 git SHAs, file paths at given revisions, hashed tool outputs deposited on disk.
-`qg-verify` (`node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log <path>`, part of the SKRAFT plugin) re-resolves every
+`qg-verify` (`node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log <path>`, bundled in this skill; `<skill>` is the folder holding this SKILL.md) re-resolves every
 claim against the files and the Git tree and derives the verdict; nobody re-runs a gate.
 
 If a field cannot be falsified from the Git tree alone, the field is mis-designed.

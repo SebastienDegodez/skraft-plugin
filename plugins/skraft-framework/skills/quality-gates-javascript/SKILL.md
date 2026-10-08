@@ -5,8 +5,8 @@ description: Use in a JavaScript/Node.js project when running its existing packa
 
 # JavaScript quality gates
 
-Load [quality bar](../skraft-quality-bar/SKILL.md) and
-[evidence contract](../quality-gates-evidence-contract/SKILL.md).
+Load quality bar (`skraft-quality-bar`) and
+evidence contract (`quality-gates-evidence-contract`).
 Missing tooling, unsupported scope, failed gates or absent evidence block delivery.
 
 ## Resolve ordinary commands first
@@ -102,6 +102,7 @@ rather than silently shrinking denominator.
   a valid fresh report is failure. Reject malformed/empty reports, wrong root,
   config/report-path mismatch, changed sources, unexpected files/statuses and
   symlink reports. Source/test/config edits during execution block.
+- Verify an assembled evidence log with `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log <qg-{story}.json>`.
 - Manifest is supporting G6 evidence, not a replacement v3 evidence log. Producer
   references both scope records from existing contract; never invent new gate IDs
   or claim all quality gates passed. Git revision alone does not attest dirty tree.

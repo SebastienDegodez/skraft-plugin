@@ -10,7 +10,8 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const QG_VERIFY = fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/qg-verify.mjs', import.meta.url))
+// SKRAFT_QG_VERIFY_CLI runs this suite against a copy bundled in a skill (skill-bundles test).
+const QG_VERIFY = process.env.SKRAFT_QG_VERIFY_CLI ?? fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/qg-verify.mjs', import.meta.url))
 const EV = '.copilot-tracking/skraft-plans/orders/evidence/2026-09-23/order-discount'
 const REF = 'evidence/2026-09-23/order-discount'
 const TEST_FILE = 'tests/Orders.UnitTests/DiscountTests.cs'

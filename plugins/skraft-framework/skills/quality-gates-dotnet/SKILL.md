@@ -37,8 +37,7 @@ filtering the produced TRX, OR run the acceptance project alone for G1 and the
 full suite for G2 (recommended on small repos).
 
 ```bash
-node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-tests -- \
-  dotnet test --nologo --logger "trx;LogFileName=qg-tests.trx" --results-directory "$EV"
+node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-tests -- dotnet test --nologo --logger "trx;LogFileName=qg-tests.trx" --results-directory "$EV"
 ```
 
 Populate the contract:
@@ -70,8 +69,7 @@ If the build is clean, G4 inherits its evidence from G3 and sets
 If the repo carries a `*.ArchitectureTests` project (NetArchTest / ArchUnitNET):
 
 ```bash
-node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-arch -- \
-  dotnet test --nologo --filter "FullyQualifiedName~Architecture" --logger "trx;LogFileName=qg-arch.trx" --results-directory "$EV"
+node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-arch -- dotnet test --nologo --filter "FullyQualifiedName~Architecture" --logger "trx;LogFileName=qg-arch.trx" --results-directory "$EV"
 ```
 
 If absent, mark G5 `status: "not_applicable"` with `rationale: "no architecture tests project"`.
@@ -84,7 +82,7 @@ discovers scope inputs, then delegates JSON generation and defaults to official
 `dotnet stryker init`; it does not hand-render Stryker's schema:
 
 ```bash
-bash "<skill>/scripts/configure-mutation.sh" --root "$PWD"
+node "<skill>/scripts/configure-mutation.mjs" --root .
 ```
 
 The configure script writes:
@@ -98,9 +96,7 @@ unambiguously, pass `--solution`. For a BFF/non-standard layout, never invent mi
 projects; pass explicit source globs for both scopes:
 
 ```bash
-bash "<skill>/scripts/configure-mutation.sh" --root "$PWD" --solution Storefront.sln \
-  --core-mutate "**/Storefront/Core/**/*.cs" \
-  --boundary-mutate "**/Storefront/Adapters/**/*.cs"
+node "<skill>/scripts/configure-mutation.mjs" --root . --solution Storefront.sln --core-mutate "**/Storefront/Core/**/*.cs" --boundary-mutate "**/Storefront/Adapters/**/*.cs"
 ```
 
 Generation is idempotent. A differing existing config is preserved; `--force` is
@@ -116,8 +112,8 @@ tested mutants: a report with zero mutants, a mutant no test ran against, or a f
 with no tested mutant fails. The last stdout line states the score or the failure:
 
 ```bash
-bash "<skill>/scripts/mutation-core.sh" --root "$PWD" --evidence "$EV" --since "$BASE"
-bash "<skill>/scripts/mutation-boundary.sh" --root "$PWD" --evidence "$EV" --since "$BASE"
+node "<skill>/scripts/mutation-core.mjs" --root . --evidence "$EV" --since "$BASE"
+node "<skill>/scripts/mutation-boundary.mjs" --root . --evidence "$EV" --since "$BASE"
 ```
 
 `BASE` is `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`. `--since`
@@ -157,7 +153,7 @@ dotnet stryker --config-file stryker-config-boundary.json
 ## G7 — No mocks in Domain/Application
 
 ```bash
-bash "<skill>/scripts/no-mocks-in-core.sh" --root "$PWD" --evidence "$EV"
+node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence "$EV"
 ```
 
 The script scans every `*.Domain` and `*.Application` project at any depth, plus the
@@ -169,7 +165,7 @@ Populate G7 with `status: "pass"` only on exit 0; `stdout_ref` = `evidence/{date
 ## G11 — Line coverage of Domain and Application
 
 ```bash
-bash "<skill>/scripts/coverage-core.sh" --root "$PWD" --evidence "$EV"
+node "<skill>/scripts/coverage-core.mjs" --root . --evidence "$EV"
 ```
 
 The script runs the solution's tests once with the XPlat Code Coverage collector
@@ -247,7 +243,7 @@ G9 keeps the commit/snapshot job unchanged.
    `git show --name-only --format= <sha>` per commit: every commit since DELIVER started.
 6. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v4).
 7. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
-8. Inside a SKRAFT install, `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
+8. `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
    `"verdict": "pass"`; otherwise fix the gate or the log, never the verifier's input.
 
 If a tool is unavailable in the environment (no Stryker installed, no SDK), the

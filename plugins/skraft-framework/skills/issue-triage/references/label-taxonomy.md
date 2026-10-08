@@ -74,14 +74,10 @@ Story points on the Fibonacci scale: **1, 2, 3, 5, 8, 13, 21**. No intermediate 
 
 ```bash
 # Example: create priority/P0 label
-gh label create "priority/P0" \
-  --color "b60205" \
-  --description "Blocking users or legal/compliance/data-loss risk. Mandatory written justification."
+gh label create "priority/P0" --color "b60205" --description "Blocking users or legal/compliance/data-loss risk. Mandatory written justification."
 
 # Example: create effort/3 label
-gh label create "effort/3" \
-  --color "7bc8f6" \
-  --description "~1 day — a new use case, endpoint, or feature with 3-4 ACs"
+gh label create "effort/3" --color "7bc8f6" --description "~1 day — a new use case, endpoint, or feature with 3-4 ACs"
 ```
 
 ### Bulk Creation Script (bash)
