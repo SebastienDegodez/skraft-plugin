@@ -6,7 +6,7 @@ description: Use when the active repository is a Python project (`pyproject.toml
 # Quality Gates — Python Adapter
 
 Binds the gates of `quality-gates-evidence-contract` to the Python toolchain. Load
-[quality bar](../skraft-quality-bar/SKILL.md) first. Every gate below blocks; a gate whose
+quality bar (`skraft-quality-bar`) first. Every gate below blocks; a gate whose
 tool is missing is `status: "fail"` with the captured output, never `not_applicable`.
 
 ## Prerequisites
@@ -126,4 +126,4 @@ The recorded exit code MUST be non-zero. The capture cannot be reconstructed aft
 1. Run G1/G2, G3, G4, G5, G6 core then boundary, G7, G11 — each through its script.
 2. Write the RED and GREEN snapshots per cycle with `snapshot.mjs`; check every G10 capture exists with a non-zero exit.
 3. `repo_root_rev = git rev-parse HEAD`; build `commits_covered[]` from the DELIVER base.
-4. Assemble `$EV/qg-{story}.json` (contract v4) with `"tech_adapter": "quality-gates-python"`, commit `$EV` alone, then run `qg-verify`.
+4. Assemble `$EV/qg-{story}.json` (contract v4) with `"tech_adapter": "quality-gates-python"`, commit `$EV` alone, then run `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"`: it must print `"verdict": "pass"`.

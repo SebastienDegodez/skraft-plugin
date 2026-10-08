@@ -44,8 +44,8 @@ flag internally:
 
 | Stack | Adapter | Status |
 |---|---|---|
-| .NET | [contract-testing-dotnet](../contract-testing-dotnet/SKILL.md) | supported |
-| Python | [contract-testing-python](../contract-testing-python/SKILL.md) | supported |
+| .NET | `contract-testing-dotnet` | supported |
+| Python | `contract-testing-python` | supported |
 | Java | _(contract-testing-java not yet provided)_ | NOT SUPPORTED |
 
 Adding a stack = add ONE `contract-testing-<stack>` adapter and the row here,
@@ -54,7 +54,7 @@ with zero edits to the worker or the orchestrator.
 ## Generic source
 
 Both layers consume the GENERIC contract artifacts authored by the
-[contract-testing](../contract-testing/SKILL.md) skill (OpenAPI / `.apiexamples`
+`contract-testing` skill (OpenAPI / `.apiexamples`
 / `.apimetadata`). The roster does not duplicate that authoring.
 
 ## Unknown value -> stop, never guess

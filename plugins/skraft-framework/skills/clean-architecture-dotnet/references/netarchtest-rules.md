@@ -302,7 +302,7 @@ Run architecture tests in every build:
 Use the [clean-architecture-dotnet skill](../SKILL.md) to generate a complete project with NetArchTest tests pre-configured.
 
 ```bash
-./scripts/init-project.sh "MyProject"
+node "<skill>/scripts/init-project.mjs" MyProject
 ```
 
 This creates all architecture rules and tests automatically.

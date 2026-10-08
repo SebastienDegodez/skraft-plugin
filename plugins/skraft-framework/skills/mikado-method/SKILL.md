@@ -72,7 +72,7 @@ Example: `refactor(mikado-graph): {P1} requires {P2} in src/Admin.cs:40`.
 Run the deterministic validator before every leaf commit and after every graph-update commit:
 
 ```bash
-bash "<skill>/scripts/validate-mikado.sh" <path-to-graph.md>
+node "<skill>/scripts/validate-mikado.mjs" <path-to-graph.md>
 ```
 
 `<skill>` is this skill's folder, the one holding this SKILL.md.
@@ -98,7 +98,7 @@ never accumulate leaves in one session (context drift risk). The dispatch packet
 2. The specific leaf to implement, verbatim, with its evidence citation.
 3. Acceptance: the harness (characterization + contract tests) passes; the full regression suite
    passes; no new failures anywhere; the change is scoped strictly to this leaf — nothing else;
-   `scripts/validate-mikado.sh` exits 0 after marking the leaf `[x]`.
+   `scripts/validate-mikado.mjs` exits 0 after marking the leaf `[x]`.
 4. The explicit instruction: if this leaf turns out to have its own unimplemented prerequisites,
    STOP and report them as new sub-prerequisites. Do not attempt to fix them inline.
 
@@ -113,7 +113,7 @@ contract the `brownfield-refactorer` orchestrator polls:
 - `DONE` — the goal is achievable cleanly now (verified by a final naive re-attempt that no longer
   breaks); the graph is empty of unimplemented leaves.
 - `BLOCKED` — needs human input (ambiguous prerequisite, conflicting constraint, harness itself
-  broke in a way the worker cannot diagnose, or `validate-mikado.sh` reports an error the worker
+  broke in a way the worker cannot diagnose, or `validate-mikado.mjs` reports an error the worker
   cannot resolve on its own).
 
 ## Common failure modes (reject these)
@@ -128,7 +128,7 @@ contract the `brownfield-refactorer` orchestrator polls:
 - **Running the naive experiment against a shared/live environment** — always an isolated worktree;
   stale state (caches, migrations) produces false signal otherwise.
 - **Skipping the validation gate** — marking a leaf `[x]` or starting a parent without a clean
-  `validate-mikado.sh` run first. The script is cheap; a corrupted graph discovered three leaves
+  `validate-mikado.mjs` run first. The script is cheap; a corrupted graph discovered three leaves
   later is not.
 
 Read [references/worked-example.md](references/worked-example.md) for a full traced example
