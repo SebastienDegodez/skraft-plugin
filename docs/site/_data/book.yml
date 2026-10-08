@@ -124,14 +124,14 @@ meta:
 # Sources dérivables (plugin SKRAFT uniquement — HVE n'est PAS scanne ici).
 sources:
   # Un arbre physique ; le scanner classe par identite et dedoublonne les chemins.
-  agents: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
+  agents: "plugins/*/com.github.copilot/agents/*.agent.md"
   # Lentilles de revue adverse et conditionnelles.
-  lenses: "plugins/skraft-framework/com.github.copilot/agents/*-lens.agent.md"
+  lenses: "plugins/*/com.github.copilot/agents/*-lens.agent.md"
   # Le scanner conserve les deux fidelity lenses dans leur famille worker.
-  workers: "plugins/skraft-framework/com.github.copilot/agents/*.agent.md"
-  skills: "plugins/skraft-framework/skills/*/SKILL.md"
-  gates: "plugins/skraft-framework/skills/*-review-criteria/SKILL.md"
-  patterns: "plugins/skraft-framework/skills/architecture-patterns/SKILL.md"
+  workers: "plugins/*/com.github.copilot/agents/*.agent.md"
+  skills: "plugins/*/skills/*/SKILL.md"
+  gates: "plugins/*/skills/*-review-criteria/SKILL.md"
+  patterns: "plugins/*/skills/architecture-patterns/SKILL.md"
   citations: "docs/site/_data/citations.yml"
 
 # parts — sidebar handbook groupee par phase (modele learning-path).

@@ -100,6 +100,16 @@ By default only users with write access or above trigger gh-aw workflows: an iss
 outside contributor starts nothing until a maintainer adds the label or comments the command.
 Opening `roles` to everyone exposes the agent to whatever an issue body says.
 
+## VS Code automation templates
+
+Two templates appear under **Templates from Plugins** in the Agents window; neither is enabled
+until you create an automation from it and choose its model and permissions.
+
+| Template | Schedule | Runs |
+|---|---|---|
+| Weekly backlog triage | Monday 08:45, local time | the backlog discoverer on the issues assigned to you |
+| Refine the proposed sprint | manual | the backlog planner on the latest sprint proposal |
+
 ## Hand-off to the engineering pipeline
 
 The two plugins share files, not code. `backlog-planner` writes, under

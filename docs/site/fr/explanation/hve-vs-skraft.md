@@ -43,8 +43,8 @@ graph LR
 
 | Couche | Étape | Agent exécuteur | Reviewer indépendant |
 |-------|-------|----------------|----------------------|
-| Produit autonome | DISCOVER | `backlog-discoverer` | `backlog-discoverer-reviewer` |
-| Produit autonome | DISCUSS | `backlog-planner` | `backlog-planner-reviewer` |
+| Produit autonome (skraft-backlog) | DISCOVER | `backlog-discoverer` | 3 lentilles + `review-verdict.mjs` |
+| Produit autonome (skraft-backlog) | DISCUSS | `backlog-planner` | 4 lentilles + `review-verdict.mjs` |
 | Ingénierie orchestrée | RESEARCH | `solution-researcher` | aucun reviewer de phase déclaré |
 | Ingénierie orchestrée | DESIGN | `solution-architect` | `solution-architect-reviewer` |
 | Ingénierie orchestrée | DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` |

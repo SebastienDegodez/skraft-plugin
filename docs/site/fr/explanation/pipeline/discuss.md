@@ -20,7 +20,7 @@ La phase DISCUSS affine les issues triées en stories structurées, prêtes à �
 | **Ce qui sort** | Story INVEST + critères d'acceptation vérifiables |
 | **Va vers** | **DESIGN** — qui en conçoit l'architecture |
 | **Agent responsable** | `backlog-planner` |
-| **Reviewer associé** | `backlog-planner-reviewer` |
+| **Reviewer associé** | aucun : le planner lance 4 lentilles et le script `review-verdict.mjs` tranche (plugin skraft-backlog) |
 
 ## Pourquoi cette phase existe
 
