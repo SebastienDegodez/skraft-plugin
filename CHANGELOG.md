@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.10.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.10.1...v1.10.2) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* **hooks:** resolve Copilot v1 hook copy through ${PLUGIN_ROOT} for VS Code ([#197](https://github.com/SebastienDegodez/skraft-plugin/issues/197)) ([5b879e2](https://github.com/SebastienDegodez/skraft-plugin/commit/5b879e2b17a2abfabc51f5583fe3cabe669c8ed0))
+
 ## [1.10.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.10.0...v1.10.1) (2026-10-08)
 
 ### 🐛 Bug Fixes
