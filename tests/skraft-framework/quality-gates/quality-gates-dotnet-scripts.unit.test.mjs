@@ -276,6 +276,7 @@ test('the gate is judged on the tested mutants, not on Stryker exit code alone',
       })
       assert.equal(result.exitCode, exitCode, `${statuses}: ${result.stderr}`)
       assert.equal(JSON.parse(result.stdout).passed, exitCode === 0)
+      assert.equal(JSON.parse(result.stdout).since, extraArgs[1] ?? null, 'the manifest records the since ref')
       assert.match(await readFile(join(evidence, 'qg-mutation.stdout'), 'utf8'), evidenceLine)
       assert.equal(await readFile(join(evidence, 'qg-mutation.exit'), 'utf8'), `${exitCode}\n`)
     } finally {

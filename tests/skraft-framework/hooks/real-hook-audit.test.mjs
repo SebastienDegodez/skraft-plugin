@@ -12,16 +12,14 @@ const hooksJsonPath = join(here, '../../../plugins/skraft-framework/hooks/hooks.
 const hooksManifest = JSON.parse(readFileSync(hooksJsonPath, 'utf8'))
 
 // Every route the framework relies on (see hook.mjs / service-factory.mjs wiring).
-// event + matcher (undefined when the event has no matcher) → each must route to hook.mjs
-// with the event name (and matcher, when present) forwarded as CLI args so hook.mjs
-// dispatches to the correct service.
+// event + matcher (undefined: no entry declares one) → each must route to hook.mjs with the
+// event name forwarded as a CLI arg so hook.mjs dispatches to the correct service; the
+// tool comes from the payload.
 const EXPECTED_ROUTES = [
-  { event: 'PreToolUse', matcher: 'Agent' },
-  { event: 'PreToolUse', matcher: 'Bash' },
+  { event: 'PreToolUse', matcher: undefined },
   { event: 'SubagentStart', matcher: undefined },
   { event: 'SubagentStop', matcher: undefined },
-  { event: 'PostToolUse', matcher: 'Agent' },
-  { event: 'PostToolUse', matcher: 'Read' }
+  { event: 'PostToolUse', matcher: undefined }
 ]
 
 const findEntry = (manifest, event, matcher) => {

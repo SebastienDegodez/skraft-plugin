@@ -30,6 +30,12 @@ test('harness-input: Copilot lowercased names map onto the framework vocabulary'
   }
 })
 
+test('harness-input: the VS Code read tool maps onto Read', () => {
+  const payload = fromHarnessInput({ tool_name: 'read_file', tool_input: { filePath: 'src/Foo.cs' } })
+  assert.equal(payload.toolName, 'Read')
+  assert.equal(payload.filePath, 'src/Foo.cs')
+})
+
 test('harness-input: the mapping is case-insensitive on both harness spellings', () => {
   assert.equal(fromHarnessInput({ toolName: 'BASH' }).toolName, 'Bash')
   assert.equal(fromHarnessInput({ tool_name: 'Create_File' }).toolName, 'Write')

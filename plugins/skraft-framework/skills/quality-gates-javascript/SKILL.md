@@ -62,13 +62,10 @@ Run bundled [runner](scripts/run-gates.mjs) with:
 node "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-javascript/scripts/run-gates.mjs" --root <repo> --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence <directory>
 ```
 
-For a PR differential run, add `--since <base-ref>`. The runner resolves the Git
+For the story's G6 run, add `--since <DELIVER baseSha>` (omit it only when no base is recorded). The runner resolves the Git
 merge-base, records it in the manifest, and mutates changed files in the working tree
 (including staged, unstaged and untracked changes) that belong to each
-durable scope. A differential score is not a full-repository score. Inside a TDD cycle,
-`<base-ref>` is the previous cycle's last commit (DELIVER `baseSha` for the first cycle),
-with `--core-only`, and the run is skipped when the cycle changed no core production
-file; it is a checkpoint, never G6 evidence. For local diagnosis,
+durable scope; the score covers the story's changed code. Run no mutation inside a TDD cycle. For local diagnosis,
 add one or more `--overlay <json-config>` arguments; overlays apply in order and cannot
 change `mutate`, test selection, thresholds, reporters, or report paths. CI must use the
 checked-in configs without overlays.

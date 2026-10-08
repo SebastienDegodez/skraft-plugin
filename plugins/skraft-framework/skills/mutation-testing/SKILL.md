@@ -27,7 +27,7 @@ reconstruct, or improvise runner commands here. Load `skraft-quality-bar`, then 
 
 ```
 1. Confirm ordinary tests are green
-2. Select differential `--since <previous cycle's last commit>` mode inside a TDD cycle (DELIVER `baseSha` for the first cycle; a checkpoint, never evidence; skipped when the cycle changed no core production file), full mode once after the story's last work commit (the G6 evidence); local diagnostic may add repeatable `--overlay <config>`
+2. Run once, after the story's last work commit, with `--since <DELIVER baseSha>`: every file the story changed is mutated and the score is the G6 evidence; full mode only when no base is recorded; never mutate inside a TDD cycle; local diagnostic may add repeatable `--overlay <config>`
 3. Adapter → validate durable configs, merge protected overlays, and run core gate
 4. Parse adapter-owned JSON report → extract survivors
 5. Decide: kill with a test, or suppress a proven equivalent narrowly
@@ -50,8 +50,8 @@ reports as gate evidence. StrykerJS uses native `thresholds.break`; do not trans
 mutants; equivalent-mutant suppression below applies only when adapter supports it.
 
 `--since` selects changed files from the Git merge-base through the working tree,
-including staged, unstaged and untracked changes; it is a differential result, not a
-full-repository score. `--overlay` is repeatable and
+including staged, unstaged and untracked changes; its score covers the story's changed code,
+not the whole repository. `--overlay` is repeatable and
 diagnostic-only. Overlays cannot change thresholds, source scopes, reporters, or
 report paths. CI evidence uses checked-in configuration without overlays.
 

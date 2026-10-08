@@ -10,7 +10,7 @@ sidebar_position: 1
 
 ## Événements hooks
 
-| Hook | Matcher | Garde | Ce qu'il impose | En cas d'échec interne |
+| Hook | Outil | Garde | Ce qu'il impose | En cas d'échec interne |
 |------|---------|-------|-----------------|------------------------|
 | `SessionStart` | — | — | Exporte `SKRAFT_PLUGIN_ROOT` vers les appels Bash suivants (Claude Code, via `CLAUDE_ENV_FILE`) ; indique le chemin du plugin et le pipeline actif dans le contexte de session ; purge le journal d'audit et les signaux d'état obsolètes | Autorise |
 | `SubagentStart` | — | G2 | Indique à l'agent qui démarre ses skills obligatoires (`verify` ou `eager`) ; intègre le contenu des skills `eager` ; exclut les skills `on-demand` | Autorise |
@@ -27,6 +27,11 @@ Les deux manifestes du plugin portent les mêmes entrées, et chaque entrée ex�
 `src/cli/hook.mjs` (`src/cli/housekeeping.mjs` pour `SessionStart`). Copilot CLI envoie ses
 propres noms d'outils (`bash`, `create`, `str_replace`, `view`, …) ;
 `adapters/api/hooks/harness-input.mjs` les traduit vers les noms ci-dessus avant toute garde.
+
+Chaque événement d'outil a une seule entrée, sans matcher : VS Code ignore les matchers et
+exécuterait toutes les entrées d'un événement à chaque appel d'outil. `src/cli/hook.mjs` lit
+le nom de l'outil dans le payload et sort avant de charger la moindre garde quand l'appel ne
+concerne aucun des outils ci-dessus.
 
 G7 et G8 lisent une commande shell à sa forme : redirections, `tee`, verbes qui réécrivent
 ou copient, `sed` et `perl` en place, scripts en ligne `node -e` ou `python -c`, derrière

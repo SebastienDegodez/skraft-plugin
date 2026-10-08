@@ -128,9 +128,14 @@ tested mutants: a report with zero mutants, a mutant no test ran against, or a f
 with no tested mutant fails. The last stdout line states the score or the failure:
 
 ```bash
-bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-core.sh" --root "$PWD" --evidence "$EV"
-bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-boundary.sh" --root "$PWD" --evidence "$EV"
+bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-core.sh" --root "$PWD" --evidence "$EV" --since "$BASE"
+bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-boundary.sh" --root "$PWD" --evidence "$EV" --since "$BASE"
 ```
+
+`BASE` is `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`. `--since`
+mutates every file changed from that commit through the working tree; drop it only when no
+base is recorded. A scope the story did not change passes with `No … mutant changed`. The
+manifest records the `since` ref.
 
 Core MUST pass before boundary starts. `--config <path>` may select an equivalent custom
 location. `--expected` is refused. Do NOT read a report score and judge it in prose.
@@ -146,18 +151,9 @@ Populate two G6 entries, one per scope:
 
 ### Cadence
 
-- At the start of each TDD cycle, record `PREV=$(git rev-parse HEAD)` — the previous
-  cycle's last commit (for the first cycle it equals `phaseHistory.DELIVER.baseSha` from
-  `state.mjs get --field phaseHistory`).
-- In the cycle's COMMIT & VERIFY, before the cycle's commit, skip mutation when neither
-  `git diff --name-only "$PREV"` (staged and unstaged changes) nor
-  `git ls-files --others --exclude-standard` (new files) lists a core production file.
-  Otherwise run the core wrapper with `--since "$PREV"`:
-  it mutates only what this cycle changed, and passes when no core mutant changed. Its
-  evidence is a checkpoint, never the G6 entry — write it to a scratch directory, not
-  `$EV`.
-- Once, after the story's last work commit: the full core then boundary wrapper runs
-  into `$EV`. Those two runs are the G6 evidence.
+- Run no mutation inside a TDD cycle.
+- Once, after the story's last work commit: the core then boundary wrapper runs
+  `--since "$BASE"` into `$EV`. Those two runs are the G6 evidence.
 
 ### Local debugging
 
