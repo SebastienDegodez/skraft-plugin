@@ -1,0 +1,28 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "skraft-backlog",
+  "version": "1.10.2",
+  "description": "skraft backlog — discover and triage GitHub issues, refine them into ready stories, and review each issue's refinement in a comment, from your editor or a GitHub Agentic Workflow.",
+  "author": {
+    "name": "SebastienDegodez"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "backlog",
+    "issue-triage",
+    "refinement",
+    "user-stories",
+    "definition-of-ready",
+    "invest",
+    "sprint-planning",
+    "github-issues",
+    "agentic-workflows",
+    "skills",
+    "agents"
+  ],
+  "extensions": {
+    "com.github.copilot": {}
+  }
+}

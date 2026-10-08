@@ -69,14 +69,16 @@ export function buildPairProjection({ root, list, read, exists }) {
       conflicts.push('Claude registration must enumerate native files exactly once')
     }
   }
+  // A plugin without hooks (skraft-backlog) ships no Copilot hook copy either.
   const hook = read('hooks/hooks.json')
-  if (!hook) throw new Error('Missing hooks/hooks.json')
   for (const path of list('com.github.copilot/hooks', true)) {
-    if (path !== 'com.github.copilot/hooks/hooks.json') extra.push(path)
+    if (!hook || path !== 'com.github.copilot/hooks/hooks.json') extra.push(path)
   }
-  const copilotHook = copilotHookManifest(hook)
-  files.push({ source: 'hooks/hooks.json', target: 'com.github.copilot/hooks/hooks.json', content: copilotHook })
-  plan('com.github.copilot/hooks/hooks.json', copilotHook)
+  if (hook) {
+    const copilotHook = copilotHookManifest(hook)
+    files.push({ source: 'hooks/hooks.json', target: 'com.github.copilot/hooks/hooks.json', content: copilotHook })
+    plan('com.github.copilot/hooks/hooks.json', copilotHook)
+  }
   const content = JSON.stringify({ version: 2, pairs }, null, 2) + '\n'
   // Preserve formatting of an otherwise identical baseline.
   const unchanged = Object.keys(baseline.pairs).length === Object.keys(pairs).length &&

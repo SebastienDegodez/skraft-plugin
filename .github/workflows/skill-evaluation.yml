@@ -30,6 +30,8 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'plugins/skraft-framework/skills/**'
+      - 'plugins/skraft-backlog/skills/**'
+      - 'plugins/skraft-backlog/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
       - 'plugins/skraft-framework/plugin.json'
       - 'plugins/skraft-framework/.claude-plugin/plugin.json'
@@ -141,7 +143,7 @@ jobs:
       # deliberately (a roster's whole job is to point at its adapters).
       - name: Lint the shipped skills (advisory)
         continue-on-error: true
-        run: vally lint plugins/skraft-framework/skills
+        run: vally lint plugins/skraft-framework/skills && vally lint plugins/skraft-backlog/skills
 
       - name: Check every experiment file points at something real
         # `vally experiment run --dry-run` validates structure and the `vary`

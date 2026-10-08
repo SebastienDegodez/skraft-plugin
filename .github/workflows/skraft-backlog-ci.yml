@@ -1,0 +1,68 @@
+name: skraft-backlog CI
+
+on:
+  push:
+    paths:
+      - 'plugins/skraft-backlog/**'
+      - 'tests/skraft-backlog/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      - 'plugins/skraft-framework/src/cli/build-config*.mjs'
+      - 'plugins/skraft-framework/src/cli/resolve-model*.mjs'
+      - 'plugins/skraft-framework/skraft-framework.config.json'
+      - '.claude-plugin/marketplace.json'
+      - '.cursor-plugin/marketplace.json'
+      - '.github/plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/skraft-backlog-ci.yml'
+  pull_request:
+    paths:
+      - 'plugins/skraft-backlog/**'
+      - 'tests/skraft-backlog/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      - 'plugins/skraft-framework/src/cli/build-config*.mjs'
+      - 'plugins/skraft-framework/src/cli/resolve-model*.mjs'
+      - 'plugins/skraft-framework/skraft-framework.config.json'
+      - '.claude-plugin/marketplace.json'
+      - '.cursor-plugin/marketplace.json'
+      - '.github/plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/skraft-backlog-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.os }})
+    # The skill scripts run on developer machines under bash and PowerShell alike.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run the backlog plugin tests
+        shell: bash
+        run: node --test "tests/skraft-backlog/**/*.test.mjs"
+
+  checks:
+    name: Agent trees, dispatch tree, models
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Both agent trees in sync with their baseline
+        run: node scripts/project-plugin-adapters.mjs --check --plugin-root plugins/skraft-backlog
+      - name: Dispatch tree and declared skills are valid
+        run: node plugins/skraft-framework/src/cli/build-config-bin.mjs --emit --dir plugins/skraft-backlog/com.github.copilot/agents > /dev/null
+      - name: Agent model assignment matches the cost_role_class policy
+        run: node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check --dir plugins/skraft-backlog/com.github.copilot/agents

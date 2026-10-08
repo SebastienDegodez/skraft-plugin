@@ -272,6 +272,11 @@ export const createAgentExecutor = ({
         const skillDirectories = [...new Set([
           ...(options.skills ?? []).flatMap((skill) => (skill.path ? [dirname(skill.path)] : [])),
           pluginSkillsDirectory(repoRoot),
+          // The skills of every other plugin a selected agent comes from (skraft-backlog).
+          ...[agent, ...subagents]
+            .map((entry) => entry.pluginDirectory)
+            .filter((directory) => directory && directory !== 'plugins/skraft-framework')
+            .map((directory) => join(repoRoot, directory, 'skills')),
         ])]
         session = await client.createSession({
           model: options.model,

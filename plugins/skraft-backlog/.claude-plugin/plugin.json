@@ -1,0 +1,22 @@
+{
+  "name": "skraft-backlog",
+  "description": "skraft backlog — discover and triage GitHub issues, refine them into ready stories, and review each issue's refinement in a comment, from your editor or a GitHub Agentic Workflow.",
+  "version": "1.10.2",
+  "author": {
+    "name": "SebastienDegodez"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
+  "agents": [
+    "./com.anthropic.claude-code/agents/backlog-discoverer.md",
+    "./com.anthropic.claude-code/agents/backlog-planner.md",
+    "./com.anthropic.claude-code/agents/discovery-completeness-lens.md",
+    "./com.anthropic.claude-code/agents/discovery-duplicate-lens.md",
+    "./com.anthropic.claude-code/agents/discovery-prioritization-lens.md",
+    "./com.anthropic.claude-code/agents/planning-ac-quality-lens.md",
+    "./com.anthropic.claude-code/agents/planning-coherence-lens.md",
+    "./com.anthropic.claude-code/agents/planning-dor-lens.md",
+    "./com.anthropic.claude-code/agents/planning-invest-lens.md"
+  ]
+}
