@@ -35,7 +35,7 @@
     "longDescription": "skraft turns a coding assistant into a disciplined software production line. Each engineering phase (RESEARCH → DESIGN → DISTILL → DELIVER) is driven by a specialized agent, reviewed by a dedicated adversarial reviewer, and locked down by deterministic guardrails that block any out-of-sequence dispatch, any mandatory skill left unloaded, and any progression without a real artifact, an APPROVED verdict and a verified git commit.",
     "defaultPrompt": [
       "Run the skraft pipeline on this issue.",
-            "Review my implementation against the skraft quality bar."
+      "Review my implementation against the skraft quality bar."
     ],
     "developerName": "SebastienDegodez",
     "category": "Developer Tools",

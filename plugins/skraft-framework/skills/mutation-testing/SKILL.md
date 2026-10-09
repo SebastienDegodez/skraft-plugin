@@ -67,7 +67,7 @@ The only suppression is `# pragma: no mutate -- <reason>` on the mutated line; n
 ## TypeScript / StrykerJS with Vitest
 
 For a TypeScript package tested with Vitest, load
-[quality-gates-typescript](../quality-gates-typescript/SKILL.md). `mutation-gate.mjs` runs one
+`quality-gates-typescript`. `mutation-gate.mjs` runs one
 scope per call, core then boundary, from the checked-in `stryker.core.json` /
 `stryker.boundary.json`, with `--since <DELIVER baseSha>`; it runs Vitest unmutated first and
 lists each survivor as `survived: <file>:<line> <mutator>` or `no coverage: …`. The only

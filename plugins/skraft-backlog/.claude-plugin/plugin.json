@@ -1,7 +1,7 @@
 {
   "name": "skraft-backlog",
   "description": "skraft backlog — discover and triage GitHub issues, refine them into ready stories, and review each issue's refinement in a comment, from your editor or a GitHub Agentic Workflow.",
-  "version": "1.10.2",
+  "version": "1.14.0",
   "author": {
     "name": "SebastienDegodez"
   },

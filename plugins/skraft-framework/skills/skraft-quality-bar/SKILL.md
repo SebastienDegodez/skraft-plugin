@@ -63,10 +63,9 @@ For Python, `quality-gates-python` scaffolds `cosmic-ray-core.toml` and
 `cosmic-ray-boundary.toml`; its mutation script runs one scope per call and carries both
 thresholds as literals.
 
-For TypeScript with Vitest, [configure-mutation.mjs](../quality-gates-typescript/scripts/configure-mutation.mjs)
-scaffolds `stryker.core.json` and `stryker.boundary.json`;
-[mutation-gate.mjs](../quality-gates-typescript/scripts/mutation-gate.mjs) runs one scope per
-call with the thresholds of [gate-policy.mjs](../quality-gates-typescript/scripts/gate-policy.mjs).
+For TypeScript with Vitest, `quality-gates-typescript` scaffolds `stryker.core.json` and
+`stryker.boundary.json`; its `mutation-gate.mjs` runs one scope per call with the thresholds of
+its `gate-policy.mjs`.
 
 ## Threshold flags
 
