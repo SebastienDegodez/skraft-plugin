@@ -1,5 +1,6 @@
-using PaymentAuthorization.Application;
-using PaymentAuthorization.Domain;
+using PaymentAuthorization.Application.Authorization;
+using PaymentAuthorization.Domain.Authorization;
+using PaymentAuthorization.Domain.Shared;
 
 namespace PaymentAuthorization.UnitTest.AuthorizePayment;
 

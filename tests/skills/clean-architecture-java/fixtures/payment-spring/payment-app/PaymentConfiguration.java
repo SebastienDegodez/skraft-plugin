@@ -1,10 +1,10 @@
 package com.example.payment.app;
 
-import com.example.payment.application.AuthorizePayment;
-import com.example.payment.application.PaymentGateway;
-import com.example.payment.application.ReceiptStore;
-import com.example.payment.infrastructure.FileSystemReceiptStore;
-import com.example.payment.infrastructure.HttpPaymentGateway;
+import com.example.payment.application.authorization.AuthorizePayment;
+import com.example.payment.application.authorization.PaymentGateway;
+import com.example.payment.application.authorization.ReceiptStore;
+import com.example.payment.infrastructure.authorization.FileSystemReceiptStore;
+import com.example.payment.infrastructure.authorization.HttpPaymentGateway;
 import java.nio.file.Path;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

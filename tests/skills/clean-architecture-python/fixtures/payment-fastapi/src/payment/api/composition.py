@@ -3,9 +3,9 @@ from pathlib import Path
 
 import httpx
 
-from payment.application.authorize_payment import AuthorizePayment
-from payment.infrastructure.file_system_receipt_store import FileSystemReceiptStore
-from payment.infrastructure.http_payment_gateway import HttpPaymentGateway
+from payment.application.authorization.authorize_payment import AuthorizePayment
+from payment.infrastructure.authorization.file_system_receipt_store import FileSystemReceiptStore
+from payment.infrastructure.authorization.http_payment_gateway import HttpPaymentGateway
 
 
 def build_authorize_payment() -> AuthorizePayment:

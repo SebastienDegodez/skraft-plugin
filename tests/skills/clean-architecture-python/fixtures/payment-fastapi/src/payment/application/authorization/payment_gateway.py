@@ -1,7 +1,7 @@
 from typing import Protocol
 
-from payment.domain.authorization_outcome import AuthorizationOutcome
-from payment.domain.money import Money
+from payment.domain.authorization.authorization_outcome import AuthorizationOutcome
+from payment.domain.shared.money import Money
 
 
 class PaymentGateway(Protocol):

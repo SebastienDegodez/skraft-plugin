@@ -173,7 +173,7 @@ public interface IOrderRepository
     Task CancelOrderAsync(OrderId id, CancellationToken ct);
 }
 
-// Infrastructure/Persistence/OrderRepository.cs (implementation)
+// Infrastructure/Orders/OrderRepository.cs (implementation)
 public sealed class OrderRepository : IOrderRepository
 {
     private readonly OrderingDbContext _context;
@@ -239,16 +239,14 @@ Domain/
 │       └── OrderPlacedEvent.cs
 ├── Shared/
 │   ├── Money.cs                 ← Shared Value Object
-│   └── Address.cs
-└── DomainException.cs           ← Base exception
+│   ├── Address.cs
+│   └── DomainException.cs       ← Base exception
 
 Application/
-├── Features/
-│   ├── PlaceOrder/
-│   │   ├── PlaceOrderCommand.cs
-│   │   └── PlaceOrderCommandHandler.cs
-│   └── GetOrder/
-│       └── GetOrderQueryHandler.cs
+├── Orders/                      ← one folder per feature
+│   ├── PlaceOrderCommand.cs
+│   ├── PlaceOrderCommandHandler.cs
+│   └── GetOrderQueryHandler.cs
 └── Shared/
     ├── ICommandHandler.cs        ← Uses SharedKernel if available
     └── IQueryHandler.cs

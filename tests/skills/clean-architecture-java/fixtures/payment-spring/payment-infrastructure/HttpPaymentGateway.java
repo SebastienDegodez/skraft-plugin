@@ -1,8 +1,8 @@
-package com.example.payment.infrastructure;
+package com.example.payment.infrastructure.authorization;
 
-import com.example.payment.application.PaymentGateway;
-import com.example.payment.domain.AuthorizationOutcome;
-import com.example.payment.domain.Money;
+import com.example.payment.application.authorization.PaymentGateway;
+import com.example.payment.domain.authorization.AuthorizationOutcome;
+import com.example.payment.domain.shared.Money;
 import java.math.BigDecimal;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;

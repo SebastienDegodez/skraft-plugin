@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from payment.infrastructure.file_system_receipt_store import FileSystemReceiptStore
+from payment.infrastructure.authorization.file_system_receipt_store import FileSystemReceiptStore
 
 
 def test_a_saved_receipt_can_be_read_back_from_disk(tmp_path: Path) -> None:

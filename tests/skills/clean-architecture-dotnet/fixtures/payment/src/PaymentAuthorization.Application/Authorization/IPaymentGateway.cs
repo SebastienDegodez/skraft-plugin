@@ -1,6 +1,7 @@
-using PaymentAuthorization.Domain;
+using PaymentAuthorization.Domain.Authorization;
+using PaymentAuthorization.Domain.Shared;
 
-namespace PaymentAuthorization.Application;
+namespace PaymentAuthorization.Application.Authorization;
 
 /// <summary>Outbound gateway to the payment provider.</summary>
 public interface IPaymentGateway

@@ -1,6 +1,6 @@
-using PaymentAuthorization.Application;
+using PaymentAuthorization.Application.Authorization;
 
-namespace PaymentAuthorization.Infrastructure;
+namespace PaymentAuthorization.Infrastructure.Authorization;
 
 /// <summary>Keeps one receipt file per reference under a root directory.</summary>
 public sealed class FileSystemReceiptStore(string rootDirectory) : IReceiptStore

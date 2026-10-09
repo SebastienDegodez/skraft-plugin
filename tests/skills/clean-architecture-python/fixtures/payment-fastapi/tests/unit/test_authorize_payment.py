@@ -1,8 +1,8 @@
 from decimal import Decimal
 
-from payment.application.authorize_payment import AuthorizePayment
-from payment.domain.authorization_outcome import AuthorizationOutcome
-from payment.domain.money import Money
+from payment.application.authorization.authorize_payment import AuthorizePayment
+from payment.domain.authorization.authorization_outcome import AuthorizationOutcome
+from payment.domain.shared.money import Money
 
 
 class AlwaysAnswers:

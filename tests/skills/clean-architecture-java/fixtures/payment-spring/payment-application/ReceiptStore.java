@@ -1,4 +1,4 @@
-package com.example.payment.application;
+package com.example.payment.application.authorization;
 
 /** Outbound store keeping one receipt per authorization attempt. */
 public interface ReceiptStore {

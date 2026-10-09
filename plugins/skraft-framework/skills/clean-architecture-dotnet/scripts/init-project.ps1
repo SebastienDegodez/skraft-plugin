@@ -105,11 +105,9 @@ New-Item -ItemType Directory -Force -Path "src/$ProjectName.Domain/Shared" | Out
 
 # Application
 New-Item -ItemType Directory -Force -Path "src/$ProjectName.Application/Shared" | Out-Null
-New-Item -ItemType Directory -Force -Path "src/$ProjectName.Application/Features" | Out-Null
 
 # Infrastructure
-New-Item -ItemType Directory -Force -Path "src/$ProjectName.Infrastructure/Persistence/Repositories" | Out-Null
-New-Item -ItemType Directory -Force -Path "src/$ProjectName.Infrastructure/Services" | Out-Null
+New-Item -ItemType Directory -Force -Path "src/$ProjectName.Infrastructure/Shared" | Out-Null
 
 # UnitTests
 New-Item -ItemType Directory -Force -Path "tests/$ProjectName.UnitTests/Application" | Out-Null
@@ -381,7 +379,7 @@ dotnet build
 Write-Host "`n✅ Clean Architecture CQRS project initialized successfully!" -ForegroundColor Green
 Write-Host "`nNext steps:"
 Write-Host "  1. Review src/$ProjectName.Domain for business logic"
-Write-Host "  2. Create Commands/Queries in src/$ProjectName.Application/Features/"
+Write-Host "  2. Add each feature as a folder in every layer project (src/$ProjectName.Application/<Feature>/, ...)"
 Write-Host "  3. Implement handlers with *CommandHandler/*QueryHandler suffix"
 Write-Host "  4. Run architecture tests: dotnet test --filter 'FullyQualifiedName~IntegrationTests'"
 Write-Host "`n📚 See .github/skills/clean-architecture-dotnet/SKILL.md for complete guide"

@@ -2,10 +2,10 @@ package com.example.payment.unittest.authorizepayment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.payment.application.AuthorizePayment;
-import com.example.payment.application.ReceiptStore;
-import com.example.payment.domain.AuthorizationOutcome;
-import com.example.payment.domain.Money;
+import com.example.payment.application.authorization.AuthorizePayment;
+import com.example.payment.application.authorization.ReceiptStore;
+import com.example.payment.domain.authorization.AuthorizationOutcome;
+import com.example.payment.domain.shared.Money;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;

@@ -1,7 +1,7 @@
-package com.example.payment.application;
+package com.example.payment.application.authorization;
 
-import com.example.payment.domain.AuthorizationOutcome;
-import com.example.payment.domain.Money;
+import com.example.payment.domain.authorization.AuthorizationOutcome;
+import com.example.payment.domain.shared.Money;
 
 /** Authorizes one payment and keeps a receipt of what the provider answered. */
 public final class AuthorizePayment {

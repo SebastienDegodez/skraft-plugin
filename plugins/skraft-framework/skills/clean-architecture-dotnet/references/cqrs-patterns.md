@@ -19,7 +19,7 @@ public interface IQueryHandler<in TQuery, TResult>
 ## Command Example
 
 ```csharp
-// Application/Features/Orders/PlaceOrderCommand.cs
+// Application/Orders/PlaceOrderCommand.cs
 public sealed record PlaceOrderCommand(OrderId OrderId, string CustomerName);
 
 public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand>
@@ -39,7 +39,7 @@ public sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderCommand
 ## Query Example
 
 ```csharp
-// Application/Features/Orders/GetOrderQuery.cs
+// Application/Orders/GetOrderQuery.cs
 public sealed record GetOrderQuery(OrderId OrderId);
 public sealed record OrderViewModel(Guid Id, string Status);
 

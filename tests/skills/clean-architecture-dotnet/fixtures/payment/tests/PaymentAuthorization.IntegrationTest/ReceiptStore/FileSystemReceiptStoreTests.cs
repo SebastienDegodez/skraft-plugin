@@ -1,4 +1,4 @@
-using PaymentAuthorization.Infrastructure;
+using PaymentAuthorization.Infrastructure.Authorization;
 
 namespace PaymentAuthorization.IntegrationTest.ReceiptStore;
 

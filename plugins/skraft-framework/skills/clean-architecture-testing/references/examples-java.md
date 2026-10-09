@@ -154,9 +154,12 @@ In `orders-integration-test` (test scope: `com.tngtech.archunit:archunit-junit5:
 ```java
 package com.example.orders.integrationtest.architecture;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -196,6 +199,15 @@ class LayerDependencyTest {
         onlyDependOn("application", "application", "domain");
     }
 
+    // One application feature never uses another; the shared package is for what two features need.
+    @Test
+    void application_features_do_not_depend_on_each_other() {
+        slices().matching(ROOT + ".application.(*)..")
+                .should().notDependOnEachOther()
+                .ignoreDependency(DescribedPredicate.alwaysTrue(), resideInAPackage(ROOT + ".application.shared.."))
+                .check(PRODUCTION);
+    }
+
     // JDK core without I/O, network or persistence.
     private static void onlyDependOn(String layer, String... allowedLayers) {
         var allowed = new java.util.ArrayList<>(List.of("java.lang..", "java.util..", "java.time..", "java.math.."));
@@ -218,6 +230,7 @@ class LayerDependencyTest {
 | `orders-api` → `orders-application` reference | red |
 | Domain/Application imports `org.springframework..`, `jakarta.persistence..`, `com.fasterxml.jackson..` | red |
 | Domain/Application uses `java.net.http.HttpClient`, `java.nio.file.Files`, `java.sql..` | red |
+| `…application.refund` imports `…application.authorization.PaymentGateway` | red |
 | Infrastructure imports Domain types; Api imports Application use cases (transitive) | green |
 
 `layeredArchitecture().consideringOnlyDependenciesInLayers()` alone stays green on both leaks: add it only on top of the allow-list.

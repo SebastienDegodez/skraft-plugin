@@ -2,8 +2,8 @@ from typing import final
 
 import httpx
 
-from payment.domain.authorization_outcome import AuthorizationOutcome
-from payment.domain.money import Money
+from payment.domain.authorization.authorization_outcome import AuthorizationOutcome
+from payment.domain.shared.money import Money
 
 
 @final

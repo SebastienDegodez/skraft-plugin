@@ -43,3 +43,10 @@ name = "Domain and application import no framework"
 type = "forbidden"
 source_modules = ["payment.domain", "payment.application"]
 forbidden_modules = ["fastapi", "starlette", "pydantic", "httpx", "uvicorn"]
+
+[[tool.importlinter.contracts]]
+name = "Application features never import each other"
+type = "independence"
+modules = ["payment.application.*"]
+ignore_imports = ["payment.application.** -> payment.application.shared.**"]
+unmatched_ignore_imports_alerting = "none"
