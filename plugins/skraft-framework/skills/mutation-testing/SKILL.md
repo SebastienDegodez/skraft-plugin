@@ -38,7 +38,7 @@ reconstruct, or improvise runner commands here. Load `skraft-quality-bar`, then 
 ## Node JavaScript / TAP
 
 For installed StrykerJS core + TAP 9.6.1, load
-[quality-gates-javascript](../quality-gates-javascript/SKILL.md). Its single runner
+`quality-gates-javascript`. Its single runner
 validates both durable configs, runs core then boundary, and captures fresh reports.
 Core-only runs diagnose failures but never prove combined G6. Full reruns start
 with core again; never reuse an earlier core receipt to unlock boundary.
@@ -57,7 +57,7 @@ report paths. CI evidence uses checked-in configuration without overlays.
 
 ## Python / cosmic-ray
 
-For a `pyproject.toml` project, load [quality-gates-python](../quality-gates-python/SKILL.md).
+For a `pyproject.toml` project, load `quality-gates-python`.
 `mutation-gate.mjs` runs one scope per call, core then boundary, from the checked-in
 `cosmic-ray-core.toml` / `cosmic-ray-boundary.toml`, with `--since <DELIVER baseSha>`; it runs
 the suite unmutated first and lists each survivor as `survived: <file>:<line> <operator>`.
@@ -67,7 +67,7 @@ The only suppression is `# pragma: no mutate -- <reason>` on the mutated line; n
 ## TypeScript / StrykerJS with Vitest
 
 For a TypeScript package tested with Vitest, load
-[quality-gates-typescript](../quality-gates-typescript/SKILL.md). `mutation-gate.mjs` runs one
+`quality-gates-typescript`. `mutation-gate.mjs` runs one
 scope per call, core then boundary, from the checked-in `stryker.core.json` /
 `stryker.boundary.json`, with `--since <DELIVER baseSha>`; it runs Vitest unmutated first and
 lists each survivor as `survived: <file>:<line> <mutator>` or `no coverage: …`. The only

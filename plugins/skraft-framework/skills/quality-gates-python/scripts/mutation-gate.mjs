@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { COSMIC_RAY_MAJOR, LIMITS, mutationVerdict, parseArgs, pragmaProblems, renderConfig, selectChanged, validateConfig } from './gate-policy.mjs'
+import { COSMIC_RAY_MAJOR, LIMITS, bindInterpreter, mutationVerdict, parseArgs, pragmaProblems, renderConfig, selectChanged, validateConfig } from './gate-policy.mjs'
 import {
 	capture, changedSince, distributionVersion, ensure, git, inside, pythonEnv, pythonFiles, pythonVersion,
 	readToml, repositoryRoot, resolvePython, sha256,
@@ -97,7 +97,9 @@ export async function runMutationGate(input, { execute = capture } = {}) {
 		manifest.sources = Object.fromEntries(Object.entries(saved).map(([name, bytes]) => [name, sha256(bytes)]))
 		manifest.tests = Object.fromEntries(Object.entries(tests).map(([name, bytes]) => [name, sha256(bytes)]))
 		const effective = join(prefix, 'cosmic-ray.toml')
-		await writeFile(effective, renderConfig({ ...config, modulePaths: selected }))
+		const testCommand = bindInterpreter(config.testCommand, python)
+		manifest.test_command = testCommand
+		await writeFile(effective, renderConfig({ ...config, modulePaths: selected, testCommand }))
 		const session = join(prefix, 'session.sqlite')
 		const argsFor = {
 			baseline: [effective, '--session-file', join(prefix, 'baseline.sqlite')],

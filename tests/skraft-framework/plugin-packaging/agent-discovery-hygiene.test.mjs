@@ -37,8 +37,6 @@ const copilotFiles = walk(copilotAgentsRoot)
 const fromRoot = (path) => relative(repoRoot, path).split('\\').join('/')
 const userInvocableAgentIds = new Set([
   'skraft-orchestrator',
-  'backlog-discoverer',
-  'backlog-planner',
   'brownfield-analyst',
   'brownfield-harness-builder',
   'brownfield-refactorer',
@@ -64,7 +62,7 @@ test('agent-discovery: every agent descriptor declares a description', () => {
 })
 
 // Check source/projection metadata, not undocumented Claude subagent visibility behavior.
-test('agent-discovery: source and copies retain visibility flags for exactly six public roots', () => {
+test('agent-discovery: source and copies retain visibility flags for exactly four public roots', () => {
   for (const files of [markdownFiles, copilotFiles]) {
     const publicIds = []
     for (const path of files) {

@@ -6,7 +6,7 @@ description: Use when the repository holds a TypeScript project tested with Vite
 # Quality Gates — TypeScript Adapter (Vitest)
 
 Binds the gates of `quality-gates-evidence-contract` to a TypeScript package tested with
-Vitest. Load [quality bar](../skraft-quality-bar/SKILL.md) first. Every gate below blocks; a
+Vitest. Load `skraft-quality-bar` first. Every gate below blocks; a
 gate whose tool is missing is `status: "fail"` with the captured output, never
 `not_applicable`. Plain JavaScript packages tested with `node --test` stay with
 `quality-gates-javascript`.
@@ -23,8 +23,8 @@ gate whose tool is missing is `status: "fail"` with the captured output, never
   install with npm 11, or set `legacy-peer-deps=true` in the project's `.npmrc`.
 - Node 22.5 or later (the scripts use `path.matchesGlob`).
 
-`$Q` is `$SKRAFT_PLUGIN_ROOT/skills/quality-gates-typescript/scripts`, or the `scripts/` folder
-beside this file when that variable is empty. `$EV` is
+`<skill>` is this skill's folder, the one holding this SKILL.md; every script ships in
+`<skill>/scripts/`, never in the consumer repository. `$EV` is
 `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`; log references drop
 the `.copilot-tracking/skraft-plans/{projectSlug}/` prefix. Every script runs with `node` and
 no shell, so the same line works in bash and PowerShell. `--root` is the Git repository root;
@@ -38,9 +38,9 @@ no shell, so the same line works in bash and PowerShell. `--root` is the Git rep
 
 | Gate | Command |
 |---|---|
-| G1 / G2 | `node "$Q/capture.mjs" --root . --evidence "$EV" --name qg-tests -- {bin:vitest} run` |
-| G3 | `node "$Q/capture.mjs" --root . --evidence "$EV" --name qg-build -- {bin:typescript:tsc} --noEmit` |
-| G4 | `node "$Q/capture.mjs" --root . --evidence "$EV" --name qg-lint -- {bin:eslint} . --max-warnings 0` |
+| G1 / G2 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-tests -- {bin:vitest} run` |
+| G3 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-build -- {bin:typescript:tsc} --noEmit` |
+| G4 | `node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-lint -- {bin:eslint} . --max-warnings 0` |
 
 G1 narrows the Vitest line to the story's acceptance tests when they live apart. Read
 `tests_total` / `tests_passed` / `tests_failed` from Vitest's `Tests` summary line.
@@ -48,7 +48,7 @@ G1 narrows the Vitest line to the story's acceptance tests when they live apart.
 ## G5 — Architecture (ESLint boundaries)
 
 ```bash
-node "$Q/architecture-gate.mjs" --root . --evidence "$EV"
+node "<skill>/scripts/architecture-gate.mjs" --root . --evidence "$EV"
 ```
 
 Asks ESLint for the resolved config of a source file and fails unless
@@ -62,7 +62,7 @@ Mutation configuration is repository infrastructure. Scaffold it once, review it
 both files in the package directory:
 
 ```bash
-node "$Q/configure-mutation.mjs" --root .
+node "<skill>/scripts/configure-mutation.mjs" --root .
 ```
 
 It writes `stryker.core.json` (`src/*/application`, and `domain` where a backend has one) and
@@ -78,8 +78,8 @@ exclusions, ignorers or thresholds to buy a score.
 Run core, then boundary, once, after the story's last work commit:
 
 ```bash
-node "$Q/mutation-gate.mjs" --root . --scope core --config stryker.core.json --evidence "$EV" --since "$BASE"
-node "$Q/mutation-gate.mjs" --root . --scope boundary --config stryker.boundary.json --evidence "$EV" --since "$BASE"
+node "<skill>/scripts/mutation-gate.mjs" --root . --scope core --config stryker.core.json --evidence "$EV" --since "$BASE"
+node "<skill>/scripts/mutation-gate.mjs" --root . --scope boundary --config stryker.boundary.json --evidence "$EV" --since "$BASE"
 ```
 
 `BASE` is `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`; drop
@@ -112,7 +112,7 @@ the verdict line.
 ## G7 — No test doubles in the core and the unit tests
 
 ```bash
-node "$Q/no-mocks-in-core.mjs" --root . --evidence "$EV"
+node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence "$EV"
 ```
 
 Scans the core config's sources and `tests/unit` (`--tests <dir>`, repeatable) for `vi.mock`,
@@ -124,7 +124,7 @@ gateways (`clean-architecture-testing`); MSW belongs to the gateway tests in
 ## G11 — Line coverage of the core
 
 ```bash
-node "$Q/coverage-core.mjs" --root . --evidence "$EV"
+node "<skill>/scripts/coverage-core.mjs" --root . --evidence "$EV"
 ```
 
 Runs the whole suite under Vitest's v8 provider with the core config's patterns as the
@@ -140,7 +140,7 @@ taken at RED and at GREEN; G10 at RED, before the implementation, with the G1 li
 to the cycle's test and `--name qg-red-{cycle}`:
 
 ```bash
-node "$Q/capture.mjs" --root . --evidence "$EV" --name qg-red-1 -- {bin:vitest} run tests/unit/todos/application/CompleteTodo.test.ts
+node "<skill>/scripts/capture.mjs" --root . --evidence "$EV" --name qg-red-1 -- {bin:vitest} run tests/unit/todos/application/CompleteTodo.test.ts
 ```
 
 The recorded exit code MUST be non-zero. The capture cannot be reconstructed after GREEN.

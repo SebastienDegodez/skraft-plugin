@@ -1,0 +1,103 @@
+name: skraft-backlog CI
+
+on:
+  push:
+    paths:
+      - 'plugins/skraft-backlog/**'
+      - 'tests/skraft-backlog/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/sync-backlog-copies.mjs'
+      - 'scripts/set-version.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      - 'plugins/skraft-framework/src/cli/build-config*.mjs'
+      - 'plugins/skraft-framework/src/cli/resolve-model*.mjs'
+      - 'plugins/skraft-framework/skraft-framework.config.json'
+      - '.claude-plugin/marketplace.json'
+      - '.cursor-plugin/marketplace.json'
+      - '.github/plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/skraft-backlog-ci.yml'
+  pull_request:
+    paths:
+      - 'plugins/skraft-backlog/**'
+      - 'tests/skraft-backlog/**'
+      - 'scripts/project-plugin-adapters.mjs'
+      - 'scripts/sync-backlog-copies.mjs'
+      - 'scripts/set-version.mjs'
+      - 'scripts/lib/agent-*.mjs'
+      - 'plugins/skraft-framework/src/cli/build-config*.mjs'
+      - 'plugins/skraft-framework/src/cli/resolve-model*.mjs'
+      - 'plugins/skraft-framework/skraft-framework.config.json'
+      - '.claude-plugin/marketplace.json'
+      - '.cursor-plugin/marketplace.json'
+      - '.github/plugin/marketplace.json'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/skraft-backlog-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.os }})
+    # The skill scripts run on developer machines under bash and PowerShell alike.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run the backlog plugin tests
+        shell: bash
+        run: node --test "tests/skraft-backlog/**/*.test.mjs"
+
+  checks:
+    name: Agent trees, dispatch tree, models
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: The workflow's copy of the marker check is the skill's
+        run: node scripts/sync-backlog-copies.mjs --check
+      - name: Both agent trees in sync with their baseline
+        run: node scripts/project-plugin-adapters.mjs --check --plugin-root plugins/skraft-backlog
+      - name: Dispatch tree and declared skills are valid
+        run: node plugins/skraft-framework/src/cli/build-config-bin.mjs --emit --dir plugins/skraft-backlog/com.github.copilot/agents > /dev/null
+      - name: Skill script coverage floor
+        run: |
+          node --test --experimental-test-coverage \
+            '--test-coverage-include=plugins/skraft-backlog/**' \
+            --test-coverage-lines=95 --test-coverage-branches=85 --test-coverage-functions=90 \
+            "tests/skraft-backlog/**/*.test.mjs"
+      - name: Agent model assignment matches the cost_role_class policy
+        run: node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check --dir plugins/skraft-backlog/com.github.copilot/agents
+
+  workflow:
+    name: skraft-refine compiles with gh-aw
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install gh-aw
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install github/gh-aw
+      # Compile it as `gh aw add` lays it out in a consumer repository: the workflow, its
+      # shared APM import and the marker check under .github/workflows/.
+      - name: Compile the workflow in a consumer layout
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          consumer="$RUNNER_TEMP/consumer"
+          mkdir -p "$consumer/.github/workflows/shared"
+          cp plugins/skraft-backlog/workflows/skraft-refine.md "$consumer/.github/workflows/"
+          cp plugins/skraft-backlog/workflows/shared/apm.md plugins/skraft-backlog/workflows/shared/skraft-refine-marker.mjs "$consumer/.github/workflows/shared/"
+          cd "$consumer"
+          git init -q
+          gh aw compile skraft-refine

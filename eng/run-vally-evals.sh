@@ -87,6 +87,17 @@ if [ "${SKILL_MAX_RETRIES+x}" = "x" ]; then
 fi
 
 SKRAFT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# The skill directory of <name> in whichever plugin ships it (skraft-framework first,
+# then skraft-backlog and any other plugin). Prints the skraft-framework path when no
+# plugin has it, so the caller's existence check reports the miss.
+plugin_skill_dir() {
+  local name="$1" dir
+  for dir in "$SKRAFT_ROOT/plugins/skraft-framework/skills/$name" "$SKRAFT_ROOT"/plugins/*/skills/"$name"; do
+    if [ -d "$dir" ]; then echo "$dir"; return 0; fi
+  done
+  echo "$SKRAFT_ROOT/plugins/skraft-framework/skills/$name"
+}
 VALLY_PACKAGE="${VALLY_PACKAGE:-@microsoft/vally-cli@0.12.0}"
 # Two shapes have to survive here. A command carrying its own arguments
 # (`npx --yes …`, `node fake-vally.mjs`) must word-split; a path to one binary
@@ -409,7 +420,7 @@ run_one_eval() {
   # EVAL_PLUGIN is the literal `skills` segment of tests/skills/<skill>.
   local TARGET_SKILL_DIR="$SKRAFT_ROOT/plugins/$EVAL_PLUGIN/skills/$EVAL_NAME"
   if [ ! -d "$TARGET_SKILL_DIR" ]; then
-    TARGET_SKILL_DIR="$SKRAFT_ROOT/plugins/skraft-framework/skills/$EVAL_NAME"
+    TARGET_SKILL_DIR="$(plugin_skill_dir "$EVAL_NAME")"
   fi
   local SKILLED_SKILL_DIR="$TARGET_SKILL_DIR"
   local SCOPED_SKILLS_FILE="$EVAL_DIR/eval.skill-dir.yaml"
@@ -460,7 +471,8 @@ run_one_eval() {
       cp -R "$TARGET_SKILL_DIR" "$SCOPED_SKILL_DIR/$EVAL_NAME"
       for companion in "${COMPANION_SKILLS[@]}"; do
         [ "$companion" = "$EVAL_NAME" ] && continue
-        local COMPANION_DIR="$SKRAFT_ROOT/plugins/skraft-framework/skills/$companion"
+        local COMPANION_DIR
+        COMPANION_DIR="$(plugin_skill_dir "$companion")"
         if [ -d "$COMPANION_DIR" ]; then
           cp -R "$COMPANION_DIR" "$SCOPED_SKILL_DIR/$companion"
         else

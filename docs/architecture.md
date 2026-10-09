@@ -31,12 +31,12 @@ skraft-plugin/
 │       └── outside-in-tdd.md
 ├── plugins/skraft-framework/              ← composants distribués par le plugin
 │   ├── plugin.json                       ← manifeste canonique v1, sans liste agents racine
-│   ├── .claude-plugin/                    ← enregistrement explicite des 31 agents Claude
+│   ├── .claude-plugin/                    ← enregistrement explicite des 20 agents Claude
 │   ├── com.github.copilot/
-│   │   ├── agents/                        ← 31 agents éditables à plat `.agent.md`
+│   │   ├── agents/                        ← 20 agents éditables à plat `.agent.md`
 │   │   └── hooks/hooks.json               ← copie générée du hook racine, `${PLUGIN_ROOT}`
 │   ├── com.anthropic.claude-code/
-│   │   └── agents/                        ← 31 agents Claude natifs éditables à plat `.md`
+│   │   └── agents/                        ← 20 agents Claude natifs éditables à plat `.md`
 │   ├── hooks/hooks.json                   ← source canonique, compatibilité Claude
 │   ├── src/                               ← runtime partagé
 │   └── skills/
@@ -48,17 +48,19 @@ skraft-plugin/
 │       ├── clean-architecture-testing/
 │       ├── contract-testing/
 │       ├── craft-discipline/
-│       ├── discovery-review-criteria/
-│       ├── github-search-protocol/
-│       ├── issue-refinement/
-│       ├── issue-triage/
+│       ├── github-publication/
 │       ├── mutation-testing/
 │       ├── outside-in-tdd/
-│       ├── planning-review-criteria/
 │       ├── playwright-evidence/
-│       ├── sprint-planning/
 │       ├── test-design-mandates/
 │       └── test-refactoring-catalog/
+├── plugins/skraft-backlog/                ← plugin backlog autonome (aucun code partagé à l'exécution)
+│   ├── plugin.json, .claude-plugin/, .codex-plugin/
+│   ├── com.github.copilot/agents/         ← discoverer, planner et leurs 7 lentilles
+│   ├── com.anthropic.claude-code/agents/  ← mêmes 9 agents, en-têtes Claude
+│   ├── skills/                            ← github-issue-search, issue-triage, issue-refinement,
+│   │                                        sprint-planning, *-review-criteria, backlog-review-lenses
+│   └── workflows/                         ← workflow gh-aw skraft-refine (paquet aw.yml)
 └── .agents/                               ← skills méta liés à l'authoring d'agents
     └── skills/
         └── create-custom-agent/
@@ -70,9 +72,9 @@ skraft-plugin/
 | Dossier | Rôle | Source de vérité |
 |---|---|---|
 | [Manifeste racine](../plugins/skraft-framework/plugin.json) | Schéma Agent Plugins v1 canonique ; aucune liste `agents` racine. | Oui. |
-| [Manifeste Claude](../plugins/skraft-framework/.claude-plugin/plugin.json) | Enregistrement explicite des 31 agents, y compris workers et lenses imbriqués. Aucun pointeur `hooks`, aucun champ `rules`. | Oui, pour l'enregistrement Claude. |
-| `com.anthropic.claude-code/agents/` | 31 agents Claude natifs éditables à plat ; en-têtes propres au client. | Oui, synchronisation du corps et de la description. |
-| `com.github.copilot/agents/` | 31 fichiers `.agent.md` à plat ; synchronisation bidirectionnelle du contenu partagé, en-têtes client préservés. | Oui, pour les éditions synchronisées. |
+| [Manifeste Claude](../plugins/skraft-framework/.claude-plugin/plugin.json) | Enregistrement explicite des 20 agents, y compris workers et lenses imbriqués. Aucun pointeur `hooks`, aucun champ `rules`. | Oui, pour l'enregistrement Claude. |
+| `com.anthropic.claude-code/agents/` | 20 agents Claude natifs éditables à plat ; en-têtes propres au client. | Oui, synchronisation du corps et de la description. |
+| `com.github.copilot/agents/` | 20 fichiers `.agent.md` à plat ; synchronisation bidirectionnelle du contenu partagé, en-têtes client préservés. | Oui, pour les éditions synchronisées. |
 | [Hooks racine](../plugins/skraft-framework/hooks/hooks.json) | Source canonique ; surface de compatibilité Claude. | Oui. |
 | [Hooks Copilot](../plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Copie générée exacte du manifeste de hooks racine. | Non. |
 
@@ -91,12 +93,13 @@ régénérés. Un conflit bloque toute écriture. Tout nouvel agent exige ses de
 explicites. Commiter les deux surfaces et le baseline : les installations marketplace
 depuis Git ne lancent aucun build.
 
-Les **31 agents** doivent rester dans le manifeste Claude pour leur enregistrement et leur
+Les **20 agents** doivent rester dans le manifeste Claude pour leur enregistrement et leur
 délégation ; ne pas retirer les internes pour les masquer. Les flags internes
 `user-invocable: false` sont conservés, mais ne sont pas documentés pour les **subagents Claude** :
-aucune garantie de masquage dans son sélecteur. Les six racines autonomes destinées au public
-Copilot sont `skraft-orchestrator`, `backlog-discoverer`, `backlog-planner`, `brownfield-analyst`,
-`brownfield-harness-builder` et `brownfield-refactorer`.
+aucune garantie de masquage dans son sélecteur. Les quatre racines autonomes destinées au public
+Copilot sont `skraft-orchestrator`, `brownfield-analyst`, `brownfield-harness-builder` et
+`brownfield-refactorer`. `backlog-discoverer` et `backlog-planner` sont les racines du plugin
+`skraft-backlog`.
 
 ### 1.2 Distinction `plugins/` vs `.agents/`
 

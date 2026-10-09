@@ -15,8 +15,8 @@ description: >-
   [report contract](references/report-contract.md) for ownership, fields, source
   refs and media boundaries. Use its JSON shape; do not add fields.
 - When referencing gates or evidence, load
-  [quality-gates-evidence-contract](../quality-gates-evidence-contract/SKILL.md)
-  and [skraft-quality-bar](../skraft-quality-bar/SKILL.md). They own evidence
+  `quality-gates-evidence-contract`
+  and `skraft-quality-bar`. They own evidence
   semantics and thresholds; this skill defines neither.
 - For rendering, use the bundled [forecast](assets/templates/forecast.md) or
   [outcome](assets/templates/outcome.md) template through the existing CLI.
@@ -44,7 +44,7 @@ description: >-
 
 The existing router renders after the relevant review is persisted; a blocked
 outcome retains that verdict and missing evidence. Resolve
-[report CLI](../../src/cli/report.mjs) relative to this skill directory into
+the bundled report CLI, `scripts/report/cli/report.mjs` in this skill's folder, into
 `report_cli`; keep the working directory at the consumer repository root.
 Invoke `node "$report_cli" render --slug {slug} --data {report.json} --out {report.md}`
 with actual returned repository-root-relative paths and quoted arguments.
@@ -59,6 +59,6 @@ Do not run tests, capture new evidence, decide gates or change pipeline state
 for report preparation. Do not spawn a reporting agent.
 
 For a requested publication handoff, give existing Markdown to the router under
-[host publication lifecycle](../../assets/reporting/mcp-publication.md); do not
+[host publication lifecycle](references/mcp-publication.md); do not
 execute transport here. Publication-only retries reuse Markdown, not engineering
 runs or another report synthesis.

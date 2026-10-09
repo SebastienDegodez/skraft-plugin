@@ -38,8 +38,7 @@ must load, the artifacts a phase must produce, the verdicts and the commits.
 
 ```mermaid
 flowchart LR
-    D[backlog-discoverer] --> P[backlog-planner]
-    P -. refined story .-> O[skraft-orchestrator]
+    P[skraft-backlog plugin, or any story writer] -. refined story .-> O[skraft-orchestrator]
     subgraph Engineering pipeline
         R[RESEARCH] --> A[DESIGN] --> T[DISTILL] --> I[DELIVER]
     end
@@ -57,7 +56,9 @@ A rejected result goes back to its specialist; it never advances silently.
 
 Other entry points you can call directly:
 
-- **Product:** `backlog-discoverer` then `backlog-planner` turn a need into refined stories.
+- **Product:** install the [skraft-backlog](../skraft-backlog/README.md) plugin: its
+  `backlog-discoverer` and `backlog-planner` turn a need into refined stories the orchestrator
+  reads. Any story with acceptance criteria works as well.
 - **Brownfield:** `brownfield-analyst` characterizes an existing system,
   `brownfield-harness-builder` pins its behavior with tests and contracts,
   `brownfield-refactorer` modernizes it step by step (Mikado, Strangler Fig).

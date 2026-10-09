@@ -31,7 +31,7 @@ dependency, tested boundary-to-boundary and hardened with mutation testing.
 ## Key features
 
 - 🔁 **5-phase SDLC pipeline** orchestrated by `skraft-orchestrator`: DISCOVER → DISCUSS → DESIGN → DISTILL → DELIVER.
-- 🤖 **Specialized phase agents**: `backlog-discoverer`, `backlog-planner`, `solution-architect`, `acceptance-designer`, `software-engineer` — each with its dedicated **adversarial reviewer**.
+- 🤖 **Specialized phase agents**: `solution-architect`, `acceptance-designer`, `software-engineer` — each with its dedicated **adversarial reviewer**; `backlog-discoverer` and `backlog-planner` ship in the separate `skraft-backlog` plugin, reviewed by their own lenses.
 - 🔬 **Independent reviewer lenses** (quality-gates, architecture-boundaries, test-integrity, cold-reader) synthesized into a weighted verdict.
 - 📚 **Discipline skills**: Outside-In TDD, Clean Architecture testing, BDD/Gherkin, mutation testing, contract testing, ADR, issue refinement…
 - 🛡️ **Mechanical guardrails G1–G9** (fail-closed hooks): dispatch ordering, forced skill loading + JSONL audit, artifact/verdict/commit verification, state protection, complete handoff of recorded inputs.
@@ -49,7 +49,11 @@ Enter these commands in Claude Code:
 ```text
 /plugin marketplace add SebastienDegodez/skraft-plugin
 /plugin install skraft
+/plugin install skraft-backlog
 ```
+
+`skraft` is the engineering pipeline. `skraft-backlog` (optional) triages GitHub issues and
+refines them into the stories the pipeline reads; see its [README](plugins/skraft-backlog/README.md).
 
 If Windows fails during `/plugin marketplace add` with `fatal: unable to checkout working tree`,
 clone SKRAFT to a short local path, then add that checkout as marketplace instead:

@@ -80,7 +80,7 @@ Test names, variables, and assertions use business vocabulary
 
 Zero surviving mutants in Domain and Application (equivalent mutants documented if accepted).
 
-Load the [`mutation-testing`](../mutation-testing/SKILL.md) skill for full workflow.
+Load the `mutation-testing` skill for full workflow.
 
 ### C9 — Conventional commit format
 

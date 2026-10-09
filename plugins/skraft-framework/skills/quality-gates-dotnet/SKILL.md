@@ -24,7 +24,10 @@ If multiple stacks coexist, run each adapter and concatenate gate entries.
 ```
 
 Throughout this file, `$EV` is shorthand for that directory — one per story, never shared.
-Create it before any redirect. Log references drop the `.copilot-tracking/skraft-plans/{projectSlug}/`
+`<skill>` is this skill's folder, the one holding this SKILL.md: every script below ships in
+`<skill>/scripts/`, never in the consumer repository. `capture.mjs` runs a command without a
+shell and writes `<name>.stdout` (stdout and stderr), `<name>.exit` and `<name>.stdout.sha256`
+into `$EV`, creating it; it exits with the command's code, in bash and PowerShell alike. Log references drop the `.copilot-tracking/skraft-plans/{projectSlug}/`
 prefix: `evidence/{date}/{story}/qg-tests.stdout`.
 
 ## G1 / G2 — Tests pass
@@ -34,13 +37,7 @@ filtering the produced TRX, OR run the acceptance project alone for G1 and the
 full suite for G2 (recommended on small repos).
 
 ```bash
-mkdir -p "$EV"
-dotnet test --nologo \
-  --logger "trx;LogFileName=qg-tests.trx" \
-  --results-directory "$EV" \
-  > "$EV/qg-tests.stdout" 2>&1
-echo $? > "$EV/qg-tests.exit"
-shasum -a 256 "$EV/qg-tests.stdout" | awk '{print $1}' > "$EV/qg-tests.stdout.sha256"
+node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-tests -- dotnet test --nologo --logger "trx;LogFileName=qg-tests.trx" --results-directory "$EV"
 ```
 
 Populate the contract:
@@ -49,7 +46,7 @@ Populate the contract:
 - `exit_code_ref` = `evidence/{date}/{story}/qg-tests.exit`
 - `stdout_ref` = `evidence/{date}/{story}/qg-tests.stdout`
 - `stdout_sha256` = contents of `qg-tests.stdout.sha256`
-- `stdout_tail` = `tail -n 40 "$EV/qg-tests.stdout"`
+- `stdout_tail` = the last 40 lines `capture.mjs` printed
 - `metrics.tests_total` / `_passed` / `_failed` parsed from the TRX `<ResultSummary outcome="..." />`
   attribute and `<Counters total="..." passed="..." failed="..." />`
 
@@ -58,10 +55,7 @@ Populate the contract:
 Implicit in `dotnet test` for most repos. If the team wants an explicit gate:
 
 ```bash
-dotnet build --nologo --no-incremental \
-  > "$EV/qg-build.stdout" 2>&1
-echo $? > "$EV/qg-build.exit"
-shasum -a 256 "$EV/qg-build.stdout" | awk '{print $1}' > "$EV/qg-build.stdout.sha256"
+node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-build -- dotnet build --nologo --no-incremental
 ```
 
 ## G4 — Static analysis
@@ -75,13 +69,7 @@ If the build is clean, G4 inherits its evidence from G3 and sets
 If the repo carries a `*.ArchitectureTests` project (NetArchTest / ArchUnitNET):
 
 ```bash
-dotnet test --nologo \
-  --filter "FullyQualifiedName~Architecture" \
-  --logger "trx;LogFileName=qg-arch.trx" \
-  --results-directory "$EV" \
-  > "$EV/qg-arch.stdout" 2>&1
-echo $? > "$EV/qg-arch.exit"
-shasum -a 256 "$EV/qg-arch.stdout" | awk '{print $1}' > "$EV/qg-arch.stdout.sha256"
+node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-arch -- dotnet test --nologo --filter "FullyQualifiedName~Architecture" --logger "trx;LogFileName=qg-arch.trx" --results-directory "$EV"
 ```
 
 If absent, mark G5 `status: "not_applicable"` with `rationale: "no architecture tests project"`.
@@ -94,12 +82,10 @@ discovers scope inputs, then delegates JSON generation and defaults to official
 `dotnet stryker init`; it does not hand-render Stryker's schema:
 
 ```bash
-bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/configure-mutation.sh" --root "$PWD"
+node "<skill>/scripts/configure-mutation.mjs" --root .
 ```
 
-The scripts ship with the plugin, never in the consumer repository: `$SKRAFT_PLUGIN_ROOT`
-is the plugin root the SessionStart hook exports and states in the session context; where
-the variable is empty, use that absolute path. The configure script writes:
+The configure script writes:
 
 - `stryker-config-core.json` — whole solution, Domain/Application source globs, 100.
 - `stryker-config-boundary.json` — whole solution, API/Infrastructure source globs, 80.
@@ -110,9 +96,7 @@ unambiguously, pass `--solution`. For a BFF/non-standard layout, never invent mi
 projects; pass explicit source globs for both scopes:
 
 ```bash
-bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/configure-mutation.sh" --root "$PWD" --solution Storefront.sln \
-  --core-mutate "**/Storefront/Core/**/*.cs" \
-  --boundary-mutate "**/Storefront/Adapters/**/*.cs"
+node "<skill>/scripts/configure-mutation.mjs" --root . --solution Storefront.sln --core-mutate "**/Storefront/Core/**/*.cs" --boundary-mutate "**/Storefront/Adapters/**/*.cs"
 ```
 
 Generation is idempotent. A differing existing config is preserved; `--force` is
@@ -128,8 +112,8 @@ tested mutants: a report with zero mutants, a mutant no test ran against, or a f
 with no tested mutant fails. The last stdout line states the score or the failure:
 
 ```bash
-bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-core.sh" --root "$PWD" --evidence "$EV" --since "$BASE"
-bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/mutation-boundary.sh" --root "$PWD" --evidence "$EV" --since "$BASE"
+node "<skill>/scripts/mutation-core.mjs" --root . --evidence "$EV" --since "$BASE"
+node "<skill>/scripts/mutation-boundary.mjs" --root . --evidence "$EV" --since "$BASE"
 ```
 
 `BASE` is `phaseHistory.DELIVER.baseSha` from `state.mjs get --field phaseHistory`. `--since`
@@ -169,7 +153,7 @@ dotnet stryker --config-file stryker-config-boundary.json
 ## G7 — No mocks in Domain/Application
 
 ```bash
-bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/no-mocks-in-core.sh" --root "$PWD" --evidence "$EV"
+node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence "$EV"
 ```
 
 The script scans every `*.Domain` and `*.Application` project at any depth, plus the
@@ -181,7 +165,7 @@ Populate G7 with `status: "pass"` only on exit 0; `stdout_ref` = `evidence/{date
 ## G11 — Line coverage of Domain and Application
 
 ```bash
-bash "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-dotnet/scripts/coverage-core.sh" --root "$PWD" --evidence "$EV"
+node "<skill>/scripts/coverage-core.mjs" --root . --evidence "$EV"
 ```
 
 The script runs the solution's tests once with the XPlat Code Coverage collector
@@ -203,14 +187,14 @@ each full message against the contract's G8 rules.
 For every TDD cycle, capture both snapshots when each commit lands:
 
 ```bash
-mkdir -p "$EV/snapshots"
 # at RED:
-git show HEAD:tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs \
-  > "$EV/snapshots/red-1-SomeTests.cs"
+node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name red-1-SomeTests.cs --file tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs
 # at GREEN (after the implementation commit):
-git show HEAD:tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs \
-  > "$EV/snapshots/green-1-SomeTests.cs"
+node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name green-1-SomeTests.cs --file tests/MonAssurance.UnitTests/Eligibilite/SomeTests.cs
 ```
+
+`snapshot.mjs` writes the exact bytes of `git show <rev>:<file>` (`--rev`, default `HEAD`) into
+`$EV/snapshots/`; a shell redirection would let PowerShell re-encode them.
 
 The producer records `red_commit`, `green_commit`, and the two snapshot paths in
 the contract. The lens diffs the two snapshots and FAILS G9 if any line was
@@ -223,14 +207,8 @@ For every TDD cycle, capture the failing run **at RED**, before the
 implementation lands. Run the G1/G2 test command narrowed to the cycle's test:
 
 ```bash
-mkdir -p "$EV"
 # at RED, for cycle {cycle} of story {story} — BEFORE writing the implementation:
-dotnet test --nologo \
-  --filter "FullyQualifiedName~SomeTests" \
-  > "$EV/qg-red-{cycle}.stdout" 2>&1
-echo $? > "$EV/qg-red-{cycle}.exit"
-shasum -a 256 "$EV/qg-red-{cycle}.stdout" | awk '{print $1}' \
-  > "$EV/qg-red-{cycle}.stdout.sha256"
+node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-red-{cycle} -- dotnet test --nologo --filter "FullyQualifiedName~SomeTests"
 ```
 
 This capture CANNOT be reconstructed afterwards: once the implementation is in,
@@ -254,19 +232,18 @@ G9 keeps the commit/snapshot job unchanged.
 
 ## Producer flow at the end of the story
 
-1. `mkdir -p "$EV/snapshots"`.
-2. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 core then boundary, G7, G11 —
-   each through its command or script, redirecting stdout and exit code into `$EV`.
-3. For each cycle, dump RED + GREEN snapshots from `git show`.
-4. For each cycle, check the G10 RED captures taken at RED time are present in `$EV`
+1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 core then boundary, G7, G11 —
+   each through `capture.mjs` or its script, which write stdout, exit code and hash into `$EV`.
+2. For each cycle, write the RED + GREEN snapshots with `snapshot.mjs`.
+3. For each cycle, check the G10 RED captures taken at RED time are present in `$EV`
    (`qg-red-{cycle}.stdout` / `.exit` / `.stdout.sha256`) with a non-zero exit. They are
    NOT re-runnable here — a missing capture is `status: "fail"`, never `not_applicable`.
-5. `repo_root_rev = git rev-parse HEAD` — the last work commit.
-6. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
+4. `repo_root_rev = git rev-parse HEAD` — the last work commit.
+5. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
    `git show --name-only --format= <sha>` per commit: every commit since DELIVER started.
-7. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v4).
-8. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
-9. `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
+6. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v4).
+7. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
+8. `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
    `"verdict": "pass"`; otherwise fix the gate or the log, never the verifier's input.
 
 If a tool is unavailable in the environment (no Stryker installed, no SDK), the

@@ -1,0 +1,43 @@
+{
+  "name": "skraft-backlog",
+  "version": "1.14.0",
+  "description": "skraft backlog — discover and triage GitHub issues, refine them into ready stories, and review each issue's refinement in a comment, from your editor or a GitHub Agentic Workflow.",
+  "author": {
+    "name": "SebastienDegodez",
+    "url": "https://github.com/SebastienDegodez"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "backlog",
+    "issue-triage",
+    "refinement",
+    "user-stories",
+    "definition-of-ready",
+    "invest",
+    "sprint-planning",
+    "github-issues",
+    "agentic-workflows",
+    "skills",
+    "agents"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SKRAFT Backlog",
+    "shortDescription": "Triage GitHub issues, refine them into ready stories, review a refinement in a comment.",
+    "longDescription": "skraft-backlog surfaces the GitHub issues worth working on, classifies them, and refines them into stories that clear the Definition of Ready: a specific persona, real domain examples, Given/When/Then acceptance criteria and a Fibonacci size. Each producer runs an independent lens review whose verdict a script computes. The same refinement can run in a GitHub Agentic Workflow that comments its proposal on new issues.",
+    "defaultPrompt": [
+      "Triage the open issues assigned to me.",
+      "Refine issue #42 into a ready story.",
+      "Review this issue's acceptance criteria."
+    ],
+    "developerName": "SebastienDegodez",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/SebastienDegodez/skraft-plugin"
+  }
+}

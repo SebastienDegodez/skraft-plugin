@@ -152,8 +152,8 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
   const enrichedById = new Map(enrichedAgents.map((agent) => [agent.id, agent]))
   const backlogDiscoverer = enrichedById.get('backlog-discoverer')
   const backlogPlanner = enrichedById.get('backlog-planner')
-  if (!backlogDiscoverer) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', "Required product preflight agent 'backlog-discoverer' is missing"))
-  if (!backlogPlanner) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', "Required product preflight agent 'backlog-planner' is missing"))
+  if (!backlogDiscoverer) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-backlog/com.github.copilot/agents', "Required product preflight agent 'backlog-discoverer' is missing"))
+  if (!backlogPlanner) findings.push(finding('error', 'PRODUCT_PREFLIGHT_AGENT_MISSING', 'plugins/skraft-backlog/com.github.copilot/agents', "Required product preflight agent 'backlog-planner' is missing"))
   if (!orchestrator) findings.push(finding('error', 'ENGINEERING_ORCHESTRATOR_MISSING', 'plugins/skraft-framework/com.github.copilot/agents', 'No agent declares the engineering phase order'))
   for (const agent of [backlogDiscoverer, backlogPlanner].filter(Boolean)) {
     if (!agent.userInvocable || !agent.root) {
