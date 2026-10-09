@@ -13,6 +13,8 @@ on:
       - 'plugins/skraft-framework/.codex-plugin/**'
       - 'scripts/project-plugin-adapters.mjs'
       - 'scripts/dotnet-quality-gates-smoke.mjs'
+      - 'scripts/python-quality-gates-smoke.mjs'
+      - 'scripts/lib/gh-annotations-reporter.mjs'
       - 'scripts/lib/agent-*.mjs'
       - 'scripts/lib/native-claude-agent.mjs'
       - 'plugins/skraft-framework/.agent-sync.json'
@@ -37,6 +39,8 @@ on:
       - 'plugins/skraft-framework/.codex-plugin/**'
       - 'scripts/project-plugin-adapters.mjs'
       - 'scripts/dotnet-quality-gates-smoke.mjs'
+      - 'scripts/python-quality-gates-smoke.mjs'
+      - 'scripts/lib/gh-annotations-reporter.mjs'
       - 'scripts/lib/agent-*.mjs'
       - 'scripts/lib/native-claude-agent.mjs'
       - 'plugins/skraft-framework/.agent-sync.json'
@@ -154,6 +158,40 @@ jobs:
 
       - name: Run the gate scripts on a real solution
         run: node scripts/dotnet-quality-gates-smoke.mjs
+
+  python-gates:
+    name: Python quality-gate scripts (${{ matrix.os }}, real cosmic-ray)
+    # The Python gate scripts run on the developer's machine: Linux, macOS or Windows.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+
+      - name: Run the Python gate suites
+        shell: bash
+        run: >-
+          node --test
+          --test-reporter=spec --test-reporter-destination=stdout
+          --test-reporter=./scripts/lib/gh-annotations-reporter.mjs --test-reporter-destination=stdout
+          "tests/skraft-framework/quality-gates/quality-gates-python-*.test.mjs"
+
+      - name: Run the gate scripts on a real project
+        if: always()
+        run: node scripts/python-quality-gates-smoke.mjs
 
   mutation:
     name: Mutation Testing

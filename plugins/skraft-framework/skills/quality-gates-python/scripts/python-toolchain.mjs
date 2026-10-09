@@ -35,11 +35,18 @@ export function resolvePython(root, explicit) {
 
 export function pythonEnv(python) {
 	const bin = dirname(python)
-	return { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH ?? ''}`, VIRTUAL_ENV: dirname(bin), PYTHONDONTWRITEBYTECODE: '1' }
+	const env = { ...process.env, VIRTUAL_ENV: dirname(bin), PYTHONDONTWRITEBYTECODE: '1' }
+	// Windows names the variable `Path`; a second `PATH` key would be ignored by the child.
+	const key = Object.keys(env).find((name) => name.toUpperCase() === 'PATH') ?? 'PATH'
+	env[key] = `${bin}${delimiter}${env[key] ?? ''}`
+	return env
 }
 
+// A .mjs interpreter path runs through this Node: the tests' fake Python, on every OS.
+export const spawnable = (command, args) => (/\.(mjs|cjs)$/.test(command) ? [process.execPath, [command, ...args]] : [command, args])
+
 export function runPython(python, args, { cwd }) {
-	return execFileSync(python, args, { cwd, env: pythonEnv(python), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+	return execFileSync(...spawnable(python, args), { cwd, env: pythonEnv(python), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
 }
 
 export function pythonVersion(python, root) {
@@ -92,7 +99,8 @@ export async function capture(command, args, { cwd, env, stdout, stderr }) {
 	try {
 		err = stderr ? await open(stderr, 'wx') : out
 		return await new Promise((done) => {
-			const child = spawn(command, args, { cwd, env, shell: false, stdio: ['ignore', out.fd, err.fd] })
+			const [executable, argv] = spawnable(command, args)
+			const child = spawn(executable, argv, { cwd, env, shell: false, stdio: ['ignore', out.fd, err.fd] })
 			child.once('error', (error) => done({ code: null, signal: null, error: error.message }))
 			child.once('close', (code, signal) => done({ code, signal }))
 		})
