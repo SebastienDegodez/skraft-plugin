@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.13.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.12.0...v1.13.0) (2026-10-09)
+
+### ✨ Features
+
+* **skills:** clean-architecture-react, with its Vally spec and ESLint guard ([#201](https://github.com/SebastienDegodez/skraft-plugin/issues/201)) ([902d3e6](https://github.com/SebastienDegodez/skraft-plugin/commit/902d3e68b4a3d549b3eaff9b55dc6d929ddb61be))
+
 ## [1.12.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.11.0...v1.12.0) (2026-10-09)
 
 ### ✨ Features
