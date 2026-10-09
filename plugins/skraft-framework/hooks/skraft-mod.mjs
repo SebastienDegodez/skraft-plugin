@@ -139,6 +139,8 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
 
   return {
     config,
+    // 'code': the DELIVER review runs as code (RunReview) instead of the reviewer agent
+    reviewMode: await $.env.get('SKRAFT_REVIEW_MODE'),
     stateReader: createFileStateReader({ files, trackingRoot, now }),
     // StateWriter: a backup per phase change, read-back check (no rename on $.fs)
     stateWriter: createSnapshotStateWriter({ files, trackingRoot, now }),

@@ -61,6 +61,21 @@ export const evidenceOf = (outcome, rev) => {
   return { [`${dir}/qg-s1.json`]: JSON.stringify(log), ...files }
 }
 
+// A lens's answer: its YAML document in a fenced block, as its descriptor's Output asks.
+export const lensDocument = (lens, { verdict = 'pass', defects = [] } = {}) => [
+  '```yaml',
+  `lens: ${lens}`,
+  `verdict: ${verdict}`,
+  ...(defects.length === 0 ? ['defects: []'] : ['defects:', ...defects.flatMap((d, i) => [
+    `  - id: "D${i + 1}"`,
+    `    gate: "${d.gate ?? 'G7'}"`,
+    `    severity: ${d.severity}`,
+    `    location: "${d.location ?? 'tests/A.cs:1'}"`,
+    `    description: "${d.description}"`,
+  ])]),
+  '```',
+].join('\n')
+
 export const ADR_INDEX_HEADER = '| ADR | Title | Status | Chosen | Decision (1 line) | Ratified by | Date |\n|---|---|---|---|---|---|---|\n'
 
 // options:
@@ -81,6 +96,11 @@ export const ADR_INDEX_HEADER = '| ADR | Title | Status | Chosen | Decision (1 l
 //   reportData:  { forecast?, outcome? }  report data the DISTILL / DELIVER specialist writes
 //                                       where its reporting addendum says (default: none)
 //   transport:   'up' | 'down'          the remote side of publication (default 'up')
+//   reviewMode:  'agent' | 'code'       RunPipeline's review mode (default: none, i.e. agent)
+//   lensAnswers: { [lens]: (string|null)[] }  what a review lens answers, in order (default:
+//                                       a passing document); null: no answer
+//   diff, nameStatus: string            SourceControl.diff / changedFiles of a review
+//   unavailable: string[]               agents the host does not have
 export const createFakeHost = (options = {}) => {
   const tracking = new Map()
   const states = new Map(Object.entries(options.states ?? {}))
@@ -116,8 +136,14 @@ export const createFakeHost = (options = {}) => {
   }
 
   // The simulated LLM.
+  const lensQueues = Object.fromEntries(Object.entries(options.lensAnswers ?? {}).map(([k, v]) => [k, [...v]]))
   const behave = ({ agent, role, phase, prompt }, slug) => {
     counters[agent] = (counters[agent] ?? 0) + 1
+    if (role === 'lens') {
+      const lens = agent.replace(/-lens$/, '')
+      const answer = take(lensQueues[lens], lensDocument(lens))
+      return answer === null ? { ok: false, text: '' } : { ok: true, text: answer }
+    }
     if (role === 'reviewer') {
       const out = prompt.match(/`\.copilot-tracking\/skraft-plans\/[^/]+\/(reviews\/[^`]+)`/)
       const body = take(reviewQueues[phase], null) ?? review(take(verdictQueues[phase], 'APPROVED'))
@@ -147,6 +173,7 @@ export const createFakeHost = (options = {}) => {
   // Every driven port of RunPipeline (ports/infrastructure/), in memory.
   const dependencies = (slug) => ({
     config: CONFIG,
+    ...(options.reviewMode ? { reviewMode: options.reviewMode } : {}),
     stateReader: {
       read: async (s) => {
         if (!states.has(s)) throw Object.assign(new Error('absent'), { code: 'ENOENT' })
@@ -184,6 +211,8 @@ export const createFakeHost = (options = {}) => {
       commit: async (sha) => (/^sha\d+$/.test(sha ?? '') ? { exists: true, subject: 'feat(checkout): pay', message: 'feat(checkout): pay\n\nSigned-off-by: E <e@x>', files: [] } : { exists: false }),
       range: async (base, rev) => { ranges.push({ base, rev }); return [] },
       show: async () => null,
+      diff: async () => options.diff ?? 'diff --git a/src/Checkout/Payment.cs b/src/Checkout/Payment.cs\n+public sealed class Payment {}\n',
+      changedFiles: async () => options.nameStatus ?? 'M\tsrc/Checkout/Payment.cs\n',
       listRecent: async (count) => (options.commits ?? []).slice(0, count),
       currentBranch: async () => options.branch ?? 'feature/checkout',
       remoteUrl: async () => options.remote ?? 'https://github.com/acme/shop.git',
@@ -233,9 +262,10 @@ export const createFakeHost = (options = {}) => {
     agentRunner: {
       run: async (dispatch) => {
         dispatches.push(dispatch)
-        behave(dispatch, slug)
+        if ((options.unavailable ?? []).includes(dispatch.agent)) return { ok: false, unavailable: true, text: '', error: `agent "${dispatch.agent}" is not available` }
+        const answer = behave(dispatch, slug) ?? { ok: true, text: 'done' }
         // what a Copilot host reports for one dispatch (options.usage: false for a host that reports none)
-        return { ok: true, text: 'done', ...(options.usage === false ? {} : { usage: { model: 'fake-model', requests: 2, inputTokens: 12000, outputTokens: 1500, cacheReadTokens: 8000, cacheWriteTokens: 0, credits: 1.25 } }) }
+        return { ...answer, ...(options.usage === false ? {} : { usage: { model: 'fake-model', requests: 2, inputTokens: 12000, outputTokens: 1500, cacheReadTokens: 8000, cacheWriteTokens: 0, credits: 1.25 } }) }
       },
     },
     humanInteraction: {

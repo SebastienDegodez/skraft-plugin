@@ -20,7 +20,8 @@ function stripComment(line) {
   let inDouble = false
   for (let i = 0; i < line.length; i++) {
     const c = line[i]
-    if (c === "'" && !inDouble) inSingle = !inSingle
+    if (c === '\\' && inDouble) i++ // an escaped character never closes the string
+    else if (c === "'" && !inDouble) inSingle = !inSingle
     else if (c === '"' && !inSingle) inDouble = !inDouble
     else if (c === '#' && !inSingle && !inDouble) {
       // Treat as a comment only at line start or after whitespace.
@@ -32,9 +33,11 @@ function stripComment(line) {
 
 function unquote(s) {
   const t = s.trim()
-  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
-    return t.slice(1, -1)
+  if (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) {
+    // A double-quoted scalar carries JSON-compatible escapes (\" \\ \n \t \uXXXX).
+    try { return JSON.parse(t) } catch { return t.slice(1, -1) }
   }
+  if (t.length >= 2 && t.startsWith("'") && t.endsWith("'")) return t.slice(1, -1).replace(/''/g, "'")
   return t
 }
 
@@ -59,8 +62,11 @@ function splitFlow(inner) {
   let buf = ''
   let inSingle = false
   let inDouble = false
+  let escaped = false
   for (const c of inner) {
-    if (c === "'" && !inDouble) inSingle = !inSingle
+    if (escaped) escaped = false
+    else if (c === '\\' && inDouble) escaped = true
+    else if (c === "'" && !inDouble) inSingle = !inSingle
     else if (c === '"' && !inSingle) inDouble = !inDouble
     if (c === ',' && !inSingle && !inDouble) {
       out.push(buf.trim())
@@ -79,7 +85,8 @@ function splitKeyValue(content) {
   let inDouble = false
   for (let i = 0; i < content.length; i++) {
     const c = content[i]
-    if (c === "'" && !inDouble) inSingle = !inSingle
+    if (c === '\\' && inDouble) i++
+    else if (c === "'" && !inDouble) inSingle = !inSingle
     else if (c === '"' && !inSingle) inDouble = !inDouble
     else if (c === ':' && !inSingle && !inDouble) {
       const after = content.slice(i + 1)
@@ -158,10 +165,16 @@ function assignInto(node, { key, value }, stack, indent) {
   if (value === '') {
     const child = {}
     node[key] = child
-    stack.push({ indent, node: child, container: node, key })
+    stack.push({ indent, node: child, container: node, key, bareKey: true })
   } else {
     node[key] = coerce(value)
   }
+}
+
+/** True when `frame` was opened by a bare key at `indent` and holds nothing, or only a list. */
+function holdsListOf(frame, indent) {
+  if (!frame.bareKey || frame.indent !== indent) return false
+  return Array.isArray(frame.node) || Object.keys(frame.node).length === 0
 }
 
 /**
@@ -186,8 +199,10 @@ export function parseYaml(text) {
     const isItem = content.startsWith('- ') || content === '-'
     if (isItem) content = content.replace(/^-\s*/, '')
 
-    // Pop until the top frame is a strict parent of this line.
-    while (stack.length > 1 && stack[stack.length - 1].indent >= indent) stack.pop()
+    // Pop until the top frame is a strict parent of this line. A `- ` item at the indent
+    // of a bare key that holds nothing but a list yet belongs to that key (the indentless
+    // sequence `key:` / `- item` many YAML writers emit).
+    while (stack.length > 1 && stack[stack.length - 1].indent >= indent && !(isItem && holdsListOf(stack[stack.length - 1], indent))) stack.pop()
     const parent = stack[stack.length - 1]
 
     if (isItem) {

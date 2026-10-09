@@ -25,6 +25,8 @@ export const createGitSourceControl = ({ git }) => {
       }
     },
     range: async (base, rev) => (isSha(base) && isSha(rev) ? lines(await git(['rev-list', '--no-merges', `${base}..${rev}`])) : []),
+    diff: async (base, rev) => (isSha(base) && isSha(rev) ? git(['diff', `${base}..${rev}`]) : null),
+    changedFiles: async (base, rev) => (isSha(base) && isSha(rev) ? git(['diff', '--name-status', `${base}..${rev}`]) : null),
     show: async (sha, path) => (isSha(sha) && typeof path === 'string' && path.length > 0 ? git(['show', `${sha}:${path}`]) : null),
     currentBranch: async () => (await git(['symbolic-ref', '--quiet', '--short', 'HEAD']))?.trim() || null,
     remoteUrl: async () => (await git(['remote', 'get-url', 'origin']))?.trim() || null,
