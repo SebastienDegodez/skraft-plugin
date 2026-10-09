@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.12.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.11.0...v1.12.0) (2026-10-09)
+
+### ✨ Features
+
+* **skills:** group each layer by feature in the .NET, Java and Python skills ([#200](https://github.com/SebastienDegodez/skraft-plugin/issues/200)) ([6009e76](https://github.com/SebastienDegodez/skraft-plugin/commit/6009e769c017935c30d9f5ed634f1ec79bbe33ba))
+
 ## [1.11.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.10.2...v1.11.0) (2026-10-08)
 
 ### ✨ Features
