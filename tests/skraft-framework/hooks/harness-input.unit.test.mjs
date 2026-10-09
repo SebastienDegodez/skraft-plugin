@@ -186,3 +186,39 @@ test('harness-input: explicit guard signals and camelCase arguments win over nat
   assert.equal(explicit.requestedAgent, 'explicit-agent')
   assert.equal(explicit.filePath, 'explicit-path')
 })
+
+// Copilot CLI batches the tool calls of a turn: `{ sessionId, cwd, toolCalls: [{ id, name, args }] }`,
+// with no root toolName / toolArgs / agentName (payload recorded from a Copilot session log).
+test('harness-input: a Copilot toolCalls batch becomes framework tool calls', () => {
+  const payload = fromHarnessInput({
+    sessionId: 'toolu_child',
+    cwd: '/repo',
+    toolCalls: [
+      { id: 'toolu_1', name: 'create', args: '{"path":"/repo/src/Orders/Order.cs","file_text":"class Order {}"}' },
+      { id: 'toolu_2', name: 'edit', args: { path: 'tests/OrderTests.cs', old_str: 'a', new_str: 'b' } },
+      { id: 'toolu_3', name: 'bash', args: '{"command":"dotnet test"}' },
+      { id: 'toolu_4', name: 'task', args: '{"subagent_type":"software-engineer"}' },
+    ],
+  }, { env: {} })
+
+  assert.equal(payload.harness, 'copilot')
+  assert.equal(payload.toolName, undefined, 'a batch has no root tool')
+  assert.deepEqual(payload.toolCalls, [
+    { toolCallId: 'toolu_1', toolName: 'Write', toolInput: { path: '/repo/src/Orders/Order.cs', file_text: 'class Order {}' }, filePath: '/repo/src/Orders/Order.cs' },
+    { toolCallId: 'toolu_2', toolName: 'Edit', toolInput: { path: 'tests/OrderTests.cs', old_str: 'a', new_str: 'b' }, filePath: 'tests/OrderTests.cs' },
+    { toolCallId: 'toolu_3', toolName: 'Bash', toolInput: { command: 'dotnet test' } },
+    { toolCallId: 'toolu_4', toolName: 'Agent', toolInput: { subagent_type: 'software-engineer' }, requestedAgent: 'software-engineer' },
+  ])
+})
+
+test('harness-input: malformed toolCalls entries are dropped, never thrown on', () => {
+  const payload = fromHarnessInput({ toolCalls: [null, 'bash', { name: 'bash', args: '{ not json' }] }, { env: {} })
+  assert.deepEqual(payload.toolCalls, [{ toolName: 'Bash' }])
+  assert.equal('toolCalls' in fromHarnessInput({ toolName: 'bash' }, { env: {} }), false)
+})
+
+test('harness-input: name and args are read on a batch entry only, never on the payload root', () => {
+  const payload = fromHarnessInput({ name: 'bash', args: '{"command":"rm -rf src/"}' }, { env: {} })
+  assert.equal(payload.toolName, undefined)
+  assert.equal(payload.toolInput, undefined)
+})

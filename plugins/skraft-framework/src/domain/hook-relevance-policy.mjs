@@ -25,10 +25,17 @@ const readsSkillFile = (payload) =>
 
 // True when the hook must run its guards for this event; false when no guard can act on
 // it and the entry point may return before importing anything.
+const callRelevant = (event, call) => {
+  if (isText(call.requestedAgent)) return true
+  if (event === 'PreToolUse') return PRE_TOOL_USE_TOOLS.has(call.toolName)
+  return call.toolName === 'Agent' || readsSkillFile(call)
+}
+
+// A batched payload (Copilot `toolCalls`) is relevant when any of its calls is.
 export const isHookRelevant = ({ event, payload = {}, raw = '' } = {}) => {
   if (event !== 'PreToolUse' && event !== 'PostToolUse') return true
   if (typeof raw === 'string' && TRACKED_STATE_WRITE_RE.test(raw)) return true
-  if (isText(payload.requestedAgent)) return true
-  if (event === 'PreToolUse') return PRE_TOOL_USE_TOOLS.has(payload.toolName)
-  return payload.toolName === 'Agent' || readsSkillFile(payload)
+  if (callRelevant(event, payload)) return true
+  return Array.isArray(payload.toolCalls)
+    && payload.toolCalls.some((call) => call && typeof call === 'object' && callRelevant(event, call))
 }

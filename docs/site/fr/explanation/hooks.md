@@ -93,6 +93,7 @@ plugins/skraft-framework/src/
     infrastructure/      ← implémentations sortantes
       jsonl-audit-writer.mjs   append-only, jamais truncate
       audit-log-resolver.mjs   un journal d'audit par projet, dans son répertoire git
+      copilot-subagent-registry.mjs   session de sous-agent Copilot → nom d'agent (G8)
       json-state-reader.mjs, state/json-state-writer.mjs
       …
 
@@ -193,6 +194,14 @@ l'orchestrateur de coller le bloc imprimé par
 `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" handoff --agent "<agent>"`. La garde ne
 s'applique pas aux lentilles, workers, agents produit, ni au spécialiste re-dispatché après
 une phase DESIGN approuvée pour la ratification des ADR.
+
+G8 a besoin du nom de l'agent qui écrit. Copilot CLI ne l'envoie pas dans le `preToolUse`
+d'un sous-agent : le payload ne porte que le `sessionId` propre au sous-agent et un lot
+`toolCalls`. `SubagentStart`, seul événement qui porte le `transcriptPath` parent, enregistre
+ce transcript à côté du journal d'audit. Quand G8 refuserait une écriture sans nom, le hook
+lit dans ce transcript l'événement `subagent.started` dont l'`agentId` correspond au
+`sessionId`, puis réévalue l'écriture sous le nom de cet agent. Chaque appel d'un lot
+`toolCalls` est gardé séparément ; un seul refus refuse tout le lot.
 
 ## Économie de tokens — l'angle des hooks
 

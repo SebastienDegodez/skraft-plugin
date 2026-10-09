@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { createHookService } from '../adapters/api/hooks/service-factory.mjs'
 import { toHarnessOutput } from '../adapters/api/hooks/harness-output.mjs'
 import { fromHarnessInput } from '../adapters/api/hooks/harness-input.mjs'
@@ -23,6 +23,11 @@ const clock = { now: () => new Date().toISOString() }
 // One audit log per project (SKRAFT_AUDIT_LOG, else the project's git directory), bound
 // once the payload says where the session runs; the plugin's logs until then.
 let auditWriter = createJsonlAuditWriter(resolveAuditLogPath({ cwd: process.cwd(), pluginRoot }))
+// Copilot sub-agent sessions -> agent names, kept beside the project's audit log.
+const subagentRegistry = async (auditLogPath) => {
+  const { createCopilotSubagentRegistry } = await import('../adapters/infrastructure/copilot-subagent-registry.mjs')
+  return createCopilotSubagentRegistry({ path: join(dirname(auditLogPath), 'copilot-subagents.json') })
+}
 
 
 // The session directory the harness reports (Claude Code and Copilot both send `cwd`);
@@ -33,7 +38,7 @@ const sessionCwd = (payload) =>
 // Each event loads only the services it routes to: a hook runs on every tool call, so
 // the modules of the other events are never imported.
 const SERVICES = {
-  PreToolUse: async ({ config, stateReader, trackingRoot }) => {
+  PreToolUse: async ({ config, stateReader, trackingRoot, auditLogPath }) => {
     const [
       { createPreToolUseService },
       { createPreToolUseSessionGuardService },
@@ -51,13 +56,13 @@ const SERVICES = {
     return {
       preToolUse: createPreToolUseCompositeService({
         dispatchGuard: createPreToolUseService({ stateReader, auditWriter, config, clock }),
-        sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
+        sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot), agentRegistry: await subagentRegistry(auditLogPath) }),
         provenanceGuard: createDispatchProvenanceService({ config, auditWriter, clock }),
         handoffGuard: createHandoffGuardService({ stateReader, auditWriter, config, clock }),
       }),
     }
   },
-  SubagentStart: async ({ config, stateReader }) => {
+  SubagentStart: async ({ config, stateReader, auditLogPath }) => {
     const [{ createSkillFileReader }, { createSubagentStartService }, { createDispatchJournal }] = await Promise.all([
       import('../adapters/infrastructure/skill-file-reader.mjs'),
       import('../application/subagent-start-service.mjs'),
@@ -65,7 +70,13 @@ const SERVICES = {
     ])
     const journal = createDispatchJournal({ auditWriter, stateReader, config, clock })
     const skillFileReader = createSkillFileReader({ pluginsRoot: pluginRoot })
-    return { subagentStart: journal.started(createSubagentStartService({ config, skillFileReader, auditWriter, clock })) }
+    const started = journal.started(createSubagentStartService({ config, skillFileReader, auditWriter, clock }))
+    // Copilot hands over the parent transcript only here; PreToolUse resolves its sub-agents from it.
+    const registry = await subagentRegistry(auditLogPath)
+    return { subagentStart: { handle: async (payload = {}) => {
+      if (payload.harness !== 'claude-code') await registry.remember({ transcriptPath: payload.transcriptPath })
+      return started.handle(payload)
+    } } }
   },
   SubagentStop: async ({ config, stateReader }) => {
     const [{ createJsonlTranscriptReader }, { createSubagentStopService }, { createDispatchJournal }] = await Promise.all([
@@ -83,7 +94,8 @@ const SERVICES = {
 }
 
 const compose = async (cwd, hookEvent) => {
-  auditWriter = createJsonlAuditWriter(resolveAuditLogPath({ cwd, pluginRoot }))
+  const auditLogPath = resolveAuditLogPath({ cwd, pluginRoot })
+  auditWriter = createJsonlAuditWriter(auditLogPath)
   // Same tracking-root resolution as cli/state.mjs (SKRAFT_TRACKING_ROOT → layout →
   // default namespaced), anchored on the harness session directory.
   const trackingRoot = resolveTrackingRoot({ cwd })
@@ -95,7 +107,7 @@ const compose = async (cwd, hookEvent) => {
   try { config = JSON.parse(await readFile(configPath, 'utf8')) }
   catch { /* fail-open: missing config means no mandatory skills, hooks still allow */ }
 
-  const services = SERVICES[hookEvent] ? await SERVICES[hookEvent]({ config, stateReader, trackingRoot }) : {}
+  const services = SERVICES[hookEvent] ? await SERVICES[hookEvent]({ config, stateReader, trackingRoot, auditLogPath }) : {}
   return { trackingRoot, hookService: createHookService(services) }
 }
 

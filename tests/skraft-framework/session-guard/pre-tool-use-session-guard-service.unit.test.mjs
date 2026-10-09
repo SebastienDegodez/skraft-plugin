@@ -107,3 +107,58 @@ test('a failing clock still stamps the audit entry', async () => {
   assert.equal(decision, 'deny')
   assert.match(entries[0].evaluatedAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
 })
+
+// Copilot names no agent on a sub-agent's tool call, only its session: the registry
+// resolves that session to the agent it runs.
+const registryGuard = async (payload, agentRegistry) => {
+  const entries = []
+  const service = createPreToolUseSessionGuardService({
+    stateReader: { read: async () => ({ currentPhase: 'DELIVER' }) },
+    auditWriter: { write: async (entry) => { entries.push(entry) } },
+    config: { ...CONFIG, agentAliases: { 'skraft:software-engineer': 'software-engineer' } },
+    clock: { now: () => NOW },
+    agentRegistry,
+  })
+  const result = await service.handle({ projectSlug: 'checkout', ...payload })
+  return { decision: result.decision, entries }
+}
+
+test('G8 lets an unnamed sub-agent session write when the registry resolves it to a DELIVER agent', async () => {
+  const asked = []
+  const registry = { agentNameOf: async (sessionId) => { asked.push(sessionId); return sessionId === 'child' ? 'skraft:software-engineer' : null } }
+
+  const engineer = await registryGuard({ sessionId: 'child', toolName: 'Write', filePath: 'src/Orders/Order.cs' }, registry)
+  assert.equal(engineer.decision, 'allow')
+  assert.equal(engineer.entries[0].agentName, 'skraft:software-engineer')
+  assert.equal(engineer.entries[0].code, 'CONFORMING')
+
+  const orchestrator = await registryGuard({ sessionId: 'parent', toolName: 'Write', filePath: 'src/Orders/Order.cs' }, registry)
+  assert.equal(orchestrator.decision, 'deny')
+  assert.equal(orchestrator.entries[0].agentName, null)
+  assert.deepEqual(asked, ['child', 'parent'])
+})
+
+test('G8 asks the registry only for an unnamed write it would deny', async () => {
+  const asked = []
+  const registry = { agentNameOf: async (sessionId) => { asked.push(sessionId); return 'software-engineer' } }
+
+  await registryGuard({ sessionId: 's', toolName: 'Write', filePath: 'docs/notes.md' }, registry)
+  await registryGuard({ sessionId: 's', agentName: 'software-engineer', toolName: 'Write', filePath: 'src/A.cs' }, registry)
+  const named = await registryGuard({ sessionId: 's', agentName: 'solution-architect', toolName: 'Write', filePath: 'src/A.cs' }, registry)
+  assert.equal(named.decision, 'deny', 'a named agent is never renamed by the registry')
+  assert.deepEqual(asked, [])
+})
+
+test('G8 still denies when the registry resolves nothing, an outsider, or fails', async () => {
+  const write = { sessionId: 's', toolName: 'Write', filePath: 'src/A.cs' }
+  for (const registry of [
+    undefined,
+    { agentNameOf: async () => null },
+    { agentNameOf: async () => 'solution-architect' },
+    { agentNameOf: async () => { throw new Error('boom') } },
+  ]) {
+    assert.equal((await registryGuard(write, registry)).decision, 'deny')
+  }
+  const noSession = await registryGuard({ toolName: 'Write', filePath: 'src/A.cs' }, { agentNameOf: async () => 'software-engineer' })
+  assert.equal(noSession.decision, 'deny')
+})

@@ -1,0 +1,26 @@
+{
+  "subagentStart": {
+    "sessionId": "0222dfae-1042-4c31-8df6-8253f208e47b",
+    "transcriptPath": "<events.jsonl>",
+    "agentName": "skraft:software-engineer",
+    "agentDisplayName": "Skraft - Software Engineer",
+    "agentDescription": "Delivers the slice outside-in.",
+    "timestamp": 1791556755433,
+    "cwd": "/repo"
+  },
+  "subagentPreToolUse": {
+    "sessionId": "toolu_014aGPtGfrsfxki2m5EBrg7V",
+    "cwd": "/repo",
+    "toolCalls": [
+      { "id": "toolu_01ES27dTPDCspGhmmkHprfVi", "name": "create", "args": "{\"path\":\"/repo/src/Orders/Order.cs\",\"file_text\":\"namespace Orders;\"}" },
+      { "id": "toolu_01WBndkP6CXK482YgNHwRVkg", "name": "edit", "args": "{\"path\":\"/repo/tests/Orders.Tests/OrderTests.cs\",\"old_str\":\"a\",\"new_str\":\"b\"}" }
+    ]
+  },
+  "orchestratorPreToolUse": {
+    "sessionId": "0222dfae-1042-4c31-8df6-8253f208e47b",
+    "cwd": "/repo",
+    "toolCalls": [
+      { "id": "toolu_01XzYMu97jSvQfdttMBb3E3C", "name": "create", "args": "{\"path\":\"/repo/src/Orders/Order.cs\",\"file_text\":\"namespace Orders;\"}" }
+    ]
+  }
+}

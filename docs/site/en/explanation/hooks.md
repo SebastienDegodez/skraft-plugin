@@ -91,6 +91,7 @@ plugins/skraft-framework/src/
     infrastructure/      ← outbound implementations
       jsonl-audit-writer.mjs   append-only, never truncates
       audit-log-resolver.mjs   one audit log per project, in its git directory
+      copilot-subagent-registry.mjs   Copilot sub-agent session → agent name (G8)
       json-state-reader.mjs, state/json-state-writer.mjs
       …
 
@@ -190,6 +191,14 @@ requires the previous review path. A denial tells the orchestrator to paste the 
 by `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" handoff --agent "<agent>"`. The guard is
 not applied to lenses, workers, product agents, or the specialist dispatched after an
 approved DESIGN phase for ADR ratification.
+
+G8 needs the name of the agent that writes. Copilot CLI does not send it on a sub-agent's
+`preToolUse`: the payload carries only the sub-agent's own `sessionId` and a `toolCalls`
+batch. `SubagentStart`, the one event that carries the parent `transcriptPath`, records that
+transcript next to the audit log. When G8 would refuse an unnamed write, the hook reads the
+`subagent.started` event whose `agentId` matches the `sessionId` from that transcript, then
+evaluates the write again under that agent's name. Each call in a `toolCalls` batch is
+guarded separately; one refusal refuses the whole batch.
 
 ## Token economy — the hook angle
 

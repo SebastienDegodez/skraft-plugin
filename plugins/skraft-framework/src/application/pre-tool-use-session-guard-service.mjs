@@ -56,10 +56,17 @@ const audit = async (auditWriter, entry) => {
   try { await auditWriter.write(entry) } catch { /* audit failure must never change the decision */ }
 }
 
-export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, config, clock, trackingDir }) => ({
+// A harness that names no agent on a sub-agent's tool call (Copilot) still names its
+// session: the registry resolves that session to the agent it runs. Never throws.
+const resolveAgentName = async (agentRegistry, sessionId) => {
+  if (!agentRegistry || typeof sessionId !== 'string' || sessionId.length === 0) return null
+  try { return (await agentRegistry.agentNameOf(sessionId)) ?? null } catch { return null }
+}
+
+export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, config, clock, trackingDir, agentRegistry }) => ({
   handle: async (payload = {}) => {
     const { command, filePath } = writeSignals(payload)
-    const agentName = payload.agentName ?? null
+    let agentName = payload.agentName ?? null
     const projectSlug = payload.projectSlug ?? null
     const evaluatedAt = safeNow(clock)
 
@@ -98,11 +105,16 @@ export const createPreToolUseSessionGuardService = ({ stateReader, auditWriter, 
       await record({ decision: 'ALLOW', code: 'UNCONFIGURED_DELIVER_AGENTS', reason: 'no monitored DELIVER agents configured; session guard fail-open' })
       return allow()
     }
-    const workspaceResult = guardWorkspaceWrite({
+    const evaluate = () => guardWorkspaceWrite({
       command, filePath, phase,
       agentName: canonicalAgentName(agentName, config) ?? null,
       deliverAgents
     })
+    let workspaceResult = evaluate()
+    if (isErr(workspaceResult) && agentName === null) {
+      agentName = await resolveAgentName(agentRegistry, payload.sessionId)
+      if (agentName !== null) workspaceResult = evaluate()
+    }
     if (isErr(workspaceResult)) {
       await record({ decision: 'DENY', code: workspaceResult.error.code, reason: workspaceResult.error.reason })
       return deny(workspaceResult.error.reason)
