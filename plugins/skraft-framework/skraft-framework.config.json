@@ -362,6 +362,10 @@
         "policy": "on-demand"
       },
       {
+        "name": "quality-gates-typescript",
+        "policy": "on-demand"
+      },
+      {
         "name": "resolving-stack-commands",
         "policy": "on-demand"
       },

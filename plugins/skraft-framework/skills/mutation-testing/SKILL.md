@@ -1,6 +1,6 @@
 ---
 name: mutation-testing
-description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing supported Stryker.NET, Node TAP StrykerJS or Python cosmic-ray results after the test baseline is green
+description: Use when entering COMMIT & VERIFY phase, killing surviving mutants, verifying test quality via mutation score, or analyzing supported Stryker.NET, Node TAP StrykerJS, TypeScript StrykerJS with the Vitest runner or Python cosmic-ray results after the test baseline is green
 ---
 
 # Mutation Testing
@@ -63,6 +63,16 @@ For a `pyproject.toml` project, load [quality-gates-python](../quality-gates-pyt
 the suite unmutated first and lists each survivor as `survived: <file>:<line> <operator>`.
 The only suppression is `# pragma: no mutate -- <reason>` on the mutated line; no
 `excluded-modules`, no filters, no threshold.
+
+## TypeScript / StrykerJS with Vitest
+
+For a TypeScript package tested with Vitest, load
+[quality-gates-typescript](../quality-gates-typescript/SKILL.md). `mutation-gate.mjs` runs one
+scope per call, core then boundary, from the checked-in `stryker.core.json` /
+`stryker.boundary.json`, with `--since <DELIVER baseSha>`; it runs Vitest unmutated first and
+lists each survivor as `survived: <file>:<line> <mutator>` or `no coverage: …`. The only
+suppression is `// Stryker disable next-line <mutator>: <reason>` above the mutated line; no
+negative `mutate` pattern, no ignorers, no threshold.
 
 ## Classify Survivors
 

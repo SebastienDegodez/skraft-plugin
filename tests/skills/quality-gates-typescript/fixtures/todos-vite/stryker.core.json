@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "mutate": [
+    "src/*/application/**/*.{ts,tsx}"
+  ],
+  "coverageAnalysis": "perTest"
+}

@@ -1,6 +1,6 @@
 ---
 name: quality-gates-javascript
-description: Use in a JavaScript/Node.js project when running its existing package tests or build scripts, when running StrykerJS mutation gates after a green baseline, or when judging whether a recorded JavaScript test or mutation result is enough to call delivery verified. Owns command resolution from checked-in package scripts, sequential core/boundary StrykerJS 9.6.1 TAP execution and fresh evidence. Not for explaining test code, frontend, TypeScript compilation, coverage enforcement, or other mutation runners.
+description: Use in a JavaScript/Node.js project when running its existing package tests or build scripts, when running StrykerJS mutation gates after a green baseline, or when judging whether a recorded JavaScript test or mutation result is enough to call delivery verified. Owns command resolution from checked-in package scripts, sequential core/boundary StrykerJS 9.6.1 TAP execution and fresh evidence. Not for explaining test code, TypeScript or Vitest packages (quality-gates-typescript), coverage enforcement, or other mutation runners.
 ---
 
 # JavaScript quality gates
