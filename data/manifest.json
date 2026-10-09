@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-09T06:56:35.976Z",
+  "generated": "2026-10-09T10:28:36.985Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -3964,7 +3964,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-202"
       ],
-      "mtime": 1791527794009.868
+      "mtime": 1791541713666.4158
     },
     {
       "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
@@ -3977,7 +3977,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-202"
       ],
-      "mtime": 1791527794038.8674
+      "mtime": 1791541713699.4155
     },
     {
       "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
@@ -3990,7 +3990,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-202"
       ],
-      "mtime": 1791527794069.8672
+      "mtime": 1791541713733.415
     },
     {
       "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
@@ -4003,7 +4003,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-202"
       ],
-      "mtime": 1791527794073.8672
+      "mtime": 1791541713769.6592
     },
     {
       "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
@@ -4016,7 +4016,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-202"
       ],
-      "mtime": 1791527794098.867
+      "mtime": 1791541713772.4148
     },
     {
       "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
@@ -4029,7 +4029,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-202"
       ],
-      "mtime": 1791527794132.323
+      "mtime": 1791541713802.6377
     },
     {
       "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
@@ -4042,7 +4042,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-202"
       ],
-      "mtime": 1791527794132.8665
+      "mtime": 1791541713803.4143
     },
     {
       "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
@@ -4055,7 +4055,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-202"
       ],
-      "mtime": 1791527794132.8665
+      "mtime": 1791541713839.414
     },
     {
       "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
@@ -4068,7 +4068,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-202"
       ],
-      "mtime": 1791527794160.8662
+      "mtime": 1791541713841.4138
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
@@ -4081,7 +4081,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-202"
       ],
-      "mtime": 1791527794223.8655
+      "mtime": 1791541713913.413
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
@@ -4094,7 +4094,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-202"
       ],
-      "mtime": 1791527794223.8655
+      "mtime": 1791541713914.413
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
@@ -4107,7 +4107,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-202"
       ],
-      "mtime": 1791527794223.8655
+      "mtime": 1791541713914.413
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
@@ -4120,7 +4120,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-202"
       ],
-      "mtime": 1791527794223.3674
+      "mtime": 1791541713914.413
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
@@ -4133,7 +4133,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-202"
       ],
-      "mtime": 1791527794223.8655
+      "mtime": 1791541713914.413
     },
     {
       "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
@@ -4146,7 +4146,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-202"
       ],
-      "mtime": 1791527794223.8655
+      "mtime": 1791541713914.413
     },
     {
       "id": "pr/202/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
@@ -4159,7 +4159,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-202"
       ],
-      "mtime": 1791527794224.8655
+      "mtime": 1791541713915.413
     },
     {
       "id": "pr/202/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
@@ -4172,7 +4172,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-202"
       ],
-      "mtime": 1791527794253.865
+      "mtime": 1791541713914.413
     },
     {
       "id": "pr/202/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
@@ -4185,7 +4185,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-202"
       ],
-      "mtime": 1791527794253.865
+      "mtime": 1791541713946.4128
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0",
@@ -4198,7 +4198,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794253.276
+      "mtime": 1791541713944.4128
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1",
@@ -4211,7 +4211,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794253.276
+      "mtime": 1791541713946.4128
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2",
@@ -4224,7 +4224,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794253.276
+      "mtime": 1791541713946.4128
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3",
@@ -4237,7 +4237,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794252.6023
+      "mtime": 1791541713947.5732
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4",
@@ -4250,7 +4250,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794253.276
+      "mtime": 1791541713947.5732
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0",
@@ -4263,7 +4263,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794282.8647
+      "mtime": 1791541713947.5732
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1",
@@ -4276,7 +4276,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794287.5068
+      "mtime": 1791541713987.226
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2",
@@ -4289,7 +4289,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794287.5068
+      "mtime": 1791541713983.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3",
@@ -4302,7 +4302,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794286.9463
+      "mtime": 1791541713988.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4",
@@ -4315,7 +4315,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794287.5068
+      "mtime": 1791541713987.226
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0",
@@ -4328,7 +4328,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794286.1838
+      "mtime": 1791541713988.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1",
@@ -4341,7 +4341,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794286.9463
+      "mtime": 1791541713989.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2",
@@ -4354,7 +4354,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794286.9463
+      "mtime": 1791541713987.226
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3",
@@ -4367,7 +4367,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794286.9463
+      "mtime": 1791541713988.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4",
@@ -4380,7 +4380,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794286.9463
+      "mtime": 1791541713988.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0",
@@ -4393,7 +4393,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794287.5068
+      "mtime": 1791541713988.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1",
@@ -4406,7 +4406,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794287.5068
+      "mtime": 1791541713988.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2",
@@ -4419,7 +4419,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794287.5068
+      "mtime": 1791541713989.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3",
@@ -4432,7 +4432,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794287.5068
+      "mtime": 1791541713989.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4",
@@ -4445,7 +4445,7 @@
         "decide-whether-the-recorded-result-is-enough-for-delivery",
         "pr-202"
       ],
-      "mtime": 1791527794312.1965
+      "mtime": 1791541713989.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0",
@@ -4458,7 +4458,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794312.1965
+      "mtime": 1791541713988.4124
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1",
@@ -4471,7 +4471,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794319.8643
+      "mtime": 1791541714000.412
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2",
@@ -4484,7 +4484,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794317.8643
+      "mtime": 1791541714015.412
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3",
@@ -4497,7 +4497,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794317.8643
+      "mtime": 1791541714016.6836
     },
     {
       "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4",
@@ -4510,7 +4510,7 @@
         "explain-the-member-pricing-assertion-without-starting-verification",
         "pr-202"
       ],
-      "mtime": 1791527794317.8643
+      "mtime": 1791541714018.7856
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0",
@@ -4523,7 +4523,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794319.8643
+      "mtime": 1791541714025.4119
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1",
@@ -4536,7 +4536,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794319.8643
+      "mtime": 1791541714019.4119
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2",
@@ -4549,7 +4549,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794320.8643
+      "mtime": 1791541714018.7856
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3",
@@ -4562,7 +4562,7 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794320.8643
+      "mtime": 1791541714017.4119
     },
     {
       "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4",
@@ -4575,7 +4575,397 @@
         "run-the-existing-package-tests-without-expanding-the-work",
         "pr-202"
       ],
-      "mtime": 1791527794320.8643
+      "mtime": 1791541714018.7856
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run0",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (baseline, run 0)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714018.7856
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run1",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (baseline, run 1)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714026.4119
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run2",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (baseline, run 2)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714026.4119
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run3",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (baseline, run 3)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714026.4119
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run4",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (baseline, run 4)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714026.4119
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run0",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (baseline, run 0)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714018.7856
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run1",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (baseline, run 1)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714025.4119
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run2",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (baseline, run 2)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714025.4119
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run3",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (baseline, run 3)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714025.4119
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run4",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (baseline, run 4)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714025.4119
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run0",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (baseline, run 0)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714051.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run1",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (baseline, run 1)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714054.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run2",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (baseline, run 2)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714053.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run3",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (baseline, run 3)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714053.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run4",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (baseline, run 4)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "baseline",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714053.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run0",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (skilled, run 0)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714057.428
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run1",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (skilled, run 1)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run2",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (skilled, run 2)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run3",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (skilled, run 3)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run4",
+      "name": "quality-gates-typescript / TypeScript front end: bring the application code to the mutation bar (skilled, run 4)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-bring-the-application-code-to-the-mutation-bar--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-bring-the-application-code-to-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run0",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (skilled, run 0)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714057.428
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run1",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (skilled, run 1)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run2",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (skilled, run 2)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run3",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (skilled, run 3)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run4",
+      "name": "quality-gates-typescript / TypeScript front end: does the application code meet the mutation bar (skilled, run 4)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-does-the-application-code-meet-the-mutation-bar--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-does-the-application-code-meet-the-mutation-bar",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run0",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (skilled, run 0)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714056.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run1",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (skilled, run 1)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run2",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (skilled, run 2)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.404
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run3",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (skilled, run 3)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714058.4116
+    },
+    {
+      "id": "pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run4",
+      "name": "quality-gates-typescript / TypeScript front end: mutation testing on a red suite (skilled, run 4)",
+      "url": "sessions/pr/202/quality-gates-typescript/typescript-front-end-mutation-testing-on-a-red-suite--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-typescript",
+        "skilled",
+        "typescript-front-end-mutation-testing-on-a-red-suite",
+        "pr-202"
+      ],
+      "mtime": 1791541714081.4114
     }
   ]
 }
