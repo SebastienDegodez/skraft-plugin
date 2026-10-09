@@ -1,17 +1,23 @@
-// Unit — the PreToolUse session guard service around the pure G7 policy: which payload
-// fields it reads as a write and what it writes to the audit log.
+// Unit — the PreToolUse session guard service around the pure G7/G8 policy: which payload
+// fields it reads as a write, whom it names the orchestrator, and what it audits.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createPreToolUseSessionGuardService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs'
 
 const NOW = '2026-09-24T08:00:00.000Z'
 const STATE = '.copilot-tracking/skraft-plans/checkout/state.json'
+const CONFIG = {
+  phaseAgents: { DELIVER: { specialist: 'Skraft - Software Engineer', reviewer: null } },
+  agentDispatchers: { 'Skraft - Software Engineer': 'Skraft - Orchestrator' },
+  agentAliases: { 'skraft-orchestrator': 'Skraft - Orchestrator', 'software-engineer': 'Skraft - Software Engineer' },
+}
 
 const guard = async (payload, { clock = { now: () => NOW } } = {}) => {
   const entries = []
   const service = createPreToolUseSessionGuardService({
     auditWriter: { write: async (entry) => { entries.push(entry) } },
     clock,
+    config: CONFIG,
   })
   const result = await service.handle({ projectSlug: 'checkout', ...payload })
   return { decision: result.decision, entries }
@@ -35,8 +41,19 @@ test('only a Bash call carries a shell command', async () => {
   assert.equal(malformed.decision, 'allow', 'a Bash payload without a string command has nothing to judge')
 })
 
-test('a workspace write is allowed whoever writes it, and audited only inside a pipeline', async () => {
-  for (const agentName of [undefined, 'skraft:software-engineer', 'Skraft - Orchestrator']) {
+test('G8 refuses a workspace write by the orchestrator, under any of its names', async () => {
+  for (const agentName of ['skraft:skraft-orchestrator', 'skraft-orchestrator', 'Skraft - Orchestrator']) {
+    const { decision, entries } = await guard({ agentName, toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
+    assert.equal(decision, 'deny', agentName)
+    assert.deepEqual(entries.map(({ decision, code, agentName: name }) => ({ decision, code, name })),
+      [{ decision: 'DENY', code: 'ORCHESTRATOR_WRITE_FORBIDDEN', name: agentName }])
+  }
+  const outside = await guard({ projectSlug: undefined, agentName: 'skraft-orchestrator', toolName: 'Bash', toolInput: { command: 'rm tests/a.test.mjs' } })
+  assert.equal(outside.decision, 'deny', 'the orchestrator never writes the workspace, pipeline or not')
+})
+
+test('G8 lets an unnamed caller or a sub-agent write the workspace, audited only inside a pipeline', async () => {
+  for (const agentName of [undefined, 'skraft:software-engineer']) {
     const { decision, entries } = await guard({ agentName, toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
     assert.equal(decision, 'allow')
     assert.deepEqual(entries.map(({ decision, code }) => ({ decision, code })), [{ decision: 'ALLOW', code: 'CONFORMING' }])
@@ -44,6 +61,12 @@ test('a workspace write is allowed whoever writes it, and audited only inside a 
   const outside = await guard({ projectSlug: undefined, toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
   assert.equal(outside.decision, 'allow')
   assert.deepEqual(outside.entries, [])
+})
+
+test('G8 names no orchestrator without a config', async () => {
+  const service = createPreToolUseSessionGuardService({ auditWriter: { write: async () => {} }, clock: { now: () => NOW } })
+  const result = await service.handle({ agentName: 'skraft-orchestrator', toolName: 'Write', toolInput: { filePath: 'src/a.mjs' } })
+  assert.equal(result.decision, 'allow')
 })
 
 test('G7 denies without an active pipeline and records the caller', async () => {

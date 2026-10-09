@@ -68,7 +68,7 @@ plugins/skraft-framework/src/
     pipeline-policy.mjs        ordre de dispatch, provenance, continuation (G1, G6)
     skill-policy.mjs           skills obligatoires/on-demand, chargements lus dans un transcript (G2, G3)
     phase-gate-policy.mjs      règles de clôture de phase (G4, G5)
-    session-guard-policy.mjs   protection de l'état suivi (G7)
+    session-guard-policy.mjs   protection de l'état suivi, écritures orchestrateur (G7, G8)
     handoff-policy.mjs         complétude du handoff de dispatch (G9)
     state-machine.mjs          transitions qu'applique le CLI d'état
     result.mjs, value-objects.mjs, …
@@ -78,7 +78,7 @@ plugins/skraft-framework/src/
     infrastructure/      interfaces sortantes (audit, état, transcript…)
 
   application/           ← un service par préoccupation de hook
-    pre-tool-use-composite.mjs   décisions G1, provenance et G7/G9
+    pre-tool-use-composite.mjs   décisions G1, provenance et G7/G8/G9
     subagent-start-service.mjs   G2
     subagent-stop-service.mjs    G3
     post-tool-use-service.mjs    trace G3, G6
@@ -172,6 +172,7 @@ Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après
 | G5 verdict et commit DELIVER | CLI d'état, à la clôture de phase | Fail-closed | Pas un hook |
 | G6 continuation | Hook `PostToolUse` | Fail-open | Aucune |
 | G7 état suivi | Hook `PreToolUse` | Fail-closed | Dernier passage enregistré : Copilot CLI 1.0.83 a refusé une écriture shell |
+| G8 écritures de l'orchestrateur | Hook `PreToolUse` | Fail-open si l'appelant n'est pas nommé | Aucune |
 | G9 handoff | Hook `PreToolUse` sur dispatch d'agent de phase | Fail-open si l'état est illisible ou en erreur interne | Aucune |
 
 Chaque garde est couverte par des tests unitaires et d'acceptation. Une preuve en session
@@ -193,13 +194,13 @@ l'orchestrateur de coller le bloc imprimé par
 s'applique pas aux lentilles, workers, agents produit, ni au spécialiste re-dispatché après
 une phase DESIGN approuvée pour la ratification des ADR.
 
-Il n'y a pas de hook G8. Un ancien G8 réservait aux agents DELIVER les écritures DELIVER
-sous `src/` et `tests/`, ce qui exige le nom de l'agent qui écrit. Copilot CLI ne l'envoie
-pas dans le `preToolUse` d'un sous-agent : le payload ne porte que le `sessionId` propre au
-sous-agent et un lot `toolCalls`. Seul un transcript relie cette session à un agent, et une
-garde qui doit deviner l'auteur n'est pas une garde : G8 a été retiré. G7 ne dépend pas de
-l'auteur : chaque appel d'un lot `toolCalls` est gardé séparément, et un seul refus refuse
-tout le lot.
+G8 tient l'orchestrateur hors de `src/` et `tests/` : il dispatche l'agent qui porte un
+changement et ne le fait jamais lui-même, quelle que soit la phase. Le hook ne refuse qu'un
+auteur que le payload nomme comme l'orchestrateur. Copilot CLI ne nomme aucun agent dans
+`preToolUse`, ni pour la session principale ni pour un sous-agent : sous Copilot l'appel passe,
+et G8 ne tient que là où le harnais nomme l'agent, comme Claude Code avec `agent_type`. G8 ne
+lit pas l'état. Chaque appel d'un lot Copilot `toolCalls` est gardé séparément, et un seul
+refus refuse tout le lot.
 
 ## Économie de tokens — l'angle des hooks
 

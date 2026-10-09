@@ -1,7 +1,7 @@
 // Acceptance — the session guard under Copilot CLI, end to end through the hook CLI, with
 // preToolUse inputs shaped as a Copilot session really sends them (fixtures/
 // copilot-pretooluse.json): no agent name, tool calls batched in `toolCalls`. Every batched
-// call reaches G7; a workspace write passes whoever the session is (#206).
+// call reaches G7; G8 cannot name the writer, so a workspace write passes (#206).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
@@ -42,7 +42,7 @@ const preToolUse = (env, payload) => {
   return stdout.trim() ? JSON.parse(stdout) : undefined
 }
 
-test('Copilot batched src/ and tests/ writes pass during DELIVER, sub-agent or orchestrator', () => {
+test('Copilot batched src/ and tests/ writes pass during DELIVER: no agent name, no G8 refusal', () => {
   inDeliver(({ root, env }) => {
     assert.equal(preToolUse(env, { ...INPUTS.subagentWrites, cwd: root }), undefined)
     assert.equal(preToolUse(env, { ...INPUTS.orchestratorWrite, cwd: root }), undefined)

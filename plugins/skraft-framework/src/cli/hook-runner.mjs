@@ -47,11 +47,11 @@ const SERVICES = {
       import('../application/dispatch-provenance-service.mjs'),
       import('../application/handoff-guard-service.mjs'),
     ])
-    // PreToolUse composite: G1 dispatch order, G9 handoff, provenance and G7 (see composite).
+    // PreToolUse composite: G1 dispatch order, G9 handoff, provenance and G7/G8 (see composite).
     return {
       preToolUse: createPreToolUseCompositeService({
         dispatchGuard: createPreToolUseService({ stateReader, auditWriter, config, clock }),
-        sessionGuard: createPreToolUseSessionGuardService({ auditWriter, clock, trackingDir: basename(trackingRoot) }),
+        sessionGuard: createPreToolUseSessionGuardService({ auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
         provenanceGuard: createDispatchProvenanceService({ config, auditWriter, clock }),
         handoffGuard: createHandoffGuardService({ stateReader, auditWriter, config, clock }),
       }),

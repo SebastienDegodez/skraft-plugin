@@ -61,9 +61,9 @@ mesuré sur SKRAFT lui-même. La chaîne causale est ancrée dans la littératur
 (Forsgren et al., Wiegers), mais aucune étude contrôlée n'a encore mesuré l'impact de
 SKRAFT sur une équipe en production. Ces chiffres indiquent une direction, pas une garantie.
 
-### Garde-fous actifs (G1, G4, G5, G7)
+### Garde-fous actifs (G1, G4, G5, G7, G8)
 
-Quatre garde-fous sont opérationnels aujourd'hui. Ils font respecter l'ordre de dispatch,
+Cinq garde-fous sont opérationnels aujourd'hui. Ils font respecter l'ordre de dispatch,
 la structure des artefacts, les verdicts des reviewers et les écritures directes dans le
 fichier d'état au niveau du runtime — *avant* l'exécution de l'outil. Ces garde-fous
 sont mécaniques, pas consultatifs.

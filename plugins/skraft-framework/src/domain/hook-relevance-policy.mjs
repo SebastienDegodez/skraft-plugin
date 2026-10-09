@@ -12,7 +12,7 @@
 export const TRACKED_STATE_WRITE_RE = /skraft-plans[/\\][^"'\s]*state\.json/
 
 // The tools a PreToolUse guard inspects: dispatch guards (G1, G9, provenance) and the
-// session guard (G7 Bash command or file write).
+// session guard (G7 Bash command or file write, G8 orchestrator workspace write).
 const PRE_TOOL_USE_TOOLS = new Set(['Agent', 'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 
 const SKILL_FILE_RE = /SKILL\.md$/i

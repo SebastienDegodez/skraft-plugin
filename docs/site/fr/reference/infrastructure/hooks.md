@@ -18,6 +18,7 @@ sidebar_position: 1
 | `PreToolUse` | `Agent`, `Task` | Provenance | Aucun agent ne se dispatche lui-même ; un agent au dispatcher déclaré n'est dispatché que par lui | Autorise |
 | `PreToolUse` | `Agent`, `Task` | G9 | Le prompt de dispatch d'un agent de phase du pipeline nomme au moins un chemin enregistré pour chaque entrée suivie obligatoire déjà présente dans l'état, et la revue précédente en rework ou re-review | Autorise |
 | `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | Aucune écriture directe dans le `state.json` d'un pipeline, son journal d'exécution ou le pointeur `.active-slug`, quelle que soit la phase | Refuse si le payload nomme un `state.json` suivi |
+| `PreToolUse` | idem | G8 | L'orchestrateur n'écrit jamais `src/` ni `tests/`, quelle que soit la phase ; un appelant que le payload ne nomme pas passe | Autorise |
 | `PostToolUse` | `Agent`, `Task` | G6 | Au retour d'un agent de phase, l'orchestrateur reçoit quoi enregistrer et quoi dispatcher ensuite | Autorise |
 | `PostToolUse` | `Read` | G3 | Chaque lecture d'un `SKILL.md` est inscrite au journal d'audit | Autorise |
 | `SubagentStop` | — | G3 | Un sous-agent dont le transcript ne montre aucun chargement d'un skill obligatoire (appel de l'outil skill, ou lecture de son `SKILL.md`) est renvoyé au travail ; les skills `on-demand` ne sont pas obligatoires ; un sous-agent déjà renvoyé est laissé partir | Autorise |
@@ -33,7 +34,7 @@ exécuterait toutes les entrées d'un événement à chaque appel d'outil. `src/
 le nom de l'outil dans le payload et sort avant de charger la moindre garde quand l'appel ne
 concerne aucun des outils ci-dessus.
 
-G7 lit une commande shell à sa forme : redirections, `tee`, verbes qui réécrivent
+G7 et G8 lisent une commande shell à sa forme : redirections, `tee`, verbes qui réécrivent
 ou copient, `sed` et `perl` en place, scripts en ligne `node -e` ou `python -c`, derrière
 des affectations `VAR=valeur` et des enveloppes comme `sudo` ou `env`. Une écriture cachée
 derrière `bash -c`, une variable, un sous-shell ou `find -delete` n'est pas reconnue.
@@ -187,11 +188,11 @@ Les hooks et les CLI lisent ces variables ; aucune n'est obligatoire.
 | `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Constructeurs de décision (vocabulaire interne) |
 | `plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs` | Décision → format de fil harness |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Routage par type d'événement |
-| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | G1, provenance et G7/G9 sur `PreToolUse` |
+| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | G1, provenance et G7/G8/G9 sur `PreToolUse` |
 | `plugins/skraft-framework/src/application/handoff-guard-service.mjs` | Garde de handoff G9 |
 | `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Ordre de dispatch, provenance, continuation |
 | `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Manifeste de handoff des entrées obligatoires et évaluation G9 |
-| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Protection de l'état suivi |
+| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Protection de l'état suivi et écritures de l'orchestrateur dans l'espace de travail |
 | `plugins/skraft-framework/src/domain/skill-policy.mjs` | Politique des skills obligatoires et `on-demand` |
 | `plugins/skraft-framework/src/domain/phase-gate-policy.mjs` | Règles de clôture de phase |
 | `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Audit append-only |

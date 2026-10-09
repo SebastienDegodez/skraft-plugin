@@ -87,11 +87,29 @@ for (const requestedAgent of [
   })
 }
 
+for (const agentName of ['skraft:skraft-orchestrator', 'plugin:skraft:skraft-orchestrator']) {
+  test(`native Edit by ${agentName}: src/ and tests/ are refused`, async () => {
+    const records = []
+    const guard = createPreToolUseSessionGuardService({
+      config, clock,
+      auditWriter: { write: async (record) => { records.push(record) } }
+    })
+    for (const file_path of ['src/app.mjs', 'tests/app.test.mjs']) {
+      const result = await guard.handle(fromHarnessInput({
+        tool_name: 'Edit', agent_type: agentName, projectSlug,
+        tool_input: { file_path, old_string: 'before', new_string: 'after' }
+      }, { env: {} }))
+      assert.equal(result.decision, 'deny', file_path)
+    }
+    assert.deepEqual(records.map(({ code }) => code), ['ORCHESTRATOR_WRITE_FORBIDDEN', 'ORCHESTRATOR_WRITE_FORBIDDEN'])
+  })
+}
+
 for (const agentName of ['skraft:software-engineer', 'other:software-engineer']) {
   test(`native Edit by ${agentName}: src/ passes, tracked state is refused`, async () => {
     const records = []
     const guard = createPreToolUseSessionGuardService({
-      clock,
+      config, clock,
       auditWriter: { write: async (record) => { records.push(record) } }
     })
     const edit = (file_path) => guard.handle(fromHarnessInput({

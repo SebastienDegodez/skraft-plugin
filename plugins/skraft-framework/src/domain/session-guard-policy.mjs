@@ -1,13 +1,17 @@
 import { Ok, Err } from './result.mjs'
-import { STATE_WRITE_FORBIDDEN } from './error-codes.mjs'
+import { ORCHESTRATOR_WRITE_FORBIDDEN, STATE_WRITE_FORBIDDEN } from './error-codes.mjs'
 
-// Pure domain: session-guard policy (G7). No IO.
+// Pure domain: session-guard policy (G7/G8). No IO.
 //
 // G7 — the recorded pipeline state (state.json) and the DELIVER execution-log are
 // mutable ONLY through the state CLI (S7 deterministic tool bridge). Any attempt to
 // edit them directly — a shell redirection/mutation command, or a Write/Edit file
 // tool targeting them — is denied. Reads stay allowed (the CLI is the sanctioned
 // write path; #57 deny + #60 CLI = A9 strong form).
+//
+// G8 — the pipeline orchestrator never writes src/ or tests/, whatever the phase: it
+// dispatches the agent that owns the change. Only a writer positively identified as the
+// orchestrator is refused; an unnamed writer (Copilot sends no agent name) passes.
 
 // Artifacts that may only change through the state CLI, all under the tracking directory
 // (default .copilot-tracking/skraft-plans): each project's state.json and execution log,
@@ -46,7 +50,8 @@ const wordsOf = (segment) => {
 const redirectTargetsOf = (segment) =>
   [...segment.matchAll(/(?:^|[^<>&0-9])[0-9&]?>>?\|?\s*("[^"]*"|'[^']*'|[^\s|;&<>]+)/g)].map((m) => m[1].replace(/^["']|["']$/g, ''))
 
-// True when a simple command writes a path `isTarget` accepts.
+// True when a simple command writes a path `isTarget` accepts: G7's tracked state, G8's
+// workspace.
 const segmentWrites = (segment, isTarget) => {
   if (redirectTargetsOf(segment).some(isTarget)) return true
   const [verb, ...operands] = wordsOf(segment)
@@ -66,6 +71,15 @@ const segmentWrites = (segment, isTarget) => {
   return false
 }
 
+// A path under src/ or tests/ (the workspace).
+const WORKSPACE_PATH_RE = /(?:^|[/\\])(?:src|tests)[/\\]/i
+
+// A mutating command applied to a path under src/ or tests/.
+const MUTATING_WORKSPACE_RE = /\b(?:rm|mv|cp|truncate|dd|install|vi|vim|nano|emacs|ex)\b[^\n]*?(?:^|[\s"'=([{/\\])(?:src|tests)[/\\]/i
+
+// A src/ or tests/ path segment inside a command line or a path.
+const NAMES_WORKSPACE_RE = /(?:^|[\s"'=([{/\\])(?:src|tests)[/\\]/i
+
 const isString = (value) => typeof value === 'string' && value.length > 0
 
 // True when a file path targets a protected artifact of the tracking directory.
@@ -79,6 +93,17 @@ export const commandMutatesProtectedArtifact = (command, { trackingDir } = {}) =
   const re = protectedPathRe(trackingDir)
   return segmentsOf(command).some((segment) => segmentWrites(segment, (text) => re.test(text)))
 }
+
+// True when a Write/Edit file path targets the src/ or tests/ workspace.
+export const isWorkspacePath = (filePath) =>
+  isString(filePath) && WORKSPACE_PATH_RE.test(filePath)
+
+// True when a shell command writes into the src/ or tests/ workspace: the forms G7 reads
+// (redirections, tee, in-place sed, inline scripts…), plus a mutating verb anywhere on the
+// line (git rm…).
+export const commandWritesWorkspace = (command) =>
+  isString(command) && (MUTATING_WORKSPACE_RE.test(command)
+    || segmentsOf(command).some((segment) => segmentWrites(segment, (text) => NAMES_WORKSPACE_RE.test(text))))
 
 // G7 — deny direct writes to state.json / execution-log; reads pass through.
 export const guardProtectedArtifact = ({ command, filePath, trackingDir } = {}) => {
@@ -95,4 +120,22 @@ export const guardProtectedArtifact = ({ command, filePath, trackingDir } = {}) 
     })
   }
   return Ok({ reason: 'no direct write to a protected artifact' })
+}
+
+// G8 — deny a src/ or tests/ write by the orchestrator. Any other writer, named or not,
+// passes: the guard refuses only what it can attribute.
+export const guardOrchestratorWrite = ({ command, filePath, agentName, orchestrators = [] } = {}) => {
+  if (!isWorkspacePath(filePath) && !commandWritesWorkspace(command)) {
+    return Ok({ reason: 'no src/ or tests/ write' })
+  }
+  if (!isString(agentName)) {
+    return Ok({ reason: 'workspace write by an unnamed caller' })
+  }
+  if (!orchestrators.includes(agentName)) {
+    return Ok({ reason: `workspace write by ${agentName}` })
+  }
+  return Err({
+    code: ORCHESTRATOR_WRITE_FORBIDDEN,
+    reason: `${agentName} never writes src/ or tests/; dispatch the phase agent that owns this change`
+  })
 }
