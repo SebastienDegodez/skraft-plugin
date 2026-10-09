@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-09T05:52:55.638Z",
+  "generated": "2026-10-09T06:36:37.093Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -3954,630 +3954,6 @@
       "mtime": 1791194100800.3818
     },
     {
-      "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
-      "url": "sessions/pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-202"
-      ],
-      "mtime": 1791499393284.6255
-    },
-    {
-      "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
-      "url": "sessions/pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-202"
-      ],
-      "mtime": 1791499393329.6252
-    },
-    {
-      "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
-      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
-      "url": "sessions/pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "absent-acceptance-criteria-halt-the-distillation",
-        "pr-202"
-      ],
-      "mtime": 1791499393373.6248
-    },
-    {
-      "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
-      "url": "sessions/pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-202"
-      ],
-      "mtime": 1791499393378.6248
-    },
-    {
-      "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
-      "url": "sessions/pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-202"
-      ],
-      "mtime": 1791499393419.6243
-    },
-    {
-      "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
-      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
-      "url": "sessions/pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
-        "pr-202"
-      ],
-      "mtime": 1791499393422.6243
-    },
-    {
-      "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
-      "url": "sessions/pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-202"
-      ],
-      "mtime": 1791499393464.624
-    },
-    {
-      "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
-      "url": "sessions/pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-202"
-      ],
-      "mtime": 1791499393465.624
-    },
-    {
-      "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
-      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
-      "url": "sessions/pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer",
-        "main",
-        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
-        "pr-202"
-      ],
-      "mtime": 1791499393511.6235
-    },
-    {
-      "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
-      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 0)",
-      "url": "sessions/pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer-reviewer",
-        "main",
-        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
-        "pr-202"
-      ],
-      "mtime": 1791499393563.623
-    },
-    {
-      "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
-      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 1)",
-      "url": "sessions/pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer-reviewer",
-        "main",
-        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
-        "pr-202"
-      ],
-      "mtime": 1791499393564.623
-    },
-    {
-      "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
-      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 2)",
-      "url": "sessions/pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer-reviewer",
-        "main",
-        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
-        "pr-202"
-      ],
-      "mtime": 1791499393564.623
-    },
-    {
-      "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
-      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 0)",
-      "url": "sessions/pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer-reviewer",
-        "main",
-        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
-        "pr-202"
-      ],
-      "mtime": 1791499393564.623
-    },
-    {
-      "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
-      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 1)",
-      "url": "sessions/pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer-reviewer",
-        "main",
-        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
-        "pr-202"
-      ],
-      "mtime": 1791499393605.6226
-    },
-    {
-      "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
-      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 2)",
-      "url": "sessions/pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2.jsonl",
-      "tags": [
-        "pr",
-        "acceptance-designer-reviewer",
-        "main",
-        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
-        "pr-202"
-      ],
-      "mtime": 1791499393606.6226
-    },
-    {
-      "id": "pr/202/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
-      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
-      "url": "sessions/pr/202/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "finish-the-approved-customer-guide-issue",
-        "pr-202"
-      ],
-      "mtime": 1791499393608.6226
-    },
-    {
-      "id": "pr/202/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
-      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
-      "url": "sessions/pr/202/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-a-customer-guide-increment-while-the-issue-remains-open",
-        "pr-202"
-      ],
-      "mtime": 1791499393608.6226
-    },
-    {
-      "id": "pr/202/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
-      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
-      "url": "sessions/pr/202/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
-      "tags": [
-        "pr",
-        "commit-convention",
-        "main",
-        "record-the-approved-guide-edit-without-a-known-issue",
-        "pr-202"
-      ],
-      "mtime": 1791499393609.6226
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 0)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393655.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 1)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393655.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 2)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393654.6223
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 3)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393656.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 4)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393655.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 0)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393655.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 1)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393656.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 2)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393655.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 3)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393656.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 4)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393656.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 0)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393655.622
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 1)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393702.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 2)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393704.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 3)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393704.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 4)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "baseline",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393703.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 0)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393704.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 1)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393704.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 2)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393705.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 3)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393705.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4",
-      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 4)",
-      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "decide-whether-the-recorded-result-is-enough-for-delivery",
-        "pr-202"
-      ],
-      "mtime": 1791499393705.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 0)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393705.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 1)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393705.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 2)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393705.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 3)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393705.6218
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4",
-      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 4)",
-      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "explain-the-member-pricing-assertion-without-starting-verification",
-        "pr-202"
-      ],
-      "mtime": 1791499393736.6213
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 0)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393739.6213
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 1)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393739.6213
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 2)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393739.6213
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 3)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393739.6213
-    },
-    {
-      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4",
-      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 4)",
-      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "quality-gates-javascript",
-        "skilled",
-        "run-the-existing-package-tests-without-expanding-the-work",
-        "pr-202"
-      ],
-      "mtime": 1791499393739.6213
-    },
-    {
       "id": "pr/201/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
       "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
       "url": "sessions/pr/201/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
@@ -6162,6 +5538,630 @@
         "pr-201"
       ],
       "mtime": 1791525173023.6716
+    },
+    {
+      "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
+      "url": "sessions/pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-202"
+      ],
+      "mtime": 1791527794009.868
+    },
+    {
+      "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
+      "url": "sessions/pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-202"
+      ],
+      "mtime": 1791527794038.8674
+    },
+    {
+      "id": "pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
+      "url": "sessions/pr/202/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-202"
+      ],
+      "mtime": 1791527794069.8672
+    },
+    {
+      "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
+      "url": "sessions/pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-202"
+      ],
+      "mtime": 1791527794073.8672
+    },
+    {
+      "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
+      "url": "sessions/pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-202"
+      ],
+      "mtime": 1791527794098.867
+    },
+    {
+      "id": "pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
+      "url": "sessions/pr/202/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-202"
+      ],
+      "mtime": 1791527794132.323
+    },
+    {
+      "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
+      "url": "sessions/pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-202"
+      ],
+      "mtime": 1791527794132.8665
+    },
+    {
+      "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
+      "url": "sessions/pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-202"
+      ],
+      "mtime": 1791527794132.8665
+    },
+    {
+      "id": "pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
+      "url": "sessions/pr/202/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-202"
+      ],
+      "mtime": 1791527794160.8662
+    },
+    {
+      "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 0)",
+      "url": "sessions/pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "pr-202"
+      ],
+      "mtime": 1791527794223.8655
+    },
+    {
+      "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 1)",
+      "url": "sessions/pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "pr-202"
+      ],
+      "mtime": 1791527794223.8655
+    },
+    {
+      "id": "pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 2)",
+      "url": "sessions/pr/202/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "pr-202"
+      ],
+      "mtime": 1791527794223.8655
+    },
+    {
+      "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 0)",
+      "url": "sessions/pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "pr-202"
+      ],
+      "mtime": 1791527794223.3674
+    },
+    {
+      "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 1)",
+      "url": "sessions/pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "pr-202"
+      ],
+      "mtime": 1791527794223.8655
+    },
+    {
+      "id": "pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 2)",
+      "url": "sessions/pr/202/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "pr-202"
+      ],
+      "mtime": 1791527794223.8655
+    },
+    {
+      "id": "pr/202/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/pr/202/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-202"
+      ],
+      "mtime": 1791527794224.8655
+    },
+    {
+      "id": "pr/202/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/pr/202/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-202"
+      ],
+      "mtime": 1791527794253.865
+    },
+    {
+      "id": "pr/202/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/pr/202/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-202"
+      ],
+      "mtime": 1791527794253.865
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 0)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794253.276
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 1)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794253.276
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 2)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794253.276
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 3)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794252.6023
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (baseline, run 4)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794253.276
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 0)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794282.8647
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 1)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794287.5068
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 2)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794287.5068
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 3)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794286.9463
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (baseline, run 4)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794287.5068
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 0)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794286.1838
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 1)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794286.9463
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 2)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794286.9463
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 3)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794286.9463
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (baseline, run 4)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--baseline--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "baseline",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794286.9463
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 0)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794287.5068
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 1)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794287.5068
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 2)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794287.5068
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 3)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794287.5068
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4",
+      "name": "quality-gates-javascript / Decide whether the recorded result is enough for delivery (skilled, run 4)",
+      "url": "sessions/pr/202/quality-gates-javascript/decide-whether-the-recorded-result-is-enough-for-delivery--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "decide-whether-the-recorded-result-is-enough-for-delivery",
+        "pr-202"
+      ],
+      "mtime": 1791527794312.1965
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 0)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794312.1965
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 1)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794319.8643
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 2)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794317.8643
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 3)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794317.8643
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4",
+      "name": "quality-gates-javascript / Explain the member-pricing assertion without starting verification (skilled, run 4)",
+      "url": "sessions/pr/202/quality-gates-javascript/explain-the-member-pricing-assertion-without-starting-verification--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "explain-the-member-pricing-assertion-without-starting-verification",
+        "pr-202"
+      ],
+      "mtime": 1791527794317.8643
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 0)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run0.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794319.8643
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 1)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run1.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794319.8643
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 2)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run2.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794320.8643
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 3)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run3.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794320.8643
+    },
+    {
+      "id": "pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4",
+      "name": "quality-gates-javascript / Run the existing package tests without expanding the work (skilled, run 4)",
+      "url": "sessions/pr/202/quality-gates-javascript/run-the-existing-package-tests-without-expanding-the-work--skilled--run4.jsonl",
+      "tags": [
+        "pr",
+        "quality-gates-javascript",
+        "skilled",
+        "run-the-existing-package-tests-without-expanding-the-work",
+        "pr-202"
+      ],
+      "mtime": 1791527794320.8643
     }
   ]
 }
