@@ -29,10 +29,11 @@ dispatch that lens once more; if it fails again, save what it returned anyway.
 
 ## 3. Decide
 
-Run the script that ships with this skill, from this skill's folder:
+Run the script that ships with this skill from the repository root, `{skill}` being the
+folder that holds this SKILL.md; relative paths are read from the repository root:
 
 ```sh
-node scripts/review-verdict.mjs --phase discover|discuss|refine \
+node {skill}/scripts/review-verdict.mjs --phase discover|discuss|refine \
   --lens <file.json> --lens <file.json> … \
   --attempt <N> --reviewed <artefact path> … \
   --out <reviews/{date}/{phase}-review-{N}.md>

@@ -40,11 +40,21 @@ test('the workflow defines inline the three lenses of a refine review', () => {
   }
 })
 
-test('the triggers: new issue, label, slash command, and by hand with an issue number and force', () => {
-  for (const pattern of [/issues:\n\s+types: \[opened\]/, /slash_command:\n\s+name: skraft-refine/, /label_command:\n\s+name: skraft-refine/,
+test('the triggers: new issue, label, comment, and by hand with an issue number and force', () => {
+  for (const pattern of [/issues:\n\s+types: \[opened, labeled\]/, /issue_comment:\n\s+types: \[created\]/,
     /workflow_dispatch:\n\s+inputs:\n\s+issue_number:/, /force:\n\s+description: .+\n\s+required: false\n\s+type: boolean/, /reaction: eyes/]) {
     assert.match(frontmatter, pattern)
   }
+})
+
+test('no gh-aw command trigger: slash_command checks the issue body of issues: opened and would skip it', () => {
+  assert.doesNotMatch(frontmatter, /slash_command|label_command|^\s*command:/m)
+})
+
+test('a run started by hand is not cancelled as a bot, and comments on the issue it was given', () => {
+  assert.doesNotMatch(frontmatter.match(/skip-bots: \[(.*)\]/)[1], /github-actions/)
+  assert.match(frontmatter, /add-comment:\n\s+max: 1\n\s+target: "\*"/)
+  assert.match(workflow, /`item_number` set to\s+\$\{\{ needs\.pre_activation\.outputs\.issue \}\}/)
 })
 
 test('the workflow writes nothing but one comment, through safe outputs', () => {

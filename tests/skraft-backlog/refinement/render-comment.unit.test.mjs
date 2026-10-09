@@ -16,10 +16,16 @@ const checked = (mutate = () => {}) => {
   return result
 }
 
-test('the comment opens with the marker of the issue text and the shipped version', () => {
+test('the comment ends with the visible marker of the issue text and the shipped version', () => {
   const comment = renderComment(checked(), { issue: frenchIssue })
-  const marker = parseMarker(comment.split('\n')[0])
-  assert.deepEqual(marker, { version: VERSION, hash: issueHash(frenchIssue.title, frenchIssue.body) })
+  const lines = comment.trimEnd().split('\n')
+  assert.deepEqual(parseMarker(lines.at(-1)), { version: VERSION, hash: issueHash(frenchIssue.title, frenchIssue.body) })
+  assert.doesNotMatch(comment, /<!--/)
+})
+
+test('a criterion title that is not a string still renders', () => {
+  const comment = renderComment(checked((p) => { p.acceptanceCriteria[0].title = 42 }), { issue: frenchIssue })
+  assert.match(comment, /\*\*AC1\*\* — 42/)
 })
 
 test('a French issue gets French headings, French Gherkin keywords and French typography', () => {

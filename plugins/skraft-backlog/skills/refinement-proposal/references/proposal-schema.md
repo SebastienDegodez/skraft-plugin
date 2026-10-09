@@ -55,4 +55,5 @@ in the right column; it adds `derived` (readiness, DoR tally, capacity days) its
 | `docs` | the output of `resolve-docs.mjs`; `gaps` only against a `used` document |
 | `review` | `verdict` as printed by `review-verdict.mjs`, `attempts` ≥ 1 |
 
-READY means: the 8 DoR items pass, the size is 8 or less, and no CRITICAL antipattern.
+READY means: the 8 DoR items pass, the size is 8 or less, no CRITICAL antipattern, and the review
+did not reject the proposal.

@@ -53,7 +53,7 @@ for (const [path, target] of uploads) {
 }
 
 const markerComments = (number) => dryRun ? [] : JSON.parse(gh(['api', '--paginate', '--slurp', `repos/${repo}/issues/${number}/comments?per_page=100`]))
-  .flat().filter((comment) => /<!-- skraft-refine v=/.test(comment.body))
+  .flat().filter((comment) => /skraft-refine v=\S+ hash=[0-9a-f]{16}/.test(comment.body))
 
 const failures = []
 const issues = {}

@@ -211,8 +211,8 @@ artefacts and report the comment as pending. Update only issue metadata:
 Refinement is not finished when the artefacts are written. Load [planning-review-criteria](../../skills/planning-review-criteria/SKILL.md) and [backlog-review-lenses](../../skills/backlog-review-lenses/SKILL.md), then run the gate with `attempt` starting at 1:
 
 1. Dispatch the four `discuss` lenses — `planning-invest-lens`, `planning-ac-quality-lens`, `planning-coherence-lens`, `planning-dor-lens` — each with only the inputs its row of the Lens dispatch table allows, the attempt number, and "Return only the JSON document of your Output section."
-2. Save each answer to `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-lens-{lens}-{attempt}.json`, then run from the backlog-review-lenses skill folder:
-   `node scripts/review-verdict.mjs --phase discuss --lens <each file> --attempt {attempt} --reviewed <stories file> --reviewed <each AC draft> --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{attempt}.md`
+2. Save each answer to `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-lens-{lens}-{attempt}.json`, then run from the repository root, `{lenses}` being the folder that holds the `backlog-review-lenses` SKILL.md:
+   `node {lenses}/scripts/review-verdict.mjs --phase discuss --lens <each file> --attempt {attempt} --reviewed <stories file> --reviewed <each AC draft> --out .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/discuss-review-{attempt}.md`
 3. Act on the script's `verdict`:
 
 | Verdict | Attempt | Action |

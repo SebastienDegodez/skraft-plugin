@@ -5,7 +5,7 @@
       "name": "ready-issue",
       "title": "Refuse a young driver whose licence was suspended",
       "body": "As an underwriter reviewing a quote for a driver under 25, I want a suspended licence in the last 3 years to refuse eligibility with the reason \"licence suspended\", so that I do not issue a policy the PRD forbids.\n\nExamples:\n1. Inès, 24, licence suspended in March 2024 → refused, reason \"licence suspended\".\n2. Hugo, 19, no suspension, licence since 2025 → not refused for this rule.\n3. Léa, 22, suspended in 2021 → not refused for this rule (older than 3 years).\n\nAcceptance criteria:\n- Given Inès, 24, licence suspended in March 2024, when she requests eligibility, then she is refused with the reason \"licence suspended\".\n- Given Hugo, 19, never suspended, when he requests eligibility, then this rule does not refuse him.\n- Given Léa, 22, suspended in 2021, when she requests eligibility, then this rule does not refuse her.\n\nTechnical notes: rule lives in the eligibility check. Dependencies: none.\n\nRules: docs/prd/eligibilite-jeunes-conducteurs.md",
-      "expect": ["^<!-- skraft-refine v=", "Refinement proposal", "Reviewed against: `docs/prd/eligibilite-jeunes-conducteurs.md`"]
+      "expect": ["^<sub>skraft-refine v=\\S+ hash=[0-9a-f]{16}</sub>$", "Refinement proposal", "Reviewed against: `docs/prd/eligibilite-jeunes-conducteurs.md`"]
     },
     {
       "name": "vague-criteria-fr",

@@ -71,6 +71,13 @@ test('a lens that is not part of the phase, or a gate outside it, keeps the revi
   assert.ok(gate.synthesis.problems.some((p) => p.includes('gate G5 is not part of the refine review')))
 })
 
+test('a lens that fails without a medium or higher defect still keeps the review from approving', () => {
+  const quiet = computeVerdict('refine', [fail('planning-invest'), pass('planning-ac-quality'), pass('planning-dor')])
+  assert.equal(quiet.verdict, 'NEEDS_REWORK')
+  const low = computeVerdict('refine', [fail('planning-invest', defect('G1', 'low')), pass('planning-ac-quality'), pass('planning-dor')])
+  assert.equal(low.verdict, 'NEEDS_REWORK')
+})
+
 test('two G7 defects on one story reject it, even when each one is only high', () => {
   const dor = fail('planning-dor', defect('G7', 'high', { story: '42', location: 'item 2' }), defect('G7', 'high', { story: '42', location: 'item 3' }))
   const review = computeVerdict('refine', [dor, pass('planning-invest'), pass('planning-ac-quality')])
