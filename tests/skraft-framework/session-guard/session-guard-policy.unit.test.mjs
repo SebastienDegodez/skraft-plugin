@@ -3,15 +3,9 @@ import assert from 'node:assert/strict'
 import {
   isProtectedArtifactPath,
   commandMutatesProtectedArtifact,
-  isWorkspacePath,
-  commandWritesWorkspace,
-  guardProtectedArtifact,
-  guardWorkspaceWrite,
-  evaluateSessionGuard
+  guardProtectedArtifact
 } from '../../../plugins/skraft-framework/src/domain/session-guard-policy.mjs'
-import { STATE_WRITE_FORBIDDEN, UNMONITORED_WRITE } from '../../../plugins/skraft-framework/src/domain/error-codes.mjs'
-
-const DELIVER_AGENTS = ['software-engineer', 'software-engineer-reviewer']
+import { STATE_WRITE_FORBIDDEN } from '../../../plugins/skraft-framework/src/domain/error-codes.mjs'
 
 // ───────────────────────────────────────────────────────────────────────────
 // G7 — protected-artifact detection primitives
@@ -113,24 +107,6 @@ test('commandMutatesProtectedArtifact allows reads and unrelated commands on the
 })
 
 // ───────────────────────────────────────────────────────────────────────────
-// G8 — workspace detection primitives
-// ───────────────────────────────────────────────────────────────────────────
-
-test('isWorkspacePath matches src/ and tests/ paths only', () => {
-  assert.equal(isWorkspacePath('src/app.mjs'), true)
-  assert.equal(isWorkspacePath('/repo/tests/foo.test.mjs'), true)
-  assert.equal(isWorkspacePath('docs/site/en/index.md'), false)
-  assert.equal(isWorkspacePath(undefined), false)
-})
-
-test('commandWritesWorkspace flags shell writes into src/ or tests/', () => {
-  assert.equal(commandWritesWorkspace('echo x > src/app.mjs'), true)
-  assert.equal(commandWritesWorkspace('rm src/old.mjs'), true)
-  assert.equal(commandWritesWorkspace('cat src/app.mjs'), false)
-  assert.equal(commandWritesWorkspace('ls src'), false)
-})
-
-// ───────────────────────────────────────────────────────────────────────────
 // G7 — guardProtectedArtifact
 // ───────────────────────────────────────────────────────────────────────────
 
@@ -158,101 +134,4 @@ test('guardProtectedArtifact follows a custom tracking directory, for a file too
 test('guardProtectedArtifact allows a read of state.json', () => {
   const result = guardProtectedArtifact({ command: `cat ${STATE}` })
   assert.equal(result.ok, true)
-})
-
-// ───────────────────────────────────────────────────────────────────────────
-// G8 — guardWorkspaceWrite
-// ───────────────────────────────────────────────────────────────────────────
-
-test('guardWorkspaceWrite blocks a src/ write outside a monitored DELIVER agent, naming the writer', () => {
-  const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, UNMONITORED_WRITE)
-  assert.equal(result.error.reason, 'src/ or tests/ write during DELIVER must run inside the monitored DELIVER sub-agent, not the orchestrator session')
-  const byArchitect = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: 'solution-architect', deliverAgents: DELIVER_AGENTS })
-  assert.match(byArchitect.error.reason, /, not solution-architect$/)
-})
-
-// The Ok reasons are what the audit log records for a conforming write.
-test('guardWorkspaceWrite allows a src/ write by the monitored DELIVER specialist', () => {
-  const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: 'software-engineer', deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, true)
-  assert.equal(result.value.reason, 'workspace write by monitored DELIVER agent software-engineer')
-})
-
-test('guardWorkspaceWrite is inactive outside DELIVER', () => {
-  const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DESIGN', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, true)
-  assert.equal(result.value.reason, 'session guard inactive outside DELIVER (phase DESIGN)')
-})
-
-test('guardWorkspaceWrite ignores non-workspace writes during DELIVER', () => {
-  const result = guardWorkspaceWrite({ filePath: 'docs/notes.md', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, true)
-  assert.equal(result.value.reason, 'no src/ or tests/ write')
-})
-
-test('guardWorkspaceWrite blocks a shell write into tests/ outside a monitored agent', () => {
-  const result = guardWorkspaceWrite({ command: 'echo x > tests/foo.test.mjs', phase: 'DELIVER', agentName: 'orchestrator', deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, UNMONITORED_WRITE)
-})
-
-// ───────────────────────────────────────────────────────────────────────────
-// Combined evaluator — G7 precedence
-// ───────────────────────────────────────────────────────────────────────────
-
-test('evaluateSessionGuard enforces G7 before G8', () => {
-  const result = evaluateSessionGuard({ filePath: STATE, phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, STATE_WRITE_FORBIDDEN)
-})
-
-test('evaluateSessionGuard enforces G8 when G7 passes', () => {
-  const result = evaluateSessionGuard({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, UNMONITORED_WRITE)
-})
-
-test('evaluateSessionGuard returns Ok when neither guard trips', () => {
-  const result = evaluateSessionGuard({ command: 'cat state.json', phase: 'DESIGN', agentName: 'solution-architect', deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, true)
-})
-
-test('commandWritesWorkspace: the in-place and scripted edits G7 recognises, and their reads', () => {
-  for (const command of [
-    "sed -i 's/Gold/Platinum/' src/Orders/Discount.cs",
-    "perl -i -pe 's/0.10m/0.15m/' src/Orders/Discount.cs",
-    `node -e "require('fs').writeFileSync('tests/a.test.mjs', '')"`,
-    'touch tests/Orders.Tests/NewTests.cs',
-    'ln -sf /tmp/forged.cs src/Orders/Discount.cs',
-    'git rm -q src/Orders/Legacy.cs',
-    'git mv tests/Old.cs "tests/New Name.cs"',
-  ]) {
-    assert.equal(commandWritesWorkspace(command), true, command)
-  }
-  for (const command of ["sed -n '1,20p' src/Orders/Discount.cs", 'node --test tests/a.test.mjs', 'grep -ri discount src/', 'dotnet test tests/Orders.Tests']) {
-    assert.equal(commandWritesWorkspace(command), false, command)
-  }
-})
-
-test('commandWritesWorkspace: every write form into src/ or tests/, and nothing else', () => {
-  for (const command of [
-    'echo x >src/app.mjs',
-    'echo x >> "tests/a.test.mjs"',
-    "echo x > 'apps/web/src/x.ts'",
-    'printf x | tee src/a.mjs',
-    'printf x | tee -a -i tests/a.mjs',
-    'printf x | tee --append src/a.mjs',
-    'truncate -s0 src/a.mjs',
-    'cp /tmp/x src/a.mjs',
-    'mv old.mjs tests/a.mjs',
-    'vim src/a.mjs',
-    'dd if=/dev/zero of=src/blob',
-  ]) {
-    assert.equal(commandWritesWorkspace(command), true, command)
-  }
-  for (const command of ['echo x > srcfoo/a.mjs', 'echo x > docs/src.md', 'cat src/a.mjs | grep x', 'ls tests', 'rm -rf dist', '']) {
-    assert.equal(commandWritesWorkspace(command), false, command)
-  }
 })

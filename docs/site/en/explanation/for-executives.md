@@ -61,9 +61,9 @@ SKRAFT itself. The causal chain is grounded in established literature (Forsgren 
 Wiegers), but no controlled study has yet measured SKRAFT's impact on a production team.
 Treat those figures as direction, not guarantee.
 
-### Active guardrails (G1, G4, G5, G7, G8)
+### Active guardrails (G1, G4, G5, G7)
 
-Five guardrails are operational today. They enforce dispatch order, artifact structure,
+Four guardrails are operational today. They enforce dispatch order, artifact structure,
 reviewer verdicts, and direct state-file writes at the runtime level — *before* the tool
 executes. These are mechanical, not advisory.
 

@@ -8,8 +8,7 @@ import { allow } from '../adapters/api/hooks/decision.mjs'
 //                               it when there is no pipeline context is what keeps a
 //                               directly-invoked standalone agent from being fail-closed
 //                               blocked on a missing state file.
-//   G7/G8 session guard        — always runs (G7 protected-artifact ban is unconditional;
-//                               G8 workspace-write check applies during DELIVER).
+//   G7  session guard          — always runs: the protected-artifact ban is unconditional.
 //   provenance guard           — runs on every agent dispatch, pipeline or not: no
 //                               self-dispatch, no dispatch outside the declared tree.
 //   G9  handoff guard          — runs with G1: a phase-agent dispatch must name every

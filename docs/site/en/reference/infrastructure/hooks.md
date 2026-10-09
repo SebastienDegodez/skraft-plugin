@@ -18,7 +18,6 @@ sidebar_position: 1
 | `PreToolUse` | `Agent`, `Task` | Provenance | No agent dispatches itself; an agent with a declared dispatcher is dispatched by that agent alone | Allow |
 | `PreToolUse` | `Agent`, `Task` | G9 | A pipeline phase-agent dispatch prompt names at least one recorded path for every required tracked input already in state, and the previous review path on rework or re-review | Allow |
 | `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | No direct write to a pipeline's `state.json`, its execution log or the `.active-slug` pointer, whatever the phase | Deny when the payload names a tracked `state.json` |
-| `PreToolUse` | same | G8 | During DELIVER, `src/` and `tests/` are written only by the DELIVER agents and the agents they dispatch | Allow |
 | `PostToolUse` | `Agent`, `Task` | G6 | After a phase agent returns, the orchestrator is told what to record and what to dispatch next | Allow |
 | `PostToolUse` | `Read` | G3 | Each `SKILL.md` read is written to the audit log | Allow |
 | `SubagentStop` | — | G3 | A subagent whose transcript shows no load of a mandatory skill (a skill tool call, or a read of its `SKILL.md`) is sent back; `on-demand` skills are not mandatory; one already sent back is let go | Allow |
@@ -26,13 +25,14 @@ sidebar_position: 1
 Both plugin manifests carry the same entries, and every entry runs `src/cli/hook.mjs`
 (`src/cli/housekeeping.mjs` for `SessionStart`). Copilot CLI sends its own tool names
 (`bash`, `create`, `str_replace`, `view`, …); `adapters/api/hooks/harness-input.mjs` maps
-them to the names above before any guard runs.
+them to the names above before any guard runs. A Copilot `toolCalls` batch is guarded call
+by call; one refused call refuses the batch.
 
 Each tool event has one entry with no matcher: VS Code ignores matchers and would run every
 entry of an event on every tool call. `src/cli/hook.mjs` reads the tool name from the payload
 and returns before loading any guard when the call involves none of the tools above.
 
-G7 and G8 read a shell command by its form: redirections, `tee`, rewriting and copying
+G7 reads a shell command by its form: redirections, `tee`, rewriting and copying
 verbs, in-place `sed` and `perl`, inline `node -e` or `python -c` scripts, behind
 `VAR=value` assignments and wrappers such as `sudo` or `env`. A write hidden behind
 `bash -c`, a variable, a subshell or `find -delete` is not recognised.
@@ -184,11 +184,11 @@ The hooks and the CLIs read these variables; none is required.
 | `plugins/skraft-framework/src/adapters/api/hooks/decision.mjs` | Decision constructors (internal vocabulary) |
 | `plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs` | Decision → harness wire format |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Route by event type |
-| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | G1, provenance and G7/G8/G9 on `PreToolUse` |
+| `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | G1, provenance and G7/G9 on `PreToolUse` |
 | `plugins/skraft-framework/src/application/handoff-guard-service.mjs` | G9 handoff guard |
 | `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Dispatch order, provenance, continuation |
 | `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Required-input handoff manifest and G9 evaluation |
-| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Tracked-state protection and DELIVER writes |
+| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Tracked-state protection |
 | `plugins/skraft-framework/src/domain/skill-policy.mjs` | Mandatory and `on-demand` skill policy |
 | `plugins/skraft-framework/src/domain/phase-gate-policy.mjs` | Phase closure rules |
 | `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Append-only audit |

@@ -240,6 +240,10 @@ pendant DELIVER, bloque les writes `src/`/`tests/` hors des agents DELIVER
 (`phaseAgents.DELIVER`) et des agents qu'ils dispatchent ; fail-open si l'état est
 illisible (un bug du hook ne fige jamais le pipeline).
 
+**Retiré :** G8 (#206). Sous Copilot CLI, le `preToolUse` d'un sous-agent ne nomme pas
+l'agent ; seul un transcript relie la session à l'agent, donc G8 ne pouvait pas prouver
+l'auteur d'une écriture. G7 reste, et garde chaque appel d'un lot Copilot `toolCalls`.
+
 **Dépend de :** US3
 
 ---

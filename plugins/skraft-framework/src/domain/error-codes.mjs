@@ -9,5 +9,3 @@ export const INVALID_VERDICT = 'INVALID_VERDICT'
 export const MISSING_MANDATORY_SKILL = 'MISSING_MANDATORY_SKILL'
 // G7 — a direct write to state.json / execution-log (must go through the state CLI).
 export const STATE_WRITE_FORBIDDEN = 'STATE_WRITE_FORBIDDEN'
-// G8 — a src/ or tests/ write attempted outside the monitored DELIVER sub-agent.
-export const UNMONITORED_WRITE = 'UNMONITORED_WRITE'
