@@ -90,7 +90,8 @@ const runGate = (ctx, script, prefix, evidence, ...args) => {
   const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--evidence', dir, ...args], { cwd: ctx.repo, encoding: 'utf8' })
   const stdout = join(dir, `${prefix}.stdout`)
   const lines = existsSync(stdout) ? readFileSync(stdout, 'utf8').trimEnd().split('\n') : []
-  return { status: result.status, line: lines.at(-1) ?? '', stderr: result.stderr ?? '' }
+  // The gate's stdout holds Stryker's own output: its tail says why a report is missing.
+  return { status: result.status, line: lines.at(-1) ?? '', stderr: result.stderr ?? '', output: lines.slice(-25).join('\n') }
 }
 
 // --- the probes ---------------------------------------------------------------------
@@ -201,7 +202,11 @@ try {
       continue
     }
     failed += 1
-    annotate(probe.name, [...failures, (result.stderr ?? '').trim().split(/\r?\n/).slice(-15).join('\n')].join('\n'))
+    annotate(probe.name, [
+      ...failures,
+      (result.stderr ?? '').trim().split(/\r?\n/).slice(-15).join('\n'),
+      ...(result.output ? ['--- gate output (tail) ---', result.output] : []),
+    ].join('\n'))
     log(`  FAIL  ${probe.name}`)
     for (const failure of failures) log(`          ${failure}`)
     if (result.stderr.trim()) log(`          stderr: ${result.stderr.trim().split('\n').slice(-5).join('\n                  ')}`)
