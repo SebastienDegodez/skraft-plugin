@@ -10,7 +10,7 @@ const server = setupServer(
   http.get(`${api}/api/todos`, () => HttpResponse.json([{ id: '1', title: 'Buy milk', done: false }])),
 )
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 

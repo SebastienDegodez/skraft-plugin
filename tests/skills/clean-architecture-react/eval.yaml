@@ -54,6 +54,8 @@ stimuli:
           dest: src/vite-env.d.ts
         - src: fixtures/vite-template/tests/setup.ts
           dest: tests/setup.ts
+        - src: fixtures/vite-template/tsconfig.app.json
+          dest: tsconfig.app.json
         - src: fixtures/vite-template/tsconfig.json
           dest: tsconfig.json
         - src: fixtures/vite-template/vite.config.ts
@@ -82,7 +84,7 @@ stimuli:
                 for (const name of ['react', 'react-dom', 'vite', 'vitest', 'typescript', 'eslint']) if (!deps[name]) problems.push(name + ' was removed from package.json');
                 for (const name of ['lint', 'typecheck', 'test']) if (!pkg.scripts || !pkg.scripts[name]) problems.push('the ' + name + ' script was removed');
               }
-              for (const file of ['tsconfig.json', 'vite.config.ts', 'src/main.tsx']) if (!fs.existsSync(file)) problems.push(file + ' was deleted');
+              for (const file of ['tsconfig.json', 'tsconfig.app.json', 'vite.config.ts', 'src/main.tsx']) if (!fs.existsSync(file)) problems.push(file + ' was deleted');
               if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
               console.log('package manifest, scripts and build configuration intact');
           expected_exit_code: 0
@@ -239,7 +241,7 @@ stimuli:
     prompt: |
       The project is already set up (React 19, TypeScript, Vite, Vitest, ESLint). Extend it: do
       not scaffold a new project, do not start a dev server, and leave package.json,
-      tsconfig.json, vite.config.ts, eslint.config.js, the eslint/ folder and the existing tests
+      the tsconfig files, vite.config.ts, eslint.config.js, the eslint/ folder and the existing tests
       as they are.
 
       Add a projects screen below the todos. GET /api/projects returns
@@ -300,6 +302,8 @@ stimuli:
           dest: tests/unit/todos/application/ListTodos.test.ts
         - src: fixtures/todos-vite/tests/unit/todos/ui/TodoList.test.tsx
           dest: tests/unit/todos/ui/TodoList.test.tsx
+        - src: fixtures/todos-vite/tsconfig.app.json
+          dest: tsconfig.app.json
         - src: fixtures/todos-vite/tsconfig.json
           dest: tsconfig.json
         - src: fixtures/todos-vite/vite.config.ts
@@ -348,7 +352,7 @@ stimuli:
               // New test files are allowed; an existing one edited, renamed or deleted is not.
               const touched = execSync('git diff --name-status HEAD', { encoding: 'utf8' }).split('\n').filter(Boolean)
                 .map(line => line.split('\t')).filter(([status]) => /^[MDR]/.test(status)).map(([, path]) => path);
-              const PROTECTED = /^(package\.json|package-lock\.json|tsconfig\.json|vite\.config\.ts|eslint\.config\.js|eslint\/|tests\/)/;
+              const PROTECTED = /^(package\.json|package-lock\.json|tsconfig(\.app)?\.json|vite\.config\.ts|eslint\.config\.js|eslint\/|tests\/)/;
               const hits = touched.filter(path => PROTECTED.test(path));
               if (hits.length) { console.log('changed or deleted: ' + hits.join(', ')); process.exit(1); }
               console.log('configuration and existing tests untouched');
@@ -371,7 +375,7 @@ stimuli:
     prompt: |
       The project is already set up (React 19, TypeScript, Vite, Vitest, ESLint). Extend it: do
       not scaffold a new project, do not start a dev server, and leave package.json,
-      tsconfig.json, vite.config.ts, eslint.config.js, the eslint/ folder and the existing tests
+      the tsconfig files, vite.config.ts, eslint.config.js, the eslint/ folder and the existing tests
       as they are.
 
       Add a "Complete" button to each todo. It sends PUT /api/todos/:id with
@@ -414,8 +418,8 @@ stimuli:
               for (const f of changed.filter(f => /^src\/[^/]+\/application\//.test(f))) {
                 for (const line of addedLines(f)) if (guard.test(line) && !/^\s*\/\//.test(line)) problems.push(f + ': decides on completion itself: ' + line.trim());
               }
-              const infra = changed.filter(f => /^src\/[^/]+\/infrastructure\//.test(f));
-              if (!infra.some(f => /\b409\b|Conflict/.test(fs.readFileSync(f, 'utf8')))) problems.push('no adapter under infrastructure/ reads the 409 the API answers');
+              const infra = changed.filter(f => /^src\/([^/]+\/infrastructure|shared)\//.test(f));
+              if (!infra.some(f => /\b409\b|Conflict/.test(fs.readFileSync(f, 'utf8')))) problems.push('no gateway under infrastructure/ (or shared HTTP code) reads the 409 the API answers');
               if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
               console.log('the client sends the request and reads the refusal; it does not re-decide the rule');
           expected_exit_code: 0
