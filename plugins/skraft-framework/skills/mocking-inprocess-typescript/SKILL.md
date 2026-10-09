@@ -36,7 +36,7 @@ import { HttpRatesGateway } from '../../../../src/expenses/infrastructure/HttpRa
 const api = 'http://rates.test'
 const server = setupServer(http.get(`${api}/rates/USD`, () => HttpResponse.json({ rate: 1.08 })))
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
@@ -75,5 +75,5 @@ notes: in-process double for the {downstream} API at the gateway boundary
 - Double the DOWNSTREAM API, never the feature's own use cases or components.
 - MSW lives in `tests/integration`; `tests/unit` uses hand-written in-memory gateways and no
   `vi.mock` / `vi.fn` (G7).
-- `onUnhandledRequest: 'error'`, so a call the test did not expect fails it.
+- `onUnhandledFrame: 'error'`, so a call the test did not expect fails it.
 - Use `resolving-stack-commands` for the test command — never hardcode `vitest`.
