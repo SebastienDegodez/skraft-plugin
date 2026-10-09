@@ -314,8 +314,11 @@ jobs:
         run: |
           set -uo pipefail
           read -r -a args <<< "$RUNNER_ARGS"
-          ./eng/run-vally-evals.sh "${args[@]}"
-          status=$?
+          # GitHub runs this step under `bash -e`: a bare failing command would end
+          # the step before its status is read, and the agent branch below would
+          # never run. `|| status=$?` keeps the runner's exit code without exiting.
+          status=0
+          ./eng/run-vally-evals.sh "${args[@]}" || status=$?
           # A suite scoring under its threshold makes the runner exit non-zero.
           # Agent verdicts are advisory by contract, so record it and let the
           # comment report it; a skill cell that errors still fails.
