@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.14.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.13.0...v1.14.0) (2026-10-09)
+
+### ✨ Features
+
+* **skills:** TypeScript stack adapters — Vitest gates, StrykerJS mutation, MSW and Microcks mocking ([#202](https://github.com/SebastienDegodez/skraft-plugin/issues/202)) ([700b6e2](https://github.com/SebastienDegodez/skraft-plugin/commit/700b6e22377fabd7be87c5f946cfc939bc614f6e)), closes [#201](https://github.com/SebastienDegodez/skraft-plugin/issues/201)
+
+### 📝 Documentation
+
+* **plugin:** rewrite the README for the people who install SKRAFT ([#203](https://github.com/SebastienDegodez/skraft-plugin/issues/203)) ([2e01aed](https://github.com/SebastienDegodez/skraft-plugin/commit/2e01aed7db06ec9266a44757c6b5aa0ca088d1b0))
+
 ## [1.13.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.12.0...v1.13.0) (2026-10-09)
 
 ### ✨ Features
