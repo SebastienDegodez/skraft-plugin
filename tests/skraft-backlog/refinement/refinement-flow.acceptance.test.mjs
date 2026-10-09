@@ -46,7 +46,9 @@ test('resolve the documents, check the proposal, render the comment, then the is
     const rendered = node([join(skill, 'scripts/render-comment.mjs'), '--proposal', join(work, 'proposal.json'), '--issue-file', join(work, 'issue.json'), '--out', join(work, 'comment.md')], repo)
     assert.equal(rendered.status, 0, rendered.stdout)
     const comment = readFileSync(join(work, 'comment.md'), 'utf8')
-    assert.match(comment, /^<!-- skraft-refine v=\S+ hash=[0-9a-f]{16} -->\n## 🛠️ Proposition de refinement — à retravailler/)
+    assert.match(comment, /^## 🛠️ Proposition de refinement — à retravailler/)
+    assert.match(comment, /\n<sub>skraft-refine v=\S+ hash=[0-9a-f]{16}<\/sub>\n$/)
+    assert.doesNotMatch(comment, /<!--/, 'gh-aw strips HTML comments from what it posts: the marker must not be one')
 
     // 4. Posted by a member, the comment makes the next run skip; an edit to the issue does not.
     const posted = [{ id: 1, body: comment, author_association: 'MEMBER', user: { type: 'User' } }]
@@ -56,7 +58,7 @@ test('resolve the documents, check the proposal, render the comment, then the is
     // 5. The hash subcommand agrees with the marker, so a person can check it by hand.
     writeFileSync(join(work, 'body.txt'), frenchIssue.body)
     const hash = execFileSync(process.execPath, [join(skill, 'scripts/refine-marker.mjs'), 'hash', '--title', frenchIssue.title, '--body-file', join(work, 'body.txt')], { encoding: 'utf8' }).trim()
-    assert.ok(comment.startsWith(`<!-- skraft-refine v=${VERSION} hash=${hash} -->`))
+    assert.ok(comment.endsWith(`<sub>skraft-refine v=${VERSION} hash=${hash}</sub>\n`))
   } finally {
     rmSync(repo, { recursive: true, force: true })
   }

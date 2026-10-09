@@ -162,7 +162,8 @@ export function computeVerdict(phase, results) {
   let verdict = 'APPROVED'
   if (blocking.length || unrefined.length) verdict = 'REJECTED'
   else if (reasons.length || findings.some((f) => rank(f.severity) >= rank('medium'))
-    || Object.values(lenses).some((l) => l.status === 'inconclusive')) verdict = 'NEEDS_REWORK'
+    // A lens that fails without naming a medium or higher defect is not a pass either.
+    || Object.values(lenses).some((l) => l.status === 'inconclusive' || l.status === 'fail')) verdict = 'NEEDS_REWORK'
 
   const strip = ({ lens, ...rest }) => rest
   return {

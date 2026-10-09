@@ -111,7 +111,7 @@ export function checkProposal(input) {
   }
   need(p.docs && Array.isArray(p.docs.used) && Array.isArray(p.docs.candidates), 'docs must carry the used and candidates lists printed by resolve-docs.mjs')
   for (const [index, gap] of (Array.isArray(p.docs?.gaps) ? p.docs.gaps : []).entries()) need(text(gap), `docs.gaps[${index}] is empty`)
-  need(!(p.docs?.gaps?.length) || p.docs.used.length > 0, 'docs.gaps needs a used document: a candidate to confirm is never reviewed against')
+  need(!(p.docs?.gaps?.length) || p.docs?.used?.length > 0, 'docs.gaps needs a used document: a candidate to confirm is never reviewed against')
   need(VERDICTS.includes(p.review?.verdict), `review.verdict must be one of ${VERDICTS.join(', ')}, as printed by review-verdict.mjs`)
   need(Number.isInteger(p.review?.attempts) && p.review.attempts >= 1, 'review.attempts must be a positive integer')
 
@@ -119,7 +119,8 @@ export function checkProposal(input) {
 
   const dorPassed = dor.filter((item) => item.pass).length
   const critical = (p.antipatterns ?? []).some((antipattern) => antipattern.severity === 'CRITICAL')
-  const ready = dorPassed === 8 && points <= 8 && !critical
+  // A proposal its review rejected cannot vouch for the story, whatever the tally says.
+  const ready = dorPassed === 8 && points <= 8 && !critical && p.review.verdict !== 'REJECTED'
   return {
     problems,
     proposal: {

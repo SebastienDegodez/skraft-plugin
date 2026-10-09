@@ -5,17 +5,20 @@ description: "Use when reviewing one GitHub issue and proposing its refinement a
 
 # Refinement Proposal
 
-One issue in, one comment out. Run every script from this skill's folder. Work in
-`/tmp/gh-aw/agent/skraft-refine/{number}/` in a GitHub Agentic Workflows run, in
-`.copilot-tracking/skraft-refine/{number}/` otherwise; call it `{work}`.
+One issue in, one comment out. `{skill}` is the folder that holds this SKILL.md. Run every
+command from the repository root and call the scripts by their path,
+`node {skill}/scripts/<name>.mjs`: `docs/` and every relative path are read from the
+repository root, never from `{skill}`. Work in `/tmp/gh-aw/agent/skraft-refine/{number}/` in a
+GitHub Agentic Workflows run, in `.copilot-tracking/skraft-refine/{number}/` otherwise; call it
+`{work}`.
 
 Load before step 4: `issue-refinement`, `issue-triage`, `github-issue-search`. Load before
-step 7: `planning-review-criteria`, `backlog-review-lenses`.
+step 5: `planning-review-criteria`, `backlog-review-lenses`.
 
 ## 1. Skip work already done (not in a workflow run: the workflow checked before starting)
 
 ```sh
-node scripts/refine-marker.mjs check --repo <owner/repo> --issue <number> [--force]
+node {skill}/scripts/refine-marker.mjs check --repo <owner/repo> --issue <number> [--force]
 ```
 
 `todo=false` → answer with its `reason` and stop. Pass `--force` only when the user asked for it.
@@ -33,7 +36,7 @@ two-letter code (`fr`, `en`, `es`…). Never translate quoted text from the issu
 
 ## 4. Assess and propose
 
-1. Documents: `node scripts/resolve-docs.mjs --issue-file {work}/issue.json --docs docs` and
+1. Documents: `node {skill}/scripts/resolve-docs.mjs --issue-file {work}/issue.json --docs docs` and
    copy its output into `docs`. Read the `used` documents only, and list in `docs.gaps` where
    the issue contradicts them or misses a rule they state. Never read or argue from a
    `candidates` entry: it is listed for the user to confirm.
@@ -55,7 +58,7 @@ two-letter code (`fr`, `en`, `es`…). Never translate quoted text from the issu
 Write `{work}/proposal.json` per [the proposal schema](references/proposal-schema.md), then:
 
 ```sh
-node scripts/check-proposal.mjs --proposal {work}/proposal.json
+node {skill}/scripts/check-proposal.mjs --proposal {work}/proposal.json
 ```
 
 Exit 2 lists the problems: fix them and re-run until it exits 0. Never compute readiness,
@@ -73,11 +76,12 @@ last verdict is not APPROVED, its blocking findings in `review.unresolved`.
 ## 6. Render and publish
 
 ```sh
-node scripts/render-comment.mjs --proposal {work}/proposal.json --issue-file {work}/issue.json --out {work}/comment.md
+node {skill}/scripts/render-comment.mjs --proposal {work}/proposal.json --issue-file {work}/issue.json --out {work}/comment.md
 ```
 
 Post `{work}/comment.md` as one new comment through the write route of
-`github-issue-search`, byte for byte: it starts with the `<!-- skraft-refine … -->` marker the
-next run looks for. Add no label unless the caller asked for labels.
+`github-issue-search`, byte for byte, on issue `{number}`: its last line is the
+`<sub>skraft-refine v=… hash=…</sub>` marker the next run
+looks for. Add no label unless the caller asked for labels.
 
 Answer with one line: readiness, size, and the comment link when the host returned one.

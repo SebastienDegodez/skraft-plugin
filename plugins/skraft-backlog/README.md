@@ -82,15 +82,24 @@ Copilot engine) in the repository or the organization.
 | Trigger | How |
 |---|---|
 | New issue | `issues: opened` |
-| Label | add `skraft-refine`; it is removed again so it can be re-added |
-| Comment | `/skraft-refine`, or `/skraft-refine --force` |
+| Label | add `skraft-refine`; the label stays, so remove it and add it again to ask again |
+| Comment | a comment whose first word is `/skraft-refine`, or `/skraft-refine --force` |
 | By hand | Actions → skraft-refine → Run workflow, with `issue_number` and `force`; or `gh workflow run skraft-refine.lock.yml -f issue_number=42 -f force=true` |
 
-The workflow reacts 👀, then a pre-activation step runs the marker check: an issue a trusted
-proposal already covers, for its current title, body and the installed version, is skipped.
-The agent's GitHub tools are read-only; its only write is one comment through safe outputs,
-and older proposals of the workflow are hidden. The slash command and the label go through the
-`agentic_commands.yml` dispatcher that `gh aw compile` generates next to it.
+These are plain GitHub events, not gh-aw's `slash_command` and `label_command` triggers: those
+only start on a command at the start of the issue body and cannot share a workflow with
+`issues: opened`. Every issue comment therefore starts the pre-activation job for a few
+seconds; its marker check reads the event and stops there unless the comment starts with
+`/skraft-refine` on an issue (not a pull request), the label is `skraft-refine`, or the run was
+started by hand.
+
+The check then reads the issue: a closed issue, a pull request, or an issue a trusted proposal
+already covers — for its current title, body and the installed version — is skipped. Only a
+run that goes on reacts 👀 to the issue or the comment. The agent's GitHub tools are
+read-only; its only write is one comment through safe outputs, aimed at the issue number the
+check resolved, and older proposals of the workflow are hidden. The proposal ends with a small
+`skraft-refine v=… hash=…` line: gh-aw strips HTML comments from what it posts, so the marker
+the next run looks for is visible.
 
 Who pays: a workflow run uses the repository's or organization's engine secret. To run a
 refinement on your own subscription, use `/skraft-refine` in your editor; the comment carries the

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Renders the refinement proposal comment from a proposal JSON, in the issue's language, with
-// the hidden marker that tells the workflow the work is done.
+// Renders the refinement proposal comment from a proposal JSON, in the issue's language, ending
+// with the marker that tells the next run the work is done.
 //
 //   node render-comment.mjs --proposal proposal.json --out comment.md [--issue-file issue.json]
 //
@@ -29,7 +29,6 @@ export function renderComment(proposal, { issue = proposal.issue, version = VERS
   const lines = []
   const push = (...items) => lines.push(...items)
 
-  push(renderMarker({ version, hash: issueHash(issue?.title, issue?.body) }))
   push(`## ${derived.readiness === 'READY' ? '✅' : '🛠️'} ${t.title} — ${derived.readiness === 'READY' ? t.ready : t.notReady}`, '')
 
   const size = derived.mustSplit
@@ -62,7 +61,7 @@ export function renderComment(proposal, { issue = proposal.issue, version = VERS
   push(`### ${t.criteria}`, '')
   proposal.acceptanceCriteria.forEach((ac, index) => {
     const id = ac.id ?? `AC${index + 1}`
-    push(`**${id}**${ac.title ? ` — ${ac.title.trim()}` : ''}${ac.example ? ` _(${t.fromExample(ac.example)})_` : ''}`)
+    push(`**${id}**${ac.title ? ` — ${String(ac.title).trim()}` : ''}${ac.example ? ` _(${t.fromExample(ac.example)})_` : ''}`)
     push(`- **${given}** ${ac.given.trim()}`, `- **${when}** ${ac.when.trim()}`, `- **${then}** ${ac.then.trim()}`, '')
   })
 
@@ -92,7 +91,7 @@ export function renderComment(proposal, { issue = proposal.issue, version = VERS
 
   push(`<details><summary>${t.review}</summary>`, '', t.reviewLine(proposal.review.verdict, proposal.review.attempts))
   if (proposal.review.unresolved?.length) push('', `**${t.unresolved}**`, '', ...proposal.review.unresolved.map((finding) => `- ${String(finding).trim()}`))
-  push('', '</details>', '', '---', `<sub>${t.footer(version)}</sub>`, '')
+  push('', '</details>', '', '---', `<sub>${t.footer(version)}</sub>`, '', renderMarker({ version, hash: issueHash(issue?.title, issue?.body) }), '')
   return lines.join('\n')
 }
 

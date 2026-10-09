@@ -15,7 +15,8 @@ Every route obeys the [existing-issue content rule](../SKILL.md#existing-issue-c
 ## Comment body
 
 - Write the comment to a file first, then send that file's bytes unchanged. Keep every
-  line, including an HTML marker such as `<!-- skraft-refine … -->` and the trailing newline.
+  line, including a marker line such as `<sub>skraft-refine v=… hash=…</sub>` and the trailing
+  newline.
 - Create a new comment. Never edit another author's comment, never reply in a review
   thread, never put the text in the issue body.
 
@@ -23,7 +24,10 @@ Every route obeys the [existing-issue content rule](../SKILL.md#existing-issue-c
 
 The GitHub MCP server is read-only in this route and `gh` has no write token.
 
-- Comment: call `add_comment` once with `body` set to the file content.
+- Comment: call `add_comment` once with `body` set to the file content and `item_number` set
+  to the issue number: a run started by hand has no triggering issue to fall back on.
+- The workflow strips HTML comments from what it posts; a marker meant to survive is visible
+  text.
 - Labels: call `add_labels` with only the labels to add; the workflow's allowlist decides
   which are accepted. Do not try to remove labels.
 - Never call an MCP write operation or `gh` to write.

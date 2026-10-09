@@ -21,10 +21,12 @@ test('a complete proposal passes and gets the derived figures the agent must not
   assert.deepEqual(checked.dor.map((item) => item.id), DOR_ITEMS)
 })
 
-test('READY needs all 8 DoR items, a size of 8 or less, and no CRITICAL antipattern', () => {
+test('READY needs all 8 DoR items, a size of 8 or less, no CRITICAL antipattern, and a review that did not reject', () => {
   const ready = proposal()
   ready.dor = ready.dor.map((item) => ({ item: item.item, pass: true }))
   assert.equal(checkProposal(ready).proposal.derived.readiness, 'READY')
+
+  assert.equal(checkProposal({ ...ready, review: { verdict: 'REJECTED', attempts: 2 } }).proposal.derived.readiness, 'NEEDS_REFINEMENT')
 
   ready.antipatterns = [{ name: 'Implement-X', severity: 'CRITICAL' }]
   assert.equal(checkProposal(ready).proposal.derived.readiness, 'NEEDS_REFINEMENT')
@@ -93,6 +95,7 @@ test('documents come from resolve-docs, and a gap is only argued from a used doc
   assertProblem((p) => { delete p.docs }, /docs must carry/)
   assertProblem((p) => { p.docs.used = [] }, /never reviewed against/)
   assertProblem((p) => { p.docs.gaps = [''] }, /docs\.gaps\[0\] is empty/)
+  assertProblem((p) => { p.docs = { candidates: [], gaps: ['a gap'] } }, /docs must carry/)
 })
 
 test('the issue, the language and the review verdict are checked too', () => {
