@@ -17,7 +17,11 @@ gate whose tool is missing is `status: "fail"` with the captured output, never
   install a tool during a gate run. Its devDependencies hold `vitest`, `typescript`, `eslint`
   with `eslint-plugin-boundaries`, `@vitest/coverage-v8` of the same major as `vitest`, and
   `@stryker-mutator/core` with `@stryker-mutator/vitest-runner`, both 10.x and the same version.
-- Node 22 or later.
+  StrykerJS 10's Vitest runner works with **Vitest 4.x** only: under Vitest 5 it sees no failing test
+  and reports every mutant as survived, so the mutation gate refuses any other Vitest major.
+  npm 10, the version Node 22 ships, cannot resolve Vitest 4.1's peer set (`TypeError … edgesOut`):
+  install with npm 11, or set `legacy-peer-deps=true` in the project's `.npmrc`.
+- Node 22.5 or later (the scripts use `path.matchesGlob`).
 
 `$Q` is `$SKRAFT_PLUGIN_ROOT/skills/quality-gates-typescript/scripts`, or the `scripts/` folder
 beside this file when that variable is empty. `$EV` is

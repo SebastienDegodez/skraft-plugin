@@ -5,7 +5,7 @@ import { realpathSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { coverageVerdict, hasRuntimeCode, matchSources, noCoverHits, parseArgs, validateConfig } from './gate-policy.mjs'
+import { coverageVerdict, hasRuntimeCode, matchSources, noCoverHits, parseArgs, requiredFiles, validateConfig } from './gate-policy.mjs'
 import { ensure, inside, loadScope, majorOf, packageRoot, packageVersion, repositoryRoot, resolveBin, runNode, sha256 } from './ts-toolchain.mjs'
 
 export async function runCoverageGate(input, { run = runNode } = {}) {
@@ -25,7 +25,7 @@ export async function runCoverageGate(input, { run = runNode } = {}) {
 		const providerVersion = packageVersion(pkg, '@vitest/coverage-v8')
 		ensure(majorOf(providerVersion) === majorOf(vitestVersion), `@vitest/coverage-v8 ${providerVersion} does not match vitest ${vitestVersion}`)
 		const vitest = resolveBin(pkg, 'vitest')
-		const scope = await loadScope({ root, pkg, config: input.config ?? 'stryker.core.json', scope: 'core', validate: validateConfig, match: matchSources })
+		const scope = await loadScope({ root, pkg, config: input.config ?? 'stryker.core.json', scope: 'core', validate: validateConfig, match: matchSources, required: requiredFiles })
 		exitCode = 1
 
 		const reports = join(prefix, 'coverage')

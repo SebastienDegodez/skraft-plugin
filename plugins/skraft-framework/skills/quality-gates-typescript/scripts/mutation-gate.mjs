@@ -7,7 +7,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-	LIMITS, STRYKER_MAJOR, effectiveConfig, matchSources, mutationVerdict, parseArgs, selectChanged, suppressionProblems, validateConfig,
+	LIMITS, STRYKER_MAJOR, VITEST_MAJOR_FOR_STRYKER, effectiveConfig, matchSources, mutationVerdict, parseArgs, requiredFiles, selectChanged, suppressionProblems, validateConfig,
 } from './gate-policy.mjs'
 import {
 	changedSince, ensure, git, inside, loadScope, majorOf, packageRoot, packageVersion, repositoryRoot, resolveBin, runNode, sha256, sourceFiles,
@@ -36,6 +36,41 @@ async function restoreChanged(base, saved) {
 	return restored
 }
 
+async function listTests(pkg) {
+	return (await sourceFiles(pkg, 'tests')).concat((await sourceFiles(pkg, 'src')).filter((name) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(name))).sort()
+}
+
+async function hashFiles(base, files) {
+	return Object.fromEntries(await Promise.all(files.map(async (name) => [name, sha256(await readFile(join(base, name)))])))
+}
+
+const sameHashes = (recorded = {}, current = {}) => {
+	const names = new Set([...Object.keys(recorded), ...Object.keys(current)])
+	return [...names].filter((name) => recorded[name] !== current[name]).sort()
+}
+
+// Boundary runs only on top of a core pass that proved the code as it is now: same revision, same
+// --since base, same core config, and every core source and every test byte-identical.
+async function verifyCoreEvidence({ root, pkg, evidence, since }) {
+	const exit = await readFile(join(evidence, 'qg-mutation.exit'), 'utf8').catch(() => '')
+	ensure(exit.trim() === '0', 'The core gate has not passed in this evidence directory; run --scope core first')
+	const core = JSON.parse(await readFile(join(evidence, 'qg-mutation', 'manifest.json'), 'utf8').catch(() => 'null'))
+	ensure(core && core.scope === 'core' && core.exit_code === 0, 'The core evidence has no passing manifest; run --scope core again')
+	const stale = []
+	if (core.revision !== git(root, ['rev-parse', 'HEAD'])) stale.push('the Git revision moved')
+	if ((core.since?.requested ?? null) !== (since ?? null)) stale.push(`core ran with --since ${core.since?.requested ?? '(none)'}, boundary with ${since ?? '(none)'}`)
+	const config = await readFile(resolve(root, core.config.path)).catch(() => null)
+	if (!config || sha256(config) !== core.config.sha256) stale.push(`${core.config.path} changed`)
+	else {
+		const current = await loadScope({ root, pkg, config: resolve(root, core.config.path), scope: 'core', validate: validateConfig, match: matchSources, required: requiredFiles })
+		const sources = sameHashes(core.scope_files, await hashFiles(pkg, current.files))
+		if (sources.length) stale.push(`core sources changed: ${sources.join(', ')}`)
+	}
+	const tests = sameHashes(core.tests, await hashFiles(pkg, await listTests(pkg)))
+	if (tests.length) stale.push(`tests changed: ${tests.join(', ')}`)
+	ensure(stale.length === 0, `The core evidence no longer matches the code (${stale.join('; ')}); run --scope core again`)
+}
+
 export async function runMutationGate(input, { run = runNode } = {}) {
 	const lines = []
 	const manifest = { scope: input.scope, limit: LIMITS[input.scope], steps: {} }
@@ -49,10 +84,6 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		for (const stale of [`${prefix}.stdout`, `${prefix}.exit`, `${prefix}.stdout.sha256`, prefix]) await rm(stale, { recursive: true, force: true })
 		await mkdir(prefix)
 
-		if (input.scope === 'boundary') {
-			const core = await readFile(join(evidence, 'qg-mutation.exit'), 'utf8').catch(() => '')
-			ensure(core.trim() === '0', 'The core gate has not passed in this evidence directory; run --scope core first')
-		}
 		const pkg = await packageRoot(root, input.package)
 		const pkgPrefix = inside(root, pkg)
 		const toPackage = (name) => (pkgPrefix ? (name.startsWith(`${pkgPrefix}/`) ? name.slice(pkgPrefix.length + 1) : null) : name)
@@ -64,12 +95,17 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		}
 		ensure(majorOf(versions['@stryker-mutator/core']) === STRYKER_MAJOR, `@stryker-mutator/core ${STRYKER_MAJOR}.x required, found ${versions['@stryker-mutator/core']}`)
 		ensure(versions['@stryker-mutator/vitest-runner'] === versions['@stryker-mutator/core'], 'The Vitest runner and Stryker core must share one version')
+		ensure(majorOf(versions.vitest) === VITEST_MAJOR_FOR_STRYKER, `StrykerJS ${STRYKER_MAJOR} runs on Vitest ${VITEST_MAJOR_FOR_STRYKER}.x; found vitest ${versions.vitest}, under which every mutant reads as survived. Pin vitest and @vitest/coverage-v8 to ${VITEST_MAJOR_FOR_STRYKER}.x`)
 		manifest.versions = versions
 		const stryker = resolveBin(pkg, '@stryker-mutator/core', 'stryker')
 		const vitest = resolveBin(pkg, 'vitest')
 
-		const scope = await loadScope({ root, pkg, config: input.config, scope: input.scope, validate: validateConfig, match: matchSources })
+		const scope = await loadScope({ root, pkg, config: input.config, scope: input.scope, validate: validateConfig, match: matchSources, required: requiredFiles })
 		manifest.config = { path: scope.name, sha256: scope.sha256 }
+		const testFiles = await listTests(pkg)
+		manifest.scope_files = await hashFiles(pkg, scope.files)
+		manifest.tests = await hashFiles(pkg, testFiles)
+		if (input.scope === 'boundary') await verifyCoreEvidence({ root, pkg, evidence, since: input.since })
 		let selected = scope.files
 		if (input.since) {
 			const changed = changedSince(root, input.since)
@@ -89,9 +125,8 @@ export async function runMutationGate(input, { run = runNode } = {}) {
 		const saved = await snapshot(pkg, selected)
 		const unexplained = Object.entries(saved).flatMap(([name, bytes]) => suppressionProblems(name, bytes.toString('utf8')))
 		ensure(unexplained.length === 0, unexplained.join('; '))
-		const tests = await snapshot(pkg, (await sourceFiles(pkg, 'tests')).concat((await sourceFiles(pkg, 'src')).filter((name) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(name))))
+		const tests = await snapshot(pkg, testFiles)
 		manifest.sources = Object.fromEntries(Object.entries(saved).map(([name, bytes]) => [name, sha256(bytes)]))
-		manifest.tests = Object.fromEntries(Object.entries(tests).map(([name, bytes]) => [name, sha256(bytes)]))
 
 		const report = join(prefix, 'mutation-report.json')
 		const effective = join(prefix, 'stryker.config.json')

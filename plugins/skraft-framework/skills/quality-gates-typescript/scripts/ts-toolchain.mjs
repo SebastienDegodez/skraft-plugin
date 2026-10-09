@@ -103,7 +103,7 @@ export const nodeEnv = () => ({ ...process.env, CI: 'true', FORCE_COLOR: '0', NO
 export const runNode = (bin, args, options) => capture(process.execPath, [bin, ...args], { env: nodeEnv(), ...options })
 
 // A scope's checked-in Stryker config: committed, valid, and the package sources it names.
-export async function loadScope({ root, pkg, config, scope, validate, match }) {
+export async function loadScope({ root, pkg, config, scope, validate, match, required = () => [] }) {
 	const path = resolve(pkg, config)
 	const name = inside(root, path)
 	git(root, ['ls-files', '--error-unmatch', '--', name])
@@ -116,9 +116,13 @@ export async function loadScope({ root, pkg, config, scope, validate, match }) {
 		throw new Error(`${name} is not JSON: ${error.message}`)
 	}
 	const options = validate(parsed, scope)
-	const files = match(await sourceFiles(pkg), options.mutate)
+	const all = await sourceFiles(pkg)
+	const files = match(all, options.mutate)
 	ensure(files.length > 0, `mutate in ${name} matches no source file`)
 	const empty = options.mutate.filter((pattern) => match(files, [pattern]).length === 0)
 	ensure(empty.length === 0, `mutate pattern matches no source file: ${empty.join(', ')}`)
+	const chosen = new Set(files)
+	const missing = required(all, scope).filter((file) => !chosen.has(file))
+	ensure(missing.length === 0, `${name} leaves ${scope} code out of mutation: ${missing.join(', ')}; mutate every file of the ${scope} layers`)
 	return { name, sha256: sha256(bytes), options, files }
 }

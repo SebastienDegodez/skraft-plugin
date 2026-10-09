@@ -70,12 +70,16 @@ Announce any missing skill as `[SKILL MISSING] {name}` and continue.
    or a blocker.
 2. **On blocker** (invalid opt-in / unsupported stack): STOP and return the
    roster's `blocked` payload verbatim. Do not guess.
-3. **Apply the adapter.** Load `contract-testing-<stack>` and emit:
-   - ALWAYS Layer 1 — the baseline `WebApplicationFactory` + `HttpClient` test.
+3. **Front end with no API** (the roster's React front-end row): STOP and return
+   `status: ok`, `stack: react-frontend`, no file and no test command, with the note
+   `front end exposes no API`. Its gateways are tested against the provider's contract
+   through the mocking roster. Skip steps 4 and 5.
+4. **Apply the adapter.** Load `contract-testing-<stack>` and emit:
+   - ALWAYS Layer 1 — the stack's baseline in-process test (.NET `WebApplicationFactory` + `HttpClient`, Python `TestClient`).
    - IF opt-in == true — ADD Layer 2 — `MicrocksContainer.TestEndpointAsync(TestRequest{ OPEN_API_SCHEMA })` against `host.testcontainers.internal:{port}`, seeded
      from the generic contract artifacts.
-4. **Resolve the test command** via `resolving-stack-commands` (never hardcode).
-5. **Return a structured result** (no commit):
+5. **Resolve the test command** via `resolving-stack-commands` (never hardcode).
+6. **Return a structured result** (no commit):
 
 ```yaml
 status: ok
@@ -83,9 +87,9 @@ capability: contract-testing
 stack: dotnet | python | react-frontend
 microcks: false | true
 files:
-  - <relative paths created>
-testCommand: <resolved test command>
-notes: baseline always ; Microcks TestEndpointAsync(OPEN_API_SCHEMA) added iff opt-in
+  - <relative paths created; none for react-frontend>
+testCommand: <resolved test command; omitted for react-frontend>
+notes: baseline always ; Microcks TestEndpointAsync(OPEN_API_SCHEMA) added iff opt-in ; react-frontend: front end exposes no API
 ```
 
 ## Blocked output
@@ -102,7 +106,7 @@ context:
 
 ## Rules
 
-- The baseline WAF+HttpClient test is ALWAYS emitted, regardless of opt-in.
+- For a service, the baseline in-process test is ALWAYS emitted, regardless of opt-in. A front end that exposes no API gets none.
 - Microcks contract verification (`TestEndpointAsync`) is ADDITIVE — never replaces the baseline, never suppressed.
 - Read the opt-in by tool call (S6). Resolve the test command (S7).
 - One responsibility: provider contract test wiring. Hand TDD authority to the lead.

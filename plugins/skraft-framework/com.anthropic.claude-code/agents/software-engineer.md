@@ -100,7 +100,7 @@ Load each skill below only when its trigger fires, never at startup.
 | `mutation-testing` | Entering phase 4 (COMMIT & VERIFY) |
 | `quality-gates-evidence-contract` | Entering phase 4 — defines the JSON contract for the evidence log you MUST deposit |
 | `quality-gates-dotnet` | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` / `stryker` recipes that populate the contract |
-| `quality-gates-javascript` | Repo has a Node package (`package.json`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
+| `quality-gates-javascript` | Repo has a plain JavaScript Node package (`package.json` without `vitest` or `typescript`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
 | `quality-gates-python` | Repo has a Python project (`pyproject.toml`) — Python gates and cosmic-ray mutation, run from the project's `.venv` |
 | `quality-gates-typescript` | Repo has a TypeScript package tested with Vitest (`vitest` in its `package.json`), a React front end included — Vitest, tsc, ESLint boundaries, v8 coverage and StrykerJS mutation, run from the package's `node_modules` |
 | `resolving-stack-commands` | Needing a build or test command the stack-commands file does not hold, or one of its commands fails — never hardcode one |

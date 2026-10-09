@@ -6,8 +6,10 @@ import { realpathSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { SOURCE, architectureRuleProblems, parseArgs } from './gate-policy.mjs'
-import { ensure, packageRoot, repositoryRoot, resolveBin, runNode, sha256, sourceFiles } from './ts-toolchain.mjs'
+import { ARCHITECTURE_RULES, SOURCE, architectureRuleProblems, parseArgs } from './gate-policy.mjs'
+import { ensure, inside, packageRoot, repositoryRoot, resolveBin, runNode, sha256, sourceFiles } from './ts-toolchain.mjs'
+
+const RULES_HELPER = fileURLToPath(new URL('./eslint-rules.mjs', import.meta.url))
 
 export async function runArchitectureGate(input, { run = runNode } = {}) {
 	const lines = []
@@ -23,21 +25,28 @@ export async function runArchitectureGate(input, { run = runNode } = {}) {
 		const pkg = await packageRoot(root, input.package)
 		const eslint = resolveBin(pkg, 'eslint')
 		const src = input.src ?? 'src'
-		const sample = (await sourceFiles(pkg, src)).find((name) => SOURCE.test(name) && !/\.d\.[cm]?ts$/.test(name))
-		ensure(sample, `No source file under ${src}`)
+		const files = (await sourceFiles(pkg, src)).filter((name) => SOURCE.test(name) && !/\.d\.[cm]?ts$/.test(name))
+		ensure(files.length > 0, `No source file under ${src}`)
 		exitCode = 1
 
-		const printed = await run(eslint, ['--print-config', sample], { cwd: pkg, stdout: join(prefix, 'print-config.stdout'), stderr: join(prefix, 'print-config.stderr') })
-		ensure(printed.code === 0, `eslint --print-config ${sample} failed (exit ${printed.code ?? printed.signal ?? printed.error})`)
-		const config = JSON.parse(await readFile(join(prefix, 'print-config.stdout'), 'utf8'))
-		const missing = architectureRuleProblems(config.rules)
-		ensure(missing.length === 0, `The ESLint config of ${sample} lacks the architecture rules: ${missing.join('; ')}`)
+		// The resolved config of every source file: a flat-config override can switch the rules off
+		// for one folder or extension while a sample file keeps them.
+		const list = join(prefix, 'files.json')
+		await writeFile(list, JSON.stringify(files))
+		const resolved = await run(RULES_HELPER, [list, ...ARCHITECTURE_RULES], { cwd: pkg, stdout: join(prefix, 'rules.stdout'), stderr: join(prefix, 'rules.stderr') })
+		ensure(resolved.code === 0, `ESLint could not resolve the config of the sources (exit ${resolved.code ?? resolved.signal ?? resolved.error}); see ${inside(root, join(prefix, 'rules.stderr'))}`)
+		const perFile = JSON.parse(await readFile(join(prefix, 'rules.stdout'), 'utf8'))
+		const uncovered = files.flatMap((file) => {
+			const missing = architectureRuleProblems(perFile[file] ?? {})
+			return missing.length ? [`${file}: ${missing.join('; ')}`] : []
+		})
+		ensure(uncovered.length === 0, `The ESLint config lacks the architecture rules for ${uncovered.length} of ${files.length} source file(s): ${uncovered.slice(0, 10).join(' | ')}`)
 
 		const lint = await run(eslint, [src, '--max-warnings', '0'], { cwd: pkg, stdout: join(prefix, 'lint.stdout') })
 		const output = (await readFile(join(prefix, 'lint.stdout'), 'utf8')).trimEnd()
 		if (output) lines.push(...output.split(/\r?\n/).slice(-60))
 		ensure(lint.code === 0 && !lint.signal && !lint.error, `ESLint reports architecture or lint errors in ${src} (exit ${lint.code ?? lint.signal ?? lint.error})`)
-		lines.push(`boundaries rules active for ${src}; ESLint clean with no warning`)
+		lines.push(`boundaries rules active for all ${files.length} source files under ${src}; ESLint clean with no warning`)
 		exitCode = 0
 	} catch (error) {
 		lines.push(`architecture gate ${exitCode === 2 ? 'blocked' : 'failed'}: ${error.message}`)

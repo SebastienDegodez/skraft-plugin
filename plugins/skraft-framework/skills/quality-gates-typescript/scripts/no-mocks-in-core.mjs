@@ -5,7 +5,7 @@ import { existsSync, realpathSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { SOURCE, matchSources, mockHits, parseArgs, validateConfig } from './gate-policy.mjs'
+import { SOURCE, matchSources, mockHits, parseArgs, requiredFiles, validateConfig } from './gate-policy.mjs'
 import { ensure, loadScope, packageRoot, repositoryRoot, sha256, sourceFiles } from './ts-toolchain.mjs'
 
 export async function runNoMocksGate(input) {
@@ -17,7 +17,7 @@ export async function runNoMocksGate(input) {
 	let exitCode = 2
 	try {
 		const pkg = await packageRoot(root, input.package)
-		const scope = await loadScope({ root, pkg, config: input.config ?? 'stryker.core.json', scope: 'core', validate: validateConfig, match: matchSources })
+		const scope = await loadScope({ root, pkg, config: input.config ?? 'stryker.core.json', scope: 'core', validate: validateConfig, match: matchSources, required: requiredFiles })
 		const testDirs = (input.tests ?? ['tests/unit']).filter((dir) => existsSync(resolve(pkg, dir)))
 		ensure(testDirs.length > 0, `No unit test folder found (${(input.tests ?? ['tests/unit']).join(', ')})`)
 		const tests = (await Promise.all(testDirs.map((dir) => sourceFiles(pkg, dir)))).flat().filter((name) => SOURCE.test(name))

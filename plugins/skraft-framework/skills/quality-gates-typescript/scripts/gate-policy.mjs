@@ -1,9 +1,12 @@
 // Pure rules of the TypeScript quality gates: arguments, Stryker configs, mutation and coverage
 // verdicts, suppression and mock detection. No I/O here; the runners own processes and files.
-import { matchesGlob } from 'node:path'
+import * as nodePath from 'node:path'
 
 export const LIMITS = Object.freeze({ core: 100, boundary: 80 })
 export const STRYKER_MAJOR = 10
+// StrykerJS 10's Vitest runner reads Vitest's internal run state as Vitest 4 shapes it; under Vitest 5
+// it sees no failing test and reports every mutant as survived. Its own suite runs on Vitest 4.1.
+export const VITEST_MAJOR_FOR_STRYKER = 4
 export const SOURCE = /\.(ts|tsx|js|jsx|mts|cts)$/
 
 const CONFIG_KEYS = ['$schema', 'testRunner', 'mutate', 'vitest', 'coverageAnalysis', 'timeoutMS', 'concurrency']
@@ -67,8 +70,36 @@ export function validateConfig(config, scope) {
 	return { mutate, vitest, coverageAnalysis: config.coverageAnalysis ?? 'perTest', timeoutMS: config.timeoutMS, concurrency: config.concurrency }
 }
 
+// path.matchesGlob arrived in Node 22.5; refuse older runtimes with a message, not a link error.
+function matchesGlob(file, pattern) {
+	ensure(typeof nodePath.matchesGlob === 'function', `Node 22.5 or later is required (path.matchesGlob); found ${process.versions.node}`)
+	return nodePath.matchesGlob(file, pattern)
+}
+
+const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/
+const isProductionSource = (file) => SOURCE.test(file) && !/\.d\.[cm]?ts$/.test(file) && !TEST_FILE.test(file)
+
 export function matchSources(files, patterns) {
-	return files.filter((file) => SOURCE.test(file) && !/\.d\.[cm]?ts$/.test(file) && patterns.some((pattern) => matchesGlob(file, pattern))).sort()
+	return files.filter((file) => isProductionSource(file) && patterns.some((pattern) => matchesGlob(file, pattern))).sort()
+}
+
+// Every production file of a scope's layers, feature-first or layer-first. A checked-in config must
+// mutate all of them: a narrower `mutate` buys the score by leaving code out, as an exclusion would.
+const SCOPE_LAYERS = {
+	core: ['src/*/application/**', 'src/application/**', 'src/*/domain/**', 'src/domain/**'],
+	boundary: ['src/*/infrastructure/**', 'src/infrastructure/**', 'src/*/ui/**', 'src/ui/**', 'src/*/api/**', 'src/api/**', 'src/app/**', 'src/shared/**'],
+}
+
+export function requiredFiles(files, scope) {
+	ensure(Object.hasOwn(SCOPE_LAYERS, scope), `Unknown mutation scope: ${scope}`)
+	const other = scope === 'core' ? SCOPE_LAYERS.boundary : SCOPE_LAYERS.core
+	return files.filter((file) => isProductionSource(file) && SCOPE_LAYERS[scope].some((pattern) => matchesGlob(file, pattern))
+		&& !(scope === 'boundary' && other.some((pattern) => matchesGlob(file, pattern)))).sort()
+}
+
+export function scopeGaps(selected, required) {
+	const chosen = new Set(selected)
+	return required.filter((file) => !chosen.has(file))
 }
 
 export function selectChanged(files, changed) {
@@ -147,23 +178,36 @@ export function noCoverHits(name, text) {
 }
 
 // A file that only declares types is erased at runtime: coverage has nothing to measure in it.
+// Erased forms: interfaces, type aliases, `declare` statements, and imports or exports whose every
+// specifier is a type (`import type`, `import { type A }`, `export { type A }`, `export type *`).
+const TYPE_ONLY_SPECIFIERS = (list) => list.split(',').map((part) => part.trim()).filter(Boolean).every((part) => /^type\s/.test(part))
+
 export function hasRuntimeCode(text) {
-	const lines = text.replace(/\/\*[\s\S]*?\*\//g, '').split(/\r?\n/).map((line) => line.replace(/\/\/.*$/, '').trim())
+	const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1')
+	// Join each statement onto one logical line so multi-line braces read as one unit.
+	const statements = []
+	let current = ''
 	let depth = 0
-	for (const line of lines) {
-		if (depth > 0) {
-			depth += (line.match(/[{(]/g) ?? []).length - (line.match(/[})]/g) ?? []).length
-			continue
+	for (const raw of code.split(/\r?\n/)) {
+		const line = raw.trim()
+		if (!line && depth === 0) continue
+		current += (current ? ' ' : '') + line
+		depth += (line.match(/[{([]/g) ?? []).length - (line.match(/[})\]]/g) ?? []).length
+		if (depth <= 0 && !/[,=(&|]$/.test(line)) {
+			statements.push(current)
+			current = ''
+			depth = 0
 		}
-		if (!line || /^import\s+type\b/.test(line) || /^export\s+type\s*\{/.test(line) || /^export\s+type\s*\*/.test(line)) continue
-		if (/^(export\s+)?(declare\s+)?(interface|type)\s+\w/.test(line)) {
-			depth = Math.max(0, (line.match(/[{(]/g) ?? []).length - (line.match(/[})]/g) ?? []).length)
-			continue
-		}
-		if (/^[})\];,]*$/.test(line)) continue
-		return true
 	}
-	return false
+	if (current) statements.push(current)
+	const erased = (s) => /^(export\s+)?(declare\s+)?(interface|type)\s+[\w$]/.test(s)
+		|| /^(export\s+)?declare\s/.test(s)
+		|| /^import\s+type\s/.test(s)
+		|| /^export\s+type\s*(\{|\*)/.test(s)
+		|| (/^(import|export)\s*\{([^}]*)\}\s*(from\s*['"][^'"]+['"])?\s*;?$/.test(s) && TYPE_ONLY_SPECIFIERS(s.match(/\{([^}]*)\}/)[1]))
+		|| /^export\s*\{\s*\}\s*;?$/.test(s)
+		|| /^[;}]*$/.test(s)
+	return statements.some((s) => !erased(s))
 }
 
 // `summary` is Vitest's coverage-summary.json (absolute paths); `files` are the core sources.
@@ -192,18 +236,38 @@ export function coverageVerdict(summary, files, { relative, excluded = [], typeO
 	return { total, covered, percent, missing, unmeasured, passed: problems.length === 0, problems }
 }
 
+// Line patterns catch the common spellings; whole-text patterns catch the ones an alias or a
+// destructuring would hide (`import { vi as v }`, `const { fn } = vi`, `import * as t from 'vitest'`).
 const MOCK_PATTERNS = [
 	/\bvi\.(mock|doMock|unmock|fn|spyOn|mocked|hoisted|stubGlobal|stubEnv)\s*\(/,
 	/\bjest\.(mock|doMock|fn|spyOn|mocked)\s*\(/,
 	/from\s+['"](sinon|ts-sinon|ts-mockito|@typestrong\/ts-mockito|testdouble|vitest-mock-extended|jest-mock-extended|@golevelup\/ts-jest|moq\.ts|msw|msw\/node)['"]/,
 	/require\(\s*['"](sinon|ts-mockito|testdouble|msw)['"]\s*\)/,
 ]
+const MOCK_TEXT_PATTERNS = [
+	[/import\s*(?:type\s+)?\{[^}]*\bvi\b[^}]*\}\s*from\s*['"]vitest['"]/g, 'imports vi from vitest'],
+	[/import\s*\*\s*as\s+\w+\s+from\s*['"]vitest['"]/g, 'imports the whole vitest namespace'],
+	[/import\s*\{[^}]*\bjest\b[^}]*\}\s*from\s*['"]@jest\/globals['"]/g, 'imports jest from @jest/globals'],
+	[/\b(?:const|let|var)\s*(?:\{[^}]*\}|[\w$]+)\s*=\s*(?:vi|jest)\b(?!\s*\.)/g, 'aliases vi or jest'],
+]
+
+const lineOf = (text, index) => text.slice(0, index).split(/\r?\n/).length
 
 export function mockHits(name, text) {
-	return text.split(/\r?\n/).flatMap((line, index) => MOCK_PATTERNS.some((pattern) => pattern.test(line)) ? [`${name}:${index + 1}: ${line.trim()}`] : [])
+	const lines = text.split(/\r?\n/)
+	const hits = new Map()
+	lines.forEach((line, index) => { if (MOCK_PATTERNS.some((pattern) => pattern.test(line))) hits.set(index + 1, line.trim()) })
+	for (const [pattern, what] of MOCK_TEXT_PATTERNS) {
+		for (const match of text.matchAll(pattern)) {
+			const line = lineOf(text, match.index)
+			if (!hits.has(line)) hits.set(line, `${lines[line - 1].trim()} (${what})`)
+		}
+	}
+	return [...hits].sort(([a], [b]) => a - b).map(([line, text]) => `${name}:${line}: ${text}`)
 }
 
 // The rules the architecture gate requires from the project's resolved ESLint config.
+export const ARCHITECTURE_RULES = ['boundaries/dependencies', 'boundaries/element-types', 'boundaries/no-unknown-files']
 export function architectureRuleProblems(rules) {
 	const on = (value) => value === 2 || value === 'error' || (Array.isArray(value) && (value[0] === 2 || value[0] === 'error'))
 	const problems = []

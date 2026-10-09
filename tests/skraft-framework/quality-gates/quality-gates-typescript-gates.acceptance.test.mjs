@@ -13,7 +13,8 @@ import { runCapture } from '../../../plugins/skraft-framework/skills/quality-gat
 import { configureMutation } from '../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/configure-mutation.mjs'
 
 const fake = pathToFileURL(fileURLToPath(new URL('./quality-gates-typescript-fake-tools.fixture.mjs', import.meta.url))).href
-const VERSIONS = { vitest: '5.0.3', '@vitest/coverage-v8': '5.0.3', '@stryker-mutator/core': '10.0.0', '@stryker-mutator/vitest-runner': '10.0.0', eslint: '9.39.5' }
+const fakeEslintApi = pathToFileURL(fileURLToPath(new URL('./quality-gates-typescript-fake-eslint-api.fixture.mjs', import.meta.url))).href
+const VERSIONS = { vitest: '4.1.11', '@vitest/coverage-v8': '4.1.11', '@stryker-mutator/core': '10.0.0', '@stryker-mutator/vitest-runner': '10.0.0', eslint: '9.39.5' }
 const BINS = { vitest: ['vitest', 'vitest.mjs'], '@stryker-mutator/core': ['stryker', 'bin/stryker.mjs'], eslint: ['eslint', 'bin/eslint.mjs'] }
 const mutant = (line, status) => ({ id: `${line}-${status}`, mutatorName: 'ConditionalExpression', status, location: { start: { line, column: 1 }, end: { line, column: 9 } } })
 
@@ -27,7 +28,8 @@ async function project(t, { versions = {}, scenario = {}, pkgDir = '.' } = {}) {
 	}
 	for (const [name, version] of Object.entries({ ...VERSIONS, ...versions })) {
 		const [bin, file] = BINS[name] ?? []
-		await put(`node_modules/${name}/package.json`, JSON.stringify({ name, version, ...(bin ? { bin: { [bin]: file } } : {}) }))
+		await put(`node_modules/${name}/package.json`, JSON.stringify({ name, version, ...(bin ? { bin: { [bin]: file } } : {}), ...(name === 'eslint' ? { main: 'api.mjs' } : {}) }))
+		if (name === 'eslint') await put('node_modules/eslint/api.mjs', `export * from ${JSON.stringify(fakeEslintApi)}\n`)
 		if (bin) await put(`node_modules/${name}/${file}`, `process.argv.splice(2, 0, ${JSON.stringify(bin)})\nawait import(${JSON.stringify(fake)})\n`)
 	}
 	await put('package.json', JSON.stringify({ name: 'front', private: true }))
@@ -164,6 +166,13 @@ test('an uncommitted config is refused', async (t) => {
 	assert.equal(result.exitCode, 2)
 })
 
+test('Vitest 5 under StrykerJS 10 blocks instead of reporting every mutant as survived', async (t) => {
+	const p = await project(t, { versions: { vitest: '5.0.3', '@vitest/coverage-v8': '5.0.3' } })
+	const result = await runMutationGate(core(p.root))
+	assert.equal(result.exitCode, 2)
+	assert.match(result.lines.join('\n'), /StrykerJS 10 runs on Vitest 4\.x; found vitest 5\.0\.3/)
+})
+
 test('another Stryker major or mismatched runner version blocks', async (t) => {
 	const p = await project(t, { versions: { '@stryker-mutator/core': '9.6.1', '@stryker-mutator/vitest-runner': '9.6.1' } })
 	assert.match((await runMutationGate(core(p.root))).lines.join('\n'), /@stryker-mutator\/core 10\.x required/)
@@ -216,7 +225,7 @@ test('coverage fails on an uncovered line, an unmeasured file or an ignore comme
 })
 
 test('coverage requires the v8 provider of the same major as vitest', async (t) => {
-	const p = await project(t, { versions: { '@vitest/coverage-v8': '4.1.0' } })
+	const p = await project(t, { versions: { '@vitest/coverage-v8': '3.2.0' } })
 	assert.match((await runCoverageGate({ root: p.root, evidence: 'evidence' })).lines.join('\n'), /does not match vitest/)
 })
 
@@ -239,6 +248,10 @@ test('architecture: the boundaries rules must be active, then ESLint must be cle
 	const missing = await runArchitectureGate({ root: p.root, evidence: 'evidence' })
 	assert.equal(missing.exitCode, 1)
 	assert.match(missing.lines.join('\n'), /boundaries\/dependencies is not an error rule; boundaries\/no-unknown-files is not an error rule/)
+	await p.scenario({ rulesByFile: { 'src/todos/ui/TodoList/TodoList.tsx': { 'boundaries/dependencies': 'off', 'boundaries/no-unknown-files': 'off' } } })
+	const overridden = await runArchitectureGate({ root: p.root, evidence: 'evidence' })
+	assert.equal(overridden.exitCode, 1, 'an override that switches the rules off for one file fails the gate')
+	assert.match(overridden.lines.join('\n'), /lacks the architecture rules for 1 of 5 source file\(s\): src\/todos\/ui\/TodoList\/TodoList\.tsx/)
 	await p.scenario({ lintExit: 1, lintOutput: 'src/todos/ui/TodoList/TodoList.tsx  1:1  error  feature todos imports feature projects' })
 	const dirty = await runArchitectureGate({ root: p.root, evidence: 'evidence' })
 	assert.equal(dirty.exitCode, 1)
@@ -252,4 +265,31 @@ test('capture runs a package command through node and records its exit code', as
 	assert.equal((await p.evidence('qg-tests.exit')).trim(), '1')
 	assert.match(await p.evidence('qg-tests.stdout'), /Tests 1 failed/)
 	assert.match(await p.evidence('qg-tests.stdout.sha256'), /^[0-9a-f]{64}\n$/)
+})
+
+test('a config that mutates only part of the core layers is refused', async (t) => {
+	const p = await project(t)
+	await p.put('stryker.core.json', JSON.stringify({ testRunner: 'vitest', mutate: ['src/todos/application/ListTodos.ts'] }))
+	p.commit()
+	const result = await runMutationGate(core(p.root))
+	assert.equal(result.exitCode, 2)
+	assert.match(result.lines.join('\n'), /leaves core code out of mutation: src\/todos\/application\/TodoGateway\.ts/)
+})
+
+test('boundary refuses core evidence the code has moved past', async (t) => {
+	const killedCore = { 'src/todos/application/ListTodos.ts': { mutants: [mutant(3, 'Killed')] } }
+	const killedUi = { 'src/todos/ui/TodoList/TodoList.tsx': { mutants: [mutant(1, 'Killed')] } }
+	for (const [label, change, extra] of [
+		['a core source', (p) => p.put('src/todos/application/ListTodos.ts', 'export class ListTodos {}\n'), {}],
+		['a test', (p) => p.put('tests/unit/todos/ListTodos.test.ts', "import { it } from 'vitest'\nit('should run', () => {})\n"), {}],
+		['the --since base', () => {}, { since: 'HEAD' }],
+	]) {
+		const p = await project(t, { scenario: { report: killedCore } })
+		assert.equal((await runMutationGate(core(p.root))).exitCode, 0, label)
+		await change(p)
+		await p.scenario({ report: killedUi })
+		const result = await runMutationGate(boundary(p.root, extra))
+		assert.equal(result.exitCode, 2, label)
+		assert.match(result.lines.join('\n'), /core evidence no longer matches the code/, label)
+	}
 })

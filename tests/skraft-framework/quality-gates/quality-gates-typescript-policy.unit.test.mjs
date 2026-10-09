@@ -1,10 +1,16 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-	architectureRuleProblems, effectiveConfig, hasRuntimeCode, matchSources, mockHits, mutationVerdict, suppressionProblems, validateConfig,
+	architectureRuleProblems, effectiveConfig, hasRuntimeCode, matchSources, mockHits, mutationVerdict, requiredFiles, suppressionProblems, validateConfig,
 } from '../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/gate-policy.mjs'
 
 const report = (...statuses) => ({ files: { 'src/a.ts': { mutants: statuses.map((status, index) => ({ status, mutatorName: 'BooleanLiteral', location: { start: { line: index + 1 } } })) } } })
+
+test('the required core and boundary files follow the layer folders, tests aside', () => {
+	const files = ['src/a/application/X.ts', 'src/a/application/X.test.ts', 'src/a/ui/Y/Y.tsx', 'src/app/App/App.tsx', 'src/shared/x.ts', 'src/main.tsx', 'src/domain/Z.ts']
+	assert.deepEqual(requiredFiles(files, 'core'), ['src/a/application/X.ts', 'src/domain/Z.ts'])
+	assert.deepEqual(requiredFiles(files, 'boundary'), ['src/a/ui/Y/Y.tsx', 'src/app/App/App.tsx', 'src/shared/x.ts'])
+})
 
 test('the score counts killed and timed-out mutants over every tested one', () => {
 	const verdict = mutationVerdict(report('Killed', 'Timeout', 'Survived', 'NoCoverage', 'Ignored'), 'boundary')
@@ -19,6 +25,13 @@ test('pending, compile and runtime errors fail the verdict instead of shrinking 
 	assert.match(mutationVerdict(report('Killed', 'RuntimeError'), 'core').problems.join(), /compile or runtime error/)
 	assert.match(mutationVerdict(report('Ignored'), 'core').problems.join(), /no mutant was tested/)
 	assert.equal(mutationVerdict({ files: {} }, 'core').passed, true)
+})
+
+test('erased TypeScript forms are type-only too', () => {
+	for (const source of ["import { type Todo } from './t'\nexport interface G {\n  list(): Promise<Todo[]>\n}\n", "export { type Todo } from './t'\n", 'export declare const todo: string\n', "declare module 'x' {\n  export const y: number\n}\n", "export type * from './t'\n"]) {
+		assert.equal(hasRuntimeCode(source), false, source)
+	}
+	assert.equal(hasRuntimeCode("import { type A, b } from './t'\nexport const c = b\n"), true)
 })
 
 test('a type-only file has no runtime code; anything executable does', () => {
@@ -53,6 +66,11 @@ test('the effective config carries no threshold or reuse of its own', () => {
 	assert.deepEqual(effective.thresholds, { high: 100, low: 0, break: null })
 	assert.equal(effective.incremental, false)
 	assert.deepEqual(effective.reporters, ['json', 'clear-text'])
+})
+
+test('aliasing or destructuring vi and jest does not hide a double', () => {
+	const hits = mockHits('t.ts', "import { describe, it, vi as v } from 'vitest'\nconst { fn } = vi\nconst w = vi\nimport * as t from 'vitest'\nimport { jest } from '@jest/globals'\nimport { describe, expect } from 'vitest'\n")
+	assert.deepEqual(hits.map((hit) => Number(hit.split(':')[1])), [1, 2, 3, 4, 5])
 })
 
 test('Vitest doubles, mocking libraries and MSW are mock hits; a hand-written fake is not', () => {

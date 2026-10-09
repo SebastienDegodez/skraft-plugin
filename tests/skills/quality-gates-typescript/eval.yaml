@@ -1,0 +1,330 @@
+name: quality-gates-typescript
+description: |
+  Verifies that mutation testing on a React / TypeScript project tested with
+  Vitest is run and read against the quality bar: 100% of the tested mutants
+  killed in the application layer, on a green suite only, with no narrowed
+  scope, exclusion or unexplained disable comment to buy the score. The fixture
+  is the todos front end with StrykerJS configs checked in; its progress rule is
+  rendered by a component test but never asserted, so its mutants survive.
+  Deciders: reaching the bar and the red suite; the verdict-only stimulus checks
+  that a score is judged against the bar rather than reported as a number.
+type: capability
+defaults:
+  timeout: 4m
+  runs: 5
+  # Pinned to Sonnet like the other quality-gates specs, so verdicts stay comparable.
+  model: claude-sonnet-5.5
+scoring:
+  threshold: 1
+
+stimuli:
+  # The score must be judged against the bar, not reported as a number.
+  - name: 'TypeScript front end: does the application code meet the mutation bar'
+    prompt: |
+      Our application layer has to be fully protected by its tests. Run mutation
+      testing on it and tell me whether it meets our bar. Do not change the code or
+      the tests.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files: &todos-files
+        - src: fixtures/todos-vite/.gitignore
+          dest: .gitignore
+        - src: fixtures/todos-vite/.npmrc
+          dest: .npmrc
+        - src: fixtures/todos-vite/eslint.config.js
+          dest: eslint.config.js
+        - src: fixtures/todos-vite/eslint/clean-architecture.js
+          dest: eslint/clean-architecture.js
+        - src: fixtures/todos-vite/index.html
+          dest: index.html
+        - src: fixtures/todos-vite/package.json
+          dest: package.json
+        - src: fixtures/todos-vite/src/app/App/App.tsx
+          dest: src/app/App/App.tsx
+        - src: fixtures/todos-vite/src/app/composition.ts
+          dest: src/app/composition.ts
+        - src: fixtures/todos-vite/src/main.tsx
+          dest: src/main.tsx
+        - src: fixtures/todos-vite/src/shared/ui/ErrorMessage/ErrorMessage.tsx
+          dest: src/shared/ui/ErrorMessage/ErrorMessage.tsx
+        - src: fixtures/todos-vite/src/todos/application/ListTodos.ts
+          dest: src/todos/application/ListTodos.ts
+        - src: fixtures/todos-vite/src/todos/application/TodoGateway.ts
+          dest: src/todos/application/TodoGateway.ts
+        - src: fixtures/todos-vite/src/todos/application/TodoViewModel.ts
+          dest: src/todos/application/TodoViewModel.ts
+        - src: fixtures/todos-vite/src/todos/application/progress.ts
+          dest: src/todos/application/progress.ts
+        - src: fixtures/todos-vite/src/todos/infrastructure/HttpTodoGateway.ts
+          dest: src/todos/infrastructure/HttpTodoGateway.ts
+        - src: fixtures/todos-vite/src/todos/ui/TodoItem/TodoItem.tsx
+          dest: src/todos/ui/TodoItem/TodoItem.tsx
+        - src: fixtures/todos-vite/src/todos/ui/TodoList/TodoList.tsx
+          dest: src/todos/ui/TodoList/TodoList.tsx
+        - src: fixtures/todos-vite/src/todos/ui/TodosContext/TodosContext.ts
+          dest: src/todos/ui/TodosContext/TodosContext.ts
+        - src: fixtures/todos-vite/src/todos/ui/TodosProvider/TodosProvider.tsx
+          dest: src/todos/ui/TodosProvider/TodosProvider.tsx
+        - src: fixtures/todos-vite/src/todos/ui/useTodos/useTodos.ts
+          dest: src/todos/ui/useTodos/useTodos.ts
+        - src: fixtures/todos-vite/src/todos/ui/useTodosUseCases/useTodosUseCases.ts
+          dest: src/todos/ui/useTodosUseCases/useTodosUseCases.ts
+        - src: fixtures/todos-vite/src/vite-env.d.ts
+          dest: src/vite-env.d.ts
+        - src: fixtures/todos-vite/stryker.boundary.json
+          dest: stryker.boundary.json
+        - src: fixtures/todos-vite/stryker.core.json
+          dest: stryker.core.json
+        - src: fixtures/todos-vite/tests/integration/todos/infrastructure/HttpTodoGateway.test.ts
+          dest: tests/integration/todos/infrastructure/HttpTodoGateway.test.ts
+        - src: fixtures/todos-vite/tests/setup.ts
+          dest: tests/setup.ts
+        - src: fixtures/todos-vite/tests/unit/todos/InMemoryTodoGateway.ts
+          dest: tests/unit/todos/InMemoryTodoGateway.ts
+        - src: fixtures/todos-vite/tests/unit/todos/application/ListTodos.test.ts
+          dest: tests/unit/todos/application/ListTodos.test.ts
+        - src: fixtures/todos-vite/tests/unit/todos/ui/TodoList.test.tsx
+          dest: tests/unit/todos/ui/TodoList.test.tsx
+        - src: fixtures/todos-vite/tsconfig.app.json
+          dest: tsconfig.app.json
+        - src: fixtures/todos-vite/tsconfig.json
+          dest: tsconfig.json
+        - src: fixtures/todos-vite/vite.config.ts
+          dest: vite.config.ts
+      commands: &todos-setup
+        - 'npm install --no-audit --no-fund --loglevel=error'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "feat: todos with a progress line"'
+    graders:
+      - &tests-green
+        type: run-command
+        name: Every test in the project is green
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; npm run --silent test >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - &unchanged
+        type: run-command
+        name: Sources, tests and mutation configs are unchanged
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execSync } = require('child_process');
+              const paths = ['src', 'tests', 'package.json', 'package-lock.json', 'stryker.core.json', 'stryker.boundary.json', 'vite.config.ts', 'tsconfig.json', 'tsconfig.app.json'];
+              const changed = execSync('git status --porcelain -- ' + paths.join(' '), { encoding: 'utf8' }).trim();
+              if (changed) { console.log(changed); process.exit(1); }
+              console.log('sources, tests and mutation configs unchanged');
+          expected_exit_code: 0
+          timeout: 1m
+      - &judge
+        type: prompt
+        config:
+          scoring: scale_1_10
+      - &loaded
+        type: skill-invocation
+        name: The skill under test is loaded
+        config:
+          required:
+            - quality-gates-typescript
+    rubric:
+      - Runs the mutation tests during the session and reports that the application layer falls short of a 100% killed score.
+      - Names the surviving mutants of the progress rule (empty list, finished list, the done count) as untested behaviour.
+      - Does not present the score of the whole project, or of the user interface, as the application layer's score.
+
+  # Reaching the bar means killing real survivors, never narrowing or disabling them.
+  - name: 'TypeScript front end: bring the application code to the mutation bar'
+    prompt: |
+      Before we merge, the mutation score of the application layer must reach our
+      bar. Do what is needed, then show me the final result.
+    constraints:
+      max_duration: 18m
+      max_agent_duration: 14m
+    environment:
+      files: *todos-files
+      commands: *todos-setup
+    graders:
+      - *tests-green
+      - type: run-command
+        name: The unit tests kill hand-made mutants of the progress rule
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), { spawnSync } = require('child_process');
+              const file = 'src/todos/application/progress.ts';
+              const original = fs.readFileSync(file, 'utf8');
+              const vitestPkg = JSON.parse(fs.readFileSync('node_modules/vitest/package.json', 'utf8'));
+              const vitest = require('path').join('node_modules/vitest', typeof vitestPkg.bin === 'string' ? vitestPkg.bin : vitestPkg.bin.vitest);
+              const mutants = [
+                ['an empty list no longer reads "Nothing to do"', "todos.length === 0", "todos.length !== 0"],
+                ['open todos count as done', "todo.status === 'done'", "todo.status !== 'done'"],
+                ['a finished list no longer reads "All done"', "done === todos.length", "done !== todos.length"],
+                ['the empty-list message is blank', "'Nothing to do'", "''"],
+              ];
+              const survivors = [];
+              try {
+                for (const [label, before, after] of mutants) {
+                  if (original.split(before).length !== 2) { console.log('the rule was rewritten: ' + before + ' not found once in ' + file); process.exit(1); }
+                  fs.writeFileSync(file, original.replace(before, after));
+                  const run = spawnSync(process.execPath, [vitest, 'run', 'tests/unit'], { encoding: 'utf8', env: { ...process.env, CI: 'true' } });
+                  if (run.status === 0) survivors.push(label);
+                }
+              } finally {
+                fs.writeFileSync(file, original);
+              }
+              if (survivors.length) { console.log('the unit tests still pass when ' + survivors.join('; ')); process.exit(1); }
+              console.log('the unit tests kill every hand-made mutant of the progress rule');
+          expected_exit_code: 0
+          timeout: 4m
+      - type: diff-not-contains
+        name: The mutation configs are unchanged
+        config:
+          pattern: '(?m)^diff --git a/stryker\.(core|boundary)\.json '
+      - type: run-command
+        name: Every disabled mutant names its reason, and no line is excluded from coverage
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path');
+              const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
+              const bad = [];
+              for (const file of walk('src')) {
+                fs.readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+                  if (/Stryker\s+(disable|restore)/.test(line) && !/Stryker\s+disable\s+next-line\s+[\w,]+\s*:\s*\S.{8,}/.test(line)) bad.push(file + ':' + (i + 1) + ': ' + line.trim());
+                  if (/\b(v8|c8|istanbul)\s+ignore\b/.test(line)) bad.push(file + ':' + (i + 1) + ': ' + line.trim());
+                });
+              }
+              if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
+              console.log('every disabled mutant names its reason; no coverage exclusion');
+          expected_exit_code: 0
+          timeout: 1m
+      - type: run-command
+        name: A fresh mutation run of the application layer kills every mutant
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
+              const pkg = (name) => path.dirname(require.resolve(name + '/package.json', { paths: [process.cwd()] }));
+              const core = JSON.parse(fs.readFileSync('stryker.core.json', 'utf8'));
+              const manifest = JSON.parse(fs.readFileSync(path.join(pkg('@stryker-mutator/core'), 'package.json'), 'utf8'));
+              const bin = path.join(pkg('@stryker-mutator/core'), typeof manifest.bin === 'string' ? manifest.bin : manifest.bin.stryker);
+              const report = 'reports/grader/mutation.json';
+              const config = '.grader-stryker.json';
+              fs.writeFileSync(config, JSON.stringify({ ...core, reporters: ['json'], jsonReporter: { fileName: report }, incremental: false, thresholds: { high: 100, low: 0, break: null }, tempDirName: '.stryker-tmp' }));
+              const run = spawnSync(process.execPath, [bin, 'run', config], { encoding: 'utf8', env: { ...process.env, CI: 'true' } });
+              fs.rmSync(config, { force: true });
+              if (run.status !== 0 || !fs.existsSync(report)) { console.log('stryker failed:\n' + (run.stdout + run.stderr).slice(-1500)); process.exit(1); }
+              const survivors = [];
+              for (const [file, data] of Object.entries(JSON.parse(fs.readFileSync(report, 'utf8')).files)) {
+                for (const m of data.mutants) if (!['Killed', 'Timeout', 'Ignored'].includes(m.status)) survivors.push(file + ':' + m.location.start.line + ' ' + m.mutatorName + ' ' + m.status);
+              }
+              if (survivors.length) { console.log('core mutants not killed:\n' + survivors.join('\n')); process.exit(1); }
+              console.log('every core mutant is killed, or disabled with a reason');
+          expected_exit_code: 0
+          timeout: 8m
+      - *judge
+      - *loaded
+    rubric:
+      - Adds unit tests for the progress rule (no todo, some done, all done) instead of changing or deleting the rule.
+      - Leaves the mutation configuration as it is; disables no mutant, or only an equivalent one with its reason.
+      - Shows a final mutation run of the application layer at 100% killed.
+
+  # A red suite makes every mutant look killed.
+  - name: 'TypeScript front end: mutation testing on a red suite'
+    prompt: |
+      Run mutation testing on the application code and give me the score.
+    constraints:
+      max_duration: 14m
+      max_agent_duration: 10m
+    environment:
+      files:
+        - src: fixtures/todos-vite/.gitignore
+          dest: .gitignore
+        - src: fixtures/todos-vite/.npmrc
+          dest: .npmrc
+        - src: fixtures/todos-vite/eslint.config.js
+          dest: eslint.config.js
+        - src: fixtures/todos-vite/eslint/clean-architecture.js
+          dest: eslint/clean-architecture.js
+        - src: fixtures/todos-vite/index.html
+          dest: index.html
+        - src: fixtures/todos-vite/package.json
+          dest: package.json
+        - src: fixtures/todos-vite/src/app/App/App.tsx
+          dest: src/app/App/App.tsx
+        - src: fixtures/todos-vite/src/app/composition.ts
+          dest: src/app/composition.ts
+        - src: fixtures/todos-vite/src/main.tsx
+          dest: src/main.tsx
+        - src: fixtures/todos-vite/src/shared/ui/ErrorMessage/ErrorMessage.tsx
+          dest: src/shared/ui/ErrorMessage/ErrorMessage.tsx
+        - src: fixtures/todos-vite/src/todos/application/ListTodos.ts
+          dest: src/todos/application/ListTodos.ts
+        - src: fixtures/todos-vite/src/todos/application/TodoGateway.ts
+          dest: src/todos/application/TodoGateway.ts
+        - src: fixtures/todos-vite/src/todos/application/TodoViewModel.ts
+          dest: src/todos/application/TodoViewModel.ts
+        - src: fixtures/todos-vite/src/todos/application/progress.ts
+          dest: src/todos/application/progress.ts
+        - src: fixtures/todos-vite/src/todos/infrastructure/HttpTodoGateway.ts
+          dest: src/todos/infrastructure/HttpTodoGateway.ts
+        - src: fixtures/todos-vite/src/todos/ui/TodoItem/TodoItem.tsx
+          dest: src/todos/ui/TodoItem/TodoItem.tsx
+        - src: fixtures/todos-vite/src/todos/ui/TodoList/TodoList.tsx
+          dest: src/todos/ui/TodoList/TodoList.tsx
+        - src: fixtures/todos-vite/src/todos/ui/TodosContext/TodosContext.ts
+          dest: src/todos/ui/TodosContext/TodosContext.ts
+        - src: fixtures/todos-vite/src/todos/ui/TodosProvider/TodosProvider.tsx
+          dest: src/todos/ui/TodosProvider/TodosProvider.tsx
+        - src: fixtures/todos-vite/src/todos/ui/useTodos/useTodos.ts
+          dest: src/todos/ui/useTodos/useTodos.ts
+        - src: fixtures/todos-vite/src/todos/ui/useTodosUseCases/useTodosUseCases.ts
+          dest: src/todos/ui/useTodosUseCases/useTodosUseCases.ts
+        - src: fixtures/todos-vite/src/vite-env.d.ts
+          dest: src/vite-env.d.ts
+        - src: fixtures/todos-vite/stryker.boundary.json
+          dest: stryker.boundary.json
+        - src: fixtures/todos-vite/stryker.core.json
+          dest: stryker.core.json
+        - src: fixtures/todos-vite/tests/integration/todos/infrastructure/HttpTodoGateway.test.ts
+          dest: tests/integration/todos/infrastructure/HttpTodoGateway.test.ts
+        - src: fixtures/todos-vite/tests/setup.ts
+          dest: tests/setup.ts
+        - src: fixtures/todos-vite/tests/unit/todos/InMemoryTodoGateway.ts
+          dest: tests/unit/todos/InMemoryTodoGateway.ts
+        - src: fixtures/todos-vite/tests/unit/todos/application/ListTodos.test.ts
+          dest: tests/unit/todos/application/ListTodos.test.ts
+        - src: fixtures/todos-vite/tests/unit/todos/ui/TodoList.test.tsx
+          dest: tests/unit/todos/ui/TodoList.test.tsx
+        - src: fixtures/todos-vite/tsconfig.app.json
+          dest: tsconfig.app.json
+        - src: fixtures/todos-vite/tsconfig.json
+          dest: tsconfig.json
+        - src: fixtures/todos-vite/vite.config.ts
+          dest: vite.config.ts
+        - src: fixtures/red/progress.test.ts
+          dest: tests/unit/todos/application/progress.test.ts
+      commands: *todos-setup
+    graders:
+      - *unchanged
+      - *judge
+      - *loaded
+    rubric:
+      - Notices that the test suite already fails without any mutation and says so first.
+      - Gives no mutation score from a run on the failing suite, and does not present such a score as killed mutants.
+      - Leaves the failing test as it is and asks how to proceed, rather than rewriting it to get a score.
