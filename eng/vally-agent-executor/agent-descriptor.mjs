@@ -17,6 +17,12 @@ const AGENT_PATHS = new Map([
   ['discovery-completeness-lens', pluginAgent('reviewer-lenses/discovery-completeness-lens')],
   ['discovery-prioritization-lens', pluginAgent('reviewer-lenses/discovery-prioritization-lens')],
   ['discovery-duplicate-lens', pluginAgent('reviewer-lenses/discovery-duplicate-lens')],
+  ['backlog-planner', pluginAgent('backlog-planner')],
+  ['backlog-planner-reviewer', pluginAgent('backlog-planner-reviewer')],
+  ['planning-invest-lens', pluginAgent('reviewer-lenses/planning-invest-lens')],
+  ['planning-ac-quality-lens', pluginAgent('reviewer-lenses/planning-ac-quality-lens')],
+  ['planning-coherence-lens', pluginAgent('reviewer-lenses/planning-coherence-lens')],
+  ['planning-dor-lens', pluginAgent('reviewer-lenses/planning-dor-lens')],
   ['solution-researcher', pluginAgent('solution-researcher')],
   ['solution-architect', pluginAgent('solution-architect')],
   ['solution-architect-reviewer', pluginAgent('solution-architect-reviewer')],
@@ -28,6 +34,9 @@ const AGENT_PATHS = new Map([
   ['cold-reader-lens', pluginAgent('reviewer-lenses/cold-reader-lens')],
   ['quality-gates-lens', pluginAgent('reviewer-lenses/quality-gates-lens')],
   ['test-integrity-lens', pluginAgent('reviewer-lenses/test-integrity-lens')],
+  ['brownfield-analyst', pluginAgent('brownfield-analyst')],
+  ['brownfield-harness-builder', pluginAgent('brownfield-harness-builder')],
+  ['brownfield-refactorer', pluginAgent('brownfield-refactorer')],
   // DELIVER-phase workers. Internal subagents (`user-invocable: false`), dispatched
   // by software-engineer; a suite selects one directly to grade the wiring it emits
   // without paying for the lead's whole TDD loop around it.
