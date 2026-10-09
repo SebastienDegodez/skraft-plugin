@@ -51,7 +51,7 @@ const SERVICES = {
     return {
       preToolUse: createPreToolUseCompositeService({
         dispatchGuard: createPreToolUseService({ stateReader, auditWriter, config, clock }),
-        sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
+        sessionGuard: createPreToolUseSessionGuardService({ auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
         provenanceGuard: createDispatchProvenanceService({ config, auditWriter, clock }),
         handoffGuard: createHandoffGuardService({ stateReader, auditWriter, config, clock }),
       }),
