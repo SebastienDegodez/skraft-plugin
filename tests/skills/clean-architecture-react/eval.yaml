@@ -3,22 +3,18 @@ description: |
   Verifies the React front-end guidance on screens asked for in plain terms,
   never by pattern name: one folder per feature split into application,
   infrastructure and ui, no feature importing another, app/ as the only place
-  that builds infrastructure, business rules left to the API (the client sends
-  the request and shows the refusal), and small components, each alone in a
-  folder of its own name and exported by name. The project carries the skill's
-  ESLint layer and component rules; the lint, type and test graders run them,
-  and the node graders check the same layout without a toolchain.
-  Probes (Sonnet 5.5 through Claude Code, 3 runs per cell, node graders only:
-  no npm registry in the sandbox). On a bare Vite template the base wrote flat
-  src/App.tsx, ExpenseForm.tsx and api.ts and installed no guard, 0/3 on the
-  layout, component and guard graders; with the skill 3/3. With the layer rules
-  already in the project the base followed them 3/3 on every existing-app
-  stimulus, which stay as regression guards. An environment-variable change
-  loaded the skill 2/3 until its description excluded that, then 0/3.
+  that builds infrastructure, business rules left to the API, and small
+  components alone in a folder of their own name, exported by name. Node
+  graders check the layout without a toolchain; lint, type and test graders run
+  the project's own rules. Probes (Sonnet 5.5, 3 runs, node graders only): on a
+  bare Vite template the base wrote flat src/App.tsx, ExpenseForm.tsx and api.ts
+  and no guard, 0/3; with the skill 3/3. With the rules already in the project
+  the base followed them 3/3, so the projects stimulus is a regression guard.
+  An environment-variable change loads the skill 0/3.
 type: capability
 defaults:
   timeout: 4m
-  runs: 4
+  runs: 5
   # Pinned to Sonnet: the probes that sized these stimuli ran on Sonnet.
   # MODEL in the environment still overrides it for the compare-models matrix.
   model: claude-sonnet-5.5
@@ -26,48 +22,42 @@ scoring:
   threshold: 1
 
 stimuli:
-  # Regression guard. The build, lint and test setup exist with the layer rules
-  # already installed: probes without the skill followed them 3/3.
-  - name: 'React project with the layer rules: an expenses screen over an existing API'
-    tags:
-      role: regression-guard
+  # Deterministic decider. A bare Vite template: no layer rules to imitate, so the
+  # layout and its guard are the agent's own call.
+  - name: 'React greenfield: a bare Vite template, the first screen'
     prompt: |
-      The project is already set up (React 19, TypeScript, Vite, Vitest, ESLint). Extend it: do
-      not scaffold a new project, do not change package.json, tsconfig.json, eslint.config.js or
-      the eslint/ folder, and do not start a dev server.
-
-      src/ holds only main.tsx. Build the first screen: the expenses of the
-      signed-in employee, from GET /api/expenses, which returns
+      This is a fresh React 19 + TypeScript + Vite project; src/ holds only
+      main.tsx. Build the first screen: the expenses of the signed-in employee,
+      from GET /api/expenses, which returns
       [{ "id": "e1", "label": "Train ticket", "amount": 42.5, "currency": "EUR", "status": "submitted" }],
       and a form to submit a new one through POST /api/expenses with
       { "label", "amount", "currency" }. The API answers 422 with
       { "errors": { "<field>": "<message>" } } when a field is invalid; show
-      those messages next to the fields. Production code only, no tests.
+      those messages next to the fields. Do not start a dev server. Production
+      code only, no tests.
     constraints:
       max_duration: 14m
       max_agent_duration: 10m
     environment:
       files:
-        - src: fixtures/todos-vite/.gitignore
+        - src: fixtures/vite-template/.gitignore
           dest: .gitignore
-        - src: fixtures/todos-vite/eslint.config.js
+        - src: fixtures/vite-template/eslint.config.js
           dest: eslint.config.js
-        - src: fixtures/todos-vite/eslint/clean-architecture.js
-          dest: eslint/clean-architecture.js
-        - src: fixtures/todos-vite/index.html
+        - src: fixtures/vite-template/index.html
           dest: index.html
-        - src: fixtures/todos-vite/package.json
+        - src: fixtures/vite-template/package.json
           dest: package.json
-        - src: fixtures/todos-vite/src/vite-env.d.ts
-          dest: src/vite-env.d.ts
-        - src: fixtures/todos-vite/tests/setup.ts
-          dest: tests/setup.ts
-        - src: fixtures/todos-vite/tsconfig.json
-          dest: tsconfig.json
-        - src: fixtures/todos-vite/vite.config.ts
-          dest: vite.config.ts
         - src: fixtures/vite-template/src/main.tsx
           dest: src/main.tsx
+        - src: fixtures/vite-template/src/vite-env.d.ts
+          dest: src/vite-env.d.ts
+        - src: fixtures/vite-template/tests/setup.ts
+          dest: tests/setup.ts
+        - src: fixtures/vite-template/tsconfig.json
+          dest: tsconfig.json
+        - src: fixtures/vite-template/vite.config.ts
+          dest: vite.config.ts
       commands: &react-setup
         - 'npm install --no-audit --no-fund --loglevel=error'
         - 'git init --quiet'
@@ -76,6 +66,27 @@ stimuli:
         - 'git add .'
         - 'git commit --quiet -m "chore: project skeleton"'
     graders:
+      - type: run-command
+        name: 'Sentinel: the project still installs and builds its configuration'
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const fs = require('fs');
+              const problems = [];
+              let pkg;
+              try { pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); } catch (e) { problems.push('package.json is not valid JSON: ' + e.message); }
+              if (pkg) {
+                const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+                for (const name of ['react', 'react-dom', 'vite', 'vitest', 'typescript', 'eslint']) if (!deps[name]) problems.push(name + ' was removed from package.json');
+                for (const name of ['lint', 'typecheck', 'test']) if (!pkg.scripts || !pkg.scripts[name]) problems.push('the ' + name + ' script was removed');
+              }
+              for (const file of ['tsconfig.json', 'vite.config.ts', 'src/main.tsx']) if (!fs.existsSync(file)) problems.push(file + ' was deleted');
+              if (problems.length) { console.log(problems.join('\n')); process.exit(1); }
+              console.log('package manifest, scripts and build configuration intact');
+          expected_exit_code: 0
+          timeout: 1m
       - &react-layout
         type: run-command
         name: Each file sits in a feature folder of its layer; no feature imports another; dependencies point inward
@@ -162,95 +173,6 @@ stimuli:
               console.log(components.length + ' new components, each alone in a folder of its own name, exported by name');
           expected_exit_code: 0
           timeout: 1m
-      - &react-lint
-        type: run-command
-        name: The lint passes, layer and component rules included
-        config:
-          command: bash
-          args:
-            - -c
-            - 'log="$(mktemp)"; npm run --silent lint >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
-          expected_exit_code: 0
-          timeout: 5m
-      - &react-types
-        type: run-command
-        name: The project typechecks
-        config:
-          command: bash
-          args:
-            - -c
-            - 'log="$(mktemp)"; npm run --silent typecheck >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
-          expected_exit_code: 0
-          timeout: 5m
-      - &react-tests
-        type: run-command
-        name: Every test is green
-        config:
-          command: bash
-          args:
-            - -c
-            - 'log="$(mktemp)"; npm run --silent test >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
-          expected_exit_code: 0
-          timeout: 5m
-      - &react-config-unchanged
-        type: diff-not-contains
-        name: The build, type and lint configuration is unchanged
-        config:
-          pattern: '(?m)^diff --git a/(package\.json|tsconfig\.json|eslint\.config\.js|eslint/)'
-      - &react-judge
-        type: prompt
-        config:
-          scoring: scale_1_10
-      - type: skill-invocation
-        name: The skill under test is loaded
-        config:
-          required:
-            - clean-architecture-react
-    rubric:
-      - Puts the expenses screen, its use cases and its HTTP calls in one expenses feature folder, split by layer.
-      - Lets the components reach the use cases through a hook, never the HTTP code directly.
-      - Shows the field errors the API returns instead of re-validating the fields on the client.
-
-  # Deterministic decider. A bare Vite template: no layer rules to imitate. The
-  # skill must lay out the feature and install the guard; the base cannot know it.
-  - name: 'React greenfield: a bare Vite template, the first screen'
-    prompt: |
-      This is a fresh React 19 + TypeScript + Vite project; src/ holds only
-      main.tsx. Build the first screen: the expenses of the signed-in employee,
-      from GET /api/expenses, which returns
-      [{ "id": "e1", "label": "Train ticket", "amount": 42.5, "currency": "EUR", "status": "submitted" }],
-      and a form to submit a new one through POST /api/expenses with
-      { "label", "amount", "currency" }. The API answers 422 with
-      { "errors": { "<field>": "<message>" } } when a field is invalid; show
-      those messages next to the fields. Do not start a dev server. Production
-      code only, no tests.
-    constraints:
-      max_duration: 14m
-      max_agent_duration: 10m
-    environment:
-      files:
-        - src: fixtures/vite-template/.gitignore
-          dest: .gitignore
-        - src: fixtures/vite-template/eslint.config.js
-          dest: eslint.config.js
-        - src: fixtures/vite-template/index.html
-          dest: index.html
-        - src: fixtures/vite-template/package.json
-          dest: package.json
-        - src: fixtures/vite-template/src/main.tsx
-          dest: src/main.tsx
-        - src: fixtures/vite-template/src/vite-env.d.ts
-          dest: src/vite-env.d.ts
-        - src: fixtures/vite-template/tests/setup.ts
-          dest: tests/setup.ts
-        - src: fixtures/vite-template/tsconfig.json
-          dest: tsconfig.json
-        - src: fixtures/vite-template/vite.config.ts
-          dest: vite.config.ts
-      commands: *react-setup
-    graders:
-      - *react-layout
-      - *react-components
       - type: run-command
         name: The lint rules that guard the layout are installed in the project
         config:
@@ -275,7 +197,8 @@ stimuli:
               console.log('boundaries installed and its dependency rule declared');
           expected_exit_code: 0
           timeout: 1m
-      - type: run-command
+      - &react-lint-installed
+        type: run-command
         name: The lint passes once the new dependencies are installed
         config:
           command: bash
@@ -284,31 +207,44 @@ stimuli:
             - 'log="$(mktemp)"; { npm install --no-audit --no-fund --loglevel=error && npm run --silent lint; } >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
           expected_exit_code: 0
           timeout: 6m
-      - *react-types
-      - *react-tests
-      - *react-judge
+      - &react-types
+        type: run-command
+        name: The project typechecks
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; { npm run --silent typecheck; } >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - &react-judge
+        type: prompt
+        config:
+          scoring: scale_1_10
       - type: skill-invocation
         name: The skill under test is loaded
         config:
           required:
             - clean-architecture-react
     rubric:
-      - Lays the screen out as an expenses feature folder split into application, infrastructure and ui, with app/ wiring it.
-      - Installs lint rules that keep that layout, rather than relying on the next developer to follow it.
-      - Keeps each component small and alone in a folder of its own name.
+      - Lists the employee's expenses with their label, amount, currency and status.
+      - Submits a new expense and shows each field error the API returns next to its field.
+      - Keeps working when the API is unreachable, with a message instead of a blank screen.
 
-  # Deterministic decider. A second feature beside todos: its own folder, its
-  # own gateway, wired in app/, and nothing imported from the todos feature.
+  # Regression guard: with the rules installed the base already follows them.
+  # A second feature beside todos, wired like the first.
   - name: 'React existing app: a projects screen beside the todos'
+    tags:
+      role: regression-guard
     prompt: |
       The project is already set up (React 19, TypeScript, Vite, Vitest, ESLint). Extend it: do
-      not scaffold a new project, do not change package.json, tsconfig.json, eslint.config.js or
-      the eslint/ folder, and do not start a dev server.
+      not scaffold a new project, do not start a dev server, and leave package.json,
+      tsconfig.json, vite.config.ts, eslint.config.js, the eslint/ folder and the existing tests
+      as they are.
 
       Add a projects screen below the todos. GET /api/projects returns
       [{ "id": "p1", "name": "Website", "openTodos": 3 }]; list each project with
-      its number of open todos. The API owns the projects. Production code
-      only, no tests.
+      its number of open todos. Production code only, no tests.
     constraints:
       max_duration: 14m
       max_agent_duration: 10m
@@ -368,23 +304,56 @@ stimuli:
           dest: tsconfig.json
         - src: fixtures/todos-vite/vite.config.ts
           dest: vite.config.ts
-      commands: *react-setup
+      commands: &react-existing-setup
+        - 'npm install --no-audit --no-fund --loglevel=error'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Eval"'
+        - 'git add .'
+        - 'git commit --quiet -m "chore: project skeleton"'
     graders:
       - *react-layout
       - *react-components
-      - *react-lint
+      - &react-lint
+        type: run-command
+        name: The lint passes, layer and component rules included
+        config:
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; { npm run --silent lint; } >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
       - *react-types
-      - *react-tests
-      - *react-config-unchanged
-      - type: file-matches
-        name: The application reaches the projects through a gateway
+      - &react-tests
+        type: run-command
+        name: Every existing test is still green
         config:
-          path: 'src/*/application/**/*.ts'
-          pattern: '(interface|type)\s+\w*Project\w*Gateway\b'
-      - type: file-not-exists
-        name: Nothing claims to own the projects as a repository
+          command: bash
+          args:
+            - -c
+            - 'log="$(mktemp)"; { npm run --silent test; } >"$log" 2>&1 && exit 0; tail -n 40 "$log"; exit 1'
+          expected_exit_code: 0
+          timeout: 5m
+      - &react-config-unchanged
+        type: run-command
+        name: The configuration and the existing tests are unchanged
         config:
-          path: 'src/**/*Repository*'
+          command: node
+          args:
+            - -e
+            - |
+              const { execSync } = require('child_process');
+              // Protected: the build, type, lint and test configuration, and every test the project already had.
+              // New test files are allowed; an existing one edited, renamed or deleted is not.
+              const touched = execSync('git diff --name-status HEAD', { encoding: 'utf8' }).split('\n').filter(Boolean)
+                .map(line => line.split('\t')).filter(([status]) => /^[MDR]/.test(status)).map(([, path]) => path);
+              const PROTECTED = /^(package\.json|package-lock\.json|tsconfig\.json|vite\.config\.ts|eslint\.config\.js|eslint\/|tests\/)/;
+              const hits = touched.filter(path => PROTECTED.test(path));
+              if (hits.length) { console.log('changed or deleted: ' + hits.join(', ')); process.exit(1); }
+              console.log('configuration and existing tests untouched');
+          expected_exit_code: 0
+          timeout: 1m
       - *react-judge
       - type: skill-invocation
         name: The skill under test is loaded
@@ -392,17 +361,18 @@ stimuli:
           required:
             - clean-architecture-react
     rubric:
-      - Adds the projects in their own feature folder, split by layer like the todos.
-      - Builds the projects gateway in app/ and hands it to the feature, as the todos already do.
-      - Imports nothing from the todos feature.
+      - Lists every project the API returns with its number of open todos.
+      - Shows a message when the projects cannot be loaded, and the todos keep working.
+      - Leaves the todos screen behaving exactly as before.
 
-  # Deterministic decider. The rule belongs to the API: the client asks and
-  # shows the refusal, it does not re-decide completion in a use case.
+  # Deterministic decider. The rule belongs to the API: the client asks and shows
+  # the refusal; it does not re-decide completion before calling.
   - name: 'React existing app: complete a todo, refused by the API when already done'
     prompt: |
       The project is already set up (React 19, TypeScript, Vite, Vitest, ESLint). Extend it: do
-      not scaffold a new project, do not change package.json, tsconfig.json, eslint.config.js or
-      the eslint/ folder, and do not start a dev server.
+      not scaffold a new project, do not start a dev server, and leave package.json,
+      tsconfig.json, vite.config.ts, eslint.config.js, the eslint/ folder and the existing tests
+      as they are.
 
       Add a "Complete" button to each todo. It sends PUT /api/todos/:id with
       { "done": true }. A todo that is already completed cannot be completed
@@ -413,7 +383,7 @@ stimuli:
       max_agent_duration: 10m
     environment:
       files: *todos-files
-      commands: *react-setup
+      commands: *react-existing-setup
     graders:
       - *react-layout
       - *react-components
@@ -457,45 +427,9 @@ stimuli:
           required:
             - clean-architecture-react
     rubric:
-      - Leaves the "already completed" rule to the API and turns its 409 into a message for the user.
-      - Keeps the PUT call in infrastructure, behind the todos gateway.
-      - Adds no check of the todo's state in a use case before calling the API.
-
-  # Deterministic decider for component size. Two small pieces of UI that tempt a
-  # single file with nested components.
-  - name: 'React existing app: a filter and an add form for the todos'
-    prompt: |
-      The project is already set up (React 19, TypeScript, Vite, Vitest, ESLint). Extend it: do
-      not scaffold a new project, do not change package.json, tsconfig.json, eslint.config.js or
-      the eslint/ folder, and do not start a dev server.
-
-      Above the todo list, add a filter (All / Open / Done) and a form to add a
-      todo: POST /api/todos with { "title" } returns the created todo, which
-      then appears in the list. The title is required. Production code only, no
-      tests.
-    constraints:
-      max_duration: 14m
-      max_agent_duration: 10m
-    environment:
-      files: *todos-files
-      commands: *react-setup
-    graders:
-      - *react-layout
-      - *react-components
-      - *react-lint
-      - *react-types
-      - *react-tests
-      - *react-config-unchanged
-      - *react-judge
-      - type: skill-invocation
-        name: The skill under test is loaded
-        config:
-          required:
-            - clean-architecture-react
-    rubric:
-      - Splits the filter, the form and their parts into small components, each in a folder of its own name.
-      - Labels the form field and reports the missing title accessibly.
-      - Keeps the POST call in infrastructure and the filtering out of the components' markup logic.
+      - Completes an open todo and shows it as done afterwards.
+      - Shows the user a message saying the todo is already completed when the API answers 409.
+      - Shows a different message for any other failure than for the 409.
 
   # Non-activation: a configuration change.
   - name: 'React existing app: the API base URL from the environment'
@@ -507,10 +441,12 @@ stimuli:
       behaviour when it is not set.
     environment:
       files: *todos-files
-      commands: *react-setup
+      commands: *react-existing-setup
     graders:
       - *react-lint
+      - *react-types
       - *react-tests
+      - *react-config-unchanged
       - *react-judge
       - type: skill-invocation
         name: The skill under test stays out of the way
@@ -518,6 +454,6 @@ stimuli:
           disallowed:
             - clean-architecture-react
     rubric:
-      - Reads VITE_API_BASE_URL where the gateways are built, in app/.
-      - Falls back to the current same-origin behaviour when the variable is empty.
-      - Changes nothing else.
+      - Calls the API at VITE_API_BASE_URL when it is set.
+      - Calls the API on the app's own origin, as before, when the variable is empty.
+      - Changes nothing else in how the todos behave.

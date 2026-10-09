@@ -103,7 +103,7 @@ Pick one mocking library per solution and stick to it. Same for the app host fac
 
 ## Per-Layer Examples (pseudo-code)
 
-Full runnable examples: [examples-dotnet.md](references/examples-dotnet.md) (.NET), [examples-java.md](references/examples-java.md) (Java / Spring Boot, Maven) , [examples-python.md](references/examples-python.md) (Python, pytest) and [examples-react.md](references/examples-react.md) (React, Vitest). The roles are identical across languages.
+Full runnable examples: [examples-dotnet.md](references/examples-dotnet.md) (.NET), [examples-java.md](references/examples-java.md) (Java / Spring Boot, Maven), [examples-python.md](references/examples-python.md) (Python, pytest) and [examples-react.md](references/examples-react.md) (React, Vitest). The roles are identical across languages.
 
 ### Application — acceptance test
 
