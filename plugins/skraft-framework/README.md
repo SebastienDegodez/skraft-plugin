@@ -69,6 +69,7 @@ Other entry points you can call directly:
 | .NET | `clean-architecture-dotnet` | `quality-gates-dotnet` (Stryker.NET) | Microcks or in-process doubles; `WebApplicationFactory` |
 | Python | `clean-architecture-python` | `quality-gates-python` (cosmic-ray) | Microcks or respx; FastAPI `TestClient` |
 | Java / Spring Boot | `clean-architecture-java` | not yet | not yet |
+| React / TypeScript (Vitest) | `clean-architecture-react` | `quality-gates-typescript` (StrykerJS on Vitest 4) | MSW or Microcks; no contract test, a front end exposes no API |
 | Node JavaScript | — | `quality-gates-javascript` (`node --test`, StrykerJS TAP) | not yet |
 
 A stack without a quality-gates adapter blocks DELIVER with a structured reason: SKRAFT never
