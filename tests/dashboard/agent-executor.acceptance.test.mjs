@@ -409,7 +409,7 @@ describe('Vally real-agent executor', () => {
     strictEqual(existsSync(join(pluginRoot, 'assets', 'templates')), true)
     strictEqual(existsSync(join(pluginRoot, 'src', 'cli', 'state.mjs')), true)
     // A skill's scripts ship under the plugin root, as in an install; its text never does.
-    strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-dotnet', 'scripts', 'configure-mutation.sh')), true)
+    strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-dotnet', 'scripts', 'configure-mutation.mjs')), true)
     strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-javascript', 'scripts', 'run-gates.mjs')), true)
     strictEqual(readdirSync(pluginRoot, { recursive: true }).some(path => path.endsWith('SKILL.md') || path.split(sep).includes('references')), false)
     strictEqual(existsSync(join(pluginRoot, 'com.anthropic.claude-code')), false)
