@@ -14,9 +14,9 @@ sidebar_position: 1
 |------|---------|-------|------------------|---------------------|
 | `SessionStart` | — | — | Exports `SKRAFT_PLUGIN_ROOT` to later Bash calls (Claude Code, through `CLAUDE_ENV_FILE`); states the plugin path and the active pipeline in the session context; trims the audit log and purges stale state signals | Allow |
 | `SubagentStart` | — | G2 | Tells the starting agent which skills are mandatory (`verify` or `eager`); inlines the `eager` ones; excludes `on-demand` skills | Allow |
-| `PreToolUse` | `Agent`, `Task` | Provenance | No agent dispatches itself; an agent with a declared dispatcher is dispatched by that agent alone | Allow |
-| `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | No direct write to a pipeline's `state.json`, its execution log or the `.active-slug` pointer, whatever the phase | Deny when the file, or a shell command read as the shell reads it, writes or removes a tracked `state.json` |
-| `PreToolUse` | same | G8 | During DELIVER, `src/` and `tests/` are written only by the DELIVER agents and the agents they dispatch | Allow |
+| `PreToolUse` | `Agent`, `Task` | Provenance | No agent dispatches itself; an agent with a declared dispatcher is dispatched by that agent alone; an agent with no right on `src/` and `tests/` (orchestrator, reviewer, lens, RESEARCH or DESIGN specialist) starts no agent without a declared dispatcher (`UNDECLARED_DISPATCH`) | Allow |
+| `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `ApplyPatch`, `StrReplaceEditor`, `WriteBash` | G7 | No direct write to a pipeline's `state.json`, its execution log or the `.active-slug` pointer, whatever the phase | Deny when the file, or a shell command read as the shell reads it, writes or removes a tracked `state.json` |
+| `PreToolUse` | same | G8 | A write stays within the caller's write rights (`writeRights` in the framework config): the orchestrator writes nothing, a reviewer or a lens only its declared transmission files, a specialist or a worker `src/` and `tests/` only in DISTILL and DELIVER and never another agent's transmission file. The caller is the payload's agent name (Claude Code's `agent_type`), without its spawners; a caller the payload does not name, or an ungoverned one, passes, audited `UNIDENTIFIED_CALLER` | Allow |
 | `PostToolUse` | `Read` | G3 | Each `SKILL.md` read is written to the audit log | Allow |
 | `SubagentStop` | — | G3 | A subagent whose transcript shows no load of a mandatory skill (a skill tool call, or a read of its `SKILL.md`) is sent back; `on-demand` skills are not mandatory; one already sent back is let go | Allow |
 
@@ -24,10 +24,28 @@ G1 (dispatch order), G6 (continuation) and G9 (handoff) are no longer hooks: the
 runs as code (RunPipeline, ADR-010), which checks G1 and G9 before every dispatch and records
 what each agent returns. See `docs/run-pipeline.md` in the repository.
 
+G8 also runs outside the settings hooks, where the host names the caller in code, with the
+same use case (`application/write-rights-guard.mjs`):
+
+| Host | Entry | Caller | When the guard fails |
+|------|-------|--------|----------------------|
+| Claude Code with mods | `hooks/skraft-mod.mjs`, `tool.call` on `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` | `agentId` → `$.agent.list()` (type, parent, `spawnedBy`); main loop: `SessionStart`'s `agent_type` | Refuses the call |
+| Copilot CLI, Copilot app | `com.github.copilot/extensions/skraft-pipeline/extension.mjs`, `hooks.onPreToolUse`; it runs provenance on `task` too | Hook input `sessionId` → the `toolCallId` of a `subagent.started` (`agentName`), spawners by `parentId` (absent in SDK 1.0.9: the chain is then incomplete); main session: `agent.getCurrent`, `subagent.selected` / `subagent.deselected`. The envelope's `agentId` names the emitter and is never a key | Refuses a write or an agent start; any other call passes |
+
+A refusal reads `skraft G8: <reason>`; the extension audits it (`SessionGuardEvaluated`,
+`source: copilot-extension`), the settings hook audits every judged call inside a pipeline
+with its code: `WRITE_RIGHT_DENIED`, `CONFORMING`, `NOT_GOVERNED` (an agent outside the
+rights whose whole chain the host names), `UNIDENTIFIED_CALLER` (no caller, or an ungoverned
+one whose spawner the host cannot name), `NO_WRITE`.
+
 Both plugin manifests carry the same entries, and every entry runs `src/cli/hook.mjs`
 (`src/cli/housekeeping.mjs` for `SessionStart`). Copilot CLI sends its own tool names
 (`bash`, `create`, `str_replace`, `view`, …); `adapters/api/hooks/harness-input.mjs` maps
-them to the names above before any guard runs.
+them to the names above before any guard runs: `apply_patch` → `ApplyPatch` (its patch, sent as
+bare text or as `input`), `str_replace_editor` → `StrReplaceEditor`, `write_bash` → `WriteBash`,
+`powershell` → `Bash` (`$null` and `| Out-Null` read as the null device), `task`'s
+`agent_type` → the requested agent. A Copilot `toolCalls` batch is guarded call
+by call; one refused call refuses the batch.
 
 Each tool event has one entry with no matcher: VS Code ignores matchers and would run every
 entry of an event on every tool call. `src/cli/hook.mjs` reads the tool name from the payload
@@ -47,7 +65,25 @@ that can name it, counts. A path G7 cannot resolve (an unknown variable or direc
 counts when it ends in a protected file name.
 
 Still not seen: aliases, shell functions defined in an earlier command, scripts run from a
-file (`bash x.sh`, `source x`), and programs that write the file on their own.
+file (`bash x.sh`, `source x`), and programs that write the file on their own. A PowerShell
+line is read as a POSIX line.
+
+For G8, the shell reading also knows `git apply`, `am`, `merge`, `pull`, `cherry-pick`,
+`revert`, `rebase`, `stash` (but `list`, `show`), `switch`, `checkout` without `--` and
+`reset --hard` / `--merge` / `--keep` (they rewrite the directory they run in), `patch` (its
+file, `-o`, or the directory a diff fed to it lands in), `tar -x`, `unzip` and a CLI's `--out
+PATH`. A here-document is dropped only when every command of its pipeline reads its input as
+data (`cat`, `grep`, `jq`, `git commit`, the framework's CLIs…); otherwise it is read as
+commands. A path under the session directory is read from there: `src/` and `tests/` are the
+project's; transmission files are read from the tracking root. Only `/dev/null`, `/dev/std*`,
+`/dev/fd/N`, a bare `nul` and `\\.\nul` are devices.
+
+An agent with no right on `src/` and `tests/` is refused a line `shellOpacity`
+(`domain/session-guard-policy.mjs`) cannot read to the end: a program fed a here-document or
+its standard input outside that allowlist, `eval`, `source`, `env -S`, a shell behind a
+wrapper or run on a script, an inline interpreter script, a PowerShell command other than a
+reading cmdlet, `WriteBash` input. Its unresolved paths and globs count wherever they could
+land, and the session directory and its ancestors hold `src/` and `tests/`.
 
 ## Skill policies
 
@@ -197,9 +233,12 @@ The hooks and the CLIs read these variables; none is required.
 | `plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs` | Decision → harness wire format |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Route by event type |
 | `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | Provenance and G7/G8 on `PreToolUse` |
+| `plugins/skraft-framework/src/application/write-rights-guard.mjs` | G8 use case: write rights of the caller, call by call |
+| `plugins/skraft-framework/src/domain/write-rights-policy.mjs` | Write rights derived from the config (`config:build`) and judged on a write |
+| `plugins/skraft-framework/src/adapters/api/copilot-workflow/copilot-write-guard.mjs` | G8 on Copilot: caller registry from session events, `onPreToolUse` handler |
 | `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Dispatch order (G1, checked by RunPipeline), provenance |
 | `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Required-input handoff manifest and G9 evaluation (checked by RunPipeline) |
-| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Tracked-state protection and DELIVER writes |
+| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Tracked-state protection; shell and workspace reading for G7 and G8 |
 | `plugins/skraft-framework/src/domain/skill-policy.mjs` | Mandatory and `on-demand` skill policy |
 | `plugins/skraft-framework/src/domain/phase-gate-policy.mjs` | Phase closure rules |
 | `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Append-only audit |

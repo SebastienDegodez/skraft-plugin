@@ -71,22 +71,39 @@ for (const requestedAgent of [
   })
 }
 
-for (const agentName of ['skraft:software-engineer', 'other:software-engineer']) {
-  test(`native DELIVER write checks monitored identity ${agentName}`, async () => {
+for (const agentName of ['skraft:skraft-orchestrator', 'plugin:skraft:skraft-orchestrator']) {
+  test(`native Edit by ${agentName}: src/ and tests/ are refused`, async () => {
     const records = []
     const guard = createPreToolUseSessionGuardService({
       config, clock,
-      stateReader: { read: async () => ({ currentPhase: 'DELIVER' }) },
       auditWriter: { write: async (record) => { records.push(record) } }
     })
-    const result = await guard.handle(fromHarnessInput({
+    for (const file_path of ['src/app.mjs', 'tests/app.test.mjs']) {
+      const result = await guard.handle(fromHarnessInput({
+        tool_name: 'Edit', agent_type: agentName, projectSlug,
+        tool_input: { file_path, old_string: 'before', new_string: 'after' }
+      }, { env: {} }))
+      assert.equal(result.decision, 'deny', file_path)
+    }
+    assert.deepEqual(records.map(({ code }) => code), ['WRITE_RIGHT_DENIED', 'WRITE_RIGHT_DENIED'])
+  })
+}
+
+for (const [agentName, code] of [['skraft:software-engineer', 'CONFORMING'], ['other:software-engineer', 'UNIDENTIFIED_CALLER']]) {
+  test(`native Edit by ${agentName}: src/ passes, tracked state is refused`, async () => {
+    const records = []
+    const guard = createPreToolUseSessionGuardService({
+      config, clock,
+      auditWriter: { write: async (record) => { records.push(record) } }
+    })
+    const edit = (file_path) => guard.handle(fromHarnessInput({
       tool_name: 'Edit', agent_type: agentName, projectSlug,
-      tool_input: { file_path: 'src/app.mjs', old_string: 'before', new_string: 'after' }
+      tool_input: { file_path, old_string: 'before', new_string: 'after' }
     }, { env: {} }))
-    const monitored = agentName === 'skraft:software-engineer'
-    assert.equal(result.decision, monitored ? 'allow' : 'deny')
-    assert.equal(records[0].code, monitored ? 'CONFORMING' : 'UNMONITORED_WRITE')
-    assert.equal(records[0].agentName, agentName)
+    assert.equal((await edit('src/app.mjs')).decision, 'allow')
+    assert.equal((await edit(`.copilot-tracking/skraft-plans/${projectSlug}/state.json`)).decision, 'deny')
+    assert.deepEqual(records.map(({ code, agentName: name }) => ({ code, name })),
+      [{ code, name: agentName }, { code: 'STATE_WRITE_FORBIDDEN', name: agentName }])
   })
 }
 
@@ -161,30 +178,3 @@ for (const toolName of ['Write', 'Edit']) {
     })
   }
 }
-for (const agentName of ['skraft:contract-testing-worker', 'mock-integration-worker', 'skraft:software-engineer-reviewer']) {
-  test(`a DELIVER write by ${agentName}, dispatched from DELIVER, is monitored`, async () => {
-    const guard = createPreToolUseSessionGuardService({
-      config, clock,
-      stateReader: { read: async () => ({ currentPhase: 'DELIVER' }) },
-      auditWriter: { write: async () => {} }
-    })
-    const result = await guard.handle(fromHarnessInput({
-      tool_name: 'Write', agent_type: agentName, projectSlug,
-      tool_input: { file_path: 'tests/Orders.ContractTests/OrdersContractTests.cs', content: '// test' }
-    }, { env: {} }))
-    assert.equal(result.decision, 'allow')
-  })
-}
-
-test('a DELIVER write by an agent outside the DELIVER dispatch tree is still refused', async () => {
-  const guard = createPreToolUseSessionGuardService({
-    config, clock,
-    stateReader: { read: async () => ({ currentPhase: 'DELIVER' }) },
-    auditWriter: { write: async () => {} }
-  })
-  const result = await guard.handle(fromHarnessInput({
-    tool_name: 'Write', agent_type: 'skraft:solution-architect', projectSlug,
-    tool_input: { file_path: 'src/Orders/Order.cs', content: '// code' }
-  }, { env: {} }))
-  assert.equal(result.decision, 'deny')
-})

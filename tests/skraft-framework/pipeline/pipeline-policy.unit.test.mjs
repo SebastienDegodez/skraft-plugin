@@ -148,3 +148,23 @@ test('evaluateDispatchProvenance: an unknown or absent caller, or an undeclared 
   assert.equal(evaluateDispatchProvenance('lead', undefined, TREE).ok, true)
   assert.equal(evaluateDispatchProvenance('lead', 'lens', {}).ok, true)
 })
+
+test('evaluateDispatchProvenance: an agent with no right on src/ and tests/ starts no agent without a declared dispatcher', () => {
+  const rights = {
+    ...TREE,
+    writeRights: {
+      Lead: { role: 'specialist', phase: 'DELIVER', workspace: true },
+      'Lead Reviewer': { role: 'reviewer', phase: 'DELIVER', files: [] },
+      lens: { role: 'lens', phase: 'DELIVER', files: [] },
+      Architect: { role: 'specialist', phase: 'DESIGN', workspace: false },
+    },
+  }
+  for (const caller of ['lead-reviewer', 'skraft:lens', 'Architect']) {
+    const r = evaluateDispatchProvenance(caller, 'general-purpose', { ...rights, agentAliases: { ...rights.agentAliases, Architect: 'Architect' } })
+    assert.equal(r.error.code, 'UNDECLARED_DISPATCH', caller)
+  }
+  assert.equal(evaluateDispatchProvenance('lead-reviewer', 'general-purpose', rights).error.reason,
+    'Lead Reviewer has no right on src/ or tests/ and starts only the agents the dispatch tree gives it; general-purpose declares no dispatcher: do the work yourself within your write rights')
+  assert.equal(evaluateDispatchProvenance('lead', 'general-purpose', rights).ok, true, 'an agent with the workspace')
+  assert.equal(evaluateDispatchProvenance('Lead Reviewer', 'skraft:lens', rights).ok, true, 'the declared tree')
+})

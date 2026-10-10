@@ -99,8 +99,10 @@ reviewers.
 | Claude Code (mod) | `/skraft <slug> [#issue] [titre]`, outil `mcp__skraft__run_pipeline` | [`hooks/skraft-mod.mjs`](../plugins/skraft-framework/hooks/skraft-mod.mjs) (`command.run`, `tool.call`) | `RunPipeline` |
 | Claude Code (mod) | `/skraft decide <slug> <clé> <réponse>` | même fichier | `RecordDecision` |
 | Claude Code (mod) | `/skraft close <slug> [findings]` | même fichier | `CloseManually` |
+| Claude Code (mod) | chaque `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` (`tool.call`) | même fichier | `WriteRightsGuard` (G8, section 7) |
 | GitHub Copilot | « Run the skraft-pipeline dynamic workflow… » ou `copilot workflow run skraft-pipeline --args '{"slug":"checkout"}'` | [`com.github.copilot/extensions/skraft-pipeline/extension.mjs`](../plugins/skraft-framework/com.github.copilot/extensions/skraft-pipeline/extension.mjs) | `RunPipeline` |
 | GitHub Copilot | outils `skraft_decide`, `skraft_close_phase` | même extension | `RecordDecision`, `CloseManually` |
+| GitHub Copilot | chaque appel d'outil, sous-agents compris (`hooks.onPreToolUse`) | même extension, [`adapters/api/copilot-workflow/copilot-write-guard.mjs`](../plugins/skraft-framework/src/adapters/api/copilot-workflow/copilot-write-guard.mjs) | `WriteRightsGuard` (G8, section 7) |
 | Copilot app | canvas « Skraft pipeline » (« Open the Skraft pipeline canvas » : le pipeline actif de la copie de travail), ses boutons et ses actions `get_pipeline`, `decide`, `show_phase`, `refresh` | même extension, [`adapters/api/copilot-canvas/`](../plugins/skraft-framework/src/adapters/api/copilot-canvas/) | `ObservePipeline`, `RecordDecision` |
 
 La ligne `/skraft` est découpée par [`adapters/api/claude-code-mod/command-args.mjs`](../plugins/skraft-framework/src/adapters/api/claude-code-mod/command-args.mjs) ;
@@ -486,13 +488,40 @@ pointeur, entre tous les worktrees ; ne le fixez pas si vous en lancez plusieurs
 
 ## 7. Cohabitation avec les settings hooks
 
-Restent dans `hooks/hooks.json` : la **provenance** des dispatchs, **G7/G8** (session guard :
-`state.json` protégé, écritures DELIVER), **G2/G3** (SubagentStart/Stop, lectures de
-SKILL.md) et le ménage de démarrage. **G1, G6 et G9 ont disparu** : RunPipeline vérifie
-l'ordre et le handoff lui-même, et enregistre ce que les agents rendent.
+Restent dans `hooks/hooks.json` : la **provenance** des dispatchs, **G7** (`state.json`, journal
+d'exécution et `.active-slug` protégés), **G8** pour un hôte qui ne tourne ni le mod ni
+l'extension, **G2/G3** (SubagentStart/Stop, lectures de SKILL.md) et le ménage de démarrage.
+**G1, G6 et G9 ont disparu** : RunPipeline vérifie l'ordre et le handoff lui-même, et
+enregistre ce que les agents rendent.
+
+**G8 — droits d'écriture par rôle d'agent** (#208) tourne là où l'hôte dit qui appelle, dans
+le code, avec un seul cas d'usage, [`application/write-rights-guard.mjs`](../plugins/skraft-framework/src/application/write-rights-guard.mjs),
+sur les droits que `config:build` tire de la config (`writeRights`,
+[`domain/write-rights-policy.mjs`](../plugins/skraft-framework/src/domain/write-rights-policy.mjs)) :
+l'orchestrateur n'écrit rien, un reviewer ou une lentille seulement ses fichiers de
+transmission déclarés, un spécialiste ou un worker `src/` et `tests/` seulement en DISTILL et
+DELIVER, jamais le fichier de transmission d'un autre agent. Un agent sans droit sur `src/` et
+`tests/` ne lance que des lignes shell que la garde lit jusqu'au bout (`shellOpacity`) ; ses
+chemins non résolus et ses globs comptent partout où ils pourraient aboutir. La provenance lui
+refuse tout agent sans dispatcher déclaré (`UNDECLARED_DISPATCH`) : là où l'hôte ne nomme pas
+qui a lancé un agent, l'héritage des droits ne tient pas.
+
+| Hôte | Où | Qui appelle | Garde en échec |
+|---|---|---|---|
+| Claude Code (mod) | `hooks/skraft-mod.mjs`, `tool.call` sur `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` | `agentId` de l'appel → `$.agent.list()` (type, parent, `spawnedBy`) ; boucle principale : `agent_type` du `SessionStart` (`--agent`) | refus (`.catch`) |
+| GitHub Copilot (extension) | `extension.mjs`, `hooks.onPreToolUse` de la session jointe, qui voit les appels des sous-agents ; provenance aussi sur `task` | `sessionId` de l'entrée → `toolCallId` d'un `subagent.started` (`agentName`), ceux qui l'ont lancé par `parentId` (absent du SDK 1.0.9 : chaîne incomplète) ; l'`agentId` de l'enveloppe nomme l'émetteur, jamais une clé ; session principale : `agent.getCurrent`, `subagent.selected` ; aucun fichier lu | refus d'une écriture ou d'un lancement d'agent |
+| Tout hôte (settings hook) | `hooks.json` → `src/cli/hook.mjs` `PreToolUse` | `agent_type` du payload (Claude Code), sans ceux qui l'ont lancé ; le `preToolUse` Copilot ne nomme personne | l'appel passe, sauf écriture d'un `state.json` suivi |
+
+Un appelant non identifié passe, audité `UNIDENTIFIED_CALLER` : refuser l'anonyme refuserait le
+Software Engineer avec les autres (#206). Une chaîne que l'hôte ne connaît qu'en partie et
+qu'aucun agent gouverné ne commence est non identifiée : une correspondance ambiguë n'est jamais
+lue comme un autre agent. Le settings hook `PreToolUse` reste nécessaire : G7 et
+la provenance n'ont pas d'autre porteur, et G8 doit tenir sous Claude Code sans mods et sous un
+hôte Copilot qui ne charge pas l'extension (VS Code lit les hooks v1). Sous Claude Code avec mods,
+le mod juge le premier ; le settings hook rejuge le même appel, avec la même identité.
 
 Au démarrage, `RunPipeline` écrit `{tracking}/.active-slug` (`ActivePipeline`) : c'est le
-pipeline contre lequel le session guard juge les écritures. Le journal d'audit est dans
+pipeline au nom duquel le settings hook audite ses décisions. Le journal d'audit est dans
 `.git/skraft/skill-audit.jsonl` (ou `SKRAFT_AUDIT_LOG`).
 
 ---
@@ -530,6 +559,7 @@ pipeline contre lequel le session guard juge les écritures. Le journal d'audit 
 | Adaptateurs pilotés | `pipeline-adapters.unit.test.mjs`, `quality-gates/git-source-control.unit.test.mjs` | vrais dépôts git, dossiers temporaires, `ctx` simulé |
 | Workflow Copilot de bout en bout | `copilot-workflow-adapter.integration.test.mjs` | vrai dépôt, consentement, ADR, forecast, preuves, hooks, clôture |
 | Mod Claude Code | `plugins/skraft-framework/hooks/skraft-mod.test.ts` | runtime réel des mods (`claude plugin test`) |
+| G8, droits d'écriture | `tests/skraft-framework/write-rights/*.test.mjs`, `skraft-mod.test.ts` | cas d'usage sur la config du plugin, hook de l'extension Copilot sur des événements de session simulés, vrai settings hook, mod dans le runtime réel |
 | Vue d'un pipeline | `observe-pipeline.use-case.test.mjs` | vue construite après de vrais runs du cas d'usage |
 | Canvas de la Copilot app | `copilot-canvas.integration.test.mjs` | vrai serveur local, HTTP et server-sent events, jeton, actions de l'agent |
 | Règle de dépendance | `tests/skraft-framework/architecture/pipeline-dependency-rule.test.mjs` | lecture des imports |

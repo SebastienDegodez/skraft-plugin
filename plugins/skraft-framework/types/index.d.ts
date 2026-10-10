@@ -12,6 +12,7 @@ export type SkraftRunView = {
 
 declare module 'claude-code' {
   interface PluginState {
-    skraft: { run: SkraftRunView }
+    // mainAgent: the main loop's agent type under --agent (SessionStart's agent_type), for G8
+    skraft: { run: SkraftRunView; mainAgent: string | null }
   }
 }

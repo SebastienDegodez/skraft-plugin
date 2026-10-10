@@ -7,7 +7,7 @@ import { isHookRelevant, TRACKED_STATE_WRITE_RE } from '../../../plugins/skraft-
 // A false negative silently disables a guard; these tests pin each tool a guard inspects.
 
 test('hook-relevance: every tool a PreToolUse guard inspects is relevant', () => {
-  for (const toolName of ['Agent', 'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+  for (const toolName of ['Agent', 'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'ApplyPatch', 'StrReplaceEditor', 'WriteBash']) {
     assert.equal(isHookRelevant({ event: 'PreToolUse', payload: { toolName } }), true, toolName)
   }
 })
@@ -47,4 +47,13 @@ test('hook-relevance: lifecycle and unnamed events always run', () => {
     assert.equal(isHookRelevant({ event, payload: { toolName: 'Read' } }), true, String(event))
   }
   assert.equal(isHookRelevant(), true)
+})
+
+test('hook-relevance: a Copilot toolCalls batch is relevant when any of its calls is', () => {
+  const batch = (...toolNames) => ({ toolCalls: toolNames.map((toolName) => ({ toolName })) })
+  assert.equal(isHookRelevant({ event: 'PreToolUse', payload: batch('Read', 'Write') }), true)
+  assert.equal(isHookRelevant({ event: 'PreToolUse', payload: batch('Read', 'grep') }), false)
+  assert.equal(isHookRelevant({ event: 'PreToolUse', payload: { toolCalls: [{ toolName: 'runSubagent', requestedAgent: 'software-engineer' }] } }), true)
+  assert.equal(isHookRelevant({ event: 'PreToolUse', payload: { toolCalls: [null, 'Write'] } }), false)
+  assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolCalls: [{ toolName: 'Read', filePath: '/p/skills/x/SKILL.md' }] } }), true)
 })

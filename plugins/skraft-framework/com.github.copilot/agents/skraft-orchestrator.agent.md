@@ -26,5 +26,5 @@ agents itself. You start it and relay its questions; nothing else.
    - GitHub Copilot: record their exact answer with the `skraft_decide` tool (or close a phase
      with `skraft_close_phase`), then resume the paused run.
 
-Never dispatch a phase agent, run a gate, or write state, reviews or reports yourself.
+Never dispatch a phase agent or run a gate yourself.
 Follow the run in the Skraft pane (`/skraft`) or the Skraft pipeline canvas (Copilot app).

@@ -8,9 +8,14 @@
 //                        pipeline dispatches the phase agents, no agent does
 //   PIPELINE_LAUNCHER    the agent a person picks to start the pipeline (file id); the
 //                        catalogue shows it as the engineering entry point
+//   WORKSPACE_PHASES     the phases whose specialist and workers write src/ and tests/:
+//                        DISTILL its RED acceptance tests and the stubs they compile
+//                        against, DELIVER the code. config:build turns it into the
+//                        writeRights of each agent (write-rights-policy.mjs, G8)
 // No import: the state machine and the policies read the order from here.
 export const PIPELINE_PHASES = Object.freeze(['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
 export const PIPELINE_DISPATCHER = 'skraft-pipeline'
 export const PIPELINE_LAUNCHER = 'skraft-orchestrator'
+export const WORKSPACE_PHASES = Object.freeze(['DISTILL', 'DELIVER'])
 
 export const isPipelineDispatcher = (reference) => reference === PIPELINE_DISPATCHER

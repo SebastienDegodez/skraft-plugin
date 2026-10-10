@@ -1,6 +1,5 @@
-// Unit — the PreToolUse session guard service: which payload `cwd` it hands G7, the exact
-// fail-open reasons it audits, and how the monitored DELIVER agent set grows. Hand-written
-// doubles only.
+// Unit — the PreToolUse session guard service: which payload `cwd` it hands G7, and whose
+// write rights G8 applies. Hand-written doubles only.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createPreToolUseSessionGuardService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs'
@@ -56,48 +55,36 @@ test('a Bash call whose command is not a string carries no command', async () =>
   for (const command of [42, { rm: 'state.json' }, ['rm', 'src/a.cs'], null]) {
     assert.deepEqual(await service.handle({ projectSlug: 'checkout', toolName: 'Bash', toolInput: { command } }), { decision: 'allow' })
   }
-  assert.deepEqual(entries.map((e) => [e.code, e.reason]), Array(4).fill(['CONFORMING', 'no src/ or tests/ write']))
+  assert.deepEqual(entries.map((e) => [e.code, e.reason]), Array(4).fill(['NO_WRITE', 'no write']))
 })
 
-test('the fail-open reason quotes the reader error, whatever was thrown', async () => {
-  const cases = [
-    [new Error('disk gone'), 'disk gone'],
-    ['plain text', 'plain text'],
-    [undefined, 'undefined'],
-    [null, 'null'],
-    [{ code: 'EIO' }, '[object Object]'],
-  ]
-  for (const [thrown, shown] of cases) {
-    const { service, entries } = serviceWith({ read: async () => { throw thrown } })
-    const decision = await service.handle({ projectSlug: 'checkout', agentName: 'orchestrator', toolName: 'Write', toolInput: { filePath: 'src/a.cs' } })
-    assert.deepEqual(decision, { decision: 'allow' }, shown)
-    assert.deepEqual(entries, [{
-      event: 'SessionGuardEvaluated', projectSlug: 'checkout', agentName: 'orchestrator', decision: 'ALLOW',
-      code: 'UNREADABLE_STATE', reason: `recorded pipeline state unreadable; session guard fail-open: ${shown}`, evaluatedAt: NOW,
-    }], shown)
-  }
-})
-
-test('DELIVER without a monitored agent fails open with its own code and reason', async () => {
-  for (const config of [undefined, {}, { phaseAgents: { DELIVER: {} } }, { phaseAgents: { DELIVER: { specialist: 3 } }, agentDispatchers: { worker: 'software-engineer' } }]) {
-    const { service, entries } = serviceWith({ config })
-    const decision = await service.handle({ projectSlug: 'checkout', toolName: 'Write', toolInput: { filePath: 'src/a.cs' } })
-    assert.deepEqual(decision, { decision: 'allow' })
-    assert.deepEqual(entries, [{
-      event: 'SessionGuardEvaluated', projectSlug: 'checkout', agentName: null, decision: 'ALLOW',
-      code: 'UNCONFIGURED_DELIVER_AGENTS', reason: 'no monitored DELIVER agents configured; session guard fail-open', evaluatedAt: NOW,
-    }], JSON.stringify(config))
-  }
-})
-
-test('the monitored set grows through dispatchers only from a configured DELIVER agent', async () => {
+test('the service applies the writeRights of the config, and no rule of its own', async () => {
   const config = {
-    phaseAgents: { DELIVER: { reviewer: 'reviewer' } },
-    agentDispatchers: { c: 'b', b: 'reviewer', x: 'y', y: 'x' },
+    writeRights: {
+      launcher: { role: 'orchestrator', files: [] },
+      engineer: { role: 'specialist', phase: 'DELIVER', workspace: true },
+      researcher: { role: 'specialist', phase: 'RESEARCH', workspace: false },
+    },
   }
   const write = (agentName) => ({ projectSlug: 'checkout', agentName, toolName: 'Edit', toolInput: { filePath: 'tests/a.test.mjs' } })
   const { service, entries } = serviceWith({ config })
-  for (const agent of ['reviewer', 'b', 'c']) assert.equal((await service.handle(write(agent))).decision, 'allow', agent)
-  for (const agent of ['x', 'y', 'software-engineer']) assert.equal((await service.handle(write(agent))).decision, 'deny', agent)
-  assert.deepEqual(entries.slice(0, 3).map((e) => e.reason), ['reviewer', 'b', 'c'].map((a) => `workspace write by monitored DELIVER agent ${a}`))
+  for (const agent of ['launcher', 'researcher']) assert.equal((await service.handle(write(agent))).decision, 'deny', agent)
+  for (const agent of ['engineer', 'dispatcher']) assert.equal((await service.handle(write(agent))).decision, 'allow', agent)
+  assert.deepEqual(entries.map((e) => e.code), ['WRITE_RIGHT_DENIED', 'WRITE_RIGHT_DENIED', 'CONFORMING', 'UNIDENTIFIED_CALLER'],
+    'the payload names the caller, not who spawned it: an ungoverned name is unidentified')
+})
+
+test('without writeRights in the config, nothing is refused', async () => {
+  for (const config of [undefined, {}, { phaseAgents: { DELIVER: {} } }, { pipeline: { launcher: 'launcher' } }]) {
+    const { service } = serviceWith({ config })
+    const decision = await service.handle({ projectSlug: 'checkout', agentName: 'launcher', toolName: 'Write', toolInput: { filePath: 'src/a.cs' } })
+    assert.deepEqual(decision, { decision: 'allow' }, JSON.stringify(config))
+  }
+})
+
+test('G7 reads every file a patch names: one protected file refuses the patch', async () => {
+  const { service } = serviceWith()
+  const patch = (...paths) => ({ toolName: 'ApplyPatch', toolInput: { input: `*** Begin Patch\n${paths.map((path) => `*** Update File: ${path}\n+x`).join('\n')}\n*** End Patch` } })
+  assert.equal((await service.handle(patch('src/a.ts', '.copilot-tracking/skraft-plans/checkout/state.json'))).decision, 'deny')
+  assert.equal((await service.handle(patch('src/a.ts', 'src/b.ts'))).decision, 'allow')
 })

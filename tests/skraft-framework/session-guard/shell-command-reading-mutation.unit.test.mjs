@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { readCommandLine, joinPath, UNKNOWN } from '../../../plugins/skraft-framework/src/domain/shell-command-reading.mjs'
 
 const U = UNKNOWN
-const cmd = (words, redirects = []) => ({ words, redirects })
+const cmd = (words, redirects = [], stdin) => ({ words, redirects, ...(stdin ? { stdin } : {}) })
 const read = (command, options) => readCommandLine(command, options)
 
 test('UNKNOWN is the NUL character, which no command line word can hold', () => {
@@ -132,9 +132,9 @@ test('only an all-digit word glued to the operator is a descriptor', () => {
 })
 
 test('reads are left out: <, <<, <<-, <<<, <& — and their target is not a word', () => {
-  assert.deepEqual(read('cat <in <<EOF <<-T <<<s <&3 x'), [cmd(['cat', 'x'])])
+  assert.deepEqual(read('cat <in <<EOF <<-T <<<s <&3 x'), [cmd(['cat', 'x'], [], 'redirect')])
   assert.deepEqual(read('<in; echo a'), [cmd(['echo', 'a'])], 'a command of reads only is no command')
-  assert.deepEqual(read('cat <&3 x; y'), [cmd(['cat', 'x']), cmd(['y'])], 'the & of <& does not split the line')
+  assert.deepEqual(read('cat <&3 x; y'), [cmd(['cat', 'x'], [], 'redirect'), cmd(['y'])], 'the & of <& does not split the line')
 })
 
 test('>& copies a descriptor (digits or -) but writes a file otherwise', () => {
@@ -156,12 +156,18 @@ test('a redirect alone is a command; one after a separator starts the next comma
   assert.deepEqual(read('a &&>out'), [cmd(['a']), cmd([], [{ op: '>', target: 'out' }])])
   assert.deepEqual(read('a &>out'), [cmd(['a'], [{ op: '&>', target: 'out' }])])
   assert.deepEqual(read('a 2>&1 &b'), [cmd(['a']), cmd(['b'])])
-  assert.deepEqual(read('a >|b|c'), [cmd(['a'], [{ op: '>|', target: 'b' }]), cmd(['c'])])
+  assert.deepEqual(read('a >|b|c'), [cmd(['a'], [{ op: '>|', target: 'b' }]), cmd(['c'], [], 'pipe')])
+})
+
+test('stdin: a lone | or |& feeds the next command, a read redirect feeds its own; || never does', () => {
+  assert.deepEqual(read('a | b |& c || d'), [cmd(['a']), cmd(['b'], [], 'pipe'), cmd(['c'], [], 'pipe'), cmd(['d'])])
+  assert.deepEqual(read('a < f; b 0<<E; c <<< s; d > o'), [cmd(['a'], [], 'redirect'), cmd(['b'], [], 'redirect'), cmd(['c'], [], 'redirect'), cmd(['d'], [{ op: '>', target: 'o' }])])
+  assert.deepEqual(read('a | b < f'), [cmd(['a']), cmd(['b'], [], 'pipe')], 'the pipe is said first')
 })
 
 test('separators: ; & && | || newline and parentheses, each once, glued or spaced', () => {
-  assert.deepEqual(read('a&b|c;d\ne(f)g&&h||i'), [cmd(['a']), cmd(['b']), cmd(['c']), cmd(['d']), cmd(['e']), cmd(['f']), cmd(['g']), cmd(['h']), cmd(['i'])])
-  assert.deepEqual(read('a &b|c'), [cmd(['a']), cmd(['b']), cmd(['c'])])
+  assert.deepEqual(read('a&b|c;d\ne(f)g&&h||i'), [cmd(['a']), cmd(['b']), cmd(['c'], [], 'pipe'), cmd(['d']), cmd(['e']), cmd(['f']), cmd(['g']), cmd(['h']), cmd(['i'])])
+  assert.deepEqual(read('a &b|c'), [cmd(['a']), cmd(['b']), cmd(['c'], [], 'pipe')])
   assert.deepEqual(read('a&&b'), [cmd(['a']), cmd(['b'])])
   assert.deepEqual(read('a || b ;; c'), [cmd(['a']), cmd(['b']), cmd(['c'])])
 })

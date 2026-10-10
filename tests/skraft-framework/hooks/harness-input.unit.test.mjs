@@ -17,6 +17,10 @@ test('harness-input: Copilot lowercased names map onto the framework vocabulary'
     ['create_file', 'Write'],
     ['edit', 'Edit'],
     ['str_replace', 'Edit'],
+    ['str_replace_editor', 'StrReplaceEditor'],
+    ['apply_patch', 'ApplyPatch'],
+    ['powershell', 'Bash'],
+    ['write_bash', 'WriteBash'],
     ['multiedit', 'MultiEdit'],
     ['notebookedit', 'NotebookEdit'],
     ['agent', 'Agent'],
@@ -185,4 +189,56 @@ test('harness-input: explicit guard signals and camelCase arguments win over nat
   const explicit = fromHarnessInput({ requestedAgent: 'explicit-agent', filePath: 'explicit-path', toolInput }, { env: {} })
   assert.equal(explicit.requestedAgent, 'explicit-agent')
   assert.equal(explicit.filePath, 'explicit-path')
+})
+
+// Copilot CLI batches the tool calls of a turn: `{ sessionId, cwd, toolCalls: [{ id, name, args }] }`,
+// with no root toolName / toolArgs / agentName (payload recorded from a Copilot session log).
+test('harness-input: a Copilot toolCalls batch becomes framework tool calls', () => {
+  const payload = fromHarnessInput({
+    sessionId: 'toolu_child',
+    cwd: '/repo',
+    toolCalls: [
+      { id: 'toolu_1', name: 'create', args: '{"path":"/repo/src/Orders/Order.cs","file_text":"class Order {}"}' },
+      { id: 'toolu_2', name: 'edit', args: { path: 'tests/OrderTests.cs', old_str: 'a', new_str: 'b' } },
+      { id: 'toolu_3', name: 'bash', args: '{"command":"dotnet test"}' },
+      { id: 'toolu_4', name: 'task', args: '{"subagent_type":"software-engineer"}' },
+    ],
+  }, { env: {} })
+
+  assert.equal(payload.harness, 'copilot')
+  assert.equal(payload.toolName, undefined, 'a batch has no root tool')
+  assert.deepEqual(payload.toolCalls, [
+    { toolCallId: 'toolu_1', toolName: 'Write', toolInput: { path: '/repo/src/Orders/Order.cs', file_text: 'class Order {}' }, filePath: '/repo/src/Orders/Order.cs' },
+    { toolCallId: 'toolu_2', toolName: 'Edit', toolInput: { path: 'tests/OrderTests.cs', old_str: 'a', new_str: 'b' }, filePath: 'tests/OrderTests.cs' },
+    { toolCallId: 'toolu_3', toolName: 'Bash', toolInput: { command: 'dotnet test' } },
+    { toolCallId: 'toolu_4', toolName: 'Agent', toolInput: { subagent_type: 'software-engineer' }, requestedAgent: 'software-engineer' },
+  ])
+})
+
+test('harness-input: malformed toolCalls entries are dropped, never thrown on', () => {
+  const payload = fromHarnessInput({ toolCalls: [null, 'bash', { name: 'bash', args: '{ not json' }] }, { env: {} })
+  assert.deepEqual(payload.toolCalls, [{ toolName: 'Bash' }])
+  assert.equal('toolCalls' in fromHarnessInput({ toolName: 'bash' }, { env: {} }), false)
+})
+
+test('harness-input: name and args are read on a batch entry only, never on the payload root', () => {
+  const payload = fromHarnessInput({ name: 'bash', args: '{"command":"rm -rf src/"}' }, { env: {} })
+  assert.equal(payload.toolName, undefined)
+  assert.equal(payload.toolInput, undefined)
+})
+
+test('harness-input: Copilot runtime tools reach the guards as the writes they are', () => {
+  const patch = '*** Begin Patch\n*** Add File: src/a.ts\n+x\n*** End Patch'
+  assert.deepEqual(fromHarnessInput({ toolName: 'apply_patch', toolArgs: patch }, { env: {} }).toolInput, { input: patch }, 'a patch sent as bare text')
+  assert.deepEqual(fromHarnessInput({ toolName: 'apply_patch', toolArgs: JSON.stringify({ input: patch }) }, { env: {} }).toolInput, { input: patch })
+  assert.equal(fromHarnessInput({ toolName: 'task', toolArgs: { agent_type: 'general-purpose', prompt: 'x' } }, { env: {} }).requestedAgent, 'general-purpose', "Copilot's task names the agent it starts")
+  assert.equal('requestedAgent' in fromHarnessInput({ toolName: 'bash', toolArgs: { agent_type: 'x', command: 'ls' } }, { env: {} }), false, 'only an Agent call starts an agent')
+})
+
+test("harness-input: a PowerShell line reaches the shell reader with PowerShell's null device spelled as one", () => {
+  const line = (command) => fromHarnessInput({ toolName: 'powershell', toolArgs: { command } }, { env: {} }).toolInput.command
+  assert.equal(line('git diff 2>$null > a.patch'), 'git diff 2>/dev/null > a.patch')
+  assert.equal(line('git fetch | Out-Null'), 'git fetch > /dev/null')
+  assert.equal(line('$nullable = 1'), '$nullable = 1')
+  assert.equal(fromHarnessInput({ toolName: 'bash', toolArgs: { command: 'echo > $null' } }, { env: {} }).toolInput.command, 'echo > $null', 'in a POSIX shell, $null is a variable')
 })

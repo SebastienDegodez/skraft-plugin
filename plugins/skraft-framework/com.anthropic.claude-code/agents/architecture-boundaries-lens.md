@@ -88,6 +88,5 @@ Quote every free-text value. Emit `defects: []` when none were found. Return
 
 ## Rules
 
-- You are read-only. You NEVER modify code.
 - You do NOT propose fixes. You report findings.
 - You do NOT see tests, journal, or checklist — only production code.

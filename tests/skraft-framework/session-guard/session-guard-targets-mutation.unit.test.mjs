@@ -5,8 +5,6 @@ import {
   isProtectedArtifactPath,
   commandWritesWorkspace,
   guardProtectedArtifact,
-  guardWorkspaceWrite,
-  evaluateSessionGuard,
 } from '../../../plugins/skraft-framework/src/domain/session-guard-policy.mjs'
 
 // G7/G8 target resolution: how the guard follows cd/pushd/popd, git -C, redirects, xargs and
@@ -337,21 +335,4 @@ test('guardProtectedArtifact: a removed holder is refused with the command reaso
       reason: 'direct edit of .copilot-*/skraft-plans/us11/state.json is forbidden; mutate recorded state only through the state CLI',
     },
   })
-})
-
-test('guardWorkspaceWrite / evaluateSessionGuard: codes and reasons of the G8 decisions', () => {
-  assert.deepEqual(guardWorkspaceWrite({ command: 'rm -rf ./src', phase: 'DELIVER', agentName: 'orchestrator' }), {
-    ok: false,
-    error: {
-      code: 'UNMONITORED_WRITE',
-      reason: 'src/ or tests/ write during DELIVER must run inside the monitored DELIVER sub-agent, not orchestrator',
-    },
-  })
-  assert.deepEqual(guardWorkspaceWrite({ command: 'rm -rf ./srcs', phase: 'DELIVER' }), { ok: true, value: { reason: 'no src/ or tests/ write' } })
-  assert.deepEqual(evaluateSessionGuard({ command: 'rm -rf ./src', phase: 'DELIVER', agentName: 'deliver', deliverAgents: ['deliver'] }), {
-    ok: true,
-    value: { reason: 'workspace write by monitored DELIVER agent deliver' },
-  })
-  // G7 first: a removed tracking directory under src/ is a state write before a workspace one.
-  assert.equal(evaluateSessionGuard({ command: 'rm -rf src/.copilot-tracking', phase: 'DELIVER' }).error.code, 'STATE_WRITE_FORBIDDEN')
 })

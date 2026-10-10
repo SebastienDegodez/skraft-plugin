@@ -1,6 +1,7 @@
 import { Ok, Err } from './result.mjs'
 import { canonicalAgentName } from './instruction-policy.mjs'
 import { isPipelineDispatcher } from './pipeline/pipeline-definition.mjs'
+import { isClosedWriter } from './write-rights-policy.mjs'
 
 // Pure pipeline dispatch policy. No IO. Decides whether a requested agent may run
 // now, from the dispatch projection of state.json (see state-schema.projectDispatchState)
@@ -82,8 +83,10 @@ export const evaluateDispatch = (requestedAgent, dispatchState, config) => {
 // Who may dispatch whom, from the dispatch tree the descriptors declare (dispatched_by,
 // published as config.agentDispatchers). Claude Code ignores a subagent definition's
 // Agent(...) allowlist, so this is where the tree is enforced. Judged only when the
-// caller is one of this plugin's agents: an unknown caller or an agent without a
-// declared dispatcher is left alone.
+// caller is one of this plugin's agents: an unknown caller is left alone, and so is an
+// agent without a declared dispatcher, unless the caller has no right on src/ and tests/
+// (isClosedWriter): such an agent would write where its caller may not, under a name no
+// write right governs (a general-purpose agent on a Claude Code without mods).
 export const evaluateDispatchProvenance = (callerAgent, requestedAgent, config) => {
   const known = new Set(Object.values(config?.agentAliases ?? {}))
   const caller = canonicalAgentName(callerAgent, config)
@@ -97,6 +100,12 @@ export const evaluateDispatchProvenance = (callerAgent, requestedAgent, config) 
     return Err({
       code: 'PIPELINE_DISPATCH',
       reason: `${requested} is dispatched by the SKRAFT pipeline, which runs as code: start or resume it (the skraft-pipeline workflow, /skraft <slug>) instead of dispatching a phase agent yourself`,
+    })
+  }
+  if (!dispatcher && isClosedWriter(caller, config)) {
+    return Err({
+      code: 'UNDECLARED_DISPATCH',
+      reason: `${caller} has no right on src/ or tests/ and starts only the agents the dispatch tree gives it; ${requested} declares no dispatcher: do the work yourself within your write rights`,
     })
   }
   if (!dispatcher || canonicalAgentName(dispatcher, config) === caller) return Ok({ reason: 'declared dispatch' })

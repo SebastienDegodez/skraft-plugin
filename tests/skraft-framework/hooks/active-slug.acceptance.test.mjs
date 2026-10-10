@@ -55,7 +55,7 @@ test('init records the active pipeline, and the session guard then judges a real
     assert.equal(readFileSync(join(root, '.active-slug'), 'utf8').trim(), 'pricing')
 
     assert.equal(hook(env, ['PreToolUse', 'Agent'], agentDispatch('skraft:software-engineer')), undefined, 'the dispatch order is RunPipeline\'s check now')
-    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => [r.projectSlug, r.decision, r.code]), [['pricing', 'ALLOW', 'CONFORMING']])
+    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => [r.projectSlug, r.decision, r.code]), [['pricing', 'ALLOW', 'NO_WRITE']])
   })
 })
 
@@ -122,7 +122,7 @@ test('the hook resolves the tracking root from the payload cwd, not its own work
   })
 })
 
-test('a corrupted state is reported by the session guard without leaving a snapshot per hook call', () => {
+test('a corrupted state never stops the session guard, and no hook call leaves a snapshot', () => {
   inProject(({ project, env }) => {
     execFileSync('node', [STATE_CLI, 'init', '--slug', 'pricing'], { cwd: project, env, stdio: 'ignore' })
     const dir = join(project, '.copilot-tracking', 'skraft-plans', 'pricing')
@@ -130,7 +130,7 @@ test('a corrupted state is reported by the session guard without leaving a snaps
     const payload = { ...agentDispatch('solution-researcher'), cwd: project }
     hook(env, ['PreToolUse', 'Agent'], payload)
     hook(env, ['PreToolUse', 'Agent'], payload)
-    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => r.code), ['UNREADABLE_STATE', 'UNREADABLE_STATE'])
+    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => r.code), ['NO_WRITE', 'NO_WRITE'], 'the session guard reads no state')
     const snapshots = readdirSync(dir).filter((f) => f.includes('.corrupted.'))
     assert.deepEqual(snapshots, [])
   })

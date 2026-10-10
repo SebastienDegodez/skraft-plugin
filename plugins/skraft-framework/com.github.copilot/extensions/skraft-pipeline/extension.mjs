@@ -1,6 +1,7 @@
 // Copilot CLI / Copilot app extension entry: registers with the SDK the `skraft-pipeline`
-// dynamic workflow, the `skraft_decide` and `skraft_close_phase` tools, and the
-// `skraft-pipeline` canvas (the Copilot app draws it). Composition root only — the driving
+// dynamic workflow, the `skraft_decide` and `skraft_close_phase` tools, the
+// `skraft-pipeline` canvas (the Copilot app draws it), and the G8 write-rights guard as the
+// session's onPreToolUse hook (it sees the sub-agents' tool calls too). Composition root only — the driving
 // adapters are src/adapters/api/copilot-workflow/ and src/adapters/api/copilot-canvas/,
 // the use cases src/application/pipeline/. See docs/run-pipeline.md.
 //
@@ -15,6 +16,7 @@ import {
   runSkraftPipelineWorkflow,
   createSkraftDecideTool,
   createSkraftClosePhaseTool,
+  createSkraftWriteGuard,
 } from '../../../src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createSkraftPipelineCanvas } from '../../../src/adapters/api/copilot-canvas/skraft-pipeline-canvas.mjs'
 
@@ -25,6 +27,9 @@ const skraftPipeline = defineWorkflow({
   meta: SKRAFT_PIPELINE_META,
   run: (ctx) => runSkraftPipelineWorkflow(ctx, host),
 })
+
+// G8: who calls is read from the session itself (copilot-write-guard.mjs).
+const writeGuard = createSkraftWriteGuard({ pluginRoot: PLUGIN_ROOT, env: process.env, cwd: () => process.cwd() })
 
 // The canvas's buttons reach the chat through the session, joined just below.
 let session = null
@@ -45,4 +50,6 @@ session = await joinSession({
     createSkraftClosePhaseTool({ ...host, cwd: () => process.cwd() }),
   ],
   canvases: [skraftCanvas],
+  hooks: { onPreToolUse: writeGuard.onPreToolUse },
 })
+void writeGuard.attach(session)

@@ -68,7 +68,8 @@ plugins/skraft-framework/src/
     pipeline-policy.mjs        ordre de dispatch (G1, vérifié par RunPipeline), provenance
     skill-policy.mjs           skills obligatoires/on-demand, chargements lus dans un transcript (G2, G3)
     phase-gate-policy.mjs      règles de clôture de phase (G4, G5)
-    session-guard-policy.mjs   protection de l'état suivi, écritures DELIVER (G7, G8)
+    session-guard-policy.mjs   protection de l'état suivi, lecture du shell et de l'espace de travail (G7, G8)
+    write-rights-policy.mjs    droits d'écriture par rôle d'agent, tirés de la config (G8)
     handoff-policy.mjs         complétude du handoff de dispatch (G9, vérifiée par RunPipeline)
     state-machine.mjs          transitions qu'applique le CLI d'état
     result.mjs, value-objects.mjs, …
@@ -79,6 +80,7 @@ plugins/skraft-framework/src/
 
   application/           ← un service par préoccupation de hook
     pre-tool-use-composite.mjs   décisions provenance et G7/G8
+    write-rights-guard.mjs       G8, le cas d'usage qu'appellent le hook, le mod et l'extension
     subagent-start-service.mjs   G2
     subagent-stop-service.mjs    G3
     post-tool-use-service.mjs    trace G3
@@ -165,14 +167,14 @@ Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après
 | Garde | Appliquée par | Mode d'échec | Preuve en session réelle |
 |-------|---------------|--------------|--------------------------|
 | G1 ordre de dispatch | RunPipeline, avant chaque dispatch | Fail-closed : le run s'arrête `blocked` | Pas un hook |
-| Provenance du dispatch | Hook `PreToolUse` | Fail-open | Aucune |
+| Provenance du dispatch | Hook `PreToolUse`, extension Copilot (`onPreToolUse`) | Fail-open | Aucune |
 | G2 skills obligatoires | Hook `SubagentStart` | Fail-open | Aucune |
 | G3 chargement des skills | Hooks `PostToolUse` et `SubagentStop` | Fail-open | Aucune |
 | G4 artefacts de phase | CLI d'état, à la clôture de phase | Fail-closed | Pas un hook |
 | G5 verdict et commit DELIVER | CLI d'état, à la clôture de phase | Fail-closed | Pas un hook |
 | G6 continuation | Supprimé : RunPipeline enregistre ce que rend un agent | — | — |
 | G7 état suivi | Hook `PreToolUse` | Fail-closed | Dernier passage enregistré : Copilot CLI 1.0.83 a refusé une écriture shell |
-| G8 écritures DELIVER | Hook `PreToolUse` | Fail-open si l'état est illisible | Aucune |
+| G8 droits d'écriture par rôle d'agent | Mod Claude Code (`tool.call`), extension Copilot (`onPreToolUse`), hook `PreToolUse` | Fail-open si l'appelant n'est pas identifié ; le mod et l'extension refusent une écriture quand la garde elle-même échoue | Aucune |
 | G9 complétude du handoff | RunPipeline, sur le prompt composé | Fail-closed : le run s'arrête `blocked` | Pas un hook |
 
 Chaque garde est couverte par des tests unitaires et d'acceptation. Une preuve en session
@@ -190,8 +192,100 @@ ne surveillaient que l'orchestrateur en prose ont quitté les hooks. G1 (ordre d
 et G9 (complétude du handoff) tournent dans le cas d'usage avant chaque dispatch, sur l'état
 qu'il a lui-même écrit ; un refus arrête le run avant tout envoi. G6 (le rappel PostToolUse
 des étapes à enregistrer) a disparu : le code enregistre artefacts et verdicts. Les hooks
-gardent ce qu'aucun chemin de code ne voit — les écritures des agents (G7/G8), les skills
-qu'ils chargent (G2/G3), qui dispatche qui (provenance).
+gardent ce qu'aucun chemin de code ne voit — les écritures des agents (G7, et G8 là où ni le
+mod ni l'extension ne tournent), les skills qu'ils chargent (G2/G3), qui dispatche qui
+(provenance).
+
+## G8 — droits d'écriture par rôle d'agent
+
+Chaque agent du pipeline n'écrit que ce que son rôle permet : aucun agent ne travaille hors de
+son périmètre, et la revue reste indépendante du code revu. `config:build` tire les droits de
+la config — `phaseAgents`, `agentDispatchers`, le lanceur et les sorties que chaque agent
+déclare — dans `writeRights` de `skraft-framework.config.json` ; rien n'est écrit agent par
+agent dans le code.
+
+| Rôle | Qui | Peut écrire |
+|------|-----|-------------|
+| Orchestrateur | Le lanceur du pipeline (`Skraft - Orchestrator`), et tout agent qui dispatche des agents de phase | Rien : le code du pipeline écrit l'état, les reviews et les rapports |
+| Reviewer | Un reviewer de phase | Ses fichiers de transmission, les sorties qu'il déclare : sa review (`reviews/{date}/{phase}-review-{N}.md`) et, en DELIVER, le patch, la liste des fichiers, la liste des commits et le verdict `qg-verify` que lisent ses lentilles |
+| Lentille | Un agent qu'un reviewer dispatche | Les sorties qu'elle déclare — aucune pour chaque lentille du pipeline |
+| Spécialiste | Un spécialiste de phase | `src/` et `tests/` seulement en DISTILL (tests d'acceptation RED et leurs stubs) et en DELIVER ; tout le reste sauf le fichier de transmission d'un autre agent |
+| Worker | Un agent qu'un spécialiste dispatche | Comme son spécialiste |
+
+Un agent hors de ces rôles (`general-purpose`, `Explore`, celui d'un autre plugin) n'est pas
+gouverné, sauf si un agent gouverné l'a lancé : il écrit alors comme lui. Les agents hors du
+pipeline (backlog, brownfield) ne sont pas gouvernés. L'héritage exige un hôte qui nomme qui a
+lancé l'agent ; là où l'hôte ne connaît qu'une partie de la chaîne (le settings hook de Claude
+Code ne nomme que l'agent, Copilot sans `parentId`), un agent non gouverné est non identifié.
+Aussi un agent sans droit sur `src/` et `tests/` — orchestrateur, reviewer, lentille,
+spécialiste RESEARCH ou DESIGN — ne lance que les agents que l'arbre de dispatch lui déclare :
+la provenance lui refuse tout agent sans dispatcher déclaré (`UNDECLARED_DISPATCH`), sur chaque
+hôte.
+
+La garde lit ce qu'un appel écrit : le fichier que nomme un outil de fichier (`apply_patch` :
+chaque fichier que nomment ses en-têtes), et les fichiers qu'écrit une commande shell, lue comme
+G7 la lit. `src/` et `tests/` sont ceux du projet où tourne la session : un chemin sous le
+répertoire de la session est lu à partir de lui, si bien qu'un projet rangé dans `~/src` n'est
+pas tout entier un espace de travail. Un fichier de transmission est lu depuis la racine de
+suivi (`SKRAFT_TRACKING_ROOT`, ou `.copilot-tracking/skraft-plans` sous le répertoire de la
+session), jamais depuis un autre répertoire `skraft-plans`.
+
+**Une ligne lue jusqu'au bout, ou refusée.** Un agent sans droit sur `src/` et `tests/` ne lance
+que des lignes shell que la garde sait lire jusqu'au bout ; toute autre est refusée :
+
+- un here-document ou l'entrée standard fournis à un programme hors de la liste des lecteurs
+  d'entrée (`cat`, `grep`, `jq`, `git commit`, les CLI du framework…), `eval`, `source`, un shell
+  derrière un wrapper (`env`, `sudo`, `timeout`…) ou lancé sur un script, un script inline
+  d'interpréteur (`node -e`) ;
+- une commande PowerShell autre qu'un cmdlet de lecture (`Get-*`, `Select-String`…), et du texte
+  tapé dans un programme déjà lancé (`write_bash` de Copilot) ;
+- un chemin qu'elle ne sait pas résoudre (`$(…)`, une variable non définie) ou un glob, partout
+  où il pourrait aboutir ; le répertoire de la session et ses ancêtres contiennent `src/` et
+  `tests/` (`rm -rf .`, `git checkout .`).
+
+`git apply`, `am`, `merge`, `pull`, `cherry-pick`, `revert`, `rebase`, `stash pop`, `switch`,
+`checkout` sans `--`, `reset --hard`, `patch` nourri d'un diff, `tar -x` et `unzip` réécrivent
+le répertoire où ils tournent ; le `--out CHEMIN` d'une CLI du framework écrit CHEMIN. Seul le
+périphérique nul nu (`/dev/null`, `nul`, `\\.\nul`) n'est pas une écriture. Le here-document de
+verdict, `git diff > …patch` et `git commit -F -` restent lisibles. Pour tout rôle, un chemin que
+la ligne ne sait pas résoudre compte comme le fichier d'un reviewer quand son dernier segment
+peut en être le nom, et un répertoire copié ou déplacé dans la racine de suivi compte comme
+écrit là.
+
+**Qui appelle.** Chaque hôte le dit, et un seul cas d'usage (`write-rights-guard.mjs`) juge :
+
+| Hôte | Où tourne G8 | Comment l'appelant est connu |
+|------|--------------|------------------------------|
+| Claude Code avec mods | Le hook `tool.call` du mod sur `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` | L'`agentId` de l'appel et `$.agent.list()` (son type et qui l'a lancé) ; l'`agent_type` de la boucle principale sous `--agent`, lu au `SessionStart` |
+| Copilot CLI et Copilot app | Le hook de session `onPreToolUse` de l'extension, qui voit aussi les appels des sous-agents (`create`, `edit`, `str_replace_editor`, `apply_patch`, `bash`, `powershell`, `write_bash`, `task`) | Le `sessionId` d'un sous-agent rapproché du `toolCallId` de l'événement `subagent.started` qu'a émis le runtime (`agentName`), les agents qui l'ont lancé suivis par `parentId` ; l'agent sélectionné dans la session principale (`agent.getCurrent`, `subagent.selected`). L'`agentId` de l'événement nomme l'émetteur, jamais l'agent lancé. Aucun fichier n'est lu |
+| Tout hôte, settings hook | `PreToolUse` de `hooks.json` | Le nom d'agent du payload : l'`agent_type` de Claude Code ; le `preToolUse` de Copilot n'en donne aucun |
+
+Un **appelant non identifié passe** (fail-open), audité `UNIDENTIFIED_CALLER` : un settings hook
+Copilot, un sous-agent qu'aucun événement n'a annoncé, une session principale dont la sélection
+n'a pas pu être lue, un agent non gouverné dont l'hôte ne sait pas nommer qui l'a lancé (une
+correspondance ambiguë n'est jamais lue comme un autre agent : le SDK Copilot 1.0.9 n'envoie
+pas de `parentId`, la session principale n'est donc jamais supposée). G8 ne refuse qu'une écriture qu'il peut attribuer à un rôle qui n'en a pas
+le droit ; refuser l'appelant anonyme refuserait le Software Engineer avec tous les autres
+(#206). Un payload Claude Code qui ne nomme aucun agent vient de la session principale sans
+`--agent`, où ne tourne aucun agent du pipeline.
+
+**Mode d'échec.** Le mod et l'extension refusent une écriture quand la garde elle-même échoue
+(un `.catch` qui refuse, une erreur rattrapée) ; le settings hook garde sa règle : un échec du
+hook laisse passer l'appel, sauf une écriture d'outil sur un `state.json` suivi.
+
+**Lots.** Chaque appel d'un lot Copilot `toolCalls` est jugé ; un seul refus refuse le lot.
+
+**Ce que G8 ne lit pas.** Un programme lancé sur un fichier de script (`node script.mjs`,
+`npm run`) écrit ce que fait le script : la garde lit la ligne, pas le script. Le Software
+Engineer et les agents de DISTILL et DELIVER gardent leur shell : une ligne illisible ne leur est
+pas refusée, et une réécriture du répertoire de la session (`git reset --hard`) n'est pas jugée
+contre les reviews. Une ligne PowerShell est lue comme une ligne POSIX, son `$null` comme le
+périphérique nul.
+
+**Ce qui exige encore le settings hook.** G7, la provenance, et G8 pour un hôte qui ne fait
+tourner ni le mod ni l'extension : Claude Code sans mods, un hôte Copilot qui ne charge pas
+l'extension du plugin (VS Code lit les hooks v1), une session où l'extension n'a pas été
+chargée. Sous Claude Code avec mods, les deux tournent et s'accordent ; le mod répond le premier.
 
 ## Économie de tokens — l'angle des hooks
 

@@ -12,8 +12,8 @@
 export const TRACKED_STATE_WRITE_RE = /skraft-plans[/\\][^"'\s]*state\.json/
 
 // The tools a PreToolUse guard inspects: dispatch provenance and the
-// session guard (G7 Bash command or file write, G8 workspace write).
-const PRE_TOOL_USE_TOOLS = new Set(['Agent', 'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
+// session guard (G7 Bash command or file write, G8 orchestrator workspace write).
+const PRE_TOOL_USE_TOOLS = new Set(['Agent', 'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'ApplyPatch', 'StrReplaceEditor', 'WriteBash'])
 
 const SKILL_FILE_RE = /SKILL\.md$/i
 
@@ -23,11 +23,18 @@ const readsSkillFile = (payload) =>
   [payload.filePath, payload.toolInput?.path, payload.toolInput?.file_path]
     .some((path) => isText(path) && SKILL_FILE_RE.test(path))
 
+const callRelevant = (event, call) => {
+  if (event === 'PreToolUse') return isText(call.requestedAgent) || PRE_TOOL_USE_TOOLS.has(call.toolName)
+  return readsSkillFile(call)
+}
+
 // True when the hook must run its guards for this event; false when no guard can act on
-// it and the entry point may return before importing anything.
+// it and the entry point may return before importing anything. A batched payload
+// (Copilot `toolCalls`) is relevant when any of its calls is.
 export const isHookRelevant = ({ event, payload = {}, raw = '' } = {}) => {
   if (event !== 'PreToolUse' && event !== 'PostToolUse') return true
   if (typeof raw === 'string' && TRACKED_STATE_WRITE_RE.test(raw)) return true
-  if (event === 'PreToolUse') return isText(payload.requestedAgent) || PRE_TOOL_USE_TOOLS.has(payload.toolName)
-  return readsSkillFile(payload)
+  if (callRelevant(event, payload)) return true
+  return Array.isArray(payload.toolCalls)
+    && payload.toolCalls.some((call) => call && typeof call === 'object' && callRelevant(event, call))
 }

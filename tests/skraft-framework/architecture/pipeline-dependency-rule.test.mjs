@@ -48,6 +48,23 @@ test('pipeline core names no command line, plugin path, process or exit code', (
   assert.deepEqual(offenders, [])
 })
 
+// G8 (#208): the write-rights policy and its use case, which every host calls — the settings
+// hook, the Claude Code mod and the Copilot extension.
+const WRITE_RIGHTS_CORE = ['domain/write-rights-policy.mjs', 'application/write-rights-guard.mjs']
+
+test('write rights: the policy imports only domain/, the use case only domain/ and application/', () => {
+  const allowed = { domain: ['domain'], application: ['domain', 'application'] }
+  const offenders = WRITE_RIGHTS_CORE.map((path) => join(SRC, path)).flatMap((file) =>
+    importsOf(file).filter(({ target }) => !target || !allowed[layerOf(file)].includes(layerOf(target))).map(({ spec }) => `${show(file)} → ${spec}`))
+  assert.deepEqual(offenders, [])
+})
+
+test('write rights core names no command line, plugin path, process or exit code', () => {
+  const forbidden = new RegExp(`src/cli/|\\.mjs['"\`]|pluginRoot|argv|exitCode|child_process|runProcess|${NODE_PROCESS.source}`)
+  const offenders = WRITE_RIGHTS_CORE.map((path) => join(SRC, path)).filter((file) => forbidden.test(bodyOf(readFileSync(file, 'utf8')))).map(show)
+  assert.deepEqual(offenders, [])
+})
+
 test('driven (infrastructure) adapters never import a use case', () => {
   const offenders = filesUnder(join(SRC, 'adapters/infrastructure')).flatMap((file) =>
     importsOf(file).filter(({ target }) => target && layerOf(target) === 'application').map(({ spec }) => `${show(file)} → ${spec}`))

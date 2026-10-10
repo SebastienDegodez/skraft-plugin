@@ -56,3 +56,38 @@ test('the removed guards are ignored even if a caller still passes them', async 
   assert.deepEqual(await svc.handle({ projectSlug: 'proj', requestedAgent: 'software-engineer' }), ALLOW)
   assert.deepEqual([dispatchGuard.calls, handoffGuard.calls], [[], []])
 })
+
+// ─── Copilot toolCalls batch ────────────────────────────────────────────────
+
+test('a toolCalls batch runs the guards once per call, each with the session context', async () => {
+  const sessionGuard = recordingGuard(ALLOW)
+  const svc = createPreToolUseCompositeService({ sessionGuard })
+
+  await svc.handle({
+    projectSlug: 'proj', sessionId: 'child', toolName: 'stale',
+    toolCalls: [
+      { toolCallId: 't1', toolName: 'Write', filePath: 'src/A.cs' },
+      { toolCallId: 't2', toolName: 'Bash', toolInput: { command: 'ls' } },
+    ],
+  })
+  assert.deepEqual(sessionGuard.calls, [
+    { projectSlug: 'proj', sessionId: 'child', toolCallId: 't1', toolName: 'Write', filePath: 'src/A.cs' },
+    { projectSlug: 'proj', sessionId: 'child', toolCallId: 't2', toolName: 'Bash', toolInput: { command: 'ls' } },
+  ])
+})
+
+test('one denied call in a batch denies the batch', async () => {
+  const sessionGuard = { handle: async (p) => (p.filePath === 'src/B.cs' ? DENY : ALLOW) }
+  const svc = createPreToolUseCompositeService({ sessionGuard })
+
+  const result = await svc.handle({ toolCalls: [{ toolName: 'Write', filePath: 'src/A.cs' }, { toolName: 'Write', filePath: 'src/B.cs' }] })
+  assert.equal(result.decision, 'deny')
+})
+
+test('a dispatch inside a batch reaches the provenance guard, with the caller of the batch', async () => {
+  const provenanceGuard = recordingGuard(ALLOW)
+  const svc = createPreToolUseCompositeService({ provenanceGuard })
+
+  await svc.handle({ agentName: 'software-engineer', toolCalls: [{ toolName: 'Read' }, { toolName: 'Agent', requestedAgent: 'contract-testing-worker' }] })
+  assert.deepEqual(provenanceGuard.calls, [{ agentName: 'software-engineer', requestedAgent: 'contract-testing-worker' }])
+})

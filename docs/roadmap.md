@@ -228,8 +228,7 @@ contexte d'étape suivante (succès) ou de re-dispatch (échec). Fail-open.
 mécaniquement inviolables.
 
 **Périmètre :** `PreToolUse(Bash)` deny édition directe `state.json`/execution-log ;
-session guard `domain/session-guard-policy.mjs` bloque writes `src`/`tests` hors
-agent monitoré pendant DELIVER.
+G8 limite les écritures de chaque agent du pipeline à son rôle (révisé par #206, puis #208).
 
 **Livré :** `domain/session-guard-policy.mjs` (pur) + `application/pre-tool-use-session-guard-service.mjs`.
 G7 (state-independent) refuse toute mutation directe des artefacts protégés —
@@ -239,6 +238,24 @@ reste permise — la seule voie d'écriture sanctionnée est le CLI d'état (#60
 pendant DELIVER, bloque les writes `src/`/`tests/` hors des agents DELIVER
 (`phaseAgents.DELIVER`) et des agents qu'ils dispatchent ; fail-open si l'état est
 illisible (un bug du hook ne fige jamais le pipeline).
+
+**Revu (#206) :** sous Copilot CLI, le `preToolUse` ne nomme aucun agent, donc G8 refusait
+aussi le Software Engineer et DELIVER était impossible. G8 refuse désormais seulement une
+écriture `src/`/`tests/` dont l'auteur est nommé comme l'orchestrateur, en toute phase, sans
+lire l'état ; un appelant non nommé passe. Chaque appel d'un lot Copilot `toolCalls` est gardé.
+
+**Revu (#208, V2) :** G8 applique des **droits d'écriture par rôle d'agent**, tirés de la
+config par `config:build` (`writeRights` : `phaseAgents`, `agentDispatchers`, le lanceur,
+les sorties déclarées). L'orchestrateur n'écrit rien ; un reviewer ou une lentille seulement
+ses fichiers de transmission déclarés (`reviews/{date}/…`) ; un spécialiste ou un worker
+`src/` et `tests/` seulement en DISTILL et DELIVER, jamais le fichier de transmission d'un
+autre agent. L'identité est résolue là où l'hôte la donne : le mod Claude Code (`tool.call`,
+`agentId` → `$.agent.list()`), l'extension Copilot (`onPreToolUse`, événements
+`subagent.started`), le settings hook (`agent_type`) pour un hôte sans l'un ni l'autre. Un
+appelant non identifié passe, audité `UNIDENTIFIED_CALLER` ; un lot `toolCalls` est jugé appel
+par appel. Un agent sans droit sur `src/` et `tests/` ne lance que des lignes shell lisibles
+jusqu'au bout et aucun agent sans dispatcher déclaré. Suivi dans
+[#208](https://github.com/SebastienDegodez/skraft-plugin/issues/208).
 
 **Dépend de :** US3
 
