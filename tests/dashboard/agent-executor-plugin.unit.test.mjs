@@ -1,7 +1,7 @@
 import { deepStrictEqual, strictEqual } from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import { describe, it } from 'node:test'
 
 import { createRegisterExecutors, pilotPermissionHandler, registerExecutors } from '../../eng/vally-agent-executor/plugin.mjs'
@@ -245,6 +245,45 @@ describe('Vally executor plugin registration', () => {
       possibleUrls: [],
       fullCommandText: 'cat /repo/tests/agents/backlog-discoverer/eval.yaml',
     }, context).kind, 'reject')
+  })
+
+  // A suite stages a scripted `gh` so the agent talks to a fake GitHub host. The
+  // name is only admitted while the workspace fake is what PATH resolves first,
+  // and the agent cannot write the staging directory to wrap a real tool.
+  it('admits a CLI staged first on PATH and keeps the agent out of the staging directory', () => {
+    const workDir = mkdtempSync(join(tmpdir(), 'skraft-permission-staged-'))
+    try {
+      mkdirSync(join(workDir, '.eval-bin'))
+      writeFileSync(join(workDir, '.eval-bin', 'gh'), '#!/usr/bin/env node\n')
+      const stimulus = { tags: { permissions: 'workspace-write' } }
+      const staged = { stimulus, workDir, searchPath: `${join(workDir, '.eval-bin')}${delimiter}/usr/bin` }
+      const shell = (fullCommandText, identifier = fullCommandText.split(' ', 1)[0]) => ({
+        kind: 'shell',
+        commandSegments: [{ identifier, fullCommandText }],
+        possiblePaths: [],
+        possibleUrls: [],
+        fullCommandText,
+      })
+      const comment = 'gh api --hostname ghe.example.com -X POST repos/acme/pricing/issues/42/comments --input -'
+
+      deepStrictEqual(pilotPermissionHandler(shell(comment), staged), { kind: 'approve-once' })
+      deepStrictEqual(
+        pilotPermissionHandler(shell(`${comment} <<'EOF'\nSee .eval-bin/gh\nEOF`), staged),
+        { kind: 'approve-once' },
+      )
+      strictEqual(pilotPermissionHandler(shell(comment), { stimulus, workDir }).kind, 'reject')
+      strictEqual(pilotPermissionHandler(shell(comment), {
+        ...staged,
+        searchPath: `/usr/bin${delimiter}${join(workDir, '.eval-bin')}`,
+      }).kind, 'reject')
+      strictEqual(pilotPermissionHandler(shell('curl --version'), staged).kind, 'reject')
+      strictEqual(pilotPermissionHandler(shell('cat > .eval-bin/gh'), staged).kind, 'reject')
+      strictEqual(pilotPermissionHandler({ kind: 'write', fileName: '.eval-bin/gh' }, staged).kind, 'reject')
+      strictEqual(pilotPermissionHandler({ kind: 'write', fileName: join(workDir, '.eval-bin', 'jq') }, staged).kind, 'reject')
+      deepStrictEqual(pilotPermissionHandler({ kind: 'write', fileName: 'src/domain.mjs' }, staged), { kind: 'approve-once' })
+    } finally {
+      rmSync(workDir, { recursive: true, force: true })
+    }
   })
 
 })
