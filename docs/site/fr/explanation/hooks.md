@@ -68,7 +68,7 @@ plugins/skraft-framework/src/
     pipeline-policy.mjs        ordre de dispatch (G1, vérifié par RunPipeline), provenance
     skill-policy.mjs           skills obligatoires/on-demand, chargements lus dans un transcript (G2, G3)
     phase-gate-policy.mjs      règles de clôture de phase (G4, G5)
-    session-guard-policy.mjs   protection de l'état suivi, écritures DELIVER (G7, G8)
+    session-guard-policy.mjs   protection de l'état suivi, écritures orchestrateur (G7, G8)
     handoff-policy.mjs         complétude du handoff de dispatch (G9, vérifiée par RunPipeline)
     state-machine.mjs          transitions qu'applique le CLI d'état
     result.mjs, value-objects.mjs, …
@@ -172,7 +172,7 @@ Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après
 | G5 verdict et commit DELIVER | CLI d'état, à la clôture de phase | Fail-closed | Pas un hook |
 | G6 continuation | Supprimé : RunPipeline enregistre ce que rend un agent | — | — |
 | G7 état suivi | Hook `PreToolUse` | Fail-closed | Dernier passage enregistré : Copilot CLI 1.0.83 a refusé une écriture shell |
-| G8 écritures DELIVER | Hook `PreToolUse` | Fail-open si l'état est illisible | Aucune |
+| G8 écritures de l'orchestrateur | Hook `PreToolUse` | Fail-open si l'appelant n'est pas nommé | Aucune |
 | G9 complétude du handoff | RunPipeline, sur le prompt composé | Fail-closed : le run s'arrête `blocked` | Pas un hook |
 
 Chaque garde est couverte par des tests unitaires et d'acceptation. Une preuve en session
@@ -192,6 +192,15 @@ qu'il a lui-même écrit ; un refus arrête le run avant tout envoi. G6 (le rapp
 des étapes à enregistrer) a disparu : le code enregistre artefacts et verdicts. Les hooks
 gardent ce qu'aucun chemin de code ne voit — les écritures des agents (G7/G8), les skills
 qu'ils chargent (G2/G3), qui dispatche qui (provenance).
+
+G8 tient l'orchestrateur hors de `src/` et `tests/` : il dispatche l'agent qui porte un
+changement et ne le fait jamais lui-même, quelle que soit la phase. Le hook ne refuse qu'un
+auteur que le payload nomme comme l'orchestrateur : l'agent lanceur, puisque le pipeline
+dispatche lui-même les agents de phase. Copilot CLI ne nomme aucun agent dans
+`preToolUse`, ni pour la session principale ni pour un sous-agent : sous Copilot l'appel passe,
+et G8 ne tient que là où le harnais nomme l'agent, comme Claude Code avec `agent_type`. G8 ne
+lit pas l'état. Chaque appel d'un lot Copilot `toolCalls` est gardé séparément, et un seul
+refus refuse tout le lot.
 
 ## Économie de tokens — l'angle des hooks
 

@@ -4,8 +4,9 @@ import { allow } from '../adapters/api/hooks/decision.mjs'
 //
 //   provenance guard           — runs on every agent dispatch, pipeline or not: no
 //                               self-dispatch, no dispatch outside the declared tree.
-//   G7/G8 session guard        — always runs (G7 protected-artifact ban is unconditional;
-//                               G8 workspace-write check applies during DELIVER).
+//   G7/G8 session guard        — always runs: the protected-artifact ban (G7) is
+//                               unconditional; an orchestrator src/ or tests/ write (G8)
+//                               is refused.
 //
 // The dispatch-order guard (G1) and the handoff guard (G9) are gone from the hooks: the
 // pipeline is code (RunPipeline), which checks both before every dispatch it makes
@@ -21,15 +22,27 @@ const combine = (decisions) =>
     ?? decisions.find((d) => d.decision === 'deny')
     ?? allow()
 
+// A batched payload (Copilot `toolCalls`) is one call per entry, each carrying the
+// session context of the payload; any other payload is its own single call.
+const callsOf = (payload) => {
+  if (!Array.isArray(payload.toolCalls) || payload.toolCalls.length === 0) return [payload]
+  const { toolCalls, toolName, toolInput, requestedAgent, filePath, ...session } = payload
+  return toolCalls.map((call) => ({ ...session, ...call }))
+}
+
 export const createPreToolUseCompositeService = ({ sessionGuard, provenanceGuard } = {}) => ({
   handle: async (payload = {}) => {
     const decisions = []
-    const requestedAgent = requestedAgentOf(payload)
-    if (provenanceGuard && requestedAgent) {
-      decisions.push(await provenanceGuard.handle({ agentName: payload.agentName, requestedAgent }))
-    }
-    if (sessionGuard) {
-      decisions.push(await sessionGuard.handle(payload))
+
+    for (const call of callsOf(payload)) {
+      const requestedAgent = requestedAgentOf(call)
+      if (provenanceGuard && requestedAgent) {
+        decisions.push(await provenanceGuard.handle({ agentName: call.agentName, requestedAgent }))
+      }
+
+      if (sessionGuard) {
+        decisions.push(await sessionGuard.handle(call))
+      }
     }
     return combine(decisions)
   }

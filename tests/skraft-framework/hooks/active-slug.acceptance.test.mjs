@@ -122,15 +122,15 @@ test('the hook resolves the tracking root from the payload cwd, not its own work
   })
 })
 
-test('a corrupted state is reported by the session guard without leaving a snapshot per hook call', () => {
+test('a corrupted state neither stops a dispatch nor leaves a snapshot per hook call: the session guard never reads it', () => {
   inProject(({ project, env }) => {
     execFileSync('node', [STATE_CLI, 'init', '--slug', 'pricing'], { cwd: project, env, stdio: 'ignore' })
     const dir = join(project, '.copilot-tracking', 'skraft-plans', 'pricing')
     writeFileSync(join(dir, 'state.json'), '{ truncated')
     const payload = { ...agentDispatch('solution-researcher'), cwd: project }
-    hook(env, ['PreToolUse', 'Agent'], payload)
-    hook(env, ['PreToolUse', 'Agent'], payload)
-    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => r.code), ['UNREADABLE_STATE', 'UNREADABLE_STATE'])
+    assert.equal(hook(env, ['PreToolUse', 'Agent'], payload), undefined)
+    assert.equal(hook(env, ['PreToolUse', 'Agent'], payload), undefined)
+    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => [r.projectSlug, r.code]), [['pricing', 'CONFORMING'], ['pricing', 'CONFORMING']])
     const snapshots = readdirSync(dir).filter((f) => f.includes('.corrupted.'))
     assert.deepEqual(snapshots, [])
   })

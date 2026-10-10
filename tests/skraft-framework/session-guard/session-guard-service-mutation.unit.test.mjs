@@ -1,6 +1,5 @@
-// Unit — the PreToolUse session guard service: which payload `cwd` it hands G7, the exact
-// fail-open reasons it audits, and how the monitored DELIVER agent set grows. Hand-written
-// doubles only.
+// Unit — the PreToolUse session guard service: which payload `cwd` it hands G7, and whom
+// it names the orchestrator for G8. Hand-written doubles only.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createPreToolUseSessionGuardService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs'
@@ -10,11 +9,9 @@ const DELIVER = { phaseAgents: { DELIVER: { specialist: 'software-engineer', rev
 
 // `config: undefined` is passed on purpose: no framework config at all.
 const serviceWith = (options = {}) => {
-  const { read = async () => ({ currentPhase: 'DELIVER' }) } = options
   const config = 'config' in options ? options.config : DELIVER
   const entries = []
   const service = createPreToolUseSessionGuardService({
-    stateReader: { read },
     auditWriter: { write: async (entry) => { entries.push(entry) } },
     config,
     clock: { now: () => NOW },
@@ -59,45 +56,33 @@ test('a Bash call whose command is not a string carries no command', async () =>
   assert.deepEqual(entries.map((e) => [e.code, e.reason]), Array(4).fill(['CONFORMING', 'no src/ or tests/ write']))
 })
 
-test('the fail-open reason quotes the reader error, whatever was thrown', async () => {
-  const cases = [
-    [new Error('disk gone'), 'disk gone'],
-    ['plain text', 'plain text'],
-    [undefined, 'undefined'],
-    [null, 'null'],
-    [{ code: 'EIO' }, '[object Object]'],
+test('without a phase agent dispatched by a named agent, nobody is the orchestrator', async () => {
+  const configs = [
+    undefined, {}, { phaseAgents: { DELIVER: {} } }, { phaseAgents: { DELIVER: null } },
+    { phaseAgents: { DELIVER: { specialist: 3 } }, agentDispatchers: { 3: 'lead', worker: 'software-engineer' } },
+    { phaseAgents: { DELIVER: { specialist: 'software-engineer' } }, agentDispatchers: { 'software-engineer': 7 } },
   ]
-  for (const [thrown, shown] of cases) {
-    const { service, entries } = serviceWith({ read: async () => { throw thrown } })
-    const decision = await service.handle({ projectSlug: 'checkout', agentName: 'orchestrator', toolName: 'Write', toolInput: { filePath: 'src/a.cs' } })
-    assert.deepEqual(decision, { decision: 'allow' }, shown)
-    assert.deepEqual(entries, [{
-      event: 'SessionGuardEvaluated', projectSlug: 'checkout', agentName: 'orchestrator', decision: 'ALLOW',
-      code: 'UNREADABLE_STATE', reason: `recorded pipeline state unreadable; session guard fail-open: ${shown}`, evaluatedAt: NOW,
-    }], shown)
-  }
-})
-
-test('DELIVER without a monitored agent fails open with its own code and reason', async () => {
-  for (const config of [undefined, {}, { phaseAgents: { DELIVER: {} } }, { phaseAgents: { DELIVER: { specialist: 3 } }, agentDispatchers: { worker: 'software-engineer' } }]) {
+  for (const config of configs) {
     const { service, entries } = serviceWith({ config })
-    const decision = await service.handle({ projectSlug: 'checkout', toolName: 'Write', toolInput: { filePath: 'src/a.cs' } })
-    assert.deepEqual(decision, { decision: 'allow' })
+    const decision = await service.handle({ projectSlug: 'checkout', agentName: 'lead', toolName: 'Write', toolInput: { filePath: 'src/a.cs' } })
+    assert.deepEqual(decision, { decision: 'allow' }, JSON.stringify(config))
     assert.deepEqual(entries, [{
-      event: 'SessionGuardEvaluated', projectSlug: 'checkout', agentName: null, decision: 'ALLOW',
-      code: 'UNCONFIGURED_DELIVER_AGENTS', reason: 'no monitored DELIVER agents configured; session guard fail-open', evaluatedAt: NOW,
+      event: 'SessionGuardEvaluated', projectSlug: 'checkout', agentName: 'lead', decision: 'ALLOW',
+      code: 'CONFORMING', reason: 'workspace write by lead', evaluatedAt: NOW,
     }], JSON.stringify(config))
   }
 })
 
-test('the monitored set grows through dispatchers only from a configured DELIVER agent', async () => {
+test('the orchestrator is the dispatcher of a phase agent; when the pipeline dispatches, the launcher agent', async () => {
   const config = {
-    phaseAgents: { DELIVER: { reviewer: 'reviewer' } },
-    agentDispatchers: { c: 'b', b: 'reviewer', x: 'y', y: 'x' },
+    phaseAgents: { DESIGN: { specialist: 'architect', reviewer: 'architect-reviewer' }, DELIVER: { specialist: 'engineer', reviewer: null } },
+    agentDispatchers: { architect: 'skraft-pipeline', 'architect-reviewer': 'skraft-pipeline', engineer: 'lead', worker: 'engineer' },
   }
   const write = (agentName) => ({ projectSlug: 'checkout', agentName, toolName: 'Edit', toolInput: { filePath: 'tests/a.test.mjs' } })
   const { service, entries } = serviceWith({ config })
-  for (const agent of ['reviewer', 'b', 'c']) assert.equal((await service.handle(write(agent))).decision, 'allow', agent)
-  for (const agent of ['x', 'y', 'software-engineer']) assert.equal((await service.handle(write(agent))).decision, 'deny', agent)
-  assert.deepEqual(entries.slice(0, 3).map((e) => e.reason), ['reviewer', 'b', 'c'].map((a) => `workspace write by monitored DELIVER agent ${a}`))
+  for (const agent of ['skraft-orchestrator', 'lead']) assert.equal((await service.handle(write(agent))).decision, 'deny', agent)
+  for (const agent of ['skraft-pipeline', 'engineer', 'worker', 'architect']) assert.equal((await service.handle(write(agent))).decision, 'allow', agent)
+  assert.deepEqual(entries.map((e) => e.code), [
+    'ORCHESTRATOR_WRITE_FORBIDDEN', 'ORCHESTRATOR_WRITE_FORBIDDEN', 'CONFORMING', 'CONFORMING', 'CONFORMING', 'CONFORMING',
+  ])
 })

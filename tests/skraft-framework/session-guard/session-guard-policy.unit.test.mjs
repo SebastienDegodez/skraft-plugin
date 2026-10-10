@@ -6,12 +6,11 @@ import {
   isWorkspacePath,
   commandWritesWorkspace,
   guardProtectedArtifact,
-  guardWorkspaceWrite,
-  evaluateSessionGuard
+  guardOrchestratorWrite
 } from '../../../plugins/skraft-framework/src/domain/session-guard-policy.mjs'
-import { STATE_WRITE_FORBIDDEN, UNMONITORED_WRITE } from '../../../plugins/skraft-framework/src/domain/error-codes.mjs'
+import { ORCHESTRATOR_WRITE_FORBIDDEN, STATE_WRITE_FORBIDDEN } from '../../../plugins/skraft-framework/src/domain/error-codes.mjs'
 
-const DELIVER_AGENTS = ['software-engineer', 'software-engineer-reviewer']
+const ORCHESTRATORS = ['Skraft - Orchestrator']
 
 // ───────────────────────────────────────────────────────────────────────────
 // G7 — protected-artifact detection primitives
@@ -161,62 +160,41 @@ test('guardProtectedArtifact allows a read of state.json', () => {
 })
 
 // ───────────────────────────────────────────────────────────────────────────
-// G8 — guardWorkspaceWrite
+// G8 — guardOrchestratorWrite
 // ───────────────────────────────────────────────────────────────────────────
 
-test('guardWorkspaceWrite blocks a src/ write outside a monitored DELIVER agent, naming the writer', () => {
-  const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, UNMONITORED_WRITE)
-  assert.equal(result.error.reason, 'src/ or tests/ write during DELIVER must run inside the monitored DELIVER sub-agent, not the orchestrator session')
-  const byArchitect = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: 'solution-architect', deliverAgents: DELIVER_AGENTS })
-  assert.match(byArchitect.error.reason, /, not solution-architect$/)
+test('guardOrchestratorWrite refuses a src/ or tests/ write by the orchestrator, naming it', () => {
+  const edit = guardOrchestratorWrite({ filePath: 'src/app.mjs', agentName: 'Skraft - Orchestrator', orchestrators: ORCHESTRATORS })
+  assert.equal(edit.ok, false)
+  assert.equal(edit.error.code, ORCHESTRATOR_WRITE_FORBIDDEN)
+  assert.equal(edit.error.reason, 'Skraft - Orchestrator never writes src/ or tests/; dispatch the phase agent that owns this change')
+  const shell = guardOrchestratorWrite({ command: 'echo x > tests/foo.test.mjs', agentName: 'Skraft - Orchestrator', orchestrators: ORCHESTRATORS })
+  assert.equal(shell.error.code, ORCHESTRATOR_WRITE_FORBIDDEN)
 })
 
-// The Ok reasons are what the audit log records for a conforming write.
-test('guardWorkspaceWrite allows a src/ write by the monitored DELIVER specialist', () => {
-  const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: 'software-engineer', deliverAgents: DELIVER_AGENTS })
+// The Ok reasons are what the audit log records for a conforming call.
+test('guardOrchestratorWrite lets an unnamed caller write the workspace', () => {
+  for (const agentName of [undefined, null, '']) {
+    const result = guardOrchestratorWrite({ filePath: 'src/app.mjs', agentName, orchestrators: ORCHESTRATORS })
+    assert.equal(result.ok, true)
+    assert.equal(result.value.reason, 'workspace write by an unnamed caller')
+  }
+})
+
+test('guardOrchestratorWrite lets any other named agent write the workspace', () => {
+  const result = guardOrchestratorWrite({ filePath: 'tests/a.test.mjs', agentName: 'Skraft - Software Engineer', orchestrators: ORCHESTRATORS })
   assert.equal(result.ok, true)
-  assert.equal(result.value.reason, 'workspace write by monitored DELIVER agent software-engineer')
+  assert.equal(result.value.reason, 'workspace write by Skraft - Software Engineer')
 })
 
-test('guardWorkspaceWrite is inactive outside DELIVER', () => {
-  const result = guardWorkspaceWrite({ filePath: 'src/app.mjs', phase: 'DESIGN', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, true)
-  assert.equal(result.value.reason, 'session guard inactive outside DELIVER (phase DESIGN)')
-})
-
-test('guardWorkspaceWrite ignores non-workspace writes during DELIVER', () => {
-  const result = guardWorkspaceWrite({ filePath: 'docs/notes.md', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
+test('guardOrchestratorWrite lets the orchestrator write outside the workspace', () => {
+  const result = guardOrchestratorWrite({ filePath: 'docs/notes.md', command: 'cat src/app.mjs', agentName: 'Skraft - Orchestrator', orchestrators: ORCHESTRATORS })
   assert.equal(result.ok, true)
   assert.equal(result.value.reason, 'no src/ or tests/ write')
 })
 
-test('guardWorkspaceWrite blocks a shell write into tests/ outside a monitored agent', () => {
-  const result = guardWorkspaceWrite({ command: 'echo x > tests/foo.test.mjs', phase: 'DELIVER', agentName: 'orchestrator', deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, UNMONITORED_WRITE)
-})
-
-// ───────────────────────────────────────────────────────────────────────────
-// Combined evaluator — G7 precedence
-// ───────────────────────────────────────────────────────────────────────────
-
-test('evaluateSessionGuard enforces G7 before G8', () => {
-  const result = evaluateSessionGuard({ filePath: STATE, phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, STATE_WRITE_FORBIDDEN)
-})
-
-test('evaluateSessionGuard enforces G8 when G7 passes', () => {
-  const result = evaluateSessionGuard({ filePath: 'src/app.mjs', phase: 'DELIVER', agentName: null, deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, UNMONITORED_WRITE)
-})
-
-test('evaluateSessionGuard returns Ok when neither guard trips', () => {
-  const result = evaluateSessionGuard({ command: 'cat state.json', phase: 'DESIGN', agentName: 'solution-architect', deliverAgents: DELIVER_AGENTS })
-  assert.equal(result.ok, true)
+test('guardOrchestratorWrite refuses nobody without a configured orchestrator', () => {
+  assert.equal(guardOrchestratorWrite({ filePath: 'src/app.mjs', agentName: 'Skraft - Orchestrator' }).ok, true)
 })
 
 test('commandWritesWorkspace: the in-place and scripted edits G7 recognises, and their reads', () => {
@@ -231,7 +209,13 @@ test('commandWritesWorkspace: the in-place and scripted edits G7 recognises, and
   ]) {
     assert.equal(commandWritesWorkspace(command), true, command)
   }
-  for (const command of ["sed -n '1,20p' src/Orders/Discount.cs", 'node --test tests/a.test.mjs', 'grep -ri discount src/', 'dotnet test tests/Orders.Tests']) {
+  for (const command of [
+    "sed -n '1,20p' src/Orders/Discount.cs",
+    'node --test tests/a.test.mjs',
+    'grep -ri discount src/',
+    'dotnet test tests/Orders.Tests',
+    'node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" record-artifact --phase DISTILL --path tests/Orders/OrderAcceptanceTests.cs',
+  ]) {
     assert.equal(commandWritesWorkspace(command), false, command)
   }
 })

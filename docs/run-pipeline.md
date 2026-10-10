@@ -487,12 +487,12 @@ pointeur, entre tous les worktrees ; ne le fixez pas si vous en lancez plusieurs
 ## 7. Cohabitation avec les settings hooks
 
 Restent dans `hooks/hooks.json` : la **provenance** des dispatchs, **G7/G8** (session guard :
-`state.json` protégé, écritures DELIVER), **G2/G3** (SubagentStart/Stop, lectures de
+`state.json` protégé, l'agent lanceur n'écrit jamais `src/` ni `tests/`), **G2/G3** (SubagentStart/Stop, lectures de
 SKILL.md) et le ménage de démarrage. **G1, G6 et G9 ont disparu** : RunPipeline vérifie
 l'ordre et le handoff lui-même, et enregistre ce que les agents rendent.
 
 Au démarrage, `RunPipeline` écrit `{tracking}/.active-slug` (`ActivePipeline`) : c'est le
-pipeline contre lequel le session guard juge les écritures. Le journal d'audit est dans
+pipeline auquel le session guard rattache ses lignes d'audit ; il ne lit pas l'état. Le journal d'audit est dans
 `.git/skraft/skill-audit.jsonl` (ou `SKRAFT_AUDIT_LOG`).
 
 ---

@@ -47,7 +47,7 @@ const SERVICES = {
     // and the handoff completeness (G9) are checked by RunPipeline before it dispatches.
     return {
       preToolUse: createPreToolUseCompositeService({
-        sessionGuard: createPreToolUseSessionGuardService({ stateReader, auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
+        sessionGuard: createPreToolUseSessionGuardService({ auditWriter, config, clock, trackingDir: basename(trackingRoot) }),
         provenanceGuard: createDispatchProvenanceService({ config, auditWriter, clock }),
       }),
     }
