@@ -44,7 +44,7 @@ import { createAgentReportTransport } from '../src/adapters/infrastructure/repor
 import { createSnapshotStateWriter } from '../src/adapters/infrastructure/state/snapshot-state-writer.mjs'
 import { createFileStateReader, createFileStateBackupReader, createFileStateArchive } from '../src/adapters/infrastructure/state/file-state-store.mjs'
 import { createTrackingDecisionStore } from '../src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
-import { joinPath, claudeAgentId, walkFiles, askable, claudeUsage, callerChain, lastSegment } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
+import { joinPath, claudeAgentId, walkFiles, askable, claudeUsage, callerChain } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
 import { createWriteRightsGuard } from '../src/application/write-rights-guard.mjs'
 import { parseSkraftArgs } from '../src/adapters/api/claude-code-mod/command-args.mjs'
 
@@ -232,7 +232,7 @@ async function writeRightsVerdict($, e) {
     mainAgent: await read($, mainAgent),
     pluginName: $.plugin.name,
   })
-  const guard = createWriteRightsGuard({ config, trackingDir: lastSegment(await trackingRootOf($, cwd)) })
+  const guard = createWriteRightsGuard({ config, trackingRoot: await trackingRootOf($, cwd) })
   return guard.judge({ caller, calls: [{ toolName: e.tool, toolInput: e }], cwd })
 }
 

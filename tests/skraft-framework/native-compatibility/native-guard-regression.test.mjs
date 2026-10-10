@@ -89,7 +89,7 @@ for (const agentName of ['skraft:skraft-orchestrator', 'plugin:skraft:skraft-orc
   })
 }
 
-for (const [agentName, code] of [['skraft:software-engineer', 'CONFORMING'], ['other:software-engineer', 'NOT_GOVERNED']]) {
+for (const [agentName, code] of [['skraft:software-engineer', 'CONFORMING'], ['other:software-engineer', 'UNIDENTIFIED_CALLER']]) {
   test(`native Edit by ${agentName}: src/ passes, tracked state is refused`, async () => {
     const records = []
     const guard = createPreToolUseSessionGuardService({

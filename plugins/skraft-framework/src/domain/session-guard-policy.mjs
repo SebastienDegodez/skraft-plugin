@@ -1,6 +1,6 @@
 import { Ok, Err } from './result.mjs'
 import { STATE_WRITE_FORBIDDEN } from './error-codes.mjs'
-import { readCommandLine, joinPath, UNKNOWN } from './shell-command-reading.mjs'
+import { readCommandLine, joinPath, pipelineAt, UNKNOWN } from './shell-command-reading.mjs'
 
 // Pure domain: session-guard policy (G7/G8). No IO.
 //
@@ -31,7 +31,7 @@ const REWRITING_VERBS = new Set(['rm', 'mv', 'tee', 'truncate', 'dd', 'shred', '
 const COPYING_VERBS = new Set(['cp', 'install', 'ln', 'rsync'])
 const INLINE_INTERPRETERS = /^(?:node|nodejs|deno|bun|python[0-9.]*|perl|ruby|php)$/
 const INLINE_SCRIPT_FLAGS = new Set(['-e', '--eval', '-c', '-p', '--print', '-r'])
-const SHELLS = /^(?:sh|bash|zsh|dash|ksh|mksh|ash)$/
+const SHELLS = /^(?:sh|bash|zsh|dash|ksh|mksh|ash|pwsh|powershell|cmd)(?:\.exe)?$/i
 const GIT_WRITING_SUBCOMMANDS = new Set(['checkout', 'restore', 'rm', 'mv', 'clean'])
 const FIND_ACTIONS = new Set(['-delete', '-exec', '-execdir', '-ok', '-okdir', '-fprint', '-fprint0', '-fprintf', '-fls'])
 const FIND_FILTERS = new Set(['-name', '-iname', '-path', '-ipath', '-wholename', '-iwholename', '-regex', '-iregex'])
@@ -73,6 +73,7 @@ const commandOf = (words) => {
   let chdir = null
   let split = null
   let viaXargs = false
+  let wrapped = false
   const outputs = []
   while (i < words.length) {
     const word = words[i]
@@ -80,6 +81,7 @@ const commandOf = (words) => {
     const wrapper = WRAPPERS.get(baseName(word))
     if (!wrapper) break
     const name = baseName(word)
+    wrapped = true
     if (name === 'xargs') viaXargs = true
     i += 1
     // `env -` is `env -i`: an option, not the command.
@@ -101,7 +103,7 @@ const commandOf = (words) => {
     if (WRAPPERS_WITH_POSITIONAL.has(name) && i < words.length) i += 1 // its duration or mask
   }
   const [verb = '', ...operands] = words.slice(i)
-  return { verb: baseName(verb), operands, chdir, split, viaXargs, outputs }
+  return { verb: baseName(verb), operands, chdir, split, viaXargs, wrapped, outputs }
 }
 
 const nonOptions = (operands) => operands.filter((w) => !w.startsWith('-') || w === '-')
@@ -114,13 +116,38 @@ const FIND_FILE_ACTIONS = new Set(['-fprint', '-fprint0', '-fprintf', '-fls'])
 const hasGlob = (w) => /[*?[]/.test(w)
 const AWK_READ_OPTIONS = new Set(['-f', '--file', '-v', '--assign', '-F', '--field-separator'])
 
-// What a simple command changes: `files` it writes, `trees` it removes, restores or
-// replaces whole (a directory takes every file under it along), command lines it runs
-// (`scripts`: a string to read, or the words of a command — sh -c, eval, find -exec), and
-// a directory it runs from (git -C).
+// Options of patch, tar and git whose value is not a path the command writes.
+const PATCH_VALUE_OPTIONS = new Set(['-i', '--input', '-d', '--directory', '-r', '--reject-file', '-B', '--prefix', '-D', '--ifdef', '-F', '--fuzz', '-V', '--version-control', '-z', '--suffix', '-Y', '--basename-prefix', '-p', '--strip'])
+const TAR_EXTRACTS = (operands) => operands.some((w, k) => w === '--extract' || w === '--get' || /^-[A-Za-z]*x/.test(w) || (k === 0 && !w.startsWith('-') && /x/.test(w)))
+// Git subcommands that rewrite the working tree from content no word names (a patch, a
+// commit, a stash, another branch): the whole tree is theirs to write.
+const GIT_REWRITING_SUBCOMMANDS = new Set(['apply', 'am', 'merge', 'pull', 'cherry-pick', 'revert', 'rebase', 'stash', 'switch'])
+const GIT_APPLY_READS = new Set(['--check', '--stat', '--numstat', '--summary'])
+const GIT_STASH_READS = new Set(['list', 'show', 'create', 'store'])
+const GIT_RESET_REWRITES = new Set(['--hard', '--merge', '--keep'])
+const valueAfter = (operands, names) => {
+  for (let k = 0; k < operands.length; k += 1) {
+    const w = operands[k]
+    for (const name of names) {
+      if (w === name && operands[k + 1] !== undefined) return operands[k + 1]
+      if (name.startsWith('--') && w.startsWith(`${name}=`)) return w.slice(name.length + 1)
+      if (!name.startsWith('--') && w.startsWith(name) && w.length > name.length) return w.slice(name.length)
+    }
+  }
+  return null
+}
+
+// What a simple command changes: `files` it writes, `landings` it copies or moves onto
+// (the destination itself), `trees` it removes, restores or replaces whole (a directory
+// takes every file under it along), `rewrites` — directories it rewrites from content no
+// word names (git apply, merge, stash, reset --hard; patch fed a diff; tar -x, unzip) —
+// command lines it runs (`scripts`: a string to read, or the words of a command — sh -c,
+// eval, find -exec), and a directory it runs from (git -C).
 const writesOf = ({ verb, operands }) => {
   const files = []
+  const landings = []
   const trees = []
+  const rewrites = []
   const scripts = []
   let find = null
   let chdir = null
@@ -134,9 +161,16 @@ const writesOf = ({ verb, operands }) => {
     // becomes a source: every operand is then judged as moved away.
     trees.push(...(paths.length > 1 && !paths.some(hasGlob) ? paths.slice(0, -1) : paths))
     if (paths.length > 1) {
-      files.push(destination)
+      landings.push(destination)
       trees.push(...paths.slice(0, -1).map((source) => `${destination}/${baseName(source)}`)) // a moved directory replaces one
     }
+  } else if (verb === 'patch') {
+    // patch FILE [PATCHFILE] writes FILE; fed a diff with no file, it writes what the diff
+    // names, under -d DIR or the directory it runs in. -o OUT writes OUT instead of FILE.
+    const named = operands.filter((w, k) => !w.startsWith('-') && !PATCH_VALUE_OPTIONS.has(operands[k - 1]))
+    const output = valueAfter(operands, ['-o', '--output'])
+    files.push(...(output ? [output] : named.slice(0, 1)))
+    if (named.length === 0 && !output) rewrites.push(valueAfter(operands, ['-d', '--directory']) ?? '.')
   } else if (REWRITING_VERBS.has(verb)) {
     // dd reads its if=; anything else it names (of=, a stray operand) counts as written.
     if (verb === 'dd') files.push(...operands.filter((w) => !w.startsWith('if=')).map((w) => w.replace(/^of=/, '')))
@@ -149,10 +183,18 @@ const writesOf = ({ verb, operands }) => {
     if (target) landing.push(...paths.map((source) => `${target}/${baseName(source)}`))
     else if (paths.length > 1) {
       const destination = paths.at(-1)
-      files.push(destination)
+      landings.push(destination)
       landing.push(...paths.slice(0, -1).map((source) => `${destination}/${baseName(source)}`))
       if (operands.some(RECURSIVE)) trees.push(destination) // it becomes the copy when it does not exist
     }
+  } else if (verb === 'tar' && TAR_EXTRACTS(operands)) {
+    rewrites.push(valueAfter(operands, ['-C', '--directory']) ?? '.')
+  } else if (verb === 'unzip') {
+    rewrites.push(valueAfter(operands, ['-d']) ?? '.')
+  } else if (verb === 'sort' || verb === 'uniq') {
+    // sort -o FILE; uniq INPUT OUTPUT.
+    const output = verb === 'sort' ? valueAfter(operands, ['-o', '--output']) : nonOptions(operands)[1]
+    if (output) files.push(output)
   } else if (verb === 'sed' || (verb === 'perl' && inPlace)) {
     if (inPlace) files.push(...nonOptions(operands))
   } else if ((verb === 'awk' || verb === 'gawk') && operands.some((w, k) => w === '-iinplace' || w === '--include=inplace' || (w === 'inplace' && (operands[k - 1] === '-i' || operands[k - 1] === '--include')))) {
@@ -163,6 +205,10 @@ const writesOf = ({ verb, operands }) => {
     // have cat, grep and jq. Its arguments and the paths its text names are candidates.
     files.push(...operands)
     for (const text of operands) files.push(...(text.match(PATHS_IN_SCRIPT) ?? []))
+  } else if (INLINE_INTERPRETERS.test(verb)) {
+    // A script run with --out PATH (the framework's artifact and structural-scan) writes PATH.
+    const output = valueAfter(operands, ['--out'])
+    if (output) files.push(output)
   } else if (SHELLS.test(verb)) {
     const flag = operands.findIndex((w) => /^-[A-Za-z]*c[A-Za-z]*$/.test(w))
     if (flag >= 0 && operands[flag + 1] !== undefined) scripts.push(operands[flag + 1])
@@ -172,10 +218,22 @@ const writesOf = ({ verb, operands }) => {
     let k = 0
     while (k < operands.length && operands[k].startsWith('-')) {
       if (operands[k] === '-C') chdir = operands[k + 1]
+      const workTree = optionValue(operands[k], '--work-tree') ?? (operands[k] === '--work-tree' ? operands[k + 1] : null)
+      if (workTree) chdir = workTree
       k += GIT_OPTIONS_WITH_VALUE.has(operands[k]) ? 2 : 1
     }
+    const subcommand = operands[k]
+    const rest = operands.slice(k + 1)
+    const named = nonOptions(rest).filter((w) => !w.startsWith('--source='))
     // checkout/restore rewrite what they name, rm/clean remove it, mv moves it away.
-    if (GIT_WRITING_SUBCOMMANDS.has(operands[k])) trees.push(...nonOptions(operands.slice(k + 1)).filter((w) => !w.startsWith('--source=')))
+    if (GIT_WRITING_SUBCOMMANDS.has(subcommand)) trees.push(...named)
+    // clean with no path cleans the whole tree; checkout without -- may name a branch.
+    if (subcommand === 'clean' && named.length === 0) trees.push('.')
+    if (subcommand === 'checkout' && !rest.includes('--')) rewrites.push('.')
+    if (subcommand === 'reset' && rest.some((w) => GIT_RESET_REWRITES.has(w))) rewrites.push('.')
+    if (GIT_REWRITING_SUBCOMMANDS.has(subcommand)
+      && !(subcommand === 'apply' && rest.some((w) => GIT_APPLY_READS.has(w)))
+      && !(subcommand === 'stash' && GIT_STASH_READS.has(rest[0]))) rewrites.push('.')
   } else if (verb === 'find' && operands.some((w) => FIND_ACTIONS.has(w))) {
     const starts = []
     for (const w of operands) { if (w.startsWith('-') || w === '(' || w === '!') break; starts.push(w) }
@@ -197,13 +255,15 @@ const writesOf = ({ verb, operands }) => {
     }
     find = { points, patterns, deletes: operands.includes('-delete'), groups }
   }
-  return { files, trees, scripts, find, chdir }
+  return { files, landings, trees, rewrites, scripts, find, chdir }
 }
 
 // True when a command line changes a path `target` accepts — G7's tracked state, G8's
 // workspace. `target.file(path, cwd)` judges a written file, `target.tree(path, cwd)` a
-// removed path (itself or what it contains). `cwd` is the directory the line starts in
-// ('' = the session directory, null = unknown); `cd` and `pushd` move it as it runs.
+// removed path (itself or what it contains), `target.landing` a copy or move destination
+// (`file` when the target has none), `target.rewrite` a directory rewritten from content
+// no word names (unjudged when the target has none). `cwd` is the directory the line
+// starts in ('' = the session directory, null = unknown); `cd` and `pushd` move it.
 const lineWrites = (command, target, cwd = '', depth = 0) => {
   if (depth > 4) return false
   const commands = Array.isArray(command) ? [{ words: command, redirects: [] }] : readCommandLine(command)
@@ -220,12 +280,14 @@ const lineWrites = (command, target, cwd = '', depth = 0) => {
     if (parsed.verb === 'popd') { dir = null; continue }
     if (parsed.split && lineWrites(parsed.split, target, here, depth + 1)) return true
     if (parsed.outputs.some((path) => target.file(path, here))) return true
-    const { files, trees, scripts, find, chdir } = writesOf(parsed)
+    const { files, landings, trees, rewrites, scripts, find, chdir } = writesOf(parsed)
     if (chdir !== null) here = moveTo(here, chdir)
     if (files.some((path) => target.file(path, here))) return true
+    if (landings.some((path) => (target.landing ?? target.file)(path, here))) return true
     if (trees.some((tree) => (typeof tree === 'string' ? target.tree(tree, here) : target.walk(tree, here)))) return true
+    if (target.rewrite && rewrites.some((path) => target.rewrite(path, here))) return true
     // xargs hands the command the words the rest of the line produces.
-    if (parsed.viaXargs && (files.length > 0 || trees.length > 0 || REWRITING_VERBS.has(parsed.verb) || COPYING_VERBS.has(parsed.verb) || REMOVING_VERBS.has(parsed.verb))) {
+    if (parsed.viaXargs && (files.length > 0 || landings.length > 0 || trees.length > 0 || REWRITING_VERBS.has(parsed.verb) || COPYING_VERBS.has(parsed.verb) || REMOVING_VERBS.has(parsed.verb))) {
       const judge = REMOVING_VERBS.has(parsed.verb) || parsed.verb === 'mv' ? target.tree : target.file
       if (everyWord.some((word) => judge(word, here))) return true
     }
@@ -444,10 +506,14 @@ const workspaceTarget = (cwd) => {
 
 // True when a shell command writes into the src/ or tests/ workspace: the forms G7 reads
 // (redirections, tee, in-place sed, inline scripts…), plus a mutating verb anywhere on the
-// line (git rm…).
-export const commandWritesWorkspace = (command, { cwd } = {}) =>
-  isString(command) && (MUTATING_WORKSPACE_RE.test(withoutProjectRoot(command, cwd))
-    || lineWrites(command, workspaceTarget(cwd), isString(cwd) ? cwd : ''))
+// line (git rm…). `strict` reads it for an agent with no right on the workspace: a path the
+// line cannot resolve counts, a glob counts when it can name src or tests, and so do the
+// session directory and its ancestors, which hold them (rm -rf ., git clean, git apply).
+export const commandWritesWorkspace = (command, { cwd, strict = false } = {}) =>
+  isString(command) && (strict
+    ? commandWritesWhere(command, strictWorkspaceJudge(cwd), { cwd, sample: 'src/x' })
+    : MUTATING_WORKSPACE_RE.test(withoutProjectRoot(command, cwd))
+      || lineWrites(command, workspaceTarget(cwd), isString(cwd) ? cwd : ''))
 
 // G7 — deny direct writes to state.json / execution-log; reads pass through.
 export const guardProtectedArtifact = ({ command, filePath, trackingDir, cwd } = {}) => {
@@ -466,22 +532,171 @@ export const guardProtectedArtifact = ({ command, filePath, trackingDir, cwd } =
   return Ok({ reason: 'no direct write to a protected artifact' })
 }
 
-// True when a shell command writes or removes a path `matches` accepts, read as G7 reads
-// it. Each path is resolved from the directory the command runs in (`cwd`, followed
-// through cd) and '/'-separated before it is judged; `holds(path)` says a directory whose
-// removal takes such a path with it; `sample` is a path `matches` accepts, which stands
-// for the files a find -exec is handed.
-export const commandWritesWhere = (command, { matches, holds = () => false, sample, cwd } = {}) => {
-  if (!isString(command) || typeof matches !== 'function') return false
-  const at = (path, here) => (isString(path) ? joinPath(here ?? '', path) : null)
-  const reaches = (path, here) => {
-    const resolved = at(path, here)
-    return resolved !== null && (matches(resolved) || holds(resolved))
+// ── G8: reading a command line to the end ────────────────────────────────────────
+
+// Where a shell sends what it discards or prints: the null device and the standard
+// streams, a bare NUL, or the Windows device path. Never a file anybody writes.
+const DEVICE_RE = /^(?:\/dev\/(?:null|stdout|stderr|tty|fd\/\d+)|nul|(?:\\\\|\/\/)\.[\\/]nul)$/i
+
+// True when a path carries a piece the line could not resolve ($( ), an unset variable).
+export const isUnresolvedPath = (path) => isString(path) && path.includes(UNKNOWN)
+export const isGlobPath = (path) => isString(path) && GLOB.test(path)
+
+// True when a path segment, glob or not, can name `name`.
+export const segmentCanBe = (segment, name) =>
+  GLOB.test(segment) ? safeGlobRe(segment).test(name) : segment.toLowerCase() === name.toLowerCase()
+
+// True when a shell command writes, removes, lands on or rewrites a path the judge
+// accepts, read as G7 reads it. `judge` holds `file` (a written file), `tree` (a removed
+// path; `file` when absent), and optionally `landing` (a copy or move destination) and
+// `rewrite` (a directory rewritten from content no word names). Each sees the path
+// resolved from where the command runs and '/'-separated; a path the line could not
+// resolve carries UNKNOWN, and so does a relative one after a cd the guard could not
+// follow. The null device is never a write. `sample` is a path the judge accepts, which
+// stands for the files a find -exec is handed.
+export const commandWritesWhere = (command, judge = {}, { cwd, sample } = {}) => {
+  if (!isString(command) || typeof judge.file !== 'function') return false
+  const resolve = (path, here) => {
+    if (!isString(path) || DEVICE_RE.test(path)) return null
+    const absolute = /^(?:[/\\]|[A-Za-z]:[/\\])/.test(path)
+    if (here === null && !absolute) return `${UNKNOWN}/${joinPath('', path)}`
+    return joinPath(here ?? '', path)
   }
+  const wrap = (fn) => (path, here) => { const resolved = resolve(path, here); return resolved !== null && fn(resolved) }
+  const tree = wrap(judge.tree ?? judge.file)
   return lineWrites(command, {
-    file: (path, here) => { const resolved = at(path, here); return resolved !== null && matches(resolved) },
-    tree: reaches,
-    walk: ({ start }, here) => reaches(start, here),
+    file: wrap(judge.file),
+    tree,
+    walk: ({ start }, here) => tree(start, here),
+    ...(judge.landing ? { landing: wrap(judge.landing) } : {}),
+    ...(judge.rewrite ? { rewrite: wrap(judge.rewrite) } : {}),
     sample: sample ?? '',
-  }, cwd ?? '')
+  }, isString(cwd) ? cwd : '')
+}
+
+// The session directory, or one of its ancestors: it holds src/ and tests/. A glob counts
+// when it can name it; without a session directory, `.` and what climbs above it.
+const holdsProject = (path, cwd) => {
+  const root = rootOf(cwd)
+  if (root.length < 2) return path === '.' || path === '..' || path.startsWith('../')
+  const own = path.replace(/\/+$/, '').split('/')
+  const rootSegments = root.split('/')
+  return own.length <= rootSegments.length && own.every((segment, k) => segmentCanBe(segment, rootSegments[k]))
+}
+
+// The strict reading of the workspace (commandWritesWorkspace, strict): a path the line
+// could not resolve counts; a segment that can be src or tests makes the path the
+// workspace's (the last one too when the path is a directory); the session directory and
+// its ancestors hold the workspace.
+const strictWorkspaceJudge = (cwd) => {
+  const inWorkspace = (path, directory) => {
+    if (isUnresolvedPath(path)) return true
+    const segments = String(projectRelative(path, cwd)).split('/')
+    return segments.slice(0, directory ? segments.length : -1).some((segment) => segmentCanBe(segment, 'src') || segmentCanBe(segment, 'tests'))
+  }
+  return {
+    file: (path) => inWorkspace(path, false),
+    landing: (path) => inWorkspace(path, true),
+    tree: (path) => inWorkspace(path, true) || holdsProject(path, cwd),
+    rewrite: (path) => inWorkspace(path, true) || holdsProject(path, cwd),
+  }
+}
+
+// Programs that only read what they are fed — the framework's own CLIs (artifact,
+// structural-scan…) read a payload — so a here-document or a pipe feeding them is data.
+const INPUT_ONLY_VERBS = new Set(['cat', 'tee', 'head', 'tail', 'wc', 'cut', 'tr', 'grep', 'egrep', 'fgrep', 'jq', 'sort', 'uniq', 'read', 'sha256sum', 'sha1sum', 'md5sum', 'nl', 'column', 'fold', 'diff', 'echo', 'printf', 'true', ':'])
+const FRAMEWORK_CLI_RE = /(?:^|\/)src\/cli\/[a-z][a-z0-9-]*\.mjs$/
+const gitSubcommandOf = (operands) => {
+  let k = 0
+  while (k < operands.length && operands[k].startsWith('-')) k += GIT_OPTIONS_WITH_VALUE.has(operands[k]) ? 2 : 1
+  return operands[k]
+}
+// PowerShell, Copilot's shell on Windows, read as a POSIX line: a cmdlet whose verb only
+// reads passes; any other cmdlet, and the built-in aliases of cmdlets that write, run text
+// or change directory, are commands the guard does not read.
+const READING_CMDLET_RE = /^(?:(?:Get|Test|Select|Measure|Sort|Compare|Resolve|ConvertTo|ConvertFrom)-[A-Za-z]+|Format-(?:Table|List|Wide|Custom|Hex)|Write-(?:Output|Host))$/i
+const CMDLET_RE = /^[A-Za-z]+-[A-Za-z]+$/
+const POWERSHELL_ALIASES = new Set(['del', 'erase', 'rd', 'ri', 'ni', 'md', 'sc', 'ac', 'copy', 'cpi', 'move', 'mi', 'ren', 'rni', 'iex', 'icm', 'start', 'saps', 'sajb', 'ii', 'sp', 'si', 'clc', 'cli', 'epcsv', 'sal', 'nal', 'sl', 'iwr', 'irm', 'foreach', '%', 'where', '?'])
+const isPowerShellCommand = (verb) => (CMDLET_RE.test(verb) && !READING_CMDLET_RE.test(verb)) || POWERSHELL_ALIASES.has(verb.toLowerCase())
+
+const readsOnlyItsInput = ({ verb, operands }) =>
+  INPUT_ONLY_VERBS.has(verb)
+  || READING_CMDLET_RE.test(verb)
+  || (verb === 'git' && gitSubcommandOf(operands) === 'commit')
+  || (INLINE_INTERPRETERS.test(verb) && !operands.some((w) => INLINE_SCRIPT_FLAGS.has(w))
+    && FRAMEWORK_CLI_RE.test(String(operands.find((w) => !w.startsWith('-')) ?? '').replace(/\\/g, '/')))
+
+// A here-document whose body only feeds data to the commands that read it (a verdict YAML
+// to the artifact CLI, a commit message to git commit, text to cat) is not commands: G8
+// reads the line without it. Any other body is kept and read as commands.
+const HERE_DOC_RE = /(?<!<)<<(?!<)-?[ \t]*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/
+const feedsDataOnly = (line, at) => {
+  const pipeline = pipelineAt(line, at)
+  if (!pipeline) return false
+  return pipeline.elements.slice(pipeline.at).every((text) => {
+    const records = readCommandLine(text)
+    return records.length === 1 && readsOnlyItsInput(commandOf(records[0].words))
+  })
+}
+export const withoutDataHereDocs = (command) => {
+  if (!isString(command)) return command
+  const lines = command.split('\n')
+  const kept = []
+  let logical = ''
+  for (let i = 0; i < lines.length; i += 1) {
+    kept.push(lines[i])
+    logical = logical ? `${logical}\n${lines[i]}` : lines[i]
+    if (/(?:^|[^\\])(?:\\\\)*\\$/.test(lines[i])) continue // the line goes on
+    const line = logical
+    logical = ''
+    const here = HERE_DOC_RE.exec(line)
+    if (!here || !feedsDataOnly(line, here.index)) continue
+    const tabs = line.slice(here.index).startsWith('<<-')
+    let end = i + 1
+    while (end < lines.length && (tabs ? lines[end].replace(/^\t+/, '') : lines[end]) !== here[2]) end += 1
+    if (end >= lines.length) continue // no closing delimiter: read the rest as the shell would run it
+    kept.push(lines[end])
+    i = end
+  }
+  return kept.join('\n')
+}
+
+// Why the guard cannot read a command line to the end, or null: a program that reads its
+// standard input as anything but data, eval or source, a shell started through a wrapper
+// or on a script it does not see, an inline interpreter script. G8 refuses such a line
+// from an agent with no right on the workspace.
+const opacityOf = (parsed, stdin, depth) => {
+  const { verb, operands, wrapped, split } = parsed
+  if (stdin && !readsOnlyItsInput(parsed)) return `${verb || 'a command'} reads its standard input as more than data`
+  if (verb === 'eval' || verb === 'source' || verb === '.') return `${verb} runs text the guard does not read`
+  if (isPowerShellCommand(verb)) return `${verb} is a PowerShell command the guard does not read`
+  if (split !== null) return 'env -S runs a command line the guard does not read'
+  if (SHELLS.test(verb)) {
+    if (wrapped) return `${verb} is started through a wrapper`
+    const flag = operands.findIndex((w) => /^-[A-Za-z]*c[A-Za-z]*$/.test(w))
+    if (flag < 0) return operands.length > 0 ? `${verb} runs a script or its input, which the guard does not read` : null
+    const script = operands[flag + 1]
+    if (!isString(script) || script.includes(UNKNOWN)) return `${verb} -c runs a script the guard cannot resolve`
+    return shellOpacity(script, depth + 1)
+  }
+  if (INLINE_INTERPRETERS.test(verb) && operands.some((w) => INLINE_SCRIPT_FLAGS.has(w))) return `${verb} runs an inline script`
+  if (verb === 'find') {
+    for (let k = 0; k < operands.length; k += 1) {
+      if (!FIND_EXEC.has(operands[k])) continue
+      const words = []
+      for (let j = k + 1; j < operands.length && operands[j] !== ';' && operands[j] !== '+'; j += 1) words.push(operands[j])
+      const why = opacityOf(commandOf(words), null, depth + 1)
+      if (why) return why
+    }
+  }
+  return null
+}
+export const shellOpacity = (command, depth = 0) => {
+  if (!isString(command)) return null
+  if (depth > 4) return 'commands nested too deep to read'
+  for (const { words, stdin } of readCommandLine(command)) {
+    const why = opacityOf(commandOf(words), stdin, depth)
+    if (why) return why
+  }
+  return null
 }

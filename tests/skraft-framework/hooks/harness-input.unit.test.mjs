@@ -17,6 +17,10 @@ test('harness-input: Copilot lowercased names map onto the framework vocabulary'
     ['create_file', 'Write'],
     ['edit', 'Edit'],
     ['str_replace', 'Edit'],
+    ['str_replace_editor', 'StrReplaceEditor'],
+    ['apply_patch', 'ApplyPatch'],
+    ['powershell', 'Bash'],
+    ['write_bash', 'WriteBash'],
     ['multiedit', 'MultiEdit'],
     ['notebookedit', 'NotebookEdit'],
     ['agent', 'Agent'],
@@ -221,4 +225,20 @@ test('harness-input: name and args are read on a batch entry only, never on the 
   const payload = fromHarnessInput({ name: 'bash', args: '{"command":"rm -rf src/"}' }, { env: {} })
   assert.equal(payload.toolName, undefined)
   assert.equal(payload.toolInput, undefined)
+})
+
+test('harness-input: Copilot runtime tools reach the guards as the writes they are', () => {
+  const patch = '*** Begin Patch\n*** Add File: src/a.ts\n+x\n*** End Patch'
+  assert.deepEqual(fromHarnessInput({ toolName: 'apply_patch', toolArgs: patch }, { env: {} }).toolInput, { input: patch }, 'a patch sent as bare text')
+  assert.deepEqual(fromHarnessInput({ toolName: 'apply_patch', toolArgs: JSON.stringify({ input: patch }) }, { env: {} }).toolInput, { input: patch })
+  assert.equal(fromHarnessInput({ toolName: 'task', toolArgs: { agent_type: 'general-purpose', prompt: 'x' } }, { env: {} }).requestedAgent, 'general-purpose', "Copilot's task names the agent it starts")
+  assert.equal('requestedAgent' in fromHarnessInput({ toolName: 'bash', toolArgs: { agent_type: 'x', command: 'ls' } }, { env: {} }), false, 'only an Agent call starts an agent')
+})
+
+test("harness-input: a PowerShell line reaches the shell reader with PowerShell's null device spelled as one", () => {
+  const line = (command) => fromHarnessInput({ toolName: 'powershell', toolArgs: { command } }, { env: {} }).toolInput.command
+  assert.equal(line('git diff 2>$null > a.patch'), 'git diff 2>/dev/null > a.patch')
+  assert.equal(line('git fetch | Out-Null'), 'git fetch > /dev/null')
+  assert.equal(line('$nullable = 1'), '$nullable = 1')
+  assert.equal(fromHarnessInput({ toolName: 'bash', toolArgs: { command: 'echo > $null' } }, { env: {} }).toolInput.command, 'echo > $null', 'in a POSIX shell, $null is a variable')
 })

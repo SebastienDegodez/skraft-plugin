@@ -4,7 +4,7 @@
 // in the engine by `claude plugin test` (hooks/skraft-mod.test.ts).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { callerChain, lastSegment } from '../../../plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
+import { callerChain } from '../../../plugins/skraft-framework/src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
 
 const AGENTS = [
   { id: 'se', type: 'skraft:software-engineer', spawnedBy: 'skraft' },
@@ -33,18 +33,12 @@ test('a subagent the main loop spawned answers to the main loop\'s agent', () =>
   assert.deepEqual(callerChain({ agentId: 'se', agents: AGENTS, mainAgent: 'skraft:skraft-orchestrator' }), { chain: ['skraft:software-engineer', 'skraft:skraft-orchestrator'] }, 'without the plugin name, nothing marks the pipeline\'s spawns')
 })
 
-test('a parent the engine no longer lists ends the chain; a cycle is read once', () => {
-  assert.deepEqual(callerChain({ agentId: 'lost', agents: AGENTS, mainAgent: 'm' }), { chain: ['general-purpose'] })
-  assert.deepEqual(callerChain({ agentId: 'loop-a', agents: AGENTS }), { chain: ['a', 'b'] })
+test('a parent the engine no longer lists, or a cycle, leaves the chain incomplete', () => {
+  assert.deepEqual(callerChain({ agentId: 'lost', agents: AGENTS, mainAgent: 'm' }), { chain: ['general-purpose'], complete: false })
+  assert.deepEqual(callerChain({ agentId: 'loop-a', agents: AGENTS }), { chain: ['a', 'b'], complete: false })
 })
 
 test('an agentId the engine does not list is an unidentified caller', () => {
   assert.equal(callerChain({ agentId: 'workflow-agent', agents: AGENTS }), null)
   assert.equal(callerChain({ agentId: 'x', agents: 'not a list' }), null)
-})
-
-test('lastSegment names the tracking directory, whatever the separator', () => {
-  assert.equal(lastSegment('/repo/.copilot-tracking/skraft-plans'), 'skraft-plans')
-  assert.equal(lastSegment('C:\\repo\\plans\\'), 'plans')
-  assert.equal(lastSegment(undefined), '')
 })

@@ -1,8 +1,10 @@
 import { Ok, Err } from './result.mjs'
 import { WRITE_RIGHT_DENIED } from './error-codes.mjs'
 import { canonicalAgentName } from './instruction-policy.mjs'
-import { commandWritesWhere, commandWritesWorkspace, isWorkspacePath } from './session-guard-policy.mjs'
-import { joinPath } from './shell-command-reading.mjs'
+import {
+  commandWritesWhere, commandWritesWorkspace, isGlobPath, isUnresolvedPath, isWorkspacePath, shellOpacity, withoutDataHereDocs,
+} from './session-guard-policy.mjs'
+import { joinPath, UNKNOWN } from './shell-command-reading.mjs'
 
 // Pure domain: write rights per agent role (G8). No IO.
 //
@@ -24,6 +26,13 @@ import { joinPath } from './shell-command-reading.mjs'
 // An agent outside writeRights is not governed: G8 lets it write. A caller that is not
 // itself governed takes the rights of its nearest governed ancestor (governingAgent): a
 // general-purpose agent a reviewer spawns writes as the reviewer does.
+//
+// An agent with no right on src/ and tests/ — the closed roles, a RESEARCH or DESIGN
+// specialist — must run shell commands the guard can read to the end: a command it cannot
+// (shellOpacity: a program reading its input as more than data, eval, a wrapped or file-run
+// shell) is refused, and a path it cannot resolve or a glob counts as a write where it
+// could land. A transmission file is read against the tracking root of the session, a
+// repository file against the session directory.
 
 export const WRITE_ROLES = Object.freeze({
   ORCHESTRATOR: 'orchestrator',
@@ -37,10 +46,6 @@ export const WRITE_ROLES = Object.freeze({
 const CLOSED_ROLES = new Set([WRITE_ROLES.ORCHESTRATOR, WRITE_ROLES.REVIEWER, WRITE_ROLES.LENS])
 
 const isString = (value) => typeof value === 'string' && value.length > 0
-
-// The tracking directory as a declared output names it.
-const DECLARED_TRACKING_PREFIX = '.copilot-tracking/skraft-plans/'
-const DEFAULT_TRACKING_DIR = 'skraft-plans'
 
 // A declared output that is a file path, without its trailing note: the path a write
 // right names. "structured result block (…)" and other prose are not paths.
@@ -108,136 +113,140 @@ export const governingAgent = (chain, config) => {
   return null
 }
 
+// True when an agent has no right on src/ and tests/: a closed role (orchestrator,
+// reviewer, lens), or a specialist or worker outside the workspace phases.
+const isClosedRights = (rights) => Boolean(rights) && (CLOSED_ROLES.has(rights.role) || rights.workspace !== true)
+export const isClosedWriter = (agent, config) => {
+  const name = canonicalAgentName(agent, config)
+  return Boolean(name) && Object.hasOwn(config?.writeRights ?? {}, name) && isClosedRights(config.writeRights[name])
+}
+
 const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-// A declared path as a regular expression on a '/'-separated path: {placeholder} is one
-// segment's worth of text, **/ any number of directories, ** any text, * any text within a
-// segment. A path under the
-// tracking directory matches wherever the tracking directory is (its name alone counts,
-// as G7 reads it).
-const pathPattern = (declared, trackingDirs) => {
+// The tracking root a declared output names, and where it is when nothing says otherwise.
+const DECLARED_TRACKING_PREFIX = '.copilot-tracking/skraft-plans/'
+const DEFAULT_TRACKING_ROOT = '.copilot-tracking/skraft-plans'
+
+// A declared path as a regular expression on a path read from its root (the tracking root
+// for a tracked output, the session directory otherwise): {placeholder} is one segment's
+// worth of text, **/ any number of directories, ** any text, * any text within a segment.
+const patternOf = (rest) => new RegExp(`^${rest.split(/(\{[^}]*\}|\*\*\/|\*\*|\*)/).map((piece) => {
+  if (piece === '**/') return '(?:.*/)?'
+  if (piece === '**') return '.*'
+  if (piece === '*') return '[^/]*'
+  if (/^\{[^}]*\}$/.test(piece)) return '[^/]+'
+  return escapeRegExp(piece)
+}).join('')}$`, 'i')
+
+// One declared file, compiled: its pattern, the pattern of its name, a path that matches
+// it, and — for a tracked file — the directories that hold it from the tracking root down.
+const compileFile = (declared) => {
   const tracked = declared.startsWith(DECLARED_TRACKING_PREFIX)
   const rest = tracked ? declared.slice(DECLARED_TRACKING_PREFIX.length) : declared
-  const body = rest.split(/(\{[^}]*\}|\*\*\/|\*\*|\*)/).map((piece) => {
-    if (piece === '**/') return '(?:.*/)?'
-    if (piece === '**') return '.*'
-    if (piece === '*') return '[^/]*'
-    if (/^\{[^}]*\}$/.test(piece)) return '[^/]+'
-    return escapeRegExp(piece)
-  }).join('')
-  const head = tracked ? `(?:^|/)(?:${trackingDirs.map(escapeRegExp).join('|')})/` : '(?:^|/)'
-  return new RegExp(`${head}${body}$`, 'i')
-}
-
-// The directories between the tracking directory's project folder and a tracked file:
-// removing one removes the file with it (reviews/ and reviews/{date}/ for a review).
-const holdingDirs = (declared, trackingDirs) => {
-  if (!declared.startsWith(DECLARED_TRACKING_PREFIX)) return []
-  const segments = declared.slice(DECLARED_TRACKING_PREFIX.length).split('/').slice(1, -1)
-  return segments.map((_, k) => pathPattern(`${DECLARED_TRACKING_PREFIX}{slug}/${segments.slice(0, k + 1).join('/')}`, trackingDirs))
-}
-
-// A path that matches the declared one, for a find -exec the guard reads.
-const sampleOf = (declared) => declared.replace(/\{[^}]*\}|\*\*|\*/g, 'x')
-
-const normalised = (path, cwd) => joinPath(isString(cwd) ? cwd : '', String(path))
-
-// A here-document whose body only feeds a command's input (a verdict YAML, a commit
-// message) is text, not commands: G8 reads the line without it. A body that a shell or an
-// interpreter reads as its program — `bash <<EOF`, `python3 - <<EOF`, `cat <<EOF | sh` — runs,
-// and is kept; `node script.mjs <<EOF` hands the script its input.
-const HERE_DOC_RE = /<<-?[ \t]*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/
-const INTERPRETER_RE = /^(?:sh|bash|zsh|dash|ksh|mksh|ash|eval|source|\.|node|nodejs|deno|bun|python[0-9.]*|perl|ruby|php|pwsh|powershell)$/
-const ASSIGNMENT_RE = /^[A-Za-z_][A-Za-z0-9_]*=/
-// True when the simple command `words` reads its standard input as a program.
-const readsProgram = (words) => {
-  const rest = words.filter((word) => !ASSIGNMENT_RE.test(word))
-  const verb = (rest[0] ?? '').split(/[/\\]/).pop()
-  return INTERPRETER_RE.test(verb) && rest.slice(1).every((word) => word.startsWith('-') || /^<</.test(word))
-}
-const bodyRuns = (line, at) => {
-  const before = line.slice(0, at).split(/\|\||&&|;|\|/).pop()
-  const after = line.slice(at).split('|').slice(1)
-  const words = (text) => text.trim().split(/\s+/).filter(Boolean)
-  return readsProgram(words(before)) || after.some((segment) => readsProgram(words(segment)))
-}
-export const withoutHereDocBodies = (command) => {
-  if (!isString(command)) return command
-  const lines = command.split('\n')
-  const kept = []
-  for (let i = 0; i < lines.length; i += 1) {
-    kept.push(lines[i])
-    const here = HERE_DOC_RE.exec(lines[i])
-    if (!here || bodyRuns(lines[i], here.index)) continue
-    const tabs = lines[i].slice(here.index).startsWith('<<-')
-    let end = i + 1
-    while (end < lines.length && (tabs ? lines[end].replace(/^\t+/, '') : lines[end]) !== here[2]) end += 1
-    if (end >= lines.length) continue // no closing delimiter: read the rest as the shell would run it
-    kept.push(lines[end])
-    i = end
-  }
-  return kept.join('\n')
-}
-
-// Where a shell sends what it discards or prints: never a file anybody writes.
-const DEVICE_RE = /^\/dev\/(?:null|stdout|stderr|tty|fd\/\d+)$|(?:^|\/)nul$/i
-
-// The rights in a form judgeWrite reads fast: compiled once per config and tracking
-// directory.
-export const compileWriteRights = (config, { trackingDir } = {}) => {
-  const writeRights = config?.writeRights ?? {}
-  const trackingDirs = [...new Set([DEFAULT_TRACKING_DIR, trackingDir].filter(isString))]
-  const filesOf = (agent) => (writeRights[agent]?.files ?? []).map((declared) => ({
+  const segments = rest.split('/')
+  return Object.freeze({
     declared,
-    pattern: pathPattern(declared, trackingDirs),
-    holders: holdingDirs(declared, trackingDirs),
-  }))
-  const owned = new Map(Object.keys(writeRights).map((agent) => [agent, filesOf(agent)]))
+    tracked,
+    pattern: patternOf(rest),
+    name: patternOf(segments.at(-1)),
+    sample: rest.replace(/\{[^}]*\}|\*\*\/|\*\*|\*/g, 'x'),
+    holders: tracked ? segments.slice(0, -1).map((_, k) => patternOf(segments.slice(0, k + 1).join('/'))) : [],
+  })
+}
+
+// The rights in a form judgeWrite reads fast: compiled once per config and tracking root.
+export const compileWriteRights = (config, { trackingRoot } = {}) => {
+  const writeRights = config?.writeRights ?? {}
+  const owned = new Map(Object.keys(writeRights).map((agent) => [agent, (writeRights[agent]?.files ?? []).map(compileFile)]))
   // Every transmission file, with its owner: what no other agent may write.
   const transmission = [...owned].flatMap(([owner, files]) => files.map((file) => ({ owner, ...file })))
-  return Object.freeze({ writeRights, owned, transmission })
+  return Object.freeze({ writeRights, owned, transmission, trackingRoot: isString(trackingRoot) ? trackingRoot : DEFAULT_TRACKING_ROOT })
+}
+
+// A path read from a root, or null when it lies elsewhere. Case does not matter (Windows).
+const under = (root, path) => {
+  if (!root) return path
+  if (path.toLowerCase() === root.toLowerCase()) return ''
+  return path.toLowerCase().startsWith(`${root.toLowerCase()}/`) ? path.slice(root.length + 1) : null
+}
+
+// Where the files of a session are read from: its tracking root and its directory.
+const placesOf = (compiled, cwd) => {
+  const project = isString(cwd) ? joinPath('', cwd).replace(/\/+$/, '') : ''
+  return { project, tracking: joinPath(project, compiled.trackingRoot).replace(/\/+$/, '') }
+}
+
+// True when a resolved, literal path is the declared file.
+const isFile = (file, path, places) => {
+  const read = under(file.tracked ? places.tracking : places.project, path)
+  return read !== null && file.pattern.test(read)
+}
+
+// True when a path the line could not resolve, or a glob, could still be the declared
+// file: its last segment can be the file's name.
+const WILD = new RegExp(`${UNKNOWN}|[*?[]`)
+const couldBeFile = (file, path) => {
+  const last = path.split('/').at(-1)
+  if (!WILD.test(last)) return file.name.test(last)
+  const wild = new RegExp(`^${last.split(/(${UNKNOWN}|\*|\?)/).map((piece) => (piece === UNKNOWN || piece === '*' ? '.*' : piece === '?' ? '.' : escapeRegExp(piece))).join('')}$`, 'i')
+  return wild.test(file.sample.split('/').at(-1))
 }
 
 const denied = (reason) => Err({ code: WRITE_RIGHT_DENIED, reason })
 
-// G8 — may `agent` make this write? `filePath` is the file a file tool writes, `command`
-// the shell line a shell tool runs, read for the files it writes: a closed role may name
-// only its own files (and the null device), a specialist or a worker never another agent's
-// transmission file, nor src/ or tests/ outside a workspace phase. An agent writeRights
-// does not name passes.
-export const judgeWrite = ({ agent, command: shellLine, filePath, cwd } = {}, compiled = compileWriteRights({})) => {
+// G8 — may `agent` make this write? `filePaths` are the files a file tool writes (`filePath`
+// for one), `command` the shell line a shell tool runs (`typed` into a program already
+// running, which the guard does not see), `opaque` a file tool whose targets cannot be read
+// (an apply_patch without file headers). An agent writeRights does not name passes.
+export const judgeWrite = ({ agent, command: shellLine, filePath, filePaths, opaque = false, typed = false, cwd } = {}, compiled = compileWriteRights({})) => {
   const rights = isString(agent) ? compiled.writeRights[agent] : undefined
   if (!rights) return Ok({ governed: false })
-  const path = isString(filePath) ? normalised(filePath, cwd) : null
-  const command = withoutHereDocBodies(shellLine)
+  const places = placesOf(compiled, cwd)
+  const paths = [...(Array.isArray(filePaths) ? filePaths : []), filePath].filter(isString)
+  const resolved = paths.map((path) => joinPath(places.project, path))
+  const command = withoutDataHereDocs(shellLine)
+  const closed = CLOSED_ROLES.has(rights.role)
+  const strict = isClosedRights(rights)
+  const label = `${agent} (${rights.role})`
 
-  if (CLOSED_ROLES.has(rights.role)) {
+  if (opaque) return denied(`${label}: this tool call names no file the guard can read`)
+  if (strict) {
+    const why = typed ? 'it types into a program already running' : shellOpacity(command)
+    if (why) return denied(`${label} has no right on src/ or tests/, and this command cannot be read to the end: ${why}; run each step as a plain command that names its paths`)
+  }
+
+  if (closed) {
     const files = compiled.owned.get(agent) ?? []
     const allowed = files.length > 0 ? `only ${files.map((file) => file.declared).join(', ')}` : 'nothing'
-    if (path !== null && !files.some((file) => file.pattern.test(path))) {
-      return denied(`${agent} (${rights.role}) writes ${allowed}; ${filePath} is not one of them`)
-    }
-    const outside = (candidate) => !DEVICE_RE.test(candidate) && !files.some((file) => file.pattern.test(candidate))
-    if (commandWritesWhere(command, { matches: outside, holds: outside, sample: '/x', cwd })) {
-      return denied(`${agent} (${rights.role}) writes ${allowed}; this command writes elsewhere`)
+    const own = (path) => !isUnresolvedPath(path) && !isGlobPath(path) && files.some((file) => isFile(file, path, places))
+    const stray = paths.find((_, k) => !own(resolved[k]))
+    if (stray !== undefined) return denied(`${label} writes ${allowed}; ${stray} is not one of them`)
+    const outside = (path) => !own(path)
+    if (commandWritesWhere(command, { file: outside, tree: outside, landing: outside, rewrite: outside }, { cwd, sample: '/x' })) {
+      return denied(`${label} writes ${allowed}; this command writes elsewhere, or where the guard cannot tell`)
     }
     return Ok({ governed: true })
   }
 
   const theirs = compiled.transmission.filter((file) => file.owner !== agent)
-  const ownerOf = (candidate) => theirs.find((file) => file.pattern.test(candidate))?.owner
-  if (path !== null && ownerOf(path)) {
-    return denied(`${agent} never writes ${filePath}: it is a transmission file of ${ownerOf(path)}`)
+  const ownerOf = (path) => theirs.find((file) => (isUnresolvedPath(path) || isGlobPath(path) ? couldBeFile(file, path) : isFile(file, path, places)))?.owner
+  const holds = (path) => {
+    const read = under(places.tracking, path)
+    return read !== null && (read === '' || theirs.some((file) => file.tracked && file.holders.some((holder) => holder.test(read))))
   }
+  // A directory between the session directory and the tracking root (.copilot-tracking).
+  const leadsToTracking = (path) => path !== places.project && under(places.project, path) !== null && under(path, places.tracking) !== null
+  const stolen = paths.findIndex((_, k) => ownerOf(resolved[k]))
+  if (stolen >= 0) return denied(`${agent} never writes ${paths[stolen]}: it is a transmission file of ${ownerOf(resolved[stolen])}`)
   if (theirs.length > 0 && commandWritesWhere(command, {
-    matches: (candidate) => Boolean(ownerOf(candidate)),
-    holds: (candidate) => theirs.some((file) => file.holders.some((holder) => holder.test(candidate))),
-    sample: sampleOf(theirs[0].declared),
-    cwd,
-  })) {
+    file: (path) => Boolean(ownerOf(path)),
+    tree: (path) => Boolean(ownerOf(path)) || holds(path),
+    landing: (path) => Boolean(ownerOf(path)) || holds(path) || isUnresolvedPath(path),
+    rewrite: (path) => holds(path) || leadsToTracking(path),
+  }, { cwd, sample: `${places.tracking}/${theirs[0].tracked ? theirs[0].sample : 'x'}` })) {
     return denied(`${agent} never writes the transmission files of a reviewer (${[...new Set(theirs.map((file) => file.owner))].join(', ')})`)
   }
-  if (!rights.workspace && (isWorkspacePath(path, { cwd }) || commandWritesWorkspace(command, { cwd }))) {
+  if (!rights.workspace && (resolved.some((path) => isWorkspacePath(path, { cwd: places.project })) || commandWritesWorkspace(command, { cwd, strict: true }))) {
     return denied(`${agent} works in ${rights.phase}, whose agents never write src/ or tests/`)
   }
   return Ok({ governed: true })

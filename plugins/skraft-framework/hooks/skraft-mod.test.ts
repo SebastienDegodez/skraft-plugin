@@ -270,6 +270,7 @@ describe('skraft mod — G8 write rights', () => {
     expect((await write($, REVIEW, 'r1')).result).toBe('ran')
     expect((await write($, 'src/app.ts', 'r1')).deny).toMatch(/Skraft - Software Engineer Reviewer \(reviewer\) writes only/)
     expect((await shell($, 'git checkout -- .', 'r1')).deny).toMatch(/this command writes elsewhere/)
+    expect((await shell($, 'env bash <<EOF\necho x > src/app.ts\nEOF', 'r1')).deny).toMatch(/cannot be read to the end: bash reads its standard input as more than data/)
     expect((await write($, REVIEW, 'l1')).deny).toMatch(/quality-gates-lens \(lens\) writes nothing/)
     expect(ran).toHaveLength(2)
   })
@@ -286,11 +287,12 @@ describe('skraft mod — G8 write rights', () => {
     expect((await write($, 'src/app.ts', 'g2')).result).toBe('ran')
   })
 
-  test('the main loop without --agent and an agent the engine does not list both pass', async ($, on) => {
-    writeWorld(on)
+  test('the main loop without --agent, an agent the engine does not list, and one whose spawner it no longer lists all pass', async ($, on) => {
+    writeWorld(on, { agents: [{ id: 'orphan', type: 'general-purpose', parentId: 'gone' }] })
     await $.classic.SessionStart({ source: 'startup' } as any)
     expect((await write($, 'src/app.ts')).result).toBe('ran')
     expect((await write($, 'src/app.ts', 'unlisted')).result).toBe('ran')
+    expect((await write($, 'src/app.ts', 'orphan')).result).toBe('ran')
   })
 
   test('a guard that cannot judge refuses the write', async ($, on) => {

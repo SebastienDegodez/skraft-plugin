@@ -22,6 +22,10 @@ const TOOL_NAMES = new Map([
   ['create_file', 'Write'],
   ['edit', 'Edit'],
   ['str_replace', 'Edit'],
+  ['str_replace_editor', 'StrReplaceEditor'],
+  ['apply_patch', 'ApplyPatch'],
+  ['powershell', 'Bash'],
+  ['write_bash', 'WriteBash'],
   ['multiedit', 'MultiEdit'],
   ['notebookedit', 'NotebookEdit'],
   ['agent', 'Agent'],
@@ -34,11 +38,14 @@ const TOOL_NAMES = new Map([
 const canonicalToolName = (name) =>
   typeof name === 'string' ? (TOOL_NAMES.get(name.toLowerCase()) ?? name) : undefined
 
-// Copilot encodes the tool arguments as a JSON string; Claude Code sends the object.
-// A malformed string must not throw here — a hook bug must never freeze the pipeline.
+// Copilot encodes the tool arguments as a JSON string; Claude Code sends the object. A
+// patch sent as bare text (apply_patch) is the tool's input. A malformed string must not
+// throw here — a hook bug must never freeze the pipeline.
+const PATCH_TEXT_RE = /^\s*\*\*\* Begin Patch/
 const asToolInput = (value) => {
   if (value && typeof value === 'object') return value
   if (typeof value !== 'string') return undefined
+  if (PATCH_TEXT_RE.test(value)) return { input: value }
   try {
     const parsed = JSON.parse(value)
     return parsed && typeof parsed === 'object' ? parsed : undefined
@@ -46,6 +53,16 @@ const asToolInput = (value) => {
     return undefined
   }
 }
+
+// A PowerShell line, as the framework reads shell lines: PowerShell's $null (a constant
+// there, an unset variable to a POSIX reader) is the null device, and `| Out-Null`
+// discards the output as a redirect to it does.
+const POWERSHELL_NULL_RE = /\$null\b/gi
+const OUT_NULL_RE = /\|\s*Out-Null\b/gi
+const asPosixLine = (name, toolInput) =>
+  String(name).toLowerCase() === 'powershell' && typeof toolInput?.command === 'string'
+    ? { ...toolInput, command: toolInput.command.replace(OUT_NULL_RE, '> /dev/null').replace(POWERSHELL_NULL_RE, '/dev/null') }
+    : toolInput
 
 // Normalises a raw harness payload into the framework payload the services expect.
 // Fields already in framework vocabulary win, so an in-process caller is untouched.
@@ -64,10 +81,13 @@ const harnessOf = (raw, env) => {
 // The tool-call signals of one call: the payload root, or one entry of a batch (whose
 // entries name the tool `name` and its arguments `args`).
 const toolCallOf = (raw, { name, args } = {}) => {
-  const toolName = canonicalToolName(raw.toolName ?? raw.tool_name ?? name)
-  const toolInput = asToolInput(raw.toolInput ?? raw.tool_input ?? raw.toolArgs ?? raw.tool_args ?? args)
+  const harnessName = raw.toolName ?? raw.tool_name ?? name
+  const toolName = canonicalToolName(harnessName)
+  const toolInput = asPosixLine(harnessName, asToolInput(raw.toolInput ?? raw.tool_input ?? raw.toolArgs ?? raw.tool_args ?? args))
+  // The agent an Agent call starts: Claude Code's subagent_type, Copilot's task agent_type.
   const requestedAgent = raw.requestedAgent ?? raw.requested_agent
     ?? toolInput?.subagentType ?? toolInput?.subagent_type
+    ?? (toolName === 'Agent' ? toolInput?.agentType ?? toolInput?.agent_type : undefined)
   const filePath = raw.filePath ?? raw.file_path
     ?? toolInput?.filePath ?? toolInput?.file_path ?? toolInput?.path ?? toolInput?.notebook_path
   return {

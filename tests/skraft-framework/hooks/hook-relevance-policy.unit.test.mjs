@@ -7,7 +7,7 @@ import { isHookRelevant, TRACKED_STATE_WRITE_RE } from '../../../plugins/skraft-
 // A false negative silently disables a guard; these tests pin each tool a guard inspects.
 
 test('hook-relevance: every tool a PreToolUse guard inspects is relevant', () => {
-  for (const toolName of ['Agent', 'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+  for (const toolName of ['Agent', 'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'ApplyPatch', 'StrReplaceEditor', 'WriteBash']) {
     assert.equal(isHookRelevant({ event: 'PreToolUse', payload: { toolName } }), true, toolName)
   }
 })

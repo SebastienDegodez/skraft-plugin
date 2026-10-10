@@ -12,6 +12,8 @@
 //              kept literal)
 //   redirects  [{ op, target }] for >, >>, >|, &>, &>>, n>…; reads (<, <<, <<<) and
 //              descriptor copies (2>&1) are left out
+//   stdin      'pipe' when a lone | (or |&) feeds the command, 'redirect' when it reads a
+//              file, a here-document or a here-string (<, <<, <<<, n<…); absent otherwise
 // Commands substituted inside $(…), backticks, $((…)) or ${…} are returned too: they run.
 //
 // Not read: aliases, functions defined elsewhere, scripts run from a file (bash x.sh,
@@ -248,10 +250,11 @@ export const readCommandLine = (command, { vars = {} } = {}) => {
   if (typeof command !== 'string' || command.length === 0) return []
   const known = { ...vars }
   const commands = []
-  for (const piece of splitSimpleCommands(command)) {
+  for (const { text: piece, piped } of splitSimpleCommands(command)) {
     const nested = []
     const tokens = tokenize(piece, known, nested)
     const current = { words: [], redirects: [] }
+    let stdin = piped ? 'pipe' : null
     for (let t = 0; t < tokens.length; t += 1) {
       const token = tokens[t]
       if (token.type === 'word') current.words.push(token.value)
@@ -259,8 +262,10 @@ export const readCommandLine = (command, { vars = {} } = {}) => {
         const target = tokens[t + 1]?.type === 'word' ? tokens[t + 1].value : ''
         if (tokens[t + 1]?.type === 'word') t += 1
         if (writesFile(token.value, target)) current.redirects.push({ op: token.value, target })
+        else if (/^[0-9]*</.test(token.value) && stdin === null) stdin = 'redirect'
       }
     }
+    if (stdin) current.stdin = stdin
     if (current.words.length > 0 || current.redirects.length > 0) commands.push(current)
     // A command made of assignments only sets them for what follows; `export NAME=…` too.
     const { words } = current
@@ -278,11 +283,12 @@ export const readCommandLine = (command, { vars = {} } = {}) => {
 }
 
 // The simple-command pieces of a line, split at ; & && || | newlines and parentheses,
-// never inside quotes, escapes or substitutions.
+// never inside quotes, escapes or substitutions; `piped` when a lone | precedes the piece.
 const splitSimpleCommands = (text) => {
   const pieces = []
   let start = 0
   let quote = null
+  let piped = false
   for (let i = 0; i < text.length; i += 1) {
     const char = text[i]
     if (quote) {
@@ -301,13 +307,16 @@ const splitSimpleCommands = (text) => {
     const redirectAmp = char === '&' && (text[i + 1] === '>' || text[i - 1] === '>' || text[i - 1] === '<')
     const pipeAfterRedirect = char === '|' && text[i - 1] === '>'
     if ((SEPARATORS.has(char) && !redirectAmp && !pipeAfterRedirect)) {
-      pieces.push(text.slice(start, i))
-      if ((char === '&' || char === '|') && text[i + 1] === char) i += 1
+      pieces.push({ text: text.slice(start, i), piped })
+      const doubled = (char === '&' || char === '|') && text[i + 1] === char
+      const pipesBoth = char === '|' && text[i + 1] === '&' // |& pipes stderr too
+      piped = char === '|' && !doubled
+      if (doubled || pipesBoth) i += 1
       start = i + 1
     }
   }
-  pieces.push(text.slice(start))
-  return pieces.map((piece) => piece.trim()).filter(Boolean)
+  pieces.push({ text: text.slice(start), piped })
+  return pieces.map((piece) => ({ ...piece, text: piece.text.trim() })).filter((piece) => piece.text)
 }
 
 // Lexical path join, '/'-separated: `cd` and relative paths without touching the disk.
@@ -327,4 +336,46 @@ export const joinPath = (base, path) => {
   }
   if (out.length === 1 && /^[A-Za-z]:$/.test(out[0])) return `${out[0]}/`
   return out.join('/') || (rooted ? '/' : '.')
+}
+
+// The pipeline of a command line that holds the character at `index`: its elements (the
+// commands a lone | or |& joins), and which one holds `index`. null when a parenthesis
+// or a brace group stands in that pipeline: what it feeds cannot be told by its words.
+export const pipelineAt = (text, index) => {
+  if (typeof text !== 'string' || index < 0 || index >= text.length) return null
+  const pipelines = [[]]
+  let start = 0
+  let quote = null
+  const grouped = [false]
+  let found = null
+  const close = (end) => { pipelines.at(-1).push({ text: text.slice(start, end), from: start, to: end }) }
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i]
+    if (quote) {
+      if (char === '\\' && quote === '"') { i += 1; continue }
+      if (char === quote) quote = null
+      continue
+    }
+    if (char === '\\') { i += 1; continue }
+    if (char === '"' || char === "'" || char === '`') { quote = char; continue }
+    if (char === '$' && text[i + 1] === '(') { i = substitutionAt(text, i + 2).end - 1; continue }
+    if (char === '{' && /^\s*$/.test(text.slice(start, i)) && /\s/.test(text[i + 1] ?? '')) grouped[grouped.length - 1] = true
+    const redirectAmp = char === '&' && (text[i + 1] === '>' || text[i - 1] === '>' || text[i - 1] === '<')
+    const pipeAfterRedirect = char === '|' && text[i - 1] === '>'
+    if (!SEPARATORS.has(char) || redirectAmp || pipeAfterRedirect) continue
+    close(i)
+    const doubled = (char === '&' || char === '|') && text[i + 1] === char
+    const pipesBoth = char === '|' && text[i + 1] === '&'
+    if (char === '(' || char === ')') grouped[grouped.length - 1] = true
+    if (!(char === '|' && !doubled)) { pipelines.push([]); grouped.push(char === '(' || char === ')') }
+    if (doubled || pipesBoth) i += 1
+    start = i + 1
+  }
+  close(text.length)
+  pipelines.forEach((elements, p) => {
+    const at = elements.findIndex((element) => index >= element.from && index < element.to)
+    if (at >= 0) found = { pipeline: p, at }
+  })
+  if (!found || grouped[found.pipeline]) return null
+  return { elements: pipelines[found.pipeline].map((element) => element.text.trim()), at: found.at }
 }

@@ -70,7 +70,8 @@ test('the service applies the writeRights of the config, and no rule of its own'
   const { service, entries } = serviceWith({ config })
   for (const agent of ['launcher', 'researcher']) assert.equal((await service.handle(write(agent))).decision, 'deny', agent)
   for (const agent of ['engineer', 'dispatcher']) assert.equal((await service.handle(write(agent))).decision, 'allow', agent)
-  assert.deepEqual(entries.map((e) => e.code), ['WRITE_RIGHT_DENIED', 'WRITE_RIGHT_DENIED', 'CONFORMING', 'NOT_GOVERNED'])
+  assert.deepEqual(entries.map((e) => e.code), ['WRITE_RIGHT_DENIED', 'WRITE_RIGHT_DENIED', 'CONFORMING', 'UNIDENTIFIED_CALLER'],
+    'the payload names the caller, not who spawned it: an ungoverned name is unidentified')
 })
 
 test('without writeRights in the config, nothing is refused', async () => {
@@ -79,4 +80,11 @@ test('without writeRights in the config, nothing is refused', async () => {
     const decision = await service.handle({ projectSlug: 'checkout', agentName: 'launcher', toolName: 'Write', toolInput: { filePath: 'src/a.cs' } })
     assert.deepEqual(decision, { decision: 'allow' }, JSON.stringify(config))
   }
+})
+
+test('G7 reads every file a patch names: one protected file refuses the patch', async () => {
+  const { service } = serviceWith()
+  const patch = (...paths) => ({ toolName: 'ApplyPatch', toolInput: { input: `*** Begin Patch\n${paths.map((path) => `*** Update File: ${path}\n+x`).join('\n')}\n*** End Patch` } })
+  assert.equal((await service.handle(patch('src/a.ts', '.copilot-tracking/skraft-plans/checkout/state.json'))).decision, 'deny')
+  assert.equal((await service.handle(patch('src/a.ts', 'src/b.ts'))).decision, 'allow')
 })

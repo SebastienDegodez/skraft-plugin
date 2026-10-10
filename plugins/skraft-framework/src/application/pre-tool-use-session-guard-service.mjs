@@ -9,13 +9,14 @@ import { allow, deny } from '../adapters/api/hooks/decision.mjs'
 //   G7: a direct write to state.json / execution-log / the active pointer is denied
 //       whatever the phase and whoever the caller.
 //   G8: a write outside the caller's write rights is denied. The caller is the agent the
-//       payload names (Claude Code's agent_type); a Claude Code payload that names none
-//       comes from the main session, which no agent runs; any other payload that names
-//       none (every Copilot preToolUse) is unidentified, and passes.
+//       payload names (Claude Code's agent_type), without the agents that spawned it: an
+//       agent no write right governs is unidentified. A Claude Code payload that names
+//       none comes from the main session, which no agent runs; any other payload that
+//       names none (every Copilot preToolUse) is unidentified, and passes.
 
 // Who calls, as the payload says it.
 const callerOf = (payload) => {
-  if (typeof payload.agentName === 'string' && payload.agentName.length > 0) return { chain: [payload.agentName] }
+  if (typeof payload.agentName === 'string' && payload.agentName.length > 0) return { chain: [payload.agentName], complete: false }
   if (payload.harness === 'claude-code') return { chain: [] }
   return null
 }
@@ -28,10 +29,10 @@ const audit = async (auditWriter, entry) => {
   try { await auditWriter.write(entry) } catch { /* audit failure must never change the decision */ }
 }
 
-export const createPreToolUseSessionGuardService = ({ auditWriter, clock, trackingDir, config }) => {
-  const writeRights = createWriteRightsGuard({ config, trackingDir })
+export const createPreToolUseSessionGuardService = ({ auditWriter, clock, trackingDir, trackingRoot, config }) => {
+  const writeRights = createWriteRightsGuard({ config, trackingRoot })
   return { handle: async (payload = {}) => {
-    const { command, filePath } = writeOf(payload)
+    const { command, filePaths } = writeOf(payload)
     const projectSlug = payload.projectSlug ?? null
     const record = (fact) => audit(auditWriter, {
       event: 'SessionGuardEvaluated',
@@ -46,10 +47,12 @@ export const createPreToolUseSessionGuardService = ({ auditWriter, clock, tracki
     // G7 — protected-artifact write ban (always enforced, state-independent).
     // The session directory: a relative path (rm state.json after a cd) resolves from it.
     const cwd = typeof payload.cwd === 'string' && payload.cwd.length > 0 ? payload.cwd : undefined
-    const protectedResult = guardProtectedArtifact({ command, filePath, trackingDir, cwd })
-    if (isErr(protectedResult)) {
-      await record({ decision: 'DENY', code: protectedResult.error.code, reason: protectedResult.error.reason })
-      return deny(protectedResult.error.reason)
+    for (const filePath of [undefined, ...filePaths]) {
+      const protectedResult = guardProtectedArtifact({ command: filePath === undefined ? command : undefined, filePath, trackingDir, cwd })
+      if (isErr(protectedResult)) {
+        await record({ decision: 'DENY', code: protectedResult.error.code, reason: protectedResult.error.reason })
+        return deny(protectedResult.error.reason)
+      }
     }
 
     // G8 — write rights of the caller's role.

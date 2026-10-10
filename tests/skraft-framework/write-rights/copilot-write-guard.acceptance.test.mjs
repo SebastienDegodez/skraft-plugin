@@ -3,9 +3,10 @@
 // the hook inputs it invokes the extension with. The SDK's shapes, simulated in memory:
 //   - a sub-agent's tool call reaches the joined session's hook with the sub-agent's own
 //     sessionId (invocation.sessionId stays the joined session's);
-//   - subagent.started carries agentName / agentDisplayName, the parent tool call id
-//     (toolCallId), the instance id (agentId), parentId, and factoryRunId for an agent a
-//     workflow (ctx.agent) started.
+//   - subagent.started carries agentName / agentDisplayName, the tool call that started it
+//     (toolCallId), parentId on runtimes that send it (not SDK 1.0.9), factoryRunId for an
+//     agent a workflow (ctx.agent) started; the envelope's agentId names the sub-agent
+//     that emitted the event.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -14,6 +15,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createCopilotCallerRegistry, createCopilotWriteGuard } from '../../../plugins/skraft-framework/src/adapters/api/copilot-workflow/copilot-write-guard.mjs'
 import { createSkraftWriteGuard } from '../../../plugins/skraft-framework/src/adapters/api/copilot-workflow/skraft-pipeline-workflow.mjs'
+import { createDispatchProvenanceService } from '../../../plugins/skraft-framework/src/application/dispatch-provenance-service.mjs'
 
 const PLUGIN_ROOT = fileURLToPath(new URL('../../../plugins/skraft-framework/', import.meta.url))
 const config = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'skraft-framework.config.json'), 'utf8'))
@@ -26,35 +28,39 @@ const started = ({ toolCallId, agentId, agentName, agentDisplayName, parentId, f
   data: { toolCallId, agentName, agentDisplayName: agentDisplayName ?? agentName, agentDescription: '', ...(parentId ? { parentId } : {}), ...(factoryRunId ? { factoryRunId } : {}) },
 })
 
-const hookWorld = ({ events = [], selected, trackingDirOf = () => 'skraft-plans', audit } = {}) => {
+const TRACKING_ROOT = '/repo/.copilot-tracking/skraft-plans'
+
+const hookWorld = ({ events = [], selected, trackingRootOf = () => TRACKING_ROOT, audit } = {}) => {
   const registry = createCopilotCallerRegistry()
   if (selected !== undefined) registry.selectedAtJoin({ agent: selected })
   for (const event of events) registry.observe(event)
   const audited = []
-  const onPreToolUse = createCopilotWriteGuard({ config, registry, trackingDirOf, audit: audit ?? (async (entry) => { audited.push(entry) }) })
+  const dispatches = []
+  const provenance = createDispatchProvenanceService({ config, auditWriter: { write: async (entry) => { dispatches.push(entry) } }, clock: { now: () => '2026-10-10T10:00:00Z' } })
+  const onPreToolUse = createCopilotWriteGuard({ config, registry, trackingRootOf, provenance, audit: audit ?? (async (entry) => { audited.push(entry) }) })
   // The SDK's PreToolUseHookInput: toolName as Copilot spells it, toolArgs as it sends them.
   const call = (sessionId, toolName, toolArgs) => onPreToolUse(
     { sessionId, timestamp: new Date(), workingDirectory: '/repo', toolName, toolArgs },
     { sessionId: ROOT },
   )
-  return { registry, call, audited }
+  return { registry, call, audited, dispatches }
 }
 
 const create = (path) => ['create', JSON.stringify({ path, file_text: 'x' })]
 const bash = (command) => ['bash', { command }]
 
 const PIPELINE = [
-  started({ toolCallId: 'toolu_se', agentId: 'agent-se', agentName: 'skraft:software-engineer', agentDisplayName: 'Skraft - Software Engineer', factoryRunId: 'run-1' }),
-  started({ toolCallId: 'toolu_worker', agentName: 'skraft:contract-testing-worker', parentId: 'toolu_se' }),
-  started({ toolCallId: 'toolu_rev', agentId: 'agent-rev', agentName: 'skraft:software-engineer-reviewer', factoryRunId: 'run-1' }),
-  started({ toolCallId: 'toolu_lens', agentName: 'skraft:quality-gates-lens', parentId: 'toolu_rev' }),
-  started({ toolCallId: 'toolu_gp', agentName: 'general-purpose', parentId: 'agent-rev' }),
+  started({ toolCallId: 'toolu_se', agentName: 'skraft:software-engineer', agentDisplayName: 'Skraft - Software Engineer', factoryRunId: 'run-1' }),
+  started({ toolCallId: 'toolu_worker', agentId: 'toolu_se', agentName: 'skraft:contract-testing-worker', parentId: 'toolu_se' }),
+  started({ toolCallId: 'toolu_rev', agentName: 'skraft:software-engineer-reviewer', factoryRunId: 'run-1' }),
+  started({ toolCallId: 'toolu_lens', agentId: 'toolu_rev', agentName: 'skraft:quality-gates-lens', parentId: 'toolu_rev' }),
+  started({ toolCallId: 'toolu_gp', agentId: 'toolu_rev', agentName: 'general-purpose', parentId: 'toolu_rev' }),
   started({ toolCallId: 'toolu_report', agentName: 'general-purpose', factoryRunId: 'run-1' }),
 ]
 
-test('AC3 (Copilot): the Software Engineer and its worker write src/ and tests/, by either id the runtime uses', async () => {
+test('AC3 (Copilot): the Software Engineer and its worker write src/ and tests/', async () => {
   const { call, audited } = hookWorld({ events: PIPELINE })
-  for (const session of ['toolu_se', 'agent-se', 'toolu_worker']) {
+  for (const session of ['toolu_se', 'toolu_worker']) {
     assert.equal(await call(session, ...create('src/Orders/Order.cs')), undefined, session)
     assert.equal(await call(session, ...bash('echo ok > tests/Orders/OrderTests.cs')), undefined, session)
   }
@@ -81,7 +87,7 @@ test('AC1 (Copilot): the orchestrator, selected in the main session, writes neit
 test('AC2 (Copilot): the reviewer writes its review only; its lens and what it spawned write nothing', async () => {
   const { call } = hookWorld({ events: PIPELINE })
   assert.equal(await call('toolu_rev', ...bash(`git diff abc..HEAD > ${REVIEW.replace('deliver-review-1.md', 'diff-s1.patch')}`)), undefined)
-  assert.equal(await call('agent-rev', ...create(REVIEW)), undefined)
+  assert.equal(await call('toolu_rev', ...create(REVIEW)), undefined)
   assert.equal((await call('toolu_rev', ...create('src/a.ts'))).permissionDecision, 'deny')
   assert.equal((await call('toolu_lens', ...create(REVIEW))).permissionDecision, 'deny')
   const delegated = await call('toolu_gp', ...create('src/a.ts'))
@@ -104,16 +110,16 @@ test('a selection seen after the join is newer than the join\'s own read', async
   assert.equal((await call(ROOT, ...create('src/a.ts'))).permissionDecision, 'deny')
 })
 
-test('an agentId the registry already knows is never taken over by a later start', async () => {
-  const { call } = hookWorld({ events: [...PIPELINE, started({ toolCallId: 'toolu_x', agentId: 'agent-se', agentName: 'skraft:quality-gates-lens' })] })
-  assert.equal(await call('agent-se', ...create('src/a.ts')), undefined, 'agent-se stays the Software Engineer')
-  assert.equal((await call('toolu_x', ...create('src/a.ts'))).permissionDecision, 'deny')
+test("the event's agentId names the sub-agent that emitted it: never the one it starts", async () => {
+  const { call } = hookWorld({ events: PIPELINE })
+  assert.equal((await call('toolu_rev', ...create('src/a.ts'))).permissionDecision, 'deny', 'toolu_rev stays the reviewer after starting a general-purpose agent')
+  assert.equal(await call('toolu_se', ...create('src/a.ts')), undefined, 'toolu_se stays the Software Engineer after starting its worker')
 })
 
 test('AC5 (Copilot): a toolCalls batch is guarded call by call; one refusal refuses the batch', async () => {
   const registry = createCopilotCallerRegistry()
   for (const event of PIPELINE) registry.observe(event)
-  const onPreToolUse = createCopilotWriteGuard({ config, registry, trackingDirOf: () => 'skraft-plans' })
+  const onPreToolUse = createCopilotWriteGuard({ config, registry, trackingRootOf: () => TRACKING_ROOT })
   const batch = (toolCalls) => onPreToolUse({ sessionId: 'toolu_se', workingDirectory: '/repo', toolCalls }, { sessionId: ROOT })
   assert.equal(await batch([{ id: 't1', name: 'create', args: { path: 'src/a.ts', file_text: '' } }, { id: 't2', name: 'edit', args: { path: 'tests/a.test.ts' } }]), undefined)
   const refused = await batch([{ id: 't1', name: 'create', args: { path: 'src/a.ts', file_text: '' } }, { id: 't2', name: 'create', args: { path: REVIEW, file_text: 'APPROVED' } }])
@@ -122,7 +128,7 @@ test('AC5 (Copilot): a toolCalls batch is guarded call by call; one refusal refu
 })
 
 test('a guard that cannot judge refuses a write and lets any other call pass', async () => {
-  const { call } = hookWorld({ events: PIPELINE, trackingDirOf: () => { throw new Error('no tracking root') } })
+  const { call } = hookWorld({ events: PIPELINE, trackingRootOf: () => { throw new Error('no tracking root') } })
   const refused = await call('toolu_se', ...create('src/a.ts'))
   assert.equal(refused.permissionDecision, 'deny')
   assert.match(refused.permissionDecisionReason, /could not judge this call \(no tracking root\)/)
@@ -168,11 +174,50 @@ test('the registry keeps the latest thousand sub-agents of a long session', asyn
   assert.equal((await call('toolu_1000', ...create('notes.md'))).permissionDecision, 'deny')
 })
 
-test('a spawner the registry never saw ends the chain: the main session is not assumed', async () => {
+test('a chain that stops before the main session is unidentified unless a governed agent starts it: the main session is never assumed', async () => {
+  const selected = { name: 'skraft-orchestrator', displayName: 'Skraft - Orchestrator' }
   const orphan = started({ toolCallId: 'toolu_orphan', agentName: 'general-purpose', parentId: 'toolu_gone' })
-  const { call } = hookWorld({ events: [orphan], selected: { name: 'skraft-orchestrator', displayName: 'Skraft - Orchestrator' } })
-  assert.equal(await call('toolu_orphan', ...create('src/a.ts')), undefined)
   const child = started({ toolCallId: 'toolu_child', agentName: 'general-purpose' })
-  const { call: callChild } = hookWorld({ events: [child], selected: { name: 'skraft-orchestrator', displayName: 'Skraft - Orchestrator' } })
-  assert.equal((await callChild('toolu_child', ...create('src/a.ts'))).permissionDecision, 'deny', 'one the main session spawned writes as its agent')
+  const lens = started({ toolCallId: 'toolu_lens', agentName: 'skraft:quality-gates-lens' })
+  const { call, audited } = hookWorld({ events: [orphan, child, lens], selected })
+  assert.equal(await call('toolu_orphan', ...create('src/a.ts')), undefined, 'a spawner the registry never saw')
+  assert.equal(await call('toolu_child', ...create('src/a.ts')), undefined, 'no parentId: SDK 1.0.9 never says who spawned it')
+  assert.equal((await call('toolu_lens', ...create('src/a.ts'))).permissionDecision, 'deny', 'its own name governs it')
+  assert.deepEqual(audited.map(({ agentName }) => agentName), ['quality-gates-lens'])
+})
+
+// ── Finding 7 and provenance: a closed role starts only the agents the tree gives it ─────
+
+const task = (agent_type) => ['task', JSON.stringify({ agent_type, description: 'x', prompt: 'x' })]
+
+test('provenance (Copilot): a closed role never starts an agent without a declared dispatcher; the tree it declares still runs', async () => {
+  const { call, dispatches } = hookWorld({ events: PIPELINE, selected: { name: 'skraft-orchestrator', displayName: 'Skraft - Orchestrator' } })
+  for (const [session, agent] of [[ROOT, 'general-purpose'], ['toolu_rev', 'general-purpose'], ['toolu_rev', 'explore'], ['toolu_lens', 'general-purpose']]) {
+    const refused = await call(session, ...task(agent))
+    assert.equal(refused?.permissionDecision, 'deny', `${session} → ${agent}`)
+    assert.match(refused.permissionDecisionReason, /^skraft provenance: .* has no right on src\/ or tests\/ and starts only the agents the dispatch tree gives it/)
+  }
+  assert.match((await call(ROOT, ...task('skraft:software-engineer'))).permissionDecisionReason, /dispatched by the SKRAFT pipeline/)
+  assert.equal(await call('toolu_rev', ...task('skraft:quality-gates-lens')), undefined, 'the reviewer dispatches its lenses')
+  assert.equal(await call('toolu_se', ...task('general-purpose')), undefined, 'the Software Engineer writes src/ and tests/ itself')
+  assert.equal(await call('toolu_unknown', ...task('general-purpose')), undefined, 'an unidentified caller is not judged')
+  assert.deepEqual([...new Set(dispatches.map(({ code }) => code))], ['UNDECLARED_DISPATCH', 'PIPELINE_DISPATCH'])
+})
+
+// ── Copilot's own tools: apply_patch, str_replace_editor, write_bash, powershell ────────
+
+test("Copilot's apply_patch, str_replace_editor, write_bash and powershell are judged as the writes they are", async () => {
+  const { call } = hookWorld({ events: PIPELINE })
+  const patch = (path) => ['apply_patch', `*** Begin Patch\n*** Add File: ${path}\n+x\n*** End Patch`]
+  assert.equal((await call('toolu_rev', ...patch('src/a.ts'))).permissionDecision, 'deny')
+  assert.equal(await call('toolu_se', ...patch('src/a.ts')), undefined)
+  assert.equal((await call('toolu_se', ...patch(REVIEW))).permissionDecision, 'deny')
+  assert.equal((await call('toolu_rev', 'str_replace_editor', { command: 'create', path: 'src/a.ts', file_text: 'x' })).permissionDecision, 'deny')
+  assert.equal(await call('toolu_rev', 'str_replace_editor', { command: 'view', path: 'src/a.ts' }), undefined)
+  assert.match((await call('toolu_rev', 'write_bash', { shellId: '1', input: 'ls\n' })).permissionDecisionReason, /types into a program already running/)
+  assert.equal((await call('toolu_se', 'write_bash', { shellId: '1', input: `echo APPROVED > ${REVIEW}\n` })).permissionDecision, 'deny')
+  const diff = REVIEW.replace('deliver-review-1.md', 'diff-s1.patch')
+  assert.equal(await call('toolu_rev', 'powershell', { command: `git diff abc..HEAD 2>$null > ${diff}` }), undefined)
+  assert.equal(await call('toolu_rev', 'powershell', { command: 'git fetch | Out-Null' }), undefined)
+  assert.equal((await call('toolu_rev', 'powershell', { command: 'Remove-Item -Recurse src' })).permissionDecision, 'deny')
 })

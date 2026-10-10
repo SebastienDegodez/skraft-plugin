@@ -56,14 +56,31 @@ test('the declared dispatch tree is allowed', () => {
   }
 })
 
-test('an unknown caller or an agent with no declared dispatcher is not judged', () => {
+test('an unknown caller is not judged, nor an agent with no declared dispatcher that an agent with the workspace starts', () => {
   for (const [caller, requested] of [
     [undefined, 'skraft:cold-reader-lens'],
     ['general-purpose', 'skraft:cold-reader-lens'],
-    ['skraft:skraft-orchestrator', 'Explore'],
-    ['skraft:solution-architect', 'skraft:backlog-planner'],
+    ['general-purpose', 'general-purpose'],
+    ['skraft:software-engineer', 'Explore'],
+    ['skraft:acceptance-designer', 'general-purpose'],
+    ['skraft:backlog-discoverer', 'general-purpose'],
   ]) {
     assert.equal(dispatch({ caller, requested }).output, undefined, `${caller} → ${requested}`)
+  }
+})
+
+test('an agent with no right on src/ and tests/ never starts an agent without a declared dispatcher', () => {
+  for (const [caller, requested] of [
+    ['skraft:skraft-orchestrator', 'Explore'],
+    ['skraft:software-engineer-reviewer', 'general-purpose'],
+    ['skraft:quality-gates-lens', 'general-purpose'],
+    ['skraft:solution-architect', 'skraft:backlog-planner'],
+    ['skraft:solution-researcher', 'general-purpose'],
+  ]) {
+    const { output, audit } = dispatch({ caller, requested })
+    assert.equal(output?.hookSpecificOutput?.permissionDecision, 'deny', `${caller} → ${requested}`)
+    assert.match(output.hookSpecificOutput.permissionDecisionReason, /has no right on src\/ or tests\/ and starts only the agents the dispatch tree gives it/)
+    assert.equal(audit.find((entry) => entry.event === 'DispatchProvenanceEvaluated')?.code, 'UNDECLARED_DISPATCH')
   }
 })
 
