@@ -1,5 +1,5 @@
 import { Ok, Err } from './result.mjs'
-import { ORCHESTRATOR_WRITE_FORBIDDEN, STATE_WRITE_FORBIDDEN } from './error-codes.mjs'
+import { STATE_WRITE_FORBIDDEN } from './error-codes.mjs'
 import { readCommandLine, joinPath, UNKNOWN } from './shell-command-reading.mjs'
 
 // Pure domain: session-guard policy (G7/G8). No IO.
@@ -10,9 +10,9 @@ import { readCommandLine, joinPath, UNKNOWN } from './shell-command-reading.mjs'
 // tool targeting them — is denied. Reads stay allowed (the CLI is the sanctioned
 // write path; #57 deny + #60 CLI = A9 strong form).
 //
-// G8 — the pipeline orchestrator never writes src/ or tests/, whatever the phase: it
-// dispatches the agent that owns the change. Only a writer positively identified as the
-// orchestrator is refused; an unnamed writer (Copilot sends no agent name) passes.
+// G8 reads writes through this module too: the workspace (src/, tests/) a file path or a
+// shell command names, and any other path a caller judges (commandWritesWhere). Who may
+// write what is write-rights-policy.mjs.
 
 // Artifacts that may only change through the state CLI, all under the tracking directory
 // (default .copilot-tracking/skraft-plans): each project's state.json and execution log,
@@ -408,25 +408,46 @@ export const isProtectedArtifactPath = (filePath, { trackingDir, cwd } = {}) =>
 export const commandMutatesProtectedArtifact = (command, { trackingDir, cwd } = {}) =>
   isString(command) && lineWrites(command, protectedTarget(trackingDir, cwd ?? ''), cwd ?? '')
 
-// True when a Write/Edit file path targets the src/ or tests/ workspace.
-export const isWorkspacePath = (filePath) =>
-  isString(filePath) && WORKSPACE_PATH_RE.test(filePath)
+// The workspace is src/ and tests/ of the project the session runs in. With the session
+// directory `cwd` known, a path under it is read from there — a project kept in ~/src is
+// not all workspace; without it, any src/ or tests/ segment counts.
+const rootOf = (cwd) => (isString(cwd) ? joinPath('', cwd).replace(/\/+$/, '') : '')
+const projectRelative = (path, cwd) => {
+  const root = rootOf(cwd)
+  const slashed = String(path).replace(/\\/g, '/')
+  return root.length > 1 && slashed.toLowerCase().startsWith(`${root.toLowerCase()}/`) ? slashed.slice(root.length + 1) : path
+}
+// A command line with the session directory written as `.`: what MUTATING_WORKSPACE_RE reads.
+const withoutProjectRoot = (command, cwd) => {
+  const root = rootOf(cwd)
+  if (root.length < 2) return command
+  return [...new Set([root, root.replace(/\//g, '\\')])].reduce((text, spelling) => text.split(spelling).join('.'), command)
+}
 
-// G8's target: a path under src/ or tests/; removing src or tests themselves counts.
+// True when a Write/Edit file path targets the src/ or tests/ workspace.
+export const isWorkspacePath = (filePath, { cwd } = {}) =>
+  isString(filePath) && WORKSPACE_PATH_RE.test(projectRelative(filePath, cwd))
+
+// G8's target: a path under src/ or tests/; removing src or tests themselves counts. A path
+// is resolved from where the command runs, then read from the session directory.
 const namesWorkspace = (path) => isString(path) && NAMES_WORKSPACE_RE.test(path)
-const WORKSPACE_TARGET = Object.freeze({
-  file: namesWorkspace,
-  tree: (path) => namesWorkspace(path) || (isString(path) && /(?:^|[/\\])(?:src|tests)[/\\]?$/i.test(path)),
-  walk: ({ start }) => namesWorkspace(start) || (isString(start) && /(?:^|[/\\])(?:src|tests)[/\\]?$/i.test(start)),
-  sample: 'src/x',
-})
+const isWorkspaceDir = (path) => isString(path) && /(?:^|[/\\])(?:src|tests)[/\\]?$/i.test(path)
+const workspaceTarget = (cwd) => {
+  const at = (path, here) => (isString(path) && isString(cwd) ? projectRelative(joinPath(here ?? '', path), cwd) : path)
+  return Object.freeze({
+    file: (path, here) => namesWorkspace(at(path, here)),
+    tree: (path, here) => namesWorkspace(at(path, here)) || isWorkspaceDir(at(path, here)),
+    walk: ({ start }, here) => namesWorkspace(at(start, here)) || isWorkspaceDir(at(start, here)),
+    sample: 'src/x',
+  })
+}
 
 // True when a shell command writes into the src/ or tests/ workspace: the forms G7 reads
 // (redirections, tee, in-place sed, inline scripts…), plus a mutating verb anywhere on the
 // line (git rm…).
-export const commandWritesWorkspace = (command) =>
-  isString(command) && (MUTATING_WORKSPACE_RE.test(command)
-    || lineWrites(command, WORKSPACE_TARGET))
+export const commandWritesWorkspace = (command, { cwd } = {}) =>
+  isString(command) && (MUTATING_WORKSPACE_RE.test(withoutProjectRoot(command, cwd))
+    || lineWrites(command, workspaceTarget(cwd), isString(cwd) ? cwd : ''))
 
 // G7 — deny direct writes to state.json / execution-log; reads pass through.
 export const guardProtectedArtifact = ({ command, filePath, trackingDir, cwd } = {}) => {
@@ -445,20 +466,22 @@ export const guardProtectedArtifact = ({ command, filePath, trackingDir, cwd } =
   return Ok({ reason: 'no direct write to a protected artifact' })
 }
 
-// G8 — deny a src/ or tests/ write by the orchestrator. Any other writer, named or not,
-// passes: the guard refuses only what it can attribute.
-export const guardOrchestratorWrite = ({ command, filePath, agentName, orchestrators = [] } = {}) => {
-  if (!isWorkspacePath(filePath) && !commandWritesWorkspace(command)) {
-    return Ok({ reason: 'no src/ or tests/ write' })
+// True when a shell command writes or removes a path `matches` accepts, read as G7 reads
+// it. Each path is resolved from the directory the command runs in (`cwd`, followed
+// through cd) and '/'-separated before it is judged; `holds(path)` says a directory whose
+// removal takes such a path with it; `sample` is a path `matches` accepts, which stands
+// for the files a find -exec is handed.
+export const commandWritesWhere = (command, { matches, holds = () => false, sample, cwd } = {}) => {
+  if (!isString(command) || typeof matches !== 'function') return false
+  const at = (path, here) => (isString(path) ? joinPath(here ?? '', path) : null)
+  const reaches = (path, here) => {
+    const resolved = at(path, here)
+    return resolved !== null && (matches(resolved) || holds(resolved))
   }
-  if (!isString(agentName)) {
-    return Ok({ reason: 'workspace write by an unnamed caller' })
-  }
-  if (!orchestrators.includes(agentName)) {
-    return Ok({ reason: `workspace write by ${agentName}` })
-  }
-  return Err({
-    code: ORCHESTRATOR_WRITE_FORBIDDEN,
-    reason: `${agentName} never writes src/ or tests/; dispatch the phase agent that owns this change`
-  })
+  return lineWrites(command, {
+    file: (path, here) => { const resolved = at(path, here); return resolved !== null && matches(resolved) },
+    tree: reaches,
+    walk: ({ start }, here) => reaches(start, here),
+    sample: sample ?? '',
+  }, cwd ?? '')
 }

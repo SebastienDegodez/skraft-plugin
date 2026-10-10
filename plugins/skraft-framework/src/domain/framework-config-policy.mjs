@@ -7,7 +7,8 @@
 // The pipeline is declared in code (pipeline/pipeline-definition.mjs): its phase order,
 // and the dispatcher its phase agents name — specialists and reviewers carry `phase` and
 // are `dispatchedBy: skraft-pipeline`.
-import { PIPELINE_DISPATCHER, PIPELINE_LAUNCHER, PIPELINE_PHASES } from './pipeline/pipeline-definition.mjs'
+import { PIPELINE_DISPATCHER, PIPELINE_LAUNCHER, PIPELINE_PHASES, WORKSPACE_PHASES } from './pipeline/pipeline-definition.mjs'
+import { deriveWriteRights } from './write-rights-policy.mjs'
 
 export const DEFAULT_SKILL_POLICY = 'verify'
 // A skill the agent loads only at the step that needs it: never injected at start,
@@ -107,14 +108,23 @@ export const buildFrameworkConfig = (descriptors) => {
   const phaseOrder = [...PIPELINE_PHASES]
   const agentAliases = agentAliasesOf(descriptors)
   const launcher = descriptors.find((d) => d.id === PIPELINE_LAUNCHER)?.name ?? null
+  const phaseAgents = phaseAgentsOf(descriptors, phaseOrder)
+  const agentDispatchers = agentDispatchersOf(descriptors, agentAliases)
+  const agentArtifacts = agentArtifactsOf(descriptors)
   return deepFreeze({
     pipeline: { dispatcher: PIPELINE_DISPATCHER, launcher },
     phaseOrder,
-    phaseAgents: phaseAgentsOf(descriptors, phaseOrder),
+    phaseAgents,
     agentAliases,
-    agentDispatchers: agentDispatchersOf(descriptors, agentAliases),
+    agentDispatchers,
     agentSkills: agentSkillsOf(descriptors),
-    agentArtifacts: agentArtifactsOf(descriptors),
+    agentArtifacts,
     agentContext: agentContextOf(descriptors),
+    // G8: who may write what, from the phase agents, who dispatches whom and the
+    // outputs each agent declares (write-rights-policy.mjs).
+    writeRights: deriveWriteRights({
+      launcher, dispatcher: PIPELINE_DISPATCHER, phaseOrder, phaseAgents, agentDispatchers, agentArtifacts,
+      workspacePhases: WORKSPACE_PHASES,
+    }),
   })
 }

@@ -4,7 +4,6 @@ import {
   commandMutatesProtectedArtifact,
   commandWritesWorkspace,
   guardProtectedArtifact,
-  guardOrchestratorWrite,
 } from '../../../plugins/skraft-framework/src/domain/session-guard-policy.mjs'
 
 const STATE = '.copilot-tracking/skraft-plans/us11/state.json'
@@ -28,11 +27,4 @@ test('guardProtectedArtifact: a harmless call passes with its reason', () => {
     value: { reason: 'no direct write to a protected artifact' },
   })
   assert.deepEqual(guardProtectedArtifact(), { ok: true, value: { reason: 'no direct write to a protected artifact' } })
-})
-
-test('guardOrchestratorWrite: with no orchestrator declared, a named workspace write passes', () => {
-  assert.deepEqual(guardOrchestratorWrite({ filePath: 'src/a.js', agentName: 'Stryker was here' }), {
-    ok: true,
-    value: { reason: 'workspace write by Stryker was here' },
-  })
 })

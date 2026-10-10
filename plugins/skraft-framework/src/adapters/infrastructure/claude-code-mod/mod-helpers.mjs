@@ -46,3 +46,28 @@ export const claudeUsage = (turnUsage, usdBefore, usdAfter) => {
     ...(usd === undefined ? {} : { usd }),
   })
 }
+
+// G8 caller of a tool call, from what the mods engine says about its loop: `agentId` (the
+// call's loop; absent on the main loop), `agents` ($.agent.list(): id, type, parentId,
+// spawnedBy) and `mainAgent` (the main loop's agent type, from SessionStart's agent_type
+// under --agent). The chain is the caller's type, then its spawners' up to the main loop;
+// an agent this plugin's pipeline spawned has no agent above it. null: the engine lists no
+// such agent — the caller is unidentified.
+export const callerChain = ({ agentId, agents = [], mainAgent = null, pluginName = null } = {}) => {
+  const main = typeof mainAgent === 'string' && mainAgent.length > 0 ? [mainAgent] : []
+  if (!agentId) return { chain: main }
+  const byId = new Map((Array.isArray(agents) ? agents : []).map((agent) => [agent?.id, agent]))
+  const chain = []
+  let current = byId.get(agentId)
+  if (!current) return null
+  while (current && !chain.includes(current)) {
+    chain.push(current)
+    if (pluginName && current.spawnedBy === pluginName) return { chain: chain.map((agent) => agent.type) }
+    if (!current.parentId) return { chain: [...chain.map((agent) => agent.type), ...main] }
+    current = byId.get(current.parentId)
+  }
+  return { chain: chain.map((agent) => agent.type) }
+}
+
+// The last segment of a '/'-separated path: the tracking directory's name G7 and G8 read.
+export const lastSegment = (path) => String(path ?? '').replace(/[/\\]+$/, '').split(/[/\\]/).pop()

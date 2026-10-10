@@ -55,7 +55,7 @@ test('init records the active pipeline, and the session guard then judges a real
     assert.equal(readFileSync(join(root, '.active-slug'), 'utf8').trim(), 'pricing')
 
     assert.equal(hook(env, ['PreToolUse', 'Agent'], agentDispatch('skraft:software-engineer')), undefined, 'the dispatch order is RunPipeline\'s check now')
-    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => [r.projectSlug, r.decision, r.code]), [['pricing', 'ALLOW', 'CONFORMING']])
+    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => [r.projectSlug, r.decision, r.code]), [['pricing', 'ALLOW', 'NO_WRITE']])
   })
 })
 
@@ -130,7 +130,7 @@ test('a corrupted state never stops the session guard, and no hook call leaves a
     const payload = { ...agentDispatch('solution-researcher'), cwd: project }
     hook(env, ['PreToolUse', 'Agent'], payload)
     hook(env, ['PreToolUse', 'Agent'], payload)
-    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => r.code), ['CONFORMING', 'CONFORMING'], 'the session guard reads no state')
+    assert.deepEqual(judged(env.SKRAFT_AUDIT_LOG).map((r) => r.code), ['NO_WRITE', 'NO_WRITE'], 'the session guard reads no state')
     const snapshots = readdirSync(dir).filter((f) => f.includes('.corrupted.'))
     assert.deepEqual(snapshots, [])
   })

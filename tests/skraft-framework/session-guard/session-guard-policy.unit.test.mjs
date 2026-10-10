@@ -5,12 +5,9 @@ import {
   commandMutatesProtectedArtifact,
   isWorkspacePath,
   commandWritesWorkspace,
-  guardProtectedArtifact,
-  guardOrchestratorWrite
+  guardProtectedArtifact
 } from '../../../plugins/skraft-framework/src/domain/session-guard-policy.mjs'
-import { ORCHESTRATOR_WRITE_FORBIDDEN, STATE_WRITE_FORBIDDEN } from '../../../plugins/skraft-framework/src/domain/error-codes.mjs'
-
-const ORCHESTRATORS = ['Skraft - Orchestrator']
+import { STATE_WRITE_FORBIDDEN } from '../../../plugins/skraft-framework/src/domain/error-codes.mjs'
 
 // ───────────────────────────────────────────────────────────────────────────
 // G7 — protected-artifact detection primitives
@@ -157,44 +154,6 @@ test('guardProtectedArtifact follows a custom tracking directory, for a file too
 test('guardProtectedArtifact allows a read of state.json', () => {
   const result = guardProtectedArtifact({ command: `cat ${STATE}` })
   assert.equal(result.ok, true)
-})
-
-// ───────────────────────────────────────────────────────────────────────────
-// G8 — guardOrchestratorWrite
-// ───────────────────────────────────────────────────────────────────────────
-
-test('guardOrchestratorWrite refuses a src/ or tests/ write by the orchestrator, naming it', () => {
-  const edit = guardOrchestratorWrite({ filePath: 'src/app.mjs', agentName: 'Skraft - Orchestrator', orchestrators: ORCHESTRATORS })
-  assert.equal(edit.ok, false)
-  assert.equal(edit.error.code, ORCHESTRATOR_WRITE_FORBIDDEN)
-  assert.equal(edit.error.reason, 'Skraft - Orchestrator never writes src/ or tests/; dispatch the phase agent that owns this change')
-  const shell = guardOrchestratorWrite({ command: 'echo x > tests/foo.test.mjs', agentName: 'Skraft - Orchestrator', orchestrators: ORCHESTRATORS })
-  assert.equal(shell.error.code, ORCHESTRATOR_WRITE_FORBIDDEN)
-})
-
-// The Ok reasons are what the audit log records for a conforming call.
-test('guardOrchestratorWrite lets an unnamed caller write the workspace', () => {
-  for (const agentName of [undefined, null, '']) {
-    const result = guardOrchestratorWrite({ filePath: 'src/app.mjs', agentName, orchestrators: ORCHESTRATORS })
-    assert.equal(result.ok, true)
-    assert.equal(result.value.reason, 'workspace write by an unnamed caller')
-  }
-})
-
-test('guardOrchestratorWrite lets any other named agent write the workspace', () => {
-  const result = guardOrchestratorWrite({ filePath: 'tests/a.test.mjs', agentName: 'Skraft - Software Engineer', orchestrators: ORCHESTRATORS })
-  assert.equal(result.ok, true)
-  assert.equal(result.value.reason, 'workspace write by Skraft - Software Engineer')
-})
-
-test('guardOrchestratorWrite lets the orchestrator write outside the workspace', () => {
-  const result = guardOrchestratorWrite({ filePath: 'docs/notes.md', command: 'cat src/app.mjs', agentName: 'Skraft - Orchestrator', orchestrators: ORCHESTRATORS })
-  assert.equal(result.ok, true)
-  assert.equal(result.value.reason, 'no src/ or tests/ write')
-})
-
-test('guardOrchestratorWrite refuses nobody without a configured orchestrator', () => {
-  assert.equal(guardOrchestratorWrite({ filePath: 'src/app.mjs', agentName: 'Skraft - Orchestrator' }).ok, true)
 })
 
 test('commandWritesWorkspace: the in-place and scripted edits G7 recognises, and their reads', () => {

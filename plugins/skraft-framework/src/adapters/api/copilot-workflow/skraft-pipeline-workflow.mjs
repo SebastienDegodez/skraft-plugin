@@ -1,10 +1,14 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { createRunPipeline } from '../../../application/pipeline/run-pipeline.mjs'
 import { createRecordDecision } from '../../../application/pipeline/record-decision.mjs'
 import { createCloseManually } from '../../../application/pipeline/close-manually.mjs'
 import { activePipelineSlug } from '../../../application/pipeline/active-pipeline.mjs'
-import { createNodePipelineDependencies } from '../pipeline/node-dependencies.mjs'
+import { createNodePipelineDependencies, loadPipelineConfig } from '../pipeline/node-dependencies.mjs'
+import { createCopilotCallerRegistry, createCopilotWriteGuard } from './copilot-write-guard.mjs'
+import { resolveTrackingRoot } from '../../infrastructure/tracking-root-resolver.mjs'
+import { resolveAuditLogPath } from '../../infrastructure/audit-log-resolver.mjs'
+import { createJsonlAuditWriter } from '../../infrastructure/jsonl-audit-writer.mjs'
 import { createWorkflowAgentRunner } from '../../infrastructure/copilot-workflow/workflow-agent-runner.mjs'
 import { createAgentReportTransport } from '../../infrastructure/reporting/agent-report-transport.mjs'
 import { createWorkflowHumanInteraction } from '../../infrastructure/copilot-workflow/workflow-human-interaction.mjs'
@@ -121,3 +125,26 @@ export const createSkraftClosePhaseTool = ({ cwd, pluginRoot, env }) => Object.f
       : `Refused (${closed.error.code}): ${closed.error.reason}`
   },
 })
+
+// G8 on Copilot: the extension's onPreToolUse hook (copilot-write-guard.mjs), composed on
+// Node. `attach(session)` feeds the caller registry from the joined session: the custom
+// agent selected at join, then every sub-agent start and selection.
+const CALLER_EVENTS = ['subagent.started', 'subagent.selected', 'subagent.deselected']
+
+export const createSkraftWriteGuard = ({ pluginRoot, env = process.env, cwd = () => process.cwd() }) => {
+  const registry = createCopilotCallerRegistry()
+  const onPreToolUse = createCopilotWriteGuard({
+    config: loadPipelineConfig(pluginRoot),
+    registry,
+    trackingDirOf: (directory) => basename(resolveTrackingRoot({ env, cwd: directory ?? cwd() })),
+    audit: (entry) => createJsonlAuditWriter(resolveAuditLogPath({ env, cwd: cwd(), pluginRoot }))
+      .write({ ...entry, evaluatedAt: new Date().toISOString() }),
+  })
+  const attach = async (session) => {
+    for (const type of CALLER_EVENTS) session?.on?.(type, (event) => registry.observe(event))
+    try {
+      registry.selectedAtJoin(await session.rpc.agent.getCurrent())
+    } catch { /* the selection stays unknown: the main session's writes are unidentified */ }
+  }
+  return Object.freeze({ registry, onPreToolUse, attach })
+}

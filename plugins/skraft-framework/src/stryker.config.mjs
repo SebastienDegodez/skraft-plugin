@@ -104,6 +104,10 @@ export default {
     'plugins/skraft-framework/src/adapters/infrastructure/reporting/agent-report-transport.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/git/process-git-runner.mjs',
     'plugins/skraft-framework/src/adapters/infrastructure/source-tree/git-source-tree.mjs',
+    // V2 — G8 write rights per agent role (#208)
+    'plugins/skraft-framework/src/domain/write-rights-policy.mjs',
+    'plugins/skraft-framework/src/application/write-rights-guard.mjs',
+    'plugins/skraft-framework/src/adapters/api/copilot-workflow/copilot-write-guard.mjs',
   ],
   coverageAnalysis: 'perTest',
   thresholds: { high: 90, low: 80, break: 80 },

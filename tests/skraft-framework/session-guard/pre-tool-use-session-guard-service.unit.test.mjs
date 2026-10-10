@@ -1,5 +1,6 @@
-// Unit — the PreToolUse session guard service around the pure G7/G8 policy: which payload
-// fields it reads as a write, whom it names the orchestrator, and what it audits.
+// Unit — the PreToolUse session guard service of the settings hook around G7 and the G8
+// write-rights use case: which payload fields it reads as a write, whom the payload names as
+// the caller, and what it audits.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createPreToolUseSessionGuardService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs'
@@ -7,9 +8,11 @@ import { createPreToolUseSessionGuardService } from '../../../plugins/skraft-fra
 const NOW = '2026-09-24T08:00:00.000Z'
 const STATE = '.copilot-tracking/skraft-plans/checkout/state.json'
 const CONFIG = {
-  phaseAgents: { DELIVER: { specialist: 'Skraft - Software Engineer', reviewer: null } },
-  agentDispatchers: { 'Skraft - Software Engineer': 'Skraft - Orchestrator' },
   agentAliases: { 'skraft-orchestrator': 'Skraft - Orchestrator', 'software-engineer': 'Skraft - Software Engineer' },
+  writeRights: {
+    'Skraft - Orchestrator': { role: 'orchestrator', files: [] },
+    'Skraft - Software Engineer': { role: 'specialist', phase: 'DELIVER', workspace: true },
+  },
 }
 
 const guard = async (payload, { clock = { now: () => NOW } } = {}) => {
@@ -41,29 +44,38 @@ test('only a Bash call carries a shell command', async () => {
   assert.equal(malformed.decision, 'allow', 'a Bash payload without a string command has nothing to judge')
 })
 
-test('G8 refuses a workspace write by the orchestrator, under any of its names', async () => {
+test('G8 refuses a write outside the rights of the agent the payload names, under any of its names', async () => {
   for (const agentName of ['skraft:skraft-orchestrator', 'skraft-orchestrator', 'Skraft - Orchestrator']) {
     const { decision, entries } = await guard({ agentName, toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
     assert.equal(decision, 'deny', agentName)
     assert.deepEqual(entries.map(({ decision, code, agentName: name }) => ({ decision, code, name })),
-      [{ decision: 'DENY', code: 'ORCHESTRATOR_WRITE_FORBIDDEN', name: agentName }])
+      [{ decision: 'DENY', code: 'WRITE_RIGHT_DENIED', name: agentName }])
   }
   const outside = await guard({ projectSlug: undefined, agentName: 'skraft-orchestrator', toolName: 'Bash', toolInput: { command: 'rm tests/a.test.mjs' } })
   assert.equal(outside.decision, 'deny', 'the orchestrator never writes the workspace, pipeline or not')
 })
 
-test('G8 lets an unnamed caller or a sub-agent write the workspace, audited only inside a pipeline', async () => {
-  for (const agentName of [undefined, 'skraft:software-engineer']) {
-    const { decision, entries } = await guard({ agentName, toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
-    assert.equal(decision, 'allow')
-    assert.deepEqual(entries.map(({ decision, code }) => ({ decision, code })), [{ decision: 'ALLOW', code: 'CONFORMING' }])
-  }
-  const outside = await guard({ projectSlug: undefined, toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
+test('G8 lets a governed agent write within its rights, audited only inside a pipeline', async () => {
+  const { decision, entries } = await guard({ agentName: 'skraft:software-engineer', toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
+  assert.equal(decision, 'allow')
+  assert.deepEqual(entries.map(({ decision, code }) => ({ decision, code })), [{ decision: 'ALLOW', code: 'CONFORMING' }])
+  const outside = await guard({ projectSlug: undefined, agentName: 'skraft:software-engineer', toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
   assert.equal(outside.decision, 'allow')
   assert.deepEqual(outside.entries, [])
 })
 
-test('G8 names no orchestrator without a config', async () => {
+test('G8: a payload that names no agent is the Claude Code main session, or an unidentified caller elsewhere — both pass', async () => {
+  const main = await guard({ harness: 'claude-code', toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
+  assert.equal(main.decision, 'allow')
+  assert.deepEqual(main.entries.map(({ code, reason }) => ({ code, reason })), [{ code: 'NOT_GOVERNED', reason: 'no agent runs this session' }])
+  for (const harness of ['copilot', undefined]) {
+    const copilot = await guard({ harness, toolName: 'Write', toolInput: { filePath: 'src/Orders/Order.cs' } })
+    assert.equal(copilot.decision, 'allow', String(harness))
+    assert.deepEqual(copilot.entries.map(({ code }) => code), ['UNIDENTIFIED_CALLER'], String(harness))
+  }
+})
+
+test('G8 names no rights without a config', async () => {
   const service = createPreToolUseSessionGuardService({ auditWriter: { write: async () => {} }, clock: { now: () => NOW } })
   const result = await service.handle({ agentName: 'skraft-orchestrator', toolName: 'Write', toolInput: { filePath: 'src/a.mjs' } })
   assert.equal(result.decision, 'allow')

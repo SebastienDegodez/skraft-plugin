@@ -1,5 +1,5 @@
-// Unit — the PreToolUse session guard service: which payload `cwd` it hands G7, and who
-// the orchestrator G8 refuses is. Hand-written doubles only.
+// Unit — the PreToolUse session guard service: which payload `cwd` it hands G7, and whose
+// write rights G8 applies. Hand-written doubles only.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createPreToolUseSessionGuardService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs'
@@ -55,24 +55,26 @@ test('a Bash call whose command is not a string carries no command', async () =>
   for (const command of [42, { rm: 'state.json' }, ['rm', 'src/a.cs'], null]) {
     assert.deepEqual(await service.handle({ projectSlug: 'checkout', toolName: 'Bash', toolInput: { command } }), { decision: 'allow' })
   }
-  assert.deepEqual(entries.map((e) => [e.code, e.reason]), Array(4).fill(['CONFORMING', 'no src/ or tests/ write']))
+  assert.deepEqual(entries.map((e) => [e.code, e.reason]), Array(4).fill(['NO_WRITE', 'no write']))
 })
 
-test('the orchestrator is the pipeline launcher and the dispatcher of the phase agents', async () => {
+test('the service applies the writeRights of the config, and no rule of its own', async () => {
   const config = {
-    pipeline: { launcher: 'launcher' },
-    phaseAgents: { DELIVER: { specialist: 'engineer', reviewer: 'reviewer' }, RESEARCH: { specialist: 'researcher', reviewer: null } },
-    agentDispatchers: { engineer: 'dispatcher', reviewer: 'dispatcher', worker: 'engineer' },
+    writeRights: {
+      launcher: { role: 'orchestrator', files: [] },
+      engineer: { role: 'specialist', phase: 'DELIVER', workspace: true },
+      researcher: { role: 'specialist', phase: 'RESEARCH', workspace: false },
+    },
   }
   const write = (agentName) => ({ projectSlug: 'checkout', agentName, toolName: 'Edit', toolInput: { filePath: 'tests/a.test.mjs' } })
   const { service, entries } = serviceWith({ config })
-  for (const agent of ['launcher', 'dispatcher']) assert.equal((await service.handle(write(agent))).decision, 'deny', agent)
-  for (const agent of ['engineer', 'reviewer', 'worker', 'researcher']) assert.equal((await service.handle(write(agent))).decision, 'allow', agent)
-  assert.deepEqual(entries.map((e) => e.code), ['ORCHESTRATOR_WRITE_FORBIDDEN', 'ORCHESTRATOR_WRITE_FORBIDDEN', 'CONFORMING', 'CONFORMING', 'CONFORMING', 'CONFORMING'])
+  for (const agent of ['launcher', 'researcher']) assert.equal((await service.handle(write(agent))).decision, 'deny', agent)
+  for (const agent of ['engineer', 'dispatcher']) assert.equal((await service.handle(write(agent))).decision, 'allow', agent)
+  assert.deepEqual(entries.map((e) => e.code), ['WRITE_RIGHT_DENIED', 'WRITE_RIGHT_DENIED', 'CONFORMING', 'NOT_GOVERNED'])
 })
 
-test('without a configured orchestrator, nothing is refused', async () => {
-  for (const config of [undefined, {}, { phaseAgents: { DELIVER: {} } }, { pipeline: { launcher: 3 } }]) {
+test('without writeRights in the config, nothing is refused', async () => {
+  for (const config of [undefined, {}, { phaseAgents: { DELIVER: {} } }, { pipeline: { launcher: 'launcher' } }]) {
     const { service } = serviceWith({ config })
     const decision = await service.handle({ projectSlug: 'checkout', agentName: 'launcher', toolName: 'Write', toolInput: { filePath: 'src/a.cs' } })
     assert.deepEqual(decision, { decision: 'allow' }, JSON.stringify(config))

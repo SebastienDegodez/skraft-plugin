@@ -28,6 +28,8 @@ metadata:
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch (optional, Phase 2 diff the lenses read)
     - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/files-{story}.txt (optional, Phase 2 changed-file list)
+    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/qg-verify-{story}.json (optional, Phase 2 qg-verify verdict the lenses read)
+    - .copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/commits-{story}.txt (optional, Phase 2 commit list)
   skills:
     - adversarial-review-lenses
   on_demand_skills:

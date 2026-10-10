@@ -1,40 +1,23 @@
 import { isErr } from '../domain/result.mjs'
-import { guardOrchestratorWrite, guardProtectedArtifact } from '../domain/session-guard-policy.mjs'
-import { canonicalAgentName } from '../domain/instruction-policy.mjs'
+import { guardProtectedArtifact } from '../domain/session-guard-policy.mjs'
+import { createWriteRightsGuard, writeOf } from './write-rights-guard.mjs'
 import { allow, deny } from '../adapters/api/hooks/decision.mjs'
 
-// PreToolUse session guard (G7/G8). Wires the pure session-guard policy to the audit seam.
-// G7: a direct write to state.json / execution-log / the active pointer is denied whatever
-// the phase and whoever the caller. G8: a src/ or tests/ write by the orchestrator is
-// denied; an unnamed caller passes. State-independent, so it never reads the state.
+// PreToolUse session guard (G7/G8) of the settings hook. Wires the pure session-guard
+// policy and the write-rights use case to the audit seam. State-independent: it never
+// reads the state.
+//   G7: a direct write to state.json / execution-log / the active pointer is denied
+//       whatever the phase and whoever the caller.
+//   G8: a write outside the caller's write rights is denied. The caller is the agent the
+//       payload names (Claude Code's agent_type); a Claude Code payload that names none
+//       comes from the main session, which no agent runs; any other payload that names
+//       none (every Copilot preToolUse) is unidentified, and passes.
 
-// The orchestrator: the pipeline's launcher agent, and whatever dispatches the pipeline's
-// phase agents.
-const orchestratorsFrom = (config) => {
-  const dispatchers = config?.agentDispatchers ?? {}
-  const names = Object.values(config?.phaseAgents ?? {})
-    .flatMap((phase) => [phase?.specialist, phase?.reviewer])
-    .filter((agent) => typeof agent === 'string')
-    .map((agent) => dispatchers[agent] ?? dispatchers[canonicalAgentName(agent, config)])
-  const launcher = config?.pipeline?.launcher
-  return [...new Set([launcher, ...names]
-    .filter((agent) => typeof agent === 'string')
-    .map((agent) => canonicalAgentName(agent, config)))]
-}
-
-// Tools that write the file they name.
-const FILE_WRITING_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
-
-// Extract the write signals from a normalised PreToolUse payload. Bash carries the
-// command; file-writing tools carry the adapter's filePath signal or legacy arguments.
-const writeSignals = (payload) => {
-  const toolName = payload.toolName
-  const toolInput = payload.toolInput ?? {}
-  const command = toolName === 'Bash' && typeof toolInput.command === 'string' ? toolInput.command : undefined
-  const filePath = FILE_WRITING_TOOLS.has(toolName)
-    ? (payload.filePath ?? toolInput.filePath ?? toolInput.path ?? toolInput.notebook_path ?? undefined)
-    : undefined
-  return { command, filePath }
+// Who calls, as the payload says it.
+const callerOf = (payload) => {
+  if (typeof payload.agentName === 'string' && payload.agentName.length > 0) return { chain: [payload.agentName] }
+  if (payload.harness === 'claude-code') return { chain: [] }
+  return null
 }
 
 const safeNow = (clock) => {
@@ -46,9 +29,9 @@ const audit = async (auditWriter, entry) => {
 }
 
 export const createPreToolUseSessionGuardService = ({ auditWriter, clock, trackingDir, config }) => {
-  const orchestrators = orchestratorsFrom(config)
+  const writeRights = createWriteRightsGuard({ config, trackingDir })
   return { handle: async (payload = {}) => {
-    const { command, filePath } = writeSignals(payload)
+    const { command, filePath } = writeOf(payload)
     const projectSlug = payload.projectSlug ?? null
     const record = (fact) => audit(auditWriter, {
       event: 'SessionGuardEvaluated',
@@ -68,16 +51,15 @@ export const createPreToolUseSessionGuardService = ({ auditWriter, clock, tracki
       await record({ decision: 'DENY', code: protectedResult.error.code, reason: protectedResult.error.reason })
       return deny(protectedResult.error.reason)
     }
-    const orchestratorResult = guardOrchestratorWrite({
-      command, filePath, orchestrators,
-      agentName: canonicalAgentName(payload.agentName, config)
-    })
-    if (isErr(orchestratorResult)) {
-      await record({ decision: 'DENY', code: orchestratorResult.error.code, reason: orchestratorResult.error.reason })
-      return deny(orchestratorResult.error.reason)
+
+    // G8 — write rights of the caller's role.
+    const judged = writeRights.judge({ caller: callerOf(payload), calls: [payload], cwd })
+    if (!judged.allowed) {
+      await record({ decision: 'DENY', code: judged.code, reason: judged.reason })
+      return deny(judged.reason)
     }
     // Without an active pipeline an allowed call is not worth an audit line.
-    if (projectSlug) await record({ decision: 'ALLOW', code: 'CONFORMING', reason: orchestratorResult.value.reason })
+    if (projectSlug) await record({ decision: 'ALLOW', code: judged.code, reason: judged.reason })
     return allow()
   } }
 }

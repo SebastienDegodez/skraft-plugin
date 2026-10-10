@@ -85,11 +85,11 @@ for (const agentName of ['skraft:skraft-orchestrator', 'plugin:skraft:skraft-orc
       }, { env: {} }))
       assert.equal(result.decision, 'deny', file_path)
     }
-    assert.deepEqual(records.map(({ code }) => code), ['ORCHESTRATOR_WRITE_FORBIDDEN', 'ORCHESTRATOR_WRITE_FORBIDDEN'])
+    assert.deepEqual(records.map(({ code }) => code), ['WRITE_RIGHT_DENIED', 'WRITE_RIGHT_DENIED'])
   })
 }
 
-for (const agentName of ['skraft:software-engineer', 'other:software-engineer']) {
+for (const [agentName, code] of [['skraft:software-engineer', 'CONFORMING'], ['other:software-engineer', 'NOT_GOVERNED']]) {
   test(`native Edit by ${agentName}: src/ passes, tracked state is refused`, async () => {
     const records = []
     const guard = createPreToolUseSessionGuardService({
@@ -103,7 +103,7 @@ for (const agentName of ['skraft:software-engineer', 'other:software-engineer'])
     assert.equal((await edit('src/app.mjs')).decision, 'allow')
     assert.equal((await edit(`.copilot-tracking/skraft-plans/${projectSlug}/state.json`)).decision, 'deny')
     assert.deepEqual(records.map(({ code, agentName: name }) => ({ code, name })),
-      [{ code: 'CONFORMING', name: agentName }, { code: 'STATE_WRITE_FORBIDDEN', name: agentName }])
+      [{ code, name: agentName }, { code: 'STATE_WRITE_FORBIDDEN', name: agentName }])
   })
 }
 

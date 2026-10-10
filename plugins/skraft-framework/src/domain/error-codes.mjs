@@ -9,5 +9,5 @@ export const INVALID_VERDICT = 'INVALID_VERDICT'
 export const MISSING_MANDATORY_SKILL = 'MISSING_MANDATORY_SKILL'
 // G7 — a direct write to state.json / execution-log (must go through the state CLI).
 export const STATE_WRITE_FORBIDDEN = 'STATE_WRITE_FORBIDDEN'
-// G8 — a src/ or tests/ write by the pipeline orchestrator (it dispatches, never writes).
-export const ORCHESTRATOR_WRITE_FORBIDDEN = 'ORCHESTRATOR_WRITE_FORBIDDEN'
+// G8 — a write outside the caller's write rights (writeRights in the framework config).
+export const WRITE_RIGHT_DENIED = 'WRITE_RIGHT_DENIED'

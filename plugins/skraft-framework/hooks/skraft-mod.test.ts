@@ -191,3 +191,111 @@ describe('skraft mod', () => {
     await ui.unmount()
   })
 })
+
+// G8 — write rights per agent role, judged by the mod on the engine's own word of who
+// calls: the loop's agentId, $.agent.list() for its type and spawner, SessionStart's
+// agent_type for the main loop under --agent. The test's tool.call hook is the engine
+// running the tool: a call that reaches it was allowed.
+const G8 = {
+  agentAliases: {
+    'skraft-orchestrator': 'Skraft - Orchestrator',
+    'software-engineer': 'Skraft - Software Engineer',
+    'contract-testing-worker': 'contract-testing-worker',
+    'software-engineer-reviewer': 'Skraft - Software Engineer Reviewer',
+    'quality-gates-lens': 'quality-gates-lens',
+  },
+  writeRights: {
+    'Skraft - Orchestrator': { role: 'orchestrator', files: [] },
+    'Skraft - Software Engineer': { role: 'specialist', phase: 'DELIVER', workspace: true },
+    'contract-testing-worker': { role: 'worker', phase: 'DELIVER', workspace: true },
+    'Skraft - Software Engineer Reviewer': {
+      role: 'reviewer', phase: 'DELIVER',
+      files: ['.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/deliver-review-{N}.md'],
+    },
+    'quality-gates-lens': { role: 'lens', phase: 'DELIVER', files: [] },
+  },
+}
+const REVIEW = `.copilot-tracking/skraft-plans/checkout/reviews/${TODAY}/deliver-review-1.md`
+
+type Agent = { id: string; type: string; parentId?: string; spawnedBy?: string }
+
+const writeWorld = (on: any, { agents = [] as Agent[], listFails = false } = {}) => {
+  const ran: string[] = []
+  on('session.cwd', () => ({ value: CWD }))
+  on('env.get', () => ({ value: undefined }))
+  on('fs.read', ($$: any, e: any) => (e.path.endsWith('skraft-framework.config.json') ? { value: JSON.stringify(G8) } : { deny: `ENOENT ${e.path}` }))
+  on('agent.list', () => (listFails ? { deny: 'no agent list' } : { value: agents.map((a) => ({ description: '', status: 'running', ...a })) }))
+  on('classic.SessionStart', () => ({}))
+  on('tool.call', ($$: any, e: any) => { ran.push(`${e.agentId ?? 'main'} ${e.tool} ${e.file_path ?? e.command}`); return { result: 'ran' } })
+  return { ran }
+}
+
+const write = ($: any, file_path: string, agentId?: string) =>
+  $.tool.call({ tool: 'Write', file_path, content: 'x', ...(agentId ? { agentId } : {}) } as any)
+const shell = ($: any, command: string, agentId?: string) =>
+  $.tool.call({ tool: 'Bash', command, ...(agentId ? { agentId } : {}) } as any)
+
+describe('skraft mod — G8 write rights', () => {
+  test('the orchestrator writes neither src/ nor tests/, as a subagent or as the main loop under --agent', async ($, on) => {
+    const { ran } = writeWorld(on, { agents: [{ id: 'o1', type: 'skraft:skraft-orchestrator' }] })
+    expect((await write($, 'src/app.ts', 'o1')).deny).toMatch(/^skraft G8: Skraft - Orchestrator \(orchestrator\) writes nothing/)
+    expect((await shell($, 'echo x > tests/app.test.ts', 'o1')).deny).toMatch(/^skraft G8:/)
+
+    await $.classic.SessionStart({ source: 'startup', agent_type: 'skraft:skraft-orchestrator' } as any)
+    expect((await write($, 'tests/app.test.ts')).deny).toMatch(/Skraft - Orchestrator/)
+    expect(ran).toEqual([])
+  })
+
+  test('the Software Engineer and a DELIVER worker it spawned write src/ and tests/', async ($, on) => {
+    const { ran } = writeWorld(on, {
+      agents: [
+        { id: 'se', type: 'skraft:software-engineer', spawnedBy: 'skraft' },
+        { id: 'w1', type: 'skraft:contract-testing-worker', parentId: 'se' },
+      ],
+    })
+    expect((await write($, 'src/app.ts', 'se')).result).toBe('ran')
+    expect((await shell($, 'echo ok > tests/app.test.ts', 'se')).result).toBe('ran')
+    expect((await write($, 'tests/contract.test.ts', 'w1')).result).toBe('ran')
+    expect(ran).toHaveLength(3)
+  })
+
+  test('a reviewer writes its review and nothing else; a lens writes nothing', async ($, on) => {
+    const { ran } = writeWorld(on, {
+      agents: [
+        { id: 'r1', type: 'skraft:software-engineer-reviewer', spawnedBy: 'skraft' },
+        { id: 'l1', type: 'skraft:quality-gates-lens', parentId: 'r1' },
+      ],
+    })
+    expect((await shell($, `cat <<'EOF' > ${REVIEW}\nverdict: APPROVED\nEOF`, 'r1')).result).toBe('ran')
+    expect((await write($, REVIEW, 'r1')).result).toBe('ran')
+    expect((await write($, 'src/app.ts', 'r1')).deny).toMatch(/Skraft - Software Engineer Reviewer \(reviewer\) writes only/)
+    expect((await shell($, 'git checkout -- .', 'r1')).deny).toMatch(/this command writes elsewhere/)
+    expect((await write($, REVIEW, 'l1')).deny).toMatch(/quality-gates-lens \(lens\) writes nothing/)
+    expect(ran).toHaveLength(2)
+  })
+
+  test('an agent outside the rights takes those of the governed agent that spawned it', async ($, on) => {
+    writeWorld(on, {
+      agents: [
+        { id: 'r1', type: 'skraft:software-engineer-reviewer', spawnedBy: 'skraft' },
+        { id: 'g1', type: 'general-purpose', parentId: 'r1' },
+        { id: 'g2', type: 'general-purpose', spawnedBy: 'skraft' },
+      ],
+    })
+    expect((await write($, 'src/app.ts', 'g1')).deny).toMatch(/Skraft - Software Engineer Reviewer/)
+    expect((await write($, 'src/app.ts', 'g2')).result).toBe('ran')
+  })
+
+  test('the main loop without --agent and an agent the engine does not list both pass', async ($, on) => {
+    writeWorld(on)
+    await $.classic.SessionStart({ source: 'startup' } as any)
+    expect((await write($, 'src/app.ts')).result).toBe('ran')
+    expect((await write($, 'src/app.ts', 'unlisted')).result).toBe('ran')
+  })
+
+  test('a guard that cannot judge refuses the write', async ($, on) => {
+    const { ran } = writeWorld(on, { listFails: true })
+    expect((await write($, 'src/app.ts', 'se')).deny).toMatch(/^skraft G8: the write-rights guard could not judge this call/)
+    expect(ran).toEqual([])
+  })
+})

@@ -21,8 +21,14 @@
 // functions — reader, snapshot writer, backups, archive — and DecisionStore); this file
 // hands them functions built on `$`. The quality-gate evidence check and the
 // structural scan run in process, inside RunPipeline: no command line. The run outlives the command that started it: it
-// is driven from a $.clock timer. The settings hooks (hooks.json `hooks`) keep enforcing
-// G1–G9 meanwhile.
+// is driven from a $.clock timer.
+//
+// G8, write rights per agent role, is judged here on every Write, Edit, MultiEdit,
+// NotebookEdit and Bash call (WriteRightsGuard, src/application/write-rights-guard.mjs):
+// the engine names the loop a call runs in (agentId), $.agent.list() its agent type and
+// who spawned it, SessionStart's agent_type the main loop's agent under --agent. A guard
+// that fails refuses the call. The settings hooks (hooks.json `hooks`) keep G2/G3, G7,
+// provenance, and G8 for a Claude Code without mods.
 import { atom, read, update } from 'claude-code'
 import { createRunPipeline } from '../src/application/pipeline/run-pipeline.mjs'
 import { createRecordDecision } from '../src/application/pipeline/record-decision.mjs'
@@ -38,7 +44,8 @@ import { createAgentReportTransport } from '../src/adapters/infrastructure/repor
 import { createSnapshotStateWriter } from '../src/adapters/infrastructure/state/snapshot-state-writer.mjs'
 import { createFileStateReader, createFileStateBackupReader, createFileStateArchive } from '../src/adapters/infrastructure/state/file-state-store.mjs'
 import { createTrackingDecisionStore } from '../src/adapters/infrastructure/pipeline/tracking-decision-store.mjs'
-import { joinPath, claudeAgentId, walkFiles, askable, claudeUsage } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
+import { joinPath, claudeAgentId, walkFiles, askable, claudeUsage, callerChain, lastSegment } from '../src/adapters/infrastructure/claude-code-mod/mod-helpers.mjs'
+import { createWriteRightsGuard } from '../src/application/write-rights-guard.mjs'
 import { parseSkraftArgs } from '../src/adapters/api/claude-code-mod/command-args.mjs'
 
 /** @typedef {import('claude-code').Register} Register */
@@ -48,6 +55,10 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']
 const IDLE = { slug: null, status: 'idle', phase: null, reason: '', log: [], checkpointKey: null }
 const run = atom({ plugin: 'skraft', key: 'run' }, IDLE)
+// The main loop's agent type when the session runs --agent (SessionStart's agent_type).
+const mainAgent = atom({ plugin: 'skraft', key: 'mainAgent' }, null)
+// The tools G8 judges: the ones that write a file, and the shell.
+const WRITE_TOOLS = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash']
 
 let active = null // slug of the run this module drives, if any
 const waiting = new Map() // agentId → resolve
@@ -201,10 +212,28 @@ async function pipelineDependencies($, { config, cwd, trackingRoot, slug }) {
   }
 }
 
+async function frameworkConfig($) {
+  return JSON.parse(await $.fs.read(joinPath($.plugin.root, 'skraft-framework.config.json')))
+}
+
 async function sessionDependencies($, slug) {
   const cwd = await $.session.cwd()
-  const config = JSON.parse(await $.fs.read(joinPath($.plugin.root, 'skraft-framework.config.json')))
+  const config = await frameworkConfig($)
   return pipelineDependencies($, { config, cwd, trackingRoot: await trackingRootOf($, cwd), slug })
+}
+
+// G8: the WriteRightsGuard verdict on one tool call, the caller resolved from the engine.
+async function writeRightsVerdict($, e) {
+  const cwd = await $.session.cwd()
+  const config = await frameworkConfig($)
+  const caller = callerChain({
+    agentId: e.agentId,
+    agents: e.agentId ? await $.agent.list() : [],
+    mainAgent: await read($, mainAgent),
+    pluginName: $.plugin.name,
+  })
+  const guard = createWriteRightsGuard({ config, trackingDir: lastSegment(await trackingRootOf($, cwd)) })
+  return guard.judge({ caller, calls: [{ toolName: e.tool, toolInput: e }], cwd })
 }
 
 async function drive($, { slug, story }) {
@@ -295,6 +324,17 @@ export const register = (on) => {
     })
     return result
   })
+
+  on('classic.SessionStart', async ($, e, next) => {
+    await update($, mainAgent, () => (typeof e.agent_type === 'string' && e.agent_type.length > 0 ? e.agent_type : null))
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  // G8 — a write outside the caller's write rights is refused; a guard that fails refuses.
+  on('tool.call', { tool: WRITE_TOOLS }, async ($, e, next) => {
+    const verdict = await writeRightsVerdict($, e)
+    return verdict.allowed ? next(e) : { deny: `skraft G8: ${verdict.reason}` }
+  }).catch(($, e, next) => (next.called ? next(e) : { deny: `skraft G8: the write-rights guard could not judge this call (${next.error.message ?? next.error.kind}); it is refused` }))
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)

@@ -5,11 +5,21 @@ import assert from 'node:assert/strict'
 // through the service handle(payload) entry, with in-memory driven adapters
 // (audit-writer as the observable seam).
 import { createPreToolUseSessionGuardService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-session-guard-service.mjs'
+import { deriveWriteRights } from '../../../plugins/skraft-framework/src/domain/write-rights-policy.mjs'
 
 const PROJECT_SLUG = 'us11-g7-g8-session-guard'
-const CONFIG = {
+const PIPELINE = {
   phaseAgents: { DELIVER: { specialist: 'software-engineer', reviewer: 'software-engineer-reviewer' } },
   agentDispatchers: { 'software-engineer': 'skraft-orchestrator', 'software-engineer-reviewer': 'skraft-orchestrator' },
+}
+const CONFIG = {
+  ...PIPELINE,
+  writeRights: deriveWriteRights({
+    ...PIPELINE,
+    phaseOrder: ['DELIVER'],
+    workspacePhases: ['DELIVER'],
+    agentArtifacts: { 'skraft-orchestrator': {}, 'software-engineer': {}, 'software-engineer-reviewer': {} },
+  }),
 }
 const FIXED_NOW = '2026-07-12T12:00:00.000Z'
 const fixedClock = { now: () => FIXED_NOW }
@@ -58,7 +68,7 @@ test('AC-02: a src/ write by the orchestrator is denied', async () => {
     payload: { toolName: 'Edit', agentName: 'skraft-orchestrator', toolInput: { filePath: 'src/app.mjs' } }
   })
   assert.equal(result.decision, 'deny')
-  assert.equal(entries[0].code, 'ORCHESTRATOR_WRITE_FORBIDDEN')
+  assert.equal(entries[0].code, 'WRITE_RIGHT_DENIED')
 })
 
 test('AC-02: a src/ write by a sub-agent or an unnamed caller is allowed', async () => {
