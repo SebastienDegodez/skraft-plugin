@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.14.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.14.0...v1.14.1) (2026-10-09)
+
+### 🐛 Bug Fixes
+
+* **hooks:** restrict G8 to the orchestrator, let unnamed callers pass ([#207](https://github.com/SebastienDegodez/skraft-plugin/issues/207)) ([7d8a422](https://github.com/SebastienDegodez/skraft-plugin/commit/7d8a42282406229d9ddfef3a9f9d4697932dd19d)), closes [#206](https://github.com/SebastienDegodez/skraft-plugin/issues/206)
+
 ## [1.14.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.13.0...v1.14.0) (2026-10-09)
 
 ### ✨ Features

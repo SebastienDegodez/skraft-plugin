@@ -16,7 +16,7 @@ sidebar_position: 1
 | `SubagentStart` | — | G2 | Indique à l'agent qui démarre ses skills obligatoires (`verify` ou `eager`) ; intègre le contenu des skills `eager` ; exclut les skills `on-demand` | Autorise |
 | `PreToolUse` | `Agent`, `Task` | Provenance | Aucun agent ne se dispatche lui-même ; un agent au dispatcher déclaré n'est dispatché que par lui | Autorise |
 | `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | Aucune écriture directe dans le `state.json` d'un pipeline, son journal d'exécution ou le pointeur `.active-slug`, quelle que soit la phase | Refuse si le fichier, ou une commande shell lue comme le shell la lit, écrit ou supprime un `state.json` suivi |
-| `PreToolUse` | idem | G8 | En DELIVER, `src/` et `tests/` ne sont écrits que par les agents DELIVER et les agents qu'ils dispatchent | Autorise |
+| `PreToolUse` | idem | G8 | L'orchestrateur n'écrit jamais `src/` ni `tests/`, quelle que soit la phase ; un appelant que le payload ne nomme pas passe | Autorise |
 | `PostToolUse` | `Read` | G3 | Chaque lecture d'un `SKILL.md` est inscrite au journal d'audit | Autorise |
 | `SubagentStop` | — | G3 | Un sous-agent dont le transcript ne montre aucun chargement d'un skill obligatoire (appel de l'outil skill, ou lecture de son `SKILL.md`) est renvoyé au travail ; les skills `on-demand` ne sont pas obligatoires ; un sous-agent déjà renvoyé est laissé partir | Autorise |
 
@@ -27,7 +27,8 @@ enregistre ce que rend chaque agent. Voir `docs/run-pipeline.md` dans le dépôt
 Les deux manifestes du plugin portent les mêmes entrées, et chaque entrée exécute
 `src/cli/hook.mjs` (`src/cli/housekeeping.mjs` pour `SessionStart`). Copilot CLI envoie ses
 propres noms d'outils (`bash`, `create`, `str_replace`, `view`, …) ;
-`adapters/api/hooks/harness-input.mjs` les traduit vers les noms ci-dessus avant toute garde.
+`adapters/api/hooks/harness-input.mjs` les traduit vers les noms ci-dessus avant toute garde. Un
+lot Copilot `toolCalls` est gardé appel par appel ; un seul appel refusé refuse le lot.
 
 Chaque événement d'outil a une seule entrée, sans matcher : VS Code ignore les matchers et
 exécuterait toutes les entrées d'un événement à chaque appel d'outil. `src/cli/hook.mjs` lit
@@ -204,7 +205,7 @@ Les hooks et les CLI lisent ces variables ; aucune n'est obligatoire.
 | `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | Provenance et G7/G8 sur `PreToolUse` |
 | `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Ordre de dispatch (G1, vérifié par RunPipeline), provenance |
 | `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Manifeste de handoff des entrées obligatoires et évaluation G9 (vérifiée par RunPipeline) |
-| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Protection de l'état suivi et écritures DELIVER |
+| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Protection de l'état suivi et écritures de l'orchestrateur dans l'espace de travail |
 | `plugins/skraft-framework/src/domain/skill-policy.mjs` | Politique des skills obligatoires et `on-demand` |
 | `plugins/skraft-framework/src/domain/phase-gate-policy.mjs` | Règles de clôture de phase |
 | `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Audit append-only |

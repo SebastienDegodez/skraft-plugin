@@ -66,7 +66,7 @@ plugins/skraft-framework/src/
     pipeline-policy.mjs        dispatch order (G1, checked by RunPipeline), provenance
     skill-policy.mjs           mandatory/on-demand skills, loads read from a transcript (G2, G3)
     phase-gate-policy.mjs      phase closure rules (G4, G5)
-    session-guard-policy.mjs   tracked-state protection, DELIVER writes (G7, G8)
+    session-guard-policy.mjs   tracked-state protection, orchestrator writes (G7, G8)
     handoff-policy.mjs         dispatch handoff completeness (G9, checked by RunPipeline)
     state-machine.mjs          transitions the state CLI applies
     result.mjs, value-objects.mjs, …
@@ -171,7 +171,7 @@ Without a hook, the call would pass silently; review would catch it *after*.
 | G5 verdict and DELIVER commit | State CLI, when a phase closes | Fail closed | Not a hook |
 | G6 continuation | Removed: RunPipeline records what an agent returns | — | — |
 | G7 tracked state | `PreToolUse` hook | Fail closed | Last recorded run: Copilot CLI 1.0.83 refused a shell write |
-| G8 DELIVER writes | `PreToolUse` hook | Fail open on unreadable state | None |
+| G8 orchestrator writes | `PreToolUse` hook | Fail open on an unnamed caller | None |
 | G9 handoff completeness | RunPipeline, on the composed prompt | Fail closed: the run stops `blocked` | Not a hook |
 
 Every guard is covered by unit and acceptance tests. A live receipt comes only from a real
@@ -191,6 +191,13 @@ a refusal stops the run before anything is sent. G6 (the PostToolUse reminder of
 record next) is gone: the code records artefacts and verdicts. The hooks keep what no code
 path can see — writes the agents make (G7/G8), skills they load (G2/G3), who dispatches
 whom (provenance).
+
+G8 keeps the orchestrator out of `src/` and `tests/`: it dispatches the agent that owns a
+change and never makes the change itself, whatever the phase. The hook refuses only a writer
+the payload names as the orchestrator. Copilot CLI names no agent on `preToolUse`, for the main
+session or a sub-agent, so under Copilot the call passes and G8 holds only where the harness
+names the agent, as Claude Code does with `agent_type`. G8 reads no state. Each call in a
+Copilot `toolCalls` batch is guarded separately, and one refusal refuses the whole batch.
 
 ## Token economy — the hook angle
 

@@ -4,7 +4,7 @@ import {
   commandMutatesProtectedArtifact,
   commandWritesWorkspace,
   guardProtectedArtifact,
-  guardWorkspaceWrite,
+  guardOrchestratorWrite,
 } from '../../../plugins/skraft-framework/src/domain/session-guard-policy.mjs'
 
 const STATE = '.copilot-tracking/skraft-plans/us11/state.json'
@@ -30,9 +30,9 @@ test('guardProtectedArtifact: a harmless call passes with its reason', () => {
   assert.deepEqual(guardProtectedArtifact(), { ok: true, value: { reason: 'no direct write to a protected artifact' } })
 })
 
-test('guardWorkspaceWrite: with no monitored agents declared, every DELIVER workspace write is refused', () => {
-  const result = guardWorkspaceWrite({ phase: 'DELIVER', filePath: 'src/a.js', agentName: 'Stryker was here' })
-  assert.equal(result.ok, false)
-  assert.equal(result.error.code, 'UNMONITORED_WRITE')
-  assert.equal(result.error.reason, 'src/ or tests/ write during DELIVER must run inside the monitored DELIVER sub-agent, not Stryker was here')
+test('guardOrchestratorWrite: with no orchestrator declared, a named workspace write passes', () => {
+  assert.deepEqual(guardOrchestratorWrite({ filePath: 'src/a.js', agentName: 'Stryker was here' }), {
+    ok: true,
+    value: { reason: 'workspace write by Stryker was here' },
+  })
 })

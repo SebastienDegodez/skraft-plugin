@@ -1,5 +1,5 @@
 import { Ok, Err } from './result.mjs'
-import { STATE_WRITE_FORBIDDEN, UNMONITORED_WRITE } from './error-codes.mjs'
+import { ORCHESTRATOR_WRITE_FORBIDDEN, STATE_WRITE_FORBIDDEN } from './error-codes.mjs'
 import { readCommandLine, joinPath, UNKNOWN } from './shell-command-reading.mjs'
 
 // Pure domain: session-guard policy (G7/G8). No IO.
@@ -10,9 +10,9 @@ import { readCommandLine, joinPath, UNKNOWN } from './shell-command-reading.mjs'
 // tool targeting them — is denied. Reads stay allowed (the CLI is the sanctioned
 // write path; #57 deny + #60 CLI = A9 strong form).
 //
-// G8 — during DELIVER, edits to the workspace (src/ and tests/) must happen inside
-// the monitored DELIVER sub-agent. A write attempted outside that agent (e.g. the
-// orchestrator session itself) is blocked so the phase boundary stays inviolable.
+// G8 — the pipeline orchestrator never writes src/ or tests/, whatever the phase: it
+// dispatches the agent that owns the change. Only a writer positively identified as the
+// orchestrator is refused; an unnamed writer (Copilot sends no agent name) passes.
 
 // Artifacts that may only change through the state CLI, all under the tracking directory
 // (default .copilot-tracking/skraft-plans): each project's state.json and execution log,
@@ -385,11 +385,14 @@ const protectedTarget = (trackingDir, root) => {
   return { file, tree, walk, sample }
 }
 
-// A path under src/ or tests/ (the monitored workspace).
+// A path under src/ or tests/ (the workspace).
 const WORKSPACE_PATH_RE = /(?:^|[/\\])(?:src|tests)[/\\]/i
 
 // A mutating command applied to a path under src/ or tests/.
 const MUTATING_WORKSPACE_RE = /\b(?:rm|mv|cp|truncate|dd|install|vi|vim|nano|emacs|ex)\b[^\n]*?(?:^|[\s"'=([{/\\])(?:src|tests)[/\\]/i
+
+// A src/ or tests/ path segment inside a command line or a path.
+const NAMES_WORKSPACE_RE = /(?:^|[\s"'=([{/\\])(?:src|tests)[/\\]/i
 
 const isString = (value) => typeof value === 'string' && value.length > 0
 
@@ -408,9 +411,6 @@ export const commandMutatesProtectedArtifact = (command, { trackingDir, cwd } = 
 // True when a Write/Edit file path targets the src/ or tests/ workspace.
 export const isWorkspacePath = (filePath) =>
   isString(filePath) && WORKSPACE_PATH_RE.test(filePath)
-
-// A src/ or tests/ path segment inside a command line or a path.
-const NAMES_WORKSPACE_RE = /(?:^|[\s"'=([{/\\])(?:src|tests)[/\\]/i
 
 // G8's target: a path under src/ or tests/; removing src or tests themselves counts.
 const namesWorkspace = (path) => isString(path) && NAMES_WORKSPACE_RE.test(path)
@@ -445,29 +445,20 @@ export const guardProtectedArtifact = ({ command, filePath, trackingDir, cwd } =
   return Ok({ reason: 'no direct write to a protected artifact' })
 }
 
-// G8 — during DELIVER, block src/ or tests/ writes performed outside a monitored
-// DELIVER sub-agent (deliverAgents). Any other phase, or a write by a monitored
-// agent, passes through.
-export const guardWorkspaceWrite = ({ command, filePath, phase, agentName, deliverAgents = [] } = {}) => {
-  if (phase !== 'DELIVER') {
-    return Ok({ reason: `session guard inactive outside DELIVER (phase ${phase})` })
-  }
-  const writesWorkspace = isWorkspacePath(filePath) || commandWritesWorkspace(command)
-  if (!writesWorkspace) {
+// G8 — deny a src/ or tests/ write by the orchestrator. Any other writer, named or not,
+// passes: the guard refuses only what it can attribute.
+export const guardOrchestratorWrite = ({ command, filePath, agentName, orchestrators = [] } = {}) => {
+  if (!isWorkspacePath(filePath) && !commandWritesWorkspace(command)) {
     return Ok({ reason: 'no src/ or tests/ write' })
   }
-  if (deliverAgents.includes(agentName)) {
-    return Ok({ reason: `workspace write by monitored DELIVER agent ${agentName}` })
+  if (!isString(agentName)) {
+    return Ok({ reason: 'workspace write by an unnamed caller' })
+  }
+  if (!orchestrators.includes(agentName)) {
+    return Ok({ reason: `workspace write by ${agentName}` })
   }
   return Err({
-    code: UNMONITORED_WRITE,
-    reason: `src/ or tests/ write during DELIVER must run inside the monitored DELIVER sub-agent, not ${agentName ?? 'the orchestrator session'}`
+    code: ORCHESTRATOR_WRITE_FORBIDDEN,
+    reason: `${agentName} never writes src/ or tests/; dispatch the phase agent that owns this change`
   })
-}
-
-// Combined evaluation: G7 takes precedence over G8. Returns Ok when neither guard trips.
-export const evaluateSessionGuard = ({ command, filePath, phase, agentName, deliverAgents, trackingDir, cwd } = {}) => {
-  const protectedResult = guardProtectedArtifact({ command, filePath, trackingDir, cwd })
-  if (protectedResult.ok === false) return protectedResult
-  return guardWorkspaceWrite({ command, filePath, phase, agentName, deliverAgents })
 }
