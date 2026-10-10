@@ -96,7 +96,9 @@ guesses a command or skips a gate.
 ## Guarantees
 
 RunPipeline checks dispatch order (G1) and handoff completeness (G9) before dispatching,
-and records agent results itself. Hooks retain skill loading, provenance and write guards.
+and records agent results itself. Hooks retain skill loading, provenance and write guards;
+the Claude Code mod and the Copilot extension also judge write rights (G8) where they know
+which agent writes.
 
 | Guard | What you get |
 |---|---|
@@ -104,7 +106,7 @@ and records agent results itself. Hooks retain skill loading, provenance and wri
 | G2 / G3 | Each agent starts with its mandatory skills, and is sent back if it never loaded them |
 | G4 / G5 | A phase closes only with its artifacts, a matching review verdict and, for DELIVER, a new commit |
 | G7 | State, execution logs and the active-pipeline pointer cannot be edited by hand |
-| G8 | The orchestrator never writes source or test files; it dispatches the agent that does |
+| G8 | Each pipeline agent writes only what its role allows: the orchestrator nothing, a reviewer its review, source and test files only the DISTILL and DELIVER agents |
 | G9 | A dispatch must pass every recorded input, and the previous review on a retry |
 
 Every guard is covered by unit and acceptance tests; the

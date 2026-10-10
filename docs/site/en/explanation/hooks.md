@@ -66,7 +66,8 @@ plugins/skraft-framework/src/
     pipeline-policy.mjs        dispatch order (G1, checked by RunPipeline), provenance
     skill-policy.mjs           mandatory/on-demand skills, loads read from a transcript (G2, G3)
     phase-gate-policy.mjs      phase closure rules (G4, G5)
-    session-guard-policy.mjs   tracked-state protection, orchestrator writes (G7, G8)
+    session-guard-policy.mjs   tracked-state protection, shell and workspace reading (G7, G8)
+    write-rights-policy.mjs    write rights per agent role, derived from the config (G8)
     handoff-policy.mjs         dispatch handoff completeness (G9, checked by RunPipeline)
     state-machine.mjs          transitions the state CLI applies
     result.mjs, value-objects.mjs, …
@@ -77,6 +78,7 @@ plugins/skraft-framework/src/
 
   application/           ← one service per hook concern
     pre-tool-use-composite.mjs   provenance and G7/G8 decisions
+    write-rights-guard.mjs       G8, the use case the hook, the mod and the extension call
     subagent-start-service.mjs   G2
     subagent-stop-service.mjs    G3
     post-tool-use-service.mjs    G3 trace
@@ -171,7 +173,7 @@ Without a hook, the call would pass silently; review would catch it *after*.
 | G5 verdict and DELIVER commit | State CLI, when a phase closes | Fail closed | Not a hook |
 | G6 continuation | Removed: RunPipeline records what an agent returns | — | — |
 | G7 tracked state | `PreToolUse` hook | Fail closed | Last recorded run: Copilot CLI 1.0.83 refused a shell write |
-| G8 orchestrator writes | `PreToolUse` hook | Fail open on an unnamed caller | None |
+| G8 write rights per agent role | Claude Code mod (`tool.call`), Copilot extension (`onPreToolUse`), `PreToolUse` hook | Fail open on an unidentified caller; the mod and the extension refuse a write when the guard itself fails | None |
 | G9 handoff completeness | RunPipeline, on the composed prompt | Fail closed: the run stops `blocked` | Not a hook |
 
 Every guard is covered by unit and acceptance tests. A live receipt comes only from a real
@@ -189,15 +191,59 @@ policed the prose orchestrator left the hooks. G1 (dispatch order) and G9 (hando
 completeness) run inside the use case before every dispatch, on the state it wrote itself;
 a refusal stops the run before anything is sent. G6 (the PostToolUse reminder of what to
 record next) is gone: the code records artefacts and verdicts. The hooks keep what no code
-path can see — writes the agents make (G7/G8), skills they load (G2/G3), who dispatches
-whom (provenance).
+path can see — writes the agents make (G7, and G8 where neither the mod nor the extension
+runs), skills they load (G2/G3), who dispatches whom (provenance).
 
-G8 keeps the orchestrator out of `src/` and `tests/`: it dispatches the agent that owns a
-change and never makes the change itself, whatever the phase. The hook refuses only a writer
-the payload names as the orchestrator. Copilot CLI names no agent on `preToolUse`, for the main
-session or a sub-agent, so under Copilot the call passes and G8 holds only where the harness
-names the agent, as Claude Code does with `agent_type`. G8 reads no state. Each call in a
-Copilot `toolCalls` batch is guarded separately, and one refusal refuses the whole batch.
+## G8 — write rights per agent role
+
+Each pipeline agent writes only what its role allows, so no agent works outside its perimeter
+and a review stays independent of the code it reviews. `config:build` derives the rights from
+the config — `phaseAgents`, `agentDispatchers`, the launcher and the outputs each agent
+declares — into `writeRights` in `skraft-framework.config.json`; nothing is written per agent
+in the code.
+
+| Role | Who | May write |
+|------|-----|-----------|
+| Orchestrator | The pipeline launcher (`Skraft - Orchestrator`), and any agent that dispatches phase agents | Nothing: the pipeline's code writes state, reviews and reports |
+| Reviewer | A phase reviewer | Its transmission files, the outputs it declares: its review (`reviews/{date}/{phase}-review-{N}.md`) and, in DELIVER, the patch, file list, commit list and `qg-verify` verdict its lenses read |
+| Lens | An agent a reviewer dispatches | The outputs it declares — none for every pipeline lens |
+| Specialist | A phase specialist | `src/` and `tests/` only in DISTILL (RED acceptance tests and their stubs) and DELIVER; anything else except another agent's transmission file |
+| Worker | An agent a specialist dispatches | As its specialist |
+
+An agent outside these roles (`general-purpose`, `Explore`, another plugin's) is not
+governed, unless a governed agent spawned it: it then writes as that agent does. Agents outside
+the pipeline (backlog, brownfield) are not governed.
+
+The guard reads what a call writes: the file a file tool names, and the files a shell command
+writes, read as G7 reads it. A here-document that only feeds a command's input (a verdict YAML,
+a commit message) is text, not commands. `src/` and `tests/` are those of the project the
+session runs in: a path under the session directory is read from there, so a project kept in
+`~/src` is not all workspace.
+
+**Who calls.** Each host says it, and the one use case (`write-rights-guard.mjs`) judges:
+
+| Host | Where G8 runs | How the caller is known |
+|------|---------------|-------------------------|
+| Claude Code with mods | The mod's `tool.call` hook on `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` | The call's `agentId` and `$.agent.list()` (its type and who spawned it); the main loop's `agent_type` under `--agent`, from `SessionStart` |
+| Copilot CLI and Copilot app | The extension's `onPreToolUse` session hook, which also sees the sub-agents' calls | A sub-agent's `sessionId` matched to the `subagent.started` event the runtime sent (`toolCallId`, `agentId`, `agentName`); the main session's selected agent (`agent.getCurrent`, `subagent.selected`). No file is read |
+| Any host, settings hook | `PreToolUse` in `hooks.json` | The payload's agent name: Claude Code's `agent_type`; Copilot's `preToolUse` names none |
+
+An **unidentified caller passes** (fail-open), audited `UNIDENTIFIED_CALLER`: a Copilot settings
+hook, a sub-agent no event announced, a main session whose selection could not be read. G8
+refuses only a write it can attribute to a role that lacks the right; refusing the unnamed
+would refuse the Software Engineer with everyone else (#206). A Claude Code payload that names
+no agent comes from the main session without `--agent`, which no pipeline agent runs.
+
+**Fail mode.** The mod and the extension refuse a write when the guard itself fails (a `.catch`
+that refuses, a caught error); the settings hook keeps its rule: a hook failure lets the call
+pass, except a tool write to a tracked `state.json`.
+
+**Batches.** Each call of a Copilot `toolCalls` batch is judged; one refusal refuses the batch.
+
+**What still needs the settings hook.** G7, provenance, and G8 for a host that runs neither the
+mod nor the extension: Claude Code without mods, a Copilot host that does not load the plugin's
+extension (VS Code reads the v1 hooks), a session where the extension did not load. On Claude Code with mods
+both run and agree; the mod answers first.
 
 ## Token economy — the hook angle
 

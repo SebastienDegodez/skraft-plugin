@@ -38,7 +38,7 @@ Load before any review work. If missing, announce `[SKILL MISSING] {name}` and c
 - The covered commits' full messages: `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/commits-{story}.txt`.
 - The evidence log: `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json`.
 - Approved feature scope and linked issue when known; never infer them from a producer's commit subject.
-- The patch and file list since the DELIVER base: `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch` and `files-{story}.txt`, plus the change log. Read the patch; open a whole file only when the patch lacks the context a finding needs. Never modify anything.
+- The patch and file list since the DELIVER base: `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch` and `files-{story}.txt`, plus the change log. Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - `test-plan-{story}.md`: the reference for every AC-to-test check in section 3. A planned test the patch does not contain is a defect unless the execution journal, evidence log or a commit message records a `PLAN_DEVIATION` for it.
 - Outcome/forecast data and frontend manifest when supplied: load `qa-reporting` before checking data; use exact returned repository-root-relative refs, not current-date paths.
 
@@ -111,7 +111,7 @@ Quote every free-text value. Emit `defects: []` when none were found.
 
 ## Rules
 
-- You are **read-only**. You NEVER execute build, tests, mutation, or `git` mutating commands.
+- You NEVER execute build, tests, mutation, or `git` mutating commands.
 - You do NOT propose code fixes. You report what is missing or contradicted.
 - You do NOT relax the contract to "save" a gate. A missing field is a finding.
 - You do NOT trust prose. A `pass` comes only from a `qg-verify` pass plus the commit-policy check.

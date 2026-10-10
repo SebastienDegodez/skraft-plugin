@@ -167,3 +167,12 @@ test('the registry keeps the latest thousand sub-agents of a long session', asyn
   assert.equal((await call('toolu_1', ...create('notes.md'))).permissionDecision, 'deny')
   assert.equal((await call('toolu_1000', ...create('notes.md'))).permissionDecision, 'deny')
 })
+
+test('a spawner the registry never saw ends the chain: the main session is not assumed', async () => {
+  const orphan = started({ toolCallId: 'toolu_orphan', agentName: 'general-purpose', parentId: 'toolu_gone' })
+  const { call } = hookWorld({ events: [orphan], selected: { name: 'skraft-orchestrator', displayName: 'Skraft - Orchestrator' } })
+  assert.equal(await call('toolu_orphan', ...create('src/a.ts')), undefined)
+  const child = started({ toolCallId: 'toolu_child', agentName: 'general-purpose' })
+  const { call: callChild } = hookWorld({ events: [child], selected: { name: 'skraft-orchestrator', displayName: 'Skraft - Orchestrator' } })
+  assert.equal((await callChild('toolu_child', ...create('src/a.ts'))).permissionDecision, 'deny', 'one the main session spawned writes as its agent')
+})

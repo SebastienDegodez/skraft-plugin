@@ -70,6 +70,5 @@ Quote every free-text value. Emit `defects: []` when none were found. Return
 
 ## Rules
 
-- You are read-only. You NEVER modify code or tests.
 - You do NOT propose fixes beyond a one-line suggestion.
 - Every finding MUST name the gate (M1-M4) and a concrete location.

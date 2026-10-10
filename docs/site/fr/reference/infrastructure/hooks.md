@@ -16,13 +16,26 @@ sidebar_position: 1
 | `SubagentStart` | — | G2 | Indique à l'agent qui démarre ses skills obligatoires (`verify` ou `eager`) ; intègre le contenu des skills `eager` ; exclut les skills `on-demand` | Autorise |
 | `PreToolUse` | `Agent`, `Task` | Provenance | Aucun agent ne se dispatche lui-même ; un agent au dispatcher déclaré n'est dispatché que par lui | Autorise |
 | `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | Aucune écriture directe dans le `state.json` d'un pipeline, son journal d'exécution ou le pointeur `.active-slug`, quelle que soit la phase | Refuse si le fichier, ou une commande shell lue comme le shell la lit, écrit ou supprime un `state.json` suivi |
-| `PreToolUse` | idem | G8 | L'orchestrateur n'écrit jamais `src/` ni `tests/`, quelle que soit la phase ; un appelant que le payload ne nomme pas passe | Autorise |
+| `PreToolUse` | idem | G8 | Une écriture reste dans les droits d'écriture de l'appelant (`writeRights` de la config du framework) : l'orchestrateur n'écrit rien, un reviewer ou une lentille seulement ses fichiers de transmission déclarés, un spécialiste ou un worker `src/` et `tests/` seulement en DISTILL et DELIVER et jamais le fichier de transmission d'un autre agent. L'appelant est le nom d'agent du payload (l'`agent_type` de Claude Code) ; un appelant que le payload ne nomme pas passe, audité `UNIDENTIFIED_CALLER` | Autorise |
 | `PostToolUse` | `Read` | G3 | Chaque lecture d'un `SKILL.md` est inscrite au journal d'audit | Autorise |
 | `SubagentStop` | — | G3 | Un sous-agent dont le transcript ne montre aucun chargement d'un skill obligatoire (appel de l'outil skill, ou lecture de son `SKILL.md`) est renvoyé au travail ; les skills `on-demand` ne sont pas obligatoires ; un sous-agent déjà renvoyé est laissé partir | Autorise |
 
 G1 (ordre de dispatch), G6 (continuation) et G9 (handoff) ne sont plus des hooks : le
 pipeline tourne en code (RunPipeline, ADR-010), qui vérifie G1 et G9 avant chaque dispatch et
 enregistre ce que rend chaque agent. Voir `docs/run-pipeline.md` dans le dépôt.
+
+G8 tourne aussi hors des settings hooks, là où l'hôte nomme l'appelant dans le code, avec le
+même cas d'usage (`application/write-rights-guard.mjs`) :
+
+| Hôte | Entrée | Appelant | Quand la garde échoue |
+|------|--------|----------|-----------------------|
+| Claude Code avec mods | `hooks/skraft-mod.mjs`, `tool.call` sur `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` | `agentId` → `$.agent.list()` (type, parent, `spawnedBy`) ; boucle principale : l'`agent_type` du `SessionStart` | Refuse l'appel |
+| Copilot CLI, Copilot app | `com.github.copilot/extensions/skraft-pipeline/extension.mjs`, `hooks.onPreToolUse` | `sessionId` de l'entrée du hook → `subagent.started` (`toolCallId`, `agentId`, `agentName`, `parentId`) ; session principale : `agent.getCurrent`, `subagent.selected` / `subagent.deselected` | Refuse une écriture ; tout autre appel passe |
+
+Un refus se lit `skraft G8: <raison>` ; l'extension l'audite (`SessionGuardEvaluated`,
+`source: copilot-extension`), le settings hook audite chaque appel jugé dans un pipeline avec
+son code : `WRITE_RIGHT_DENIED`, `CONFORMING`, `NOT_GOVERNED` (un agent hors des droits),
+`UNIDENTIFIED_CALLER`, `NO_WRITE`.
 
 Les deux manifestes du plugin portent les mêmes entrées, et chaque entrée exécute
 `src/cli/hook.mjs` (`src/cli/housekeeping.mjs` pour `SessionStart`). Copilot CLI envoie ses
@@ -51,7 +64,13 @@ protégé.
 
 Restent invisibles : les alias, les fonctions shell définies dans une commande précédente,
 les scripts lancés depuis un fichier (`bash x.sh`, `source x`) et les programmes qui
-écrivent le fichier d'eux-mêmes.
+écrivent le fichier d'eux-mêmes. L'outil `powershell` de Copilot n'est pas lu.
+
+Pour G8, un here-document qui ne fait qu'alimenter l'entrée d'une commande est du texte ; celui
+qu'un shell ou un interpréteur lit comme son programme (`bash <<EOF`, `python3 - <<EOF`,
+`cat <<EOF | sh`) est lu. Un chemin sous le répertoire de la session est lu à partir de lui :
+`src/` et `tests/` sont ceux du projet. Le shell d'un reviewer peut toujours envoyer sa sortie
+vers `/dev/null` (ou `nul`).
 
 ## Politiques de skills
 
@@ -203,9 +222,12 @@ Les hooks et les CLI lisent ces variables ; aucune n'est obligatoire.
 | `plugins/skraft-framework/src/adapters/api/hooks/harness-output.mjs` | Décision → format de fil harness |
 | `plugins/skraft-framework/src/adapters/api/hooks/hook-router.mjs` | Routage par type d'événement |
 | `plugins/skraft-framework/src/application/pre-tool-use-composite.mjs` | Provenance et G7/G8 sur `PreToolUse` |
+| `plugins/skraft-framework/src/application/write-rights-guard.mjs` | Cas d'usage G8 : droits d'écriture de l'appelant, appel par appel |
+| `plugins/skraft-framework/src/domain/write-rights-policy.mjs` | Droits d'écriture tirés de la config (`config:build`) et jugés sur une écriture |
+| `plugins/skraft-framework/src/adapters/api/copilot-workflow/copilot-write-guard.mjs` | G8 sous Copilot : registre des appelants tiré des événements de session, handler `onPreToolUse` |
 | `plugins/skraft-framework/src/domain/pipeline-policy.mjs` | Ordre de dispatch (G1, vérifié par RunPipeline), provenance |
 | `plugins/skraft-framework/src/domain/handoff-policy.mjs` | Manifeste de handoff des entrées obligatoires et évaluation G9 (vérifiée par RunPipeline) |
-| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Protection de l'état suivi et écritures de l'orchestrateur dans l'espace de travail |
+| `plugins/skraft-framework/src/domain/session-guard-policy.mjs` | Protection de l'état suivi ; lecture du shell et de l'espace de travail pour G7 et G8 |
 | `plugins/skraft-framework/src/domain/skill-policy.mjs` | Politique des skills obligatoires et `on-demand` |
 | `plugins/skraft-framework/src/domain/phase-gate-policy.mjs` | Règles de clôture de phase |
 | `plugins/skraft-framework/src/adapters/infrastructure/jsonl-audit-writer.mjs` | Audit append-only |
