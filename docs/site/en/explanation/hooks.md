@@ -166,7 +166,7 @@ Without a hook, the call would pass silently; review would catch it *after*.
 | Guard | Enforced by | Failure mode | Live harness receipt |
 |-------|-------------|--------------|----------------------|
 | G1 dispatch order | RunPipeline, before every dispatch | Fail closed: the run stops `blocked` | Not a hook |
-| Dispatch provenance | `PreToolUse` hook | Fail open | None |
+| Dispatch provenance | `PreToolUse` hook, Copilot extension (`onPreToolUse`) | Fail open | None |
 | G2 mandatory skills | `SubagentStart` hook | Fail open | None |
 | G3 skill loads | `PostToolUse` and `SubagentStop` hooks | Fail open | None |
 | G4 phase artifacts | State CLI, when a phase closes | Fail closed | Not a hook |
@@ -212,24 +212,51 @@ in the code.
 
 An agent outside these roles (`general-purpose`, `Explore`, another plugin's) is not
 governed, unless a governed agent spawned it: it then writes as that agent does. Agents outside
-the pipeline (backlog, brownfield) are not governed.
+the pipeline (backlog, brownfield) are not governed. Inheritance needs a host that names the
+spawner; where the host knows only part of the chain (Claude Code's settings hook names the
+agent alone, Copilot without `parentId`), an ungoverned agent is unidentified. So an agent with
+no right on `src/` and `tests/` — orchestrator, reviewer, lens, RESEARCH or DESIGN specialist —
+starts only the agents the dispatch tree declares for it: provenance refuses it any agent
+without a declared dispatcher (`UNDECLARED_DISPATCH`), on every host.
 
-The guard reads what a call writes: the file a file tool names, and the files a shell command
-writes, read as G7 reads it. A here-document that only feeds a command's input (a verdict YAML,
-a commit message) is text, not commands. `src/` and `tests/` are those of the project the
-session runs in: a path under the session directory is read from there, so a project kept in
-`~/src` is not all workspace.
+The guard reads what a call writes: the file a file tool names (`apply_patch`: every file its
+headers name), and the files a shell command writes, read as G7 reads it. `src/` and `tests/` are
+those of the project the session runs in: a path under the session directory is read from
+there, so a project kept in `~/src` is not all workspace. A transmission file is read from the
+tracking root (`SKRAFT_TRACKING_ROOT`, or `.copilot-tracking/skraft-plans` under the session
+directory), never from another `skraft-plans` directory.
+
+**A line read to the end, or refused.** An agent with no right on `src/` and `tests/` runs only
+shell lines the guard can read to the end; any other is refused:
+
+- a here-document or standard input fed to a program outside the input-only allowlist (`cat`,
+  `grep`, `jq`, `git commit`, the framework's CLIs…), `eval`, `source`, a shell behind a wrapper
+  (`env`, `sudo`, `timeout`…) or run on a script, an inline interpreter script (`node -e`);
+- a PowerShell command other than a reading cmdlet (`Get-*`, `Select-String`…), and text typed
+  into a running program (Copilot's `write_bash`);
+- a path it cannot resolve (`$(…)`, an unset variable) or a glob, wherever it could land; the
+  session directory and its ancestors hold `src/` and `tests/` (`rm -rf .`, `git checkout .`).
+
+`git apply`, `am`, `merge`, `pull`, `cherry-pick`, `revert`, `rebase`, `stash pop`, `switch`,
+`checkout` without `--`, `reset --hard`, `patch` fed a diff, `tar -x` and `unzip` rewrite the
+directory they run in; a framework CLI's `--out PATH` writes PATH. Only the bare null device
+(`/dev/null`, `nul`, `\\.\nul`) is no write. The verdict here-document, `git diff > …patch` and
+`git commit -F -` stay readable. For every role, a path the line cannot resolve counts as a
+reviewer's file when its last segment can be that file's name, and a directory copied or moved
+into the tracking root counts as written there.
 
 **Who calls.** Each host says it, and the one use case (`write-rights-guard.mjs`) judges:
 
 | Host | Where G8 runs | How the caller is known |
 |------|---------------|-------------------------|
 | Claude Code with mods | The mod's `tool.call` hook on `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` | The call's `agentId` and `$.agent.list()` (its type and who spawned it); the main loop's `agent_type` under `--agent`, from `SessionStart` |
-| Copilot CLI and Copilot app | The extension's `onPreToolUse` session hook, which also sees the sub-agents' calls | A sub-agent's `sessionId` matched to the `subagent.started` event the runtime sent (`toolCallId`, `agentId`, `agentName`); the main session's selected agent (`agent.getCurrent`, `subagent.selected`). No file is read |
+| Copilot CLI and Copilot app | The extension's `onPreToolUse` session hook, which also sees the sub-agents' calls (`create`, `edit`, `str_replace_editor`, `apply_patch`, `bash`, `powershell`, `write_bash`, `task`) | A sub-agent's `sessionId` matched to the `toolCallId` of the `subagent.started` event the runtime sent (`agentName`), its spawners followed by `parentId`; the main session's selected agent (`agent.getCurrent`, `subagent.selected`). The event's `agentId` names the emitter, never the started agent. No file is read |
 | Any host, settings hook | `PreToolUse` in `hooks.json` | The payload's agent name: Claude Code's `agent_type`; Copilot's `preToolUse` names none |
 
 An **unidentified caller passes** (fail-open), audited `UNIDENTIFIED_CALLER`: a Copilot settings
-hook, a sub-agent no event announced, a main session whose selection could not be read. G8
+hook, a sub-agent no event announced, a main session whose selection could not be read, an
+ungoverned agent whose spawner the host cannot name (an ambiguous mapping is never read as
+another agent: Copilot SDK 1.0.9 sends no `parentId`, so the main session is never assumed). G8
 refuses only a write it can attribute to a role that lacks the right; refusing the unnamed
 would refuse the Software Engineer with everyone else (#206). A Claude Code payload that names
 no agent comes from the main session without `--agent`, which no pipeline agent runs.
@@ -239,6 +266,12 @@ that refuses, a caught error); the settings hook keeps its rule: a hook failure 
 pass, except a tool write to a tracked `state.json`.
 
 **Batches.** Each call of a Copilot `toolCalls` batch is judged; one refusal refuses the batch.
+
+**What G8 does not read.** A program run on a script file (`node script.mjs`, `npm run`) writes
+what the script does: the guard reads the line, not the script. The Software Engineer and the
+DISTILL and DELIVER agents keep their shell: an unreadable line is not refused to them, and a
+rewrite of the session directory (`git reset --hard`) is not judged against the reviews. A
+PowerShell line is read as a POSIX line, its `$null` as the null device.
 
 **What still needs the settings hook.** G7, provenance, and G8 for a host that runs neither the
 mod nor the extension: Claude Code without mods, a Copilot host that does not load the plugin's

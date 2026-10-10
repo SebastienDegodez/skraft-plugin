@@ -500,16 +500,22 @@ sur les droits que `config:build` tire de la config (`writeRights`,
 [`domain/write-rights-policy.mjs`](../plugins/skraft-framework/src/domain/write-rights-policy.mjs)) :
 l'orchestrateur n'écrit rien, un reviewer ou une lentille seulement ses fichiers de
 transmission déclarés, un spécialiste ou un worker `src/` et `tests/` seulement en DISTILL et
-DELIVER, jamais le fichier de transmission d'un autre agent.
+DELIVER, jamais le fichier de transmission d'un autre agent. Un agent sans droit sur `src/` et
+`tests/` ne lance que des lignes shell que la garde lit jusqu'au bout (`shellOpacity`) ; ses
+chemins non résolus et ses globs comptent partout où ils pourraient aboutir. La provenance lui
+refuse tout agent sans dispatcher déclaré (`UNDECLARED_DISPATCH`) : là où l'hôte ne nomme pas
+qui a lancé un agent, l'héritage des droits ne tient pas.
 
 | Hôte | Où | Qui appelle | Garde en échec |
 |---|---|---|---|
 | Claude Code (mod) | `hooks/skraft-mod.mjs`, `tool.call` sur `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` | `agentId` de l'appel → `$.agent.list()` (type, parent, `spawnedBy`) ; boucle principale : `agent_type` du `SessionStart` (`--agent`) | refus (`.catch`) |
-| GitHub Copilot (extension) | `extension.mjs`, `hooks.onPreToolUse` de la session jointe, qui voit les appels des sous-agents | `sessionId` de l'entrée → événement `subagent.started` (`toolCallId`, `agentId`, `agentName`, `parentId`) ; session principale : `agent.getCurrent`, `subagent.selected` ; aucun fichier lu | refus d'une écriture |
-| Tout hôte (settings hook) | `hooks.json` → `src/cli/hook.mjs` `PreToolUse` | `agent_type` du payload (Claude Code) ; le `preToolUse` Copilot ne nomme personne | l'appel passe, sauf écriture d'un `state.json` suivi |
+| GitHub Copilot (extension) | `extension.mjs`, `hooks.onPreToolUse` de la session jointe, qui voit les appels des sous-agents ; provenance aussi sur `task` | `sessionId` de l'entrée → `toolCallId` d'un `subagent.started` (`agentName`), ceux qui l'ont lancé par `parentId` (absent du SDK 1.0.9 : chaîne incomplète) ; l'`agentId` de l'enveloppe nomme l'émetteur, jamais une clé ; session principale : `agent.getCurrent`, `subagent.selected` ; aucun fichier lu | refus d'une écriture ou d'un lancement d'agent |
+| Tout hôte (settings hook) | `hooks.json` → `src/cli/hook.mjs` `PreToolUse` | `agent_type` du payload (Claude Code), sans ceux qui l'ont lancé ; le `preToolUse` Copilot ne nomme personne | l'appel passe, sauf écriture d'un `state.json` suivi |
 
 Un appelant non identifié passe, audité `UNIDENTIFIED_CALLER` : refuser l'anonyme refuserait le
-Software Engineer avec les autres (#206). Le settings hook `PreToolUse` reste nécessaire : G7 et
+Software Engineer avec les autres (#206). Une chaîne que l'hôte ne connaît qu'en partie et
+qu'aucun agent gouverné ne commence est non identifiée : une correspondance ambiguë n'est jamais
+lue comme un autre agent. Le settings hook `PreToolUse` reste nécessaire : G7 et
 la provenance n'ont pas d'autre porteur, et G8 doit tenir sous Claude Code sans mods et sous un
 hôte Copilot qui ne charge pas l'extension (VS Code lit les hooks v1). Sous Claude Code avec mods,
 le mod juge le premier ; le settings hook rejuge le même appel, avec la même identité.

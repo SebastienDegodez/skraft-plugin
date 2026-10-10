@@ -14,9 +14,9 @@ sidebar_position: 1
 |------|---------|-------|-----------------|------------------------|
 | `SessionStart` | — | — | Exporte `SKRAFT_PLUGIN_ROOT` vers les appels Bash suivants (Claude Code, via `CLAUDE_ENV_FILE`) ; indique le chemin du plugin et le pipeline actif dans le contexte de session ; purge le journal d'audit et les signaux d'état obsolètes | Autorise |
 | `SubagentStart` | — | G2 | Indique à l'agent qui démarre ses skills obligatoires (`verify` ou `eager`) ; intègre le contenu des skills `eager` ; exclut les skills `on-demand` | Autorise |
-| `PreToolUse` | `Agent`, `Task` | Provenance | Aucun agent ne se dispatche lui-même ; un agent au dispatcher déclaré n'est dispatché que par lui | Autorise |
-| `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` | G7 | Aucune écriture directe dans le `state.json` d'un pipeline, son journal d'exécution ou le pointeur `.active-slug`, quelle que soit la phase | Refuse si le fichier, ou une commande shell lue comme le shell la lit, écrit ou supprime un `state.json` suivi |
-| `PreToolUse` | idem | G8 | Une écriture reste dans les droits d'écriture de l'appelant (`writeRights` de la config du framework) : l'orchestrateur n'écrit rien, un reviewer ou une lentille seulement ses fichiers de transmission déclarés, un spécialiste ou un worker `src/` et `tests/` seulement en DISTILL et DELIVER et jamais le fichier de transmission d'un autre agent. L'appelant est le nom d'agent du payload (l'`agent_type` de Claude Code) ; un appelant que le payload ne nomme pas passe, audité `UNIDENTIFIED_CALLER` | Autorise |
+| `PreToolUse` | `Agent`, `Task` | Provenance | Aucun agent ne se dispatche lui-même ; un agent au dispatcher déclaré n'est dispatché que par lui ; un agent sans droit sur `src/` et `tests/` (orchestrateur, reviewer, lentille, spécialiste RESEARCH ou DESIGN) ne lance aucun agent sans dispatcher déclaré (`UNDECLARED_DISPATCH`) | Autorise |
+| `PreToolUse` | `Bash`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `ApplyPatch`, `StrReplaceEditor`, `WriteBash` | G7 | Aucune écriture directe dans le `state.json` d'un pipeline, son journal d'exécution ou le pointeur `.active-slug`, quelle que soit la phase | Refuse si le fichier, ou une commande shell lue comme le shell la lit, écrit ou supprime un `state.json` suivi |
+| `PreToolUse` | idem | G8 | Une écriture reste dans les droits d'écriture de l'appelant (`writeRights` de la config du framework) : l'orchestrateur n'écrit rien, un reviewer ou une lentille seulement ses fichiers de transmission déclarés, un spécialiste ou un worker `src/` et `tests/` seulement en DISTILL et DELIVER et jamais le fichier de transmission d'un autre agent. L'appelant est le nom d'agent du payload (l'`agent_type` de Claude Code), sans ceux qui l'ont lancé ; un appelant que le payload ne nomme pas, ou non gouverné, passe, audité `UNIDENTIFIED_CALLER` | Autorise |
 | `PostToolUse` | `Read` | G3 | Chaque lecture d'un `SKILL.md` est inscrite au journal d'audit | Autorise |
 | `SubagentStop` | — | G3 | Un sous-agent dont le transcript ne montre aucun chargement d'un skill obligatoire (appel de l'outil skill, ou lecture de son `SKILL.md`) est renvoyé au travail ; les skills `on-demand` ne sont pas obligatoires ; un sous-agent déjà renvoyé est laissé partir | Autorise |
 
@@ -30,17 +30,21 @@ même cas d'usage (`application/write-rights-guard.mjs`) :
 | Hôte | Entrée | Appelant | Quand la garde échoue |
 |------|--------|----------|-----------------------|
 | Claude Code avec mods | `hooks/skraft-mod.mjs`, `tool.call` sur `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Bash` | `agentId` → `$.agent.list()` (type, parent, `spawnedBy`) ; boucle principale : l'`agent_type` du `SessionStart` | Refuse l'appel |
-| Copilot CLI, Copilot app | `com.github.copilot/extensions/skraft-pipeline/extension.mjs`, `hooks.onPreToolUse` | `sessionId` de l'entrée du hook → `subagent.started` (`toolCallId`, `agentId`, `agentName`, `parentId`) ; session principale : `agent.getCurrent`, `subagent.selected` / `subagent.deselected` | Refuse une écriture ; tout autre appel passe |
+| Copilot CLI, Copilot app | `com.github.copilot/extensions/skraft-pipeline/extension.mjs`, `hooks.onPreToolUse` ; elle applique aussi la provenance à `task` | `sessionId` de l'entrée du hook → le `toolCallId` d'un `subagent.started` (`agentName`), ceux qui l'ont lancé par `parentId` (absent du SDK 1.0.9 : la chaîne est alors incomplète) ; session principale : `agent.getCurrent`, `subagent.selected` / `subagent.deselected`. L'`agentId` de l'enveloppe nomme l'émetteur et n'est jamais une clé | Refuse une écriture ou un lancement d'agent ; tout autre appel passe |
 
 Un refus se lit `skraft G8: <raison>` ; l'extension l'audite (`SessionGuardEvaluated`,
 `source: copilot-extension`), le settings hook audite chaque appel jugé dans un pipeline avec
-son code : `WRITE_RIGHT_DENIED`, `CONFORMING`, `NOT_GOVERNED` (un agent hors des droits),
-`UNIDENTIFIED_CALLER`, `NO_WRITE`.
+son code : `WRITE_RIGHT_DENIED`, `CONFORMING`, `NOT_GOVERNED` (un agent hors des droits dont
+l'hôte nomme toute la chaîne), `UNIDENTIFIED_CALLER` (aucun appelant, ou un appelant non
+gouverné dont l'hôte ne sait pas nommer qui l'a lancé), `NO_WRITE`.
 
 Les deux manifestes du plugin portent les mêmes entrées, et chaque entrée exécute
 `src/cli/hook.mjs` (`src/cli/housekeeping.mjs` pour `SessionStart`). Copilot CLI envoie ses
 propres noms d'outils (`bash`, `create`, `str_replace`, `view`, …) ;
-`adapters/api/hooks/harness-input.mjs` les traduit vers les noms ci-dessus avant toute garde. Un
+`adapters/api/hooks/harness-input.mjs` les traduit vers les noms ci-dessus avant toute garde :
+`apply_patch` → `ApplyPatch` (son patch, en texte nu ou en `input`), `str_replace_editor` →
+`StrReplaceEditor`, `write_bash` → `WriteBash`, `powershell` → `Bash` (`$null` et `| Out-Null`
+lus comme le périphérique nul), l'`agent_type` de `task` → l'agent demandé. Un
 lot Copilot `toolCalls` est gardé appel par appel ; un seul appel refusé refuse le lot.
 
 Chaque événement d'outil a une seule entrée, sans matcher : VS Code ignore les matchers et
@@ -64,13 +68,26 @@ protégé.
 
 Restent invisibles : les alias, les fonctions shell définies dans une commande précédente,
 les scripts lancés depuis un fichier (`bash x.sh`, `source x`) et les programmes qui
-écrivent le fichier d'eux-mêmes. L'outil `powershell` de Copilot n'est pas lu.
+écrivent le fichier d'eux-mêmes. Une ligne PowerShell est lue comme une ligne POSIX.
 
-Pour G8, un here-document qui ne fait qu'alimenter l'entrée d'une commande est du texte ; celui
-qu'un shell ou un interpréteur lit comme son programme (`bash <<EOF`, `python3 - <<EOF`,
-`cat <<EOF | sh`) est lu. Un chemin sous le répertoire de la session est lu à partir de lui :
-`src/` et `tests/` sont ceux du projet. Le shell d'un reviewer peut toujours envoyer sa sortie
-vers `/dev/null` (ou `nul`).
+Pour G8, la lecture du shell connaît aussi `git apply`, `am`, `merge`, `pull`, `cherry-pick`,
+`revert`, `rebase`, `stash` (sauf `list`, `show`), `switch`, `checkout` sans `--` et
+`reset --hard` / `--merge` / `--keep` (ils réécrivent le répertoire où ils tournent), `patch`
+(son fichier, `-o`, ou le répertoire où aboutit le diff qu'on lui fournit), `tar -x`, `unzip` et
+le `--out CHEMIN` d'une CLI. Un here-document n'est écarté que si chaque commande de son
+pipeline lit son entrée comme des données (`cat`, `grep`, `jq`, `git commit`, les CLI du
+framework…) ; sinon il est lu comme des commandes. Un chemin sous le répertoire de la session
+est lu à partir de lui : `src/` et `tests/` sont ceux du projet ; les fichiers de transmission
+sont lus depuis la racine de suivi. Seuls `/dev/null`, `/dev/std*`, `/dev/fd/N`, un `nul` nu et
+`\\.\nul` sont des périphériques.
+
+Un agent sans droit sur `src/` et `tests/` se voit refuser une ligne que `shellOpacity`
+(`domain/session-guard-policy.mjs`) ne sait pas lire jusqu'au bout : un programme nourri d'un
+here-document ou de son entrée standard hors de cette liste, `eval`, `source`, `env -S`, un
+shell derrière un wrapper ou lancé sur un script, un script inline d'interpréteur, une commande
+PowerShell autre qu'un cmdlet de lecture, l'entrée de `WriteBash`. Ses chemins non résolus et
+ses globs comptent partout où ils pourraient aboutir, et le répertoire de la session et ses
+ancêtres contiennent `src/` et `tests/`.
 
 ## Politiques de skills
 

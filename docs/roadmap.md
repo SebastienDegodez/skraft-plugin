@@ -253,7 +253,9 @@ autre agent. L'identité est résolue là où l'hôte la donne : le mod Claude C
 `agentId` → `$.agent.list()`), l'extension Copilot (`onPreToolUse`, événements
 `subagent.started`), le settings hook (`agent_type`) pour un hôte sans l'un ni l'autre. Un
 appelant non identifié passe, audité `UNIDENTIFIED_CALLER` ; un lot `toolCalls` est jugé appel
-par appel. Suivi dans [#208](https://github.com/SebastienDegodez/skraft-plugin/issues/208).
+par appel. Un agent sans droit sur `src/` et `tests/` ne lance que des lignes shell lisibles
+jusqu'au bout et aucun agent sans dispatcher déclaré. Suivi dans
+[#208](https://github.com/SebastienDegodez/skraft-plugin/issues/208).
 
 **Dépend de :** US3
 
