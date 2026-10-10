@@ -190,6 +190,8 @@ test('a project kept under a src/ directory is not all workspace: paths are read
   assert.equal(researcher(home, write('/tmp/src/a.ts')).allowed, false, 'outside the project, a src/ segment still counts')
   assert.equal(researcher('C:\\Users\\me\\src\\acme', write('C:\\Users\\me\\src\\acme\\docs\\notes.md')).allowed, true)
   assert.equal(researcher('c:\\users\\me\\src\\acme', write('C:\\Users\\me\\src\\acme\\tests\\a.ts')).allowed, false)
+  assert.equal(researcher('C:\\Users\\me\\src\\acme', shell('rm C:\\Users\\me\\src\\acme\\build\\out.txt')).allowed, true, 'a Windows spelling of the session directory')
+  assert.equal(researcher('/', shell('rm /src/a.ts')).allowed, false, 'the filesystem root is no project root')
   assert.equal(researcher(undefined, write(`${home}/docs/notes.md`)).allowed, false, 'without a session directory, any src/ segment counts')
 })
 
@@ -208,4 +210,35 @@ test('a here-document body is text unless a shell or an interpreter reads it as 
     assert.equal(judge(reviewer, shell(command)).allowed, false, command)
   }
   assert.equal(judge(reviewer, shell(`node build.mjs <<EOF\nx > src/a.ts\nEOF`)).allowed, true, 'a script reads the body as its input')
+})
+
+test('a find that reaches a review, to rewrite or delete it, is a write to it', () => {
+  const engineer = by('skraft:software-engineer')
+  for (const command of [
+    `find ${TRACK}/reviews -name '*.md' -exec sh -c 'echo APPROVED > {}' \;`,
+    `find ${TRACK}/reviews -name '*.md' -delete`,
+  ]) assert.equal(judge(engineer, shell(command)).allowed, false, command)
+  assert.equal(judge(engineer, shell("find src -name '*.ts' -exec sed -i s/a/b/ {} +")).allowed, true)
+})
+
+test('declared files may name a placeholder, a glob within a segment, or any depth', () => {
+  const custom = createWriteRightsGuard({
+    config: {
+      writeRights: {
+        lens: { role: 'lens', phase: 'DELIVER', files: ['docs/**/notes-*.md', '.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/lens-{story}.txt'] },
+        engineer: { role: 'specialist', phase: 'DELIVER', workspace: true },
+      },
+    },
+  })
+  const lens = (call) => custom.judge({ caller: by('lens'), calls: [call], cwd: '/repo' }).allowed
+  assert.equal(lens(write('docs/notes-a.md')), true)
+  assert.equal(lens(write('docs/x/y/notes-b.md')), true)
+  assert.equal(lens(write('docs/x/notes.md')), false)
+  assert.equal(lens(write('docs/x/notes-b.md.bak')), false)
+  assert.equal(lens(write(`${TRACK}/reviews/2026-10-10/lens-s1.txt`)), true)
+  assert.equal(lens(write(`${TRACK}/reviews/2026-10-10/x/lens-s1.txt`)), false, 'a placeholder is one segment')
+  const engineer = (call) => custom.judge({ caller: by('engineer'), calls: [call], cwd: '/repo' }).allowed
+  assert.equal(engineer(write('docs/a/notes-x.md')), false, "the lens's file is no one else's")
+  assert.equal(engineer(shell(`rm -rf ${TRACK}/reviews/2026-10-10`)), false, 'a directory that holds a transmission file')
+  assert.equal(engineer(shell('rm -rf docs')), true, 'only a tracked file has holding directories')
 })

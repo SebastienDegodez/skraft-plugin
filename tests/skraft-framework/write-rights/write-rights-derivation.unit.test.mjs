@@ -18,7 +18,7 @@ const DESCRIPTORS = [
   agent('software-engineer', 'Skraft - Software Engineer', { phase: 'DELIVER', dispatchedBy: 'skraft-pipeline' }),
   agent('software-engineer-reviewer', 'Skraft - Software Engineer Reviewer', {
     phase: 'DELIVER-REVIEW', dispatchedBy: 'skraft-pipeline',
-    outputs: [tracked('reviews/{date}/deliver-review-{N}.md'), `${tracked('reviews/{date}/diff-{story}.patch')} (optional, Phase 2 diff the lenses read)`],
+    outputs: [tracked('reviews/{date}/deliver-review-{N}.md'), `${tracked('reviews/{date}/diff-{story}.patch')} (optional, Phase 2 diff the lenses read)`, tracked('reviews/{date}/deliver-review-{N}.md')],
   }),
   agent('contract-testing-worker', 'contract-testing-worker', { dispatchedBy: 'software-engineer', outputs: ['structured result block (stack, files[]) — NO commit'] }),
   agent('stub-worker', 'stub-worker', { dispatchedBy: 'contract-testing-worker' }),
@@ -46,6 +46,7 @@ test('config:build writes writeRights: one entry per pipeline agent, by role', (
     'sub-lens': { role: 'lens', phase: 'DELIVER', files: [tracked('reviews/{date}/sub-{story}.md')] },
   })
   assert.equal(Object.hasOwn(writeRights, 'planning-dor-lens'), false, 'an agent outside the pipeline is not governed')
+  assert.deepEqual(Object.keys(writeRights), Object.keys(writeRights).slice().sort((x, y) => x.localeCompare(y)), 'a stable order: config:check compares the file')
 })
 
 test('the workspace phases are the pipeline definition\'s: DISTILL and DELIVER', () => {

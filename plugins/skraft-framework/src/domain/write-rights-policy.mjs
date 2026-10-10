@@ -111,13 +111,15 @@ export const governingAgent = (chain, config) => {
 const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 // A declared path as a regular expression on a '/'-separated path: {placeholder} is one
-// segment's worth of text, ** any depth, * any text within a segment. A path under the
+// segment's worth of text, **/ any number of directories, ** any text, * any text within a
+// segment. A path under the
 // tracking directory matches wherever the tracking directory is (its name alone counts,
 // as G7 reads it).
 const pathPattern = (declared, trackingDirs) => {
   const tracked = declared.startsWith(DECLARED_TRACKING_PREFIX)
   const rest = tracked ? declared.slice(DECLARED_TRACKING_PREFIX.length) : declared
-  const body = rest.split(/(\{[^}]*\}|\*\*|\*)/).map((piece) => {
+  const body = rest.split(/(\{[^}]*\}|\*\*\/|\*\*|\*)/).map((piece) => {
+    if (piece === '**/') return '(?:.*/)?'
     if (piece === '**') return '.*'
     if (piece === '*') return '[^/]*'
     if (/^\{[^}]*\}$/.test(piece)) return '[^/]+'
@@ -205,7 +207,7 @@ const denied = (reason) => Err({ code: WRITE_RIGHT_DENIED, reason })
 // does not name passes.
 export const judgeWrite = ({ agent, command: shellLine, filePath, cwd } = {}, compiled = compileWriteRights({})) => {
   const rights = isString(agent) ? compiled.writeRights[agent] : undefined
-  if (!rights) return Ok({ reason: isString(agent) ? `${agent} is not governed by write rights` : 'no governed agent' })
+  if (!rights) return Ok({ governed: false })
   const path = isString(filePath) ? normalised(filePath, cwd) : null
   const command = withoutHereDocBodies(shellLine)
 
@@ -219,7 +221,7 @@ export const judgeWrite = ({ agent, command: shellLine, filePath, cwd } = {}, co
     if (commandWritesWhere(command, { matches: outside, holds: outside, sample: '/x', cwd })) {
       return denied(`${agent} (${rights.role}) writes ${allowed}; this command writes elsewhere`)
     }
-    return Ok({ reason: path !== null ? `${filePath} is a transmission file of ${agent}` : `no write outside the rights of ${agent}` })
+    return Ok({ governed: true })
   }
 
   const theirs = compiled.transmission.filter((file) => file.owner !== agent)
@@ -238,5 +240,5 @@ export const judgeWrite = ({ agent, command: shellLine, filePath, cwd } = {}, co
   if (!rights.workspace && (isWorkspacePath(path, { cwd }) || commandWritesWorkspace(command, { cwd }))) {
     return denied(`${agent} works in ${rights.phase}, whose agents never write src/ or tests/`)
   }
-  return Ok({ reason: `write within the ${rights.phase} rights of ${agent}` })
+  return Ok({ governed: true })
 }
