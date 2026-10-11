@@ -71,7 +71,8 @@ different days compare.
 
 One JSON object per line, UTF-8, `\n` or `\r\n`. Blank lines are skipped. A line that is not
 JSON makes `compare` exit 2. Every event carries `type`, `at` (ISO-8601 UTC) and `prev`
-(hash of the previous line, `null` on the first); the harness does **not** verify the chain.
+(lowercase hex SHA-256 of the UTF-8 bytes of the previous line, without its line ending;
+`null` on the first); the harness does **not** verify the chain, the engine does.
 Unknown `type` values and missing payload fields are ignored.
 
 | `type` | Payload read | Effect on the summary |
@@ -84,6 +85,7 @@ Unknown `type` values and missing payload fields are ignored.
 | `decision.recorded` | — | not compared. |
 | `phase.closed` | `phase` | appended once to `phasesReached`. |
 | `run.finished` | `at`, `status` | duration end; `status` copied (`completed` means a full run). |
+| `run.stopped` | — | not compared: the host could not start an agent; the next run resumes the open step. |
 
 Rules lot 1 must honour so v1 and v2 compare:
 
