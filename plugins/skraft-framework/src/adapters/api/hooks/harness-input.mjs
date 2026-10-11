@@ -53,7 +53,7 @@ const harnessOf = (raw, env) => {
   const explicit = raw.harness ?? raw.skraftHarness ?? env?.SKRAFT_HARNESS
   if (explicit) return explicit
   if (raw.agent_type != null || raw.agentType != null) return 'claude-code'
-  if (raw.toolArgs != null || raw.tool_args != null || raw.agentName != null) return 'copilot'
+  if (raw.toolArgs != null || raw.tool_args != null || raw.agentName != null || Array.isArray(raw.toolCalls)) return 'copilot'
   if (env?.PLUGIN_ROOT && !env?.CLAUDE_PLUGIN_ROOT) return 'copilot'
   // Installed Copilot plugin hooks also expose CLAUDE_PLUGIN_ROOT. Wire shape,
   // not that shared variable, is the authoritative harness discriminator.
@@ -61,23 +61,45 @@ const harnessOf = (raw, env) => {
   return undefined
 }
 
-export const fromHarnessInput = (raw = {}, { env = process.env } = {}) => {
-  const toolName = canonicalToolName(raw.toolName ?? raw.tool_name)
-  const toolInput = asToolInput(raw.toolInput ?? raw.tool_input ?? raw.toolArgs ?? raw.tool_args)
-  const agentName = raw.agentName ?? raw.agent_name ?? raw.agentType ?? raw.agent_type
+// The tool-call signals of one call: the payload root, or one entry of a batch (whose
+// entries name the tool `name` and its arguments `args`).
+const toolCallOf = (raw, { name, args } = {}) => {
+  const toolName = canonicalToolName(raw.toolName ?? raw.tool_name ?? name)
+  const toolInput = asToolInput(raw.toolInput ?? raw.tool_input ?? raw.toolArgs ?? raw.tool_args ?? args)
   const requestedAgent = raw.requestedAgent ?? raw.requested_agent
     ?? toolInput?.subagentType ?? toolInput?.subagent_type
   const filePath = raw.filePath ?? raw.file_path
     ?? toolInput?.filePath ?? toolInput?.file_path ?? toolInput?.path ?? toolInput?.notebook_path
+  return {
+    ...(toolName === undefined ? {} : { toolName }),
+    ...(toolInput === undefined ? {} : { toolInput }),
+    ...(requestedAgent === undefined ? {} : { requestedAgent }),
+    ...(filePath === undefined ? {} : { filePath }),
+  }
+}
+
+// Copilot batches a turn's tool calls into `toolCalls: [{ id, name, args }]` instead of
+// one `toolName` / `toolArgs`. Each entry becomes a framework tool call the guards read.
+const toolCallsOf = (value) => {
+  if (!Array.isArray(value)) return undefined
+  return value
+    .filter((call) => call && typeof call === 'object')
+    .map((call) => ({
+      ...(call.id === undefined ? {} : { toolCallId: call.id }),
+      ...toolCallOf(call, { name: call.name, args: call.args ?? call.arguments }),
+    }))
+}
+
+export const fromHarnessInput = (raw = {}, { env = process.env } = {}) => {
+  const agentName = raw.agentName ?? raw.agent_name ?? raw.agentType ?? raw.agent_type
+  const toolCalls = toolCallsOf(raw.toolCalls ?? raw.tool_calls)
   const harness = harnessOf(raw, env)
 
   return {
     ...raw,
-    ...(toolName === undefined ? {} : { toolName }),
-    ...(toolInput === undefined ? {} : { toolInput }),
+    ...toolCallOf(raw),
     ...(agentName === undefined ? {} : { agentName }),
-    ...(requestedAgent === undefined ? {} : { requestedAgent }),
-    ...(filePath === undefined ? {} : { filePath }),
+    ...(toolCalls === undefined ? {} : { toolCalls }),
     ...(harness === undefined ? {} : { harness }),
   }
 }

@@ -1,0 +1,25 @@
+{
+  "subagentWrites": {
+    "sessionId": "toolu_014aGPtGfrsfxki2m5EBrg7V",
+    "cwd": "/repo",
+    "toolCalls": [
+      { "id": "toolu_01ES27dTPDCspGhmmkHprfVi", "name": "create", "args": "{\"path\":\"/repo/src/Orders/Order.cs\",\"file_text\":\"namespace Orders;\"}" },
+      { "id": "toolu_01WBndkP6CXK482YgNHwRVkg", "name": "edit", "args": "{\"path\":\"/repo/tests/Orders.Tests/OrderTests.cs\",\"old_str\":\"a\",\"new_str\":\"b\"}" }
+    ]
+  },
+  "orchestratorWrite": {
+    "sessionId": "0222dfae-1042-4c31-8df6-8253f208e47b",
+    "cwd": "/repo",
+    "toolCalls": [
+      { "id": "toolu_01XzYMu97jSvQfdttMBb3E3C", "name": "create", "args": "{\"path\":\"/repo/src/Orders/Order.cs\",\"file_text\":\"namespace Orders;\"}" }
+    ]
+  },
+  "trackedStateInBatch": {
+    "sessionId": "toolu_014aGPtGfrsfxki2m5EBrg7V",
+    "cwd": "/repo",
+    "toolCalls": [
+      { "id": "toolu_01BADNAwu4RfpAaivGvgswpw", "name": "view", "args": "{\"path\":\"/repo/src/Orders/Order.cs\"}" },
+      { "id": "toolu_01HBeE8TXcP8PABZrFjVLv1f", "name": "bash", "args": "{\"command\":\"echo {} >| .copilot-tracking/skraft-plans/checkout/state.json\",\"description\":\"Reset state\"}" }
+    ]
+  }
+}

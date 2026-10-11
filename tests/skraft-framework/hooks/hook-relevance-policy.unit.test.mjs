@@ -48,3 +48,12 @@ test('hook-relevance: lifecycle and unnamed events always run', () => {
   }
   assert.equal(isHookRelevant(), true)
 })
+
+test('hook-relevance: a Copilot toolCalls batch is relevant when any of its calls is', () => {
+  const batch = (...toolNames) => ({ toolCalls: toolNames.map((toolName) => ({ toolName })) })
+  assert.equal(isHookRelevant({ event: 'PreToolUse', payload: batch('Read', 'Write') }), true)
+  assert.equal(isHookRelevant({ event: 'PreToolUse', payload: batch('Read', 'grep') }), false)
+  assert.equal(isHookRelevant({ event: 'PreToolUse', payload: { toolCalls: [{ toolName: 'runSubagent', requestedAgent: 'software-engineer' }] } }), true)
+  assert.equal(isHookRelevant({ event: 'PreToolUse', payload: { toolCalls: [null, 'Write'] } }), false)
+  assert.equal(isHookRelevant({ event: 'PostToolUse', payload: { toolCalls: [{ toolName: 'Read', filePath: '/p/skills/x/SKILL.md' }] } }), true)
+})

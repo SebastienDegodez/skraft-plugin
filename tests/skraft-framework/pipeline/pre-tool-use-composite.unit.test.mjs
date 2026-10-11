@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createPreToolUseCompositeService } from '../../../plugins/skraft-framework/src/application/pre-tool-use-composite.mjs'
 
 // The composite fans a single PreToolUse event out to the two guards that govern it —
-// G1 dispatch-order (only for orchestrator-tracked agent dispatches) and G7/G8 session
+// G1 dispatch-order (only for orchestrator-tracked agent dispatches) and G7 session
 // guard (always) — then combines their harness decisions fail-closed (block > deny > allow).
 
 const recordingGuard = (decision) => {
@@ -125,4 +125,39 @@ test('a handoff refusal denies the dispatch even when every other guard allows',
   })
   const result = await svc.handle({ projectSlug: 'proj', requestedAgent: 'software-engineer' })
   assert.deepEqual(result, { decision: 'deny', message: 'omits the test plan' })
+})
+
+// ─── Copilot toolCalls batch ────────────────────────────────────────────────
+
+test('a toolCalls batch runs the guards once per call, each with the session context', async () => {
+  const sessionGuard = recordingGuard(ALLOW)
+  const svc = createPreToolUseCompositeService({ sessionGuard })
+
+  await svc.handle({
+    projectSlug: 'proj', sessionId: 'child', toolName: 'stale',
+    toolCalls: [
+      { toolCallId: 't1', toolName: 'Write', filePath: 'src/A.cs' },
+      { toolCallId: 't2', toolName: 'Bash', toolInput: { command: 'ls' } },
+    ],
+  })
+  assert.deepEqual(sessionGuard.calls, [
+    { projectSlug: 'proj', sessionId: 'child', toolCallId: 't1', toolName: 'Write', filePath: 'src/A.cs' },
+    { projectSlug: 'proj', sessionId: 'child', toolCallId: 't2', toolName: 'Bash', toolInput: { command: 'ls' } },
+  ])
+})
+
+test('one denied call in a batch denies the batch', async () => {
+  const sessionGuard = { handle: async (p) => (p.filePath === 'src/B.cs' ? DENY : ALLOW) }
+  const svc = createPreToolUseCompositeService({ sessionGuard })
+
+  const result = await svc.handle({ toolCalls: [{ toolName: 'Write', filePath: 'src/A.cs' }, { toolName: 'Write', filePath: 'src/B.cs' }] })
+  assert.equal(result.decision, 'deny')
+})
+
+test('a dispatch inside a batch reaches the dispatch guards', async () => {
+  const dispatchGuard = recordingGuard(ALLOW)
+  const svc = createPreToolUseCompositeService({ dispatchGuard })
+
+  await svc.handle({ projectSlug: 'proj', toolCalls: [{ toolName: 'Read' }, { toolName: 'Agent', requestedAgent: 'solution-architect' }] })
+  assert.deepEqual(dispatchGuard.calls, [{ requestedAgent: 'solution-architect', projectSlug: 'proj' }])
 })
