@@ -52,7 +52,7 @@ Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about co
 
 ## Output path
 
-Write the research document where the orchestrator's dispatch header tells you to. Invoked standalone (no orchestrator), write it to `.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md`. Begin the file with `<!-- markdownlint-disable-file -->`. Use plain-text workspace-relative paths inside the document — never markdown links or `#file:` directives (VS Code flags missing targets and floods the Problems tab).
+Fill the research document in place at the absolute path your dispatch brief lists: the engine pre-created it from the template below; never create another copy. Invoked standalone (no engine), write it to `.copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md`. Begin the file with `<!-- markdownlint-disable-file -->`. Use plain-text workspace-relative paths inside the document — never markdown links or `#file:` directives (VS Code flags missing targets and floods the Problems tab).
 
 ## Required phases
 
