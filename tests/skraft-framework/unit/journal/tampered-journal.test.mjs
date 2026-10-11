@@ -86,3 +86,11 @@ test('init on a tampered journal is refused and leaves the active pipeline as it
   assert.deepEqual(outcome, { ok: false, slug: 'checkout', created: false, code: 'journal-tampered', reason: tamperedOutcome(1, 'does not open the chain').reason })
   assert.equal(tracking.activeSlug, 'other')
 })
+
+test('a line that is JSON but not an event object breaks the chain', async () => {
+  for (const line of ['null', '[]', '42', '"text"']) {
+    const run = await startedRun([])
+    run.tracking.rewriteJournal('checkout', (lines) => [...lines, line])
+    assert.deepEqual(await createRunPipeline(run.deps).run({}), tamperedOutcome(2, 'is not JSON'))
+  }
+})

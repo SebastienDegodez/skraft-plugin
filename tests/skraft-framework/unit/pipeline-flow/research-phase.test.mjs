@@ -27,7 +27,7 @@ const hostWith = (behaviours) => {
   return { tracking, agentRunner, progress, deps }
 }
 
-const researchWritten = (tracking) => () => tracking.write('checkout', OUTPUT, `${TEMPLATE}\n## Key discoveries\nThe cart lives in src/cart.\n`)
+const researchWritten = (tracking) => () => tracking.write('checkout', OUTPUT, `${TEMPLATE.replace('{{topic}}', 'Pay by card')}\n## Key discoveries\nThe cart lives in src/cart.\n`)
 const nothingWritten = () => undefined
 
 const startCheckout = async (deps, story = { issue: 42, title: 'Pay by card' }) => {
@@ -108,7 +108,7 @@ test('a research document left as its template, or deleted, counts as missing', 
   assert.equal((await startCheckout(left.deps)).code, 'missing-outputs')
   assert.equal(await left.tracking.read('checkout', OUTPUT), TEMPLATE)
 
-  const deleted = hostWith([() => deleted.tracking.files.delete(`checkout/${OUTPUT}`), nothingWritten])
+  const deleted = hostWith([() => { deleted.tracking.files.delete(`checkout/${OUTPUT}`) }, nothingWritten])
   const outcome = await startCheckout(deleted.deps)
   assert.equal(outcome.code, 'missing-outputs')
 

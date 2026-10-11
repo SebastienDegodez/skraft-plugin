@@ -22,12 +22,21 @@ export const openJournal = async ({ journal: store, hasher, clock }, slug) => {
   /** @type {RunEvent[]} */
   const events = lines.map((line) => JSON.parse(line))
   let last = hashes.at(-1) ?? null
+  let count = lines.length
   const append = async (/** @type {string} */ type, payload = {}) => {
+    const now = await store.lines(slug)
+    if (now.length !== count || (count > 0 && (await hasher.sha256(now[count - 1])) !== last)) {
+      throw new JournalConflict(`${slug}: another run wrote events.jsonl meanwhile; run again once it stops`)
+    }
     const event = { type, at: clock.now().toISOString(), prev: last, ...payload }
     const line = JSON.stringify(event)
     await store.append(slug, line)
     last = await hasher.sha256(line)
+    count += 1
     events.push(event)
   }
   return { ok: true, journal: { events, append } }
 }
+
+/** Another writer appended to the journal since it was opened. */
+export class JournalConflict extends Error {}
