@@ -22,10 +22,10 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Check native regressions",
+			"label": "Check native Claude agent projection",
 			"type": "process",
 			"command": "node",
-			"args": ["--test", "tests/skraft-framework/native-compatibility/*.test.mjs"],
+			"args": ["--test", "tests/tooling/native-compatibility/*.test.mjs"],
 			"options": { "cwd": "${workspaceFolder}" },
 			"problemMatcher": []
 		},
