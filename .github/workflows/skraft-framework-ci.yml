@@ -30,7 +30,7 @@ on:
       - '.agents/plugins/marketplace.json'
       - '.github/workflows/skraft-framework-ci.yml'
   pull_request:
-    branches: [main, integration/v2-next]
+    branches: [main, integration/v2-next, 'v2/lot-*']
     paths:
       - 'plugins/skraft-framework/engine/**'
       - 'plugins/skraft-framework/hooks/**'
