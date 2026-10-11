@@ -230,7 +230,7 @@ describe('Vally real-agent executor', () => {
     )
 
     calls.sessions[0].onPermissionRequest({ kind: 'write', fileName: '/tmp/work/src/domain.mjs' })
-    const [pluginRoot] = /\/\S*skraft-plugin-root-\S+?(?=\/src\/cli\/state\.mjs)/.exec(calls.sessions[0].customAgents[0].prompt)
+    const [pluginRoot] = /\/\S*skraft-plugin-root-\S+?(?=\/skills\/<skill>\/scripts\/)/.exec(calls.sessions[0].customAgents[0].prompt)
     deepStrictEqual(permissionCalls[0].context, { stimulus, workDir: '/tmp/work', readableRoots: ['/tmp/work', pluginRoot, pluginSkills] })
     await executor.shutdown()
   })
