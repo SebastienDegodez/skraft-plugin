@@ -1,0 +1,5 @@
+node_modules/
+# The root .gitignore drops every package-lock.json; CI runs `npm ci --prefix plugins/skraft-framework/engine`.
+!package-lock.json
+.stryker-tmp/
+reports/
