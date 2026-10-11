@@ -6,6 +6,9 @@ test('/skraft alone, or blank, asks for the status', () => {
   assert.deepEqual(parseSkraftCommand(''), { command: 'status' })
   assert.deepEqual(parseSkraftCommand('  \t '), { command: 'status' })
   assert.deepEqual(parseSkraftCommand(undefined), { command: 'status' })
+  assert.deepEqual(parseSkraftCommand('status'), { command: 'status' })
+  assert.deepEqual(parseSkraftCommand(' help '), { command: 'status' })
+  assert.equal(parseSkraftCommand('status #4').command, 'run')
 })
 
 test('/skraft <slug> [#issue] [title…] asks for a run with its story', () => {

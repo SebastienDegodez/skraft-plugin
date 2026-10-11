@@ -85,3 +85,14 @@ test('the workflow passes agentIds through and blocks when the session lacks the
   assert.equal(outcome.code, 'agent-unavailable')
   assert.equal(missing.calls.length, 0)
 })
+
+test('an agent call the host rejects stops the run as agent-failed instead of throwing', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [async () => { throw new Error('unknown agent skraft:solution-researcher') }] })
+
+  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+
+  assert.equal(outcome.code, 'agent-failed')
+  assert.equal(outcome.reason, 'solution-researcher stopped without finishing: skraft:solution-researcher failed: unknown agent skraft:solution-researcher')
+})

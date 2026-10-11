@@ -41,7 +41,7 @@ export const briefPaths = (prompt) => {
  * would ({ agentId } or { deny }), or completes the turn itself.
  */
 export const fillsItsOutputs = (text = '\n## Key discoveries\nThe cart lives in src/cart.\n') => async (spawn, host) => {
-  for (const path of briefPaths(spawn.prompt).outputs) await nodeModFs.write(path, `${await nodeModFs.read(path)}${text}`)
+  for (const path of briefPaths(spawn.prompt).outputs) await nodeModFs.write(path, `${(await nodeModFs.read(path)).replace(/\{\{[^{}]*\}\}/g, 'filled in')}${text}`)
   return host.answer(spawn)
 }
 export const writesNothing = () => async (spawn, host) => host.answer(spawn)

@@ -71,7 +71,12 @@ export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {} }) => {
           error: `agent "${agent}" is not available in this Copilot session (agents: ${known}); install or enable the skraft plugin, or pass agentIds`,
         }
       }
-      const text = await ctx.agent(prompt, { label, agent: name })
+      let text
+      try {
+        text = await ctx.agent(prompt, { label, agent: name })
+      } catch (error) {
+        return { ok: false, text: '', error: `${name} failed: ${error instanceof Error ? error.message : String(error)}` }
+      }
       if (typeof text === 'string' && text.trim() !== '') return { ok: true, text }
       return { ok: false, text: '', error: `${name} answered nothing` }
     },

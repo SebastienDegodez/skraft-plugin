@@ -40,7 +40,7 @@ export const fillsOutputs = (findings = 'Findings.\n') => async ({ outputs }) =>
   const template = await readFile(TEMPLATE_PATH, 'utf8')
   for (const path of outputs) {
     await mkdir(dirname(path), { recursive: true })
-    await writeFile(path, `${template}${findings}`, 'utf8')
+    await writeFile(path, `${template.replace(/\{\{[^{}]*\}\}/g, 'filled in')}${findings}`, 'utf8')
   }
   return 'research written'
 }
