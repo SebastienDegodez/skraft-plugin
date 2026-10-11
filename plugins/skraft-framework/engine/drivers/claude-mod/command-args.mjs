@@ -9,7 +9,7 @@
  */
 
 /**
- *   ''                          → status
+ *   '', 'status', 'help'        → status (reserved words, never slugs)
  *   'decide …'                  → decide
  *   'checkout #42 Pay by card'  → run checkout, story { issue: 42, title: 'Pay by card' }
  * @param {unknown} args everything after `/skraft`, as typed
@@ -17,8 +17,8 @@
  */
 export const parseSkraftCommand = (args) => {
   const words = String(args ?? '').trim().split(/\s+/).filter((word) => word !== '')
-  if (words.length === 0) return { command: 'status' }
   const [first, ...rest] = words
+  if (first === undefined || ((first === 'status' || first === 'help') && rest.length === 0)) return { command: 'status' }
   if (first === 'decide') return { command: 'decide', words: rest }
   const issue = /^#(\d+)$/.exec(rest[0] ?? '')
   const titleWords = issue ? rest.slice(1) : rest
