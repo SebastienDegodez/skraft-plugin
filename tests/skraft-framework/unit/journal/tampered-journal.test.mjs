@@ -75,3 +75,14 @@ test('a removed event or an unreadable line breaks the chain too', async () => {
   reordered.tracking.rewriteJournal('checkout', (lines) => [lines[0].replace('"prev":null', '"prev":"0"')])
   assert.deepEqual(await createRunPipeline(reordered.deps).run({}), tamperedOutcome(1, 'does not open the chain'))
 })
+
+test('init on a tampered journal is refused and leaves the active pipeline as it was', async () => {
+  const { tracking, deps } = await startedRun([])
+  await tracking.activate('other')
+  tracking.rewriteJournal('checkout', (lines) => [lines[0].replace('"prev":null', '"prev":"0"')])
+
+  const outcome = await createInit(deps).init({ slug: 'checkout' })
+
+  assert.deepEqual(outcome, { ok: false, slug: 'checkout', created: false, code: 'journal-tampered', reason: tamperedOutcome(1, 'does not open the chain').reason })
+  assert.equal(tracking.activeSlug, 'other')
+})

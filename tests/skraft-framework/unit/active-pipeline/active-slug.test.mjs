@@ -68,7 +68,7 @@ test('init refuses a slug that is not kebab-case and changes nothing', async () 
 
   for (const slug of ['Checkout', 'check out', '../x', '', undefined, 'a--b', '-a']) {
     const outcome = await createInit(deps).init({ slug })
-    assert.deepEqual(outcome, { ok: false, slug: slug ?? null, created: false, reason: `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}` })
+    assert.deepEqual(outcome, { ok: false, slug: slug ?? null, created: false, code: 'invalid-slug', reason: `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}` })
   }
   assert.equal(tracking.activeSlug, null)
   assert.equal(tracking.files.size, 0)
@@ -80,7 +80,7 @@ test('init makes the slug the active pipeline, switching from another one', asyn
 
   const outcome = await createInit(deps).init({ slug: 'refund-2' })
 
-  assert.deepEqual(outcome, { ok: true, slug: 'refund-2', created: true, reason: 'refund-2 is the active pipeline' })
+  assert.deepEqual(outcome, { ok: true, slug: 'refund-2', created: true, code: null, reason: 'refund-2 is the active pipeline' })
   assert.equal(tracking.activeSlug, 'refund-2')
   assert.equal(tracking.journal('refund-2')[0].type, 'run.started')
   assert.equal(tracking.journal('refund-2')[0].workflow, 'skraft')
