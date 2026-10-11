@@ -25,7 +25,7 @@ const host = () => {
   return { tracking, clock, deps, agentRunner: deps.agentRunner }
 }
 
-const fill = (tracking) => tracking.write('checkout', OUTPUT, `${TEMPLATE}Findings.\n`)
+const fill = (tracking) => tracking.write('checkout', OUTPUT, `${TEMPLATE.replace('{{topic}}', 'Checkout')}Findings.\n`)
 const interrupted = () => { throw new Error('host interrupted') }
 
 test('a run resumed after RESEARCH closed dispatches nothing and writes nothing', async () => {

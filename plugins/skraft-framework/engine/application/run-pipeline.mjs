@@ -4,6 +4,7 @@ import { deriveRun } from '../domain/journal/run-state.mjs'
 import { composeBrief, dispatchLabel } from '../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath } from '../domain/pipeline/outputs.mjs'
 import { openActiveRun } from './active-run.mjs'
+import { JournalConflict } from './run-journal.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -32,34 +33,48 @@ export const createRunPipeline = (deps, definition = DEFAULT_PIPELINE) => Object
   run: async ({ slug: requested } = {}) => {
     const opened = await openActiveRun(deps, requested)
     if (!opened.ok) return opened.outcome
-    const { slug, journal } = opened
-    let shown = null
-    for (;;) {
-      const run = deriveRun(journal.events)
-      const next = nextStep(definition, run)
-      if (next.kind === 'done') {
-        const reason = next.phase ? `${next.phase} closed` : 'nothing to run'
-        if (!run.finished) await journal.append('run.finished', { status: next.status, reason })
-        return { status: 'done', slug, phase: next.phase, code: null, reason }
-      }
-      if (next.kind === 'blocked') {
-        const paths = next.missing.map((path) => deps.files.location(slug, path)).join(', ')
-        const reason = `${next.step.agent} left required outputs missing after ${next.step.maxAttempts} attempts: ${paths}`
-        if (!run.finished) await journal.append('run.finished', { status: 'blocked', reason })
-        return { status: 'blocked', slug, phase: next.phase, code: 'missing-outputs', reason }
-      }
-      if (next.kind === 'close-phase') {
-        await journal.append('phase.closed', { phase: next.phase })
-        deps.progress.log(`${slug}: ${next.phase} closed`)
-        continue
-      }
-      if (shown !== next.phase) deps.progress.phase(next.phase)
-      shown = next.phase
-      const blocked = await dispatch(deps, { slug, story: run.story, journal, next })
-      if (blocked) return blocked
+    try {
+      return await runFrom(deps, definition, opened)
+    } catch (error) {
+      if (!(error instanceof JournalConflict)) throw error
+      return { status: 'blocked', slug: opened.slug, phase: null, code: 'journal-changed', reason: error.message }
     }
   },
 })
+
+/**
+ * @param {PipelineDeps} deps
+ * @param {import('../domain/pipeline/pipeline-definition.mjs').PipelineDefinition} definition
+ * @param {{ slug: string, journal: OpenJournal }} opened
+ * @returns {Promise<RunOutcome>}
+ */
+const runFrom = async (deps, definition, { slug, journal }) => {
+  let shown = null
+  for (;;) {
+    const run = deriveRun(journal.events)
+    const next = nextStep(definition, run)
+    if (next.kind === 'done') {
+      const reason = next.phase ? `${next.phase} closed` : 'nothing to run'
+      if (!run.finished) await journal.append('run.finished', { status: next.status, reason })
+      return { status: 'done', slug, phase: next.phase, code: null, reason }
+    }
+    if (next.kind === 'blocked') {
+      const paths = next.missing.map((path) => deps.files.location(slug, path)).join(', ')
+      const reason = `${next.step.agent} left required outputs missing after ${next.step.maxAttempts} attempts: ${paths}`
+      if (!run.finished) await journal.append('run.finished', { status: 'blocked', reason })
+      return { status: 'blocked', slug, phase: next.phase, code: 'missing-outputs', reason }
+    }
+    if (next.kind === 'close-phase') {
+      await journal.append('phase.closed', { phase: next.phase })
+      deps.progress.log(`${slug}: ${next.phase} closed`)
+      continue
+    }
+    if (shown !== next.phase) deps.progress.phase(next.phase)
+    shown = next.phase
+    const blocked = await dispatch(deps, { slug, story: run.story, journal, next })
+    if (blocked) return blocked
+  }
+}
 
 /**
  * One dispatch: pre-create the outputs, start the agent unless a resumed attempt already
@@ -71,7 +86,7 @@ export const createRunPipeline = (deps, definition = DEFAULT_PIPELINE) => Object
 const dispatch = async (deps, { slug, story, journal, next }) => {
   const { phase, step, attempt, missing, resumed } = next
   const date = dayOf(deps.clock.now())
-  const outputs = resumed ? resumed.outputs : step.outputs.map((output) => outputPath(output.path, { date, slug }))
+  const outputs = next.outputs ?? step.outputs.map((output) => outputPath(output.path, { date, slug }))
   const precreated = await Promise.all(step.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   if (!resumed) {
     for (const [index, path] of outputs.entries()) {
@@ -109,6 +124,11 @@ const dispatch = async (deps, { slug, story, journal, next }) => {
       return { status: 'blocked', slug, phase, code: 'agent-unavailable', reason }
     }
     cost = answer.costUsd
+    if (!answer.ok && (await missingNow()).length > 0) {
+      const reason = `${step.agent} stopped without finishing: ${answer.error ?? 'no answer'}`
+      await journal.append('run.stopped', { code: 'agent-failed', reason })
+      return { status: 'blocked', slug, phase, code: 'agent-failed', reason }
+    }
   }
   const left = await missingNow()
   await journal.append('step.recorded', {
