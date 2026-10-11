@@ -1,7 +1,7 @@
 # Mikado graph format (full spec)
 
 Loaded on demand from `SKILL.md` when the exact syntax of a graph element is
-needed (e.g. before writing the first node, or when `scripts/validate-mikado.sh`
+needed (e.g. before writing the first node, or when `scripts/validate-mikado.mjs`
 reports a parse issue). This is the annotated reference; `SKILL.md` only shows the
 minimal skeleton.
 
@@ -12,7 +12,7 @@ minimal skeleton.
 ```
 
 One file per goal. Wrapped in a fenced ` ```mermaid ` block so it both renders in
-any markdown viewer and is machine-parseable by `scripts/validate-mikado.sh`.
+any markdown viewer and is machine-parseable by `scripts/validate-mikado.mjs`.
 
 ## Node types
 
@@ -87,7 +87,7 @@ P2 -.requires.-> P5
 
 Use this when two different parents depend on the SAME prerequisite, instead of
 duplicating the node. Dotted style keeps it visually distinct from the tree
-structure in any Mermaid renderer. `scripts/validate-mikado.sh` Pass 3 rejects any
+structure in any Mermaid renderer. `scripts/validate-mikado.mjs` Pass 3 rejects any
 edge (tree or `requires:`) whose target id is not a defined node — fix the id or
 add the missing node before re-running.
 
@@ -115,7 +115,7 @@ refactor(mikado-graph): initial graph for <goal>
 refactor(mikado-graph): {P1} requires {P2} in src/Admin.cs:40
 ```
 
-`scripts/validate-mikado.sh` Pass 5 reads each node's `discovered:` sha via
+`scripts/validate-mikado.mjs` Pass 5 reads each node's `discovered:` sha via
 `git log`, verifies the commit message carries this prefix, and verifies a child's
 commit is the same commit as its parent's or a descendant of it (via `git
 merge-base --is-ancestor`) — children are prerequisites, discovered during or
@@ -142,7 +142,7 @@ Before the first leaf implementation, the graph MUST contain either:
   %% no-golden-master: coverage 92% on AdminService, characterization tests exist
   ```
 
-`scripts/validate-mikado.sh` Pass 7 fails the graph if neither is present.
+`scripts/validate-mikado.mjs` Pass 7 fails the graph if neither is present.
 
 ## Full example
 
@@ -166,5 +166,5 @@ graph TD
 Validate any graph file with (add `--no-git` since the SHAs above are fictional):
 
 ```bash
-bash "$SKRAFT_PLUGIN_ROOT/skills/mikado-method/scripts/validate-mikado.sh" --no-git <path-to-graph.md>
+node "<skill>/scripts/validate-mikado.mjs" --no-git <path-to-graph.md>
 ```

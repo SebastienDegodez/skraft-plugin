@@ -50,7 +50,7 @@ test('plugin packaging: Claude manifest enumerates every native agent exactly on
     .filter((path) => path.endsWith('.md'))
     .map((path) => `./com.anthropic.claude-code/agents/${path.replaceAll('\\', '/').split('/').at(-1)}`)
     .sort()
-  assert.equal(expected.length, 31)
+  assert.equal(expected.length, 20)
   assert.ok(Array.isArray(claude.agents), 'agents must be an array of Markdown file paths')
   assert.deepEqual([...claude.agents].sort(), expected)
 })

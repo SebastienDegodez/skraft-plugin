@@ -42,4 +42,4 @@ export default [...yourConfig, ...cleanArchitecture({ root: 'src' })]
 npm i -D eslint-plugin-boundaries eslint-import-resolver-typescript eslint-plugin-react eslint-plugin-jsx-a11y
 ```
 
-The lint then fails on a feature importing another, a layer pointing outward, a file outside the layout, two components in one file, a component outside its folder, a default export, and the accessibility rules of `jsx-a11y`. Tests follow `clean-architecture-testing` ([examples-react.md](../clean-architecture-testing/references/examples-react.md)).
+The lint then fails on a feature importing another, a layer pointing outward, a file outside the layout, two components in one file, a component outside its folder, a default export, and the accessibility rules of `jsx-a11y`. Tests follow `clean-architecture-testing` and its React examples.

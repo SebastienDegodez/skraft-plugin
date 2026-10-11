@@ -44,8 +44,8 @@ flag internally:
 
 | Stack | Adapter | Status |
 |---|---|---|
-| .NET | [contract-testing-dotnet](../contract-testing-dotnet/SKILL.md) | supported |
-| Python | [contract-testing-python](../contract-testing-python/SKILL.md) | supported |
+| .NET | `contract-testing-dotnet` | supported |
+| Python | `contract-testing-python` | supported |
 | React front end (exposes no API) | _none needed_ | not applicable: return `status: ok` with no file and the note `front end exposes no API`; its gateways are tested against the provider's contract through the mocking roster |
 | Java | _(contract-testing-java not yet provided)_ | NOT SUPPORTED |
 
@@ -55,7 +55,7 @@ with zero edits to the worker or the orchestrator.
 ## Generic source
 
 Both layers consume the GENERIC contract artifacts authored by the
-[contract-testing](../contract-testing/SKILL.md) skill (OpenAPI / `.apiexamples`
+`contract-testing` skill (OpenAPI / `.apiexamples`
 / `.apimetadata`). The roster does not duplicate that authoring.
 
 ## Unknown value -> stop, never guess

@@ -51,12 +51,12 @@ Detect the stack from markers at the repo root (delegate to
 
 | Strategy | Stack | Adapter | Status |
 |---|---|---|---|
-| microcks | .NET | [mocking-microcks-dotnet](../mocking-microcks-dotnet/SKILL.md) | supported |
-| inprocess | .NET | [mocking-inprocess-dotnet](../mocking-inprocess-dotnet/SKILL.md) | supported |
-| microcks | Python | [mocking-microcks-python](../mocking-microcks-python/SKILL.md) | supported |
-| inprocess | Python | [mocking-inprocess-python](../mocking-inprocess-python/SKILL.md) | supported |
-| microcks | TypeScript (Vitest) | [mocking-microcks-typescript](../mocking-microcks-typescript/SKILL.md) | supported |
-| inprocess | TypeScript (Vitest) | [mocking-inprocess-typescript](../mocking-inprocess-typescript/SKILL.md) | supported |
+| microcks | .NET | `mocking-microcks-dotnet` | supported |
+| inprocess | .NET | `mocking-inprocess-dotnet` | supported |
+| microcks | Python | `mocking-microcks-python` | supported |
+| inprocess | Python | `mocking-inprocess-python` | supported |
+| microcks | TypeScript (Vitest) | `mocking-microcks-typescript` | supported |
+| inprocess | TypeScript (Vitest) | `mocking-inprocess-typescript` | supported |
 | microcks | Java | _(mocking-microcks-java not yet provided)_ | NOT SUPPORTED |
 | inprocess | Java | _(mocking-inprocess-java not yet provided)_ | NOT SUPPORTED |
 

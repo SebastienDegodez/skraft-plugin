@@ -39,6 +39,6 @@ What differs:
   `BLOCKED`) specific to the SKRAFT `brownfield-refactorer` orchestration.
 
 No source code or text was copied from the upstream project.
-`scripts/validate-mikado.sh` was written and tested independently against the
+`scripts/validate-mikado.mjs` was written and tested independently against the
 Mermaid format. The MIT License does not require a copyright notice in this
 case. This file credits the source as a matter of good practice.

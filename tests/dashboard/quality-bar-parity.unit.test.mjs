@@ -34,14 +34,20 @@ function documentedBreakThresholds(markdown) {
   return thresholds
 }
 
+// A scope wrapper passes its bar and scope as object properties (`expected: 100,`); the
+// scaffold declares them as constants (`const CORE_EXPECTED = 100`).
+function scriptProperty(source, name) {
+  const match = new RegExp(`^\\s*${name}:\\s*(?:'([^'\\n]+)'|(\\d+)),?\\s*$`, 'm').exec(source)
+  return match?.[1] ?? match?.[2]
+}
+
 function scriptConstant(source, name) {
-  const match = new RegExp(`^${name}=\\"?([^\\"\\n]+)\\"?$`, 'm').exec(source)
-  return match?.[1]
+  return new RegExp(`^const ${name} = (\\d+)$`, 'm').exec(source)?.[1]
 }
 
 const SCRIPTS = [
-  { file: 'mutation-core.sh', scope: 'Domain,Application', scaffoldConstant: 'CORE_EXPECTED' },
-  { file: 'mutation-boundary.sh', scope: 'API,Infrastructure', scaffoldConstant: 'BOUNDARY_EXPECTED' },
+  { file: 'mutation-core.mjs', scope: 'Domain,Application', scaffoldConstant: 'CORE_EXPECTED' },
+  { file: 'mutation-boundary.mjs', scope: 'API,Infrastructure', scaffoldConstant: 'BOUNDARY_EXPECTED' },
 ]
 
 describe('quality bar parity', () => {
@@ -62,9 +68,9 @@ describe('quality bar parity', () => {
       const source = readFileSync(path, 'utf8')
       const expected = barRows(readFileSync(barPath, 'utf8')).get(scope)
 
-      strictEqual(scriptConstant(source, 'SCOPE'), scope, `${file} declares a different scope than the bar row it implements`)
+      strictEqual(scriptProperty(source, 'scope'), scope, `${file} declares a different scope than the bar row it implements`)
       strictEqual(
-        Number(scriptConstant(source, 'EXPECTED')),
+        Number(scriptProperty(source, 'expected')),
         expected,
         `${file} hardcodes a threshold the bar no longer states — one of the two moved without the other`,
       )
@@ -72,7 +78,7 @@ describe('quality bar parity', () => {
   }
 
   it('keeps generated config thresholds in step with both scope wrappers', () => {
-    const scaffold = readFileSync(join(scriptsDir, 'configure-mutation.sh'), 'utf8')
+    const scaffold = readFileSync(join(scriptsDir, 'configure-mutation.mjs'), 'utf8')
     const rows = barRows(readFileSync(barPath, 'utf8'))
 
     for (const { scope, scaffoldConstant } of SCRIPTS) {
@@ -82,10 +88,10 @@ describe('quality bar parity', () => {
         `${scaffoldConstant} would generate a root config below the quality bar`,
       )
     }
-    strictEqual(/dotnet stryker init/.test(scaffold), true, 'scaffold must delegate config schema to Stryker init')
-    strictEqual(/--threshold-high "\$expected"/.test(scaffold), true)
-    strictEqual(/--threshold-low "\$expected"/.test(scaffold), true)
-    strictEqual(/--break-at "\$expected"/.test(scaffold), true)
+    strictEqual(/'stryker', 'init'/.test(scaffold), true, 'scaffold must delegate config schema to Stryker init')
+    strictEqual(/'--threshold-high', String\(expected\)/.test(scaffold), true)
+    strictEqual(/'--threshold-low', String\(expected\)/.test(scaffold), true)
+    strictEqual(/'--break-at', String\(expected\)/.test(scaffold), true)
   })
 
   it('keeps the documented config break thresholds equal to the bar', () => {
@@ -99,11 +105,12 @@ describe('quality bar parity', () => {
   })
 
   it('refuses runtime thresholds and validates checked-in config thresholds', () => {
-    const runner = readFileSync(join(scriptsDir, 'run-mutation-gate.sh'), 'utf8')
+    const runner = readFileSync(join(scriptsDir, 'run-mutation-gate.mjs'), 'utf8')
+    strictEqual(/'--expected': 'refusing --expected/.test(runner), true, 'the shared runner must reject --expected explicitly')
     for (const { file } of SCRIPTS) {
       const source = readFileSync(join(scriptsDir, file), 'utf8')
-      strictEqual(/--expected/.test(source), true, `${file} must reject --expected explicitly`)
-      strictEqual(/--config-file/.test(runner), true, 'runner must use the checked-in root config')
+      strictEqual(/runMutationGate\(/.test(source), true, `${file} must go through the shared runner, which refuses --expected`)
+      strictEqual(/'--config-file'/.test(runner), true, 'runner must use the checked-in root config')
       strictEqual(/config\.thresholds\?\.break !== expected/.test(runner), true, 'runner must reject config threshold drift')
     }
   })

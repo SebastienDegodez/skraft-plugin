@@ -45,8 +45,8 @@ each reviewer applies it.
 
 ## DISCOVER — G1 to G6
 
-Reviewer: `backlog-discoverer-reviewer`. 3 lenses. Checks the triage report and the
-sprint proposal.
+No reviewer agent: `backlog-discoverer` (skraft-backlog plugin) dispatches 3 lenses and the
+`review-verdict.mjs` script computes the verdict. Checks the triage report and the sprint proposal.
 
 ### Lens 1 — Completeness
 
@@ -73,8 +73,8 @@ sprint proposal.
 
 ## DISCUSS — G1 to G8
 
-Reviewer: `backlog-planner-reviewer`. 4 lenses. Checks stories, acceptance criteria
-and the sprint plan.
+No reviewer agent: `backlog-planner` (skraft-backlog plugin) dispatches 4 lenses and the
+`review-verdict.mjs` script computes the verdict. Checks stories, acceptance criteria and the sprint plan.
 
 ### Lens 1 — INVEST
 

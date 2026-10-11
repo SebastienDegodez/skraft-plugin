@@ -5,18 +5,17 @@ import { readFileSync } from 'node:fs'
 import { readFrontMatter } from '../lib/front-matter.mjs'
 
 const pluginAgent = (relativePath) => `plugins/skraft-framework/com.github.copilot/agents/${relativePath.split('/').at(-1)}.agent.md`
+const backlogAgent = (id) => `plugins/skraft-backlog/com.github.copilot/agents/${id}.agent.md`
 
 const AGENT_PATHS = new Map([
   ['skraft-orchestrator', pluginAgent('skraft-orchestrator')],
-  // Product-layer chain. These two are NOT dispatched by the orchestrator - the
-  // developer invokes the discoverer directly and it dispatches its own reviewer
-  // at its review gate. Both are allowlisted so a suite can name the reviewer in
-  // `tags.subagents` and grade the dispatch instead of a narrated one.
-  ['backlog-discoverer', pluginAgent('backlog-discoverer')],
-  ['backlog-discoverer-reviewer', pluginAgent('backlog-discoverer-reviewer')],
-  ['discovery-completeness-lens', pluginAgent('reviewer-lenses/discovery-completeness-lens')],
-  ['discovery-prioritization-lens', pluginAgent('reviewer-lenses/discovery-prioritization-lens')],
-  ['discovery-duplicate-lens', pluginAgent('reviewer-lenses/discovery-duplicate-lens')],
+  // skraft-backlog plugin. The developer invokes the discoverer directly and it
+  // dispatches its own lenses at its review gate; the lenses are allowlisted so a
+  // suite can name them in `tags.subagents` and grade the dispatch.
+  ['backlog-discoverer', backlogAgent('backlog-discoverer')],
+  ['discovery-completeness-lens', backlogAgent('discovery-completeness-lens')],
+  ['discovery-prioritization-lens', backlogAgent('discovery-prioritization-lens')],
+  ['discovery-duplicate-lens', backlogAgent('discovery-duplicate-lens')],
   ['solution-researcher', pluginAgent('solution-researcher')],
   ['solution-architect', pluginAgent('solution-architect')],
   ['solution-architect-reviewer', pluginAgent('solution-architect-reviewer')],
@@ -47,6 +46,9 @@ const AGENT_PATHS = new Map([
 ])
 
 const posix = (value) => value.split('\\').join('/')
+
+/** The allowlisted descriptor path of an agent id, or undefined. */
+export const agentPathOf = (id) => AGENT_PATHS.get(id)
 
 const metadataSequence = (content, key) => {
   const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)
@@ -84,7 +86,13 @@ const assertInside = (repoRoot, path, label) => {
   if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error(`${label} escapes repository root`)
 }
 
-const configuredSkills = (repoRoot, agentName) => {
+// The plugin directory an allowlisted path belongs to, e.g. plugins/skraft-backlog.
+export const pluginDirectoryOf = (relativePath) => posix(relativePath).split('/').slice(0, 2).join('/')
+
+// Only the engineering plugin publishes a guardrail config; another plugin's
+// descriptor is its own source of truth for the skills it loads.
+const configuredSkills = (repoRoot, pluginDirectory, agentName, sourceSkills) => {
+  if (pluginDirectory && pluginDirectory !== 'plugins/skraft-framework') return sourceSkills
   const configPath = join(repoRoot, 'plugins/skraft-framework/skraft-framework.config.json')
   const config = JSON.parse(readFileSync(configPath, 'utf8'))
   return (config.agentSkills?.[agentName] ?? []).map((entry) => (typeof entry === 'string' ? entry : entry.name))
@@ -106,13 +114,15 @@ export const loadAgentDescriptor = (repoRoot, id) => {
   if (!name) throw new Error(`Agent has no name: ${relativePath}`)
 
   const sourceSkills = [...metadataSequence(content, 'skills'), ...metadataSequence(content, 'on_demand_skills')]
-  const skills = configuredSkills(normalizedRoot, name)
+  const pluginDirectory = relativePath.startsWith('plugins/') ? pluginDirectoryOf(relativePath) : null
+  const skills = configuredSkills(normalizedRoot, pluginDirectory, name, sourceSkills)
   if (!sameValues(sourceSkills, skills)) throw new Error(`Agent skill declarations drift from framework config: ${id}`)
 
   return {
     id,
     name,
     path: posix(relative(normalizedRoot, path)),
+    pluginDirectory,
     sha256: createHash('sha256').update(content).digest('hex'),
     description: String(data.description ?? ''),
     declaredModel: String(data.model ?? ''),

@@ -28,8 +28,8 @@ Use returned plan and evidence refs, not legacy phase-path conventions.
 
 **Scope:** capture, name, store and list evidence. Engineer owns capture/manifest;
 router consumes refs only. For report media selection load
-[qa-reporting](../qa-reporting/SKILL.md), then its
-[reporting contract](../qa-reporting/references/report-contract.md#media-boundary). No hosting or
+`qa-reporting`, then its
+[reporting contract](references/report-contract.md#media-boundary). No hosting or
 automatic upload/push. Existing remote URLs must be verified; local paths are
 local-only, never published attachments. Upload mechanism and consent require
 separate agreement; warn that traces/screenshots may expose private data.

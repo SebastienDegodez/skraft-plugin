@@ -28,6 +28,9 @@ Rules:
 
 ```
 plugins/
+  skraft-backlog/      ← Backlog plugin: discoverer, planner, their lenses and skills, the
+                         skraft-refine agentic workflow. Shares no runtime code with the core;
+                         same two agent trees and sync rules (`--plugin-root plugins/skraft-backlog`).
   skraft-framework/    ← Claude Code plugin (production source + Stryker config)
    src/
     domain/            ← Pure functions, no IO (Clean Architecture: Domain layer)
@@ -41,8 +44,8 @@ plugins/
     cli/               ← Composition root: hook.mjs wires all services
     hooks/hooks.json     ← Canonical hook source; Claude compatibility surface
     com.github.copilot/hooks/hooks.json  ← Generated copy for Copilot v1 (`${PLUGIN_ROOT}`)
-    com.github.copilot/agents/           ← 31 flat editable `.agent.md` descriptors
-    com.anthropic.claude-code/agents/    ← 31 flat editable native `.md` descriptors
+    com.github.copilot/agents/           ← 20 flat editable `.agent.md` descriptors
+    com.anthropic.claude-code/agents/    ← 20 flat editable native `.md` descriptors
     stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
     skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
 
@@ -76,11 +79,11 @@ prompts an agent pays for on every run, not documentation.
   New agents require both explicitly authored client versions; never inherit tools blindly.
   Commit both runtime surfaces and baseline together; marketplace Git installs do not build.
 - Keep root [plugins/skraft-framework/plugin.json](plugins/skraft-framework/plugin.json)
-  on the canonical v1 schema with no root `agents` list. Keep all 31 agents registered in
+  on the canonical v1 schema with no root `agents` list. Keep all 20 agents registered in
   [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json),
   including internal workers and lenses. Never delete internal registrations to hide them.
   Preserve `user-invocable: false`; it is not documented for Claude subagents and does not
-  guarantee picker hiding. Six standalone roots are intended public Copilot entry points.
+  guarantee picker hiding. Four standalone roots are intended public Copilot entry points.
 - Keep one canonical hook source and two physical plugin surfaces: root compatibility hooks
   plus generated Copilot namespace. Do not add extra manifest `hooks` pointers.
   See [docs/architecture.md](docs/architecture.md#compatibility) for current compatibility limits;

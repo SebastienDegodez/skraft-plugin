@@ -59,23 +59,25 @@ variants:
         - ../../plugins/skraft-framework/skills/contract-testing-dotnet
         - ../../plugins/skraft-framework/skills/contract-testing-roster
         - ../../plugins/skraft-framework/skills/craft-discipline
-        - ../../plugins/skraft-framework/skills/discovery-review-criteria
-        - ../../plugins/skraft-framework/skills/github-search-protocol
-        - ../../plugins/skraft-framework/skills/issue-refinement
-        - ../../plugins/skraft-framework/skills/issue-triage
+        - ../../plugins/skraft-backlog/skills/backlog-review-lenses
+        - ../../plugins/skraft-backlog/skills/discovery-review-criteria
+        - ../../plugins/skraft-backlog/skills/github-issue-search
+        - ../../plugins/skraft-framework/skills/github-publication
+        - ../../plugins/skraft-backlog/skills/issue-refinement
+        - ../../plugins/skraft-backlog/skills/issue-triage
         - ../../plugins/skraft-framework/skills/mikado-method
         - ../../plugins/skraft-framework/skills/mocking-inprocess-dotnet
         - ../../plugins/skraft-framework/skills/mocking-microcks-dotnet
         - ../../plugins/skraft-framework/skills/mocking-strategy-roster
         - ../../plugins/skraft-framework/skills/mutation-testing
         - ../../plugins/skraft-framework/skills/outside-in-tdd
-        - ../../plugins/skraft-framework/skills/planning-review-criteria
+        - ../../plugins/skraft-backlog/skills/planning-review-criteria
         - ../../plugins/skraft-framework/skills/playwright-evidence
         - ../../plugins/skraft-framework/skills/quality-gates-dotnet
         - ../../plugins/skraft-framework/skills/quality-gates-evidence-contract
         - ../../plugins/skraft-framework/skills/resolving-stack-commands
         - ../../plugins/skraft-framework/skills/skraft-quality-bar
-        - ../../plugins/skraft-framework/skills/sprint-planning
+        - ../../plugins/skraft-backlog/skills/sprint-planning
         - ../../plugins/skraft-framework/skills/strangler-fig-method
         - ../../plugins/skraft-framework/skills/test-design-mandates
         - ../../plugins/skraft-framework/skills/test-refactoring-catalog

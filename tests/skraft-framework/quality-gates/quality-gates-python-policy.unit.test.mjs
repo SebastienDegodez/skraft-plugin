@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-	LIMITS, coverageVerdict, mockHits, mutationVerdict, noCoverHits, pragmaProblems, renderConfig, selectChanged, validateConfig,
+	LIMITS, bindInterpreter, coverageVerdict, mockHits, mutationVerdict, noCoverHits, pragmaProblems, renderConfig, selectChanged, validateConfig,
 } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/gate-policy.mjs'
 
 const table = (patch = {}) => ({
@@ -44,6 +44,14 @@ test('the rendered config is the validated subset with a local distributor', () 
 	const text = renderConfig({ modulePaths: ['src/shop/domain/order.py'], timeout: 30, testCommand: 'python -m pytest -q "tests/unit"' })
 	assert.match(text, /^\[cosmic-ray\]\nmodule-path = \["src\/shop\/domain\/order.py"\]\ntimeout = 30.0\nexcluded-modules = \[\]\ntest-command = "python -m pytest -q \\"tests\/unit\\""\n\n\[cosmic-ray.distributor\]\nname = "local"\n$/)
 	assert.throws(() => renderConfig({ modulePaths: [], timeout: 1, testCommand: 'x' }))
+})
+
+test('a leading python in the test command becomes the quoted project interpreter', () => {
+	assert.equal(bindInterpreter('python -m pytest -x tests/unit', 'C:\\repo\\.venv\\Scripts\\python.exe'), "'C:\\repo\\.venv\\Scripts\\python.exe' -m pytest -x tests/unit")
+	assert.equal(bindInterpreter('python3 -m pytest', '/r/.venv/bin/python'), "'/r/.venv/bin/python' -m pytest")
+	assert.equal(bindInterpreter('pytest -x', '/r/.venv/bin/python'), 'pytest -x')
+	assert.equal(bindInterpreter('python3.12 -m pytest', '/r/.venv/bin/python'), 'python3.12 -m pytest')
+	assert.throws(() => bindInterpreter('python -m pytest', "/it's/python"), /single quote/)
 })
 
 test('--since keeps only the scope files that changed', () => {

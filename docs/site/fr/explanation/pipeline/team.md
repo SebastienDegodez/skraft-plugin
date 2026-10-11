@@ -53,7 +53,7 @@ ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 - **Mission :** transformer un flux brut d'issues en un rapport de triage priorisé.
 - **Reçoit :** des issues, un milestone.
 - **Passe le relais :** un rapport de triage.
-- **Contrôlé par :** `backlog-discoverer-reviewer` (gates G1–G6).
+- **Contrôlé par :** sa propre revue — 3 lentilles, verdict calculé par `review-verdict.mjs` (gates G1–G6).
 - **Invoqué par :** le développeur, hors `skraft-orchestrator`.
 
 ### 2. `backlog-planner` — le raffineur (DISCUSS)
@@ -61,7 +61,7 @@ ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 - **Mission :** faire d'une issue triée une story INVEST avec critères d'acceptation.
 - **Reçoit :** le rapport de triage.
 - **Passe le relais :** une story prête, sans ambiguïté.
-- **Contrôlé par :** `backlog-planner-reviewer` (gates G1–G8).
+- **Contrôlé par :** sa propre revue — 4 lentilles, verdict calculé par `review-verdict.mjs` (gates G1–G8).
 - **Invoqué par :** le développeur, hors `skraft-orchestrator`.
 
 ## Les quatre exécuteurs d'ingénierie

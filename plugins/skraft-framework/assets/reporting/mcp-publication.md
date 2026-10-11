@@ -2,9 +2,9 @@
 
 Load in the orchestrator at reporting startup, report boundaries and publication-only
 resume. Keep producer/reviewer ownership and renderer data in
-[reporting contract](../../skills/qa-reporting/references/report-contract.md) unchanged.
+[reporting contract](report-contract.md) unchanged.
 Before preparing, checking or rendering report data, load
-[qa-reporting](../../skills/qa-reporting/SKILL.md). This protocol covers reporting
+`qa-reporting`. This protocol covers reporting
 to GitHub, Azure DevOps and GitLab, not portability of the whole engineering pipeline.
 
 ## Execution boundary
@@ -12,7 +12,7 @@ to GitHub, Azure DevOps and GitLab, not portability of the whole engineering pip
 Invoke registered MCP tools directly through the orchestrator's host. Local
 scripts cannot call the host's registered tools. Keep the reporting CLI local:
 setup, render, prepare, decide, record, status, abandon. When `provider` is `github`,
-load [github-search-protocol](../../skills/github-search-protocol/SKILL.md) for
+load `github-publication` for
 publication transport selection, operation mappings and probes. Azure DevOps/GitLab
 use exposed MCP tools. Do not add an MCP SDK/client, provider HTTP transport,
 network adapter or reporter agent. Do not install servers, configure clients,
@@ -96,7 +96,7 @@ servers differ; unresolved read/write gaps leave the destination pending.
 
 | Provider reference | Target/identity and comment reads | Comment writes |
 |---|---|---|
-| GitHub | [github-search-protocol](../../skills/github-search-protocol/SKILL.md) | — |
+| GitHub | `github-publication` | — |
 | [Official Azure DevOps toolset](https://github.com/microsoft/azure-devops-mcp/blob/main/docs/TOOLSET.md) | `repo_pull_request` (`get`); `repo_pull_request_thread` (`list`, `list_comments`); `wit_work_item` (`get`, `list_comments`). Discover authenticated identity independently; identity search is not proof of current viewer | `repo_pull_request_thread_write` (`create`, `update`); `wit_work_item_comment_write` (`add`, `update`) |
 | [Community GitLab MCP server](https://github.com/zereight/gitlab-mcp) | Discover current-user, MR/issue, notes and pagination operations in the installed catalog | Discover note create/update operations; no guaranteed operation names or official-server parity |
 
@@ -111,7 +111,7 @@ evidence of official support. Never synthesize a comment URL for any provider.
 
 ## Local CLI and host procedure
 
-Run `node "$SKRAFT_PLUGIN_ROOT/src/cli/report.mjs"` with the following arguments.
+Run the report CLI bundled in the `qa-reporting` skill, `node "<qa-reporting>/scripts/report/cli/report.mjs"`, with the following arguments.
 Use actual returned artifact paths under the resolved tracking root, not guessed
 dated paths. If the installed CLI lacks this handoff, report a version/interface
 mismatch and keep publication pending; do not invoke a legacy network publisher.

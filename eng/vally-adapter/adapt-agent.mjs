@@ -12,7 +12,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
-import { agentByStimulus, agentSuiteVerdicts } from '../lib/agent-verdict.mjs'
+import { agentByStimulus, agentSourcePath, agentSuiteVerdicts } from '../lib/agent-verdict.mjs'
+import { agentPathOf } from '../vally-agent-executor/agent-descriptor.mjs'
 
 const { values: options } = parseArgs({
   options: {
@@ -45,7 +46,9 @@ const spec = readFileSync(resolve(options.spec), 'utf8')
 // "the agent conformed" means for that suite.
 const threshold = Number(/^scoring:\s*$[\s\S]*?^\s+threshold:\s*([\d.]+)/m.exec(spec)?.[1] ?? 1)
 
-const verdicts = agentSuiteVerdicts(records, { agents: agentByStimulus(spec), threshold })
+// An agent of another plugin (skraft-backlog) lives outside the default path.
+const sourcePath = (id) => agentPathOf(id) ?? agentSourcePath(id)
+const verdicts = agentSuiteVerdicts(records, { agents: agentByStimulus(spec), threshold, sourcePath })
 
 if (!verdicts.length) {
   console.warn(`⚠ ${options.suite}: no trial named an agent (missing \`tags.agent\`?); nothing to publish`)

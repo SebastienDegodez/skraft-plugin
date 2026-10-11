@@ -4,7 +4,7 @@
     "name": "SebastienDegodez"
   },
   "metadata": {
-    "description": "skraft agentic SDLC pipeline — specialized phase agents, dedicated reviewers and implementation-discipline skills, from backlog discovery to the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline."
+    "description": "skraft agentic SDLC — the engineering pipeline (phase agents, adversarial reviewers, guardrails) and the backlog plugin that triages and refines GitHub issues before it."
   },
   "interface": {
     "displayName": "SKRAFT SDLC Pipeline"
@@ -21,7 +21,20 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Coding",
-      "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture, backlog discovery and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline."
+      "description": "skraft SDLC pipeline — agents, skills and hooks for outside-in TDD, Clean Architecture and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline."
+    },
+    {
+      "name": "skraft-backlog",
+      "source": {
+        "source": "local",
+        "path": "./plugins/skraft-backlog"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding",
+      "description": "skraft backlog — discover and triage GitHub issues, refine them into ready stories, and review each issue's refinement in a comment, from your editor or a GitHub Agentic Workflow."
     }
   ]
 }

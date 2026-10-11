@@ -49,8 +49,8 @@ intégrale, telle que chaque reviewer l'applique.
 
 ## DISCOVER — G1 à G6
 
-Reviewer : `backlog-discoverer-reviewer`. 3 lentilles. Vérifie le rapport de triage
-et la proposition de sprint.
+Pas d'agent reviewer : `backlog-discoverer` (plugin skraft-backlog) lance 3 lentilles et le
+script `review-verdict.mjs` calcule le verdict. Vérifie le rapport de triage et la proposition de sprint.
 
 ### Lentille 1 — Complétude
 
@@ -77,8 +77,8 @@ et la proposition de sprint.
 
 ## DISCUSS — G1 à G8
 
-Reviewer : `backlog-planner-reviewer`. 4 lentilles. Vérifie les stories, les
-critères d'acceptation et le plan de sprint.
+Pas d'agent reviewer : `backlog-planner` (plugin skraft-backlog) lance 4 lentilles et le
+script `review-verdict.mjs` calcule le verdict. Vérifie les stories, les critères d'acceptation et le plan de sprint.
 
 ### Lentille 1 — INVEST
 

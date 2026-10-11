@@ -20,7 +20,7 @@ The DISCOVER phase transforms a raw stream of issues into a prioritised, actiona
 | **What exits** | Prioritised triage report (priority, labels, effort) |
 | **Goes to** | **DISCUSS** — which refines the selected issues into stories |
 | **Responsible agent** | `backlog-discoverer` |
-| **Associated reviewer** | `backlog-discoverer-reviewer` |
+| **Associated reviewer** | none: the discoverer dispatches 3 lenses and the `review-verdict.mjs` script decides (skraft-backlog plugin) |
 
 ## Why this phase exists
 

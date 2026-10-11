@@ -20,7 +20,7 @@ La phase DISCOVER transforme un flux brut d'issues en un rapport de triage prior
 | **Ce qui sort** | Rapport de triage priorisé (priorité, labels, effort) |
 | **Va vers** | **DISCUSS** — qui raffine les issues retenues en stories |
 | **Agent responsable** | `backlog-discoverer` |
-| **Reviewer associé** | `backlog-discoverer-reviewer` |
+| **Reviewer associé** | aucun : le discoverer lance 3 lentilles et le script `review-verdict.mjs` tranche (plugin skraft-backlog) |
 
 ## Pourquoi cette phase existe
 

@@ -12,7 +12,7 @@ A tech-agnostic schema that attests quality gates as **falsifiable references**,
 Truth #6 (HARNESSES BRIDGE): the LLM cannot prove a test passed by saying so.
 The producer (software-engineer) MUST cite **substrate the verifier can re-resolve**:
 git SHAs, file paths at given revisions, hashed tool outputs deposited on disk.
-`qg-verify` (`node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log <path>`) re-resolves every
+`qg-verify` (`node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log <path>`, bundled in this skill; `<skill>` is the folder holding this SKILL.md) re-resolves every
 claim against the files and the Git tree and derives the verdict; nobody re-runs a gate.
 
 If a field cannot be falsified from the Git tree alone, the field is mis-designed.
@@ -172,9 +172,9 @@ messages. A verified violation is `fail`; a message nobody can read is `inconclu
   `repo_root_rev` is that last work commit. The evidence is then committed alone, touching
   only the story's evidence directory.
 - Run `qg-verify` on the log before handing over; a `fail` or `inconclusive` is yours to fix.
-- Tool stdout/exit are captured by the SHELL (`> file 2>&1; echo $? > file.exit`), never transcribed.
-- `stdout_sha256` is computed via a tool call (`shasum -a 256 file`), never asserted from memory.
-- Snapshots are extracted via `git show <commit>:<path> > snapshot-file`, never copy-pasted.
+- Tool stdout/exit are captured by the stack adapter's bundled `capture.mjs` (or its gate scripts), never transcribed.
+- `stdout_sha256` comes from the `.stdout.sha256` file that capture writes, never asserted from memory.
+- Snapshots are written by the adapter's `snapshot.mjs` from `git show <commit>:<path>`, never copy-pasted.
 - The RED stdout and its exit code are captured **at RED**, before the implementation lands — they cannot be reconstructed afterwards (G10).
 - A failing gate yields `status: "fail"` AND the file is still written. Do NOT suppress the log to hide a failure — a missing log is `inconclusive` (NEEDS_REWORK), so hiding fails harder than disclosing.
 

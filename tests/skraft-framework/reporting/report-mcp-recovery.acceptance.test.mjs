@@ -170,7 +170,8 @@ test('desired remote body is still a conflict with no authorization or mismatche
   }
 })
 
-const cli = fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/report.mjs', import.meta.url))
+// SKRAFT_REPORT_CLI runs this suite against the copy bundled in qa-reporting (skill-bundles test).
+const cli = process.env.SKRAFT_REPORT_CLI ?? fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/report.mjs', import.meta.url))
 const stateCli = fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/state.mjs', import.meta.url))
 const json = (path) => JSON.parse(readFileSync(path, 'utf8'))
 function success(result) {

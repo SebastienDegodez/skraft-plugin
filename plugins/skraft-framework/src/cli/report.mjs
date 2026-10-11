@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { createStateService } from '../application/state-service.mjs'
@@ -10,8 +10,16 @@ import { preparePublication, decidePublication, recordPublication } from '../app
 import { validateReportingPreferences } from '../domain/reporting-preferences.mjs'
 import { normalizeMcpTarget, sameMcpScope, validateMcpPacket } from '../domain/report-mcp-policy.mjs'
 import { validateReportData } from '../domain/reporting-presentation.mjs'
+
 import { createReportFiles } from '../adapters/infrastructure/report-files.mjs'
 import { resolveTrackingRoot } from '../adapters/infrastructure/tracking-root-resolver.mjs'
+
+// Templates ship in the qa-reporting skill. From the plugin (src/cli) they sit under the
+// plugin root; from the copy bundled in that skill (scripts/report/cli) under the skill root.
+const bundledSkillRoot = new URL('../../../', import.meta.url)
+const templateUrl = (ref) => existsSync(new URL('SKILL.md', bundledSkillRoot))
+	? new URL(ref.replace(/^skills\/qa-reporting\//, ''), bundledSkillRoot)
+	: new URL(ref, new URL('../../', import.meta.url))
 
 const commands = {
 	setup: ['slug', 'data'], render: ['slug', 'data', 'out'],
@@ -247,7 +255,7 @@ async function run() {
 		const markdown = renderReport(data, {
 			readText: (ref) => files.readText(ref, { reference: true }),
 			hashText,
-			readTemplate: (ref) => readFileSync(new URL(ref, new URL('../../', import.meta.url)), 'utf8'),
+			readTemplate: (ref) => readFileSync(templateUrl(ref), 'utf8'),
 		})
 		files.writeAtomic(options.out, markdown)
 		return { rendered: true, kind: data.kind, story: data.story, path: options.out }

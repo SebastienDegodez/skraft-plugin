@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -9,11 +9,11 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 const SCRIPTS = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/', import.meta.url))
-const CONFIGURE = join(SCRIPTS, 'configure-mutation.sh')
-const CORE = join(SCRIPTS, 'mutation-core.sh')
-const BOUNDARY = join(SCRIPTS, 'mutation-boundary.sh')
+const CONFIGURE = join(SCRIPTS, 'configure-mutation.mjs')
+const CORE = join(SCRIPTS, 'mutation-core.mjs')
+const BOUNDARY = join(SCRIPTS, 'mutation-boundary.mjs')
 const REPORT_FIXTURE = fileURLToPath(new URL('./quality-gates-dotnet-report.fixture.json', import.meta.url))
-const DOTNET_FIXTURE = fileURLToPath(new URL('./quality-gates-dotnet-fake-dotnet.fixture.sh', import.meta.url))
+const DOTNET_FIXTURE = fileURLToPath(new URL('./quality-gates-dotnet-fake-dotnet.fixture.mjs', import.meta.url))
 
 const touch = async (root, relativePath, contents = '') => {
   const path = join(root, relativePath)
@@ -24,18 +24,9 @@ const touch = async (root, relativePath, contents = '') => {
 
 const touchProject = (root, relativePath) => touch(root, relativePath, '<Project />\n')
 
-const fakeDotnet = async (root) => {
-  const bin = join(root, 'bin')
-  const path = join(bin, 'dotnet')
-  await mkdir(bin, { recursive: true })
-  await copyFile(DOTNET_FIXTURE, path)
-  await chmod(path, 0o755)
-  return bin
-}
-
 const run = async (script, args, { cwd, env = {} }) => {
   try {
-    const { stdout, stderr } = await execFileAsync('bash', [script, ...args], {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [script, ...args], {
       cwd,
       env: { ...process.env, ...env },
     })
@@ -55,13 +46,12 @@ const setup = async () => {
   const initLog = join(root, 'dotnet-init.log')
   await writeFile(log, '')
   await writeFile(initLog, '')
-  const bin = await fakeDotnet(root)
   return {
     root,
     log,
     initLog,
     env: {
-      PATH: `${bin}:${process.env.PATH}`,
+      SKRAFT_DOTNET: DOTNET_FIXTURE,
       FAKE_DOTNET_LOG: log,
       FAKE_DOTNET_INIT_LOG: initLog,
       FAKE_DOTNET_REPORT_FIXTURE: REPORT_FIXTURE,

@@ -174,8 +174,8 @@ return "DefaultExample"
 > the Microcks sample formats. The concrete DELIVER recipe (baseline
 > `WebApplicationFactory` + `HttpClient`, plus the optional Microcks `VerifyAsync`
 > layer) is owned per stack by the `contract-testing-<stack>` adapter, resolved
-> via [contract-testing-roster](../contract-testing-roster/SKILL.md). For .NET see
-> [contract-testing-dotnet](../contract-testing-dotnet/SKILL.md). The .NET snippets
+> via `contract-testing-roster`. For .NET see
+> `contract-testing-dotnet`. The .NET snippets
 > below remain as the canonical reference those adapters point back to.
 
 Use the `Microcks.Testcontainers` NuGet package (it brings `DotNet.Testcontainers`
@@ -292,7 +292,7 @@ Use `TestEndpointAsync` with the `OPEN_API_SCHEMA` runner to assert your running
 implementation satisfies the contract. Microcks calls IN to your service, so the
 service must listen on a real TCP port (boot real Kestrel — a `WebApplicationFactory`
 exposes none). The concrete .NET wiring lives in
-[contract-testing-dotnet](../contract-testing-dotnet/SKILL.md).
+`contract-testing-dotnet`.
 
 ```csharp
 var request = new TestRequest

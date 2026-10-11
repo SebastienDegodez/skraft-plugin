@@ -5,8 +5,8 @@ description: Use in a JavaScript/Node.js project when running its existing packa
 
 # JavaScript quality gates
 
-Load [quality bar](../skraft-quality-bar/SKILL.md) and
-[evidence contract](../quality-gates-evidence-contract/SKILL.md).
+Load quality bar (`skraft-quality-bar`) and
+evidence contract (`quality-gates-evidence-contract`).
 Missing tooling, unsupported scope, failed gates or absent evidence block delivery.
 
 ## Resolve ordinary commands first
@@ -21,8 +21,12 @@ Missing tooling, unsupported scope, failed gates or absent evidence block delive
   `node --test tests/skraft-framework/quality-gates/quality-gates-javascript-*.test.mjs`.
 - Plain no-emit JavaScript has no compilation step: `node --check <source>` checks
   syntax only. Do not label it TypeScript compilation or architecture validation.
-- Capture ordinary commands' stdout, stderr and exit codes at execution time.
-  This runner captures mutation only, not G1-G5, G7-G11 or RED evidence.
+- Capture ordinary commands, and every RED run, at execution time with the bundled
+  `node "<skill>/scripts/capture.mjs" --evidence <dir> --name qg-tests -- npm --prefix <package> run test`:
+  it runs without a shell and writes `<name>.stdout`, `<name>.exit` and `<name>.stdout.sha256`.
+  Write G9 snapshots with `node "<skill>/scripts/snapshot.mjs" --evidence <dir> --name red-1-<file> --file <path>`.
+  `<skill>` is this skill's folder, the one holding this SKILL.md. The mutation runner
+  below captures mutation only.
 - G11 line coverage is **not implemented** here. Native Node coverage may aid
   diagnosis but is not an enforced scoped coverage gate. Report blocker, not pass.
 
@@ -59,7 +63,7 @@ I/O runner in boundary when validating changes to this adapter itself.
 Run bundled [runner](scripts/run-gates.mjs) with:
 
 ```text
-node "$SKRAFT_PLUGIN_ROOT/skills/quality-gates-javascript/scripts/run-gates.mjs" --root <repo> --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence <directory>
+node "<skill>/scripts/run-gates.mjs" --root <repo> --package <package-dir> --core <core-config> --boundary <boundary-config> --evidence <directory>
 ```
 
 For the story's G6 run, add `--since <DELIVER baseSha>` (omit it only when no base is recorded). The runner resolves the Git
@@ -98,6 +102,7 @@ rather than silently shrinking denominator.
   a valid fresh report is failure. Reject malformed/empty reports, wrong root,
   config/report-path mismatch, changed sources, unexpected files/statuses and
   symlink reports. Source/test/config edits during execution block.
+- Verify an assembled evidence log with `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log <qg-{story}.json>`.
 - Manifest is supporting G6 evidence, not a replacement v3 evidence log. Producer
   references both scope records from existing contract; never invent new gate IDs
   or claim all quality gates passed. Git revision alone does not attest dirty tree.

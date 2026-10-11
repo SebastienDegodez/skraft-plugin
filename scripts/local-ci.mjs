@@ -38,14 +38,21 @@ const fastGates = [
   { name: 'Framework tests & coverage (node --test)', cmd: 'node', args: testArgs('tests/skraft-framework', true) },
   { name: 'Dashboard tooling tests (node --test)', cmd: 'node', args: testArgs('tests/dashboard') },
   { name: 'Plugin catalogue scan', cmd: 'node', args: ['eng/catalog/scan.mjs'] },
+  { name: 'Skill copies in sync', cmd: 'node', args: ['scripts/sync-skill-copies.mjs', '--check'] },
   { name: 'Plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check'] },
   { name: 'Guardrail config in sync (US2)', cmd: 'node', args: ['plugins/skraft-framework/src/cli/build-config-bin.mjs', '--check'] },
   { name: 'Agent model policy (B12)', cmd: 'node', args: ['plugins/skraft-framework/src/cli/resolve-model-bin.mjs', '--check'] },
+  // skraft-backlog: its own tests, agent trees, dispatch tree and model policy.
+  { name: 'Backlog plugin tests (node --test)', cmd: 'node', args: testArgs('tests/skraft-backlog') },
+  { name: 'Backlog plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check', '--plugin-root', 'plugins/skraft-backlog'] },
+  { name: 'Backlog dispatch tree and skills', cmd: 'node', args: ['plugins/skraft-framework/src/cli/build-config-bin.mjs', '--emit', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'], quiet: true },
+  { name: 'Backlog copies in sync', cmd: 'node', args: ['scripts/sync-backlog-copies.mjs', '--check'] },
+  { name: 'Backlog agent model policy (B12)', cmd: 'node', args: ['plugins/skraft-framework/src/cli/resolve-model-bin.mjs', '--check', '--dir', 'plugins/skraft-backlog/com.github.copilot/agents'] },
 ]
 
 const run = (gate) => {
   process.stdout.write(`\n▶ ${gate.name}\n`)
-  const result = spawnSync(gate.cmd, gate.args, { stdio: 'inherit' })
+  const result = spawnSync(gate.cmd, gate.args, { stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
   return { name: gate.name, ok: result.status === 0 }
 }
 

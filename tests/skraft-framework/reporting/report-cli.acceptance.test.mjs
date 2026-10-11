@@ -11,7 +11,8 @@ import { gitExecutable, installGhSentinel, isolatedEnv } from './fixtures/isolat
 // Local CLI boundary -> setup, rendering and preparation security. No application doubles.
 // Host MCP lifecycle/receipts belong to report-mcp-cli.acceptance.test.mjs;
 // provider-independent publication policy belongs to report-mcp-handoff.acceptance.test.mjs.
-const cli = fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/report.mjs', import.meta.url))
+// SKRAFT_REPORT_CLI runs this suite against the copy bundled in qa-reporting (skill-bundles test).
+const cli = process.env.SKRAFT_REPORT_CLI ?? fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/report.mjs', import.meta.url))
 const stateCli = fileURLToPath(new URL('../../../plugins/skraft-framework/src/cli/state.mjs', import.meta.url))
 const slug = 'checkout-plan'
 const branch = 'feature/checkout'

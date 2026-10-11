@@ -2,7 +2,7 @@
 // never assembled by hand, and the script's exit code is the gate verdict.
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -11,8 +11,9 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 const SCRIPTS = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/', import.meta.url))
-const NO_MOCKS = join(SCRIPTS, 'no-mocks-in-core.sh')
-const COVERAGE = join(SCRIPTS, 'coverage-core.sh')
+const NO_MOCKS = join(SCRIPTS, 'no-mocks-in-core.mjs')
+const COVERAGE = join(SCRIPTS, 'coverage-core.mjs')
+const DOTNET_FIXTURE = fileURLToPath(new URL('./quality-gates-dotnet-fake-dotnet.fixture.mjs', import.meta.url))
 
 const touch = async (root, relativePath, contents = '') => {
   const path = join(root, relativePath)
@@ -22,7 +23,7 @@ const touch = async (root, relativePath, contents = '') => {
 
 const run = async (script, args, env = {}) => {
   try {
-    const { stdout, stderr } = await execFileAsync('bash', [script, ...args], { env: { ...process.env, ...env } })
+    const { stdout, stderr } = await execFileAsync(process.execPath, [script, ...args], { env: { ...process.env, ...env } })
     return { exitCode: 0, stdout, stderr }
   } catch (error) {
     return { exitCode: error.code ?? 1, stdout: error.stdout ?? '', stderr: error.stderr ?? '' }
@@ -86,26 +87,12 @@ const cobertura = (packages) => `<?xml version="1.0"?>\n<coverage>\n<packages>\n
   return `<package name="${name}" line-rate="${valid ? covered / valid : 1}"><classes><class name="C" filename="src/${name}/C.cs" line-rate="1"><methods><method name="M"><lines>${lines}</lines></method></methods><lines>${lines}</lines></class></classes></package>`
 }).join('\n')}\n</packages>\n</coverage>\n`
 
-// A dotnet that writes one Cobertura report per test project into --results-directory.
-const fakeDotnet = async (root, reports, exitCode = 0) => {
-  const bin = join(root, 'bin')
-  await mkdir(bin, { recursive: true })
-  const script = `#!/usr/bin/env bash
-[ "$1" = "test" ] || exit 90
-while [ $# -gt 0 ]; do
-  case "$1" in --results-directory) results="$2"; shift 2 ;; *) shift ;; esac
-done
-i=0
-for report in ${reports.map((r) => `'${r}'`).join(' ')}; do
-  i=$((i+1)); mkdir -p "$results/run-$i"; cp "$report" "$results/run-$i/coverage.cobertura.xml"
-done
-echo "Passed!"
-exit ${exitCode}
-`
-  await writeFile(join(bin, 'dotnet'), script)
-  await chmod(join(bin, 'dotnet'), 0o755)
-  return { PATH: `${bin}:${process.env.PATH}` }
-}
+// The fake dotnet copies one Cobertura report per test project into --results-directory.
+const fakeDotnet = async (_root, reports, exitCode = 0) => ({
+  SKRAFT_DOTNET: DOTNET_FIXTURE,
+  FAKE_DOTNET_COVERAGE_REPORTS: JSON.stringify(reports),
+  FAKE_DOTNET_TEST_EXIT: String(exitCode),
+})
 
 test('G11 passes at 100% line coverage of Domain and Application, whatever the boundary covers', async () => {
   await withRoot(async (root) => {

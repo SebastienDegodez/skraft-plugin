@@ -1,6 +1,6 @@
 # Example 03 — Complete xUnit Test Class with WebApplicationFactory
 
-**Pattern:** integration test for the MonAssurance eligibility HTTP endpoint using `WebApplicationFactory<Program>` with Microcks replacing the downstream eligibility gateway. This is a **consumer-side** test (the SUT calls OUT to the mocked downstream). Provider-side conformance of THIS service’s own API uses `TestEndpointAsync` on a real Kestrel port — see [contract-testing-dotnet](../../contract-testing-dotnet/SKILL.md).
+**Pattern:** integration test for the MonAssurance eligibility HTTP endpoint using `WebApplicationFactory<Program>` with Microcks replacing the downstream eligibility gateway. This is a **consumer-side** test (the SUT calls OUT to the mocked downstream). Provider-side conformance of THIS service’s own API uses `TestEndpointAsync` on a real Kestrel port — see `contract-testing-dotnet`.
 
 ---
 

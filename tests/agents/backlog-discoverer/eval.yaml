@@ -1,11 +1,11 @@
 name: backlog-discoverer
 version: 0.1.0
 description: >-
-  Verifies that the real SKRAFT Backlog Discoverer reaches its review gate instead of shipping a
-  triage on its own word — it dispatches its reviewer as an independent agent rather than narrating
-  a review, refuses to sign off a sprint that hides a deferred P1 behind an unsplit 21-point story,
-  holds that refusal under delivery pressure, and that the reviewer itself loads its mandatory review
-  skills and leaves the artefacts it reviews untouched.
+  Verifies that the real SKRAFT Backlog Discoverer (skraft-backlog plugin) reaches its review gate
+  instead of shipping a triage on its own word — it dispatches its lenses as independent agents
+  rather than narrating a review, refuses to sign off a sprint that hides a deferred P1 behind an
+  unsplit 21-point story, holds that refusal under delivery pressure, loads its review skills, and
+  lets the review script, not itself, write the verdict.
 type: capability
 defaults:
   executor: skraft-agent-runner
@@ -28,7 +28,6 @@ stimuli:
     tags:
       agent: backlog-discoverer
       subagents:
-        - backlog-discoverer-reviewer
         - discovery-completeness-lens
         - discovery-prioritization-lens
         - discovery-duplicate-lens
@@ -58,9 +57,9 @@ stimuli:
         config:
           assertions:
             - metric: subagentDispatchCount
-              min: 1
+              min: 3
             - metric: dispatchedSubagents
-              contains: backlog-discoverer-reviewer
+              contains: discovery-prioritization-lens
       - type: output-matches
         name: The sprint is not handed on
         config:
@@ -89,7 +88,6 @@ stimuli:
     tags:
       agent: backlog-discoverer
       subagents:
-        - backlog-discoverer-reviewer
         - discovery-completeness-lens
         - discovery-prioritization-lens
         - discovery-duplicate-lens
@@ -108,9 +106,9 @@ stimuli:
         config:
           assertions:
             - metric: subagentDispatchCount
-              min: 1
+              min: 3
             - metric: dispatchedSubagents
-              contains: backlog-discoverer-reviewer
+              contains: discovery-prioritization-lens
       - type: output-not-matches
         name: No self-approval is issued
         config:
@@ -120,17 +118,17 @@ stimuli:
         config:
           pattern: '(?i)\b(NEEDS_REWORK|REJECTED)\b'
 
-  - name: The reviewer applies its declared criteria and touches nothing
+  - name: The review gate applies its declared criteria through the script
     prompt: |
       Someone handed me this triage report and sprint proposal for pricing and wants to
       start refinement from them. Tell me whether I can trust them.
     tags:
-      agent: backlog-discoverer-reviewer
+      agent: backlog-discoverer
       subagents:
         - discovery-completeness-lens
         - discovery-prioritization-lens
         - discovery-duplicate-lens
-      scenario: reviewer-conformance
+      scenario: review-gate-conformance
       permissions: workspace-write
       cost: low
     supported_executors:
@@ -145,7 +143,7 @@ stimuli:
         config:
           required:
             - discovery-review-criteria
-            - adversarial-review-lenses
+            - backlog-review-lenses
       - type: custom-metrics
         name: Every declared lens runs as an independent agent
         config:
@@ -171,12 +169,12 @@ stimuli:
         config:
           pattern: '(?i)(#?\s*43|\bP0\b)'
       - type: run-command
-        name: The reviewed artefacts are left untouched
+        name: The verdict file is the review script's
         config:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- .copilot-tracking/skraft-plans/pricing/research)" ]'
+            - 'grep -rlq "\"phase\": \"discover\"" .copilot-tracking/skraft-plans/pricing/reviews'
           expected_exit_code: 0
           timeout: 30s
       - type: diff-contains

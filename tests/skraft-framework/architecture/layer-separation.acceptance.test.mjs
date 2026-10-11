@@ -32,15 +32,14 @@ test('layer separation: no phase agent is a backlog (product-layer) agent', () =
   assert.ok(!wired.includes('backlog'), 'backlog agents must not appear in phaseAgents')
 })
 
-test('layer separation: backlog agents still exist as standalone product agents', () => {
-  // They remain in the agent catalogue (agentSkills) — just no longer pipeline-dispatched.
+test('layer separation: backlog agents live in the skraft-backlog plugin, outside the engineering catalogue', () => {
   for (const a of [
     'Skraft - Backlog Discoverer',
     'Skraft - Backlog Discoverer Reviewer',
     'Skraft - Backlog Planner',
     'Skraft - Backlog Planner Reviewer',
   ]) {
-    assert.ok(a in config.agentSkills, `${a} should still be a known agent`)
+    assert.ok(!(a in config.agentSkills), `${a} must not be part of the engineering plugin`)
   }
 })
 

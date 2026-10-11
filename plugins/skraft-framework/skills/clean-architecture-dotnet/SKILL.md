@@ -20,7 +20,7 @@ The layer rules are those of `architecture-patterns`. This skill maps them onto 
 - Use types reached transitively; never add a `<ProjectReference>` to reach them.
 - EF Core, ASP.NET Core and `HttpClient` appear only in Infrastructure and Api. Domain uses nothing beyond the BCL.
 - Tests live in the test projects `clean-architecture-testing` defines, never in a layer project.
-- `scripts/init-project.sh` (or `.ps1`) creates this layout.
+- `node "<skill>/scripts/init-project.mjs" <Context>`, run from the repository root, creates this layout (`<skill>` is this skill's folder).
 
 ## Use cases
 

@@ -55,16 +55,25 @@ const walk = (directory, matches, found = []) => {
 const findings = []
 const warn = (code, path, message) => findings.push({ severity: 'warning', code, path, message })
 
-// ── Skills ─────────────────────────────────────────────────────────
+// ── Plugins ────────────────────────────────────────────────────────
+// The engineering plugin first, then every other plugin the repository ships
+// (skraft-backlog): the dashboard shows one catalogue across them.
 const pluginRoot = join(repoRoot, 'plugins/skraft-framework')
-const skillsRoot = join(pluginRoot, 'skills')
+const pluginRoots = [pluginRoot, ...readdirSync(join(repoRoot, 'plugins')).sort()
+  .map((name) => join(repoRoot, 'plugins', name))
+  .filter((path) => path !== pluginRoot && existsSync(join(path, '.claude-plugin/plugin.json')))]
+const pluginName = (root) => JSON.parse(readFileSync(join(root, '.claude-plugin/plugin.json'), 'utf8')).name
 const evalsRoot = join(repoRoot, 'tests/skills')
 
-
-const skills = readdirSync(skillsRoot)
-  .filter((name) => existsSync(join(skillsRoot, name, 'SKILL.md')))
-  .sort()
-  .map((directory) => {
+// ── Skills ─────────────────────────────────────────────────────────
+const skills = pluginRoots.flatMap((root) => {
+  const skillsRoot = join(root, 'skills')
+  if (!existsSync(skillsRoot)) return []
+  return readdirSync(skillsRoot).map((directory) => ({ root, skillsRoot, directory }))
+})
+  .filter(({ skillsRoot, directory }) => existsSync(join(skillsRoot, directory, 'SKILL.md')))
+  .sort((left, right) => left.directory.localeCompare(right.directory))
+  .map(({ root, skillsRoot, directory }) => {
     const skillPath = join(skillsRoot, directory, 'SKILL.md')
     const content = readFileSync(skillPath, 'utf8')
     const { data, body } = readFrontMatter(content)
@@ -81,21 +90,23 @@ const skills = readdirSync(skillsRoot)
       ? { path: fromRoot(evalPath), ...summariseEvalSpec(readFileSync(evalPath, 'utf8')) }
       : { path: null, stimuli: 0, runs: 0, trials: 0 }
 
-    return { name: String(data.name || directory), directory, description, path: fromRoot(skillPath), profile, evaluation }
+    return { name: String(data.name || directory), directory, plugin: pluginName(root), description, path: fromRoot(skillPath), profile, evaluation }
   })
 
 // ── Agents, workers, review lenses ─────────────────────────────────────────
 // Read one runtime tree only: Copilot retains original provenance metadata.
 // Classification preserves former worker-family membership, including fidelity lenses.
-const agentsRoot = join(pluginRoot, 'com.github.copilot/agents')
-const agentKind = (path) => {
+const agentKind = (agentsRoot, path) => {
   const relativePath = posix(relative(agentsRoot, path))
   if (/(?:-worker|^(?:contract|mock)-fidelity-lens)\.agent\.md$/.test(relativePath)) return 'worker'
   if (relativePath.endsWith('-lens.agent.md')) return 'lens'
   return 'agent'
 }
 
-const agents = walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((path) => {
+const agents = pluginRoots.flatMap((root) => {
+  const agentsRoot = join(root, 'com.github.copilot/agents')
+  return walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((path) => ({ root, agentsRoot, path }))
+}).map(({ root, agentsRoot, path }) => {
   const content = readFileSync(path, 'utf8')
   const { data } = readFrontMatter(content)
   const structured = structuredFrontMatter(content)
@@ -117,7 +128,8 @@ const agents = walk(agentsRoot, (entry) => entry.endsWith('.agent.md')).map((pat
     // for a run. Same input as the executor's own hash (the whole file, utf8),
     // or the two never compare equal.
     sha256: createHash('sha256').update(content).digest('hex'),
-    kind: agentKind(path),
+    plugin: pluginName(root),
+    kind: agentKind(agentsRoot, path),
     model: data.model ? String(data.model) : null,
     userInvocable: structured['user-invocable'] === true || structured.userInvocable === true,
     costRoleClass: metadata.cost_role_class ? String(metadata.cost_role_class) : null,
@@ -155,6 +167,10 @@ const report = {
     description: manifest.description,
     path: 'plugins/skraft-framework',
   },
+  plugins: pluginRoots.map((root) => {
+    const shipped = JSON.parse(readFileSync(join(root, '.claude-plugin/plugin.json'), 'utf8'))
+    return { name: shipped.name, version: shipped.version, path: fromRoot(root) }
+  }),
   summary: {
     skills: skills.length,
     agents: agents.filter((agent) => agent.kind === 'agent').length,

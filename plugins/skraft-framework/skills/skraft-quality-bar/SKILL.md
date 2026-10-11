@@ -55,21 +55,17 @@ Core runs first and short-circuits: there is nothing to learn from mutating adap
 while the domain is unproven. `resolving-stack-commands` detects the stack and routes
 to the adapter; the adapter owns the invocation.
 
-For .NET, [configure-mutation.sh](../quality-gates-dotnet/scripts/configure-mutation.sh)
-scaffolds `stryker-config-core.json` and `stryker-config-boundary.json` at consumer
-repository root. [mutation-core.sh](../quality-gates-dotnet/scripts/mutation-core.sh)
-and [mutation-boundary.sh](../quality-gates-dotnet/scripts/mutation-boundary.sh) validate
-and execute them. Checked-in configs are also local-debug and CI/CD interface.
+For .NET, `quality-gates-dotnet` scaffolds `stryker-config-core.json` and
+`stryker-config-boundary.json` at consumer repository root, and its core and boundary
+scripts validate and execute them. Checked-in configs are also local-debug and CI/CD interface.
 
-For Python, [configure-mutation.mjs](../quality-gates-python/scripts/configure-mutation.mjs)
-scaffolds `cosmic-ray-core.toml` and `cosmic-ray-boundary.toml`;
-[mutation-gate.mjs](../quality-gates-python/scripts/mutation-gate.mjs) runs one scope per call
-and carries both thresholds as literals.
+For Python, `quality-gates-python` scaffolds `cosmic-ray-core.toml` and
+`cosmic-ray-boundary.toml`; its mutation script runs one scope per call and carries both
+thresholds as literals.
 
-For TypeScript with Vitest, [configure-mutation.mjs](../quality-gates-typescript/scripts/configure-mutation.mjs)
-scaffolds `stryker.core.json` and `stryker.boundary.json`;
-[mutation-gate.mjs](../quality-gates-typescript/scripts/mutation-gate.mjs) runs one scope per
-call with the thresholds of [gate-policy.mjs](../quality-gates-typescript/scripts/gate-policy.mjs).
+For TypeScript with Vitest, `quality-gates-typescript` scaffolds `stryker.core.json` and
+`stryker.boundary.json`; its `mutation-gate.mjs` runs one scope per call with the thresholds of
+its `gate-policy.mjs`.
 
 ## Threshold flags
 

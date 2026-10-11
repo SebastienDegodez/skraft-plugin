@@ -9,7 +9,7 @@ Reviewer agents use this procedure to produce an independent, defensible verdict
 
 ## When to use
 
-Every SKRAFT phase reviewer (`backlog-discoverer-reviewer`, `backlog-planner-reviewer`, `solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`) invokes this skill once per review pass, after reading the upstream phase artifact(s) and the relevant `*-review-criteria` skill.
+Every SKRAFT phase reviewer (`solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`) invokes this skill once per review pass, after reading the upstream phase artifact(s) and the relevant `*-review-criteria` skill.
 
 ## Questions and lenses are not the same thing
 
@@ -17,8 +17,7 @@ The four questions below are fixed. Every review answers all four, and a review 
 one unanswered is not a review.
 
 The **lenses** that answer them are not fixed. Each phase's `*-review-criteria` skill defines
-its own lens set, named for what that phase actually inspects, and the sets differ in size:
-DISCOVER runs three, DISCUSS and DELIVER run four. That is by design — the lens is the
+its own lens set, named for what that phase actually inspects, and the sets differ in size. That is by design — the lens is the
 instrument, the question is the obligation. Requiring exactly four instruments would force a
 phase to invent one it has no gates for, and an invented lens returns `OK` by construction.
 

@@ -1,16 +1,16 @@
 // Pure mapping: which evaluation subject(s) a set of changed file paths touches.
 //
 // A PR should only pay the model-call cost of evaluating what it actually
-// changed. `plugins/skraft-framework/skills/<skill>/**` is a skill's own tree;
+// changed. `plugins/<plugin>/skills/<skill>/**` is a skill's own tree;
 // `tests/skills/<skill>/**` is its eval spec; `tests/agents/<suite>/**` is an
 // agent suite. Either side changing means the subject's behaviour or its
 // contract moved.
 
-const SKILL_PATH_PATTERN = /^(?:plugins\/skraft-framework\/skills|tests\/skills)\/([^/]+)\//
+const SKILL_PATH_PATTERN = /^(?:plugins\/[^/]+\/skills|tests\/skills)\/([^/]+)\//
 
 const AGENT_SUITE_PATTERN = /^tests\/agents\/([^/]+)\//
 
-const AGENT_SOURCE_PATTERN = /^plugins\/skraft-framework\/(?:com\.github\.copilot\/agents|com\.anthropic\.claude-code\/agents)\//
+const AGENT_SOURCE_PATTERN = /^plugins\/[^/]+\/(?:com\.github\.copilot\/agents|com\.anthropic\.claude-code\/agents)\//
 
 const posix = (path) => String(path ?? '').split('\\').join('/')
 

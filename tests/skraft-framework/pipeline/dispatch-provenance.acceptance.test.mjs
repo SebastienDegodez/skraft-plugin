@@ -34,7 +34,7 @@ const dispatch = ({ caller, requested }) => {
 }
 
 test('an agent that dispatches itself is refused', () => {
-  const { output, audit } = dispatch({ caller: 'skraft:backlog-discoverer', requested: 'skraft:backlog-discoverer' })
+  const { output, audit } = dispatch({ caller: 'skraft:brownfield-refactorer', requested: 'skraft:brownfield-refactorer' })
   assert.equal(output.hookSpecificOutput.permissionDecision, 'deny')
   assert.match(output.hookSpecificOutput.permissionDecisionReason, /dispatches itself/)
   assert.equal(audit.find((entry) => entry.event === 'DispatchProvenanceEvaluated')?.code, 'SELF_DISPATCH')
@@ -50,7 +50,7 @@ test('the declared dispatch tree is allowed', () => {
   for (const [caller, requested] of [
     ['skraft:software-engineer-reviewer', 'skraft:cold-reader-lens'],
     ['skraft:software-engineer', 'contract-testing-worker'],
-    ['skraft:backlog-discoverer', 'backlog-discoverer-reviewer'],
+    ['skraft:brownfield-refactorer', 'refactoring-worker'],
   ]) {
     assert.equal(dispatch({ caller, requested }).output, undefined, `${caller} → ${requested}`)
   }
@@ -61,7 +61,7 @@ test('an unknown caller or an agent with no declared dispatcher is not judged', 
     [undefined, 'skraft:cold-reader-lens'],
     ['general-purpose', 'skraft:cold-reader-lens'],
     ['skraft:skraft-orchestrator', 'Explore'],
-    ['skraft:solution-architect', 'skraft:backlog-planner'],
+    ['skraft:solution-architect', 'skraft-backlog:backlog-planner'],
   ]) {
     assert.equal(dispatch({ caller, requested }).output, undefined, `${caller} → ${requested}`)
   }

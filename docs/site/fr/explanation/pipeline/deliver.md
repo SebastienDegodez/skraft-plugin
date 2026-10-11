@@ -116,7 +116,7 @@ l'URL retournée du commentaire dans le reçu PR/MR correspondant.
 
 Les scripts rendent et valident localement ; l'orchestrateur assure la publication
 distante via l'hôte. Pour GitHub, le skill livré
-[github-search-protocol]({{ "/fr/dashboard/#skill-github-search-protocol" | relative_url }})
+[github-publication]({{ "/fr/dashboard/#skill-github-publication" | relative_url }})
 possède la procédure : MCP en priorité, repli annoncé vers `gh` dans l'hôte seulement si
 MCP ou une capacité requise est indisponible selon la politique du skill. Aucun skill
 compagnon externe n'est requis. Azure DevOps/GitLab restent des cibles de reporting MCP
