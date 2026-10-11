@@ -93,7 +93,8 @@ Everything must run on Windows and macOS, under Claude Code, Copilot CLI and VS 
 
 Apply the `clean-architecture-testing` and `outside-in-tdd` skills to the engine itself.
 
-- Test files never live inside `plugins/`. Feature folders are named by behaviour
+- Test files never live inside `plugins/`; the mod's `*.test.ts` live in
+  `tests/skraft-framework/integration/claude-mod/plugin-test/` and run on a temporary copy. Feature folders are named by behaviour
   (`pipeline-flow`, `write-scope`, `review`, `gates`…), never by ticket. Name files
   `<behaviour>.test.mjs`.
 - `tests/skraft-framework/unit/<feature>/`: enter through a use case; assert the returned step,
@@ -224,5 +225,7 @@ npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/sk
 npm run mutation:engine        # Stryker, incremental
 npm run skills:check && npm run plugin:check && npm run backlog:check
 node scripts/agent-policy/resolve-model-bin.mjs --check
+claude plugin validate plugins/skraft-framework                    # the Claude Code mod
+node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs  # `claude plugin test` on a copy
 node scripts/local-ci.mjs      # mirrors CI locally
 ```
