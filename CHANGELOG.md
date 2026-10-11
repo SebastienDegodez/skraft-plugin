@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.15.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.15.0...v1.15.1) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* **ci:** keep agent evaluation verdicts advisory under the Actions shell ([#205](https://github.com/SebastienDegodez/skraft-plugin/issues/205)) ([d4f76e1](https://github.com/SebastienDegodez/skraft-plugin/commit/d4f76e12057dd33362f8bf7649df2a56a3d0bf6d))
+
 ## [1.15.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.14.1...v1.15.0) (2026-10-11)
 
 ### ✨ Features
