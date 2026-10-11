@@ -136,7 +136,8 @@ test('an agent the host cannot start blocks the run without spending the attempt
   assert.deepEqual(outcome, {
     status: 'blocked', slug: 'checkout', phase: 'RESEARCH', code: 'agent-unavailable', reason: 'agent "solution-researcher" is not installed',
   })
-  assert.deepEqual(tracking.journal('checkout').map((event) => event.type), ['run.started', 'step.started'])
+  assert.deepEqual(tracking.journal('checkout').map((event) => event.type), ['run.started', 'step.started', 'run.stopped'])
+  assert.equal(tracking.journal('checkout')[2].code, 'agent-unavailable')
 
   agentRunner.behaviours.push(researchWritten(tracking))
   const resumed = await createRunPipeline(deps).run({ slug: 'checkout' })

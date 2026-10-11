@@ -35,8 +35,8 @@ export const createObserve = (deps, definition = DEFAULT_PIPELINE) => Object.fre
     const open = Object.entries(run.steps).find(([, step]) => step.open)
     return {
       slug,
-      status: run.finished ? (run.finished.status === 'blocked' ? 'blocked' : 'done') : 'running',
-      reason: run.finished?.reason ?? '',
+      status: run.finished ? (run.finished.status === 'blocked' ? 'blocked' : 'done') : run.stopped ? 'blocked' : 'running',
+      reason: run.finished?.reason ?? run.stopped?.reason ?? '',
       phases: definition.phases.map(({ phase, steps }) => ({
         phase,
         state: run.closed.includes(phase) ? 'closed' : steps.some((step) => run.steps[step.id]) ? 'open' : 'pending',
