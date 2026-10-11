@@ -19,6 +19,6 @@ test('skraft --version prints the plugin version', () => {
 test('an unknown command prints a one-line usage on stderr and exits 2', () => {
   const run = skraft('frobnicate')
   assert.equal(run.stdout, '')
-  assert.match(run.stderr, /^usage: skraft --version\n$/)
+  assert.match(run.stderr, /^usage: skraft --version \| init <slug> \[--issue <number>\] \[--title <text>\] \| status \[--json\]\n$/)
   assert.equal(run.status, 2)
 })
