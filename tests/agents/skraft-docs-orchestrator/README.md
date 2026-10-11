@@ -35,7 +35,7 @@ before-state is known exactly, so "scans clean afterwards" is a real repair and 
 friends. That is deliberate — a copied scanner would drift from the shipped one and the eval
 would start grading a fiction. Four files plus one dependency are staged:
 `scripts/{scan-drift,lint-nav,check-citations}.mjs`, `scripts/lib/book.mjs`, and
-`plugins/skraft-framework/src/domain/yaml-parser.mjs` (which `book.mjs` imports).
+`eng/lib/yaml-parser.mjs` (which `book.mjs` imports).
 
 **This is the one mechanic in the suite that has not been verified**: whether vally accepts a
 `src:` that escapes the spec's own directory is unknown, because the suite has never been run.

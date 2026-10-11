@@ -5,7 +5,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { parseAgentDescriptor } from '../../../plugins/skraft-framework/src/cli/build-config.mjs'
+import { parseAgentDescriptor } from '../../../scripts/agent-policy/build-config.mjs'
 import { projectPluginAdapters } from '../../../scripts/project-plugin-adapters.mjs'
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url))

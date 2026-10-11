@@ -58,8 +58,8 @@ stimuli:
           dest: scripts/check-citations.mjs
         - src: ../../../scripts/lib/book.mjs
           dest: scripts/lib/book.mjs
-        - src: ../../../plugins/skraft-framework/src/domain/yaml-parser.mjs
-          dest: plugins/skraft-framework/src/domain/yaml-parser.mjs
+        - src: ../../../eng/lib/yaml-parser.mjs
+          dest: eng/lib/yaml-parser.mjs
         - src: fixtures/orphan-worker/docs/site/_data/book.yml
           dest: docs/site/_data/book.yml
         - src: fixtures/orphan-worker/docs/site/fr/reference/workers/contract-testing-worker.md
@@ -176,8 +176,8 @@ stimuli:
           dest: scripts/check-citations.mjs
         - src: ../../../scripts/lib/book.mjs
           dest: scripts/lib/book.mjs
-        - src: ../../../plugins/skraft-framework/src/domain/yaml-parser.mjs
-          dest: plugins/skraft-framework/src/domain/yaml-parser.mjs
+        - src: ../../../eng/lib/yaml-parser.mjs
+          dest: eng/lib/yaml-parser.mjs
         - src: fixtures/diataxis-gap/docs/site/_data/book.yml
           dest: docs/site/_data/book.yml
         - src: fixtures/diataxis-gap/docs/site/fr/reference/workers/contract-testing-worker.md
@@ -269,8 +269,8 @@ stimuli:
           dest: scripts/check-citations.mjs
         - src: ../../../scripts/lib/book.mjs
           dest: scripts/lib/book.mjs
-        - src: ../../../plugins/skraft-framework/src/domain/yaml-parser.mjs
-          dest: plugins/skraft-framework/src/domain/yaml-parser.mjs
+        - src: ../../../eng/lib/yaml-parser.mjs
+          dest: eng/lib/yaml-parser.mjs
         - src: fixtures/editorial-gap/docs/site/_data/book.yml
           dest: docs/site/_data/book.yml
         - src: fixtures/editorial-gap/docs/site/fr/reference/workers/contract-testing-worker.md

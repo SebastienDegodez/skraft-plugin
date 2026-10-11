@@ -1,0 +1,204 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { mkdtemp, mkdir, writeFile, readdir, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { parseAgentDescriptor, main } from '../../../scripts/agent-policy/build-config.mjs'
+
+// Capture console-like io so main() stays testable in-process.
+const capture = () => {
+  const out = []
+  const errs = []
+  return { io: { log: (...a) => out.push(a.join(' ')), error: (...a) => errs.push(a.join(' ')) }, out, errs }
+}
+
+const specialist = ({ name, phase, skills = [], inputs = [], outputs = [] }) =>
+  [
+    '---',
+    `name: ${name}`,
+    'description: "x"',
+    'metadata:',
+    `  dispatched_by: skraft-orchestrator`,
+    `  phase: ${phase}`,
+    ...(skills.length ? ['  skills:', ...skills.map((s) => `    - ${s}`)] : []),
+    '  inputs:',
+    '    required:',
+    ...inputs.map((i) => `      - ${i}`),
+    '  outputs:',
+    ...outputs.map((o) => `    - ${o}`),
+    '---',
+    '',
+    '# body',
+  ].join('\n')
+
+const orchestrator = (phases) =>
+  [
+    '---',
+    'name: skraft-orchestrator',
+    'description: "x"',
+    'metadata:',
+    '  phases:',
+    ...phases.map((p) => `    - ${p}`),
+    '---',
+    '',
+    '# body',
+  ].join('\n')
+
+// --- pure: parseAgentDescriptor ---
+
+test('parseAgentDescriptor extracts identity, phase, dispatch, skills and artifacts', () => {
+  const d = parseAgentDescriptor(
+    specialist({
+      name: 'solution-architect',
+      phase: 'DESIGN',
+      skills: ['architecture-patterns', 'architecture-decisions'],
+      inputs: ['stories.md'],
+      outputs: ['adr.md', 'diagrams.md'],
+    }),
+    { id: 'solution-architect' },
+  )
+  assert.equal(d.id, 'solution-architect')
+  assert.equal(d.name, 'solution-architect')
+  assert.equal(d.phase, 'DESIGN')
+  assert.equal(d.dispatchedBy, 'skraft-orchestrator')
+  assert.deepEqual(d.skills, ['architecture-patterns', 'architecture-decisions'])
+  assert.deepEqual(d.inputs, ['stories.md'])
+  assert.deepEqual(d.outputs, ['adr.md', 'diagrams.md'])
+})
+
+test('parseAgentDescriptor reads the orchestrator phase order from metadata.phases', () => {
+  const d = parseAgentDescriptor(orchestrator(['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER']))
+  assert.deepEqual(d.phases, ['DISCOVER', 'DISCUSS', 'DESIGN', 'DISTILL', 'DELIVER'])
+})
+
+test('parseAgentDescriptor reads on-demand skills and merges context with recommended inputs', () => {
+  const d = parseAgentDescriptor([
+    '---',
+    'name: software-engineer',
+    'description: "x"',
+    'metadata:',
+    '  dispatched_by: skraft-orchestrator',
+    '  phase: DELIVER',
+    '  skills:',
+    '    - outside-in-tdd',
+    '  on_demand_skills:',
+    '    - mutation-testing',
+    '  inputs:',
+    '    required:',
+    '      - test-plan.md',
+    '    context:',
+    '      - contracts.md',
+    '    recommended:',
+    '      - research.md',
+    '---',
+    '',
+    '# body',
+  ].join('\n'))
+  assert.deepEqual(d.skills, ['outside-in-tdd'])
+  assert.deepEqual(d.onDemandSkills, ['mutation-testing'])
+  assert.deepEqual(d.inputs, ['test-plan.md'])
+  assert.deepEqual(d.context, ['contracts.md', 'research.md'])
+})
+
+test('parseAgentDescriptor yields empty collections when frontmatter is absent', () => {
+  const d = parseAgentDescriptor('# no fences')
+  assert.equal(d.name, undefined)
+  assert.deepEqual(d.skills, [])
+  assert.deepEqual(d.onDemandSkills, [])
+  assert.deepEqual(d.inputs, [])
+  assert.deepEqual(d.context, [])
+  assert.deepEqual(d.outputs, [])
+})
+
+// --- main() in-process over a temp agent dir ---
+
+async function fixtureDir() {
+  const dir = await mkdtemp(join(tmpdir(), 'skraft-cfg-build-'))
+  const agents = join(dir, 'agents')
+  await mkdir(agents, { recursive: true })
+  await writeFile(join(agents, 'orch.md'), orchestrator(['DESIGN', 'DELIVER']))
+  await writeFile(
+    join(agents, 'arch.md'),
+    specialist({ name: 'solution-architect', phase: 'DESIGN', skills: ['architecture-patterns'] }),
+  )
+  await writeFile(join(agents, 'arch-rev.md'), specialist({ name: 'solution-architect-reviewer', phase: 'DESIGN' }))
+  await writeFile(join(agents, 'eng.md'), specialist({ name: 'software-engineer', phase: 'DELIVER' }))
+  await writeFile(join(agents, 'eng-rev.md'), specialist({ name: 'software-engineer-reviewer', phase: 'DELIVER' }))
+  return { dir, agents }
+}
+
+test('main --emit prints a config derived from the agent descriptors', async () => {
+  const { dir, agents } = await fixtureDir()
+  const { io, out: logs } = capture()
+  const code = main(['--emit', '--dir', agents], io)
+  assert.equal(code, 0)
+  const config = JSON.parse(logs.join('\n'))
+  assert.deepEqual(config.phaseOrder, ['DESIGN', 'DELIVER'])
+  assert.deepEqual(config.phaseAgents.DESIGN, {
+    specialist: 'solution-architect',
+    reviewer: 'solution-architect-reviewer',
+  })
+  assert.deepEqual(config.agentSkills['solution-architect'], [{ name: 'architecture-patterns', policy: 'verify' }])
+  await rm(dir, { recursive: true, force: true })
+})
+
+test('main without --emit validates the descriptors and writes no file', async () => {
+  const { dir, agents } = await fixtureDir()
+  const { io, out: logs } = capture()
+  const code = main(['--dir', agents], io)
+  assert.equal(code, 0)
+  assert.ok(logs.some((l) => /valid/.test(l)))
+  assert.deepEqual((await readdir(dir)).sort(), ['agents'])
+  await rm(dir, { recursive: true, force: true })
+})
+
+test('main rejects the retired --check and --apply flags', async () => {
+  const { dir, agents } = await fixtureDir()
+  assert.throws(() => main(['--check', '--dir', agents], capture().io), /Unknown option '--check'/)
+  assert.throws(() => main(['--apply', '--dir', agents], capture().io), /Unknown option '--apply'/)
+  await rm(dir, { recursive: true, force: true })
+})
+
+test('main fails (exit 1) and names the orphan when an agent declares no parent', async () => {
+  const { dir, agents } = await fixtureDir()
+  await writeFile(
+    join(agents, 'orphan.md'),
+    ['---', 'name: orphan-agent', 'description: "x"', 'metadata:', '  phase: DESIGN', '---', '', '# body'].join('\n'),
+  )
+  const { io, errs, out: logs } = capture()
+  const code = main(['--emit', '--dir', agents], io)
+  assert.equal(code, 1)
+  assert.deepEqual(logs, [])
+  assert.ok(errs.some((l) => /orphan-agent/.test(l) && /ORPHAN_AGENT/.test(l)))
+  await rm(dir, { recursive: true, force: true })
+})
+
+test('main fails (exit 1) and names the skill an agent lists as both mandatory and on-demand', async () => {
+  const { dir, agents } = await fixtureDir()
+  await writeFile(
+    join(agents, 'eng.md'),
+    [
+      '---', 'name: software-engineer', 'description: "x"', 'metadata:',
+      '  dispatched_by: skraft-orchestrator', '  phase: DELIVER',
+      '  skills:', '    - outside-in-tdd', '    - mutation-testing',
+      '  on_demand_skills:', '    - mutation-testing',
+      '---', '', '# body',
+    ].join('\n'),
+  )
+  const { io, errs } = capture()
+  const code = main(['--emit', '--dir', agents], io)
+  assert.equal(code, 1)
+  assert.ok(errs.some((l) => /software-engineer/.test(l) && /mutation-testing/.test(l) && /SKILL_DECLARED_TWICE/.test(l)))
+  await rm(dir, { recursive: true, force: true })
+})
+
+test('main --emit --json prints the config without writing a file', async () => {
+  const { dir, agents } = await fixtureDir()
+  const { io, out: logs } = capture()
+  const code = main(['--emit', '--json', '--dir', agents], io)
+  assert.equal(code, 0)
+  const config = JSON.parse(logs.join('\n'))
+  assert.deepEqual(config.phaseOrder, ['DESIGN', 'DELIVER'])
+  assert.deepEqual((await readdir(dir)).sort(), ['agents'])
+  await rm(dir, { recursive: true, force: true })
+})

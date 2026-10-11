@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import { mergeEnv } from '@microsoft/vally'
 
 import { loadAgentDescriptor } from './agent-descriptor.mjs'
-import { sessionContext } from '../../plugins/skraft-framework/src/domain/session-context-policy.mjs'
+import { sessionContext } from '../lib/session-context-policy.mjs'
 
 const agentTag = (stimulus) => {
   const value = stimulus?.tags?.agent
@@ -74,29 +74,22 @@ const dispatchNotice = (self, dispatchable) => [
   `Pass only \`agent_type\`, \`name\`, \`description\` and \`prompt\`. Never pass \`model\`, \`reasoning_effort\` or \`context_tier\`: every registered agent is already on the model this run pins, and a dispatch that names its own risks a pairing the runtime rejects — the sub-agent fails to start and the work you delegated never happens.`,
 ].join('\n\n')
 
-// Every SKRAFT descriptor reaches its own tooling through `$SKRAFT_PLUGIN_ROOT`:
-// the orchestrator rehydrates state with `src/cli/state.mjs`, a reviewer renders
-// its verdict with `src/cli/artifact.mjs`, the engineer runs the quality-gate
-// scripts under `skills/<skill>/scripts`. In a real session the plugin's
-// SessionStart hook exports that variable and injects the same context this
-// executor injects (sessionContext): the evaluation runs what ships, not a
-// harness-only notice. Before that export existed, the mandated command expanded
-// to `node "/src/cli/state.mjs"` and one trial burned ten dispatches hunting for it.
+// Agents reach the scripts their skills bundle through `$SKRAFT_PLUGIN_ROOT`, so the
+// executor assembles a plugin root and injects the session context that names it.
 //
 // The tree is assembled once per executor, outside the workspace: Vally captures
 // the diff baseline before `execute()` runs, so anything staged into the
 // workspace here would show up as work the agent did and break every
 // `diff-empty`.
 //
-// What is copied is what the CLI needs to run and nothing that is itself under
+// What is copied is what those scripts need to run and nothing that is itself under
 // test. Never a skill's text — a skill reaches an agent through the runtime, not
 // off disk, and a copy here would only invite an agent to open the file instead;
 // only the scripts a skill bundles, which the skill tells the agent to run.
 // Never `agents/` — the descriptors are already injected as prompts, and an agent
 // that can open a sibling's descriptor reads it instead of dispatching, which is
-// the exact behaviour the dispatch metrics exist to catch. Never
-// `src/node_modules` — 67 MB the dependency-free source never loads.
-const PLUGIN_SUBTREES = ['src/cli', 'src/domain', 'src/application', 'src/adapters', 'src/ports', 'assets']
+// the exact behaviour the dispatch metrics exist to catch.
+const PLUGIN_SUBTREES = ['assets']
 
 // Where a skill name resolves from. Agent suites stage nothing of their own —
 // `options.skills` is empty for every stimulus under tests/agents — so without
@@ -119,7 +112,6 @@ const copyPluginRoot = (repoRoot) => {
   return root
 }
 
-// The context the plugin's SessionStart hook injects in a real session.
 const pluginRootContext = (pluginRoot) => [
   '## Session context',
   sessionContext({ pluginRoot }),
@@ -296,7 +288,7 @@ export const createAgentExecutor = ({
             stimulus,
             workDir: options.workDir,
             // The root the prompt names has to be the root the handler admits.
-            // Telling an agent to run `node <pluginRoot>/src/cli/artifact.mjs`
+            // Telling an agent to run `node <pluginRoot>/skills/<skill>/scripts/...`
             // while the handler treats that absolute path as an escape denies
             // the command it was just ordered to run, and the refusal reads as
             // the agent declining to write its artefact.

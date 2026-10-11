@@ -1,6 +1,6 @@
 import { basename, posix } from 'node:path'
-import { parseYaml } from '../../plugins/skraft-framework/src/domain/yaml-parser.mjs'
-import { resolveModel } from '../../plugins/skraft-framework/src/application/resolve-model.mjs'
+import { parseYaml } from '../../eng/lib/yaml-parser.mjs'
+import { resolveModel } from '../../eng/lib/resolve-model.mjs'
 
 export const nativeAgents = 'com.anthropic.claude-code/agents'
 const authoredAgents = 'com.github.copilot/agents'

@@ -122,12 +122,12 @@ describe('Vally executor plugin registration', () => {
     deepStrictEqual(pilotPermissionHandler({
       kind: 'shell',
       commandSegments: [
-        { identifier: 'node', fullCommandText: 'node /tmp/plugin/src/cli/artifact.mjs review-verdict --out .copilot-tracking/reviews/design-review-1.md' },
+        { identifier: 'node', fullCommandText: 'node /tmp/plugin/skills/qa-reporting/scripts/report/cli/report.mjs render --slug demo --data report.json --out .copilot-tracking/reviews/design-review-1.md' },
       ],
-      possiblePaths: ['/tmp/plugin/src/cli/artifact.mjs'],
+      possiblePaths: ['/tmp/plugin/skills/qa-reporting/scripts/report/cli/report.mjs'],
       possibleUrls: [],
       fullCommandText: [
-        'node /tmp/plugin/src/cli/artifact.mjs review-verdict --out .copilot-tracking/reviews/design-review-1.md <<\'EOF\'',
+        'node /tmp/plugin/skills/qa-reporting/scripts/report/cli/report.mjs render --slug demo --data report.json --out .copilot-tracking/reviews/design-review-1.md <<\'EOF\'',
         'conclusion: "contract / ADR-002 / reconciled: no"',
         'EOF',
       ].join('\n'),
@@ -209,11 +209,11 @@ describe('Vally executor plugin registration', () => {
     }
   })
 
-  // The executor assembles the CLI the descriptors invoke as `$CLAUDE_PLUGIN_ROOT`
-  // and passes it as a readable root, so the mandated `node .../state.mjs` is
-  // allowed. It stays a READ root: the CLI is not a place the agent may write, and
-  // the rest of the filesystem is no more reachable than before.
-  it('runs the assembled plugin CLI while keeping everything else out of reach', () => {
+  // The executor assembles the plugin root the skills' scripts run from and passes it
+  // as a readable root, so a mandated `node .../report.mjs` is allowed. It stays a
+  // READ root: the agent may not write there, and the rest of the filesystem is no
+  // more reachable than before.
+  it('runs a script from the assembled plugin root while keeping everything else out of reach', () => {
     const pluginRoot = '/tmp/skraft-plugin-root-ab12'
     const context = {
       stimulus: { tags: { permissions: 'workspace-write' } },
@@ -222,19 +222,19 @@ describe('Vally executor plugin registration', () => {
     }
 
     deepStrictEqual(
-      pilotPermissionHandler({ kind: 'read', path: `${pluginRoot}/src/cli/state.mjs` }, context),
+      pilotPermissionHandler({ kind: 'read', path: `${pluginRoot}/skills/qa-reporting/scripts/report/cli/report.mjs` }, context),
       { kind: 'approve-once' },
     )
     deepStrictEqual(pilotPermissionHandler({
       kind: 'shell',
-      commandSegments: [{ identifier: 'node', fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project pricing` }],
-      possiblePaths: [`${pluginRoot}/src/cli/state.mjs`],
+      commandSegments: [{ identifier: 'node', fullCommandText: `node ${pluginRoot}/skills/qa-reporting/scripts/report/cli/report.mjs status --slug pricing` }],
+      possiblePaths: [`${pluginRoot}/skills/qa-reporting/scripts/report/cli/report.mjs`],
       possibleUrls: [],
-      fullCommandText: `node ${pluginRoot}/src/cli/state.mjs get --project pricing`,
+      fullCommandText: `node ${pluginRoot}/skills/qa-reporting/scripts/report/cli/report.mjs status --slug pricing`,
     }, context), { kind: 'approve-once' })
 
     strictEqual(
-      pilotPermissionHandler({ kind: 'write', fileName: `${pluginRoot}/src/cli/state.mjs` }, context).kind,
+      pilotPermissionHandler({ kind: 'write', fileName: `${pluginRoot}/skills/qa-reporting/scripts/report/cli/report.mjs` }, context).kind,
       'reject',
     )
     strictEqual(pilotPermissionHandler({ kind: 'read', path: '/repo/tests/agents' }, context).kind, 'reject')

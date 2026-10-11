@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto'
-import { spawnSync } from 'node:child_process'
 import { deepStrictEqual, match, strictEqual } from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -369,13 +368,10 @@ describe('Vally real-agent executor', () => {
     strictEqual(calls.sessions[0].customAgents[0].prompt.includes('Evaluation runtime sub-agent dispatch'), false)
   })
 
-  // `$CLAUDE_PLUGIN_ROOT` is exported by nobody here, so a descriptor's mandated
-  // `node "$CLAUDE_PLUGIN_ROOT/src/cli/state.mjs"` resolves to `/src/...` and the
-  // agent hunts for a CLI instead of running the phase. The executor assembles
-  // one for every agent stimulus, outside the workspace so the diff baseline —
-  // captured before execute() — stays clean, and carrying the CLI and its
-  // templates only.
-  it('assembles a runnable plugin CLI without skill entrypoints or agents under test', async t => {
+  // The executor assembles a plugin root for every agent stimulus, outside the workspace
+  // so the diff baseline — captured before execute() — stays clean, carrying the skill
+  // scripts and assets only.
+  it('assembles a plugin root of skill scripts without skill entrypoints or agents under test', async t => {
     const calls = { sessions: [] }
     const executor = createAgentExecutor({
       repoRoot,
@@ -403,32 +399,20 @@ describe('Vally real-agent executor', () => {
     })
 
     const [{ prompt }] = calls.sessions[0].customAgents
-    const [pluginRoot] = /\/\S*skraft-plugin-root-\S+?(?=\/src\/cli\/state\.mjs)/.exec(prompt)
-    strictEqual(prompt.includes(`node "${pluginRoot}/src/cli/state.mjs"`), true)
-    // The CLI renders its artefacts from templates that live beside it.
+    const [pluginRoot] = /\/\S*skraft-plugin-root-\S+?(?=\/skills\/<skill>\/scripts\/)/.exec(prompt)
+    strictEqual(prompt.includes(`node "${pluginRoot}/skills/<skill>/scripts/<script>.mjs"`), true)
     strictEqual(existsSync(join(pluginRoot, 'assets', 'templates')), true)
-    strictEqual(existsSync(join(pluginRoot, 'src', 'cli', 'state.mjs')), true)
     // A skill's scripts ship under the plugin root, as in an install; its text never does.
     strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-dotnet', 'scripts', 'configure-mutation.mjs')), true)
     strictEqual(existsSync(join(pluginRoot, 'skills', 'quality-gates-javascript', 'scripts', 'run-gates.mjs')), true)
     strictEqual(readdirSync(pluginRoot, { recursive: true }).some(path => path.endsWith('SKILL.md') || path.split(sep).includes('references')), false)
     strictEqual(existsSync(join(pluginRoot, 'com.anthropic.claude-code')), false)
-    // The state contract ships as in an install; the descriptors never do.
-    strictEqual(existsSync(join(pluginRoot, 'src', 'domain', 'state.schema.json')), true)
+    // The descriptors never ship.
     strictEqual(existsSync(join(pluginRoot, 'com.github.copilot')), false)
     strictEqual(existsSync(join(pluginRoot, 'docs')), false)
-    // 67 MB the dependency-free source never loads.
-    strictEqual(existsSync(join(pluginRoot, 'src', 'node_modules')), false)
+    strictEqual(existsSync(join(pluginRoot, 'engine')), false)
     // The workspace is untouched: Vally captured its diff baseline before this ran.
     deepStrictEqual(readdirSync(workDir), ['.log'])
-
-    const initialized = spawnSync('git', ['init', '-q'], { cwd: workDir, encoding: 'utf8' })
-    strictEqual(initialized.status, 0, initialized.stderr)
-    const scanned = spawnSync(process.execPath, [join(pluginRoot, 'src/cli/state.mjs'), 'scan-commits', '--count', '1'], {
-      cwd: workDir, encoding: 'utf8',
-    })
-    strictEqual(scanned.status, 0, scanned.stderr)
-    deepStrictEqual(JSON.parse(scanned.stdout), { total: 0, nonConventional: [] })
     await executor.shutdown()
     strictEqual(existsSync(pluginRoot), false)
   })

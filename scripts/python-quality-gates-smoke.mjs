@@ -8,7 +8,7 @@
 // same way on Linux, macOS and Windows.
 //
 // So this runs the shipped scripts with the real toolchain on a small Clean Architecture
-// project, in a throwaway Git copy of tests/skraft-framework/quality-gates/fixtures/python-payment:
+// project, in a throwaway Git copy of tests/skill-scripts/quality-gates/fixtures/python-payment:
 //
 //   scaffold    configure-mutation.mjs writes the two cosmic-ray configs
 //   G1          capture.mjs records a green pytest run with its exit code
@@ -33,7 +33,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const FIXTURE = join(repoRoot, 'tests', 'skraft-framework', 'quality-gates', 'fixtures', 'python-payment')
+const FIXTURE = join(repoRoot, 'tests', 'skill-scripts', 'quality-gates', 'fixtures', 'python-payment')
 const SCRIPTS = join(repoRoot, 'plugins', 'skraft-framework', 'skills', 'quality-gates-python', 'scripts')
 const LOCAL_STATE = new Set(['.venv', '__pycache__', '.pytest_cache', 'build'])
 
