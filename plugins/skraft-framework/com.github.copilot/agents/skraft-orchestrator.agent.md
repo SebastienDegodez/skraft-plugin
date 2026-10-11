@@ -31,8 +31,11 @@ and relay what it reports.
    Without a slug the run resumes the working copy's active pipeline
    (`.copilot-tracking/skraft-plans/.active-slug`); when there is none, ask the human for the
    slug. Never pick one from the folders on disk.
-3. Relay the outcome as the engine gives it: status, code, reason. On `blocked` or `refused`,
-   tell the human what the reason asks for and stop.
+3. Relay what the run reports:
+   - Claude Code: the tool answers at once and the run goes on in the background; say it
+     started and point to the Skraft pane, or `/skraft`, for its state.
+   - GitHub Copilot CLI: the workflow returns the outcome; relay its status, code and reason.
+   On `blocked` or `refused`, tell the human what the reason asks for and stop.
 
 Never dispatch a phase agent, run a gate, or write or edit any file under
 `.copilot-tracking/` yourself.
