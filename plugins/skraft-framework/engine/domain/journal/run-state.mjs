@@ -1,7 +1,8 @@
 /**
  * @typedef {{ type: string, at: string, prev: string | null, [field: string]: any }} RunEvent
  * @typedef {{ attempt: number, phase: string, agent: string, outputs: string[], missing: string[] }} OpenAttempt
- * @typedef {{ attempts: number, open: OpenAttempt | null, last: RunEvent | null }} StepState
+ * @typedef {{ attempts: number, outputs: string[], open: OpenAttempt | null, last: RunEvent | null }} StepState
+ *   outputs: the paths of the first attempt; every retry keeps them.
  * @typedef {{
  *   slug: string | null,
  *   story: { issue?: number | null, title?: string | null } | null,
@@ -29,7 +30,9 @@ export const deriveRun = (events) => {
       run.story = event.story ?? null
     } else if (event.type === 'step.started') {
       const step = stepOf(run, event.step)
+      if (step.attempts === 0) step.outputs = [...event.outputs]
       step.attempts = event.attempt
+      run.finished = null
       step.open = { attempt: event.attempt, phase: event.phase, agent: event.agent, outputs: [...event.outputs], missing: [...event.missing] }
       run.attempts += 1
     } else if (event.type === 'step.recorded') {
@@ -39,6 +42,7 @@ export const deriveRun = (events) => {
       if (typeof event.cost === 'number') run.costUsd = (run.costUsd ?? 0) + event.cost
     } else if (event.type === 'phase.closed') {
       run.closed.push(event.phase)
+      run.finished = null
     } else if (event.type === 'run.finished') {
       run.finished = event
     }
@@ -47,4 +51,4 @@ export const deriveRun = (events) => {
 }
 
 /** @param {RunState} run @param {string} id @returns {StepState} */
-const stepOf = (run, id) => (run.steps[id] ??= { attempts: 0, open: null, last: null })
+const stepOf = (run, id) => (run.steps[id] ??= { attempts: 0, outputs: [], open: null, last: null })

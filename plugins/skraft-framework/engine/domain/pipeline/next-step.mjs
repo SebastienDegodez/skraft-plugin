@@ -5,7 +5,7 @@ import { PIPELINE_PHASES } from './pipeline-definition.mjs'
  * @typedef {import('./pipeline-definition.mjs').StepSpec} StepSpec
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
  * @typedef {{ kind: 'dispatch', phase: string, step: StepSpec, attempt: number, missing: string[],
- *   resumed: import('../journal/run-state.mjs').OpenAttempt | null }} DispatchStep
+ *   outputs: string[] | null, resumed: import('../journal/run-state.mjs').OpenAttempt | null }} DispatchStep
  * @typedef {{ kind: 'blocked', phase: string, step: StepSpec, missing: string[] }} BlockedStep
  * @typedef {{ kind: 'close-phase', phase: string }} ClosePhaseStep
  * @typedef {{ kind: 'done', phase: string | null, status: 'completed' | 'incomplete' }} DoneStep
@@ -23,12 +23,12 @@ export const nextStep = (definition, run) => {
     if (run.closed.includes(phase)) continue
     for (const step of steps) {
       const state = run.steps[step.id]
-      if (!state) return { kind: 'dispatch', phase, step, attempt: 1, missing: [], resumed: null }
-      if (state.open) return { kind: 'dispatch', phase, step, attempt: state.open.attempt, missing: state.open.missing, resumed: state.open }
+      if (!state) return { kind: 'dispatch', phase, step, attempt: 1, missing: [], outputs: null, resumed: null }
+      if (state.open) return { kind: 'dispatch', phase, step, attempt: state.open.attempt, missing: state.open.missing, outputs: state.open.outputs, resumed: state.open }
       const missing = state.last?.missing ?? []
       if (missing.length === 0) continue
       if (state.attempts >= step.maxAttempts) return { kind: 'blocked', phase, step, missing }
-      return { kind: 'dispatch', phase, step, attempt: state.attempts + 1, missing, resumed: null }
+      return { kind: 'dispatch', phase, step, attempt: state.attempts + 1, missing, outputs: state.outputs, resumed: null }
     }
     return { kind: 'close-phase', phase }
   }
