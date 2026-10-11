@@ -12,12 +12,10 @@ plugins/skraft-framework/
 ├── .claude-plugin/plugin.json        explicit registration of all 31 agents
 ├── com.github.copilot/
 │   ├── agents/                      31 flat `.agent.md` synchronized descriptors
-│   └── hooks/hooks.json             generated copy of root hooks, `${PLUGIN_ROOT}`
 ├── com.anthropic.claude-code/
 │   └── agents/                      31 flat editable native Claude `.md` descriptors
-├── hooks/hooks.json                 canonical source; Claude compatibility
 ├── skills/                         shared skills
-└── src/                            shared zero-dependency runtime
+└── engine/                         V2 engine: domain, application, infrastructure, drivers (ADR-001)
 ```
 
 Copilot loads path-scoped rules natively. Claude's `SubagentStart` hook resolves the
@@ -53,12 +51,8 @@ entry), **PASS denied** (1 hook audit entry), forbidden write absent. This verif
 SKRAFT refusal, not the full six-root picker, hidden-subagent invocation, model IDs, general
 tool permissions, or the full engineering pipeline. Full live VS Code validation remains unverified.
 
-Hooks have one source and two physical surfaces: canonical [hooks/hooks.json](hooks/hooks.json)
-for Claude compatibility and generated [com.github.copilot/hooks/hooks.json](com.github.copilot/hooks/hooks.json)
-for Copilot v1. No extra manifest `hooks` pointers: do not register either auto-loaded surface twice.
-These are current packaging facts, recorded in [ADR-009](../../docs/adr/adr-009-generated-copilot-hook-copy.md);
-[ADR-008](../../docs/adr/adr-008-single-hook-manifest.md), which it supersedes, retains its measured
-legacy record, not a current cross-client guarantee.
+V2 ships no command hooks ([ADR-001](../../docs/adr/adr-001-host-neutral-engine-with-drivers.md)).
+The v1 hook packaging and its ADRs remain on `main`.
 
 ## Maintainer workflow
 
@@ -79,19 +73,19 @@ Commit both runtime descriptors, shared baseline and generated hook copy togethe
 marketplace Git installs do not run a build.
 Keep the Claude manifest's full agent list synchronized when adding or removing agents.
 
-After changing an agent, regenerate the guardrail config:
+After changing an agent, check the dispatch tree and skill declarations:
 
 ```bash
-node plugins/skraft-framework/src/cli/build-config-bin.mjs
+node scripts/agent-policy/build-config-bin.mjs
 ```
 
 Before opening a pull request:
 
 ```bash
 npm run paths:check
-node plugins/skraft-framework/src/cli/build-config-bin.mjs --check
-node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check
-node --test "tests/skraft-framework/**/*.test.mjs"
+node scripts/agent-policy/build-config-bin.mjs
+node scripts/agent-policy/resolve-model-bin.mjs --check
+npm run test:engine
 npm run ci:local
 ```
 

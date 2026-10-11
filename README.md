@@ -147,12 +147,13 @@ marketplace Git installs do not run a build.
 # Tests (boundary-to-boundary, 0 runtime dependency)
 node --test "tests/skraft-framework/**/*.test.mjs"
 
-# Mutation testing (Stryker)
-npm --prefix plugins/skraft-framework/src ci && node plugins/skraft-framework/src/node_modules/.bin/stryker run plugins/skraft-framework/src/stryker.config.mjs
+# Engine tests and mutation testing (Stryker)
+npm run test:engine
+npm ci --prefix plugins/skraft-framework/engine && npm run mutation:engine
 
-# Policy checks (data-driven config, models by cost class)
-node plugins/skraft-framework/src/cli/build-config-bin.mjs --check
-node plugins/skraft-framework/src/cli/resolve-model-bin.mjs --check
+# Policy checks (dispatch tree, models by cost class)
+node scripts/agent-policy/build-config-bin.mjs
+node scripts/agent-policy/resolve-model-bin.mjs --check
 ```
 
 Test placement and Stryker configuration rules are described in [`AGENTS.md`](./AGENTS.md).

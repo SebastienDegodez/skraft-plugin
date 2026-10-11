@@ -21,7 +21,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Coding",
-      "description": "skraft SDLC pipeline — agents, skills and hooks for outside-in TDD, Clean Architecture and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline."
+      "description": "skraft SDLC pipeline — agents and skills for outside-in TDD, Clean Architecture and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline."
     },
     {
       "name": "skraft-backlog",

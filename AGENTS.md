@@ -1,178 +1,228 @@
+# AGENTS.md — skraft-plugin (V2)
 
+This branch line builds skraft V2. `main` holds v1 and is the regression reference: never push,
+merge or open a PR to `main` from V2 work. Each lot lands on `integration/v2-next` through its own
+PR; one final PR `integration/v2-next` → `main` ships 2.0.0.
 
-## graphify
+Sources of truth, in this order:
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+1. [`docs/v2/prd.md`](docs/v2/prd.md) — V2 plan (French, versioned copy of the living doc).
+2. [ADR-001](docs/adr/adr-001-host-neutral-engine-with-drivers.md) — engine, drivers, zero hooks.
+   V2 ADR numbering starts at 001; v1 ADRs stay on `main`.
+3. Epic [#211](https://github.com/SebastienDegodez/skraft-plugin/issues/211) and its lot issues
+   #212–#223: scope and done criteria of each lot.
 
-When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+`plugins/skraft-framework/README.md`, `docs/architecture.md` and `docs/site/**/hooks.md` still
+describe v1 until they are rewritten; do not take them as V2 guidance.
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-
-## skraft-framework documentation
-
-- Plugin install, use, pipeline, guardrails and harness packaging:
-  **`plugins/skraft-framework/README.md`**.
-- Framework internals and physical architecture: **`docs/architecture.md`**.
-- Runtime hook rationale, fail modes and guardrails G1–G9:
-  **`docs/site/en/explanation/hooks.md`** and **`docs/site/fr/explanation/hooks.md`**.
-- Roadmap with all 13 US (gain + status + milestone): **`docs/roadmap.md`**.
-- Skill evaluation (Vally), the published quality dashboard and AGENTVIZ replay:
-  **`docs/skill-evaluation.md`**.
-
-## Repository structure
+## Repository map
 
 ```
 plugins/
-  skraft-backlog/      ← Backlog plugin: discoverer, planner, their lenses and skills, the
-                         skraft-refine agentic workflow. Shares no runtime code with the core;
-                         same two agent trees and sync rules (`--plugin-root plugins/skraft-backlog`).
-  skraft-framework/    ← Claude Code plugin (production source + Stryker config)
-   src/
-    domain/            ← Pure functions, no IO (Clean Architecture: Domain layer)
-    application/       ← Use cases, orchestrate domain + ports (Application layer)
-    ports/
-      api/             ← Inbound port stubs (hook type constants)
-      infrastructure/  ← Outbound port interfaces (transcript reader, audit writer…)
-    adapters/
-      api/hooks/       ← Hook router, service factory, entry, decision helpers
-      infrastructure/  ← JSONL audit writer, JSON state reader, system clock…
-    cli/               ← Composition root: hook.mjs wires all services
-    hooks/hooks.json     ← Canonical hook source; Claude compatibility surface
-    com.github.copilot/hooks/hooks.json  ← Generated copy for Copilot v1 (`${PLUGIN_ROOT}`)
-    com.github.copilot/agents/           ← 20 flat editable `.agent.md` descriptors
-    com.anthropic.claude-code/agents/    ← 20 flat editable native `.md` descriptors
-    stryker.config.mjs   ← Mutation testing config (runs tests from tests/skraft-framework/)
-    skraft-framework.config.json  ← Generated config (agentSkills, phaseOrder…)
+  skraft-framework/                  ← central plugin (same install identity as v1)
+    engine/                          ← V2 engine: package.json, stryker.config.mjs, jsconfig.json
+      domain/                        ← pure policies
+      application/  application/ports/ ← use cases and port contracts (JSDoc typedefs)
+      infrastructure/                ← adapters: files, git, processes
+      drivers/copilot-workflow/      ← GitHub Copilot dynamic workflow + Canvas
+      drivers/claude-mod/            ← Claude Code mod + panel
+      drivers/copilot-sdk/           ← VS Code through the Copilot SDK
+      drivers/cli/                   ← `skraft` CLI (skraft.mjs); VS Code agent-loop fallback
+    com.anthropic.claude-code/agents/  com.github.copilot/agents/  ← the two agent trees
+    skills/                          ← self-contained skills (scripts inside each skill)
+    assets/                          ← shared templates
+  skraft-backlog/                    ← backlog plugin; shares no runtime code with the core
+  skraft-brownfield/                 ← lot 9; independent plugin, installed next to the core
 
 tests/
-  skraft-framework/    ← ALL framework tests, grouped by feature (unit + acceptance + fixtures)
-  dashboard/           ← Tests for the eng/ evaluation & dashboard tooling
-  skills/              ← Vally eval specs: tests/skills/<skill>/eval.yaml
-  agents/              ← Vally real-agent specs + suite-local fixtures
-  site/                ← Playwright smoke tests for docs/site (incl. the dashboard)
+  skraft-framework/unit/<feature>/         ← engine use-case acceptance tests
+  skraft-framework/integration/<feature>/  ← real adapters, CLI, drivers, architecture rules
+  skill-scripts/<feature>/                 ← skill script tests and fixtures
+  tooling/<feature>/                       ← repo tooling tests
+  regression/                              ← tests of eng/regression
+  dashboard/  skraft-backlog/  site/       ← eval/dashboard tooling, backlog plugin, docs site
+  skills/<skill>/eval.yaml                 ← Vally skill specs
+  agents/<suite>/eval.yaml                 ← Vally real-agent specs and fixtures
 
-eng/                   ← Skill evaluation & dashboard tooling (zero-dependency Node)
-  lib/                 ← Pure rules (front matter, skill profile, verdict, replay naming)
-  catalog/scan.mjs     ← Plugin sources → artifacts/catalog/report.json
-  vally-adapter/       ← Paired Vally runs → eval-results/<skill>/results.json
-  dashboard/           ← History, published data, AGENTVIZ manifest, retention, publish.sh
-  run-vally-evals.sh   ← One local runner: paired skill comparisons + real-agent suites
+eng/
+  regression/      ← v1 (a `main` ref in a worktree) vs this branch on the same fixtures
+  lib/             ← pure modules shared by repo tooling
+  catalog/  vally-adapter/  vally-agent-executor/  dashboard/  run-vally-evals.sh
+scripts/
+  agent-policy/    ← dispatch-tree and model-policy checks for both agent trees
 ```
 
-### Agent descriptor rules
+## Engine rules
 
-Descriptors under `plugins/skraft-framework/com.github.copilot/agents/` are
-prompts an agent pays for on every run, not documentation.
+- `domain/` imports only `domain/`. `application/` imports only `domain/` and `application/`.
+  Neither uses `node:` modules, `process`, `child_process` or `$`. This is what lets the Claude
+  Code mod module (no Node, no `import()`) and the Copilot extension import the same code.
+- `infrastructure/` never imports a driver or a use case (ports allowed). A driver never imports
+  another driver. Every engine file sits in one of the four layers.
+- Drivers execute what the engine asks and are the only callers that spawn agents (depth 1). No
+  agent spawns another agent.
+- Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
+  (git diff per step), gates, review verdict, TDD red/green commits.
+- V2 ships **no command hooks**. A hook comes back only if it protects an irreversible action the
+  engine cannot detect afterwards, with a measured cost and a documented behaviour on Claude
+  Code, Copilot CLI and VS Code. `hooks/hooks.json` may only declare the mod module.
+- State lives in `.copilot-tracking/skraft-plans/<slug>/`; `events.jsonl` (hash-chained)
+  replaces `state.json`; `.active-slug` is mandatory and never guessed.
+- Developer configuration is `skraft-config.json` with components (root, stack, paths,
+  commands, mocking, contractTesting). A command written by the developer always wins over a
+  default. Quality thresholds are not configurable.
+- The workflow is a DOT graph shipped in the plugin and copied into a repo with
+  `skraft workflow eject`. DELIVER gates are `locked`; removing one needs `unlock="<reason>"`.
 
-- Edit agents in either of the two flat runtime trees; author hooks only in
-  [plugins/skraft-framework/hooks/hooks.json](plugins/skraft-framework/hooks/hooks.json).
-  Run `npm run plugin:sync` then `npm run plugin:check` to synchronize shared content with
-  [scripts/project-plugin-adapters.mjs](scripts/project-plugin-adapters.mjs) (`--apply` / `--check`).
-  Sync body and description only; preserve every client-specific header.
-  Keep stable basename IDs and per-side shared fields in `.agent-sync.json` v2.
-  Never introduce a third descriptor tree or header/template surrogate.
-  New agents require both explicitly authored client versions; never inherit tools blindly.
-  Commit both runtime surfaces and baseline together; marketplace Git installs do not build.
-- Keep root [plugins/skraft-framework/plugin.json](plugins/skraft-framework/plugin.json)
-  on the canonical v1 schema with no root `agents` list. Keep all 20 agents registered in
-  [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json),
-  including internal workers and lenses. Never delete internal registrations to hide them.
-  Preserve `user-invocable: false`; it is not documented for Claude subagents and does not
-  guarantee picker hiding. Four standalone roots are intended public Copilot entry points.
-- Keep one canonical hook source and two physical plugin surfaces: root compatibility hooks
-  plus generated Copilot namespace. Do not add extra manifest `hooks` pointers.
-  See [docs/architecture.md](docs/architecture.md#compatibility) for current compatibility limits;
-  preserve ADR-008 as historical evidence, not current packaging guidance.
-- **Write for the agent, never for a human reader.** Every sentence must carry a
-  decision the agent has to make. No prose explaining why a rule exists, no gloss
-  on the descriptor's own wording, no justification clause. The reasoning belongs
-  in the commit message.
-- **Put a rule's scope inside the rule**, not in a paragraph after it. A
-  prohibition scoped too narrowly is an escape hatch: `You NEVER produce business
-  content yourself` left the orchestrator free to configure Stryker and run the
-  mutation gates, so it did DELIVER itself and dispatched nothing.
-- **Never argue from the evaluation sandbox.** `none of them are available here`
-  describes the harness command allowlist; on a developer's machine `base64` and
-  `python` work, so the claim is false everywhere else and the agent reads the
-  whole rule as stale. Argue from what holds in both.
-- **Required dispatch content goes in an explicit list.** Buried mid-paragraph it
-  lands about half the time.
+## Portability rules
 
-### Test placement rules
+Everything must run on Windows and macOS, under Claude Code, Copilot CLI and VS Code.
 
-- **Framework test files live in `tests/skraft-framework/<feature>/`** — never inside `plugins/`. Colocate unit tests, acceptance tests and fixtures for the same feature.
-- **Evaluation/dashboard tooling tests live in `tests/dashboard/`** and import from `../../eng/...`.
-- Naming convention:
-  - Unit tests: `{module}.unit.test.mjs` (e.g. `skill-policy.unit.test.mjs`)
-  - Acceptance tests: `{feature}.acceptance.test.mjs` (e.g. `skill-loading.acceptance.test.mjs`)
-  - Integration/other: `{module}.test.mjs`
-- `stryker.config.mjs` uses the recursive glob `tests/skraft-framework/**/*.test.mjs` — it picks up all tests automatically. **Never replace this glob with an explicit list.**
-- Import paths from `tests/skraft-framework/<feature>/` into plugin source: `../../../plugins/skraft-framework/src/...`
+- Node code: `node:path` for paths, `spawnSync`/`spawn` with an argv array, never a shell string.
+- Commands that an agent runs: no environment variable (`$SKRAFT_PLUGIN_ROOT` and the like), no
+  heredoc, no pipe; data goes through files at paths the engine gives; the command form
+  `node "<absolute path>" <subcommand> --option value` works in sh and PowerShell.
+- A skill carries every script it runs, even if that duplicates another skill's script; skills
+  reference each other by name, never by path. `npm run skills:sync` / `skills:check` maintain
+  declared copies.
+- A skill script called often (per tool call or per TDD cycle) is written as `.sh` + `.ps1`
+  twins tested by one contract suite on the three OS; a script called once per story may stay in
+  Node.
 
-### Vally evaluation rules
+## Testing rules
+
+Apply the `clean-architecture-testing` and `outside-in-tdd` skills to the engine itself.
+
+- Test files never live inside `plugins/`. Feature folders are named by behaviour
+  (`pipeline-flow`, `write-scope`, `review`, `gates`…), never by ticket. Name files
+  `<behaviour>.test.mjs`.
+- `tests/skraft-framework/unit/<feature>/`: enter through a use case; assert the returned step,
+  the events and the files. Hand-written InMemory doubles (run store, workspace, scripted
+  command runner, fixed clock) with real domain objects; **no mock library**. The LLM is never
+  called: agent results are files written by the test. A domain test only for an extracted
+  complex rule already covered by an acceptance test.
+- `tests/skraft-framework/integration/<feature>/`: real adapters (temp dirs, real git, real
+  processes), the CLI end to end, drivers on a simulated host, architecture rules. No doubles.
+  Passes on Windows, macOS and Linux.
+- Work outside-in: approved scenarios become the first tests at the use-case level; one red test
+  at a time, red on a business assertion (a compile or import error is not red). A red commit
+  is allowed on a lot branch. After green, check the wiring (`git diff`) and refactor without
+  touching the test.
+- Import path from a test feature folder into the engine:
+  `../../../../plugins/skraft-framework/engine/...`
+
+## Mutation rules
+
+- Config: `plugins/skraft-framework/engine/stryker.config.mjs`, incremental, run with
+  `npm run mutation:engine` after `npm ci --prefix plugins/skraft-framework/engine`.
+- It mutates all of `engine/` except `drivers/cli/skraft.mjs`. Never keep a hand-maintained
+  `mutate` list. `thresholds.break` is 80; change thresholds only on explicit instruction.
+- Kill a surviving mutant with a sharper acceptance scenario, never with a test written for that
+  mutant. Exclude an equivalent mutant only with its reason.
+
+## Regression rules
+
+- `eng/regression/` compares a v1 run (from a worktree on a `main` ref) with a V2 run on the same
+  fixtures: phases reached, verdicts, gates, artefacts, duration, cost, retries.
+- A lot PR that degrades a criterion without a waiver (`regression-waivers.json`, one criterion
+  on one fixture, with a reason) does not merge.
+- V2 events must follow the `events.jsonl` contract written in `eng/regression/README.md`.
+
+## Agent descriptor rules
+
+Descriptors are prompts an agent pays for on every run, not documentation.
+
+- Edit agents in either of the two flat trees, then `npm run plugin:sync` and
+  `npm run plugin:check` ([scripts/project-plugin-adapters.mjs](scripts/project-plugin-adapters.mjs)).
+  Sync body and description only; preserve every client-specific header. Keep stable basename
+  IDs and per-side shared fields in `.agent-sync.json`. Never introduce a third descriptor tree.
+  A new agent needs both client versions authored explicitly; never inherit tools blindly.
+  Commit both trees and the baseline together; marketplace Git installs do not build.
+- Register every agent, internal lenses included, in
+  [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json).
+  Keep the root `plugin.json` on the canonical schema with no root `agents` list. Preserve
+  `user-invocable: false` on internal agents.
+- The model is fixed in each agent file; Copilot and VS Code need the exact model name.
+  `node scripts/agent-policy/resolve-model-bin.mjs --check` must pass.
+- **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
+  has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
+- **Do not repeat a check the engine performs** (order, inputs, outputs, commit convention,
+  gates, verdict). A check stays in prose only if nothing else performs it and only that agent
+  can avoid the error.
+- **Put a rule's scope inside the rule**, not in a paragraph after it. A prohibition scoped too
+  narrowly is an escape hatch.
+- **Never argue from the evaluation sandbox.** Argue from what holds on a developer machine too.
+- **Required dispatch content goes in an explicit list.** Buried mid-paragraph it lands about
+  half the time.
+- skraft does Clean Architecture: no "hexagonal" and no port/adapter vocabulary in agent or
+  skill prose.
+
+## Skill rules
+
+- A language skill (e.g. `clean-architecture-java`) holds the strict minimum, never a copy of
+  another language's skill. Check every rule before reducing a skill; then reduce.
+- Every skill change is judged with Vally on Sonnet (rules below).
+
+## Vally evaluation rules
 
 - One eval spec per skill at `tests/skills/<skill>/eval.yaml`; `<skill>` MUST match the
-  directory under `plugins/skraft-framework/skills/` — `eng/run-vally-evals.sh` resolves the skill from
-  that path, and reports the eval as skipped when it does not.
+  directory under `plugins/skraft-framework/skills/` — `eng/run-vally-evals.sh` resolves the skill
+  from that path, and reports the eval as skipped when it does not.
 - A prompt must **never name the skill** or copy its wording, and a rubric must judge the
-  outcome, not the technique. Otherwise the evaluation measures nothing.
-- **NEVER create tests for eval specs.** Do not add unit or acceptance tests that load,
-  parse, snapshot, or assert an `eval.yaml` file, its prompts, tags, fixtures, graders,
-  ordering, or scenario-specific behavior. Validate specs through Vally loading and live
-  eval runs. Tests may cover reusable evaluation tooling, but must not mirror spec contents.
-- Budget trials for **power, not for a floor**. The sign test needs at least 6 discordant
-  pairs before any tally can reach `p <= 0.05`, so 5 trials — or a flawless 5W/0L sweep —
-  is reported as inconclusive by design. Ties are common, so plan **12–15 trials** for a
-  verdict you can defend, and buy that power up front: adding runs to an already-noisy
-  comparison is the worst purchase in the protocol.
-- Spend the budget on **runs, not on breadth**. `3 stimuli × 5 runs` and `5 stimuli × 3 runs`
-  cost the same and only the first yields readable per-scenario cells. Each stimulus should
-  force **one** decision through the narrowest task that exposes it — a paired run executes
-  every trial twice plus judge work, and cost per trial is driven by how much work the prompt
-  asks for, not by fixture size.
-- Real-agent specs live under `tests/agents/<suite>/eval.yaml`. Their custom executor
-  selects an allowlisted `.agent.md`; use Vally's typed trajectory events and built-in
-  graders where available instead of duplicating event conversion or grading logic.
-- Agent application fixtures live under `tests/agents/<suite>/fixtures/<state>/` beside
-  their eval spec. Specs stage explicit files from a named state so local ignored build
-  outputs cannot leak into prepared workspaces.
-- `eng/run-vally-evals.sh` is the only eval entry point. Skill specs run baseline vs
-  treatment; agent specs run once through their declared executor.
-- `STIMULI=` on the runner narrows a run to named stimuli — the pilot signal check before
-  funding a full paired arm. It derives the pilot from the frozen spec and writes to
-  `eval-results-pilot/`, so a probe can never be published as a verdict. Never hand-edit a
-  committed spec to make a cheaper run possible.
-- `BASELINE_CACHE=1` on the runner reuses baseline records per `- name:` block, so only the
-  stimuli you actually edited are re-run. **ALWAYS ASK THE HUMAN before using it, every time,
-  and never enable it on your own initiative.** A cached arm is a frozen draw rather than a
-  fresh sample — two archived baseline arms of the same spec, same model, twelve minutes
-  apart, differ by 0.14 in contrast score — so it biases the paired tests in whichever
-  direction that draw happened to land. It answers "did my edit move anything" in the local
-  loop; it never produces a verdict. The runner refuses it under CI, and any result it
-  touches carries `baselineProvenance.publishable: false`. Never publish, commit, or quote
-  such a result as a measurement.
+  outcome, not the technique.
+- **NEVER create tests for eval specs.** Do not add tests that load, parse, snapshot or assert an
+  `eval.yaml`, its prompts, tags, fixtures, graders, ordering or scenario-specific behaviour.
+  Validate specs through Vally loading and live eval runs. Tests may cover reusable evaluation
+  tooling.
+- Budget trials for **power, not for a floor**. The sign test needs at least 6 discordant pairs
+  before any tally can reach `p <= 0.05`; plan **12–15 trials** for a verdict you can defend, and
+  buy that power up front.
+- Spend the budget on **runs, not on breadth**: `3 stimuli × 5 runs` beats `5 stimuli × 3 runs`.
+  Each stimulus forces **one** decision through the narrowest task that exposes it.
+- Real-agent specs live under `tests/agents/<suite>/eval.yaml`; their custom executor selects an
+  allowlisted `.agent.md`. Use Vally's typed trajectory events and built-in graders.
+- Agent fixtures live under `tests/agents/<suite>/fixtures/<state>/`; specs stage explicit files
+  from a named state.
+- `eng/run-vally-evals.sh` is the only eval entry point.
+- `STIMULI=` narrows a run to named stimuli and writes to `eval-results-pilot/`; a pilot is never
+  a verdict. Never hand-edit a committed spec to make a cheaper run possible.
+- `BASELINE_CACHE=1` reuses baseline records. **ALWAYS ASK THE HUMAN before using it, every
+  time, and never enable it on your own initiative.** A cached arm is a frozen draw that biases
+  the paired tests; its results carry `baselineProvenance.publishable: false` and are never
+  published, committed or quoted as a measurement.
 - Generated output (`artifacts/`, `eval-results/`, `eval-results-pilot/`, `dashboard-data/`,
-  `docs/site/dashboard/data/`) is never committed. The local baseline cache
-  (`eval-baseline-cache/`) is likewise disposable and gitignored.
+  `docs/site/dashboard/data/`, `eval-baseline-cache/`) is never committed.
 
-### stryker.config.mjs rules
+## Git rules
 
-- The `mutate` array is **additive**: when adding new modules, append to the existing list — never replace it.
-- The `testFiles` glob must stay `['tests/skraft-framework/**/*.test.mjs']` — never enumerate files explicitly.
-- The existing `thresholds` are set per-story; do not change them without an explicit instruction.
+- Move files with `git mv`; keep a symlink at the old location when something outside the repo
+  may still point there.
+- Conventional commit titles. Lot PRs reference their issue (`Refs #212`) without closing it;
+  only the final PR to `main` closes issues.
 
-### gh-aw workflow frontmatter rules
+## gh-aw workflow rules
 
-- Never hand-compute `frontmatter_hash` in `.github/workflows/*.lock.yml` (no ad-hoc SHA256/Node/Python scripts). Always run `gh aw compile <workflow-name>` and let it regenerate the lockfile, then diff the result.
-- If `gh aw compile` isn't available in the environment, install it first (`gh extension install github/gh-aw`) rather than reverse-engineering the hash algorithm.
+- Never hand-compute `frontmatter_hash` in `.github/workflows/*.lock.yml`. Run
+  `gh aw compile <workflow-name>` and diff the result; install it with
+  `gh extension install github/gh-aw` if missing.
 
-### File inspection tool rules
+## Tool rules
 
-- Use the `view`/`grep`/`glob` tools to read or search files — not `bash cat`/`head`/`tail`/`find`. Reserve `bash` for git, test, and build commands.
-- Use `view_range` on large files instead of dumping the whole file into context.
+- Read and search files with the dedicated view/grep/glob tools, not `cat`/`head`/`tail`/`find`.
+  Reserve the shell for git, tests and builds. Read large files by range.
+- When `graphify-out/graph.json` exists, start codebase questions with `graphify query`,
+  `graphify path` or `graphify explain`; run `graphify update .` after modifying code. On
+  `/graphify`, invoke the `graphify` skill first.
 
+## Commands
+
+```bash
+npm run test:engine            # engine unit + integration
+npm run test:regression        # regression harness
+npm run test:tooling           # repo tooling
+npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/skraft-framework/engine)
+npm run mutation:engine        # Stryker, incremental
+npm run skills:check && npm run plugin:check && npm run backlog:check
+node scripts/agent-policy/resolve-model-bin.mjs --check
+node scripts/local-ci.mjs      # mirrors CI locally
+```
