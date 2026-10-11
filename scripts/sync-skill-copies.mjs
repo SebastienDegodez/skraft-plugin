@@ -3,15 +3,28 @@
 // copied into the skill, byte for byte, from one source of truth. `--apply` writes the
 // copies, `--check` fails when one is missing, stale or extraneous.
 //
-// COPIES are single files. BUNDLES are a plugin CLI and every module it imports (static,
-// dynamic, and JSON loaded through createRequire), copied under <target>/ with the same
-// layout as src/ so relative imports keep resolving.
+// COPIES are single files. The qg-verify CLI bundled in quality-gates-evidence-contract is
+// the source of the identical copies the stack-specific quality-gates skills ship.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, posix, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const pluginRoot = join(repo, 'plugins', 'skraft-framework')
+
+const toPosix = (path) => path.split(sep).join('/')
+
+const QG_VERIFY = 'skills/quality-gates-evidence-contract/scripts/qg-verify'
+const QG_VERIFY_TARGETS = ['quality-gates-dotnet', 'quality-gates-javascript', 'quality-gates-python'].map((skill) => `skills/${skill}/scripts/qg-verify`)
+
+function qgVerifyCopies() {
+	const root = join(pluginRoot, QG_VERIFY)
+	return readdirSync(root, { recursive: true, withFileTypes: true })
+		.filter((entry) => entry.isFile())
+		.map((entry) => toPosix(relative(root, join(entry.parentPath, entry.name))))
+		.sort()
+		.map((file) => ({ source: posix.join(QG_VERIFY, file), targets: QG_VERIFY_TARGETS.map((target) => posix.join(target, file)) }))
+}
 
 export const COPIES = [
 	{ source: 'skills/quality-gates-dotnet/scripts/capture.mjs', targets: ['skills/quality-gates-javascript/scripts/capture.mjs'] },
@@ -21,58 +34,8 @@ export const COPIES = [
 		source: `skills/qa-reporting/references/${name}`,
 		targets: [`assets/reporting/${name}`, `skills/github-publication/references/${name}`, `skills/playwright-evidence/references/${name}`],
 	})),
+	...qgVerifyCopies(),
 ]
-
-export const BUNDLES = [
-	{
-		entry: 'src/cli/qg-verify.mjs',
-		targets: [
-			'skills/quality-gates-evidence-contract/scripts/qg-verify',
-			'skills/quality-gates-dotnet/scripts/qg-verify',
-			'skills/quality-gates-javascript/scripts/qg-verify',
-			'skills/quality-gates-python/scripts/qg-verify',
-		],
-	},
-	{ entry: 'src/cli/report.mjs', targets: ['skills/qa-reporting/scripts/report'] },
-]
-
-const MARKER = 'GENERATED.md'
-
-const toPosix = (path) => path.split(sep).join('/')
-
-export function bundleFiles(entry) {
-	const src = join(pluginRoot, 'src')
-	const seen = new Set()
-	const visit = (file) => {
-		if (seen.has(file)) return
-		seen.add(file)
-		if (!file.endsWith('.mjs')) return
-		const text = readFileSync(file, 'utf8')
-		const specifiers = [
-			...text.matchAll(/(?:^|\n)\s*(?:import|export)\s[^'"]*?from\s*['"](\.[^'"]+)['"]/g),
-			...text.matchAll(/import\(\s*['"](\.[^'"]+)['"]\s*\)/g),
-			...text.matchAll(/createRequire\([^)]*\)\(\s*['"](\.[^'"]+)['"]\s*\)/g),
-		].map((match) => match[1])
-		for (const specifier of specifiers) visit(resolve(dirname(file), specifier))
-	}
-	visit(join(pluginRoot, entry))
-	return [...seen].map((file) => {
-		const name = relative(src, file)
-		if (name.startsWith('..')) throw new Error(`${entry} imports ${file}, outside src/`)
-		return toPosix(name)
-	}).sort()
-}
-
-const marker = (entry, files) => [
-	'<!-- markdownlint-disable-file -->',
-	`# Generated copy of \`${entry}\``,
-	'',
-	'Written by `scripts/sync-skill-copies.mjs --apply` so this skill runs without the SKRAFT',
-	'plugin around it. Never edit these files here: change the plugin source, then re-run the sync.',
-	'',
-	...files.map((file) => `- \`${file}\``),
-	'',
-].join('\n')
 
 export function expectedFiles() {
 	const expected = new Map()
@@ -80,29 +43,15 @@ export function expectedFiles() {
 		const bytes = readFileSync(join(pluginRoot, source))
 		for (const target of targets) expected.set(target, bytes)
 	}
-	for (const { entry, targets } of BUNDLES) {
-		const files = bundleFiles(entry)
-		for (const target of targets) {
-			for (const file of files) expected.set(posix.join(target, file), readFileSync(join(pluginRoot, 'src', file)))
-			expected.set(posix.join(target, MARKER), Buffer.from(marker(entry, files)))
-		}
-	}
 	return expected
 }
 
-function bundleRootFiles(target) {
+function filesUnder(target) {
 	const dir = join(pluginRoot, target)
 	if (!existsSync(dir)) return []
-	const files = []
-	const walk = (path) => {
-		for (const entry of readdirSync(path, { withFileTypes: true })) {
-			const full = join(path, entry.name)
-			if (entry.isDirectory()) walk(full)
-			else files.push(toPosix(relative(pluginRoot, full)))
-		}
-	}
-	walk(dir)
-	return files
+	return readdirSync(dir, { recursive: true, withFileTypes: true })
+		.filter((entry) => entry.isFile())
+		.map((entry) => toPosix(relative(pluginRoot, join(entry.parentPath, entry.name))))
 }
 
 export function check() {
@@ -113,18 +62,19 @@ export function check() {
 		if (!existsSync(path)) problems.push(`missing: ${target}`)
 		else if (!readFileSync(path).equals(bytes)) problems.push(`stale: ${target}`)
 	}
-	for (const { targets } of BUNDLES) {
-		for (const target of targets) {
-			for (const file of bundleRootFiles(target)) if (!expected.has(file)) problems.push(`extraneous: ${file}`)
-		}
+	for (const target of QG_VERIFY_TARGETS) {
+		for (const file of filesUnder(target)) if (!expected.has(file)) problems.push(`extraneous: ${file}`)
 	}
 	return problems
 }
 
 export function apply() {
 	const written = []
-	for (const { targets } of BUNDLES) for (const target of targets) rmSync(join(pluginRoot, target), { recursive: true, force: true })
-	for (const [target, bytes] of expectedFiles()) {
+	const expected = expectedFiles()
+	for (const target of QG_VERIFY_TARGETS) {
+		for (const file of filesUnder(target)) if (!expected.has(file)) rmSync(join(pluginRoot, file))
+	}
+	for (const [target, bytes] of expected) {
 		const path = join(pluginRoot, target)
 		if (existsSync(path) && readFileSync(path).equals(bytes)) continue
 		mkdirSync(dirname(path), { recursive: true })

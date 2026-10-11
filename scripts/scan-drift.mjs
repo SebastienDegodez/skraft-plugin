@@ -112,9 +112,7 @@ function catalogueTopology(root, book) {
     }
   }
 
-  const configPath = join(root, 'plugins/skraft-framework/skraft-framework.config.json');
-  const frameworkConfig = existsSync(configPath) ? JSON.parse(readFileSync(configPath, 'utf-8')) : null;
-  return { ownedKeys, topology: buildCatalogueTopology({ skills, agents, frameworkConfig }) };
+  return { ownedKeys, topology: buildCatalogueTopology({ skills, agents }) };
 }
 
 const LEGACY_CATALOGUE_LINK = /\/(?:fr|en)\/reference\/(?:agents|skills|workers|lens(?:es)?)(?:\/[a-z0-9-]+(?:\.html)?)?\/?/gi;

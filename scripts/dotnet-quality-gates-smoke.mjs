@@ -9,7 +9,7 @@
 // no test ran exited 0 with every mutant left Pending.
 //
 // So this runs the shipped scripts with the real toolchain on a small Clean Architecture
-// solution, in a throwaway Git copy of tests/skraft-framework/quality-gates/fixtures/dotnet-checkout:
+// solution, in a throwaway Git copy of tests/skill-scripts/quality-gates/fixtures/dotnet-checkout:
 //
 //   scaffold    configure-mutation.mjs writes configs Stryker.NET accepts
 //   G7, G11     no mocking framework in the core; 100% line coverage of Domain + Application
@@ -33,7 +33,7 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const FIXTURE = join(repoRoot, 'tests', 'skraft-framework', 'quality-gates', 'fixtures', 'dotnet-checkout')
+const FIXTURE = join(repoRoot, 'tests', 'skill-scripts', 'quality-gates', 'fixtures', 'dotnet-checkout')
 const SCRIPTS = join(repoRoot, 'plugins', 'skraft-framework', 'skills', 'quality-gates-dotnet', 'scripts')
 const INIT_PROJECT = join(repoRoot, 'plugins', 'skraft-framework', 'skills', 'clean-architecture-dotnet', 'scripts', 'init-project.mjs')
 const BUILD_OUTPUT = new Set(['bin', 'obj', 'StrykerOutput', 'TestResults'])

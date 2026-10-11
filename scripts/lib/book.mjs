@@ -3,15 +3,13 @@
 // Zero-dependency reader for the SKRAFT book contract (docs/site/_data/book.yml)
 // and a recursive glob matcher, shared by scan-drift.mjs and lint-nav.mjs.
 //
-// The YAML subset parser itself (`parseYaml`) lives in
-// plugins/skraft-framework/src/domain/yaml-parser.mjs — it is also the parser behind the shipped
-// `artifact` CLI (plugins/skraft-framework/src/cli/artifact.mjs), so both consumers share one
-// implementation instead of drifting. This module re-exports it and adds the
-// book-contract-specific loading/traversal helpers below.
+// The YAML subset parser itself (`parseYaml`) lives in eng/lib/yaml-parser.mjs, shared
+// with the catalogue scan and the agent-policy tools. This module re-exports it and adds
+// the book-contract-specific loading/traversal helpers below.
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { parseYaml } from '../../plugins/skraft-framework/src/domain/yaml-parser.mjs';
+import { parseYaml } from '../../eng/lib/yaml-parser.mjs';
 
 export { parseYaml };
 

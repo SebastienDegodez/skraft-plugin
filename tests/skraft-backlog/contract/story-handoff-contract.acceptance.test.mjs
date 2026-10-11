@@ -7,10 +7,10 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { parseAgentDescriptor } from '../../../plugins/skraft-framework/src/cli/build-config.mjs'
+import { frameworkConfigFrom, parseAgentDescriptor } from '../../../scripts/agent-policy/build-config.mjs'
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url))
-const coreConfig = JSON.parse(readFileSync(join(repo, 'plugins/skraft-framework/skraft-framework.config.json'), 'utf8'))
+const coreConfig = frameworkConfigFrom(join(repo, 'plugins/skraft-framework/com.github.copilot/agents'))
 const backlogAgents = join(repo, 'plugins/skraft-backlog/com.github.copilot/agents')
 const backlog = Object.fromEntries(readdirSync(backlogAgents).map((file) => {
   const descriptor = parseAgentDescriptor(readFileSync(join(backlogAgents, file), 'utf8'), { id: file.replace(/\.agent\.md$/, '') })

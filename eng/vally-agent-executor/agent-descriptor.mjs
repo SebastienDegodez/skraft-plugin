@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { isAbsolute, join, relative, resolve } from 'node:path'
+import { isAbsolute, relative, resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
 
 import { readFrontMatter } from '../lib/front-matter.mjs'
@@ -89,17 +89,6 @@ const assertInside = (repoRoot, path, label) => {
 // The plugin directory an allowlisted path belongs to, e.g. plugins/skraft-backlog.
 export const pluginDirectoryOf = (relativePath) => posix(relativePath).split('/').slice(0, 2).join('/')
 
-// Only the engineering plugin publishes a guardrail config; another plugin's
-// descriptor is its own source of truth for the skills it loads.
-const configuredSkills = (repoRoot, pluginDirectory, agentName, sourceSkills) => {
-  if (pluginDirectory && pluginDirectory !== 'plugins/skraft-framework') return sourceSkills
-  const configPath = join(repoRoot, 'plugins/skraft-framework/skraft-framework.config.json')
-  const config = JSON.parse(readFileSync(configPath, 'utf8'))
-  return (config.agentSkills?.[agentName] ?? []).map((entry) => (typeof entry === 'string' ? entry : entry.name))
-}
-
-const sameValues = (left, right) => left.length === right.length && left.every((value, index) => value === right[index])
-
 export const loadAgentDescriptor = (repoRoot, id) => {
   const relativePath = AGENT_PATHS.get(id)
   if (!relativePath) throw new Error(`Agent is not allowlisted: ${id || '<missing>'}`)
@@ -113,10 +102,8 @@ export const loadAgentDescriptor = (repoRoot, id) => {
   const name = String(data.name ?? '')
   if (!name) throw new Error(`Agent has no name: ${relativePath}`)
 
-  const sourceSkills = [...metadataSequence(content, 'skills'), ...metadataSequence(content, 'on_demand_skills')]
+  const skills = [...metadataSequence(content, 'skills'), ...metadataSequence(content, 'on_demand_skills')]
   const pluginDirectory = relativePath.startsWith('plugins/') ? pluginDirectoryOf(relativePath) : null
-  const skills = configuredSkills(normalizedRoot, pluginDirectory, name, sourceSkills)
-  if (!sameValues(sourceSkills, skills)) throw new Error(`Agent skill declarations drift from framework config: ${id}`)
 
   return {
     id,

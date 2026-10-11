@@ -67,10 +67,6 @@ before(() => {
     ['---', 'name: Demo Lens', 'description: Reviews the demo.', 'metadata:', '  dispatched_by: Delivery Reviewer', '---', '', '# Demo lens', ''].join('\n'),
   )
   write(
-    join(workspace, 'plugins/skraft-framework/skraft-framework.config.json'),
-    JSON.stringify({ phaseOrder: ['RESEARCH', 'DELIVER'] }),
-  )
-  write(
     join(workspace, 'tests/skills/demo-skill/eval.yaml'),
     ['name: demo-skill', 'defaults:', '  runs: 3', 'stimuli:', '  - name: first', '    prompt: hello', '  - name: second', '    prompt: world', ''].join('\n'),
   )
