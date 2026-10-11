@@ -1,0 +1,9 @@
+{"type":"run.started","at":"2026-10-09T10:00:00.000Z","prev":null,"base":"def456","workflow":"default"}
+{"type":"step.started","at":"2026-10-09T10:00:01.000Z","prev":"h1","step":"research","kind":"agent","agent":"solution-researcher"}
+{"type":"step.recorded","at":"2026-10-09T10:15:00.000Z","prev":"h2","step":"research","outcome":"ok","durationMs":899000,"cost":1.2}
+{"type":"review.decided","at":"2026-10-09T10:16:00.000Z","prev":"h3","phase":"RESEARCH","verdict":"APPROVED"}
+{"type":"phase.closed","at":"2026-10-09T10:16:30.000Z","prev":"h4","phase":"RESEARCH"}
+{"type":"step.started","at":"2026-10-09T10:17:00.000Z","prev":"h5","step":"design","kind":"agent","agent":"solution-architect"}
+{"type":"gate.ran","at":"2026-10-09T10:30:00.000Z","prev":"h6","component":"refund","gate":"G1","status":"fail"}
+{"type":"engine.heartbeat","at":"2026-10-09T10:31:00.000Z","prev":"h7"}
+{"type":"run.finished","at":"2026-10-09T10:40:00.000Z","prev":"h8","status":"stopped"}

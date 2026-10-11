@@ -1,0 +1,3 @@
+```yaml
+verdict: "APPROVED"
+```
