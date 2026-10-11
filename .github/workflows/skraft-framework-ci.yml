@@ -5,6 +5,8 @@ on:
     branches: [main, integration/v2-next]
     paths:
       - 'plugins/skraft-framework/engine/**'
+      - 'plugins/skraft-framework/hooks/**'
+      - 'plugins/skraft-framework/types/**'
       - '.releaserc.json'
       - '.github/workflows/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
@@ -31,6 +33,8 @@ on:
     branches: [main, integration/v2-next]
     paths:
       - 'plugins/skraft-framework/engine/**'
+      - 'plugins/skraft-framework/hooks/**'
+      - 'plugins/skraft-framework/types/**'
       - '.releaserc.json'
       - '.github/workflows/**'
       - 'plugins/skraft-framework/com.github.copilot/agents/**'
@@ -97,6 +101,23 @@ jobs:
         env:
           NODE_OPTIONS: ${{ env.ANNOTATED_TESTS }}
         run: npm run test:engine:integration
+
+  claude-mod:
+    name: Claude Code mod
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the pinned Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.296
+      - name: Validate the plugin and its mod module
+        run: claude plugin validate plugins/skraft-framework
+      # The mod's *.test.ts live in tests/, never in plugins/: the script runs
+      # `claude plugin test` on a temporary copy of the plugin that holds them.
+      - name: Run the mod's tests in the Claude Code runtime
+        run: node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs
 
   engine-mutation:
     name: Engine mutation testing
