@@ -17,9 +17,15 @@ const researchPath = async (cwd, slug) => {
   return join(trackingDir(cwd, slug), ...started.outputs[0].split('/'))
 }
 
+// The workflow process dies while the agent runs: ctx.agent never settles.
 const interrupted = (behaviour) => async (call) => {
   await behaviour(call)
-  throw new Error('workflow interrupted')
+  return new Promise(() => {})
+}
+/** The run never settles: a resumed run starts from what the journal holds. */
+const dies = async (run) => {
+  const settled = await Promise.race([run.then(() => 'settled', () => 'settled'), new Promise((resolve) => setTimeout(resolve, 50, 'hung'))])
+  assert.equal(settled, 'hung')
 }
 
 test('the workflow declares skraft-pipeline with its RESEARCH phase and optional arguments', () => {
@@ -91,7 +97,7 @@ test('a journal edited by hand blocks the run as tampered and dispatches nothing
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(writesNothing)] })
-  await assert.rejects(runSkraftPipelineWorkflow(first.ctx, host(cwd)), /workflow interrupted/)
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)))
   const lines = await journalLines(cwd, 'checkout')
   lines[0] = lines[0].replace('"story":null', '"story":{"issue":7}')
   await writeFile(eventsPath(cwd, 'checkout'), `${lines.join('\n')}\n`, 'utf8')
@@ -137,7 +143,7 @@ test('a run resumed after the researcher wrote its document closes RESEARCH with
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(fillsOutputs())] })
-  await assert.rejects(runSkraftPipelineWorkflow(first.ctx, host(cwd)), /workflow interrupted/)
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)))
 
   const resumed = simulatedContext({ args: { slug: 'checkout' }, journal: first.journal })
   const outcome = await runSkraftPipelineWorkflow(resumed.ctx, host(cwd))
@@ -154,7 +160,7 @@ test('a resumed dispatch keeps its label and prompt, so the host returns its mem
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(writesNothing)] })
-  await assert.rejects(runSkraftPipelineWorkflow(first.ctx, host(cwd)), /workflow interrupted/)
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)))
   const answered = [{ ...first.calls[0], text: 'already answered' }]
 
   const resumed = simulatedContext({ journal: answered, behaviours: [fillsOutputs()] })
