@@ -45,7 +45,7 @@ on:
         REPO: ${{ github.repository }}
         ISSUE: ${{ inputs.issue_number }}
         SKRAFT_REFINE_FORCE: ${{ inputs.force }}
-        SKRAFT_BACKLOG_VERSION: "1.14.1"
+        SKRAFT_BACKLOG_VERSION: "1.15.0"
       run: >-
         node .github/workflows/shared/skraft-refine-marker.mjs check
         --repo "$REPO" --issue "$ISSUE" --version "$SKRAFT_BACKLOG_VERSION"
@@ -71,12 +71,12 @@ imports:
     with:
       target: copilot
       packages:
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/refinement-proposal#v1.14.1
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-refinement#v1.14.1
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-triage#v1.14.1
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/github-issue-search#v1.14.1
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/planning-review-criteria#v1.14.1
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/backlog-review-lenses#v1.14.1
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/refinement-proposal#v1.15.0
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-refinement#v1.15.0
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-triage#v1.15.0
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/github-issue-search#v1.15.0
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/planning-review-criteria#v1.15.0
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/backlog-review-lenses#v1.15.0
 
 tools:
   github:

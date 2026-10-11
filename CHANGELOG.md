@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.15.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.14.1...v1.15.0) (2026-10-11)
+
+### ✨ Features
+
+* two self-contained plugins — self-contained skills in skraft, the backlog in skraft-backlog ([#204](https://github.com/SebastienDegodez/skraft-plugin/issues/204)) ([2406fc7](https://github.com/SebastienDegodez/skraft-plugin/commit/2406fc70f7d4ef61f11e464f894b99fb9617c307))
+
 ## [1.14.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.14.0...v1.14.1) (2026-10-09)
 
 ### 🐛 Bug Fixes
