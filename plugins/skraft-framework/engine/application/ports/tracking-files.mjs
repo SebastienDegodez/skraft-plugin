@@ -1,0 +1,12 @@
+/**
+ * TrackingFiles — the files under a pipeline's tracking folder `<slug>/`.
+ *
+ * @typedef {{
+ *   read: (slug: string, path: string) => Promise<string | null>,
+ *   write: (slug: string, path: string, text: string) => Promise<void>,
+ *   location: (slug: string, path: string) => string,
+ * }} TrackingFiles
+ *   path is relative to `<slug>/`, `/`-separated. read: null when absent. write creates
+ *   missing folders. location: the absolute path an agent is given.
+ */
+export {}
