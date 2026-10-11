@@ -54,31 +54,24 @@ Read each criterion as a business analyst who has never seen the code. Auto-fail
 
 ## Output
 
-Return EXACTLY this JSON document, and nothing else:
+Return EXACTLY this YAML document, and nothing else:
 
-```json
-{
-  "lens": "planning-ac-quality",
-  "verdict": "pass | fail | inconclusive",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G3 | G4",
-      "severity": "blocker | high",
-      "story": "story id (the issue number in a refine review)",
-      "location": "story id and criterion number",
-      "description": "the two readings, or the leak",
-      "suggestion": "how to say it once"
-    }
-  ]
-}
+```yaml
+lens: planning-ac-quality
+verdict: pass
+defects:
+  - id: D1
+    gate: G3
+    severity: blocker
+    story: "story id (the issue number in a refine review)"
+    location: "story id and criterion number"
+    description: "the two readings, or the leak"
+    suggestion: "how to say it once"
 ```
 
-Quote every free-text value. An unquoted `:` or `#` truncates the document silently, and a
-finding that does not parse is a finding that did not happen. This lens is the most exposed:
-the ambiguities you must exhibit are the ones most likely to contain a colon.
-
-Emit `"defects": []` when you found none; never omit the key.
+Choose `pass`, `fail` or `inconclusive`; choose G3 or G4 and a valid severity for each finding.
+Quote every free-text value so punctuation remains part of the value. Emit `defects: []` when
+you found none; never omit the key.
 
 ## Rules
 

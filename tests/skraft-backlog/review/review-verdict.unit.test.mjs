@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  PHASES, WEIGHTS, computeVerdict, main, parseArgs, renderReview, validateLensResult,
+  PHASES, WEIGHTS, computeVerdict, main, parseArgs, parseLensResult, renderReview, validateLensResult,
 } from '../../../plugins/skraft-backlog/skills/backlog-review-lenses/scripts/review-verdict.mjs'
 
 const pass = (lens) => ({ lens, verdict: 'pass', defects: [] })
@@ -59,6 +59,33 @@ test('a lens that says pass while listing a medium defect is rejected as unusabl
   assert.ok(problems.some((p) => p.includes('pass but a medium')))
 })
 
+test('lens results parse concise YAML and preserve quoted punctuation', () => {
+  assert.deepEqual(parseLensResult([
+    'lens: planning-ac-quality',
+    'verdict: fail',
+    'defects:',
+    '  - id: D1',
+    '    gate: G4',
+    '    severity: blocker',
+    '    story: "42"',
+    '    location: "42, AC 1"',
+    '    description: "A: B # C"',
+    '    suggestion: "Use: one rule"',
+  ].join('\n')), {
+    lens: 'planning-ac-quality',
+    verdict: 'fail',
+    defects: [{
+      id: 'D1', gate: 'G4', severity: 'blocker', story: '42', location: '42, AC 1',
+      description: 'A: B # C', suggestion: 'Use: one rule',
+    }],
+  })
+  assert.deepEqual(parseLensResult('lens: planning-dor\nverdict: pass\ndefects: []'), {
+    lens: 'planning-dor', verdict: 'pass', defects: [],
+  })
+  assert.throws(() => parseLensResult('lens: planning-dor\nverdict: pass\ndefects: nope'), /YAML list/)
+  assert.deepEqual(parseLensResult(JSON.stringify(pass('planning-dor'))), pass('planning-dor'))
+})
+
 test('lens names with or without the -lens suffix are the same lens', () => {
   const review = computeVerdict('refine', ['planning-invest-lens', 'planning-ac-quality-lens', 'planning-dor-lens'].map(pass))
   assert.equal(review.verdict, 'APPROVED')
@@ -109,7 +136,7 @@ test('the review file carries the verdict line and the JSON payload', () => {
 })
 
 test('arguments: a phase and at least one lens are required, and the attempt is a positive integer', () => {
-  assert.throws(() => parseArgs(['--lens', 'a.json']), /--phase/)
+  assert.throws(() => parseArgs(['--lens', 'a.yaml']), /--phase/)
   assert.throws(() => parseArgs(['--phase', 'refine']), /--lens/)
   assert.throws(() => parseArgs(['--phase', 'refine', '--lens', 'a', '--attempt', '0']), /positive/)
   assert.throws(() => parseArgs(['--phase', 'refine', '--lens']), /needs a value/)
@@ -120,23 +147,23 @@ test('arguments: a phase and at least one lens are required, and the attempt is 
 
 test('main maps the verdict to its exit code, writes the review and reports an unreadable lens as a problem', () => {
   const files = {
-    'invest.json': JSON.stringify(pass('planning-invest')),
-    'ac.json': JSON.stringify(pass('planning-ac-quality')),
-    'dor.json': '{ not json',
+    'invest.yaml': 'lens: planning-invest\nverdict: pass\ndefects: []',
+    'ac.yaml': 'lens: planning-ac-quality\nverdict: pass\ndefects: []',
+    'dor.yaml': 'not valid YAML',
   }
   const written = {}
   const lines = []
   const io = { read: (path) => files[path], write: (path, content) => { written[path] = content }, log: (line) => lines.push(line), error: () => {} }
-  const code = main(['--phase', 'refine', '--lens', 'invest.json', '--lens', 'ac.json', '--lens', 'dor.json', '--out', 'r.md'], io)
+  const code = main(['--phase', 'refine', '--lens', 'invest.yaml', '--lens', 'ac.yaml', '--lens', 'dor.yaml', '--out', 'r.md'], io)
   assert.equal(code, 3)
   assert.match(written['r.md'], /verdict: NEEDS_REWORK/)
   const summary = JSON.parse(lines[0])
   assert.equal(summary.verdict, 'NEEDS_REWORK')
-  assert.ok(summary.problems.some((p) => p.includes('dor.json')))
+  assert.ok(summary.problems.some((p) => p.includes('dor.yaml')))
 
-  files['dor.json'] = JSON.stringify(pass('planning-dor'))
-  assert.equal(main(['--phase', 'refine', '--lens', 'invest.json', '--lens', 'ac.json', '--lens', 'dor.json'], io), 0)
-  files['dor.json'] = JSON.stringify(fail('planning-dor', defect('G7', 'blocker')))
-  assert.equal(main(['--phase', 'refine', '--lens', 'invest.json', '--lens', 'ac.json', '--lens', 'dor.json'], io), 4)
+  files['dor.yaml'] = 'lens: planning-dor\nverdict: pass\ndefects: []'
+  assert.equal(main(['--phase', 'refine', '--lens', 'invest.yaml', '--lens', 'ac.yaml', '--lens', 'dor.yaml'], io), 0)
+  files['dor.yaml'] = 'lens: planning-dor\nverdict: fail\ndefects:\n  - id: D1\n    gate: G7\n    severity: blocker\n    story: "S-1"\n    location: "S-1, DoR 1"\n    description: "Missing: reason"\n    suggestion: "Add: detail"'
+  assert.equal(main(['--phase', 'refine', '--lens', 'invest.yaml', '--lens', 'ac.yaml', '--lens', 'dor.yaml'], io), 4)
   assert.equal(main(['--phase', 'nope', '--lens', 'x'], io), 1)
 })

@@ -50,27 +50,23 @@ even when the graph itself is acyclic.
 
 ## Output
 
-Return EXACTLY this JSON document, and nothing else:
+Return EXACTLY this YAML document, and nothing else:
 
-```json
-{
-  "lens": "planning-coherence",
-  "verdict": "pass | fail | inconclusive",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G5 | G6",
-      "severity": "blocker | high",
-      "story": "story id (the issue number in a refine review)",
-      "location": "story id or the cycle path",
-      "description": "what cannot be delivered as sequenced",
-      "suggestion": "how to resequence or decompose"
-    }
-  ]
-}
+```yaml
+lens: planning-coherence
+verdict: pass
+defects:
+  - id: D1
+    gate: G5
+    severity: blocker
+    story: "story id (the issue number in a refine review)"
+    location: "story id or the cycle path"
+    description: "what cannot be delivered as sequenced"
+    suggestion: "how to resequence or decompose"
 ```
 
-Emit `"defects": []` when you found none; never omit the key.
+Choose `pass`, `fail` or `inconclusive`; choose a valid gate and severity for each finding.
+Quote every free-text value. Emit `defects: []` when you found none; never omit the key.
 
 ## Rules
 

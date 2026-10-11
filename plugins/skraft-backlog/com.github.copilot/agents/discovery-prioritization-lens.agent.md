@@ -54,26 +54,22 @@ reads "this story will take two days" is out of scope for this lens.
 
 ## Output
 
-Return EXACTLY this JSON document, and nothing else:
+Return EXACTLY this YAML document, and nothing else:
 
-```json
-{
-  "lens": "discovery-prioritization",
-  "verdict": "pass | fail | inconclusive",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G3 | G4",
-      "severity": "high",
-      "location": "issue number or proposal section",
-      "description": "what does not hold",
-      "suggestion": "how to make it hold"
-    }
-  ]
-}
+```yaml
+lens: discovery-prioritization
+verdict: pass
+defects:
+  - id: D1
+    gate: G3
+    severity: high
+    location: "issue number or proposal section"
+    description: "what does not hold"
+    suggestion: "how to make it hold"
 ```
 
-Emit `"defects": []` when you found none; never omit the key.
+Choose `pass`, `fail` or `inconclusive`; choose a valid gate and severity for each finding.
+Quote every free-text value. Emit `defects: []` when you found none; never omit the key.
 
 ## Rules
 

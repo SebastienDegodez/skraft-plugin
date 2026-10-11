@@ -63,27 +63,23 @@ HIGH — any one of these forces rework:
 
 ## Output
 
-Return EXACTLY this JSON document, and nothing else:
+Return EXACTLY this YAML document, and nothing else:
 
-```json
-{
-  "lens": "planning-dor",
-  "verdict": "pass | fail | inconclusive",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G7 | G8",
-      "severity": "blocker | high",
-      "story": "story id (the issue number in a refine review)",
-      "location": "story id and the failing item or antipattern",
-      "description": "what DESIGN would have to guess",
-      "suggestion": "what to supply"
-    }
-  ]
-}
+```yaml
+lens: planning-dor
+verdict: pass
+defects:
+  - id: D1
+    gate: G7
+    severity: blocker
+    story: "story id (the issue number in a refine review)"
+    location: "story id and the failing item or antipattern"
+    description: "what DESIGN would have to guess"
+    suggestion: "what to supply"
 ```
 
-Emit `"defects": []` when you found none; never omit the key.
+Choose `pass`, `fail` or `inconclusive`; choose a valid gate and severity for each finding.
+Quote every free-text value. Emit `defects: []` when you found none; never omit the key.
 
 ## Rules
 

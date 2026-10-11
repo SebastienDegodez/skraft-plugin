@@ -55,26 +55,22 @@ If the repository is unreachable, you cannot verify G2. Return
 
 ## Output
 
-Return EXACTLY this JSON document, and nothing else:
+Return EXACTLY this YAML document, and nothing else:
 
-```json
-{
-  "lens": "discovery-completeness",
-  "verdict": "pass | fail | inconclusive",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G1 | G2",
-      "severity": "blocker | high",
-      "location": "issue number or report section",
-      "description": "what was missed",
-      "suggestion": "how to close the gap"
-    }
-  ]
-}
+```yaml
+lens: discovery-completeness
+verdict: pass
+defects:
+  - id: D1
+    gate: G1
+    severity: high
+    location: "issue number or report section"
+    description: "what was missed"
+    suggestion: "how to close the gap"
 ```
 
-Emit `"defects": []` when you found none; never omit the key.
+Choose `pass`, `fail` or `inconclusive`; choose a valid gate and severity for each finding.
+Quote every free-text value. Emit `defects: []` when you found none; never omit the key.
 
 ## Rules
 

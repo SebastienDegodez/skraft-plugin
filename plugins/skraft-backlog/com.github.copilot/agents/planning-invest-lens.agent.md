@@ -57,27 +57,23 @@ On a back-edge, report the cycle path: `Story-A -> Story-B -> Story-C -> Story-A
 
 ## Output
 
-Return EXACTLY this JSON document, and nothing else:
+Return EXACTLY this YAML document, and nothing else:
 
-```json
-{
-  "lens": "planning-invest",
-  "verdict": "pass | fail | inconclusive",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G1 | G2",
-      "severity": "high",
-      "story": "story id (the issue number in a refine review)",
-      "location": "story id",
-      "description": "which criterion fails and why",
-      "suggestion": "how to reshape the story"
-    }
-  ]
-}
+```yaml
+lens: planning-invest
+verdict: pass
+defects:
+  - id: D1
+    gate: G1
+    severity: high
+    story: "story id (the issue number in a refine review)"
+    location: "story id"
+    description: "which criterion fails and why"
+    suggestion: "how to reshape the story"
 ```
 
-Emit `"defects": []` when you found none; never omit the key.
+Choose `pass`, `fail` or `inconclusive`; choose a valid gate and severity for each finding.
+Quote every free-text value. Emit `defects: []` when you found none; never omit the key.
 
 ## Rules
 

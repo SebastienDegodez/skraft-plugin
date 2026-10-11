@@ -16,7 +16,7 @@ see. Each dispatch prompt carries:
 
 - the paths of the inputs that lens is entitled to, and no other artefact or finding;
 - the attempt number;
-- the instruction: "Return only the JSON document of your Output section."
+- the instruction: "Return only the YAML document of your Output section."
 
 Never write a lens result yourself, and never run two lenses in one context. A missing
 dispatch is a missing lens, and the script counts it as one.
@@ -24,7 +24,7 @@ dispatch is a missing lens, and the script counts it as one.
 ## 2. Collect
 
 Save each lens answer, verbatim, to its own file next to the review:
-`reviews/{date}/{phase}-lens-{lens}-{attempt}.json`. When an answer is not valid JSON,
+`reviews/{date}/{phase}-lens-{lens}-{attempt}.yaml`. When an answer is not valid YAML,
 dispatch that lens once more; if it fails again, save what it returned anyway.
 
 ## 3. Decide
@@ -34,7 +34,7 @@ folder that holds this SKILL.md; relative paths are read from the repository roo
 
 ```sh
 node {skill}/scripts/review-verdict.mjs --phase discover|discuss|refine \
-  --lens <file.json> --lens <file.json> … \
+  --lens <file.yaml> --lens <file.yaml> … \
   --attempt <N> --reviewed <artefact path> … \
   --out <reviews/{date}/{phase}-review-{N}.md>
 ```

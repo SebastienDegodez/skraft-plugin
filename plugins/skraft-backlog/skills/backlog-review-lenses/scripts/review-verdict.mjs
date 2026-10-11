@@ -3,12 +3,10 @@
 // The producer dispatches the lenses; this script, not the producer, decides the verdict, so a
 // producer never approves its own work.
 //
-//   node review-verdict.mjs --phase discover|discuss|refine --lens a.json --lens b.json \
+//   node review-verdict.mjs --phase discover|discuss|refine --lens a.yaml --lens b.yaml \
 //     [--attempt N] [--reviewed path] [--out reviews/2026-10-09/discuss-review-1.md]
 //
-// A lens result is JSON: { "lens": "planning-dor", "verdict": "pass|fail|inconclusive",
-//   "defects": [{ "gate": "G7", "severity": "blocker|high|medium|low", "story": "S-1",
-//   "location": "…", "description": "…", "suggestion": "…" }] }
+// A lens result is YAML with lens, verdict and defects fields.
 //
 // Exit codes: 0 APPROVED, 3 NEEDS_REWORK, 4 REJECTED, 1 usage or unreadable input.
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
@@ -58,10 +56,69 @@ const rank = (severity) => SEVERITIES.indexOf(severity)
 
 const normalizeLensName = (name) => String(name ?? '').trim().replace(/-lens$/, '')
 
+const RESULT_FIELDS = new Set(['lens', 'verdict', 'defects'])
+const DEFECT_FIELDS = new Set(['id', 'gate', 'severity', 'story', 'location', 'description', 'suggestion'])
+
+function parseYamlScalar(source) {
+  const value = source.trim()
+  if (value.startsWith('"')) return JSON.parse(value)
+  if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1).replaceAll("''", "'")
+  if (/^[A-Za-z0-9_./<>-]+$/.test(value)) return value
+  throw new Error(`unsupported YAML scalar: ${value}`)
+}
+
+/** Parse the deliberately small YAML mapping emitted by review lenses. */
+export function parseLensResult(source) {
+  if (source.trimStart().startsWith('{')) return JSON.parse(source)
+
+  const result = {}
+  let defects = false
+  let currentDefect
+  const assign = (target, key, value, allowed) => {
+    if (!allowed.has(key)) throw new Error(`unknown YAML field: ${key}`)
+    if (Object.hasOwn(target, key)) throw new Error(`duplicate YAML field: ${key}`)
+    target[key] = parseYamlScalar(value)
+  }
+
+  for (const line of source.split(/\r?\n/)) {
+    if (!line.trim()) continue
+    const top = /^(lens|verdict|defects):(?:\s*(.*))?$/.exec(line)
+    if (top) {
+      const [, key, value = ''] = top
+      if (defects) throw new Error('unexpected top-level YAML field')
+      if (!RESULT_FIELDS.has(key)) throw new Error(`unknown YAML field: ${key}`)
+      if (Object.hasOwn(result, key)) throw new Error(`duplicate YAML field: ${key}`)
+      if (key === 'defects') {
+        defects = true
+        result.defects = value === '[]' ? [] : []
+        if (value && value !== '[]') throw new Error('defects must be a YAML list or []')
+      } else {
+        result[key] = parseYamlScalar(value)
+      }
+      continue
+    }
+    if (!defects) throw new Error('unexpected YAML content')
+    const item = /^  - ([a-z_]+):\s*(.*)$/.exec(line)
+    if (item) {
+      currentDefect = {}
+      result.defects.push(currentDefect)
+      assign(currentDefect, item[1], item[2], DEFECT_FIELDS)
+      continue
+    }
+    const field = /^    ([a-z_]+):\s*(.*)$/.exec(line)
+    if (field && currentDefect) {
+      assign(currentDefect, field[1], field[2], DEFECT_FIELDS)
+      continue
+    }
+    throw new Error('unexpected YAML content')
+  }
+  return result
+}
+
 /** Validates one lens result. Returns { lens, problems } — an empty problems list means usable. */
 export function validateLensResult(result) {
   const problems = []
-  if (result === null || typeof result !== 'object' || Array.isArray(result)) return { lens: null, problems: ['not a JSON object'] }
+  if (result === null || typeof result !== 'object' || Array.isArray(result)) return { lens: null, problems: ['not a mapping'] }
   const lens = normalizeLensName(result.lens)
   if (!lens) problems.push('missing "lens"')
   if (!LENS_VERDICTS.includes(result.verdict)) problems.push(`"verdict" must be one of ${LENS_VERDICTS.join(', ')}`)
@@ -220,7 +277,7 @@ export function parseArgs(argv) {
     else throw new Error(`unknown argument: ${arg}`)
   }
   if (!PHASES[options.phase]) throw new Error(`--phase must be one of ${Object.keys(PHASES).join(', ')}`)
-  if (options.lens.length === 0) throw new Error('give each lens result with --lens <file.json>')
+  if (options.lens.length === 0) throw new Error('give each lens result with --lens <file.yaml>')
   if (options.attempt !== undefined && !(options.attempt >= 1)) throw new Error('--attempt must be a positive integer')
   return options
 }
@@ -230,7 +287,7 @@ export function main(argv, { read = (path) => readFileSync(path, 'utf8'), write 
   try { options = parseArgs(argv) } catch (err) { error(`review-verdict: ${err.message}`); return 1 }
   const results = []
   for (const path of options.lens) {
-    try { results.push(JSON.parse(read(path))) } catch (err) {
+    try { results.push(parseLensResult(read(path))) } catch (err) {
       // An unreadable lens is a lens that did not answer; the verdict says so.
       results.push({ lens: path, verdict: 'unparseable', defects: [], error: err.message })
     }

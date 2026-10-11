@@ -50,26 +50,22 @@ Load on demand (C1 LAZY ASSET):
 
 ## Output
 
-Return EXACTLY this JSON document, and nothing else:
+Return EXACTLY this YAML document, and nothing else:
 
-```json
-{
-  "lens": "discovery-duplicate",
-  "verdict": "pass | fail | inconclusive",
-  "defects": [
-    {
-      "id": "D<N>",
-      "gate": "G5 | G6",
-      "severity": "high | medium",
-      "location": "the two issue numbers",
-      "description": "what the pair has in common",
-      "suggestion": "merge, link, or keep separate"
-    }
-  ]
-}
+```yaml
+lens: discovery-duplicate
+verdict: pass
+defects:
+  - id: D1
+    gate: G5
+    severity: high
+    location: "the two issue numbers"
+    description: "what the pair has in common"
+    suggestion: "merge, link, or keep separate"
 ```
 
-Emit `"defects": []` when you found none; never omit the key.
+Choose `pass`, `fail` or `inconclusive`; choose a valid gate and severity for each finding.
+Quote every free-text value. Emit `defects: []` when you found none; never omit the key.
 
 ## Rules
 
