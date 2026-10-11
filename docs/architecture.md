@@ -129,8 +129,8 @@ Copilot sont `skraft-orchestrator`, `brownfield-analyst`, `brownfield-harness-bu
   l'exécution complète du pipeline. Aucune garantie globale de compatibilité entre clients.
 
 Ces notes et le [README distribué](../plugins/skraft-framework/README.md#harness-packaging)
-décrivent le packaging courant, que consigne [ADR-009](adr/adr-009-generated-copilot-hook-copy.md).
-[ADR-008](adr/adr-008-single-hook-manifest.md), qu'il remplace, conserve ses mesures historiques
+décrivent le packaging courant, que consigne [ADR-009 v1](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-009-generated-copilot-hook-copy.md).
+[ADR-008 v1](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-008-single-hook-manifest.md), qu'il remplace, conserve ses mesures historiques
 sur l'ancien packaging ; ce n'est pas une preuve pour les versions actuelles.
 
 ---
