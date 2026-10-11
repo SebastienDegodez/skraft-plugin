@@ -69,8 +69,10 @@ export function buildPairProjection({ root, list, read, exists }) {
       conflicts.push('Claude registration must enumerate native files exactly once')
     }
   }
-  // A plugin without hooks (skraft-backlog) ships no Copilot hook copy either.
-  const hook = read('hooks/hooks.json')
+  // A plugin without command hooks ships no Copilot hook copy: skraft-backlog has no
+  // manifest, and the V2 core's manifest only declares the Claude Code mod module.
+  const manifestText = read('hooks/hooks.json')
+  const hook = manifestText && !declaresModulesOnly(manifestText) ? manifestText : null
   for (const path of list('com.github.copilot/hooks', true)) {
     if (!hook || path !== 'com.github.copilot/hooks/hooks.json') extra.push(path)
   }
@@ -86,4 +88,12 @@ export function buildPairProjection({ root, list, read, exists }) {
       ['body', 'description'].every((field) => baseline.pairs[id]?.[side]?.[field] === pair[side][field])))
   plan('.agent-sync.json', oldBaseline && unchanged ? oldBaseline : Buffer.from(content))
   return { root, files, writes, removed: [], conflicts, missing: missing.sort(), stale: stale.sort(), extra: extra.sort() }
+}
+const declaresModulesOnly = (text) => {
+  try {
+    const manifest = JSON.parse(text)
+    return manifest !== null && typeof manifest === 'object' && Array.isArray(manifest.modules) && manifest.hooks === undefined
+  } catch {
+    return false
+  }
 }
