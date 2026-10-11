@@ -78,10 +78,9 @@ test('plugin packaging: Claude manifest points at the agent adapters and no rule
 })
 
 // V2 ships no hooks: no hook manifest on either surface and no manifest pointer to one.
-test('plugin packaging: no hook manifest ships and no manifest declares a hooks pointer', () => {
-  for (const path of ['hooks/hooks.json', 'com.github.copilot/hooks/hooks.json']) {
-    assert.equal(existsSync(join(pluginRoot, path)), false, path)
-  }
+test('plugin packaging: the hook manifest declares only the mod module, no command hook, no Copilot copy, no hooks pointer', () => {
+  assert.deepEqual(JSON.parse(readFileSync(join(pluginRoot, 'hooks/hooks.json'), 'utf8')), { modules: ['./skraft-mod.tsx'] })
+  assert.equal(existsSync(join(pluginRoot, 'com.github.copilot/hooks/hooks.json')), false)
   for (const manifest of ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json', 'plugin.json']) {
     const declared = JSON.parse(readFileSync(join(pluginRoot, manifest), 'utf8')).hooks
     assert.equal(declared, undefined, `${manifest} declares a hooks pointer`)
