@@ -81,6 +81,6 @@ test('init on an initialised slug keeps its journal and its story', async () => 
 
   const again = await createInit(deps).init({ slug: 'checkout', story: { issue: 8, title: 'Other' } })
 
-  assert.deepEqual(again, { ok: true, slug: 'checkout', created: false, reason: 'checkout is the active pipeline' })
+  assert.deepEqual(again, { ok: true, slug: 'checkout', created: false, code: null, reason: 'checkout is the active pipeline' })
   assert.deepEqual(tracking.journal('checkout').map((event) => [event.type, event.story]), [['run.started', { issue: 7, title: null }]])
 })

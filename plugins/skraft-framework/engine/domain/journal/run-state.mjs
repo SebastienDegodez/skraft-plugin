@@ -8,6 +8,7 @@
  *   closed: string[],
  *   steps: Record<string, StepState>,
  *   finished: RunEvent | null,
+ *   stopped: RunEvent | null,
  *   attempts: number,
  *   costUsd: number | null,
  * }} RunState
@@ -20,8 +21,9 @@
  */
 export const deriveRun = (events) => {
   /** @type {RunState} */
-  const run = { slug: null, story: null, closed: [], steps: {}, finished: null, attempts: 0, costUsd: null }
+  const run = { slug: null, story: null, closed: [], steps: {}, finished: null, stopped: null, attempts: 0, costUsd: null }
   for (const event of events) {
+    run.stopped = event.type === 'run.stopped' ? event : null
     if (event.type === 'run.started' && run.slug === null) {
       run.slug = event.slug ?? null
       run.story = event.story ?? null

@@ -85,3 +85,18 @@ test('the view of a blocked run keeps the reason, and of a tampered journal says
   assert.equal(tampered.status, 'tampered')
   assert.equal(tampered.reason, 'journal tampered: events.jsonl line 1 does not open the chain; restore the file or start a new slug')
 })
+
+test('the view of a run stopped on an agent the host cannot start says blocked, until the step resumes', async () => {
+  const { tracking, deps } = host()
+  await createInit(deps).init({ slug: 'checkout' })
+  deps.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'not installed' }))
+  await createRunPipeline(deps).run({})
+
+  const stopped = await createObserve(deps).view()
+  assert.equal(stopped.status, 'blocked')
+  assert.equal(stopped.reason, 'not installed')
+
+  deps.agentRunner.behaviours.push(() => tracking.write('checkout', OUTPUT, 'Findings.\n'))
+  await createRunPipeline(deps).run({})
+  assert.equal((await createObserve(deps).view()).status, 'done')
+})

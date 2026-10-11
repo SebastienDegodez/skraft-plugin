@@ -104,7 +104,9 @@ const dispatch = async (deps, { slug, story, journal, next }) => {
       }),
     })
     if (answer.unavailable) {
-      return { status: 'blocked', slug, phase, code: 'agent-unavailable', reason: answer.error ?? `${step.agent} could not be started` }
+      const reason = answer.error ?? `${step.agent} could not be started`
+      await journal.append('run.stopped', { code: 'agent-unavailable', reason })
+      return { status: 'blocked', slug, phase, code: 'agent-unavailable', reason }
     }
     cost = answer.costUsd
   }
