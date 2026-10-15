@@ -36,14 +36,14 @@ const TRACKING = '.copilot-tracking'
 
 /**
  * Whether a component is touched by the files changed since its base. A file under another
- * component whose root sits inside this one belongs to that one.
+ * component whose root sits inside this one belongs to that one; a root equal to this one's
+ * (this component's own, or a component sharing it) takes nothing away.
  * @param {Component} component
  * @param {Component[]} components every component of the config
  * @param {string[]} changed paths relative to the component's root
  */
 export const isTouched = (component, components, changed) => {
   const nested = components
-    .filter((other) => other !== component)
     .map((other) => pathUnder(other.root, component.root))
     .filter((/** @type {string | null} */ inner) => inner !== null && inner !== '.')
   return changed.some((path) => {
