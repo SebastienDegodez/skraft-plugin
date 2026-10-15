@@ -59,6 +59,10 @@ verdict, nor the progress.
 In the mod, each `$` call stays a one-line function in the registered module. The rest of
 the driver receives these functions and is tested without Claude Code.
 
+Showing the agent currently in progress, as [Skwad](https://github.com/Kochava-Studios/skwad)
+does, is in progress: today `skraft status` and the Skraft pane show the open step, its
+agent and its attempt.
+
 > **Coming next.** Questions to the human (`$.ui.ask`, `ctx.pause`, `skraft decide`):
 > planned for lot 5. The Copilot Canvas and the full pane view: planned for lot 8.
 
@@ -121,11 +125,11 @@ What an agent could forget, the engine checks.
 
 ## Rejected alternatives
 
-**A standalone engine, server or binary.** That is the choice of Archon and Fabro: an
-executor outside the host drives the agents from the outside. It needs its own model-provider
-credentials, and SKRAFT would no longer live in the developer's host. V2 keeps their
-modelling ideas (typed nodes, "done" proven by a command, capped loops, failure classes,
-event journal), not their execution form.
+**A standalone engine, server or binary.** An executor outside the host would drive the
+agents from the outside. It would need its own model-provider credentials, and SKRAFT would
+no longer live in the developer's host. V2 keeps execution in the host and puts in the
+engine what such an executor would bring: typed nodes, "done" proven by a command, capped
+loops, failure classes, event journal.
 
 **An agent-driven loop as the primary driver.** An agent calls `skraft next`, does the step,
 calls `skraft record`. It works everywhere, but costs a round trip per step, serialises the

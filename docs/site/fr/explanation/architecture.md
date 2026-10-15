@@ -61,6 +61,10 @@ verdict, ni de l'avancement.
 Dans le mod, chaque appel à `$` reste une fonction d'une ligne dans le module enregistré.
 Le reste du pilote reçoit ces fonctions et se teste sans Claude Code.
 
+Montrer l'agent en cours, comme le fait [Skwad](https://github.com/Kochava-Studios/skwad),
+est en cours : aujourd'hui `skraft status` et le panneau Skraft affichent l'étape ouverte,
+son agent et sa tentative.
+
 > **À venir.** Les questions à l'humain (`$.ui.ask`, `ctx.pause`, `skraft decide`) : prévues
 > au lot 5. Le Canvas Copilot et la vue complète du panneau : prévus au lot 8.
 
@@ -123,11 +127,11 @@ Ce qu'un agent pourrait oublier, le moteur le vérifie.
 
 ## Alternatives écartées
 
-**Un moteur autonome, serveur ou binaire.** C'est le choix d'Archon et de Fabro : un
-exécuteur hors de l'hôte pilote les agents de l'extérieur. Il lui faut ses propres accès aux
-fournisseurs de modèles, et SKRAFT ne vivrait plus dans l'hôte du développeur. La V2 reprend
-leurs idées de modélisation (nœuds typés, « fini » prouvé par une commande, boucles
-plafonnées, classes d'échec, journal d'événements), pas leur forme d'exécution.
+**Un moteur autonome, serveur ou binaire.** Un exécuteur hors de l'hôte piloterait les
+agents de l'extérieur. Il lui faudrait ses propres accès aux fournisseurs de modèles, et
+SKRAFT ne vivrait plus dans l'hôte du développeur. La V2 garde l'exécution dans l'hôte et
+met dans le moteur ce qu'un tel exécuteur apporterait : nœuds typés, « fini » prouvé par une
+commande, boucles plafonnées, classes d'échec, journal d'événements.
 
 **Une boucle conduite par l'agent comme pilote principal.** Un agent appelle `skraft next`,
 fait l'étape, appelle `skraft record`. Cela marche partout, mais coûte un aller-retour par
