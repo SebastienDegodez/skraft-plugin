@@ -1,0 +1,359 @@
+#!/usr/bin/env node
+// Evaluation stand-in for the GitHub CLI. Only the GitHub Enterprise host in
+// .eval/github-seed.json is authenticated; every other host is refused. Each
+// invocation is appended to .eval/runtime/gh-calls.jsonl and the tracked issue
+// thread lives in .eval/runtime/gh-state.json, so the verifier can judge what was
+// read or written, where, and how the host was bound.
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { spawnSync } from 'node:child_process'
+
+const root = resolve(dirname(realpathSync(process.argv[1])), '..')
+const seed = JSON.parse(readFileSync(join(root, '.eval', 'github-seed.json'), 'utf8'))
+const runtime = join(root, '.eval', 'runtime')
+mkdirSync(runtime, { recursive: true })
+const statePath = join(runtime, 'gh-state.json')
+const state = existsSync(statePath)
+  ? JSON.parse(readFileSync(statePath, 'utf8'))
+  : { nextCommentId: seed.nextCommentId, comments: seed.comments }
+const argv = process.argv.slice(2)
+const base = { at: new Date().toISOString(), argv, ghHostEnv: process.env.GH_HOST ?? null }
+
+const log = (fields) => appendFileSync(join(runtime, 'gh-calls.jsonl'), `${JSON.stringify({ ...base, ...fields })}\n`)
+const save = () => writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`)
+const print = (text) => process.stdout.write(text.endsWith('\n') ? text : `${text}\n`)
+const stop = (fields, message, code = 1, body) => {
+  log({ ...fields, status: 'error', error: message })
+  if (body !== undefined) print(JSON.stringify(body))
+  process.stderr.write(`${message}\n`)
+  process.exit(code)
+}
+
+const normalizeHost = (value) => String(value).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+const bindHost = (explicit) => {
+  if (explicit) return { host: normalizeHost(explicit), hostSource: 'flag' }
+  if (process.env.GH_HOST) return { host: normalizeHost(process.env.GH_HOST), hostSource: 'env' }
+  return { host: 'github.com', hostSource: 'default' }
+}
+const requireAuthenticated = (fields) => {
+  if (fields.host === seed.host) return
+  stop(fields, `To get started with GitHub CLI for ${fields.host}, please run:  gh auth login --hostname ${fields.host}`, 4)
+}
+
+const [owner, name] = seed.repo.split('/')
+const apiBase = `https://${seed.host}/api/v3`
+const web = `https://${seed.host}/${seed.repo}`
+const issueNumber = seed.issue.number
+const commentJson = (comment) => ({
+  id: comment.id,
+  node_id: `IC_kwDOEval${comment.id}`,
+  url: `${apiBase}/repos/${seed.repo}/issues/comments/${comment.id}`,
+  html_url: `${web}/issues/${issueNumber}#issuecomment-${comment.id}`,
+  issue_url: `${apiBase}/repos/${seed.repo}/issues/${issueNumber}`,
+  user: comment.user,
+  created_at: comment.created_at,
+  updated_at: comment.updated_at,
+  author_association: 'MEMBER',
+  body: comment.body,
+})
+const issueJson = () => ({
+  id: 5000 + issueNumber,
+  node_id: `I_kwDOEval${issueNumber}`,
+  url: `${apiBase}/repos/${seed.repo}/issues/${issueNumber}`,
+  repository_url: `${apiBase}/repos/${seed.repo}`,
+  comments_url: `${apiBase}/repos/${seed.repo}/issues/${issueNumber}/comments`,
+  html_url: `${web}/issues/${issueNumber}`,
+  number: issueNumber,
+  title: seed.issue.title,
+  state: seed.issue.state,
+  user: seed.issue.user,
+  labels: [],
+  comments: state.comments.length,
+  created_at: seed.issue.created_at,
+  body: seed.issue.body,
+})
+const repoJson = () => ({
+  id: 314,
+  node_id: 'R_kgDOEval314',
+  name,
+  full_name: seed.repo,
+  private: true,
+  owner: { login: owner, id: 7, type: 'Organization' },
+  html_url: web,
+  url: `${apiBase}/repos/${seed.repo}`,
+  default_branch: 'main',
+  permissions: { admin: false, maintain: false, push: true, triage: true, pull: true },
+})
+const viewerJson = () => ({
+  ...seed.viewer,
+  html_url: `https://${seed.host}/${seed.viewer.login}`,
+  url: `${apiBase}/users/${seed.viewer.login}`,
+})
+const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+const createComment = (body) => {
+  const comment = { id: state.nextCommentId++, user: seed.viewer, body, created_at: now(), updated_at: now() }
+  state.comments.push(comment)
+  save()
+  return comment
+}
+const readInput = (source) => (source === '-' ? readFileSync(0, 'utf8') : readFileSync(resolve(process.cwd(), source), 'utf8'))
+
+const VERSION = 'gh version 2.63.0 (2024-12-11)\nhttps://github.com/cli/cli/releases/tag/v2.63.0'
+const API_HELP = `Makes an authenticated HTTP request to the GitHub API and prints the response.
+
+USAGE
+  gh api <endpoint> [flags]
+
+FLAGS
+      --cache duration        Cache the response, e.g. "3600s", "60m", "1h"
+  -F, --field key=value       Add a typed parameter in key=value format ("@file" reads a file, "@-" stdin)
+  -H, --header key:value      Add a HTTP request header in key:value format
+      --hostname string       The GitHub hostname for the request (default "github.com")
+  -i, --include               Include HTTP response status line and headers in the output
+      --input file            The file to use as body for the HTTP request (use "-" to read from standard input)
+  -q, --jq string             Query to select values from the response using jq syntax
+  -X, --method string         The HTTP method for the request (default "GET")
+      --paginate              Make additional HTTP requests to fetch all pages of results
+  -f, --raw-field key=value   Add a string parameter in key=value format
+      --silent                Do not print the response body
+      --slurp                 Use with "--paginate" to return an array of all pages of either JSON arrays or objects
+  -t, --template string       Format JSON output using a Go template
+
+INHERITED FLAGS
+  --help   Show help for command`
+
+const VALUE_OPTIONS = {
+  '--hostname': 'hostname', '-X': 'method', '--method': 'method', '-F': 'field', '--field': 'field',
+  '-f': 'rawField', '--raw-field': 'rawField', '--input': 'input', '-H': 'header', '--header': 'header',
+  '-q': 'jq', '--jq': 'jq', '-t': 'template', '--template': 'template', '--cache': 'cache', '-p': 'preview', '--preview': 'preview',
+}
+const FLAG_OPTIONS = { '--paginate': 'paginate', '--slurp': 'slurp', '-i': 'include', '--include': 'include', '--silent': 'silent', '--verbose': 'verbose', '-h': 'help', '--help': 'help' }
+
+const parseOptions = (args, valueOptions, flagOptions) => {
+  const options = { positional: [], field: [], rawField: [], header: [] }
+  for (let index = 0; index < args.length; index++) {
+    let arg = args[index]
+    let value
+    const short = arg.match(/^(-[A-Za-z])(.+)$/)
+    if (arg.startsWith('--') && arg.includes('=')) [arg, value] = [arg.slice(0, arg.indexOf('=')), arg.slice(arg.indexOf('=') + 1)]
+    else if (short && valueOptions[short[1]] && !valueOptions[arg]) [arg, value] = [short[1], short[2]]
+    if (valueOptions[arg]) {
+      value ??= args[++index]
+      const key = valueOptions[arg]
+      if (Array.isArray(options[key])) options[key].push(value)
+      else options[key] = value
+    } else if (flagOptions[arg]) {
+      options[flagOptions[arg]] = true
+    } else {
+      options.positional.push(arg)
+    }
+  }
+  return options
+}
+
+const typed = (value) => {
+  if (value === 'true') return true
+  if (value === 'false') return false
+  if (value === 'null') return null
+  if (/^-?\d+$/.test(value)) return Number(value)
+  return value
+}
+const requestBody = (options) => {
+  if (options.input) return JSON.parse(readInput(options.input))
+  const body = {}
+  for (const pair of options.field) {
+    const [key, ...rest] = pair.split('=')
+    const value = rest.join('=')
+    body[key] = value.startsWith('@') ? readInput(value.slice(1)) : typed(value)
+  }
+  for (const pair of options.rawField) {
+    const [key, ...rest] = pair.split('=')
+    body[key] = rest.join('=')
+  }
+  return body
+}
+
+const emit = (options, payload, status = 200) => {
+  if (options.silent) return
+  if (options.include) print(`HTTP/2.0 ${status} ${status === 201 ? 'Created' : 'OK'}\nContent-Type: application/json; charset=utf-8\n`)
+  const text = JSON.stringify(payload)
+  if (options.jq) {
+    const result = spawnSync('jq', ['-r', options.jq], { input: text, encoding: 'utf8' })
+    if (result.error || result.status !== 0) {
+      process.stderr.write(result.stderr || 'jq expression failed\n')
+      process.exit(1)
+    }
+    process.stdout.write(result.stdout)
+    return
+  }
+  print(text)
+}
+
+const api = (args) => {
+  const options = parseOptions(args, VALUE_OPTIONS, FLAG_OPTIONS)
+  if (options.help || options.positional.length === 0) {
+    log({ command: 'api --help', status: 'ok' })
+    print(API_HELP)
+    return
+  }
+  const binding = bindHost(options.hostname)
+  let endpoint = options.positional[0].replace(/^https?:\/\/[^/]+(?:\/api\/v3)?\//, '').replace(/^\//, '')
+  const path = endpoint.split('?')[0].toLowerCase()
+  const hasBody = options.field.length > 0 || options.rawField.length > 0 || options.input !== undefined
+  const method = (options.method ?? (hasBody ? 'POST' : 'GET')).toUpperCase()
+  const fields = { command: 'api', ...binding, method, endpoint }
+  if (options.template) stop(fields, '--template is not available in this environment; use --jq or raw JSON output')
+  requireAuthenticated(fields)
+  const notFound = () => stop({ ...fields, httpStatus: 404 }, 'gh: Not Found (HTTP 404)', 1,
+    { message: 'Not Found', documentation_url: 'https://docs.github.com/enterprise-server@3.14/rest' })
+  const repoPath = `repos/${seed.repo}`.toLowerCase()
+  const commentMatch = path.match(new RegExp(`^${repoPath}/issues/comments/(\\d+)$`))
+
+  if (path === 'user' && method === 'GET') {
+    log({ ...fields, status: 'ok', httpStatus: 200 })
+    return emit(options, viewerJson())
+  }
+  if (path === repoPath && method === 'GET') {
+    log({ ...fields, status: 'ok', httpStatus: 200 })
+    return emit(options, repoJson())
+  }
+  if (path === `${repoPath}/issues/${issueNumber}` && method === 'GET') {
+    log({ ...fields, status: 'ok', httpStatus: 200 })
+    return emit(options, issueJson())
+  }
+  if (path === `${repoPath}/issues/${issueNumber}/comments`) {
+    if (method === 'GET') {
+      const list = state.comments.map(commentJson)
+      log({ ...fields, status: 'ok', httpStatus: 200 })
+      return emit(options, options.paginate && options.slurp ? [list] : list)
+    }
+    if (method === 'POST') {
+      const body = requestBody(options).body
+      if (typeof body !== 'string' || body.trim() === '') stop({ ...fields, httpStatus: 422 }, 'gh: Validation Failed (HTTP 422)', 1, { message: 'Validation Failed' })
+      const comment = createComment(body)
+      log({ ...fields, status: 'ok', httpStatus: 201, createdId: comment.id })
+      return emit(options, commentJson(comment), 201)
+    }
+  }
+  if (commentMatch) {
+    const comment = state.comments.find(({ id }) => id === Number(commentMatch[1]))
+    if (!comment) return notFound()
+    if (method === 'GET') {
+      log({ ...fields, status: 'ok', httpStatus: 200 })
+      return emit(options, commentJson(comment))
+    }
+    if (method === 'PATCH' || method === 'DELETE') {
+      if (comment.user.id !== seed.viewer.id) {
+        stop({ ...fields, httpStatus: 403 }, 'gh: Must have admin rights to Repository. (HTTP 403)', 1, { message: 'Must have admin rights to Repository.' })
+      }
+      if (method === 'DELETE') {
+        state.comments = state.comments.filter(({ id }) => id !== comment.id)
+        save()
+        log({ ...fields, status: 'ok', httpStatus: 204, deletedId: comment.id })
+        return
+      }
+      const body = requestBody(options).body
+      if (typeof body !== 'string' || body.trim() === '') stop({ ...fields, httpStatus: 422 }, 'gh: Validation Failed (HTTP 422)', 1, { message: 'Validation Failed' })
+      comment.body = body
+      comment.updated_at = now()
+      save()
+      log({ ...fields, status: 'ok', httpStatus: 200, updatedId: comment.id })
+      return emit(options, commentJson(comment))
+    }
+  }
+  return notFound()
+}
+
+const repoBinding = (repoOption) => {
+  const parts = (repoOption ?? '').replace(/^https?:\/\//, '').split('/').filter(Boolean)
+  if (parts.length === 3) return { ...bindHost(parts[0]), repo: `${parts[1]}/${parts[2]}` }
+  return { ...bindHost(), repo: parts.length === 2 ? `${parts[0]}/${parts[1]}` : null }
+}
+
+const issue = ([subcommand, ...args]) => {
+  const options = parseOptions(args,
+    { '-R': 'repo', '--repo': 'repo', '-b': 'body', '--body': 'body', '-F': 'bodyFile', '--body-file': 'bodyFile', '--json': 'json', '-q': 'jq', '--jq': 'jq' },
+    { '--comments': 'comments', '--edit-last': 'editLast', '--web': 'web', '-w': 'web', '--create-if-none': 'createIfNone' })
+  const binding = repoBinding(options.repo)
+  const target = String(options.positional[0] ?? '').replace(/^.*\/issues\//, '').replace(/^#/, '')
+  const fields = { command: `issue ${subcommand}`, host: binding.host, hostSource: binding.hostSource,
+    method: subcommand === 'comment' ? (options.editLast ? 'PATCH' : 'POST') : 'GET', endpoint: `repos/${binding.repo}/issues/${target}` }
+  requireAuthenticated(fields)
+  if (!binding.repo) stop(fields, 'could not determine the repository: none of the git remotes point to a known GitHub host; use --repo')
+  if (binding.repo.toLowerCase() !== seed.repo || Number(target) !== issueNumber) stop(fields, `GraphQL: Could not resolve to an issue with the number of ${target}.`)
+  if (subcommand === 'view') {
+    log({ ...fields, status: 'ok' })
+    const view = {
+      number: issueNumber, title: seed.issue.title, state: seed.issue.state.toUpperCase(), body: seed.issue.body,
+      url: `${web}/issues/${issueNumber}`, author: { login: seed.issue.user.login },
+      comments: state.comments.map((comment) => ({ id: `IC_kwDOEval${comment.id}`, author: { login: comment.user.login }, body: comment.body, createdAt: comment.created_at, url: commentJson(comment).html_url })),
+    }
+    if (options.json) {
+      const picked = Object.fromEntries(options.json.split(',').map((key) => [key, view[key]]))
+      return emit({ jq: options.jq }, picked)
+    }
+    return print(`${view.title} #${issueNumber}\n${view.state}\n\n${view.body}${options.comments ? `\n\n${view.comments.map((c) => `${c.author.login}: ${c.body}`).join('\n\n')}` : ''}`)
+  }
+  if (subcommand === 'comment') {
+    if (options.web) stop(fields, 'opening a browser is not available in this environment')
+    const body = options.bodyFile !== undefined ? readInput(options.bodyFile) : options.body
+    if (typeof body !== 'string' || body.trim() === '') stop(fields, 'body cannot be blank')
+    if (options.editLast) {
+      const last = [...state.comments].reverse().find((comment) => comment.user.id === seed.viewer.id)
+      if (!last) stop(fields, 'no comments found for current user')
+      last.body = body
+      last.updated_at = now()
+      save()
+      log({ ...fields, status: 'ok', updatedId: last.id })
+      return print(commentJson(last).html_url)
+    }
+    const comment = createComment(body)
+    log({ ...fields, status: 'ok', createdId: comment.id })
+    return print(commentJson(comment).html_url)
+  }
+  stop(fields, `gh issue ${subcommand} is not available in this environment`)
+}
+
+const auth = ([subcommand, ...args]) => {
+  if (subcommand !== 'status') stop({ command: `auth ${subcommand}` }, `gh auth ${subcommand} is disabled in this environment`)
+  const options = parseOptions(args, { '-h': 'hostname', '--hostname': 'hostname' }, { '--show-token': 'showToken', '-t': 'showToken', '--active': 'active', '-a': 'active' })
+  const host = options.hostname ? normalizeHost(options.hostname) : null
+  const fields = { command: 'auth status', host, hostSource: host ? 'flag' : 'none' }
+  if (options.showToken) stop(fields, 'printing tokens is disabled in this environment')
+  if (host && host !== seed.host) stop(fields, `You are not logged into any accounts on ${host}`)
+  log({ ...fields, status: 'ok' })
+  print(`${seed.host}\n  ✓ Logged in to ${seed.host} account ${seed.viewer.login} (keyring)\n  - Active account: true\n  - Git operations protocol: https\n  - Token scopes: 'repo', 'read:org'`)
+}
+
+const [command, ...rest] = argv
+if (command === undefined || command === '--help' || command === 'help') {
+  if (rest[0] === 'api') {
+    log({ command: 'api --help', status: 'ok' })
+    print(API_HELP)
+  } else {
+    log({ command: 'help', status: 'ok' })
+    print('Work seamlessly with GitHub from the command line.\n\nUSAGE\n  gh <command> <subcommand> [flags]\n\nCORE COMMANDS\n  auth, issue, pr, repo\n\nGITHUB ACTIONS COMMANDS\n  run, workflow\n\nADDITIONAL COMMANDS\n  api, version')
+  }
+} else if (command === '--version' || command === 'version') {
+  log({ command: 'version', status: 'ok' })
+  print(VERSION)
+} else if (command === 'api') {
+  api(rest)
+} else if (command === 'issue') {
+  issue(rest)
+} else if (command === 'auth') {
+  auth(rest)
+} else if (command === 'pr' || command === 'repo') {
+  const options = parseOptions(rest.slice(1), { '-R': 'repo', '--repo': 'repo', '--json': 'json' }, {})
+  const binding = repoBinding(options.repo)
+  const fields = { command: `${command} ${rest[0] ?? ''}`.trim(), host: binding.host, hostSource: binding.hostSource, method: 'GET' }
+  requireAuthenticated(fields)
+  if (command === 'repo' && binding.repo?.toLowerCase() === seed.repo) {
+    log({ ...fields, status: 'ok' })
+    print(JSON.stringify({ nameWithOwner: seed.repo, url: web, defaultBranchRef: { name: 'main' } }))
+  } else {
+    stop(fields, command === 'pr' ? 'no pull requests found' : 'could not determine the repository; use --repo')
+  }
+} else {
+  stop({ command }, `unknown command "${command}" for "gh"`)
+}

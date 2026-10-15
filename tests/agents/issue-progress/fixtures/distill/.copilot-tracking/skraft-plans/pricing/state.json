@@ -1,0 +1,81 @@
+{
+  "projectSlug": "pricing",
+  "currentPhase": "DISTILL",
+  "adrRatification": {
+    "checkpointStatus": "resolved",
+    "pending": [],
+    "ratified": []
+  },
+  "phasesCompleted": [
+    "RESEARCH",
+    "DESIGN"
+  ],
+  "phaseArtifacts": {
+    "RESEARCH": [
+      "research/2026-08-12/discount-research.md"
+    ],
+    "DESIGN": [
+      "details/2026-08-14/event-model-discount.md",
+      "details/2026-08-14/diagrams-discount.md",
+      "details/2026-08-14/contracts-discount.md",
+      "details/2026-08-14/context-map.md",
+      "details/2026-08-14/consistency-matrix-discount.md"
+    ],
+    "DISTILL": [
+      "features/pricing-loyalty-discount.feature",
+      "details/2026-08-17/test-plan-discount.md",
+      "details/2026-08-17/impl-plan-discount.md"
+    ]
+  },
+  "verdicts": {
+    "RESEARCH": "APPROVED",
+    "DESIGN": "APPROVED"
+  },
+  "reviewArtifacts": {
+    "DESIGN": [
+      "reviews/2026-08-14/design-review-1.md"
+    ]
+  },
+  "retryCount": {},
+  "reworkCount": {},
+  "findingsResolved": {},
+  "phaseHistory": {
+    "RESEARCH": {
+      "status": "done",
+      "startedAt": "2026-08-12T09:00:00Z",
+      "baseSha": null,
+      "completedAt": "2026-08-12T11:30:00Z"
+    },
+    "DESIGN": {
+      "status": "done",
+      "startedAt": "2026-08-14T09:00:00Z",
+      "baseSha": null,
+      "completedAt": "2026-08-14T17:00:00Z"
+    },
+    "DISTILL": {
+      "status": "inProgress",
+      "startedAt": "2026-08-17T09:00:00Z",
+      "baseSha": null
+    }
+  },
+  "userPreferences": {
+    "maxRetriesPerPhase": 2,
+    "reporting": {
+      "confirmed": true,
+      "provider": "github",
+      "host": "ghe.example.com",
+      "repo": "acme/pricing",
+      "branch": "",
+      "prNumber": null,
+      "issueNumber": 42,
+      "destinations": {
+        "pr": false,
+        "issue": "none",
+        "chat": false,
+        "issueProgress": true
+      },
+      "maxMedia": 0,
+      "allowDraftPr": false
+    }
+  }
+}

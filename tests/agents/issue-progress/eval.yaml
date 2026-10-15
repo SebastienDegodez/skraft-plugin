@@ -1,0 +1,415 @@
+name: issue-progress
+version: 0.1.0
+description: >-
+  Verifies that the real SKRAFT Orchestrator keeps a tracked issue informed of every phase
+  transition: exactly one comment per approved or rejected phase, rendered from a schema-validated
+  artifact instead of hand-written prose, a dedicated ratification comment when ADRs await the
+  human, a phase-by-phase summary when the pipeline closes, every call bound explicitly to the
+  confirmed GitHub Enterprise host, a verified local receipt for each comment, and no remote call
+  at all when no issue is tracked.
+type: capability
+defaults:
+  executor: skraft-agent-runner
+  timeout: 15m
+  model: claude-sonnet-5
+  runs: 3
+scoring:
+  threshold: 0.9
+stimuli:
+  - name: An approved design closes with one comment on the tracked issue
+    prompt: &design-prompt |
+      The architecture review for the loyalty tier pricing story has come back; its verdict is in
+      the story's reviews folder. Handle that verdict and close the stage if it allows. Do not
+      start the next stage's work in this session; tell me where the story stands.
+    tags:
+      agent: skraft-orchestrator
+      scenario: design-approved-tracked
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      env: &fake-gh-path
+        PATH: ".eval-bin:$PATH"
+      files:
+        - src: fixtures/shared/.gitignore
+          dest: .gitignore
+        - src: fixtures/shared/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/shared/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+          dest: .copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+        - src: fixtures/shared/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/design/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/github/.eval-bin/gh
+          dest: .eval-bin/gh
+        - src: fixtures/github/.eval/github-seed.json
+          dest: .eval/github-seed.json
+        - src: fixtures/github/.eval/verify-progress.mjs
+          dest: .eval/verify-progress.mjs
+      commands: &baseline-setup
+        - 'chmod +x .eval-bin/gh'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'git add .'
+        - 'git commit --quiet -m "test: pricing story fixture baseline"'
+        - 'git tag eval-baseline'
+    graders:
+      - type: completed
+      - type: tool-calls
+        name: The transition comment is rendered by the artifact renderer
+        config:
+          required:
+            - name: '^bash$'
+              args:
+                command: 'artifact\.mjs["'']?\s+phase-progress\b'
+      - type: program
+        name: DESIGN closes into DISTILL
+        config: {program: node, args: [.eval/verify-progress.mjs, design, state], timeout: 30s}
+      - type: program
+        name: Exactly one marked comment reports the approved DESIGN and its next phase
+        config: {program: node, args: [.eval/verify-progress.mjs, design, comment], timeout: 30s}
+      - type: program
+        name: Every GitHub call names the confirmed Enterprise host
+        config: {program: node, args: [.eval/verify-progress.mjs, design, host], timeout: 30s}
+      - type: program
+        name: The posted comment has a verified local receipt
+        config: {program: node, args: [.eval/verify-progress.mjs, design, receipt], timeout: 30s}
+      - type: program
+        name: Sentinel - evaluation infrastructure survived the trial
+        config: {program: node, args: [.eval/verify-progress.mjs, design, sentinel], timeout: 30s}
+
+  - name: Proposed ADRs halt DESIGN with one ratification comment
+    prompt: *design-prompt
+    tags:
+      agent: skraft-orchestrator
+      scenario: adr-ratification-tracked
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      env: *fake-gh-path
+      files:
+        - src: fixtures/shared/.gitignore
+          dest: .gitignore
+        - src: fixtures/shared/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/shared/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+          dest: .copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+        - src: fixtures/adr/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/adr/docs/adr/adr-002-tier-reduction-rounding.md
+          dest: docs/adr/adr-002-tier-reduction-rounding.md
+        - src: fixtures/design/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/github/.eval-bin/gh
+          dest: .eval-bin/gh
+        - src: fixtures/github/.eval/github-seed.json
+          dest: .eval/github-seed.json
+        - src: fixtures/github/.eval/verify-progress.mjs
+          dest: .eval/verify-progress.mjs
+      commands: *baseline-setup
+    graders:
+      - type: completed
+      - type: tool-calls
+        name: The ratification comment is rendered by the artifact renderer
+        config:
+          required:
+            - name: '^bash$'
+              args:
+                command: 'artifact\.mjs["'']?\s+adr-checkpoint\b'
+      - type: program
+        name: DESIGN waits for the human on ADR-002
+        config: {program: node, args: [.eval/verify-progress.mjs, adr, state], timeout: 30s}
+      - type: program
+        name: Exactly one marked comment asks to accept, reject or amend ADR-002
+        config: {program: node, args: [.eval/verify-progress.mjs, adr, comment], timeout: 30s}
+      - type: program
+        name: Every GitHub call names the confirmed Enterprise host
+        config: {program: node, args: [.eval/verify-progress.mjs, adr, host], timeout: 30s}
+      - type: program
+        name: The posted comment has a verified local receipt
+        config: {program: node, args: [.eval/verify-progress.mjs, adr, receipt], timeout: 30s}
+      - type: program
+        name: Sentinel - evaluation infrastructure survived the trial
+        config: {program: node, args: [.eval/verify-progress.mjs, adr, sentinel], timeout: 30s}
+
+  - name: A rejected acceptance design stops with one comment on the tracked issue
+    prompt: |
+      The acceptance review for the loyalty tier pricing story has come back; its verdict is in
+      the story's reviews folder. Handle that verdict. Do not start any other stage's work in this
+      session; tell me where the story stands.
+    tags:
+      agent: skraft-orchestrator
+      scenario: distill-rejected-tracked
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      env: *fake-gh-path
+      files:
+        - src: fixtures/shared/.gitignore
+          dest: .gitignore
+        - src: fixtures/shared/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/shared/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+          dest: .copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+        - src: fixtures/shared/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/distill/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/distill/.copilot-tracking/skraft-plans/pricing/features/pricing-loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/pricing-loyalty-discount.feature
+        - src: fixtures/distill/.copilot-tracking/skraft-plans/pricing/details/2026-08-17/test-plan-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-17/test-plan-discount.md
+        - src: fixtures/distill/.copilot-tracking/skraft-plans/pricing/details/2026-08-17/impl-plan-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-17/impl-plan-discount.md
+        - src: fixtures/distill/.copilot-tracking/skraft-plans/pricing/reviews/2026-08-17/distill-review-1.md
+          dest: .copilot-tracking/skraft-plans/pricing/reviews/2026-08-17/distill-review-1.md
+        - src: fixtures/github/.eval-bin/gh
+          dest: .eval-bin/gh
+        - src: fixtures/github/.eval/github-seed.json
+          dest: .eval/github-seed.json
+        - src: fixtures/github/.eval/verify-progress.mjs
+          dest: .eval/verify-progress.mjs
+      commands: *baseline-setup
+    graders:
+      - type: completed
+      - type: tool-calls
+        name: The transition comment is rendered by the artifact renderer
+        config:
+          required:
+            - name: '^bash$'
+              args:
+                command: 'artifact\.mjs["'']?\s+phase-progress\b'
+      - type: program
+        name: DISTILL stays stopped with the rejection recorded
+        config: {program: node, args: [.eval/verify-progress.mjs, distill, state], timeout: 30s}
+      - type: program
+        name: Exactly one marked comment reports the rejected DISTILL and its review
+        config: {program: node, args: [.eval/verify-progress.mjs, distill, comment], timeout: 30s}
+      - type: program
+        name: Every GitHub call names the confirmed Enterprise host
+        config: {program: node, args: [.eval/verify-progress.mjs, distill, host], timeout: 30s}
+      - type: program
+        name: The posted comment has a verified local receipt
+        config: {program: node, args: [.eval/verify-progress.mjs, distill, receipt], timeout: 30s}
+      - type: program
+        name: Sentinel - evaluation infrastructure survived the trial
+        config: {program: node, args: [.eval/verify-progress.mjs, distill, sentinel], timeout: 30s}
+
+  - name: An approved delivery closes the pipeline with one phase-by-phase summary
+    prompt: |
+      The delivery review for the loyalty tier pricing story has come back; its verdict is in the
+      story's reviews folder. Handle that verdict and close out the pipeline if it allows; tell me
+      where the story stands.
+    tags:
+      agent: skraft-orchestrator
+      scenario: deliver-approved-tracked
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      env: *fake-gh-path
+      files:
+        - src: fixtures/shared/.gitignore
+          dest: .gitignore
+        - src: fixtures/shared/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/shared/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+          dest: .copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+        - src: fixtures/shared/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/deliver/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/deliver/.copilot-tracking/skraft-plans/pricing/features/pricing-loyalty-discount.feature
+          dest: .copilot-tracking/skraft-plans/pricing/features/pricing-loyalty-discount.feature
+        - src: fixtures/deliver/.copilot-tracking/skraft-plans/pricing/details/2026-08-17/test-plan-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-17/test-plan-discount.md
+        - src: fixtures/distill/.copilot-tracking/skraft-plans/pricing/details/2026-08-17/impl-plan-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-17/impl-plan-discount.md
+        - src: fixtures/deliver/.copilot-tracking/skraft-plans/pricing/reviews/2026-08-17/distill-review-1.md
+          dest: .copilot-tracking/skraft-plans/pricing/reviews/2026-08-17/distill-review-1.md
+        - src: fixtures/deliver/.copilot-tracking/skraft-plans/pricing/changes/2026-08-20/change-log.md
+          dest: .copilot-tracking/skraft-plans/pricing/changes/2026-08-20/change-log.md
+        - src: fixtures/deliver/.copilot-tracking/skraft-plans/pricing/reviews/2026-08-20/deliver-review-1.md
+          dest: .copilot-tracking/skraft-plans/pricing/reviews/2026-08-20/deliver-review-1.md
+        - src: fixtures/deliver/src/CheckoutPricing.Domain/LoyaltyDiscount.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyDiscount.cs
+        - src: fixtures/deliver/tests/CheckoutPricing.UnitTests/LoyaltyDiscountTests.cs
+          dest: tests/CheckoutPricing.UnitTests/LoyaltyDiscountTests.cs
+        - src: fixtures/deliver/.eval/seed-delivery.mjs
+          dest: .eval/seed-delivery.mjs
+        - src: fixtures/github/.eval-bin/gh
+          dest: .eval-bin/gh
+        - src: fixtures/github/.eval/github-seed.json
+          dest: .eval/github-seed.json
+        - src: fixtures/github/.eval/verify-progress.mjs
+          dest: .eval/verify-progress.mjs
+      commands:
+        - 'chmod +x .eval-bin/gh'
+        - 'git init --quiet'
+        - 'git config user.email eval@example.invalid'
+        - 'git config user.name "SKRAFT Evaluation"'
+        - 'node .eval/seed-delivery.mjs'
+        - 'git tag eval-baseline'
+    graders:
+      - type: completed
+      - type: tool-calls
+        name: The closing comment is rendered by the summary renderer
+        config:
+          required:
+            - name: '^bash$'
+              args:
+                command: 'artifact\.mjs["'']?\s+pipeline-summary\b'
+      - type: program
+        name: The pipeline reaches DONE
+        config: {program: node, args: [.eval/verify-progress.mjs, deliver, state], timeout: 30s}
+      - type: program
+        name: Exactly one marked comment lists every phase done with its gates and evidence
+        config: {program: node, args: [.eval/verify-progress.mjs, deliver, comment], timeout: 30s}
+      - type: program
+        name: Every GitHub call names the confirmed Enterprise host
+        config: {program: node, args: [.eval/verify-progress.mjs, deliver, host], timeout: 30s}
+      - type: program
+        name: The posted comment has a verified local receipt
+        config: {program: node, args: [.eval/verify-progress.mjs, deliver, receipt], timeout: 30s}
+      - type: program
+        name: Sentinel - evaluation infrastructure survived the trial
+        config: {program: node, args: [.eval/verify-progress.mjs, deliver, sentinel], timeout: 30s}
+
+  - name: Without a tracked issue the approved design closes silently
+    prompt: *design-prompt
+    tags:
+      agent: skraft-orchestrator
+      scenario: design-approved-untracked
+      permissions: workspace-write
+      cost: medium
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      env: *fake-gh-path
+      files:
+        - src: fixtures/shared/.gitignore
+          dest: .gitignore
+        - src: fixtures/shared/skraft-config.json
+          dest: skraft-config.json
+        - src: fixtures/shared/src/CheckoutPricing.Domain/LoyaltyTier.cs
+          dest: src/CheckoutPricing.Domain/LoyaltyTier.cs
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/stories-m1.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+          dest: .copilot-tracking/skraft-plans/pricing/plans/2026-08-12/ac.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+          dest: .copilot-tracking/skraft-plans/pricing/research/2026-08-12/discount-research.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/event-model-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/diagrams-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/contracts-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/context-map.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+          dest: .copilot-tracking/skraft-plans/pricing/details/2026-08-14/consistency-matrix-discount.md
+        - src: fixtures/shared/.copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+          dest: .copilot-tracking/skraft-plans/pricing/reviews/2026-08-14/design-review-1.md
+        - src: fixtures/shared/docs/adr/decisions-index.md
+          dest: docs/adr/decisions-index.md
+        - src: fixtures/untracked/.copilot-tracking/skraft-plans/pricing/state.json
+          dest: .copilot-tracking/skraft-plans/pricing/state.json
+        - src: fixtures/github/.eval-bin/gh
+          dest: .eval-bin/gh
+        - src: fixtures/github/.eval/github-seed.json
+          dest: .eval/github-seed.json
+        - src: fixtures/github/.eval/verify-progress.mjs
+          dest: .eval/verify-progress.mjs
+      commands: *baseline-setup
+    graders:
+      - type: completed
+      - type: program
+        name: DESIGN closes into DISTILL
+        config: {program: node, args: [.eval/verify-progress.mjs, untracked, state], timeout: 30s}
+      - type: program
+        name: No issue is read or written and no publication is prepared
+        config: {program: node, args: [.eval/verify-progress.mjs, untracked, silent], timeout: 30s}
+      - type: program
+        name: Sentinel - evaluation infrastructure survived the trial
+        config: {program: node, args: [.eval/verify-progress.mjs, untracked, sentinel], timeout: 30s}

@@ -1,0 +1,23 @@
+{
+  "host": "ghe.example.com",
+  "repo": "acme/pricing",
+  "viewer": { "login": "skraft-bot", "id": 4242, "type": "User" },
+  "issue": {
+    "number": 42,
+    "title": "Loyalty tier discount at checkout",
+    "state": "open",
+    "body": "As a returning customer I want my loyalty tier reflected in the checkout total.\n\nRefined in plans/2026-08-12/stories-m1.md.",
+    "user": { "login": "po-alice", "id": 17, "type": "User" },
+    "created_at": "2026-08-11T14:40:00Z"
+  },
+  "comments": [
+    {
+      "id": 9001,
+      "user": { "login": "po-alice", "id": 17, "type": "User" },
+      "body": "Refined with the pricing team; ready for engineering.",
+      "created_at": "2026-08-11T15:02:00Z",
+      "updated_at": "2026-08-11T15:02:00Z"
+    }
+  ],
+  "nextCommentId": 9101
+}
