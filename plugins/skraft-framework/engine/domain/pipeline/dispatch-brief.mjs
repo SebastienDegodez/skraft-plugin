@@ -23,5 +23,8 @@ const storyLine = (story) => {
   return parts.length > 0 ? parts.join(' — ') : 'none'
 }
 
-/** Stable across a resume: a host that memoises dispatches by label finds it again. */
+/**
+ * Stable across a resume: a host that memoises dispatches by label finds it again.
+ * @param {{ slug: string, step: string, attempt: number }} dispatch
+ */
 export const dispatchLabel = ({ slug, step, attempt }) => `skraft ${slug} · ${step} · attempt ${attempt}`

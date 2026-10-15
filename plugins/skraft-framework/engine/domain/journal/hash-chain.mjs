@@ -9,7 +9,7 @@
 export const chainBreak = (lines, hashes) => {
   for (let index = 0; index < lines.length; index += 1) {
     const event = parse(lines[index])
-    if (event === undefined) return { line: index + 1, detail: 'is not JSON' }
+    if (event === null) return { line: index + 1, detail: 'is not JSON' }
     if (index === 0) {
       if (event.prev !== null) return { line: 1, detail: 'does not open the chain' }
     } else if (event.prev !== hashes[index - 1]) {
@@ -23,12 +23,12 @@ export const chainBreak = (lines, hashes) => {
 export const tamperedReason = ({ line, detail }) =>
   `journal tampered: events.jsonl line ${line} ${detail}; restore the file or start a new slug`
 
-/** @param {string} line @returns {any} */
+/** @param {string} line @returns {any} null when the line is not a JSON object */
 const parse = (line) => {
   try {
     const value = JSON.parse(line)
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null
   } catch {
-    return undefined
+    return null
   }
 }
