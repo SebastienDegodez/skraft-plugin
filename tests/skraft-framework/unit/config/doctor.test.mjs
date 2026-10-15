@@ -5,7 +5,8 @@ import { InMemorySourceControl, InMemoryWorkspace, ScriptedMachine } from '../su
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
-const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
+const { mocking: _inprocess, ...MICROCKS_WEB } = WEB
+const FOLDERS ={ 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
 const doctor = ({ components = [API, WEB], machine = new ScriptedMachine(), node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl() } = {}) => {
   const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ components }) }) })
@@ -15,7 +16,7 @@ const doctor = ({ components = [API, WEB], machine = new ScriptedMachine(), node
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
 
 test('every program found and Docker answering: doctor passes without running any command but docker info', async () => {
-  const { machine, doctor: check } = doctor()
+  const { machine, doctor: check } = doctor({ components: [API, MICROCKS_WEB] })
 
   const report = await check.check()
 
@@ -29,7 +30,7 @@ test('every program found and Docker answering: doctor passes without running an
       { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
       { subject: 'web/test', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
       { subject: 'web/e2e', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
-      { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' },
+      { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api, web)' },
     ],
   })
   assert.deepEqual(machine.lines(), ['. $ docker info'])
@@ -49,9 +50,9 @@ test('a command not found is named with the component and the command to change'
 })
 
 test('a Microcks component without Docker is reported; with only in-process mocks Docker is not asked', async () => {
-  const down = doctor({ machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
+  const down = doctor({ components: [API, { ...WEB, mocking: {} }], machine: new ScriptedMachine({ exits: { '. $ docker info': 1 } }) })
   assert.deepEqual(failures(await down.doctor.check()), [
-    'docker: Docker does not answer, and Microcks, the mocking of api, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component',
+    'docker: Docker does not answer, and Microcks, the mocking of api, web, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component',
   ])
 
   const inprocess = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess', library: 'WireMock.Net' } }, WEB], machine: new ScriptedMachine({ installed: ['dotnet', 'npx'] }) })
@@ -79,7 +80,26 @@ test('--run starts every command once from its component root, with the base, an
     '../payment-web $ npx playwright test',
     '. $ docker info',
   ])
-  assert.deepEqual(failures(report), ['web/e2e: npx playwright test exited 1'])
+  assert.deepEqual(report.checks.slice(2), [
+    { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
+    { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo passed' },
+    { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:{baseSha} passed' },
+    { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
+    { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1' },
+    { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' },
+  ])
+})
+
+test('--run names a command found on the machine that cannot be started, with the host\'s error', async () => {
+  const workspace = new InMemoryWorkspace({ ...FOLDERS, 'skraft-config.json': JSON.stringify({ components: [WEB] }) })
+  const check = createDoctor({
+    workspace, executables: new ScriptedMachine(), commandRunner: new ScriptedMachine({ installed: [] }),
+    sourceControl: new InMemorySourceControl(), runtime: { nodeVersion: () => 'v22.11.0' },
+  })
+
+  const report = await check.check({ run: true })
+
+  assert.deepEqual(failures(report), ['web/test: command not found: npx', 'web/e2e: command not found: npx'])
 })
 
 test('--run without a base cannot start a {baseSha} command and says why', async () => {
