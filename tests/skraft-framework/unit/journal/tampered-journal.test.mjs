@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryTemplates, InMemoryTracking, RecordingProgress, ScriptedAgentRunner,
+  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner,
 } from '../support/in-memory-host.mjs'
 
 const OUTPUT = 'research/2026-10-11/checkout-research.md'
@@ -15,6 +15,8 @@ const startedRun = async (behaviours) => {
     journal: tracking,
     activePipeline: tracking,
     files: tracking,
+    workspace: new InMemoryWorkspace(),
+    sourceControl: new InMemorySourceControl(),
     templates: new InMemoryTemplates({}),
     clock: new FixedClock('2026-10-11T09:00:00.000Z'),
     hasher: new FakeHasher(),

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryTemplates, InMemoryTracking, RecordingProgress, ScriptedAgentRunner,
+  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner,
 } from '../support/in-memory-host.mjs'
 
 const TEMPLATE = '# Research: {{topic}}\n'
@@ -16,6 +16,8 @@ const host = () => {
     journal: tracking,
     activePipeline: tracking,
     files: tracking,
+    workspace: new InMemoryWorkspace(),
+    sourceControl: new InMemorySourceControl(),
     templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }),
     clock,
     hasher: new FakeHasher(),

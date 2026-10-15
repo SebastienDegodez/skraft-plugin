@@ -6,6 +6,7 @@
  * @typedef {{
  *   slug: string | null,
  *   story: { issue?: number | null, title?: string | null } | null,
+ *   base: Array<{ component: string | null, root: string, repository: string, ref: string, source: 'flag' | 'component' | 'config' | 'default', sha: string }>,
  *   closed: string[],
  *   steps: Record<string, StepState>,
  *   finished: RunEvent | null,
@@ -22,12 +23,13 @@
  */
 export const deriveRun = (events) => {
   /** @type {RunState} */
-  const run = { slug: null, story: null, closed: [], steps: {}, finished: null, stopped: null, attempts: 0, costUsd: null }
+  const run = { slug: null, story: null, base: [], closed: [], steps: {}, finished: null, stopped: null, attempts: 0, costUsd: null }
   for (const event of events) {
     run.stopped = event.type === 'run.stopped' ? event : null
     if (event.type === 'run.started' && run.slug === null) {
       run.slug = event.slug ?? null
       run.story = event.story ?? null
+      run.base = Array.isArray(event.base) ? event.base : []
     } else if (event.type === 'step.started') {
       const step = stepOf(run, event.step)
       if (step.attempts === 0) step.outputs = [...event.outputs]
