@@ -4,7 +4,6 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/run-journal.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
-import { DEFAULT_PIPELINE } from '../../../../plugins/skraft-framework/engine/domain/pipeline/pipeline-definition.mjs'
 import {
   FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner,
 } from '../support/in-memory-host.mjs'
@@ -57,6 +56,8 @@ test('an agent that stops without an answer and without its document stops the r
     status: 'blocked', slug: 'checkout', phase: 'RESEARCH', code: 'agent-failed', reason: 'solution-researcher stopped without finishing: aborted by the user',
   })
   assert.deepEqual(tracking.journal('checkout').map((event) => event.type), ['run.started', 'step.started', 'run.stopped'])
+  const { code, reason } = tracking.journal('checkout')[2]
+  assert.deepEqual({ code, reason }, { code: 'agent-failed', reason: outcome.reason })
   assert.equal((await createObserve(deps).view()).status, 'blocked')
 
   agentRunner.behaviours.push(() => ({ ok: false, text: '' }), () => tracking.write('checkout', OUTPUT, 'Findings.\n'))
@@ -92,12 +93,19 @@ test('a run whose journal another writer appended to meanwhile stops without bre
   assert.equal((await createRunPipeline(deps).run({})).status, 'done')
 })
 
-test('a journal shortened by another writer meanwhile is a conflict too', async () => {
-  const { tracking, deps, agentRunner } = host()
-  await createInit(deps).init({ slug: 'checkout' })
-  agentRunner.behaviours.push(() => tracking.rewriteJournal('checkout', (lines) => lines.slice(0, 1)))
+test('a journal shortened, or rewritten on its last line, by another writer meanwhile is a conflict too', async () => {
+  const shortened = host()
+  await createInit(shortened.deps).init({ slug: 'checkout' })
+  shortened.agentRunner.behaviours.push(() => shortened.tracking.rewriteJournal('checkout', (lines) => lines.slice(0, 1)))
+  assert.equal((await createRunPipeline(shortened.deps).run({})).code, 'journal-changed')
 
-  assert.equal((await createRunPipeline(deps).run({})).code, 'journal-changed')
+  const rewritten = host()
+  await createInit(rewritten.deps).init({ slug: 'checkout' })
+  rewritten.agentRunner.behaviours.push(async () => {
+    rewritten.tracking.rewriteJournal('checkout', (lines) => [...lines.slice(0, -1), lines.at(-1).replace('"attempt":1', '"attempt":2')])
+    await rewritten.tracking.write('checkout', OUTPUT, 'Findings.\n')
+  })
+  assert.equal((await createRunPipeline(rewritten.deps).run({})).code, 'journal-changed')
 })
 
 test('a retry after midnight keeps the path of the first attempt', async () => {
@@ -116,9 +124,12 @@ test('a run that reaches a later phase is no longer finished: the next run.finis
   agentRunner.behaviours.push(() => tracking.write('checkout', OUTPUT, 'Findings.\n'))
   await (await started(deps)).run({})
   const longer = {
-    phases: [...DEFAULT_PIPELINE.phases, {
+    phases: [{
+      phase: 'RESEARCH',
+      steps: [{ id: 'research', agent: 'solution-researcher', outputs: [{ path: 'research/{date}/{slug}-research.md', template: 'research.template.md' }], maxAttempts: 2 }],
+    }, {
       phase: 'DESIGN',
-      steps: [{ id: 'design', kind: 'dispatch', agent: 'solution-architect', outputs: [{ path: 'design/{date}/{slug}-design.md', template: null }], maxAttempts: 2 }],
+      steps: [{ id: 'design', agent: 'solution-architect', outputs: [{ path: 'design/{date}/{slug}-design.md', template: null }], maxAttempts: 2 }],
     }],
   }
   const seen = []
@@ -134,18 +145,20 @@ test('a run that reaches a later phase is no longer finished: the next run.finis
   assert.deepEqual(tracking.journal('checkout').filter((event) => event.type === 'run.finished').map((event) => event.reason), ['RESEARCH closed', 'DESIGN closed'])
 })
 
-test('an output without a template is not pre-created and counts once written', async () => {
+test('outputs without a template are not pre-created, and all the missing ones are named', async () => {
   const { tracking, deps, agentRunner } = host()
-  const bare = { phases: [{ phase: 'RESEARCH', steps: [{ id: 'notes', kind: 'dispatch', agent: 'solution-researcher', outputs: [{ path: 'notes/{slug}.md', template: null }], maxAttempts: 1 }] }] }
+  const outputs = [{ path: 'notes/{slug}.md', template: null }, { path: 'notes/{slug}-sources.md', template: null }]
+  const bare = { phases: [{ phase: 'RESEARCH', steps: [{ id: 'notes', agent: 'solution-researcher', outputs, maxAttempts: 1 }] }] }
   const seen = []
-  agentRunner.behaviours.push(async () => { seen.push(await tracking.read('checkout', 'notes/checkout.md')) })
+  agentRunner.behaviours.push(() => { seen.push(...[...tracking.files.keys()].filter((key) => key.includes('notes/'))) })
   await createInit(deps).init({ slug: 'checkout' })
 
   const outcome = await createRunPipeline(deps, bare).run({})
 
-  assert.deepEqual(seen, [null])
+  assert.deepEqual(seen, [])
   assert.equal(outcome.code, 'missing-outputs')
-  assert.equal(outcome.reason, 'solution-researcher left required outputs missing after 1 attempts: /work/.copilot-tracking/skraft-plans/checkout/notes/checkout.md')
+  assert.equal(outcome.reason, 'solution-researcher left required outputs missing after 1 attempts: '
+    + '/work/.copilot-tracking/skraft-plans/checkout/notes/checkout.md, /work/.copilot-tracking/skraft-plans/checkout/notes/checkout-sources.md')
 })
 
 test('a document already there is not overwritten by the template before the dispatch', async () => {
