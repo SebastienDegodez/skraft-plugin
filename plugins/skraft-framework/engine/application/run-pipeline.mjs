@@ -137,7 +137,7 @@ const dispatch = async (deps, { slug, story, journal, next }) => {
     outcome: left.length === 0 ? 'outputs-complete' : 'missing-outputs',
     missing: left,
     durationMs: deps.clock.now().getTime() - started.getTime(),
-    ...(typeof cost === 'number' ? { cost } : {}),
+    cost, // undefined when the host reports none: the journal line leaves it out
   })
   return null
 }
