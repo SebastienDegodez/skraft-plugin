@@ -159,14 +159,16 @@ export class InMemorySourceControl {
  */
 export class ScriptedMachine {
   /**
-   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number }} [options]
-   *   exits: null for a program stopped before it exited; clock advances by takesMs per run
+   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void> }} [options]
+   *   exits: null for a program stopped before it exited; clock advances by takesMs per run;
+   *   meanwhile: what happens elsewhere on the machine while that command line runs
    */
-  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0 } = {}) {
+  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {} } = {}) {
     this.installed = new Set(installed)
     this.exits = exits
     this.clock = clock
     this.takesMs = takesMs
+    this.meanwhile = meanwhile
     /** @type {Array<{ argv: string[], cwd: string }>} */
     this.runs = []
   }
@@ -176,6 +178,7 @@ export class ScriptedMachine {
     if (!this.installed.has(argv[0])) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
     this.clock?.advance(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`
+    await this.meanwhile[line]?.()
     if (this.exits[line] === null) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} was stopped by SIGKILL` }
     const exitCode = this.exits[line] ?? 0
     return { started: true, exitCode, stdout: `${argv.join(' ')} output\n`, stderr: exitCode === 0 ? '' : 'it failed\n' }

@@ -37,14 +37,14 @@ test('a story that only touches the front runs only the front gates during the l
 
   const loop = await gate('touched')
 
-  assert.deepEqual([loop.status, loop.components], ['passed', ['web']])
+  assert.deepEqual([loop.status, loop.components, loop.failure, loop.reason], ['passed', ['web'], null, '2 gates passed on web'])
   assert.deepEqual(machine.lines(), ['../payment-web $ npx eslint .', '../payment-web $ npx vitest run'])
   assert.deepEqual(sourceControl.diffs, [{ dir: 'services/payment-api', sha: 'a1' }, { dir: '../payment-web', sha: 'w1' }])
 
   machine.runs = []
   const closure = await gate('all')
 
-  assert.deepEqual([closure.status, closure.components], ['passed', ['api', 'web']])
+  assert.deepEqual([closure.status, closure.components, closure.failure, closure.reason], ['passed', ['api', 'web'], null, '5 gates passed on api, web'])
   assert.deepEqual(machine.lines(), [
     'services/payment-api $ dotnet build --nologo',
     'services/payment-api $ dotnet test --nologo',
@@ -58,31 +58,57 @@ test('a story that only touches the front runs only the front gates during the l
   ])
 })
 
-test('nothing changed since the bases: no gate runs in the loop', async () => {
+test('nothing changed since the bases: no gate runs in the loop, the scope gates take unless told otherwise', async () => {
   const { machine, gate } = await hostWith()
 
-  const outcome = await gate('touched')
+  const outcome = await gate()
 
-  assert.deepEqual([outcome.status, outcome.components, outcome.reason], ['passed', [], 'no component changed since its base; no gate to run'])
+  assert.deepEqual([outcome.status, outcome.scope, outcome.components, outcome.reason], ['passed', 'touched', [], 'no component changed since its base; no gate to run'])
   assert.deepEqual(machine.runs, [])
 })
 
-test('a file under a component nested in another one touches only the nested component', async () => {
-  const root = { ...API, name: 'api', root: '.' }
-  const front = { ...WEB, root: 'web' }
+/** One repository at the working copy; `changed` lists what changed since `a1` by component root. */
+const hostOver = async (components, changed) => {
   const tracking = new InMemoryTracking()
-  const machine = new ScriptedMachine()
+  const sourceControl = new InMemorySourceControl(Object.fromEntries(
+    [['.', []], ...Object.entries(changed)].map(([dir, files]) => [dir, { top: '.', mergeBases: { main: 'a1' }, changed: files }]),
+  ))
   const deps = {
     journal: tracking, activePipeline: tracking, files: tracking,
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components: [root, front] }) }),
-    sourceControl: new InMemorySourceControl({ '.': { top: '.', mergeBases: { main: 'a1' }, changed: ['web/src/App.tsx', '.copilot-tracking/skraft-plans/checkout/research.md'] }, web: { top: '.', mergeBases: { main: 'a1' }, changed: ['src/App.tsx'] } }),
-    commandRunner: machine, clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher(),
+    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components }) }),
+    sourceControl, commandRunner: new ScriptedMachine(), clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher(),
   }
   await createInit(deps).init({ slug: 'checkout' })
+  return { sourceControl, touched: async () => (await createRunGate(deps).run({ scope: 'touched' })).components }
+}
 
-  const outcome = await createRunGate(deps).run({ scope: 'touched' })
+test('a file under a component nested in another one touches only the nested component', async () => {
+  const { touched } = await hostOver([{ ...API, root: '.' }, { ...WEB, root: 'web' }], {
+    '.': ['web/src/App.tsx', 'web', '.copilot-tracking/skraft-plans/checkout/research.md'],
+    web: ['src/App.tsx'],
+  })
 
-  assert.deepEqual(outcome.components, ['web'])
+  assert.deepEqual(await touched(), ['web'])
+})
+
+test('a component nested deeper in another one still owns its files, and the outer one is touched by its own', async () => {
+  const { sourceControl, touched } = await hostOver([{ ...API, root: 'apps' }, { ...WEB, root: 'apps/web' }], {
+    apps: ['web/src/App.tsx'],
+    'apps/web': ['src/App.tsx'],
+  })
+
+  assert.deepEqual(await touched(), ['web'])
+
+  sourceControl.folders.apps.changed.push('Program.cs')
+  assert.deepEqual(await touched(), ['api', 'web'])
+})
+
+test('components that share a root are all touched by a file changed there', async () => {
+  const { touched } = await hostOver([{ ...API, root: 'services/payment-api' }, { ...WEB, name: 'docs', root: 'services/payment-api' }], {
+    'services/payment-api': ['src/Payment.cs'],
+  })
+
+  assert.deepEqual(await touched(), ['api', 'docs'])
 })
 
 test('a command the developer wrote is the one that runs, with the base of its own repository', async () => {
@@ -121,17 +147,17 @@ test('a failing test is deterministic: the evidence holds the output and the com
   assert.equal(outcome.gates.find((result) => result.status === 'fail').evidence, '/work/.copilot-tracking/skraft-plans/checkout/gates/api/test-1.log')
 })
 
-test('a command missing from the machine makes its gate fail as environment, naming the program', async () => {
-  const { tracking, gate } = await hostWith({ machine: new ScriptedMachine({ installed: ['git', 'npx'] }) })
+test('a command missing from the machine makes its gate fail as environment, naming the program, even when another gate fails deterministically', async () => {
+  const { tracking, gate } = await hostWith({ machine: new ScriptedMachine({ installed: ['git', 'npx'], exits: { '../payment-web $ npx vitest run': 1 } }) })
 
   const outcome = await gate('all')
 
   assert.deepEqual([outcome.status, outcome.failure], ['failed', 'environment'])
-  assert.equal(outcome.reason, 'api/build: command not found: dotnet; install it or change the command in skraft-config.json')
+  assert.equal(outcome.reason, 'api/build: command not found: dotnet; install it or change the command in skraft-config.json; web/test: exited 1')
   assert.deepEqual(gatesRan(tracking).map(({ component, gate: name, status, failure, exitCode }) => [component, name, status, failure, exitCode]), [
     ['api', 'build', 'fail', 'environment', null],
     ['web', 'lint', 'pass', null, 0],
-    ['web', 'test', 'pass', null, 0],
+    ['web', 'test', 'fail', 'deterministic', 1],
   ])
 })
 
@@ -144,13 +170,23 @@ test('a shell that cannot find the program (exit 127 or 9009) is an environment 
   assert.deepEqual(outcome.gates.map(({ component, gate: name, failure }) => [component, name, failure]), [['api', 'build', 'environment'], ['web', 'lint', 'environment']])
 })
 
-test('a command line with shell syntax is not started and fails as environment', async () => {
-  const { machine, gate } = await hostWith({ components: [{ ...WEB, commands: { test: 'npm ci && npx vitest run' } }] })
+test('a command line with shell syntax or an unclosed quote is not started and fails as environment', async () => {
+  const { tracking, machine, gate } = await hostWith({ components: [
+    { ...API, commands: { test: 'dotnet test --filter "Category=Fast' } },
+    { ...WEB, commands: { test: 'npm ci && npx vitest run' } },
+  ] })
 
   const outcome = await gate('all')
 
-  assert.deepEqual([outcome.failure, outcome.reason], ['environment', 'web/test: command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script'])
+  assert.deepEqual([outcome.failure, outcome.reason], ['environment', [
+    'api/test: command "dotnet test --filter \\"Category=Fast" has an unclosed " quote',
+    'web/test: command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script',
+  ].join('; ')])
   assert.deepEqual(machine.runs, [])
+  assert.equal(
+    await tracking.read('checkout', 'gates/web/test-1.log'),
+    '$ npm ci && npx vitest run\ncwd: ../payment-web\nresult: fail (environment): command "npm ci && npx vitest run" uses shell syntax (&&); put the steps in a script and call the script\n',
+  )
 })
 
 test('a Microcks component without Docker: its test gates fail as environment without running; in-process mocks need no Docker', async () => {
@@ -169,12 +205,31 @@ test('a Microcks component without Docker: its test gates fail as environment wi
   assert.deepEqual(ran.lines(), ['services/payment-api $ dotnet build --nologo', '. $ docker info', '../payment-web $ npx eslint .', '../payment-web $ npx vitest run'])
 })
 
+test('without Docker, the architecture, coverage and mutation gates of a Microcks component wait for it like the tests', async () => {
+  const machine = new ScriptedMachine({ exits: { '. $ docker info': 1 } })
+  const microcks = { ...API, mocking: { strategy: 'microcks' } }
+  const { gate } = await hostWith({ machine, components: [
+    { ...microcks, name: 'architecture', commands: { architecture: 'dotnet test --filter Architecture' } },
+    { ...microcks, name: 'coverage', commands: { coverage: 'dotnet test --collect coverage' } },
+    { ...microcks, name: 'mutation', commands: { mutation: 'dotnet stryker' } },
+  ] })
+
+  const outcome = await gate('all')
+
+  assert.deepEqual(outcome.gates.map(({ component, status, failure, reason }) => [component, status, failure, reason.startsWith('Docker does not answer')]), [
+    ['architecture', 'fail', 'environment', true],
+    ['coverage', 'fail', 'environment', true],
+    ['mutation', 'fail', 'environment', true],
+  ])
+  assert.deepEqual(machine.lines(), ['. $ docker info'])
+})
+
 test('gates need an active, initialised pipeline and components to run', async () => {
   const tracking = new InMemoryTracking()
   const base = { journal: tracking, activePipeline: tracking, files: tracking, sourceControl: new InMemorySourceControl(), commandRunner: new ScriptedMachine(), clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher() }
 
   const none = await createRunGate({ ...base, workspace: new InMemoryWorkspace() }).run()
-  assert.deepEqual([none.status, none.code], ['refused', 'no-active-pipeline'])
+  assert.deepEqual([none.status, none.code, none.components, none.gates, none.failure], ['refused', 'no-active-pipeline', [], [], null])
 
   await createInit({ ...base, workspace: new InMemoryWorkspace() }).init({ slug: 'checkout' })
   const empty = await createRunGate({ ...base, workspace: new InMemoryWorkspace() }).run({ scope: 'all' })
@@ -182,6 +237,10 @@ test('gates need an active, initialised pipeline and components to run', async (
 
   const broken = await createRunGate({ ...base, workspace: new InMemoryWorkspace({ 'skraft-config.json': '[' }) }).run()
   assert.deepEqual([broken.status, broken.code], ['refused', 'config-invalid'])
+
+  tracking.rewriteJournal('checkout', (lines) => [lines[0].replace('"prev":null', '"prev":"0"')])
+  const tampered = await createRunGate({ ...base, workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components: [WEB] }) }) }).run()
+  assert.deepEqual([tampered.status, tampered.slug, tampered.code, tampered.components, tampered.gates], ['blocked', 'checkout', 'journal-tampered', [], []])
 })
 
 test('a component outside Git always counts as touched, and a {baseSha} command there cannot run', async () => {
@@ -189,7 +248,7 @@ test('a component outside Git always counts as touched, and a {baseSha} command 
   const machine = new ScriptedMachine()
   const deps = {
     journal: tracking, activePipeline: tracking, files: tracking,
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components: [{ ...API, root: 'api' }] }) }),
+    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components: [{ ...API, root: '../../legacy/./api/' }] }) }),
     sourceControl: new InMemorySourceControl(), commandRunner: machine, clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher(),
   }
   await createInit(deps).init({ slug: 'checkout' })
@@ -197,13 +256,14 @@ test('a component outside Git always counts as touched, and a {baseSha} command 
   const outcome = await createRunGate(deps).run({ scope: 'touched' })
 
   assert.deepEqual(outcome.components, ['api'])
+  assert.deepEqual(machine.lines(), ['../../legacy/api $ dotnet build --nologo', '../../legacy/api $ dotnet test --nologo'])
   assert.equal(outcome.reason, 'api/mutation: command "dotnet stryker --since:{baseSha}" uses {baseSha} but the run has no base for this repository')
 })
 
 test('each gate journals how long its command took, and each run of a gate keeps its own evidence', async () => {
   const clock = new FixedClock('2026-10-15T08:00:00.000Z')
   const machine = new ScriptedMachine({ clock, takesMs: 1500 })
-  const { tracking, gate } = await hostWith({ components: [WEB], machine, clock })
+  const { tracking, gate } = await hostWith({ components: [WEB, { ...API, commands: { test: 'dotnet test --nologo' } }], machine, clock })
 
   await gate('all')
   machine.exits['../payment-web $ npx vitest run'] = 1
@@ -212,8 +272,10 @@ test('each gate journals how long its command took, and each run of a gate keeps
   assert.deepEqual(gatesRan(tracking).map(({ gate: name, status, durationMs, evidence }) => [name, status, durationMs, evidence]), [
     ['lint', 'pass', 1500, 'gates/web/lint-1.log'],
     ['test', 'pass', 1500, 'gates/web/test-1.log'],
+    ['test', 'pass', 1500, 'gates/api/test-1.log'],
     ['lint', 'pass', 1500, 'gates/web/lint-2.log'],
     ['test', 'fail', 1500, 'gates/web/test-2.log'],
+    ['test', 'pass', 1500, 'gates/api/test-2.log'],
   ])
   assert.match(await tracking.read('checkout', 'gates/web/test-1.log'), /^result: pass: /m)
   assert.match(await tracking.read('checkout', 'gates/web/test-2.log'), /^result: fail \(deterministic\): exited 1$/m)
@@ -226,6 +288,7 @@ test('a component with no gate command fails as environment instead of passing w
 
   assert.deepEqual([outcome.status, outcome.failure], ['failed', 'environment'])
   assert.equal(outcome.reason, 'web/none: no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json')
+  assert.equal(outcome.gates[0].evidence, '/work/.copilot-tracking/skraft-plans/checkout/gates/web')
   assert.deepEqual(machine.runs, [])
   assert.deepEqual(gatesRan(tracking).map(({ component, gate: name, status, failure }) => [component, name, status, failure]), [['web', 'none', 'fail', 'environment']])
 })
@@ -284,6 +347,28 @@ test('a command stopped before it exits fails as environment, and the run says t
   const outcome = await gate('all')
 
   assert.deepEqual([outcome.failure, outcome.reason], ['environment', 'web/test: npx was stopped by SIGKILL; run it again'])
+})
+
+test('another run writing the journal during the gates blocks this one, keeping the gates already journaled', async () => {
+  const machine = new ScriptedMachine()
+  const { tracking, gate } = await hostWith({ machine })
+  machine.meanwhile['../payment-web $ npx eslint .'] = () => tracking.append('checkout', JSON.stringify({ type: 'run.started', slug: 'checkout' }))
+
+  const outcome = await gate('all')
+
+  assert.deepEqual(
+    { status: outcome.status, slug: outcome.slug, scope: outcome.scope, components: outcome.components, failure: outcome.failure, code: outcome.code, reason: outcome.reason },
+    { status: 'blocked', slug: 'checkout', scope: 'all', components: ['api', 'web'], failure: null, code: 'journal-changed', reason: 'checkout: another run wrote events.jsonl meanwhile; run again once it stops' },
+  )
+  assert.deepEqual(outcome.gates.map(({ component, gate: name, status }) => `${component}/${name} ${status}`), ['api/build pass', 'api/test pass', 'api/mutation pass'])
+  assert.equal(machine.lines().at(-1), '../payment-web $ npx eslint .')
+})
+
+test('a failure of the tracking folder itself stops the gates with that error', async () => {
+  const { tracking, gate } = await hostWith()
+  tracking.write = async () => { throw new Error('ENOSPC: no space left on device') }
+
+  await assert.rejects(gate('all'), /^Error: ENOSPC: no space left on device$/)
 })
 
 test('a component whose changes Git cannot list counts as touched', async () => {
