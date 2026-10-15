@@ -36,6 +36,8 @@ export const copyFixture = (from, to) => {
 
 /** @param {string} cwd @param {...string} args */
 export const git = (cwd, ...args) => {
+  // Without a folder git would act on the repository the tests run from.
+  if (typeof cwd !== 'string') throw new TypeError(`git ${args.join(' ')} needs a folder, got ${cwd}`)
   const run = spawnSync('git', ['-c', 'user.name=skraft', '-c', 'user.email=skraft@example.invalid', '-c', 'commit.gpgsign=false', ...args], { cwd, encoding: 'utf8' })
   if (run.status !== 0) throw new Error(`git ${args.join(' ')} failed in ${cwd}: ${run.stderr}`)
   return run.stdout.trim()
