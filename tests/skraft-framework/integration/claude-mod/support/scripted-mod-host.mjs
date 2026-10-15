@@ -1,5 +1,6 @@
 // The Claude Code mod's `$` functions, scripted: a real temp working copy on Node's fs, the
 // real plugin root, and subagents that are the simulated LLM. No mock library.
+import { spawn } from 'node:child_process'
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join } from 'node:path'
@@ -17,6 +18,21 @@ export const nodeModFs = Object.freeze({
     await writeFile(path, text, 'utf8')
   },
   exists: (/** @type {string} */ path) => access(path).then(() => true, () => false),
+})
+
+/**
+ * `$.process.run` as the mod runtime answers it: resolves with the exit code and output,
+ * rejects when the program cannot be started.
+ * @param {string[]} argv @param {{ cwd?: string }} [init]
+ */
+export const nodeModRun = ([program, ...args], init = {}) => new Promise((resolve, reject) => {
+  const child = spawn(program, args, { cwd: init.cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+  let stdout = ''
+  let stderr = ''
+  child.stdout.on('data', (chunk) => { stdout += chunk })
+  child.stderr.on('data', (chunk) => { stderr += chunk })
+  child.once('error', reject)
+  child.once('close', (code) => resolve({ exitCode: code ?? 1, stdout, stderr }))
 })
 
 /** The absolute paths a brief lists as outputs, then as missing. @param {string} prompt */
@@ -83,6 +99,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [] } = {})
     cwd: async () => root,
     pluginRoot: PLUGIN_ROOT,
     pluginName: 'skraft',
+    run: nodeModRun,
     spawn: async (/** @type {any} */ args) => {
       spawns.push(args)
       const behaviour = scripted.shift()
