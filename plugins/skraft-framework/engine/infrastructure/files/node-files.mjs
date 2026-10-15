@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
 /** @returns {import('../tracking/tracking-store.mjs').FileFunctions} */
@@ -21,3 +21,21 @@ export const createNodeFiles = () => Object.freeze({
   },
   join,
 })
+
+/**
+ * A folder's entries, null when the path is not a folder.
+ * @param {string} path
+ * @returns {Promise<import('../../application/ports/workspace.mjs').WorkspaceEntry[] | null>}
+ */
+export const listFolder = async (path) => {
+  try {
+    const entries = await readdir(path, { withFileTypes: true })
+    return entries
+      .filter((entry) => entry.isFile() || entry.isDirectory())
+      .map((entry) => ({ name: entry.name, kind: entry.isDirectory() ? /** @type {const} */ ('dir') : /** @type {const} */ ('file') }))
+  } catch (error) {
+    const code = /** @type {NodeJS.ErrnoException} */ (error).code
+    if (code === 'ENOENT' || code === 'ENOTDIR') return null
+    throw error
+  }
+}
