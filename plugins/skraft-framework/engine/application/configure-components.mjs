@@ -5,7 +5,7 @@ import { joinRelative, normalizeRelative } from '../domain/config/relative-path.
 /**
  * @typedef {import('./ports/workspace.mjs').Workspace} Workspace
  * @typedef {{ name: string, root: string, stack: string, paths: { src: string[], tests: string[] }, commands: Record<string, string> }} ProposedComponent
- * @typedef {{ ok: boolean, written: boolean, added: ProposedComponent[], kept: number, reason: string }} ConfigureOutcome
+ * @typedef {{ ok: boolean, reason: string }} ConfigureOutcome
  */
 
 const DEPTH = 3
@@ -26,10 +26,10 @@ export const createConfigureComponents = ({ workspace }) => Object.freeze({
    */
   configure: async ({ workingCopyName, folders = [] }) => {
     const reading = readConfig(await workspace.read(CONFIG_FILE))
-    if (!reading.ok) return { ok: false, written: false, added: [], kept: 0, reason: `${CONFIG_FILE} is invalid: ${reading.errors.join('; ')}` }
+    if (!reading.ok) return { ok: false, reason: `${CONFIG_FILE} is invalid: ${reading.errors.join('; ')}` }
     for (const folder of folders) {
       const refused = isAbsolutePath(folder) ? 'is not relative to the working copy' : (await workspace.list(normalizeRelative(folder))) === null ? 'is not a folder' : null
-      if (refused) return { ok: false, written: false, added: [], kept: 0, reason: `--add ${folder} ${refused}` }
+      if (refused) return { ok: false, reason: `--add ${folder} ${refused}` }
     }
     const listed = Array.isArray(reading.raw.components) ? /** @type {Array<Record<string, unknown>>} */ (reading.raw.components) : []
     const roots = new Set(reading.config.components.map((component) => component.root))
@@ -40,28 +40,27 @@ export const createConfigureComponents = ({ workspace }) => Object.freeze({
       for (const found of await projectsUnder(workspace, start)) {
         if (roots.has(found.root)) continue
         roots.add(found.root)
-        const name = unique(componentName(found.root === '.' ? workingCopyName : found.root.split('/').at(-1) ?? ''), names)
+        const name = unique(componentName(found.root === '.' ? workingCopyName : /** @type {string} */ (found.root.split('/').at(-1))), names)
         names.add(name)
         added.push({ name, root: found.root, stack: found.stack, paths: found.paths, commands: found.commands })
       }
     }
     const kept = listed.length
     if (added.length === 0 && reading.present && Array.isArray(reading.raw.components)) {
-      return { ok: true, written: false, added, kept, reason: `${CONFIG_FILE} already lists every project found (${kept} components)` }
+      return { ok: true, reason: `${CONFIG_FILE} already lists every project found (${kept} components)` }
     }
     await workspace.write(CONFIG_FILE, writeConfig(reading.raw, [...listed, ...added]))
     return {
       ok: true,
-      written: true,
-      added,
-      kept,
       reason: added.length === 0 ? `no project found; ${CONFIG_FILE} lists no component` : `${CONFIG_FILE}: ${added.map((component) => `${component.name} (${component.stack}, ${component.root})`).join(', ')}`,
     }
   },
 })
 
+// Stryker disable next-line StringLiteral: the label is only compared with other families; any text that is not a stack name is the same family
+const JS_FAMILY = 'js'
 /** Stacks of one family share a project tree: a `.csproj` under a solution is that solution's. */
-const familyOf = (/** @type {string} */ stack) => (['typescript', 'javascript', 'react'].includes(stack) ? 'js' : stack)
+const familyOf = (/** @type {string} */ stack) => (['typescript', 'javascript', 'react'].includes(stack) ? JS_FAMILY : stack)
 
 /**
  * The projects under a folder. A folder that is a project is one component; a folder under
@@ -72,26 +71,29 @@ const familyOf = (/** @type {string} */ stack) => (['typescript', 'javascript', 
 const projectsUnder = async (workspace, start) => {
   /** @type {Array<{ root: string } & import('../domain/config/stack-detection.mjs').Detected>} */
   const found = []
-  /** @param {string} dir @param {number} depth @param {string[]} families of the projects above */
+  /** @param {string} dir a folder, never a file @param {number} depth @param {string[]} families of the projects above */
   const visit = async (dir, depth, families) => {
-    const entries = await workspace.list(dir)
-    if (entries === null) return
+    const entries = /** @type {import('./ports/workspace.mjs').WorkspaceEntry[]} */ (await workspace.list(dir))
     /** @type {Map<string, string | null>} */
     const texts = new Map()
-    for (const name of ['package.json', 'pom.xml']) {
-      if (entries.some((entry) => entry.kind === 'file' && entry.name === name)) texts.set(name, await workspace.read(joinRelative(dir, name)))
-    }
+    for (const name of ['package.json', 'pom.xml']) texts.set(name, await workspace.read(joinRelative(dir, name)))
     const detected = detectProject({ entries, read: (name) => texts.get(name) ?? null })
-    const family = detected ? familyOf(detected.stack) : null
-    if (detected && family !== null && !families.includes(family)) found.push({ root: dir, ...detected })
+    let below = families
+    if (detected) {
+      const family = familyOf(detected.stack)
+      if (!families.includes(family)) {
+        found.push({ root: dir, ...detected })
+        below = [...families, family]
+      }
+    }
     if (depth >= DEPTH) return
     const folders = entries
       .filter((entry) => entry.kind === 'dir' && !entry.name.startsWith('.') && entry.name !== DEPENDENCIES)
       .map((entry) => entry.name)
       .sort()
-    const below = family !== null && !families.includes(family) ? [...families, family] : families
     for (const name of folders) await visit(joinRelative(dir, name), depth + 1, below)
   }
+  // Stryker disable next-line ArrayDeclaration: no stack family is named "Stryker was here"
   await visit(start, 0, [])
   return found
 }
