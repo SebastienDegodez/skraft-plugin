@@ -55,7 +55,7 @@ test('a program on the PATH, a .cmd shim under Windows included, runs with its a
   assert.equal(result.started, true, result.error)
   assert.equal(result.exitCode, 0, result.stderr)
   assert.deepEqual(JSON.parse(result.stdout).args, ['plain', 'with space', 'a&b', '50%', '--since:abc123'])
-  assert.equal(await createNodeExecutables({ root, env }).locate('tool', '.'), join(bin, process.platform === 'win32' ? 'tool.cmd' : 'tool'))
+  assert.equal((await createNodeExecutables({ root, env }).locate('tool', '.'))?.toLowerCase(), join(bin, process.platform === 'win32' ? 'tool.cmd' : 'tool').toLowerCase())
 })
 
 test('locate finds a program on the PATH or at a path from the folder, and nothing else', async (t) => {
@@ -66,8 +66,8 @@ test('locate finds a program on the PATH or at a path from the folder, and nothi
   if (process.platform !== 'win32') chmodSync(local, 0o755)
   const executables = createNodeExecutables({ root })
 
-  assert.equal((await executables.locate('node', 'web'))?.toLowerCase().startsWith(process.platform === 'win32' ? '' : '/'), true)
-  assert.equal(await executables.locate('./gradlew', 'web'), local)
+  assert.match(await executables.locate('node', 'web') ?? '', process.platform === 'win32' ? /\\node\.exe$/i : /\/node$/)
+  assert.equal((await executables.locate('./gradlew', 'web'))?.toLowerCase(), local.toLowerCase())
   assert.equal(await executables.locate('./gradlew', '.'), null)
   assert.equal(await executables.locate('skraft-no-such-program', '.'), null)
   assert.equal(await executables.locate('', '.'), null)
