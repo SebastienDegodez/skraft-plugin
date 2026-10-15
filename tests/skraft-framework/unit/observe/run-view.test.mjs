@@ -40,6 +40,43 @@ test('the view of a working copy with no active pipeline says so', async () => {
   })
 })
 
+test('the view of an active slug that has no journal says it is not initialised', async () => {
+  const { tracking, deps } = host()
+  await tracking.activate('checkout')
+
+  assert.deepEqual(await createObserve(deps).view(), {
+    slug: 'checkout',
+    status: 'not-initialised',
+    reason: 'checkout has no journal (events.jsonl)',
+    phases: [{ phase: 'RESEARCH', state: 'pending' }],
+    current: null,
+    attempts: 0,
+    costUsd: null,
+  })
+})
+
+test('a phase is open once one of its steps started, and the later phases stay pending', async () => {
+  const { tracking, deps } = host()
+  const step = (id, agent) => ({ id, agent, outputs: [{ path: `${id}/{slug}.md`, template: null }], maxAttempts: 1 })
+  const definition = {
+    phases: [
+      { phase: 'RESEARCH', steps: [step('research', 'solution-researcher'), step('sources', 'solution-researcher')] },
+      { phase: 'DESIGN', steps: [step('design', 'solution-architect')] },
+    ],
+  }
+  await createInit(deps).init({ slug: 'checkout' })
+  const seen = []
+  deps.agentRunner.behaviours.push(async () => {
+    seen.push((await createObserve(deps, definition).view()).phases)
+    await tracking.write('checkout', 'research/checkout.md', 'Findings.\n')
+    return { ok: false, unavailable: true, text: '' }
+  })
+
+  await createRunPipeline(deps, definition).run({})
+
+  assert.deepEqual(seen, [[{ phase: 'RESEARCH', state: 'open' }, { phase: 'DESIGN', state: 'pending' }]])
+})
+
 test('the view follows a run from its start to RESEARCH closed, with its cost', async () => {
   const { tracking, deps } = host()
   await createInit(deps).init({ slug: 'checkout' })
@@ -91,12 +128,13 @@ test('the view of a blocked run keeps the reason, and of a tampered journal says
 test('the view of a run stopped on an agent the host cannot start says blocked, until the step resumes', async () => {
   const { tracking, deps } = host()
   await createInit(deps).init({ slug: 'checkout' })
-  deps.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'not installed' }))
-  await createRunPipeline(deps).run({})
+  deps.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '' }))
+  const outcome = await createRunPipeline(deps).run({})
 
   const stopped = await createObserve(deps).view()
+  assert.equal(outcome.reason, 'solution-researcher could not be started')
   assert.equal(stopped.status, 'blocked')
-  assert.equal(stopped.reason, 'not installed')
+  assert.equal(stopped.reason, 'solution-researcher could not be started')
 
   deps.agentRunner.behaviours.push(() => tracking.write('checkout', OUTPUT, 'Findings.\n'))
   await createRunPipeline(deps).run({})

@@ -60,9 +60,9 @@ test('a run interrupted after the researcher wrote its document closes RESEARCH 
   ])
 })
 
-test('a run interrupted before the researcher wrote anything dispatches the same attempt again, under the same label', async () => {
+test('a run interrupted before the researcher wrote anything dispatches the same attempt again, under the same label and brief', async () => {
   const { tracking, clock, deps, agentRunner } = host()
-  agentRunner.behaviours.push(interrupted, () => fill(tracking))
+  agentRunner.behaviours.push(() => undefined, interrupted, () => fill(tracking))
   await createInit(deps).init({ slug: 'checkout' })
   await assert.rejects(createRunPipeline(deps).run({ slug: 'checkout' }), /host interrupted/)
   clock.advance(60 * 60_000)
@@ -71,10 +71,11 @@ test('a run interrupted before the researcher wrote anything dispatches the same
 
   assert.equal(resumed.status, 'done')
   assert.deepEqual(agentRunner.dispatches.map((dispatch) => dispatch.label), [
-    'skraft checkout · research · attempt 1', 'skraft checkout · research · attempt 1',
+    'skraft checkout · research · attempt 1', 'skraft checkout · research · attempt 2', 'skraft checkout · research · attempt 2',
   ])
-  assert.equal(agentRunner.dispatches[0].prompt, agentRunner.dispatches[1].prompt)
-  assert.equal(tracking.journal('checkout').filter((event) => event.type === 'step.started').length, 1)
+  assert.match(agentRunner.dispatches[2].prompt, /Missing outputs from attempt 1 of 2:/)
+  assert.equal(agentRunner.dispatches[2].prompt, agentRunner.dispatches[1].prompt)
+  assert.equal(tracking.journal('checkout').filter((event) => event.type === 'step.started').length, 2)
 })
 
 test('init on an initialised slug keeps its journal and its story', async () => {
