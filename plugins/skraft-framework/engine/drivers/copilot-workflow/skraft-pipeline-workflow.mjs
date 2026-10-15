@@ -13,12 +13,14 @@ import { createCtxProgress } from './ctx-progress.mjs'
 
 export const SKRAFT_PIPELINE_META = Object.freeze({
   name: 'skraft-pipeline',
+  // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description:
     'SKRAFT engineering pipeline for one story, run from its journal and resumable. ' +
     'args: { slug?: kebab-case feature scope (omit to resume the active pipeline), issue?: number, title?: string, ' +
     'base?: git ref to diff against instead of the configured base (new slug only), ' +
     'agentIds?: { [agent file id]: session agent id } }.',
   phases: Object.freeze([Object.freeze({ title: 'RESEARCH', detail: 'Solution Researcher' })]),
+  // Stryker restore StringLiteral
   argsSchema: Object.freeze({
     type: 'object',
     properties: Object.freeze({

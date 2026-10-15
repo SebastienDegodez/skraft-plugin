@@ -16,8 +16,7 @@ export const createGitSourceControl = ({ commandRunner }) => {
   return Object.freeze({
     unavailable: async () => {
       const result = await commandRunner.run({ argv: ['git', '--version'], cwd: '.' })
-      if (!result.started) return result.error ?? 'git could not be started'
-      return result.exitCode === 0 ? null : `git --version exited ${result.exitCode}`
+      return result.started ? null : /** @type {string} */ (result.error)
     },
     repository: async (dir) => {
       const cdup = await git(dir, ['rev-parse', '--show-cdup'])
@@ -25,13 +24,13 @@ export const createGitSourceControl = ({ commandRunner }) => {
     },
     mergeBase: async (dir, ref) => {
       const sha = await git(dir, ['merge-base', '--end-of-options', 'HEAD', ref])
-      return sha === null || sha.trim() === '' ? null : sha.trim()
+      return sha?.trim() ?? null
     },
     changedFiles: async (dir, sha) => {
       const changed = await git(dir, ['diff', '--name-only', '--relative', '--end-of-options', sha, '--'])
       const untracked = await git(dir, ['ls-files', '--others', '--exclude-standard'])
-      if (changed === null || untracked === null) return null
-      return [...new Set([...lines(changed), ...lines(untracked)])]
+      if (changed === null) return null
+      return [...new Set([...lines(changed), ...lines(untracked ?? '')])]
     },
   })
 }

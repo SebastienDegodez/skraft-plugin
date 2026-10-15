@@ -47,22 +47,28 @@ export const PANE_ID = 'skraft-pipeline'
 export const PANE_TITLE = 'Skraft'
 export const COMMAND = Object.freeze({
   name: 'skraft',
+  // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description: 'Run the skraft pipeline for one story, or show where the active one stands',
+  // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
   argumentHint: '[<slug> [#issue] [title…] [--base <ref>]] | decide …',
 })
 export const TOOL = Object.freeze({
   name: 'run_pipeline',
+  // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description:
     'Start or resume the skraft engineering pipeline of this working copy for one story. ' +
     'Returns at once; the run goes on in the background and reports in the Skraft pane. ' +
     'Without a slug it resumes the active pipeline; it never picks a slug itself.',
+  // Stryker restore StringLiteral
   inputSchema: Object.freeze({
     type: 'object',
     properties: {
+      // Stryker disable StringLiteral: descriptions shown to the model; the types are checked by the tool-input tests
       slug: { type: 'string', description: 'kebab-case feature scope; omit to resume the active pipeline' },
       issue: { type: 'integer', description: 'the story issue number' },
       title: { type: 'string', description: 'the story title' },
       base: { type: 'string', description: 'git ref to diff against instead of the configured base; only for a new slug' },
+      // Stryker restore StringLiteral
     },
   }),
 })
