@@ -8,11 +8,11 @@ import { CONFIG_FILE, isRef, readConfig } from '../domain/config/skraft-config.m
  *   base was taken with (`main`, `origin/main`, `develop`).
  */
 
-export const DEFAULT_BASE_BRANCH = 'main'
+const DEFAULT_BASE_BRANCH = 'main'
 
 /**
  * The developer configuration, read and checked.
- * @param {{ workspace: import('./ports/workspace.mjs').Workspace }} deps
+ * @param {{ workspace: import('./ports/workspace.mjs').ConfigSource }} deps
  * @returns {Promise<{ ok: true, config: SkraftConfig, present: boolean } | { ok: false, reason: string }>}
  */
 export const loadConfig = async ({ workspace }) => {

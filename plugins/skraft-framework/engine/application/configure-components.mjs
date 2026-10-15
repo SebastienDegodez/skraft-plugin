@@ -1,5 +1,5 @@
 import { CONFIG_FILE, isAbsolutePath, readConfig, writeConfig } from '../domain/config/skraft-config.mjs'
-import { componentName, detectProject, SKIPPED_FOLDERS } from '../domain/config/stack-detection.mjs'
+import { componentName, detectProject } from '../domain/config/stack-detection.mjs'
 import { joinRelative, normalizeRelative } from '../domain/config/relative-path.mjs'
 
 /**
@@ -9,6 +9,8 @@ import { joinRelative, normalizeRelative } from '../domain/config/relative-path.
  */
 
 const DEPTH = 3
+/** Hidden folders are skipped too; build outputs hold no project marker within DEPTH. */
+const DEPENDENCIES = 'node_modules'
 
 /**
  * ConfigureComponents — `skraft init` without a slug: one component per project found in the
@@ -84,7 +86,7 @@ const projectsUnder = async (workspace, start) => {
     if (detected && family !== null && !families.includes(family)) found.push({ root: dir, ...detected })
     if (depth >= DEPTH) return
     const folders = entries
-      .filter((entry) => entry.kind === 'dir' && !entry.name.startsWith('.') && !SKIPPED_FOLDERS.includes(entry.name))
+      .filter((entry) => entry.kind === 'dir' && !entry.name.startsWith('.') && entry.name !== DEPENDENCIES)
       .map((entry) => entry.name)
       .sort()
     const below = family !== null && !families.includes(family) ? [...families, family] : families

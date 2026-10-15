@@ -10,7 +10,7 @@
 export const normalizeRelative = (path) => {
   /** @type {string[]} */
   const parts = []
-  for (const part of path.split(/[\\/]+/)) {
+  for (const part of path.split(/[\\/]/)) {
     if (part === '' || part === '.') continue
     if (part === '..' && parts.length > 0 && parts.at(-1) !== '..') parts.pop()
     else parts.push(part)

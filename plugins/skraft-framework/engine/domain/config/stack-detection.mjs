@@ -12,9 +12,6 @@ const PROJECT = /\.(csproj|fsproj|vbproj)$/i
 const PYTHON_MARKERS = ['pyproject.toml', 'setup.py', 'setup.cfg', 'requirements.txt']
 const JAVA_MARKERS = ['pom.xml', 'build.gradle', 'build.gradle.kts']
 
-/** Folders never walked for projects: build outputs, dependencies, tracking. */
-export const SKIPPED_FOLDERS = Object.freeze(['node_modules', 'bin', 'obj', 'dist', 'build', 'target', 'out', 'coverage', 'venv', '__pycache__'])
-
 /**
  * @param {{ entries: Entry[], read: (name: string) => string | null }} folder the folder's own
  *   entries, and the text of a file of that folder (null when absent)
@@ -60,18 +57,18 @@ export const detectProject = ({ entries, read }) => {
       commands: { build: `python -m compileall -q ${src.length > 0 ? 'src' : '.'}`, test: 'python -m pytest -q -p no:cacheprovider' },
     }
   }
-  if (has('package.json')) return javascriptProject(parseJson(read('package.json')), { has, folder })
+  if (has('package.json')) return javascriptProject(parseJson(read('package.json')) ?? {}, { has, folder })
   return null
 }
 
 /**
- * @param {Record<string, any> | null} manifest
+ * @param {Record<string, any>} manifest
  * @param {{ has: (name: string) => boolean, folder: (names: string[]) => string[] }} folder
  * @returns {Detected}
  */
 const javascriptProject = (manifest, { has, folder }) => {
-  const dependencies = { ...(manifest?.dependencies ?? {}), ...(manifest?.devDependencies ?? {}) }
-  const scripts = manifest?.scripts ?? {}
+  const dependencies = { ...manifest.dependencies, ...manifest.devDependencies }
+  const scripts = manifest.scripts ?? {}
   const stack = 'react' in dependencies ? 'react' : has('tsconfig.json') || 'typescript' in dependencies ? 'typescript' : 'javascript'
   /** @type {Record<string, string>} */
   const commands = {}
@@ -93,14 +90,12 @@ const javaCommands = (tool, build, test) => ({ build: [tool, ...build].join(' ')
 const orRoot = (paths) => (paths.length > 0 ? paths : ['./'])
 
 /** The `<module>` names a Maven parent POM lists. @param {string} pom */
-const mavenModules = (pom) => [...pom.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<module>\s*([^<\s]+)\s*<\/module>/g)].map(([, name]) => name)
+const mavenModules = (pom) => [...pom.matchAll(/<module>\s*([^<\s]+)\s*<\/module>/g)].map(([, name]) => name)
 
-/** @param {string | null} text @returns {Record<string, any> | null} */
+/** @param {string | null} text @returns {Record<string, any> | null} null when the text is not JSON */
 const parseJson = (text) => {
-  if (text === null) return null
   try {
-    const value = JSON.parse(text)
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null
+    return JSON.parse(/** @type {string} */ (text))
   } catch {
     return null
   }

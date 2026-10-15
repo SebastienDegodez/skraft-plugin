@@ -22,17 +22,19 @@ test('a command runs from its folder, relative to the working copy, with its arg
   assert.equal(JSON.parse(neighbour.stdout).cwd.toLowerCase(), join(root, 'payment web').toLowerCase())
 })
 
-test('the exit code and both outputs come back; a missing program or folder is not started', async (t) => {
+test('the exit code and both outputs come back, a command waiting on input gets none; a missing program or folder is not started', async (t) => {
   const root = tempFolder(t)
   const runner = createNodeCommandRunner({ root })
 
   const failed = await runner.run({ argv: ['node', '-e', 'console.log("out"); console.error("err"); process.exit(3)'], cwd: '.' })
   const missing = await runner.run({ argv: ['skraft-no-such-program', '--version'], cwd: '.' })
   const noFolder = await runner.run({ argv: ['node', '--version'], cwd: 'gone' })
+  const reader = await runner.run({ argv: ['node', '-e', 'process.stdin.resume().on("end", () => process.exit(4))'], cwd: '.' })
 
   assert.deepEqual([failed.started, failed.exitCode, failed.stdout.trim(), failed.stderr.trim()], [true, 3, 'out', 'err'])
   assert.deepEqual(missing, { started: false, exitCode: null, stdout: '', stderr: '', error: 'command not found: skraft-no-such-program' })
   assert.deepEqual([noFolder.started, noFolder.error], [false, `folder not found: ${join(root, 'gone')}`])
+  assert.equal(reader.exitCode, 4)
 })
 
 test('a program on the PATH, a .cmd shim under Windows included, runs with its arguments intact', async (t) => {
@@ -101,7 +103,7 @@ test('under Windows rules a program is found by PATHEXT, in Path whatever its ca
 // cmd.exe stands for itself here: a script that prints the command line it receives.
 test('a .cmd starts through ComSpec with /d /s /c and every argument quoted and escaped for cmd', { skip: process.platform === 'win32' }, async (t) => {
   const root = tempFolder(t)
-  const bin = join(root, 'bin')
+  const bin = join(root, 'Program Files (x86)')
   mkdirSync(join(bin, 'node_modules', '.bin'), { recursive: true })
   writeFileSync(join(bin, 'npm.cmd'), '')
   writeFileSync(join(bin, 'node_modules', '.bin', 'vitest.cmd'), '')
@@ -110,9 +112,10 @@ test('a .cmd starts through ComSpec with /d /s /c and every argument quoted and 
   chmodSync(comspec, 0o755)
   const runner = createNodeCommandRunner({ root, platform: 'win32', env: { Path: bin, PATHEXT: '.cmd', ComSpec: comspec } })
 
-  const npm = await runner.run({ argv: ['npm', 'run', 'test:unit', 'a b', 'x&y', '50%', 'say "hi"'], cwd: '.' })
-  const shim = await runner.run({ argv: ['node_modules/.bin/vitest', 'a&b'], cwd: 'bin' })
+  const npm = await runner.run({ argv: ['npm', 'run', 'test:unit', 'a b', 'x&y', '50%', 'say "hi"', 'C:\\out\\'], cwd: '.' })
+  const shim = await runner.run({ argv: ['node_modules/.bin/vitest', 'a&b'], cwd: 'Program Files (x86)' })
 
-  assert.deepEqual(JSON.parse(npm.stdout), ['/d', '/s', '/c', `"${join(bin, 'npm.cmd')} ^"run^" ^"test:unit^" ^"a^ b^" ^"x^&y^" ^"50^%^" ^"say^ \\^"hi\\^"^""`])
-  assert.deepEqual(JSON.parse(shim.stdout), ['/d', '/s', '/c', `"${join(bin, 'node_modules', '.bin', 'vitest.cmd')} ^^^"a^^^&b^^^""`])
+  const escaped = join(root, 'Program^ Files^ ^(x86^)')
+  assert.deepEqual(JSON.parse(npm.stdout), ['/d', '/s', '/c', `"${join(escaped, 'npm.cmd')} ^"run^" ^"test:unit^" ^"a^ b^" ^"x^&y^" ^"50^%^" ^"say^ \\^"hi\\^"^" ^"C:\\out\\\\^""`])
+  assert.deepEqual(JSON.parse(shim.stdout), ['/d', '/s', '/c', `"${join(escaped, 'node_modules', '.bin', 'vitest.cmd')} ^^^"a^^^&b^^^""`])
 })

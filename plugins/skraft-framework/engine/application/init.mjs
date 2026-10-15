@@ -9,7 +9,7 @@ import { openJournal } from './run-journal.mjs'
  * @typedef {{ ok: boolean, slug: string | null, created: boolean, code: InitCode | null, reason: string }} InitOutcome
  * @typedef {{
  *   activePipeline: ActivePipeline,
- *   workspace: import('./ports/workspace.mjs').Workspace,
+ *   workspace: import('./ports/workspace.mjs').ConfigSource,
  *   sourceControl: import('./ports/source-control.mjs').SourceControl,
  * } & Parameters<typeof openJournal>[0]} InitDeps
  */

@@ -86,13 +86,13 @@ test('a file under a component nested in another one touches only the nested com
 })
 
 test('a command the developer wrote is the one that runs, with the base of its own repository', async () => {
-  const api = { ...API, commands: { test: 'dotnet test --filter "Category!=Slow" --nologo', mutation: 'dotnet stryker --since:{baseSha} --threshold-break 80' } }
+  const api = { ...API, commands: { test: 'dotnet test --filter "Category!=Slow|Category=Fast" --nologo \'\'', mutation: 'dotnet stryker --since:{baseSha} --threshold-break 80' } }
   const { machine, gate } = await hostWith({ components: [api, { ...WEB, commands: { mutation: 'npx stryker run --since {baseSha}' } }] })
 
   await gate('all')
 
   assert.deepEqual(machine.runs, [
-    { argv: ['dotnet', 'test', '--filter', 'Category!=Slow', '--nologo'], cwd: 'services/payment-api' },
+    { argv: ['dotnet', 'test', '--filter', 'Category!=Slow|Category=Fast', '--nologo', ''], cwd: 'services/payment-api' },
     { argv: ['dotnet', 'stryker', '--since:a1', '--threshold-break', '80'], cwd: 'services/payment-api' },
     { argv: ['npx', 'stryker', 'run', '--since', 'w1'], cwd: '../payment-web' },
   ])
@@ -230,20 +230,40 @@ test('a component with no gate command fails as environment instead of passing w
   assert.deepEqual(gatesRan(tracking).map(({ component, gate: name, status, failure }) => [component, name, status, failure]), [['web', 'none', 'fail', 'environment']])
 })
 
-test('a misspelt key in a component refuses the gates instead of dropping its commands', async () => {
+test('an invalid skraft-config.json refuses the gates with every error, instead of dropping what it cannot read', async () => {
   const tracking = new InMemoryTracking()
   const base = { journal: tracking, activePipeline: tracking, files: tracking, sourceControl: new InMemorySourceControl(), commandRunner: new ScriptedMachine(), clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher() }
   await createInit({ ...base, workspace: new InMemoryWorkspace() }).init({ slug: 'checkout' })
-  const workspace = new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components: [{ name: 'web', root: '/srv/web', stack: 'react', comands: { test: 'npm test' }, paths: { source: ['src/'] } }] }) })
+  const gateWith = async (text) => (await createRunGate({ ...base, workspace: new InMemoryWorkspace({ 'skraft-config.json': text }) }).run({ scope: 'all' })).reason
 
-  const outcome = await createRunGate({ ...base, workspace }).run({ scope: 'all' })
-
-  assert.deepEqual([outcome.status, outcome.code], ['refused', 'config-invalid'])
-  assert.equal(outcome.reason, [
-    'skraft-config.json is invalid: component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)',
+  assert.equal(await gateWith(JSON.stringify({
+    baseBranch: '--orphan',
+    components: [
+      { name: 'web', root: '/srv/web', stack: 'react', comands: { test: 'npm test' } },
+      { name: 'Api', root: 'api', stack: 'cobol', commands: { Test: 'dotnet test', build: '  ', mutation: 7 }, baseBranch: 'release 2', mocking: { strategy: 'wiremock' } },
+      { name: 'api', root: 'api', stack: 'dotnet', commands: 'dotnet test', mocking: 'inprocess' },
+      { name: 'api', root: 'api2', stack: 'dotnet' },
+      null,
+    ],
+  })), [
+    'skraft-config.json is invalid: baseBranch must be a git ref, got "--orphan"',
+    'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)',
     'component web: root must be a path relative to the working copy',
-    'component web: unknown key paths.source (allowed: src, tests)',
+    'components[1].name must be kebab-case, got "Api"',
+    'component Api: stack must be one of dotnet, java, python, typescript, javascript, react',
+    'component Api: command name "Test" must be lower-case',
+    'component Api: command build must be a non-empty command line',
+    'component Api: command mutation must be a non-empty command line',
+    'component Api: baseBranch must be a git ref, got "release 2"',
+    'component Api: mocking must be { "strategy": "microcks" or "inprocess" }',
+    'component api: commands must be an object of command lines',
+    'component api: mocking must be { "strategy": "microcks" or "inprocess" }',
+    'components[4] must be an object',
   ].join('; '))
+  assert.equal(await gateWith(JSON.stringify({ components: [{ name: 'api', root: 'a', stack: 'dotnet' }, { name: 'api', root: 'b', stack: 'dotnet' }] })), 'skraft-config.json is invalid: component name api is used twice')
+  assert.equal(await gateWith('{"components": {}}'), 'skraft-config.json is invalid: components must be an array')
+  assert.equal(await gateWith('["api"]'), 'skraft-config.json is invalid: skraft-config.json must hold a JSON object')
+  assert.match(await gateWith('{"components": ['), /^skraft-config\.json is invalid: skraft-config\.json is not JSON: /)
 })
 
 test('with Docker up, every Microcks test gate runs and Docker is asked once', async () => {

@@ -9,7 +9,7 @@ import { baseOf, loadConfig, resolveBases } from './bases.mjs'
  *   subject: `node`, `config`, `docker`, `<component>` or `<component>/<command>`.
  * @typedef {{ ok: boolean, checks: DoctorCheck[] }} DoctorReport
  * @typedef {{
- *   workspace: import('./ports/workspace.mjs').Workspace,
+ *   workspace: Pick<import('./ports/workspace.mjs').Workspace, 'read' | 'list'>,
  *   executables: import('./ports/executables.mjs').Executables,
  *   commandRunner: import('./ports/command-runner.mjs').CommandRunner,
  *   sourceControl: import('./ports/source-control.mjs').SourceControl,
@@ -84,7 +84,7 @@ const commandCheck = async (deps, { component, name, run, baseSha }) => {
   if (located === null) return { subject, status: 'fail', detail: `command not found: ${program} (from ${component.root}); install it or change commands.${name} in ${CONFIG_FILE}` }
   if (!run) return { subject, status: 'ok', detail: `${program} → ${located}` }
   const result = await deps.commandRunner.run({ argv: parsed.argv, cwd: component.root })
-  if (!result.started) return { subject, status: 'fail', detail: result.error ?? `${program} could not be started` }
+  if (!result.started) return { subject, status: 'fail', detail: /** @type {string} */ (result.error) }
   return result.exitCode === 0
     ? { subject, status: 'ok', detail: `${line} passed` }
     : { subject, status: 'fail', detail: `${line} exited ${result.exitCode}` }

@@ -20,7 +20,7 @@ import { JournalConflict } from './run-journal.mjs'
  * @typedef {{
  *   activePipeline: import('./ports/active-pipeline.mjs').ActivePipeline,
  *   files: import('./ports/tracking-files.mjs').TrackingFiles,
- *   workspace: import('./ports/workspace.mjs').Workspace,
+ *   workspace: import('./ports/workspace.mjs').ConfigSource,
  *   sourceControl: import('./ports/source-control.mjs').SourceControl,
  *   commandRunner: import('./ports/command-runner.mjs').CommandRunner,
  * } & Parameters<typeof openActiveRun>[0]} GateDeps
@@ -146,8 +146,8 @@ const runOne = async (deps, { slug, component, gate, scope, journal, baseSha, do
     result = await deps.commandRunner.run({ argv: parsed.argv, cwd: component.root })
     durationMs = deps.clock.now().getTime() - started.getTime()
     reason = !result.started
-      ? `${result.error ?? `${parsed.argv[0]} could not be started`}; install it or change the command in ${CONFIG_FILE}`
-      : result.exitCode === null ? `${result.error ?? 'stopped without an exit code'}; run it again` : `exited ${result.exitCode}`
+      ? `${result.error}; install it or change the command in ${CONFIG_FILE}`
+      : result.exitCode === null ? `${result.error}; run it again` : `exited ${result.exitCode}`
   }
   const failure = result === null ? 'environment' : failureOf(result)
   await deps.files.write(slug, evidencePath, [
@@ -162,5 +162,5 @@ const runOne = async (deps, { slug, component, gate, scope, journal, baseSha, do
     component: component.name, gate, scope, command: line, status, failure,
     exitCode: result?.exitCode ?? null, durationMs, evidence: evidencePath,
   })
-  return { component: component.name, gate, status, failure, reason: failure === null ? 'passed' : reason, evidence }
+  return { component: component.name, gate, status, failure, reason, evidence }
 }

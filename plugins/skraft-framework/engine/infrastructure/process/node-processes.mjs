@@ -29,13 +29,17 @@ export const createNodeCommandRunner = ({ root, platform = process.platform, env
     const [program, ...args] = argv
     const dir = resolve(root, cwd)
     const notStarted = (/** @type {string} */ error) => ({ started: false, exitCode: null, stdout: '', stderr: '', error })
-    if ((await isFolder(dir)) === false) return notStarted(`folder not found: ${dir}`)
+    if (!(await isFolder(dir))) return notStarted(`folder not found: ${dir}`)
     const located = await locate(program, dir, { platform, env })
     if (located === null) return notStarted(`command not found: ${program}`)
+    // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent under Linux, where mutation runs: only the ComSpec test locates a .cmd, and it sets platform win32
     const [file, fileArgs, verbatim] = platform === 'win32' && /\.(cmd|bat)$/i.test(located)
+      // Stryker disable next-line BooleanLiteral: windowsVerbatimArguments has no effect outside Windows; the Windows integration job runs this path
       ? [env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${[escapeForCmd(normalize(located)), ...args.map((arg) => quoteForCmd(arg, CMD_SHIM.test(located)))].join(' ')}"`], true]
+      // Stryker disable next-line BooleanLiteral: windowsVerbatimArguments has no effect outside Windows
       : [located, args, false]
     return new Promise((done) => {
+      // Stryker disable next-line BooleanLiteral: windowsHide has no effect outside Windows
       const child = spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: verbatim, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
       /** @type {Buffer[]} */
       const out = []
@@ -49,7 +53,7 @@ export const createNodeCommandRunner = ({ root, platform = process.platform, env
         exitCode: code,
         stdout: Buffer.concat(out).toString('utf8'),
         stderr: Buffer.concat(err).toString('utf8'),
-        ...(code === null ? { error: `${program} was stopped by ${signal ?? 'its host'}` } : {}),
+        ...(code === null ? { error: `${program} was stopped by ${signal}` } : {}),
       }))
     })
   },
@@ -62,12 +66,11 @@ export const createNodeCommandRunner = ({ root, platform = process.platform, env
  * @returns {Promise<string | null>}
  */
 const locate = async (program, dir, { platform, env }) => {
-  if (program === '') return null
   const windows = platform === 'win32'
   const pathext = (env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter((ext) => ext !== '')
   const extensions = !windows ? [''] : pathext.some((ext) => ext.toLowerCase() === extname(program).toLowerCase()) ? [''] : pathext
   const pathOf = windows ? env.Path ?? env.PATH ?? '' : env.PATH ?? ''
-  const folders = isAbsolute(program) || /[\\/]/.test(program) ? [dir] : pathOf.split(delimiter).filter((folder) => folder !== '')
+  const folders = isAbsolute(program) || /[\\/]/.test(program) ? [dir] : pathOf.split(delimiter)
   for (const folder of folders) {
     for (const ext of extensions) {
       const candidate = resolve(folder, `${program}${ext}`)
