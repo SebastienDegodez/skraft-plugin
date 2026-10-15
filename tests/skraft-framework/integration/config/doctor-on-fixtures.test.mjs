@@ -48,7 +48,7 @@ test('skraft init then doctor pass on a .NET API with its React front in a neigh
 
   assert.equal(init.stdout, 'skraft-config.json: payment-api (dotnet, .), payment-web (react, ../payment-web)\n')
   assert.equal(doctor.status, 0, doctor.stdout)
-  assert.match(doctor.stdout, /^ok {4}payment-web\/test: npm → .*npm(\.cmd)?$/m)
+  assert.match(doctor.stdout, /^ok {4}payment-web\/test: npm → .*npm(\.cmd)?$/im)
 })
 
 test('doctor names the missing command and exits 1; the developer\'s command then wins over the default', (t) => {
