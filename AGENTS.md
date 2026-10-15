@@ -112,6 +112,37 @@ Apply the `clean-architecture-testing` and `outside-in-tdd` skills to the engine
 - Import path from a test feature folder into the engine:
   `../../../../plugins/skraft-framework/engine/...`
 
+## Engine core: outside-in TDD from the use case
+
+Applies to every change in `engine/domain/` and `engine/application/`, including closing mutation
+gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engine needs.
+
+- Enter through `application/` first. A use case (`createInit`, `createRunGate`,
+  `createConfigureComponents`, `createDoctor`, `createRunPipeline`, `createObserve`…) is the only
+  input boundary of a `tests/skraft-framework/unit/<feature>/` test; assert its returned outcome,
+  the journal events and the files written. `domain/` is covered **through** these scenarios:
+  never import a `domain/` module from a test, unless it is an extracted complex rule (tiers, a
+  matrix of edge cases) already covered by an acceptance scenario.
+- Red first, also when the code already exists: write or sharpen the scenario, apply the change it
+  should catch to the production code by hand, see the scenario fail on a business assertion,
+  restore the code, see it pass. A test that stays green against the broken code is not done.
+- Before writing a scenario, sharpen an existing one in the same feature folder (more fields
+  asserted, data with two elements instead of one, a hyphenated slug). A new test exists only for a
+  behaviour no scenario shows. Name tests by behaviour, never by mutant or ticket.
+- Every surviving or uncovered mutant in `domain/` or `application/` ends one of three ways, and
+  the target is 100 %:
+  1. **No behaviour asks for the code** → delete it (unreachable guard, a fallback the port
+     contract already rules out, a field no caller reads).
+  2. **A behaviour asks for it** → a use-case scenario shows that behaviour and kills the mutant.
+  3. **The mutant changes nothing observable** → `// Stryker disable next-line <Mutator>: <reason>`
+     on that line only.
+- No code for a later lot. A phase, a field, a step kind or a default that only a future lot will
+  read is written by that lot, with its scenario. Never exclude a mutant because "lot N will use it".
+- Code reached only from a child process is invisible to Stryker: drive the CLI and the drivers in
+  the test process (`runCli`, the driver factories); keep one test that starts the executable.
+- Stryker needs the npm registry. Where it is unreachable, prove each kill by hand-applying the
+  mutant; the CI mutation job is the verdict.
+
 ## Mutation rules
 
 - Config: `plugins/skraft-framework/engine/stryker.config.mjs`, incremental, run with
