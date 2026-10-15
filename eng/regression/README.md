@@ -78,7 +78,7 @@ Unknown `type` values and missing payload fields are ignored.
 | `type` | Payload read | Effect on the summary |
 | --- | --- | --- |
 | `run.started` | `at` (first one) | duration start. `workflow` and `base` not read; `base` lists one `{ component, root, repository, ref, source, sha }` per repository folder (`component: null` for the working copy, `source`: `flag`, `component`, `config` or `default`). |
-| `step.started` | `step` | a second `step.started` with the same `step` counts one retry. `kind`, `agent` not read. |
+| `step.started` | `step` | a second `step.started` with the same `step` counts one retry. `agent` not read. |
 | `step.recorded` | `cost` (number) | summed into `cost`. `outcome`, `durationMs` not read. |
 | `gate.ran` | `component`, `gate`, `status` | last status per `component/gate` wins. Status values: `pass`, `fail`, `not_applicable`. A v1 `pass` that becomes `not_applicable` is reported as info, so check it when a DELIVER gate disappears. Lot 2 also writes `scope` (`touched`, `all`), `command`, `failure` (`environment`, `deterministic`, null), `exitCode`, `durationMs`, `evidence`; not read. |
 | `review.decided` | `phase`, `verdict` | appended to `verdicts[phase]`. Verdict values: `APPROVED`, `NEEDS_REWORK`, `REJECTED`. |
