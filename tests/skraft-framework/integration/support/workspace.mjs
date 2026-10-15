@@ -4,12 +4,14 @@
 import { spawnSync } from 'node:child_process'
 import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { delimiter, dirname, join } from 'node:path'
+import { basename, delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { runCli } from '../../../../plugins/skraft-framework/engine/drivers/cli/run-cli.mjs'
+import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 
 const REPO = fileURLToPath(new URL('../../../../', import.meta.url))
 export const PLUGIN_ROOT = join(REPO, 'plugins', 'skraft-framework')
-export const CLI = join(PLUGIN_ROOT, 'engine', 'drivers', 'cli', 'skraft.mjs')
 
 /** The skill fixtures `skraft doctor` must pass on. */
 export const FIXTURES = Object.freeze({
@@ -79,10 +81,24 @@ const gitFolder = () => {
 }
 
 /**
- * @param {string} cwd @param {string[]} args @param {{ env?: NodeJS.ProcessEnv }} [options]
- * @returns {{ status: number | null, stdout: string, stderr: string }}
+ * The skraft command line in this process, on the real Node adapters, as the executable
+ * would run it from cwd: mutation testing sees the code it runs.
+ * @param {string} cwd @param {string[]} args @param {{ env?: NodeJS.ProcessEnv }} [options] env: PATH included
+ * @returns {Promise<{ status: number, stdout: string, stderr: string }>}
  */
-export const skraft = (cwd, args, { env = process.env } = {}) => spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8', env })
+export const skraft = async (cwd, args, { env = process.env } = {}) => {
+  /** @type {string[]} */
+  const out = []
+  /** @type {string[]} */
+  const err = []
+  const status = await runCli(args, {
+    pluginVersion: () => 'in-process',
+    workingCopyName: () => basename(cwd),
+    adapters: () => createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT, env }),
+  }, { out: (line) => out.push(line), err: (line) => err.push(line) })
+  const text = (/** @type {string[]} */ lines) => lines.map((line) => `${line}\n`).join('')
+  return { status, stdout: text(out), stderr: text(err) }
+}
 
 export const readJson = (/** @type {string} */ path) => JSON.parse(readFileSync(path, 'utf8'))
 export const journal = (/** @type {string} */ cwd, /** @type {string} */ slug) =>

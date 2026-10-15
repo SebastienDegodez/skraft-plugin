@@ -9,12 +9,13 @@ import { createNodeCommandRunner, createNodeExecutables } from './process/node-p
 
 /**
  * Every adapter a Node host needs, except the host's own AgentRunner and progress.
- * @param {{ cwd: string, pluginRoot: string }} host
+ * @param {{ cwd: string, pluginRoot: string, env?: NodeJS.ProcessEnv }} host env: where programs are
+ *   looked for and what they inherit; this process's environment by default
  */
-export const createNodeAdapters = ({ cwd, pluginRoot }) => {
+export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env }) => {
   const files = createNodeFiles()
   const tracking = createTrackingStore({ files, root: cwd })
-  const commandRunner = createNodeCommandRunner({ root: cwd })
+  const commandRunner = createNodeCommandRunner({ root: cwd, env })
   return Object.freeze({
     journal: tracking.journal,
     activePipeline: tracking.activePipeline,
@@ -25,7 +26,7 @@ export const createNodeAdapters = ({ cwd, pluginRoot }) => {
     workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner }),
-    executables: createNodeExecutables({ root: cwd }),
+    executables: createNodeExecutables({ root: cwd, env }),
     runtime: Object.freeze({ nodeVersion: () => process.version }),
   })
 }
