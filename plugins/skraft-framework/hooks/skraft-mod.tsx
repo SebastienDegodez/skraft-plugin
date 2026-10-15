@@ -1,7 +1,7 @@
 // skraft as a Claude Code mod. Every `$` call is a one-line function handed to the
 // claude-mod driver (engine/drivers/claude-mod/), which composes the engine's use cases.
 //
-//   /skraft <slug> [#issue] [title…]   Init then RunPipeline in the background, pane `skraft-pipeline`
+//   /skraft <slug> [#issue] [title…] [--base <ref>]   Init then RunPipeline in the background, pane `skraft-pipeline`
 //   /skraft                            the Observe view of the active pipeline
 //   /skraft decide …                   no question is pending in lot 1
 //   mcp__skraft__run_pipeline          the same start, for the model
@@ -24,6 +24,7 @@ const hostOf = ($: EngineInterface) => ({
   pluginRoot: $.plugin.root,
   pluginName: $.plugin.name,
   spawn: (args: { prompt: string; subagentType: string; description: string }) => $.agent.spawn(args),
+  run: (argv: string[], init?: { cwd?: string; timeoutMs?: number }) => $.process.run(argv, init),
   sessionCostUsd: () => $.session.usage().then((usage) => usage.cost?.usd ?? null, () => null),
   later: (run: () => void) => void $.clock.after(0, run),
   publish: (snapshot: SkraftPipelineSnapshot) => update($, pipeline, () => snapshot),
@@ -63,7 +64,7 @@ export const register: Register = (on) => {
   }).catch(($, e, next) => ({ text: `skraft: ${next.error?.message ?? 'failed'}` }))
 
   on('tool.call', { tool: 'mcp__skraft__run_pipeline' }, async ($, e) => {
-    const text = await driver.tool(hostOf($), e as { slug?: unknown; issue?: unknown; title?: unknown })
+    const text = await driver.tool(hostOf($), e as { slug?: unknown; issue?: unknown; title?: unknown; base?: unknown })
     void openPane($)
     return { result: text }
   }).catch(($, e, next) => ({ result: `skraft could not start: ${next.error?.message ?? 'failed'}` }))
