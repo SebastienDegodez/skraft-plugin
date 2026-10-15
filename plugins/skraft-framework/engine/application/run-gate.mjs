@@ -129,7 +129,7 @@ const dockerAnswers = async (deps) => {
  */
 const runOne = async (deps, { slug, component, gate, scope, journal, baseSha, docker }) => {
   const line = component.commands[gate]
-  const earlier = journal.events.filter((event) => event.type === 'gate.ran' && event.component === component.name && event.gate === gate).length
+  const earlier = journal.events.filter((event) => event.component === component.name && event.gate === gate).length
   const evidencePath = `gates/${component.name}/${gate}-${earlier + 1}.log`
   const evidence = deps.files.location(slug, evidencePath)
   const parsed = parseCommand(line, { baseSha })

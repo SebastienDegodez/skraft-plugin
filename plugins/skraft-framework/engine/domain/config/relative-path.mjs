@@ -23,13 +23,13 @@ export const joinRelative = (...parts) => normalizeRelative(parts.join('/'))
 
 /**
  * The part of `path` under `folder`, or null when it is not under it. Both relative to the
- * same place.
+ * same place; under `.`, every path is itself, `..` ones included.
  * @param {string} path
  * @param {string} folder
  */
 export const pathUnder = (path, folder) => {
   const [inner, outer] = [normalizeRelative(path), normalizeRelative(folder)]
-  if (outer === '.') return inner.startsWith('..') ? null : inner
+  if (outer === '.') return inner
   if (inner === outer) return '.'
   return inner.startsWith(`${outer}/`) ? inner.slice(outer.length + 1) : null
 }
