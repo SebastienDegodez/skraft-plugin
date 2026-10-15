@@ -1,0 +1,276 @@
+---
+layout: doc
+lang: en
+title: "skraft-config.json"
+description: "The component configuration file: location, full schema, validation and messages, command lines, gates, detection defaults and the base rule."
+persona: tech-lead
+---
+
+# skraft-config.json
+
+> `skraft-config.json` tells the engine which components make up the repository and which commands, always those the developer wrote, build and test them.
+
+## Why — the problem it solves
+
+In v1, build and test commands were guessed by agents or written in bash recipes. A recipe
+that worked on one machine failed on another, PowerShell in particular. V2 describes each
+**component** (a buildable project: a .NET API, a React front end…) in a versioned file. The
+engine runs exactly those commands, with no shell, from the component's root. A developer
+whose script does not work on their machine replaces the command in the file; nothing else
+redefines it.
+
+## Key concepts — how it works
+
+### Location
+
+The file sits **at the root of the repository that starts the run** (the working copy), next
+to `.copilot-tracking/`. A missing file is not an error: it counts as a config with no
+component. `skraft init` without a slug creates or completes it.
+
+```mermaid
+flowchart TD
+    I[skraft init] -->|detects| F[skraft-config.json]
+    F -->|read and validated| V{valid?}
+    V -->|no| R[refused config-invalid<br/>every error]
+    V -->|yes| B[base per repository<br/>git merge-base HEAD ref]
+    B --> G[skraft gate<br/>build → format → lint → test<br/>→ architecture → coverage → mutation]
+    F --> D[skraft doctor]
+```
+
+### Example
+
+```json
+{
+  "baseBranch": "main",
+  "components": [
+    { "name": "api", "root": "services/payment-api", "stack": "dotnet",
+      "paths": { "src": ["src/"], "tests": ["tests/"] },
+      "commands": { "build": "dotnet build --nologo", "test": "dotnet test --nologo",
+                    "format": "dotnet format --verify-no-changes",
+                    "mutation": "dotnet stryker --since:{baseSha}" } },
+    { "name": "web", "root": "../payment-web", "stack": "react", "baseBranch": "develop",
+      "mocking": { "strategy": "inprocess" },
+      "commands": { "build": "npm run build", "lint": "npm run lint", "test": "npm test" } }
+  ]
+}
+```
+
+### Schema — top level
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `baseBranch` | string | absent (the base falls back to `main`) | git ref: no blank, does not start with `-`; `null` counts as absent |
+| `components` | array of objects | `[]` | each entry is a component (below) |
+| any other key | any | — | kept as is, never read or rewritten |
+
+### Schema — one component
+
+Any key outside this list is refused.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `name` | string | required | kebab-case (`api`, `payment-web`); unique in the file |
+| `root` | string | required | path relative to the working copy, not empty, never absolute (`/x`, `\x`, `C:x`); may point to a neighbour repository (`../payment-web`); normalised (`./api/` becomes `api`) |
+| `stack` | string | required | `dotnet`, `java`, `python`, `typescript`, `javascript` or `react` |
+| `commands` | object | `{}` | name → command line; lower-case name starting with a letter (letters, digits, `-`); non-empty line |
+| `baseBranch` | string | absent (falls back to the global `baseBranch`) | git ref; `null` counts as absent |
+| `mocking` | object | `{ "strategy": "microcks" }` | `strategy` is `microcks` or `inprocess`; `{}` means `microcks` |
+| `paths` | object | — | accepted unchecked; `skraft init` writes `{ "src": […], "tests": […] }` into it |
+| `contractTesting` | any | — | accepted unchecked |
+
+> **Coming next.** `paths` and `contractTesting` are accepted today but the engine does not
+> read them yet: they are read from lots 3 and 6.
+
+Quality thresholds (coverage, mutation…) are **not** configurable: no key carries them.
+
+### Validation and messages
+
+The engine validates the whole file and returns **every** error at once, joined with `; `,
+as `skraft-config.json is invalid: <error>; <error>…` (code `config-invalid`). In the
+messages, `<label>` is `component <name>` when the name is a string, `components[<index>]`
+otherwise.
+
+| Case | Exact message |
+| --- | --- |
+| not JSON | `skraft-config.json is not JSON: <parser message>` |
+| not an object | `skraft-config.json must hold a JSON object` |
+| global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
+| `components` not an array | `components must be an array` |
+| entry not an object | `components[<index>] must be an object` |
+| name | `components[<index>].name must be kebab-case, got <JSON value>` |
+| duplicate name | `component name <name> is used twice` |
+| unknown key | `<label>: unknown key <key> (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)` |
+| root | `<label>: root must be a path relative to the working copy` |
+| stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
+| `commands` not an object | `<label>: commands must be an object of command lines` |
+| command name | `<label>: command name "<name>" must be lower-case` |
+| empty line | `<label>: command <name> must be a non-empty command line` |
+| component `baseBranch` | `<label>: baseBranch must be a git ref, got <JSON value>` |
+| `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
+
+### Command lines
+
+A `commands` line runs **with no shell**, from the component's root. The same line therefore
+behaves the same way under sh, PowerShell and cmd.
+
+| Rule | Detail |
+| --- | --- |
+| Splitting | on blanks; the first word is the program |
+| Quotes | `"…"` and `'…'` keep blanks inside one argument; no escape character |
+| `{baseSha}` | replaced, before splitting, with the base SHA of the component's repository |
+| Shell syntax | a word written with no quotes that contains <code>&#124;</code>, `&`, `;`, `<` or `>` is refused |
+| Nothing interpreted | no variable, wildcard or redirection: each word goes to the program as is |
+| Program | looked up on the PATH (and PATHEXT under Windows); a path with `/` or `\` starts from the component's root |
+| Windows | a `.cmd` or `.bat` (npm, npx, gradlew.bat) goes through cmd.exe, arguments escaped |
+
+Messages refusing a line (prefixed with `command "<line>"` in a gate, with `"<line>"` in the
+doctor):
+
+| Case | Message |
+| --- | --- |
+| shell syntax | `uses shell syntax (<word>); put the steps in a script and call the script` |
+| unclosed quote | `has an unclosed <quote> quote` |
+| `{baseSha}` with no base | `uses {baseSha} but the run has no base for this repository` |
+
+To chain steps (`a && b`), write them in a script of the repository and call the script.
+
+### Gates
+
+A **gate** is a command whose name is one of the seven names below. They run in this order,
+whatever the order in the file:
+
+| Order | Name | Needs Docker when `mocking` = `microcks` |
+| --- | --- | --- |
+| 1 | `build` | no |
+| 2 | `format` | no |
+| 3 | `lint` | no |
+| 4 | `test` | yes |
+| 5 | `architecture` | yes |
+| 6 | `coverage` | yes |
+| 7 | `mutation` | yes |
+
+Any other command (`e2e`…) is not a gate: `skraft gate` does not run it, but `skraft doctor`
+checks it. A component with no gate command fails (gate `none`, class `environment`):
+`no gate command; give it at least one of build, format, lint, test, architecture, coverage,
+mutation in skraft-config.json`. A component stops at its first failing gate.
+
+With Microcks (the default), the engine asks once per call whether `docker info` answers, as
+soon as a gate 4 to 7 must run. Otherwise the gate fails: `Docker does not answer and <name>
+mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the
+component`.
+
+### Failure classes
+
+| Class | Case | Reason shown | Who acts |
+| --- | --- | --- | --- |
+| `environment` | program or folder not found, program cannot start | `<error>; install it or change the command in skraft-config.json` | a human, on the machine or the config |
+| `environment` | exit code 127 (sh) or 9009 (cmd) | `exited <code>` | same |
+| `environment` | program stopped by a signal | `<program> was stopped by <signal>; run it again` | same |
+| `environment` | line refused (shell syntax, quote, `{baseSha}`) | `command "<line>" <reason>` | same |
+| `environment` | Docker missing for Microcks | Docker message above | same |
+| `environment` | component with no gate command | `no gate command` message above | same |
+| `deterministic` | any other non-zero exit code | `exited <code>` | the code must change |
+
+### Changed components
+
+Without `--all`, `skraft gate` runs only the components **changed since their base**: files
+changed since the base SHA (commits, index, working tree) and untracked files, under the
+component's root. These do not count: files under `.copilot-tracking/` and files of a
+component nested inside this one. A component with no base (root outside any Git
+repository), or whose changes Git cannot list, counts as changed. `skraft gate --all` runs
+them all; from lot 3 on, it will be the scope that closes DELIVER.
+
+### Base rule
+
+The **base** of a repository is the commit it is compared from: `git merge-base HEAD <ref>`,
+computed in each component's repository and in the working copy's.
+
+| Priority | Source of `<ref>` | Journaled `source` |
+| --- | --- | --- |
+| 1 | `--base <ref>` | `flag` |
+| 2 | component `baseBranch` | `component` |
+| 3 | global `baseBranch` | `config` |
+| 4 | `main` | `default` |
+
+- When the ref has no local merge base, the engine tries `origin/<ref>`.
+- A folder outside any repository has no base; that is not an error.
+- With no merge base even with `origin/<ref>`: refused `base-unresolved`, one part per
+  repository without a base (`the working copy (<repository>) has no merge base with <ref>`
+  or `component <name> (<repository>) has no merge base with <ref>`), joined by `; `, then
+  `; set baseBranch in skraft-config.json or pass --base <ref>`.
+- When the config lists components and Git does not start: refused
+  `source-control-unavailable`.
+- The base is journaled in `run.started.base` at the **first** init of the slug. A resume
+  keeps the journaled base.
+
+### Detection (`skraft init` without a slug)
+
+The engine looks for projects in the working copy and in each `--add` folder, down to
+**3 levels**, skipping hidden folders and `node_modules`. A project under a project of the
+**same family** is not a component (a `.csproj` under a solution); a project of **another
+family** is one (a React front end under a .NET solution). Families: `dotnet`, `java`,
+`python`, `js` (typescript, javascript, react).
+
+In one folder, the first marker found in this order decides the stack:
+
+| Stack | Markers | `build` | `test` | Other commands |
+| --- | --- | --- | --- | --- |
+| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` | `dotnet build --nologo` | `dotnet test --nologo` | `format`: `dotnet format --verify-no-changes`; `mutation`: `dotnet stryker --since:{baseSha}` |
+| `java` (Maven) | `pom.xml` | `mvn -B -q -DskipTests package` (`./mvnw` when present) | `mvn -B -q test` (`./mvnw` when present) | — |
+| `java` (Gradle) | `build.gradle`, `build.gradle.kts` | `gradle build -x test` (`./gradlew` when present) | `gradle test` (`./gradlew` when present) | — |
+| `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` | `python -m compileall -q src` (`.` with no `src` folder) | `python -m pytest -q -p no:cacheprovider` | — |
+| `react` / `typescript` / `javascript` | `package.json` | `npm run build` when a `build` script exists, otherwise `npx tsc --noEmit` (not for javascript) | `npm test` when a `test` script exists, otherwise `npx vitest run` with a vitest dependency, otherwise `npx jest` with a jest dependency | `lint`: `npm run lint` when a `lint` script exists |
+
+For `package.json`: `react` with a `react` dependency, otherwise `typescript` when
+`tsconfig.json` exists or with a `typescript` dependency, otherwise `javascript`. The
+dependencies read are `dependencies` and `devDependencies`.
+
+Proposed `paths`:
+
+| Stack | `src` | `tests` |
+| --- | --- | --- |
+| `dotnet`, `python` | `src/` when it exists, otherwise `./` | `tests/` and/or `test/` when they exist |
+| `java` without modules | `src/main/` | `src/test/` |
+| `java` Maven with modules | the `pom.xml` `<module>`s other than test modules | the modules whose name holds the word `test`, `tests` or `it` (alone or separated by `-`) |
+| JS / TS / React | `src/` when it exists, otherwise `./` | `tests/`, `test/`, `__tests__/` when they exist, otherwise as `src` |
+
+**Name**: the folder name in kebab-case (`PaymentApi` becomes `payment-api`), the working
+copy's folder name for the root, `app` when nothing is left; `-2`, `-3`… when the name is
+taken. A root already listed is not proposed again. The engine writes neither `mocking` nor
+`baseBranch`: the defaults apply.
+
+## Why this practice
+
+> « Don't Assume It—Prove It. »
+> — Hunt, A. & Thomas, D., *The Pragmatic Programmer, 20th anniversary ed.*, 2019.
+
+A gate does not assume the code works: it proves it with a command. Written in a versioned file and run by the engine with no
+shell, they give the same result on every machine and under every host. What differs from
+one machine to another is settled in the config, not in an agent's prose.
+
+## Pitfalls & anti-patterns
+
+- **A shell chain in `commands`** (`npm ci && npm test`): refused. Put the steps in a script
+  and call it.
+- **Relying on an environment variable** (`$HOME`, `%PATH%`) in a line: it goes to the
+  program as is.
+- **A misspelt gate name** (`Test`, `unit-test`): it is not a gate and never runs in
+  `skraft gate`.
+- **An absolute root**: refused; a neighbour repository is written `../name`.
+- **Forgetting Docker with Microcks**: switch the component to `inprocess` when it does not
+  mock with Microcks.
+
+## Going further
+
+- [Configure the components]({{ "/en/how-to/configure-components" | relative_url }})
+- [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
+- [What you can adapt, and the risk]({{ "/en/how-to/customisation" | relative_url }})
+- [The skraft command line]({{ "/en/reference/cli" | relative_url }})
+- [Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})
+
+## Sources
+
+- Hunt, A. & Thomas, D. *The Pragmatic Programmer, 20th anniversary ed.*, 2019.
+
+Terms to know: **component**, **gate**, **base**, **Microcks** — see the
+[glossary]({{ "/en/reference/glossary" | relative_url }}).

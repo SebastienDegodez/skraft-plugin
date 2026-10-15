@@ -1,117 +1,64 @@
 ---
 layout: doc
 lang: fr
-title: "Customisation"
-description: "Ce que SKRAFT permet de personnaliser et le risque de réduire les contrôles : gates, lentilles, reviewers. Guide pour adapter le pipeline sans casser les garanties."
+title: "Personnaliser SKRAFT"
+description: "Ce que vous pouvez adapter aujourd'hui en V2 (composants, commandes, base, mocking), ce qui arrive aux lots suivants, et le risque de chaque contrôle que vous réduisez."
 persona: tech-lead
 ---
 
-# Customisation
+# Personnaliser SKRAFT
 
-SKRAFT est un framework, pas un carcan. Chaque composant est conçu pour être adapté à votre contexte — mais certaines contraintes ne sont pas négociables. Cette page distingue ce qui peut changer de ce qui ne doit pas.
+**But** : adapter SKRAFT à votre dépôt sans retirer, par mégarde, une preuve dont votre équipe dépend.
 
-## Niveaux de customisation
+En V2, le **moteur** décide de l'ordre des phases, des sorties attendues, des relances, des verdicts et des gates. Vous ne réglez pas ces décisions ; vous décrivez votre dépôt dans `skraft-config.json`, et le moteur s'y tient.
 
-| Niveau | Quoi | Exemples | Citation |
-|--------|------|----------|----------|
-| **L1 — Surface** | Textes de prompts, vocabulaire, glossaire métier | Renommer les labels, adapter les templates de story, traduire les messages | Evans (2003) : le langage ubiquitaire doit refléter le domaine |
-| **L2 — Cycles** | Profondeur des phases, seuils de qualité, itérations reviewer | Ajuster le mutation score floor, changer le nombre de retries, configurer la profondeur du Walking Skeleton | Beck (2004) : scope, temps, coût et qualité sont des variables à gérer |
-| **L3 — Invariants** | Structure des artefacts, contrats inter-agents, CQS | Modifier le format de `state.json`, changer le protocole de verdict | Martin (2017) : l'architecture protège les cas d'usage |
+## Ce que vous pouvez adapter aujourd'hui
 
-> « A model is a selectively simplified and consciously structured form of knowledge. »
-> — Evans, E., *Domain-Driven Design*, 2003.
+Tout passe par `skraft-config.json`, à la racine de la copie de travail qui lance le run.
 
-**Règle d'or** : L1 est libre, L2 est configurable avec précaution, L3 nécessite une compréhension profonde du système et peut casser les garanties du pipeline.
+| Quoi | Où | Effet | Guide |
+|---|---|---|---|
+| Les composants | `components[]` : `name`, `root`, `stack` | Ce que le moteur construit et teste, y compris un dépôt voisin (`../payment-web`) | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
+| Les commandes | `commands` d'un composant | Une commande écrite par vous est **toujours** celle qui tourne ; le moteur ne la remplace jamais par un défaut | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
+| Les gates | les commandes nommées `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | Ce que `skraft gate` lance, dans cet ordre | [Lancer les gates]({{ "/fr/how-to/run-gates" | relative_url }}) |
+| La base | `baseBranch` global ou par composant, `--base <ref>` à l'init | Le commit de comparaison : composants modifiés, `{baseSha}` dans les commandes | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
+| Le mocking | `mocking.strategy` : `"microcks"` ou `"inprocess"` | `microcks` (défaut) exige Docker pour les gates de test ; `inprocess` ne l'exige pas | [Configurer les composants]({{ "/fr/how-to/configure-components" | relative_url }}) |
 
-## Invariants opposables
+Ce qui ne se règle pas :
 
-Ces contraintes sont non négociables. Chaque invariant est défendu par une référence académique ou industrielle.
+- Les **seuils qualité** ne sont pas configurables.
+- L'ordre des phases, le nombre de tentatives d'un agent et les codes de blocage sont dans le moteur.
+- Les clés `paths` et `contractTesting` d'un composant sont acceptées, mais le moteur ne les lit qu'à partir des lots 3 et 6.
 
-| Invariant | Pourquoi | Référence |
-|-----------|----------|-----------|
-| Tests d'acceptation avant code | Les scénarios BDD définissent le comportement attendu avant toute implémentation | Adzic, G., *Specification by Example*, 2011 |
-| Mutation score floor | Le coverage de lignes est insuffisant — le mutation testing vérifie l'efficacité réelle des tests | Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011 |
-| Reviewer en lecture seule (CQS) | Poser une question ne doit pas changer la réponse — le reviewer ne modifie jamais les artefacts | Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997 |
-| Une story = un Use Case | Chaque passage dans le pipeline traite exactement un Use Case, pas de batching | Cockburn, A., *Writing Effective Use Cases*, 2001 |
-| Walking Skeleton d'abord | La première itération traverse toutes les couches de bout en bout | Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009 |
-| Outside-In TDD | Les tests partent du comportement observable et descendent vers les détails internes | Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009 |
-| Object Calisthenics | Contraintes de design appliquées au code métier pour forcer la qualité structurelle | Bay, J., *Object Calisthenics*, 2008 |
+Les autres clés de premier niveau de `skraft-config.json` sont conservées telles quelles par `skraft init`.
 
-## Étendre une phase
+## Ce qui arrive
 
-Vous pouvez ajouter une étape à une phase existante — par exemple, insérer un `security-reviewer` entre DESIGN et DISTILL. Voici la marche à suivre :
+> **À venir.** Éjecter le workflow (graphe DOT) dans votre dépôt pour l'adapter : lot 3 ; ses gates de DELIVER seront verrouillées et ne se retireront qu'avec `unlock="<raison>"`. Agents et lentilles propres à votre dépôt : lots 3 et 4. Feuille de route complète : [Accueil]({{ "/fr/" | relative_url }}) ; pourquoi ces décisions restent dans le moteur : [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
 
-### 1. Créer l'agent
+## Risques — réduire les contrôles
 
-Créez un fichier d'agent `.md` en suivant les contrats visibles dans le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }}). Définissez clairement :
-- Son rôle (exécuteur ou reviewer)
-- Son contrat d'entrée/sortie
-- Ses invariants
+Chaque réglage ci-dessus peut aussi **retirer une preuve**. Le moteur fait tourner ce que vous écrivez : il ne sait pas si votre commande teste vraiment quelque chose. Avant de réduire un contrôle, écrivez la raison quelque part où l'équipe la lira (la description de PR, un ADR).
 
-Créez les deux versions d'exécution à plat sous `plugins/skraft-framework/` :
-`com.github.copilot/agents/<id>.agent.md` et `com.anthropic.claude-code/agents/<id>.md`.
-Déclarez explicitement les outils et le modèle natifs de chaque client. Ce sont les seuls deux arbres éditables.
-Lancez `npm run plugin:sync` puis `npm run plugin:check` : corps et description se synchronisent
-dans les deux sens contre un baseline par client, avec traduction des destinations Markdown.
-Les en-têtes natifs restent intacts ; les éditions contradictoires bloquent toute écriture.
-Enregistrez le fichier natif dans le manifeste Claude ; gardez les flags de visibilité internes.
-Placez chaque règle que suit l'agent dans le corps de son descripteur : le plugin ne livre aucune
-règle path-scoped, et aucun hook n'injecte de fichier de règles dans un agent.
+| Ce que vous faites | Ce qui disparaît | Le signe à surveiller |
+|---|---|---|
+| Retirer une gate d'un composant (supprimer `mutation`, `architecture` ou `coverage`) | La preuve correspondante : plus de mutation testing, plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans la sortie de `skraft gate` ni dans `gates/<composant>/` |
+| Remplacer une commande par une qui ne teste rien (`"test": "node -e 0"`, un script qui sort toujours 0, un filtre qui exclut presque tous les tests) | Toute la gate : elle passe à chaque fois, quel que soit le code | Une preuve `pass` dont `stdout` ne montre aucun test lancé |
+| Passer un composant en `inprocess` sans test de contrat | La garantie que vos mocks ressemblent encore au vrai service ; les tests passent contre une dépendance imaginaire | Des tests verts, puis une panne à l'intégration |
+| Laisser un composant sans gate | Rien ne prouve ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans la sortie de `skraft gate` |
+| Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé : des composants touchés ne sont plus retenus par `skraft gate` | `no component changed since its base; no gate to run` alors que vous avez modifié du code |
+| Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : la chaîne casse et le run est bloqué en `journal-tampered` | Voir [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }}) |
 
-### 2. Enregistrer dans l'orchestrateur
+Pour vérifier qu'une gate prouve encore quelque chose, ouvrez sa preuve (`.copilot-tracking/skraft-plans/<slug>/gates/<composant>/<gate>-<n>.log`) et lisez ce que la commande a réellement fait.
 
-Ajoutez l'agent dans la configuration de l'orchestrateur, en précisant :
-- Sa position dans la séquence des phases
-- Les conditions de dispatch (après quel agent, avant quel agent)
-- Le format de verdict attendu (si reviewer)
-
-### 3. Respecter CQS
-
-Si votre agent est un reviewer, il **doit** être en lecture seule. S'il est un exécuteur, il **doit** produire des artefacts dans le format attendu par la phase suivante.
-
-### 4. Tester la chaîne
-
-Exécutez un cycle complet du pipeline avec votre nouvel agent pour vérifier que :
-- Les artefacts circulent correctement entre les phases
-- Les verdicts sont correctement interprétés par l'orchestrateur
-- Le retry fonctionne en cas de rejet
-
-> « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
-> — Martin, R. C., *Clean Architecture*, 2017.
-
-## ⚠️ Risques de réduction des contrôles
-
-> **Principe** : chaque contrôle supprimé est un angle mort qui ne sera découvert qu'en production — là où le coût de correction est le plus élevé (estimé). La décision d'affaiblir un contrôle doit être documentée dans un ADR.
-
-### Supprimer ou affaiblir un gate
-
-Chaque gate protège un invariant précis (voir le [détail des 46 gates]({{ "/fr/reference/gates" | relative_url }})). Supprimer un gate signifie que la phase suivante démarrera sans garantie que les critères de la phase précédente sont remplis.
-
-| Action | Risque | Ce qui disparaît |
-|--------|--------|-----------------|
-| Affaiblir le DoR en DISCUSS (G7) | Stories mal définies en DESIGN | Vérification du DoR (Definition of Ready) |
-| Supprimer la règle de dépendance en DESIGN (G3) | Architecture non validée avant les tests | Détection des violations de Clean Architecture |
-| Abaisser le seuil de mutation en DELIVER (G6) | Tests de surface uniquement | Détection des tests qui ne testent pas vraiment |
-
-### Désactiver une lentille de revue
-
-Les 4 lentilles couvrent des angles complémentaires. Désactiver l'une d'elles crée un angle mort.
-
-| Lentille supprimée | Angle mort |
-|-------------------|------------|
-| `architecture-boundaries` | Les violations de frontières architecturales passent en PR humaine |
-| `test-integrity` | Les tests de façade (qui passent sans tester) ne sont pas détectés |
-| `quality-gates` | Les seuils de qualité (mutation, coverage) ne sont pas vérifiés |
-| `cold-reader` | La lisibilité du code n'est pas vérifiée : le prochain développeur sera perdu |
-
-### Passer un reviewer en mode écriture (violer CQS)
-
-Si un reviewer peut modifier des artefacts, il introduit un effet de bord dans la revue. Le verdict ne reflète plus l'état original — il reflète un état modifié par le reviewer lui-même. C'est une violation du principe CQS qui peut produire des résultats non reproductibles.
-
-> **Règle** : ne jamais donner à un reviewer le droit d'écrire dans les artefacts. Si vous souhaitez qu'un agent améliore automatiquement les artefacts, créez un agent *exécuteur* distinct, pas un reviewer.
+Ce que mesure le mutation testing, et pourquoi le retirer coûte cher : [Glossaire]({{ "/fr/reference/glossary" | relative_url }}) (Jia & Harman, 2011).
 
 ## Voir aussi
 
-- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — Vue CQS du pipeline
-- [Concepts fondamentaux]({{ "/fr/explanation/concepts" | relative_url }}) — CQS, CQRS, Walking Skeleton
-- [Pipeline]({{ "/fr/explanation/pipeline/" | relative_url }}) — Description de chaque phase
+- [Référence skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }})
+- [Zéro hook, contrôles dans le moteur]({{ "/fr/explanation/hooks" | relative_url }})
+- [Architecture : moteur et pilotes]({{ "/fr/explanation/architecture" | relative_url }})
+
+## Sources
+
+- Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.

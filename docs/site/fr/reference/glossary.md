@@ -24,6 +24,10 @@ Tout fichier produit par le pipeline : stories raffinées, ADR, scénarios BDD, 
 
 ## B
 
+**Base**
+Point de comparaison d'un dépôt : `git merge-base HEAD <ref>`, avec `main` par défaut. Elle décide quels composants ont changé et remplace `{baseSha}` dans les commandes. Journalisée au démarrage du run.
+→ Voir [Base]({{ "/fr/reference/skraft-config" | relative_url }})
+
 **BDD (Behaviour-Driven Development)**
 Méthode de développement où les comportements attendus sont décrits en langage naturel structuré (Gherkin : *Given / When / Then*) avant d'écrire le code. Permet aux non-développeurs de comprendre et valider les tests.
 
@@ -31,6 +35,14 @@ Méthode de développement où les comportements attendus sont décrits en langa
 Liste priorisée de fonctionnalités ou User Stories à développer. Le backlog est la "liste de courses" du projet.
 
 ## C
+
+**Classe d'échec**
+Nature d'une gate en échec : `environment` (la machine ou la config doit changer : programme absent, Docker arrêté) ou `deterministic` (la commande a échoué : le code doit changer).
+→ Voir [Classe d'échec]({{ "/fr/how-to/run-gates" | relative_url }})
+
+**Composant**
+Un projet du dépôt (ou d'un dépôt voisin) décrit dans `skraft-config.json` : racine, stack, commandes. Les gates tournent par composant.
+→ Voir [Composant]({{ "/fr/reference/skraft-config" | relative_url }})
 
 **Clean Architecture**
 Style d'architecture logicielle qui sépare les règles métier des détails techniques (bases de données, frameworks, interfaces). Proposé par Robert C. Martin.
@@ -62,11 +74,17 @@ Patron d'architecture où l'état d'un système est reconstruit à partir d'une 
 ## G
 
 **Gate (porte de qualité)**
-Point de contrôle entre deux phases du pipeline SKRAFT. Un gate définit des critères précis à remplir pour progresser. Si les critères ne sont pas atteints, la phase recommence.
-→ Voir [Gates]({{ "/fr/reference/gates" | relative_url }})
+Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même pour prouver la qualité. Chaque gate laisse un fichier de preuve et un événement `gate.ran`. Aujourd'hui, on les lance par `skraft gate` ; au lot 3, elles deviennent des étapes de DELIVER.
+→ Voir [skraft-config.json]({{ "/fr/reference/skraft-config" | relative_url }}) ; les gates de revue des skills de la v1 : [Gates (v1)]({{ "/fr/reference/gates" | relative_url }})
 
 **Gherkin**
 Langage structuré pour écrire des scénarios BDD : `Given` (contexte), `When` (action), `Then` (résultat attendu).
+
+## J
+
+**Journal (events.jsonl)**
+Fichier du dossier de suivi où le moteur écrit un événement par ligne, chaque ligne portant le hachage de la précédente. L'état du run est recalculé depuis lui ; une modification à la main est détectée.
+→ Voir [Journal (events.jsonl)]({{ "/fr/reference/run-journal" | relative_url }})
 
 ## L
 
@@ -74,10 +92,18 @@ Langage structuré pour écrire des scénarios BDD : `Given` (contexte), `When` 
 Vocabulaire partagé entre développeurs et experts métier, utilisé aussi bien dans les conversations que dans le code. Concept central du DDD.
 
 **Lentille (reviewer lens)**
-Dans SKRAFT, un point de vue spécialisé appliqué lors de la revue adverse. Les 4 lentilles sont : `architecture-boundaries`, `cold-reader`, `quality-gates`, `test-integrity`.
+Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un agent isolé. Lentilles de DELIVER livrées avec le plugin : `architecture-boundaries`, `cold-reader`, `contract-fidelity`, `mock-fidelity`, `test-integrity` (`quality-gates` est retirée en V2 : le moteur lance les gates lui-même). Au lot 4, le pilote d'hôte lance les lentilles et le moteur calcule le verdict ; DESIGN et DISTILL reçoivent leurs propres lentilles.
 → Voir [Lentilles]({{ "/fr/dashboard/" | relative_url }})
 
 ## M
+
+**Microcks**
+Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; il tourne dans Docker. C'est le mocking par défaut d'un composant (`"mocking": { "strategy": "microcks" }`) : les gates `test`, `architecture`, `coverage` et `mutation` exigent alors que Docker réponde. `inprocess` s'en passe.
+→ Voir [Microcks]({{ "/fr/reference/skraft-config" | relative_url }})
+
+**Moteur**
+Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties attendues, relances, gates), le même sur tous les hôtes.
+→ Voir [Moteur]({{ "/fr/explanation/architecture" | relative_url }})
 
 **Mutation testing**
 Technique qui modifie légèrement le code source (introduit des "mutants") pour vérifier que les tests les détectent. Un test qui ne détecte pas un mutant est un test faible.
@@ -93,18 +119,26 @@ Variante du TDD où les tests commencent au niveau le plus externe (comportement
 
 ## P
 
+**Pilote d'hôte**
+La partie de SKRAFT propre à un hôte (mod Claude Code, workflow Copilot CLI) qui lance les agents et pose les questions que le moteur demande, sans rien décider.
+→ Voir [Pilote d'hôte]({{ "/fr/explanation/architecture" | relative_url }})
+
 **Pattern (patron d'architecture)**
 Solution éprouvée à un problème récurrent. Les patterns SKRAFT (DDD, Clean Architecture, CQRS...) sont documentés avec leur référence d'origine.
 → Voir [Patterns]({{ "/fr/reference/patterns" | relative_url }})
 
 **Pipeline**
-Flux d'artefacts SKRAFT : DISCOVER puis DISCUSS sont deux workflows produit autonomes et optionnels. `skraft-orchestrator` séquence ensuite RESEARCH → DESIGN → DISTILL → DELIVER à partir d'une story affinée.
+Les quatre phases RESEARCH → DESIGN → DISTILL → DELIVER qu'une story traverse. Le moteur décide de chaque étape et un pilote d'hôte lance les agents. Aujourd'hui, seule RESEARCH est conduite par le moteur ; DESIGN, DISTILL et DELIVER arrivent au lot 3. DISCOVER et DISCUSS restent des workflows produit optionnels, en amont.
 → Voir [Le pipeline]({{ "/fr/explanation/pipeline/" | relative_url }})
+
+**Pipeline actif**
+Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur lequel agissent `skraft status`, `skraft gate` et la reprise. Un par copie de travail (donc par worktree) ; il ne change que par un init explicite, jamais deviné.
+→ Voir [Pipeline actif]({{ "/fr/reference/run-journal" | relative_url }})
 
 ## R
 
 **Reviewer**
-Agent IA en lecture seule qui émet un verdict (`APPROVE`, `CONDITIONAL_APPROVE`, `REJECT`) sur les artefacts produits par un agent exécuteur. Un reviewer ne modifie jamais les artefacts (principe CQS).
+Agent IA en lecture seule qui juge les artefacts d'un agent exécuteur, sans jamais les modifier (principe CQS). En V2, les reviewers de phase laissent la place à des lentilles isolées dont le moteur combine les findings en verdict (lot 4).
 
 **Rework**
 Travail à refaire parce qu'il n'a pas passé la revue. SKRAFT vise à réduire le rework en filtrant les défauts tôt dans le pipeline.
@@ -115,8 +149,13 @@ Travail à refaire parce qu'il n'a pas passé la revue. SKRAFT vise à réduire 
 Dans SKRAFT, une pratique outillée encapsulée dans un fichier `SKILL.md`. Une skill définit quoi faire, comment le faire et quelles références la justifient.
 → Voir [Skills]({{ "/fr/dashboard/" | relative_url }})
 
+**Slug**
+Le nom kebab-case d'un pipeline (`checkout-by-card`), choisi par le développeur. Un slug = un pipeline = un dossier `.copilot-tracking/skraft-plans/<slug>/`. Ni le moteur ni un agent ne le choisissent.
+→ Voir [Slug]({{ "/fr/reference/run-journal" | relative_url }})
+
 **State.json**
-Fichier de traçabilité produit par le pipeline SKRAFT. Il contient l'historique des phases, artefacts et verdicts pour une User Story.
+Fichier d'état de la v1 (`.copilot-tracking/skraft-plans/<slug>/state.json`), réécrit à chaque transition. En V2, il est remplacé par le journal `events.jsonl` ; `skraft migrate` (lot 11) convertira un `state.json` en cours.
+→ Voir [Journal (events.jsonl)]({{ "/fr/reference/run-journal" | relative_url }})
 
 ## T
 
@@ -138,7 +177,7 @@ Description courte d'une fonctionnalité du point de vue de l'utilisateur : "En 
 ## V
 
 **Verdict**
-Résultat d'une revue par un reviewer : `APPROVE` (validé), `CONDITIONAL_APPROVE` (validé sous conditions), `REJECT` (à corriger). Un `REJECT` déclenche une correction et une nouvelle revue.
+Résultat d'une revue. En V2, le moteur le calcule à partir des findings typés des lentilles (lot 4) : `APPROVED`, `NEEDS_REWORK` (relance de l'agent avec les findings) ou `REJECTED`. La v1 utilisait `APPROVE`, `CONDITIONAL_APPROVE` et `REJECT`.
 
 ## W
 
@@ -153,6 +192,7 @@ Les termes de ce glossaire sont définis d'après leurs ouvrages de référence 
 - Martin, R. C. *Clean Architecture*, 2017 — Clean Architecture, CQS.
 - Beck, K. *Test-Driven Development by Example*, 2003 — TDD.
 - Freeman, S. & Pryce, N. *Growing Object-Oriented Software, Guided by Tests*, 2009 — Outside-In TDD, Walking Skeleton.
-- Wiegers, K. *Peer Reviews in Software*, 2002 — revue, gate.
+- Wiegers, K. *Peer Reviews in Software*, 2002 — revue.
+- Jia, Y. & Harman, M. *An Analysis and Survey of the Development of Mutation Testing*, 2011 — mutation testing.
 
 La bibliographie complète est sur la page [Citations]({{ "/fr/reference/citations" | relative_url }}).

@@ -2,84 +2,148 @@
 layout: doc
 lang: fr
 title: "Architecture"
+description: "Comment SKRAFT V2 sépare un moteur à cas d'usage, le même partout, des pilotes d'hôte qui lancent les agents, et pourquoi les contrôles vivent dans le code."
 persona: tech-lead
 ---
 
 # Architecture
 
-SKRAFT applique le principe CQS (Command-Query Separation) au niveau système. L'orchestrateur dispatche des commandes vers des agents exécuteurs, qui produisent des artefacts. Les agents reviewers lisent ces artefacts et émettent des verdicts — ils ne modifient jamais rien.
+> Un seul moteur décide de tout ; chaque hôte le fait tourner avec ce qu'il sait faire. Seul
+> le pilote lance des agents, et aucun agent n'en lance un autre.
 
-> « Asking a question should not change the answer. »
-> — Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997.
+## Le problème à résoudre
 
-## Vue d'ensemble (L1 + L2)
+SKRAFT doit faire le même pipeline sous Claude Code, GitHub Copilot CLI et VS Code, sur
+Windows et macOS. Ces hôtes n'offrent pas les mêmes moyens : l'un lance un agent par
+`$.agent.spawn`, l'autre par `ctx.agent`, le troisième n'a ni l'un ni l'autre.
 
-Cette vue reste à deux niveaux : **L1** les racines invocables et **L2** les agents
-du pipeline d'ingénierie et leurs reviewers déclarés. DISCOVER puis DISCUSS sont
-deux workflows produit autonomes et optionnels ; ils précèdent l'orchestrateur
-sans être ses enfants. Le fan-out interne **L3** (câblage des
-tests dans DELIVER) a ses propres pages de zoom — voir *Zoomer plus loin* ci-dessous.
+En v1, l'ordre des phases et les verdicts vivaient dans la prose d'un agent orchestrateur.
+Chaque hôte et chaque modèle la suivaient à leur façon. La V2 sort ces décisions de la prose
+et les met dans du code testé, le même partout.
+
+## Le moteur à cas d'usage
+
+Le **moteur** (`plugins/skraft-framework/engine/`) est découpé en quatre couches.
+
+| Couche | Contenu | Ce qu'elle peut importer |
+| --- | --- | --- |
+| `domain/` | Règles pures : étape suivante, sorties attendues, état dérivé du journal, configuration, gates | `domain/` seulement |
+| `application/` | Cas d'usage : `Init`, `RunPipeline`, `Observe`, `RunGate`, `Doctor`… et leurs contrats (lancer un agent, montrer la progression, lire et écrire le journal) | `domain/` et `application/` |
+| `infrastructure/` | Fichiers, git, processus, horloge, empreintes | Les contrats de `application/`, jamais un pilote ni un cas d'usage |
+| `drivers/` | Un pilote par hôte : `claude-mod/`, `copilot-workflow/`, `copilot-sdk/`, `cli/` | Ce qu'il assemble ; jamais un autre pilote |
+
+Un **cas d'usage** est une action complète du point de vue de l'utilisateur : démarrer un
+pipeline, le faire avancer, observer son état, lancer les gates. Il décide ; il ne fait
+aucune entrée-sortie lui-même.
+
+`domain/` et `application/` n'utilisent ni modules `node:`, ni `process`, ni
+`child_process`, ni `$`. C'est la condition pour que le même code soit chargé par le module
+du mod Claude Code, qui n'a pas Node, et par le workflow Copilot, qui l'a. Une règle
+d'architecture testée l'impose.
+
+> « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
+> — Martin, R. C., *Clean Architecture*, 2017.
+
+## Les pilotes d'hôte
+
+Un **pilote d'hôte** relie le moteur à un hôte. Il fournit au moteur de quoi lancer un agent
+et montrer la progression, puis appelle le cas d'usage. Il ne décide ni de l'ordre, ni du
+verdict, ni de l'avancement.
+
+| Pilote | Lance les agents par | Montre le run | Point d'entrée | Disponible |
+| --- | --- | --- | --- | --- |
+| Mod Claude Code | `$.agent.spawn` | Panneau « Skraft » | `/skraft …`, outil `mcp__skraft__run_pipeline` | Oui |
+| Workflow dynamique Copilot CLI | `ctx.agent`, rejoué à la reprise | Journal du workflow (`ctx.log`) ; Canvas au lot 8 | workflow `skraft-pipeline`, outil `skraft_decide` | Oui |
+| VS Code, SDK Copilot | Le même pilote que le workflow | Canvas | — | Lot 10 |
+| VS Code, repli | L'agent orchestrateur, sur l'étape rendue par `skraft next` | `WORKFLOW.md` | `skraft next` / `skraft record` | Lot 10 |
+| Ligne de commande `skraft` | — (ne lance pas d'agent aujourd'hui) | Texte ou JSON | `init`, `status`, `gate`, `doctor` | Oui |
+
+Dans le mod, chaque appel à `$` reste une fonction d'une ligne dans le module enregistré.
+Le reste du pilote reçoit ces fonctions et se teste sans Claude Code.
+
+> **À venir.** Les questions à l'humain (`$.ui.ask`, `ctx.pause`, `skraft decide`) : prévues
+> au lot 5. Le Canvas Copilot et la vue complète du panneau : prévus au lot 8.
+
+## La boucle pilote ↔ moteur
+
+Le pilote appelle `RunPipeline`. Le moteur relit le journal, calcule l'étape suivante,
+pré-crée la sortie attendue depuis son template, journalise le lancement, puis demande au
+pilote de lancer l'agent. Quand l'agent rend la main, le moteur vérifie lui-même la sortie
+et journalise le résultat avant de décider de la suite.
 
 ```mermaid
-graph TB
-    BD[backlog-discoverer] -.->|si les deux sont utilisés| BP[backlog-planner]
-    BP -.->|story affinée| O[skraft-orchestrator]
-    O -->|dispatch| SR[solution-researcher]
-    O -->|dispatch| SA[solution-architect]
-    O -->|dispatch| AD[acceptance-designer]
-    O -->|dispatch| SE[software-engineer]
-    
-    SR -->|writes| A0[recherche sourcée]
-    SA -->|writes| A3[ADRs + diagrams]
-    AD -->|writes| A4[Gherkin scenarios]
-    SE -->|writes| A5[tested code]
-    
-    A3 -.->|reads| SAR[solution-architect-reviewer]
-    A4 -.->|reads| ADR[acceptance-designer-reviewer]
-    A5 -.->|reads| SER[software-engineer-reviewer]
-    
-    SAR -->|verdict| O
-    ADR -->|verdict| O
-    SER -->|verdict| O
-    
-    O -.->|reads| S[(state.json)]
-    
-    style O fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
-    style S fill:#1a2a3a,stroke:#7fd3ff
+sequenceDiagram
+    participant P as Pilote d'hôte
+    participant M as Moteur (RunPipeline)
+    participant J as events.jsonl
+    participant A as Agent
+    P->>M: lancer ou reprendre le pipeline actif
+    loop jusqu'à done ou blocked
+        M->>J: relire et vérifier la chaîne
+        M->>M: étape suivante
+        M->>J: step.started (sorties, tentative)
+        M->>P: lancer l'agent avec le brief
+        P->>A: spawn (profondeur 1)
+        A-->>P: fin, sortie écrite au chemin donné
+        P-->>M: réponse (ok, coût)
+        M->>M: sortie remplie ?
+        M->>J: step.recorded / phase.closed
+    end
+    M-->>P: done ou blocked, avec la raison
 ```
 
-## Légende
+Une sortie absente déclenche une seconde tentative avec la liste des chemins manquants, puis
+un arrêt nommé `missing-outputs`. Un agent que l'hôte ne peut pas lancer arrête le run sur
+`agent-unavailable` sans consommer la tentative.
 
-| Flèche | Signification |
-|--------|---------------|
-| **Trait plein** orchestrateur → exécuteur | Commande (côté command de CQS) |
-| **Trait plein** exécuteur → artefact | Écriture — l'exécuteur produit un artefact |
-| **Trait pointillé** artefact → reviewer | Lecture seule (côté query de CQS) |
-| **Trait plein** reviewer → orchestrateur | Verdict (PASS / FAIL + motifs) |
-| **Trait pointillé** orchestrateur → state.json | Modèle de lecture CQRS |
+## Profondeur 1
 
-## Zoomer plus loin — le fan-out interne de DELIVER (L3)
+Seul le pilote lance des agents. Aucun agent ne lance un autre agent, lentilles de revue
+comprises. En v1, le reviewer de DELIVER lançait ses lentilles (profondeur 2) : un coût de
+contexte en plus, des contrôles dupliqués, et un comportement qui dépendait de l'hôte.
 
-Cette page s'arrête volontairement à L1 + L2. Dans DELIVER, le `software-engineer`
-(L2) ne câble pas les tests d'intégration à la main : il **dispatche des sous-agents
-internes** (L3, `user-invocable: false`) pour ce wiring. Le lead garde le cycle TDD
-métier et vérifie chaque worker en TIER-1 (RED → GREEN). Quand une capacité est
-active, sa **lentille de fidélité** rejoint le panel adverse du
-`software-engineer-reviewer`.
+À profondeur 1, le pilote peut lancer plusieurs agents en parallèle quand l'hôte le permet,
+et le moteur voit chaque lancement dans son journal.
 
-Chaque fan-out L3 a sa propre page de zoom pour que ce schéma reste lisible :
+> **À venir.** Les lentilles lancées en parallèle par le pilote et le verdict calculé par le
+> moteur : prévus au lot 4.
 
-| Capacité L3 | Ce qu'elle câble | Page de zoom |
+## Les contrôles dans le code
+
+Ce qu'un agent pourrait oublier, le moteur le vérifie.
+
+| Contrôle | Où | Disponible |
 | --- | --- | --- |
-| Mocking du dépendant aval | `mock-integration-worker` → roster de stratégie → Microcks (défaut) / in-process | [Zoom L3 : mocking (Microcks)]({{ "/fr/explanation/deep-dive/mocking-microcks" | relative_url }}) |
-| Test de contrat fournisseur | `contract-testing-worker` → roster → intégration in-process + Microcks (opt-in) | [Zoom L3 : contract testing]({{ "/fr/explanation/deep-dive/contract-testing" | relative_url }}) |
+| Ordre des phases | Domaine du moteur | Oui (RESEARCH) ; DESIGN, DISTILL, DELIVER au lot 3 |
+| Sorties attendues pré-créées et vérifiées | `RunPipeline` | Oui |
+| Intégrité du journal | Chaîne de hachage, vérifiée à chaque lecture | Oui |
+| Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commandes de `skraft-config.json` | Oui, lancées par `skraft gate` |
+| Droits d'écriture | Diff git après chaque étape | Lot 3 |
+| Verdict de revue | Findings typés, verdict calculé | Lot 4 |
 
-Voir aussi le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }}).
+## Alternatives écartées
 
-## Séparation stricte
+**Un moteur autonome, serveur ou binaire.** C'est le choix d'Archon et de Fabro : un
+exécuteur hors de l'hôte pilote les agents de l'extérieur. Il lui faut ses propres accès aux
+fournisseurs de modèles, et SKRAFT ne vivrait plus dans l'hôte du développeur. La V2 reprend
+leurs idées de modélisation (nœuds typés, « fini » prouvé par une commande, boucles
+plafonnées, classes d'échec, journal d'événements), pas leur forme d'exécution.
 
-Les exécuteurs **écrivent** des artefacts mais n'émettent jamais de verdict sur leur propre travail. Les reviewers **lisent** les artefacts et produisent un verdict, mais ne modifient jamais le code ni les documents. Cette séparation garantit que chaque artefact est validé par un regard indépendant.
+**Une boucle conduite par l'agent comme pilote principal.** Un agent appelle `skraft next`,
+fait l'étape, appelle `skraft record`. Cela marche partout, mais coûte un aller-retour par
+étape, met les lentilles en séquence et laisse l'avancement à un modèle qui peut s'écarter
+de la boucle. Elle restera seulement comme repli sous VS Code (lot 10), où le moteur
+refusera tout `next` tant que l'étape précédente ne sera pas enregistrée.
 
-Le fichier `state.json` sert de modèle de lecture (CQRS) : l'orchestrateur y enregistre la progression des phases et les verdicts, puis le consulte pour décider de la prochaine action.
+**Garder les hooks.** Voir [Garde-fous : du hook au moteur]({{ "/fr/explanation/hooks" | relative_url }}).
 
-Voir [Concepts fondamentaux]({{ "/fr/explanation/concepts" | relative_url }}) pour la théorie derrière CQS et CQRS.
+## Pour aller plus loin
+
+- [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }}) — le journal chaîné.
+- [Clean Architecture]({{ "/fr/explanation/clean-architecture" | relative_url }}) — la règle de dépendance appliquée au moteur.
+- [Référence : la ligne de commande skraft]({{ "/fr/reference/cli" | relative_url }}).
+- [Référence : dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}).
+
+## Sources
+
+- Martin, R. C., *Clean Architecture*, 2017.

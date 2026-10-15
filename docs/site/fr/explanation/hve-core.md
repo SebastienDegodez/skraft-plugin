@@ -1,95 +1,111 @@
 ---
 layout: doc
 lang: fr
-title: "Le substrat HVE-Core"
-description: "HVE-Core est le substrat de reprise du pipeline d'ingénierie : state.json, son schéma JSON, écriture déterministe et transitions conditionnées par les verdicts."
+title: "État et reprise"
+persona: tech-lead
+description: "Pourquoi SKRAFT V2 remplace state.json par un journal d'événements chaîné, d'où l'état est recalculé, et comment cela permet une reprise exacte et la détection des écarts."
 ---
 
-# Le substrat HVE-Core
+# État et reprise
 
-> HVE-Core fournit au pipeline d'ingénierie sa mémoire durable (`state.json`), sa
-> reprise après interruption et ses transitions conditionnées par les verdicts.
+> Le moteur n'écrit pas un état ; il écrit des faits. L'état se recalcule à chaque lecture,
+> et la reprise repart du dernier fait enregistré.
 
-## Pourquoi un substrat
+## Le problème : un état que tout le monde peut écrire
 
-Le pipeline piloté par `skraft-orchestrator` a besoin d'un point de vérité unique :
-où en est l'ingénierie, quel verdict a été rendu et combien de reprises ont eu lieu.
-Sans cela, chaque agent improviserait son propre état et la reprise après interruption
-serait impossible. DISCOVER, DISCUSS et les racines Brownfield restent des workflows
-autonomes. Ils ne mutent pas cet état.
+En v1, l'état du pipeline tenait dans `.copilot-tracking/skraft-plans/<slug>/state.json` :
+phase courante, verdicts, compteurs de reprise. C'était un instantané, réécrit à chaque
+transition.
 
-## `state.json` — la mémoire du pipeline
+Un instantané a trois faiblesses :
 
-L'état persiste en JSON à
-`.copilot-tracking/skraft-plans/{project-slug}/state.json`. Son contrat est le schéma JSON
-`plugins/skraft-framework/src/domain/state.schema.json`. Champs clés :
+- il ne dit pas **comment** on en est arrivé là ;
+- une écriture à la main, ou par un agent passant par le shell, est indiscernable d'une
+  écriture légitime ; la v1 avait besoin d'un hook (G7) pour l'interdire, et ce hook ne
+  lisait que les commandes POSIX ;
+- deux runs qui écrivent en même temps s'écrasent sans le savoir.
 
-```json
-{
-  "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE",
-  "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
-  "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
-  "retryCount": { "DESIGN": 0 },
-  "userPreferences": { "maxRetriesPerPhase": 2 },
-  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] }
-}
-```
+## Un journal d'événements à la place
 
-- `currentPhase` n'avance **que** sur un verdict `APPROVED`.
-- `phaseArtifacts`, `verdicts`, `retryCount` tracent ce que chaque phase a
-  produit et comment elle a été jugée.
-- `maxRetriesPerPhase` (défaut 2) borne les reprises avant escalade humaine.
-- `adrRatification` retient DESIGN tant qu'un humain n'a pas ratifié chaque ADR proposée.
+La V2 remplace `state.json` par `events.jsonl`, dans le même dossier de suivi. C'est un
+**journal d'événements** : un objet JSON par ligne, un événement par fait. Le run démarre
+(`run.started`), une étape est lancée (`step.started`), son résultat est enregistré
+(`step.recorded`), une phase se clôt (`phase.closed`), le run s'arrête ou finit
+(`run.stopped`, `run.finished`), une gate tourne (`gate.ran`). Chaque événement porte son
+type et son heure.
 
-La CLI d'état applique ce schéma à chaque lecture et écriture. Un champ que le schéma ne
-déclare pas, ou une valeur hors de sa forme, rend l'état invalide : aucun ancien format
-n'est migré. Un pipeline démarré avec une version antérieure s'arrête donc sur
-`INVALID_STATE` ; `state.mjs diagnose` indique la commande suivante, et après `reset`
-l'orchestrateur reconstruit l'état depuis les artefacts sur disque, avec votre confirmation.
+Le moteur écrit chaque fait dans le journal avant de décider de la suite. Il ne modifie
+jamais une ligne déjà écrite : il ajoute.
 
-L'état ne porte **aucun dial de qualité**. Les seuils de mutation et de couverture, les
-quatre lentilles de revue adverse, la porte Gherkin et la variante TDD Outside-In
-double-boucle sont fixés une fois pour toutes par la skill `skraft-quality-bar` ; ils
-sont identiques à chaque run, et rien de ce qui est écrit dans `state.json` ne peut les
-abaisser.
+> « At its heart is the notion that you can use a different model to update information than the model you use to read information. »
+> — Fowler, M., *Bliki: CQRS*, 2011.
 
-## Le modèle write-through
+## L'état est recalculé à la lecture
 
-`state.json` est un snapshot de sécurité, pas un bloc relu à chaque tour :
+Le journal est le modèle d'écriture. L'état (phase en cours, tentative, sorties manquantes,
+statut du run) est le modèle de lecture : le moteur le recalcule à chaque lecture en
+rejouant les événements. Aucun fichier d'état ne peut donc diverger du journal.
 
-1. **Rehydrate** — lire et valider le snapshot une fois au début de la session.
-2. **Execute** — décider depuis le dernier état affiché par la CLI, puis dispatcher l'agent ou demander une décision humaine.
-3. **Record** — appliquer chaque mutation par la CLI déterministe `state.mjs`, qui affiche l'état mis à jour.
+`skraft status` et le panneau « Skraft » du mod Claude Code lisent cette même vue
+recalculée. Les vues complètes, Canvas Copilot compris, sont prévues au lot 8.
 
-## Comment les phases s'articulent
+## Reprise exacte, sans rejouer un agent fini
 
-`skraft-orchestrator` est sélectionné avec une story affinée. Il séquence uniquement
-RESEARCH → DESIGN → DISTILL → DELIVER. RESEARCH peut être sauté quand un handoff HVE
-amont confirmé prouve qu'il est déjà satisfait ; il n'a pas de reviewer de phase déclaré. Les trois phases suivantes avancent selon
-les verdicts de leurs reviewers dédiés.
+Un run interrompu (hôte fermé, machine éteinte, agent arrêté) reprend là où il s'était
+arrêté : le moteur relit le journal et recalcule l'étape suivante. Rien n'est rejoué « pour
+voir ».
 
-```mermaid
-flowchart TD
-    O([skraft-orchestrator]) -->|READ / WRITE| S[(state.json)]
-    O --> D1[RESEARCH si nécessaire]
-    D1 --> D3[DESIGN]
-    D3 --> R3{reviewer}
-    R3 -->|APPROVED| D4[DISTILL]
-    R3 -->|CHANGES_REQUESTED| D3
-    D4 --> R4{reviewer}
-    R4 -->|APPROVED| D5[DELIVER]
-    R4 -->|CHANGES_REQUESTED| D4
-    D5 --> R5{reviewer}
-    R5 -->|APPROVED| DONE([DONE])
-    R5 -->|CHANGES_REQUESTED| D5
-```
+- Une étape lancée dont la sortie est déjà remplie est enregistrée sans relancer l'agent.
+- Une étape lancée dont la sortie manque relance l'agent, dans la même tentative.
+- Un agent que l'hôte n'a pas pu lancer (`agent-unavailable`) ne consomme pas sa tentative :
+  la reprise le relance.
+- La base de comparaison git est journalisée au premier démarrage du slug ; une reprise
+  garde celle-là.
 
-Sur `CHANGES_REQUESTED`, la même phase est re-dispatchée, `retryCount` augmente et
-`currentPhase` ne bouge pas. Quand le budget de reprises est atteint sans
-`APPROVED`, l'orchestrateur escalade à l'utilisateur.
+> **À venir.** Les questions à l'humain, avec une reprise exacte après la réponse, sont
+> prévues au lot 5. `skraft migrate`, qui convertira un `state.json` v1 en cours en journal,
+> est prévu au lot 11.
 
-## Voir aussi
+## Une chaîne de hachage pour détecter une modification
 
-- [Traces & auditabilité](traces.html)
-- [HVE → SKRAFT](hve-vs-skraft.html)
-- [Architecture](architecture.html)
+Chaque ligne du journal porte dans `prev` l'empreinte SHA-256 de la ligne précédente
+(`null` pour la première). Modifier, supprimer ou insérer une ligne casse la chaîne.
+
+À la lecture suivante, le moteur le voit et s'arrête sur `journal-tampered`, en nommant la
+ligne fautive : il faut restaurer le fichier ou démarrer un nouveau slug. Le moteur ne
+« répare » rien et ne devine rien. Ce contrôle remplace le hook G7, sans coût par appel
+d'outil et de la même façon sur tous les hôtes.
+
+## Un second run qui écrit en même temps
+
+Si un autre run écrit dans le même journal pendant que celui-ci tourne, le moteur s'en
+aperçoit au moment d'ajouter son propre fait et s'arrête sur `journal-changed`. Deux runs ne
+peuvent pas s'écraser en silence ; on relance une fois l'autre run arrêté.
+
+## `.active-slug` : jamais deviné
+
+`.copilot-tracking/skraft-plans/.active-slug` désigne le pipeline actif de la copie de
+travail. Il est obligatoire. Sans lui, le moteur refuse (`no-active-pipeline`) au lieu de
+choisir le dernier dossier venu. On change de pipeline par un démarrage explicite :
+`/skraft <slug>`, `skraft init <slug>` ou le workflow avec `slug` rendent ce slug actif avant
+de lancer quoi que ce soit. Un appel qui nommerait un autre slug que l'actif sans cet init
+serait refusé (`slug-mismatch`) ; c'est un garde-fou interne, qu'aucune commande actuelle ne
+déclenche. Ni le moteur ni un
+agent ne choisissent un slug à la place du développeur.
+
+## Un pipeline par worktree
+
+Chaque worktree git a son propre `.copilot-tracking/`, donc son propre `.active-slug` et ses
+propres journaux. Deux stories avancent en parallèle dans deux worktrees sans partager
+d'état.
+
+## Pour aller plus loin
+
+- [Reprendre ou débloquer un run]({{ "/fr/how-to/resume-a-run" | relative_url }}).
+- [Référence : dossier de suivi, events.jsonl, codes]({{ "/fr/reference/run-journal" | relative_url }}).
+- [Garde-fous : du hook au moteur]({{ "/fr/explanation/hooks" | relative_url }}).
+- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}).
+
+## Sources
+
+- Fowler, M., *Bliki: CQRS*, 2011.

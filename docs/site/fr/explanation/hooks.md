@@ -1,261 +1,116 @@
 ---
 layout: doc
 lang: fr
-title: "Garde-fous (hooks)"
-description: "Pourquoi les hooks rendent les invariants Engineer/Reviewer mécaniquement infranchissables dans SKRAFT."
+title: "Garde-fous : du hook au moteur"
+description: "Pourquoi SKRAFT V2 part de zéro hook, ce qui remplace chaque garde-fou de la v1, et à quelle condition un hook peut revenir."
 sidebar_position: 18
+persona: tech-lead
 ---
 
-# Garde-fous — hooks SKRAFT
+# Garde-fous : du hook au moteur
 
-> « Le contrat n'a de valeur que s'il est mécaniquement infranchissable. »
-> — principe directeur du framework SKRAFT
+> En v1, des hooks surveillaient l'agent à chaque appel d'outil. En V2, le moteur qui lance
+> l'agent vérifie lui-même ce qui compte, avant et après chaque étape.
 
-## Le problème
+## Ce qu'était un garde-fou en v1
 
-Dans un pipeline SDLC agentique, les invariants critiques (aucun import de domaine
-depuis la couche Infra, audit-writer append-only, payload normalisé) sont documentés
-dans les skills et ADR. Mais un agent peut les ignorer : rien dans le runtime ne les
-fait respecter mécaniquement.
+Un **hook** est un programme que l'hôte lance sur un événement : avant un appel d'outil,
+au démarrage ou à l'arrêt d'un sous-agent, à l'ouverture d'une session. La v1 s'en servait
+pour faire respecter ses invariants : ordre des phases (G1), skills chargées (G2, G3),
+écriture directe dans `state.json` interdite (G7), droits d'écriture de l'orchestrateur
+(G8), complétude du brief d'un agent (G9).
 
-Sans garde-fous, chaque phase du pipeline expose l'invariant à la dérive silencieuse.
-La revue adverse détecte *après* ; les hooks détectent *avant*.
+L'idée était juste : un invariant ne vaut que s'il est appliqué mécaniquement. Ce qui a
+changé, c'est l'endroit où l'appliquer.
 
-## La solution — le harness de hooks
+## Pourquoi la V2 part de zéro hook
 
-SKRAFT cible les événements de Claude Code et Copilot CLI ; les limites de validation
-par client figurent ci-dessous. Chaque hook intercepte un événement
-(`PreToolUse`, `SubagentStop`, …), évalue le payload normalisé, et retourne une décision
-(`allow`, `deny`, `block`, `additionalContext`).
+### Un coût à chaque appel d'outil
 
-```
-Runtime du harness
-      │
-      ▼  PreToolUse (outil: bash, tool_input: …)
- hook.mjs ──► normalise(payload) ──► router ──► handler
-                                                    │
-                                          ┌─────────┤
-                                        allow     deny / block
-                                          │             │
-                                          └──► toHarnessOutput(décision, événement)
-                                                    │
-                                      exécution     bloqué
-```
+La v1 déclarait cinq entrées de hook sans filtre : chaque appel d'outil lançait un processus
+`node`, sur chaque hôte, pour chaque agent. Ce coût se payait même quand aucun invariant
+n'était en jeu. La V2 vise 0 ms de surcoût par appel d'outil.
 
-Ce vocabulaire de décision appartient à SKRAFT — aucun harness ne le comprend. Il est
-traduit à la sortie par `harness-output.mjs` vers le JSON que les runtimes valident
-réellement : un refus avant un outil voyage en `permissionDecision: "deny"`, un refus sur
-tout autre événement en `decision: "block"`, et un `allow` en aucune sortie du tout. Une
-seule enveloppe porte à la fois les clés racine que lit Copilot et le bloc
-`hookSpecificOutput` que lit Claude Code.
+### Un comportement inégal selon l'hôte
 
-La traduction n'est pas cosmétique : une décision écrite dans le vocabulaire interne échoue
-à la validation du schéma harness à la racine, le payload entier est jeté, et la garde
-devient un no-op qui laisse passer la violation. Voir
-[Hooks — référence]({{ "/fr/reference/infrastructure/hooks" | relative_url }}) pour le format
-de fil exact.
+Un hook dépend de ce que l'hôte lui transmet et de la façon dont il respecte sa réponse.
+Relevé sur la v1 :
 
-L'application du garde-fou exige que l'hôte charge le hook et respecte sa décision.
-Une réponse traduite `deny` ou `block` ne prouve pas à elle seule le blocage par l'hôte.
+- la provenance d'un lancement ne voyait jamais le nom de l'agent appelant ;
+- la trace de G3 restait inerte sous Claude Code ;
+- G8 bloquait DELIVER sous Copilot ;
+- G7 ne lisait que les commandes shell POSIX, pas PowerShell.
 
-## Structure du framework
+Un même pipeline se comportait donc différemment selon l'outil. C'est le contraire de ce que
+SKRAFT promet.
 
-Le framework est dans `plugins/skraft-framework/src/` à la racine du repo :
+### Des contrôles que le moteur fait déjà
 
-```
-plugins/skraft-framework/src/
-  domain/                ← politiques pures (aucune IO)
-    pipeline-policy.mjs        ordre de dispatch, provenance, continuation (G1, G6)
-    skill-policy.mjs           skills obligatoires/on-demand, chargements lus dans un transcript (G2, G3)
-    phase-gate-policy.mjs      règles de clôture de phase (G4, G5)
-    session-guard-policy.mjs   protection de l'état suivi, écritures orchestrateur (G7, G8)
-    handoff-policy.mjs         complétude du handoff de dispatch (G9)
-    state-machine.mjs          transitions qu'applique le CLI d'état
-    result.mjs, value-objects.mjs, …
+En V2, le moteur compose lui-même le brief de chaque agent, fixe ses sorties, et écrit le
+journal. Il n'a plus besoin de surveiller un modèle qui écrirait l'état par le shell : l'état
+n'est plus un fichier que l'agent modifie, c'est un journal que le moteur relit et vérifie.
 
-  ports/                 ← contrats JSDoc (duck-typing)
-    api/                 interfaces entrantes des hooks
-    infrastructure/      interfaces sortantes (audit, état, transcript…)
+Résultat : `hooks/hooks.json` ne déclare que le module du mod Claude Code. Aucun hook de
+commande n'est livré.
 
-  application/           ← un service par préoccupation de hook
-    pre-tool-use-composite.mjs   décisions G1, provenance et G7/G8/G9
-    subagent-start-service.mjs   G2
-    subagent-stop-service.mjs    G3
-    post-tool-use-service.mjs    trace G3, G6
-    handoff-guard-service.mjs    G9
-    state-service.mjs, phase-gate-service.mjs   le CLI d'état et sa porte
+## Ce qui remplace chaque garde-fou
 
-  adapters/
-    api/hooks/           ← frontière avec le harness
-      harness-input.mjs  payload harness → payload du framework
-      harness-output.mjs décision → format de fil harness
-      hook-router.mjs    routage par événement
-    infrastructure/      ← implémentations sortantes
-      jsonl-audit-writer.mjs   append-only, jamais truncate
-      audit-log-resolver.mjs   un journal d'audit par projet, dans son répertoire git
-      json-state-reader.mjs, state/json-state-writer.mjs
-      …
+| Garde-fou v1 | En V2 | Disponible |
+| --- | --- | --- |
+| SessionStart (export de `SKRAFT_PLUGIN_ROOT`, purge des journaux) | Retiré : plus aucune variable d'environnement nécessaire, le moteur donne des chemins absolus. La purge doit devenir une commande `skraft housekeeping` | Variable : oui. Purge : prévue par le plan, pas encore disponible |
+| Provenance des lancements | Retirée : elle n'avait jamais le nom de l'appelant. Seul le pilote lance des agents | Oui |
+| G1 ordre des phases, G9 complétude du brief | Dans le moteur, qui calcule l'étape suivante et compose le brief | Oui pour RESEARCH ; DESIGN, DISTILL, DELIVER au lot 3 |
+| G2 injection des skills | En-tête `skills:` sous Claude Code ; ailleurs, chemins absolus des skills obligatoires dans le brief | Lot 6 |
+| G3 contrôle à l'arrêt du sous-agent, trace G3 | Retirés ; le chargement réel des skills est mesuré par les évaluations Vally | Oui |
+| Journal de lancement | Événements du moteur dans `events.jsonl` | Oui |
+| G7 écriture directe de l'état | Chaîne de hachage du journal, vérifiée à la lecture suivante | Oui |
+| G8 droits d'écriture | Diff git du moteur après chaque étape ; l'orchestrateur n'a pas d'outil d'édition | Lot 3 |
 
-  cli/
-    hook.mjs             entrée des hooks : stdin JSON → router → stdout JSON
-    housekeeping.mjs     entrée de SessionStart
-    state.mjs            seul écrivain de state.json
-```
+> **À venir.** Le contrôle des droits d'écriture par diff git, étape par étape, est prévu au
+> lot 3. Jusque-là, seule RESEARCH tourne par le moteur.
 
-## Packaging courant et limites de validation
+## Prévenir ou détecter
 
-Les hooks du plugin installé partagent une source canonique, livrée sur deux surfaces physiques :
+Un hook **prévient** : il refuse l'appel d'outil avant qu'il ait lieu. Le moteur
+**détecte** : il constate après l'étape qu'un fichier a été modifié à la main, que la sortie
+manque, ou (au lot 3) qu'un agent a écrit hors de son périmètre, et il arrête le run en le
+disant.
 
-| Surface | Rôle |
-|---|---|
-| [Hooks racine](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/hooks/hooks.json) | Source canonique et compatibilité Claude |
-| [Hooks du namespace Copilot](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/com.github.copilot/hooks/hooks.json) | Copie générée pour Copilot v1 ; seul le jeton de racine du plugin diffère |
+C'est un choix assumé. Sans hook, un agent lancé à la main hors du moteur n'est pas arrêté
+pendant qu'il travaille ; l'écart est découvert ensuite, par la chaîne de hachage ou le diff
+git. En échange, le contrôle est le même sur tous les hôtes, se teste sans hôte, et ne coûte
+rien aux appels d'outil.
 
-Aucun pointeur `hooks` supplémentaire dans les manifestes n'est nécessaire. Les deux surfaces
-invoquent le même runtime partagé ; ce sont des adaptateurs de distribution, pas des logiques de
-garde-fous distinctes. La source racine résout via `${CLAUDE_PLUGIN_ROOT}` ; le générateur réécrit
-ce jeton en `${PLUGIN_ROOT}` dans la copie Copilot, car VS Code charge la copie du namespace v1 et
-n'y interpole que `${PLUGIN_ROOT}`. Laissé littéral, `${CLAUDE_PLUGIN_ROOT}` s'étend à vide et node
-cherche `/src/cli/hook.mjs` (`C:\src\cli\hook.mjs` sous PowerShell Windows). Le manifeste racine canonique déclare Agent Plugins v1
-sans liste `agents` racine. Exactement deux arbres d'exécution éditables sont distribués :
-31 fichiers Copilot `.agent.md` à plat dans `com.github.copilot/agents/` et 31 fichiers Claude
-natifs `.md` à plat dans `com.anthropic.claude-code/agents/`. Corps et description se synchronisent
-dans les deux sens contre un baseline par client ; les destinations Markdown sont traduites sans modifier les en-têtes natifs.
-`npm run plugin:sync` (`--apply`) et `npm run plugin:check` (`--check`) synchronisent et vérifient
-la paire. Les éditions contradictoires bloquent toute écriture. Les deux arbres, le baseline et
-la copie générée des hooks sont commités car les installations marketplace depuis Git ne lancent aucun build.
+## Quand un hook peut revenir
 
-Les fixtures sur **Copilot CLI 1.0.83 réel** ont **réussi** la découverte des agents namespacés,
-`SessionStart` et `PreToolUse` avec `CLAUDE_PLUGIN_ROOT`, y compris des chemins contenant des espaces.
-[scripts/copilot-hook-smoke.mjs](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/copilot-hook-smoke.mjs)
-a aussi **réussi** sur le plugin migré courant installé depuis le checkout marketplace local,
-avec la CLI exacte **1.0.83** épinglée via `--cli` et un `COPILOT_HOME` isolé :
-**PASS allowed** (1 entrée d'audit de hook), **PASS denied** (1 entrée d'audit de hook), écriture
-interdite absente. Ce refus SKRAFT observé ne valide ni le sélecteur complet des six racines
-ni l'invocation de sous-agents masqués. Le code source
-actuel de **VS Code** détecte d'abord le `$schema` v1, puis se replie sur `.plugin` puis
-`.claude-plugin` ; la validation v1 complète en session réelle reste **non vérifiée**. Aucun de ces résultats ne justifie
-une garantie globale de compatibilité ni l'ancien contournement sans schéma.
+Un hook revient seulement s'il remplit les trois conditions :
 
-Sources : [générateur d'adaptateurs](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/project-plugin-adapters.mjs),
-[sonde de compatibilité CLI](https://github.com/SebastienDegodez/skraft-plugin/blob/main/scripts/copilot-plugin-compat-smoke.mjs)
-et [notes de packaging courant](https://github.com/SebastienDegodez/skraft-plugin/blob/main/plugins/skraft-framework/README.md#harness-packaging).
-[ADR-009](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-009-generated-copilot-hook-copy.md)
-consigne le packaging courant. [ADR-008](https://github.com/SebastienDegodez/skraft-plugin/blob/main/docs/adr/adr-008-single-hook-manifest.md),
-qu'il remplace, conserve les mesures historiques ; ce n'est pas une référence du packaging actuel entre clients.
+1. il protège une action **irréversible** que le moteur ne peut pas détecter après coup ;
+2. son coût par appel est **mesuré** ;
+3. il marche sur Claude Code, Copilot CLI et VS Code, ou documente son comportement d'échec
+   sur chacun.
 
-## Exemple Starbucks (illustratif)
+> **À venir.** La mesure sur des runs réels, qui dira si un hook doit revenir, est prévue au
+> lot 10.
 
-*Exemple illustratif — inventé pour enseigner le concept, non dérivé du codebase.*
+## Ce qu'aucun garde-fou ne couvre
 
-Imaginons que le pipeline traite la story "payer une commande". L'invariant est :
-*aucun appel réseau vers le service de paiement en environnement de test*.
+Ni un hook ni le moteur ne détectent une **erreur factuelle** : une règle métier inventée, un
+endpoint qui n'existe pas, une connaissance du domaine fausse dans un test. Ils contrôlent
+la structure du travail (ordre, sorties, intégrité, gates), pas la vérité de son contenu.
+Cela reste le rôle de la revue et des tests d'acceptation métier.
 
-Avec les hooks :
+Wiegers (*Peer Reviews in Software*, 2002) range la revue par les pairs parmi les pratiques
+qualité les plus efficaces : c'est elle, pas un garde-fou mécanique, qui attrape ce type
+d'erreur.
 
-1. `PreToolUse` reçoit `{ toolName: "bash", tool_input: { command: "curl https://pay.starbucks.com …" } }`
-2. Le handler détecte l'URL de production → retourne `deny("appel réseau interdit en CI")`
-3. L'agent reçoit le refus avant exécution → reformule son approche
-4. L'audit-writer consigne la tentative en JSONL append-only
+## Pour aller plus loin
 
-Sans hook, l'appel passerait silencieusement ; la revue le découvrirait *après*.
+- [Architecture]({{ "/fr/explanation/architecture" | relative_url }}) — le moteur, les pilotes, la profondeur 1.
+- [État et reprise]({{ "/fr/explanation/hve-core" | relative_url }}) — la chaîne de hachage qui remplace G7.
+- [Référence : dossier de suivi et journal]({{ "/fr/reference/run-journal" | relative_url }}).
+- [Lancer les gates et lire leurs preuves]({{ "/fr/how-to/run-gates" | relative_url }}).
 
-## État d'implémentation
+## Sources
 
-| Garde | Appliquée par | Mode d'échec | Preuve en session réelle |
-|-------|---------------|--------------|--------------------------|
-| G1 ordre de dispatch | Hook `PreToolUse` | Fail-closed pour un agent de phase | Aucune |
-| Provenance du dispatch | Hook `PreToolUse` | Fail-open | Aucune |
-| G2 skills obligatoires | Hook `SubagentStart` | Fail-open | Aucune |
-| G3 chargement des skills | Hooks `PostToolUse` et `SubagentStop` | Fail-open | Aucune |
-| G4 artefacts de phase | CLI d'état, à la clôture de phase | Fail-closed | Pas un hook |
-| G5 verdict et commit DELIVER | CLI d'état, à la clôture de phase | Fail-closed | Pas un hook |
-| G6 continuation | Hook `PostToolUse` | Fail-open | Aucune |
-| G7 état suivi | Hook `PreToolUse` | Fail-closed | Dernier passage enregistré : Copilot CLI 1.0.83 a refusé une écriture shell |
-| G8 écritures de l'orchestrateur | Hook `PreToolUse` | Fail-open si l'appelant n'est pas nommé | Aucune |
-| G9 handoff | Hook `PreToolUse` sur dispatch d'agent de phase | Fail-open si l'état est illisible ou en erreur interne | Aucune |
-
-Chaque garde est couverte par des tests unitaires et d'acceptation. Une preuve en session
-réelle ne vient que d'une vraie session (`scripts/copilot-hook-smoke.mjs`,
-`scripts/claude-plugin-smoke.mjs`) ; les évaluations Vally ne chargent pas les hooks du plugin.
-
-`SubagentStart` n'injecte que les skills obligatoires de l'agent qui démarre. Un skill
-déclaré `on-demand` n'est pas injecté au démarrage et n'est pas exigé par `SubagentStop` ;
-sa lecture éventuelle reste tracée par G3. Les règles ne sont pas injectées : Copilot
-découvre nativement les règles path-scoped, et l'orchestrateur, seul lecteur de ces règles,
-les charge lui-même.
-
-G9 garde le handoff de dispatch plutôt que le raisonnement du sous-agent. Pour un agent de
-phase du pipeline, le hook `PreToolUse` vérifie que le prompt nomme au moins un chemin
-enregistré pour chaque entrée suivie obligatoire déjà présente dans l'état ; en rework ou
-re-review, il exige aussi le chemin de la revue précédente. Un refus demande à
-l'orchestrateur de coller le bloc imprimé par
-`node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" handoff --agent "<agent>"`. La garde ne
-s'applique pas aux lentilles, workers, agents produit, ni au spécialiste re-dispatché après
-une phase DESIGN approuvée pour la ratification des ADR.
-
-G8 tient l'orchestrateur hors de `src/` et `tests/` : il dispatche l'agent qui porte un
-changement et ne le fait jamais lui-même, quelle que soit la phase. Le hook ne refuse qu'un
-auteur que le payload nomme comme l'orchestrateur. Copilot CLI ne nomme aucun agent dans
-`preToolUse`, ni pour la session principale ni pour un sous-agent : sous Copilot l'appel passe,
-et G8 ne tient que là où le harnais nomme l'agent, comme Claude Code avec `agent_type`. G8 ne
-lit pas l'état. Chaque appel d'un lot Copilot `toolCalls` est gardé séparément, et un seul
-refus refuse tout le lot.
-
-## Économie de tokens — l'angle des hooks
-
-Les hooks contribuent à l'[économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }})
-du pipeline sur deux leviers de la discipline Genesis.
-
-### Enforcement déterministe = zéro token de raisonnement
-
-Sans hook, l'agent doit *raisonner* sur chaque invariant à chaque appel d'outil :
-« dois-je normaliser ce payload ? », « cet audit-writer est-il bien append-only ? ».
-Chaque vérification est une chaîne de pensée produite en sortie, tour après tour.
-
-Avec un hook `PreToolUse`, l'enforcement est **code natif** : exit 0 ou réponse JSON
-`deny`/`allow`, sans aucun token de raisonnement. La décision sort du chemin du modèle.
-
-### Préfixe stable = cache KV éligible
-
-Parce que l'invariant est tenu par le code du hook et non ré-injecté en prose dans le
-contexte à chaque tour, le **préfixe système reste stable** entre les appels. Un préfixe
-stable reste éligible au cache KV — le levier qui produit la plus grande réduction de
-tokens *mesurée* du pipeline. Dès qu'un invariant est réécrit dans le prompt à chaque
-appel d'outil, le préfixe change et le cache rate.
-
-> Les ratios de réduction mesurés (cache, classe de modèle) sont documentés sur la page
-> [Économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }}).
-
-## Ce que les hooks ne couvrent pas
-
-Les hooks et le CLI d'état font respecter des **invariants structurels et
-comportementaux** — ordre de dispatch, présence des artefacts, verdict du reviewer,
-intégrité du fichier d'état. Ils ne constituent pas un système anti-hallucination général, et deux limites
-importantes doivent être énoncées explicitement.
-
-### G2 et G3 imposent la méthode déclarée, pas la vérité
-
-Le garde-fou G2 injecte les skills obligatoires à `SubagentStart`. G3 consigne les lectures
-de skills et renvoie au travail un sous-agent dont le transcript ne montre aucun chargement
-d'un skill obligatoire : un appel de l'outil skill ou une lecture de son `SKILL.md`, jamais
-une simple mention. Les skills marqués `on-demand` sortent de cet ensemble obligatoire : ils
-ne déclenchent ni injection au démarrage ni blocage de conformité à l'arrêt. Tous deux sont
-fail-open si le hook échoue afin qu'une erreur interne du runtime ne fige pas le pipeline.
-Ils prouvent qu'un skill a été chargé, pas que l'agent l'a bien appliqué.
-
-### Violations structurelles vs. hallucinations factuelles
-
-Les hooks détectent les **hallucinations de qualité** : artefact manquant, dispatch
-hors ordre, verdict ne correspondant pas au fichier écrit. Ils ne détectent pas les
-**hallucinations factuelles** : une règle métier inventée par le modèle, un endpoint
-d'API inexistant cité dans le code, ou une connaissance du domaine incorrecte intégrée
-dans un test. La correction factuelle reste la responsabilité du reviewer humain et
-des tests d'acceptation métier.
-
-## Pour en savoir plus
-
-- [Économie de tokens]({{ "/fr/explanation/token-economy" | relative_url }}) — les leviers Genesis et les ratios de réduction mesurés
-
-- [Référence hooks]({{ "/fr/reference/infrastructure/hooks" | relative_url }}) — événements et gardes, porte de phase, décisions, variables d'environnement
-- [Clean Architecture]({{ "/fr/explanation/clean-architecture" | relative_url }}) — couches Api → Infra → Application → Domain
+- Wiegers, K., *Peer Reviews in Software*, 2002.

@@ -1,41 +1,68 @@
 ---
 layout: doc
 lang: en
-title: "Getting Started"
-description: "Install SKRAFT with /plugin, choose the right journey, and run the first workflow."
+title: "Getting started"
+description: "Install SKRAFT V2, describe a small repository, run the RESEARCH phase of a story and pass its gates."
 persona: software-engineer
 ---
 
-# Getting Started
+# Getting started
 
-> Install the plugin in your assistant, choose your starting point, then run the workflow that fits your project.
+> In this tutorial, you install SKRAFT, describe a small repository in `skraft-config.json`,
+> run the RESEARCH phase of the story "#42 Pay by card" and pass the repository's gates.
 
-## Before you begin
+You follow one path, from start to finish. Each step shows what you should see.
 
-- **Claude Code**, to use the `/plugin` commands below
-- a target repository open in your assistant
-- GitHub access only when you want to work from issues
+## What you need
 
-Node.js, APM, and a clone of the SKRAFT repository are not required to use the
-plugin. They belong to development of the plugin itself.
+- **Node 22** or later;
+- **Git**;
+- **Claude Code** (for GitHub Copilot CLI, see [With GitHub Copilot CLI](#with-github-copilot-cli) after the path).
 
-## 1. Install SKRAFT with `/plugin`
+## 1. Create the small repository
 
-Enter these commands in the Claude Code conversation, not in a terminal:
+Create a `shop` folder, open a terminal in it and create the repository:
+
+```text
+git init -b main
+```
+
+Create the file `web/package.json` with this content:
+
+```json
+{
+  "name": "web",
+  "private": true,
+  "scripts": {
+    "build": "node --version",
+    "test": "node --version"
+  }
+}
+```
+
+Then record a first commit:
+
+```text
+git add web/package.json
+git commit -m "Start the shop"
+```
+
+You see a line `[main (root-commit) …] Start the shop`.
+
+## 2. Install the plugin
+
+Open Claude Code in the `shop` folder. Type these two commands **in the conversation**, not in a
+terminal:
 
 ```text
 /plugin marketplace add SebastienDegodez/skraft-plugin
 /plugin install skraft
 ```
 
-The first command adds the repository as a marketplace. The second installs the
-`skraft` plugin published by that marketplace. Then open `/plugin` and check that
-`skraft` appears under installed plugins.
+Open `/plugin`: `skraft` appears under installed plugins.
 
-### Windows workaround
-
-If `/plugin marketplace add` fails with `fatal: unable to checkout working tree`,
-clone SKRAFT to a short local path and add that checkout instead:
+**On Windows**, if `/plugin marketplace add` fails because of a path that is too long, clone the
+repository to a short path, then add that clone:
 
 ```powershell
 git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft
@@ -46,64 +73,189 @@ git clone https://github.com/SebastienDegodez/skraft-plugin C:\s\skraft
 /plugin install skraft
 ```
 
-Or enable Windows long paths, restart the shell, and retry:
+## 3. Write `skraft-config.json`
 
-```powershell
-New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
-git config --global core.longpaths true
+The `skraft` command line is a Node script shipped with the plugin. Run it from the root of your
+repository, in sh or in PowerShell alike:
+
+```text
+node "<skraft plugin folder>/engine/drivers/cli/skraft.mjs" init
 ```
 
-## 2. Choose your journey
+Replace `<skraft plugin folder>` with the folder where the host installed the skraft plugin. From
+here on, `skraft …` means this full command.
 
-Do not automatically run one global chain. The right starting point depends on
-what your repository already has.
+`skraft init` looks for the projects in the repository and writes one **component** per project —
+a part of the repository with its root, its stack and its commands. You see:
 
-| Your situation | Start with | Then |
-| --- | --- | --- |
-| A refined story already exists | `skraft-orchestrator` | engineering pipeline |
-| Issues exist but are not prepared | `backlog-discoverer`, then `backlog-planner` | `skraft-orchestrator` |
-| Code exists without product documentation | `brownfield-analyst` | PRD, issue creation, product preparation, then `skraft-orchestrator` |
-| Legacy code is unsafe to change | `brownfield-harness-builder`, then `brownfield-refactorer` | return to a prepared story, then `skraft-orchestrator` |
+```text
+skraft-config.json: web (javascript, web)
+```
 
-The Brownfield, DISCOVER, and DISCUSS workflows are invoked directly. They are
-not hidden phases of `skraft-orchestrator`. Read the
-[Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }}) when
-taking over an existing system.
+Open `skraft-config.json` at the root of `shop`:
 
-## 3. Run the first workflow
+```json
+{
+  "components": [
+    {
+      "name": "web",
+      "root": "web",
+      "stack": "javascript",
+      "paths": {
+        "src": ["./"],
+        "tests": ["./"]
+      },
+      "commands": {
+        "build": "npm run build",
+        "test": "npm test"
+      }
+    }
+  ]
+}
+```
 
-### Story already prepared
+`build` and `test` come from the scripts in `web/package.json`.
 
-In the agent selector, choose `skraft-orchestrator`, then give it the refined
-story. This is the sole entrypoint for the engineering pipeline. It loads its
-persistent state and resumes from the last validated point.
+## 4. Check with `skraft doctor`
 
-### Backlog still raw
+`skraft doctor` checks that every command in the configuration can run on your machine:
 
-First choose `backlog-discoverer` in the agent selector. Once triage is complete,
-choose `backlog-planner` to refine the selected issue. The refined story then
-becomes the input to `skraft-orchestrator`.
+```text
+skraft doctor
+```
 
-## 4. Understand what will run
+If Docker is not running, a `FAIL` line appears:
 
-The core journey has two distinct areas:
+```text
+ok    node: Node v22.22.0
+ok    config: 1 components: web
+ok    web/build: npm → /opt/node22/bin/npm
+ok    web/test: npm → /opt/node22/bin/npm
+FAIL  docker: Docker does not answer, and Microcks, the mocking of web, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component
+skraft doctor: 1 checks failed
+```
 
-1. **Optional standalone product preparation**
-	- **DISCOVER** triages and prioritizes issues
-	- **DISCUSS** turns an issue into a verifiable story
-2. **Engineering pipeline driven by `skraft-orchestrator`**
-	- **RESEARCH** reduces uncertainty when the work justifies it
-	- **DESIGN** makes and records architecture decisions
-	- **DISTILL** produces executable scenarios and the plan
-	- **DELIVER** implements with Outside-In TDD and gathers evidence
+The `npm` paths and the Node version are your machine's. If Docker is running, the `docker` line
+is `ok`. Either way, the `web` component does not need Microcks: add the `mocking` line to the
+component in `skraft-config.json`:
 
-RESEARCH may be skipped when routing concludes that a dedicated investigation
-would add no value. DISCOVER and DISCUSS are never dispatched by
-`skraft-orchestrator`: you choose them before it when your input is not yet a
-ready story.
+```json
+      "name": "web",
+      "root": "web",
+      "stack": "javascript",
+      "mocking": { "strategy": "inprocess" },
+```
 
-## 5. Continue reading
+Run `skraft doctor` again:
 
-- [Choose an entrypoint and see the pipeline]({{ "/en/explanation/pipeline/" | relative_url }})
-- [Follow one request end to end]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }})
-- [Take over a Brownfield system]({{ "/en/explanation/brownfield" | relative_url }})
+```text
+ok    node: Node v22.22.0
+ok    config: 1 components: web
+ok    web/build: npm → /opt/node22/bin/npm
+ok    web/test: npm → /opt/node22/bin/npm
+skraft doctor: every check passed
+```
+
+Any other `FAIL` line (program not found, missing root, component without a command) is fixed in
+the configuration: follow the
+[Configure components]({{ "/en/how-to/configure-components" | relative_url }}) guide.
+
+## 5. Run the story in Claude Code
+
+In the Claude Code conversation, type:
+
+```text
+/skraft checkout #42 Pay by card
+```
+
+`checkout` is the **slug**: the name of the pipeline, in kebab-case. `#42` is the issue number,
+`Pay by card` its title. Claude Code answers:
+
+```text
+skraft checkout started — progress in the Skraft pane.
+```
+
+The **Skraft** pane opens. It shows the RESEARCH phase, the running agent (`solution-researcher`)
+and the progress log. Wait for the closing notification:
+
+```text
+skraft checkout: done — RESEARCH closed
+```
+
+## 6. Look at `skraft status`
+
+In the terminal, at the root of `shop`:
+
+```text
+skraft status
+```
+
+You see:
+
+```text
+skraft checkout: done
+RESEARCH  closed
+RESEARCH closed
+```
+
+A `cost: … USD` line may be added when the host reports the cost. The same state lives in
+`.copilot-tracking/skraft-plans/checkout/events.jsonl`, one event per line, and
+`.copilot-tracking/skraft-plans/.active-slug` contains `checkout`.
+
+## 7. Open the research document
+
+The agent filled in the document the engine had pre-created from its template:
+
+```text
+.copilot-tracking/skraft-plans/checkout/research/<YYYY-MM-DD>/checkout-research.md
+```
+
+`<YYYY-MM-DD>` is the date of the run. Open it: it is the research on "Pay by card". The engine
+checked that it is not empty, not identical to the template, and has no {% raw %}`{{…}}`{% endraw %} left.
+
+## 8. Pass the gates with `skraft gate`
+
+**Gates** are the named commands of the components (`build`, `test`…) run as quality checks. Run
+those of every component:
+
+```text
+skraft gate --all
+```
+
+You see:
+
+```text
+pass  web/build
+pass  web/test
+skraft checkout: gates passed — 2 gates passed on web
+```
+
+The evidence of each gate is written to `.copilot-tracking/skraft-plans/checkout/gates/web/`, for
+example `build-1.log`: the command, the folder, the result, standard output and standard error.
+
+## What you learned
+
+- `skraft init` describes your repository as components in `skraft-config.json`;
+- `skraft doctor` tells you what your machine is missing before a run;
+- `/skraft <slug> #<issue> <title>` starts the story; the engine drives RESEARCH and records everything;
+- `skraft status` reads the state from the journal;
+- `skraft gate` runs the component commands and keeps evidence of each gate.
+
+## With GitHub Copilot CLI
+
+In step 5, run the dynamic workflow `skraft-pipeline` with the arguments
+`{ "slug": "checkout", "issue": 42, "title": "Pay by card" }`. The engine does the same work;
+progress shows in the workflow log. The other steps do not change.
+
+## What comes next
+
+> **Coming next.** Today, you run the gates by hand. In lot 3, gates become pipeline steps, run by
+> the engine during DELIVER.
+
+## Next pages
+
+- [Configure components]({{ "/en/how-to/configure-components" | relative_url }})
+- [Run the gates and read their evidence]({{ "/en/how-to/run-gates" | relative_url }})
+- [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }})
+- [The `skraft` command line]({{ "/en/reference/cli" | relative_url }})
+- [Engine, drivers, depth 1]({{ "/en/explanation/architecture" | relative_url }})
