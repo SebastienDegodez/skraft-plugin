@@ -15,7 +15,7 @@ import { normalizeRelative } from './relative-path.mjs'
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
  * @typedef {{ baseBranch: string | null, components: Component[] }} SkraftConfig
  * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }
- *   | { ok: false, present: true, errors: string[] }} ConfigReading
+ *   | { ok: false, errors: string[] }} ConfigReading
  */
 
 export const CONFIG_FILE = 'skraft-config.json'
@@ -35,9 +35,9 @@ export const readConfig = (text) => {
   try {
     raw = JSON.parse(text)
   } catch (error) {
-    return { ok: false, present: true, errors: [`${CONFIG_FILE} is not JSON: ${/** @type {Error} */ (error).message}`] }
+    return { ok: false, errors: [`${CONFIG_FILE} is not JSON: ${/** @type {Error} */ (error).message}`] }
   }
-  if (!isRecord(raw)) return { ok: false, present: true, errors: [`${CONFIG_FILE} must hold a JSON object`] }
+  if (!isRecord(raw)) return { ok: false, errors: [`${CONFIG_FILE} must hold a JSON object`] }
   /** @type {string[]} */
   const errors = []
   const baseBranch = optionalRef(raw.baseBranch, 'baseBranch', errors)
@@ -46,7 +46,7 @@ export const readConfig = (text) => {
   const components = (Array.isArray(listed) ? listed : []).map((entry, index) => componentOf(entry, index, errors))
   const names = components.map((component) => component?.name)
   for (const name of new Set(names.filter((name, index) => name !== undefined && names.indexOf(name) !== index))) errors.push(`component name ${name} is used twice`)
-  if (errors.length > 0) return { ok: false, present: true, errors }
+  if (errors.length > 0) return { ok: false, errors }
   return { ok: true, present: true, config: { baseBranch, components: /** @type {Component[]} */ (components) }, raw }
 }
 

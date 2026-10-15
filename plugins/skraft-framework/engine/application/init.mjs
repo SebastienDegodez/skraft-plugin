@@ -25,16 +25,13 @@ export const createInit = (deps) => Object.freeze({
     if (!isSlug(slug)) {
       return { ok: false, slug: /** @type {any} */ (slug) ?? null, created: false, code: 'invalid-slug', reason: `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}` }
     }
-    if (base !== null && typeof base !== 'string') {
-      return { ok: false, slug, created: false, code: 'invalid-base', reason: `--base must be a git ref, got ${JSON.stringify(base)}` }
-    }
     const opened = await openJournal(deps, slug)
     if (!opened.ok) return { ok: false, slug, created: false, code: 'journal-tampered', reason: opened.reason }
     const created = opened.journal.events.length === 0
     if (created) {
       const loaded = await loadConfig(deps)
       if (!loaded.ok) return { ok: false, slug, created: false, code: 'config-invalid', reason: loaded.reason }
-      const resolved = await resolveBases(deps, { config: loaded.config, flag: /** @type {string | null} */ (base) })
+      const resolved = await resolveBases(deps, { config: loaded.config, flag: base })
       if (!resolved.ok) return { ok: false, slug, created: false, code: resolved.code, reason: resolved.reason }
       await opened.journal.append('run.started', { slug, story, workflow: 'skraft', base: resolved.bases })
     }
