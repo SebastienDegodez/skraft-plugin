@@ -6,7 +6,7 @@ import { openJournal } from '../../../../plugins/skraft-framework/engine/applica
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
 import { DEFAULT_PIPELINE } from '../../../../plugins/skraft-framework/engine/domain/pipeline/pipeline-definition.mjs'
 import {
-  FakeHasher, FixedClock, InMemoryTemplates, InMemoryTracking, RecordingProgress, ScriptedAgentRunner,
+  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner,
 } from '../support/in-memory-host.mjs'
 
 const TEMPLATE = '# Research: {{topic}}\n## Approaches\n{{approach_A}}\n'
@@ -18,6 +18,8 @@ const host = (iso = '2026-10-11T09:00:00.000Z') => {
     journal: tracking,
     activePipeline: tracking,
     files: tracking,
+    workspace: new InMemoryWorkspace(),
+    sourceControl: new InMemorySourceControl(),
     templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }),
     clock: new FixedClock(iso),
     hasher: new FakeHasher(),
