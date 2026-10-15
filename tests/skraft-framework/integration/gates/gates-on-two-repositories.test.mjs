@@ -45,7 +45,7 @@ const twoRepositories = (t) => {
   return { root, api, web, apiBase, webBase, ran, failWith: (codes) => writeFileSync(fail, JSON.stringify(codes)), resetLog: () => writeFileSync(log, '') }
 }
 
-test('init journals the merge base of each repository; --base and baseBranch choose another one', (t) => {
+test('init journals the merge base of each repository; --base and baseBranch choose another one', async (t) => {
   const { api, web, apiBase, webBase } = twoRepositories(t)
   git(api, 'checkout', '-q', '-b', 'feature/pay')
   git(web, 'checkout', '-q', '-b', 'develop')
@@ -55,7 +55,7 @@ test('init journals the merge base of each repository; --base and baseBranch cho
   const developHead = git(web, 'rev-parse', 'HEAD')
   git(web, 'checkout', '-q', '-b', 'feature/pay')
 
-  const init = skraft(api, ['init', 'checkout'])
+  const init = await skraft(api, ['init', 'checkout'])
 
   assert.equal(init.status, 0, init.stderr)
   assert.deepEqual(journal(api, 'checkout')[0].base, [
@@ -67,29 +67,29 @@ test('init journals the merge base of each repository; --base and baseBranch cho
   const config = JSON.parse(readFileSync(join(api, 'skraft-config.json'), 'utf8'))
   config.components[1].baseBranch = 'develop'
   writeFileSync(join(api, 'skraft-config.json'), JSON.stringify(config))
-  assert.equal(skraft(api, ['init', 'refund']).status, 0)
+  assert.equal((await skraft(api, ['init', 'refund'])).status, 0)
   assert.deepEqual(journal(api, 'refund')[0].base.at(-1), { component: 'web', root: '../payment-web', repository: '../payment-web', ref: 'develop', source: 'component', sha: developHead })
 
-  const flagged = skraft(api, ['init', 'payout', '--base', 'develop'])
+  const flagged = await skraft(api, ['init', 'payout', '--base', 'develop'])
   assert.equal(flagged.status, 1)
   assert.equal(flagged.stderr, 'the working copy (.) has no merge base with develop; component api (.) has no merge base with develop; set baseBranch in skraft-config.json or pass --base <ref>\n')
-  assert.equal(skraft(api, ['init', 'payout', '--base', 'main']).status, 0)
+  assert.equal((await skraft(api, ['init', 'payout', '--base', 'main'])).status, 0)
   assert.deepEqual(journal(api, 'payout')[0].base.map(({ ref, source }) => `${ref} ${source}`), ['main flag', 'main flag', 'main flag'])
 })
 
-test('a change in the front runs the front gates only; --all runs every gate, each from its own root', (t) => {
+test('a change in the front runs the front gates only; --all runs every gate, each from its own root', async (t) => {
   const { api, web, apiBase, ran, resetLog } = twoRepositories(t)
-  assert.equal(skraft(api, ['init', 'checkout']).status, 0)
+  assert.equal((await skraft(api, ['init', 'checkout'])).status, 0)
   writeFileSync(join(web, 'src', 'Cart.tsx'), 'export const Cart = () => null\n')
 
-  const loop = skraft(api, ['gate'])
+  const loop = await skraft(api, ['gate'])
 
   assert.equal(loop.status, 0, loop.stdout + loop.stderr)
   assert.deepEqual(ran(), ['payment-web web/lint', 'payment-web web/test'])
   assert.equal(loop.stdout, 'pass  web/lint\npass  web/test\nskraft checkout: gates passed — 2 gates passed on web\n')
 
   resetLog()
-  const closure = skraft(api, ['gate', '--all'])
+  const closure = await skraft(api, ['gate', '--all'])
 
   assert.equal(closure.status, 0, closure.stdout)
   assert.deepEqual(ran(), ['payment-api api/build', 'payment-api api/test', `payment-api api/mutation --since:${apiBase}`, 'payment-web web/lint', 'payment-web web/test'])
@@ -98,12 +98,12 @@ test('a change in the front runs the front gates only; --all runs every gate, ea
   assert.match(readFileSync(join(api, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'api', 'mutation-1.log'), 'utf8'), new RegExp(`^\\$ node .*--since:\\{baseSha\\}\\ncwd: \\.\\nresult: pass`))
 })
 
-test('a failing gate exits 1 as deterministic; a missing program exits 1 as environment', (t) => {
+test('a failing gate exits 1 as deterministic; a missing program exits 1 as environment', async (t) => {
   const { api, failWith } = twoRepositories(t)
-  assert.equal(skraft(api, ['init', 'checkout']).status, 0)
+  assert.equal((await skraft(api, ['init', 'checkout'])).status, 0)
   failWith({ 'api/test': 2 })
 
-  const failed = skraft(api, ['gate', '--all', '--json'])
+  const failed = await skraft(api, ['gate', '--all', '--json'])
 
   assert.equal(failed.status, 1)
   const outcome = JSON.parse(failed.stdout)
@@ -115,16 +115,16 @@ test('a failing gate exits 1 as deterministic; a missing program exits 1 as envi
   writeFileSync(join(api, 'skraft-config.json'), JSON.stringify(config))
   failWith({})
 
-  const missing = skraft(api, ['gate', '--all'])
+  const missing = await skraft(api, ['gate', '--all'])
 
   assert.equal(missing.status, 1)
   assert.match(missing.stdout, /^fail \(environment\) {2}web\/lint: command not found: skraft-no-such-linter; install it or change the command in skraft-config\.json$/m)
 })
 
-test('gate without an active pipeline is refused and exits 1', (t) => {
+test('gate without an active pipeline is refused and exits 1', async (t) => {
   const { api } = twoRepositories(t)
 
-  const run = skraft(api, ['gate'])
+  const run = await skraft(api, ['gate'])
 
   assert.equal(run.status, 1)
   assert.match(run.stdout, /^skraft: gates refused \(no-active-pipeline\) — no active pipeline/m)

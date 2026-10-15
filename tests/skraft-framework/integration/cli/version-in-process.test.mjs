@@ -30,5 +30,12 @@ test('an unknown command prints the usage on stderr and exits 2', async () => {
   assert.equal(code, 2)
   assert.deepEqual(lines.out, [])
   assert.deepEqual(lines.err, [USAGE])
-  assert.equal(USAGE.split('\n')[0], 'usage: skraft --version')
+  assert.deepEqual(USAGE.split('\n').map((line) => line.trim().split(/\s{2,}/)[0]), [
+    'usage: skraft --version',
+    'skraft init [--add <folder>]...',
+    'skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>]',
+    'skraft status [--json]',
+    'skraft gate [--all] [--json]',
+    'skraft doctor [--run] [--base <ref>] [--json]',
+  ])
 })
