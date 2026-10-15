@@ -80,11 +80,11 @@ test('init makes the slug the active pipeline, switching from another one', asyn
   const { tracking, deps } = host()
   await createInit(deps).init({ slug: 'checkout' })
 
-  const outcome = await createInit(deps).init({ slug: 'refund-2' })
+  const outcome = await createInit(deps).init({ slug: 'refund-v2' })
 
-  assert.deepEqual(outcome, { ok: true, slug: 'refund-2', created: true, code: null, reason: 'refund-2 is the active pipeline' })
-  assert.equal(tracking.activeSlug, 'refund-2')
-  assert.equal(tracking.journal('refund-2')[0].type, 'run.started')
-  assert.equal(tracking.journal('refund-2')[0].workflow, 'skraft')
-  assert.deepEqual(tracking.journal('refund-2')[0].story, null)
+  assert.deepEqual(outcome, { ok: true, slug: 'refund-v2', created: true, code: null, reason: 'refund-v2 is the active pipeline' })
+  assert.equal(tracking.activeSlug, 'refund-v2')
+  assert.equal(tracking.journal('refund-v2')[0].type, 'run.started')
+  assert.equal(tracking.journal('refund-v2')[0].workflow, 'skraft')
+  assert.deepEqual(tracking.journal('refund-v2')[0].story, null)
 })

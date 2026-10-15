@@ -62,7 +62,7 @@ const componentOf = (entry, index, errors) => {
   }
   const label = typeof entry.name === 'string' ? `component ${entry.name}` : at
   const before = errors.length
-  if (!NAME.test(String(entry.name))) errors.push(`${at}.name must be kebab-case, got ${JSON.stringify(entry.name ?? null)}`)
+  if (typeof entry.name !== 'string' || !NAME.test(entry.name)) errors.push(`${at}.name must be kebab-case, got ${JSON.stringify(entry.name ?? null)}`)
   for (const key of Object.keys(entry).filter((key) => !COMPONENT_KEYS.includes(key))) errors.push(`${label}: unknown key ${key} (allowed: ${COMPONENT_KEYS.join(', ')})`)
   if (typeof entry.root !== 'string' || entry.root.trim() === '' || isAbsolutePath(entry.root)) errors.push(`${label}: root must be a path relative to the working copy`)
   if (!STACKS.includes(entry.stack)) errors.push(`${label}: stack must be one of ${STACKS.join(', ')}`)
