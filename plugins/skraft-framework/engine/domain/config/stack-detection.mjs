@@ -14,7 +14,7 @@ const JAVA_MARKERS = ['pom.xml', 'build.gradle', 'build.gradle.kts']
 
 /**
  * @param {{ entries: Entry[], read: (name: string) => string | null }} folder the folder's own
- *   entries, and the text of a file of that folder (null when absent)
+ *   entries, and the text of a file of that folder (read only for a file the entries list)
  * @returns {Detected | null} null when the folder holds no project marker
  */
 export const detectProject = ({ entries, read }) => {
@@ -37,7 +37,7 @@ export const detectProject = ({ entries, read }) => {
   }
   if (JAVA_MARKERS.some(has)) {
     const maven = has('pom.xml')
-    const modules = maven ? mavenModules(read('pom.xml') ?? '') : []
+    const modules = maven ? mavenModules(/** @type {string} */ (read('pom.xml'))) : []
     const testModules = modules.filter((name) => /(^|-)(tests?|it)(-|$)/.test(name))
     return {
       stack: 'java',
@@ -57,7 +57,7 @@ export const detectProject = ({ entries, read }) => {
       commands: { build: `python -m compileall -q ${src.length > 0 ? 'src' : '.'}`, test: 'python -m pytest -q -p no:cacheprovider' },
     }
   }
-  if (has('package.json')) return javascriptProject(parseJson(read('package.json')) ?? {}, { has, folder })
+  if (has('package.json')) return javascriptProject(manifestOf(read('package.json')), { has, folder })
   return null
 }
 
@@ -92,12 +92,12 @@ const orRoot = (paths) => (paths.length > 0 ? paths : ['./'])
 /** The `<module>` names a Maven parent POM lists. @param {string} pom */
 const mavenModules = (pom) => [...pom.matchAll(/<module>\s*([^<\s]+)\s*<\/module>/g)].map(([, name]) => name)
 
-/** @param {string | null} text @returns {Record<string, any> | null} null when the text is not JSON */
-const parseJson = (text) => {
+/** @param {string | null} text @returns {Record<string, any>} empty when the text is not JSON or is `null` */
+const manifestOf = (text) => {
   try {
-    return JSON.parse(/** @type {string} */ (text))
+    return JSON.parse(/** @type {string} */ (text)) ?? {}
   } catch {
-    return null
+    return {}
   }
 }
 
@@ -110,6 +110,6 @@ export const componentName = (folderName) => {
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/^-|-$/g, '')
   return name === '' ? 'app' : name
 }

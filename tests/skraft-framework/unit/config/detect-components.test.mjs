@@ -120,14 +120,14 @@ test('init keeps every component and key the developer wrote, and adds only the 
 
   const result = await outcome
 
-  assert.equal(result.written, true)
+  assert.equal(result.ok, true, result.reason)
   assert.deepEqual(workspace.config(), {
     ...written,
     components: [written.components[0], { name: 'web', root: 'web', stack: 'react', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test' } }],
   })
 
   const again = await createConfigureComponents({ workspace }).configure({ workingCopyName: 'x' })
-  assert.deepEqual([again.written, again.reason], [false, 'skraft-config.json already lists every project found (2 components)'])
+  assert.deepEqual([again.ok, again.reason], [true, 'skraft-config.json already lists every project found (2 components)'])
 })
 
 test('an invalid skraft-config.json is reported and left untouched', async () => {
