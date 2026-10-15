@@ -28,7 +28,7 @@ const start = async ({ config = CONFIG(), sourceControl = twoRepositories(), bas
 }
 
 test('without any setting, every repository is compared with its merge base with main, journaled at the start', async () => {
-  const { outcome, started } = await start()
+  const { outcome, started } = await start({ config: CONFIG({ baseBranch: null }) })
 
   assert.equal(outcome.ok, true, outcome.reason)
   assert.deepEqual(started.base, [
@@ -81,10 +81,14 @@ test('a base Git cannot find refuses the start, names the repository, and journa
   assert.equal(tracking.activeSlug, null)
 })
 
-test('a --base that is not a single git ref is refused before anything is read', async () => {
-  const { outcome } = await start({ base: '--upload-pack=evil' })
+test('a --base that is not a single git ref, or not text at all, refuses the start and journals nothing', async () => {
+  for (const [base, shown] of [['--upload-pack=evil', '"--upload-pack=evil"'], [42, '42']]) {
+    const { outcome, tracking } = await start({ base })
 
-  assert.deepEqual([outcome.ok, outcome.code, outcome.reason], [false, 'invalid-base', '--base must be a git ref, got "--upload-pack=evil"'])
+    assert.deepEqual(outcome, { ok: false, slug: 'checkout', created: false, code: 'invalid-base', reason: `--base must be a git ref, got ${shown}` })
+    assert.deepEqual(tracking.journal('checkout'), [])
+    assert.equal(tracking.activeSlug, null)
+  }
 })
 
 test('a working copy outside Git, without skraft-config.json, starts with no base', async () => {
@@ -94,10 +98,33 @@ test('a working copy outside Git, without skraft-config.json, starts with no bas
   assert.deepEqual(started.base, [])
 })
 
-test('an invalid skraft-config.json refuses the start with its errors', async () => {
-  const { outcome } = await start({ config: '{"components":{}}' })
+test('a global baseBranch without components is the base of the working copy', async () => {
+  const { outcome, started } = await start({ config: JSON.stringify({ baseBranch: 'develop' }) })
 
-  assert.deepEqual([outcome.code, outcome.reason], ['config-invalid', 'skraft-config.json is invalid: components must be an array'])
+  assert.equal(outcome.ok, true, outcome.reason)
+  assert.deepEqual(started.base, [{ component: null, root: '.', repository: '.', ref: 'develop', source: 'config', sha: 'a2' }])
+})
+
+test('an invalid skraft-config.json refuses the start with its errors and journals nothing', async () => {
+  const listed = await start({ config: '{"components":{}}' })
+  assert.deepEqual(listed.outcome, { ok: false, slug: 'checkout', created: false, code: 'config-invalid', reason: 'skraft-config.json is invalid: components must be an array' })
+
+  const { outcome, tracking } = await start({
+    config: JSON.stringify({
+      components: [
+        { name: 'payment-Web', root: '  ', stack: 'react', commands: { 'smoke-Test': 'npm run smoke' } },
+        { root: 'api', stack: 'cobol' },
+      ],
+    }),
+  })
+  assert.deepEqual(outcome, {
+    ok: false, slug: 'checkout', created: false, code: 'config-invalid',
+    reason: 'skraft-config.json is invalid: components[0].name must be kebab-case, got "payment-Web"; component payment-Web: root must be a path relative to the working copy; '
+      + 'component payment-Web: command name "smoke-Test" must be lower-case; components[1].name must be kebab-case, got null; '
+      + 'components[1]: stack must be one of dotnet, java, python, typescript, javascript, react',
+  })
+  assert.deepEqual(tracking.journal('checkout'), [])
+  assert.equal(tracking.activeSlug, null)
 })
 
 test('the base is taken once: resuming an existing run with another --base keeps the journaled one', async () => {
