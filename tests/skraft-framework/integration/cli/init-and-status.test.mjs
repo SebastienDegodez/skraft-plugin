@@ -21,6 +21,7 @@ const inProcess = async (cwd, args) => {
   const lines = { out: [], err: [] }
   const code = await runCli(args, {
     pluginVersion: () => '9.9.9',
+    workingCopyName: () => 'shop',
     adapters: () => createNodeAdapters({ cwd, pluginRoot }),
   }, { out: (line) => lines.out.push(line), err: (line) => lines.err.push(line) })
   return { code, ...lines }
@@ -39,12 +40,13 @@ test('skraft init makes the slug the active pipeline and opens its journal with 
   assert.deepEqual([started.type, started.slug, started.story, started.prev], ['run.started', 'checkout', { issue: 42, title: 'Pay by card' }, null])
 })
 
-test('skraft init refuses a slug that is not kebab-case, or a missing one, and exits 1', async (t) => {
+test('skraft init refuses a slug that is not kebab-case, or a malformed option, and changes nothing', async (t) => {
   const cwd = workingCopy(t)
 
   assert.deepEqual(await inProcess(cwd, ['init', 'Check Out']), { code: 1, out: [], err: ['slug must be kebab-case, got "Check Out"'] })
-  assert.deepEqual(await inProcess(cwd, ['init']), { code: 1, out: [], err: ['slug must be kebab-case, got null'] })
   assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--issue', 'x']), { code: 2, out: [], err: [USAGE] })
+  assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--base']), { code: 2, out: [], err: [USAGE] })
+  assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--title', 'a', '--title', 'b']), { code: 2, out: [], err: [USAGE] })
   assert.equal(existsSync(tracking(cwd)), false)
 })
 

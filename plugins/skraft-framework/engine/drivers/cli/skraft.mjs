@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readPluginVersion } from '../../infrastructure/plugin-manifest.mjs'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
@@ -10,6 +11,7 @@ process.exitCode = await runCli(
   process.argv.slice(2),
   {
     pluginVersion: () => readPluginVersion(new URL('plugin.json', pluginRoot)),
+    workingCopyName: () => basename(process.cwd()),
     adapters: () => createNodeAdapters({ cwd: process.cwd(), pluginRoot: fileURLToPath(pluginRoot) }),
   },
   { out: (line) => process.stdout.write(`${line}\n`), err: (line) => process.stderr.write(`${line}\n`) },
