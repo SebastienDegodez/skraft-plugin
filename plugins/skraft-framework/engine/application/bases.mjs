@@ -27,7 +27,7 @@ export const loadConfig = async ({ workspace }) => {
  * > `main`; `origin/<ref>` when the ref is not a local branch. A folder in no repository has
  * no base. Components need Git itself: a host that cannot run it is refused.
  * @param {{ sourceControl: import('./ports/source-control.mjs').SourceControl }} deps
- * @param {{ config: SkraftConfig, flag: string | null }} request
+ * @param {{ config: SkraftConfig, flag: unknown }} request flag: `--base` as received, null when absent
  * @returns {Promise<{ ok: true, bases: Base[] } | { ok: false, code: 'invalid-base' | 'base-unresolved' | 'source-control-unavailable', reason: string }>}
  */
 export const resolveBases = async ({ sourceControl }, { config, flag }) => {
@@ -51,13 +51,12 @@ export const resolveBases = async ({ sourceControl }, { config, flag }) => {
     if (repository === null) continue
     const [ref, source] = flag ? [flag, 'flag'] : branch ? [branch, 'component'] : config.baseBranch ? [config.baseBranch, 'config'] : [DEFAULT_BASE_BRANCH, 'default']
     const local = await sourceControl.mergeBase(root, ref)
-    const remote = local === null ? await sourceControl.mergeBase(root, `origin/${ref}`) : null
-    const sha = local ?? remote
+    const [used, sha] = local === null ? [`origin/${ref}`, await sourceControl.mergeBase(root, `origin/${ref}`)] : [ref, local]
     if (sha === null) {
       unresolved.push(`${component === null ? 'the working copy' : `component ${component}`} (${repository}) has no merge base with ${ref}`)
       continue
     }
-    bases.push({ component, root, repository, ref: local === null ? `origin/${ref}` : ref, source: /** @type {BaseSource} */ (source), sha })
+    bases.push({ component, root, repository, ref: used, source: /** @type {BaseSource} */ (source), sha })
   }
   if (unresolved.length > 0) {
     return { ok: false, code: 'base-unresolved', reason: `${unresolved.join('; ')}; set baseBranch in ${CONFIG_FILE} or pass --base <ref>` }

@@ -37,13 +37,8 @@ export const createDoctor = (deps) => Object.freeze({
     if (components.length === 0) return report([...checks, { subject: 'config', status: 'fail', detail: `${CONFIG_FILE} lists no component; run skraft init to detect them` }])
     checks.push({ subject: 'config', status: 'ok', detail: `${components.length} components: ${components.map(({ name }) => name).join(', ')}` })
 
-    /** @type {import('./bases.mjs').Base[]} */
-    let bases = []
-    if (run) {
-      const resolved = await resolveBases(deps, { config: loaded.config, flag: base })
-      if (resolved.ok) bases = resolved.bases
-      else checks.push({ subject: 'base', status: 'fail', detail: resolved.reason })
-    }
+    const resolved = run ? await resolveBases(deps, { config: loaded.config, flag: base }) : null
+    if (resolved?.ok === false) checks.push({ subject: 'base', status: 'fail', detail: resolved.reason })
     for (const component of components) {
       if ((await deps.workspace.list(component.root)) === null) {
         checks.push({ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` })
@@ -53,7 +48,7 @@ export const createDoctor = (deps) => Object.freeze({
         checks.push({ subject: component.name, status: 'fail', detail: `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}` })
       }
       for (const name of commandNames(component)) {
-        const baseSha = run ? baseOf(bases, component.name)?.sha ?? null : 'HEAD'
+        const baseSha = resolved === null ? 'HEAD' : resolved.ok ? baseOf(resolved.bases, component.name)?.sha ?? null : null
         checks.push(await commandCheck(deps, { component, name, run, baseSha }))
       }
     }
@@ -104,7 +99,7 @@ const dockerCheck = async (deps, components) => {
 
 /** @param {string} version @returns {DoctorCheck} */
 const nodeCheck = (version) => {
-  const major = Number(/^v?(\d+)\./.exec(version)?.[1] ?? 0)
+  const major = Number.parseInt(version.slice(1), 10)
   return major >= NODE_MAJOR
     ? { subject: 'node', status: 'ok', detail: `Node ${version}` }
     : { subject: 'node', status: 'fail', detail: `Node ${version}; skraft needs Node ${NODE_MAJOR} or later` }
