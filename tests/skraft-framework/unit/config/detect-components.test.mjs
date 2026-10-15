@@ -62,12 +62,19 @@ test('a React front inside a .NET solution folder is its own component; a projec
     'Payment.sln': '',
     'src/Payment.Api/Payment.Api.csproj': '',
     'src/web/package.json': REACT,
+    'src/web/ui/package.json': '{}',
+    'src/web/ui/tsconfig.json': '{}',
+    'src/web/scripts/package.json': '{}',
+    'src/payment-web/package.json': '{}',
+    'src/payment-web/tsconfig.json': '{}',
+    'src/payment-web/admin/package.json': REACT,
   })
 
   await outcome
 
   assert.deepEqual(workspace.config().components.map(({ name, root, stack }) => [name, root, stack]), [
     ['payment-authorization', '.', 'dotnet'],
+    ['payment-web', 'src/payment-web', 'typescript'],
     ['web', 'src/web', 'react'],
   ])
 })
@@ -89,7 +96,7 @@ test('a neighbour repository named at init becomes a component with its root rel
 
 test('Java, Python and plain JavaScript projects get their own stacks, paths and commands', async () => {
   const { workspace, outcome } = configure({
-    'payment-spring/pom.xml': '<project><modules><module>payment-domain</module><module>payment-app</module><module>payment-unit-test</module></modules></project>',
+    'payment-spring/pom.xml': '<project><modules><module>payment-domain</module><module>payment-app</module><module>payment-unit-test</module><module>tests</module></modules></project>',
     'payment-spring/payment-domain/pom.xml': '<project />',
     'payment-fastapi/pyproject.toml': '[project]\nname = "payment"\n',
     'payment-fastapi/src/payment/__init__.py': '',
@@ -101,7 +108,7 @@ test('Java, Python and plain JavaScript projects get their own stacks, paths and
 
   assert.deepEqual(workspace.config().components.map(({ name, stack, paths, commands }) => [name, stack, paths, commands]), [
     ['payment-fastapi', 'python', { src: ['src/'], tests: ['tests/'] }, { build: 'python -m compileall -q src', test: 'python -m pytest -q -p no:cacheprovider' }],
-    ['payment-spring', 'java', { src: ['payment-domain/', 'payment-app/'], tests: ['payment-unit-test/'] }, { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test' }],
+    ['payment-spring', 'java', { src: ['payment-domain/', 'payment-app/'], tests: ['payment-unit-test/', 'tests/'] }, { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q test' }],
     ['scripts', 'javascript', { src: ['./'], tests: ['./'] }, { test: 'npm test' }],
   ])
 })
@@ -116,6 +123,7 @@ test('init keeps every component and key the developer wrote, and adds only the 
     'skraft-config.json': JSON.stringify(written),
     'services/payment-api/Payment.sln': '',
     'web/package.json': REACT,
+    'tools/api/package.json': '{}',
   })
 
   const result = await outcome
@@ -123,11 +131,15 @@ test('init keeps every component and key the developer wrote, and adds only the 
   assert.equal(result.ok, true, result.reason)
   assert.deepEqual(workspace.config(), {
     ...written,
-    components: [written.components[0], { name: 'web', root: 'web', stack: 'react', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test' } }],
+    components: [
+      written.components[0],
+      { name: 'api-2', root: 'tools/api', stack: 'javascript', paths: { src: ['./'], tests: ['./'] }, commands: {} },
+      { name: 'web', root: 'web', stack: 'react', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npm run build', lint: 'npm run lint', test: 'npm test' } },
+    ],
   })
 
   const again = await createConfigureComponents({ workspace }).configure({ workingCopyName: 'x' })
-  assert.deepEqual([again.ok, again.reason], [true, 'skraft-config.json already lists every project found (2 components)'])
+  assert.deepEqual([again.ok, again.reason], [true, 'skraft-config.json already lists every project found (3 components)'])
 })
 
 test('an invalid skraft-config.json is reported and left untouched', async () => {
@@ -148,9 +160,9 @@ test('a Maven or Gradle project that ships its wrapper is built with it', async 
 
   await outcome
 
-  assert.deepEqual(workspace.config().components.map(({ name, commands }) => [name, commands]), [
-    ['billing', { build: './gradlew build -x test', test: './gradlew test' }],
-    ['orders', { build: './mvnw -B -q -DskipTests package', test: './mvnw -B -q test' }],
+  assert.deepEqual(workspace.config().components.map(({ name, paths, commands }) => [name, paths, commands]), [
+    ['billing', { src: ['src/main/'], tests: ['src/test/'] }, { build: './gradlew build -x test', test: './gradlew test' }],
+    ['orders', { src: ['src/main/'], tests: ['src/test/'] }, { build: './mvnw -B -q -DskipTests package', test: './mvnw -B -q test' }],
   ])
 })
 
@@ -162,3 +174,88 @@ test('a neighbour folder that is absolute or missing is refused, and nothing is 
   const missing = configure({ 'Payment.sln': '' }, { folders: ['../payment-web'] })
   assert.deepEqual([(await missing.outcome).reason, await missing.workspace.read('skraft-config.json')], ['--add ../payment-web is not a folder', null])
 })
+
+const NO_COMMANDS = {}
+for (const [behaviour, files, expected] of [
+  ['a setup.py without a src folder is a Python project built from its root', { 'setup.py': '' },
+    { stack: 'python', paths: { src: ['./'], tests: [] }, commands: { build: 'python -m compileall -q .', test: 'python -m pytest -q -p no:cacheprovider' } }],
+  ['a setup.cfg is a Python project; its test folder holds the tests', { 'setup.cfg': '', 'test/test_payment.py': '' },
+    { stack: 'python', paths: { src: ['./'], tests: ['test/'] }, commands: { build: 'python -m compileall -q .', test: 'python -m pytest -q -p no:cacheprovider' } }],
+  ['a requirements.txt is a Python project', { 'requirements.txt': '' },
+    { stack: 'python', paths: { src: ['./'], tests: [] }, commands: { build: 'python -m compileall -q .', test: 'python -m pytest -q -p no:cacheprovider' } }],
+  ['a build.gradle without a wrapper is a Java project built with gradle in the Maven layout', { 'build.gradle': '' },
+    { stack: 'java', paths: { src: ['src/main/'], tests: ['src/test/'] }, commands: { build: 'gradle build -x test', test: 'gradle test' } }],
+  ['a .csproj without a solution is a .NET project; its test folder holds the tests', { 'Payment.csproj': '', 'test/PaymentTests.cs': '' },
+    { stack: 'dotnet', paths: { src: ['./'], tests: ['test/'] }, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', format: 'dotnet format --verify-no-changes', mutation: 'dotnet stryker --since:{baseSha}' } }],
+  ['a tsconfig.json makes a package TypeScript, type-checked and without a test command', { 'package.json': '{}', 'tsconfig.json': '{}' },
+    { stack: 'typescript', paths: { src: ['./'], tests: ['./'] }, commands: { build: 'npx tsc --noEmit' } }],
+  ['a package with jest is tested with jest, from its __tests__ folder', { 'package.json': JSON.stringify({ devDependencies: { jest: '^29.0.0' } }), '__tests__/pay.test.js': '' },
+    { stack: 'javascript', paths: { src: ['./'], tests: ['__tests__/'] }, commands: { test: 'npx jest' } }],
+  ['a package keeps its tests in its tests folder', { 'package.json': '{}', 'src/pay.js': '', 'tests/pay.test.js': '' },
+    { stack: 'javascript', paths: { src: ['src/'], tests: ['tests/'] }, commands: NO_COMMANDS }],
+  ['a package keeps its tests in its test folder', { 'package.json': '{}', 'test/pay.test.js': '' },
+    { stack: 'javascript', paths: { src: ['./'], tests: ['test/'] }, commands: NO_COMMANDS }],
+  ['a package.json that is not JSON is a JavaScript project without commands', { 'package.json': '{ "name": ' },
+    { stack: 'javascript', paths: { src: ['./'], tests: ['./'] }, commands: NO_COMMANDS }],
+  ['a file named like a test folder is not a test folder', { 'package.json': '{}', test: '#!/bin/sh' },
+    { stack: 'javascript', paths: { src: ['./'], tests: ['./'] }, commands: NO_COMMANDS }],
+  ['a folder named like a project file is not a project', { 'requirements.txt/notes.md': '' }, null],
+  ['a backup of a solution is not a project', { 'Payment.sln.bak': '' }, null],
+  ['the user settings of a .NET project are not a project', { 'Payment.csproj.user': '' }, null],
+]) {
+  test(behaviour, async () => {
+    const { workspace, outcome } = configure(Object.fromEntries(Object.entries(files).map(([path, text]) => [`payment/${path}`, text])))
+
+    await outcome
+
+    assert.deepEqual(workspace.config().components.map(({ stack, paths, commands }) => ({ stack, paths, commands })), expected === null ? [] : [expected])
+  })
+}
+
+test('a working copy without any project gets a configuration without components', async () => {
+  const { workspace, outcome } = configure({ 'README.md': '# Payment' })
+
+  const result = await outcome
+
+  assert.deepEqual([result.ok, result.reason], [true, 'no project found; skraft-config.json lists no component'])
+  assert.deepEqual(workspace.config(), { components: [] })
+})
+
+test('projects in folders of the same name get numbered names', async () => {
+  const { workspace, outcome } = configure({ 'web/package.json': '{}', 'apps/web/package.json': '{}', 'tools/web/package.json': '{}' })
+
+  const result = await outcome
+
+  assert.deepEqual(workspace.config().components.map(({ name, root }) => [name, root]), [['web', 'apps/web'], ['web-2', 'tools/web'], ['web-3', 'web']])
+  assert.equal(result.reason, 'skraft-config.json: web (javascript, apps/web), web-2 (javascript, tools/web), web-3 (javascript, web)')
+})
+
+test('a project more than three folders deep is not proposed', async () => {
+  const { workspace, outcome } = configure({ 'services/payment/api/pom.xml': '<project />', 'services/payment/legacy/api/pom.xml': '<project />' })
+
+  await outcome
+
+  assert.deepEqual(workspace.config().components.map(({ root }) => root), ['services/payment/api'])
+})
+
+test('installed dependencies and hidden folders are not searched for projects', async () => {
+  const { workspace, outcome } = configure({
+    'Payment.sln': '',
+    'node_modules/left-pad/package.json': '{}',
+    '.tools/web/package.json': '{}',
+  })
+
+  await outcome
+
+  assert.deepEqual(workspace.config().components.map(({ name, root }) => [name, root]), [['payment-authorization', '.']])
+})
+
+for (const [workingCopyName, name] of [['__Payment__Web__', 'payment-web'], ['---', 'app']]) {
+  test(`a working copy named ${workingCopyName} gives the component name ${name}`, async () => {
+    const { workspace, outcome } = configure({ 'Payment.sln': '' }, { workingCopyName })
+
+    await outcome
+
+    assert.deepEqual(workspace.config().components.map((component) => component.name), [name])
+  })
+}
