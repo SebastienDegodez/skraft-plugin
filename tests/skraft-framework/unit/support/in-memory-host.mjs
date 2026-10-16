@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 // Hand-written doubles for the engine ports. No mock library: each double is a small
 // working implementation over plain JavaScript values.
 
@@ -31,6 +33,10 @@ export class InMemoryTracking {
   async read(slug, rel) { return this.files.get(this.key(slug, rel)) ?? null }
   async write(slug, rel, text) { this.files.set(this.key(slug, rel), text) }
   location(slug, rel) { return `${this.root}/${slug}/${rel}` }
+  async list(slug, folder) {
+    const prefix = this.key(slug, `${folder}/`)
+    return [...this.files.keys()].filter((key) => key.startsWith(prefix)).map((key) => key.slice(slug.length + 1)).sort()
+  }
 
   /** Test helpers */
   journal(slug) { return (this.files.get(this.key(slug, 'events.jsonl')) ?? '').split('\n').filter(Boolean).map((line) => JSON.parse(line)) }
@@ -150,6 +156,121 @@ export class InMemorySourceControl {
     const changed = this.folders[tidy(dir) || '.']?.changed
     return changed === undefined ? [] : changed
   }
+  async head() { return null }
+  async commits() { return [] }
+}
+
+/** Whether `path` is `folder` or under it; both relative to the same place, `.`-free. */
+const under = (path, folder) => folder === '' || path === folder || path.startsWith(`${folder}/`)
+const inside = (path, folder) => (folder === '' ? path : path.slice(folder.length + 1))
+
+/**
+ * Git repositories that change while the run goes: each has its commits and its uncommitted
+ * files. Paths the helpers take are relative to the working copy; `.` is the working copy's
+ * own repository, `../web` a neighbour one.
+ */
+export class InMemoryGit {
+  /**
+   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string> }>, unavailable?: string | null }} [options]
+   *   every repository starts with one commit, `<top>-0`, which its merge bases usually name
+   */
+  constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null } = {}) {
+    this.missing = unavailable
+    /** @type {Map<string, { mergeBases: Record<string, string>, history: Array<{ sha: string, subject: string, files: string[] }>, dirty: Set<string> }>} */
+    this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {} }]) => {
+      const key = tidy(top)
+      return [key, { mergeBases, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', files: [] }], dirty: new Set() }]
+    }))
+  }
+  /** The repository holding a working-copy path, and the path inside it. */
+  locate(path) {
+    const file = tidy(path)
+    const top = [...this.repositories.keys()].filter((key) => under(file, key)).sort((a, b) => b.length - a.length)[0]
+    return top === undefined ? null : { top, repo: this.repositories.get(top), inner: inside(file, top) }
+  }
+  /** Files written and left uncommitted. @param {...string} paths */
+  change(...paths) {
+    for (const path of paths) {
+      const at = this.locate(path)
+      at.repo.dirty.add(at.inner)
+    }
+  }
+  /** A commit of these files, all in one repository; returns its sha. @param {string} subject @param {string[]} paths */
+  commit(subject, paths) {
+    const at = this.locate(paths[0] ?? '.')
+    const files = paths.map((path) => this.locate(path).inner)
+    for (const file of files) at.repo.dirty.delete(file)
+    const sha = `${shaPrefix(at.top)}-${at.repo.history.length}`
+    at.repo.history.push({ sha, subject, files })
+    return sha
+  }
+  async unavailable() { return this.missing }
+  async repository(dir) {
+    const at = this.locate(dir)
+    return at === null ? null : at.top === '' ? '.' : at.top
+  }
+  async mergeBase(dir, ref) { return this.locate(dir)?.repo.mergeBases[ref] ?? null }
+  async head(dir) { return this.locate(dir)?.repo.history.at(-1).sha ?? null }
+  async commits(dir, since) {
+    const at = this.locate(dir)
+    const from = at?.repo.history.findIndex((commit) => commit.sha === since) ?? -1
+    if (from < 0) return null
+    return at.repo.history.slice(from + 1).map(({ sha, subject, files }) => ({
+      sha, subject, files: files.filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner)),
+    }))
+  }
+  async changedFiles(dir, sha) {
+    const commits = await this.commits(dir, sha)
+    if (commits === null) return null
+    const at = this.locate(dir)
+    const dirty = [...at.repo.dirty].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
+    return [...new Set([...commits.flatMap((commit) => commit.files), ...dirty])]
+  }
+}
+const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').replaceAll('/', '-'))
+
+/**
+ * Commits replayed in a throwaway checkout: the test command exits 1 (the red test fails)
+ * unless `exits` names another code for that commit; null stands for a program that could not
+ * start. The clock advances by takesMs per replay.
+ */
+export class ScriptedReplay {
+  /** @param {{ exits?: Record<string, number | null>, clock?: FixedClock | null, takesMs?: number }} [options] */
+  constructor({ exits = {}, clock = null, takesMs = 0 } = {}) {
+    this.exits = exits
+    this.clock = clock
+    this.takesMs = takesMs
+    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[] }>} */
+    this.replays = []
+  }
+  async run(request) {
+    this.replays.push(request)
+    this.clock?.advance(this.takesMs)
+    const exitCode = request.sha in this.exits ? this.exits[request.sha] : 1
+    if (exitCode === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${request.argv[0]}` }
+    return { started: true, exitCode, stdout: `${request.argv.join(' ')} at ${request.sha}\n`, stderr: '' }
+  }
+  /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`. */
+  lines() { return this.replays.map(({ sha, repository, cwd, argv }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}`) }
+}
+
+/** Agents by where they come from; the plugin ships the pipeline's own by default. */
+export class InMemoryAgentCatalog {
+  /** @param {{ plugin?: string[], repository?: string[] }} [agents] */
+  constructor({ plugin = ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'], repository = [] } = {}) {
+    this.plugin = new Set(plugin)
+    this.repository = new Set(repository)
+  }
+  async locate(agent) { return this.plugin.has(agent) ? 'plugin' : this.repository.has(agent) ? 'repository' : null }
+}
+
+/** The plugin's own `workflows/skraft.dot`, read once: the default every test runs. */
+export const BUILT_IN_WORKFLOW = readFileSync(new URL('../../../../plugins/skraft-framework/workflows/skraft.dot', import.meta.url), 'utf8')
+
+export class InMemoryWorkflowSource {
+  /** @param {string} [text] */
+  constructor(text = BUILT_IN_WORKFLOW) { this.text = text }
+  async builtIn() { return this.text }
 }
 
 /**

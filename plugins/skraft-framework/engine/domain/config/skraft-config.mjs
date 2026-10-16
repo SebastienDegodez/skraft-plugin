@@ -2,25 +2,33 @@ import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { normalizeRelative } from './relative-path.mjs'
 
 /**
- * `skraft-config.json`: components, each with its root, stack and commands. A command the
- * developer wrote is used as written; nothing here fills in a default. `paths` and
- * `contractTesting` are accepted and read by the lots that use them.
+ * `skraft-config.json`: components, each with its root, stack, source and test paths and
+ * commands; the workflow the repository runs; how TDD commits are replayed. A command the
+ * developer wrote is used as written; nothing here fills in a default. `contractTesting` is
+ * accepted and read by the lot that uses it.
  *
  * @typedef {'dotnet' | 'java' | 'python' | 'typescript' | 'javascript' | 'react'} Stack
  * @typedef {{
  *   name: string, root: string, stack: Stack,
+ *   paths: { src: string[], tests: string[] },
  *   commands: Record<string, string>,
  *   baseBranch: string | null,
  *   mocking: { strategy: 'microcks' | 'inprocess' },
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
- * @typedef {{ baseBranch: string | null, components: Component[] }} SkraftConfig
+ *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none.
+ * @typedef {'all' | 'last-red'} ReplayMode
+ *   all: every red commit is replayed; last-red: only the last red commit of each story.
+ * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode } }} Settings
+ *   workflow: the repository's DOT workflow, relative to the working copy; null runs the plugin's.
+ * @typedef {Settings & { components: Component[] }} SkraftConfig
  * @typedef {{ ok: true, present: boolean, config: SkraftConfig, raw: Record<string, unknown> }
  *   | { ok: false, errors: string[] }} ConfigReading
  */
 
 export const CONFIG_FILE = 'skraft-config.json'
 const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
+const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting'])
@@ -37,17 +45,42 @@ export const NO_GATE = `no gate command; give it at least one of ${GATE_ORDER.jo
  * @returns {ConfigReading}
  */
 export const readConfig = (text) => {
-  if (text === null) return { ok: true, present: false, config: { baseBranch: null, components: [] }, raw: {} }
+  if (text === null) return { ok: true, present: false, config: { baseBranch: null, workflow: null, tdd: { replay: 'all' }, components: [] }, raw: {} }
   const parsed = parseObject(text)
   if (!parsed.ok) return parsed
   const raw = parsed.value
   /** @type {string[]} */
   const errors = []
-  const baseBranch = optionalRef(raw.baseBranch, 'baseBranch', errors)
+  const settings = settingsOf(raw, errors)
   const components = componentsOf(raw.components ?? [], errors)
   reportNamesUsedTwice(components, errors)
   if (errors.length > 0) return { ok: false, errors }
-  return { ok: true, present: true, config: { baseBranch, components: /** @type {Component[]} */ (components) }, raw }
+  return { ok: true, present: true, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw }
+}
+
+/**
+ * The repository-wide keys, checked in the order their errors are listed.
+ * @param {Record<string, any>} raw @param {string[]} errors @returns {Settings}
+ */
+const settingsOf = (raw, errors) => ({
+  baseBranch: optionalRef(raw.baseBranch, 'baseBranch', errors),
+  workflow: workflowOf(raw.workflow ?? null, errors),
+  tdd: { replay: replayOf(raw.tdd, errors) },
+})
+
+/** @param {unknown} workflow @param {string[]} errors @returns {string | null} */
+const workflowOf = (workflow, errors) => {
+  if (workflow === null) return null
+  if (typeof workflow === 'string' && workflow.endsWith('.dot') && !isAbsolutePath(workflow)) return normalizeRelative(workflow)
+  errors.push(`workflow must be a .dot file relative to the working copy, got ${JSON.stringify(workflow)}`)
+  return null
+}
+
+/** @param {unknown} tdd @param {string[]} errors @returns {any} the replay mode it names, all when absent */
+const replayOf = (tdd, errors) => {
+  const replay = isRecord(tdd) ? tdd.replay ?? 'all' : tdd === undefined ? 'all' : null
+  if (!REPLAY_MODES.includes(replay)) errors.push(`tdd must be { "replay": "${REPLAY_MODES.join('" or "')}" }`)
+  return replay
 }
 
 /**
@@ -125,23 +158,25 @@ const checkedComponent = (component) => {
   const { entry, label, errors } = component
   const before = errors.length
   for (const check of FIELD_CHECKS) check(component)
+  const paths = pathsOf(entry.paths ?? {}, label, errors)
   const commands = commandsOf(entry.commands ?? {}, label, errors)
   const baseBranch = optionalRef(entry.baseBranch, `${label}: baseBranch`, errors)
   const strategy = mockingOf(entry.mocking, label, errors)
   if (errors.length > before) return null
-  return componentFrom(entry, { commands, baseBranch, strategy })
+  return componentFrom(entry, { paths, commands, baseBranch, strategy })
 }
 
 /**
  * A component whose fields passed their checks, its root normalised.
  * @param {Record<string, any>} entry
- * @param {{ commands: Record<string, string>, baseBranch: string | null, strategy: any }} values
+ * @param {{ paths: Component['paths'], commands: Record<string, string>, baseBranch: string | null, strategy: any }} values
  * @returns {Component}
  */
-const componentFrom = (entry, { commands, baseBranch, strategy }) => ({
+const componentFrom = (entry, { paths, commands, baseBranch, strategy }) => ({
   name: entry.name,
   root: normalizeRelative(entry.root),
   stack: entry.stack,
+  paths,
   commands,
   baseBranch,
   mocking: { strategy },
@@ -170,6 +205,37 @@ const commandsOf = (value, label, errors) => {
   return /** @type {Record<string, string>} */ (value)
 }
 
+/** @param {unknown} value @param {string} label @param {string[]} errors @returns {Component['paths']} */
+const pathsOf = (value, label, errors) => {
+  /** @type {Component['paths']} */
+  const paths = { src: ['.'], tests: ['.'] }
+  if (!isRecord(value)) {
+    errors.push(`${label}: paths must be { "src": [...], "tests": [...] }`)
+    return paths
+  }
+  for (const key of PATH_KEYS) readPaths(paths, key, value[key], label, errors)
+  return paths
+}
+
+const PATH_KEYS = /** @type {const} */ (['src', 'tests'])
+
+/**
+ * One key of `paths`, kept as `['.']` when absent.
+ * @param {Component['paths']} paths @param {'src' | 'tests'} key @param {unknown} listed
+ * @param {string} label @param {string[]} errors
+ */
+const readPaths = (paths, key, listed, label, errors) => {
+  if (listed === undefined) return
+  if (isFolderList(listed)) paths[key] = listed.map(normalizeRelative)
+  else errors.push(`${label}: paths.${key} must list folders inside the component root`)
+}
+
+/** Folders inside a component root: relative, and never above it. @param {unknown} listed @returns {listed is string[]} */
+const isFolderList = (listed) => Array.isArray(listed) && listed.length > 0 && listed.every(isInnerFolder)
+
+/** @param {unknown} path */
+const isInnerFolder = (path) => typeof path === 'string' && path.trim() !== '' && !isAbsolutePath(path) && !normalizeRelative(path).startsWith('..')
+
 /** @param {unknown} value @param {string} label @param {string[]} errors @returns {string | null} */
 const optionalRef = (value, label, errors) => {
   if (value === undefined || value === null) return null
@@ -195,3 +261,10 @@ const isRecord = (value) => value !== null && typeof value === 'object' && !Arra
  * @param {Array<Record<string, unknown>>} components the components to list, in order
  */
 export const writeConfig = (raw, components) => `${JSON.stringify({ ...raw, components }, null, 2)}\n`
+
+/**
+ * The file's text once it designates a workflow, every other key kept as it was.
+ * @param {Record<string, unknown>} raw the object read from the file ({} when absent)
+ * @param {string} workflow relative to the working copy
+ */
+export const writeWorkflow = (raw, workflow) => `${JSON.stringify({ ...raw, workflow }, null, 2)}\n`

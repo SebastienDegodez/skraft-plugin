@@ -1,0 +1,18 @@
+// The skraft pipeline. Copy it into a repository with `skraft workflow eject`, then add
+// agents or gates; `skraft workflow check` validates it, `skraft workflow diff` compares it
+// with this one. A node marked locked=true can only be dropped with unlock="<reason>".
+digraph skraft {
+  graph [version="2", goal="Deliver the story"]
+
+  start    [shape=Mdiamond]
+  research [shape=box, agent="solution-researcher", phase="RESEARCH"]
+  design   [shape=box, agent="solution-architect", phase="DESIGN"]
+  distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
+  deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
+  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]
+  exit     [shape=Msquare]
+
+  start -> research -> design -> distill -> deliver -> gates
+  gates -> deliver [label="FAIL", max_visits=3]
+  gates -> exit    [label="PASS"]
+}
