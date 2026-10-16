@@ -40,5 +40,8 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     'skraft status [--json]',
     'skraft gate [--all] [--json]',
     'skraft doctor [--run] [--base <ref>] [--json]',
+    'skraft workflow eject',
+    'skraft workflow check [--json]',
+    'skraft workflow diff [--json]',
   ])
 })

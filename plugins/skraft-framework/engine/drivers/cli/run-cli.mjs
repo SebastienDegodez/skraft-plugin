@@ -3,12 +3,15 @@ import { createObserve } from '../../application/observe.mjs'
 import { createConfigureComponents } from '../../application/configure-components.mjs'
 import { createRunGate } from '../../application/run-gate.mjs'
 import { createDoctor } from '../../application/doctor.mjs'
+import { createWorkflowCommands } from '../../application/workflow.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
- * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0]} CliAdapters
+ * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0]} CliAdapters
  * @typedef {{ pluginVersion: () => string, workingCopyName: () => string, adapters: () => CliAdapters }} CliServices
  * @typedef {(args: string[], services: CliServices, console: Console) => Promise<number> | number} Command
+ * @typedef {ReturnType<typeof createWorkflowCommands>} WorkflowCommands
+ * @typedef {(commands: WorkflowCommands, request: { json: boolean, services: CliServices }, console: Console) => Promise<number>} WorkflowAction
  */
 
 export const USAGE = [
@@ -18,6 +21,9 @@ export const USAGE = [
   '       skraft status [--json]',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
+  '       skraft workflow eject                                             copy the plugin workflow into skraft-workflow.dot',
+  '       skraft workflow check [--json]                                    validate the workflow a run follows',
+  '       skraft workflow diff [--json]                                     compare the repository workflow with the plugin one',
 ].join('\n')
 
 /**
@@ -162,6 +168,33 @@ const doctorLines = (report) => [
   report.ok ? 'skraft doctor: every check passed' : `skraft doctor: ${report.checks.filter((check) => check.status === 'fail').length} checks failed`,
 ]
 
+/** `workflow eject`, `workflow check [--json]`, `workflow diff [--json]`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const workflow = async ([action, ...args], services, console) => {
+  const options = optionsOf(args, { flags: action === 'eject' ? [] : ['--json'] })
+  const run = WORKFLOW_ACTIONS.get(action)
+  if (options === undefined || run === undefined) return usage(console)
+  return run(createWorkflowCommands(services.adapters()), { json: options['--json'] === true, services }, console)
+}
+
+/** What each `workflow` action runs. @type {Map<string | undefined, WorkflowAction>} */
+const WORKFLOW_ACTIONS = new Map([
+  ['eject', async (commands, { services }, console) => answer(await commands.eject({ pluginVersion: services.pluginVersion() }), console)],
+  ['check', async (commands, { json }, console) => workflowReport(await commands.check(), json, console)],
+  ['diff', async (commands, { json, services }, console) => workflowReport(await commands.diff({ pluginVersion: services.pluginVersion() }), json, console)],
+])
+
+/**
+ * A check or a diff: indented JSON with `--json`; else its changes then its reason on stdout,
+ * or its reason on stderr when it failed.
+ * @param {{ ok: boolean, reason: string, changes?: string[] }} outcome @param {boolean} json @param {Console} console
+ */
+const workflowReport = (outcome, json, console) => {
+  if (json) console.out(JSON.stringify(outcome, null, 2))
+  else if (outcome.ok) for (const line of [...(outcome.changes ?? []), outcome.reason]) console.out(line)
+  else console.err(outcome.reason)
+  return outcome.ok ? 0 : 1
+}
+
 /** @type {Command} */
 const unknown = (_args, _services, console) => usage(console)
 
@@ -172,6 +205,7 @@ const COMMANDS = new Map([
   ['status', status],
   ['gate', gate],
   ['doctor', doctor],
+  ['workflow', workflow],
 ])
 
 /** `skraft` followed by the slug, when there is one. @param {string | null | undefined} slug */
