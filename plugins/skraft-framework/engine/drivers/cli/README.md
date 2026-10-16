@@ -7,7 +7,7 @@ Never imports another driver.
 | Command | Use case | Exit |
 | --- | --- | --- |
 | `skraft init [--add <folder>]...` | ConfigureComponents: one component per project into `skraft-config.json` | 0, 1 invalid config |
-| `skraft init <slug> [--issue <n>] [--title <t>] [--base <ref>]` | Init: active pipeline, journal, bases | 0, 1 refused |
+| `skraft init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | Init: active pipeline, journal, bases; from the DISCUSS stories, starts in DESIGN | 0, 1 refused |
 | `skraft status [--json]` | Observe | 0, 1 tampered |
 | `skraft gate [--all] [--json]` | RunGate: touched components, or all | 0 passed, 1 otherwise |
 | `skraft doctor [--run] [--base <ref>] [--json]` | Doctor | 0 every check ok, 1 otherwise |

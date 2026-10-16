@@ -1,5 +1,6 @@
 /**
- * AgentRunner on `$.agent.spawn`: the subagent's answer is its own `turn.complete`.
+ * AgentRunner on `$.agent.spawn`: the subagent's answer is its own `turn.complete`. A plugin
+ * agent is spawned as `<pluginName>:<id>`, a repository agent under its own id.
  *
  * @typedef {{ agentId?: string, answer?: string, reason?: string }} TurnComplete
  *   the fields of a `turn.complete` input the runner reads.
@@ -56,17 +57,18 @@ export const createAgentAnswers = ({ keep = 50 } = {}) => {
  * @returns {import('../../application/ports/agent-runner.mjs').AgentRunner}
  */
 export const createSpawnAgentRunner = ({ spawn, answers, pluginName, sessionCostUsd }) => Object.freeze({
-  run: async ({ agent, label, prompt }) => {
+  run: async ({ agent, source, label, prompt }) => {
+    const subagentType = source === 'repository' ? agent : `${pluginName}:${agent}`
     const before = await sessionCostUsd()
     /** @type {SpawnResult} */
     let spawned
     try {
-      spawned = await spawn({ prompt, subagentType: `${pluginName}:${agent}`, description: label })
+      spawned = await spawn({ prompt, subagentType, description: label })
     } catch (error) {
-      return { ok: false, text: '', unavailable: true, error: `${pluginName}:${agent} could not be started: ${messageOf(error)}` }
+      return { ok: false, text: '', unavailable: true, error: `${subagentType} could not be started: ${messageOf(error)}` }
     }
     if (typeof spawned.deny === 'string' || typeof spawned.agentId !== 'string') {
-      return { ok: false, text: '', unavailable: true, error: spawned.deny ?? `${pluginName}:${agent} was not started` }
+      return { ok: false, text: '', unavailable: true, error: spawned.deny ?? `${subagentType} was not started` }
     }
     const turn = await answers.wait(spawned.agentId)
     const after = await sessionCostUsd()
@@ -74,7 +76,7 @@ export const createSpawnAgentRunner = ({ spawn, answers, pluginName, sessionCost
     return {
       ok,
       text: turn.answer ?? '',
-      ...(ok ? {} : { error: `${pluginName}:${agent} ended: ${turn.reason}` }),
+      ...(ok ? {} : { error: `${subagentType} ended: ${turn.reason}` }),
       ...(before !== null && after !== null && after >= before ? { costUsd: after - before } : {}),
     }
   },

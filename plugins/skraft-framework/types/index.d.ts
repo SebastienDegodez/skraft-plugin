@@ -8,7 +8,7 @@ export type SkraftRunView = {
   status: 'idle' | 'not-initialised' | 'running' | 'done' | 'blocked' | 'tampered'
   reason: string
   phases: SkraftPhaseView[]
-  current: { step: string; phase: string; agent: string; attempt: number } | null
+  current: { step: string; phase: string; agent: string | null; gates: string[] | null; visit: number; attempt: number } | null
   attempts: number
   costUsd: number | null
 }

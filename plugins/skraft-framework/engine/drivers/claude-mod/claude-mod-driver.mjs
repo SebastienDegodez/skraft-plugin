@@ -7,6 +7,9 @@ import { createSystemClock } from '../../infrastructure/clock/system-clock.mjs'
 import { createWebCryptoHasher } from '../../infrastructure/crypto/web-crypto-hasher.mjs'
 import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-files.mjs'
 import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
+import { createGitCommitReplay } from '../../infrastructure/source-control/git-commit-replay.mjs'
+import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mjs'
+import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
 import { createModCommandRunner } from './mod-processes.mjs'
 import { createModFiles } from './mod-files.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
@@ -50,7 +53,7 @@ export const COMMAND = Object.freeze({
   // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description: 'Run the skraft pipeline for one story, or show where the active one stands',
   // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
-  argumentHint: '[<slug> [#issue] [title…] [--base <ref>]] | decide …',
+  argumentHint: '[<slug> [#issue] [title…] [--base <ref>] [--from-artifacts]] | decide …',
 })
 export const TOOL = Object.freeze({
   name: 'run_pipeline',
@@ -68,6 +71,7 @@ export const TOOL = Object.freeze({
       issue: { type: 'integer', description: 'the story issue number' },
       title: { type: 'string', description: 'the story title' },
       base: { type: 'string', description: 'git ref to diff against instead of the configured base; only for a new slug' },
+      fromArtifacts: { type: 'boolean', description: 'start a new slug in DESIGN from the DISCUSS stories already in its tracking folder' },
       // Stryker restore StringLiteral
     },
   }),
@@ -89,9 +93,10 @@ export const createClaudeModDriver = () => {
 
   /** @param {ModHost} host */
   const compose = async (host) => {
-    const files = createModFiles(host.fs)
+    const files = createModFiles(host.fs, { run: host.run })
     const root = await host.cwd()
     const tracking = createTrackingStore({ files, root })
+    const commandRunner = createModCommandRunner({ run: host.run, root })
     return {
       journal: tracking.journal,
       activePipeline: tracking.activePipeline,
@@ -100,7 +105,11 @@ export const createClaudeModDriver = () => {
       clock: host.clock ?? createSystemClock(),
       hasher: createWebCryptoHasher(),
       workspace: createWorkspaceFiles({ files, root }),
-      sourceControl: createGitSourceControl({ commandRunner: createModCommandRunner({ run: host.run, root }) }),
+      commandRunner,
+      sourceControl: createGitSourceControl({ commandRunner }),
+      commitReplay: createGitCommitReplay({ commandRunner }),
+      workflowSource: createPluginWorkflows({ files, pluginRoot: host.pluginRoot }),
+      agentCatalog: createAgentCatalog({ files, pluginRoot: host.pluginRoot, root }),
     }
   }
 
@@ -153,8 +162,8 @@ export const createClaudeModDriver = () => {
     return outcome
   }
 
-  /** @param {ModHost} host @param {{ slug: string | null, story: Story, base: string | null }} request @returns {Promise<string>} */
-  const start = async (host, { slug, story, base }) => {
+  /** @param {ModHost} host @param {{ slug: string | null, story: Story, base: string | null, fromArtifacts: boolean }} request @returns {Promise<string>} */
+  const start = async (host, { slug, story, base, fromArtifacts }) => {
     if (running !== null) return `skraft is already running ${running}; see the Skraft pane.`
     running = slug ?? 'the active pipeline'
     let launched = false
@@ -165,7 +174,7 @@ export const createClaudeModDriver = () => {
         target = await deps.activePipeline.current()
         if (target === null) return outcomeText(await pipelineOf(host, deps, null).run({}))
       } else {
-        const initialised = await createInit(deps).init({ slug: target, story, base })
+        const initialised = await createInit(deps).init({ slug: target, story, base, fromArtifacts })
         if (!initialised.ok) return `skraft ${target}: not started — ${initialised.reason}`
       }
       const slugToRun = target

@@ -7,7 +7,7 @@ const RUNNING = {
   status: 'running',
   reason: '',
   phases: [{ phase: 'RESEARCH', state: 'open' }, { phase: 'DESIGN', state: 'pending' }],
-  current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', attempt: 2 },
+  current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, visit: 1, attempt: 2 },
   attempts: 1,
   costUsd: 0.25,
 }
@@ -17,9 +17,17 @@ test('a running pipeline shows its phases, its current agent and its cost', () =
     { key: 'title', text: 'skraft checkout — running', tone: 'title' },
     { key: 'phase-RESEARCH', text: '▶ RESEARCH', tone: 'open' },
     { key: 'phase-DESIGN', text: '· DESIGN', tone: 'pending' },
-    { key: 'agent', text: 'agent: solution-researcher (research, attempt 2)', tone: 'detail' },
+    { key: 'current', text: 'agent: solution-researcher (research, attempt 2)', tone: 'detail' },
     { key: 'cost', text: 'cost: $0.25', tone: 'detail' },
   ])
+})
+
+test('the current node names its pass after the first, and a gate node shows its gates instead of an agent', () => {
+  const delivering = { ...RUNNING, phases: [], costUsd: null, current: { step: 'deliver', phase: 'DELIVER', agent: 'software-engineer', gates: null, visit: 2, attempt: 3 } }
+  assert.equal(viewText(delivering), 'skraft checkout — running\nagent: software-engineer (deliver, pass 2, attempt 3)')
+  const gating = { ...delivering, current: { step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'test'], visit: 1, attempt: 1 } }
+  assert.deepEqual(viewRows(gating).at(-1), { key: 'current', text: 'gates: build, test (gates)', tone: 'detail' })
+  assert.equal(viewRows({ ...gating, current: { ...gating.current, visit: 3 } }).at(-1).text, 'gates: build, test (gates, pass 3)')
 })
 
 test('a finished pipeline shows its closed phases and its reason', () => {

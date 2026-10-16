@@ -11,7 +11,8 @@ import { join } from 'node:path'
 
 /**
  * The session's agent for an engine agent file id (`solution-researcher`), or null when the
- * list names none. listed null: the session cannot list, so the plugin prefix is assumed.
+ * list names none. listed null: the session cannot list, so the id takes the plugin prefix,
+ * if any: a repository agent is given none.
  * @param {string} id
  * @param {{ listed: SessionAgent[] | null, pluginName: string | null }} known
  * @returns {string | null}
@@ -53,15 +54,16 @@ const pluginNameOf = async (pluginRoot) => {
 export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {} }) => {
   /** @type {Promise<SessionAgent[] | null> | undefined} */
   let listing
-  const idOf = async (/** @type {string} */ id) => {
+  const idOf = async (/** @type {string} */ id, /** @type {import('../../application/ports/agent-catalog.mjs').AgentSource} */ source) => {
     if (typeof agentIds[id] === 'string') return { name: agentIds[id], listed: null }
     listing ??= listAgents(ctx)
     const listed = await listing
-    return { name: resolveAgentId(id, { listed, pluginName: listed === null ? await pluginNameOf(pluginRoot) : null }), listed }
+    const pluginName = listed === null && source === 'plugin' ? await pluginNameOf(pluginRoot) : null
+    return { name: resolveAgentId(id, { listed, pluginName }), listed }
   }
   return Object.freeze({
-    run: async ({ agent, label, prompt }) => {
-      const { name, listed } = await idOf(agent)
+    run: async ({ agent, source, label, prompt }) => {
+      const { name, listed } = await idOf(agent, source)
       if (name === null) {
         const known = (listed ?? []).map((entry) => entry.id ?? entry.name).join(', ') || 'none'
         return {

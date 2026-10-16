@@ -17,7 +17,7 @@ import { createWorkflowCommands } from '../../application/workflow.mjs'
 export const USAGE = [
   'usage: skraft --version',
   '       skraft init [--add <folder>]...                                   detect the components into skraft-config.json',
-  '       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>]   start or resume a pipeline',
+  '       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline',
   '       skraft status [--json]',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
@@ -101,9 +101,10 @@ const configure = async (args, services, console) => {
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
 const init = async ([slug, ...rest], services, console) => {
-  const options = optionsOf(rest, { values: ['--issue', '--title', '--base'] })
+  const options = optionsOf(rest, { values: ['--issue', '--title', '--base'], flags: ['--from-artifacts'] })
   if (options === undefined || !isIssueNumber(options['--issue'])) return usage(console)
-  return answer(await createInit(services.adapters()).init({ slug: slug ?? null, story: storyOf(options), base: options['--base'] ?? null }), console)
+  const request = { slug: slug ?? null, story: storyOf(options), base: options['--base'] ?? null, fromArtifacts: options['--from-artifacts'] === true }
+  return answer(await createInit(services.adapters()).init(request), console)
 }
 
 /** `--issue`, when given, is a positive whole number with no leading zero. @param {string | string[] | true | undefined} issue */
@@ -129,10 +130,21 @@ const status = async (args, services, console) => {
 const statusLines = (view) => [
   `${skraftOf(view.slug)}: ${view.status}`,
   ...view.phases.map(({ phase, state }) => `${phase}  ${state}`),
-  ...(view.current ? [`agent: ${view.current.agent} (${view.current.step}, attempt ${view.current.attempt})`] : []),
+  ...(view.current ? [currentLine(view.current)] : []),
   ...(view.costUsd !== null ? [`cost: ${view.costUsd.toFixed(2)} USD`] : []),
   ...(view.reason ? [view.reason] : []),
 ]
+
+/**
+ * The node the run stands on: a gate node by its gates, an agent node by its agent and attempt.
+ * @param {NonNullable<import('../../application/observe.mjs').RunView['current']>} current
+ */
+const currentLine = ({ step, agent, gates, visit, attempt }) => {
+  const pass = visit > 1 ? `, pass ${visit}` : ''
+  return agent === null
+    ? `gates: ${/** @type {string[]} */ (gates).join(', ')} (${step}${pass})`
+    : `agent: ${agent} (${step}${pass}, attempt ${attempt})`
+}
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
 const gate = async (args, services, console) => {

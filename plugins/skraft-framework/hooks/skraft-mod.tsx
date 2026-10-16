@@ -1,9 +1,9 @@
 // skraft as a Claude Code mod. Every `$` call is a one-line function handed to the
 // claude-mod driver (engine/drivers/claude-mod/), which composes the engine's use cases.
 //
-//   /skraft <slug> [#issue] [title…] [--base <ref>]   Init then RunPipeline in the background, pane `skraft-pipeline`
+//   /skraft <slug> [#issue] [title…] [--base <ref>] [--from-artifacts]   Init then RunPipeline in the background, pane `skraft-pipeline`
 //   /skraft                            the Observe view of the active pipeline
-//   /skraft decide …                   no question is pending in lot 1
+//   /skraft decide …                   no step asks a question yet
 //   mcp__skraft__run_pipeline          the same start, for the model
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
@@ -64,7 +64,7 @@ export const register: Register = (on) => {
   }).catch(($, e, next) => ({ text: `skraft: ${next.error?.message ?? 'failed'}` }))
 
   on('tool.call', { tool: 'mcp__skraft__run_pipeline' }, async ($, e) => {
-    const text = await driver.tool(hostOf($), e as { slug?: unknown; issue?: unknown; title?: unknown; base?: unknown })
+    const text = await driver.tool(hostOf($), e as { slug?: unknown; issue?: unknown; title?: unknown; base?: unknown; fromArtifacts?: unknown })
     void openPane($)
     return { result: text }
   }).catch(($, e, next) => ({ result: `skraft could not start: ${next.error?.message ?? 'failed'}` }))

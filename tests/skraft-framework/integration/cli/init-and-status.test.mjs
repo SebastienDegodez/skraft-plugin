@@ -1,12 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runCli, USAGE } from '../../../../plugins/skraft-framework/engine/drivers/cli/run-cli.mjs'
+import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
+import { actsAs, simulatedContext } from '../copilot-workflow/simulated-host.mjs'
+import { NOMINAL, SLUG, blocked, briefOf, commit, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { journal } from '../support/workspace.mjs'
 
 const pluginRoot = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 const cli = join(pluginRoot, 'engine', 'drivers', 'cli', 'skraft.mjs')
@@ -28,6 +32,7 @@ const inProcess = async (cwd, args) => {
 }
 
 const tracking = (cwd, ...parts) => join(cwd, '.copilot-tracking', 'skraft-plans', ...parts)
+const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']
 
 test('skraft init makes the slug the active pipeline and opens its journal with the story it was given', async (t) => {
   const cwd = workingCopy(t)
@@ -70,7 +75,7 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
   const cwd = workingCopy(t)
   assert.deepEqual(await inProcess(cwd, ['status']), {
     code: 0,
-    out: ['skraft: idle', 'RESEARCH  pending', 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'],
+    out: ['skraft: idle', ...PHASES.map((phase) => `${phase}  pending`), 'no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug'],
     err: [],
   })
 
@@ -78,9 +83,9 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
   const json = await inProcess(cwd, ['status', '--json'])
   assert.equal(json.code, 0)
   assert.deepEqual(JSON.parse(json.out.join('\n')), {
-    slug: 'checkout', status: 'running', reason: '', phases: [{ phase: 'RESEARCH', state: 'pending' }], current: null, attempts: 0, costUsd: null,
+    slug: 'checkout', status: 'running', reason: '', phases: PHASES.map((phase) => ({ phase, state: 'pending' })), current: null, attempts: 0, costUsd: null,
   })
-  assert.deepEqual((await inProcess(cwd, ['status'])).out, ['skraft checkout: running', 'RESEARCH  pending'])
+  assert.deepEqual((await inProcess(cwd, ['status'])).out, ['skraft checkout: running', ...PHASES.map((phase) => `${phase}  pending`)])
 })
 
 test('skraft status says the journal is tampered and exits 1', async (t) => {
@@ -103,5 +108,63 @@ test('the skraft executable runs init and status from the working directory', (t
   const init = skraft('init', 'checkout')
   assert.equal(init.status, 0, init.stderr)
   assert.equal(init.stdout, 'checkout is the active pipeline\n')
-  assert.equal(skraft('status').stdout, 'skraft checkout: running\nRESEARCH  pending\n')
+  assert.equal(skraft('status').stdout, `skraft checkout: running\n${PHASES.map((phase) => `${phase}  pending\n`).join('')}`)
+})
+
+test('skraft init <slug> --from-artifacts skips RESEARCH, and the run then starts with the architect reading the stories', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const stories = tracking(cwd, SLUG, 'plans', '2026-10-01', 'stories-v1.md')
+  mkdirSync(join(stories, '..'), { recursive: true })
+  writeFileSync(stories, '# Stories\n\n- Pay by card\n')
+
+  assert.deepEqual(await inProcess(cwd, ['init', SLUG, '--from-artifacts', '--issue', '42']), { code: 0, out: [`${SLUG} is the active pipeline`], err: [] })
+  assert.deepEqual(journal(cwd, SLUG).map(({ type, phase, skipped }) => [type, phase ?? null, skipped ?? null]), [['run.started', null, null], ['phase.closed', 'RESEARCH', 'from-artifacts']])
+  assert.deepEqual(journal(cwd, SLUG)[0].artifacts, ['plans/2026-10-01/stories-v1.md'])
+  assert.deepEqual((await inProcess(cwd, ['status'])).out, [`skraft ${SLUG}: running`, 'RESEARCH  closed', 'DESIGN  pending', 'DISTILL  pending', 'DELIVER  pending'])
+
+  const llm = scriptedLlm({ cwd, acts: { 'solution-architect': [blocked('stop after reading the stories')] } })
+  const { ctx, calls } = simulatedContext({ otherwise: actsAs(llm) })
+  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot })
+
+  assert.deepEqual(calls.map(({ agent, label }) => `${agent} | ${label}`), [`skraft:solution-architect | skraft ${SLUG} · design · attempt 1`])
+  assert.ok(calls[0].prompt.includes(`- Read first:\n- ${stories}\n`), calls[0].prompt)
+  assert.deepEqual(briefOf(calls[0].prompt).inputs, [stories])
+  assert.ok(calls[0].prompt.includes('- Story: #42'))
+  assert.equal(outcome.reason, 'solution-architect is blocked: stop after reading the stories')
+})
+
+test('skraft init --from-artifacts is refused without DISCUSS stories, and on a slug already started', async (t) => {
+  const cwd = workingCopy(t)
+
+  assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--from-artifacts']), { code: 1, out: [], err: ['checkout has no DISCUSS stories (plans/<date>/stories-<milestone>.md) to start from'] })
+  assert.equal(existsSync(tracking(cwd, '.active-slug')), false)
+  assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--from-artifacts', '--from-artifacts']), { code: 2, out: [], err: [USAGE] })
+
+  await inProcess(cwd, ['init', 'checkout'])
+  assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--from-artifacts']), { code: 1, out: [], err: ['checkout already has a journal; resume it without --from-artifacts'] })
+})
+
+test('skraft status names the gate node a stopped run stands on, as the pane does', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  // The engineer leaves a test command the machine reports as not found (exit 127): the gates stop the run, their node open.
+  const breaksTheTests = (brief, repository) => {
+    NOMINAL['software-engineer'](brief, repository)
+    commit(cwd, `chore(${SLUG}): hand the tests to a missing tool`, { 'tests/check.mjs': 'process.exit(127)\n' })
+  }
+  const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [breaksTheTests] } })
+  const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
+  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot })
+  assert.deepEqual([outcome.phase, outcome.code], ['DELIVER', 'environment'], outcome.reason)
+
+  const status = await inProcess(cwd, ['status'])
+
+  assert.equal(status.code, 0)
+  assert.deepEqual(status.out.slice(0, -1), [
+    `skraft ${SLUG}: blocked`, 'RESEARCH  closed', 'DESIGN  closed', 'DISTILL  closed', 'DELIVER  open',
+    'gates: build, format, lint, test, architecture, coverage, mutation (gates)',
+  ])
+  assert.match(status.out.at(-1), /^app\/test: exited 127 \(evidence: .+test-1\.log\)$/)
+  assert.deepEqual(JSON.parse((await inProcess(cwd, ['status', '--json'])).out.join('\n')).current, {
+    step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'], visit: 1, attempt: 1,
+  })
 })
