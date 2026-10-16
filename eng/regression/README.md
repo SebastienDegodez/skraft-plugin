@@ -79,14 +79,14 @@ Unknown `type` values and missing payload fields are ignored.
 | --- | --- | --- |
 | `run.started` | `at` (first one), `slug` (first non-empty) | duration start; `slug` is the component of every v2 gate (`unknown` when absent). `workflow` (`skraft` or the repo `.dot` path), `artifacts`, `start`, `unlocked` and `base` not read. |
 | `step.started` | `step` | a second `step.started` with the same `step` counts one retry, whatever its `visit` and `attempt`: a new visit after a failed gate and a retry both count one. `phase`, `agent`, `gates`, `outputs`, `missing`, `feedback`, `heads` not read. |
-| `step.recorded` | `cost` (number) | summed into `cost`. `visit`, `attempt`, `outcome`, `failures`, `next`, `durationMs` not read. |
+| `step.recorded` | `cost` (number) | summed into `cost`. `visit`, `attempt`, `outcome` (`done`, `failed`, `pass`, `fail`, `skipped`), `code`, `missing`, `failures`, `next`, `reason`, `durationMs`, `replayMs` not read. |
 | `gate.ran` | `component`, `gate`, `status` | last status per config `component`/`gate` command wins, then mapped onto v1 ids (see below). `scope`, `command`, `failure`, `exitCode`, `durationMs`, `evidence` not read. |
 | `commits.checked` | `step`, `commits[].verdict`, `commits[].replay` | only the last check of each `step` counts; gives G8 and G10 (see below). |
 | `review.decided` | `phase`, `verdict` | appended to `verdicts[phase]`. Verdict values: `APPROVED`, `NEEDS_REWORK`, `REJECTED`. |
 | `decision.recorded`, `tdd.replay-slow` | — | not compared. |
 | `phase.closed` | `phase` | appended once to `phasesReached`, including `skipped: 'from-artifacts'` (phase reached before the run started). |
 | `run.finished` | `at`, `status` | duration end; `status` copied (`completed` when every phase closed, else `blocked`). `code` not read. |
-| `run.stopped` | — | not compared: the host could not start an agent; the next run resumes the open step. |
+| `run.stopped` | — | not compared: the host or the machine stopped the run (`agent-unavailable`, `agent-failed`, `environment`, `no-components`); the next run resumes the open step. |
 
 Gate mapping, per run slug:
 
