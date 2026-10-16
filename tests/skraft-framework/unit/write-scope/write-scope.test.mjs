@@ -1,0 +1,118 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { BUILT_IN_WORKFLOW, InMemoryGit } from '../support/in-memory-host.mjs'
+import { agent, API, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+
+const unavailable = () => ({ ok: false, unavailable: true, text: '' })
+const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
+
+test('the architect writing in src/ is refused with the files at fault, and told so', async () => {
+  const hack = agent({ work: ({ git }) => { git.change('src/Checkout.cs', 'docs/adr/adr-001.md'); git.commit('docs(checkout): sketch', ['src/Sketch.cs']) } })
+  const host = scripted({}, (it) => [agent()(it), hack(it), agent()(it), unavailable])
+
+  await host.start()
+
+  const [refused] = recorded(host, 'design')
+  assert.deepEqual([refused.outcome, refused.code, refused.failures], ['failed', 'write-scope', ['out of write scope: src/Sketch.cs', 'out of write scope: src/Checkout.cs']])
+  assert.ok(host.agentRunner.dispatches[2].prompt.endsWith('\n\nRefused in attempt 1 of 3:\n- out of write scope: src/Sketch.cs\n- out of write scope: src/Checkout.cs'))
+})
+
+test('files out of scope stay refused on the next attempt of the pass, until they are reverted', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => git.change('src/Checkout.cs') })(it),
+    agent()(it),
+    agent({ work: ({ git }) => { git.revert('src/Checkout.cs') } })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'design').map((event) => [event.attempt, event.outcome, event.failures]), [
+    [1, 'failed', ['out of write scope: src/Checkout.cs']],
+    [2, 'failed', ['out of write scope: src/Checkout.cs']],
+  ])
+  assert.equal(host.agentRunner.dispatches.length, 3)
+
+  const reverted = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => git.change('src/Checkout.cs') })(it),
+    agent({ work: ({ git }) => { git.revert('src/Checkout.cs') } })(it),
+    unavailable,
+  ])
+  await reverted.start()
+  assert.deepEqual(recorded(reverted, 'design').map((event) => event.outcome), ['failed', 'done'])
+})
+
+test('the software engineer writing the source and test paths of its components is accepted', async () => {
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: (h) => { tddCycle()(h); h.git.change('tests/Fixtures/card.json', `.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it)])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(recorded(host, 'deliver').map((event) => [event.outcome, event.failures]), [['done', []]])
+})
+
+test('the acceptance designer may write tests but not source', async () => {
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.change('tests/Acceptance/Pay.cs', 'src/Pay.cs') })(it), unavailable])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'distill')[0].failures, ['out of write scope: src/Pay.cs'])
+})
+
+test('files already changed before the pass started are not held against the agent', async () => {
+  const host = scripted({}, (it) => [agent()(it), unavailable])
+  host.git.change('src/WorkInProgress.cs')
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'research').map((event) => [event.outcome, event.failures]), [['done', []]])
+})
+
+test('no agent may change skraft-config.json or the workflow file, even inside its paths', async () => {
+  const everywhere = { ...API, paths: { src: ['.'], tests: ['.'] } }
+  const host = scripted({ components: [everywhere], config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': BUILT_IN_WORKFLOW } }, (it) => [
+    agent()(it), agent()(it), agent()(it),
+    agent({ work: ({ git }) => { tddCycle()({ git }); git.change('skraft-config.json', 'skraft-workflow.dot', 'README.md') } })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: skraft-config.json', 'out of write scope: skraft-workflow.dot'])
+})
+
+test('a component in a neighbour repository is checked in that repository, against its own paths', async () => {
+  const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
+  const host = scripted({ components: [API, WEB], git }, (it) => [
+    agent()(it), agent()(it), agent()(it),
+    agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']); repos.change('../web/package.json') } })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  const started = host.events().find((event) => event.type === 'step.started' && event.step === 'deliver')
+  assert.deepEqual(started.heads, [{ repository: '.', sha: 'root-0', dirty: [] }, { repository: '../web', sha: 'up-web-0', dirty: [] }])
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: ../web/package.json'])
+  assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run'])
+})
+
+test('Git that cannot list a repository\'s changes stops the run on the machine; the next run checks the step again', async () => {
+  const host = scripted({}, (it) => [agent()(it), unavailable])
+  await host.init()
+  const listing = host.git.changedFiles.bind(host.git)
+  let broken = true
+  host.git.changedFiles = async (dir, sha) => (broken && host.agentRunner.dispatches.length > 0 ? null : listing(dir, sha))
+
+  const outcome = await host.run()
+
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: 'Git cannot list what changed in . since root-0' })
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
+  broken = false
+  assert.equal((await host.run()).code, 'agent-unavailable')
+  assert.equal(host.agentRunner.dispatches.length, 2)
+  assert.deepEqual(recorded(host, 'research').map((event) => event.outcome), ['done'])
+})

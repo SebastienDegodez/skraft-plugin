@@ -1,75 +1,74 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
-import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
-import { InMemoryTemplates, InMemoryTracking, inMemoryDeps } from '../support/in-memory-host.mjs'
+import { agent, pipelineHost, scripted, SLUG } from '../support/pipeline-host.mjs'
 
-const TEMPLATE = '# Research: {{topic}}\n'
-const OUTPUT = 'research/2026-10-11/checkout-research.md'
-
-const host = () => {
-  const tracking = new InMemoryTracking()
-  const deps = inMemoryDeps({ tracking, templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }), now: '2026-10-11T23:59:00.000Z' })
-  return { tracking, clock: deps.clock, deps, agentRunner: deps.agentRunner }
-}
-
-const fill = (tracking) => tracking.write('checkout', OUTPUT, `${TEMPLATE.replace('{{topic}}', 'Checkout')}Findings.\n`)
 const interrupted = () => { throw new Error('host interrupted') }
+const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 
-test('a run resumed after RESEARCH closed dispatches nothing and writes nothing', async () => {
-  const { tracking, deps, agentRunner } = host()
-  agentRunner.behaviours.push(() => fill(tracking))
-  await createInit(deps).init({ slug: 'checkout' })
-  await createRunPipeline(deps).run({ slug: 'checkout' })
-  const journal = tracking.journal('checkout')
+test('a run interrupted after the researcher did its work records it without dispatching it again', async () => {
+  const host = scripted({}, (it) => [async (dispatch) => { await agent()(it)(dispatch); interrupted() }, unavailable])
+  await host.init()
+  await assert.rejects(host.run(), /host interrupted/)
+  host.clock.advance(60 * 60_000) // the next day: the outputs keep the date of their dispatch
 
-  const resumed = await createRunPipeline(deps).run({})
+  const resumed = await host.run()
 
-  assert.equal(resumed.status, 'done')
-  assert.equal(agentRunner.dispatches.length, 1)
-  assert.deepEqual(tracking.journal('checkout'), journal)
+  assert.equal(resumed.code, 'agent-unavailable')
+  assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect'])
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'step.recorded', 'phase.closed', 'step.started', 'run.stopped'])
 })
 
-test('a run interrupted after the researcher wrote its document closes RESEARCH without dispatching it again', async () => {
-  const { tracking, clock, deps, agentRunner } = host()
-  agentRunner.behaviours.push(() => { fill(tracking); interrupted() })
-  await createInit(deps).init({ slug: 'checkout' })
-  await assert.rejects(createRunPipeline(deps).run({ slug: 'checkout' }), /host interrupted/)
-  clock.advance(60 * 60_000) // the next day: the output keeps the date of its dispatch
+test('a run interrupted before the agent finished dispatches the same attempt again, under the same label and brief', async () => {
+  const host = scripted({}, (it) => [agent({ fill: false })(it), interrupted, agent()(it), unavailable])
+  await host.init()
+  await assert.rejects(host.run(), /host interrupted/)
+  host.clock.advance(60 * 60_000)
 
-  const resumed = await createRunPipeline(deps).run({ slug: 'checkout' })
+  await host.run()
 
-  assert.equal(resumed.status, 'done')
-  assert.equal(agentRunner.dispatches.length, 1)
-  assert.deepEqual(tracking.journal('checkout').map((event) => event.type), [
-    'run.started', 'step.started', 'step.recorded', 'phase.closed', 'run.finished',
+  assert.deepEqual(host.agentRunner.dispatches.slice(0, 3).map((dispatch) => dispatch.label), [
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · research · attempt 2`, `skraft ${SLUG} · research · attempt 2`,
   ])
+  assert.equal(host.agentRunner.dispatches[2].prompt, host.agentRunner.dispatches[1].prompt)
+  assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'research').length, 2)
 })
 
-test('a run interrupted before the researcher wrote anything dispatches the same attempt again, under the same label and brief', async () => {
-  const { tracking, clock, deps, agentRunner } = host()
-  agentRunner.behaviours.push(() => undefined, interrupted, () => fill(tracking))
-  await createInit(deps).init({ slug: 'checkout' })
-  await assert.rejects(createRunPipeline(deps).run({ slug: 'checkout' }), /host interrupted/)
-  clock.advance(60 * 60_000)
+test('a resumed attempt whose outputs are done but whose result is missing is dispatched again', async () => {
+  const host = scripted({}, (it) => [async (dispatch) => { await agent({ result: null })(it)(dispatch); interrupted() }, agent()(it), unavailable])
+  await host.init()
+  await assert.rejects(host.run(), /host interrupted/)
 
-  const resumed = await createRunPipeline(deps).run({ slug: 'checkout' })
+  await host.run()
 
-  assert.equal(resumed.status, 'done')
-  assert.deepEqual(agentRunner.dispatches.map((dispatch) => dispatch.label), [
-    'skraft checkout · research · attempt 1', 'skraft checkout · research · attempt 2', 'skraft checkout · research · attempt 2',
-  ])
-  assert.match(agentRunner.dispatches[2].prompt, /Missing outputs from attempt 1 of 2:/)
-  assert.equal(agentRunner.dispatches[2].prompt, agentRunner.dispatches[1].prompt)
-  assert.equal(tracking.journal('checkout').filter((event) => event.type === 'step.started').length, 2)
+  assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.label).slice(0, 2), Array(2).fill(`skraft ${SLUG} · research · attempt 1`))
 })
 
 test('init on an initialised slug keeps its journal and its story', async () => {
-  const { tracking, deps } = host()
-  await createInit(deps).init({ slug: 'checkout', story: { issue: 7, title: null } })
+  const host = pipelineHost()
+  await host.init({ story: { issue: 7, title: null } })
 
-  const again = await createInit(deps).init({ slug: 'checkout', story: { issue: 8, title: 'Other' } })
+  const again = await host.init({ story: { issue: 8, title: 'Other' } })
 
-  assert.deepEqual(again, { ok: true, slug: 'checkout', created: false, code: null, reason: 'checkout is the active pipeline' })
-  assert.deepEqual(tracking.journal('checkout').map((event) => [event.type, event.story]), [['run.started', { issue: 7, title: null }]])
+  assert.deepEqual(again, { ok: true, slug: SLUG, created: false, code: null, reason: `${SLUG} is the active pipeline` })
+  assert.deepEqual(host.events().map((event) => [event.type, event.story]), [['run.started', { issue: 7, title: null }]])
+})
+
+test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, entry and unlocked gates', async () => {
+  const host = pipelineHost()
+
+  await host.init({ story: { issue: 42, title: 'Pay by card' } })
+
+  const [started] = host.events()
+  assert.deepEqual(
+    { slug: started.slug, story: started.story, workflow: started.workflow, base: started.base, artifacts: started.artifacts, start: started.start, unlocked: started.unlocked },
+    {
+      slug: SLUG,
+      story: { issue: 42, title: 'Pay by card' },
+      workflow: 'skraft',
+      base: [{ component: null, root: '.', repository: '.', ref: 'main', source: 'default', sha: 'root-0' }, { component: 'api', root: '.', repository: '.', ref: 'main', source: 'default', sha: 'root-0' }],
+      artifacts: [],
+      start: null,
+      unlocked: [],
+    },
+  )
 })

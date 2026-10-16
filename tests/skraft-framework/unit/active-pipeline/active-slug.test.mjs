@@ -2,11 +2,25 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
-import { InMemoryTracking, inMemoryDeps } from '../support/in-memory-host.mjs'
+import {
+  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner, InMemoryAgentCatalog, InMemoryWorkflowSource,
+} from '../support/in-memory-host.mjs'
 
 const host = () => {
   const tracking = new InMemoryTracking()
-  return { tracking, deps: inMemoryDeps({ tracking, now: '2026-10-11T09:00:00.000Z' }) }
+  const deps = {
+    journal: tracking,
+    activePipeline: tracking,
+    files: tracking,
+    workspace: new InMemoryWorkspace(),
+    sourceControl: new InMemorySourceControl(),
+    templates: new InMemoryTemplates({}),
+    clock: new FixedClock('2026-10-11T09:00:00.000Z'),
+    hasher: new FakeHasher(), workflowSource: new InMemoryWorkflowSource(), agentCatalog: new InMemoryAgentCatalog(),
+    agentRunner: new ScriptedAgentRunner(),
+    progress: new RecordingProgress(),
+  }
+  return { tracking, deps }
 }
 
 test('without an active pipeline a run is refused, never guessed from the slugs on disk', async () => {

@@ -195,6 +195,13 @@ export class InMemoryGit {
       at.repo.dirty.add(at.inner)
     }
   }
+  /** Uncommitted changes undone. @param {...string} paths */
+  revert(...paths) {
+    for (const path of paths) {
+      const at = this.locate(path)
+      at.repo.dirty.delete(at.inner)
+    }
+  }
   /** A commit of these files, all in one repository; returns its sha. @param {string} subject @param {string[]} paths */
   commit(subject, paths) {
     const at = this.locate(paths[0] ?? '.')
@@ -332,5 +339,7 @@ export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, now = 
   hasher: new FakeHasher(),
   agentRunner: new ScriptedAgentRunner(),
   progress: new RecordingProgress(),
+  workflowSource: new InMemoryWorkflowSource(),
+  agentCatalog: new InMemoryAgentCatalog(),
   ...given,
 })
