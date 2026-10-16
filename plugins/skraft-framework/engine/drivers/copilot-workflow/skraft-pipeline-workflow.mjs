@@ -49,7 +49,7 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
  */
 export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot }) => {
   const { slug, issue, title, base, fromArtifacts, agentIds } = ctx.args ?? {}
-  const adapters = createNodeAdapters({ cwd, pluginRoot })
+  const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot' })
   const outcome = slug === undefined || slug === null
     ? await run(ctx, adapters, { pluginRoot, agentIds })
     : await initThenRun(ctx, adapters, { pluginRoot, agentIds, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })

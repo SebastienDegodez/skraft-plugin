@@ -68,3 +68,11 @@ export const allowedPaths = (role, { slug, components }) => [...new Set([
   ...role.writes.map((path) => joinRelative(path)),
   ...components.flatMap((component) => role.components.flatMap((kind) => component.paths[kind].map((path) => joinRelative(component.root, path)))),
 ])]
+
+/**
+ * The component roots whose own files (a solution, a manifest, a lock file) an agent may change:
+ * those of every component whose source or test paths it writes.
+ * @param {Role} role
+ * @param {readonly Component[]} components
+ */
+export const rootFiles = (role, components) => (role.components.length > 0 ? components.map((component) => component.root) : [])

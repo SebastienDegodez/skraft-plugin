@@ -109,7 +109,7 @@ export const createClaudeModDriver = () => {
       sourceControl: createGitSourceControl({ commandRunner }),
       commitReplay: createGitCommitReplay({ commandRunner }),
       workflowSource: createPluginWorkflows({ files, pluginRoot: host.pluginRoot }),
-      agentCatalog: createAgentCatalog({ files, pluginRoot: host.pluginRoot, root }),
+      agentCatalog: createAgentCatalog({ files, pluginRoot: host.pluginRoot, root, host: 'claude-code' }),
     }
   }
 

@@ -101,7 +101,7 @@ test('an absent output is dispatched again with its path listed missing; the sam
   assert.deepEqual(calls.map((call) => call.label), ['skraft checkout · research · attempt 1', 'skraft checkout · research · attempt 2'])
   assert.ok(!calls[0].prompt.includes('Missing outputs'))
   assert.ok(calls[1].prompt.includes(`Missing outputs from attempt 1 of 3:\n- ${path}`), calls[1].prompt)
-  assert.ok(calls[1].prompt.includes(`Refused in attempt 1 of 3:\n- result ${join(trackingDir(cwd, 'checkout'), 'results', 'research-1.json')} is missing`), calls[1].prompt)
+  assert.ok(calls[1].prompt.includes(`Refused in attempt 1 of 3:\n- result is missing`), calls[1].prompt)
   assert.equal(outcome.status, 'blocked')
   assert.equal(outcome.code, 'missing-outputs')
   assert.ok(outcome.reason.startsWith(`solution-researcher failed the same way on attempts 1 and 2: missing outputs: ${path}; result `), outcome.reason)

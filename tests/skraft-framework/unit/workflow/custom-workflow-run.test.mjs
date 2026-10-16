@@ -37,7 +37,7 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/security/2026-10-11/${SLUG}-review.md`,
     `- ${TRACKING}/notes.md`,
-    `- Write your result as JSON to ${TRACKING}/results/security-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}`,
+    `- Write your result as JSON to ${TRACKING}/results/security-1-1.json: {"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/security',
@@ -178,4 +178,19 @@ test('a run whose last step, or the node it led to, left the workflow stops as c
   await target.deps.workspace.write('skraft-workflow.dot', WITHOUT_SECURITY)
   assert.deepEqual(await target.run(), { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })
   assert.equal(target.events().filter((event) => event.type === 'step.recorded').at(-1).next, 'security')
+})
+
+test('a skipped gate interrupted before it was recorded is not started twice', async () => {
+  const unlocked = edit(BUILT_IN_WORKFLOW, ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'])
+  const host = scripted(repositoryWorkflow(unlocked), nominal)
+  const append = host.tracking.append.bind(host.tracking)
+  let crashes = 1
+  host.tracking.append = async (slug, line) => {
+    if (line.includes('"outcome":"skipped"') && crashes-- > 0) throw new Error('host interrupted')
+    return append(slug, line)
+  }
+  await assert.rejects(host.start(), /host interrupted/)
+
+  assert.equal((await host.run()).status, 'done')
+  assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
 })

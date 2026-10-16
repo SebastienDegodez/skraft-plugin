@@ -6,7 +6,7 @@ import { dayOf, isFilled, outputPath } from '../domain/pipeline/outputs.mjs'
 import { allowedPaths, roleOf } from '../domain/pipeline/roles.mjs'
 import { REPLAY_SHARE } from '../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
-import { loadConfig } from './bases.mjs'
+import { baseOf, loadConfig } from './bases.mjs'
 import { runGates } from './gate-runs.mjs'
 import { loadWorkflow } from './load-workflow.mjs'
 import { JournalConflict } from './run-journal.mjs'
@@ -145,7 +145,7 @@ const dispatch = async (context, run, next) => {
   const role = roleOf(node)
   const date = dayOf(deps.clock.now())
   const outputs = run.nodes[node.id]?.outputs ?? role.outputs.map((output) => outputPath(output.path, { date, slug }))
-  const result = `results/${node.id}-${visit}.json`
+  const result = `results/${node.id}-${visit}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
   let heads = resumed?.heads
   if (!heads) {
@@ -179,7 +179,8 @@ const dispatch = async (context, run, next) => {
         outputs: outputs.map((path) => deps.files.location(slug, path)),
         result: deps.files.location(slug, result),
         allowed: allowedPaths(role, { slug, components: config.components }),
-        components: components.map(({ name, root, stack, commands }) => ({ name, root, stack, test: commands.test ?? null })),
+        components: components.map(({ name, root, stack, commands }) => ({ name, root, stack, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
+        tdd: role.components.includes('src') ? 'cycle' : role.components.length > 0 ? 'red' : null,
         missing: missing.map((path) => deps.files.location(slug, path)),
         feedback,
       }),
@@ -188,10 +189,14 @@ const dispatch = async (context, run, next) => {
     cost = answer.costUsd
     if (!answer.ok && (await pending())) return stop(context, phase, 'agent-failed', `${agent} stopped without finishing: ${answer.error ?? 'no answer'}`)
   }
+  const inState = attempt > 1 || resumed !== null
+  const known = new Map(journal.events
+    .filter((event) => event.type === 'commits.checked' && event.step === node.id && event.visit === visit)
+    .flatMap((event) => event.commits.map((/** @type {{ sha: string, verdict: string, replay: any }} */ commit) => [commit.sha, commit])))
   const checked = await checkStep({ deps, slug, config, base: run.base }, {
-    role, outputs, precreated, result,
-    attemptHeads: heads,
-    visitHeads: attempt === 1 ? heads : run.nodes[node.id].heads,
+    role, outputs, precreated, result, known,
+    visitHeads: inState ? run.nodes[node.id].heads : heads,
+    sentBack: inState ? run.nodes[node.id].sentBack : feedback.length > 0,
   })
   if (checked.commits.length > 0) await journal.append('commits.checked', { step: node.id, visit, attempt, commits: checked.commits })
   if (checked.environment !== null) return stop(context, phase, 'environment', checked.environment)
@@ -214,6 +219,12 @@ const dispatch = async (context, run, next) => {
   await warnSlowReplay(context, phase)
   return null
 }
+
+/**
+ * A test command as the agent can run it: the base the run diffs against in place of `{baseSha}`.
+ * @param {string | undefined} line @param {string | undefined} sha
+ */
+const testLine = (line, sha) => (line === undefined ? null : sha ? line.replaceAll('{baseSha}', sha) : line)
 
 /**
  * Tells the developer once per phase that replaying red commits takes more than its share of
@@ -279,10 +290,10 @@ const gate = async (context, run, next) => {
  * @param {Context} context @param {RunState} run @param {SkipStep} next
  * @returns {Promise<null>}
  */
-const skip = async (context, run, { phase, node, visit }) => {
+const skip = async (context, run, { phase, node, visit, resumed }) => {
   const { deps, slug, journal } = context
   const reason = /** @type {string} */ (node.unlock)
-  await journal.append('step.started', { step: node.id, phase, gates: node.gates, visit, attempt: 1 })
+  if (!resumed) await journal.append('step.started', { step: node.id, phase, gates: node.gates, visit, attempt: 1 })
   const routed = leave(context, run, node.id, 'PASS', [])
   await journal.append('step.recorded', { step: node.id, visit, attempt: 1, outcome: 'skipped', code: routed.code ?? null, failures: [], next: routed.next, reason: routed.reason ?? `unlocked: ${reason}`, durationMs: 0 })
   deps.progress.log(`${slug}: ${node.id} skipped, unlocked: ${reason}`)

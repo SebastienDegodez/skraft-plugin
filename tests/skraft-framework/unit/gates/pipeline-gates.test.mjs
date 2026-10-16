@@ -37,8 +37,8 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
   ].join('\n')), second.prompt)
   assert.ok(second.prompt.endsWith(`\n\nThe gates failed on pass 1:\n- ${failure}`))
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, feedback, outputs, result }) => [visit, attempt, feedback, outputs, result]), [
-    [1, 1, [], ['changes/2026-10-11/change-log.md'], 'results/deliver-1.json'],
-    [2, 1, [failure], ['changes/2026-10-11/change-log.md'], 'results/deliver-2.json'],
+    [1, 1, [], ['changes/2026-10-11/change-log.md'], 'results/deliver-1-1.json'],
+    [2, 1, [failure], ['changes/2026-10-11/change-log.md'], 'results/deliver-2-1.json'],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: software-engineer, pass 2, attempt 1`))
   assert.ok(host.progress.lines.includes(`${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation), pass 2`))
@@ -126,9 +126,8 @@ test('the goal gate runs the gates of the components the story touched, then tho
   assert.deepEqual(recorded(host, 'gates').map(({ outcome: result, failures }) => [result, failures]), [['fail', [`api/test: exited 1 (evidence: ${TRACKING}/gates/api/test-1.log)`]]])
 })
 
-test('a gate node that is not a goal gate runs only the touched components, and only its own gates', async () => {
+test('a gate node that is not a goal gate runs its own gates on the touched components only; the goal gate then runs the others', async () => {
   const workflow = BUILT_IN_WORKFLOW
-    .replace('gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true,', 'gate="build,format,lint,test,architecture,coverage,mutation",')
     .replace('gates    [shape=parallelogram', 'quick [shape=parallelogram, gate="build"]\n  gates    [shape=parallelogram')
     .replace('deliver -> gates', 'deliver -> quick -> gates')
   const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
@@ -139,7 +138,7 @@ test('a gate node that is not a goal gate runs only the touched components, and 
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.events().filter((event) => event.type === 'gate.ran').map(({ scope, component, gate, status }) => `${scope} ${component}/${gate} ${status}`), [
-    'touched api/build pass', 'touched api/build pass', 'touched api/test pass',
+    'touched api/build pass', 'touched api/build pass', 'touched api/test pass', 'all web/lint pass',
   ])
 })
 
@@ -155,7 +154,9 @@ test('a component with none of a gate node\'s gates fails it as environment', as
 })
 
 test('a failing gate with no FAIL edge stops the run with the gate failures', async () => {
-  const workflow = BUILT_IN_WORKFLOW.replace('  gates -> deliver [label="FAIL", max_visits=3]\n', '')
+  const workflow = BUILT_IN_WORKFLOW
+    .replace('gates    [shape=parallelogram', 'quick [shape=parallelogram, gate="build"]\n  gates    [shape=parallelogram')
+    .replace('deliver -> gates', 'deliver -> quick -> gates')
   const machine = new ScriptedMachine({ exits: { '. $ dotnet build': 2 } })
   const host = scripted({ machine, config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': workflow } }, (it) => [...upToDeliver(it), deliver(it)])
 
@@ -163,7 +164,7 @@ test('a failing gate with no FAIL edge stops the run with the gate failures', as
 
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'gates-failed',
-    reason: `gates failed and the workflow has no FAIL edge out of it; api/build: exited 2 (evidence: ${TRACKING}/gates/api/build-1.log)`,
+    reason: `quick failed and the workflow has no FAIL edge out of it; api/build: exited 2 (evidence: ${TRACKING}/gates/api/build-1.log)`,
   })
 })
 
@@ -193,4 +194,22 @@ test('another writer of the journal during the gates stops the run as a conflict
   closing.meanwhile['../web $ npx eslint .'] = () => all.tracking.append(SLUG, JSON.stringify({ type: 'other' }))
   assert.equal((await all.start()).code, 'journal-changed')
   assert.deepEqual(closing.lines(), ['. $ dotnet build', '. $ dotnet test', '../web $ npx eslint .'])
+})
+
+test('on a pass the gates sent back, their failure is the red of the first fix', async () => {
+  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
+  const host = scripted({ machine }, (it) => [
+    ...upToDeliver(it),
+    deliver(it),
+    agent({ result: null, work: ({ git }) => { machine.exits['. $ dotnet test'] = 0; git.commit('fix(checkout): round the card amount', ['src/Checkout.cs']) } })(it),
+    agent()(it),
+  ])
+
+  const outcome = await host.start()
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(recorded(host, 'deliver').map(({ visit, attempt, outcome: result, failures }) => [visit, attempt, result, failures]), [
+    [1, 1, 'done', []], [2, 1, 'failed', ['result is missing']], [2, 2, 'done', []],
+  ])
+  assert.deepEqual(host.events().filter((event) => event.type === 'commits.checked').at(-1).commits.map((commit) => `${commit.subject} ${commit.verdict}`), ['fix(checkout): round the card amount ok'])
 })

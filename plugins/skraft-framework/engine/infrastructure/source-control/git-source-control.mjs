@@ -53,7 +53,7 @@ const mergeBase = async (git, dir, ref) => {
  * @param {Git} git @param {string} dir @param {string} sha @returns {Promise<string[] | null>}
  */
 const changedFiles = async (git, dir, sha) => {
-  const changed = await git(dir, ['diff', '--name-only', '--relative', '--end-of-options', sha, '--'])
+  const changed = await git(dir, ['diff', '--name-only', '--no-renames', '--relative', '--end-of-options', sha, '--'])
   const untracked = await git(dir, ['ls-files', '--others', '--exclude-standard'])
   if (changed === null) return null
   // Stryker disable next-line StringLiteral: git lists untracked files wherever it can diff, so the fallback never applies
@@ -72,7 +72,7 @@ const head = async (git, dir) => {
  * @param {Git} git @param {string} dir @param {string} since
  */
 const commits = async (git, dir, since) => {
-  const log = await git(dir, ['log', '--reverse', '-z', '--name-only', '--relative', '--format=%x01%H%x02%s', '--end-of-options', `${since}..HEAD`, '--'])
+  const log = await git(dir, ['log', '--reverse', '-z', '--name-only', '--no-renames', '--relative', '--format=%x01%H%x02%s', '--end-of-options', `${since}..HEAD`, '--'])
   return log === null ? null : log.split('\x01').slice(1).map(commitOf)
 }
 

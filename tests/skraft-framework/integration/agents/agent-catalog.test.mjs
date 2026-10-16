@@ -47,3 +47,24 @@ test('a name that is not a kebab-case agent id is never looked up as a path', as
   assert.equal(await agentCatalog.locate('Upper'), null)
   assert.equal(await agentCatalog.locate(''), null)
 })
+
+test('each host finds only the agents it can start: Claude Code those of .claude/agents/, Copilot those of .github/agents/', async (t) => {
+  const cwd = tempFolder(t)
+  const pluginRoot = tempFolder(t)
+  agentFile(cwd, '.claude', 'agents', 'acme-claude-reviewer.md')
+  agentFile(cwd, '.github', 'agents', 'acme-copilot-reviewer.agent.md')
+  agentFile(cwd, '.github', 'agents', 'acme-plain-reviewer.md')
+  agentFile(pluginRoot, 'com.github.copilot', 'agents', 'copilot-only.agent.md')
+  agentFile(pluginRoot, 'com.anthropic.claude-code', 'agents', 'claude-only.md')
+  const claude = createNodeAdapters({ cwd, pluginRoot, agentHost: 'claude-code' }).agentCatalog
+  const copilot = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot' }).agentCatalog
+
+  assert.deepEqual(
+    await Promise.all(['acme-claude-reviewer', 'acme-copilot-reviewer', 'acme-plain-reviewer', 'claude-only', 'copilot-only'].map((id) => claude.locate(id))),
+    ['repository', null, null, 'plugin', null],
+  )
+  assert.deepEqual(
+    await Promise.all(['acme-claude-reviewer', 'acme-copilot-reviewer', 'acme-plain-reviewer', 'claude-only', 'copilot-only'].map((id) => copilot.locate(id))),
+    [null, 'repository', 'repository', null, 'plugin'],
+  )
+})

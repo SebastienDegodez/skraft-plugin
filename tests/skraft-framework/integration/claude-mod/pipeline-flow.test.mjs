@@ -80,10 +80,11 @@ test('a researcher that writes the same invalid result twice is blocked without 
 
   const { result } = briefOf(spawns[0].prompt)
   assert.equal(spawns.length, 2)
-  assert.ok(spawns[1].prompt.includes(`Refused in attempt 1 of 3:\n- result ${result} status must be "done" or "blocked"`), spawns[1].prompt)
+  assert.ok(spawns[1].prompt.includes(`Refused in attempt 1 of 3:\n- result status must be "done" or "blocked"`), spawns[1].prompt)
+  assert.deepEqual([result, briefOf(spawns[1].prompt).result].map((path) => path.split(/[\\/]/).at(-1)), ['research-1-1.json', 'research-1-2.json'])
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'invalid-result',
-    reason: `solution-researcher failed the same way on attempts 1 and 2: result ${result} status must be "done" or "blocked"`,
+    reason: `solution-researcher failed the same way on attempts 1 and 2: result status must be "done" or "blocked"`,
   })
   assert.equal(mod.notes.at(-1), `skraft ${SLUG}: blocked (invalid-result) — ${outcome.reason}`)
 })
@@ -113,7 +114,7 @@ test('a test commit whose tests pass is refused as not red', async (t) => {
   const { outcome, spawns, events } = await runOn(cwd, { acts: { 'acceptance-designer': [green, blocked('cannot make it fail')] } })
 
   const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
-  const refusal = `commit ${sha} "test(${SLUG}): pay by card" is not red: the tests of app pass at it`
+  const refusal = `commit ${sha} "test(${SLUG}): pay by card" is not red: the tests of app pass at it; a test commit must fail before the code that makes it pass`
   assert.deepEqual(recorded(events, 'distill').map(({ code, failures }) => [code, failures]), [['tdd', [refusal]], ['agent-blocked', ['cannot make it fail']]])
   assert.ok(spawns[3].prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), spawns[3].prompt)
   assert.deepEqual([outcome.code, outcome.reason], ['agent-blocked', 'acceptance-designer is blocked: cannot make it fail'])

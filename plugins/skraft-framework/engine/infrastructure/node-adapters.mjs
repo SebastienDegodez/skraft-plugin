@@ -12,14 +12,15 @@ import { createNodeCommandRunner, createNodeExecutables } from './process/node-p
 
 /**
  * Every adapter a Node host needs, except the host's own AgentRunner and progress.
- * @param {{ cwd: string, pluginRoot: string, env?: NodeJS.ProcessEnv }} host env: where programs are
- *   looked for and what they inherit; this process's environment by default
+ * @param {{ cwd: string, pluginRoot: string, env?: NodeJS.ProcessEnv, agentHost?: import('./agents/agent-catalog.mjs').AgentHost }} host
+ *   env: where programs are looked for and what they inherit; this process's environment by
+ *   default. agentHost: the host that starts the agents; none for the CLI, which checks for both.
  */
-export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env }) => {
+export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHost }) => {
   const files = createNodeFiles()
   return Object.freeze({
     ...trackedState(files, cwd),
-    ...pluginContent(files, pluginRoot, cwd),
+    ...pluginContent(files, { pluginRoot, cwd, agentHost }),
     clock: createSystemClock(),
     hasher: createWebCryptoHasher(),
     workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
@@ -38,13 +39,14 @@ const trackedState = (files, cwd) => {
 }
 
 /**
- * What the plugin ships, and the agents the working copy adds to it.
- * @param {ReturnType<typeof createNodeFiles>} files @param {string} pluginRoot @param {string} cwd
+ * What the plugin ships, and the agents the working copy adds to it for the host that starts them.
+ * @param {ReturnType<typeof createNodeFiles>} files
+ * @param {{ pluginRoot: string, cwd: string, agentHost: import('./agents/agent-catalog.mjs').AgentHost | undefined }} where
  */
-const pluginContent = (files, pluginRoot, cwd) => ({
+const pluginContent = (files, { pluginRoot, cwd, agentHost }) => ({
   templates: createPluginTemplates({ files, pluginRoot }),
   workflowSource: createPluginWorkflows({ files, pluginRoot }),
-  agentCatalog: createAgentCatalog({ files, pluginRoot, root: cwd }),
+  agentCatalog: createAgentCatalog({ files, pluginRoot, root: cwd, host: agentHost }),
 })
 
 /**

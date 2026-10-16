@@ -240,7 +240,9 @@ const loopsOf = (ids, edges) => {
 }
 
 /**
- * The locked nodes of the built-in workflow a repository workflow keeps, skips or breaks.
+ * The locked nodes of the built-in workflow a repository workflow keeps, skips or breaks. A
+ * kept one must keep its gates, its goal, its FAIL edge back to an agent of its phase, and no
+ * path may reach the exit around it from the start or from an agent of its phase.
  * @param {Workflow} builtIn @param {Workflow} custom
  * @returns {{ errors: string[], unlocked: Array<{ node: string, reason: string }> }}
  */
@@ -258,9 +260,46 @@ export const checkLocks = (builtIn, custom) => {
     } else {
       const dropped = node.gates.filter((gate) => !kept.gates.includes(gate))
       if (dropped.length > 0) errors.push(`locked node ${node.id} drops ${dropped.join(', ')}; keep them, or skip the node with unlock="<reason>"`)
+      if (node.goal && !kept.goal) errors.push(`locked node ${node.id} must stay goal_gate=true; skip it with unlock="<reason>" instead`)
+      errors.push(...failEdge(builtIn, custom, kept), ...bypasses(custom, kept))
     }
   }
   return { errors, unlocked }
+}
+
+/**
+ * A kept locked gate whose built-in one sends FAIL back must send it to an agent of its phase.
+ * @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} kept
+ */
+const failEdge = (builtIn, custom, kept) => {
+  if (!builtIn.edges.some((edge) => edge.from === kept.id && edge.label === 'FAIL')) return []
+  const target = custom.edges.find((edge) => edge.from === kept.id && edge.label === 'FAIL')?.to
+  if (target === undefined) return [`locked node ${kept.id} has no FAIL edge back to an agent of ${kept.phase}`]
+  const back = custom.nodes[target]
+  return back.kind === 'agent' && back.phase === kept.phase ? [] : [`locked node ${kept.id} must send FAIL back to an agent of ${kept.phase}, not to ${target}`]
+}
+
+/**
+ * The start and the agents of a locked gate's phase from which an exit is reached without it.
+ * @param {Workflow} custom @param {WorkflowNode} kept
+ */
+const bypasses = (custom, kept) => [custom.start, ...custom.order.filter((id) => custom.nodes[id].kind === 'agent' && custom.nodes[id].phase === kept.phase)]
+  .filter((from) => reachesExitWithout(custom, from, kept.id))
+  .map((from) => `${from} reaches the exit without passing ${kept.id}; keep the run going through ${kept.id}, or skip ${kept.id} with unlock="<reason>"`)
+
+/** @param {Workflow} workflow @param {string} from @param {string} avoided */
+const reachesExitWithout = (workflow, from, avoided) => {
+  const seen = new Set([from])
+  const queue = [from]
+  while (queue.length > 0) {
+    const id = /** @type {string} */ (queue.shift())
+    if (workflow.nodes[id].kind === 'exit') return true
+    for (const { to } of workflow.edges.filter((edge) => edge.from === id && edge.to !== avoided && !seen.has(edge.to))) {
+      seen.add(to)
+      queue.push(to)
+    }
+  }
+  return false
 }
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */

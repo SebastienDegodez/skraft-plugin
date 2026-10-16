@@ -16,7 +16,8 @@ import { normalizeRelative } from './relative-path.mjs'
  *   mocking: { strategy: 'microcks' | 'inprocess' },
  * }} Component
  *   root is relative to the working copy, normalised (`.`, `services/api`, `../payment-web`).
- *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none.
+ *   paths are relative to root, normalised; `['.']` (the whole root) when the file names none,
+ *   or an empty list (`skraft init` on a project with no tests folder yet).
  * @typedef {'all' | 'last-red'} ReplayMode
  *   all: every red commit is replayed; last-red: only the last red commit of each story.
  * @typedef {{ baseBranch: string | null, workflow: string | null, tdd: { replay: ReplayMode } }} Settings
@@ -221,18 +222,18 @@ const pathsOf = (value, label, errors) => {
 const PATH_KEYS = /** @type {const} */ (['src', 'tests'])
 
 /**
- * One key of `paths`, kept as `['.']` when absent.
+ * One key of `paths`, kept as `['.']` when absent or empty.
  * @param {Component['paths']} paths @param {'src' | 'tests'} key @param {unknown} listed
  * @param {string} label @param {string[]} errors
  */
 const readPaths = (paths, key, listed, label, errors) => {
-  if (listed === undefined) return
+  if (listed === undefined || (Array.isArray(listed) && listed.length === 0)) return
   if (isFolderList(listed)) paths[key] = listed.map(normalizeRelative)
   else errors.push(`${label}: paths.${key} must list folders inside the component root`)
 }
 
 /** Folders inside a component root: relative, and never above it. @param {unknown} listed @returns {listed is string[]} */
-const isFolderList = (listed) => Array.isArray(listed) && listed.length > 0 && listed.every(isInnerFolder)
+const isFolderList = (listed) => Array.isArray(listed) && listed.every(isInnerFolder)
 
 /** @param {unknown} path */
 const isInnerFolder = (path) => typeof path === 'string' && path.trim() !== '' && !isAbsolutePath(path) && !normalizeRelative(path).startsWith('..')

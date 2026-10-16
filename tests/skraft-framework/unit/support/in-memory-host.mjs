@@ -199,6 +199,11 @@ export class InMemoryGit {
       at.repo.dirty.add(at.inner)
     }
   }
+  /** History rewritten: the commits after sha leave the repository holding path. @param {string} path @param {string} sha */
+  reset(path, sha) {
+    const { repo } = this.locate(path)
+    repo.history.splice(repo.history.findIndex((commit) => commit.sha === sha) + 1)
+  }
   /** Uncommitted changes undone. @param {...string} paths */
   revert(...paths) {
     for (const path of paths) {
@@ -211,7 +216,8 @@ export class InMemoryGit {
     const at = this.locate(paths[0] ?? '.')
     const files = paths.map((path) => this.locate(path).inner)
     for (const file of files) at.repo.dirty.delete(file)
-    const sha = `${shaPrefix(at.top)}-${at.repo.history.length}`
+    at.repo.made = (at.repo.made ?? 0) + 1
+    const sha = `${shaPrefix(at.top)}-${at.repo.made}`
     at.repo.history.push({ sha, subject, files })
     return sha
   }

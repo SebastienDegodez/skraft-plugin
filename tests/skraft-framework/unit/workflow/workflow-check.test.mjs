@@ -253,3 +253,37 @@ test('an agent with two ways out is refused', async () => {
 
   assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', ['node design: agent node needs exactly one outgoing edge, has 2']))
 })
+
+test('a workflow that lets the run reach the exit around the locked gates is refused', async () => {
+  const bypass = 'keep the run going through gates, or skip gates with unlock="<reason>"'
+  const cases = [
+    {
+      dot: edit(BUILT_IN_WORKFLOW, ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> exit [label="FAIL"]']),
+      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to exit'],
+    },
+    {
+      dot: edit(BUILT_IN_WORKFLOW, ['  gates -> deliver [label="FAIL", max_visits=3]\n', '']),
+      errors: ['locked node gates has no FAIL edge back to an agent of DELIVER'],
+    },
+    {
+      dot: edit(BUILT_IN_WORKFLOW,
+        ['start -> research -> design -> distill -> deliver -> gates', 'start -> research -> design -> distill -> gates -> deliver -> exit'],
+        ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> exit    [label="PASS"]\n', '  gates -> deliver [label="FAIL", max_visits=3]\n']),
+      errors: [`deliver reaches the exit without passing gates; ${bypass}`],
+    },
+    {
+      dot: edit(BUILT_IN_WORKFLOW,
+        ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  quick    [shape=parallelogram, gate="build"]'],
+        ['deliver -> gates\n', 'deliver -> quick\n  quick -> exit [label="PASS"]\n  quick -> gates [label="FAIL"]\n']),
+      errors: [`start reaches the exit without passing gates; ${bypass}`, `deliver reaches the exit without passing gates; ${bypass}`],
+    },
+    {
+      dot: edit(BUILT_IN_WORKFLOW, ['goal_gate=true, locked=true', 'goal_gate=false, locked=true']),
+      errors: ['locked node gates must stay goal_gate=true; skip it with unlock="<reason>" instead'],
+    },
+  ]
+  for (const { dot, errors } of cases) {
+    const { commands } = host({ files: designating(dot) })
+    assert.deepEqual(await commands.check(), refused('skraft-workflow.dot', errors))
+  }
+})

@@ -63,3 +63,14 @@ test('commits since a sha the repository does not know cannot be told', async (t
   assert.equal(await sourceControl.commits('.', 'f'.repeat(40)), null)
   assert.equal(await sourceControl.commits('.', 'no-such-ref'), null)
 })
+
+test('a file moved to another folder shows as both paths, in the changes and in the commits', async (t) => {
+  const { root, base, sourceControl } = repository(t)
+  mkdirSync(join(root, 'docs', 'adr'), { recursive: true })
+  git(root, 'mv', 'services/api/src/Payment.cs', 'docs/adr/Payment.cs')
+
+  assert.deepEqual((await sourceControl.changedFiles('.', base)).sort(), ['docs/adr/Payment.cs', 'services/api/src/Payment.cs'])
+
+  git(root, 'commit', '-q', '-m', 'docs(adr): move')
+  assert.deepEqual((await sourceControl.commits('.', base)).map((entry) => entry.files.sort()), [['docs/adr/Payment.cs', 'services/api/src/Payment.cs']])
+})

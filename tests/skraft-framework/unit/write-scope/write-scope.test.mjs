@@ -101,7 +101,7 @@ test('a component in a neighbour repository is checked in that repository, again
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
   const host = scripted({ components: [API, WEB], git }, (it) => [
     agent()(it), agent()(it), agent()(it),
-    agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']); repos.change('../web/package.json') } })(it),
+    agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']); repos.change('../web/package.json', '../web/scripts/release.sh') } })(it),
     unavailable,
   ])
 
@@ -109,7 +109,7 @@ test('a component in a neighbour repository is checked in that repository, again
 
   const started = host.events().find((event) => event.type === 'step.started' && event.step === 'deliver')
   assert.deepEqual(started.heads, [{ repository: '.', sha: 'root-0', dirty: [] }, { repository: '../web', sha: 'up-web-0', dirty: [] }])
-  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: ../web/package.json'])
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['out of write scope: ../web/scripts/release.sh'])
   assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run'])
 })
 
@@ -128,4 +128,40 @@ test('Git that cannot list a repository\'s changes stops the run on the machine;
   assert.equal((await host.run()).code, 'agent-unavailable')
   assert.equal(host.agentRunner.dispatches.length, 2)
   assert.deepEqual(recorded(host, 'research').map((event) => event.outcome), ['done'])
+})
+
+test('a file already changed before the pass is held against the agent once it changes it again, or deletes it', async () => {
+  for (const touch of [
+    (workspace) => workspace.write('src/WorkInProgress.cs', 'class Draft { int x; }'),
+    (workspace) => { workspace.files.delete('src/WorkInProgress.cs') },
+  ]) {
+    const host = scripted({ files: { 'src/WorkInProgress.cs': 'class Draft {}' } }, (it) => [agent({ work: () => touch(it.deps.workspace) })(it), unavailable])
+    host.git.change('src/WorkInProgress.cs')
+
+    await host.start()
+
+    assert.deepEqual(recorded(host, 'research')[0].failures, ['out of write scope: src/WorkInProgress.cs'])
+  }
+})
+
+test('the agents writing a component\'s paths may change the files right in its root, not those of its other folders', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it), agent()(it),
+    agent({ work: ({ git }) => git.change('Checkout.sln', 'tests/Acceptance/Pay.cs', 'build/props.xml') })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'distill')[0].failures, ['out of write scope: build/props.xml'])
+})
+
+test('a component whose paths list no folder (no tests folder yet) is written anywhere in its root', async () => {
+  const host = scripted({ components: [{ ...API, paths: { src: [], tests: [] } }] }, (it) => [
+    agent()(it), agent()(it), agent({ work: ({ git }) => git.change('Checkout.Tests/PayTests.cs') })(it), unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.outcome, event.failures]), [['done', []]])
 })

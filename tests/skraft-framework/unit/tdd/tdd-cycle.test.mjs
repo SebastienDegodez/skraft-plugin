@@ -35,7 +35,7 @@ test('a red commit whose tests pass is refused', async () => {
   await host.start()
 
   const [refused] = recorded(host, 'deliver')
-  assert.deepEqual([refused.outcome, refused.code, refused.failures], ['failed', 'tdd', ['commit root-1 "test(checkout): Checkout pays by card" is not red: the tests of api pass at it']])
+  assert.deepEqual([refused.outcome, refused.code, refused.failures], ['failed', 'tdd', ['commit root-1 "test(checkout): Checkout pays by card" is not red: the tests of api pass at it; a test commit must fail before the code that makes it pass']])
   assert.equal(checked(host)[0].commits[0].verdict, 'not-red')
 })
 
@@ -53,8 +53,8 @@ test('a green commit with no red before it is refused, and so is the next green 
   await host.start()
 
   assert.deepEqual(recorded(host, 'deliver')[0].failures, [
-    'commit root-1 "feat(checkout): pay by card" makes code pass with no test commit before it',
-    'commit root-5 "fix(checkout): refund rounding" makes code pass with no test commit before it',
+    'commit root-1 "feat(checkout): pay by card" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit',
+    'commit root-5 "fix(checkout): refund rounding" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit',
   ])
 })
 
@@ -71,9 +71,9 @@ test('a commit that is not type(scope): subject is refused; every conventional t
   await host.start()
 
   assert.deepEqual(recorded(host, 'research')[0].failures, [
-    'commit root-1 "wip" is not a conventional commit (type(scope): subject)',
-    'commit root-2 "Docs: research" is not a conventional commit (type(scope): subject)',
-    'commit root-11 "wip test: notes" is not a conventional commit (type(scope): subject)',
+    'commit root-1 "wip" is not a conventional commit (type(scope): subject); reword it',
+    'commit root-2 "Docs: research" is not a conventional commit (type(scope): subject); reword it',
+    'commit root-11 "wip test: notes" is not a conventional commit (type(scope): subject); reword it',
   ])
   assert.equal(recorded(host, 'research')[0].code, 'commit-convention')
 })
@@ -92,29 +92,40 @@ test('a red commit that changes no component is refused', async () => {
   assert.deepEqual(recorded(outside, 'design')[0].failures, ['commit root-1 "test(checkout): ADR of the card payment" changes no component: a test commit adds a failing test to a component'])
 })
 
-test('only the commits of the refused attempt are judged again: a later attempt answers for its own', async () => {
+test('a refused commit stays refused on the next attempts of the pass, and a red replayed once is not replayed again', async () => {
   const host = scripted({}, (it) => [
     ...upToDeliver(it),
-    agent({ work: ({ git }) => { git.commit('test(checkout): pay', ['tests/PayTests.cs']); git.change('README.md') } })(it),
-    agent({ work: ({ git }) => { git.revert('README.md'); git.commit('feat(checkout): pay', ['src/Pay.cs']) } })(it),
+    agent({ work: ({ git }) => { git.commit('test(checkout): pay', ['tests/PayTests.cs']); git.commit('wip', ['tests/PayTests.cs']) } })(it),
+    agent()(it),
   ])
 
   const outcome = await host.start()
 
-  assert.equal(outcome.status, 'done')
-  assert.deepEqual(checked(host).map((event) => event.commits.map((commit) => commit.sha)), [['root-1'], ['root-2']])
+  assert.deepEqual([outcome.code, outcome.reason], [
+    'commit-convention',
+    'software-engineer failed the same way on attempts 1 and 2: commit root-2 "wip" is not a conventional commit (type(scope): subject); reword it',
+  ])
+  assert.deepEqual(checked(host).map((event) => event.commits.map((commit) => `${commit.sha} ${commit.verdict} ${commit.replay?.exitCode}`)), [
+    ['root-1 ok 1', 'root-2 not-conventional undefined'], ['root-1 ok 1', 'root-2 not-conventional undefined'],
+  ])
   assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test'])
+})
 
-  const neighbour = scripted({ components: [API, NEIGHBOUR], git: twoRepositories() }, (it) => [
+test('a refused commit leaves the pass once the agent rewrites the history', async () => {
+  const replay = new ScriptedReplay({ exits: { 'up-web-1': 0 } })
+  const host = scripted({ components: [API, NEIGHBOUR], git: twoRepositories(), replay }, (it) => [
     ...upToDeliver(it),
-    agent({ work: ({ git }) => { git.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); git.commit('wip', ['../web/src/Cart.test.tsx']); git.change('README.md') } })(it),
-    agent({ work: ({ git }) => { git.revert('README.md'); git.commit('feat(checkout): cart', ['../web/src/Cart.tsx']) } })(it),
+    agent({ work: ({ git }) => { git.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); git.change('docs/notes.md') } })(it),
+    agent({ work: ({ git }) => { git.revert('docs/notes.md'); git.reset('../web', 'up-web-0'); git.commit('test(checkout): cart fails', ['../web/src/Cart.test.tsx']); git.commit('feat(checkout): cart', ['../web/src/Cart.tsx']) } })(it),
   ])
 
-  assert.equal((await neighbour.start()).status, 'done')
-  assert.deepEqual([recorded(neighbour, 'deliver')[0].code, recorded(neighbour, 'deliver')[0].failures], ['write-scope', ['out of write scope: README.md', 'commit up-web- "wip" is not a conventional commit (type(scope): subject)']])
-  assert.deepEqual(checked(neighbour).map((event) => event.commits.map((commit) => commit.sha)), [['up-web-1', 'up-web-2'], ['up-web-3']])
-  assert.deepEqual(neighbour.replay.lines(), ['up-web-1 ../web/. $ npx vitest run'])
+  assert.equal((await host.start()).status, 'done')
+  assert.deepEqual(recorded(host, 'deliver').map((event) => [event.code, event.failures]), [
+    ['write-scope', ['out of write scope: docs/notes.md', 'commit up-web- "test(checkout): cart" is not red: the tests of web pass at it; a test commit must fail before the code that makes it pass']],
+    [null, []],
+  ])
+  assert.deepEqual(checked(host).map((event) => event.commits.map((commit) => commit.sha)), [['up-web-1'], ['up-web-2', 'up-web-3']])
+  assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run', 'up-web-2 ../web/. $ npx vitest run'])
 })
 
 test('a component without a test command stops the run on the machine until it gets one', async () => {
@@ -196,7 +207,7 @@ test('a red commit whose tests pass in every component it touches names them all
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['commit root-1 "test(checkout): both" is not red: the tests of web, api pass at it'])
+  assert.deepEqual(recorded(host, 'deliver')[0].failures, ['commit root-1 "test(checkout): both" is not red: the tests of web, api pass at it; a test commit must fail before the code that makes it pass'])
 })
 
 test('with "tdd": { "replay": "last-red" }, only the last red commit of each story is replayed', async () => {

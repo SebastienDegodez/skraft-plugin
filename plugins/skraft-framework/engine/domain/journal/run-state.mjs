@@ -1,19 +1,20 @@
 /**
  * @typedef {{ type: string, at: string, prev: string | null, [field: string]: any }} RunEvent
- * @typedef {{ repository: string, sha: string, dirty: string[] }} Head
+ * @typedef {{ repository: string, sha: string, dirty: Array<{ path: string, hash: string | null }> }} Head
  *   the HEAD of one repository when an attempt started, and the files then already changed
- *   (relative to the working copy).
+ *   (relative to the working copy), with the hash of their content (null: deleted).
  * @typedef {{
  *   visit: number, attempt: number, phase: string, agent: string | null, gates: string[] | null,
  *   outputs: string[], missing: string[], feedback: string[], heads: Head[],
  * }} OpenAttempt
  * @typedef {{
- *   visit: number, attempt: number, outputs: string[], heads: Head[],
+ *   visit: number, attempt: number, outputs: string[], heads: Head[], sentBack: boolean,
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
  * }} NodeState
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
  *   paths of the node's first dispatch, which every later one reuses. heads: the first
- *   attempt's of this visit. last and previous: this visit's last two step.recorded.
+ *   attempt's of this visit. sentBack: this visit started on gate failures. last and previous:
+ *   this visit's last two step.recorded.
  * @typedef {{
  *   story: { issue?: number | null, title?: string | null } | null,
  *   base: Array<{ component: string | null, root: string, repository: string, ref: string, source: 'flag' | 'component' | 'config' | 'default', sha: string }>,
@@ -97,6 +98,7 @@ const started_ = (run, event) => {
     attempt: event.attempt,
     outputs: before?.outputs ?? open.outputs,
     heads: sameVisit ? before.heads : open.heads,
+    sentBack: sameVisit ? before.sentBack : event.feedback?.length > 0,
     open,
     last: sameVisit ? before.last : null,
     previous: null,

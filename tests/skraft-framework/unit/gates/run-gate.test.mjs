@@ -359,7 +359,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     'components[4] must be an object',
     'component front: paths must be { "src": [...], "tests": [...] }',
     'component back: paths.src must list folders inside the component root',
-    'component back: paths.tests must list folders inside the component root',
+    
     'component jobs: paths.src must list folders inside the component root',
     'component jobs: paths.tests must list folders inside the component root',
     'component tools: paths.src must list folders inside the component root',

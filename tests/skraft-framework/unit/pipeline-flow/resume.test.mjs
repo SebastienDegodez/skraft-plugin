@@ -72,3 +72,21 @@ test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, en
     },
   )
 })
+
+test('a later attempt the host could not start is dispatched again on resume, not judged on the earlier attempt\'s work', async () => {
+  const host = scripted({}, (it) => [
+    agent({ work: ({ git }) => git.change('src/Hack.cs') })(it),
+    unavailable,
+    agent({ result: { status: 'done', summary: 'Reverted the stray file.' }, work: ({ git }) => git.revert('src/Hack.cs') })(it),
+    unavailable,
+  ])
+  await host.start()
+
+  await host.run()
+
+  assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.label), [
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · research · attempt 2`, `skraft ${SLUG} · research · attempt 2`, `skraft ${SLUG} · design · attempt 1`,
+  ])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded').map((event) => [event.attempt, event.outcome]), [[1, 'failed'], [2, 'done']])
+  assert.equal(await host.tracking.read(SLUG, 'results/research-1-2.json'), JSON.stringify({ status: 'done', summary: 'Reverted the stray file.' }))
+})

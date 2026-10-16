@@ -60,7 +60,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Attempt: 1 of 3',
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${RESEARCH}`,
-    `- Write your result as JSON to ${TRACKING}/results/research-1.json: ${RESULT_SHAPE}`,
+    `- Write your result as JSON to ${TRACKING}/results/research-1-1.json: ${RESULT_SHAPE}`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
   ].join('\n'))
@@ -73,7 +73,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- ${TRACKING}/${RESEARCH}`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${CONTEXT_MAP}`,
-    `- Write your result as JSON to ${TRACKING}/results/design-1.json: ${RESULT_SHAPE}`,
+    `- Write your result as JSON to ${TRACKING}/results/design-1-1.json: ${RESULT_SHAPE}`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- docs/adr',
@@ -89,19 +89,28 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- ${TRACKING}/${TEST_PLAN}`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${CHANGE_LOG}`,
-    `- Write your result as JSON to ${TRACKING}/results/deliver-1.json: ${RESULT_SHAPE}`,
+    `- Write your result as JSON to ${TRACKING}/results/deliver-1-1.json: ${RESULT_SHAPE}`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '- src',
     '- tests',
+    '- ./* (the files right in the root of api)',
     '- Components:',
     '- api: . (dotnet), tests: dotnet test',
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
-    '  then `refactor(<story>): …` if needed. The engine runs the tests at every test commit and refuses one whose tests pass,',
-    '  a feat or fix commit with no test commit before it, and any commit that is not `type(scope): subject`.',
+    '  then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;',
+    '  lint and format fixes in a `style` commit. The engine runs the tests at every test commit and refuses one whose tests pass,',
+    '  a feat or fix commit with no test commit since the last feat or fix (on a pass the gates sent back, their failure counts as that test),',
+    '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'))
-  assert.ok(host.agentRunner.dispatches[2].prompt.includes('- api: . (dotnet), tests: dotnet test\n'))
-  assert.ok(host.agentRunner.dispatches[2].prompt.includes('- tests\n- Components:'))
+  assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
+    '- tests',
+    '- ./* (the files right in the root of api)',
+    '- Components:',
+    '- api: . (dotnet), tests: dotnet test',
+    '- Commit the failing acceptance tests as `test(<story>): …`. The engine runs the tests at every test commit and refuses one whose tests pass,',
+    '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+  ].join('\n')), host.agentRunner.dispatches[2].prompt)
 })
 
 test('the step journals its outputs, its result file and where each repository stood', async () => {
@@ -113,7 +122,7 @@ test('the step journals its outputs, its result file and where each repository s
   const [started] = host.events().filter((event) => event.type === 'step.started')
   assert.deepEqual(
     { step: started.step, phase: started.phase, agent: started.agent, visit: started.visit, attempt: started.attempt, outputs: started.outputs, result: started.result, missing: started.missing, feedback: started.feedback, heads: started.heads },
-    { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', visit: 1, attempt: 1, outputs: [RESEARCH], result: 'results/research-1.json', missing: [], feedback: [], heads: [{ repository: '.', sha: 'root-0', dirty: ['src/Draft.cs'] }] },
+    { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', visit: 1, attempt: 1, outputs: [RESEARCH], result: 'results/research-1-1.json', missing: [], feedback: [], heads: [{ repository: '.', sha: 'root-0', dirty: [{ path: 'src/Draft.cs', hash: null }] }] },
   )
 })
 
@@ -172,7 +181,7 @@ test('a missing document is asked again with its path, and a retry that fills it
     '- Attempt: 2 of 3',
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${RESEARCH}`,
-    `- Write your result as JSON to ${TRACKING}/results/research-1.json: ${RESULT_SHAPE}`,
+    `- Write your result as JSON to ${TRACKING}/results/research-1-2.json: ${RESULT_SHAPE}`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
     '',
@@ -322,12 +331,20 @@ test('the engineer works on every component, each with its test command when it 
   await host.start()
 
   const deliver = host.agentRunner.dispatches[3].prompt
-  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- Components:\n- api: . (dotnet), tests: dotnet test\n- web: ../web (react)\n`), deliver)
-  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- tests\n- ../web/src\n- Components:`))
+  assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), tests: dotnet test\n- web: ../web (react)\n`), deliver)
+  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
-  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- .\n- ../web/src\n- Components:`), distill)
-  assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- Components:`), engineer)
+  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- .\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
+  assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
+})
+
+test('the test command the engineer is given has the run\'s base in place of {baseSha}', async () => {
+  const host = scripted({ components: [{ ...API, commands: { test: 'dotnet test --filter Since={baseSha}' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
+
+  await host.start()
+
+  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), tests: dotnet test --filter Since=root-0\n'))
 })
