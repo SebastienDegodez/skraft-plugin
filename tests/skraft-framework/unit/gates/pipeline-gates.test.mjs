@@ -196,7 +196,7 @@ test('another writer of the journal during the gates stops the run as a conflict
   assert.deepEqual(closing.lines(), ['. $ dotnet build', '. $ dotnet test', '../web $ npx eslint .'])
 })
 
-test('on a pass the gates sent back, their failure is the red of the first fix', async () => {
+test('on a pass the gates sent back, their failure is the red of the first fix, on every attempt of the pass, resumed or not', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
   const host = scripted({ machine }, (it) => [
     ...upToDeliver(it),
@@ -212,4 +212,17 @@ test('on a pass the gates sent back, their failure is the red of the first fix',
     [1, 1, 'done', []], [2, 1, 'failed', ['result is missing']], [2, 2, 'done', []],
   ])
   assert.deepEqual(host.events().filter((event) => event.type === 'commits.checked').at(-1).commits.map((commit) => `${commit.subject} ${commit.verdict}`), ['fix(checkout): round the card amount ok'])
+
+  const blanked = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
+  const resumed = scripted({ machine: blanked }, (it) => [
+    ...upToDeliver(it),
+    deliver(it),
+    agent({ fill: false, work: ({ git }) => { blanked.exits['. $ dotnet test'] = 0; it.tracking.write(SLUG, 'changes/2026-10-11/change-log.md', ''); git.commit('fix(checkout): round the card amount', ['src/Checkout.cs']) } })(it),
+    async (dispatch) => { await agent()(it)(dispatch); throw new Error('host interrupted') },
+  ])
+  await assert.rejects(resumed.start(), /host interrupted/)
+  assert.equal((await resumed.run()).status, 'done')
+  assert.deepEqual(recorded(resumed, 'deliver').map(({ visit, attempt, outcome: result, code }) => [visit, attempt, result, code]), [
+    [1, 1, 'done', null], [2, 1, 'failed', 'missing-outputs'], [2, 2, 'done', null],
+  ])
 })

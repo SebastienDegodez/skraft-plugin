@@ -75,4 +75,5 @@ export const allowedPaths = (role, { slug, components }) => [...new Set([
  * @param {Role} role
  * @param {readonly Component[]} components
  */
+// Stryker disable next-line ArrayDeclaration: no changed file sits right in a folder named like the placeholder
 export const rootFiles = (role, components) => (role.components.length > 0 ? components.map((component) => component.root) : [])

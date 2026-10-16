@@ -189,9 +189,9 @@ const dispatch = async (context, run, next) => {
     cost = answer.costUsd
     if (!answer.ok && (await pending())) return stop(context, phase, 'agent-failed', `${agent} stopped without finishing: ${answer.error ?? 'no answer'}`)
   }
-  const inState = attempt > 1 || resumed !== null
+  const inState = attempt > 1
   const known = new Map(journal.events
-    .filter((event) => event.type === 'commits.checked' && event.step === node.id && event.visit === visit)
+    .filter((event) => event.type === 'commits.checked')
     .flatMap((event) => event.commits.map((/** @type {{ sha: string, verdict: string, replay: any }} */ commit) => [commit.sha, commit])))
   const checked = await checkStep({ deps, slug, config, base: run.base }, {
     role, outputs, precreated, result, known,

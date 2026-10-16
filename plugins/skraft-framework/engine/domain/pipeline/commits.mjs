@@ -46,6 +46,7 @@ const classify = (subject) => {
  */
 export const judgeCommits = (commits, { sentBack }) => {
   /** @type {Set<string>} repositories with a red since their last green */
+  // Stryker disable next-line ArrayDeclaration: no commit is in a repository named like the placeholder
   const red = new Set(sentBack ? commits.map((commit) => commit.repository) : [])
   return commits.map((commit) => {
     const { kind, scope } = classify(commit.subject)

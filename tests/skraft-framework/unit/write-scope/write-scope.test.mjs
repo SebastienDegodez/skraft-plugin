@@ -75,8 +75,8 @@ test('the acceptance designer may write tests but not source', async () => {
 })
 
 test('files already changed before the pass started are not held against the agent', async () => {
-  const host = scripted({}, (it) => [agent()(it), unavailable])
-  host.git.change('src/WorkInProgress.cs')
+  const host = scripted({ files: { 'src/WorkInProgress.cs': 'class WorkInProgress {}\n', 'README.md': '# Draft\n' } }, (it) => [agent()(it), unavailable])
+  host.git.change('src/WorkInProgress.cs', 'README.md')
 
   await host.start()
 
@@ -144,7 +144,7 @@ test('a file already changed before the pass is held against the agent once it c
   }
 })
 
-test('the agents writing a component\'s paths may change the files right in its root, not those of its other folders', async () => {
+test('the agents writing a component\'s paths may change the files right in its root, not those of its other folders; the others may not', async () => {
   const host = scripted({}, (it) => [
     agent()(it), agent()(it),
     agent({ work: ({ git }) => git.change('Checkout.sln', 'tests/Acceptance/Pay.cs', 'build/props.xml') })(it),
@@ -154,6 +154,10 @@ test('the agents writing a component\'s paths may change the files right in its 
   await host.start()
 
   assert.deepEqual(recorded(host, 'distill')[0].failures, ['out of write scope: build/props.xml'])
+
+  const architect = scripted({}, (it) => [agent()(it), agent({ work: ({ git }) => git.change('Checkout.sln') })(it), unavailable])
+  await architect.start()
+  assert.deepEqual(recorded(architect, 'design')[0].failures, ['out of write scope: Checkout.sln'])
 })
 
 test('a component whose paths list no folder (no tests folder yet) is written anywhere in its root', async () => {

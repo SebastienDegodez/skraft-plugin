@@ -39,7 +39,7 @@ test('a red commit whose tests pass is refused', async () => {
   assert.equal(checked(host)[0].commits[0].verdict, 'not-red')
 })
 
-test('a green commit with no red before it is refused, and so is the next green after a green', async () => {
+test('a green commit with no red before it is refused, and so is the next green after a green, on the next attempt too', async () => {
   const host = scripted({}, (it) => [...upToDeliver(it), agent({
     work: ({ git }) => {
       git.commit('feat(checkout): pay by card', ['src/Checkout.cs'])
@@ -48,10 +48,11 @@ test('a green commit with no red before it is refused, and so is the next green 
       git.commit('refactor(checkout): name the refund', ['src/Refund.cs'])
       git.commit('fix(checkout): refund rounding', ['src/Refund.cs'])
     },
-  })(it), unavailable])
+  })(it), agent()(it)])
 
-  await host.start()
+  const outcome = await host.start()
 
+  assert.equal(outcome.reason.split(':')[0], 'software-engineer failed the same way on attempts 1 and 2')
   assert.deepEqual(recorded(host, 'deliver')[0].failures, [
     'commit root-1 "feat(checkout): pay by card" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit',
     'commit root-5 "fix(checkout): refund rounding" makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit',
@@ -183,6 +184,12 @@ test('a component added after the run started has its test commits replayed with
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.replay.lines(), ['root-1 ./web $ npx vitest run'])
+
+  const placeholder = scripted({}, (it) => [...upToDeliver(it), unavailable])
+  await placeholder.init()
+  await placeholder.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API, { ...FRONT, commands: { test: 'npx vitest run --since {baseSha}' } }] }))
+  await placeholder.run()
+  assert.ok(placeholder.agentRunner.dispatches[3].prompt.includes('- web: web (react), tests: npx vitest run --since {baseSha}\n'), placeholder.agentRunner.dispatches[3].prompt)
 })
 
 test('a red commit is replayed for each component it touches, and is red when one of them fails', async () => {

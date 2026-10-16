@@ -262,6 +262,12 @@ test('a workflow that lets the run reach the exit around the locked gates is ref
       errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to exit'],
     },
     {
+      dot: edit(BUILT_IN_WORKFLOW,
+        ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  review   [shape=box, agent="solution-architect", phase="REVIEW"]\n  reviewed [shape=Msquare]'],
+        ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> review [label="FAIL"]\n  review -> reviewed']),
+      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to review'],
+    },
+    {
       dot: edit(BUILT_IN_WORKFLOW, ['  gates -> deliver [label="FAIL", max_visits=3]\n', '']),
       errors: ['locked node gates has no FAIL edge back to an agent of DELIVER'],
     },

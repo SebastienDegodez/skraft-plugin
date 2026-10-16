@@ -44,6 +44,7 @@ test('a name that is not a kebab-case agent id is never looked up as a path', as
   const { agentCatalog } = createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT })
 
   assert.equal(await agentCatalog.locate('../evil'), null)
+  assert.equal(await agentCatalog.locate('acme/../../evil'), null)
   assert.equal(await agentCatalog.locate('Upper'), null)
   assert.equal(await agentCatalog.locate(''), null)
 })

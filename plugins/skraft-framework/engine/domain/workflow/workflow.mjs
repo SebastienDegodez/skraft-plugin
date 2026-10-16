@@ -272,7 +272,6 @@ export const checkLocks = (builtIn, custom) => {
  * @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} kept
  */
 const failEdge = (builtIn, custom, kept) => {
-  if (!builtIn.edges.some((edge) => edge.from === kept.id && edge.label === 'FAIL')) return []
   const target = custom.edges.find((edge) => edge.from === kept.id && edge.label === 'FAIL')?.to
   if (target === undefined) return [`locked node ${kept.id} has no FAIL edge back to an agent of ${kept.phase}`]
   const back = custom.nodes[target]
@@ -289,6 +288,7 @@ const bypasses = (custom, kept) => [custom.start, ...custom.order.filter((id) =>
 
 /** @param {Workflow} workflow @param {string} from @param {string} avoided */
 const reachesExitWithout = (workflow, from, avoided) => {
+  // Stryker disable next-line ArrayDeclaration: without the start in seen, an edge back to it queues it once more and finds nothing new
   const seen = new Set([from])
   const queue = [from]
   while (queue.length > 0) {

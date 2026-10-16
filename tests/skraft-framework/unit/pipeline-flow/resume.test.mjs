@@ -33,7 +33,7 @@ test('a run interrupted before the agent finished dispatches the same attempt ag
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'research').length, 2)
 })
 
-test('a resumed attempt whose outputs are done but whose result is missing is dispatched again', async () => {
+test('a resumed attempt whose result or outputs are missing is dispatched again', async () => {
   const host = scripted({}, (it) => [async (dispatch) => { await agent({ result: null })(it)(dispatch); interrupted() }, agent()(it), unavailable])
   await host.init()
   await assert.rejects(host.run(), /host interrupted/)
@@ -41,6 +41,12 @@ test('a resumed attempt whose outputs are done but whose result is missing is di
   await host.run()
 
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.label).slice(0, 2), Array(2).fill(`skraft ${SLUG} · research · attempt 1`))
+
+  const unfilled = scripted({}, (it) => [async (dispatch) => { await agent({ fill: false })(it)(dispatch); interrupted() }, agent()(it), unavailable])
+  await unfilled.init()
+  await assert.rejects(unfilled.run(), /host interrupted/)
+  await unfilled.run()
+  assert.deepEqual(unfilled.agentRunner.dispatches.map((dispatch) => dispatch.label).slice(0, 2), Array(2).fill(`skraft ${SLUG} · research · attempt 1`))
 })
 
 test('init on an initialised slug keeps its journal and its story', async () => {
