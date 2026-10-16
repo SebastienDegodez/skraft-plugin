@@ -119,6 +119,56 @@ export const summarizeV1 = ({ state = {}, reviews = [], evidence = [], files = [
   }
 }
 
+// v2 gate command name → v1 gate ids (quality-gates-evidence-contract). `none` and unknown names
+// have no v1 counterpart and are dropped.
+export const V2_GATE_TO_V1 = Object.freeze({
+  build: ['G3'],
+  format: ['G4'],
+  lint: ['G4'],
+  test: ['G1', 'G2'],
+  architecture: ['G5'],
+  coverage: ['G11'],
+  mutation: ['G6'],
+})
+
+const gateOrder = (a, b) => Number(a.gate.slice(1)) - Number(b.gate.slice(1))
+
+// Several config components map onto one slug: `fail` wins over `pass`.
+const worstStatus = (statuses) =>
+  statuses.includes('fail') ? 'fail' : statuses.includes('pass') ? 'pass' : statuses[0]
+
+/**
+ * v2 `gate.ran` (config component + command name) → v1 gates on the run slug.
+ * @param {{ component: string, gate: string, status: string }[]} ran last status per component/command
+ * @param {string} slug
+ */
+export const mapV2Gates = (ran, slug) => {
+  const byId = new Map()
+  for (const g of ran) {
+    for (const id of V2_GATE_TO_V1[g.gate] ?? []) {
+      if (!byId.has(id)) byId.set(id, [])
+      byId.get(id).push(g.status)
+    }
+  }
+  return [...byId].map(([gate, statuses]) => ({ component: slug, gate, status: worstStatus(statuses) }))
+}
+
+const RED_FAILURES = new Set(['not-red', 'green-without-red'])
+
+/**
+ * G8 and G10 from `commits.checked`: only the last check of each step counts.
+ * @param {Map<string, any[]>} lastCheckByStep
+ * @param {string} slug
+ */
+export const commitGates = (lastCheckByStep, slug) => {
+  const commits = [...lastCheckByStep.values()].flat().filter((c) => c && typeof c === 'object')
+  if (commits.length === 0) return []
+  const gates = [{ component: slug, gate: 'G8', status: commits.some((c) => c.verdict === 'not-conventional') ? 'fail' : 'pass' }]
+  if (commits.some((c) => RED_FAILURES.has(c.verdict))) gates.push({ component: slug, gate: 'G10', status: 'fail' })
+  else if (commits.some((c) => c.replay)) gates.push({ component: slug, gate: 'G10', status: 'pass' })
+  return gates
+}
+
 /**
  * Tolerant reader: unknown event types are ignored, missing payload fields are skipped.
  * The hash chain (`prev`) is not verified here; the engine owns that check.
@@ -130,6 +180,8 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
   const phasesReached = []
   const verdicts = {}
   const gates = []
+  const commitChecks = new Map()
+  let slug = null
   const started = new Set()
   let retries = 0
   let cost = null
@@ -142,6 +194,7 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
     switch (e.type) {
       case 'run.started':
         startedAt ??= e.at
+        if (slug === null && typeof e.slug === 'string' && e.slug) slug = e.slug
         break
       case 'step.started':
         if (e.step === undefined) break
@@ -153,6 +206,12 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
         break
       case 'gate.ran':
         if (e.gate !== undefined) gates.push({ component: String(e.component ?? 'unknown'), gate: String(e.gate), status: String(e.status) })
+        break
+      case 'commits.checked':
+        if (Array.isArray(e.commits)) {
+          commitChecks.delete(String(e.step))
+          commitChecks.set(String(e.step), e.commits)
+        }
         break
       case 'review.decided':
         if (e.phase && e.verdict) (verdicts[e.phase] ??= []).push(e.verdict)
@@ -172,7 +231,7 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
   return {
     phasesReached,
     verdicts,
-    gates: lastGateWins(gates),
+    gates: [...mapV2Gates(lastGateWins(gates), slug ?? 'unknown'), ...commitGates(commitChecks, slug ?? 'unknown')].sort(gateOrder),
     artefacts: artefactsFrom(files),
     durationMs: startedAt && finishedAt ? span([startedAt], [finishedAt]) : null,
     cost,

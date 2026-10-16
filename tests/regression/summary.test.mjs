@@ -72,13 +72,13 @@ const ev = (type, at, payload = {}) => ({ type, at, prev: 'x', ...payload })
 
 test('v2 events: phases, verdicts, last gate status wins, cost and retries from steps', () => {
   const events = [
-    ev('run.started', '2026-10-09T10:00:00.000Z', { base: 'abc', workflow: 'default' }),
+    ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund', base: [], workflow: 'skraft' }),
     ev('step.started', '2026-10-09T10:00:01.000Z', { step: 'research', kind: 'agent', agent: 'solution-researcher' }),
     ev('step.recorded', '2026-10-09T10:05:00.000Z', { step: 'research', outcome: 'fail', durationMs: 1000, cost: 0.5 }),
     ev('step.started', '2026-10-09T10:05:01.000Z', { step: 'research', kind: 'agent', agent: 'solution-researcher' }),
     ev('step.recorded', '2026-10-09T10:09:00.000Z', { step: 'research', outcome: 'ok', durationMs: 2000, cost: 0.25 }),
-    ev('gate.ran', '2026-10-09T10:09:10.000Z', { component: 'refund', gate: 'G1', status: 'fail' }),
-    ev('gate.ran', '2026-10-09T10:09:20.000Z', { component: 'refund', gate: 'G1', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:09:10.000Z', { component: 'api', gate: 'build', status: 'fail' }),
+    ev('gate.ran', '2026-10-09T10:09:20.000Z', { component: 'api', gate: 'build', status: 'pass' }),
     ev('review.decided', '2026-10-09T10:09:30.000Z', { phase: 'RESEARCH', verdict: 'APPROVED' }),
     ev('decision.recorded', '2026-10-09T10:09:40.000Z', { key: 'adr-1', answer: 'accept' }),
     ev('phase.closed', '2026-10-09T10:09:50.000Z', { phase: 'RESEARCH' }),
@@ -90,7 +90,7 @@ test('v2 events: phases, verdicts, last gate status wins, cost and retries from 
 
   assert.deepEqual(summary.phasesReached, ['RESEARCH'])
   assert.deepEqual(summary.verdicts, { RESEARCH: ['APPROVED'] })
-  assert.deepEqual(summary.gates, [{ component: 'refund', gate: 'G1', status: 'pass' }])
+  assert.deepEqual(summary.gates, [{ component: 'refund', gate: 'G3', status: 'pass' }])
   assert.deepEqual(summary.artefacts, ['research/report.md'])
   assert.equal(summary.durationMs, 10 * 60 * 1000)
   assert.equal(summary.cost, 0.75)
@@ -113,4 +113,98 @@ test('parseEventsJsonl skips blank lines (CRLF too) and names the bad line', () 
 test('artefact paths are normalised: backslashes to slashes, dates to {date}', () => {
   const summary = summarizeV2([], { files: ['design\\adr\\0001.md', 'reports/2026-10-09/summary.md'] })
   assert.deepEqual(summary.artefacts, ['design/adr/0001.md', 'reports/{date}/summary.md'])
+})
+
+test('v2 gates map onto v1 ids for the run slug; one failing component fails the slug', () => {
+  const events = [
+    ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund', workflow: 'skraft', artifacts: [], start: null, unlocked: [] }),
+    ev('gate.ran', '2026-10-09T10:01:00.000Z', { component: 'api', gate: 'build', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:01:01.000Z', { component: 'web', gate: 'build', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:02:00.000Z', { component: 'api', gate: 'test', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:02:01.000Z', { component: 'web', gate: 'test', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:02:02.000Z', { component: 'web', gate: 'test', status: 'fail' }),
+    ev('gate.ran', '2026-10-09T10:03:00.000Z', { component: 'api', gate: 'format', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:03:01.000Z', { component: 'api', gate: 'lint', status: 'fail' }),
+    ev('gate.ran', '2026-10-09T10:04:00.000Z', { component: 'api', gate: 'architecture', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:04:01.000Z', { component: 'api', gate: 'mutation', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:04:02.000Z', { component: 'api', gate: 'coverage', status: 'fail' }),
+    ev('gate.ran', '2026-10-09T10:04:03.000Z', { component: 'api', gate: 'coverage', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:05:00.000Z', { component: 'docs', gate: 'none', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:05:01.000Z', { component: 'api', gate: 'e2e', status: 'fail' }),
+  ]
+
+  assert.deepEqual(summarizeV2(events).gates, [
+    { component: 'refund', gate: 'G1', status: 'fail' },
+    { component: 'refund', gate: 'G2', status: 'fail' },
+    { component: 'refund', gate: 'G3', status: 'pass' },
+    { component: 'refund', gate: 'G4', status: 'fail' },
+    { component: 'refund', gate: 'G5', status: 'pass' },
+    { component: 'refund', gate: 'G6', status: 'pass' },
+    { component: 'refund', gate: 'G11', status: 'pass' },
+  ])
+})
+
+test('v2 format and lint passing give G4 pass; no slug gives the unknown component', () => {
+  const events = [
+    ev('run.started', '2026-10-09T10:00:00.000Z'),
+    ev('gate.ran', '2026-10-09T10:01:00.000Z', { component: 'api', gate: 'format', status: 'pass' }),
+    ev('gate.ran', '2026-10-09T10:01:01.000Z', { component: 'api', gate: 'lint', status: 'pass' }),
+  ]
+  assert.deepEqual(summarizeV2(events).gates, [{ component: 'unknown', gate: 'G4', status: 'pass' }])
+})
+
+const commit = (verdict, replay = null) => ({ repository: '.', sha: 'abc', subject: 's', kind: 'green', verdict, replay })
+const replay = { component: 'api', exitCode: 1, durationMs: 900 }
+
+test('commits.checked: G8 and G10 from the last check of each step only', () => {
+  const events = [
+    ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund' }),
+    ev('commits.checked', '2026-10-09T10:01:00.000Z', { step: 'deliver', visit: 1, attempt: 1, commits: [commit('not-conventional'), commit('not-red')] }),
+    ev('commits.checked', '2026-10-09T10:02:00.000Z', { step: 'deliver', visit: 1, attempt: 2, commits: [commit('ok', replay), commit('ok')] }),
+    ev('commits.checked', '2026-10-09T10:03:00.000Z', { step: 'refactor', visit: 1, attempt: 1, commits: [commit('ok')] }),
+  ]
+  assert.deepEqual(summarizeV2(events).gates, [
+    { component: 'refund', gate: 'G8', status: 'pass' },
+    { component: 'refund', gate: 'G10', status: 'pass' },
+  ])
+})
+
+test('commits.checked: a not-conventional commit fails G8; not-red or green-without-red fails G10', () => {
+  const run = (commits) => summarizeV2([
+    ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund' }),
+    ev('commits.checked', '2026-10-09T10:01:00.000Z', { step: 'deliver', visit: 1, attempt: 1, commits }),
+  ]).gates
+
+  assert.deepEqual(run([commit('not-conventional', replay), commit('ok', replay)]), [
+    { component: 'refund', gate: 'G8', status: 'fail' },
+    { component: 'refund', gate: 'G10', status: 'pass' },
+  ])
+  assert.deepEqual(run([commit('green-without-red')]).find((g) => g.gate === 'G10').status, 'fail')
+  assert.deepEqual(run([commit('not-red', replay)]).find((g) => g.gate === 'G10').status, 'fail')
+})
+
+test('commits.checked: no replay leaves G10 absent; no commit checked leaves G8 absent', () => {
+  const gates = summarizeV2([
+    ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund' }),
+    ev('commits.checked', '2026-10-09T10:01:00.000Z', { step: 'deliver', commits: [commit('ok')] }),
+  ]).gates
+  assert.deepEqual(gates, [{ component: 'refund', gate: 'G8', status: 'pass' }])
+
+  const empty = summarizeV2([ev('commits.checked', '2026-10-09T10:01:00.000Z', { step: 'deliver', commits: [] })]).gates
+  assert.deepEqual(empty, [])
+})
+
+test('phases closed as skipped from artefacts count as reached; a new visit counts one retry', () => {
+  const events = [
+    ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund' }),
+    ev('phase.closed', '2026-10-09T10:00:01.000Z', { phase: 'RESEARCH', skipped: 'from-artifacts' }),
+    ev('phase.closed', '2026-10-09T10:00:02.000Z', { phase: 'DESIGN', skipped: 'from-artifacts' }),
+    ev('step.started', '2026-10-09T10:01:00.000Z', { step: 'deliver', phase: 'DELIVER', visit: 1, attempt: 1 }),
+    ev('step.started', '2026-10-09T10:02:00.000Z', { step: 'deliver', phase: 'DELIVER', visit: 1, attempt: 2 }),
+    ev('step.started', '2026-10-09T10:03:00.000Z', { step: 'deliver', phase: 'DELIVER', visit: 2, attempt: 1 }),
+    ev('phase.closed', '2026-10-09T10:04:00.000Z', { phase: 'DELIVER' }),
+  ]
+  const summary = summarizeV2(events)
+  assert.deepEqual(summary.phasesReached, ['RESEARCH', 'DESIGN', 'DELIVER'])
+  assert.equal(summary.retries, 2)
 })
