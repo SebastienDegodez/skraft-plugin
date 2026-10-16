@@ -5,6 +5,9 @@ import { createSystemClock } from './clock/system-clock.mjs'
 import { createWebCryptoHasher } from './crypto/web-crypto-hasher.mjs'
 import { createWorkspaceFiles } from './workspace/workspace-files.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
+import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
+import { createAgentCatalog } from './agents/agent-catalog.mjs'
+import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
 
 /**
@@ -16,7 +19,7 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env }) => {
   const files = createNodeFiles()
   return Object.freeze({
     ...trackedState(files, cwd),
-    templates: createPluginTemplates({ files, pluginRoot }),
+    ...pluginContent(files, pluginRoot, cwd),
     clock: createSystemClock(),
     hasher: createWebCryptoHasher(),
     workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
@@ -35,6 +38,16 @@ const trackedState = (files, cwd) => {
 }
 
 /**
+ * What the plugin ships, and the agents the working copy adds to it.
+ * @param {ReturnType<typeof createNodeFiles>} files @param {string} pluginRoot @param {string} cwd
+ */
+const pluginContent = (files, pluginRoot, cwd) => ({
+  templates: createPluginTemplates({ files, pluginRoot }),
+  workflowSource: createPluginWorkflows({ files, pluginRoot }),
+  agentCatalog: createAgentCatalog({ files, pluginRoot, root: cwd }),
+})
+
+/**
  * Programs started from the working copy, git run through them, and where they are found.
  * @param {string} cwd @param {NodeJS.ProcessEnv} env
  */
@@ -43,6 +56,7 @@ const programs = (cwd, env) => {
   return {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner }),
+    commitReplay: createGitCommitReplay({ commandRunner }),
     executables: createNodeExecutables({ root: cwd, env }),
   }
 }

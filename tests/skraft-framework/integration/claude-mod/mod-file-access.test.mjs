@@ -1,10 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, mkdir } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createModFiles, joinPath } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/mod-files.mjs'
-import { nodeModFs } from './support/scripted-mod-host.mjs'
+import { nodeModFs, nodeModRun } from './support/scripted-mod-host.mjs'
+import { git } from '../support/workspace.mjs'
 
 const inTemp = (body) => async () => {
   const root = await mkdtemp(join(tmpdir(), 'skraft-mod-files-'))
@@ -31,6 +32,31 @@ test('a read that fails on a file that exists is not taken for a missing file', 
   const folder = join(root, 'a-folder')
   await mkdir(folder)
   await assert.rejects(createModFiles(nodeModFs).read(folder))
+}))
+
+test('a folder of a repository lists its files at any depth through git, tracked or not, ignored included', inTemp(async (root) => {
+  const files = createModFiles(nodeModFs, { run: nodeModRun })
+  const folder = files.join(root, '.copilot-tracking', 'skraft-plans', 'checkout')
+  await files.write(files.join(root, '.gitignore'), '.copilot-tracking/\n')
+  await files.write(files.join(folder, 'research', 'tracked.md'), 't\n')
+  git(root, 'init', '-q', '-b', 'main')
+  git(root, 'add', '-f', '-A')
+  git(root, 'commit', '-q', '-m', 'tracked')
+  await files.write(files.join(folder, 'research', 'deep', 'untracked notes.md'), 'u\n')
+  await files.write(files.join(folder, 'research', 'été.md'), 'e\n')
+  await rm(join(folder, 'research', 'tracked.md'))
+  await files.write(files.join(folder, 'research', 'kept.md'), 'k\n')
+  git(root, 'add', '-f', join(folder, 'research', 'kept.md'))
+
+  assert.deepEqual((await files.list(files.join(folder, 'research'))).sort(), ['deep/untracked notes.md', 'kept.md', 'été.md'])
+  assert.equal(await files.list(files.join(folder, 'absent')), null)
+}))
+
+test('outside a repository, or without $.process.run, the mod cannot list a folder', inTemp(async (root) => {
+  await writeFile(join(root, 'a.md'), 'a\n')
+
+  assert.equal(await createModFiles(nodeModFs, { run: nodeModRun }).list(root), null)
+  assert.equal(await createModFiles(nodeModFs).list(root), null)
 }))
 
 test('paths are joined with / whatever separator the root came with', () => {

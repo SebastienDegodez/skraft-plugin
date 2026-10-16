@@ -6,9 +6,12 @@ import { isSlug } from '../../domain/pipeline/slug.mjs'
  *   write: (path: string, text: string) => Promise<void>,
  *   append: (path: string, text: string) => Promise<void>,
  *   join: (...parts: string[]) => string,
+ *   list: (path: string) => Promise<string[] | null>,
  * }} FileFunctions
  *   The few file operations the tracking folder needs, on any host: Node's fs or the
  *   Claude Code mod's `$.fs`. read: null when absent. write and append create folders.
+ *   list: every file under the folder at any depth, relative to it, `/`-separated; null when
+ *   the path is not a folder (or the host cannot list it).
  */
 
 export const TRACKING_FOLDER = ['.copilot-tracking', 'skraft-plans']
@@ -43,6 +46,11 @@ export const createTrackingStore = ({ files, root }) => {
     read: (slug, path) => files.read(at(slug, path)),
     write: (slug, path, text) => files.write(at(slug, path), text),
     location: at,
+    list: async (slug, folder) => {
+      const prefix = folder.split('/').filter((part) => part !== '' && part !== '.').join('/')
+      const names = (await files.list(at(slug, prefix))) ?? []
+      return names.map((name) => (prefix === '' ? name : `${prefix}/${name}`)).sort()
+    },
   })
 
   return Object.freeze({ journal, activePipeline, files: trackingFiles })
