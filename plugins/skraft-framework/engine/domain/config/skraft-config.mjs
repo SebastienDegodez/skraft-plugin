@@ -45,7 +45,7 @@ export const NO_GATE = `no gate command; give it at least one of ${GATE_ORDER.jo
  * @returns {ConfigReading}
  */
 export const readConfig = (text) => {
-  if (text === null) return { ok: true, present: false, config: { baseBranch: null, workflow: null, tdd: { replay: 'all' }, components: [] }, raw: {} }
+  if (text === null) return { .../** @type {Extract<ConfigReading, { ok: true }>} */ (readConfig('{}')), present: false }
   const parsed = parseObject(text)
   if (!parsed.ok) return parsed
   const raw = parsed.value
@@ -208,6 +208,7 @@ const commandsOf = (value, label, errors) => {
 /** @param {unknown} value @param {string} label @param {string[]} errors @returns {Component['paths']} */
 const pathsOf = (value, label, errors) => {
   /** @type {Component['paths']} */
+  // Stryker disable next-line StringLiteral: an empty path and `.` both name the component root once joined to it
   const paths = { src: ['.'], tests: ['.'] }
   if (!isRecord(value)) {
     errors.push(`${label}: paths must be { "src": [...], "tests": [...] }`)

@@ -52,10 +52,11 @@ test('a workflow without a DESIGN phase cannot start from DISCUSS artefacts', as
   })
 })
 
-test('a story file nested deeper in plans/ counts too, a file outside plans/ does not', async () => {
+test('a story file nested deeper in plans/ counts too, a file outside plans/ or not ending in .md does not', async () => {
   const host = pipelineHost()
   await host.tracking.write(SLUG, 'plans/2026-10-01/sprint-1/stories-v1.md', '# Stories\n')
   await host.tracking.write(SLUG, 'notes/stories-v2.md', '# Not DISCUSS\n')
+  await host.tracking.write(SLUG, 'plans/2026-10-01/stories-v1.md.orig', '# Merge leftover\n')
 
   await host.init({ fromArtifacts: true })
 

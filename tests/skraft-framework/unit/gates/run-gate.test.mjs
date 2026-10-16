@@ -329,15 +329,21 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
 
   assert.equal(await gateWith(JSON.stringify({
     baseBranch: '--orphan',
+    workflow: 7,
     components: [
       { name: 'web', root: '/srv/web', stack: 'react', comands: { test: 'npm test' } },
       { name: 'Api', root: 'api', stack: 'cobol', commands: { Test: 'dotnet test', tset: 'dotnet test', build: '  ', mutation: 7 }, baseBranch: 'release 2', mocking: { strategy: 'wiremock' } },
       { name: 'api', root: 'api', stack: 'dotnet', commands: 'dotnet test', mocking: 'inprocess' },
       { name: 'api', root: 'api2', stack: 'dotnet' },
       null,
+      { name: 'front', root: 'front', stack: 'react', paths: ['src'] },
+      { name: 'back', root: 'back', stack: 'dotnet', paths: { src: ['src', '../shared'], tests: [] } },
+      { name: 'jobs', root: 'jobs', stack: 'python', paths: { src: ['/srv/jobs'], tests: [' '] } },
+      { name: 'tools', root: 'tools', stack: 'python', paths: { src: [3], tests: ['tests'] } },
     ],
   })), [
     'skraft-config.json is invalid: baseBranch must be a git ref, got "--orphan"',
+    'workflow must be a .dot file relative to the working copy, got 7',
     'component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)',
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',
@@ -351,8 +357,14 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     'component api: commands must be an object of command lines',
     'component api: mocking must be { "strategy": "microcks" or "inprocess" }',
     'components[4] must be an object',
+    'component front: paths must be { "src": [...], "tests": [...] }',
+    'component back: paths.src must list folders inside the component root',
+    'component back: paths.tests must list folders inside the component root',
+    'component jobs: paths.src must list folders inside the component root',
+    'component jobs: paths.tests must list folders inside the component root',
+    'component tools: paths.src must list folders inside the component root',
   ].join('; '))
-  assert.equal(await gateWith(JSON.stringify({ components: [{ name: 'api', root: 'a', stack: 'dotnet' }, { name: 'api', root: 'b', stack: 'dotnet' }] })), 'skraft-config.json is invalid: component name api is used twice')
+  assert.equal(await gateWith(JSON.stringify({ components: [{ name: 'payment-api', root: 'a', stack: 'dotnet' }, { name: 'payment-api', root: 'b', stack: 'dotnet' }] })), 'skraft-config.json is invalid: component name payment-api is used twice')
   assert.equal(await gateWith('{"components": {}}'), 'skraft-config.json is invalid: components must be an array')
   assert.equal(await gateWith('["api"]'), 'skraft-config.json is invalid: skraft-config.json must hold a JSON object')
   assert.match(await gateWith('{"components": ['), /^skraft-config\.json is invalid: skraft-config\.json is not JSON: /)

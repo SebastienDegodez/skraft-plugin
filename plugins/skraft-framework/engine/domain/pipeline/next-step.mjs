@@ -49,6 +49,7 @@ export const nextStep = (workflow, run) => {
     const block = (/** @type {BlockCause} */ cause) => ({ kind: /** @type {const} */ ('blocked'), phase: node.phase, node, cause, last, previous, missingNode: null })
     if (last.code === 'agent-blocked') return block('agent-blocked')
     if (previous !== null && sameFailure(previous, last)) return block('breaker')
+    // Stryker disable next-line StringLiteral: a refusal that is not the breaker's is told as the ceiling, whatever its cause
     if (last.attempt >= (node.maxAttempts ?? DEFAULT_ATTEMPTS)) return block('ceiling')
     return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, resumed: null }, run)
   }
@@ -58,7 +59,7 @@ export const nextStep = (workflow, run) => {
   const phase = /** @type {string} */ (node.phase)
   if (!run.closed.includes(phase) && (target.kind === 'exit' || target.phase !== phase)) return { kind: 'close-phase', phase }
   const visit = (run.nodes[target.id]?.visit ?? 0) + 1
-  return enter(target, { visit, attempt: 1, missing: [], feedback: last.outcome === 'fail' ? last.failures : [], resumed: null }, run)
+  return enter(target, { visit, attempt: 1, missing: [], feedback: last.failures, resumed: null }, run)
 }
 
 /**
@@ -70,7 +71,7 @@ export const nextStep = (workflow, run) => {
 const enter = (node, entry, run) => {
   if (node.kind === 'exit') return { kind: 'done', phase: run.closed.at(-1) ?? null }
   const phase = /** @type {string} */ (node.phase)
-  if (node.kind === 'gate' && node.unlock !== null) return { kind: 'skip', phase, node, visit: entry.visit }
+  if (node.unlock !== null) return { kind: 'skip', phase, node, visit: entry.visit }
   return { kind: /** @type {'agent' | 'gate'} */ (node.kind), phase, node, ...entry }
 }
 

@@ -6,7 +6,7 @@ const RESULT = `${TRACKING}/results/research-1.json`
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const recorded = (host) => host.events().filter((event) => event.type === 'step.recorded')
 
-test('two identical invalid results stop the run without a third attempt', async () => {
+test('two identical invalid results stop the run without a third attempt, null and a number alike', async () => {
   const host = scripted({}, (it) => [agent({ result: '{ "status": "finished" }' })(it), agent({ result: '{ "status": "finished" }' })(it)])
 
   const outcome = await host.start()
@@ -26,6 +26,9 @@ test('two identical invalid results stop the run without a third attempt', async
     ['failed', 'invalid-result', [`result ${RESULT} status must be "done" or "blocked"; summary must be a non-empty string`]],
   ])
   assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.finished', status: 'blocked', code: 'invalid-result', reason: outcome.reason })
+
+  const scalars = scripted({}, (it) => [agent({ result: 'null' })(it), agent({ result: '42' })(it)])
+  assert.equal((await scalars.start()).reason, `solution-researcher failed the same way on attempts 1 and 2: result ${RESULT} must hold a JSON object`)
 })
 
 test('different invalid results get every attempt, then the run stops at the ceiling', async () => {
@@ -65,6 +68,7 @@ test('an agent that reports itself blocked stops the run at once with its reason
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-blocked', reason: 'solution-researcher is blocked: The story names no payment provider.' })
   assert.deepEqual(recorded(host).map(({ outcome: result, code, missing, failures }) => [result, code, missing, failures]), [['failed', 'agent-blocked', [], ['The story names no payment provider.']]])
+  assert.deepEqual(host.events().map((event) => event.type), ['run.started', 'step.started', 'step.recorded', 'run.finished'])
   assert.equal(host.agentRunner.dispatches.length, 1)
 })
 

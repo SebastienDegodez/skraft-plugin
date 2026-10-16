@@ -134,11 +134,11 @@ test('the research document is pre-created from its template, and one already th
 
 test('outputs without a template are not pre-created', async () => {
   const seen = []
-  const host = scripted({}, (it) => [agent()(it), async () => { seen.push(await it.tracking.read(SLUG, CONTEXT_MAP)); return { ok: false, unavailable: true, text: '' } }])
+  const host = scripted({}, (it) => [agent()(it), async () => { seen.push(await it.tracking.list(SLUG, 'details')); return { ok: false, unavailable: true, text: '' } }])
 
   await host.start()
 
-  assert.deepEqual(seen, [null])
+  assert.deepEqual(seen, [[]])
 })
 
 test('a document left as its template, with a placeholder left, blank or deleted counts as missing', async () => {
@@ -165,8 +165,20 @@ test('a missing document is asked again with its path, and a retry that fills it
   const [first, second] = host.agentRunner.dispatches
   assert.equal(second.label, `skraft ${SLUG} · research · attempt 2`)
   assert.ok(!first.prompt.includes('Missing outputs'))
-  assert.ok(second.prompt.endsWith(`\n\nMissing outputs from attempt 1 of 3:\n- ${TRACKING}/${RESEARCH}`), second.prompt)
-  assert.ok(second.prompt.includes('- Attempt: 2 of 3\n'))
+  assert.equal(second.prompt, [
+    '## Skraft dispatch: solution-researcher (RESEARCH)',
+    '- Story: none',
+    `- Feature scope: ${SLUG}`,
+    '- Attempt: 2 of 3',
+    '- Fill each output in place; keep the path, create no other copy:',
+    `- ${TRACKING}/${RESEARCH}`,
+    `- Write your result as JSON to ${TRACKING}/results/research-1.json: ${RESULT_SHAPE}`,
+    '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
+    `- .copilot-tracking/skraft-plans/${SLUG}`,
+    '',
+    'Missing outputs from attempt 1 of 3:',
+    `- ${TRACKING}/${RESEARCH}`,
+  ].join('\n'))
   const recorded = host.events().filter((event) => event.type === 'step.recorded')
   assert.deepEqual(recorded.map(({ outcome, code, missing, next }) => [outcome, code, missing, next]), [['failed', 'missing-outputs', [RESEARCH], null], ['done', null, [], 'design']])
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started').map((event) => [event.attempt, event.missing, event.outputs]), [
@@ -303,7 +315,7 @@ test('a configuration that became invalid stops the run before anything is dispa
   assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
-test('the engineer works on every component, each with its test command when it has one', async () => {
+test('the engineer works on every component, each with its test command when it has one, a path list left out being the whole root', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
   const host = scripted({ components: [API, WEB] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
 
@@ -312,4 +324,10 @@ test('the engineer works on every component, each with its test command when it 
   const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- Components:\n- api: . (dotnet), tests: dotnet test\n- web: ../web (react)\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- tests\n- ../web/src\n- Components:`))
+
+  const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
+  await partial.start()
+  const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
+  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- .\n- ../web/src\n- Components:`), distill)
+  assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- Components:`), engineer)
 })

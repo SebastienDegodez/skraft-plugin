@@ -36,6 +36,7 @@ import { JournalConflict } from './run-journal.mjs'
  * gates: conflict says so, with the gates run until then.
  * @param {GateRunDeps} deps @param {GateRunRequest} request @returns {Promise<GateRun>}
  */
+// Stryker disable next-line ArrayDeclaration: component names are kebab-case, so no component is named like the placeholder
 export const runGates = async (deps, { slug, journal, components, base, scope, only = GATE_ORDER, skip = [] }) => {
   const shaOf = (/** @type {Component} */ component) => baseOf(base, component.name)?.sha ?? null
   const selected = await selectComponents(deps, components, { scope, skip, shaOf })
@@ -45,10 +46,19 @@ export const runGates = async (deps, { slug, journal, components, base, scope, o
   try {
     await runEachComponent(deps, { slug, scope, journal, only }, { selected, shaOf, gates })
   } catch (error) {
-    if (!(error instanceof JournalConflict)) throw error
-    return { components: names, gates, failure: null, conflict: error.message }
+    return stoppedBy(error, { components: names, gates })
   }
   return { components: names, gates, failure: failureOfGates(gates), conflict: null }
+}
+
+/**
+ * Another writer of the journal stops the gates with those run until then; any other error is
+ * not the gates' to handle.
+ * @param {unknown} error @param {Pick<GateRun, 'components' | 'gates'>} ran @returns {GateRun}
+ */
+const stoppedBy = (error, { components, gates }) => {
+  if (!(error instanceof JournalConflict)) throw error
+  return { components, gates, failure: null, conflict: error.message }
 }
 
 /**

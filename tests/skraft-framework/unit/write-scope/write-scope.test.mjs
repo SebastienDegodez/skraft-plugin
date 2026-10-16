@@ -17,7 +17,7 @@ test('the architect writing in src/ is refused with the files at fault, and told
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith('\n\nRefused in attempt 1 of 3:\n- out of write scope: src/Sketch.cs\n- out of write scope: src/Checkout.cs'))
 })
 
-test('files out of scope stay refused on the next attempt of the pass, until they are reverted', async () => {
+test('files out of scope stay refused on the next attempt of the pass, resumed or not, until they are reverted', async () => {
   const host = scripted({}, (it) => [
     agent()(it),
     agent({ work: ({ git }) => git.change('src/Checkout.cs') })(it),
@@ -42,6 +42,19 @@ test('files out of scope stay refused on the next attempt of the pass, until the
   ])
   await reverted.start()
   assert.deepEqual(recorded(reverted, 'design').map((event) => event.outcome), ['failed', 'done'])
+
+  const interrupted = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => git.change('src/Checkout.cs') })(it),
+    async (dispatch) => { await agent()(it)(dispatch); throw new Error('host interrupted') },
+    unavailable,
+  ])
+  await assert.rejects(interrupted.start(), /host interrupted/)
+  await interrupted.run()
+  assert.deepEqual(recorded(interrupted, 'design').map((event) => [event.attempt, event.outcome, event.failures]), [
+    [1, 'failed', ['out of write scope: src/Checkout.cs']],
+    [2, 'failed', ['out of write scope: src/Checkout.cs']],
+  ])
 })
 
 test('the software engineer writing the source and test paths of its components is accepted', async () => {

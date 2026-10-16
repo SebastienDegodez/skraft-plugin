@@ -75,7 +75,7 @@ const runFrom = async (context) => {
     const run = deriveRun(journal.events)
     const next = nextStep(loaded.workflow, run)
     if (next.kind === 'done') {
-      const reason = next.phase ? `${next.phase} closed` : 'nothing to run'
+      const reason = `${next.phase} closed`
       if (!run.finished) await journal.append('run.finished', { status: 'completed', reason })
       return { status: 'done', slug, phase: next.phase, code: null, reason }
     }
@@ -106,7 +106,7 @@ const blockedBy = ({ deps, slug }, { cause, node, last, previous, missingNode })
   const event = /** @type {import('../domain/journal/run-state.mjs').RunEvent} */ (last)
   if (cause === 'route') return { code: event.code, reason: event.reason }
   const agent = /** @type {{ agent: string }} */ (node).agent
-  if (cause === 'agent-blocked') return { code: event.code, reason: `${agent} is blocked: ${event.failures.join('; ')}` }
+  if (cause === 'agent-blocked') return { code: event.code, reason: `${agent} is blocked: ${event.failures[0]}` }
   const details = [
     ...(event.missing.length > 0 ? [`missing outputs: ${event.missing.map((/** @type {string} */ path) => deps.files.location(slug, path)).join(', ')}`] : []),
     ...event.failures,
@@ -168,7 +168,7 @@ const dispatch = async (context, run, next) => {
   /** @type {number | undefined} */
   let cost
   if (!resumed || (await pending())) {
-    const inputs = [...run.artifacts, ...Object.entries(run.nodes).filter(([id, state]) => id !== node.id && state.last?.outcome === 'done').flatMap(([, state]) => state.outputs)]
+    const inputs = [...run.artifacts, ...Object.entries(run.nodes).filter(([id]) => id !== node.id).flatMap(([, state]) => state.outputs)]
     const answer = await deps.agentRunner.run({
       agent,
       source: loaded.sources[agent],
@@ -206,7 +206,7 @@ const dispatch = async (context, run, next) => {
     missing: checked.missing,
     failures: checked.failures,
     next: routed.next,
-    ...(routed.reason ? { reason: routed.reason } : {}),
+    reason: routed.reason,
     durationMs: deps.clock.now().getTime() - started.getTime(),
     replayMs: checked.replayMs,
     cost, // undefined when the host reports none: the journal line leaves it out
@@ -254,7 +254,6 @@ const gate = async (context, run, next) => {
   let { gates, failure } = touched
   if (failure === null && node.goal) {
     const rest = await runGates(deps, { ...request, scope: 'all', skip: touched.components })
-    if (rest.conflict !== null) throw new JournalConflict(rest.conflict)
     gates = [...gates, ...rest.gates]
     failure = rest.failure
   }
@@ -269,7 +268,7 @@ const gate = async (context, run, next) => {
     code: routed.code ?? null,
     failures,
     next: routed.next,
-    ...(routed.reason ? { reason: routed.reason } : {}),
+    reason: routed.reason,
     durationMs: deps.clock.now().getTime() - started.getTime(),
   })
   return null

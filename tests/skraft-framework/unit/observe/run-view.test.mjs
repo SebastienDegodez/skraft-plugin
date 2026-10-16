@@ -8,7 +8,7 @@ const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER']
 const phases = (...states) => PHASES.map((phase, index) => ({ phase, state: states[index] }))
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 
-test('the view of a working copy with no active pipeline says so, with the workflow\'s phases pending', async () => {
+test('the view of a working copy with no active pipeline says so, with the workflow\'s phases pending, or none when it cannot be read', async () => {
   const host = pipelineHost()
 
   assert.deepEqual(await host.view(), {
@@ -20,6 +20,9 @@ test('the view of a working copy with no active pipeline says so, with the workf
     attempts: 0,
     costUsd: null,
   })
+
+  await host.deps.workspace.write('skraft-config.json', 'not json')
+  assert.deepEqual((await host.view()).phases, [])
 })
 
 test('the view of an active slug that has no journal says it is not initialised', async () => {
@@ -108,6 +111,8 @@ test('the view draws the phases of the repository\'s workflow, and of the journa
   const renamed = edit(WITH_SECURITY, ['agent="acme-security-reviewer"', 'agent="acme-security-reviewer", phase="SECURITY"'], ['agent="acceptance-designer", phase="DISTILL"', 'agent="acceptance-designer", phase="DISTILL"'])
   const host = scripted({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': renamed }, catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }, (it) => [agent()(it), unavailable])
   await host.start()
+  assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER'])
+  host.deps.agentCatalog.repository.clear()
   assert.deepEqual((await host.view()).phases.map((view) => view.phase), ['RESEARCH', 'DESIGN', 'SECURITY', 'DISTILL', 'DELIVER'])
 
   await host.deps.workspace.write('skraft-workflow.dot', 'digraph {')

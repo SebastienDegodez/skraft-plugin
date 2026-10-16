@@ -8,8 +8,10 @@ import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 const repositoryWorkflow = (dot) => ({ config: { workflow: 'skraft-workflow.dot' }, files: { 'skraft-workflow.dot': dot } })
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
-test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent', async () => {
-  const host = scripted(withSecurity, (it) => {
+test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
+  const chain = '  start -> research -> design -> security -> distill -> deliver -> gates\n'
+  const edgesLast = edit(WITH_SECURITY, [chain, ''], ['  gates -> exit    [label="PASS"]\n', `  gates -> exit    [label="PASS"]\n${chain}`])
+  const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
     const [research, design, ...rest] = nominal(it)
     return [research, design, agent({ work: ({ git }) => git.change('docs/security/threat-model.md') })(it), ...rest]
   })
@@ -43,16 +45,33 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
   ].join('\n'))
 })
 
-test('a repository agent writing outside its declared paths is refused, and stops at its own max_attempts', async () => {
+test('a repository agent leaving its outputs empty and writing outside its declared paths is refused for both, and stops at its own max_attempts', async () => {
   const host = scripted(withSecurity, (it) => {
     const [research, design] = nominal(it)
-    const outside = agent({ work: ({ git }) => git.change('tests/Hack.cs') })
+    const outside = agent({ fill: false, work: ({ git }) => git.change('tests/Hack.cs') })
     return [research, design, outside(it), outside(it)]
   })
 
   const outcome = await host.start()
 
-  assert.deepEqual([outcome.code, outcome.reason], ['write-scope', 'acme-security-reviewer failed the same way on attempts 1 and 2: out of write scope: tests/Hack.cs'])
+  assert.deepEqual([outcome.code, outcome.reason], [
+    'missing-outputs',
+    `acme-security-reviewer failed the same way on attempts 1 and 2: missing outputs: ${TRACKING}/security/2026-10-11/${SLUG}-review.md, ${TRACKING}/notes.md; out of write scope: tests/Hack.cs`,
+  ])
+})
+
+test('a repository agent that declares no outputs is asked for its result only', async () => {
+  const resultOnly = edit(WITH_SECURITY, ['outputs="security/{date}/{slug}-review.md, notes.md", ', ''])
+  const host = scripted({ ...withSecurity, ...repositoryWorkflow(resultOnly) }, (it) => {
+    const [research, design] = nominal(it)
+    return [research, design, agent()(it), () => ({ ok: false, unavailable: true, text: '' })]
+  })
+
+  await host.start()
+
+  const security = host.events().filter((event) => event.step === 'security')
+  assert.deepEqual(security.map(({ type, outputs, outcome }) => [type, outputs, outcome]), [['step.started', [], undefined], ['step.recorded', undefined, 'done']])
+  assert.ok(!host.agentRunner.dispatches[2].prompt.includes('- Fill each output'), host.agentRunner.dispatches[2].prompt)
 })
 
 test('a workflow that cannot run is refused at init, with every reason, and nothing is journaled', async () => {
@@ -94,11 +113,29 @@ test('the locked gates removed without unlock are refused; kept with unlock they
   assert.deepEqual(host.events()[0].unlocked, [{ node: 'gates', reason: 'the team runs the gates in its own CI' }])
   assert.deepEqual(host.machine.runs, [])
   const gates = host.events().filter((event) => event.step === 'gates')
-  assert.deepEqual(gates.map(({ type, outcome: result, reason, next, gates: names }) => [type, result, reason, next, names?.length]), [
-    ['step.started', undefined, undefined, undefined, 7],
-    ['step.recorded', 'skipped', 'unlocked: the team runs the gates in its own CI', 'exit', undefined],
+  assert.deepEqual(gates.map(({ type, outcome: result, code, failures, reason, next, gates: names }) => [type, result, code, failures, reason, next, names?.length]), [
+    ['step.started', undefined, undefined, undefined, undefined, undefined, 7],
+    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs the gates in its own CI', 'exit', undefined],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: gates skipped, unlocked: the team runs the gates in its own CI`))
+})
+
+test('a skipped gate still takes its edge, and stops the run once that edge reached its max_visits', async () => {
+  const looped = edit(BUILT_IN_WORKFLOW,
+    ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'],
+    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  check    [shape=parallelogram, gate="test", phase="DELIVER"]'],
+    ['  gates -> exit    [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> exit    [label="PASS"]'])
+  const host = scripted(repositoryWorkflow(looped), (it) => [...nominal(it), agent()(it)])
+  host.machine.exits['. $ dotnet test'] = 1
+
+  const outcome = await host.start()
+
+  const reason = 'gates -> check was already taken 1 times, its max_visits'
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'loop-ceiling', reason })
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && event.step === 'gates').map(({ visit, outcome: result, code, next, reason: why }) => [visit, result, code, next, why]), [
+    [1, 'skipped', null, 'check', 'unlocked: the team runs the gates in its own CI'],
+    [2, 'skipped', 'loop-ceiling', null, reason],
+  ])
 })
 
 test('a workflow that became invalid stops the run; one whose node of the run is gone stops it as changed', async () => {

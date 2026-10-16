@@ -5,7 +5,7 @@
  *   (relative to the working copy).
  * @typedef {{
  *   visit: number, attempt: number, phase: string, agent: string | null, gates: string[] | null,
- *   outputs: string[], result: string | null, missing: string[], feedback: string[], heads: Head[],
+ *   outputs: string[], missing: string[], feedback: string[], heads: Head[],
  * }} OpenAttempt
  * @typedef {{
  *   visit: number, attempt: number, outputs: string[], heads: Head[],
@@ -19,7 +19,6 @@
  *   base: Array<{ component: string | null, root: string, repository: string, ref: string, source: 'flag' | 'component' | 'config' | 'default', sha: string }>,
  *   artifacts: string[],
  *   start: string | null,
- *   unlocked: Array<{ node: string, reason: string }>,
  *   closed: string[],
  *   nodes: Record<string, NodeState>,
  *   last: RunEvent | null,
@@ -50,15 +49,15 @@ export const deriveRun = ([started, ...events]) => {
   const run = {
     story: started.story,
     base: started.base,
-    artifacts: started.artifacts ?? [],
+    artifacts: started.artifacts,
     start: started.start ?? null,
-    unlocked: started.unlocked ?? [],
     closed: [],
     nodes: {},
     last: null,
     traversals: {},
     phaseStarted: {},
     replayMs: {},
+    // Stryker disable next-line ArrayDeclaration: no phase is named like the placeholder
     replayWarned: [],
     finished: null,
     stopped: null,
@@ -89,10 +88,9 @@ const started_ = (run, event) => {
     agent: event.agent ?? null,
     gates: event.gates ?? null,
     outputs: event.outputs ?? [],
-    result: event.result ?? null,
-    missing: event.missing ?? [],
-    feedback: event.feedback ?? [],
-    heads: event.heads ?? [],
+    missing: event.missing,
+    feedback: event.feedback,
+    heads: event.heads,
   }
   run.nodes[event.step] = {
     visit: event.visit,
@@ -101,7 +99,7 @@ const started_ = (run, event) => {
     heads: sameVisit ? before.heads : open.heads,
     open,
     last: sameVisit ? before.last : null,
-    previous: sameVisit ? before.previous : null,
+    previous: null,
   }
   run.phaseStarted[event.phase] ??= event.at
   run.finished = null
@@ -117,6 +115,6 @@ const recorded = (run, event) => {
   if (typeof event.replayMs === 'number') run.replayMs[phase] = (run.replayMs[phase] ?? 0) + event.replayMs
   node.open = null
   run.last = event
-  if (event.next) run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
+  run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
   if (typeof event.cost === 'number') run.costUsd = (run.costUsd ?? 0) + event.cost
 }

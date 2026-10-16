@@ -49,7 +49,11 @@ export class InMemoryTracking {
 export class InMemoryTemplates {
   /** @param {Record<string, string>} templates */
   constructor(templates) { this.templates = templates }
-  async read(name) { return this.templates[name] ?? null }
+  /** @param {string} name a file name, as the plugin's templates folder needs one */
+  async read(name) {
+    if (typeof name !== 'string') throw new TypeError(`a template name is a file name, got ${name}`)
+    return this.templates[name] ?? null
+  }
 }
 
 export class FixedClock {

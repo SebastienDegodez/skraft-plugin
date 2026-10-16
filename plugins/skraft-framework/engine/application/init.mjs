@@ -64,6 +64,7 @@ const start = async (deps, journal, { slug, story, base, fromArtifacts }) => {
   /** @type {string | null} */
   let entry = null
   if (fromArtifacts) {
+    // Stryker disable next-line Regex: every DISCUSS artefact already ends in its .md file name, so only a folder named stories-*.md* could tell the anchor
     if (!artifacts.some((path) => /\/stories-[^/]+\.md$/.test(path))) {
       return refuse('no-artifacts', `${slug} has no DISCUSS stories (plans/<date>/stories-<milestone>.md) to start from`)
     }

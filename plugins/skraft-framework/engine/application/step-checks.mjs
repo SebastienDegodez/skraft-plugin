@@ -19,8 +19,8 @@ import { baseOf } from './bases.mjs'
  * }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
- *   environment: string | null, replayMs: number,
- * }} StepCheck
+ *   environment: null, replayMs: number,
+ * } | { commits: CheckedCommit[], environment: string }} StepCheck
  *   environment: why the machine could not check the step (a missing test command, Git
  *   failing); the step then stays open.
  * @typedef {{
@@ -32,7 +32,7 @@ import { baseOf } from './bases.mjs'
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['agent-blocked', 'missing-outputs', 'invalid-result', 'write-scope', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'write-scope', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -45,8 +45,8 @@ export const headsOf = async ({ sourceControl }, base) => {
   /** @type {Head[]} */
   const heads = []
   for (const repository of new Set(base.map((entry) => entry.repository))) {
-    const sha = await sourceControl.head(repository)
-    if (sha === null) continue
+    const sha = /** @type {string} */ (await sourceControl.head(repository))
+    // Stryker disable next-line ArrayDeclaration: dirty only filters the changed paths, and no changed path is a placeholder
     const dirty = (await sourceControl.changedFiles(repository, sha)) ?? []
     heads.push({ repository, sha, dirty: dirty.map((path) => joinRelative(repository, path)) })
   }
@@ -92,7 +92,7 @@ export const checkStep = async ({ deps, slug, config, base }, { role, outputs, p
 }
 
 /** @param {string} reason @returns {StepCheck} */
-const environmentOnly = (reason) => ({ missing: [], failures: [], code: null, commits: [], environment: reason, replayMs: 0 })
+const environmentOnly = (reason) => ({ commits: [], environment: reason })
 
 /**
  * The files changed since the pass started that the agent may not change; a string when Git
@@ -103,7 +103,7 @@ const environmentOnly = (reason) => ({ missing: [], failures: [], code: null, co
  */
 const outOfScope = async ({ sourceControl }, { slug, config, role, visitHeads }) => {
   const allowed = allowedPaths(role, { slug, components: config.components })
-  const engineFiles = [CONFIG_FILE, ...(config.workflow === null ? [] : [config.workflow])]
+  const engineFiles = [CONFIG_FILE, config.workflow]
   /** @type {string[]} */
   const refused = []
   for (const { repository, sha, dirty } of visitHeads) {
@@ -124,11 +124,12 @@ const outOfScope = async ({ sourceControl }, { slug, config, role, visitHeads })
  * @returns {Promise<import('../domain/pipeline/commits.mjs').StepCommit[] | string>}
  */
 const commitsOf = async ({ sourceControl }, { attemptHeads, visitHeads }) => {
+  // Stryker disable next-line ArrayDeclaration: an element that is not a commit is judged ok and is not mine, so nothing reports or replays it
   const commits = []
   for (const { repository, sha } of visitHeads) {
     const listed = await sourceControl.commits(repository, sha)
     if (listed === null) return `Git cannot list the commits of ${repository} since ${sha}`
-    const from = attemptHeads.find((head) => head.repository === repository)?.sha
+    const from = /** @type {Head} */ (attemptHeads.find((head) => head.repository === repository)).sha
     const before = listed.findIndex((commit) => commit.sha === from)
     commits.push(...listed.map((commit, index) => ({
       repository, sha: commit.sha, subject: commit.subject, files: commit.files.map((file) => joinRelative(repository, file)), mine: index > before,

@@ -34,7 +34,7 @@ const KINDS = Object.freeze({
 const classify = (subject) => {
   const match = CONVENTIONAL.exec(subject)
   const kind = match ? /** @type {Record<string, CommitKind>} */ (KINDS)[match[1]] : undefined
-  return kind ? { kind, scope: match?.[2] ?? null } : { kind: 'invalid', scope: null }
+  return kind ? { kind, scope: /** @type {RegExpExecArray} */ (match)[2] ?? null } : { kind: 'invalid', scope: null }
 }
 
 /**
@@ -75,7 +75,7 @@ export const redsToReplay = (judged, mode) => {
  * @param {JudgedCommit} commit
  * @param {string} [detail] why a red is not red
  */
-export const commitFailure = (commit, detail = '') => {
+export const commitFailure = (commit, detail) => {
   const named = `commit ${commit.sha.slice(0, 7)} "${commit.subject}"`
   switch (commit.verdict) {
     case 'not-conventional': return `${named} is not a conventional commit (type(scope): subject)`

@@ -1,25 +1,29 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { FixedClock, ScriptedReplay } from '../support/in-memory-host.mjs'
+import { FixedClock, InMemoryGit, ScriptedReplay } from '../support/in-memory-host.mjs'
 import { agent, API, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const checked = (host) => host.events().filter((event) => event.type === 'commits.checked')
+const NEIGHBOUR = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+const twoRepositories = () => new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
 
 test('each test commit is replayed with its component\'s test command, and confirmed red', async () => {
-  const host = scripted({}, (it) => [...upToDeliver(it), agent({ work: tddCycle() })(it)])
+  const host = scripted({}, (it) => [...upToDeliver(it), agent({ work: (h) => { tddCycle()(h); h.git.commit('test(checkout): Checkout refunds', ['tests/RefundTests.cs']); h.git.commit('feat(checkout): Checkout refunds', ['src/Refund.cs']) } })(it)])
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test'])
+  assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-4 ./. $ dotnet test'])
   assert.deepEqual(checked(host).map((event) => [event.step, event.visit, event.attempt, event.commits.map(({ repository, sha, subject, kind, verdict, replay }) => [repository, sha, subject, kind, verdict, replay])]), [[
     'deliver', 1, 1, [
       ['.', 'root-1', 'test(checkout): Checkout pays by card', 'red', 'ok', { component: 'api', exitCode: 1, durationMs: 0 }],
       ['.', 'root-2', 'feat(checkout): Checkout pays by card', 'green', 'ok', null],
       ['.', 'root-3', 'refactor(checkout): name the card payment', 'refactor', 'ok', null],
+      ['.', 'root-4', 'test(checkout): Checkout refunds', 'red', 'ok', { component: 'api', exitCode: 1, durationMs: 0 }],
+      ['.', 'root-5', 'feat(checkout): Checkout refunds', 'green', 'ok', null],
     ],
   ]])
 })
@@ -41,6 +45,7 @@ test('a green commit with no red before it is refused, and so is the next green 
       git.commit('feat(checkout): pay by card', ['src/Checkout.cs'])
       git.commit('test(checkout): refund', ['tests/RefundTests.cs'])
       git.commit('fix(checkout): refund', ['src/Refund.cs'])
+      git.commit('refactor(checkout): name the refund', ['src/Refund.cs'])
       git.commit('fix(checkout): refund rounding', ['src/Refund.cs'])
     },
   })(it), unavailable])
@@ -49,18 +54,26 @@ test('a green commit with no red before it is refused, and so is the next green 
 
   assert.deepEqual(recorded(host, 'deliver')[0].failures, [
     'commit root-1 "feat(checkout): pay by card" makes code pass with no test commit before it',
-    'commit root-4 "fix(checkout): refund rounding" makes code pass with no test commit before it',
+    'commit root-5 "fix(checkout): refund rounding" makes code pass with no test commit before it',
   ])
 })
 
-test('a commit that is not type(scope): subject is refused', async () => {
-  const host = scripted({}, (it) => [agent({ work: ({ git }) => { git.commit('wip', ['.copilot-tracking/skraft-plans/checkout/a.md']); git.commit('Docs: research', ['.copilot-tracking/skraft-plans/checkout/b.md']); git.commit('docs(checkout)!: research', ['.copilot-tracking/skraft-plans/checkout/c.md']); git.commit('docs: research done', ['.copilot-tracking/skraft-plans/checkout/d.md']) } })(it), unavailable])
+test('a commit that is not type(scope): subject is refused; every conventional type is accepted', async () => {
+  const host = scripted({}, (it) => [agent({ work: ({ git }) => {
+    git.commit('wip', ['.copilot-tracking/skraft-plans/checkout/a.md'])
+    git.commit('Docs: research', ['.copilot-tracking/skraft-plans/checkout/b.md'])
+    git.commit('docs(checkout)!: research', ['.copilot-tracking/skraft-plans/checkout/c.md'])
+    git.commit('docs: research done', ['.copilot-tracking/skraft-plans/checkout/d.md'])
+    for (const type of ['chore', 'build', 'ci', 'perf', 'style', 'revert']) git.commit(`${type}(checkout): tidy`, ['.copilot-tracking/skraft-plans/checkout/e.md'])
+    git.commit('wip test: notes', ['.copilot-tracking/skraft-plans/checkout/f.md'])
+  } })(it), unavailable])
 
   await host.start()
 
   assert.deepEqual(recorded(host, 'research')[0].failures, [
     'commit root-1 "wip" is not a conventional commit (type(scope): subject)',
     'commit root-2 "Docs: research" is not a conventional commit (type(scope): subject)',
+    'commit root-11 "wip test: notes" is not a conventional commit (type(scope): subject)',
   ])
   assert.equal(recorded(host, 'research')[0].code, 'commit-convention')
 })
@@ -73,6 +86,10 @@ test('a red commit that changes no component is refused', async () => {
   assert.deepEqual(recorded(host, 'research')[0].failures, ['commit root-1 "test(checkout): notes" changes no component: a test commit adds a failing test to a component'])
   assert.equal(checked(host)[0].commits[0].verdict, 'no-component')
   assert.deepEqual(host.replay.replays, [])
+
+  const outside = scripted({ components: [{ ...API, root: 'api' }] }, (it) => [agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): ADR of the card payment', ['docs/adr/adr-001.md']) })(it), unavailable])
+  await outside.start()
+  assert.deepEqual(recorded(outside, 'design')[0].failures, ['commit root-1 "test(checkout): ADR of the card payment" changes no component: a test commit adds a failing test to a component'])
 })
 
 test('only the commits of the refused attempt are judged again: a later attempt answers for its own', async () => {
@@ -87,6 +104,17 @@ test('only the commits of the refused attempt are judged again: a later attempt 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(checked(host).map((event) => event.commits.map((commit) => commit.sha)), [['root-1'], ['root-2']])
   assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test'])
+
+  const neighbour = scripted({ components: [API, NEIGHBOUR], git: twoRepositories() }, (it) => [
+    ...upToDeliver(it),
+    agent({ work: ({ git }) => { git.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); git.commit('wip', ['../web/src/Cart.test.tsx']); git.change('README.md') } })(it),
+    agent({ work: ({ git }) => { git.revert('README.md'); git.commit('feat(checkout): cart', ['../web/src/Cart.tsx']) } })(it),
+  ])
+
+  assert.equal((await neighbour.start()).status, 'done')
+  assert.deepEqual([recorded(neighbour, 'deliver')[0].code, recorded(neighbour, 'deliver')[0].failures], ['write-scope', ['out of write scope: README.md', 'commit up-web- "wip" is not a conventional commit (type(scope): subject)']])
+  assert.deepEqual(checked(neighbour).map((event) => event.commits.map((commit) => commit.sha)), [['up-web-1', 'up-web-2'], ['up-web-3']])
+  assert.deepEqual(neighbour.replay.lines(), ['up-web-1 ../web/. $ npx vitest run'])
 })
 
 test('a component without a test command stops the run on the machine until it gets one', async () => {
@@ -118,8 +146,32 @@ test('a replay the machine cannot run, or a test command with shell syntax, stop
   const missing = scripted({ replay: killed }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
   assert.equal((await missing.start()).reason, 'replaying root-1 for api: dotnet test exited 127')
 
+  const neighbour = scripted({ components: [API, NEIGHBOUR], git: twoRepositories(), replay: new ScriptedReplay({ exits: { 'up-web-1': null } }) }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']) })(it)])
+  assert.equal((await neighbour.start()).reason, 'replaying up-web- for web: command not found: npx')
+
   const piped = scripted({ components: [{ ...API, commands: { test: 'dotnet test | tee out.log' } }] }, (it) => [...upToDeliver(it).slice(0, 2), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
   assert.equal((await piped.start()).reason, 'api command "dotnet test | tee out.log" uses shell syntax (|); put the steps in a script and call the script')
+})
+
+test('Git that cannot list a repository\'s commits stops the run on the machine', async () => {
+  const host = scripted({}, (it) => [agent({ work: ({ git }) => { git.commits = async () => null; git.changedFiles = async () => [] } })(it)])
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'environment', reason: 'Git cannot list the commits of . since root-0' })
+  assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
+})
+
+test('a component added after the run started has its test commits replayed without a base', async () => {
+  const FRONT = { name: 'web', root: 'web', stack: 'react', mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
+  const host = scripted({}, (it) => [...upToDeliver(it), agent({ work: ({ git }) => git.commit('test(checkout): cart', ['web/src/Cart.test.tsx']) })(it)])
+  await host.init()
+  await host.deps.workspace.write('skraft-config.json', JSON.stringify({ components: [API, FRONT] }))
+
+  const outcome = await host.run()
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(host.replay.lines(), ['root-1 ./web $ npx vitest run'])
 })
 
 test('a red commit is replayed for each component it touches, and is red when one of them fails', async () => {
@@ -134,6 +186,7 @@ test('a red commit is replayed for each component it touches, and is red when on
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(host.replay.lines(), ['root-1 ./. $ dotnet test', 'root-1 ./web $ npx vitest run --since root-0'])
+  assert.deepEqual(checked(host)[0].commits[0].replay, { component: 'api', exitCode: 1, durationMs: 0 })
 })
 
 test('a red commit whose tests pass in every component it touches names them all', async () => {
@@ -147,7 +200,9 @@ test('a red commit whose tests pass in every component it touches names them all
 })
 
 test('with "tdd": { "replay": "last-red" }, only the last red commit of each story is replayed', async () => {
-  const host = scripted({ config: { tdd: { replay: 'last-red' } } }, (it) => [...upToDeliver(it), agent({
+  const clock = new FixedClock('2026-10-11T09:00:00.000Z')
+  const replay = new ScriptedReplay({ clock, takesMs: 30_000 })
+  const host = scripted({ config: { tdd: { replay: 'last-red' } }, clock, replay }, (it) => [...upToDeliver(it), agent({
     work: ({ git }) => {
       git.commit('test(pay): first', ['tests/PayTests.cs'])
       git.commit('feat(pay): first', ['src/Pay.cs'])
@@ -164,10 +219,10 @@ test('with "tdd": { "replay": "last-red" }, only the last red commit of each sto
   assert.ok(!host.types().includes('tdd.replay-slow'))
 })
 
-test('replays above a fifth of the phase are reported once, with the way to replay less', async () => {
+test('replays above a fifth of the phase are reported once, with the way to replay less, every red being replayed by default', async () => {
   const clock = new FixedClock('2026-10-11T09:00:00.000Z')
   const replay = new ScriptedReplay({ clock, takesMs: 30_000 })
-  const host = scripted({ clock, replay }, (it) => [...upToDeliver(it), agent({ work: (h) => { it.clock.advance(100_000); tddCycle()(h) } })(it)])
+  const host = scripted({ config: { tdd: {} }, clock, replay }, (it) => [...upToDeliver(it), agent({ work: (h) => { it.clock.advance(100_000); tddCycle()(h) } })(it)])
   host.machine.clock = null
 
   await host.start()
