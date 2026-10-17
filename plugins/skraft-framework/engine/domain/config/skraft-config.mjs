@@ -51,8 +51,8 @@ export const readConfig = (text) => {
   const listed = raw.components ?? []
   if (!Array.isArray(listed)) errors.push('components must be an array')
   const components = (Array.isArray(listed) ? listed : []).map((entry, index) => componentOf(entry, index, errors))
-  const names = components.map((component) => component?.name)
-  for (const name of new Set(names.filter((name, index) => name !== undefined && names.indexOf(name) !== index))) errors.push(`component name ${name} is used twice`)
+  const names = components.flatMap((component) => (component === null ? [] : [component.name]))
+  for (const name of new Set(names)) if (names.indexOf(name) !== names.lastIndexOf(name)) errors.push(`component name ${name} is used twice`)
   if (errors.length > 0) return { ok: false, errors }
   return { ok: true, present: true, config: { baseBranch, components: /** @type {Component[]} */ (components) }, raw }
 }
