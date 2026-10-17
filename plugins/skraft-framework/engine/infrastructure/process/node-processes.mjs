@@ -32,15 +32,14 @@ export const createNodeCommandRunner = ({ root, platform = process.platform, env
     if (!(await isFolder(dir))) return notStarted(`folder not found: ${dir}`)
     const located = await locate(program, dir, { platform, env })
     if (located === null) return notStarted(`command not found: ${program}`)
-    // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent under Linux, where mutation runs: only the ComSpec test locates a .cmd, and it sets platform win32
-    const [file, fileArgs, verbatim] = platform === 'win32' && /\.(cmd|bat)$/i.test(located)
-      // Stryker disable next-line BooleanLiteral: windowsVerbatimArguments has no effect outside Windows; the Windows integration job runs this path
-      ? [env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${[escapeForCmd(normalize(located)), ...args.map((arg) => quoteForCmd(arg, CMD_SHIM.test(located)))].join(' ')}"`], true]
-      // Stryker disable next-line BooleanLiteral: windowsVerbatimArguments has no effect outside Windows
-      : [located, args, false]
+    // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent under Linux, where mutation runs: only the tests under Windows rules locate a .cmd, and they set platform win32
+    const throughCmd = platform === 'win32' && CMD_SCRIPTS.includes(extname(located).toLowerCase())
+    const [file, fileArgs] = throughCmd
+      ? [env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${[escapeForCmd(normalize(located)), ...args.map((arg) => quoteForCmd(arg, CMD_SHIM.test(located)))].join(' ')}"`]]
+      : [located, args]
     return new Promise((done) => {
       // Stryker disable next-line BooleanLiteral: windowsHide has no effect outside Windows
-      const child = spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: verbatim, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+      const child = spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
       /** @type {Buffer[]} */
       const out = []
       /** @type {Buffer[]} */
@@ -86,18 +85,23 @@ const runnable = async (path, windows) => {
     if (!(await stat(path)).isFile()) return false
     await access(path, windows ? constants.F_OK : constants.X_OK)
     return true
+  // Stryker disable next-line BlockStatement: undefined and false both mean "not runnable" to the only caller, which tests truthiness
   } catch {
     return false
   }
 }
 
 /** @param {string} dir @returns {Promise<boolean>} */
+// Stryker disable next-line ArrowFunction: undefined and false both mean "no folder" to the only caller, which tests truthiness
 const isFolder = (dir) => stat(dir).then((entry) => entry.isDirectory(), () => false)
 
 // cmd.exe quoting, as cross-spawn does it: quote each argument for the program's own parser,
 // then escape cmd's metacharacters with ^; twice for a node_modules/.bin shim, which runs
 // its arguments through cmd again.
 const CMD_META = /([()\][%!^"`<>&|;, *?])/g
+/** The extensions only cmd.exe can start. */
+const CMD_SCRIPTS = Object.freeze(['.cmd', '.bat'])
+// Stryker disable next-line Regex: in the cmd.exe branch the path already ends with the .cmd or .bat that located it
 const CMD_SHIM = /node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/i
 
 /** @param {string} command */

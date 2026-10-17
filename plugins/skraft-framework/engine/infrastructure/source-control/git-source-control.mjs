@@ -15,6 +15,7 @@ export const createGitSourceControl = ({ commandRunner }) => {
   const lines = (/** @type {string} */ text) => text.split(/\r?\n/).filter((line) => line !== '')
   return Object.freeze({
     unavailable: async () => {
+      // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
       const result = await commandRunner.run({ argv: ['git', '--version'], cwd: '.' })
       return result.started ? null : /** @type {string} */ (result.error)
     },

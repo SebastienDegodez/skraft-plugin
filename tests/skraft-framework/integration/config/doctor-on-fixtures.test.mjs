@@ -16,11 +16,14 @@ const initThenDoctor = async (cwd, env, add = []) => {
   return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
 }
 
-for (const [fixture, stack, commands] of [
-  ['payment', 'dotnet', ['build', 'format', 'test', 'mutation']],
-  ['payment-spring', 'java', ['build', 'test']],
-  ['payment-fastapi', 'python', ['build', 'test']],
-  ['react', 'react', ['build', 'lint', 'test']],
+for (const [fixture, stack, commands, paths] of [
+  ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
+  ['payment-spring', 'java', ['build', 'test'], {
+    src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
+    tests: ['payment-unit-test/', 'payment-integration-test/'],
+  }],
+  ['payment-fastapi', 'python', ['build', 'test'], { src: ['src/'], tests: ['tests/'] }],
+  ['react', 'react', ['build', 'lint', 'test'], { src: ['src/'], tests: ['tests/'] }],
 ]) {
   test(`skraft init then doctor pass on the ${fixture} fixture`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
@@ -28,7 +31,7 @@ for (const [fixture, stack, commands] of [
     const { init, doctor } = await initThenDoctor(cwd, machine(t))
 
     const [component] = readJson(join(cwd, 'skraft-config.json')).components
-    assert.deepEqual([component.name, component.root, component.stack], [fixture, '.', stack])
+    assert.deepEqual([component.name, component.root, component.stack, component.paths], [fixture, '.', stack, paths])
     assert.equal(init.stdout, `skraft-config.json: ${fixture} (${stack}, .)\n`)
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)

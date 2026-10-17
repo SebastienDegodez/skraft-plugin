@@ -30,9 +30,7 @@ export const createNodeFiles = () => Object.freeze({
 export const listFolder = async (path) => {
   try {
     const entries = await readdir(path, { withFileTypes: true })
-    return entries
-      .filter((entry) => entry.isFile() || entry.isDirectory())
-      .map((entry) => ({ name: entry.name, kind: entry.isDirectory() ? /** @type {const} */ ('dir') : /** @type {const} */ ('file') }))
+    return entries.map((entry) => ({ name: entry.name, kind: entry.isDirectory() ? /** @type {const} */ ('dir') : /** @type {const} */ ('file') }))
   } catch (error) {
     const code = /** @type {NodeJS.ErrnoException} */ (error).code
     if (code === 'ENOENT' || code === 'ENOTDIR') return null
