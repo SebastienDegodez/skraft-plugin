@@ -1,10 +1,10 @@
 import { readLensAnswer, readRefutation } from '../domain/review/answers.mjs'
+import { composeReviewContext, RULE_FILES } from '../domain/review/context.mjs'
 import { reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
 import { planLenses, REFUTER } from '../domain/review/lenses.mjs'
 import { decideReview, REFUTED_SEVERITIES } from '../domain/review/verdict.mjs'
 import { joinRelative } from '../domain/config/relative-path.mjs'
-import { trackingFolder } from '../domain/pipeline/roles.mjs'
 
 /**
  * @typedef {import('../domain/review/lenses.mjs').Lens} Lens
@@ -73,7 +73,8 @@ const prepareChanges = async (review) => {
   const folder = `reviews/${review.step.node.id}-${review.step.visit}`
   await review.deps.files.write(review.slug, `${folder}/changes.patch`, changes.patch)
   await review.deps.files.write(review.slug, `${folder}/changed-files.txt`, changes.paths.map((path) => `${path}\n`).join(''))
-  return { ...changes, inputs: { ...documentsOf(review, changes.paths), patch: [`${folder}/changes.patch`], files: [`${folder}/changed-files.txt`] } }
+  await review.deps.files.write(review.slug, `${folder}/context.md`, await contextOf(review))
+  return { ...changes, inputs: { overview: [`${folder}/context.md`], ...documentsOf(review), patch: [`${folder}/changes.patch`], files: [`${folder}/changed-files.txt`] } }
 }
 
 /**
@@ -97,24 +98,46 @@ const changesSinceBase = async ({ deps, run }) => {
 const uniqueRepositories = (base) => base.filter((entry, index) => base.findIndex((other) => other.repository === entry.repository) === index)
 
 /**
- * The documents of the review's phase, with every other document the agents left in the
- * tracking folder since the base, and those of the story and the other phases.
- * @param {Review} review @param {string[]} paths the changed paths, relative to the working copy
+ * The documents the agents of the review's phase filled or wrote, and those of the story and
+ * of the other phases.
+ * @param {Review} review
  * @returns {{ outputs: string[], context: string[] }}
  */
-const documentsOf = ({ workflow, run, step, slug }, paths) => {
+const documentsOf = ({ workflow, run, step }) => {
   const nodes = Object.entries(run.nodes)
-  const ofPhase = (/** @type {boolean} */ same) => nodes.filter(([id]) => (workflow.nodes[id]?.phase === step.phase) === same).flatMap(([, state]) => state.outputs)
-  const context = [...run.artifacts, ...ofPhase(false)]
-  const outputs = ofPhase(true)
-  return { outputs: [...outputs, ...trackedDocuments(slug, paths).filter((path) => !outputs.includes(path) && !context.includes(path))], context }
+  const ofPhase = (/** @type {boolean} */ same) => [...new Set(nodes
+    .filter(([id]) => (workflow.nodes[id]?.phase === step.phase) === same)
+    .flatMap(([, state]) => [...state.outputs, ...state.documents]))]
+  return { outputs: ofPhase(true), context: [...new Set([...run.artifacts, ...ofPhase(false)])] }
 }
 
-/** The changed paths under the pipeline's tracking folder, relative to it. @param {string} slug @param {string[]} paths */
-const trackedDocuments = (slug, paths) => {
-  const folder = `${trackingFolder(slug)}/`
-  return paths.filter((path) => path.startsWith(folder)).map((path) => path.slice(folder.length))
+/**
+ * The shared context file of the review: its story, the project's rule files that exist, and
+ * the documents each agent node filled or wrote, by phase in workflow order.
+ * @param {Review} review
+ */
+const contextOf = async (review) => {
+  const { deps, slug, workflow, run, step } = review
+  const at = (/** @type {string} */ path) => deps.files.location(slug, path)
+  return composeReviewContext({
+    node: step.node.id, phase: step.phase, story: run.story,
+    rules: await rulesOf(review), artifacts: run.artifacts.map(at),
+    phases: workflow.phases
+      .map((phase) => ({ phase, steps: stepsOf(review, phase).map(({ id, agent, documents }) => ({ step: id, agent, documents: documents.map(at) })) }))
+      .filter(({ steps }) => steps.length > 0),
+  })
 }
+
+/** The project's rule files the working copy has. @param {Review} review */
+const rulesOf = async ({ deps }) => {
+  const present = await Promise.all(RULE_FILES.map(async (path) => ((await deps.workspace.read(path)) === null ? null : path)))
+  return present.filter((path) => path !== null)
+}
+
+/** The agent nodes of a phase that ran, with what they filled or wrote. @param {Review} review @param {string} phase */
+const stepsOf = ({ workflow, run }, phase) => workflow.order
+  .filter((id) => workflow.nodes[id].kind === 'agent' && workflow.nodes[id].phase === phase && id in run.nodes)
+  .map((id) => ({ id, agent: /** @type {string} */ (workflow.nodes[id].agent), documents: [...new Set([...run.nodes[id].outputs, ...run.nodes[id].documents])] }))
 
 /**
  * The lenses that run on these changes, each with its inputs and their fingerprint.
@@ -124,7 +147,8 @@ const trackedDocuments = (slug, paths) => {
 const planned_ = async (review, prepared) => {
   const lenses = planLenses(review.step.node.lenses, prepared)
   return Promise.all(lenses.map(async (lens) => {
-    const inputs = lens.inputs.flatMap((kind) => prepared.inputs[kind].map((path) => ({ kind, path })))
+    const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
+    const inputs = kinds.flatMap((kind) => prepared.inputs[kind].map((path) => ({ kind, path })))
     return { lens, inputs, fingerprint: await fingerprintOf(review, inputs, lens.inputs.includes('files') ? prepared.paths : []) }
   }))
 }
@@ -136,7 +160,7 @@ const planned_ = async (review, prepared) => {
  */
 const fingerprintOf = async ({ deps, slug }, inputs, changed) => {
   const texts = await Promise.all(inputs.map(({ path }) => deps.files.read(slug, path)))
-  const keyed = inputs.map(({ kind, path }, index) => [kind === 'patch' || kind === 'files' ? kind : path, texts[index]])
+  const keyed = inputs.map(({ kind, path }, index) => [kind === 'outputs' || kind === 'context' ? path : kind, texts[index]])
   const contents = await Promise.all(changed.map(async (path) => [path, await deps.workspace.read(path)]))
   return deps.hasher.sha256(JSON.stringify([...keyed, ...contents]))
 }

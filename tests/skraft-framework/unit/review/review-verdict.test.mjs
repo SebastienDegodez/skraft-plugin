@@ -56,6 +56,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '- Story: #42 — Pay by card',
     `- Feature scope: ${SLUG}`,
     '- Read these inputs and the files they name; search the repository for nothing else:',
+    `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
@@ -68,6 +69,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '- Story: #42 — Pay by card',
     `- Feature scope: ${SLUG}`,
     '- Read these inputs and the files they name; search the repository for nothing else:',
+    `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     '- Write no file, change nothing, start no agent.',
@@ -81,18 +83,18 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '- Write no file, change nothing, start no agent.',
     `- End your answer with this JSON document alone; "findings" is [] when you find none: ${shape('cold-reader')}`,
   ].join('\n'))
-  const KIND = { 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch': 'files' }
+  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch': 'files' }
   const kinds = (dispatch) => [...new Set(dispatch.prompt.split('\n').filter((line) => line.startsWith('  - ')).map((line) => line.slice(4, line.indexOf(':'))).map((title) => KIND[title] ?? 'patch'))]
   assert.deepEqual(Object.fromEntries(host.agentRunner.reviewed().map((dispatch) => [dispatch.agent, kinds(dispatch)])), {
-    'consistency-lens': ['outputs', 'context', 'patch', 'files'],
-    'architecture-compliance-lens': ['outputs', 'patch', 'files'],
-    'fitness-lens': ['outputs', 'context'],
-    'coverage-lens': ['outputs', 'context', 'patch', 'files'],
-    'business-alignment-lens': ['outputs', 'context'],
-    'testability-lens': ['outputs', 'patch', 'files'],
-    'boundary-enforcement-lens': ['outputs', 'patch', 'files'],
-    'test-integrity-lens': ['outputs', 'context', 'patch', 'files'],
-    'architecture-boundaries-lens': ['context', 'patch', 'files'],
+    'consistency-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
+    'architecture-compliance-lens': ['overview', 'outputs', 'patch', 'files'],
+    'fitness-lens': ['overview', 'outputs', 'context'],
+    'coverage-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
+    'business-alignment-lens': ['overview', 'outputs', 'context'],
+    'testability-lens': ['overview', 'outputs', 'patch', 'files'],
+    'boundary-enforcement-lens': ['overview', 'outputs', 'patch', 'files'],
+    'test-integrity-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
+    'architecture-boundaries-lens': ['overview', 'context', 'patch', 'files'],
     'cold-reader-lens': ['patch', 'files'],
   })
   assert.ok(prompt('test-integrity-lens', 'deliver_review').includes([
@@ -210,6 +212,7 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
     '## Skraft finding check: consistency F1',
     '- Finding: blocker at src/Checkout.cs:12: the ADR is missing',
     '- Read these inputs and the files they name; search the repository for nothing else:',
+    `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,

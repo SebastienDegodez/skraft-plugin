@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { designating, edit } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
 
@@ -155,7 +155,7 @@ test('a lens the repository adds to a review runs with the others, as a reposito
   const [batch] = host.agentRunner.batches
   assert.deepEqual(batch.map(({ agent: id, source }) => `${id} ${source}`), ['consistency-lens plugin', 'architecture-compliance-lens plugin', 'fitness-lens plugin', 'acme-threat-model-lens repository'])
   assert.ok(batch[3].prompt.startsWith('## Skraft review lens: acme-threat-model (DESIGN)\n- Story: #42 — Pay by card\n'), batch[3].prompt)
-  assert.equal(batch[3].prompt.split('\n').filter((line) => line.startsWith('  - ')).length, 4)
+  assert.equal(batch[3].prompt.split('\n').filter((line) => line.startsWith('  - ')).length, 5)
   assert.deepEqual(reviews(host)[0], ['design_review', 1, 'needs-rework', 'design'])
 })
 
@@ -248,25 +248,46 @@ test('every lens that answered unreadably twice is named', async () => {
   assert.equal(outcome.reason, 'consistency-lens answered 2 times without a readable verdict: the answer is not JSON; fitness-lens answered 2 times without a readable verdict: the answer is not a JSON object')
 })
 
-test('the documents the agents left in the tracking folder are given to the lenses that read the phase\'s documents', async () => {
-  const folder = `.copilot-tracking/skraft-plans/${SLUG}`
-  const host = scripted({}, (it) => [
+test('each agent\'s documents in the tracking folder reach the lenses, by phase, with a shared context naming who wrote them', async () => {
+  const rules = ['AGENTS.md', 'CLAUDE.md', 'CONTRIBUTING.md', '.github/copilot-instructions.md', 'docs/adr/decisions-index.md']
+  const host = scripted({ files: Object.fromEntries(rules.map((path) => [path, '# Rules\n'])) }, (it) => [
     agent()(it),
-    agent({ work: ({ git }) => {
-      git.change(`${folder}/details/2026-10-11/contracts-checkout.md`, `${folder}/results/design-1-1.json`)
+    agent({ work: ({ git, tracking }) => {
+      tracking.write(SLUG, 'details/2026-10-11/contracts-checkout.md', '# Contracts\n')
+      tracking.write(SLUG, 'results/notes.json', '{}')
       git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'])
     } })(it),
     ...nominal(it).slice(2),
   ])
 
-  await host.start()
+  await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
+  const design = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design')
+  assert.deepEqual(design.documents, ['details/2026-10-11/context-map.md', 'details/2026-10-11/contracts-checkout.md'])
   const fitness = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'fitness-lens').prompt
   assert.deepEqual(fitness.split('\n').filter((line) => line.startsWith('  - ')), [
-    `  - Documents of this phase: /work/${folder}/details/2026-10-11/context-map.md`,
-    `  - Documents of this phase: /work/${folder}/details/2026-10-11/contracts-checkout.md`,
-    `  - Documents of the story and of the other phases: /work/${folder}/research/2026-10-11/checkout-research.md`,
+    `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
+    `  - Documents of this phase: ${TRACKING}/details/2026-10-11/context-map.md`,
+    `  - Documents of this phase: ${TRACKING}/details/2026-10-11/contracts-checkout.md`,
+    `  - Documents of the story and of the other phases: ${TRACKING}/research/2026-10-11/checkout-research.md`,
   ])
+  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/context.md'), [
+    '# Review context: design_review (DESIGN)',
+    '', '## Story', '', '#42 — Pay by card',
+    '', '## Project rules', '', ...rules.map((path) => `- ${path}`),
+    '', '## Documents by phase',
+    '', '### RESEARCH', '', '- research (solution-researcher):', `  - ${TRACKING}/research/2026-10-11/checkout-research.md`,
+    '', '### DESIGN (under review)', '', '- design (solution-architect):', `  - ${TRACKING}/details/2026-10-11/context-map.md`, `  - ${TRACKING}/details/2026-10-11/contracts-checkout.md`,
+    '',
+  ].join('\n'))
+  const coverage = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'coverage-lens').prompt
+  assert.ok(coverage.includes(`  - Documents of the story and of the other phases: ${TRACKING}/details/2026-10-11/contracts-checkout.md`), coverage)
+  const story = await host.tracking.read(SLUG, 'reviews/distill_review-1/context.md')
+  assert.ok(story.includes('- distill (acceptance-designer):'), story)
+
+  const bare = scripted({}, nominal)
+  await bare.start()
+  assert.ok((await bare.tracking.read(SLUG, 'reviews/design_review-1/context.md')).includes('## Project rules\n\nnone found\n'))
 })
 
 test('a lens reading the changed paths runs again when a changed file\'s content changes, its path already listed', async () => {

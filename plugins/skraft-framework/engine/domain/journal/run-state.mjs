@@ -8,11 +8,12 @@
  *   outputs: string[], missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null, heads: Head[],
  * }} OpenAttempt
  * @typedef {{
- *   visit: number, attempt: number, outputs: string[], heads: Head[], sentBack: boolean,
+ *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[], sentBack: boolean,
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
  * }} NodeState
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
- *   paths of the node's first dispatch, which every later one reuses. heads: the first
+ *   paths of the node's first dispatch, which every later one reuses. documents: every document of
+ *   the tracking folder the node's attempts wrote, outputs included. heads: the first
  *   attempt's of this visit. sentBack: this visit started on gate failures. last and previous:
  *   this visit's last two step.recorded.
  * @typedef {{
@@ -107,6 +108,7 @@ const enteredNode = (before, event) => {
     visit: event.visit,
     attempt: event.attempt,
     outputs: before?.outputs ?? open.outputs,
+    documents: before?.documents ?? [],
     ...thisVisit(before, open),
     previous: null,
   }
@@ -141,6 +143,7 @@ const recorded = (run, event) => {
   const node = run.nodes[event.step]
   node.previous = node.last
   node.last = event
+  node.documents = [...new Set([...node.documents, ...(event.documents ?? [])])]
   const { phase } = /** @type {OpenAttempt} */ (node.open)
   if (typeof event.replayMs === 'number') run.replayMs[phase] = (run.replayMs[phase] ?? 0) + event.replayMs
   node.open = null

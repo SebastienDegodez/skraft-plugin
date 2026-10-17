@@ -16,6 +16,7 @@ import { lensShape, REFUTATION_SHAPE } from './answers.mjs'
  */
 
 const TITLES = Object.freeze({
+  overview: 'Review context (story, project rules, who wrote which document)',
   outputs: 'Documents of this phase',
   context: 'Documents of the story and of the other phases',
   patch: 'Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs)',

@@ -3,6 +3,7 @@ import { deriveRun } from '../domain/journal/run-state.mjs'
 import { DEFAULT_ATTEMPTS, nextStep, route } from '../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath } from '../domain/pipeline/outputs.mjs'
+import { isDocument, writtenDocuments } from '../domain/pipeline/documents.mjs'
 import { allowedPaths, roleOf } from '../domain/pipeline/roles.mjs'
 import { REPLAY_SHARE } from '../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
@@ -259,11 +260,32 @@ const prepareJob = async ({ deps, slug }, run, { node, visit, attempt }) => {
 const openAttempt = async (context, run, next, job) => {
   if (next.resumed?.heads) return next.resumed.heads
   await precreate(context, job)
+  await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
   const { phase, node, visit, attempt, missing, feedback, sentBy } = next
   const { agent, outputs, result } = job
   await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), heads })
   return heads
+}
+
+/** Where an attempt keeps the documents of the tracking folder as it found them. @param {string} result the attempt's result file */
+const snapshotOf = (result) => result.replace(/\.json$/, '.documents.json')
+
+/** Each document of the tracking folder with the hash of its content. @param {Context} context */
+const documentHashes = async ({ deps, slug }) => {
+  /** @type {Record<string, string>} */
+  const hashes = {}
+  for (const path of (await deps.files.list(slug, '')).filter(isDocument)) hashes[path] = await deps.hasher.sha256(/** @type {string} */ (await deps.files.read(slug, path)))
+  return hashes
+}
+
+/**
+ * The documents the attempt wrote in the tracking folder, against what it found there.
+ * @param {Context} context @param {Job} job
+ */
+const documentsWritten = async (context, { result }) => {
+  const before = await context.deps.files.read(context.slug, snapshotOf(result))
+  return writtenDocuments(before === null ? {} : JSON.parse(before), await documentHashes(context))
 }
 
 /** Writes each output that has a template and does not exist yet. @param {Context} context @param {Job} job */
@@ -394,13 +416,13 @@ const knownCommits = (journal) => new Map(journal.events
 /**
  * Records the attempt: refused, or done with the node it leads to.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ started: Date, cost?: number, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
+ * @param {{ job: Job, started: Date, cost?: number, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
  */
-const recordAttempt = async (context, run, { node, visit, attempt }, { started, cost, checked }) => {
+const recordAttempt = async (context, run, { node, visit, attempt }, { job, started, cost, checked }) => {
   const failed = checked.missing.length > 0 || checked.failures.length > 0
   const routed = failed ? { next: null } : leave(context, run, node.id, null, [])
   await context.journal.append('step.recorded', {
-    step: node.id, visit, attempt,
+    step: node.id, visit, attempt, documents: await documentsWritten(context, job),
     outcome: failed ? 'failed' : 'done',
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,

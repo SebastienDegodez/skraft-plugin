@@ -34,7 +34,7 @@ export class InMemoryTracking {
   async write(slug, rel, text) { this.files.set(this.key(slug, rel), text) }
   location(slug, rel) { return `${this.root}/${slug}/${rel}` }
   async list(slug, folder) {
-    const prefix = this.key(slug, `${folder}/`)
+    const prefix = folder === '' || folder === '.' ? `${slug}/` : this.key(slug, `${folder}/`)
     return [...this.files.keys()].filter((key) => key.startsWith(prefix)).map((key) => key.slice(slug.length + 1)).sort()
   }
 

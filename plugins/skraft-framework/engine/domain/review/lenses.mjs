@@ -3,10 +3,12 @@
  * `<name>-lens`; a lens skraft does not know (one a repository adds) reads everything a
  * review prepares.
  *
- * @typedef {'outputs' | 'context' | 'patch' | 'files'} InputKind
- *   outputs: what the agents of the review's phase filled; context: the story's artifacts and
- *   what the agents of the other phases filled; patch: the changes since the run's base;
- *   files: the paths those changes touch.
+ * @typedef {'overview' | 'outputs' | 'context' | 'patch' | 'files'} InputKind
+ *   overview: the review's shared context (story, project rules, who wrote which document), read
+ *   by every lens but a blind one; outputs: what the agents of the review's phase filled or
+ *   wrote in the tracking folder; context: the story's artifacts and what the agents of the
+ *   other phases filled or wrote; patch: the changes since the run's base; files: the paths
+ *   those changes touch.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
  * @typedef {{ name: string, agent: string, inputs: readonly InputKind[], blind: boolean, trigger: Trigger | null }} Lens
