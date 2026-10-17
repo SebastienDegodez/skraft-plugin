@@ -18,14 +18,14 @@
  * @returns {SkraftRequest}
  */
 export const parseSkraftCommand = (args) => {
-  const typed = String(args ?? '').trim().split(/\s+/).filter((word) => word !== '')
+  const typed = String(args ?? '').split(/\s/).filter((word) => word !== '')
   const [first, ...rest] = typed
   if (first === undefined || ((first === 'status' || first === 'help') && rest.length === 0)) return { command: 'status' }
   if (first === 'decide') return { command: 'decide', words: rest }
   const flag = rest.indexOf('--base')
   const base = flag >= 0 ? rest[flag + 1] ?? '' : null
   const story = flag >= 0 ? [...rest.slice(0, flag), ...rest.slice(flag + 2)] : rest
-  const issue = /^#(\d+)$/.exec(story[0] ?? '')
+  const issue = /^#(\d+)$/.exec(story[0])
   const titleWords = issue ? story.slice(1) : story
   return { command: 'run', slug: first, story: storyOf(issue ? Number(issue[1]) : null, titleWords.join(' ')), base }
 }

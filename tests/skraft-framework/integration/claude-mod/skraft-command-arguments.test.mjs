@@ -19,6 +19,7 @@ test('/skraft <slug> [#issue] [title…] asks for a run with its story', () => {
   assert.deepEqual(parseSkraftCommand('checkout 2 factor login'), { command: 'run', slug: 'checkout', story: { issue: null, title: '2 factor login' }, base: null })
   assert.deepEqual(parseSkraftCommand('checkout #4a2'), { command: 'run', slug: 'checkout', story: { issue: null, title: '#4a2' }, base: null })
   assert.deepEqual(parseSkraftCommand('checkout x #42'), { command: 'run', slug: 'checkout', story: { issue: null, title: 'x #42' }, base: null })
+  assert.deepEqual(parseSkraftCommand('checkout PR#42 follow-up'), { command: 'run', slug: 'checkout', story: { issue: null, title: 'PR#42 follow-up' }, base: null })
 })
 
 test('--base <ref> anywhere after the slug is the run\'s base, not part of the title', () => {
@@ -27,6 +28,7 @@ test('--base <ref> anywhere after the slug is the run\'s base, not part of the t
   assert.deepEqual(parseSkraftCommand('checkout --base'), { command: 'run', slug: 'checkout', story: null, base: '' })
   assert.deepEqual(toolRequest({ slug: 'checkout', base: ' develop ' }), { command: 'run', slug: 'checkout', story: null, base: 'develop' })
   assert.deepEqual(toolRequest({ slug: 'checkout', base: 7 }), { command: 'run', slug: 'checkout', story: null, base: null })
+  assert.deepEqual(toolRequest({ slug: 'checkout', base: '   ' }), { command: 'run', slug: 'checkout', story: null, base: null })
 })
 
 test('the slug is passed as typed: Init, not the parser, judges it', () => {

@@ -37,8 +37,10 @@ test('the workflow declares skraft-pipeline with its RESEARCH phase and optional
   assert.equal(SKRAFT_PIPELINE_META.name, 'skraft-pipeline')
   assert.deepEqual(SKRAFT_PIPELINE_META.phases.map((phase) => phase.title), ['RESEARCH'])
   assert.deepEqual(SKRAFT_PIPELINE_META.argsSchema.required, undefined)
-  assert.deepEqual(Object.keys(SKRAFT_PIPELINE_META.argsSchema.properties), ['slug', 'issue', 'title', 'base', 'agentIds'])
-  assert.equal(SKRAFT_PIPELINE_META.argsSchema.properties.issue.type, 'integer')
+  assert.deepEqual(
+    Object.entries(SKRAFT_PIPELINE_META.argsSchema.properties).map(([name, { type }]) => `${name}: ${type}`),
+    ['slug: string', 'issue: integer', 'title: string', 'base: string', 'agentIds: object'],
+  )
 })
 
 test('a new slug dispatches the researcher with its output pre-created from the template', async (t) => {
