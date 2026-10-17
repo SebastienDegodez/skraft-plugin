@@ -4,13 +4,14 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import {
-  NOMINAL, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, briefOf, commit, deliverWith, fillOutputs, pipelineRepository, scriptedLlm, writeResult, writesOnly,
+  LENSES, NOMINAL, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, briefOf, commit, deliverWith, fillOutputs, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
+  scriptedLlm, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
 /** `/skraft <args>` on the repository, the scripted LLM answering every spawn, until the run stops. */
-const runOn = async (cwd, { acts, args = SLUG } = {}) => {
-  const llm = scriptedLlm({ cwd, acts })
+const runOn = async (cwd, { acts, reviews, args = SLUG } = {}) => {
+  const llm = scriptedLlm({ cwd, acts, reviews })
   const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm) })
   const text = await mod.command(args)
   const outcome = await mod.settled()
@@ -29,10 +30,14 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
   assert.deepEqual(spawns.map(({ subagentType, description }) => `${subagentType} | ${description}`), [
     `skraft:solution-researcher | skraft ${SLUG} · research · attempt 1`,
     `skraft:solution-architect | skraft ${SLUG} · design · attempt 1`,
+    ...lensDispatches('design_review'),
     `skraft:acceptance-designer | skraft ${SLUG} · distill · attempt 1`,
+    ...lensDispatches('distill_review'),
     `skraft:software-engineer | skraft ${SLUG} · deliver · attempt 1`,
+    ...lensDispatches('deliver_review'),
   ])
-  assert.ok(spawns.every((spawn) => spawn.prompt.includes('- Story: #42 — Pay by card')))
+  assert.deepEqual(spawns.filter((spawn) => !spawn.prompt.includes('- Story: #42 — Pay by card')).map(({ subagentType }) => subagentType), ['skraft:cold-reader-lens'])
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'distill'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'exit']])
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ component, gate, status }) => `${component}/${gate} ${status}`), ['app/test pass'])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ kind, verdict, replay }) => `${kind} ${verdict} ${replay?.exitCode ?? '-'}`)]), [
@@ -43,6 +48,7 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
   assert.deepEqual([events.at(-1).type, events.at(-1).status], ['run.finished', 'completed'])
   assert.deepEqual(mod.statuses, [`skraft ${SLUG} · RESEARCH`, `skraft ${SLUG} · DESIGN`, `skraft ${SLUG} · DISTILL`, `skraft ${SLUG} · DELIVER`, undefined])
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation)`), mod.published.at(-1).log.join('\n'))
+  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: design_review (consistency, architecture-compliance, fitness)`), mod.published.at(-1).log.join('\n'))
   assert.equal(mod.notes.at(-1), `skraft ${SLUG}: done — DELIVER closed`)
   assert.equal(await mod.command(''), `skraft ${SLUG} — done\n✓ RESEARCH\n✓ DESIGN\n✓ DISTILL\n✓ DELIVER\nDELIVER closed`)
 })
@@ -62,7 +68,8 @@ test('an architect that writes outside its write scope is refused, and its next 
   const { outcome, spawns, events } = await runOn(cwd, { acts: { 'solution-architect': [hacks, cleans], 'acceptance-designer': [blocked('stop after the design')] } })
 
   assert.deepEqual(spawns.map((spawn) => spawn.description), [
-    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · attempt 2`, `skraft ${SLUG} · distill · attempt 1`,
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · design · attempt 2`, ...lensLabels('design_review'),
+    `skraft ${SLUG} · distill · attempt 1`,
   ])
   assert.deepEqual(recorded(events, 'design').map(({ attempt, outcome: result, code, failures }) => [attempt, result, code, failures]), [
     [1, 'failed', 'write-scope', ['out of write scope: src/hack.mjs']],
@@ -95,10 +102,12 @@ test('gates that fail send DELIVER back as pass 2 with the failing gate in its b
   const { outcome, spawns, events, mod } = await runOn(cwd, { acts: { 'software-engineer': [deliverWith(WRONG_PAY)] } })
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
-  assert.deepEqual(spawns.slice(3).map((spawn) => spawn.description), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`])
-  assert.ok(spawns[4].prompt.includes('- Pass: 2, after the gates sent the work back'), spawns[4].prompt)
-  assert.match(spawns[4].prompt, /\nThe gates failed on pass 1:\n- app\/test: exited 1 \(evidence: .+test-1\.log\)/)
-  assert.deepEqual(recorded(events, 'gates').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'deliver'], [2, 'pass', 'exit']])
+  const delivering = spawns.slice(3 + LENSES.design_review.length + LENSES.distill_review.length)
+  assert.deepEqual(delivering.map((spawn) => spawn.description), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`, ...lensLabels('deliver_review')])
+  assert.ok(delivering[1].prompt.includes('- Pass: 2, after the gates sent the work back'), delivering[1].prompt)
+  assert.match(delivering[1].prompt, /\nThe gates failed on pass 1:\n- app\/test: exited 1 \(evidence: .+test-1\.log\)/)
+  assert.deepEqual(recorded(events, 'gates').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'fail', 'deliver'], [2, 'pass', 'deliver_review']])
+  assert.deepEqual(recorded(events, 'deliver_review').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'approved', 'exit']])
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: software-engineer, pass 2, attempt 1`), mod.published.at(-1).log.join('\n'))
   assert.equal(git(cwd, 'show', 'HEAD:src/pay.mjs'), 'export const pay = (amount) => `paid ${amount}`')
 })
@@ -116,7 +125,8 @@ test('a test commit whose tests pass is refused as not red', async (t) => {
   const sha = git(cwd, 'rev-parse', '--short=7', 'HEAD')
   const refusal = `commit ${sha} "test(${SLUG}): pay by card" is not red: the tests of app pass at it; a test commit must fail before the code that makes it pass`
   assert.deepEqual(recorded(events, 'distill').map(({ code, failures }) => [code, failures]), [['tdd', [refusal]], ['agent-blocked', ['cannot make it fail']]])
-  assert.ok(spawns[3].prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), spawns[3].prompt)
+  const retried = spawns.find((spawn) => spawn.description === `skraft ${SLUG} · distill · attempt 2`)
+  assert.ok(retried.prompt.includes(`Refused in attempt 1 of 3:\n- ${refusal}`), retried.prompt)
   assert.deepEqual([outcome.code, outcome.reason], ['agent-blocked', 'acceptance-designer is blocked: cannot make it fail'])
 })
 
