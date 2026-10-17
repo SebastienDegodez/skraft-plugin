@@ -2,33 +2,33 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunGate } from '../../../../plugins/skraft-framework/engine/application/run-gate.mjs'
-import {
-  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTracking, InMemoryWorkspace, ScriptedMachine,
-} from '../support/in-memory-host.mjs'
+import { FixedClock, InMemorySourceControl, InMemoryTracking, ScriptedMachine, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', mocking: { strategy: 'inprocess' }, commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { lint: 'npx eslint .', test: 'npx vitest run' } }
+
+/** The run checkout started over `components`; `given` replaces any in-memory dependency. */
+const started = async ({ components, ...given }) => {
+  const deps = inMemoryDeps({ config: JSON.stringify({ components }), ...given })
+  const initialised = await createInit(deps).init({ slug: 'checkout' })
+  assert.equal(initialised.ok, true, initialised.reason)
+  return { tracking: deps.journal, machine: deps.commandRunner, sourceControl: deps.sourceControl, gate: (scope) => createRunGate(deps).run({ scope }) }
+}
 
 /**
  * A working copy with the API, and the front in a neighbour repository. `changed` lists what
  * the story changed since each base, relative to the component's root.
  */
-const hostWith = async ({ components = [API, WEB], changed = {}, machine = new ScriptedMachine(), clock = new FixedClock('2026-10-15T08:00:00.000Z') } = {}) => {
-  const tracking = new InMemoryTracking()
-  const sourceControl = new InMemorySourceControl({
+const hostWith = ({ components = [API, WEB], changed = {}, machine = new ScriptedMachine(), ...given } = {}) => started({
+  components,
+  commandRunner: machine,
+  sourceControl: new InMemorySourceControl({
     '.': { top: '.', mergeBases: { main: 'a1' } },
     'services/payment-api': { top: '.', mergeBases: { main: 'a1' }, changed: 'api' in changed ? changed.api : [] },
     '../payment-web': { top: '../payment-web', mergeBases: { main: 'w1' }, changed: changed.web ?? [] },
-  })
-  const deps = {
-    journal: tracking, activePipeline: tracking, files: tracking,
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components }) }),
-    sourceControl, commandRunner: machine, clock, hasher: new FakeHasher(),
-  }
-  const initialised = await createInit(deps).init({ slug: 'checkout' })
-  assert.equal(initialised.ok, true, initialised.reason)
-  return { tracking, machine, sourceControl, gate: (scope) => createRunGate(deps).run({ scope }) }
-}
+  }),
+  ...given,
+})
 
 const gatesRan = (tracking) => tracking.journal('checkout').filter((event) => event.type === 'gate.ran')
 
@@ -69,17 +69,13 @@ test('nothing changed since the bases: no gate runs in the loop, the scope gates
 
 /** One repository at the working copy; `changed` lists what changed since `a1` by component root. */
 const hostOver = async (components, changed) => {
-  const tracking = new InMemoryTracking()
-  const sourceControl = new InMemorySourceControl(Object.fromEntries(
-    [['.', []], ...Object.entries(changed)].map(([dir, files]) => [dir, { top: '.', mergeBases: { main: 'a1' }, changed: files }]),
-  ))
-  const deps = {
-    journal: tracking, activePipeline: tracking, files: tracking,
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components }) }),
-    sourceControl, commandRunner: new ScriptedMachine(), clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher(),
-  }
-  await createInit(deps).init({ slug: 'checkout' })
-  return { sourceControl, touched: async () => (await createRunGate(deps).run({ scope: 'touched' })).components }
+  const { sourceControl, gate } = await started({
+    components,
+    sourceControl: new InMemorySourceControl(Object.fromEntries(
+      [['.', []], ...Object.entries(changed)].map(([dir, files]) => [dir, { top: '.', mergeBases: { main: 'a1' }, changed: files }]),
+    )),
+  })
+  return { sourceControl, touched: async () => (await gate('touched')).components }
 }
 
 test('a file under a component nested in another one touches only the nested component', async () => {
@@ -266,34 +262,27 @@ test('without Docker, the architecture, coverage and mutation gates of a Microck
 
 test('gates need an active, initialised pipeline and components to run', async () => {
   const tracking = new InMemoryTracking()
-  const base = { journal: tracking, activePipeline: tracking, files: tracking, sourceControl: new InMemorySourceControl(), commandRunner: new ScriptedMachine(), clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher() }
+  const gates = (config) => createRunGate(inMemoryDeps({ tracking, config }))
 
-  const none = await createRunGate({ ...base, workspace: new InMemoryWorkspace() }).run()
+  const none = await gates().run()
   assert.deepEqual([none.status, none.code, none.components, none.gates, none.failure], ['refused', 'no-active-pipeline', [], [], null])
 
-  await createInit({ ...base, workspace: new InMemoryWorkspace() }).init({ slug: 'checkout' })
-  const empty = await createRunGate({ ...base, workspace: new InMemoryWorkspace() }).run({ scope: 'all' })
+  await createInit(inMemoryDeps({ tracking })).init({ slug: 'checkout' })
+  const empty = await gates().run({ scope: 'all' })
   assert.deepEqual([empty.status, empty.code, empty.reason], ['refused', 'no-components', 'skraft-config.json lists no component; run skraft init to detect them'])
 
-  const broken = await createRunGate({ ...base, workspace: new InMemoryWorkspace({ 'skraft-config.json': '[' }) }).run()
+  const broken = await gates('[').run()
   assert.deepEqual([broken.status, broken.code], ['refused', 'config-invalid'])
 
   tracking.rewriteJournal('checkout', (lines) => [lines[0].replace('"prev":null', '"prev":"0"')])
-  const tampered = await createRunGate({ ...base, workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components: [WEB] }) }) }).run()
+  const tampered = await gates(JSON.stringify({ components: [WEB] })).run()
   assert.deepEqual([tampered.status, tampered.slug, tampered.code, tampered.components, tampered.gates], ['blocked', 'checkout', 'journal-tampered', [], []])
 })
 
 test('a component outside Git always counts as touched, and a {baseSha} command there cannot run', async () => {
-  const tracking = new InMemoryTracking()
-  const machine = new ScriptedMachine()
-  const deps = {
-    journal: tracking, activePipeline: tracking, files: tracking,
-    workspace: new InMemoryWorkspace({ 'skraft-config.json': JSON.stringify({ components: [{ ...API, root: '../../legacy/./api/' }] }) }),
-    sourceControl: new InMemorySourceControl(), commandRunner: machine, clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher(),
-  }
-  await createInit(deps).init({ slug: 'checkout' })
+  const { machine, gate } = await started({ components: [{ ...API, root: '../../legacy/./api/' }] })
 
-  const outcome = await createRunGate(deps).run({ scope: 'touched' })
+  const outcome = await gate('touched')
 
   assert.deepEqual(outcome.components, ['api'])
   assert.deepEqual(machine.lines(), ['../../legacy/api $ dotnet build --nologo', '../../legacy/api $ dotnet test --nologo'])
@@ -335,9 +324,8 @@ test('a component with no gate command fails as environment instead of passing w
 
 test('an invalid skraft-config.json refuses the gates with every error, instead of dropping what it cannot read', async () => {
   const tracking = new InMemoryTracking()
-  const base = { journal: tracking, activePipeline: tracking, files: tracking, sourceControl: new InMemorySourceControl(), commandRunner: new ScriptedMachine(), clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher() }
-  await createInit({ ...base, workspace: new InMemoryWorkspace() }).init({ slug: 'checkout' })
-  const gateWith = async (text) => (await createRunGate({ ...base, workspace: new InMemoryWorkspace({ 'skraft-config.json': text }) }).run({ scope: 'all' })).reason
+  await createInit(inMemoryDeps({ tracking })).init({ slug: 'checkout' })
+  const gateWith = async (config) => (await createRunGate(inMemoryDeps({ tracking, config })).run({ scope: 'all' })).reason
 
   assert.equal(await gateWith(JSON.stringify({
     baseBranch: '--orphan',
