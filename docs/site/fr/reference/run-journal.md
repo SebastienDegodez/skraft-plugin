@@ -109,6 +109,11 @@ un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-unreadable` q
 a répondu deux fois sans verdict lisible), `failures` (les findings retenus, que le brief suivant
 de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Un agent
 renvoyé par les gates ou par une revue porte `sentBy` (`gate` ou `review`) sur son `step.started`.
+Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
+tentative a créés ou modifiés (hors fichiers du moteur) ; une revue donne ces documents à chaque
+lentille, par phase, et écrit `reviews/<nœud>-<passe>/context.md` : la story, les fichiers de
+règles du projet trouvés (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`,
+`.github/copilot-instructions.md`, `docs/adr/decisions-index.md`) et quel agent a écrit quel document.
 
 > **À venir.** Le contrat de comparaison prévoit aussi `decision.recorded`, écrit avec les
 > décisions humaines (lot 5).

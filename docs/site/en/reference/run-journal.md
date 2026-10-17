@@ -109,6 +109,11 @@ A review node's `step.started` carries `lenses` instead of `agent`; its `step.re
 twice without a readable verdict), `failures` (the findings that count, which the next brief of
 the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). An agent sent back by the
 gates or by a review has `sentBy` (`gate` or `review`) on its `step.started`.
+An agent's `step.recorded` lists in `documents` the files of the tracking folder its attempt
+created or changed (the engine's own files left out); a review gives each lens these documents
+by phase, and writes `reviews/<node>-<pass>/context.md`: the story, the project rule files
+found (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`,
+`docs/adr/decisions-index.md`) and which agent wrote which document.
 
 > **Coming next.** The comparison contract also plans `decision.recorded`, written with human
 > decisions (lot 5).
