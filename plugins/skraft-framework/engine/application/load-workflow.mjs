@@ -41,16 +41,27 @@ export const loadWorkflow = async (deps, { config, agents = true }) => {
   const { name, builtIn, read } = await readWorkflows(deps, config)
   if (!read.ok) return refused(name, read.errors)
   const { workflow } = read
-  const { errors, unlocked } = checkLocks(builtIn, workflow)
-  /** @type {Record<string, AgentSource>} */
-  const sources = {}
-  for (const { id, agent } of Object.values(workflow.nodes).filter((node) => agents && node.kind === 'agent')) {
-    const source = await deps.agentCatalog.locate(/** @type {string} */ (agent))
-    if (source === null) errors.push(`node ${id}: agent ${agent} not found in the plugin, .claude/agents/ or .github/agents/`)
-    else sources[/** @type {string} */ (agent)] = source
-  }
+  const locks = checkLocks(builtIn, workflow)
+  const located = agents ? await locateAgents(deps.agentCatalog, workflow) : { sources: {}, errors: [] }
+  const errors = [...locks.errors, ...located.errors]
   if (errors.length > 0) return refused(name, errors)
-  return { ok: true, workflow, name, unlocked, sources }
+  return { ok: true, workflow, name, unlocked: locks.unlocked, sources: located.sources }
+}
+
+/**
+ * The source of each agent node's agent, one lookup after the other, in node order.
+ * @param {import('./ports/agent-catalog.mjs').AgentCatalog} agentCatalog @param {Workflow} workflow
+ * @returns {Promise<{ sources: Record<string, AgentSource>, errors: string[] }>} errors: the agents nobody provides
+ */
+const locateAgents = async (agentCatalog, workflow) => {
+  /** @type {{ sources: Record<string, AgentSource>, errors: string[] }} */
+  const located = { sources: {}, errors: [] }
+  for (const { id, agent } of Object.values(workflow.nodes).filter((node) => node.kind === 'agent')) {
+    const source = await agentCatalog.locate(/** @type {string} */ (agent))
+    if (source === null) located.errors.push(`node ${id}: agent ${agent} not found in the plugin, .claude/agents/ or .github/agents/`)
+    else located.sources[/** @type {string} */ (agent)] = source
+  }
+  return located
 }
 
 /** @param {string} name @param {string[]} errors @returns {WorkflowLoading} */
