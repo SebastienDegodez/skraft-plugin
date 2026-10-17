@@ -17,18 +17,32 @@ export const RESULT_SHAPE = '{"status": "done" | "blocked", "summary": "<what yo
  * @returns {ResultReading}
  */
 export const readResult = (text) => {
-  if (text === null) return { ok: false, errors: ['is missing'] }
-  let value
-  try {
-    value = JSON.parse(text)
-  } catch {
-    return { ok: false, errors: ['is not JSON'] }
-  }
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return { ok: false, errors: ['must hold a JSON object'] }
-  const errors = [
-    ...(STATUSES.includes(value.status) ? [] : [`status must be ${STATUSES.map((status) => JSON.stringify(status)).join(' or ')}`]),
-    ...(typeof value.summary === 'string' && value.summary.trim() !== '' ? [] : ['summary must be a non-empty string']),
-    ...Object.keys(value).filter((key) => !KEYS.includes(key)).map((key) => `unknown key ${key}`),
-  ]
-  return errors.length > 0 ? { ok: false, errors } : { ok: true, result: { status: value.status, summary: value.summary } }
+  if (text === null) return refused(['is missing'])
+  const parsed = parseJson(text)
+  if (parsed === null) return refused(['is not JSON'])
+  if (!isJsonObject(parsed.value)) return refused(['must hold a JSON object'])
+  const errors = shapeErrors(parsed.value)
+  return errors.length > 0 ? refused(errors) : { ok: true, result: { status: parsed.value.status, summary: parsed.value.summary } }
 }
+
+/** @param {string[]} errors @returns {ResultReading} */
+const refused = (errors) => ({ ok: false, errors })
+
+/** @param {string} text @returns {{ value: any } | null} null when the text is not JSON */
+const parseJson = (text) => {
+  try {
+    return { value: JSON.parse(text) }
+  } catch {
+    return null
+  }
+}
+
+/** @param {unknown} value */
+const isJsonObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+
+/** What keeps a JSON object from being a result, status first. @param {any} value */
+const shapeErrors = (value) => [
+  ...(STATUSES.includes(value.status) ? [] : [`status must be ${STATUSES.map((status) => JSON.stringify(status)).join(' or ')}`]),
+  ...(typeof value.summary === 'string' && value.summary.trim() !== '' ? [] : ['summary must be a non-empty string']),
+  ...Object.keys(value).filter((key) => !KEYS.includes(key)).map((key) => `unknown key ${key}`),
+]
