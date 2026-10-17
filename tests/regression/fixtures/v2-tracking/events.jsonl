@@ -1,9 +1,14 @@
 {"type":"run.started","at":"2026-10-09T10:00:00.000Z","prev":null,"slug":"refund","workflow":"skraft","base":[],"artifacts":[],"start":null,"unlocked":[]}
-{"type":"step.started","at":"2026-10-09T10:00:01.000Z","prev":"h1","step":"research","kind":"agent","agent":"solution-researcher"}
-{"type":"step.recorded","at":"2026-10-09T10:15:00.000Z","prev":"h2","step":"research","outcome":"ok","durationMs":899000,"cost":1.2}
-{"type":"review.decided","at":"2026-10-09T10:16:00.000Z","prev":"h3","phase":"RESEARCH","verdict":"APPROVED"}
-{"type":"phase.closed","at":"2026-10-09T10:16:30.000Z","prev":"h4","phase":"RESEARCH"}
-{"type":"step.started","at":"2026-10-09T10:17:00.000Z","prev":"h5","step":"design","kind":"agent","agent":"solution-architect"}
-{"type":"gate.ran","at":"2026-10-09T10:30:00.000Z","prev":"h6","component":"api","gate":"test","scope":"all","command":"dotnet test","status":"fail","failure":"deterministic","exitCode":1,"durationMs":4000,"evidence":null}
-{"type":"engine.heartbeat","at":"2026-10-09T10:31:00.000Z","prev":"h7"}
-{"type":"run.finished","at":"2026-10-09T10:40:00.000Z","prev":"h8","status":"stopped"}
+{"type":"step.started","at":"2026-10-09T10:00:01.000Z","prev":"h1","step":"research","phase":"RESEARCH","agent":"solution-researcher","visit":1,"attempt":1}
+{"type":"step.recorded","at":"2026-10-09T10:15:00.000Z","prev":"h2","step":"research","visit":1,"attempt":1,"outcome":"done","durationMs":899000,"cost":1.2}
+{"type":"phase.closed","at":"2026-10-09T10:16:30.000Z","prev":"h3","phase":"RESEARCH"}
+{"type":"step.started","at":"2026-10-09T10:17:00.000Z","prev":"h4","step":"design","phase":"DESIGN","agent":"solution-architect","visit":1,"attempt":1}
+{"type":"step.recorded","at":"2026-10-09T10:25:00.000Z","prev":"h5","step":"design","visit":1,"attempt":1,"outcome":"done","next":"design_review","durationMs":480000}
+{"type":"step.started","at":"2026-10-09T10:25:01.000Z","prev":"h6","step":"design_review","phase":"DESIGN","lenses":["consistency","architecture-compliance","fitness"],"visit":1,"attempt":1}
+{"type":"review.lens","at":"2026-10-09T10:27:00.000Z","prev":"h7","step":"design_review","visit":1,"lens":"consistency","agent":"consistency-lens","fingerprint":"f1","verdict":"fail","findings":[{"id":"F1","severity":"high","location":"design/architecture.md:12","description":"the refund port is named twice","suggestion":null}],"cost":0.1}
+{"type":"review.refuted","at":"2026-10-09T10:28:00.000Z","prev":"h8","step":"design_review","visit":1,"lens":"consistency","finding":"F1","verdict":"confirmed","reason":"both names appear","cost":0.05}
+{"type":"step.recorded","at":"2026-10-09T10:28:30.000Z","prev":"h9","step":"design_review","visit":1,"attempt":1,"outcome":"needs-rework","code":null,"failures":["consistency F1 high at design/architecture.md:12: the refund port is named twice"],"next":"design","reason":"NEEDS_REWORK: 1 finding to address","durationMs":209000,"cost":0.15}
+{"type":"step.started","at":"2026-10-09T10:29:00.000Z","prev":"h10","step":"design","phase":"DESIGN","agent":"solution-architect","visit":2,"attempt":1,"sentBy":"review"}
+{"type":"gate.ran","at":"2026-10-09T10:30:00.000Z","prev":"h11","component":"api","gate":"test","scope":"all","command":"dotnet test","status":"fail","failure":"deterministic","exitCode":1,"durationMs":4000,"evidence":null}
+{"type":"engine.heartbeat","at":"2026-10-09T10:31:00.000Z","prev":"h12"}
+{"type":"run.finished","at":"2026-10-09T10:40:00.000Z","prev":"h13","status":"stopped"}
