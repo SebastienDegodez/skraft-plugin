@@ -169,8 +169,6 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
 - Split along decisions: one level of abstraction per function, named by what it decides. Never
   pass a limit by packing logic onto one line, chaining ternaries or merging statements.
 - No `eslint-disable` comment, anywhere in `engine/`.
-- Files not refactored yet are named in the config's warning list. A file leaves the list once
-  it passes; no file joins it, and a file you change leaves it in the same change.
 
 ## Regression rules
 

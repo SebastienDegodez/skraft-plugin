@@ -7,16 +7,6 @@ const LIMITS = Object.freeze({
   'max-depth': ['error', 3],
 })
 
-// Lot 1 code outside lot 2's scope, refactored in its own change. A file leaves this list once
-// it passes; no file joins it.
-const NOT_REFACTORED_YET = [
-  'application/active-run.mjs',
-  'application/run-journal.mjs',
-  'drivers/copilot-workflow/skraft-decide-tool.mjs',
-]
-
-const warnings = Object.fromEntries(Object.entries(LIMITS).map(([rule, [, ...options]]) => [rule, ['warn', ...options]]))
-
 // Paths below are relative to this folder, wherever ESLint is started from.
 const basePath = import.meta.dirname
 
@@ -29,5 +19,4 @@ export default [
     linterOptions: { noInlineConfig: true },
     rules: LIMITS,
   },
-  { basePath, files: NOT_REFACTORED_YET, rules: warnings },
 ]
