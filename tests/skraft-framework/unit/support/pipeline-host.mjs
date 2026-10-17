@@ -1,6 +1,7 @@
 // A whole host for RunPipeline, Init and Observe: every port is a hand-written double, the
 // LLM is a scripted behaviour per dispatch that writes what an agent would write.
 import assert from 'node:assert/strict'
+import { answerYaml } from './answer-yaml.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
@@ -123,13 +124,13 @@ export const scripted = (options, script) => {
  * A lens's answer as its final message.
  * @param {string} lens @param {'pass' | 'fail' | 'inconclusive'} verdict @param {object[]} [findings]
  */
-export const says = (lens, verdict, findings = []) => JSON.stringify({ lens, verdict, findings })
+export const says = (lens, verdict, findings = []) => answerYaml({ lens, verdict, findings })
 
 /** A finding of a lens's answer. @param {string} id @param {string} severity @param {string} description @param {object} [more] */
-export const finding = (id, severity, description, more = {}) => ({ id, severity, location: 'src/Checkout.cs:12', description, ...more })
+export const finding = (id, severity, description, more = {}) => ({ id, gate: 'G1', severity, location: 'src/Checkout.cs:12', description, ...more })
 
 /** The refuter's answer. @param {'confirmed' | 'refuted' | 'unverifiable'} verdict @param {string} [reason] */
-export const refutes = (verdict, reason = `${verdict} by the patch`) => JSON.stringify({ verdict, reason })
+export const refutes = (verdict, reason = `${verdict} by the patch`) => answerYaml({ verdict, reason })
 
 /**
  * Answers lenses and the refuter from queues: `byLens[name]` for the lens `<name>-lens`,

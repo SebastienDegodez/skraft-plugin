@@ -8,14 +8,17 @@
  *   outputs: string[], missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null, heads: Head[],
  * }} OpenAttempt
  * @typedef {{
- *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[], sentBack: boolean,
+ *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[],
+ *   sentBy: 'gate' | 'review' | null, redByGateFailure: boolean,
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
  * }} NodeState
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
  *   paths of the node's first dispatch, which every later one reuses. documents: every document of
  *   the tracking folder the node's attempts wrote, outputs included. heads: the first
- *   attempt's of this visit. sentBack: this visit started on gate failures. last and previous:
- *   this visit's last two step.recorded.
+ *   attempt's of this visit. sentBy: what sent the run back into this visit, kept for each of
+ *   its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
+ *   commit; a visit the review opened has no failing test, so its agent commits a red one.
+ *   last and previous: this visit's last two step.recorded.
  * @typedef {{
  *   story: { issue?: number | null, title?: string | null } | null,
  *   base: Array<{ component: string | null, root: string, repository: string, ref: string, source: 'flag' | 'component' | 'config' | 'default', sha: string }>,
@@ -131,11 +134,11 @@ const openAttempt = (event) => ({
 /**
  * A new visit starts from the attempt's heads and feedback; a later attempt keeps the visit's.
  * @param {NodeState | undefined} before @param {OpenAttempt} open
- * @returns {Pick<NodeState, 'heads' | 'sentBack' | 'open' | 'last'>}
+ * @returns {Pick<NodeState, 'heads' | 'sentBy' | 'redByGateFailure' | 'open' | 'last'>}
  */
 const thisVisit = (before, open) => {
-  if (before?.visit !== open.visit) return { heads: open.heads, sentBack: open.feedback?.length > 0 && open.sentBy !== 'review', open, last: null }
-  return { heads: before.heads, sentBack: before.sentBack, open, last: before.last }
+  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, redByGateFailure: open.feedback?.length > 0 && open.sentBy !== 'review', open, last: null }
+  return { heads: before.heads, sentBy: before.sentBy, redByGateFailure: before.redByGateFailure, open, last: before.last }
 }
 
 /** @param {RunState} run @param {RunEvent} event */

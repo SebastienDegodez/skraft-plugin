@@ -24,8 +24,12 @@ export const createGitSourceControl = ({ commandRunner }) => {
   })
 }
 
-/** A patch whose paths read `a/<path>` and `b/<path>` relative to the folder, whatever the user's diff config. */
-const PATCH_OPTIONS = Object.freeze(['--no-renames', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/', '--relative'])
+/**
+ * A patch whose paths read `a/<path>` and `b/<path>` relative to the folder, whatever the user's
+ * diff config, that shows every file's real text: no attribute (`-diff`, a textconv driver) of
+ * the repository can turn a file into "Binary files differ" or rewrite what it holds.
+ */
+const PATCH_OPTIONS = Object.freeze(['--no-renames', '--no-color', '--no-ext-diff', '--no-textconv', '--text', '--src-prefix=a/', '--dst-prefix=b/', '--relative'])
 
 /** @param {CommandRunner} commandRunner @returns {Git} */
 const gitThrough = (commandRunner) => async (dir, args) => {

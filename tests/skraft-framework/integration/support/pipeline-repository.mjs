@@ -4,6 +4,7 @@
 // repository's real test command. No doubles: every driver test stages the same repository.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
+import { answerYaml } from '../../unit/support/answer-yaml.mjs'
 import { PLUGIN_ROOT, commitAll, git, tempFolder } from './workspace.mjs'
 
 export const SLUG = 'checkout'
@@ -264,13 +265,13 @@ export const reviewsOf = (events) => events
  * A lens's answer as its final message.
  * @param {string} lens @param {'pass' | 'fail' | 'inconclusive'} verdict @param {object[]} [findings]
  */
-export const says = (lens, verdict, findings = []) => `I read the inputs.\n\n\`\`\`json\n${JSON.stringify({ lens, verdict, findings })}\n\`\`\``
+export const says = (lens, verdict, findings = []) => `I read the inputs.\n\n\`\`\`yaml\n${answerYaml({ lens, verdict, findings })}\n\`\`\``
 
 /** A finding of a lens's answer. @param {string} id @param {string} severity @param {string} description @param {object} [more] */
-export const finding = (id, severity, description, more = {}) => ({ id, severity, location: 'docs/adr/adr-001-card-payment.md:3', description, suggestion: 'name the provider', ...more })
+export const finding = (id, severity, description, more = {}) => ({ id, gate: 'G1', severity, location: 'docs/adr/adr-001-card-payment.md:3', description, suggestion: 'name the provider', ...more })
 
 /** The refuter's answer. @param {'confirmed' | 'refuted' | 'unverifiable'} verdict @param {string} [reason] */
-export const refutes = (verdict, reason = `${verdict} by the patch`) => JSON.stringify({ verdict, reason })
+export const refutes = (verdict, reason = `${verdict} by the patch`) => answerYaml({ verdict, reason })
 
 /**
  * What a review brief asks: the lens it names, or `refuter` with the lens and finding it checks;

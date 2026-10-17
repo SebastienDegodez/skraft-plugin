@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { answerYaml } from './answer-yaml.mjs'
 
 // Hand-written doubles for the engine ports. No mock library: each double is a small
 // working implementation over plain JavaScript values.
@@ -78,7 +79,7 @@ export class FakeHasher {
 }
 
 /** What a lens answers when the test scripts nothing for it: it passes. */
-export const passing = (dispatch) => JSON.stringify({ lens: dispatch.agent.replace(/-lens$/, ''), verdict: 'pass', findings: [] })
+export const passing = (dispatch) => answerYaml({ lens: dispatch.agent.replace(/-lens$/, ''), verdict: 'pass', findings: [] })
 
 /**
  * The simulated LLM: each dispatch runs the next scripted behaviour, which may write
@@ -95,7 +96,7 @@ export class ScriptedAgentRunner {
     /** @type {Array<Array<{agent: string, label: string, prompt: string}>>} */
     this.batches = []
     /** @type {(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|string>|object|string} */
-    this.review = (dispatch) => (dispatch.agent === 'finding-refuter' ? JSON.stringify({ verdict: 'confirmed', reason: 'the patch shows it' }) : passing(dispatch))
+    this.review = (dispatch) => (dispatch.agent === 'finding-refuter' ? answerYaml({ verdict: 'confirmed', reason: 'the patch shows it' }) : passing(dispatch))
     /** @type {number | undefined} what each batch costs, beside what each answer says */
     this.batchCostUsd = undefined
   }
@@ -322,11 +323,14 @@ export const PLUGIN_AGENTS = Object.freeze([
 /** Agents by where they come from; the plugin ships the pipeline's own by default. */
 export class InMemoryAgentCatalog {
   /** @param {{ plugin?: string[], repository?: string[] }} [agents] */
-  constructor({ plugin = PLUGIN_AGENTS, repository = [] } = {}) {
+  /** @param {{ plugin?: string[], repository?: string[], skills?: Record<string, string[]> }} [agents] skills: SKILL.md paths by agent */
+  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {} } = {}) {
     this.plugin = new Set(plugin)
     this.repository = new Set(repository)
+    this.skillsByAgent = skills
   }
   async locate(agent) { return this.plugin.has(agent) ? 'plugin' : this.repository.has(agent) ? 'repository' : null }
+  async skills(agent) { return this.skillsByAgent[agent] ?? [] }
 }
 
 /** The plugin's own `workflows/skraft.dot`, read once: the default every test runs. */

@@ -41,13 +41,13 @@ const classify = (subject) => {
  * leaves the history. A green needs a red after the previous green of its repository; on a
  * pass the gates sent back, their failure is the red of the first green.
  * @param {StepCommit[]} commits oldest first, every repository of the run
- * @param {{ sentBack: boolean }} pass
+ * @param {{ redByGateFailure: boolean }} pass
  * @returns {JudgedCommit[]}
  */
-export const judgeCommits = (commits, { sentBack }) => {
+export const judgeCommits = (commits, { redByGateFailure }) => {
   /** @type {Set<string>} repositories with a red since their last green */
   // Stryker disable next-line ArrayDeclaration: no commit is in a repository named like the placeholder
-  const red = new Set(sentBack ? commits.map((commit) => commit.repository) : [])
+  const red = new Set(redByGateFailure ? commits.map((commit) => commit.repository) : [])
   return commits.map((commit) => {
     const { kind, scope } = classify(commit.subject)
     /** @type {CommitVerdict} */

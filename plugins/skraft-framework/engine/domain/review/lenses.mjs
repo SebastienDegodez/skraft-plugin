@@ -3,12 +3,13 @@
  * `<name>-lens`; a lens skraft does not know (one a repository adds) reads everything a
  * review prepares.
  *
- * @typedef {'overview' | 'outputs' | 'context' | 'patch' | 'files'} InputKind
+ * @typedef {'overview' | 'outputs' | 'context' | 'patch' | 'files' | 'components'} InputKind
  *   overview: the review's shared context (story, project rules, who wrote which document), read
  *   by every lens but a blind one; outputs: what the agents of the review's phase filled or
  *   wrote in the tracking folder; context: the story's artifacts and what the agents of the
  *   other phases filled or wrote; patch: the changes since the run's base; files: the paths
- *   those changes touch.
+ *   those changes touch; components: each component's stack, mocking strategy and contract
+ *   testing choice, as the configuration gives them.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
  * @typedef {{ name: string, agent: string, inputs: readonly InputKind[], blind: boolean, trigger: Trigger | null }} Lens
@@ -25,6 +26,7 @@ const ALL = Object.freeze(/** @type {InputKind[]} */ (['outputs', 'context', 'pa
 const DOCUMENTS = Object.freeze(/** @type {InputKind[]} */ (['outputs', 'context']))
 const OWN_CHANGES = Object.freeze(/** @type {InputKind[]} */ (['outputs', 'patch', 'files']))
 const CHANGES = Object.freeze(/** @type {InputKind[]} */ (['patch', 'files']))
+const CHANGES_AND_COMPONENTS = Object.freeze(/** @type {InputKind[]} */ (['patch', 'files', 'components']))
 
 /** @type {Trigger} */
 const MOCKS = Object.freeze({
@@ -37,8 +39,8 @@ const CONTRACTS = Object.freeze({
   line: /\bVerifyAsync\b|\bPact\w*|\bProviderVerifier|\bContractTest/,
 })
 
-/** The lenses that read less than everything. @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean, trigger?: Trigger }>>} */
-const KNOWN = Object.freeze({
+/** The lenses that read less than everything. */
+const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean, trigger?: Trigger }>>} */ (/** @type {unknown} */ (Object.freeze({
   __proto__: null,
   'architecture-compliance': { inputs: OWN_CHANGES },
   fitness: { inputs: DOCUMENTS },
@@ -47,12 +49,12 @@ const KNOWN = Object.freeze({
   'boundary-enforcement': { inputs: OWN_CHANGES },
   'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files'])) },
   'cold-reader': { inputs: CHANGES, blind: true },
-  'mock-fidelity': { inputs: CHANGES, trigger: MOCKS },
-  'contract-fidelity': { inputs: CHANGES, trigger: CONTRACTS },
-})
+  'mock-fidelity': { inputs: CHANGES_AND_COMPONENTS, trigger: MOCKS },
+  'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS, trigger: CONTRACTS },
+})))
 
 /** @param {string} name @returns {Lens} */
-export const lensOf = (name) => {
+const lensOf = (name) => {
   const known = KNOWN[name]
   return { name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, trigger: known?.trigger ?? null }
 }

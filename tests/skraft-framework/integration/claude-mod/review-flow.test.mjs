@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import {
-  LENSES, NOMINAL, SECURITY_LENS, SLUG, commit, fillOutputs, finding, lensDispatches, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
+  LENSES, NOMINAL, SECURITY_LENS, SLUG, refutes, commit, fillOutputs, finding, lensDispatches, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -35,9 +35,7 @@ const SIZES = Object.freeze({ design_review: 3, distill_review: 4, deliver_revie
 /** `/skraft <slug>` on the repository, the scripted LLM answering every spawn, until the run stops. */
 const runOn = async (cwd, { acts, reviews, sizes = SIZES, turnCostUsd } = {}) => {
   const llm = scriptedLlm({ cwd, acts, reviews })
-  /** @type {Awaited<ReturnType<typeof scriptedModHost>>} */
-  let mod
-  mod = await scriptedModHost({ cwd, turnCostUsd, otherwise: answersTogether(llm, () => mod.spawns, sizes) })
+  const mod = await scriptedModHost({ cwd, turnCostUsd, otherwise: answersTogether(llm, () => mod.spawns, sizes) })
   await mod.command(SLUG)
   const outcome = await mod.settled()
   return { outcome, mod, spawns: mod.spawns, timeline: mod.timeline, events: journal(cwd, SLUG) }
@@ -53,7 +51,7 @@ const startedTogether = (timeline) => {
 }
 
 /** How the review hands a confirmed finding to the phase agent. */
-const FINDING_LINE = 'consistency F1 blocker at docs/adr/adr-001-card-payment.md:3: The ADR names no payment provider (suggestion: name the provider)'
+const FINDING_LINE = 'consistency F1 G1 blocker at docs/adr/adr-001-card-payment.md:3: The ADR names no payment provider (suggestion: name the provider)'
 
 const lensEvents = (events, step) => events.filter((event) => event.type === 'review.lens' && event.step === step)
 const recorded = (events, step) => events.filter((event) => event.type === 'step.recorded' && event.step === step)
@@ -99,7 +97,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
     `skraft ${SLUG} · design · pass 2 · attempt 1`, ...lensLabels('design_review', { visit: 2 }),
   ])
   assert.equal(spawns[5].subagentType, 'skraft:finding-refuter')
-  assert.match(spawns[5].prompt, /^## Skraft finding check: consistency F1\n- Finding: blocker at docs\/adr\/adr-001-card-payment\.md:3: The ADR names no payment provider\n/)
+  assert.match(spawns[5].prompt, /^## Skraft finding check: consistency F1\n- Finding: G1 blocker at docs\/adr\/adr-001-card-payment\.md:3: The ADR names no payment provider\n/)
   assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ step, visit, lens, finding: id, verdict }) => [step, visit, lens, id, verdict]), [['design_review', 1, 'consistency', 'F1', 'confirmed']])
   assert.deepEqual(recorded(events, 'design_review')[0].failures, [FINDING_LINE])
   assert.ok(spawns[6].prompt.includes('- Pass: 2, after the review sent the work back'), spawns[6].prompt)
@@ -113,9 +111,9 @@ test('a lens that answers twice without a readable verdict blocks the run as len
   const { outcome, spawns, events, mod } = await runOn(cwd, { reviews: { fitness: ['The design fits.', 'It fits, really.'] } })
 
   assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['blocked', 'DESIGN', 'lens-unreadable'])
-  assert.equal(outcome.reason, 'fitness-lens answered 2 times without a readable verdict: the answer is not JSON')
+  assert.equal(outcome.reason, 'fitness-lens answered 2 times without a readable verdict: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)')
   assert.deepEqual(spawns.slice(2).map((spawn) => spawn.description), [...lensLabels('design_review'), `skraft ${SLUG} · design_review · fitness · attempt 2`])
-  assert.ok(spawns.at(-1).prompt.endsWith('Your previous answer was refused: the answer is not JSON. Answer again with the JSON document only.'), spawns.at(-1).prompt)
+  assert.ok(spawns.at(-1).prompt.endsWith('Your previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), spawns.at(-1).prompt)
   assert.deepEqual(recorded(events, 'design_review').map(({ outcome: result, code }) => [result, code]), [['blocked', 'lens-unreadable']])
   assert.equal(mod.notes.at(-1), `skraft ${SLUG}: blocked (lens-unreadable) — ${outcome.reason}`)
 })
@@ -169,4 +167,51 @@ test('the session cost a review batch adds lands on the review step.recorded, no
   ])
   assert.deepEqual(events.filter((event) => event.type === 'review.lens' && 'cost' in event), [])
   assert.equal(events.filter((event) => event.type === 'review.lens').length, 10)
+})
+
+test('a blocker the refuter refutes does not count; an unverifiable high finding does, marked as not verified', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const revises = (brief, { slug }) => {
+    fillOutputs(brief, 'Payments has one owner.\n')
+    commit(cwd, `docs(${slug}): one owner for payments`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\nPayments owns refunds.\n' })
+    writeResult(brief, { status: 'done', summary: 'owner named' })
+  }
+
+  const { outcome, spawns, events } = await runOn(cwd, {
+    acts: { 'solution-architect': [NOMINAL['solution-architect'], revises] },
+    reviews: {
+      consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'The ADR names no payment provider'), finding('F2', 'high', 'Two contexts own payments')])],
+      refuter: [refutes('refuted', 'docs/adr/adr-001-card-payment.md:3 names Acme Pay'), refutes('unverifiable', 'the context map does not say')],
+    },
+  })
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(spawns.filter((item) => item.description.includes(' · refute ')).map((item) => item.description), [
+    `skraft ${SLUG} · design_review · refute consistency F1 · attempt 1`, `skraft ${SLUG} · design_review · refute consistency F2 · attempt 1`,
+  ])
+  assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict }) => [lens, id, verdict]), [['consistency', 'F1', 'refuted'], ['consistency', 'F2', 'unverifiable']])
+  assert.deepEqual(recorded(events, 'design_review')[0].failures, ['consistency F2 G1 high at docs/adr/adr-001-card-payment.md:3: Two contexts own payments (suggestion: name the provider) (not verified)'])
+  assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+})
+
+test('on pass 2 only the lenses that had findings or whose inputs changed run again; a clean one whose inputs did not move is taken over', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const blocker = finding('F1', 'blocker', 'The ADR names no payment provider')
+  const reworks = (brief, { slug }) => {
+    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\nAccepted: Acme Pay.\n' })
+    writeResult(brief, { status: 'done', summary: 'provider named' })
+  }
+
+  const { outcome, spawns, events } = await runOn(cwd, {
+    acts: { 'solution-architect': [NOMINAL['solution-architect'], reworks] },
+    reviews: { consistency: [says('consistency', 'fail', [blocker])] },
+  })
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(spawns.filter((item) => / · design_review · .* · pass 2 · /.test(item.description)).map((item) => item.description).sort(), [
+    `skraft ${SLUG} · design_review · architecture-compliance · pass 2 · attempt 1`, `skraft ${SLUG} · design_review · consistency · pass 2 · attempt 1`,
+  ])
+  assert.deepEqual(lensEvents(events, 'design_review').filter((event) => event.visit === 2).map(({ lens, reused }) => [lens, reused ?? false]).sort(), [
+    ['architecture-compliance', false], ['consistency', false], ['fitness', true],
+  ])
 })

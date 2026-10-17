@@ -57,6 +57,21 @@ test('the diff keeps the a/ and b/ prefixes and no color, whatever the repositor
   assert.equal(api.includes('\u001b['), false)
 })
 
+test('the diff shows every file\'s real text, whatever attributes or text conversion the repository sets', async (t) => {
+  const { work, base, sourceControl } = changedSinceBase(t)
+  writeFileSync(join(work, 'services', 'api', '.gitattributes'), '*.cs -diff\n')
+  mkdirSync(join(work, '.git', 'info'), { recursive: true })
+  writeFileSync(join(work, '.git', 'info', 'attributes'), 'Payment.cs diff=clean\n')
+  git(work, 'config', 'diff.clean.textconv', 'sed s/Amount/Nothing/')
+  git(work, 'config', 'diff.clean.binary', 'true')
+
+  const api = await sourceControl.diff('services/api', base)
+
+  assert.equal(api.includes('Binary files'), false)
+  assert.match(api, /\n\+class Payment \{ int Amount; \}\n/)
+  assert.match(api, /\n\+class Refund \{\}\n/)
+})
+
 test('the diff is null when the base is unknown, and empty when nothing changed under the folder', async (t) => {
   const { work, sourceControl } = changedSinceBase(t)
   git(work, 'add', '-A')

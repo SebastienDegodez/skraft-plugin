@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
 import { PLUGIN_ROOT, actsAs, simulatedContext, trackingDir } from './simulated-host.mjs'
 import {
-  LENSES, NOMINAL, SECURITY_LENS, SLUG, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
+  LENSES, NOMINAL, SECURITY_LENS, SLUG, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
@@ -36,9 +36,7 @@ const answersTogether = (llm, calls, sizes) => async (call) => {
 /** Runs the workflow for a new slug on the repository, the scripted LLM answering every agent call. */
 const runOn = async (cwd, { acts, reviews, sizes = { design_review: 3, distill_review: 4, deliver_review: 3 } } = {}) => {
   const llm = scriptedLlm({ cwd, acts, reviews })
-  /** @type {ReturnType<typeof simulatedContext>} */
-  let host
-  host = simulatedContext({ args: { slug: SLUG }, otherwise: answersTogether(llm, () => host.calls, sizes) })
+  const host = simulatedContext({ args: { slug: SLUG }, otherwise: answersTogether(llm, () => host.calls, sizes) })
   const outcome = await runSkraftPipelineWorkflow(host.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
   return { outcome, llm, calls: host.calls, timeline: host.timeline, events: journal(cwd, SLUG) }
 }
@@ -53,7 +51,7 @@ const startedTogether = (timeline) => {
 }
 
 /** How the review hands a confirmed finding to the phase agent. */
-const FINDING_LINE = 'consistency F1 blocker at docs/adr/adr-001-card-payment.md:3: The ADR names no payment provider (suggestion: name the provider)'
+const FINDING_LINE = 'consistency F1 G1 blocker at docs/adr/adr-001-card-payment.md:3: The ADR names no payment provider (suggestion: name the provider)'
 
 const lensEvents = (events, step) => events.filter((event) => event.type === 'review.lens' && event.step === step)
 
@@ -94,7 +92,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
   const refute = calls.filter((call) => call.label.includes(' · refute '))
   assert.deepEqual(refute.map(({ agent, label }) => `${agent} | ${label}`), [`skraft:finding-refuter | skraft ${SLUG} · design_review · refute consistency F1 · attempt 1`])
-  assert.match(refute[0].prompt, /^## Skraft finding check: consistency F1\n- Finding: blocker at docs\/adr\/adr-001-card-payment\.md:3: The ADR names no payment provider\n/)
+  assert.match(refute[0].prompt, /^## Skraft finding check: consistency F1\n- Finding: G1 blocker at docs\/adr\/adr-001-card-payment\.md:3: The ADR names no payment provider\n/)
   assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ step, visit, lens, finding: id, verdict }) => [step, visit, lens, id, verdict]), [['design_review', 1, 'consistency', 'F1', 'confirmed']])
   const second = calls.find((call) => call.label === `skraft ${SLUG} · design · pass 2 · attempt 1`)
   assert.ok(second.prompt.includes('- Pass: 2, after the review sent the work back'), second.prompt)
@@ -121,10 +119,10 @@ test('a lens that answers twice without a readable verdict blocks the run as len
   const { outcome, calls, events } = await runOn(cwd, { reviews: { fitness: ['The design fits.', 'It fits, really.'] } })
 
   assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['blocked', 'DESIGN', 'lens-unreadable'])
-  assert.equal(outcome.reason, 'fitness-lens answered 2 times without a readable verdict: the answer is not JSON')
+  assert.equal(outcome.reason, 'fitness-lens answered 2 times without a readable verdict: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)')
   const fitness = calls.filter((call) => call.label.includes(' · fitness · '))
   assert.deepEqual(fitness.map((call) => call.label), [`skraft ${SLUG} · design_review · fitness · attempt 1`, `skraft ${SLUG} · design_review · fitness · attempt 2`])
-  assert.ok(fitness[1].prompt.endsWith('Your previous answer was refused: the answer is not JSON. Answer again with the JSON document only.'), fitness[1].prompt)
+  assert.ok(fitness[1].prompt.endsWith('Your previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), fitness[1].prompt)
   assert.deepEqual(recordedReview(events), [['design_review', 'blocked', 'lens-unreadable']])
   assert.equal(calls.some((call) => call.label.includes(' · distill ')), false)
 })
@@ -168,4 +166,51 @@ test('a repository lens added to design_review is called with the others, under 
   assert.match(design.find((call) => call.agent === `${SECURITY_LENS}-lens`).prompt, new RegExp(`^## Skraft review lens: ${SECURITY_LENS} \\(DESIGN\\)\\n`))
   assert.equal(startedTogether(timeline).design_review, true)
   assert.deepEqual(lensEvents(events, 'design_review').map(({ lens }) => lens).sort(), ['acme-security', 'architecture-compliance', 'consistency', 'fitness'])
+})
+
+test('a blocker the refuter refutes does not count; an unverifiable high finding does, marked as not verified', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const revises = (brief, { slug }) => {
+    fillOutputs(brief, 'Payments has one owner.\n')
+    commit(cwd, `docs(${slug}): one owner for payments`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\nPayments owns refunds.\n' })
+    writeResult(brief, { status: 'done', summary: 'owner named' })
+  }
+
+  const { outcome, calls, events } = await runOn(cwd, {
+    acts: { 'solution-architect': [NOMINAL['solution-architect'], revises] },
+    reviews: {
+      consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'The ADR names no payment provider'), finding('F2', 'high', 'Two contexts own payments')])],
+      refuter: [refutes('refuted', 'docs/adr/adr-001-card-payment.md:3 names Acme Pay'), refutes('unverifiable', 'the context map does not say')],
+    },
+  })
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(calls.filter((item) => item.label.includes(' · refute ')).map((item) => item.label), [
+    `skraft ${SLUG} · design_review · refute consistency F1 · attempt 1`, `skraft ${SLUG} · design_review · refute consistency F2 · attempt 1`,
+  ])
+  assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict }) => [lens, id, verdict]), [['consistency', 'F1', 'refuted'], ['consistency', 'F2', 'unverifiable']])
+  assert.deepEqual(events.find((event) => event.type === 'step.recorded' && event.step === 'design_review').failures, ['consistency F2 G1 high at docs/adr/adr-001-card-payment.md:3: Two contexts own payments (suggestion: name the provider) (not verified)'])
+  assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+})
+
+test('on pass 2 only the lenses that had findings or whose inputs changed run again; a clean one whose inputs did not move is taken over', async (t) => {
+  const { cwd } = pipelineRepository(t)
+  const blocker = finding('F1', 'blocker', 'The ADR names no payment provider')
+  const reworks = (brief, { slug }) => {
+    commit(cwd, `docs(${slug}): name the payment provider`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\nAccepted: Acme Pay.\n' })
+    writeResult(brief, { status: 'done', summary: 'provider named' })
+  }
+
+  const { outcome, calls, events } = await runOn(cwd, {
+    acts: { 'solution-architect': [NOMINAL['solution-architect'], reworks] },
+    reviews: { consistency: [says('consistency', 'fail', [blocker])] },
+  })
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(calls.filter((item) => / · design_review · .* · pass 2 · /.test(item.label)).map((item) => item.label).sort(), [
+    `skraft ${SLUG} · design_review · architecture-compliance · pass 2 · attempt 1`, `skraft ${SLUG} · design_review · consistency · pass 2 · attempt 1`,
+  ])
+  assert.deepEqual(lensEvents(events, 'design_review').filter((event) => event.visit === 2).map(({ lens, reused }) => [lens, reused ?? false]).sort(), [
+    ['architecture-compliance', false], ['consistency', false], ['fitness', true],
+  ])
 })

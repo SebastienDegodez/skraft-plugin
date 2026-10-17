@@ -1,3 +1,4 @@
+import { readOrName } from './workspace-reading.mjs'
 import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../domain/config/relative-path.mjs'
 import { parseCommand } from '../domain/gates/command-line.mjs'
@@ -65,7 +66,7 @@ export const headsOf = async (deps, base) => {
 
 /** @param {Pick<CheckDeps, 'workspace' | 'hasher'>} deps @param {string} path relative to the working copy */
 const contentHash = async ({ workspace, hasher }, path) => {
-  const text = await workspace.read(path)
+  const text = await readOrName(workspace, path)
   return text === null ? null : hasher.sha256(text)
 }
 
@@ -76,8 +77,8 @@ const contentHash = async ({ workspace, hasher }, path) => {
  * @param {{ deps: CheckDeps, slug: string, config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} context
  * @param {{
  *   role: import('../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
- *   visitHeads: Head[], sentBack: boolean, known: KnownCommits,
- * }} step visitHeads: the heads when the pass started; sentBack: the gates sent the work back
+ *   visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits,
+ * }} step visitHeads: the heads when the pass started; redByGateFailure: the gates sent the work back
  * @returns {Promise<StepCheck>}
  */
 export const checkStep = async ({ deps, slug, config, base }, step) => {
@@ -197,13 +198,13 @@ const isRootFile = (path, root) => {
  * replayed; the environment reason when the machine cannot check them.
  * @param {CheckDeps} deps
  * @param {{ config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} run
- * @param {{ visitHeads: Head[], sentBack: boolean, known: KnownCommits }} step
+ * @param {{ visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number }>}
  */
-const checkCommits = async (deps, { config, base }, { visitHeads, sentBack, known }) => {
+const checkCommits = async (deps, { config, base }, { visitHeads, redByGateFailure, known }) => {
   const history = await commitsOf(deps, visitHeads)
   if (typeof history === 'string') return { environment: history, checked: [] }
-  const judged = judgeCommits(history, { sentBack })
+  const judged = judgeCommits(history, { redByGateFailure })
   const replayed = await replayReds(deps, { config, base, judged, known })
   const checked = report(judged, replayed.replays)
   if (replayed.environment !== null) return { environment: replayed.environment, checked }

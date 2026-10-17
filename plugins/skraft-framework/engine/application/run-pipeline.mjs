@@ -404,7 +404,7 @@ const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, fee
   return checkStep({ deps, slug, config, base: run.base }, {
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
-    sentBack: inState ? run.nodes[node.id].sentBack : feedback.length > 0 && sentBy !== 'review',
+    redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : feedback.length > 0 && sentBy !== 'review',
   })
 }
 
@@ -534,8 +534,8 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
 const review = async (context, run, next) => {
   await openReview(context, next)
   const started = context.deps.clock.now()
-  const { deps, slug, journal, loaded } = context
-  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, sources: loaded.sources, run, step: next })
+  const { deps, slug, journal, loaded, config } = context
+  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, components: config.components, sources: loaded.sources, run, step: next })
   if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
   await recordReview(context, run, next, { reviewed, started })
   return null
@@ -553,7 +553,7 @@ const openReview = async ({ deps, slug, journal }, { phase, node, visit, resumed
  * @param {{ reviewed: Exclude<Awaited<ReturnType<typeof runReview>>, { stop: unknown }>, started: Date }} review
  */
 const recordReview = async (context, run, { node, visit }, { reviewed, started }) => {
-  const fields = 'blocked' in reviewed ? blockedReview(reviewed.blocked) : verdictOf(context, run, node.id, reviewed.verdict)
+  const fields = 'blocked' in reviewed ? blockedReview(reviewed.blocked) : recordedFieldsOf(context, run, node.id, reviewed.verdict)
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt: 1, ...fields,
     durationMs: context.deps.clock.now().getTime() - started.getTime(),
@@ -562,14 +562,18 @@ const recordReview = async (context, run, { node, visit }, { reviewed, started }
   context.deps.progress.log(`${context.slug}: ${node.id} ${fields.outcome === 'blocked' ? `blocked (${fields.code})` : fields.reason}`)
 }
 
-/** @param {{ code: string, reason: string }} blocked */
+/**
+ * A lens that answered twice without a readable verdict blocks the node for good, as the
+ * breaker does for an agent: a new run of the same slug stays blocked.
+ * @param {{ code: string, reason: string }} blocked
+ */
 const blockedReview = ({ code, reason }) => ({ outcome: 'blocked', code, failures: [], next: null, reason })
 
 /**
  * @param {Context} context @param {RunState} run @param {string} from
  * @param {import('../domain/review/verdict.mjs').ReviewVerdict} verdict
  */
-const verdictOf = (context, run, from, { status, reasons, summary }) => {
+const recordedFieldsOf = (context, run, from, { status, reasons, summary }) => {
   const routed = leave(context, run, from, status, reasons)
   return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, reason: routed.reason ?? summary }
 }

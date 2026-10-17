@@ -39,10 +39,12 @@ const ATTRIBUTES = Object.freeze({
   review: { required: ['lenses'], optional: [] },
 })
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
-const LABELS = Object.freeze({ gate: Object.freeze(['PASS', 'FAIL']), review: Object.freeze(['APPROVED', 'NEEDS_REWORK']) })
+const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK'])) })
 const PHASE = /^[A-Z][A-Z0-9_]*$/
 const AGENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const POSITIVE = /^[1-9][0-9]*$/
+/** A node id names the node's files in the tracking folder: a word, never a path. */
+const NODE_ID = /^[A-Za-z_][A-Za-z0-9_-]*$/
 
 /** @param {string} value @returns {string[]} */
 const listOf = (value) => value.split(',').map((item) => item.trim()).filter((item) => item !== '')
@@ -68,6 +70,7 @@ const NODE_CHECKS = {
 
 /** @type {Record<string, (value: string) => string | null>} */
 const EDGE_CHECKS = {
+  // A label's value depends on the kind of node the edge leaves: labelReasons checks it.
   label: () => null,
   max_visits: positive,
 }
@@ -172,7 +175,7 @@ const edgeOf = ({ from, to, attributes }, source) => ({
 
 /** A node with no phase takes the phase of its first predecessor in `order`. @param {Record<string, WorkflowNode>} nodes @param {string[]} order @param {WorkflowEdge[]} edges */
 const inheritPhases = (nodes, order, edges) => {
-  for (const id of order.filter((id) => id in nodes)) {
+  for (const id of order.filter((candidate) => candidate in nodes)) {
     const first = order.find((other) => edges.some((edge) => edge.from === other && edge.to === id))
     nodes[id].phase ??= first === undefined ? null : nodes[first]?.phase ?? null
   }
@@ -186,6 +189,7 @@ const nodeAttributeReasons = ({ graph }) => graph.nodes.flatMap(nodeReasons)
 
 /** @param {import('./dot.mjs').DotNode} node */
 const nodeReasons = ({ id, attributes }) => {
+  if (!NODE_ID.test(id)) return [`node ${JSON.stringify(id)}: an id is a word of letters, digits, _ and -, since it names the node's files`]
   const { shape } = attributes
   const kind = KINDS.get(shape ?? '')
   if (kind === undefined) return [shapeReason(id, shape)]

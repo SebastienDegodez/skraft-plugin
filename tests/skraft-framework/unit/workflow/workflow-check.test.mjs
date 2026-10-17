@@ -200,11 +200,12 @@ test('every faulty node attribute is reported with its node, in declaration orde
   start   [shape=Mdiamond]
   plan    [shape=box, agent="Solution Planner", phase="plan", max_attempts=0, outputs="/plan.md", writes="C:/src", locked=yes]
   draft   [shape=box, phase="DRAFT", outputs="notes/../draft.md"]
+  "../../escape" [shape=component, lenses="consistency"]
   check   [shape=parallelogram, gate="build,smoke", goal_gate=yes, locked=maybe, unlock=" ", phase="CHECK", agent="checker"]
   verify  [shape=parallelogram, gate="", phase="CHECK"]
   confirm [shape=parallelogram, phase="CHECK", label="Confirm"]
   done    [shape=Msquare]
-  start -> plan -> draft -> check -> verify -> confirm -> done
+  start -> plan -> draft -> "../../escape" -> check -> verify -> confirm -> done
 }`
   const { commands } = host({ files: designating(faulty) })
 
@@ -217,6 +218,7 @@ test('every faulty node attribute is reported with its node, in declaration orde
     'node plan: attribute locked is not supported on a box node (supported: label, shape, phase, agent, outputs, writes, max_attempts)',
     'node draft: outputs="notes/../draft.md" must list paths relative to the tracking folder, without ..',
     'node draft: a box node needs agent="…"',
+    'node "../../escape": an id is a word of letters, digits, _ and -, since it names the node\'s files',
     'node check: gate="build,smoke" must list gates among build, format, lint, test, architecture, coverage, mutation',
     'node check: goal_gate="yes" must be true or false',
     'node check: locked="maybe" must be true or false',

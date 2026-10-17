@@ -1,8 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { designating, edit } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
+import { openJournal } from '../../../../plugins/skraft-framework/engine/application/run-journal.mjs'
 
 const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
 
@@ -45,7 +46,7 @@ test('a lens that passed with a low finding runs again on the next pass, its inp
 
 test('an answer that cannot be read is asked once more with the reason; a second one stops the run naming the lens', async () => {
   const host = scripted({}, (it) => nominal(it).slice(0, 2))
-  host.agentRunner.review = lenses({ consistency: ['Looks fine to me.', '{"lens": "consistency", "verdict": "ok"}'] })
+  host.agentRunner.review = lenses({ consistency: ['Looks fine to me.', 'lens: consistency\nverdict: ok\nfindings: []'] })
 
   const outcome = await host.start()
 
@@ -55,7 +56,7 @@ test('an answer that cannot be read is asked once more with the reason; a second
   })
   const asked = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'consistency-lens')
   assert.deepEqual(asked.map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`, `skraft ${SLUG} · design_review · consistency · attempt 2`])
-  assert.ok(asked[1].prompt.endsWith('\n\nYour previous answer was refused: the answer is not JSON. Answer again with the JSON document only.'), asked[1].prompt)
+  assert.ok(asked[1].prompt.endsWith('\n\nYour previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), asked[1].prompt)
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map((dispatch) => dispatch.agent)), [['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'], ['consistency-lens']])
   const recorded = host.events().filter((event) => event.type === 'step.recorded').at(-1)
   assert.deepEqual([recorded.step, recorded.outcome, recorded.next], ['design_review', 'blocked', null])
@@ -67,13 +68,13 @@ test('an answer that cannot be read is asked once more with the reason; a second
 test('an answer read on the second ask counts; one in a fenced block after prose is read; a lens that answered nothing is asked again', async () => {
   const host = scripted({}, nominal)
   host.agentRunner.review = lenses({
-    consistency: [{ ok: false, text: '', error: 'consistency-lens ended: max_turns' }, `I checked the ADR.\n\n\`\`\`json\n${says('consistency', 'pass')}\n\`\`\``],
-    fitness: [`\`\`\`text\nnotes\n\`\`\`\n\`\`\`json\n${says('fitness', 'pass')}\n\`\`\``],
+    consistency: [{ ok: false, text: '', error: 'consistency-lens ended: max_turns' }, `I checked the ADR.\n\n\`\`\`yaml\n${says('consistency', 'pass')}\n\`\`\``],
+    fitness: [`\`\`\`yaml\nlens: fitness\nverdict: fail\nfindings: []\n\`\`\`\nThat was the example; my answer:\n\`\`\`\n${says('fitness', 'pass')}\n\`\`\``],
   })
 
   assert.equal((await host.start()).status, 'done')
   const retry = host.agentRunner.reviewed().find((dispatch) => dispatch.label.endsWith('consistency · attempt 2'))
-  assert.ok(retry.prompt.endsWith('Your previous answer was refused: consistency-lens ended: max_turns. Answer again with the JSON document only.'), retry.prompt)
+  assert.ok(retry.prompt.endsWith('Your previous answer was refused: consistency-lens ended: max_turns. Answer again with the YAML document only.'), retry.prompt)
 })
 
 test('a refuter answer that cannot be read twice leaves the finding unverifiable, so it counts', async () => {
@@ -82,7 +83,7 @@ test('a refuter answer that cannot be read twice leaves the finding unverifiable
 
   await host.start()
 
-  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ verdict, reason }) => [verdict, reason]), [['unverifiable', 'unreadable twice: the answer is not JSON']])
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ verdict, reason }) => [verdict, reason]), [['unverifiable', 'unreadable 2 times: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)']])
   assert.deepEqual(reviews(host)[0], ['design_review', 1, 'needs-rework', 'design'])
 })
 
@@ -116,7 +117,7 @@ test('a resumed review does not check again a finding the refuter already answer
     'refute consistency F1', 'refute consistency F2', 'refute consistency F2',
   ])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual(recorded.failures, ['consistency F2 high at src/Checkout.cs:12: two contexts own payments'])
+  assert.deepEqual(recorded.failures, ['consistency F2 G1 high at src/Checkout.cs:12: two contexts own payments'])
 })
 
 test('each lens journals its own cost, and the review records what its lenses and checks cost together', async () => {
@@ -155,7 +156,11 @@ test('a lens the repository adds to a review runs with the others, as a reposito
   const [batch] = host.agentRunner.batches
   assert.deepEqual(batch.map(({ agent: id, source }) => `${id} ${source}`), ['consistency-lens plugin', 'architecture-compliance-lens plugin', 'fitness-lens plugin', 'acme-threat-model-lens repository'])
   assert.ok(batch[3].prompt.startsWith('## Skraft review lens: acme-threat-model (DESIGN)\n- Story: #42 — Pay by card\n'), batch[3].prompt)
-  assert.equal(batch[3].prompt.split('\n').filter((line) => line.startsWith('  - ')).length, 5)
+  assert.deepEqual(batch[3].prompt.split('\n').filter((line) => /^  - .+: \/work\//.test(line)).map((line) => line.split(':')[0].trim()), [
+    '- Review context (story, project rules, who wrote which document)', '- Documents of this phase', '- Documents of the story and of the other phases',
+    '- Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs)',
+    '- Paths those changes touch (a path with no section in the patch is a new file',
+  ])
   assert.deepEqual(reviews(host)[0], ['design_review', 1, 'needs-rework', 'design'])
 })
 
@@ -175,18 +180,31 @@ test('a lens nobody provides refuses the workflow, naming the lens and its agent
 
 test('each way an answer cannot be read is told to the lens on its second ask', async () => {
   const good = says('consistency', 'pass')
+  const notYaml = (line, what) => `the answer is not the YAML document the brief shows (line ${line}: ${what})`
+  const many = Array.from({ length: 21 }, (_, index) => finding(`F${index + 1}`, 'low', `note ${index + 1}`))
   const cases = [
-    ['', 'the answer holds no JSON document'],
-    ['[1, 2]', 'the answer is not a JSON object'],
-    ['null', 'the answer is not a JSON object'],
-    ['"pass"', 'the answer is not a JSON object'],
+    ['', 'the answer holds no YAML document'],
+    ['{"lens": "consistency", "verdict": "pass", "findings": []}', notYaml(1, 'is not a `key: value` line')],
+    ['- 1\n- 2', notYaml(1, 'is not a `key: value` line')],
     [{ ok: false, text: '' }, 'no answer'],
-    [`\`\`\`json\n${says('fitness', 'pass')}\n\`\`\`\n\`\`\`\n${good}\n\`\`\``, 'lens is "fitness", expected "consistency"'],
-    ['{"verdict": "pass"}', 'lens is null, expected "consistency"'],
-    ['{"lens": "consistency"}', 'verdict null is not one of pass, fail, inconclusive'],
-    ['{"lens": "consistency", "verdict": "pass", "findings": {}}', 'findings is not a list'],
-    [says('consistency', 'fail', [finding('F1', 'high', 'one'), { severity: 'major', description: 'two' }]), 'finding 2 needs a severity among blocker, high, medium, low and a description'],
-    [says('consistency', 'fail', [{ severity: 'high', description: '  ' }]), 'finding 1 needs a severity among blocker, high, medium, low and a description'],
+    [`\`\`\`yaml\n${good}\n\`\`\`\n\`\`\`\n${says('fitness', 'pass')}\n\`\`\``, 'lens is "fitness", expected "consistency"'],
+    ['verdict: pass\nfindings: []', 'lens is null, expected "consistency"'],
+    ['lens: consistency\nfindings: []', 'verdict null is not one of pass, fail, inconclusive'],
+    ['lens: consistency\nverdict: pass', 'findings is missing; write `findings: []` when you find none'],
+    ['lens: consistency\nverdict: pass\nfindings: none', notYaml(3, 'findings must be a list of `- key: value` items, or []')],
+    ['lens: consistency\nverdict: fail\ndefects:\n  - severity: blocker\n    description: "the ADR is missing"', 'the key defects is not in the contract; the keys are lens, verdict, findings'],
+    ['lens: consistency\nverdict: pass\nfindings: []\nlens: fitness', notYaml(4, 'repeats the key lens')],
+    ['lens: *consistency\nverdict: pass\nfindings: []', notYaml(1, 'starts its value with a YAML marker; quote the value')],
+    ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    severity: high\n    description: the port: named twice', notYaml(6, 'holds `: ` or ` #` in a plain value; quote the value')],
+    ['lens: consistency\nverdict: fail\nfindings:\n  - gate: G1\n    severity: high\n    description: "the port', notYaml(6, 'has a double-quoted value that does not close')],
+    ['lens: consistency\nverdict: pass\nfindings: []\n  extra: 1', notYaml(4, 'is indented where a top-level key belongs')],
+    ['lens: consistency\n\tverdict: pass', notYaml(2, 'is indented with a tab')],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one'), { gate: 'G2', severity: 'major', description: 'two' }]), 'finding 2: severity must be one of blocker, high, medium, low'],
+    [says('consistency', 'fail', [{ gate: 'G1', severity: 'high', description: '  ' }]), 'finding 1: description is empty'],
+    [says('consistency', 'fail', [{ severity: 'high', description: 'no gate named' }]), 'finding 1: gate must name the gate of your table, such as G1'],
+    [says('consistency', 'fail', [finding('F1', 'high', 'one', { rule: 'R1' })]), 'finding 1: the key rule is not in the contract; the keys are id, gate, severity, location, description, suggestion'],
+    [says('consistency', 'pass', [finding('F1', 'high', 'the ADR is missing')]), 'verdict is pass but finding F1 is high'],
+    [says('consistency', 'fail', many), '21 findings; give at most 20, the most severe first'],
   ]
   for (const [bad, reason] of cases) {
     const host = scripted({}, nominal)
@@ -195,30 +213,30 @@ test('each way an answer cannot be read is told to the lens on its second ask', 
     await host.start()
 
     const retry = host.agentRunner.reviewed().find((dispatch) => dispatch.label.endsWith('consistency · attempt 2'))
-    assert.ok(retry?.prompt.endsWith(`Your previous answer was refused: ${reason}. Answer again with the JSON document only.`), `${bad}\n${retry?.prompt}`)
+    assert.ok(retry?.prompt.endsWith(`Your previous answer was refused: ${reason}. Answer again with the YAML document only.`), `${typeof bad === 'string' ? bad : JSON.stringify(bad)}\n${retry?.prompt}`)
   }
 })
 
-test('an untagged block is read when no json block is there; a finding without id is numbered by its place', async () => {
+test('the last fenced block of an answer is read whatever its tag, its words in any case; a finding without id takes the first free number, its text on one line', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
-  host.agentRunner.review = lenses({
-    consistency: [`Notes first.\n\`\`\`\n${says('consistency', 'fail', [finding('F1', 'low', 'a note'), { severity: 'medium', location: '', description: 'no owner for refunds' }])}\n\`\`\``],
-  })
+  const answer = says('consistency-lens', 'FAIL', [finding('F1', 'low', 'a note'), { gate: 'G2', severity: 'Medium', location: '', description: 'no owner\n   for refunds' }, finding('F3', 'low', 'another note')])
+  host.agentRunner.review = lenses({ consistency: [`Notes first.\n\`\`\`text\n${answer}\n\`\`\``] })
 
   await host.start()
 
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual(recorded.failures, ['consistency F2 medium: no owner for refunds'])
+  assert.deepEqual(recorded.failures, ['consistency F2 G2 medium: no owner for refunds'])
+  assert.deepEqual(host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency').findings.map(({ id }) => id), ['F1', 'F2', 'F3'])
 })
 
 test('a refuter answer with a verdict outside the three is asked again with the reason', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
-  host.agentRunner.review = lenses({ consistency: [blocker], refuter: ['{"reason": "?"}', refutes('confirmed')] })
+  host.agentRunner.review = lenses({ consistency: [blocker], refuter: ['reason: "?"', refutes('confirmed')] })
 
   await host.start()
 
   const retry = host.agentRunner.reviewed().find((dispatch) => dispatch.label.endsWith('refute consistency F1 · attempt 2'))
-  assert.ok(retry.prompt.endsWith('Your previous answer was refused: verdict null is not one of confirmed, refuted, unverifiable. Answer again with the JSON document only.'), retry.prompt)
+  assert.ok(retry.prompt.endsWith('Your previous answer was refused: verdict null is not one of confirmed, refuted, unverifiable. Answer again with the YAML document only.'), retry.prompt)
 })
 
 test('a lens two review nodes share is asked by each; the second never takes over the first one\'s verdict or checks', async () => {
@@ -245,7 +263,8 @@ test('every lens that answered unreadably twice is named', async () => {
 
   const outcome = await host.start()
 
-  assert.equal(outcome.reason, 'consistency-lens answered 2 times without a readable verdict: the answer is not JSON; fitness-lens answered 2 times without a readable verdict: the answer is not a JSON object')
+  const notYaml = 'the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)'
+  assert.equal(outcome.reason, `consistency-lens answered 2 times without a readable verdict: ${notYaml}; fitness-lens answered 2 times without a readable verdict: ${notYaml}`)
 })
 
 test('each agent\'s documents in the tracking folder reach the lenses, by phase, with a shared context naming who wrote them', async () => {
@@ -265,7 +284,7 @@ test('each agent\'s documents in the tracking folder reach the lenses, by phase,
   const design = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design')
   assert.deepEqual(design.documents, ['details/2026-10-11/context-map.md', 'details/2026-10-11/contracts-checkout.md'])
   const fitness = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'fitness-lens').prompt
-  assert.deepEqual(fitness.split('\n').filter((line) => line.startsWith('  - ')), [
+  assert.deepEqual(fitness.split('\n').filter((line) => /^  - .+: \//.test(line)), [
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/context-map.md`,
     `  - Documents of this phase: ${TRACKING}/details/2026-10-11/contracts-checkout.md`,
@@ -305,12 +324,12 @@ test('a lens reading the changed paths runs again when a changed file\'s content
 
 test('a lens answer that gives two findings the same id is asked again', async () => {
   const host = scripted({}, nominal)
-  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [{ severity: 'high', description: 'one' }, finding('F1', 'blocker', 'two')]), says('consistency', 'pass')] })
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'high', 'one'), finding('F1', 'blocker', 'two')]), says('consistency', 'pass')] })
 
   await host.start()
 
   const retry = host.agentRunner.reviewed().find((dispatch) => dispatch.label.endsWith('consistency · attempt 2'))
-  assert.ok(retry.prompt.endsWith('Your previous answer was refused: finding id F1 is used twice. Answer again with the JSON document only.'), retry.prompt)
+  assert.ok(retry.prompt.endsWith('Your previous answer was refused: finding id F1 is used twice. Answer again with the YAML document only.'), retry.prompt)
 })
 
 test('a review resumed after a stop still counts what its lenses cost before the stop, and the batches the host costs as a whole', async () => {
@@ -338,4 +357,148 @@ test('a review node naming a lens twice is refused', async () => {
   const outcome = await host.init()
 
   assert.match(outcome.reason, /node design_review: lenses="consistency,fitness,consistency" must list kebab-case lens names, each once/)
+})
+
+test('every attempt of a pass the review opened is told the review sent the work back', async () => {
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent({ result: null })(it), agent()(it), ...nominal(it).slice(2)])
+  host.agentRunner.review = lenses({ consistency: [blocker] })
+
+  assert.equal((await host.start()).status, 'done')
+
+  const second = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 2 · attempt 2`)
+  assert.ok(second.prompt.includes('- Pass: 2, after the review sent the work back'), second.prompt)
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'design').map(({ visit, attempt, sentBy }) => [visit, attempt, sentBy ?? null]), [
+    [1, 1, null], [2, 1, 'review'], [2, 2, 'review'],
+  ])
+})
+
+test('a DELIVER pass the review opened has no failing test to stand for its red: a fix with no red commit is refused', async () => {
+  const integrity = says('test-integrity', 'fail', [finding('F1', 'blocker', 'the test asserts nothing', { gate: 'G7' })])
+  const host = scripted({}, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it)])
+  host.agentRunner.review = lenses({ 'test-integrity': [integrity] })
+  host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
+
+  await host.start()
+
+  const deliver = host.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver')
+  assert.deepEqual(deliver.map(({ visit, attempt, outcome, code }) => [visit, attempt, outcome, code]), [[1, 1, 'done', null], [2, 1, 'failed', 'tdd']])
+  const judged = host.events().find((event) => event.type === 'commits.checked' && event.step === 'deliver' && event.visit === 2)
+  assert.deepEqual(judged.commits.map(({ subject, verdict }) => [subject, verdict]), [['fix(checkout): assert the card amount', 'green-without-red']])
+
+  const again = scripted({}, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it), agent()(it)])
+  again.agentRunner.review = lenses({ 'test-integrity': [integrity] })
+  assert.equal((await again.start()).code, 'tdd')
+  assert.deepEqual(again.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver').map(({ visit, attempt, outcome }) => [visit, attempt, outcome]), [[1, 1, 'done'], [2, 1, 'failed'], [2, 2, 'failed']])
+})
+
+test('a lens answer that sits in the journal before its pass started is not taken as that pass\'s answer', async () => {
+  const reference = scripted({}, nominal)
+  await reference.start()
+  const fingerprint = reference.events().find((event) => event.type === 'review.lens' && event.step === 'design_review' && event.lens === 'consistency').fingerprint
+
+  const host = scripted({}, (it) => [
+    nominal(it)[0],
+    async () => ({ ok: false, unavailable: true, text: '', error: 'the host went away' }),
+    ...nominal(it).slice(1),
+  ])
+  assert.equal((await host.start()).code, 'agent-unavailable')
+  const opened = await openJournal(host.deps, SLUG)
+  await opened.journal.append('review.lens', { step: 'design_review', visit: 1, lens: 'consistency', agent: 'consistency-lens', fingerprint, verdict: 'pass', findings: [] })
+
+  assert.equal((await host.run()).status, 'done')
+
+  assert.ok(host.agentRunner.reviewed().some((dispatch) => dispatch.label === `skraft ${SLUG} · design_review · consistency · attempt 1`))
+  assert.equal(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review' && event.lens === 'consistency').length, 2)
+})
+
+test('a resumed review asks again a lens whose inputs changed since it answered in that pass', async () => {
+  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '# ADR 001\n' } }, nominal)
+  host.agentRunner.review = lenses({ fitness: [{ ok: false, text: '', unavailable: true, error: 'fitness-lens is not installed' }] })
+  assert.equal((await host.start()).code, 'agent-unavailable')
+  await host.deps.workspace.write('docs/adr/adr-001-card-payment.md', '# ADR 001\nThe payment context owns refunds.\n')
+
+  await host.run()
+
+  assert.deepEqual(host.agentRunner.batches[1].map((dispatch) => dispatch.agent), ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'])
+})
+
+test('a lens reads the skills its descriptor lists before any other input, and so does the refuter of its findings; a skill or a rule file that changes makes it read again', async () => {
+  const skill = '/plugin/skills/architecture-review-criteria/SKILL.md'
+  const catalog = new InMemoryAgentCatalog({ skills: { 'consistency-lens': [skill], 'architecture-compliance-lens': [skill] } })
+  const host = scripted({ catalog, files: { 'AGENTS.md': '# Rules\n' } }, (it) => [
+    ...nominal(it).slice(0, 2),
+    agent({ fill: false, work: () => {
+      it.deps.workspace.write('AGENTS.md', '# Rules\nNo port vocabulary.\n')
+    } })(it),
+    ...nominal(it).slice(2),
+  ])
+  host.agentRunner.review = lenses({ consistency: [blocker] })
+
+  await host.start()
+
+  const first = host.agentRunner.reviewed().find((dispatch) => dispatch.label === `skraft ${SLUG} · design_review · consistency · attempt 1`).prompt.split('\n')
+  assert.deepEqual(first.slice(3, 5), [`- Skill (read it before any other input and judge with its criteria): ${skill}`, '- Read these inputs and the files they name; search the repository for nothing else:'])
+  const check = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'finding-refuter').prompt.split('\n')
+  assert.equal(check[2], `- Skill (read it before any other input and judge with its criteria): ${skill}`)
+  assert.equal(host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'fitness-lens').prompt.includes('- Skill'), false)
+  assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'])
+
+  const learning = scripted({ catalog: new InMemoryAgentCatalog() }, (it) => [
+    ...nominal(it).slice(0, 2),
+    agent({ fill: false, work: () => { it.deps.agentCatalog.skillsByAgent['fitness-lens'] = ['/plugin/skills/skraft-quality-bar/SKILL.md'] } })(it),
+    ...nominal(it).slice(2),
+  ])
+  learning.agentRunner.review = lenses({ consistency: [blocker] })
+  await learning.start()
+  assert.deepEqual(askedOn(learning, 'design_review', 2), ['consistency-lens', 'fitness-lens'])
+})
+
+test('a changed path that is no readable file, such as a nested repository, is reviewed by its name', async () => {
+  const host = scripted({}, (it) => [
+    ...nominal(it).slice(0, 3),
+    agent({ work: (work) => { tddCycle()(work); work.git.change('src/PaymentsSdk') } })(it),
+  ])
+  const read = host.deps.workspace.read.bind(host.deps.workspace)
+  host.deps.workspace.read = async (path) => {
+    if (path === 'src/PaymentsSdk') throw Object.assign(new Error('EISDIR: illegal operation on a directory, read'), { code: 'EISDIR' })
+    return read(path)
+  }
+
+  assert.equal((await host.start()).status, 'done')
+  assert.ok((await host.tracking.read(SLUG, 'reviews/deliver_review-1/changed-files.txt')).includes('src/PaymentsSdk\n'))
+})
+
+test('an answer in the usual YAML forms is read: comments, single quotes, blocks, a bare dash, an id given as a number, an empty suggestion', async () => {
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+  const answer = [
+    '# my verdict',
+    'lens: consistency   # the lens',
+    "verdict: 'fail'",
+    'findings:',
+    '  # the one that blocks',
+    '  - id: 7',
+    '    gate: G2',
+    '    severity: high',
+    "    location: 'docs/adr/adr-001.md:3'",
+    '    description: |',
+    "      The ADR's provider",
+    '      is not named.',
+    '    suggestion: ~',
+    '  -',
+    '    gate: C1',
+    '    severity: low',
+    '    description: >',
+    '      two names',
+    '      for one context',
+    '    suggestion: "name it \\"Payments\\"" # a note',
+  ].join('\n')
+  host.agentRunner.review = lenses({ consistency: [answer] })
+
+  await host.start()
+
+  const lensed = host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency')
+  assert.deepEqual(lensed.findings, [
+    { id: '7', gate: 'G2', severity: 'high', location: 'docs/adr/adr-001.md:3', description: "The ADR's provider is not named.", suggestion: null },
+    { id: 'F1', gate: 'C1', severity: 'low', location: '', description: 'two names for one context', suggestion: 'name it "Payments"' },
+  ])
 })

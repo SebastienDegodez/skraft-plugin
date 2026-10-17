@@ -69,3 +69,37 @@ test('each host finds only the agents it can start: Claude Code those of .claude
     [null, 'repository', 'repository', null, 'plugin'],
   )
 })
+
+test('the skills an agent lists under skills: are found in the plugin first, then in the working copy; one found nowhere is left out', async (t) => {
+  const cwd = tempFolder(t)
+  const pluginRoot = tempFolder(t)
+  const skill = (root, ...parts) => {
+    mkdirSync(join(root, ...parts), { recursive: true })
+    writeFileSync(join(root, ...parts, 'SKILL.md'), '# skill\n')
+  }
+  skill(pluginRoot, 'skills', 'review-criteria')
+  skill(cwd, '.github', 'skills', 'acme-rules')
+  skill(cwd, '.claude', 'skills', 'review-criteria')
+  mkdirSync(join(pluginRoot, 'com.anthropic.claude-code', 'agents'), { recursive: true })
+  writeFileSync(join(pluginRoot, 'com.anthropic.claude-code', 'agents', 'acme-lens.md'), [
+    '---', 'name: acme-lens', 'metadata:', '  skills:', '    - review-criteria', '    - acme-rules  # house rules', '    - nowhere', '    - ../escape', '  other: 1', '---', '# Acme lens',
+  ].join('\n'))
+  mkdirSync(join(cwd, '.claude', 'agents'), { recursive: true })
+  writeFileSync(join(cwd, '.claude', 'agents', 'plain-lens.md'), '---\nname: plain-lens\n---\n# Plain\n')
+  const { agentCatalog } = createNodeAdapters({ cwd, pluginRoot })
+
+  assert.deepEqual(await agentCatalog.skills('acme-lens'), [
+    join(pluginRoot, 'skills', 'review-criteria', 'SKILL.md'),
+    join(cwd, '.github', 'skills', 'acme-rules', 'SKILL.md'),
+  ])
+  assert.deepEqual(await agentCatalog.skills('plain-lens'), [])
+  assert.deepEqual(await agentCatalog.skills('unknown-lens'), [])
+  assert.deepEqual(await agentCatalog.skills('../acme-lens'), [])
+})
+
+test('every lens the plugin ships points its brief at a skill file that exists', async (t) => {
+  const { agentCatalog } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: PLUGIN_ROOT })
+
+  assert.deepEqual(await agentCatalog.skills('consistency-lens'), [join(PLUGIN_ROOT, 'skills', 'architecture-review-criteria', 'SKILL.md')])
+  assert.deepEqual(await agentCatalog.skills('coverage-lens'), [join(PLUGIN_ROOT, 'skills', 'acceptance-review-criteria', 'SKILL.md')])
+})

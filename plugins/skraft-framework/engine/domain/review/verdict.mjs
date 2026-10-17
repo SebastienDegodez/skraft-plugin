@@ -10,7 +10,10 @@
  * @typedef {import('./answers.mjs').Finding} Finding
  * @typedef {{ lens: string, finding: string, verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string }} RecordedRefutation
  * @typedef {{ status: 'APPROVED' | 'NEEDS_REWORK', reasons: string[], summary: string }} ReviewVerdict
- *   reasons: one line per finding or lens that sends the work back, for the next brief.
+ *   reasons: one line per finding or lens that sends the work back, for the next brief. A lens
+ *   result's verdict (pass, fail, inconclusive) and a refutation's (confirmed, refuted,
+ *   unverifiable) feed this status; the journal records it as the outcome approved or
+ *   needs-rework, and a run with no NEEDS_REWORK edge stops with the code review-rejected.
  */
 
 const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
@@ -49,8 +52,8 @@ const refutationOf = (refutations, lens, id) => refutations.find((refutation) =>
  * A finding as the agent it goes back to reads it.
  * @param {string} lens @param {Finding} finding @param {RecordedRefutation | undefined} refutation
  */
-const findingLine = (lens, { id, severity, location, description, suggestion }, refutation) => [
-  `${lens} ${id} ${severity}${location === '' ? '' : ` at ${location}`}: ${description}`,
+const findingLine = (lens, { id, gate, severity, location, description, suggestion }, refutation) => [
+  `${lens} ${id} ${gate} ${severity}${location === '' ? '' : ` at ${location}`}: ${description}`,
   ...(suggestion === null ? [] : [` (suggestion: ${suggestion})`]),
   ...(refutation?.verdict === 'unverifiable' ? [' (not verified)'] : []),
 ].join('')
@@ -59,5 +62,5 @@ const findingLine = (lens, { id, severity, location, description, suggestion }, 
 const summaryOf = (status, results, reasons) => {
   if (results.length === 0) return 'APPROVED: no lens applies to these changes'
   if (status === 'APPROVED') return `APPROVED: ${results.map((result) => result.lens).join(', ')} approve`
-  return `NEEDS_REWORK: ${reasons.length} finding${reasons.length > 1 ? 's' : ''} to address`
+  return `NEEDS_REWORK: ${reasons.length} reason${reasons.length > 1 ? 's' : ''} to address`
 }

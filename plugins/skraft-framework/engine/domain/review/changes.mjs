@@ -3,17 +3,23 @@ import { joinRelative } from '../config/relative-path.mjs'
 /**
  * The changes a review reads. The patch leaves the tracking folder out, since a lens gets the
  * documents of the run by their paths; the changed paths keep the documents the agents wrote
- * there, and leave out what the engine itself keeps (journal, results, reviews).
+ * there, and leave out what the engine itself keeps (journal, results, reviews). The tracking
+ * folder is the one at the top of a repository: a `.copilot-tracking` folder deeper in the
+ * code is code like any other.
  */
 
 const TRACKING = '.copilot-tracking/'
-const ENGINE_FILES = /(^|\/)events\.jsonl$|(^|\/)(results|reviews)\//
+const ENGINE_FILES = /^\.copilot-tracking\/skraft-plans\/[^/]+\/(events\.jsonl$|results\/|reviews\/)/
 
-/** @param {string} path relative to its repository or to the working copy */
-const tracked = (path) => path.startsWith(TRACKING) || path.includes(`/${TRACKING}`)
+/** @param {string} path relative to its repository */
+const tracked = (path) => path.startsWith(TRACKING)
 
-/** @param {string[]} paths @returns {string[]} */
-export const reviewedPaths = (paths) => paths.filter((path) => !(tracked(path) && ENGINE_FILES.test(path)))
+/**
+ * @param {string[]} paths relative to the repository
+ * @param {string} repository its folder, relative to the working copy
+ * @returns {string[]} relative to the working copy
+ */
+export const reviewedPaths = (paths, repository) => paths.filter((path) => !ENGINE_FILES.test(path)).map((path) => joinRelative(repository, path))
 
 /**
  * A unified diff without the sections of tracking files, its paths made relative to the
