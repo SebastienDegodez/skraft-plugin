@@ -47,30 +47,65 @@ export const commandText = (argv) => argv
 export const parseCommand = (line, { baseSha = null } = {}) => {
   if (line.includes('{baseSha}') && !baseSha) return { ok: false, reason: 'uses {baseSha} but the run has no base for this repository' }
   const text = baseSha ? line.replaceAll('{baseSha}', baseSha) : line
-  /** @type {Array<{ text: string, quoted: boolean }>} */
-  const words = []
-  /** @type {{ text: string, quoted: boolean } | null} the word being read, null between words */
-  let word = null
-  /** @type {string | null} */
-  let quote = null
-  for (const char of text) {
-    if (quote !== null) {
-      if (char === quote) quote = null
-      else /** @type {{ text: string }} */ (word).text += char
-    } else if (/\s/.test(char)) {
-      word = null
-    } else {
-      if (word === null) words.push((word = { text: '', quoted: false }))
-      if (char === '"' || char === "'") {
-        quote = char
-        word.quoted = true
-      } else {
-        word.text += char
-      }
-    }
-  }
+  const { words, quote } = scanWords(text)
   if (quote !== null) return { ok: false, reason: `has an unclosed ${quote} quote` }
   const shell = words.find((candidate) => !candidate.quoted && SHELL_SYNTAX.test(candidate.text))
   if (shell !== undefined) return { ok: false, reason: `uses shell syntax (${shell.text}); put the steps in a script and call the script` }
   return { ok: true, argv: words.map((candidate) => candidate.text) }
+}
+
+/**
+ * @typedef {{ text: string, quoted: boolean }} Word
+ * @typedef {{ words: Word[], word: Word | null, quote: string | null }} Scan
+ *   word: the word being read, null between words; quote: the quote left open, null outside one.
+ */
+
+/** @param {string} text @returns {Scan} the words, and the quote the text leaves open */
+const scanWords = (text) => {
+  /** @type {Scan} */
+  const scan = { words: [], word: null, quote: null }
+  for (const char of text) scanChar(scan, char)
+  return scan
+}
+
+/**
+ * One character: inside quotes, a blank between words, or part of a word.
+ * @param {Scan} scan @param {string} char
+ */
+const scanChar = (scan, char) => {
+  if (scan.quote !== null) scanQuoted(scan, char)
+  else if (/\s/.test(char)) scan.word = null
+  else scanUnquoted(scan, char)
+}
+
+/**
+ * Inside quotes: the closing quote ends them; any other character, blanks included, is text.
+ * @param {Scan} scan @param {string} char
+ */
+const scanQuoted = (scan, char) => {
+  if (char === scan.quote) scan.quote = null
+  else /** @type {Word} */ (scan.word).text += char
+}
+
+/**
+ * Outside quotes: a quote opens quotes in the word; any other character is text. Either one
+ * starts a word between words.
+ * @param {Scan} scan @param {string} char
+ */
+const scanUnquoted = (scan, char) => {
+  const word = scan.word ?? startWord(scan)
+  if (char === '"' || char === "'") {
+    scan.quote = char
+    word.quoted = true
+  } else {
+    word.text += char
+  }
+}
+
+/** @param {Scan} scan @returns {Word} */
+const startWord = (scan) => {
+  const word = { text: '', quoted: false }
+  scan.words.push(word)
+  scan.word = word
+  return word
 }
