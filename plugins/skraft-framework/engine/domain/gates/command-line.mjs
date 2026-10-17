@@ -22,6 +22,15 @@ const PYTHON = Object.freeze(['.venv/bin/python', '.venv/Scripts/python.exe', 'p
 export const programChoices = (argv) => (argv[0] === 'python' ? PYTHON.map((program) => [program, ...argv.slice(1)]) : [argv])
 
 /**
+ * An argv written back as one line that parseCommand reads into the same argv: what the
+ * evidence and doctor show of a command that ran.
+ * @param {string[]} argv
+ */
+export const commandText = (argv) => argv
+  .map((word) => (word.includes('"') ? `'${word}'` : word === '' || /[\s'|&;<>]/.test(word) ? `"${word}"` : word))
+  .join(' ')
+
+/**
  * Splits on blanks; `"…"` and `'…'` keep blanks inside one argument. `{baseSha}` is replaced
  * before splitting.
  * @param {string} line

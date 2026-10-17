@@ -1,6 +1,6 @@
 import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
 import { deriveRun } from '../domain/journal/run-state.mjs'
-import { parseCommand, programChoices } from '../domain/gates/command-line.mjs'
+import { commandText, parseCommand, programChoices } from '../domain/gates/command-line.mjs'
 import { failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig } from './bases.mjs'
 import { openActiveRun } from './active-run.mjs'
@@ -123,8 +123,8 @@ const dockerAnswers = async (deps) => {
 }
 
 /**
- * The first of the command's program choices that starts. When none starts, the answer to the
- * program as written, with every place it was looked for.
+ * The first of the command's program choices that starts, with the argv it started. When none
+ * starts, the answer to the program as written, with every place it was looked for.
  * @param {GateDeps} deps @param {string[]} argv @param {string} cwd
  */
 const startFirst = async (deps, argv, cwd) => {
@@ -132,11 +132,11 @@ const startFirst = async (deps, argv, cwd) => {
   const answers = []
   for (const choice of choices) {
     const answer = await deps.commandRunner.run({ argv: choice, cwd })
-    if (answer.started) return answer
+    if (answer.started) return { ...answer, argv: choice }
     answers.push(answer)
   }
   const written = answers[choices.findIndex(([program]) => program === argv[0])]
-  return choices.length === 1 ? written : { ...written, error: `${written.error}; looked for ${choices.map(([program]) => program).join(', ')}` }
+  return { ...written, argv, ...(choices.length === 1 ? {} : { error: `${written.error}; looked for ${choices.map(([program]) => program).join(', ')}` }) }
 }
 
 /**
@@ -150,7 +150,7 @@ const runOne = async (deps, { slug, component, gate, scope, journal, baseSha, do
   const evidencePath = `gates/${component.name}/${gate}-${earlier + 1}.log`
   const evidence = deps.files.location(slug, evidencePath)
   const parsed = parseCommand(line, { baseSha })
-  /** @type {{ started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string } | null} */
+  /** @type {{ argv: string[], started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string } | null} */
   let result = null
   let reason
   let durationMs = 0
@@ -168,7 +168,7 @@ const runOne = async (deps, { slug, component, gate, scope, journal, baseSha, do
   }
   const failure = result === null ? 'environment' : failureOf(result)
   await deps.files.write(slug, evidencePath, [
-    `$ ${line}`,
+    `$ ${result ? commandText(result.argv) : parsed.ok ? commandText(parsed.argv) : line}`,
     `cwd: ${component.root}`,
     `result: ${failure === null ? 'pass' : `fail (${failure})`}: ${reason}`,
     ...(result ? ['--- stdout', result.stdout, '--- stderr', result.stderr] : []),

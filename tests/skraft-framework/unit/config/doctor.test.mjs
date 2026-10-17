@@ -83,7 +83,7 @@ test('--run starts every command once from its component root, with the base, an
   assert.deepEqual(report.checks.slice(2), [
     { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
     { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo passed' },
-    { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:{baseSha} passed' },
+    { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:a1 passed' },
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1' },
     { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' },
@@ -104,7 +104,8 @@ test('python is found in the component\'s virtual environment, else as python3, 
     'py/test: command not found: python (from services/py; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3); install it or change commands.test in skraft-config.json',
   ])
 
-  assert.equal((await venv.doctor.check({ run: true })).ok, true)
+  const ran = await venv.doctor.check({ run: true })
+  assert.deepEqual(ran.checks[2], { subject: 'py/test', status: 'ok', detail: '.venv/Scripts/python.exe -m pytest -q passed' })
   assert.deepEqual(venv.machine.lines(), ['services/py $ .venv/Scripts/python.exe -m pytest -q'])
 })
 

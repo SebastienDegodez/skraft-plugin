@@ -1,5 +1,5 @@
 import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
-import { parseCommand, programChoices } from '../domain/gates/command-line.mjs'
+import { commandText, parseCommand, programChoices } from '../domain/gates/command-line.mjs'
 import { GATE_ORDER } from '../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from './bases.mjs'
 
@@ -84,9 +84,10 @@ const commandCheck = async (deps, { component, name, run, baseSha }) => {
   if (!run) return { subject, status: 'ok', detail: `${program} → ${found.located}` }
   const result = await deps.commandRunner.run({ argv: found.argv, cwd: component.root })
   if (!result.started) return { subject, status: 'fail', detail: /** @type {string} */ (result.error) }
+  const ran = commandText(found.argv)
   return result.exitCode === 0
-    ? { subject, status: 'ok', detail: `${line} passed` }
-    : { subject, status: 'fail', detail: `${line} exited ${result.exitCode}` }
+    ? { subject, status: 'ok', detail: `${ran} passed` }
+    : { subject, status: 'fail', detail: `${ran} exited ${result.exitCode}` }
 }
 
 /**

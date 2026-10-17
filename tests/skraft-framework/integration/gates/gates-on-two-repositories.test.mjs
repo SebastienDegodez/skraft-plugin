@@ -95,7 +95,7 @@ test('a change in the front runs the front gates only; --all runs every gate, ea
   assert.deepEqual(ran(), ['payment-api api/build', 'payment-api api/test', `payment-api api/mutation --since:${apiBase}`, 'payment-web web/lint', 'payment-web web/test'])
   const mutation = journal(api, 'checkout').find((event) => event.type === 'gate.ran' && event.gate === 'mutation')
   assert.ok(mutation.command.endsWith('--since:{baseSha}'))
-  assert.match(readFileSync(join(api, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'api', 'mutation-1.log'), 'utf8'), new RegExp(`^\\$ node .*--since:\\{baseSha\\}\\ncwd: \\.\\nresult: pass`))
+  assert.match(readFileSync(join(api, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'api', 'mutation-1.log'), 'utf8'), new RegExp(`^\\$ node .*--since:${apiBase}\\ncwd: \\.\\nresult: pass`))
 })
 
 test('a failing gate exits 1 as deterministic; a missing program exits 1 as environment', async (t) => {

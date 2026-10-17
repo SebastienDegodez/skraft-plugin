@@ -113,7 +113,7 @@ test('components that share a root are all touched by a file changed there', asy
 
 test('a command the developer wrote is the one that runs, with the base of its own repository', async () => {
   const api = { ...API, commands: { test: 'dotnet test --filter "Category!=Slow|Category=Fast" --nologo \'\'', mutation: 'dotnet stryker --since:{baseSha} --threshold-break 80' } }
-  const { machine, gate } = await hostWith({ components: [api, { ...WEB, commands: { mutation: 'npx stryker run --since {baseSha}' } }] })
+  const { tracking, machine, gate } = await hostWith({ components: [api, { ...WEB, commands: { mutation: 'npx stryker run --since {baseSha}' } }] })
 
   await gate('all')
 
@@ -122,6 +122,13 @@ test('a command the developer wrote is the one that runs, with the base of its o
     { argv: ['dotnet', 'stryker', '--since:a1', '--threshold-break', '80'], cwd: 'services/payment-api' },
     { argv: ['npx', 'stryker', 'run', '--since', 'w1'], cwd: '../payment-web' },
   ])
+  const firstLine = async (evidence) => (await tracking.read('checkout', evidence)).split('\n')[0]
+  assert.deepEqual([await firstLine('gates/api/test-1.log'), await firstLine('gates/api/mutation-1.log'), await firstLine('gates/web/mutation-1.log')], [
+    '$ dotnet test --filter "Category!=Slow|Category=Fast" --nologo ""',
+    '$ dotnet stryker --since:a1 --threshold-break 80',
+    '$ npx stryker run --since w1',
+  ])
+  assert.deepEqual(gatesRan(tracking).map(({ command }) => command), [api.commands.test, api.commands.mutation, 'npx stryker run --since {baseSha}'])
 })
 
 const PY = { name: 'py', root: 'services/py', stack: 'python', mocking: { strategy: 'inprocess' }, commands: { build: 'python -m compileall -q src', test: 'python -m pytest -q' } }
@@ -240,10 +247,10 @@ test('a Microcks component without Docker: its test gates fail as environment wi
 test('without Docker, the architecture, coverage and mutation gates of a Microcks component wait for it like the tests', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ docker info': 1 } })
   const microcks = { ...API, mocking: { strategy: 'microcks' } }
-  const { gate } = await hostWith({ machine, components: [
+  const { tracking, gate } = await hostWith({ machine, components: [
     { ...microcks, name: 'architecture', commands: { architecture: 'dotnet test --filter Architecture' } },
     { ...microcks, name: 'coverage', commands: { coverage: 'dotnet test --collect coverage' } },
-    { ...microcks, name: 'mutation', commands: { mutation: 'dotnet stryker' } },
+    { ...microcks, name: 'mutation', commands: { mutation: 'dotnet stryker --since:{baseSha}' } },
   ] })
 
   const outcome = await gate('all')
@@ -254,6 +261,7 @@ test('without Docker, the architecture, coverage and mutation gates of a Microck
     ['mutation', 'fail', 'environment', true],
   ])
   assert.deepEqual(machine.lines(), ['. $ docker info'])
+  assert.match(await tracking.read('checkout', 'gates/mutation/mutation-1.log'), /^\$ dotnet stryker --since:a1\ncwd: services\/payment-api\nresult: fail \(environment\): Docker does not answer/)
 })
 
 test('gates need an active, initialised pipeline and components to run', async () => {
