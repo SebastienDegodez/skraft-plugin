@@ -213,12 +213,16 @@ export const INTEGRITY_LENS = 'test-integrity'
 
 const refutationKey = (step, visit, lens, finding) => JSON.stringify([step, visit, lens, finding])
 
+/** The severities that send the work back, as the engine counts them. */
+const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
+
 const integrityStatus = (result, refuted) => {
   if (result.verdict === 'inconclusive') return 'inconclusive'
   const findings = Array.isArray(result.findings) ? result.findings : []
-  const counted = findings.filter((f) => f?.severity === 'blocker' && !refuted.has(refutationKey(result.step, result.visit, result.lens, f.id)))
+  const blocking = findings.filter((f) => BLOCKING.includes(f?.severity))
+  const counted = blocking.filter((f) => !refuted.has(refutationKey(result.step, result.visit, result.lens, f.id)))
   if (counted.length > 0) return 'fail'
-  return result.verdict === 'fail' && findings.length === 0 ? 'fail' : 'pass'
+  return result.verdict === 'fail' && blocking.length === 0 ? 'fail' : 'pass'
 }
 
 /**

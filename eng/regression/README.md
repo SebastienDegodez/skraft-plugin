@@ -84,6 +84,7 @@ Unknown `type` values and missing payload fields are ignored.
 | `commits.checked` | `step`, `commits[].verdict`, `commits[].replay` | only the last check of each `step` counts; gives G8 and G10 (see below). |
 | `review.lens` | `step`, `visit`, `lens`, `verdict`, `findings[].id`, `findings[].severity` | lot 4, one per lens and pass (`reused: true` when kept from the last pass). The last `test-integrity` one on a DELIVER review step gives G7 and G9 (see below). `agent`, `fingerprint`, `findings[].location/description/suggestion`, `cost`, `reused` not read. |
 | `review.refuted` | `step`, `visit`, `lens`, `finding`, `verdict` | lot 4, one per blocker or high finding checked. `refuted` drops that finding from G7/G9; `confirmed` and `unverifiable` keep it. `reason`, `cost` not read. |
+| `review.cost` | `step`, `visit`, `cost` | lot 4, the cost of a batch of lenses or checks when the host tells it only for the batch (the Claude Code mod). Not read: the review's `step.recorded` `cost` already holds it. |
 | `decision.recorded`, `tdd.replay-slow` | — | not compared. |
 | `phase.closed` | `phase` | appended once to `phasesReached`, including `skipped: 'from-artifacts'` (phase reached before the run started). |
 | `run.finished` | `at`, `status` | duration end; `status` copied (`completed` when every phase closed, else `blocked`). `code` not read. |
@@ -102,7 +103,7 @@ Gate mapping, per run slug:
 | `gate.ran` `none` or unknown | — | dropped |
 | `commits.checked` | G8 | `fail` if a verdict is `not-conventional`, else `pass`; absent when no commit was checked |
 | `commits.checked` | G10 | `fail` if a verdict is `not-red` or `green-without-red`; `pass` when a commit has a `replay` and none failed; absent otherwise |
-| `review.lens` `test-integrity` | G7 and G9 | last one on a DELIVER review step: `inconclusive` if its verdict is; `fail` if a `blocker` finding is not `refuted` in the same step and visit, or the lens failed without a finding; else `pass` (high, medium and low findings do not count); absent when the lens never ran there |
+| `review.lens` `test-integrity` | G7 and G9 | last one on a DELIVER review step: `inconclusive` if its verdict is; `fail` if a `blocker`, `high` or `medium` finding is not `refuted` in the same step and visit, or the lens failed without one; else `pass` (low findings do not count), as the engine counts them for the review verdict; absent when the lens never ran there |
 
 Several config components and commands map onto one `slug/id`: each keeps its last status,
 then the id is `fail` if any is `fail`, else `pass`.
@@ -110,7 +111,7 @@ then the id is `fail` if any is `fail`, else `pass`.
 The v1 side reads G7 and G9 from `qg-{story}.json`, where they attest no mocks in the core and
 no test tampering (RED→GREEN); the v1 `test-integrity` lens of `software-engineer-reviewer`
 checks the same two ids at blocker severity, as test theater and the Iron Rule. In v2 the same lens runs in the DELIVER review
-(`deliver_review` in the default workflow) without a gate field, so its blocker findings give
+(`deliver_review` in the default workflow) without a gate field, so the findings that send its review back give
 both ids. A workflow whose DELIVER review drops the lens leaves G7/G9 absent: a regression
 against a v1 `pass`.
 

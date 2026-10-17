@@ -90,6 +90,7 @@ première rupture donne `journal-tampered` avec ce message :
 | `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête | `code` (`agent-unavailable` ou `agent-failed`) ; `reason` |
 | `review.lens` | un nœud de revue, une fois par lentille | `step` ; `visit` ; `lens` (`consistency`) ; `agent` (`consistency-lens`) ; `fingerprint` (empreinte des entrées de la lentille) ; `verdict` (`pass`, `fail` ou `inconclusive`) ; `findings` (`{ id, severity, location, description, suggestion }`) ; `cost` (absent s'il est inconnu) ; `reused` (`true` quand le résultat est repris de la passe précédente : mêmes entrées, rien trouvé) |
 | `review.refuted` | un nœud de revue, une fois par finding blocker ou high vérifié par `finding-refuter` | `step` ; `visit` ; `lens` ; `finding` (son id) ; `verdict` (`confirmed`, `refuted` ou `unverifiable`) ; `reason` ; `cost` |
+| `review.cost` | un nœud de revue, une fois par lot que l'hôte chiffre d'un bloc (le mod Claude Code) | `step` ; `visit` ; `cost` |
 | `gate.ran` | `skraft gate`, une fois par gate | `component` ; `gate` (`build`… ou `none`) ; `scope` (`touched` ou `all`) ; `command` (`null` pour `none`) ; `status` (`pass` ou `fail`) ; `failure` (`environment`, `deterministic` ou `null`) ; `exitCode` (`null` si rien n'a tourné) ; `durationMs` ; `evidence` (chemin relatif au dossier du slug, `null` pour `none`) |
 
 Chaque entrée de `run.started.base` : `{ component, root, repository, ref, source, sha }`.
@@ -106,7 +107,7 @@ run v1 sur les mêmes fixtures.
 Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent` ; son `step.recorded` a
 un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-unreadable` quand une lentille
 a répondu deux fois sans verdict lisible), `failures` (les findings retenus, que le brief suivant
-de l'agent de la phase liste) et `cost` (ses lentilles et ses vérifications ensemble). Un agent
+de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Un agent
 renvoyé par les gates ou par une revue porte `sentBy` (`gate` ou `review`) sur son `step.started`.
 
 > **À venir.** Le contrat de comparaison prévoit aussi `decision.recorded`, écrit avec les
