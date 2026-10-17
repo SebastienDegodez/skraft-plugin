@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryGit } from '../support/in-memory-host.mjs'
+import { designating, edit } from '../workflow/support.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
@@ -79,6 +81,20 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '- Write no file, change nothing, start no agent.',
     `- End your answer with this JSON document alone; "findings" is [] when you find none: ${shape('cold-reader')}`,
   ].join('\n'))
+  const KIND = { 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch': 'files' }
+  const kinds = (dispatch) => [...new Set(dispatch.prompt.split('\n').filter((line) => line.startsWith('  - ')).map((line) => line.slice(4, line.indexOf(':'))).map((title) => KIND[title] ?? 'patch'))]
+  assert.deepEqual(Object.fromEntries(host.agentRunner.reviewed().map((dispatch) => [dispatch.agent, kinds(dispatch)])), {
+    'consistency-lens': ['outputs', 'context', 'patch', 'files'],
+    'architecture-compliance-lens': ['outputs', 'patch', 'files'],
+    'fitness-lens': ['outputs', 'context'],
+    'coverage-lens': ['outputs', 'context', 'patch', 'files'],
+    'business-alignment-lens': ['outputs', 'context'],
+    'testability-lens': ['outputs', 'patch', 'files'],
+    'boundary-enforcement-lens': ['outputs', 'patch', 'files'],
+    'test-integrity-lens': ['outputs', 'context', 'patch', 'files'],
+    'architecture-boundaries-lens': ['context', 'patch', 'files'],
+    'cold-reader-lens': ['patch', 'files'],
+  })
   assert.ok(prompt('test-integrity-lens', 'deliver_review').includes([
     `  - Documents of this phase: ${TRACKING}/${CHANGE_LOG}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
@@ -123,6 +139,27 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   await host.start()
 
   assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
+
+  const contracts = scripted({}, (it) => [
+    ...nominal(it).slice(0, 3),
+    agent({ work: ({ git }) => {
+      git.removes('src/Checkout.cs', 'var server = WireMockServer.Start();')
+      git.commit('test(checkout): the payment contract is honoured', ['tests/Contracts/PaymentContractTests.cs'])
+      git.commit('feat(checkout): Checkout pays by card', ['src/Checkout.cs'])
+    } })(it),
+  ])
+  await contracts.start()
+  assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
+})
+
+test('a review whose every lens waits for a trigger that nothing matches approves, saying no lens applies', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"', 'lenses="mock-fidelity,contract-fidelity"'])
+  const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
+
+  assert.equal((await host.start()).status, 'done')
+  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'deliver_review')
+  assert.deepEqual([recorded.outcome, recorded.reason, recorded.cost], ['approved', 'APPROVED: no lens applies to these changes', undefined])
+  assert.equal(host.agentRunner.batches.length, 2)
 })
 
 test('a confirmed blocker sends the work back to the phase agent with the findings in its brief', async () => {
@@ -206,7 +243,8 @@ test('a lens that fails without a finding, or answers inconclusive, sends the wo
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail')],
-    fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty')])],
+    fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty'), finding('F2', 'low', 'no story to read')])],
+    'architecture-compliance': [says('architecture-compliance', 'inconclusive')],
   })
 
   await host.start()
@@ -214,8 +252,9 @@ test('a lens that fails without a finding, or answers inconclusive, sends the wo
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.deepEqual([recorded.outcome, recorded.failures, recorded.reason], ['needs-rework', [
     'consistency: failed without naming a finding',
-    'fitness: inconclusive: the research document is empty',
-  ], 'NEEDS_REWORK: 2 findings to address'])
+    'architecture-compliance: inconclusive',
+    'fitness: inconclusive: the research document is empty; no story to read',
+  ], 'NEEDS_REWORK: 3 findings to address'])
 })
 
 test('a review sent back more often than its edge allows stops the run, naming the edge and the findings', async () => {
@@ -228,5 +267,50 @@ test('a review sent back more often than its edge allows stops the run, naming t
   assert.deepEqual(outcome, {
     status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'loop-ceiling',
     reason: 'design_review -> design was already taken 3 times, its max_visits; consistency F1 blocker at src/Checkout.cs:12: the ADR contradicts the context map',
+  })
+})
+
+test('the changes of a component in a neighbour repository are read from that repository, each repository once', async () => {
+  const WEB = { name: 'web', root: '../web', stack: 'react', paths: { src: ['src'], tests: ['src'] }, commands: { build: 'npm run build', test: 'npx vitest run' } }
+  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
+  git.adds('../web/src/App.tsx', 'export const App = () => null')
+  git.change('../web/src/App.tsx')
+  const host = scripted({ components: [API, WEB], git }, (it) => nominal(it).slice(0, 2))
+  host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
+
+  await host.start()
+
+  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), 'docs/adr/adr-001-card-payment.md\n../web/src/App.tsx\n')
+  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changes.patch'), [
+    'diff --git a/docs/adr/adr-001-card-payment.md b/docs/adr/adr-001-card-payment.md',
+    'diff --git a/src/App.tsx b/src/App.tsx',
+    '+export const App = () => null',
+    '',
+  ].join('\n'))
+})
+
+test('a review Git cannot diff stops the run as the environment, and the next run reviews again', async () => {
+  const host = scripted({}, (it) => nominal(it))
+  const diff = host.git.diff.bind(host.git)
+  host.git.diff = async () => null
+
+  const stopped = await host.start()
+
+  assert.deepEqual(stopped, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'environment', reason: 'Git could not tell what changed since the base of the run, so design_review has nothing to review' })
+  assert.equal(host.agentRunner.batches.length, 0)
+  host.git.diff = diff
+  assert.equal((await host.run()).status, 'done')
+})
+
+test('a review asking for rework where the workflow has no NEEDS_REWORK edge stops the run, saying so', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW, ['  design_review -> design  [label="NEEDS_REWORK", max_visits=3]\n', ''])
+  const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => nominal(it).slice(0, 2))
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'medium', 'no owner for refunds')])] })
+
+  const outcome = await host.start()
+
+  assert.deepEqual(outcome, {
+    status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'review-rejected',
+    reason: 'design_review asked for rework and the workflow has no NEEDS_REWORK edge out of it; consistency F1 medium at src/Checkout.cs:12: no owner for refunds',
   })
 })

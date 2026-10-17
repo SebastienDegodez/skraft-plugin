@@ -35,17 +35,14 @@ const CONTRACTS = Object.freeze({
   line: /\bVerifyAsync\b|\bPact\w*|\bProviderVerifier|\bContractTest/,
 })
 
-/** @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean, trigger?: Trigger }>>} */
+/** The lenses that read less than everything. @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean, trigger?: Trigger }>>} */
 const KNOWN = Object.freeze({
   __proto__: null,
-  consistency: { inputs: ALL },
   'architecture-compliance': { inputs: OWN_CHANGES },
   fitness: { inputs: DOCUMENTS },
-  coverage: { inputs: ALL },
   'business-alignment': { inputs: DOCUMENTS },
   testability: { inputs: OWN_CHANGES },
   'boundary-enforcement': { inputs: OWN_CHANGES },
-  'test-integrity': { inputs: ALL },
   'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files'])) },
   'cold-reader': { inputs: CHANGES, blind: true },
   'mock-fidelity': { inputs: CHANGES, trigger: MOCKS },

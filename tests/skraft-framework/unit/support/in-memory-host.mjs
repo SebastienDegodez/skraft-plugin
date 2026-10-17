@@ -270,12 +270,17 @@ export class InMemoryGit {
   async diff(dir, sha) {
     const files = await this.changedFiles(dir, sha)
     if (files === null) return null
-    return files.map((file) => `diff --git a/${file} b/${file}\n${(this.patches?.[file] ?? []).map((line) => `+${line}\n`).join('')}`).join('')
+    return files.map((file) => `diff --git a/${file} b/${file}\n${(this.patches?.[file] ?? []).map((line) => `${line}\n`).join('')}`).join('')
   }
   /** Lines a change adds to a file, as its diff shows them. @param {string} path relative to the working copy @param {...string} lines */
-  adds(path, ...lines) {
+  adds(path, ...lines) { this.patched(path, lines.map((line) => `+${line}`)) }
+  /** Lines a change removes from a file, as its diff shows them. @param {string} path relative to the working copy @param {...string} lines */
+  removes(path, ...lines) { this.patched(path, lines.map((line) => `-${line}`)) }
+  /** @param {string} path @param {string[]} lines */
+  patched(path, lines) {
     this.patches ??= {}
-    this.patches[this.locate(path).inner] = lines
+    const inner = this.locate(path).inner
+    this.patches[inner] = [...(this.patches[inner] ?? []), ...lines]
   }
 }
 const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').replaceAll('/', '-'))

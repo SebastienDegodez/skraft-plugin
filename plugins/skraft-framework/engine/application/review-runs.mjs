@@ -102,7 +102,7 @@ const uniqueRepositories = (base) => base.filter((entry, index) => base.findInde
  * @returns {{ outputs: string[], context: string[] }}
  */
 const documentsOf = ({ workflow, run, step }) => {
-  const nodes = Object.entries(run.nodes).filter(([id]) => id !== step.node.id)
+  const nodes = Object.entries(run.nodes)
   const ofPhase = (/** @type {boolean} */ same) => nodes.filter(([id]) => (workflow.nodes[id]?.phase === step.phase) === same).flatMap(([, state]) => state.outputs)
   return { outputs: ofPhase(true), context: [...run.artifacts, ...ofPhase(false)] }
 }
@@ -135,7 +135,8 @@ const eventsOf = ({ journal, step }, type) => journal.events.filter((event) => e
 
 /**
  * Each lens's result: kept from this pass when a resumed review already has it, kept from the
- * last pass when its inputs did not change and it found nothing, else asked.
+ * last pass when its inputs did not change and it found nothing, else asked. fresh: the results
+ * the refuter may still check (one taken over found nothing).
  * @param {Review} review @param {PlannedLens[]} planned
  * @returns {Promise<{ results: LensResult[], fresh: LensResult[], costUsd: number } | Stopped | Blocked>}
  */
@@ -146,7 +147,7 @@ const lensResults = async (review, planned) => {
   if ('stop' in answered || 'blocked' in answered) return answered
   const fresh = answered.results
   const results = planned.map(({ lens }) => kept.get(lens.name) ?? /** @type {LensResult} */ (fresh.find((result) => result.lens === lens.name)))
-  return { results, fresh: [...fresh, ...thisPass(review, kept)], costUsd: answered.costUsd }
+  return { results, fresh: [...fresh, ...kept.values()], costUsd: answered.costUsd }
 }
 
 /**
@@ -160,15 +161,13 @@ const keepLenses = async (review, planned) => {
   const kept = new Map()
   for (const { lens, fingerprint } of planned) {
     const current = events.find((event) => event.visit === review.step.visit && event.lens === lens.name)
+    // Stryker disable next-line EqualityOperator: an event of this pass is found as current first
     const earlier = events.filter((event) => event.visit < review.step.visit && event.lens === lens.name).at(-1)
     if (current) kept.set(lens.name, resultOf(current))
     else if (earlier && isClean(earlier) && earlier.fingerprint === fingerprint) kept.set(lens.name, await reuse(review, earlier))
   }
   return kept
 }
-
-/** The kept results answered in this pass, not taken over: their findings may still need the refuter. @param {Review} review @param {Map<string, LensResult>} kept */
-const thisPass = (review, kept) => [...kept.values()].filter((result) => eventsOf(review, 'review.lens').some((event) => event.visit === review.step.visit && event.lens === result.lens && event.reused !== true))
 
 /** @param {RunEvent} event @returns {LensResult} */
 const resultOf = ({ lens, verdict, findings }) => ({ lens, verdict, findings })
@@ -238,7 +237,7 @@ const refutations = async (review, planned, fresh) => {
   const answered = await askTwice(review, asked, refuterAsking(review))
   if ('stop' in answered) return answered
   const lost = []
-  for (const { item, error } of answered.unreadable) lost.push(await recordRefutation(review, item, { verdict: 'unverifiable', reason: `unreadable twice: ${error}` }, { ok: false, text: '' }))
+  for (const { item, error } of answered.unreadable) lost.push(await recordRefutation(review, item, { verdict: 'unverifiable', reason: `unreadable twice: ${error}` }, undefined))
   return { refutations: [...done, ...answered.read.map(({ value }) => value), ...lost], costUsd: answered.costUsd }
 }
 
@@ -246,7 +245,7 @@ const refutations = async (review, planned, fresh) => {
 const refuterAsking = (review) => ({
   dispatch: (suspect, attempt, retry) => refuterDispatch(review, suspect, attempt, retry),
   read: (text) => readRefutation(text),
-  record: (suspect, reading, answer) => recordRefutation(review, suspect, reading.refutation, answer),
+  record: (suspect, reading, answer) => recordRefutation(review, suspect, reading.refutation, answer.costUsd),
 })
 
 /**
@@ -272,11 +271,11 @@ const refuterDispatch = ({ deps, slug, sources, step }, { lens, finding, inputs 
 
 /**
  * @param {Review} review @param {Suspect} suspect
- * @param {import('../domain/review/answers.mjs').Refutation} refutation @param {AgentAnswer} answer
+ * @param {import('../domain/review/answers.mjs').Refutation} refutation @param {number | undefined} cost
  * @returns {Promise<RecordedRefutation>}
  */
-const recordRefutation = async ({ journal, step }, { lens, finding }, { verdict, reason }, answer) => {
-  await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, cost: answer.costUsd })
+const recordRefutation = async ({ journal, step }, { lens, finding }, { verdict, reason }, cost) => {
+  await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, cost })
   return { lens, finding: finding.id, verdict, reason }
 }
 

@@ -548,9 +548,8 @@ const blockedReview = ({ code, reason }) => ({ outcome: 'blocked', code, failure
  * @param {import('../domain/review/verdict.mjs').ReviewVerdict} verdict
  */
 const verdictOf = (context, run, from, { status, reasons, summary }) => {
-  const failures = status === 'APPROVED' ? [] : reasons
-  const routed = leave(context, run, from, status, failures)
-  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures, next: routed.next, reason: routed.reason ?? summary }
+  const routed = leave(context, run, from, status, reasons)
+  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, reason: routed.reason ?? summary }
 }
 
 /**
