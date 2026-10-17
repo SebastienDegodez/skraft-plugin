@@ -2,7 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createAgentAnswers, createSpawnAgentRunner } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/agent-runner.mjs'
 
-const DISPATCH = { agent: 'solution-researcher', label: 'skraft checkout · research · attempt 1', prompt: '## Skraft dispatch' }
+const DISPATCH = { agent: 'solution-researcher', source: 'plugin', label: 'skraft checkout · research · attempt 1', prompt: '## Skraft dispatch' }
+const REPOSITORY_DISPATCH = { agent: 'acme-security-reviewer', source: 'repository', label: 'skraft checkout · security · attempt 1', prompt: '## Skraft dispatch' }
 
 /** A scripted `$.agent.spawn` and `$.session.usage` cost, around one answers registry. */
 const runnerWith = ({ spawn, costs = [] }) => {
@@ -31,6 +32,27 @@ test('the dispatch spawns skraft:<agent> with the brief and the label, and answe
 
   assert.deepEqual(await runner.run(DISPATCH), { ok: true, text: 'research written' })
   assert.deepEqual(spawned, [{ prompt: '## Skraft dispatch', subagentType: 'skraft:solution-researcher', description: 'skraft checkout · research · attempt 1' }])
+})
+
+test('a repository agent is spawned under its own id, and named so when it cannot start or ends without an answer', async () => {
+  const answered = runnerWith({
+    spawn: (args, answers) => {
+      answers.complete({ agentId: 'r1', answer: 'reviewed', reason: 'answer' })
+      return { model: 'm', agentId: 'r1' }
+    },
+  })
+  assert.deepEqual(await answered.runner.run(REPOSITORY_DISPATCH), { ok: true, text: 'reviewed' })
+  assert.deepEqual(answered.spawned, [{ prompt: '## Skraft dispatch', subagentType: 'acme-security-reviewer', description: 'skraft checkout · security · attempt 1' }])
+
+  assert.equal((await runnerWith({ spawn: () => ({ model: 'm' }) }).runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer was not started')
+  assert.equal((await runnerWith({ spawn: () => { throw new Error('unknown') } }).runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer could not be started: unknown')
+  const aborted = runnerWith({
+    spawn: (args, answers) => {
+      answers.complete({ agentId: 'r2', reason: 'aborted' })
+      return { model: 'm', agentId: 'r2' }
+    },
+  })
+  assert.equal((await aborted.runner.run(REPOSITORY_DISPATCH)).error, 'acme-security-reviewer ended: aborted')
 })
 
 test('an answer that completes after the spawn resolved is matched by its agentId, not another one', async () => {

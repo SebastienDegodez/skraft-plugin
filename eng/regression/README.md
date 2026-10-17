@@ -10,7 +10,7 @@ into a `RunSummary`, compares them and renders a Markdown table for the PR comme
 
 | File | Role |
 | --- | --- |
-| `summary.mjs` | Pure. v1 folder content or v2 event list → `RunSummary`. |
+| `summary.mjs` | Pure. v1 folder content or v2 event list → `RunSummary`; maps v2 gates onto v1 ids. |
 | `compare.mjs` | Pure. Two summaries → findings `{criterion, v1, v2, severity}`. |
 | `report.mjs` | Pure. Waivers, exit code, Markdown table. |
 | `tracking-folder.mjs` | IO. Reads a tracking folder, detects v1 or v2 by its content. |
@@ -67,7 +67,7 @@ different days compare.
   `story`.
 - `execution-log.json` is bookkeeping only.
 
-### v2 source: `events.jsonl` (contract for lot 1)
+### v2 source: `events.jsonl` (contract since lot 3)
 
 One JSON object per line, UTF-8, `\n` or `\r\n`. Blank lines are skipped. A line that is not
 JSON makes `compare` exit 2. Every event carries `type`, `at` (ISO-8601 UTC) and `prev`
@@ -77,26 +77,45 @@ Unknown `type` values and missing payload fields are ignored.
 
 | `type` | Payload read | Effect on the summary |
 | --- | --- | --- |
-| `run.started` | `at` (first one) | duration start. `workflow` and `base` not read; `base` lists one `{ component, root, repository, ref, source, sha }` per repository folder (`component: null` for the working copy, `source`: `flag`, `component`, `config` or `default`). |
-| `step.started` | `step` | a second `step.started` with the same `step` counts one retry. `agent` not read. |
-| `step.recorded` | `cost` (number) | summed into `cost`. `outcome`, `durationMs` not read. |
-| `gate.ran` | `component`, `gate`, `status` | last status per `component/gate` wins. Status values: `pass`, `fail`, `not_applicable`. A v1 `pass` that becomes `not_applicable` is reported as info, so check it when a DELIVER gate disappears. Lot 2 also writes `scope` (`touched`, `all`), `command`, `failure` (`environment`, `deterministic`, null), `exitCode`, `durationMs`, `evidence`; not read. |
+| `run.started` | `at` (first one), `slug` (first non-empty) | duration start; `slug` is the component of every v2 gate (`unknown` when absent). `workflow` (`skraft` or the repo `.dot` path), `artifacts`, `start`, `unlocked` and `base` not read. |
+| `step.started` | `step` | a second `step.started` with the same `step` counts one retry, whatever its `visit` and `attempt`: a new visit after a failed gate and a retry both count one. `phase`, `agent`, `gates`, `outputs`, `missing`, `feedback`, `heads` not read. |
+| `step.recorded` | `cost` (number) | summed into `cost`. `visit`, `attempt`, `outcome` (`done`, `failed`, `pass`, `fail`, `skipped`), `code`, `missing`, `failures`, `next`, `reason`, `durationMs`, `replayMs` not read. |
+| `gate.ran` | `component`, `gate`, `status` | last status per config `component`/`gate` command wins, then mapped onto v1 ids (see below). `scope`, `command`, `failure`, `exitCode`, `durationMs`, `evidence` not read. |
+| `commits.checked` | `step`, `commits[].verdict`, `commits[].replay` | only the last check of each `step` counts; gives G8 and G10 (see below). |
 | `review.decided` | `phase`, `verdict` | appended to `verdicts[phase]`. Verdict values: `APPROVED`, `NEEDS_REWORK`, `REJECTED`. |
-| `decision.recorded` | — | not compared. |
-| `phase.closed` | `phase` | appended once to `phasesReached`. |
-| `run.finished` | `at`, `status` | duration end; `status` copied (`completed` means a full run). |
-| `run.stopped` | — | not compared: the host could not start an agent; the next run resumes the open step. |
+| `decision.recorded`, `tdd.replay-slow` | — | not compared. |
+| `phase.closed` | `phase` | appended once to `phasesReached`, including `skipped: 'from-artifacts'` (phase reached before the run started). |
+| `run.finished` | `at`, `status` | duration end; `status` copied (`completed` when every phase closed, else `blocked`). `code` not read. |
+| `run.stopped` | — | not compared: the host or the machine stopped the run (`agent-unavailable`, `agent-failed`, `environment`, `no-components`); the next run resumes the open step. |
 
-Rules lot 1 must honour so v1 and v2 compare:
+Gate mapping, per run slug:
+
+| v2 source | v1 id | Rule |
+| --- | --- | --- |
+| `gate.ran` `build` | G3 | |
+| `gate.ran` `format`, `lint` | G4 | |
+| `gate.ran` `test` | G1 and G2 | |
+| `gate.ran` `architecture` | G5 | |
+| `gate.ran` `mutation` | G6 | |
+| `gate.ran` `coverage` | G11 | |
+| `gate.ran` `none` or unknown | — | dropped |
+| `commits.checked` | G8 | `fail` if a verdict is `not-conventional`, else `pass`; absent when no commit was checked |
+| `commits.checked` | G10 | `fail` if a verdict is `not-red` or `green-without-red`; `pass` when a commit has a `replay` and none failed; absent otherwise |
+
+Several config components and commands map onto one `slug/id`: each keeps its last status,
+then the id is `fail` if any is `fail`, else `pass`.
+
+G7 (no mocks in core) and G9 (no test tampering) have no v2 source until the review lot: a v1
+`pass` on them shows as a regression (v2 absent). Cover it with one waiver per fixture that
+names the review lot.
+
+Rules a v2 run must honour so v1 and v2 compare:
 
 - Phase names are the v1 ones, upper case: `RESEARCH`, `DESIGN`, `DISTILL`, `DELIVER`.
 - `run.finished.status` is `completed` only when every phase closed.
-- A retry re-emits `step.started` with the same `step` id; distinct passes need no new id.
+- A retry or a new visit re-emits `step.started` with the same `step` id.
 - `step.recorded.cost` is a number in one unit for the whole run (USD recommended).
-- `gate.ran.component` is the story slug (v1 reads it from `qg-{story}.json`), `gate` the
-  v1 gate id (`G1`…). Since lot 2, RunGate writes the `skraft-config.json` component name and
-  the command name (`build`, `test`, `mutation`…); the DELIVER lot that first emits gates in
-  a run maps them onto the v1 ids before v1 and v2 gates are compared.
+- `run.started.slug` is the story slug v1 uses in `qg-{story}.json`.
 - Phase artefacts stay at the v1 paths under the tracking folder.
 
 ## Criteria

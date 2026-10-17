@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { compareSummaries } from '../../eng/regression/compare.mjs'
+import { summarizeV1, summarizeV2 } from '../../eng/regression/summary.mjs'
 import { renderMarkdown, exitCode, applyWaivers, parseWaivers } from '../../eng/regression/report.mjs'
 
 const baseline = () => ({
@@ -120,4 +121,17 @@ test('markdown report: verdict line, regressions first, waived rows marked, pipe
 test('markdown report flags unwaived regressions', () => {
   const md = renderMarkdown(compareSummaries(baseline(), { ...baseline(), retries: 3 }), { fixture: 'payment' })
   assert.match(md, /1 unwaived regression/)
+})
+
+test('a v1 G3 pass and a v2 build pass on the same slug give no gate regression', () => {
+  const v1 = summarizeV1({ state: {}, evidence: [{ path: 'evidence/2026-10-01/refund/qg-refund.json', json: { story: 'refund', gates: [{ id: 'G3', status: 'pass' }] } }] })
+  const v2 = summarizeV2([
+    { type: 'run.started', at: '2026-10-09T10:00:00.000Z', prev: null, slug: 'refund', workflow: 'skraft' },
+    { type: 'gate.ran', at: '2026-10-09T10:01:00.000Z', prev: 'h1', component: 'api', gate: 'build', status: 'pass' },
+    { type: 'gate.ran', at: '2026-10-09T10:01:01.000Z', prev: 'h2', component: 'web', gate: 'build', status: 'pass' },
+  ])
+
+  const gateFindings = compareSummaries(v1, v2).filter((f) => f.criterion.startsWith('gate '))
+
+  assert.deepEqual(gateFindings, [{ criterion: 'gate refund/G3', v1: 'pass', v2: 'pass', severity: 'same' }])
 })

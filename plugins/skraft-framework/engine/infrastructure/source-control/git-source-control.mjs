@@ -18,6 +18,8 @@ export const createGitSourceControl = ({ commandRunner }) => {
     repository: (dir) => repository(git, dir),
     mergeBase: (dir, ref) => mergeBase(git, dir, ref),
     changedFiles: (dir, sha) => changedFiles(git, dir, sha),
+    head: (dir) => head(git, dir),
+    commits: (dir, since) => commits(git, dir, since),
   })
 }
 
@@ -51,11 +53,43 @@ const mergeBase = async (git, dir, ref) => {
  * @param {Git} git @param {string} dir @param {string} sha @returns {Promise<string[] | null>}
  */
 const changedFiles = async (git, dir, sha) => {
-  const changed = await git(dir, ['diff', '--name-only', '--relative', '--end-of-options', sha, '--'])
+  const changed = await git(dir, ['diff', '--name-only', '--no-renames', '--relative', '--end-of-options', sha, '--'])
   const untracked = await git(dir, ['ls-files', '--others', '--exclude-standard'])
   if (changed === null) return null
   // Stryker disable next-line StringLiteral: git lists untracked files wherever it can diff, so the fallback never applies
   return [...new Set([...lines(changed), ...lines(untracked ?? '')])]
+}
+
+/** @param {Git} git @param {string} dir @returns {Promise<string | null>} null before the first commit */
+const head = async (git, dir) => {
+  const sha = await git(dir, ['rev-parse', '--verify', '--quiet', 'HEAD'])
+  return sha?.trim() || null
+}
+
+/**
+ * The commits after `since` up to HEAD, oldest first, each with the files it changed relative
+ * to the folder; null when git cannot list them.
+ * @param {Git} git @param {string} dir @param {string} since
+ */
+const commits = async (git, dir, since) => {
+  const log = await git(dir, ['log', '--reverse', '-z', '--name-only', '--no-renames', '--relative', '--format=%x01%H%x02%s', '--end-of-options', `${since}..HEAD`, '--'])
+  return log === null ? null : log.split('\x01').slice(1).map(commitOf)
+}
+
+/**
+ * One commit of `git log -z --name-only --format=%x01%H%x02%s`, its \x01 removed: sha and
+ * subject split by \x02 and closed by NUL, then its files, each closed by NUL.
+ * @param {string} entry
+ * @returns {import('../../application/ports/source-control.mjs').Commit}
+ */
+const commitOf = (entry) => {
+  const [header, ...names] = entry.split('\0')
+  const separator = header.indexOf('\x02')
+  return {
+    sha: header.slice(0, separator),
+    subject: header.slice(separator + 1),
+    files: names.map((name) => name.replace(/^\r?\n/, '')).filter((name) => name !== ''),
+  }
 }
 
 /** @param {string} text @returns {string[]} */

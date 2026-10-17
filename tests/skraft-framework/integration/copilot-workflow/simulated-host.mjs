@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { briefOf } from '../support/pipeline-repository.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../plugins/skraft-framework/', import.meta.url))
 export const TEMPLATE_PATH = join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md')
@@ -23,30 +24,37 @@ export const journalLines = async (cwd, slug) =>
   (await readFile(eventsPath(cwd, slug), 'utf8')).split(/\r?\n/).filter((line) => line !== '')
 export const journalEvents = async (cwd, slug) => (await journalLines(cwd, slug)).map((line) => JSON.parse(line))
 
-/** The absolute output paths a brief lists after "Fill each output in place". */
-export const outputsOf = (prompt) => {
-  const lines = prompt.split('\n')
-  const start = lines.findIndex((line) => line.includes('Fill each output in place'))
-  const outputs = []
-  for (const line of lines.slice(start + 1)) {
-    if (!line.startsWith('- ')) break
-    outputs.push(line.slice(2))
-  }
-  return outputs
+/** The absolute output paths a brief lists after "Fill each output in place". @param {string} prompt */
+export const outputsOf = (prompt) => briefOf(prompt).outputs
+
+/** @param {string} path @param {string} text */
+const write = async (path, text) => {
+  await mkdir(dirname(path), { recursive: true })
+  await writeFile(path, text, 'utf8')
 }
 
-/** A behaviour that fills every listed output with the template plus findings. */
-export const fillsOutputs = (findings = 'Findings.\n') => async ({ outputs }) => {
+/** A behaviour that fills every listed output with the template plus findings, and writes its result. */
+export const fillsOutputs = (findings = 'Findings.\n') => async ({ prompt, outputs }) => {
   const template = await readFile(TEMPLATE_PATH, 'utf8')
-  for (const path of outputs) {
-    await mkdir(dirname(path), { recursive: true })
-    await writeFile(path, `${template.replace(/\{\{[^{}]*\}\}/g, 'filled in')}${findings}`, 'utf8')
-  }
+  for (const path of outputs) await write(path, `${template.replace(/\{\{[^{}]*\}\}/g, 'filled in')}${findings}`)
+  await write(/** @type {string} */ (briefOf(prompt).result), JSON.stringify({ status: 'done', summary: 'research written' }))
   return 'research written'
+}
+
+/** A behaviour that writes a blocked result and nothing else. */
+export const stops = (summary = 'needs a decision on the payment provider') => async ({ prompt }) => {
+  await write(/** @type {string} */ (briefOf(prompt).result), JSON.stringify({ status: 'blocked', summary }))
+  return summary
 }
 
 /** A behaviour that writes nothing but still answers. */
 export const writesNothing = async () => 'I could not find anything'
+
+/** A behaviour for every call: the scripted LLM of a pipeline repository. @param {{ act: (prompt: string) => void }} llm */
+export const actsAs = (llm) => async ({ prompt }) => {
+  llm.act(prompt)
+  return 'done'
+}
 
 /**
  * @param {{
@@ -54,9 +62,11 @@ export const writesNothing = async () => 'I could not find anything'
  *   behaviours?: Array<(call: { prompt: string, label: string, agent: string, outputs: string[] }) => Promise<string | undefined>>,
  *   journal?: Array<{ label: string, prompt: string, text: string | undefined }>,
  *   agents?: Array<{ id?: string, name?: string, displayName?: string }> | 'fails',
- * }} [options] journal: the previous run's, for a resume; agents: what session.rpc.agent.list answers
+ *   otherwise?: (call: { prompt: string, label: string, agent: string, outputs: string[] }) => Promise<string | undefined>,
+ * }} [options] journal: the previous run's, for a resume; agents: what session.rpc.agent.list answers;
+ *   otherwise: the behaviour of a call once the queued ones are spent (writesNothing by default)
  */
-export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents } = {}) => {
+export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing } = {}) => {
   const queue = [...behaviours]
   const calls = []
   const logs = []
@@ -68,7 +78,7 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
       if (memoised) return memoised.text
       const call = { prompt, label: options.label, agent: options.agent, outputs: outputsOf(prompt) }
       calls.push(call)
-      const behaviour = queue.shift() ?? writesNothing
+      const behaviour = queue.shift() ?? otherwise
       const text = await behaviour(call)
       journal.push({ label: options.label, prompt, text })
       return text

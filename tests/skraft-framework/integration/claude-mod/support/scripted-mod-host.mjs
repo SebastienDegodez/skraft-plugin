@@ -3,9 +3,10 @@
 import { spawn } from 'node:child_process'
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, isAbsolute, join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClaudeModDriver } from '../../../../../plugins/skraft-framework/engine/drivers/claude-mod/claude-mod-driver.mjs'
+import { briefOf } from '../../support/pipeline-repository.mjs'
 
 export const PLUGIN_ROOT = fileURLToPath(new URL('../../../../../plugins/skraft-framework/', import.meta.url))
 export const RESEARCH_TEMPLATE = await readFile(join(PLUGIN_ROOT, 'assets', 'templates', 'research.template.md'), 'utf8')
@@ -35,22 +36,14 @@ export const nodeModRun = ([program, ...args], init = {}) => new Promise((resolv
   child.once('close', (code) => resolve({ exitCode: code ?? 1, stdout, stderr }))
 })
 
-/** The absolute paths a brief lists as outputs, then as missing. @param {string} prompt */
+/** The absolute paths a brief lists as outputs, then as missing, and its result file. @param {string} prompt */
 export const briefPaths = (prompt) => {
-  const lines = prompt.split('\n')
-  const listed = (/** @type {number} */ from) => {
-    const paths = []
-    for (const line of lines.slice(from)) {
-      const path = line.startsWith('- ') ? line.slice(2) : null
-      if (path === null || !isAbsolute(path)) break
-      paths.push(path)
-    }
-    return paths
-  }
-  const fill = lines.findIndex((line) => line.startsWith('- Fill each output'))
-  const missing = lines.findIndex((line) => line.startsWith('Missing outputs from'))
-  return { outputs: fill < 0 ? [] : listed(fill + 1), missing: missing < 0 ? [] : listed(missing + 1) }
+  const { outputs, missing, result } = briefOf(prompt)
+  return { outputs, missing, result: /** @type {string} */ (result) }
 }
+
+/** @param {string} prompt @param {'done' | 'blocked'} status @param {string} summary */
+const writeResult = (prompt, status, summary) => nodeModFs.write(briefPaths(prompt).result, JSON.stringify({ status, summary }))
 
 /**
  * Subagent behaviours: each receives the spawn and the host, and answers what `$.agent.spawn`
@@ -58,19 +51,32 @@ export const briefPaths = (prompt) => {
  */
 export const fillsItsOutputs = (text = '\n## Key discoveries\nThe cart lives in src/cart.\n') => async (spawn, host) => {
   for (const path of briefPaths(spawn.prompt).outputs) await nodeModFs.write(path, `${(await nodeModFs.read(path)).replace(/\{\{[^{}]*\}\}/g, 'filled in')}${text}`)
+  await writeResult(spawn.prompt, 'done', 'research written')
   return host.answer(spawn)
 }
 export const writesNothing = () => async (spawn, host) => host.answer(spawn)
-/** The host dies once the agent wrote its outputs: its turn never completes. */
+/** Writes a blocked result and nothing else. */
+export const stops = (summary = 'needs a decision on the payment provider') => async (spawn, host) => {
+  await writeResult(spawn.prompt, 'blocked', summary)
+  return host.answer(spawn)
+}
+/** The host dies once the agent wrote its outputs and its result: its turn never completes. */
 export const fillsThenHostDies = () => async (spawn, host) => {
   for (const path of briefPaths(spawn.prompt).outputs) await nodeModFs.write(path, 'Findings.\n')
+  await writeResult(spawn.prompt, 'done', 'research written')
   return host.started(spawn)
+}
+/** Every spawn answered by the scripted LLM of a pipeline repository. @param {{ act: (prompt: string) => void }} llm */
+export const actsAs = (llm) => async (spawn, host) => {
+  llm.act(spawn.prompt)
+  return host.answer(spawn)
 }
 
 /**
- * @param {{ cwd?: string, behaviours?: Array<(spawn: any, host: any) => Promise<object>>, costs?: Array<number | null> }} [options]
+ * @param {{ cwd?: string, behaviours?: Array<(spawn: any, host: any) => Promise<object>>, costs?: Array<number | null>, otherwise?: (spawn: any, host: any) => Promise<object> }} [options]
+ *   otherwise: the behaviour of a spawn once the queued ones are spent; without it such a spawn is rejected
  */
-export const scriptedModHost = async ({ cwd, behaviours = [], costs = [] } = {}) => {
+export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise } = {}) => {
   const root = cwd ?? (await mkdtemp(join(tmpdir(), 'skraft-mod-')))
   const driver = createClaudeModDriver()
   /** @type {Array<{ prompt: string, subagentType: string, description: string }>} */
@@ -102,7 +108,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [] } = {})
     run: nodeModRun,
     spawn: async (/** @type {any} */ args) => {
       spawns.push(args)
-      const behaviour = scripted.shift()
+      const behaviour = scripted.shift() ?? otherwise
       if (!behaviour) throw new Error(`unexpected spawn ${args.description}`)
       const answer = await behaviour(args, control)
       started += 1

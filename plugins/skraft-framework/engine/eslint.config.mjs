@@ -11,16 +11,8 @@ const LIMITS = Object.freeze({
 // it passes; no file joins it.
 const NOT_REFACTORED_YET = [
   'application/active-run.mjs',
-  'application/observe.mjs',
   'application/run-journal.mjs',
-  'application/run-pipeline.mjs',
-  'domain/pipeline/next-step.mjs',
-  'drivers/claude-mod/agent-runner.mjs',
-  'drivers/claude-mod/claude-mod-driver.mjs',
-  'drivers/claude-mod/mod-files.mjs',
-  'drivers/copilot-workflow/ctx-agent-runner.mjs',
   'drivers/copilot-workflow/skraft-decide-tool.mjs',
-  'infrastructure/tracking/tracking-store.mjs',
 ]
 
 const warnings = Object.fromEntries(Object.entries(LIMITS).map(([rule, [, ...options]]) => [rule, ['warn', ...options]]))

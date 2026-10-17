@@ -1,5 +1,6 @@
 /**
- * AgentRunner on `$.agent.spawn`: the subagent's answer is its own `turn.complete`.
+ * AgentRunner on `$.agent.spawn`: the subagent's answer is its own `turn.complete`. A plugin
+ * agent is spawned as `<pluginName>:<id>`, a repository agent under its own id.
  *
  * @typedef {{ agentId?: string, answer?: string, reason?: string }} TurnComplete
  *   the fields of a `turn.complete` input the runner reads.
@@ -9,6 +10,19 @@
  *   complete: (turn: TurnComplete) => void,
  *   wait: (agentId: string) => Promise<TurnComplete>,
  * }} AgentAnswers
+ * @typedef {{
+ *   waiting: Map<string, (turn: TurnComplete) => void>,
+ *   early: Map<string, TurnComplete>,
+ *   keep: number,
+ * }} AnswerBook the answers awaited and the ones that came first
+ * @typedef {{
+ *   spawn: (args: SpawnArgs) => Promise<SpawnResult>,
+ *   answers: AgentAnswers,
+ *   pluginName: string,
+ *   sessionCostUsd: () => Promise<number | null>,
+ * }} SpawnHost
+ * @typedef {import('../../application/ports/agent-runner.mjs').AgentRunner} AgentRunner
+ * @typedef {import('../../application/ports/agent-runner.mjs').AgentAnswer} AgentAnswer
  */
 
 /**
@@ -18,67 +32,97 @@
  * @returns {AgentAnswers}
  */
 export const createAgentAnswers = ({ keep = 50 } = {}) => {
-  /** @type {Map<string, (turn: TurnComplete) => void>} */
-  const waiting = new Map()
-  /** @type {Map<string, TurnComplete>} */
-  const early = new Map()
+  /** @type {AnswerBook} */
+  const book = { waiting: new Map(), early: new Map(), keep }
   return Object.freeze({
-    complete: (turn) => {
-      const id = turn.agentId
-      if (typeof id !== 'string') return
-      const resolve = waiting.get(id)
-      if (resolve) {
-        waiting.delete(id)
-        resolve(turn)
-        return
-      }
-      early.set(id, turn)
-      if (early.size > keep) early.delete(/** @type {string} */ (early.keys().next().value))
-    },
-    wait: (agentId) => {
-      const turn = early.get(agentId)
-      if (turn) {
-        early.delete(agentId)
-        return Promise.resolve(turn)
-      }
-      return new Promise((resolve) => waiting.set(agentId, resolve))
-    },
+    complete: (turn) => completeTurn(book, turn),
+    wait: (agentId) => waitForAnswer(book, agentId),
   })
 }
 
+/** Hands the answer to whoever waits for it, or keeps it for a later wait. @param {AnswerBook} book @param {TurnComplete} turn */
+const completeTurn = (book, turn) => {
+  const id = turn.agentId
+  if (typeof id !== 'string') return
+  const resolve = book.waiting.get(id)
+  if (resolve) {
+    book.waiting.delete(id)
+    resolve(turn)
+    return
+  }
+  keepEarly(book, id, turn)
+}
+
+/** Keeps the `keep` latest answers nobody waits for yet. @param {AnswerBook} book @param {string} id @param {TurnComplete} turn */
+const keepEarly = (book, id, turn) => {
+  book.early.set(id, turn)
+  if (book.early.size > book.keep) book.early.delete(/** @type {string} */ (book.early.keys().next().value))
+}
+
+/** @param {AnswerBook} book @param {string} agentId @returns {Promise<TurnComplete>} */
+const waitForAnswer = (book, agentId) => {
+  const turn = book.early.get(agentId)
+  if (turn) {
+    book.early.delete(agentId)
+    return Promise.resolve(turn)
+  }
+  return new Promise((resolve) => book.waiting.set(agentId, resolve))
+}
+
 /**
- * @param {{
- *   spawn: (args: SpawnArgs) => Promise<SpawnResult>,
- *   answers: AgentAnswers,
- *   pluginName: string,
- *   sessionCostUsd: () => Promise<number | null>,
- * }} host
- * @returns {import('../../application/ports/agent-runner.mjs').AgentRunner}
+ * @param {SpawnHost} host
+ * @returns {AgentRunner}
  */
 export const createSpawnAgentRunner = ({ spawn, answers, pluginName, sessionCostUsd }) => Object.freeze({
-  run: async ({ agent, label, prompt }) => {
-    const before = await sessionCostUsd()
-    /** @type {SpawnResult} */
-    let spawned
-    try {
-      spawned = await spawn({ prompt, subagentType: `${pluginName}:${agent}`, description: label })
-    } catch (error) {
-      return { ok: false, text: '', unavailable: true, error: `${pluginName}:${agent} could not be started: ${messageOf(error)}` }
-    }
-    if (typeof spawned.deny === 'string' || typeof spawned.agentId !== 'string') {
-      return { ok: false, text: '', unavailable: true, error: spawned.deny ?? `${pluginName}:${agent} was not started` }
-    }
-    const turn = await answers.wait(spawned.agentId)
-    const after = await sessionCostUsd()
-    const ok = turn.reason === 'answer'
-    return {
-      ok,
-      text: turn.answer ?? '',
-      ...(ok ? {} : { error: `${pluginName}:${agent} ended: ${turn.reason}` }),
-      ...(before !== null && after !== null && after >= before ? { costUsd: after - before } : {}),
-    }
-  },
+  run: (request) => runSpawned({ spawn, answers, pluginName, sessionCostUsd }, request),
 })
+
+/** @param {SpawnHost} host @param {import('../../application/ports/agent-runner.mjs').AgentDispatch} request @returns {Promise<AgentAnswer>} */
+const runSpawned = async (host, { agent, source, label, prompt }) => {
+  const { spawn, answers, pluginName, sessionCostUsd } = host
+  const subagentType = source === 'repository' ? agent : `${pluginName}:${agent}`
+  const before = await sessionCostUsd()
+  const spawned = await spawnSubagent(spawn, { prompt, subagentType, description: label })
+  if ('refused' in spawned) return spawned.refused
+  const turn = await answers.wait(spawned.agentId)
+  const after = await sessionCostUsd()
+  return { ...turnResult(subagentType, turn), ...costSpent(before, after) }
+}
+
+/**
+ * The started subagent's id, or the result of a spawn the host refused or could not make.
+ * @param {SpawnHost['spawn']} spawn @param {SpawnArgs} args
+ * @returns {Promise<{ agentId: string } | { refused: AgentAnswer }>}
+ */
+const spawnSubagent = async (spawn, args) => {
+  /** @type {SpawnResult} */
+  let spawned
+  try {
+    spawned = await spawn(args)
+  } catch (error) {
+    return { refused: notStarted(`${args.subagentType} could not be started: ${messageOf(error)}`) }
+  }
+  if (typeof spawned.deny === 'string' || typeof spawned.agentId !== 'string') {
+    return { refused: notStarted(spawned.deny ?? `${args.subagentType} was not started`) }
+  }
+  return { agentId: spawned.agentId }
+}
+
+/** @param {string} error @returns {AgentAnswer} */
+const notStarted = (error) => ({ ok: false, text: '', unavailable: true, error })
+
+/** @param {string} subagentType @param {TurnComplete} turn */
+const turnResult = (subagentType, turn) => {
+  const ok = turn.reason === 'answer'
+  return {
+    ok,
+    text: turn.answer ?? '',
+    ...(ok ? {} : { error: `${subagentType} ended: ${turn.reason}` }),
+  }
+}
+
+/** The session cost the subagent added, when both readings are known and it did not fall. @param {number | null} before @param {number | null} after */
+const costSpent = (before, after) => (before !== null && after !== null && after >= before ? { costUsd: after - before } : {})
 
 /** @param {unknown} error */
 const messageOf = (error) => (error instanceof Error ? error.message : String(error))

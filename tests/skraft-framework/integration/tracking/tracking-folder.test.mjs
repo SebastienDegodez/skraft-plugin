@@ -51,6 +51,21 @@ test('tracking files live under the slug folder; the location is the absolute na
   assert.equal(await adapters.files.read('checkout', 'research/2026-10-11/checkout-research.md'), 'Findings.\n')
 })
 
+test('the files under a tracking folder are listed at any depth, relative to the slug folder, sorted', async (t) => {
+  const { adapters } = adaptersIn(t)
+  assert.deepEqual(await adapters.files.list('checkout', 'research'), [])
+
+  await adapters.files.write('checkout', 'research/2026-10-12/b notes.md', 'b\n')
+  await adapters.files.write('checkout', 'research/2026-10-11/a.md', 'a\n')
+  await adapters.files.write('checkout', 'research/top.md', 'top\n')
+  await adapters.files.write('checkout', 'plan/plan.md', 'plan\n')
+
+  assert.deepEqual(await adapters.files.list('checkout', 'research'), ['research/2026-10-11/a.md', 'research/2026-10-12/b notes.md', 'research/top.md'])
+  assert.deepEqual(await adapters.files.list('checkout', 'research/2026-10-11/'), ['research/2026-10-11/a.md'])
+  assert.deepEqual(await adapters.files.list('checkout', 'research/top.md'), [])
+  assert.deepEqual(await adapters.files.list('other', 'research'), [])
+})
+
 test('a tracking path that cannot be read for another reason than absence fails loudly', async (t) => {
   const { adapters, base } = adaptersIn(t)
   mkdirSync(join(base, 'checkout', 'events.jsonl'), { recursive: true })

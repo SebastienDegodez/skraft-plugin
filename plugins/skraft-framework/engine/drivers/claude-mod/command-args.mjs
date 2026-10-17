@@ -4,9 +4,10 @@
  * @typedef {{ issue: number | null, title: string | null } | null} Story
  * @typedef {{ command: 'status' }
  *   | { command: 'decide', words: string[] }
- *   | { command: 'run', slug: string | null, story: Story, base: string | null }} SkraftRequest
+ *   | { command: 'run', slug: string | null, story: Story, base: string | null, fromArtifacts: boolean }} SkraftRequest
  *   run with a null slug resumes the active pipeline; the slug is never guessed. base: the
- *   `--base <ref>` typed anywhere after the slug, null without one.
+ *   `--base <ref>` typed anywhere after the slug, null without one. fromArtifacts:
+ *   `--from-artifacts` typed anywhere after the slug.
  */
 
 /**
@@ -14,6 +15,7 @@
  *   'decide …'                  → decide
  *   'checkout #42 Pay by card'  → run checkout, story { issue: 42, title: 'Pay by card' }
  *   'checkout --base develop'   → run checkout on the base develop
+ *   'checkout --from-artifacts' → run checkout from its DISCUSS stories
  * @param {unknown} args everything after `/skraft`, as typed
  * @returns {SkraftRequest}
  */
@@ -28,16 +30,19 @@ export const parseSkraftCommand = (args) => {
 const asksForStatus = (first, rest) => first === undefined || ((first === 'status' || first === 'help') && rest.length === 0)
 
 /**
- * `<slug> [#<issue>] [title…]`, with `--base <ref>` anywhere after the slug.
- * @param {string} slug @param {string[]} words
- * @returns {{ command: 'run', slug: string, story: Story, base: string | null }}
+ * `<slug> [#<issue>] [title…]`, with `--base <ref>` and `--from-artifacts` anywhere after the slug.
+ * @param {string} slug @param {string[]} typed
+ * @returns {{ command: 'run', slug: string, story: Story, base: string | null, fromArtifacts: boolean }}
  */
-const runRequest = (slug, words) => {
+const runRequest = (slug, typed) => {
+  const words = typed.filter((word) => word !== FROM_ARTIFACTS)
   const { base, story } = splitBase(words)
   const issue = /^#(\d+)$/.exec(story[0])
   const titleWords = issue ? story.slice(1) : story
-  return { command: 'run', slug, story: storyOf(issue ? Number(issue[1]) : null, titleWords.join(' ')), base }
+  return { command: 'run', slug, story: storyOf(issue ? Number(issue[1]) : null, titleWords.join(' ')), base, fromArtifacts: words.length < typed.length }
 }
+
+const FROM_ARTIFACTS = '--from-artifacts'
 
 /**
  * The ref after `--base` ('' when nothing follows it, null without `--base`) and the words left
@@ -52,14 +57,15 @@ const splitBase = (words) => {
 }
 
 /**
- * @param {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown } | null | undefined} input the tool's input
- * @returns {{ command: 'run', slug: string | null, story: Story, base: string | null }}
+ * @param {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown } | null | undefined} input the tool's input
+ * @returns {{ command: 'run', slug: string | null, story: Story, base: string | null, fromArtifacts: boolean }}
  */
 export const toolRequest = (input) => ({
   command: 'run',
   slug: trimmedText(input?.slug),
   story: storyOf(positiveInteger(input?.issue), trimmedText(input?.title) ?? ''),
   base: trimmedText(input?.base),
+  fromArtifacts: input?.fromArtifacts === true,
 })
 
 /** The text without surrounding blanks; null when it is not text or holds only blanks. @param {unknown} value */

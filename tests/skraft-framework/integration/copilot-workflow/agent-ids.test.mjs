@@ -4,15 +4,16 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createCtxAgentRunner } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/ctx-agent-runner.mjs'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, fillsOutputs, simulatedContext, workingCopy } from './simulated-host.mjs'
+import { PLUGIN_ROOT, fillsOutputs, simulatedContext, stops, workingCopy } from './simulated-host.mjs'
 
-const DISPATCH = { agent: 'solution-researcher', label: 'skraft checkout · research · attempt 1', prompt: 'brief' }
+const DISPATCH = { agent: 'solution-researcher', source: 'plugin', label: 'skraft checkout · research · attempt 1', prompt: 'brief' }
+const REPOSITORY_DISPATCH = { agent: 'acme-security-reviewer', source: 'repository', label: 'skraft checkout · security · attempt 1', prompt: 'brief' }
 const answering = (text) => [async () => text]
 
 /** The agent name ctx.agent received for the researcher. */
-const dispatchedAs = async (options, pluginRoot = PLUGIN_ROOT) => {
+const dispatchedAs = async (options, pluginRoot = PLUGIN_ROOT, dispatch = DISPATCH) => {
   const { ctx, calls } = simulatedContext({ behaviours: answering('ok'), ...options })
-  const answer = await createCtxAgentRunner({ ctx, pluginRoot, agentIds: options.agentIds }).run(DISPATCH)
+  const answer = await createCtxAgentRunner({ ctx, pluginRoot, agentIds: options.agentIds }).run(dispatch)
   return { answer, agent: calls[0]?.agent }
 }
 
@@ -32,6 +33,13 @@ test('the session list resolves the agent by id, name or display name, or by an 
 test('a session that cannot list its agents gets the plugin-prefixed id', async () => {
   assert.equal((await dispatchedAs({})).agent, 'skraft:solution-researcher')
   assert.equal((await dispatchedAs({ agents: 'fails' })).agent, 'skraft:solution-researcher')
+})
+
+test('a session that cannot list its agents calls a repository agent by its bare id; a list or agentIds still decide', async () => {
+  assert.equal((await dispatchedAs({}, PLUGIN_ROOT, REPOSITORY_DISPATCH)).agent, 'acme-security-reviewer')
+  assert.equal((await dispatchedAs({ agents: 'fails' }, PLUGIN_ROOT, REPOSITORY_DISPATCH)).agent, 'acme-security-reviewer')
+  assert.equal((await dispatchedAs({ agents: [{ id: 'repo:acme-security-reviewer' }] }, PLUGIN_ROOT, REPOSITORY_DISPATCH)).agent, 'repo:acme-security-reviewer')
+  assert.equal((await dispatchedAs({ agentIds: { 'acme-security-reviewer': 'mine' } }, PLUGIN_ROOT, REPOSITORY_DISPATCH)).agent, 'mine')
 })
 
 test('without a readable plugin manifest the file id is used as is', async (t) => {
@@ -75,9 +83,9 @@ test('the session is listed once per run', async () => {
 test('the workflow passes agentIds through and blocks when the session lacks the agent', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
-  const explicit = simulatedContext({ args: { slug: 'checkout', agentIds: { 'solution-researcher': 'mine' } }, behaviours: [fillsOutputs()] })
-  assert.equal((await runSkraftPipelineWorkflow(explicit.ctx, { cwd, pluginRoot: PLUGIN_ROOT })).status, 'done')
-  assert.equal(explicit.calls[0].agent, 'mine')
+  const explicit = simulatedContext({ args: { slug: 'checkout', agentIds: { 'solution-researcher': 'mine' } }, behaviours: [fillsOutputs(), stops()] })
+  assert.equal((await runSkraftPipelineWorkflow(explicit.ctx, { cwd, pluginRoot: PLUGIN_ROOT })).code, 'agent-blocked')
+  assert.deepEqual(explicit.calls.map((call) => call.agent), ['mine', 'skraft:solution-architect'])
 
   const missing = simulatedContext({ args: { slug: 'billing' }, agents: [] })
   const outcome = await runSkraftPipelineWorkflow(missing.ctx, { cwd, pluginRoot: PLUGIN_ROOT })

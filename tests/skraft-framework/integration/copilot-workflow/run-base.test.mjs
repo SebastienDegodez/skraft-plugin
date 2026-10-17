@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, fillsOutputs, simulatedContext } from './simulated-host.mjs'
+import { PLUGIN_ROOT, fillsOutputs, simulatedContext, stops } from './simulated-host.mjs'
 import { commitAll, git, journal, tempFolder } from '../support/workspace.mjs'
 
 /** A working copy on a feature branch, with `develop` and `main` behind it, and a front in a neighbour repository. */
@@ -31,16 +31,16 @@ const repositories = (t) => {
 test('the workflow journals the base of each repository when it starts a slug, and args.base wins', async (t) => {
   const { cwd, main, develop, webMain } = repositories(t)
 
-  const plain = simulatedContext({ args: { slug: 'checkout' }, behaviours: [fillsOutputs()] })
+  const plain = simulatedContext({ args: { slug: 'checkout' }, behaviours: [fillsOutputs(), stops()] })
   const outcome = await runSkraftPipelineWorkflow(plain.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
-  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual([outcome.phase, outcome.code], ['DESIGN', 'agent-blocked'], outcome.reason)
   assert.deepEqual(journal(cwd, 'checkout')[0].base.map(({ component, ref, source, sha }) => [component, ref, source, sha]), [
     [null, 'main', 'default', main],
     ['web', 'develop', 'component', webMain],
   ])
 
-  const flagged = simulatedContext({ args: { slug: 'refund', base: 'develop' }, behaviours: [fillsOutputs()] })
-  await runSkraftPipelineWorkflow(flagged.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  const flagged = simulatedContext({ args: { slug: 'refund', base: 'develop' }, behaviours: [fillsOutputs(), stops()] })
+  assert.equal((await runSkraftPipelineWorkflow(flagged.ctx, { cwd, pluginRoot: PLUGIN_ROOT })).code, 'agent-blocked')
   assert.deepEqual(journal(cwd, 'refund')[0].base.map(({ component, ref, source, sha }) => [component, ref, source, sha]), [
     [null, 'develop', 'flag', develop],
     ['web', 'develop', 'flag', webMain],

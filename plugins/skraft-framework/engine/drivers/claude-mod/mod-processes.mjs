@@ -10,15 +10,18 @@ import { joinPath } from './mod-files.mjs'
 /** `$.process.run` refuses a longer timeout. */
 const LONGEST_MS = 600_000
 
+/** `/x`, `\\server\x`, `C:\x`, `C:/x`. */
+const ABSOLUTE = /^(?:[\\/]|[A-Za-z]:[\\/])/
+
 /**
- * The CommandRunner port on the Claude Code mod's `$.process.run`.
+ * The CommandRunner port on the Claude Code mod's `$.process.run`. An absolute cwd is taken as is.
  * @param {{ run: ModRun, root: string }} options root: the working copy
  * @returns {import('../../application/ports/command-runner.mjs').CommandRunner}
  */
 export const createModCommandRunner = ({ run, root }) => Object.freeze({
   run: async ({ argv, cwd }) => {
     try {
-      const result = await run([...argv], { cwd: joinPath(root, cwd), timeoutMs: LONGEST_MS })
+      const result = await run([...argv], { cwd: ABSOLUTE.test(cwd) ? cwd : joinPath(root, cwd), timeoutMs: LONGEST_MS })
       return { started: true, exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

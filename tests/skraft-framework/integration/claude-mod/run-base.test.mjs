@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fillsItsOutputs, scriptedModHost } from './support/scripted-mod-host.mjs'
+import { fillsItsOutputs, scriptedModHost, stops } from './support/scripted-mod-host.mjs'
 import { TOOL } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/claude-mod-driver.mjs'
 import { createModCommandRunner } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/mod-processes.mjs'
 import { commitAll, git, tempFolder } from '../support/workspace.mjs'
@@ -23,12 +23,12 @@ const repository = (t) => {
 
 test('/skraft <slug> journals the merge base with main through $.process.run; --base <ref> picks another', async (t) => {
   const { cwd, main, develop } = repository(t)
-  const mod = await scriptedModHost({ cwd, behaviours: [fillsItsOutputs(), fillsItsOutputs()] })
+  const mod = await scriptedModHost({ cwd, behaviours: [fillsItsOutputs(), stops(), fillsItsOutputs(), stops()] })
 
   assert.equal(await mod.command('checkout #42 Pay by card'), 'skraft checkout started — progress in the Skraft pane.')
-  await mod.settled()
+  assert.equal((await mod.settled()).code, 'agent-blocked')
   assert.equal(await mod.command('refund --base develop'), 'skraft refund started — progress in the Skraft pane.')
-  await mod.settled()
+  assert.equal((await mod.settled()).code, 'agent-blocked')
 
   const [checkout] = await mod.journal('checkout')
   const [refund] = await mod.journal('refund')
@@ -45,16 +45,16 @@ test('the run_pipeline tool takes a base, and a base Git cannot find is refused 
 
   assert.equal(text, 'skraft checkout: not started — the working copy (.) has no merge base with release/9; set baseBranch in skraft-config.json or pass --base <ref>')
   assert.deepEqual(mod.spawns, [])
-  assert.deepEqual(Object.entries(TOOL.inputSchema.properties).map(([name, { type }]) => `${name}: ${type}`), ['slug: string', 'issue: integer', 'title: string', 'base: string'])
+  assert.deepEqual(Object.entries(TOOL.inputSchema.properties).map(([name, { type }]) => `${name}: ${type}`), ['slug: string', 'issue: integer', 'title: string', 'base: string', 'fromArtifacts: boolean'])
 })
 
 test('a mod host whose $.process.run cannot start git starts the run with no base', async (t) => {
-  const mod = await scriptedModHost({ behaviours: [fillsItsOutputs()] })
+  const mod = await scriptedModHost({ behaviours: [fillsItsOutputs(), stops()] })
   t.after(mod.cleanup)
   mod.host.run = async () => { throw new Error('process.run is not allowed') }
 
   await mod.command('checkout')
-  await mod.settled()
+  assert.equal((await mod.settled()).code, 'agent-blocked')
 
   assert.deepEqual((await mod.journal('checkout'))[0].base, [])
 })

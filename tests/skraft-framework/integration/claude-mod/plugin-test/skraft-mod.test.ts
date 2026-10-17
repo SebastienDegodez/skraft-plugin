@@ -5,11 +5,16 @@
 // researcher and then counts as not started; the Node tests beside this folder drive the
 // answered path (turn.complete) with scripted `$` functions.
 import { describe, expect, mock, test } from 'claude-code/testing'
+import { PLUGIN_FILES } from './plugin-files'
 
 const CWD = '/work'
 const PANE = 'skraft-pipeline'
 const NOT_STARTED = 'skraft checkout: blocked (agent-unavailable) — skraft:solution-researcher was not started'
 const TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
+const PHASES = '▶ RESEARCH\n· DESIGN\n· DISTILL\n· DELIVER'
+
+/** A file the plugin ships (the workflow, its agents), served by its path under the plugin root. */
+const shipped = (path: string) => Object.entries(PLUGIN_FILES).find(([relative]) => path.endsWith(`/${relative}`))?.[1]
 
 type Spawn = { prompt: string; subagentType?: string; description?: string }
 
@@ -37,9 +42,10 @@ const world = ($: any, on: any) => {
   on('ui.status', () => ({ value: undefined }))
   on('session.cwd', () => ({ value: CWD }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [] } }))
-  on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) }))
+  on('fs.exists', ($$: any, e: any) => ({ value: files.has(e.path) || shipped(e.path) !== undefined }))
   on('fs.read', ($$: any, e: any) => {
     if (e.path.endsWith('/assets/templates/research.template.md')) return { value: TEMPLATE }
+    if (shipped(e.path) !== undefined) return { value: shipped(e.path) }
     if (!files.has(e.path)) return { deny: `ENOENT: ${e.path}` }
     return { value: files.get(e.path) }
   })
@@ -85,7 +91,7 @@ describe('skraft mod', () => {
     expect(logs).toEqual([NOT_STARTED])
 
     const status = await $.command.run({ command: 'skraft', args: '' } as any)
-    expect(status.text).toBe(`skraft checkout — blocked\n▶ RESEARCH\nskraft:solution-researcher was not started\nagent: solution-researcher (research, attempt 1)`)
+    expect(status.text).toBe(`skraft checkout — blocked\n${PHASES}\nskraft:solution-researcher was not started\nagent: solution-researcher (research, attempt 1)`)
     const decided = await $.command.run({ command: 'skraft', args: 'decide yes' } as any)
     expect(decided.text).toBe('skraft: no question is pending for checkout; nothing to decide.')
   })

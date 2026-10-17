@@ -5,18 +5,22 @@ import { createSystemClock } from './clock/system-clock.mjs'
 import { createWebCryptoHasher } from './crypto/web-crypto-hasher.mjs'
 import { createWorkspaceFiles } from './workspace/workspace-files.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
+import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
+import { createAgentCatalog } from './agents/agent-catalog.mjs'
+import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
 
 /**
  * Every adapter a Node host needs, except the host's own AgentRunner and progress.
- * @param {{ cwd: string, pluginRoot: string, env?: NodeJS.ProcessEnv }} host env: where programs are
- *   looked for and what they inherit; this process's environment by default
+ * @param {{ cwd: string, pluginRoot: string, env?: NodeJS.ProcessEnv, agentHost?: import('./agents/agent-catalog.mjs').AgentHost }} host
+ *   env: where programs are looked for and what they inherit; this process's environment by
+ *   default. agentHost: the host that starts the agents; none for the CLI, which checks for both.
  */
-export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env }) => {
+export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHost }) => {
   const files = createNodeFiles()
   return Object.freeze({
     ...trackedState(files, cwd),
-    templates: createPluginTemplates({ files, pluginRoot }),
+    ...pluginContent(files, { pluginRoot, cwd, agentHost }),
     clock: createSystemClock(),
     hasher: createWebCryptoHasher(),
     workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
@@ -35,6 +39,17 @@ const trackedState = (files, cwd) => {
 }
 
 /**
+ * What the plugin ships, and the agents the working copy adds to it for the host that starts them.
+ * @param {ReturnType<typeof createNodeFiles>} files
+ * @param {{ pluginRoot: string, cwd: string, agentHost: import('./agents/agent-catalog.mjs').AgentHost | undefined }} where
+ */
+const pluginContent = (files, { pluginRoot, cwd, agentHost }) => ({
+  templates: createPluginTemplates({ files, pluginRoot }),
+  workflowSource: createPluginWorkflows({ files, pluginRoot }),
+  agentCatalog: createAgentCatalog({ files, pluginRoot, root: cwd, host: agentHost }),
+})
+
+/**
  * Programs started from the working copy, git run through them, and where they are found.
  * @param {string} cwd @param {NodeJS.ProcessEnv} env
  */
@@ -43,6 +58,7 @@ const programs = (cwd, env) => {
   return {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner }),
+    commitReplay: createGitCommitReplay({ commandRunner }),
     executables: createNodeExecutables({ root: cwd, env }),
   }
 }

@@ -36,9 +36,12 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
   assert.deepEqual(USAGE.split('\n').map((line) => line.trim().split(/\s{2,}/)[0]), [
     'usage: skraft --version',
     'skraft init [--add <folder>]...',
-    'skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>]',
+    'skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]',
     'skraft status [--json]',
     'skraft gate [--all] [--json]',
     'skraft doctor [--run] [--base <ref>] [--json]',
+    'skraft workflow eject',
+    'skraft workflow check [--json]',
+    'skraft workflow diff [--json]',
   ])
 })
