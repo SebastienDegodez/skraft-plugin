@@ -31,6 +31,7 @@ export const createGitSourceControl = ({ commandRunner }) => {
       const changed = await git(dir, ['diff', '--name-only', '--relative', '--end-of-options', sha, '--'])
       const untracked = await git(dir, ['ls-files', '--others', '--exclude-standard'])
       if (changed === null) return null
+      // Stryker disable next-line StringLiteral: git lists untracked files wherever it can diff, so the fallback never applies
       return [...new Set([...lines(changed), ...lines(untracked ?? '')])]
     },
   })

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { copyFileSync, linkSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, linkSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { FIXTURES, commitAll, copyFixture, envWithPath, git, readJson, skraft, stubPrograms, tempFolder, toolFolders } from '../support/workspace.mjs'
 
@@ -135,4 +135,29 @@ test('doctor --run starts each command once against the base it is given, main b
   assert.equal(onDevelop.status, 0, onDevelop.stdout)
   assert.equal(onDevelop.stdout.split(/\r?\n/)[2], `ok    payment/test: node --version ${developSha} passed`)
   assert.match(JSON.parse(dry.stdout).checks[2].detail, /^node → /)
+})
+
+test('doctor names a component root that is missing or a file; a folder it may not read stops it with the system\'s error', async (t) => {
+  const cwd = join(tempFolder(t), 'payment')
+  mkdirSync(join(cwd, 'locked'), { recursive: true })
+  writeFileSync(join(cwd, 'notes.txt'), 'not a folder\n')
+  const component = (name, root) => ({ name, root, stack: 'javascript', mocking: { strategy: 'inprocess' }, commands: { test: 'node --version' } })
+  const configure = (components) => writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ components }))
+  const env = envWithPath(toolFolders())
+  configure([component('gone', 'gone'), component('notes', 'notes.txt')])
+
+  const report = JSON.parse((await skraft(cwd, ['doctor', '--json'], { env })).stdout)
+
+  assert.deepEqual(report.checks.filter((check) => check.status === 'fail'), [
+    { subject: 'gone', status: 'fail', detail: 'root gone is not a folder' },
+    { subject: 'notes', status: 'fail', detail: 'root notes.txt is not a folder' },
+  ])
+  if (process.platform === 'win32' || process.getuid?.() === 0) return
+  configure([component('locked', 'locked')])
+  chmodSync(join(cwd, 'locked'), 0o000)
+  try {
+    await assert.rejects(skraft(cwd, ['doctor'], { env }), { code: 'EACCES' })
+  } finally {
+    chmodSync(join(cwd, 'locked'), 0o755)
+  }
 })

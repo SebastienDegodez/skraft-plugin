@@ -76,26 +76,29 @@ const locate = async (program, dir, { platform, env }) => {
   const windows = platform === 'win32'
   const pathext = (env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter((ext) => ext !== '')
   const extensions = !windows ? [''] : pathext.some((ext) => ext.toLowerCase() === extname(program).toLowerCase()) ? [''] : pathext
+  // Stryker disable next-line StringLiteral: with no PATH, any fallback names no folder that holds the program
   const pathOf = windows ? env.Path ?? env.PATH ?? '' : env.PATH ?? ''
   const folders = isAbsolute(program) || /[\\/]/.test(program) ? [dir] : pathOf.split(delimiter)
   for (const folder of folders) {
     for (const ext of extensions) {
-      const candidate = resolve(folder, `${program}${ext}`)
-      if (await runnable(candidate, windows)) return candidate
+      const found = await programAt(resolve(folder, `${program}${ext}`), windows)
+      if (found !== null) return found
     }
   }
   return null
 }
 
-/** @param {string} path @param {boolean} windows */
-const runnable = async (path, windows) => {
+/**
+ * The path when it is a file this system can start, null otherwise.
+ * @param {string} path @param {boolean} windows @returns {Promise<string | null>}
+ */
+const programAt = async (path, windows) => {
   try {
-    if (!(await stat(path)).isFile()) return false
+    if (!(await stat(path)).isFile()) return null
     await access(path, windows ? constants.F_OK : constants.X_OK)
-    return true
-  // Stryker disable next-line BlockStatement: undefined and false both mean "not runnable" to the only caller, which tests truthiness
+    return path
   } catch {
-    return false
+    return null
   }
 }
 

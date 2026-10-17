@@ -104,6 +104,13 @@ test('a program found but that the system refuses to start is not started, with 
   assert.match(result.error, /^\.\/broken(\.exe)? could not be started: spawn /)
 })
 
+test('an argument no program can receive (a NUL byte) is refused before anything starts', async (t) => {
+  const result = await createNodeCommandRunner({ root: tempFolder(t) }).run({ argv: ['node', '-e', '0', 'a\0b'], cwd: '.' })
+
+  assert.deepEqual([result.started, result.exitCode], [false, null])
+  assert.match(result.error, /^node could not be started: .*null bytes/)
+})
+
 test('under Windows rules a program is found by PATHEXT, in Path whatever its case, unless it already has one of those extensions', async (t) => {
   const root = tempFolder(t)
   const bin = join(root, 'bin')

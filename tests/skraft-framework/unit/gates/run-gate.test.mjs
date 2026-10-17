@@ -112,19 +112,19 @@ test('components that share a root are all touched by a file changed there', asy
 })
 
 test('a command the developer wrote is the one that runs, with the base of its own repository', async () => {
-  const api = { ...API, commands: { test: 'dotnet test --filter "Category!=Slow|Category=Fast" --nologo \'\'', mutation: 'dotnet stryker --since:{baseSha} --threshold-break 80' } }
+  const api = { ...API, commands: { test: 'dotnet test --filter "Category!=Slow|Category=Fast" --nologo \'\' --logger \'trx;LogFileName="run.trx"\'', mutation: 'dotnet stryker --since:{baseSha} --threshold-break 80' } }
   const { tracking, machine, gate } = await hostWith({ components: [api, { ...WEB, commands: { mutation: 'npx stryker run --since {baseSha}' } }] })
 
   await gate('all')
 
   assert.deepEqual(machine.runs, [
-    { argv: ['dotnet', 'test', '--filter', 'Category!=Slow|Category=Fast', '--nologo', ''], cwd: 'services/payment-api' },
+    { argv: ['dotnet', 'test', '--filter', 'Category!=Slow|Category=Fast', '--nologo', '', '--logger', 'trx;LogFileName="run.trx"'], cwd: 'services/payment-api' },
     { argv: ['dotnet', 'stryker', '--since:a1', '--threshold-break', '80'], cwd: 'services/payment-api' },
     { argv: ['npx', 'stryker', 'run', '--since', 'w1'], cwd: '../payment-web' },
   ])
   const firstLine = async (evidence) => (await tracking.read('checkout', evidence)).split('\n')[0]
   assert.deepEqual([await firstLine('gates/api/test-1.log'), await firstLine('gates/api/mutation-1.log'), await firstLine('gates/web/mutation-1.log')], [
-    '$ dotnet test --filter "Category!=Slow|Category=Fast" --nologo ""',
+    '$ dotnet test --filter "Category!=Slow|Category=Fast" --nologo "" --logger \'trx;LogFileName="run.trx"\'',
     '$ dotnet stryker --since:a1 --threshold-break 80',
     '$ npx stryker run --since w1',
   ])
