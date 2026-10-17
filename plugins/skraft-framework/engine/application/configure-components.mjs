@@ -1,6 +1,7 @@
-import { CONFIG_FILE, isAbsolutePath, readConfig, writeConfig } from '../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, isAbsolutePath, writeConfig } from '../domain/config/skraft-config.mjs'
 import { componentName, detectProject } from '../domain/config/stack-detection.mjs'
 import { joinRelative, normalizeRelative } from '../domain/config/relative-path.mjs'
+import { loadConfig } from './bases.mjs'
 
 /**
  * @typedef {import('./ports/workspace.mjs').Workspace} Workspace
@@ -25,13 +26,14 @@ export const createConfigureComponents = ({ workspace }) => Object.freeze({
    * @returns {Promise<ConfigureOutcome>}
    */
   configure: async ({ workingCopyName, folders = [] }) => {
-    const reading = readConfig(await workspace.read(CONFIG_FILE))
-    if (!reading.ok) return { ok: false, reason: `${CONFIG_FILE} is invalid: ${reading.errors.join('; ')}` }
+    const reading = await loadConfig({ workspace })
+    if (!reading.ok) return reading
     for (const folder of folders) {
       const refused = isAbsolutePath(folder) ? 'is not relative to the working copy' : (await workspace.list(normalizeRelative(folder))) === null ? 'is not a folder' : null
       if (refused) return { ok: false, reason: `--add ${folder} ${refused}` }
     }
-    const listed = Array.isArray(reading.raw.components) ? /** @type {Array<Record<string, unknown>>} */ (reading.raw.components) : []
+    const hasList = Array.isArray(reading.raw.components)
+    const listed = hasList ? /** @type {Array<Record<string, unknown>>} */ (reading.raw.components) : []
     const roots = new Set(reading.config.components.map((component) => component.root))
     const names = new Set(reading.config.components.map((component) => component.name))
     /** @type {ProposedComponent[]} */
@@ -45,10 +47,7 @@ export const createConfigureComponents = ({ workspace }) => Object.freeze({
         added.push({ name, root: found.root, stack: found.stack, paths: found.paths, commands: found.commands })
       }
     }
-    const kept = listed.length
-    if (added.length === 0 && reading.present && Array.isArray(reading.raw.components)) {
-      return { ok: true, reason: `${CONFIG_FILE} already lists every project found (${kept} components)` }
-    }
+    if (added.length === 0 && hasList) return { ok: true, reason: `${CONFIG_FILE} already lists every project found (${listed.length} components)` }
     await workspace.write(CONFIG_FILE, writeConfig(reading.raw, [...listed, ...added]))
     return {
       ok: true,
@@ -74,10 +73,10 @@ const projectsUnder = async (workspace, start) => {
   /** @param {string} dir a folder, never a file @param {number} depth @param {string[]} families of the projects above */
   const visit = async (dir, depth, families) => {
     const entries = /** @type {import('./ports/workspace.mjs').WorkspaceEntry[]} */ (await workspace.list(dir))
-    /** @type {Map<string, string | null>} */
-    const texts = new Map()
-    for (const name of ['package.json', 'pom.xml']) texts.set(name, await workspace.read(joinRelative(dir, name)))
-    const detected = detectProject({ entries, read: (name) => texts.get(name) ?? null })
+    const readHere = (/** @type {string} */ name) => workspace.read(joinRelative(dir, name))
+    /** @type {Record<string, string | null>} the only files detectProject reads */
+    const texts = { 'package.json': await readHere('package.json'), 'pom.xml': await readHere('pom.xml') }
+    const detected = detectProject({ entries, read: (name) => texts[name] ?? null })
     let below = families
     if (detected) {
       const family = familyOf(detected.stack)

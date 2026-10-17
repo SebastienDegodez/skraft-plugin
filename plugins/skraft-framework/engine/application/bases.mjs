@@ -11,14 +11,13 @@ import { CONFIG_FILE, isRef, readConfig } from '../domain/config/skraft-config.m
 const DEFAULT_BASE_BRANCH = 'main'
 
 /**
- * The developer configuration, read and checked.
+ * The developer configuration, read and checked; raw: the object as written, {} when absent.
  * @param {{ workspace: import('./ports/workspace.mjs').ConfigSource }} deps
- * @returns {Promise<{ ok: true, config: SkraftConfig, present: boolean } | { ok: false, reason: string }>}
+ * @returns {Promise<{ ok: true, config: SkraftConfig, present: boolean, raw: Record<string, unknown> } | { ok: false, reason: string }>}
  */
 export const loadConfig = async ({ workspace }) => {
   const reading = readConfig(await workspace.read(CONFIG_FILE))
-  if (!reading.ok) return { ok: false, reason: `${CONFIG_FILE} is invalid: ${reading.errors.join('; ')}` }
-  return { ok: true, config: reading.config, present: reading.present }
+  return reading.ok ? reading : { ok: false, reason: `${CONFIG_FILE} is invalid: ${reading.errors.join('; ')}` }
 }
 
 /**
