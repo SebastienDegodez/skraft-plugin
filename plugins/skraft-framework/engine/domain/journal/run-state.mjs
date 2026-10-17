@@ -151,7 +151,6 @@ const recorded = (run, event) => {
 /** @param {RunState} run @param {RunEvent} event */
 const closed = (run, event) => {
   run.closed.push(event.phase)
-  run.finished = null
 }
 
 /** @param {RunState} run @param {RunEvent} event */
