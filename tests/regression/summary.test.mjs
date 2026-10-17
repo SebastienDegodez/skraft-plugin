@@ -280,12 +280,16 @@ const deliverReview = (...lensEvents) => [
 ]
 const integrityOf = (events) => summarizeV2(events).gates.filter((g) => g.gate === 'G7' || g.gate === 'G9')
 
-test('G7 and G9 come from the test-integrity lens of the DELIVER review: a blocker it keeps fails both', () => {
+test('G7 and G9 come from the test-integrity lens of the DELIVER review: a blocker fails the gate it names, or both when it names neither', () => {
   const failed = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'blocker')])))
   assert.deepEqual(failed, [
     { component: 'refund', gate: 'G7', status: 'fail' },
     { component: 'refund', gate: 'G9', status: 'fail' },
   ])
+  const theater = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'blocker'), gate: 'G7' }])))
+  assert.deepEqual(theater.map((g) => [g.gate, g.status]), [['G7', 'fail'], ['G9', 'pass']])
+  const ironRule = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'high'), gate: 'G9' }, { ...finding('F2', 'low'), gate: 'G7' }])))
+  assert.deepEqual(ironRule.map((g) => [g.gate, g.status]), [['G7', 'pass'], ['G9', 'fail']])
 
   const medium = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'medium')])))
   assert.deepEqual(medium.map((g) => g.status), ['fail', 'fail'])

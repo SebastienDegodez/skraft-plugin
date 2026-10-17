@@ -216,25 +216,31 @@ const refutationKey = (step, visit, lens, finding) => JSON.stringify([step, visi
 /** The severities that send the work back, as the engine counts them. */
 const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
 
-const integrityStatus = (result, refuted) => {
+/** The gates the lens attests; a finding that names neither counts against both. */
+const INTEGRITY_GATES = Object.freeze(['G7', 'G9'])
+
+/** Whether a finding counts against a gate: it names that gate, or no gate the lens attests. */
+const against = (finding, gate) => finding?.gate === gate || !INTEGRITY_GATES.includes(finding?.gate)
+
+const integrityStatus = (result, refuted, gate) => {
   if (result.verdict === 'inconclusive') return 'inconclusive'
   const findings = Array.isArray(result.findings) ? result.findings : []
   const blocking = findings.filter((f) => BLOCKING.includes(f?.severity))
-  const counted = blocking.filter((f) => !refuted.has(refutationKey(result.step, result.visit, result.lens, f.id)))
+  const counted = blocking.filter((f) => against(f, gate) && !refuted.has(refutationKey(result.step, result.visit, result.lens, f.id)))
   if (counted.length > 0) return 'fail'
   return result.verdict === 'fail' && blocking.length === 0 ? 'fail' : 'pass'
 }
 
 /**
- * G7 and G9 from the last `test-integrity` lens result of a DELIVER review.
+ * G7 and G9 from the last `test-integrity` lens result of a DELIVER review, each from the
+ * findings that name it (a finding that names neither counts against both).
  * @param {any | null} result the last `review.lens` event of that lens
  * @param {Set<string>} refuted keys of the findings the refuter refuted
  * @param {string} slug
  */
 export const integrityGates = (result, refuted, slug) => {
   if (result === null) return []
-  const status = integrityStatus(result, refuted)
-  return ['G7', 'G9'].map((gate) => ({ component: slug, gate, status }))
+  return INTEGRITY_GATES.map((gate) => ({ component: slug, gate, status: integrityStatus(result, refuted, gate) }))
 }
 
 /**
