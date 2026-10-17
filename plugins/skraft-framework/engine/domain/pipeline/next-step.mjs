@@ -31,36 +31,82 @@ export const DEFAULT_ATTEMPTS = 3
  */
 export const nextStep = (workflow, run) => {
   const open = Object.entries(run.nodes).find(([, state]) => state.open !== null)
-  if (open) {
-    const [id, { open: attempt }] = /** @type {[string, { open: OpenAttempt }]} */ (open)
-    const node = workflow.nodes[id]
-    if (!node) return changed(id)
-    return enter(node, { visit: attempt.visit, attempt: attempt.attempt, missing: attempt.missing, feedback: attempt.feedback, resumed: attempt }, run)
-  }
-  const { last } = run
-  if (last === null) {
-    const first = run.start ?? /** @type {{ to: string }} */ (workflow.edges.find((edge) => edge.from === workflow.start)).to
-    return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], resumed: null }, run)
-  }
-  const node = workflow.nodes[last.step]
-  if (!node) return changed(last.step)
-  if (last.outcome === 'failed') {
-    const { previous } = run.nodes[last.step]
-    const block = (/** @type {BlockCause} */ cause) => ({ kind: /** @type {const} */ ('blocked'), phase: node.phase, node, cause, last, previous, missingNode: null })
-    if (last.code === 'agent-blocked') return block('agent-blocked')
-    if (previous !== null && sameFailure(previous, last)) return block('breaker')
-    // Stryker disable next-line StringLiteral: a refusal that is not the breaker's is told as the ceiling, whatever its cause
-    if (last.attempt >= (node.maxAttempts ?? DEFAULT_ATTEMPTS)) return block('ceiling')
-    return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, resumed: null }, run)
-  }
+  if (open) return resume(workflow, run, /** @type {[string, { open: OpenAttempt }]} */ (open))
+  if (run.last === null) return begin(workflow, run)
+  const node = workflow.nodes[run.last.step]
+  if (!node) return changed(run.last.step)
+  if (run.last.outcome === 'failed') return retry(node, run, run.last)
+  return advance(workflow, run, node, run.last)
+}
+
+/**
+ * A run stopped inside an attempt picks that attempt up again.
+ * @param {Workflow} workflow @param {RunState} run @param {[string, { open: OpenAttempt }]} open
+ * @returns {NextStep}
+ */
+const resume = (workflow, run, [id, { open: attempt }]) => {
+  const node = workflow.nodes[id]
+  if (!node) return changed(id)
+  return enter(node, { visit: attempt.visit, attempt: attempt.attempt, missing: attempt.missing, feedback: attempt.feedback, resumed: attempt }, run)
+}
+
+/**
+ * A run with nothing recorded yet enters its start node, or the node it was started at.
+ * @param {Workflow} workflow @param {RunState} run
+ * @returns {NextStep}
+ */
+const begin = (workflow, run) => {
+  const first = run.start ?? /** @type {{ to: string }} */ (workflow.edges.find((edge) => edge.from === workflow.start)).to
+  return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], resumed: null }, run)
+}
+
+/**
+ * A refused attempt is tried again with what it was refused for, unless the run is blocked.
+ * @param {WorkflowNode} node @param {RunState} run @param {RunEvent} last
+ * @returns {NextStep}
+ */
+const retry = (node, run, last) => {
+  const { previous } = run.nodes[last.step]
+  const cause = refusalBlock(node, previous, last)
+  if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null }
+  return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, resumed: null }, run)
+}
+
+/**
+ * Why a refused attempt blocks the run: the agent said so, it failed the same way twice, or it
+ * used its last attempt; null when it gets another one.
+ * @param {WorkflowNode} node @param {RunEvent | null} previous @param {RunEvent} last
+ * @returns {BlockCause | null}
+ */
+const refusalBlock = (node, previous, last) => {
+  if (last.code === 'agent-blocked') return 'agent-blocked'
+  if (previous !== null && sameFailure(previous, last)) return 'breaker'
+  // Stryker disable next-line StringLiteral: a refusal that is not the breaker's is told as the ceiling, whatever its cause
+  if (last.attempt >= (node.maxAttempts ?? DEFAULT_ATTEMPTS)) return 'ceiling'
+  return null
+}
+
+/**
+ * A node that passed hands over to the node its edge leads to, closing its phase first when
+ * that edge leaves the phase.
+ * @param {Workflow} workflow @param {RunState} run @param {WorkflowNode} node @param {RunEvent} last
+ * @returns {NextStep}
+ */
+const advance = (workflow, run, node, last) => {
   if (last.next === null) return { kind: 'blocked', phase: node.phase, node, cause: 'route', last, previous: null, missingNode: null }
   const target = workflow.nodes[last.next]
   if (!target) return changed(last.next)
   const phase = /** @type {string} */ (node.phase)
-  if (!run.closed.includes(phase) && (target.kind === 'exit' || target.phase !== phase)) return { kind: 'close-phase', phase }
+  if (closes(run, phase, target)) return { kind: 'close-phase', phase }
   const visit = (run.nodes[target.id]?.visit ?? 0) + 1
   return enter(target, { visit, attempt: 1, missing: [], feedback: last.failures, resumed: null }, run)
 }
+
+/**
+ * Whether moving to target ends a phase not closed yet.
+ * @param {RunState} run @param {string} phase @param {WorkflowNode} target
+ */
+const closes = (run, phase, target) => !run.closed.includes(phase) && (target.kind === 'exit' || target.phase !== phase)
 
 /**
  * @param {WorkflowNode} node
