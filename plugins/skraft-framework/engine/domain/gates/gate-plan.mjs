@@ -19,6 +19,12 @@ export const gatesOf = (component) => GATE_ORDER.filter((gate) => gate in compon
 /** @param {Component} component @param {string} gate */
 export const needsDocker = (component, gate) => component.mocking.strategy === 'microcks' && TEST_GATES.includes(gate)
 
+/** Docker answers when this command passes. */
+export const DOCKER_PROBE = Object.freeze(['docker', 'info'])
+
+/** What the developer does when Docker does not answer and a component mocks with Microcks. */
+export const DOCKER_HINT = 'start Docker, or set "mocking": { "strategy": "inprocess" } on the component'
+
 /** Exit codes a shell gives when it cannot find the command: 127 (sh), 9009 (cmd). */
 const NOT_FOUND_EXIT = Object.freeze([127, 9009])
 

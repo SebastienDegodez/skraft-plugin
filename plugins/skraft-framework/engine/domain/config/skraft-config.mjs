@@ -27,6 +27,11 @@ const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'command
 /** The gates, and `e2e`, which doctor checks but no gate runs. */
 const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 
+/** Why a config with no component cannot be checked or gated. */
+export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
+/** Why a component with no gate command cannot prove anything. */
+export const NO_GATE = `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}`
+
 /**
  * @param {string | null} text the file's content, null when the file is absent
  * @returns {ConfigReading}

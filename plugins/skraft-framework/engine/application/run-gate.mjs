@@ -1,7 +1,7 @@
-import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../domain/config/skraft-config.mjs'
 import { deriveRun } from '../domain/journal/run-state.mjs'
-import { commandText, parseCommand, programChoices } from '../domain/gates/command-line.mjs'
-import { failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../domain/gates/gate-plan.mjs'
+import { commandText, lookedFor, parseCommand, programChoices } from '../domain/gates/command-line.mjs'
+import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf, isTouched, needsDocker } from '../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig } from './bases.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { JournalConflict } from './run-journal.mjs'
@@ -24,10 +24,9 @@ import { JournalConflict } from './run-journal.mjs'
  *   sourceControl: import('./ports/source-control.mjs').SourceControl,
  *   commandRunner: import('./ports/command-runner.mjs').CommandRunner,
  * } & Parameters<typeof openActiveRun>[0]} GateDeps
+ * @typedef {{ slug: string, component: Component, scope: GateScope, journal: import('./run-journal.mjs').OpenJournal }} GateContext
+ * @typedef {{ argv: string[], started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string }} Started
  */
-
-/** Asked once per RunGate call, when a Microcks component runs a test gate. */
-const DOCKER_PROBE = Object.freeze(['docker', 'info'])
 
 /**
  * RunGate — runs the gate commands of `skraft-config.json` from each component's root, writes
@@ -45,14 +44,14 @@ export const createRunGate = (deps) => Object.freeze({
     const loaded = await loadConfig(deps)
     if (!loaded.ok) return { ...empty, status: 'refused', slug, code: 'config-invalid', reason: loaded.reason }
     const { components } = loaded.config
-    if (components.length === 0) {
-      return { ...empty, status: 'refused', slug, code: 'no-components', reason: `${CONFIG_FILE} lists no component; run skraft init to detect them` }
-    }
+    if (components.length === 0) return { ...empty, status: 'refused', slug, code: 'no-components', reason: NO_COMPONENT }
     const { base } = deriveRun(journal.events)
+    const shaOf = (/** @type {Component} */ component) => baseOf(base, component.name)?.sha ?? null
     const selected = []
     for (const component of components) {
-      if (scope === 'all' || (await touched(deps, component, components, baseOf(base, component.name)?.sha ?? null))) selected.push(component)
+      if (scope === 'all' || (await touched(deps, component, components, shaOf(component)))) selected.push(component)
     }
+    const names = selected.map(({ name }) => name)
     /** @type {GateResult[]} */
     const gates = []
     /** @type {Promise<boolean> | null} */
@@ -60,50 +59,50 @@ export const createRunGate = (deps) => Object.freeze({
     const dockerReady = () => (docker ??= dockerAnswers(deps))
     try {
       for (const component of selected) {
-        if (gatesOf(component).length === 0) {
-          gates.push(await noGate(deps, { slug, component, scope, journal }))
-          continue
-        }
+        const context = { slug, component, scope, journal }
+        if (gatesOf(component).length === 0) gates.push(await noGate(deps, context))
         for (const gate of gatesOf(component)) {
           const ready = needsDocker(component, gate) ? await dockerReady() : true
-          const result = await runOne(deps, { slug, component, gate, scope, journal, baseSha: baseOf(base, component.name)?.sha ?? null, docker: ready })
+          const result = await runOne(deps, context, { gate, baseSha: shaOf(component), docker: ready })
           gates.push(result)
           if (result.status === 'fail') break
         }
       }
     } catch (error) {
       if (!(error instanceof JournalConflict)) throw error
-      return { ...empty, status: 'blocked', slug, components: selected.map(({ name }) => name), gates, code: 'journal-changed', reason: error.message }
+      return { ...empty, status: 'blocked', slug, components: names, gates, code: 'journal-changed', reason: error.message }
     }
-    const failed = gates.filter((gate) => gate.status === 'fail')
-    const failure = failed.some((gate) => gate.failure === 'environment') ? 'environment' : failed.length > 0 ? 'deterministic' : null
-    const names = selected.map(({ name }) => name)
-    return {
-      status: failed.length > 0 ? 'failed' : 'passed',
-      slug,
-      scope,
-      components: names,
-      gates,
-      failure,
-      code: null,
-      reason: failed.length > 0
-        ? failed.map((gate) => `${gate.component}/${gate.gate}: ${gate.reason}`).join('; ')
-        : names.length === 0 ? 'no component changed since its base; no gate to run' : `${gates.length} gates passed on ${names.join(', ')}`,
-    }
+    const { status, failure, reason } = verdict(gates, names)
+    return { status, slug, scope, components: names, gates, failure, code: null, reason }
   },
 })
 
 /**
+ * Failed as environment when any failed gate is, so a human looks first.
+ * @param {GateResult[]} gates @param {string[]} names the components the gates ran on
+ * @returns {Pick<GateOutcome, 'status' | 'failure' | 'reason'>}
+ */
+const verdict = (gates, names) => {
+  const failed = gates.filter((gate) => gate.status === 'fail')
+  if (failed.length > 0) {
+    return {
+      status: 'failed',
+      failure: failed.some((gate) => gate.failure === 'environment') ? 'environment' : 'deterministic',
+      reason: failed.map((gate) => `${gate.component}/${gate.gate}: ${gate.reason}`).join('; '),
+    }
+  }
+  const reason = names.length === 0 ? 'no component changed since its base; no gate to run' : `${gates.length} gates passed on ${names.join(', ')}`
+  return { status: 'passed', failure: null, reason }
+}
+
+/**
  * A component with no gate command cannot prove anything: it fails, as environment, until the
  * developer gives it one.
- * @param {GateDeps} deps
- * @param {{ slug: string, component: Component, scope: GateScope, journal: import('./run-journal.mjs').OpenJournal }} context
- * @returns {Promise<GateResult>}
+ * @param {GateDeps} deps @param {GateContext} context @returns {Promise<GateResult>}
  */
 const noGate = async (deps, { slug, component, scope, journal }) => {
-  const reason = `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}`
   await journal.append('gate.ran', { component: component.name, gate: 'none', scope, command: null, status: 'fail', failure: 'environment', exitCode: null, durationMs: 0, evidence: null })
-  return { component: component.name, gate: 'none', status: 'fail', failure: 'environment', reason, evidence: deps.files.location(slug, `gates/${component.name}`) }
+  return { component: component.name, gate: 'none', status: 'fail', failure: 'environment', reason: NO_GATE, evidence: deps.files.location(slug, `gates/${component.name}`) }
 }
 
 /**
@@ -117,15 +116,61 @@ const touched = async (deps, component, components, sha) => {
 }
 
 /** @param {GateDeps} deps */
-const dockerAnswers = async (deps) => {
-  const answer = await deps.commandRunner.run({ argv: [...DOCKER_PROBE], cwd: '.' })
-  return answer.started && answer.exitCode === 0
+const dockerAnswers = async (deps) => failureOf(await deps.commandRunner.run({ argv: [...DOCKER_PROBE], cwd: '.' })) === null
+
+/**
+ * @param {GateDeps} deps @param {GateContext} context
+ * @param {{ gate: string, baseSha: string | null, docker: boolean }} request
+ * @returns {Promise<GateResult>}
+ */
+const runOne = async (deps, { slug, component, scope, journal }, { gate, baseSha, docker }) => {
+  const line = component.commands[gate]
+  const earlier = journal.events.filter((event) => event.component === component.name && event.gate === gate).length
+  const evidencePath = `gates/${component.name}/${gate}-${earlier + 1}.log`
+  const { shown, result, durationMs, reason } = await attempt(deps, component, { line, baseSha, docker })
+  const failure = result === null ? 'environment' : failureOf(result)
+  const status = failure === null ? 'pass' : 'fail'
+  await deps.files.write(slug, evidencePath, [
+    `$ ${shown}`,
+    `cwd: ${component.root}`,
+    `result: ${failure === null ? 'pass' : `fail (${failure})`}: ${reason}`,
+    ...(result ? ['--- stdout', result.stdout, '--- stderr', result.stderr] : []),
+    '',
+  ].join('\n'))
+  await journal.append('gate.ran', {
+    component: component.name, gate, scope, command: line, status, failure,
+    exitCode: result?.exitCode ?? null, durationMs, evidence: evidencePath,
+  })
+  return { component: component.name, gate, status, failure, reason, evidence: deps.files.location(slug, evidencePath) }
+}
+
+/**
+ * The gate's command started from the component's root, unless it does not parse or needs a
+ * Docker that does not answer. shown: the command as the evidence writes it.
+ * @param {GateDeps} deps @param {Component} component
+ * @param {{ line: string, baseSha: string | null, docker: boolean }} request
+ * @returns {Promise<{ shown: string, result: Started | null, durationMs: number, reason: string }>}
+ */
+const attempt = async (deps, component, { line, baseSha, docker }) => {
+  const parsed = parseCommand(line, { baseSha })
+  if (!parsed.ok) return { shown: line, result: null, durationMs: 0, reason: `command ${JSON.stringify(line)} ${parsed.reason}` }
+  if (!docker) {
+    return { shown: commandText(parsed.argv), result: null, durationMs: 0, reason: `Docker does not answer and ${component.name} mocks with Microcks; ${DOCKER_HINT}` }
+  }
+  const started = deps.clock.now()
+  const result = await startFirst(deps, parsed.argv, component.root)
+  const durationMs = deps.clock.now().getTime() - started.getTime()
+  const reason = !result.started
+    ? `${result.error}; install it or change the command in ${CONFIG_FILE}`
+    : result.exitCode === null ? `${result.error}; run it again` : `exited ${result.exitCode}`
+  return { shown: commandText(result.argv), result, durationMs, reason }
 }
 
 /**
  * The first of the command's program choices that starts, with the argv it started. When none
  * starts, the answer to the program as written, with every place it was looked for.
  * @param {GateDeps} deps @param {string[]} argv @param {string} cwd
+ * @returns {Promise<Started>}
  */
 const startFirst = async (deps, argv, cwd) => {
   const choices = programChoices(argv)
@@ -136,48 +181,5 @@ const startFirst = async (deps, argv, cwd) => {
     answers.push(answer)
   }
   const written = answers[choices.findIndex(([program]) => program === argv[0])]
-  return { ...written, argv, ...(choices.length === 1 ? {} : { error: `${written.error}; looked for ${choices.map(([program]) => program).join(', ')}` }) }
-}
-
-/**
- * @param {GateDeps} deps
- * @param {{ slug: string, component: Component, gate: string, scope: GateScope, journal: import('./run-journal.mjs').OpenJournal, baseSha: string | null, docker: boolean }} context
- * @returns {Promise<GateResult>}
- */
-const runOne = async (deps, { slug, component, gate, scope, journal, baseSha, docker }) => {
-  const line = component.commands[gate]
-  const earlier = journal.events.filter((event) => event.component === component.name && event.gate === gate).length
-  const evidencePath = `gates/${component.name}/${gate}-${earlier + 1}.log`
-  const evidence = deps.files.location(slug, evidencePath)
-  const parsed = parseCommand(line, { baseSha })
-  /** @type {{ argv: string[], started: boolean, exitCode: number | null, stdout: string, stderr: string, error?: string } | null} */
-  let result = null
-  let reason
-  let durationMs = 0
-  if (!parsed.ok) {
-    reason = `command ${JSON.stringify(line)} ${parsed.reason}`
-  } else if (!docker) {
-    reason = `Docker does not answer and ${component.name} mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the component`
-  } else {
-    const started = deps.clock.now()
-    result = await startFirst(deps, parsed.argv, component.root)
-    durationMs = deps.clock.now().getTime() - started.getTime()
-    reason = !result.started
-      ? `${result.error}; install it or change the command in ${CONFIG_FILE}`
-      : result.exitCode === null ? `${result.error}; run it again` : `exited ${result.exitCode}`
-  }
-  const failure = result === null ? 'environment' : failureOf(result)
-  await deps.files.write(slug, evidencePath, [
-    `$ ${result ? commandText(result.argv) : parsed.ok ? commandText(parsed.argv) : line}`,
-    `cwd: ${component.root}`,
-    `result: ${failure === null ? 'pass' : `fail (${failure})`}: ${reason}`,
-    ...(result ? ['--- stdout', result.stdout, '--- stderr', result.stderr] : []),
-    '',
-  ].join('\n'))
-  const status = failure === null ? 'pass' : 'fail'
-  await journal.append('gate.ran', {
-    component: component.name, gate, scope, command: line, status, failure,
-    exitCode: result?.exitCode ?? null, durationMs, evidence: evidencePath,
-  })
-  return { component: component.name, gate, status, failure, reason, evidence }
+  return { ...written, argv, error: `${written.error}${lookedFor(choices)}` }
 }

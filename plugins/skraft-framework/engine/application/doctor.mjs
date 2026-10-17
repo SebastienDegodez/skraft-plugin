@@ -1,6 +1,6 @@
-import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
-import { commandText, parseCommand, programChoices } from '../domain/gates/command-line.mjs'
-import { GATE_ORDER } from '../domain/gates/gate-plan.mjs'
+import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../domain/config/skraft-config.mjs'
+import { commandText, lookedFor, parseCommand, programChoices } from '../domain/gates/command-line.mjs'
+import { DOCKER_HINT, DOCKER_PROBE, failureOf, gatesOf } from '../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from './bases.mjs'
 
 /**
@@ -31,10 +31,10 @@ export const createDoctor = (deps) => Object.freeze({
     /** @type {DoctorCheck[]} */
     const checks = [nodeCheck(deps.runtime.nodeVersion())]
     const loaded = await loadConfig(deps)
-    if (!loaded.ok) return report([...checks, { subject: 'config', status: 'fail', detail: loaded.reason }])
+    if (!loaded.ok) return report([...checks, configFails(loaded.reason)])
     const { components } = loaded.config
-    if (!loaded.present) return report([...checks, { subject: 'config', status: 'fail', detail: `no ${CONFIG_FILE}; run skraft init to detect the components` }])
-    if (components.length === 0) return report([...checks, { subject: 'config', status: 'fail', detail: `${CONFIG_FILE} lists no component; run skraft init to detect them` }])
+    const empty = !loaded.present ? `no ${CONFIG_FILE}; run skraft init to detect the components` : components.length === 0 ? NO_COMPONENT : null
+    if (empty !== null) return report([...checks, configFails(empty)])
     checks.push({ subject: 'config', status: 'ok', detail: `${components.length} components: ${components.map(({ name }) => name).join(', ')}` })
 
     const resolved = run ? await resolveBases(deps, { config: loaded.config, flag: base }) : null
@@ -44,13 +44,9 @@ export const createDoctor = (deps) => Object.freeze({
         checks.push({ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` })
         continue
       }
-      if (!GATE_ORDER.some((name) => name in component.commands)) {
-        checks.push({ subject: component.name, status: 'fail', detail: `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}` })
-      }
-      for (const name of commandNames(component)) {
-        const baseSha = resolved === null ? 'HEAD' : resolved.ok ? baseOf(resolved.bases, component.name)?.sha ?? null : null
-        checks.push(await commandCheck(deps, { component, name, run, baseSha }))
-      }
+      if (gatesOf(component).length === 0) checks.push({ subject: component.name, status: 'fail', detail: NO_GATE })
+      const baseSha = resolved === null ? 'HEAD' : resolved.ok ? baseOf(resolved.bases, component.name)?.sha ?? null : null
+      for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
     }
     const microcks = components.filter((component) => component.mocking.strategy === 'microcks').map(({ name }) => name)
     if (microcks.length > 0) checks.push(await dockerCheck(deps, microcks))
@@ -59,10 +55,10 @@ export const createDoctor = (deps) => Object.freeze({
 })
 
 /** Gates first, in their order, then the other commands as written. @param {Component} component */
-const commandNames = (component) => [
-  ...GATE_ORDER.filter((name) => name in component.commands),
-  ...Object.keys(component.commands).filter((name) => !GATE_ORDER.includes(name)),
-]
+const commandNames = (component) => {
+  const gates = gatesOf(component)
+  return [...gates, ...Object.keys(component.commands).filter((name) => !gates.includes(name))]
+}
 
 /**
  * @param {DoctorDeps} deps
@@ -78,8 +74,7 @@ const commandCheck = async (deps, { component, name, run, baseSha }) => {
   const choices = programChoices(parsed.argv)
   const found = await locateFirst(deps, choices, component.root)
   if (found === null) {
-    const looked = choices.length === 1 ? '' : `; looked for ${choices.map(([choice]) => choice).join(', ')}`
-    return { subject, status: 'fail', detail: `command not found: ${program} (from ${component.root}${looked}); install it or change commands.${name} in ${CONFIG_FILE}` }
+    return { subject, status: 'fail', detail: `command not found: ${program} (from ${component.root}${lookedFor(choices)}); install it or change commands.${name} in ${CONFIG_FILE}` }
   }
   if (!run) return { subject, status: 'ok', detail: `${program} → ${found.located}` }
   const result = await deps.commandRunner.run({ argv: found.argv, cwd: component.root })
@@ -105,14 +100,10 @@ const locateFirst = async (deps, choices, cwd) => {
 
 /** @param {DoctorDeps} deps @param {string[]} components */
 const dockerCheck = async (deps, components) => {
-  const answer = await deps.commandRunner.run({ argv: ['docker', 'info'], cwd: '.' })
-  return answer.started && answer.exitCode === 0
+  const answers = failureOf(await deps.commandRunner.run({ argv: [...DOCKER_PROBE], cwd: '.' })) === null
+  return answers
     ? { subject: 'docker', status: /** @type {const} */ ('ok'), detail: `Docker answers (Microcks: ${components.join(', ')})` }
-    : {
-      subject: 'docker',
-      status: /** @type {const} */ ('fail'),
-      detail: `Docker does not answer, and Microcks, the mocking of ${components.join(', ')}, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component`,
-    }
+    : { subject: 'docker', status: /** @type {const} */ ('fail'), detail: `Docker does not answer, and Microcks, the mocking of ${components.join(', ')}, needs it; ${DOCKER_HINT}` }
 }
 
 /** @param {string} version @returns {DoctorCheck} */
@@ -122,6 +113,9 @@ const nodeCheck = (version) => {
     ? { subject: 'node', status: 'ok', detail: `Node ${version}` }
     : { subject: 'node', status: 'fail', detail: `Node ${version}; skraft needs Node ${NODE_MAJOR} or later` }
 }
+
+/** @param {string} detail @returns {DoctorCheck} */
+const configFails = (detail) => ({ subject: 'config', status: 'fail', detail })
 
 /** @param {DoctorCheck[]} checks @returns {DoctorReport} */
 const report = (checks) => ({ ok: checks.every((check) => check.status === 'ok'), checks })
