@@ -9,8 +9,10 @@ const repositoryWorkflow = (dot) => ({ config: { workflow: 'skraft-workflow.dot'
 const withSecurity = { ...repositoryWorkflow(WITH_SECURITY), catalog: new InMemoryAgentCatalog({ repository: ['acme-security-reviewer'] }) }
 
 test('a repository agent between DESIGN and DISTILL is launched in its place, as a repository agent, whatever the order of the edges', async () => {
-  const chain = '  start -> research -> design -> security -> distill -> deliver -> gates\n'
-  const edgesLast = edit(WITH_SECURITY, [chain, ''], ['  gates -> exit    [label="PASS"]\n', `  gates -> exit    [label="PASS"]\n${chain}`])
+  const chain = '  start -> research -> design -> design_review\n'
+  const around = '  design_review -> security [label="APPROVED"]\n  security -> distill\n'
+  const last = '  deliver_review -> exit    [label="APPROVED"]\n'
+  const edgesLast = edit(WITH_SECURITY, [chain, ''], [around, ''], [last, `${last}${around}${chain}`])
   const host = scripted({ ...withSecurity, ...repositoryWorkflow(edgesLast) }, (it) => {
     const [research, design, ...rest] = nominal(it)
     return [research, design, agent({ work: ({ git }) => git.change('docs/security/threat-model.md') })(it), ...rest]
@@ -99,8 +101,8 @@ test('a repository agent nobody provides refuses the workflow, naming it', async
 test('the locked gates removed without unlock are refused; kept with unlock they are skipped, journaled with the reason', async () => {
   const removed = edit(BUILT_IN_WORKFLOW,
     ['  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]\n', ''],
-    ['deliver -> gates\n', 'deliver -> exit\n'],
-    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> exit    [label="PASS"]\n', ''])
+    ['deliver -> gates\n', 'deliver -> deliver_review\n'],
+    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> deliver_review [label="PASS"]\n', ''])
   const refused = pipelineHost(repositoryWorkflow(removed))
   assert.deepEqual([(await refused.init()).code, (await refused.init()).reason], ['workflow-invalid', 'skraft-workflow.dot is invalid: locked node gates is missing; keep it with unlock="<reason>" to skip it'])
 
@@ -115,7 +117,7 @@ test('the locked gates removed without unlock are refused; kept with unlock they
   const gates = host.events().filter((event) => event.step === 'gates')
   assert.deepEqual(gates.map(({ type, outcome: result, code, failures, reason, next, gates: names }) => [type, result, code, failures, reason, next, names?.length]), [
     ['step.started', undefined, undefined, undefined, undefined, undefined, 7],
-    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs the gates in its own CI', 'exit', undefined],
+    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs the gates in its own CI', 'deliver_review', undefined],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: gates skipped, unlocked: the team runs the gates in its own CI`))
 })
@@ -124,7 +126,7 @@ test('a skipped gate still takes its edge, and stops the run once that edge reac
   const looped = edit(BUILT_IN_WORKFLOW,
     ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'],
     ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  check    [shape=parallelogram, gate="test", phase="DELIVER"]'],
-    ['  gates -> exit    [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> exit    [label="PASS"]'])
+    ['  gates -> deliver_review [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> deliver_review [label="PASS"]'])
   const host = scripted(repositoryWorkflow(looped), (it) => [...nominal(it), agent()(it)])
   host.machine.exits['. $ dotnet test'] = 1
 
@@ -153,7 +155,7 @@ test('a workflow that became invalid stops the run; one whose node of the run is
 })
 
 test('a run whose last step, or the node it led to, left the workflow stops as changed', async () => {
-  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['design -> security -> distill', 'design -> distill'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
+  const WITHOUT_SECURITY = edit(WITH_SECURITY, ['design_review -> security [label="APPROVED"]\n  security -> distill', 'design_review -> distill [label="APPROVED"]'], ['  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]', ''])
   const stopsEntering = (host, phase) => {
     const shown = host.progress.phase.bind(host.progress)
     host.progress.phase = (name) => {

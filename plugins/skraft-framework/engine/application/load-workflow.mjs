@@ -1,3 +1,4 @@
+import { lensAgent, REFUTER } from '../domain/review/lenses.mjs'
 import { checkLocks, readWorkflow } from '../domain/workflow/workflow.mjs'
 
 /**
@@ -49,19 +50,35 @@ export const loadWorkflow = async (deps, { config, agents = true }) => {
 }
 
 /**
- * The source of each agent node's agent, one lookup after the other, in node order.
+ * The source of each agent the nodes start, one lookup after the other, in node order: an
+ * agent node's agent, a review node's lenses and the refuter.
  * @param {import('./ports/agent-catalog.mjs').AgentCatalog} agentCatalog @param {Workflow} workflow
  * @returns {Promise<{ sources: Record<string, AgentSource>, errors: string[] }>} errors: the agents nobody provides
  */
 const locateAgents = async (agentCatalog, workflow) => {
   /** @type {{ sources: Record<string, AgentSource>, errors: string[] }} */
   const located = { sources: {}, errors: [] }
-  for (const { id, agent } of Object.values(workflow.nodes).filter((node) => node.kind === 'agent')) {
-    const source = await agentCatalog.locate(/** @type {string} */ (agent))
-    if (source === null) located.errors.push(`node ${id}: agent ${agent} not found in the plugin, .claude/agents/ or .github/agents/`)
-    else located.sources[/** @type {string} */ (agent)] = source
+  const wanted = Object.values(workflow.nodes).flatMap(agentsOf)
+  for (const { node, agent, what } of wanted.filter((entry, index) => wanted.findIndex((other) => other.agent === entry.agent) === index)) {
+    const source = await agentCatalog.locate(agent)
+    if (source === null) located.errors.push(`node ${node}: ${what} not found in the plugin, .claude/agents/ or .github/agents/`)
+    else located.sources[agent] = source
   }
   return located
+}
+
+/**
+ * The agents a node starts, each with how a refusal names it.
+ * @param {import('../domain/workflow/workflow.mjs').WorkflowNode} node
+ * @returns {Array<{ node: string, agent: string, what: string }>}
+ */
+const agentsOf = ({ id, kind, agent, lenses }) => {
+  if (kind === 'agent') return [{ node: id, agent: /** @type {string} */ (agent), what: `agent ${agent}` }]
+  if (kind !== 'review') return []
+  return [
+    ...lenses.map((lens) => ({ node: id, agent: lensAgent(lens), what: `lens ${lens} (agent ${lensAgent(lens)})` })),
+    { node: id, agent: REFUTER, what: `agent ${REFUTER}` },
+  ]
 }
 
 /** @param {string} name @param {string[]} errors @returns {WorkflowLoading} */
