@@ -56,7 +56,7 @@ const pluginNameOf = async (pluginRoot) => {
 
 /**
  * AgentRunner on `ctx.agent`. Copilot reports usage in nano-AIU credits, never USD, so no
- * costUsd is reported. runMany starts every agent at once; Copilot runs at most
+ * costUsd is reported. runMany starts every agent at once, in dispatch order; Copilot runs at most
  * `maxConcurrentSubagents` of them side by side and queues the others.
  * @param {{ ctx: AgentContext, pluginRoot: string, agentIds?: Record<string, string> }} options
  * @returns {AgentRunner}
@@ -66,8 +66,21 @@ export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {} }) => {
   const session = { ctx, pluginRoot, agentIds, listing: undefined }
   return Object.freeze({
     run: (dispatch) => runCtxAgent(session, dispatch),
-    runMany: async (dispatches) => ({ answers: await Promise.all(dispatches.map((dispatch) => runCtxAgent(session, dispatch))) }),
+    runMany: (dispatches) => runCtxAgents(session, dispatches),
   })
+}
+
+/**
+ * Resolves every agent first, so the batch reaches `ctx.agent` in dispatch order, then waits
+ * for all of them together.
+ * @param {CtxSession} session @param {AgentDispatch[]} dispatches
+ * @returns {Promise<import('../../application/ports/agent-runner.mjs').AgentAnswers>}
+ */
+const runCtxAgents = async (session, dispatches) => {
+  const resolved = []
+  for (const dispatch of dispatches) resolved.push({ dispatch, ...(await sessionAgentOf(session, dispatch.agent, dispatch.source)) })
+  const answers = resolved.map(({ dispatch, name, listed }) => (name === null ? notInSession(dispatch.agent, listed) : askAgent(session.ctx, name, dispatch)))
+  return { answers: await Promise.all(answers) }
 }
 
 /** @param {CtxSession} session @param {AgentDispatch} dispatch @returns {Promise<AgentAnswer>} */
