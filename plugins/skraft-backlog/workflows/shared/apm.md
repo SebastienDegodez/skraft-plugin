@@ -439,6 +439,9 @@ jobs:
           private-key: ${{ env.ROW_PRIVATE_KEY }}
           owner: ${{ matrix.group.owner != '' && matrix.group.owner || github.repository_owner }}
           repositories: ${{ matrix.group.repositories }}
+          # Local change to the upstream copy: the token only fetches packages; gh-aw strict
+          # mode (v0.92+) refuses an installation token minted with every scope.
+          permission-contents: read
       - name: Select APM package token
         id: package-token
         env:
