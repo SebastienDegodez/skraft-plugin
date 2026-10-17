@@ -56,7 +56,8 @@ const pluginNameOf = async (pluginRoot) => {
 
 /**
  * AgentRunner on `ctx.agent`. Copilot reports usage in nano-AIU credits, never USD, so no
- * costUsd is reported.
+ * costUsd is reported. runMany starts every agent at once; Copilot runs at most
+ * `maxConcurrentSubagents` of them side by side and queues the others.
  * @param {{ ctx: AgentContext, pluginRoot: string, agentIds?: Record<string, string> }} options
  * @returns {AgentRunner}
  */
@@ -65,6 +66,7 @@ export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {} }) => {
   const session = { ctx, pluginRoot, agentIds, listing: undefined }
   return Object.freeze({
     run: (dispatch) => runCtxAgent(session, dispatch),
+    runMany: async (dispatches) => ({ answers: await Promise.all(dispatches.map((dispatch) => runCtxAgent(session, dispatch))) }),
   })
 }
 

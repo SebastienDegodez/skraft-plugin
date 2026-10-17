@@ -3,6 +3,7 @@ import { deriveRun } from '../domain/journal/run-state.mjs'
 import { DEFAULT_ATTEMPTS, nextStep, route } from '../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath } from '../domain/pipeline/outputs.mjs'
+import { isDocument, writtenDocuments } from '../domain/pipeline/documents.mjs'
 import { allowedPaths, roleOf } from '../domain/pipeline/roles.mjs'
 import { REPLAY_SHARE } from '../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
@@ -10,6 +11,7 @@ import { baseOf, loadConfig } from './bases.mjs'
 import { runGates } from './gate-runs.mjs'
 import { loadWorkflow } from './load-workflow.mjs'
 import { JournalConflict } from './run-journal.mjs'
+import { runReview } from './review-runs.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
 
 /**
@@ -151,6 +153,7 @@ const showPhase = ({ deps }, shown, phase) => {
 const work = (context, run, next) => {
   if (next.kind === 'skip') return skip(context, run, next)
   if (next.kind === 'gate') return gate(context, run, next)
+  if (next.kind === 'review') return review(context, run, next)
   return dispatch(context, run, next)
 }
 
@@ -188,17 +191,22 @@ const refusalDetails = ({ deps, slug }, event) => [
 
 /**
  * Where the run goes once a node passed, or why it cannot go on.
- * @param {Context} context @param {RunState} run @param {string} from @param {'PASS' | 'FAIL' | null} label @param {string[]} failures
+ * @param {Context} context @param {RunState} run @param {string} from @param {import('../domain/workflow/workflow.mjs').EdgeLabel | null} label @param {string[]} failures
  * @returns {{ next: string | null, code?: string, reason?: string }}
  */
 const leave = ({ loaded }, run, from, label, failures) => {
   const routed = route(loaded.workflow, run, from, label)
   if (routed.ok) return { next: routed.to }
-  const why = routed.code === 'gates-failed'
-    ? `${from} failed and the workflow has no FAIL edge out of it`
-    : `${from} -> ${routed.to} was already taken ${routed.taken} times, its max_visits`
+  const why = routed.code === 'loop-ceiling'
+    ? `${from} -> ${routed.to} was already taken ${routed.taken} times, its max_visits`
+    : `${from} ${NO_EDGE[routed.code]}`
   return { next: null, code: routed.code, reason: [why, ...failures].join('; ') }
 }
+
+const NO_EDGE = Object.freeze({
+  'gates-failed': 'failed and the workflow has no FAIL edge out of it',
+  'review-rejected': 'asked for rework and the workflow has no NEEDS_REWORK edge out of it',
+})
 
 /**
  * @typedef {{
@@ -252,11 +260,32 @@ const prepareJob = async ({ deps, slug }, run, { node, visit, attempt }) => {
 const openAttempt = async (context, run, next, job) => {
   if (next.resumed?.heads) return next.resumed.heads
   await precreate(context, job)
+  await context.deps.files.write(context.slug, snapshotOf(job.result), JSON.stringify(await documentHashes(context)))
   const heads = await headsOf(context.deps, run.base)
-  const { phase, node, visit, attempt, missing, feedback } = next
+  const { phase, node, visit, attempt, missing, feedback, sentBy } = next
   const { agent, outputs, result } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, heads })
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...(sentBy === null ? {} : { sentBy }), heads })
   return heads
+}
+
+/** Where an attempt keeps the documents of the tracking folder as it found them. @param {string} result the attempt's result file */
+const snapshotOf = (result) => result.replace(/\.json$/, '.documents.json')
+
+/** Each document of the tracking folder with the hash of its content. @param {Context} context */
+const documentHashes = async ({ deps, slug }) => {
+  /** @type {Record<string, string>} */
+  const hashes = {}
+  for (const path of (await deps.files.list(slug, '')).filter(isDocument)) hashes[path] = await deps.hasher.sha256(/** @type {string} */ (await deps.files.read(slug, path)))
+  return hashes
+}
+
+/**
+ * The documents the attempt wrote in the tracking folder, against what it found there.
+ * @param {Context} context @param {Job} job
+ */
+const documentsWritten = async (context, { result }) => {
+  const before = await context.deps.files.read(context.slug, snapshotOf(result))
+  return writtenDocuments(before === null ? {} : JSON.parse(before), await documentHashes(context))
 }
 
 /** Writes each output that has a template and does not exist yet. @param {Context} context @param {Job} job */
@@ -318,6 +347,7 @@ const briefOf = (context, run, next, job) => ({
   ...briefStack(context, run, job.role),
   missing: next.missing.map((path) => context.deps.files.location(context.slug, path)),
   feedback: next.feedback,
+  sentBy: next.sentBy,
 })
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
@@ -368,13 +398,13 @@ const judgeAttempt = async (context, run, next, attempt) => {
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ job: Job, heads: any }} attempt
  */
-const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, feedback }, { job, heads }) => {
+const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, feedback, sentBy }, { job, heads }) => {
   const inState = attempt > 1
   const { role, outputs, precreated, result } = job
   return checkStep({ deps, slug, config, base: run.base }, {
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
-    sentBack: inState ? run.nodes[node.id].sentBack : feedback.length > 0,
+    sentBack: inState ? run.nodes[node.id].sentBack : feedback.length > 0 && sentBy !== 'review',
   })
 }
 
@@ -386,13 +416,13 @@ const knownCommits = (journal) => new Map(journal.events
 /**
  * Records the attempt: refused, or done with the node it leads to.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ started: Date, cost?: number, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
+ * @param {{ job: Job, started: Date, cost?: number, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
  */
-const recordAttempt = async (context, run, { node, visit, attempt }, { started, cost, checked }) => {
+const recordAttempt = async (context, run, { node, visit, attempt }, { job, started, cost, checked }) => {
   const failed = checked.missing.length > 0 || checked.failures.length > 0
   const routed = failed ? { next: null } : leave(context, run, node.id, null, [])
   await context.journal.append('step.recorded', {
-    step: node.id, visit, attempt,
+    step: node.id, visit, attempt, documents: await documentsWritten(context, job),
     outcome: failed ? 'failed' : 'done',
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,
@@ -494,6 +524,54 @@ const recordGate = async (context, run, { node, visit, attempt }, { failure, fai
     next: routed.next, reason: routed.reason,
     durationMs: context.deps.clock.now().getTime() - started.getTime(),
   })
+}
+
+/**
+ * A review node: its lenses and the refuter answer, the verdict decides the edge it leaves by.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ * @returns {Promise<RunOutcome | null>}
+ */
+const review = async (context, run, next) => {
+  await openReview(context, next)
+  const started = context.deps.clock.now()
+  const { deps, slug, journal, loaded } = context
+  const reviewed = await runReview({ deps, slug, journal, workflow: loaded.workflow, sources: loaded.sources, run, step: next })
+  if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
+  await recordReview(context, run, next, { reviewed, started })
+  return null
+}
+
+/** @param {Context} context @param {WorkStep} next */
+const openReview = async ({ deps, slug, journal }, { phase, node, visit, resumed }) => {
+  if (!resumed) await journal.append('step.started', { step: node.id, phase, lenses: node.lenses, visit, attempt: 1 })
+  deps.progress.log(`${slug}: ${node.id} (${node.lenses.join(', ')})${passOf(visit)}`)
+}
+
+/**
+ * Records the review: its verdict with the node it leads to, or the lens that blocks it.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ * @param {{ reviewed: Exclude<Awaited<ReturnType<typeof runReview>>, { stop: unknown }>, started: Date }} review
+ */
+const recordReview = async (context, run, { node, visit }, { reviewed, started }) => {
+  const fields = 'blocked' in reviewed ? blockedReview(reviewed.blocked) : verdictOf(context, run, node.id, reviewed.verdict)
+  await context.journal.append('step.recorded', {
+    step: node.id, visit, attempt: 1, ...fields,
+    durationMs: context.deps.clock.now().getTime() - started.getTime(),
+    cost: reviewed.costUsd,
+  })
+  context.deps.progress.log(`${context.slug}: ${node.id} ${fields.outcome === 'blocked' ? `blocked (${fields.code})` : fields.reason}`)
+}
+
+/** @param {{ code: string, reason: string }} blocked */
+const blockedReview = ({ code, reason }) => ({ outcome: 'blocked', code, failures: [], next: null, reason })
+
+/**
+ * @param {Context} context @param {RunState} run @param {string} from
+ * @param {import('../domain/review/verdict.mjs').ReviewVerdict} verdict
+ */
+const verdictOf = (context, run, from, { status, reasons, summary }) => {
+  const routed = leave(context, run, from, status, reasons)
+  return { outcome: status === 'APPROVED' ? 'approved' : 'needs-rework', code: routed.code ?? null, failures: reasons, next: routed.next, reason: routed.reason ?? summary }
 }
 
 /**

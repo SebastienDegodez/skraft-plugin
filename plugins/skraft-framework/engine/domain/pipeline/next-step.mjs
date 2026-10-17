@@ -6,11 +6,14 @@ import { edgeKey } from '../journal/run-state.mjs'
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('../journal/run-state.mjs').OpenAttempt} OpenAttempt
- * @typedef {{ visit: number, attempt: number, missing: string[], feedback: string[], resumed: OpenAttempt | null }} Entry
+ * @typedef {{
+ *   visit: number, attempt: number, missing: string[], feedback: string[],
+ *   sentBy: 'gate' | 'review' | null, resumed: OpenAttempt | null,
+ * }} Entry
  *   missing and feedback: what the previous attempt left missing or got refused for, or for a
- *   new pass the gate failures that sent the run back; resumed: the open attempt a resumed run
- *   picks up.
- * @typedef {Entry & { kind: 'agent' | 'gate', phase: string, node: WorkflowNode }} WorkStep
+ *   new pass the gate failures or review findings that sent the run back, sentBy naming which;
+ *   resumed: the open attempt a resumed run picks up.
+ * @typedef {Entry & { kind: 'agent' | 'gate' | 'review', phase: string, node: WorkflowNode }} WorkStep
  * @typedef {{ kind: 'skip', phase: string, node: WorkflowNode, visit: number, resumed: OpenAttempt | null }} SkipStep
  *   a locked gate the repository's workflow unlocked.
  * @typedef {'agent-blocked' | 'breaker' | 'ceiling' | 'route' | 'workflow-changed'} BlockCause
@@ -47,7 +50,7 @@ export const nextStep = (workflow, run) => {
 const resume = (workflow, run, [id, { open: attempt }]) => {
   const node = workflow.nodes[id]
   if (!node) return changed(id)
-  return enter(node, { visit: attempt.visit, attempt: attempt.attempt, missing: attempt.missing, feedback: attempt.feedback, resumed: attempt }, run)
+  return enter(node, { visit: attempt.visit, attempt: attempt.attempt, missing: attempt.missing, feedback: attempt.feedback, sentBy: attempt.sentBy, resumed: attempt }, run)
 }
 
 /**
@@ -57,7 +60,7 @@ const resume = (workflow, run, [id, { open: attempt }]) => {
  */
 const begin = (workflow, run) => {
   const first = run.start ?? /** @type {{ to: string }} */ (workflow.edges.find((edge) => edge.from === workflow.start)).to
-  return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], resumed: null }, run)
+  return enter(workflow.nodes[first], { visit: 1, attempt: 1, missing: [], feedback: [], sentBy: null, resumed: null }, run)
 }
 
 /**
@@ -69,7 +72,7 @@ const retry = (node, run, last) => {
   const { previous } = run.nodes[last.step]
   const cause = refusalBlock(node, previous, last)
   if (cause !== null) return { kind: 'blocked', phase: node.phase, node, cause, last, previous, missingNode: null }
-  return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, resumed: null }, run)
+  return enter(node, { visit: last.visit, attempt: last.attempt + 1, missing: last.missing, feedback: last.failures, sentBy: null, resumed: null }, run)
 }
 
 /**
@@ -99,8 +102,11 @@ const advance = (workflow, run, node, last) => {
   const phase = /** @type {string} */ (node.phase)
   if (closes(run, phase, target)) return { kind: 'close-phase', phase }
   const visit = (run.nodes[target.id]?.visit ?? 0) + 1
-  return enter(target, { visit, attempt: 1, missing: [], feedback: last.failures, resumed: null }, run)
+  return enter(target, { visit, attempt: 1, missing: [], feedback: last.failures, sentBy: sentBy(node, last), resumed: null }, run)
 }
+
+/** The kind of node whose failures send the run to its next node. @param {WorkflowNode} node @param {RunEvent} last */
+const sentBy = (node, last) => (last.failures.length > 0 && (node.kind === 'gate' || node.kind === 'review') ? node.kind : null)
 
 /**
  * Whether moving to target ends a phase not closed yet.
@@ -118,7 +124,7 @@ const enter = (node, entry, run) => {
   if (node.kind === 'exit') return { kind: 'done', phase: run.closed.at(-1) ?? null }
   const phase = /** @type {string} */ (node.phase)
   if (node.unlock !== null) return { kind: 'skip', phase, node, visit: entry.visit, resumed: entry.resumed }
-  return { kind: /** @type {'agent' | 'gate'} */ (node.kind), phase, node, ...entry }
+  return { kind: /** @type {'agent' | 'gate' | 'review'} */ (node.kind), phase, node, ...entry }
 }
 
 /** @param {string} id @returns {BlockedStep} */
@@ -132,12 +138,12 @@ const sameFailure = (a, b) => JSON.stringify([a.missing, a.failures]) === JSON.s
  * @param {Workflow} workflow
  * @param {RunState} run
  * @param {string} from
- * @param {'PASS' | 'FAIL' | null} label null for an agent's single edge
- * @returns {{ ok: true, to: string } | { ok: false, code: 'gates-failed' | 'loop-ceiling', to: string | null, taken: number, maxVisits: number | null }}
+ * @param {import('../workflow/workflow.mjs').EdgeLabel | null} label null for an agent's single edge
+ * @returns {{ ok: true, to: string } | { ok: false, code: 'gates-failed' | 'review-rejected' | 'loop-ceiling', to: string | null, taken: number, maxVisits: number | null }}
  */
 export const route = (workflow, run, from, label) => {
   const edge = workflow.edges.find((candidate) => candidate.from === from && candidate.label === label)
-  if (!edge) return { ok: false, code: 'gates-failed', to: null, taken: 0, maxVisits: null }
+  if (!edge) return { ok: false, code: label === 'NEEDS_REWORK' ? 'review-rejected' : 'gates-failed', to: null, taken: 0, maxVisits: null }
   const taken = run.traversals[edgeKey(from, edge.to)] ?? 0
   if (edge.maxVisits !== null && taken >= edge.maxVisits) return { ok: false, code: 'loop-ceiling', to: edge.to, taken, maxVisits: edge.maxVisits }
   return { ok: true, to: edge.to }

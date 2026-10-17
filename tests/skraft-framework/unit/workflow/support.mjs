@@ -15,7 +15,7 @@ export const edit = (text, ...replacements) => replacements.reduce((edited, [old
 export const WITH_SECURITY = edit(
   BUILT_IN_WORKFLOW,
   ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  security [shape=box, agent="acme-security-reviewer", outputs="security/{date}/{slug}-review.md, notes.md", writes="docs/security/, src/", max_attempts=2]'],
-  ['start -> research -> design -> distill', 'start -> research -> design -> security -> distill'],
+  ['design_review -> distill [label="APPROVED"]', 'design_review -> security [label="APPROVED"]\n  security -> distill'],
 )
 
 /** A working copy whose skraft-config.json designates skraft-workflow.dot, holding `dot`. */

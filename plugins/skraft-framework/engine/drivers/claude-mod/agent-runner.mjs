@@ -75,7 +75,22 @@ const waitForAnswer = (book, agentId) => {
  */
 export const createSpawnAgentRunner = ({ spawn, answers, pluginName, sessionCostUsd }) => Object.freeze({
   run: (request) => runSpawned({ spawn, answers, pluginName, sessionCostUsd }, request),
+  runMany: (requests) => runSpawnedTogether({ spawn, answers, pluginName, sessionCostUsd }, requests),
 })
+
+/**
+ * Spawns every subagent before waiting for any. Their turns overlap, so the session cost they
+ * add is the batch's, not any one agent's.
+ * @param {SpawnHost} host @param {import('../../application/ports/agent-runner.mjs').AgentDispatch[]} requests
+ * @returns {Promise<import('../../application/ports/agent-runner.mjs').AgentAnswers>}
+ */
+const runSpawnedTogether = async (host, requests) => {
+  const before = await host.sessionCostUsd()
+  const uncounted = { ...host, sessionCostUsd: async () => null }
+  const answers = await Promise.all(requests.map((request) => runSpawned(uncounted, request)))
+  const after = await host.sessionCostUsd()
+  return { answers, ...costSpent(before, after) }
+}
 
 /** @param {SpawnHost} host @param {import('../../application/ports/agent-runner.mjs').AgentDispatch} request @returns {Promise<AgentAnswer>} */
 const runSpawned = async (host, { agent, source, label, prompt }) => {

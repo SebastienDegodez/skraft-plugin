@@ -8,12 +8,13 @@ import { RESULT_SHAPE } from './agent-result.mjs'
  *   visit: number, attempt: number, maxAttempts: number,
  *   inputs: string[], outputs: string[], result: string,
  *   allowed: string[], components: BriefComponent[], tdd: 'cycle' | 'red' | null,
- *   missing: string[], feedback: string[],
+ *   missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null,
  * }} Brief
  *   inputs, outputs, result and missing are absolute paths; allowed is relative to the working
  *   copy; components: those whose paths the agent may write, empty otherwise. tdd: the commits
  *   the agent makes, a whole TDD cycle or failing tests only. feedback: on a retry, why the
- *   previous attempt was refused; on a new pass, the gate failures behind it.
+ *   previous attempt was refused; on a new pass, the gate failures or the review findings behind
+ *   it, sentBy naming which.
  */
 
 /**
@@ -28,11 +29,11 @@ export const composeBrief = (brief) => [
 ].join('\n')
 
 /** Who is dispatched, for which story, on which pass and attempt. @param {Brief} brief */
-const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts }) => [
+const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy }) => [
   `## Skraft dispatch: ${agent} (${phase})`,
   `- Story: ${storyLine(story)}`,
   `- Feature scope: ${slug}`,
-  ...(visit > 1 ? [`- Pass: ${visit}, after the gates sent the work back`] : []),
+  ...(visit > 1 ? [`- Pass: ${visit}, after the ${sentBy === 'review' ? 'review' : 'gates'} sent the work back`] : []),
   `- Attempt: ${attempt} of ${maxAttempts}`,
 ]
 
@@ -61,14 +62,15 @@ const missingLines = ({ missing, attempt, maxAttempts }) => (missing.length > 0
   : [])
 
 /** Why the previous attempt was refused, or why the gates sent the work back. @param {Brief} brief */
-const feedbackLines = ({ feedback, attempt, maxAttempts, visit }) => (feedback.length > 0
-  ? ['', feedbackTitle({ attempt, maxAttempts, visit }), ...feedback.map((line) => `- ${line}`)]
+const feedbackLines = ({ feedback, attempt, maxAttempts, visit, sentBy }) => (feedback.length > 0
+  ? ['', feedbackTitle({ attempt, maxAttempts, visit, sentBy }), ...feedback.map((line) => `- ${line}`)]
   : [])
 
-/** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit'>} brief */
-const feedbackTitle = ({ attempt, maxAttempts, visit }) => (attempt > 1
-  ? `Refused in attempt ${attempt - 1} of ${maxAttempts}:`
-  : `The gates failed on pass ${visit - 1}:`)
+/** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit' | 'sentBy'>} brief */
+const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {
+  if (attempt > 1) return `Refused in attempt ${attempt - 1} of ${maxAttempts}:`
+  return sentBy === 'review' ? `The review sent the work back on pass ${visit - 1}, with these findings:` : `The gates failed on pass ${visit - 1}:`
+}
 
 const TDD_RULES = Object.freeze({
   cycle: [
@@ -88,7 +90,7 @@ const TDD_RULES = Object.freeze({
 const section = (title, lines) => (lines.length > 0 ? [title, ...lines.map((line) => `- ${line}`)] : [])
 
 /** @param {{ issue?: number | null, title?: string | null } | null} story */
-const storyLine = (story) => {
+export const storyLine = (story) => {
   const parts = [story?.issue ? `#${story.issue}` : null, story?.title || null].filter(Boolean)
   return parts.length > 0 ? parts.join(' — ') : 'none'
 }

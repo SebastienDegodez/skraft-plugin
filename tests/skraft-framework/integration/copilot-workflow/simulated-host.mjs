@@ -50,11 +50,12 @@ export const stops = (summary = 'needs a decision on the payment provider') => a
 /** A behaviour that writes nothing but still answers. */
 export const writesNothing = async () => 'I could not find anything'
 
-/** A behaviour for every call: the scripted LLM of a pipeline repository. @param {{ act: (prompt: string) => void }} llm */
-export const actsAs = (llm) => async ({ prompt }) => {
-  llm.act(prompt)
-  return 'done'
-}
+/**
+ * A behaviour for every call: the scripted LLM of a pipeline repository. A phase agent answers
+ * `done`, a lens or the refuter its scripted final message.
+ * @param {{ act: (prompt: string) => string | undefined }} llm
+ */
+export const actsAs = (llm) => async ({ prompt }) => llm.act(prompt) ?? 'done'
 
 /**
  * @param {{
@@ -65,11 +66,14 @@ export const actsAs = (llm) => async ({ prompt }) => {
  *   otherwise?: (call: { prompt: string, label: string, agent: string, outputs: string[] }) => Promise<string | undefined>,
  * }} [options] journal: the previous run's, for a resume; agents: what session.rpc.agent.list answers;
  *   otherwise: the behaviour of a call once the queued ones are spent (writesNothing by default)
+ * @returns timeline: `call <label>` when ctx.agent starts an agent, `answer <label>` when its
+ *   answer comes back, in the order they happen.
  */
 export const simulatedContext = ({ args = {}, behaviours = [], journal = [], agents, otherwise = writesNothing } = {}) => {
   const queue = [...behaviours]
   const calls = []
   const logs = []
+  const timeline = []
   const ctx = {
     args,
     log: (message) => logs.push(message),
@@ -78,9 +82,11 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
       if (memoised) return memoised.text
       const call = { prompt, label: options.label, agent: options.agent, outputs: outputsOf(prompt) }
       calls.push(call)
+      timeline.push(`call ${options.label}`)
       const behaviour = queue.shift() ?? otherwise
       const text = await behaviour(call)
       journal.push({ label: options.label, prompt, text })
+      timeline.push(`answer ${options.label}`)
       return text
     },
     ...(agents === undefined ? {} : {
@@ -90,5 +96,5 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
       } } } },
     }),
   }
-  return { ctx, calls, logs, journal }
+  return { ctx, calls, logs, journal, timeline }
 }

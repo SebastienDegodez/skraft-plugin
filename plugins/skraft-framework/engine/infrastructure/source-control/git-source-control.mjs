@@ -20,8 +20,12 @@ export const createGitSourceControl = ({ commandRunner }) => {
     changedFiles: (dir, sha) => changedFiles(git, dir, sha),
     head: (dir) => head(git, dir),
     commits: (dir, since) => commits(git, dir, since),
+    diff: (dir, sha) => git(dir, ['diff', ...PATCH_OPTIONS, '--end-of-options', sha, '--']),
   })
 }
+
+/** A patch whose paths read `a/<path>` and `b/<path>` relative to the folder, whatever the user's diff config. */
+const PATCH_OPTIONS = Object.freeze(['--no-renames', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/', '--relative'])
 
 /** @param {CommandRunner} commandRunner @returns {Git} */
 const gitThrough = (commandRunner) => async (dir, args) => {

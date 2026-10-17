@@ -6,16 +6,19 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  * A skraft workflow: the DOT graph read as the pipeline the engine runs, and checked before any
  * run.
  *
- * @typedef {'start' | 'exit' | 'agent' | 'gate'} NodeKind
+ * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review'} NodeKind
  * @typedef {{
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
- *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
- *   maxAttempts: number | null,
+ *   lenses: string[], goal: boolean, locked: boolean, unlock: string | null, outputs: string[],
+ *   writes: string[], maxAttempts: number | null,
  * }} WorkflowNode
- *   phase: its own, else the phase of its first predecessor in `order`. outputs: relative to the
- *   tracking folder (`{date}`, `{slug}` filled at dispatch); writes: relative to the working copy.
- * @typedef {{ from: string, to: string, label: 'PASS' | 'FAIL' | null, maxVisits: number | null }} WorkflowEdge
- *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), null elsewhere.
+ *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
+ *   review node runs, each as the agent `<lens>-lens`. outputs: relative to the tracking folder
+ *   (`{date}`, `{slug}` filled at dispatch); writes: relative to the working copy.
+ * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
+ * @typedef {{ from: string, to: string, label: EdgeLabel | null, maxVisits: number | null }} WorkflowEdge
+ *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
+ *   NEEDS_REWORK on an edge leaving a review (unlabeled means APPROVED), null elsewhere.
  * @typedef {{
  *   version: string | null, skraftVersion: string | null, goal: string | null, start: string,
  *   nodes: Record<string, WorkflowNode>, order: string[], edges: WorkflowEdge[], phases: string[],
@@ -25,7 +28,7 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  */
 
 /** @type {ReadonlyMap<string, NodeKind>} */
-const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate']])
+const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate'], ['component', 'review']])
 const COMMON = Object.freeze(['label', 'shape', 'phase'])
 /** @type {Readonly<Record<NodeKind, { required: string[], optional: string[] }>>} */
 const ATTRIBUTES = Object.freeze({
@@ -33,7 +36,10 @@ const ATTRIBUTES = Object.freeze({
   exit: { required: [], optional: [] },
   agent: { required: ['agent'], optional: ['outputs', 'writes', 'max_attempts'] },
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
+  review: { required: ['lenses'], optional: [] },
 })
+/** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
+const LABELS = Object.freeze({ gate: Object.freeze(['PASS', 'FAIL']), review: Object.freeze(['APPROVED', 'NEEDS_REWORK']) })
 const PHASE = /^[A-Z][A-Z0-9_]*$/
 const AGENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const POSITIVE = /^[1-9][0-9]*$/
@@ -50,6 +56,7 @@ const flag = (value) => (value === 'true' || value === 'false' ? null : 'must be
 const NODE_CHECKS = {
   phase: (value) => (PHASE.test(value) ? null : 'must be an upper-case word'),
   agent: (value) => (AGENT_ID.test(value) ? null : 'must be a kebab-case agent id'),
+  lenses: (value) => (listOf(value).length > 0 && listOf(value).every((lens, index, all) => AGENT_ID.test(lens) && all.indexOf(lens) === index) ? null : 'must list kebab-case lens names, each once'),
   gate: (value) => (listOf(value).length > 0 && listOf(value).every((gate) => GATE_ORDER.includes(gate)) ? null : `must list gates among ${GATE_ORDER.join(', ')}`),
   goal_gate: flag,
   locked: flag,
@@ -61,7 +68,7 @@ const NODE_CHECKS = {
 
 /** @type {Record<string, (value: string) => string | null>} */
 const EDGE_CHECKS = {
-  label: (value) => (value === 'PASS' || value === 'FAIL' ? null : 'must be PASS or FAIL'),
+  label: () => null,
   max_visits: positive,
 }
 
@@ -135,6 +142,7 @@ const nodeOf = (id, kind, attributes) => ({
   kind,
   phase: attributes.phase ?? null,
   agent: attributes.agent ?? null,
+  lenses: listOf(attributes.lenses ?? ''),
   ...gateSettingsOf(attributes),
   ...stepSettingsOf(attributes),
 })
@@ -158,7 +166,7 @@ const stepSettingsOf = (attributes) => ({
 const edgeOf = ({ from, to, attributes }, source) => ({
   from,
   to,
-  label: /** @type {'PASS' | 'FAIL' | null} */ (attributes.label ?? (source === 'gate' ? 'PASS' : null)),
+  label: /** @type {EdgeLabel | null} */ (attributes.label ?? labelsOf(source)?.[0] ?? null),
   maxVisits: attributes.max_visits === undefined ? null : Number(attributes.max_visits),
 })
 
@@ -191,7 +199,7 @@ const nodeReasons = ({ id, attributes }) => {
 
 /** @param {string} id @param {string | undefined} shape */
 const shapeReason = (id, shape) => (shape === undefined
-  ? `node ${id} has no shape; declare it with shape=Mdiamond, Msquare, box or parallelogram`
+  ? `node ${id} has no shape; declare it with shape=Mdiamond, Msquare, box, parallelogram or component`
   : `node ${id}: shape ${shape} is not supported (supported: ${[...KINDS.keys()].join(', ')})`)
 
 /** @param {string} name @param {string} shape @param {string[]} allowed @param {string} key @param {string} value */
@@ -200,7 +208,10 @@ const nodeAttributeReason = (name, shape, allowed, key, value) => {
   return valueReasons(name, key, value, NODE_CHECKS[key]?.(value) ?? null)
 }
 
-/** Known attributes, valid values, labels only on gates. @param {Draft} draft */
+/** @param {NodeKind | null} kind @returns {readonly EdgeLabel[] | undefined} */
+const labelsOf = (kind) => (kind === null ? undefined : LABELS[kind])
+
+/** Known attributes, valid values, labels only on gates and reviews. @param {Draft} draft */
 const edgeAttributeReasons = ({ graph, nodes }) => graph.edges.flatMap((edge) => edgeReasons(edge, kindOf(nodes, edge.from)))
 
 /** @param {import('./dot.mjs').DotEdge} edge @param {NodeKind | null} source the kind of `from` */
@@ -208,8 +219,15 @@ const edgeReasons = ({ from, to, attributes }, source) => {
   const name = `edge ${from} -> ${to}`
   return [
     ...Object.entries(attributes).flatMap(([key, value]) => edgeAttributeReason(name, key, value)),
-    ...when(attributes.label !== undefined && source !== 'gate', `${name}: only an edge leaving a gate takes a label`),
+    ...labelReasons(name, attributes.label, labelsOf(source)),
   ]
+}
+
+/** @param {string} name @param {string | undefined} label @param {readonly EdgeLabel[] | undefined} labels those its source takes */
+const labelReasons = (name, label, labels) => {
+  if (label === undefined) return []
+  if (labels === undefined) return [`${name}: only an edge leaving a gate or a review takes a label`]
+  return valueReasons(name, 'label', label, labels.some((known) => known === label) ? null : `must be ${labels.join(' or ')}`)
 }
 
 /** @param {string} name @param {string} key @param {string} value */
@@ -236,8 +254,17 @@ const gateOutgoing = (node, out) => {
   ]
 }
 
+/** @param {WorkflowNode} node @param {WorkflowEdge[]} out its outgoing edges */
+const reviewOutgoing = (node, out) => {
+  const rework = out.filter((edge) => edge.label === 'NEEDS_REWORK').length
+  return [
+    ...when(out.length - rework !== 1, `node ${node.id}: review node needs exactly one APPROVED edge, has ${out.length - rework}`),
+    ...when(rework > 1, `node ${node.id}: review node takes at most one NEEDS_REWORK edge, has ${rework}`),
+  ]
+}
+
 /** @type {Readonly<Record<NodeKind, (node: WorkflowNode, out: WorkflowEdge[]) => string[]>>} */
-const OUTGOING = Object.freeze({ start: oneOutgoing, agent: oneOutgoing, exit: noOutgoing, gate: gateOutgoing })
+const OUTGOING = Object.freeze({ start: oneOutgoing, agent: oneOutgoing, exit: noOutgoing, gate: gateOutgoing, review: reviewOutgoing })
 
 /** @param {Draft} draft */
 const startAndExitReasons = ({ starts, exits }) => [
@@ -261,10 +288,13 @@ const deadEndReasons = ({ ids, exits, edges }) => {
 /** @param {Draft} draft */
 const unboundedLoopReasons = ({ ids, edges }) => loopsOf(ids, edges.filter((edge) => edge.maxVisits === null)).map((loop) => `loop ${loop.join(' -> ')} has no max_visits`)
 
+/** The kinds of node that do the run's work, each in a phase. */
+const WORKING = Object.freeze(['agent', 'gate', 'review'])
+
 /** @param {Draft} draft */
 const missingPhaseReasons = ({ nodes, order }) => order
   .filter((id) => id in nodes)
-  .filter((id) => nodes[id].phase === null && (nodes[id].kind === 'agent' || nodes[id].kind === 'gate'))
+  .filter((id) => nodes[id].phase === null && WORKING.includes(nodes[id].kind))
   .map((id) => `node ${id} has no phase; set phase="<PHASE>" on it or on a node before it`)
 
 /** No edge enters the start; no edge goes back to an earlier phase. @param {Draft} draft */
@@ -414,13 +444,19 @@ const factsOf = (node) => [
   ['kind', node.kind],
   ['agent', node.agent],
   ['gate', node.gates.join(',')],
+  ['lenses', node.lenses.join(',')],
   ['phase', node.phase],
-  ['goal_gate', String(node.goal)],
-  ['locked', String(node.locked)],
-  ['unlock', node.unlock],
+  ...gateFactsOf(node),
   ['outputs', node.outputs.join(', ')],
   ['writes', node.writes.join(', ')],
   ['max_attempts', node.maxAttempts === null ? null : String(node.maxAttempts)],
+]
+
+/** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
+const gateFactsOf = (node) => [
+  ['goal_gate', String(node.goal)],
+  ['locked', String(node.locked)],
+  ['unlock', node.unlock],
 ]
 
 /** @param {WorkflowEdge} edge @returns {Array<[string, string | null]>} */
@@ -463,7 +499,7 @@ const nodeChanges = (from, to) => {
 }
 
 /** @param {WorkflowNode} node */
-const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.gates.join(',')].filter(Boolean).join(' ')})`
+const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.gates.join(','), node.lenses.join(',')].filter(Boolean).join(' ')})`
 
 /** @param {Workflow} from @param {Workflow} to */
 const edgeChanges = (from, to) => {

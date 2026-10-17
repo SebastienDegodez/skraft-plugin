@@ -16,7 +16,7 @@ metadata:
 # Architecture Boundaries Lens
 
 You are a structural analysis lens of the `software-engineer-reviewer`.
-You receive the patch and file list since the DELIVER base, the `contracts-{story}.md` and `docs/adr/decisions-index.md` — no journal, no checklist.
+Read the patch, the changed-file list and the documents your brief lists; open `docs/adr/decisions-index.md` and the `contracts-{story}.md` when they exist.
 Your job is to verify architectural invariants.
 
 Read the patch; open a whole file only when the patch lacks the context a finding needs.
@@ -68,22 +68,7 @@ Violations → `medium` severity.
 
 ## Output
 
-Return EXACTLY this YAML document:
-
-```yaml
-lens: architecture-boundaries
-verdict: pass | fail | inconclusive
-defects:
-  - id: D<N>
-    gate: G<N>
-    severity: blocker | high | medium | low
-    location: "file:line"
-    description: "what is wrong"
-    suggestion: "how to fix"
-```
-
-Quote every free-text value. Emit `defects: []` when none were found. Return
-`verdict: inconclusive` when required evidence cannot be inspected; never infer pass from silence.
+End your final message with the JSON document your brief shows; `findings` is `[]` when you find none; answer `inconclusive` when you cannot inspect an input.
 
 ## Rules
 

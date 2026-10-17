@@ -66,17 +66,27 @@ export const fillsThenHostDies = () => async (spawn, host) => {
   await writeResult(spawn.prompt, 'done', 'research written')
   return host.started(spawn)
 }
-/** Every spawn answered by the scripted LLM of a pipeline repository. @param {{ act: (prompt: string) => void }} llm */
+/**
+ * Every spawn answered by the scripted LLM of a pipeline repository: a phase agent's turn ends
+ * with `done`, a lens's or the refuter's with its scripted final message.
+ * @param {{ act: (prompt: string) => string | undefined }} llm
+ */
 export const actsAs = (llm) => async (spawn, host) => {
-  llm.act(spawn.prompt)
-  return host.answer(spawn)
+  const answer = llm.act(spawn.prompt)
+  return host.answer(spawn, answer === undefined ? {} : { answer })
 }
 
 /**
- * @param {{ cwd?: string, behaviours?: Array<(spawn: any, host: any) => Promise<object>>, costs?: Array<number | null>, otherwise?: (spawn: any, host: any) => Promise<object> }} [options]
- *   otherwise: the behaviour of a spawn once the queued ones are spent; without it such a spawn is rejected
+ * @param {{
+ *   cwd?: string, behaviours?: Array<(spawn: any, host: any) => Promise<object>>, costs?: Array<number | null>,
+ *   otherwise?: (spawn: any, host: any) => Promise<object>, turnCostUsd?: number,
+ * }} [options]
+ *   otherwise: the behaviour of a spawn once the queued ones are spent; without it such a spawn is rejected.
+ *   turnCostUsd: what each completed turn adds to the session cost, which then starts at 0, in place of `costs`.
+ * @returns timeline: `spawn <description>` when `$.agent.spawn` is called, `complete <description>`
+ *   when that subagent's turn.complete reaches the driver, in the order they happen.
  */
-export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise } = {}) => {
+export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherwise, turnCostUsd } = {}) => {
   const root = cwd ?? (await mkdtemp(join(tmpdir(), 'skraft-mod-')))
   const driver = createClaudeModDriver()
   /** @type {Array<{ prompt: string, subagentType: string, description: string }>} */
@@ -84,16 +94,31 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
   const published = []
   const statuses = []
   const notes = []
+  const timeline = []
   const scripted = [...behaviours]
   const costQueue = [...costs]
   let agents = 0
   let started = 0
+  let sessionCost = 0
+
+  /** @param {any} spawn @param {string} agentId @param {object} turn */
+  const complete = (spawn, agentId, turn) => {
+    timeline.push(`complete ${spawn.description}`)
+    if (turnCostUsd !== undefined) sessionCost += turnCostUsd
+    driver.turnComplete({ agentId, answer: 'done', reason: 'answer', ...turn })
+  }
 
   const control = {
     /** Starts the subagent and completes its turn before the spawn resolves. */
     answer: (spawn, turn = {}) => {
       const agentId = `agent-${++agents}`
-      driver.turnComplete({ agentId, answer: 'done', reason: 'answer', ...turn })
+      complete(spawn, agentId, turn)
+      return { model: 'scripted', agentId }
+    },
+    /** Starts the subagent; its turn completes once `after` settles, after the spawn resolved. @param {Promise<unknown>} after */
+    answerAfter: (spawn, after, turn = {}) => {
+      const agentId = `agent-${++agents}`
+      after.then(() => complete(spawn, agentId, turn))
       return { model: 'scripted', agentId }
     },
     /** Starts the subagent; its turn never completes. */
@@ -108,13 +133,17 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     run: nodeModRun,
     spawn: async (/** @type {any} */ args) => {
       spawns.push(args)
+      timeline.push(`spawn ${args.description}`)
       const behaviour = scripted.shift() ?? otherwise
       if (!behaviour) throw new Error(`unexpected spawn ${args.description}`)
       const answer = await behaviour(args, control)
       started += 1
       return answer
     },
-    sessionCostUsd: async () => (costQueue.length > 0 ? costQueue.shift() ?? null : null),
+    sessionCostUsd: async () => {
+      if (turnCostUsd !== undefined) return sessionCost
+      return costQueue.length > 0 ? costQueue.shift() ?? null : null
+    },
     later: (/** @type {() => void} */ run) => run(),
     publish: async (/** @type {any} */ snapshot) => { published.push(snapshot) },
     status: (/** @type {string | undefined} */ text) => { statuses.push(text) },
@@ -130,6 +159,7 @@ export const scriptedModHost = async ({ cwd, behaviours = [], costs = [], otherw
     published,
     statuses,
     notes,
+    timeline,
     behaviours: scripted,
     command: (/** @type {string} */ args) => driver.command(host, args),
     tool: (/** @type {any} */ input) => driver.tool(host, input),

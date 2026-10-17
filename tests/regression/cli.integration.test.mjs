@@ -33,6 +33,7 @@ test('compare on a v1 and a v2 tracking folder writes the report and fails on re
   assert.match(md, /regression check — `payment`/)
   assert.match(md, /\| phases \| RESEARCH, DESIGN, DISTILL, DELIVER \| RESEARCH \| regression \|/)
   assert.match(md, /\| gate refund\/G1 \| pass \| fail \| regression \|/)
+  assert.match(md, /\| verdict DESIGN \| APPROVED \| NEEDS_REWORK \| regression \|/)
   assert.match(md, /\| artefact design\/architecture\.md \| present \| missing \| regression \|/)
   assert.match(md, /\| artefact research\/report\.md \| present \| present \| same \|/)
   assert.doesNotMatch(md, /execution-log|state\.json|events\.jsonl/)

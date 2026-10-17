@@ -58,22 +58,7 @@ You read this code as if you found it in a repository for the first time.
 
 ## Output
 
-Return EXACTLY this YAML document:
-
-```yaml
-lens: cold-reader
-verdict: pass | fail | inconclusive
-defects:
-  - id: D<N>
-    gate: G11
-    severity: medium | low
-    location: "file:line"
-    description: "what is unclear or poorly named"
-    suggestion: "how to fix"
-```
-
-Quote every free-text value. Emit `defects: []` when none were found. Return
-`verdict: inconclusive` when required evidence cannot be inspected; never infer pass from silence.
+End your final message with the JSON document your brief shows; `findings` is `[]` when you find none; answer `inconclusive` when you cannot inspect an input.
 
 ## Rules
 

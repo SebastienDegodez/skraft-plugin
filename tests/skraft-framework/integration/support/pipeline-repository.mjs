@@ -4,7 +4,7 @@
 // repository's real test command. No doubles: every driver test stages the same repository.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
-import { commitAll, git, tempFolder } from './workspace.mjs'
+import { PLUGIN_ROOT, commitAll, git, tempFolder } from './workspace.mjs'
 
 export const SLUG = 'checkout'
 
@@ -52,18 +52,33 @@ export const SECURITY_WORKFLOW = `digraph skraft {
 
 export const SECURITY_AGENT = 'acme-security-reviewer'
 
+/** A repository lens: the agent `acme-security-lens`. */
+export const SECURITY_LENS = 'acme-security'
+
+/** A repository workflow: the plugin's, its design review with the repository lens last. */
+export const LENS_WORKFLOW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
+  .replace('lenses="consistency,architecture-compliance,fitness"', `lenses="consistency,architecture-compliance,fitness,${SECURITY_LENS}"`)
+
+/** @param {string} cwd @param {string} agent @param {string} description */
+const repositoryAgent = (cwd, agent, description) => {
+  for (const [folder, name] of [['.claude', `${agent}.md`], ['.github', `${agent}.agent.md`]]) {
+    mkdirSync(join(cwd, folder, 'agents'), { recursive: true })
+    writeFileSync(join(cwd, folder, 'agents', name), `---\nname: ${agent}\ndescription: ${description}\n---\nReview the design.\n`)
+  }
+}
+
 /**
  * A repository on `main` with one JavaScript component `app` at its root, the tracking folder
  * ignored. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
- * both hosts.
+ * both hosts; with `lens`, it runs LENS_WORKFLOW and defines its repository lens for both hosts.
  * @param {import('node:test').TestContext} t
- * @param {{ security?: boolean }} [options]
+ * @param {{ security?: boolean, lens?: boolean }} [options]
  */
-export const pipelineRepository = (t, { security = false } = {}) => {
+export const pipelineRepository = (t, { security = false, lens = false } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
-    ...(security ? { workflow: 'skraft-workflow.dot' } : {}),
+    ...(security || lens ? { workflow: 'skraft-workflow.dot' } : {}),
     components: [{
       name: 'app', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
@@ -75,10 +90,11 @@ export const pipelineRepository = (t, { security = false } = {}) => {
   writeFileSync(join(cwd, 'README.md'), '# payment\n')
   if (security) {
     writeFileSync(join(cwd, 'skraft-workflow.dot'), SECURITY_WORKFLOW)
-    for (const [folder, name] of [['.claude', `${SECURITY_AGENT}.md`], ['.github', `${SECURITY_AGENT}.agent.md`]]) {
-      mkdirSync(join(cwd, folder, 'agents'), { recursive: true })
-      writeFileSync(join(cwd, folder, 'agents', name), `---\nname: ${SECURITY_AGENT}\ndescription: Reviews the design for security\n---\nReview the design.\n`)
-    }
+    repositoryAgent(cwd, SECURITY_AGENT, 'Reviews the design for security')
+  }
+  if (lens) {
+    writeFileSync(join(cwd, 'skraft-workflow.dot'), LENS_WORKFLOW)
+    repositoryAgent(cwd, `${SECURITY_LENS}-lens`, 'Reviews the design for security, as a lens')
   }
   const main = commitAll(cwd)
   return { cwd, main }
@@ -198,24 +214,121 @@ export const NOMINAL = Object.freeze({
   [SECURITY_AGENT]: (brief) => writeResult(brief, { status: 'done', summary: 'no security finding' }),
 })
 
+/** The lenses of the plugin workflow's review nodes, in node order; deliver_review's triggered lenses left out. */
+export const LENSES = Object.freeze({
+  design_review: ['consistency', 'architecture-compliance', 'fitness'],
+  distill_review: ['coverage', 'business-alignment', 'testability', 'boundary-enforcement'],
+  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader'],
+})
+
+/**
+ * The labels a review node's lenses are started under, in node order.
+ * @param {keyof typeof LENSES} node @param {{ visit?: number, attempt?: number, lenses?: string[] }} [options]
+ */
+export const lensLabels = (node, { visit = 1, attempt = 1, lenses = LENSES[node] } = {}) =>
+  lenses.map((lens) => `skraft ${SLUG} · ${node} · ${lens}${visit > 1 ? ` · pass ${visit}` : ''} · attempt ${attempt}`)
+
+/**
+ * `<agent> | <label>` of each lens a review node starts, the plugin's lenses by their plugin id.
+ * @param {keyof typeof LENSES} node @param {Parameters<typeof lensLabels>[1]} [options]
+ */
+export const lensDispatches = (node, options = {}) => {
+  const lenses = options.lenses ?? LENSES[node]
+  const labels = lensLabels(node, { ...options, lenses })
+  return lenses.map((lens, index) => `skraft:${lens}-lens | ${labels[index]}`)
+}
+
+/**
+ * The lines in order, the lenses each review node starts together sorted among themselves: a
+ * host may start them in any order. A line names its node by ` · <node>_review · `.
+ * @param {string[]} lines
+ */
+export const batchesSorted = (lines) => {
+  const nodeOf = (/** @type {string} */ line) => / · (\w+_review) · /.exec(line)?.[1] ?? null
+  /** @type {string[][]} */
+  const groups = []
+  for (const line of lines) {
+    const last = groups.at(-1)
+    if (last && nodeOf(line) !== null && nodeOf(last[0]) === nodeOf(line)) last.push(line)
+    else groups.push([line])
+  }
+  return groups.flatMap((group) => [...group].sort())
+}
+
+/** The step.recorded of the review nodes: step, visit, outcome, next. @param {object[]} events */
+export const reviewsOf = (events) => events
+  .filter((event) => event.type === 'step.recorded' && event.step.endsWith('_review'))
+  .map(({ step, visit, outcome, next }) => [step, visit, outcome, next])
+
+/**
+ * A lens's answer as its final message.
+ * @param {string} lens @param {'pass' | 'fail' | 'inconclusive'} verdict @param {object[]} [findings]
+ */
+export const says = (lens, verdict, findings = []) => `I read the inputs.\n\n\`\`\`json\n${JSON.stringify({ lens, verdict, findings })}\n\`\`\``
+
+/** A finding of a lens's answer. @param {string} id @param {string} severity @param {string} description @param {object} [more] */
+export const finding = (id, severity, description, more = {}) => ({ id, severity, location: 'docs/adr/adr-001-card-payment.md:3', description, suggestion: 'name the provider', ...more })
+
+/** The refuter's answer. @param {'confirmed' | 'refuted' | 'unverifiable'} verdict @param {string} [reason] */
+export const refutes = (verdict, reason = `${verdict} by the patch`) => JSON.stringify({ verdict, reason })
+
+/**
+ * What a review brief asks: the lens it names, or `refuter` with the lens and finding it checks;
+ * null for a phase agent's brief.
+ * @param {string} prompt
+ * @returns {{ name: string, lens: string, finding: string | null, prompt: string } | null}
+ */
+export const reviewBriefOf = (prompt) => {
+  const first = prompt.split('\n')[0] ?? ''
+  const lens = /^## Skraft review lens: (\S+)/.exec(first)
+  if (lens) return { name: lens[1], lens: lens[1], finding: null, prompt }
+  const check = /^## Skraft finding check: (\S+) (\S+)$/.exec(first)
+  return check ? { name: 'refuter', lens: check[1], finding: check[2], prompt } : null
+}
+
+/**
+ * @typedef {string | ((brief: NonNullable<ReturnType<typeof reviewBriefOf>>) => string)} ReviewAnswer
+ *   what one lens or the refuter answers to one brief: its final message.
+ */
+
 /**
  * The scripted LLM of one run: each dispatch is answered by the next act queued for its agent,
- * else by its NOMINAL act. `dispatched` lists the agents in dispatch order with their briefs.
- * @param {{ cwd: string, slug?: string, acts?: Record<string, Act[]> }} options
+ * else by its NOMINAL act. A lens `<name>` answers the next of `reviews[name]`, the refuter the
+ * next of `reviews.refuter`; what a queue does not script passes, or is confirmed.
+ * `dispatched` lists the phase briefs in dispatch order, `reviewed` the lens and refuter briefs.
+ * @param {{ cwd: string, slug?: string, acts?: Record<string, Act[]>, reviews?: Record<string, ReviewAnswer[]> }} options
  */
-export const scriptedLlm = ({ cwd, slug = SLUG, acts = {} }) => {
+export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {} }) => {
   const queues = Object.fromEntries(Object.entries(acts).map(([agent, list]) => [agent, [...list]]))
+  const answers = Object.fromEntries(Object.entries(reviews).map(([name, list]) => [name, [...list]]))
   /** @type {Brief[]} */
   const dispatched = []
+  /** @type {Array<NonNullable<ReturnType<typeof reviewBriefOf>>>} */
+  const reviewed = []
+  /** @param {NonNullable<ReturnType<typeof reviewBriefOf>>} brief @returns {string} */
+  const review = (brief) => {
+    reviewed.push(brief)
+    const next = answers[brief.name]?.shift()
+    if (typeof next === 'function') return next(brief)
+    if (next !== undefined) return next
+    return brief.name === 'refuter' ? refutes('confirmed') : says(brief.lens, 'pass')
+  }
   return {
     dispatched,
-    /** Acts on one brief, as the agent it names. @param {string} prompt */
+    reviewed,
+    /**
+     * Acts on one brief, as the agent it names; a lens or the refuter returns its final message.
+     * @param {string} prompt @returns {string | undefined}
+     */
     act: (prompt) => {
+      const asked = reviewBriefOf(prompt)
+      if (asked !== null) return review(asked)
       const brief = briefOf(prompt)
       dispatched.push(brief)
       const act = queues[/** @type {string} */ (brief.agent)]?.shift() ?? NOMINAL[/** @type {string} */ (brief.agent)]
       if (!act) throw new Error(`no scripted act for ${brief.agent}`)
       act(brief, { cwd, slug })
+      return undefined
     },
   }
 }

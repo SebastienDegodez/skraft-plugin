@@ -79,7 +79,8 @@ test('v2 events: phases, verdicts, last gate status wins, cost and retries from 
     ev('step.recorded', '2026-10-09T10:09:00.000Z', { step: 'research', outcome: 'ok', durationMs: 2000, cost: 0.25 }),
     ev('gate.ran', '2026-10-09T10:09:10.000Z', { component: 'api', gate: 'build', status: 'fail' }),
     ev('gate.ran', '2026-10-09T10:09:20.000Z', { component: 'api', gate: 'build', status: 'pass' }),
-    ev('review.decided', '2026-10-09T10:09:30.000Z', { phase: 'RESEARCH', verdict: 'APPROVED' }),
+    ev('step.started', '2026-10-09T10:09:21.000Z', { step: 'research_review', phase: 'RESEARCH', lenses: ['cold-reader'], visit: 1, attempt: 1 }),
+    ev('step.recorded', '2026-10-09T10:09:30.000Z', { step: 'research_review', visit: 1, attempt: 1, outcome: 'approved', code: null, failures: [], next: 'exit' }),
     ev('decision.recorded', '2026-10-09T10:09:40.000Z', { key: 'adr-1', answer: 'accept' }),
     ev('phase.closed', '2026-10-09T10:09:50.000Z', { phase: 'RESEARCH' }),
     ev('some.future.event', '2026-10-09T10:09:55.000Z', { whatever: true }),
@@ -207,4 +208,128 @@ test('phases closed as skipped from artefacts count as reached; a new visit coun
   const summary = summarizeV2(events)
   assert.deepEqual(summary.phasesReached, ['RESEARCH', 'DESIGN', 'DELIVER'])
   assert.equal(summary.retries, 2)
+})
+
+const reviewStarted = (at, step, phase, visit, lenses = ['consistency']) => ev('step.started', at, { step, phase, lenses, visit, attempt: 1 })
+const reviewRecorded = (at, step, visit, outcome, extra = {}) => ev('step.recorded', at, { step, visit, attempt: 1, outcome, code: null, failures: [], next: null, reason: '', durationMs: 10, ...extra })
+const agentStarted = (at, step, phase, visit, extra = {}) => ev('step.started', at, { step, phase, agent: `${step}-agent`, visit, attempt: 1, ...extra })
+
+test('v2 review steps give the verdicts per phase, one per pass; a blocked review gives none', () => {
+  const events = [
+    ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund' }),
+    agentStarted('2026-10-09T10:01:00.000Z', 'design', 'DESIGN', 1),
+    reviewStarted('2026-10-09T10:02:00.000Z', 'design_review', 'DESIGN', 1),
+    reviewRecorded('2026-10-09T10:03:00.000Z', 'design_review', 1, 'needs-rework', { failures: ['consistency F1 high: x'], next: 'design' }),
+    agentStarted('2026-10-09T10:04:00.000Z', 'design', 'DESIGN', 2, { sentBy: 'review' }),
+    reviewStarted('2026-10-09T10:05:00.000Z', 'design_review', 'DESIGN', 2),
+    reviewRecorded('2026-10-09T10:06:00.000Z', 'design_review', 2, 'approved', { next: 'distill' }),
+    agentStarted('2026-10-09T10:07:00.000Z', 'distill', 'DISTILL', 1),
+    reviewStarted('2026-10-09T10:08:00.000Z', 'distill_review', 'DISTILL', 1),
+    reviewRecorded('2026-10-09T10:09:00.000Z', 'distill_review', 1, 'blocked', { code: 'lens-unreadable' }),
+    ev('run.stopped', '2026-10-09T10:09:01.000Z', { code: 'agent-unavailable' }),
+  ]
+
+  const summary = summarizeV2(events)
+
+  assert.deepEqual(summary.verdicts, { DESIGN: ['NEEDS_REWORK', 'APPROVED'] })
+  assert.equal(summary.retries, 1)
+})
+
+test('v2 review: NEEDS_REWORK without an edge reads as REJECTED, past max_visits as NEEDS_REWORK', () => {
+  const run = (code) => summarizeV2([
+    reviewStarted('2026-10-09T10:00:00.000Z', 'deliver_review', 'DELIVER', 1),
+    reviewRecorded('2026-10-09T10:01:00.000Z', 'deliver_review', 1, 'needs-rework', { code }),
+  ]).verdicts
+
+  assert.deepEqual(run('review-rejected'), { DELIVER: ['REJECTED'] })
+  assert.deepEqual(run('loop-ceiling'), { DELIVER: ['NEEDS_REWORK'] })
+})
+
+test('v2 retries: a review rework counts one; a gate failure inside it still counts as in lot 3', () => {
+  const events = [
+    agentStarted('2026-10-09T10:00:00.000Z', 'deliver', 'DELIVER', 1),
+    ev('step.started', '2026-10-09T10:01:00.000Z', { step: 'gates', phase: 'DELIVER', gates: ['test'], visit: 1, attempt: 1 }),
+    reviewStarted('2026-10-09T10:02:00.000Z', 'deliver_review', 'DELIVER', 1),
+    reviewRecorded('2026-10-09T10:03:00.000Z', 'deliver_review', 1, 'needs-rework', { next: 'deliver' }),
+    agentStarted('2026-10-09T10:04:00.000Z', 'deliver', 'DELIVER', 2, { sentBy: 'review' }),
+    ev('step.started', '2026-10-09T10:05:00.000Z', { step: 'gates', phase: 'DELIVER', gates: ['test'], visit: 2, attempt: 1 }),
+    agentStarted('2026-10-09T10:06:00.000Z', 'deliver', 'DELIVER', 3, { sentBy: 'gate' }),
+    ev('step.started', '2026-10-09T10:07:00.000Z', { step: 'gates', phase: 'DELIVER', gates: ['test'], visit: 3, attempt: 1 }),
+    reviewStarted('2026-10-09T10:08:00.000Z', 'deliver_review', 'DELIVER', 2),
+    reviewRecorded('2026-10-09T10:09:00.000Z', 'deliver_review', 2, 'approved', { next: 'exit' }),
+  ]
+
+  assert.equal(summarizeV2(events).retries, 3)
+})
+
+test('v2 review cost is the step.recorded cost; lens and refuter costs are not added twice', () => {
+  const events = [
+    reviewStarted('2026-10-09T10:00:00.000Z', 'design_review', 'DESIGN', 1),
+    ev('review.lens', '2026-10-09T10:01:00.000Z', { step: 'design_review', visit: 1, lens: 'consistency', agent: 'consistency-lens', fingerprint: 'f', verdict: 'pass', findings: [], cost: 0.2 }),
+    reviewRecorded('2026-10-09T10:02:00.000Z', 'design_review', 1, 'approved', { cost: 0.2 }),
+  ]
+  assert.equal(summarizeV2(events).cost, 0.2)
+})
+
+const finding = (id, severity) => ({ id, severity, location: 'tests/a.test.mjs:3', description: 'tautological test', suggestion: null })
+const integrityLens = (at, step, visit, verdict, findings, extra = {}) => ev('review.lens', at, { step, visit, lens: 'test-integrity', agent: 'test-integrity-lens', fingerprint: 'f', verdict, findings, ...extra })
+const deliverReview = (...lensEvents) => [
+  ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund' }),
+  reviewStarted('2026-10-09T10:01:00.000Z', 'deliver_review', 'DELIVER', 1, ['test-integrity', 'cold-reader']),
+  ...lensEvents,
+]
+const integrityOf = (events) => summarizeV2(events).gates.filter((g) => g.gate === 'G7' || g.gate === 'G9')
+
+test('G7 and G9 come from the test-integrity lens of the DELIVER review: a blocker it keeps fails both', () => {
+  const failed = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'blocker')])))
+  assert.deepEqual(failed, [
+    { component: 'refund', gate: 'G7', status: 'fail' },
+    { component: 'refund', gate: 'G9', status: 'fail' },
+  ])
+
+  const medium = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'medium')])))
+  assert.deepEqual(medium.map((g) => g.status), ['fail', 'fail'])
+  const low = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'pass', [finding('F1', 'low')])))
+  assert.deepEqual(low.map((g) => g.status), ['pass', 'pass'])
+  const lowFail = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'low')])))
+  assert.deepEqual(lowFail.map((g) => g.status), ['fail', 'fail'])
+
+  const silentFail = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [])))
+  assert.deepEqual(silentFail.map((g) => g.status), ['fail', 'fail'])
+
+  const inconclusive = integrityOf(deliverReview(integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'inconclusive', [])))
+  assert.deepEqual(inconclusive.map((g) => g.status), ['inconclusive', 'inconclusive'])
+})
+
+test('G7 and G9: a refuted blocker does not count; the last pass wins, a reused clean result included', () => {
+  const refuted = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'blocker')]),
+    ev('review.refuted', '2026-10-09T10:03:00.000Z', { step: 'deliver_review', visit: 1, lens: 'test-integrity', finding: 'F1', verdict: 'refuted', reason: 'the assertion checks state' }),
+  ))
+  assert.deepEqual(refuted.map((g) => g.status), ['pass', 'pass'])
+
+  const unverifiable = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'blocker')]),
+    ev('review.refuted', '2026-10-09T10:03:00.000Z', { step: 'deliver_review', visit: 1, lens: 'test-integrity', finding: 'F1', verdict: 'unverifiable', reason: '' }),
+  ))
+  assert.deepEqual(unverifiable.map((g) => g.status), ['fail', 'fail'])
+
+  const secondPass = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'blocker')]),
+    reviewRecorded('2026-10-09T10:03:00.000Z', 'deliver_review', 1, 'needs-rework', { next: 'deliver' }),
+    reviewStarted('2026-10-09T10:04:00.000Z', 'deliver_review', 'DELIVER', 2, ['test-integrity', 'cold-reader']),
+    integrityLens('2026-10-09T10:05:00.000Z', 'deliver_review', 2, 'pass', [], { reused: true }),
+  ))
+  assert.deepEqual(secondPass.map((g) => g.status), ['pass', 'pass'])
+})
+
+test('G7 and G9 stay absent without a test-integrity result in a DELIVER review', () => {
+  assert.deepEqual(integrityOf(deliverReview()), [])
+
+  const designReview = [
+    ev('run.started', '2026-10-09T10:00:00.000Z', { slug: 'refund' }),
+    reviewStarted('2026-10-09T10:01:00.000Z', 'design_review', 'DESIGN', 1, ['test-integrity']),
+    integrityLens('2026-10-09T10:02:00.000Z', 'design_review', 1, 'fail', [finding('F1', 'blocker')]),
+  ]
+  assert.deepEqual(integrityOf(designReview), [])
 })

@@ -67,7 +67,7 @@ different days compare.
   `story`.
 - `execution-log.json` is bookkeeping only.
 
-### v2 source: `events.jsonl` (contract since lot 3)
+### v2 source: `events.jsonl` (contract since lot 3, review events since lot 4)
 
 One JSON object per line, UTF-8, `\n` or `\r\n`. Blank lines are skipped. A line that is not
 JSON makes `compare` exit 2. Every event carries `type`, `at` (ISO-8601 UTC) and `prev`
@@ -78,11 +78,13 @@ Unknown `type` values and missing payload fields are ignored.
 | `type` | Payload read | Effect on the summary |
 | --- | --- | --- |
 | `run.started` | `at` (first one), `slug` (first non-empty) | duration start; `slug` is the component of every v2 gate (`unknown` when absent). `workflow` (`skraft` or the repo `.dot` path), `artifacts`, `start`, `unlocked` and `base` not read. |
-| `step.started` | `step` | a second `step.started` with the same `step` counts one retry, whatever its `visit` and `attempt`: a new visit after a failed gate and a retry both count one. `phase`, `agent`, `gates`, `outputs`, `missing`, `feedback`, `heads` not read. |
-| `step.recorded` | `cost` (number) | summed into `cost`. `visit`, `attempt`, `outcome` (`done`, `failed`, `pass`, `fail`, `skipped`), `code`, `missing`, `failures`, `next`, `reason`, `durationMs`, `replayMs` not read. |
+| `step.started` | `step`, `lenses`, `phase` | a second `step.started` with the same `step` counts one retry, whatever its `visit` and `attempt`: a new visit after a failed gate and a retry both count one. One with a `lenses` list (lot 4) opens a **review step** of `phase`; see the retry rule for reviews below. `agent`, `gates`, `outputs`, `missing`, `feedback`, `sentBy` (`gate` or `review` on an agent the run sent back), `heads` not read. |
+| `step.recorded` | `cost` (number); on a review step `outcome`, `code` | `cost` summed into `cost` (a review's `cost` already holds its lenses and refuter). On a review step, appended to `verdicts[phase]`: `approved` → `APPROVED`, `needs-rework` → `NEEDS_REWORK` (also with code `loop-ceiling`: past `max_visits`), `needs-rework` with code `review-rejected` (no NEEDS_REWORK edge) → `REJECTED`; `blocked` (code `lens-unreadable`) is no verdict. `visit`, `attempt`, other `outcome` values (`done`, `failed`, `pass`, `fail`, `skipped`), `missing`, `failures`, `next`, `reason`, `durationMs`, `replayMs` not read. |
 | `gate.ran` | `component`, `gate`, `status` | last status per config `component`/`gate` command wins, then mapped onto v1 ids (see below). `scope`, `command`, `failure`, `exitCode`, `durationMs`, `evidence` not read. |
 | `commits.checked` | `step`, `commits[].verdict`, `commits[].replay` | only the last check of each `step` counts; gives G8 and G10 (see below). |
-| `review.decided` | `phase`, `verdict` | appended to `verdicts[phase]`. Verdict values: `APPROVED`, `NEEDS_REWORK`, `REJECTED`. |
+| `review.lens` | `step`, `visit`, `lens`, `verdict`, `findings[].id`, `findings[].severity` | lot 4, one per lens and pass (`reused: true` when kept from the last pass). The last `test-integrity` one on a DELIVER review step gives G7 and G9 (see below). `agent`, `fingerprint`, `findings[].location/description/suggestion`, `cost`, `reused` not read. |
+| `review.refuted` | `step`, `visit`, `lens`, `finding`, `verdict` | lot 4, one per blocker or high finding checked. `refuted` drops that finding from G7/G9; `confirmed` and `unverifiable` keep it. `reason`, `cost` not read. |
+| `review.cost` | `step`, `visit`, `cost` | lot 4, the cost of a batch of lenses or checks when the host tells it only for the batch (the Claude Code mod). Not read: the review's `step.recorded` `cost` already holds it. |
 | `decision.recorded`, `tdd.replay-slow` | — | not compared. |
 | `phase.closed` | `phase` | appended once to `phasesReached`, including `skipped: 'from-artifacts'` (phase reached before the run started). |
 | `run.finished` | `at`, `status` | duration end; `status` copied (`completed` when every phase closed, else `blocked`). `code` not read. |
@@ -101,19 +103,37 @@ Gate mapping, per run slug:
 | `gate.ran` `none` or unknown | — | dropped |
 | `commits.checked` | G8 | `fail` if a verdict is `not-conventional`, else `pass`; absent when no commit was checked |
 | `commits.checked` | G10 | `fail` if a verdict is `not-red` or `green-without-red`; `pass` when a commit has a `replay` and none failed; absent otherwise |
+| `review.lens` `test-integrity` | G7 and G9 | last one on a DELIVER review step: `inconclusive` if its verdict is; `fail` if a `blocker`, `high` or `medium` finding is not `refuted` in the same step and visit, or the lens failed without one; else `pass` (low findings do not count), as the engine counts them for the review verdict; absent when the lens never ran there |
 
 Several config components and commands map onto one `slug/id`: each keeps its last status,
 then the id is `fail` if any is `fail`, else `pass`.
 
-G7 (no mocks in core) and G9 (no test tampering) have no v2 source until the review lot: a v1
-`pass` on them shows as a regression (v2 absent). Cover it with one waiver per fixture that
-names the review lot.
+The v1 side reads G7 and G9 from `qg-{story}.json`, where they attest no mocks in the core and
+no test tampering (RED→GREEN); the v1 `test-integrity` lens of `software-engineer-reviewer`
+checks the same two ids at blocker severity, as test theater and the Iron Rule. In v2 the same lens runs in the DELIVER review
+(`deliver_review` in the default workflow) without a gate field, so the findings that send its review back give
+both ids. A workflow whose DELIVER review drops the lens leaves G7/G9 absent: a regression
+against a v1 `pass`.
+
+Review steps (lot 4) and retries:
+
+- A review step's verdicts go to the phase its `step.started` carries (`design_review` →
+  `DESIGN`, `distill_review` → `DISTILL`, `deliver_review` → `DELIVER` in the default
+  workflow), one per pass, in order; the comparison reads the last one.
+- Each review pass beyond the first counts one retry. After a `NEEDS_REWORK`, the steps the run
+  goes back through (the agent with `sentBy: 'review'`, the gates after it) count nothing on
+  their first start before the review's next pass, so one rework counts one retry, as v1
+  `reworkCount` did. A gate failure inside that rework still counts as above.
+- `review.decided`, planned before lot 4, is not emitted: the verdict is on `step.recorded`.
+  Review files the engine writes under `reviews/<step>-<visit>/` are bookkeeping.
 
 Rules a v2 run must honour so v1 and v2 compare:
 
 - Phase names are the v1 ones, upper case: `RESEARCH`, `DESIGN`, `DISTILL`, `DELIVER`.
 - `run.finished.status` is `completed` only when every phase closed.
 - A retry or a new visit re-emits `step.started` with the same `step` id.
+- A review step's `step.started` carries `phase` and `lenses`; the DELIVER review keeps the
+  lens named `test-integrity`.
 - `step.recorded.cost` is a number in one unit for the whole run (USD recommended).
 - `run.started.slug` is the story slug v1 uses in `qg-{story}.json`.
 - Phase artefacts stay at the v1 paths under the tracking folder.
