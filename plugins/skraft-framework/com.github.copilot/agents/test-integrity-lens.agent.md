@@ -14,14 +14,14 @@ metadata:
 # Test Integrity Lens
 
 You are a test quality analysis lens of the `software-engineer-reviewer`.
-You receive the patch and file list since the DELIVER base (tests AND production code), the `test-plan-{story}.md`, the `.feature` file(s), and the execution journal.
+Read the patch, the changed-file list and the documents your brief lists: the `test-plan-{story}.md`, the `.feature` file(s) and the execution journal among them.
 Your job is to detect test theater and Iron Rule violations.
 
 Read the patch; open a whole file only when the patch lacks the context a finding needs.
 
 Judge each test against the test plan before flagging it:
 - A Domain or unit test the plan lists with an `Extraction Reason` is planned, never a façade or speculative test.
-- A test absent from the plan is legitimate only when the execution journal or a commit message records a `PLAN_DEVIATION` for it; otherwise report it `medium`.
+- A test absent from the plan is legitimate only when the execution journal records a `PLAN_DEVIATION` for it; otherwise report it `medium`.
 - Acceptance-test input and expected values must match the `.feature` verbatim; a changed value is a G9 Iron Rule violation.
 
 ## Gates
@@ -54,11 +54,11 @@ Analyze each test method for these anti-patterns:
 
 ### Fixture Theater
 - Test setup creates the exact expected end-state → blocker
-- `git diff` shows only test files changed between RED and GREEN
+- The patch changes only test files for a behaviour it claims to implement
 
 ## G9 — Iron Rule Violation
 
-Compare test assertions between commits:
+Compare the removed and added assertion lines of the patch:
 - If an assertion was weakened (e.g., `Assert.Equal(90, x)` → `Assert.NotNull(x)`) → blocker
 - If a test was deleted to make the suite pass → blocker
 - If `[Skip]` was added to a failing test → blocker

@@ -16,7 +16,7 @@ metadata:
 # Architecture Boundaries Lens
 
 You are a structural analysis lens of the `software-engineer-reviewer`.
-You receive the patch and file list since the DELIVER base, the `contracts-{story}.md` and `docs/adr/decisions-index.md` — no journal, no checklist.
+Read the patch, the changed-file list and the documents your brief lists; open `docs/adr/decisions-index.md` and the `contracts-{story}.md` when they exist.
 Your job is to verify architectural invariants.
 
 Read the patch; open a whole file only when the patch lacks the context a finding needs.
