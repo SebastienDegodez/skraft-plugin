@@ -91,3 +91,125 @@ export class RecordingProgress {
   phase(phase) { this.lines.push(`phase ${phase}`) }
   log(message) { this.lines.push(message) }
 }
+
+/** `/`-separated, no `./`, `..` resolved: the keys the workspace double files by. */
+const tidy = (path) => {
+  const parts = []
+  for (const part of path.split('/')) {
+    if (part === '' || part === '.') continue
+    if (part === '..' && parts.length > 0 && parts.at(-1) !== '..') parts.pop()
+    else parts.push(part)
+  }
+  return parts.join('/')
+}
+
+/** The working copy and its neighbours: files by path relative to the working copy. */
+export class InMemoryWorkspace {
+  /** @param {Record<string, string>} files e.g. { 'api/Payment.sln': '', '../web/package.json': '{}' } */
+  constructor(files = {}) {
+    this.files = new Map(Object.entries(files).map(([path, text]) => [tidy(path), text]))
+  }
+  async read(path) { return this.files.get(tidy(path)) ?? null }
+  async write(path, text) { this.files.set(tidy(path), text) }
+  async list(path) {
+    const dir = tidy(path)
+    const prefix = dir === '' ? '' : `${dir}/`
+    const entries = new Map()
+    for (const key of this.files.keys()) {
+      if (!key.startsWith(prefix) || key === dir) continue
+      const [name, ...rest] = key.slice(prefix.length).split('/')
+      if (name === '..') continue
+      entries.set(name, rest.length > 0 ? 'dir' : entries.get(name) ?? 'file')
+    }
+    if (entries.size === 0 && dir !== '') return null
+    return [...entries].map(([name, kind]) => ({ name, kind }))
+  }
+  config() { return JSON.parse(this.files.get('skraft-config.json')) }
+}
+
+/**
+ * Git facts by folder (relative to the working copy): the repository top, merge bases by ref,
+ * and the files changed since the base, relative to that folder.
+ */
+export class InMemorySourceControl {
+  /**
+   * @param {Record<string, { top?: string, mergeBases?: Record<string, string>, changed?: string[] | null }>} folders
+   * @param {{ unavailable?: string | null }} [options] unavailable: why Git cannot run here, null when it can
+   */
+  constructor(folders = {}, { unavailable = null } = {}) {
+    this.folders = folders
+    this.missing = unavailable
+    /** @type {Array<{ dir: string, sha: string }>} */
+    this.diffs = []
+  }
+  async unavailable() { return this.missing }
+  async repository(dir) { return this.folders[tidy(dir) || '.']?.top ?? null }
+  async mergeBase(dir, ref) { return this.folders[tidy(dir) || '.']?.mergeBases?.[ref] ?? null }
+  async changedFiles(dir, sha) {
+    this.diffs.push({ dir, sha })
+    const changed = this.folders[tidy(dir) || '.']?.changed
+    return changed === undefined ? [] : changed
+  }
+}
+
+/**
+ * The machine the commands run on: which programs are installed, and how a command line
+ * exits (`'<cwd> $ <argv joined by spaces>'` → exit code). Everything else exits 0.
+ * It is both the CommandRunner and the Executables port. A program written with a `/`
+ * (`.venv/bin/python`) is installed as a path relative to the working copy
+ * (`services/py/.venv/bin/python`) and found from the folder it starts in.
+ */
+export class ScriptedMachine {
+  /**
+   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void> }} [options]
+   *   exits: null for a program stopped before it exited; clock advances by takesMs per run;
+   *   meanwhile: what happens elsewhere on the machine while that command line runs
+   */
+  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {} } = {}) {
+    this.installed = new Set(installed)
+    this.exits = exits
+    this.clock = clock
+    this.takesMs = takesMs
+    this.meanwhile = meanwhile
+    /** @type {Array<{ argv: string[], cwd: string }>} */
+    this.runs = []
+  }
+  /** @param {string} program @param {string} cwd */
+  installedAt(program, cwd) {
+    if (!program.includes('/')) return this.installed.has(program) ? `/usr/local/bin/${program}` : null
+    const path = tidy(`${cwd}/${program}`)
+    return this.installed.has(path) ? `/work/${path}` : null
+  }
+  async locate(program, cwd = '.') { return this.installedAt(program, cwd) }
+  async run({ argv, cwd }) {
+    this.runs.push({ argv, cwd })
+    if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
+    this.clock?.advance(this.takesMs)
+    const line = `${cwd} $ ${argv.join(' ')}`
+    await this.meanwhile[line]?.()
+    if (this.exits[line] === null) return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} was stopped by SIGKILL` }
+    const exitCode = this.exits[line] ?? 0
+    return { started: true, exitCode, stdout: `${argv.join(' ')} output\n`, stderr: exitCode === 0 ? '' : 'it failed\n' }
+  }
+  /** The command lines run, as `'<cwd> $ <argv>'`. */
+  lines() { return this.runs.map(({ argv, cwd }) => `${cwd} $ ${argv.join(' ')}`) }
+}
+
+/**
+ * Every dependency a use case takes, over the doubles above; a test names only the ones it
+ * looks at. config: the text of skraft-config.json, no file when undefined; now: the clock.
+ */
+export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, now = '2026-10-15T08:00:00.000Z', ...given } = {}) => ({
+  journal: tracking,
+  activePipeline: tracking,
+  files: tracking,
+  workspace: new InMemoryWorkspace(config === undefined ? {} : { 'skraft-config.json': config }),
+  sourceControl: new InMemorySourceControl(),
+  commandRunner: new ScriptedMachine(),
+  templates: new InMemoryTemplates({}),
+  clock: new FixedClock(now),
+  hasher: new FakeHasher(),
+  agentRunner: new ScriptedAgentRunner(),
+  progress: new RecordingProgress(),
+  ...given,
+})

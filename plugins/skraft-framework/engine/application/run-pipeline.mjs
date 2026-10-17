@@ -55,7 +55,7 @@ const runFrom = async (deps, definition, { slug, journal }) => {
     const next = nextStep(definition, run)
     if (next.kind === 'done') {
       const reason = next.phase ? `${next.phase} closed` : 'nothing to run'
-      if (!run.finished) await journal.append('run.finished', { status: next.status, reason })
+      if (!run.finished) await journal.append('run.finished', { status: 'incomplete', reason })
       return { status: 'done', slug, phase: next.phase, code: null, reason }
     }
     if (next.kind === 'blocked') {
@@ -93,7 +93,7 @@ const dispatch = async (deps, { slug, story, journal, next }) => {
       const text = precreated[index]
       if (text !== null && (await deps.files.read(slug, path)) === null) await deps.files.write(slug, path, text)
     }
-    await journal.append('step.started', { step: step.id, phase, kind: step.kind, agent: step.agent, attempt, outputs, missing })
+    await journal.append('step.started', { step: step.id, phase, agent: step.agent, attempt, outputs, missing })
   }
   deps.progress.log(`${slug}: ${step.agent}, attempt ${attempt}`)
   const missingNow = async () => {
@@ -137,7 +137,7 @@ const dispatch = async (deps, { slug, story, journal, next }) => {
     outcome: left.length === 0 ? 'outputs-complete' : 'missing-outputs',
     missing: left,
     durationMs: deps.clock.now().getTime() - started.getTime(),
-    ...(typeof cost === 'number' ? { cost } : {}),
+    cost, // undefined when the host reports none: the journal line leaves it out
   })
   return null
 }

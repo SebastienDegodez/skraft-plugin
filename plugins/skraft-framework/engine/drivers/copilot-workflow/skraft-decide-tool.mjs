@@ -8,9 +8,11 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
  */
 export const createSkraftDecideTool = ({ cwd, pluginRoot }) => Object.freeze({
   name: 'skraft_decide',
+  // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description:
     "Record the human's answer to the question the active skraft-pipeline run is waiting on. " +
     'Use only with the exact answer the human gave, then tell them to resume the skraft-pipeline run.',
+  // Stryker restore StringLiteral
   parameters: Object.freeze({
     type: 'object',
     properties: Object.freeze({

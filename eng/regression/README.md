@@ -77,10 +77,10 @@ Unknown `type` values and missing payload fields are ignored.
 
 | `type` | Payload read | Effect on the summary |
 | --- | --- | --- |
-| `run.started` | `at` (first one) | duration start. `base`, `workflow` not read. |
-| `step.started` | `step` | a second `step.started` with the same `step` counts one retry. `kind`, `agent` not read. |
+| `run.started` | `at` (first one) | duration start. `workflow` and `base` not read; `base` lists one `{ component, root, repository, ref, source, sha }` per repository folder (`component: null` for the working copy, `source`: `flag`, `component`, `config` or `default`). |
+| `step.started` | `step` | a second `step.started` with the same `step` counts one retry. `agent` not read. |
 | `step.recorded` | `cost` (number) | summed into `cost`. `outcome`, `durationMs` not read. |
-| `gate.ran` | `component`, `gate`, `status` | last status per `component/gate` wins. Status values: `pass`, `fail`, `not_applicable`. A v1 `pass` that becomes `not_applicable` is reported as info, so check it when a DELIVER gate disappears. |
+| `gate.ran` | `component`, `gate`, `status` | last status per `component/gate` wins. Status values: `pass`, `fail`, `not_applicable`. A v1 `pass` that becomes `not_applicable` is reported as info, so check it when a DELIVER gate disappears. Lot 2 also writes `scope` (`touched`, `all`), `command`, `failure` (`environment`, `deterministic`, null), `exitCode`, `durationMs`, `evidence`; not read. |
 | `review.decided` | `phase`, `verdict` | appended to `verdicts[phase]`. Verdict values: `APPROVED`, `NEEDS_REWORK`, `REJECTED`. |
 | `decision.recorded` | — | not compared. |
 | `phase.closed` | `phase` | appended once to `phasesReached`. |
@@ -94,7 +94,9 @@ Rules lot 1 must honour so v1 and v2 compare:
 - A retry re-emits `step.started` with the same `step` id; distinct passes need no new id.
 - `step.recorded.cost` is a number in one unit for the whole run (USD recommended).
 - `gate.ran.component` is the story slug (v1 reads it from `qg-{story}.json`), `gate` the
-  v1 gate id (`G1`…).
+  v1 gate id (`G1`…). Since lot 2, RunGate writes the `skraft-config.json` component name and
+  the command name (`build`, `test`, `mutation`…); the DELIVER lot that first emits gates in
+  a run maps them onto the v1 ids before v1 and v2 gates are compared.
 - Phase artefacts stay at the v1 paths under the tracking folder.
 
 ## Criteria

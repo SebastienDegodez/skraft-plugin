@@ -83,6 +83,19 @@ jobs:
           NODE_OPTIONS: ${{ env.ANNOTATED_TESTS }}
         run: npm run test:engine:unit
 
+  engine-lint:
+    name: Engine lint (function size and complexity)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the engine's dev dependencies
+        run: npm ci --prefix plugins/skraft-framework/engine
+      - name: Lint the engine
+        run: npm run lint:engine
+
   engine-integration:
     name: Engine integration tests (${{ matrix.os }})
     # The engine runs on the user's machine: real adapters and the CLI must work,

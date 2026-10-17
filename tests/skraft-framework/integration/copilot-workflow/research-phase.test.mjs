@@ -22,8 +22,13 @@ const interrupted = (behaviour) => async (call) => {
   await behaviour(call)
   return new Promise(() => {})
 }
-/** The run never settles: a resumed run starts from what the journal holds. */
-const dies = async (run) => {
+/**
+ * The run never settles once its agent is called: a resumed run starts from what the journal
+ * holds. Waits for that call, however long starting git takes on the host.
+ */
+const dies = async (run, { calls }) => {
+  const deadline = Date.now() + 10_000
+  while (calls.length === 0 && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10))
   const settled = await Promise.race([run.then(() => 'settled', () => 'settled'), new Promise((resolve) => setTimeout(resolve, 50, 'hung'))])
   assert.equal(settled, 'hung')
 }
@@ -32,8 +37,10 @@ test('the workflow declares skraft-pipeline with its RESEARCH phase and optional
   assert.equal(SKRAFT_PIPELINE_META.name, 'skraft-pipeline')
   assert.deepEqual(SKRAFT_PIPELINE_META.phases.map((phase) => phase.title), ['RESEARCH'])
   assert.deepEqual(SKRAFT_PIPELINE_META.argsSchema.required, undefined)
-  assert.deepEqual(Object.keys(SKRAFT_PIPELINE_META.argsSchema.properties), ['slug', 'issue', 'title', 'agentIds'])
-  assert.equal(SKRAFT_PIPELINE_META.argsSchema.properties.issue.type, 'integer')
+  assert.deepEqual(
+    Object.entries(SKRAFT_PIPELINE_META.argsSchema.properties).map(([name, { type }]) => `${name}: ${type}`),
+    ['slug: string', 'issue: integer', 'title: string', 'base: string', 'agentIds: object'],
+  )
 })
 
 test('a new slug dispatches the researcher with its output pre-created from the template', async (t) => {
@@ -97,7 +104,7 @@ test('a journal edited by hand blocks the run as tampered and dispatches nothing
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(writesNothing)] })
-  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)))
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first)
   const lines = await journalLines(cwd, 'checkout')
   lines[0] = lines[0].replace('"story":null', '"story":{"issue":7}')
   await writeFile(eventsPath(cwd, 'checkout'), `${lines.join('\n')}\n`, 'utf8')
@@ -143,7 +150,7 @@ test('a run resumed after the researcher wrote its document closes RESEARCH with
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(fillsOutputs())] })
-  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)))
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first)
 
   const resumed = simulatedContext({ args: { slug: 'checkout' }, journal: first.journal })
   const outcome = await runSkraftPipelineWorkflow(resumed.ctx, host(cwd))
@@ -160,7 +167,7 @@ test('a resumed dispatch keeps its label and prompt, so the host returns its mem
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const first = simulatedContext({ args: { slug: 'checkout' }, behaviours: [interrupted(writesNothing)] })
-  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)))
+  await dies(runSkraftPipelineWorkflow(first.ctx, host(cwd)), first)
   const answered = [{ ...first.calls[0], text: 'already answered' }]
 
   const resumed = simulatedContext({ journal: answered, behaviours: [fillsOutputs()] })

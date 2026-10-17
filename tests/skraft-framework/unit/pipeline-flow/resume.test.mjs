@@ -2,27 +2,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
-import {
-  FakeHasher, FixedClock, InMemoryTemplates, InMemoryTracking, RecordingProgress, ScriptedAgentRunner,
-} from '../support/in-memory-host.mjs'
+import { InMemoryTemplates, InMemoryTracking, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const TEMPLATE = '# Research: {{topic}}\n'
 const OUTPUT = 'research/2026-10-11/checkout-research.md'
 
 const host = () => {
   const tracking = new InMemoryTracking()
-  const clock = new FixedClock('2026-10-11T23:59:00.000Z')
-  const deps = {
-    journal: tracking,
-    activePipeline: tracking,
-    files: tracking,
-    templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }),
-    clock,
-    hasher: new FakeHasher(),
-    agentRunner: new ScriptedAgentRunner(),
-    progress: new RecordingProgress(),
-  }
-  return { tracking, clock, deps, agentRunner: deps.agentRunner }
+  const deps = inMemoryDeps({ tracking, templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }), now: '2026-10-11T23:59:00.000Z' })
+  return { tracking, clock: deps.clock, deps, agentRunner: deps.agentRunner }
 }
 
 const fill = (tracking) => tracking.write('checkout', OUTPUT, `${TEMPLATE.replace('{{topic}}', 'Checkout')}Findings.\n`)
@@ -58,9 +46,9 @@ test('a run interrupted after the researcher wrote its document closes RESEARCH 
   ])
 })
 
-test('a run interrupted before the researcher wrote anything dispatches the same attempt again, under the same label', async () => {
+test('a run interrupted before the researcher wrote anything dispatches the same attempt again, under the same label and brief', async () => {
   const { tracking, clock, deps, agentRunner } = host()
-  agentRunner.behaviours.push(interrupted, () => fill(tracking))
+  agentRunner.behaviours.push(() => undefined, interrupted, () => fill(tracking))
   await createInit(deps).init({ slug: 'checkout' })
   await assert.rejects(createRunPipeline(deps).run({ slug: 'checkout' }), /host interrupted/)
   clock.advance(60 * 60_000)
@@ -69,10 +57,11 @@ test('a run interrupted before the researcher wrote anything dispatches the same
 
   assert.equal(resumed.status, 'done')
   assert.deepEqual(agentRunner.dispatches.map((dispatch) => dispatch.label), [
-    'skraft checkout · research · attempt 1', 'skraft checkout · research · attempt 1',
+    'skraft checkout · research · attempt 1', 'skraft checkout · research · attempt 2', 'skraft checkout · research · attempt 2',
   ])
-  assert.equal(agentRunner.dispatches[0].prompt, agentRunner.dispatches[1].prompt)
-  assert.equal(tracking.journal('checkout').filter((event) => event.type === 'step.started').length, 1)
+  assert.match(agentRunner.dispatches[2].prompt, /Missing outputs from attempt 1 of 2:/)
+  assert.equal(agentRunner.dispatches[2].prompt, agentRunner.dispatches[1].prompt)
+  assert.equal(tracking.journal('checkout').filter((event) => event.type === 'step.started').length, 2)
 })
 
 test('init on an initialised slug keeps its journal and its story', async () => {

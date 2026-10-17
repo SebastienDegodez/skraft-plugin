@@ -2,9 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
-import {
-  FakeHasher, FixedClock, InMemoryTemplates, InMemoryTracking, RecordingProgress, ScriptedAgentRunner,
-} from '../support/in-memory-host.mjs'
+import { InMemoryTemplates, InMemoryTracking, RecordingProgress, ScriptedAgentRunner, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const TEMPLATE = '<!-- markdownlint-disable-file -->\n# Research: {{topic}}\n'
 const OUTPUT = 'research/2026-10-11/checkout-research.md'
@@ -14,16 +12,8 @@ const hostWith = (behaviours) => {
   const tracking = new InMemoryTracking()
   const agentRunner = new ScriptedAgentRunner(behaviours)
   const progress = new RecordingProgress()
-  const deps = {
-    journal: tracking,
-    activePipeline: tracking,
-    files: tracking,
-    templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }),
-    clock: new FixedClock('2026-10-11T09:00:00.000Z'),
-    hasher: new FakeHasher(),
-    agentRunner,
-    progress,
-  }
+  const templates = new InMemoryTemplates({ 'research.template.md': TEMPLATE })
+  const deps = inMemoryDeps({ tracking, agentRunner, progress, templates, now: '2026-10-11T09:00:00.000Z' })
   return { tracking, agentRunner, progress, deps }
 }
 
@@ -76,6 +66,7 @@ test('a filled research document closes RESEARCH and ends the run, incomplete un
   assert.equal(started.slug, 'checkout')
   assert.equal(recorded.outcome, 'outputs-complete')
   assert.deepEqual(recorded.missing, [])
+  assert.equal('cost' in recorded, false)
   assert.equal(closed.phase, 'RESEARCH')
   assert.equal(finished.status, 'incomplete')
   assert.deepEqual(progress.lines, [
@@ -92,8 +83,16 @@ test('a missing research document is asked again with the missing paths, then th
 
   assert.equal(agentRunner.dispatches.length, 2)
   assert.equal(agentRunner.dispatches[1].label, 'skraft checkout · research · attempt 2')
-  assert.ok(agentRunner.dispatches[1].prompt.includes(`Missing outputs from attempt 1 of 2:\n- ${OUTPUT_PATH}`), agentRunner.dispatches[1].prompt)
-  assert.ok(!agentRunner.dispatches[0].prompt.includes('Missing outputs'))
+  const brief = (attempt) => [
+    '## Skraft dispatch: solution-researcher (RESEARCH)',
+    '- Story: #42 — Pay by card',
+    '- Feature scope: checkout',
+    `- Attempt: ${attempt} of 2`,
+    '- Fill each output in place. The engine pre-created it from its template; keep the path, create no other copy:',
+    `- ${OUTPUT_PATH}`,
+  ]
+  assert.equal(agentRunner.dispatches[0].prompt, brief(1).join('\n'))
+  assert.equal(agentRunner.dispatches[1].prompt, [...brief(2), '', 'Missing outputs from attempt 1 of 2:', `- ${OUTPUT_PATH}`].join('\n'))
   assert.equal(outcome.status, 'blocked')
   assert.equal(outcome.code, 'missing-outputs')
   assert.equal(outcome.reason, `solution-researcher left required outputs missing after 2 attempts: ${OUTPUT_PATH}`)
@@ -114,16 +113,26 @@ test('a research document left as its template, or deleted, counts as missing', 
 
   const blank = hostWith([() => blank.tracking.write('checkout', OUTPUT, '  \n'), nothingWritten])
   assert.equal((await startCheckout(blank.deps)).code, 'missing-outputs')
+
+  const plain = hostWith([nothingWritten, nothingWritten])
+  plain.deps.templates = new InMemoryTemplates({ 'research.template.md': '# Research\n' })
+  assert.equal((await startCheckout(plain.deps)).code, 'missing-outputs')
 })
 
 test('a second attempt that fills the document closes the phase after one retry', async () => {
-  const { tracking, agentRunner, deps } = hostWith([nothingWritten])
+  const { tracking, agentRunner, progress, deps } = hostWith([nothingWritten])
   agentRunner.behaviours.push(researchWritten(tracking))
 
   const outcome = await startCheckout(deps)
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(tracking.journal('checkout').filter((event) => event.type === 'step.started').map((event) => event.attempt), [1, 2])
+  assert.deepEqual(progress.lines, [
+    'phase RESEARCH',
+    'checkout: solution-researcher, attempt 1',
+    'checkout: solution-researcher, attempt 2',
+    'checkout: RESEARCH closed',
+  ])
 })
 
 test('an agent the host cannot start blocks the run without spending the attempt', async () => {

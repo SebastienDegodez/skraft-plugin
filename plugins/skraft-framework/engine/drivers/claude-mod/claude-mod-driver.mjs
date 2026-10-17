@@ -5,6 +5,9 @@ import { createTrackingStore } from '../../infrastructure/tracking/tracking-stor
 import { createPluginTemplates } from '../../infrastructure/templates/plugin-templates.mjs'
 import { createSystemClock } from '../../infrastructure/clock/system-clock.mjs'
 import { createWebCryptoHasher } from '../../infrastructure/crypto/web-crypto-hasher.mjs'
+import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-files.mjs'
+import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
+import { createModCommandRunner } from './mod-processes.mjs'
 import { createModFiles } from './mod-files.mjs'
 import { createAgentAnswers, createSpawnAgentRunner } from './agent-runner.mjs'
 import { parseSkraftCommand, toolRequest } from './command-args.mjs'
@@ -28,6 +31,7 @@ import { viewText } from './run-view.mjs'
  *   pluginRoot: string,
  *   pluginName: string,
  *   spawn: (args: SpawnArgs) => Promise<SpawnResult>,
+ *   run: import('./mod-processes.mjs').ModRun,
  *   sessionCostUsd: () => Promise<number | null>,
  *   later: (run: () => void) => void,
  *   publish: (snapshot: PipelineSnapshot) => Promise<unknown>,
@@ -35,7 +39,7 @@ import { viewText } from './run-view.mjs'
  *   notify: (line: string) => void,
  *   clock?: import('../../application/ports/clock.mjs').Clock,
  * }} ModHost
- *   cwd: `$.session.cwd()`; later: `$.clock.after(0, run)`; publish: the pane's `$.state`;
+ *   cwd: `$.session.cwd()`; run: `$.process.run`; later: `$.clock.after(0, run)`; publish: the pane's `$.state`;
  *   status: `$.ui.status`; notify: `$.ui.log` and a toast.
  */
 
@@ -43,21 +47,28 @@ export const PANE_ID = 'skraft-pipeline'
 export const PANE_TITLE = 'Skraft'
 export const COMMAND = Object.freeze({
   name: 'skraft',
+  // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description: 'Run the skraft pipeline for one story, or show where the active one stands',
-  argumentHint: '[<slug> [#issue] [title…]] | decide …',
+  // Stryker disable next-line StringLiteral: text shown to the host and the model; no engine behaviour reads it
+  argumentHint: '[<slug> [#issue] [title…] [--base <ref>]] | decide …',
 })
 export const TOOL = Object.freeze({
   name: 'run_pipeline',
+  // Stryker disable StringLiteral: text shown to the host and the model; no engine behaviour reads it
   description:
     'Start or resume the skraft engineering pipeline of this working copy for one story. ' +
     'Returns at once; the run goes on in the background and reports in the Skraft pane. ' +
     'Without a slug it resumes the active pipeline; it never picks a slug itself.',
+  // Stryker restore StringLiteral
   inputSchema: Object.freeze({
     type: 'object',
     properties: {
+      // Stryker disable StringLiteral: descriptions shown to the model; the types are checked by the tool-input tests
       slug: { type: 'string', description: 'kebab-case feature scope; omit to resume the active pipeline' },
       issue: { type: 'integer', description: 'the story issue number' },
       title: { type: 'string', description: 'the story title' },
+      base: { type: 'string', description: 'git ref to diff against instead of the configured base; only for a new slug' },
+      // Stryker restore StringLiteral
     },
   }),
 })
@@ -79,7 +90,8 @@ export const createClaudeModDriver = () => {
   /** @param {ModHost} host */
   const compose = async (host) => {
     const files = createModFiles(host.fs)
-    const tracking = createTrackingStore({ files, root: await host.cwd() })
+    const root = await host.cwd()
+    const tracking = createTrackingStore({ files, root })
     return {
       journal: tracking.journal,
       activePipeline: tracking.activePipeline,
@@ -87,6 +99,8 @@ export const createClaudeModDriver = () => {
       templates: createPluginTemplates({ files, pluginRoot: host.pluginRoot }),
       clock: host.clock ?? createSystemClock(),
       hasher: createWebCryptoHasher(),
+      workspace: createWorkspaceFiles({ files, root }),
+      sourceControl: createGitSourceControl({ commandRunner: createModCommandRunner({ run: host.run, root }) }),
     }
   }
 
@@ -139,8 +153,8 @@ export const createClaudeModDriver = () => {
     return outcome
   }
 
-  /** @param {ModHost} host @param {{ slug: string | null, story: Story }} request @returns {Promise<string>} */
-  const start = async (host, { slug, story }) => {
+  /** @param {ModHost} host @param {{ slug: string | null, story: Story, base: string | null }} request @returns {Promise<string>} */
+  const start = async (host, { slug, story, base }) => {
     if (running !== null) return `skraft is already running ${running}; see the Skraft pane.`
     running = slug ?? 'the active pipeline'
     let launched = false
@@ -151,7 +165,7 @@ export const createClaudeModDriver = () => {
         target = await deps.activePipeline.current()
         if (target === null) return outcomeText(await pipelineOf(host, deps, null).run({}))
       } else {
-        const initialised = await createInit(deps).init({ slug: target, story })
+        const initialised = await createInit(deps).init({ slug: target, story, base })
         if (!initialised.ok) return `skraft ${target}: not started — ${initialised.reason}`
       }
       const slugToRun = target

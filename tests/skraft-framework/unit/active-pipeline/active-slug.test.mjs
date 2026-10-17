@@ -2,23 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
-import {
-  FakeHasher, FixedClock, InMemoryTemplates, InMemoryTracking, RecordingProgress, ScriptedAgentRunner,
-} from '../support/in-memory-host.mjs'
+import { InMemoryTracking, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const host = () => {
   const tracking = new InMemoryTracking()
-  const deps = {
-    journal: tracking,
-    activePipeline: tracking,
-    files: tracking,
-    templates: new InMemoryTemplates({}),
-    clock: new FixedClock('2026-10-11T09:00:00.000Z'),
-    hasher: new FakeHasher(),
-    agentRunner: new ScriptedAgentRunner(),
-    progress: new RecordingProgress(),
-  }
-  return { tracking, deps }
+  return { tracking, deps: inMemoryDeps({ tracking, now: '2026-10-11T09:00:00.000Z' }) }
 }
 
 test('without an active pipeline a run is refused, never guessed from the slugs on disk', async () => {
@@ -78,11 +66,11 @@ test('init makes the slug the active pipeline, switching from another one', asyn
   const { tracking, deps } = host()
   await createInit(deps).init({ slug: 'checkout' })
 
-  const outcome = await createInit(deps).init({ slug: 'refund-2' })
+  const outcome = await createInit(deps).init({ slug: 'refund-v2' })
 
-  assert.deepEqual(outcome, { ok: true, slug: 'refund-2', created: true, code: null, reason: 'refund-2 is the active pipeline' })
-  assert.equal(tracking.activeSlug, 'refund-2')
-  assert.equal(tracking.journal('refund-2')[0].type, 'run.started')
-  assert.equal(tracking.journal('refund-2')[0].workflow, 'skraft')
-  assert.deepEqual(tracking.journal('refund-2')[0].story, null)
+  assert.deepEqual(outcome, { ok: true, slug: 'refund-v2', created: true, code: null, reason: 'refund-v2 is the active pipeline' })
+  assert.equal(tracking.activeSlug, 'refund-v2')
+  assert.equal(tracking.journal('refund-v2')[0].type, 'run.started')
+  assert.equal(tracking.journal('refund-v2')[0].workflow, 'skraft')
+  assert.deepEqual(tracking.journal('refund-v2')[0].story, null)
 })
