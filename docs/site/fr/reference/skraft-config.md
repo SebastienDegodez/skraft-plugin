@@ -72,7 +72,7 @@ Toute clé hors de cette liste est refusée.
 | `name` | string | obligatoire | kebab-case (`api`, `payment-web`) ; unique dans le fichier |
 | `root` | string | obligatoire | chemin relatif à la copie de travail, non vide, jamais absolu (`/x`, `\x`, `C:x`) ; peut viser un dépôt voisin (`../payment-web`) ; normalisé (`./api/` devient `api`) |
 | `stack` | string | obligatoire | `dotnet`, `java`, `python`, `typescript`, `javascript` ou `react` |
-| `commands` | object | `{}` | nom → ligne de commande ; nom en minuscules, commence par une lettre (lettres, chiffres, `-`) ; ligne non vide |
+| `commands` | object | `{}` | nom → ligne de commande ; nom parmi `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`, `e2e` ; ligne non vide |
 | `baseBranch` | string | absent (retombe sur le `baseBranch` global) | ref git ; `null` vaut absent |
 | `mocking` | object | `{ "strategy": "microcks" }` | `strategy` vaut `microcks` ou `inprocess` ; `{}` vaut `microcks` |
 | `paths` | object | — | accepté sans contrôle ; `skraft init` y écrit `{ "src": […], "tests": […] }` |
@@ -104,7 +104,7 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | racine | `<label>: root must be a path relative to the working copy` |
 | stack | `<label>: stack must be one of dotnet, java, python, typescript, javascript, react` |
 | `commands` pas un objet | `<label>: commands must be an object of command lines` |
-| nom de commande | `<label>: command name "<nom>" must be lower-case` |
+| nom de commande | `<label>: unknown command <nom> (allowed: build, format, lint, test, architecture, coverage, mutation, e2e)` |
 | ligne vide | `<label>: command <nom> must be a non-empty command line` |
 | `baseBranch` du composant | `<label>: baseBranch must be a git ref, got <valeur JSON>` |
 | `mocking` | `<label>: mocking must be { "strategy": "microcks" or "inprocess" }` |
@@ -151,11 +151,17 @@ dans cet ordre, quel que soit l'ordre du fichier :
 | 6 | `coverage` | oui |
 | 7 | `mutation` | oui |
 
-Toute autre commande (`e2e`…) n'est pas une gate : `skraft gate` ne la lance pas, mais
-`skraft doctor` la vérifie. Un composant sans aucune commande de gate échoue (gate `none`,
+`e2e`, le seul autre nom permis, n'est pas une gate : `skraft gate` ne la lance pas, mais
+`skraft doctor` la vérifie. Un nom mal écrit (`tset`) rend la configuration invalide au lieu
+de sauter la gate en silence. Un composant sans aucune commande de gate échoue (gate `none`,
 classe `environment`) : `no gate command; give it at least one of build, format, lint, test,
 architecture, coverage, mutation in skraft-config.json`. Un composant s'arrête à sa première
 gate en échec.
+
+Une ligne qui commence par `python` lance le premier interpréteur trouvé depuis la racine du
+composant : `.venv/bin/python`, `.venv/Scripts/python.exe`, puis `python` et `python3` sur le
+PATH. Le fichier garde `python` et reste le même sous Windows, macOS et Linux. Tout autre
+programme démarre tel qu'écrit.
 
 Avec Microcks (le défaut), le moteur demande une fois par appel si `docker info` répond, dès
 qu'une gate 4 à 7 doit tourner. Sinon la gate échoue : `Docker does not answer and <name>

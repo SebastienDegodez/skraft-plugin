@@ -253,12 +253,11 @@ Checks, in order:
 | `base` (with `--run`) | the base can be computed | the `invalid-base`, `base-unresolved` or `source-control-unavailable` message |
 | `<component>` | the root is a folder | `root <root> is not a folder` (its commands are not checked) |
 | `<component>` | at least one gate command | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
-| `<component>/<command>` | the line splits and its program is found (PATH, and PATHEXT under Windows) | `"<line>" <reason>`; `command not found: <program> (from <root>); install it or change commands.<name> in skraft-config.json` |
-| `<component>/<command>` with `--run` | the command exits with 0 | `<line> exited <code>` |
+| `<component>/<command>` | the line splits and its program is found (PATH, and PATHEXT under Windows) | `"<line>" <reason>`; `command not found: <program> (from <root>); install it or change commands.<name> in skraft-config.json` (for `python`, `(from <root>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
+| `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>` (base substituted, interpreter chosen) |
 | `docker` | `docker info` answers, when a component mocks with Microcks | `Docker does not answer, and Microcks, the mocking of <components>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
 
-A component's commands are checked gates first (in gate order), then the others (`e2e`…) in
-file order. The doctor stops after `config` when the config is invalid, missing or empty.
+A component's commands are checked gates first (in gate order), then `e2e`. The doctor stops after `config` when the config is invalid, missing or empty.
 Without `--run`, `{baseSha}` is replaced with `HEAD` for splitting only.
 
 **Text output**:

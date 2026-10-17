@@ -255,12 +255,12 @@ Contrôles, dans l'ordre :
 | `base` (avec `--run`) | la base se calcule | message de `invalid-base`, `base-unresolved` ou `source-control-unavailable` |
 | `<composant>` | la racine est un dossier | `root <racine> is not a folder` (ses commandes ne sont pas contrôlées) |
 | `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
-| `<composant>/<commande>` | la ligne se découpe et son programme est trouvé (PATH, et PATHEXT sous Windows) | `"<ligne>" <raison>` ; `command not found: <programme> (from <racine>); install it or change commands.<nom> in skraft-config.json` |
-| `<composant>/<commande>` avec `--run` | la commande sort avec 0 | `<ligne> exited <code>` |
+| `<composant>/<commande>` | la ligne se découpe et son programme est trouvé (PATH, et PATHEXT sous Windows) | `"<ligne>" <raison>` ; `command not found: <programme> (from <racine>); install it or change commands.<nom> in skraft-config.json` (pour `python`, `(from <racine>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
+| `<composant>/<commande>` avec `--run` | la commande sort avec 0 | `<commande lancée> exited <code>` (base remplacée, interpréteur choisi) |
 | `docker` | `docker info` répond, si un composant mocke avec Microcks | `Docker does not answer, and Microcks, the mocking of <composants>, needs it; start Docker, or set "mocking": { "strategy": "inprocess" } on the component` |
 
 Les commandes d'un composant sont contrôlées gates d'abord (dans l'ordre des gates), puis
-les autres (`e2e`…) dans l'ordre du fichier. Le doctor s'arrête après `config` si la config
+`e2e` dans l'ordre du fichier. Le doctor s'arrête après `config` si la config
 est invalide, absente ou vide. Sans `--run`, `{baseSha}` est remplacé par `HEAD` pour le
 seul découpage.
 

@@ -94,7 +94,7 @@ Règles d'écriture d'une commande :
 
 ## 4. Ajouter une gate
 
-Une **gate** est une commande nommée que le moteur lance pour prouver la qualité. Les noms de gate, dans leur ordre d'exécution : `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`. Un autre nom (par exemple `e2e`) n'est pas une gate, mais `skraft doctor` le vérifie quand même.
+Une **gate** est une commande nommée que le moteur lance pour prouver la qualité. Les noms de gate, dans leur ordre d'exécution : `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`. Le seul autre nom accepté, `e2e`, n'est pas une gate, mais `skraft doctor` le vérifie quand même ; tout autre nom rend la configuration invalide.
 
 Ajoutez la commande sous son nom :
 
@@ -185,7 +185,7 @@ Un fichier invalide est refusé en entier, avec la liste de toutes ses erreurs, 
 | `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)` | Corriger la faute de frappe ; un composant n'accepte que ces clés. |
 | `component web: root must be a path relative to the working copy` | Remplacer `/srv/web` ou `C:\…` par un chemin relatif (`web`, `../payment-web`). |
 | `components[1].name must be kebab-case, got "Api"` | Nom en minuscules et tirets : `api`, `payment-api`. |
-| `component api: command name "Test" must be lower-case` | Écrire `test`. |
+| `component api: unknown command Test (allowed: build, format, lint, test, architecture, coverage, mutation, e2e)` | Écrire `test`. |
 | `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | Écrire un objet, pas une chaîne : `"mocking": { "strategy": "inprocess" }`. |
 | `component name api is used twice` | Donner un nom unique à chaque composant. |
 

@@ -94,7 +94,7 @@ How a command is written:
 
 ## 4. Add a gate
 
-A **gate** is a named command the engine runs to prove quality. Gate names, in the order they run: `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`. Any other name (for instance `e2e`) is not a gate, but `skraft doctor` still checks it.
+A **gate** is a named command the engine runs to prove quality. Gate names, in the order they run: `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`. The only other name accepted, `e2e`, is not a gate, but `skraft doctor` still checks it; any other name makes the configuration invalid.
 
 Add the command under its name:
 
@@ -185,7 +185,7 @@ An invalid file is refused as a whole, with the list of all its errors, separate
 | `component web: unknown key comands (allowed: name, root, stack, paths, commands, baseBranch, mocking, contractTesting)` | Fix the typo; a component accepts only these keys. |
 | `component web: root must be a path relative to the working copy` | Replace `/srv/web` or `C:\…` with a relative path (`web`, `../payment-web`). |
 | `components[1].name must be kebab-case, got "Api"` | Lower case and dashes: `api`, `payment-api`. |
-| `component api: command name "Test" must be lower-case` | Write `test`. |
+| `component api: unknown command Test (allowed: build, format, lint, test, architecture, coverage, mutation, e2e)` | Write `test`. |
 | `component api: mocking must be { "strategy": "microcks" or "inprocess" }` | Write an object, not a string: `"mocking": { "strategy": "inprocess" }`. |
 | `component name api is used twice` | Give each component a unique name. |
 

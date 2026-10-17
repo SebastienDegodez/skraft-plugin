@@ -123,7 +123,7 @@ Chaque gate lancée écrit `<slug>/gates/<composant>/<gate>-<n>.log`, où `<n>` 
 nombre de `gate.ran` déjà journalisés pour ce composant et cette gate. Format :
 
 ```
-$ <ligne de commande>
+$ <commande lancée>
 cwd: <racine du composant>
 result: pass: exited 0
 --- stdout
@@ -131,6 +131,10 @@ result: pass: exited 0
 --- stderr
 <sortie d'erreur>
 ```
+
+La première ligne montre la commande telle qu'elle a démarré : `{baseSha}` remplacé, interpréteur
+Python choisi, citée pour se relire en la même liste d'arguments. Le champ `command` de
+`gate.ran` garde la ligne écrite dans `skraft-config.json`.
 
 En échec, la ligne `result` vaut `fail (<classe>): <raison>`. Les sections `stdout` et
 `stderr` manquent quand rien n'a été lancé (ligne refusée, Docker absent). Un composant sans
