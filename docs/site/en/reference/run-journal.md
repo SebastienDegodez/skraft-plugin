@@ -88,6 +88,8 @@ write arrived since it was opened, it stops with `journal-changed`:
 | `phase.closed` | the pipeline | `phase` |
 | `run.finished` | the pipeline | `status` (`incomplete` when RESEARCH is closed, `blocked` when outputs are missing after the last attempt); `reason` |
 | `run.stopped` | the pipeline, when the agent does not start or stops | `code` (`agent-unavailable` or `agent-failed`); `reason` |
+| `review.lens` | a review node, once per lens | `step`; `visit`; `lens` (`consistency`); `agent` (`consistency-lens`); `fingerprint` (hash of the lens's inputs); `verdict` (`pass`, `fail` or `inconclusive`); `findings` (`{ id, severity, location, description, suggestion }`); `cost` (absent when unknown); `reused` (`true` when kept from the previous pass: same inputs, nothing found) |
+| `review.refuted` | a review node, once per blocker or high finding checked by `finding-refuter` | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `cost` |
 | `gate.ran` | `skraft gate`, once per gate | `component`; `gate` (`build`… or `none`); `scope` (`touched` or `all`); `command` (`null` for `none`); `status` (`pass` or `fail`); `failure` (`environment`, `deterministic` or `null`); `exitCode` (`null` when nothing ran); `durationMs`; `evidence` (path relative to the slug folder, `null` for `none`) |
 
 Each entry of `run.started.base`: `{ component, root, repository, ref, source, sha }`.
@@ -101,10 +103,14 @@ USD; the Copilot workflow reports none (Copilot counts in credits, not USD).
 This journal follows the contract written in `eng/regression/README.md`, which compares a V2
 run with a v1 run on the same fixtures.
 
-> **Coming next.** The comparison contract also plans `review.decided` and
-> `decision.recorded`. The engine does not write them yet: they come with the lens review
-> (lot 4) and human decisions (lot 5). `run.finished` will be `completed` once every phase is
-> run by the engine (lot 3).
+A review node's `step.started` carries `lenses` instead of `agent`; its `step.recorded` has
+`outcome` `approved`, `needs-rework` or `blocked` (`code` `lens-unreadable` when a lens answered
+twice without a readable verdict), `failures` (the findings that count, which the next brief of
+the phase agent lists) and `cost` (its lenses and checks together). An agent sent back by the
+gates or by a review has `sentBy` (`gate` or `review`) on its `step.started`.
+
+> **Coming next.** The comparison contract also plans `decision.recorded`, written with human
+> decisions (lot 5).
 
 ### Research document
 
