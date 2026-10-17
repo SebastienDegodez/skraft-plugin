@@ -2,29 +2,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
-import {
-  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner,
-} from '../support/in-memory-host.mjs'
+import { InMemoryTemplates, InMemoryTracking, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const TEMPLATE = '# Research: {{topic}}\n'
 const OUTPUT = 'research/2026-10-11/checkout-research.md'
 
 const host = () => {
   const tracking = new InMemoryTracking()
-  const clock = new FixedClock('2026-10-11T23:59:00.000Z')
-  const deps = {
-    journal: tracking,
-    activePipeline: tracking,
-    files: tracking,
-    workspace: new InMemoryWorkspace(),
-    sourceControl: new InMemorySourceControl(),
-    templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }),
-    clock,
-    hasher: new FakeHasher(),
-    agentRunner: new ScriptedAgentRunner(),
-    progress: new RecordingProgress(),
-  }
-  return { tracking, clock, deps, agentRunner: deps.agentRunner }
+  const deps = inMemoryDeps({ tracking, templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }), now: '2026-10-11T23:59:00.000Z' })
+  return { tracking, clock: deps.clock, deps, agentRunner: deps.agentRunner }
 }
 
 const fill = (tracking) => tracking.write('checkout', OUTPUT, `${TEMPLATE.replace('{{topic}}', 'Checkout')}Findings.\n`)

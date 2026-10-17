@@ -194,3 +194,22 @@ export class ScriptedMachine {
   /** The command lines run, as `'<cwd> $ <argv>'`. */
   lines() { return this.runs.map(({ argv, cwd }) => `${cwd} $ ${argv.join(' ')}`) }
 }
+
+/**
+ * Every dependency a use case takes, over the doubles above; a test names only the ones it
+ * looks at. config: the text of skraft-config.json, no file when undefined; now: the clock.
+ */
+export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, now = '2026-10-15T08:00:00.000Z', ...given } = {}) => ({
+  journal: tracking,
+  activePipeline: tracking,
+  files: tracking,
+  workspace: new InMemoryWorkspace(config === undefined ? {} : { 'skraft-config.json': config }),
+  sourceControl: new InMemorySourceControl(),
+  commandRunner: new ScriptedMachine(),
+  templates: new InMemoryTemplates({}),
+  clock: new FixedClock(now),
+  hasher: new FakeHasher(),
+  agentRunner: new ScriptedAgentRunner(),
+  progress: new RecordingProgress(),
+  ...given,
+})

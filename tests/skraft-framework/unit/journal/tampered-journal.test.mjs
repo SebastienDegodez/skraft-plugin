@@ -2,27 +2,14 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
-import {
-  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner,
-} from '../support/in-memory-host.mjs'
+import { InMemoryTracking, ScriptedAgentRunner, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const OUTPUT = 'research/2026-10-11/checkout-research.md'
 
 const startedRun = async (behaviours) => {
   const tracking = new InMemoryTracking()
   const agentRunner = new ScriptedAgentRunner(behaviours)
-  const deps = {
-    journal: tracking,
-    activePipeline: tracking,
-    files: tracking,
-    workspace: new InMemoryWorkspace(),
-    sourceControl: new InMemorySourceControl(),
-    templates: new InMemoryTemplates({}),
-    clock: new FixedClock('2026-10-11T09:00:00.000Z'),
-    hasher: new FakeHasher(),
-    agentRunner,
-    progress: new RecordingProgress(),
-  }
+  const deps = inMemoryDeps({ tracking, agentRunner, now: '2026-10-11T09:00:00.000Z' })
   await createInit(deps).init({ slug: 'checkout' })
   return { tracking, agentRunner, deps }
 }
