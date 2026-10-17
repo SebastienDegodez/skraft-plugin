@@ -2,77 +2,84 @@
 layout: doc
 lang: en
 title: "SKRAFT — The Handbook"
-description: "Choose a SKRAFT journey, from first run to delivery or taking over a Brownfield system."
+description: "What SKRAFT V2 is, what is available today, what comes next, and where to read for your need or role."
 persona: tech-lead
 ---
 
 # SKRAFT — The Handbook
 
-SKRAFT is an **AI-agent-driven SDLC pipeline**. Each development phase is executed
-by a dedicated agent, then validated by an independent reviewer — no agent
-validates its own work.
+SKRAFT takes a story through four phases: **RESEARCH → DESIGN → DISTILL → DELIVER**.
+In V2, a single **engine** decides everything — phase order, expected outputs, retries, verdicts,
+gates — and it is the same under Claude Code, GitHub Copilot CLI and, soon, VS Code.
+**Host drivers** carry out what the engine asks and are the only ones that start agents; no agent
+starts another, and no command hook slows down your tool calls.
 
 > « The only way to go fast is to go well. »
 > — Martin, R. C., *Clean Architecture*, 2017.
 
-## First time here? Install, then choose
+## First visit
 
-1. [Install SKRAFT with `/plugin`]({{ "/en/tutorials/getting-started" | relative_url }}).
-2. Choose the journey matching the real state of your project.
+Follow the [Getting started tutorial]({{ "/en/tutorials/getting-started" | relative_url }}): you
+install the plugin, describe your repository in `skraft-config.json`, run the RESEARCH phase of a
+story and pass the gates, on a small repository, in one sitting.
 
-| Your starting point | Journey |
-| --- | --- |
-| Refined story or existing backlog | [Core journey]({{ "/en/explanation/pipeline/" | relative_url }}) |
-| Existing code without documentation or a safety net | [Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }}) |
+## Available today, and what comes next
 
-To understand the handoffs before running a workflow, next follow
-[one Starbucks order end to end]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }}).
+SKRAFT V2 is built in **lots**. Each lot is compared with v1 on the same sample projects; a
+regression blocks the lot.
+
+| Lot | Capability | State |
+| --- | --- | --- |
+| 0 – 2 | **RESEARCH** phase end to end (pre-created document, retry when missing, stop at the cap), hash-chained journal, resume, component-based `skraft-config.json`, detection (`skraft init`), `skraft doctor`, per-repository base, gates run by hand (`skraft gate`) | Available |
+| 3 | DESIGN, DISTILL and DELIVER driven by the engine; gates as pipeline steps | Planned |
+| 4 | Code review through lenses | Planned |
+| 5 | Human decisions (`skraft decide`) | Planned |
+| 6 | v1 agents and skills pruned | Planned |
+| 7 | Mutation closing loop | Planned |
+| 8 | Full Canvas and pane views, screenshot publishing | Planned |
+| 9 | Brownfield | Planned |
+| 10 | VS Code: Copilot SDK driver, then the `skraft next` / `skraft record` fallback | Planned |
+| 11 | Version 2.0.0 | Planned |
+
+Hosts available today: **Claude Code** (`/skraft` command, "Skraft" pane) and **GitHub Copilot
+CLI** (`skraft-pipeline` workflow).
 
 ## How to read this handbook
 
-The documentation follows the **Diátaxis** structure — four doors depending on
-what you are trying to do:
+The documentation follows **Diátaxis**: four doors depending on what you are looking for.
 
-| Door | For… | Start with |
+| Door | For… | Pages |
 | --- | --- | --- |
-| **Learn** (tutorial) | following a guided path | [Getting started]({{ "/en/tutorials/getting-started" | relative_url }}), [The running example]({{ "/en/explanation/pipeline/fil-rouge" | relative_url }}) |
-| **Do** (how-to) | solving a precise task | [Customization]({{ "/en/how-to/customisation" | relative_url }}), [Genesis & contributing]({{ "/en/how-to/contributing" | relative_url }}) |
-| **Understand** (explanation) | knowing *why* it is built this way | [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}), [Review before review]({{ "/en/explanation/why-review-before-review" | relative_url }}) |
-| **Look up** (reference) | finding a precise fact | [Agentic catalogue]({{ "/en/dashboard/" | relative_url }}), [Gates]({{ "/en/reference/gates" | relative_url }}), [Patterns]({{ "/en/reference/patterns" | relative_url }}) |
+| **Learn** (tutorial) | a first guided run | [Getting started]({{ "/en/tutorials/getting-started" | relative_url }}) |
+| **Do** (how-to) | completing a precise task | [Configure components]({{ "/en/how-to/configure-components" | relative_url }}), [Run the gates]({{ "/en/how-to/run-gates" | relative_url }}), [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }}), [Customisation]({{ "/en/how-to/customisation" | relative_url }}), [Evaluate a skill]({{ "/en/how-to/evaluation" | relative_url }}), [Contributing]({{ "/en/how-to/contributing" | relative_url }}) |
+| **Look up** (reference) | finding an exact fact | [The `skraft` command line]({{ "/en/reference/cli" | relative_url }}), [`skraft-config.json`]({{ "/en/reference/skraft-config" | relative_url }}), [Run journal]({{ "/en/reference/run-journal" | relative_url }}), [Glossary]({{ "/en/reference/glossary" | relative_url }}), [Agent and skill catalogue]({{ "/en/dashboard/" | relative_url }}), [Skill review gates (v1)]({{ "/en/reference/gates" | relative_url }}) |
+| **Understand** (explanation) | knowing *why* it is built this way | [For executives]({{ "/en/explanation/for-executives" | relative_url }}), [Architecture]({{ "/en/explanation/architecture" | relative_url }}), [Zero hooks]({{ "/en/explanation/hooks" | relative_url }}), [State and resume]({{ "/en/explanation/hve-core" | relative_url }}), [The phases]({{ "/en/explanation/pipeline/" | relative_url }}), [Concepts]({{ "/en/explanation/concepts" | relative_url }}), [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}), [Outside-In TDD]({{ "/en/explanation/deep-dive/outside-in-tdd" | relative_url }}), [Brownfield]({{ "/en/explanation/brownfield" | relative_url }}) |
 
 ## Where to go by role
 
-- **Executive** — why assisted review lowers time-to-delivery: [For executives]({{ "/en/explanation/for-executives" | relative_url }}).
-- **Developer** — the pipeline phase by phase and the agent team: [The pipeline]({{ "/en/explanation/pipeline/" | relative_url }}), [The team]({{ "/en/explanation/pipeline/team" | relative_url }}).
-- **Legacy maintainer** — understand, secure, then transform existing code: [Brownfield journey]({{ "/en/explanation/brownfield" | relative_url }}).
-- **Architect** — decisions and boundaries: [Architecture]({{ "/en/explanation/architecture" | relative_url }}), [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}).
-- **Coming from HVE?** — the continuity (RPI, `state.json`, BRD/PRD upstream): [HVE → SKRAFT]({{ "/en/explanation/hve-vs-skraft" | relative_url }}).
+- **Executive** — the problem V2 solves and the targets it aims for:
+  [For executives]({{ "/en/explanation/for-executives" | relative_url }}).
+- **Developer** — first the [tutorial]({{ "/en/tutorials/getting-started" | relative_url }}),
+  then the guides: [configure components]({{ "/en/how-to/configure-components" | relative_url }}),
+  [run the gates]({{ "/en/how-to/run-gates" | relative_url }}),
+  [resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }}).
+- **Architect** — engine, host drivers, depth 1:
+  [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
+- **Quality assurance** — where the evidence lives and how to read it:
+  [Run the gates]({{ "/en/how-to/run-gates" | relative_url }}),
+  [Run journal]({{ "/en/reference/run-journal" | relative_url }}).
 
-## The journeys in one picture
+## SKRAFT V2 in one picture
 
 ```mermaid
 flowchart LR
-    C{Starting point} -->|raw backlog| D[optional DISCOVER]
-    C -->|refined story| R[RESEARCH]
-    C -->|legacy code| BF[standalone Brownfield]
-    BF -.->|PRD, backlog, or secured code| C
-    D -.->|triage| DI[optional DISCUSS]
-    DI -.->|refined story| R
-    R -->|sourced research| DE[DESIGN]
-    DE -->|architecture| DIS[DISTILL]
-    DIS -->|scenarios| DEL[DELIVER]
-    DEL -->|code| PR[Pull Request]
-    style BF fill:#102016,stroke:#6f8478
-    style D fill:#1a3a2a,stroke:#4ed58a
-    style DI fill:#1a3a2a,stroke:#4ed58a
-    style DE fill:#1a3a2a,stroke:#4ed58a
-    style DIS fill:#1a3a2a,stroke:#4ed58a
-    style DEL fill:#1a3a2a,stroke:#4ed58a
-    style PR fill:#102016,stroke:#6f8478
+    H[You: /skraft or the skraft-pipeline workflow] --> P[Host driver]
+    P <-->|request / result| M[Engine]
+    P -->|starts| A[Phase agent]
+    A -->|files| W[Repository]
+    M -->|checks outputs, runs gates| W
+    M -->|writes| J[events.jsonl]
 ```
 
-DISCOVER then DISCUSS are optional standalone product workflows. They precede
-`skraft-orchestrator`, entrypoint for the RESEARCH → DESIGN → DISTILL → DELIVER
-engineering pipeline on the shared [HVE-Core]({{ "/en/explanation/hve-core" | relative_url }}) substrate. Brownfield remains a
-human-chosen standalone journey. It rejoins the core journey once the backlog,
-story, or code is ready.
+The engine never starts an agent; it tells the driver what to start, checks what the agent wrote,
+then records each step in `.copilot-tracking/skraft-plans/<slug>/events.jsonl`.

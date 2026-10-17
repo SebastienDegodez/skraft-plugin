@@ -163,8 +163,8 @@ parts:
     sidebar_position: 1
     title_fr: "Tutoriels — apprendre"
     title_en: "Tutorials — learn"
-    intro_fr: "Un parcours guide ou vous executez : installer le plugin et lancer le pipeline de bout en bout."
-    intro_en: "A guided path where you do things: install the plugin and run the pipeline end to end."
+    intro_fr: "Un parcours guide ou vous executez : installer le plugin, decrire un depot, lancer la phase RESEARCH d'une story et passer ses gates."
+    intro_en: "A guided path where you do things: install the plugin, describe a repository, run the RESEARCH phase of a story and pass its gates."
     pages:
       - id: getting-started
         type: editorial
@@ -172,8 +172,8 @@ parts:
         label_en: "First steps"
         fr: "fr/tutorials/getting-started.md"
         en: "en/tutorials/getting-started.md"
-        purpose_fr: "Installer le plugin et lancer le pipeline en quelques minutes."
-        purpose_en: "Install the plugin and run the pipeline in minutes."
+        purpose_fr: "Installer le plugin, ecrire skraft-config.json, verifier avec doctor, lancer la phase RESEARCH d'une story et passer ses gates, sur un petit depot."
+        purpose_en: "Install the plugin, write skraft-config.json, check with doctor, run the RESEARCH phase of a story and pass its gates, on a small repository."
 
   # ----------------------------------------------------------- GUIDES PRATIQUES
   - id: how-to
@@ -182,17 +182,41 @@ parts:
     sidebar_position: 2
     title_fr: "Guides pratiques — faire"
     title_en: "How-to guides — do"
-    intro_fr: "Resoudre une tache precise : adapter le pipeline, proposer un nouveau pattern de maniere disciplinee."
-    intro_en: "Solve a precise task: adapt the pipeline, propose a new pattern with discipline."
+    intro_fr: "Resoudre une tache precise : configurer les composants, lancer les gates, debloquer un run, adapter le pipeline, proposer un pattern."
+    intro_en: "Solve a precise task: configure components, run the gates, unblock a run, adapt the pipeline, propose a pattern."
     pages:
+      - id: configure-components
+        type: editorial
+        label_fr: "Configurer les composants"
+        label_en: "Configure components"
+        fr: "fr/how-to/configure-components.md"
+        en: "en/how-to/configure-components.md"
+        purpose_fr: "Detecter les composants, remplacer une commande, ajouter un depot voisin, choisir la base et le mocking, verifier avec doctor."
+        purpose_en: "Detect components, replace a command, add a neighbour repository, choose the base and the mocking, check with doctor."
+      - id: run-gates
+        type: editorial
+        label_fr: "Lancer les gates"
+        label_en: "Run the gates"
+        fr: "fr/how-to/run-gates.md"
+        en: "en/how-to/run-gates.md"
+        purpose_fr: "Lancer les gates des composants modifies ou de tous, lire leurs preuves, traiter un echec environment ou deterministic."
+        purpose_en: "Run the gates of the changed components or of all, read their evidence, handle an environment or deterministic failure."
+      - id: resume-a-run
+        type: editorial
+        label_fr: "Reprendre un run"
+        label_en: "Resume a run"
+        fr: "fr/how-to/resume-a-run.md"
+        en: "en/how-to/resume-a-run.md"
+        purpose_fr: "Reprendre apres une interruption, changer de pipeline actif, et debloquer un run selon son code."
+        purpose_en: "Resume after an interruption, switch the active pipeline, and unblock a run by its code."
       - id: customisation
         type: editorial
         label_fr: "Customisation"
         label_en: "Customization"
         fr: "fr/how-to/customisation.md"
         en: "en/how-to/customisation.md"
-        purpose_fr: "Ce que SKRAFT permet de customiser ET le RISQUE de reduire les controles (gates, lens, reviewers)."
-        purpose_en: "What SKRAFT lets you customize AND the RISK of reducing controls (gates, lenses, reviewers)."
+        purpose_fr: "Ce que la V2 permet d'adapter aujourd'hui, ce qui arrive, ET le RISQUE de reduire les controles (gates, commandes, mocking)."
+        purpose_en: "What V2 lets you adapt today, what comes next, AND the RISK of reducing the controls (gates, commands, mocking)."
         requires_risk_section: true
       - id: evaluation
         type: editorial
@@ -354,17 +378,17 @@ parts:
             sidebar_position: 3
             fr: "fr/explanation/architecture.md"
             en: "en/explanation/architecture.md"
-            purpose_fr: "Vue d'architecture : comment racines, agents et reviewers s'assemblent."
-            purpose_en: "Architecture view: how roots, agents, and reviewers assemble."
+            purpose_fr: "Le moteur a cas d'usage, les pilotes d'hote seuls a lancer des agents, la profondeur 1, et les controles qui vivent dans le code."
+            purpose_en: "The use-case engine, the host drivers that alone start agents, depth 1, and the checks that live in the code."
           - id: hve-core
-            type: derived
+            type: editorial
             label_fr: "État et reprise"
             label_en: "State and recovery"
             sidebar_position: 4
             fr: "fr/explanation/hve-core.md"
             en: "en/explanation/hve-core.md"
-            purpose_fr: "Le substrat d'état : state.json, reprise et transitions conditionnées par les verdicts."
-            purpose_en: "The state substrate: state.json, recovery, and transitions gated by verdicts."
+            purpose_fr: "Le journal d'evenements chaine qui remplace state.json : etat recalcule, reprise exacte, modifications detectees."
+            purpose_en: "The chained event journal that replaces state.json: state recomputed, exact resume, edits detected."
           - id: traces
             type: derived
             label_fr: "Traces et auditabilité"
@@ -377,13 +401,13 @@ parts:
             purpose_en: "The traces left by the pipeline: dated artifacts, state, PRs, and verdicts."
           - id: hooks
             type: editorial
-            label_fr: "Garde-fous (hooks)"
-            label_en: "Guardrails (hooks)"
+            label_fr: "Garde-fous : du hook au moteur"
+            label_en: "Guardrails: from hook to engine"
             sidebar_position: 6
             fr: "fr/explanation/hooks.md"
             en: "en/explanation/hooks.md"
-            purpose_fr: "Pourquoi les hooks rendent les invariants Engineer/Reviewer mécaniquement infranchissables."
-            purpose_en: "Why hooks make Engineer/Reviewer invariants mechanically unbreakable."
+            purpose_fr: "Pourquoi la V2 part de zero hook et ce qui remplace chaque garde-fou de la v1 dans le moteur."
+            purpose_en: "Why V2 starts from zero hooks and what replaces each v1 guardrail in the engine."
           - id: token-economy
             type: editorial
             label_fr: "Économie de tokens"
@@ -494,8 +518,8 @@ parts:
             sidebar_position: 2
             fr: "fr/explanation/for-executives.md"
             en: "en/explanation/for-executives.md"
-            purpose_fr: "Pourquoi la revue assistée avant la revue humaine réduit le délai de livraison."
-            purpose_en: "Why AI-assisted review before human review lowers time to delivery."
+            purpose_fr: "Pourquoi une organisation qui livre avec des assistants IA a besoin d'une discipline imposee par un moteur teste, ce qui est disponible aujourd'hui et les objectifs du plan V2."
+            purpose_en: "Why an organisation that ships with AI assistants needs a discipline enforced by a tested engine, what is available today and the V2 plan's goals."
 
   # ---------------------------------------------------------------- REFERENCE
   - id: reference
@@ -510,10 +534,42 @@ parts:
     # agents, skills, workers et lentilles sans materialiser une page Markdown par
     # source. Les autres sections conservent leurs pages handbook explicites.
     sections:
+      - id: usage
+        title_fr: "Utiliser SKRAFT"
+        title_en: "Using SKRAFT"
+        sidebar_position: 1
+        pages:
+          - id: cli
+            type: editorial
+            label_fr: "Ligne de commande"
+            label_en: "Command line"
+            sidebar_position: 1
+            fr: "fr/reference/cli.md"
+            en: "en/reference/cli.md"
+            purpose_fr: "Chaque commande skraft, ses options, ses sorties et codes de sortie, et leurs equivalents dans le mod Claude Code et le workflow Copilot."
+            purpose_en: "Every skraft command, its options, outputs and exit codes, and their equivalents in the Claude Code mod and the Copilot workflow."
+          - id: skraft-config
+            type: editorial
+            label_fr: "skraft-config.json"
+            label_en: "skraft-config.json"
+            sidebar_position: 2
+            fr: "fr/reference/skraft-config.md"
+            en: "en/reference/skraft-config.md"
+            purpose_fr: "Le schema complet de la configuration, ses regles de validation, les lignes de commande et les defauts de detection."
+            purpose_en: "The full configuration schema, its validation rules, command lines and detection defaults."
+          - id: run-journal
+            type: editorial
+            label_fr: "Suivi et journal"
+            label_en: "Tracking and journal"
+            sidebar_position: 3
+            fr: "fr/reference/run-journal.md"
+            en: "en/reference/run-journal.md"
+            purpose_fr: "Le dossier de suivi, les evenements de events.jsonl, les artefacts et tous les codes de refus et de blocage."
+            purpose_en: "The tracking folder, the events.jsonl events, the artefacts and every refusal and block code."
       - id: catalogue
         title_fr: "Catalogue agentique"
         title_en: "Agentic catalogue"
-        sidebar_position: 1
+        sidebar_position: 2
         ownership: dashboard
         source_families: [agents, skills, workers, lenses]
         retire:
@@ -540,7 +596,7 @@ parts:
       - id: gates
         title_fr: "Gates"
         title_en: "Gates"
-        sidebar_position: 2
+        sidebar_position: 3
         pages:
           - id: gates
             type: derived
@@ -555,7 +611,7 @@ parts:
       - id: patterns
         title_fr: "Patterns"
         title_en: "Patterns"
-        sidebar_position: 3
+        sidebar_position: 4
         pages:
           - id: patterns
             type: derived
@@ -567,22 +623,6 @@ parts:
             source: "plugins/skraft-framework/skills/architecture-patterns/SKILL.md"
             purpose_fr: "Les patterns d'architecture (Event Modeling, DDD, Clean Architecture, CQRS...) avec leur reference."
             purpose_en: "Architecture patterns (Event Modeling, DDD, Clean Architecture, CQRS...) with their reference."
-      - id: infrastructure
-        title_fr: "Infrastructure"
-        title_en: "Infrastructure"
-        sidebar_position: 4
-        folder_fr: "fr/reference/infrastructure"
-        folder_en: "en/reference/infrastructure"
-        pages:
-          - id: hooks
-            type: editorial
-            label_fr: "Hooks"
-            label_en: "Hooks"
-            sidebar_position: 1
-            fr: "fr/reference/infrastructure/hooks.md"
-            en: "en/reference/infrastructure/hooks.md"
-            purpose_fr: "Catalogue des 7 événements hooks, 4 types de décision, normalisation payload et config SKRAFT_*."
-            purpose_en: "Catalogue of 7 hook events, 4 decision types, payload normalisation and SKRAFT_* config."
       - id: bibliography
         title_fr: "Bibliographie & annexes"
         title_en: "Bibliography & appendix"

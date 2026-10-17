@@ -2,84 +2,150 @@
 layout: doc
 lang: en
 title: "Architecture"
+description: "How SKRAFT V2 separates an engine of use cases, the same everywhere, from the host drivers that spawn agents, and why the checks live in code."
 persona: tech-lead
 ---
 
 # Architecture
 
-SKRAFT applies the CQS (Command-Query Separation) principle at the system level. The orchestrator dispatches commands to executor agents, who produce artifacts. Reviewer agents read those artifacts and emit verdicts — they never modify anything.
+> One engine decides everything; each host runs it with what it does best. Only the driver
+> spawns agents, and no agent spawns another.
 
-> « Asking a question should not change the answer. »
-> — Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997.
+## The problem to solve
 
-## Overview (L1 + L2)
+SKRAFT must run the same pipeline under Claude Code, GitHub Copilot CLI and VS Code, on
+Windows and macOS. These hosts do not offer the same means: one spawns an agent with
+`$.agent.spawn`, another with `ctx.agent`, the third has neither.
 
-This view stays at two levels: **L1** invocable roots and **L2** engineering
-pipeline agents and their declared reviewers. DISCOVER then DISCUSS are optional
-standalone product workflows; they precede the orchestrator without becoming its
-children. The internal **L3** fan-out (test wiring
-inside DELIVER) has its own zoom pages — see *Zoom further* below.
+In v1, the phase order and the verdicts lived in the prose of an orchestrator agent. Each
+host and each model followed it its own way. V2 takes these decisions out of the prose and
+puts them in tested code, the same everywhere.
+
+## The engine of use cases
+
+The **engine** (`plugins/skraft-framework/engine/`) is split into four layers.
+
+| Layer | Content | What it may import |
+| --- | --- | --- |
+| `domain/` | Pure rules: next step, expected outputs, state derived from the journal, configuration, gates | `domain/` only |
+| `application/` | Use cases: `Init`, `RunPipeline`, `Observe`, `RunGate`, `Doctor`… and their contracts (spawn an agent, show progress, read and write the journal) | `domain/` and `application/` |
+| `infrastructure/` | Files, git, processes, clock, hashes | The contracts in `application/`, never a driver or a use case |
+| `drivers/` | One driver per host: `claude-mod/`, `copilot-workflow/`, `copilot-sdk/`, `cli/` | What it assembles; never another driver |
+
+A **use case** is a complete action from the user's point of view: start a pipeline, move it
+forward, observe its state, run the gates. It decides; it does no input or output itself.
+
+`domain/` and `application/` use no `node:` modules, no `process`, no `child_process`, no
+`$`. That is what lets the same code be loaded by the Claude Code mod module, which has no
+Node, and by the Copilot workflow, which has it. A tested architecture rule enforces it.
+
+> « Good architecture makes the system easy to understand, easy to develop, easy to maintain, and easy to deploy. »
+> — Martin, R. C., *Clean Architecture*, 2017.
+
+## The host drivers
+
+A **host driver** connects the engine to a host. It gives the engine the means to spawn an
+agent and show progress, then calls the use case. It decides neither the order, nor the
+verdict, nor the progress.
+
+| Driver | Spawns agents with | Shows the run | Entry point | Available |
+| --- | --- | --- | --- | --- |
+| Claude Code mod | `$.agent.spawn` | "Skraft" pane | `/skraft …`, tool `mcp__skraft__run_pipeline` | Yes |
+| Copilot CLI dynamic workflow | `ctx.agent`, replayed on resume | Workflow log (`ctx.log`); Canvas in lot 8 | workflow `skraft-pipeline`, tool `skraft_decide` | Yes |
+| VS Code, Copilot SDK | The same driver as the workflow | Canvas | — | Lot 10 |
+| VS Code, fallback | The orchestrator agent, on the step returned by `skraft next` | `WORKFLOW.md` | `skraft next` / `skraft record` | Lot 10 |
+| `skraft` command line | — (spawns no agent today) | Text or JSON | `init`, `status`, `gate`, `doctor` | Yes |
+
+In the mod, each `$` call stays a one-line function in the registered module. The rest of
+the driver receives these functions and is tested without Claude Code.
+
+Showing the agent currently in progress, as [Skwad](https://github.com/Kochava-Studios/skwad)
+does, is in progress: today `skraft status` and the Skraft pane show the open step, its
+agent and its attempt.
+
+> **Coming next.** Questions to the human (`$.ui.ask`, `ctx.pause`, `skraft decide`):
+> planned for lot 5. The Copilot Canvas and the full pane view: planned for lot 8.
+
+## The driver ↔ engine loop
+
+The driver calls `RunPipeline`. The engine re-reads the journal, computes the next step,
+pre-creates the expected output from its template, journals the start, then asks the driver
+to spawn the agent. When the agent returns, the engine checks the output itself and journals
+the result before deciding what comes next.
 
 ```mermaid
-graph TB
-    BD[backlog-discoverer] -.->|when both are used| BP[backlog-planner]
-    BP -.->|refined story| O[skraft-orchestrator]
-    O -->|dispatch| SR[solution-researcher]
-    O -->|dispatch| SA[solution-architect]
-    O -->|dispatch| AD[acceptance-designer]
-    O -->|dispatch| SE[software-engineer]
-    
-    SR -->|writes| A0[sourced research]
-    SA -->|writes| A3[ADRs + diagrams]
-    AD -->|writes| A4[Gherkin scenarios]
-    SE -->|writes| A5[tested code]
-    
-    A3 -.->|reads| SAR[solution-architect-reviewer]
-    A4 -.->|reads| ADR[acceptance-designer-reviewer]
-    A5 -.->|reads| SER[software-engineer-reviewer]
-    
-    SAR -->|verdict| O
-    ADR -->|verdict| O
-    SER -->|verdict| O
-    
-    O -.->|reads| S[(state.json)]
-    
-    style O fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
-    style S fill:#1a2a3a,stroke:#7fd3ff
+sequenceDiagram
+    participant P as Host driver
+    participant M as Engine (RunPipeline)
+    participant J as events.jsonl
+    participant A as Agent
+    P->>M: start or resume the active pipeline
+    loop until done or blocked
+        M->>J: re-read and check the chain
+        M->>M: next step
+        M->>J: step.started (outputs, attempt)
+        M->>P: spawn the agent with the brief
+        P->>A: spawn (depth 1)
+        A-->>P: done, output written at the given path
+        P-->>M: answer (ok, cost)
+        M->>M: output filled?
+        M->>J: step.recorded / phase.closed
+    end
+    M-->>P: done or blocked, with the reason
 ```
 
-## Legend
+A missing output triggers a second attempt with the list of missing paths, then a named stop,
+`missing-outputs`. An agent the host cannot spawn stops the run on `agent-unavailable`
+without consuming the attempt.
 
-| Arrow | Meaning |
-|-------|---------|
-| **Solid** orchestrator → executor | Command (CQS command side) |
-| **Solid** executor → artifact | Write — the executor produces an artifact |
-| **Dashed** artifact → reviewer | Read-only (CQS query side) |
-| **Solid** reviewer → orchestrator | Verdict (PASS / FAIL + reasons) |
-| **Dashed** orchestrator → state.json | CQRS read model |
+## Depth 1
 
-## Zoom further — the DELIVER internal fan-out (L3)
+Only the driver spawns agents. No agent spawns another agent, review lenses included. In v1,
+the DELIVER reviewer spawned its lenses (depth 2): extra context cost, duplicated checks, and
+behaviour that depended on the host.
 
-This page deliberately stops at L1 + L2. Inside DELIVER, the `software-engineer`
-(L2) does not wire the integration tests by hand: it **dispatches internal
-sub-agents** (L3, `user-invocable: false`) for that wiring. The lead keeps the
-business TDD cycle and verifies each worker in TIER-1 (RED → GREEN). When a
-capability is active, its **fidelity lens** joins the adversarial panel of the
-`software-engineer-reviewer`.
+At depth 1, the driver can spawn several agents in parallel when the host allows it, and the
+engine sees every spawn in its journal.
 
-Each L3 fan-out has its own zoom page so this diagram stays readable:
+> **Coming next.** Lenses spawned in parallel by the driver and the verdict computed by the
+> engine: planned for lot 4.
 
-| L3 capability | What it wires | Zoom page |
+## Checks in code
+
+What an agent could forget, the engine checks.
+
+| Check | Where | Available |
 | --- | --- | --- |
-| Mocking the downstream dependency | `mock-integration-worker` → strategy roster → Microcks (default) / in-process | [L3 zoom: mocking (Microcks)]({{ "/en/explanation/deep-dive/mocking-microcks" | relative_url }}) |
-| Provider-side contract test | `contract-testing-worker` → roster → in-process integration + Microcks (opt-in) | [L3 zoom: contract testing]({{ "/en/explanation/deep-dive/contract-testing" | relative_url }}) |
+| Phase order | Engine domain | Yes (RESEARCH); DESIGN, DISTILL, DELIVER in lot 3 |
+| Expected outputs pre-created and checked | `RunPipeline` | Yes |
+| Journal integrity | Hash chain, checked on every read | Yes |
+| Gates (build, format, lint, test, architecture, coverage, mutation) | `RunGate`, commands from `skraft-config.json` | Yes, run with `skraft gate` |
+| Write scope | Git diff after each step | Lot 3 |
+| Review verdict | Typed findings, computed verdict | Lot 4 |
 
-See also the [agentic catalogue]({{ "/en/dashboard/" | relative_url }}).
+## Rejected alternatives
 
-## Strict separation
+**A standalone engine, server or binary.** An executor outside the host would drive the
+agents from the outside. It would need its own model-provider credentials, and SKRAFT would
+no longer live in the developer's host. V2 keeps execution in the host and puts in the
+engine what such an executor would bring: typed nodes, "done" proven by a command, capped
+loops, failure classes, event journal.
 
-Executors **write** artifacts but never emit verdicts on their own work. Reviewers **read** artifacts and produce verdicts, but never modify code or documents. This separation guarantees that every artifact is validated by an independent eye.
+**An agent-driven loop as the primary driver.** An agent calls `skraft next`, does the step,
+calls `skraft record`. It works everywhere, but costs a round trip per step, serialises the
+lenses and leaves progress to a model that can drift from the loop. It will stay only as the
+VS Code fallback (lot 10), where the engine will refuse any `next` until the previous step is
+recorded.
 
-The `state.json` file serves as the read model (CQRS): the orchestrator records phase progression and verdicts there, then consults it to decide the next action.
+**Keeping the hooks.** See [Guardrails: from hook to engine]({{ "/en/explanation/hooks" | relative_url }}).
 
-See [Core concepts]({{ "/en/explanation/concepts" | relative_url }}) for the theory behind CQS and CQRS.
+## Going further
+
+- [State and recovery]({{ "/en/explanation/hve-core" | relative_url }}) — the chained journal.
+- [Clean Architecture]({{ "/en/explanation/clean-architecture" | relative_url }}) — the dependency rule applied to the engine.
+- [Reference: the skraft command line]({{ "/en/reference/cli" | relative_url }}).
+- [Reference: tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }}).
+
+## Sources
+
+- Martin, R. C., *Clean Architecture*, 2017.

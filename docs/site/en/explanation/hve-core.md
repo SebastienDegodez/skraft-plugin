@@ -1,94 +1,104 @@
 ---
 layout: doc
 lang: en
-title: "The HVE-Core substrate"
-description: "HVE-Core is the engineering pipeline recovery substrate: state.json, its JSON Schema, deterministic writes, and verdict-gated transitions."
+title: "State and recovery"
+persona: tech-lead
+description: "Why SKRAFT V2 replaces state.json with a chained event journal from which state is recomputed, and how that gives exact resume and detects deviations."
 ---
 
-# The HVE-Core substrate
+# State and recovery
 
-> HVE-Core gives the engineering pipeline durable memory (`state.json`), recovery
-> after interruption, and transitions gated by verdicts.
+> The engine does not write a state; it writes facts. State is recomputed on every read, and
+> resume starts from the last recorded fact.
 
-## Why a substrate
+## The problem: a state anyone can write
 
-The pipeline driven by `skraft-orchestrator` needs one source of truth: where
-engineering stands, what verdict was issued, and how many retries happened. Without
-it, every agent would improvise state and recovery after an interruption would be
-impossible. DISCOVER, DISCUSS, and Brownfield roots remain standalone workflows.
-They do not mutate this state.
+In v1, the pipeline state lived in `.copilot-tracking/skraft-plans/<slug>/state.json`:
+current phase, verdicts, retry counters. It was a snapshot, rewritten on each transition.
 
-## `state.json` — the pipeline memory
+A snapshot has three weaknesses:
 
-State persists as JSON at
-`.copilot-tracking/skraft-plans/{project-slug}/state.json`. Its contract is the JSON Schema
-`plugins/skraft-framework/src/domain/state.schema.json`. Key fields:
+- it does not say **how** the pipeline got there;
+- a hand edit, or one made by an agent through the shell, cannot be told apart from a
+  legitimate write; v1 needed a hook (G7) to forbid it, and that hook only parsed POSIX
+  commands;
+- two runs writing at the same time overwrite each other without knowing it.
 
-```json
-{
-  "currentPhase": "RESEARCH | DESIGN | DISTILL | DELIVER | DONE",
-  "phaseArtifacts": { "DESIGN": ["adrs/ADR-001-...md"], "...": [] },
-  "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
-  "retryCount": { "DESIGN": 0 },
-  "userPreferences": { "maxRetriesPerPhase": 2 },
-  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] }
-}
-```
+## An event journal instead
 
-- `currentPhase` advances **only** on an `APPROVED` verdict.
-- `phaseArtifacts`, `verdicts`, `retryCount` trace what each phase produced and
-  how it was judged.
-- `maxRetriesPerPhase` (default 2) bounds retries before human escalation.
-- `adrRatification` holds DESIGN until a human ratifies every proposed ADR.
+V2 replaces `state.json` with `events.jsonl`, in the same tracking folder. It is an **event
+journal**: one JSON object per line, one event per fact. The run starts (`run.started`), a
+step starts (`step.started`), its result is recorded (`step.recorded`), a phase closes
+(`phase.closed`), the run stops or finishes (`run.stopped`, `run.finished`), a gate runs
+(`gate.ran`). Each event carries its type and its time.
 
-The state CLI enforces that schema on every read and write. A field the schema does not
-declare, or a value outside its shape, makes the state invalid: no older format is
-migrated. A pipeline started with an earlier version therefore stops with
-`INVALID_STATE`; `state.mjs diagnose` names the next command, and after `reset` the
-orchestrator rebuilds the state from the artefacts on disk, with your confirmation.
+The engine writes each fact to the journal before deciding what comes next. It never edits a
+line already written: it appends.
 
-The state carries **no quality dial**. Mutation and coverage thresholds, the four
-adversarial review lenses, the Gherkin gate and the Outside-In double-loop TDD variant
-are fixed once and for all by the `skraft-quality-bar` skill; they are the same on every
-run, and nothing written into `state.json` can lower them.
+> « At its heart is the notion that you can use a different model to update information than the model you use to read information. »
+> — Fowler, M., *Bliki: CQRS*, 2011.
 
-## The write-through model
+## State is recomputed on read
 
-`state.json` is a safety snapshot, not a block reread on every turn:
+The journal is the write model. The state (current phase, attempt, missing outputs, run
+status) is the read model: the engine recomputes it on every read by replaying the events.
+No state file can therefore drift from the journal.
 
-1. **Rehydrate** — read and validate the snapshot once at session start.
-2. **Execute** — decide from the last state the CLI printed, then dispatch an agent or request a human decision.
-3. **Record** — apply each mutation through the deterministic `state.mjs` CLI, which prints the updated state.
+`skraft status` and the "Skraft" pane of the Claude Code mod read this same recomputed view.
+Full views, Copilot Canvas included, are planned for lot 8.
 
-## How the phases articulate
+## Exact resume, without replaying a finished agent
 
-`skraft-orchestrator` is selected with a refined story. It sequences only
-RESEARCH → DESIGN → DISTILL → DELIVER. RESEARCH may be skipped when a confirmed
-upstream HVE handoff proves it already satisfied; it has no declared phase reviewer. The next three phases advance
-according to verdicts from their dedicated reviewers.
+An interrupted run (host closed, machine off, agent stopped) resumes where it stopped: the
+engine re-reads the journal and recomputes the next step. Nothing is replayed "just in case".
 
-```mermaid
-flowchart TD
-    O([skraft-orchestrator]) -->|READ / WRITE| S[(state.json)]
-    O --> D1[RESEARCH when needed]
-    D1 --> D3[DESIGN]
-    D3 --> R3{reviewer}
-    R3 -->|APPROVED| D4[DISTILL]
-    R3 -->|CHANGES_REQUESTED| D3
-    D4 --> R4{reviewer}
-    R4 -->|APPROVED| D5[DELIVER]
-    R4 -->|CHANGES_REQUESTED| D4
-    D5 --> R5{reviewer}
-    R5 -->|APPROVED| DONE([DONE])
-    R5 -->|CHANGES_REQUESTED| D5
-```
+- A started step whose output is already filled is recorded without spawning the agent again.
+- A started step whose output is missing spawns the agent again, in the same attempt.
+- An agent the host could not spawn (`agent-unavailable`) does not consume its attempt: the
+  resume spawns it again.
+- The git comparison base is journaled when the slug first starts; a resume keeps that one.
 
-On `CHANGES_REQUESTED`, the same phase is re-dispatched, `retryCount` increases,
-and `currentPhase` does not move. When the retry budget is reached without
-`APPROVED`, the orchestrator escalates to the user.
+> **Coming next.** Questions to the human, with exact resume after the answer, are planned
+> for lot 5. `skraft migrate`, which will convert an in-progress v1 `state.json` into a
+> journal, is planned for lot 11.
 
-## See also
+## A hash chain to detect an edit
 
-- [Traces & auditability](traces.html)
-- [HVE → SKRAFT](hve-vs-skraft.html)
-- [Architecture](architecture.html)
+Each journal line carries in `prev` the SHA-256 hash of the previous line (`null` for the
+first). Editing, deleting or inserting a line breaks the chain.
+
+On the next read, the engine sees it and stops on `journal-tampered`, naming the faulty line:
+restore the file or start a new slug. The engine repairs nothing and guesses nothing. This
+check replaces the G7 hook, with no per-tool-call cost and in the same way on every host.
+
+## A second run writing at the same time
+
+If another run writes to the same journal while this one runs, the engine notices when it
+appends its own fact and stops on `journal-changed`. Two runs cannot overwrite each other
+silently; run again once the other run stops.
+
+## `.active-slug`: never guessed
+
+`.copilot-tracking/skraft-plans/.active-slug` names the active pipeline of the working copy.
+It is mandatory. Without it, the engine refuses (`no-active-pipeline`) instead of picking the
+latest folder. You switch pipelines by an explicit start: `/skraft <slug>`, `skraft init <slug>`
+or the workflow with a `slug` make that slug active before starting anything. A call naming a
+slug other than the active one without that init would be refused (`slug-mismatch`); it is an
+internal safeguard that no current command triggers. Neither the engine nor an agent picks a slug on the
+developer's behalf.
+
+## One pipeline per worktree
+
+Each git worktree has its own `.copilot-tracking/`, so its own `.active-slug` and its own
+journals. Two stories progress in parallel in two worktrees without sharing state.
+
+## Going further
+
+- [Resume or unblock a run]({{ "/en/how-to/resume-a-run" | relative_url }}).
+- [Reference: tracking folder, events.jsonl, codes]({{ "/en/reference/run-journal" | relative_url }}).
+- [Guardrails: from hook to engine]({{ "/en/explanation/hooks" | relative_url }}).
+- [Architecture]({{ "/en/explanation/architecture" | relative_url }}).
+
+## Sources
+
+- Fowler, M., *Bliki: CQRS*, 2011.
