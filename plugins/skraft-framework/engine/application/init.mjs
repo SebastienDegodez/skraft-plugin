@@ -16,6 +16,8 @@ import { openJournal } from './run-journal.mjs'
  *   sourceControl: import('./ports/source-control.mjs').SourceControl,
  *   files: Pick<import('./ports/tracking-files.mjs').TrackingFiles, 'list'>,
  * } & import('./load-workflow.mjs').WorkflowDeps & Parameters<typeof openJournal>[0]} InitDeps
+ * @typedef {{ slug: string, story: Story, base: unknown, fromArtifacts: boolean }} StartRequest
+ * @typedef {Extract<Awaited<ReturnType<typeof loadWorkflow>>, { ok: true }>} LoadedWorkflow
  */
 
 /**
@@ -29,52 +31,105 @@ export const createInit = (deps) => Object.freeze({
    * @param {{ slug?: unknown, story?: Story, base?: unknown, fromArtifacts?: boolean }} request
    * @returns {Promise<InitOutcome>}
    */
-  init: async ({ slug, story = null, base = null, fromArtifacts = false }) => {
-    if (!isSlug(slug)) {
-      return { ok: false, slug: /** @type {any} */ (slug) ?? null, created: false, code: 'invalid-slug', reason: `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}` }
-    }
-    const opened = await openJournal(deps, slug)
-    if (!opened.ok) return { ok: false, slug, created: false, code: 'journal-tampered', reason: opened.reason }
-    const created = opened.journal.events.length === 0
-    if (!created && fromArtifacts) {
-      return { ok: false, slug, created: false, code: 'already-started', reason: `${slug} already has a journal; resume it without --from-artifacts` }
-    }
-    if (created) {
-      const refused = await start(deps, opened.journal, { slug, story, base, fromArtifacts })
-      if (refused) return refused
-    }
-    await deps.activePipeline.activate(slug)
-    return { ok: true, slug, created, code: null, reason: `${slug} is the active pipeline` }
-  },
+  init: ({ slug, story = null, base = null, fromArtifacts = false }) => init(deps, { slug, story, base, fromArtifacts }),
 })
 
 /**
  * @param {InitDeps} deps
+ * @param {{ slug: unknown, story: Story, base: unknown, fromArtifacts: boolean }} request
+ * @returns {Promise<InitOutcome>}
+ */
+const init = async (deps, request) => {
+  const { slug } = request
+  if (!isSlug(slug)) return refuseInvalidSlug(slug)
+  const opened = await openJournal(deps, slug)
+  if (!opened.ok) return refusal(slug, 'journal-tampered', opened.reason)
+  if (opened.journal.events.length > 0) return resumeStartedRun(deps, slug, request.fromArtifacts)
+  const refused = await start(deps, opened.journal, /** @type {StartRequest} */ (request))
+  if (refused) return refused
+  return activate(deps, slug, true)
+}
+
+/** @param {string | null} slug @param {InitCode} code @param {string} reason @returns {InitOutcome} */
+const refusal = (slug, code, reason) => ({ ok: false, slug, created: false, code, reason })
+
+/** @param {unknown} slug @returns {InitOutcome} */
+const refuseInvalidSlug = (slug) =>
+  refusal(/** @type {any} */ (slug) ?? null, 'invalid-slug', `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}`)
+
+/**
+ * A run that already has a journal resumes; --from-artifacts only starts a new one.
+ * @param {InitDeps} deps @param {string} slug @param {boolean} fromArtifacts
+ * @returns {Promise<InitOutcome>}
+ */
+const resumeStartedRun = async (deps, slug, fromArtifacts) => {
+  if (fromArtifacts) return refusal(slug, 'already-started', `${slug} already has a journal; resume it without --from-artifacts`)
+  return activate(deps, slug, false)
+}
+
+/** @param {InitDeps} deps @param {string} slug @param {boolean} created @returns {Promise<InitOutcome>} */
+const activate = async (deps, slug, created) => {
+  await deps.activePipeline.activate(slug)
+  return { ok: true, slug, created, code: null, reason: `${slug} is the active pipeline` }
+}
+
+/**
+ * @param {InitDeps} deps
  * @param {import('./run-journal.mjs').OpenJournal} journal
- * @param {{ slug: string, story: Story, base: unknown, fromArtifacts: boolean }} request
+ * @param {StartRequest} request
  * @returns {Promise<InitOutcome | null>} the refusal, null once the run started
  */
-const start = async (deps, journal, { slug, story, base, fromArtifacts }) => {
-  const refuse = (/** @type {InitCode} */ code, /** @type {string} */ reason) => ({ ok: false, slug, created: false, code, reason })
-  const loaded = await loadConfig(deps)
-  if (!loaded.ok) return refuse('config-invalid', loaded.reason)
-  const workflow = await loadWorkflow(deps, { config: loaded.config })
-  if (!workflow.ok) return refuse('workflow-invalid', workflow.reason)
-  const artifacts = discussArtifacts(await deps.files.list(slug, 'plans'))
-  /** @type {string | null} */
-  let entry = null
-  if (fromArtifacts) {
-    // Stryker disable next-line Regex: every DISCUSS artefact already ends in its .md file name, so only a folder named stories-*.md* could tell the anchor
-    if (!artifacts.some((path) => /\/stories-[^/]+\.md$/.test(path))) {
-      return refuse('no-artifacts', `${slug} has no DISCUSS stories (plans/<date>/stories-<milestone>.md) to start from`)
-    }
-    entry = workflow.workflow.order.find((id) => workflow.workflow.nodes[id].phase === ENTRY_AFTER_DISCUSS) ?? null
-    if (entry === null) return refuse('workflow-invalid', `${workflow.name} has no ${ENTRY_AFTER_DISCUSS} phase to start from`)
-  }
-  const resolved = await resolveBases(deps, { config: loaded.config, flag: base })
-  if (!resolved.ok) return refuse(resolved.code, resolved.reason)
-  await journal.append('run.started', { slug, story, workflow: workflow.name, base: resolved.bases, artifacts, start: entry, unlocked: workflow.unlocked })
-  const skipped = entry === null ? [] : workflow.workflow.phases.slice(0, workflow.workflow.phases.indexOf(ENTRY_AFTER_DISCUSS))
-  for (const phase of skipped) await journal.append('phase.closed', { phase, skipped: 'from-artifacts' })
+const start = async (deps, journal, request) => {
+  const checked = await checkConfigAndWorkflow(deps, request.slug)
+  if (checked.refusal) return checked.refusal
+  const artifacts = discussArtifacts(await deps.files.list(request.slug, 'plans'))
+  const found = findEntry(checked.workflow, artifacts, request)
+  if (found.refusal) return found.refusal
+  const resolved = await resolveBases(deps, { config: checked.config, flag: request.base })
+  if (!resolved.ok) return refusal(request.slug, resolved.code, resolved.reason)
+  await journalStart(journal, request, { workflow: checked.workflow, bases: resolved.bases, artifacts, entry: found.entry })
   return null
+}
+
+/**
+ * @param {InitDeps} deps @param {string} slug
+ * @returns {Promise<{ refusal: InitOutcome } | { refusal: null, config: any, workflow: LoadedWorkflow }>}
+ */
+const checkConfigAndWorkflow = async (deps, slug) => {
+  const loaded = await loadConfig(deps)
+  if (!loaded.ok) return { refusal: refusal(slug, 'config-invalid', loaded.reason) }
+  const workflow = await loadWorkflow(deps, { config: loaded.config })
+  if (!workflow.ok) return { refusal: refusal(slug, 'workflow-invalid', workflow.reason) }
+  return { refusal: null, config: loaded.config, workflow }
+}
+
+/**
+ * The node a run starts on: null for a new run, the first DESIGN node from DISCUSS stories.
+ * @param {LoadedWorkflow} workflow @param {string[]} artifacts @param {StartRequest} request
+ * @returns {{ refusal: InitOutcome, entry?: undefined } | { refusal: null, entry: string | null }}
+ */
+const findEntry = (workflow, artifacts, { slug, fromArtifacts }) => {
+  if (!fromArtifacts) return { refusal: null, entry: null }
+  // Stryker disable next-line Regex: every DISCUSS artefact already ends in its .md file name, so only a folder named stories-*.md* could tell the anchor
+  if (!artifacts.some((path) => /\/stories-[^/]+\.md$/.test(path))) {
+    return { refusal: refusal(slug, 'no-artifacts', `${slug} has no DISCUSS stories (plans/<date>/stories-<milestone>.md) to start from`) }
+  }
+  const entry = workflow.workflow.order.find((id) => workflow.workflow.nodes[id].phase === ENTRY_AFTER_DISCUSS) ?? null
+  if (entry === null) return { refusal: refusal(slug, 'workflow-invalid', `${workflow.name} has no ${ENTRY_AFTER_DISCUSS} phase to start from`) }
+  return { refusal: null, entry }
+}
+
+/**
+ * @param {import('./run-journal.mjs').OpenJournal} journal @param {StartRequest} request
+ * @param {{ workflow: LoadedWorkflow, bases: any, artifacts: string[], entry: string | null }} started
+ */
+const journalStart = async (journal, { slug, story }, { workflow, bases, artifacts, entry }) => {
+  await journal.append('run.started', { slug, story, workflow: workflow.name, base: bases, artifacts, start: entry, unlocked: workflow.unlocked })
+  for (const phase of skippedPhases(workflow, entry)) await journal.append('phase.closed', { phase, skipped: 'from-artifacts' })
+}
+
+/** The phases a run started after DISCUSS never runs. @param {LoadedWorkflow} workflow @param {string | null} entry */
+const skippedPhases = (workflow, entry) => {
+  if (entry === null) return []
+  return workflow.workflow.phases.slice(0, workflow.workflow.phases.indexOf(ENTRY_AFTER_DISCUSS))
 }
