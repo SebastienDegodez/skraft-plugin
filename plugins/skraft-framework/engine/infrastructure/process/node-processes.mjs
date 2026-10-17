@@ -25,46 +25,92 @@ export const createNodeExecutables = ({ root, platform = process.platform, env =
  * @returns {CommandRunner}
  */
 export const createNodeCommandRunner = ({ root, platform = process.platform, env = process.env }) => Object.freeze({
-  run: async ({ argv, cwd }) => {
-    const [program, ...args] = argv
-    const dir = resolve(root, cwd)
-    const notStarted = (/** @type {string} */ error) => ({ started: false, exitCode: null, stdout: '', stderr: '', error })
-    if (!(await isFolder(dir))) return notStarted(`folder not found: ${dir}`)
-    const located = await locate(program, dir, { platform, env })
-    if (located === null) return notStarted(`command not found: ${program}`)
-    // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent under Linux, where mutation runs: only the tests under Windows rules locate a .cmd, and they set platform win32
-    const throughCmd = platform === 'win32' && CMD_SCRIPTS.includes(extname(located).toLowerCase())
-    const [file, fileArgs] = throughCmd
-      ? [env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${[escapeForCmd(normalize(located)), ...args.map((arg) => quoteForCmd(arg, CMD_SHIM.test(located)))].join(' ')}"`]]
-      : [located, args]
-    return new Promise((done) => {
-      /** @type {import('node:child_process').ChildProcessWithoutNullStreams} */
-      let child
-      try {
-        // Stryker disable next-line BooleanLiteral: windowsHide has no effect outside Windows
-        child = /** @type {import('node:child_process').ChildProcessWithoutNullStreams} */ (spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }))
-      } catch (error) {
-        // Windows throws, instead of emitting `error`, for a file that is not a program.
-        done(notStarted(`${program} could not be started: ${/** @type {Error} */ (error).message}`))
-        return
-      }
-      /** @type {Buffer[]} */
-      const out = []
-      /** @type {Buffer[]} */
-      const err = []
-      child.stdout.on('data', (chunk) => out.push(chunk))
-      child.stderr.on('data', (chunk) => err.push(chunk))
-      child.once('error', (error) => done(notStarted(`${program} could not be started: ${error.message}`)))
-      child.once('close', (code, signal) => done({
-        started: true,
-        exitCode: code,
-        stdout: Buffer.concat(out).toString('utf8'),
-        stderr: Buffer.concat(err).toString('utf8'),
-        ...(code === null ? { error: `${program} was stopped by ${signal}` } : {}),
-      }))
-    })
-  },
+  run: async ({ argv, cwd }) => runCommand(argv, resolve(root, cwd), { platform, env }),
 })
+
+/**
+ * @typedef {Awaited<ReturnType<CommandRunner['run']>>} CommandResult
+ * @typedef {import('node:child_process').ChildProcessWithoutNullStreams} Child
+ * @typedef {{ file: string, fileArgs: string[], throughCmd: boolean }} Start
+ */
+
+/**
+ * @param {string[]} argv the program as written, then its arguments
+ * @param {string} dir absolute folder it is started from
+ * @param {Required<ProcessHost>} host
+ * @returns {Promise<CommandResult>}
+ */
+const runCommand = async ([program, ...args], dir, host) => {
+  if (!(await isFolder(dir))) return notStarted(`folder not found: ${dir}`)
+  const located = await locate(program, dir, host)
+  if (located === null) return notStarted(`command not found: ${program}`)
+  return start(program, startArgs(located, args, host), dir, host.env)
+}
+
+/**
+ * What to spawn for a located program: the program itself, or cmd.exe running it for a `.cmd`
+ * or `.bat` under Windows, with every argument quoted and escaped for cmd.
+ * @param {string} located @param {string[]} args @param {Required<ProcessHost>} host
+ * @returns {Start}
+ */
+const startArgs = (located, args, { platform, env }) => {
+  // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent under Linux, where mutation runs: only the tests under Windows rules locate a .cmd, and they set platform win32
+  const throughCmd = platform === 'win32' && CMD_SCRIPTS.includes(extname(located).toLowerCase())
+  if (!throughCmd) return { file: located, fileArgs: args, throughCmd }
+  const line = [escapeForCmd(normalize(located)), ...args.map((arg) => quoteForCmd(arg, CMD_SHIM.test(located)))].join(' ')
+  return { file: env.ComSpec ?? 'cmd.exe', fileArgs: ['/d', '/s', '/c', `"${line}"`], throughCmd }
+}
+
+/**
+ * Spawns the program and collects what it writes until it closes.
+ * @param {string} program argv[0] as written @param {Start} spawned @param {string} dir
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {Promise<CommandResult>}
+ */
+const start = (program, { file, fileArgs, throughCmd }, dir, env) => {
+  /** @type {Child} */
+  let child
+  try {
+    // Stryker disable next-line BooleanLiteral: windowsHide has no effect outside Windows
+    child = /** @type {Child} */ (spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }))
+  } catch (error) {
+    // Windows throws, instead of emitting `error`, for a file that is not a program.
+    return Promise.resolve(notStarted(`${program} could not be started: ${/** @type {Error} */ (error).message}`))
+  }
+  return collect(child, program)
+}
+
+/**
+ * The child's exit code and both outputs once it closes; not started when it emits `error`.
+ * @param {Child} child @param {string} program argv[0] as written
+ * @returns {Promise<CommandResult>}
+ */
+const collect = (child, program) => new Promise((done) => {
+  const stdout = gather(child.stdout)
+  const stderr = gather(child.stderr)
+  child.once('error', (error) => done(notStarted(`${program} could not be started: ${error.message}`)))
+  child.once('close', (code, signal) => done({
+    started: true,
+    exitCode: code,
+    stdout: stdout(),
+    stderr: stderr(),
+    ...(code === null ? { error: `${program} was stopped by ${signal}` } : {}),
+  }))
+})
+
+/**
+ * Keeps every chunk a stream emits; the returned function reads them as UTF-8 text.
+ * @param {import('node:stream').Readable} stream @returns {() => string}
+ */
+const gather = (stream) => {
+  /** @type {Buffer[]} */
+  const chunks = []
+  stream.on('data', (chunk) => chunks.push(chunk))
+  return () => Buffer.concat(chunks).toString('utf8')
+}
+
+/** @param {string} error @returns {CommandResult} */
+const notStarted = (error) => ({ started: false, exitCode: null, stdout: '', stderr: '', error })
 
 /**
  * @param {string} program argv[0] as written
@@ -72,20 +118,39 @@ export const createNodeCommandRunner = ({ root, platform = process.platform, env
  * @param {Required<ProcessHost>} host
  * @returns {Promise<string | null>}
  */
-const locate = async (program, dir, { platform, env }) => {
-  const windows = platform === 'win32'
-  const pathext = (env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter((ext) => ext !== '')
-  const extensions = !windows ? [''] : pathext.some((ext) => ext.toLowerCase() === extname(program).toLowerCase()) ? [''] : pathext
-  // Stryker disable next-line StringLiteral: with no PATH, any fallback names no folder that holds the program
-  const pathOf = windows ? env.Path ?? env.PATH ?? '' : env.PATH ?? ''
-  const folders = isAbsolute(program) || /[\\/]/.test(program) ? [dir] : pathOf.split(delimiter)
-  for (const folder of folders) {
+const locate = async (program, dir, host) => {
+  const windows = host.platform === 'win32'
+  const extensions = extensionsFor(program, host)
+  for (const folder of foldersFor(program, dir, host)) {
     for (const ext of extensions) {
       const found = await programAt(resolve(folder, `${program}${ext}`), windows)
       if (found !== null) return found
     }
   }
   return null
+}
+
+/**
+ * The suffixes tried after the program's name: none outside Windows, nor when the name already
+ * ends with one of PATHEXT; every PATHEXT entry otherwise.
+ * @param {string} program @param {Required<ProcessHost>} host @returns {string[]}
+ */
+const extensionsFor = (program, { platform, env }) => {
+  if (platform !== 'win32') return ['']
+  const pathext = (env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter((ext) => ext !== '')
+  return pathext.some((ext) => ext.toLowerCase() === extname(program).toLowerCase()) ? [''] : pathext
+}
+
+/**
+ * The folders looked in: the start folder for a program written as a path, the PATH otherwise
+ * (Path first under Windows).
+ * @param {string} program @param {string} dir @param {Required<ProcessHost>} host @returns {string[]}
+ */
+const foldersFor = (program, dir, { platform, env }) => {
+  if (isAbsolute(program) || /[\\/]/.test(program)) return [dir]
+  // Stryker disable next-line StringLiteral: with no PATH, any fallback names no folder that holds the program
+  const pathOf = platform === 'win32' ? env.Path ?? env.PATH ?? '' : env.PATH ?? ''
+  return pathOf.split(delimiter)
 }
 
 /**
