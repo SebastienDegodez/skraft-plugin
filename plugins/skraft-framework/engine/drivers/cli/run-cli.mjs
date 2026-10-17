@@ -51,16 +51,13 @@ const optionsOf = (args, { values = [], flags = [], repeated = [] }) => {
   const options = {}
   for (let index = 0; index < args.length; index += 1) {
     const name = args[index]
-    if (flags.includes(name) && !(name in options)) {
-      options[name] = true
-    } else if ((values.includes(name) || repeated.includes(name)) && args[index + 1] !== undefined && !args[index + 1].startsWith('--')) {
-      const value = args[(index += 1)]
-      if (repeated.includes(name)) options[name] = [.../** @type {string[]} */ (options[name] ?? []), value]
-      else if (name in options) return undefined
-      else options[name] = value
-    } else {
-      return undefined
-    }
+    const next = args[index + 1]
+    const valued = next !== undefined && !next.startsWith('--')
+    if (name in options && !repeated.includes(name)) return undefined
+    if (flags.includes(name)) options[name] = true
+    else if (repeated.includes(name) && valued) options[name] = [.../** @type {string[]} */ (options[name] ?? []), args[(index += 1)]]
+    else if (values.includes(name) && valued) options[name] = args[(index += 1)]
+    else return undefined
   }
   return options
 }
@@ -70,13 +67,7 @@ const configure = async (args, services, console) => {
   const options = optionsOf(args, { repeated: ['--add'] })
   if (options === undefined) return usage(console)
   const folders = /** @type {string[]} */ (options['--add'] ?? [])
-  const outcome = await createConfigureComponents(services.adapters()).configure({ workingCopyName: services.workingCopyName(), folders })
-  if (!outcome.ok) {
-    console.err(outcome.reason)
-    return 1
-  }
-  console.out(outcome.reason)
-  return 0
+  return answer(await createConfigureComponents(services.adapters()).configure({ workingCopyName: services.workingCopyName(), folders }), console)
 }
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
@@ -88,13 +79,7 @@ const init = async (args, services, console) => {
   if (issue !== undefined && !/^[1-9]\d*$/.test(String(issue))) return usage(console)
   const title = /** @type {string | undefined} */ (options['--title'])
   const story = issue === undefined && title === undefined ? null : { issue: Number(issue) || null, title: title ?? null }
-  const outcome = await createInit(services.adapters()).init({ slug: slug ?? null, story, base: options['--base'] ?? null })
-  if (!outcome.ok) {
-    console.err(outcome.reason)
-    return 1
-  }
-  console.out(outcome.reason)
-  return 0
+  return answer(await createInit(services.adapters()).init({ slug: slug ?? null, story, base: options['--base'] ?? null }), console)
 }
 
 /** @param {boolean} json @param {CliServices} services @param {Console} console */
@@ -140,6 +125,16 @@ const doctor = async (args, services, console) => {
     console.out(report.ok ? 'skraft doctor: every check passed' : `skraft doctor: ${report.checks.filter((check) => check.status === 'fail').length} checks failed`)
   }
   return report.ok ? 0 : 1
+}
+
+/** A use case's reason: on stdout with 0 when ok, on stderr with 1 otherwise. @param {{ ok: boolean, reason: string }} outcome @param {Console} console */
+const answer = ({ ok, reason }, console) => {
+  if (!ok) {
+    console.err(reason)
+    return 1
+  }
+  console.out(reason)
+  return 0
 }
 
 /** @param {Console} console */
