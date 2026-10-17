@@ -55,7 +55,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '## Skraft review lens: consistency (DESIGN)',
     '- Story: #42 — Pay by card',
     `- Feature scope: ${SLUG}`,
-    '- Read only these inputs; search the repository for nothing else:',
+    '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
@@ -67,7 +67,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '## Skraft review lens: fitness (DESIGN)',
     '- Story: #42 — Pay by card',
     `- Feature scope: ${SLUG}`,
-    '- Read only these inputs; search the repository for nothing else:',
+    '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     '- Write no file, change nothing, start no agent.',
@@ -75,7 +75,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
   ].join('\n'))
   assert.equal(prompt('cold-reader-lens', 'deliver_review'), [
     '## Skraft review lens: cold-reader',
-    '- Read only these inputs; search the repository for nothing else:',
+    '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/deliver_review-1/changes.patch`,
     `  - Paths those changes touch: ${TRACKING}/reviews/deliver_review-1/changed-files.txt`,
     '- Write no file, change nothing, start no agent.',
@@ -209,7 +209,7 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
   assert.equal(check.prompt, [
     '## Skraft finding check: consistency F1',
     '- Finding: blocker at src/Checkout.cs:12: the ADR is missing',
-    '- Read only these inputs; search the repository for nothing else:',
+    '- Read these inputs and the files they name; search the repository for nothing else:',
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
@@ -239,10 +239,10 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
   ])
 })
 
-test('a lens that fails without a finding, or answers inconclusive, sends the work back', async () => {
+test('a lens that fails with no finding that blocks, or answers inconclusive, sends the work back', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
   host.agentRunner.review = lenses({
-    consistency: [says('consistency', 'fail')],
+    consistency: [says('consistency', 'fail', [finding('F1', 'low', 'a typo in the title')])],
     fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty'), finding('F2', 'low', 'no story to read')])],
     'architecture-compliance': [says('architecture-compliance', 'inconclusive')],
   })
@@ -251,7 +251,7 @@ test('a lens that fails without a finding, or answers inconclusive, sends the wo
 
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.deepEqual([recorded.outcome, recorded.failures, recorded.reason], ['needs-rework', [
-    'consistency: failed without naming a finding',
+    'consistency: failed without naming a blocker, high or medium finding',
     'architecture-compliance: inconclusive',
     'fitness: inconclusive: the research document is empty; no story to read',
   ], 'NEEDS_REWORK: 3 findings to address'])
@@ -273,6 +273,7 @@ test('a review sent back more often than its edge allows stops the run, naming t
 test('the changes of a component in a neighbour repository are read from that repository, each repository once', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', paths: { src: ['src'], tests: ['src'] }, commands: { build: 'npm run build', test: 'npx vitest run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
+  git.patched('../web/src/App.tsx', ['--- a/src/App.tsx', '+++ b/src/App.tsx'])
   git.adds('../web/src/App.tsx', 'export const App = () => null')
   git.change('../web/src/App.tsx')
   const host = scripted({ components: [API, WEB], git }, (it) => nominal(it).slice(0, 2))
@@ -283,7 +284,9 @@ test('the changes of a component in a neighbour repository are read from that re
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), 'docs/adr/adr-001-card-payment.md\n../web/src/App.tsx\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changes.patch'), [
     'diff --git a/docs/adr/adr-001-card-payment.md b/docs/adr/adr-001-card-payment.md',
-    'diff --git a/src/App.tsx b/src/App.tsx',
+    'diff --git a/../web/src/App.tsx b/../web/src/App.tsx',
+    '--- a/../web/src/App.tsx',
+    '+++ b/../web/src/App.tsx',
     '+export const App = () => null',
     '',
   ].join('\n'))

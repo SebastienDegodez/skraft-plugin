@@ -132,7 +132,7 @@ const openAttempt = (event) => ({
  * @returns {Pick<NodeState, 'heads' | 'sentBack' | 'open' | 'last'>}
  */
 const thisVisit = (before, open) => {
-  if (before?.visit !== open.visit) return { heads: open.heads, sentBack: open.sentBy === 'gate', open, last: null }
+  if (before?.visit !== open.visit) return { heads: open.heads, sentBack: open.feedback?.length > 0 && open.sentBy !== 'review', open, last: null }
   return { heads: before.heads, sentBack: before.sentBack, open, last: before.last }
 }
 

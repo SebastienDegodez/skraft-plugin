@@ -56,7 +56,7 @@ const flag = (value) => (value === 'true' || value === 'false' ? null : 'must be
 const NODE_CHECKS = {
   phase: (value) => (PHASE.test(value) ? null : 'must be an upper-case word'),
   agent: (value) => (AGENT_ID.test(value) ? null : 'must be a kebab-case agent id'),
-  lenses: (value) => (listOf(value).length > 0 && listOf(value).every((lens) => AGENT_ID.test(lens)) ? null : 'must list kebab-case lens names'),
+  lenses: (value) => (listOf(value).length > 0 && listOf(value).every((lens, index, all) => AGENT_ID.test(lens) && all.indexOf(lens) === index) ? null : 'must list kebab-case lens names, each once'),
   gate: (value) => (listOf(value).length > 0 && listOf(value).every((gate) => GATE_ORDER.includes(gate)) ? null : `must list gates among ${GATE_ORDER.join(', ')}`),
   goal_gate: flag,
   locked: flag,

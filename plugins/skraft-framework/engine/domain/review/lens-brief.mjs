@@ -44,7 +44,7 @@ export const composeRefuterBrief = ({ lens, finding, inputs, retry }) => [
 
 /** @param {LensInput[]} inputs */
 const inputLines = (inputs) => [
-  '- Read only these inputs; search the repository for nothing else:',
+  '- Read these inputs and the files they name; search the repository for nothing else:',
   ...inputs.map(({ kind, path }) => `  - ${TITLES[kind]}: ${path}`),
 ]
 

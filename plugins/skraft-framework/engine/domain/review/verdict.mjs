@@ -3,7 +3,7 @@
  * it. A refuted finding does not count; an unverifiable one does.
  *   a blocker, high or medium finding that counts   NEEDS_REWORK
  *   a lens that answered inconclusive                NEEDS_REWORK
- *   a lens that failed without naming a finding      NEEDS_REWORK
+ *   a lens that failed with no blocker, high or medium finding   NEEDS_REWORK
  *   otherwise (low findings are notes)               APPROVED
  *
  * @typedef {import('./answers.mjs').LensResult} LensResult
@@ -31,7 +31,7 @@ export const decideReview = (results, refutations) => {
 /** @param {LensResult} result @param {RecordedRefutation[]} refutations */
 const lensReasons = (result, refutations) => {
   if (result.verdict === 'inconclusive') return [`${result.lens}: inconclusive${detailOf(result.findings)}`]
-  if (result.verdict === 'fail' && result.findings.length === 0) return [`${result.lens}: failed without naming a finding`]
+  if (result.verdict === 'fail' && !result.findings.some((finding) => BLOCKING.includes(finding.severity))) return [`${result.lens}: failed without naming a blocker, high or medium finding`]
   return result.findings
     .filter((finding) => BLOCKING.includes(finding.severity))
     .map((finding) => ({ finding, refutation: refutationOf(refutations, result.lens, finding.id) }))

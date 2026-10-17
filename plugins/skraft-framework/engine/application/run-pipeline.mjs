@@ -376,13 +376,13 @@ const judgeAttempt = async (context, run, next, attempt) => {
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ job: Job, heads: any }} attempt
  */
-const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, sentBy }, { job, heads }) => {
+const checkAttempt = ({ deps, slug, config, journal }, run, { node, attempt, feedback, sentBy }, { job, heads }) => {
   const inState = attempt > 1
   const { role, outputs, precreated, result } = job
   return checkStep({ deps, slug, config, base: run.base }, {
     role, outputs, precreated, result, known: knownCommits(journal),
     visitHeads: inState ? run.nodes[node.id].heads : heads,
-    sentBack: inState ? run.nodes[node.id].sentBack : sentBy === 'gate',
+    sentBack: inState ? run.nodes[node.id].sentBack : feedback.length > 0 && sentBy !== 'review',
   })
 }
 

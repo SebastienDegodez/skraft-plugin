@@ -247,3 +247,74 @@ test('every lens that answered unreadably twice is named', async () => {
 
   assert.equal(outcome.reason, 'consistency-lens answered 2 times without a readable verdict: the answer is not JSON; fitness-lens answered 2 times without a readable verdict: the answer is not a JSON object')
 })
+
+test('the documents the agents left in the tracking folder are given to the lenses that read the phase\'s documents', async () => {
+  const folder = `.copilot-tracking/skraft-plans/${SLUG}`
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => {
+      git.change(`${folder}/details/2026-10-11/contracts-checkout.md`, `${folder}/results/design-1-1.json`)
+      git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md'])
+    } })(it),
+    ...nominal(it).slice(2),
+  ])
+
+  await host.start()
+
+  const fitness = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'fitness-lens').prompt
+  assert.deepEqual(fitness.split('\n').filter((line) => line.startsWith('  - ')), [
+    `  - Documents of this phase: /work/${folder}/details/2026-10-11/context-map.md`,
+    `  - Documents of this phase: /work/${folder}/details/2026-10-11/contracts-checkout.md`,
+    `  - Documents of the story and of the other phases: /work/${folder}/research/2026-10-11/checkout-research.md`,
+  ])
+})
+
+test('a lens reading the changed paths runs again when a changed file\'s content changes, its path already listed', async () => {
+  const host = scripted({ files: { 'docs/adr/adr-001-card-payment.md': '# ADR 001\nStatus: Proposed\n' } }, (it) => [
+    ...nominal(it).slice(0, 2),
+    agent({ fill: false, work: () => it.deps.workspace.write('docs/adr/adr-001-card-payment.md', '# ADR 001\nStatus: Proposed\nThe payment context owns refunds.\n') })(it),
+    ...nominal(it).slice(2),
+  ])
+  host.agentRunner.review = lenses({ consistency: [blocker] })
+
+  await host.start()
+
+  assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'architecture-compliance-lens'])
+})
+
+test('a lens answer that gives two findings the same id is asked again', async () => {
+  const host = scripted({}, nominal)
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [{ severity: 'high', description: 'one' }, finding('F1', 'blocker', 'two')]), says('consistency', 'pass')] })
+
+  await host.start()
+
+  const retry = host.agentRunner.reviewed().find((dispatch) => dispatch.label.endsWith('consistency · attempt 2'))
+  assert.ok(retry.prompt.endsWith('Your previous answer was refused: finding id F1 is used twice. Answer again with the JSON document only.'), retry.prompt)
+})
+
+test('a review resumed after a stop still counts what its lenses cost before the stop, and the batches the host costs as a whole', async () => {
+  const host = scripted({}, nominal)
+  host.agentRunner.batchCostUsd = 0.5
+  host.agentRunner.review = lenses({ fitness: [{ ok: false, text: '', unavailable: true, error: 'fitness-lens is not installed' }] })
+  const priced = host.agentRunner.review
+  host.agentRunner.review = async (dispatch) => {
+    const answer = await priced(dispatch)
+    return typeof answer === 'string' ? { ok: true, text: answer, costUsd: 0.25 } : answer
+  }
+
+  assert.equal((await host.start()).code, 'agent-unavailable')
+  assert.equal((await host.run()).status, 'done')
+
+  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
+  assert.equal(recorded.cost, 0.25 * 3 + 0.5 * 2)
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.cost' && event.step === 'design_review').map(({ visit, cost }) => [visit, cost]), [[1, 0.5], [1, 0.5]])
+})
+
+test('a review node naming a lens twice is refused', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,fitness,consistency"'])
+  const host = scripted({ files: designating(workflow, { components: [API] }) }, () => [])
+
+  const outcome = await host.init()
+
+  assert.match(outcome.reason, /node design_review: lenses="consistency,fitness,consistency" must list kebab-case lens names, each once/)
+})

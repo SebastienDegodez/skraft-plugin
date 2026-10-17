@@ -4,6 +4,7 @@ import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/re
 import { planLenses, REFUTER } from '../domain/review/lenses.mjs'
 import { decideReview, REFUTED_SEVERITIES } from '../domain/review/verdict.mjs'
 import { joinRelative } from '../domain/config/relative-path.mjs'
+import { trackingFolder } from '../domain/pipeline/roles.mjs'
 
 /**
  * @typedef {import('../domain/review/lenses.mjs').Lens} Lens
@@ -39,7 +40,6 @@ import { joinRelative } from '../domain/config/relative-path.mjs'
  * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined }} Reviewed
  *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing.
  * @typedef {{ lens: Lens, inputs: TrackedInput[], fingerprint: string }} PlannedLens
- * @typedef {{ answers: Array<{ ok: true, value: any } | { ok: false, error: string } | { unavailable: string }>, costUsd: number }} Round
  */
 
 /** Answers a lens or the refuter may give before it counts as unreadable. */
@@ -59,7 +59,7 @@ export const runReview = async (review) => {
   if (!('results' in lensed)) return lensed
   const refuted = await refutations(review, planned, lensed.fresh)
   if ('stop' in refuted) return refuted
-  return { verdict: decideReview(lensed.results, refuted.refutations), costUsd: addCost(lensed.costUsd, refuted.costUsd) }
+  return { verdict: decideReview(lensed.results, refuted.refutations), costUsd: costOf(review) }
 }
 
 /**
@@ -73,7 +73,7 @@ const prepareChanges = async (review) => {
   const folder = `reviews/${review.step.node.id}-${review.step.visit}`
   await review.deps.files.write(review.slug, `${folder}/changes.patch`, changes.patch)
   await review.deps.files.write(review.slug, `${folder}/changed-files.txt`, changes.paths.map((path) => `${path}\n`).join(''))
-  return { ...changes, inputs: { ...documentsOf(review), patch: [`${folder}/changes.patch`], files: [`${folder}/changed-files.txt`] } }
+  return { ...changes, inputs: { ...documentsOf(review, changes.paths), patch: [`${folder}/changes.patch`], files: [`${folder}/changed-files.txt`] } }
 }
 
 /**
@@ -88,7 +88,7 @@ const changesSinceBase = async ({ deps, run }) => {
     const paths = await deps.sourceControl.changedFiles(repository, sha)
     if (patch === null || paths === null) return null
     changes.paths.push(...reviewedPaths(paths.map((path) => joinRelative(repository, path))))
-    changes.patch += reviewedPatch(patch)
+    changes.patch += reviewedPatch(patch, repository)
   }
   return changes
 }
@@ -97,14 +97,23 @@ const changesSinceBase = async ({ deps, run }) => {
 const uniqueRepositories = (base) => base.filter((entry, index) => base.findIndex((other) => other.repository === entry.repository) === index)
 
 /**
- * The documents of the review's phase, and those of the story and the other phases.
- * @param {Review} review
+ * The documents of the review's phase, with every other document the agents left in the
+ * tracking folder since the base, and those of the story and the other phases.
+ * @param {Review} review @param {string[]} paths the changed paths, relative to the working copy
  * @returns {{ outputs: string[], context: string[] }}
  */
-const documentsOf = ({ workflow, run, step }) => {
+const documentsOf = ({ workflow, run, step, slug }, paths) => {
   const nodes = Object.entries(run.nodes)
   const ofPhase = (/** @type {boolean} */ same) => nodes.filter(([id]) => (workflow.nodes[id]?.phase === step.phase) === same).flatMap(([, state]) => state.outputs)
-  return { outputs: ofPhase(true), context: [...run.artifacts, ...ofPhase(false)] }
+  const context = [...run.artifacts, ...ofPhase(false)]
+  const outputs = ofPhase(true)
+  return { outputs: [...outputs, ...trackedDocuments(slug, paths).filter((path) => !outputs.includes(path) && !context.includes(path))], context }
+}
+
+/** The changed paths under the pipeline's tracking folder, relative to it. @param {string} slug @param {string[]} paths */
+const trackedDocuments = (slug, paths) => {
+  const folder = `${trackingFolder(slug)}/`
+  return paths.filter((path) => path.startsWith(folder)).map((path) => path.slice(folder.length))
 }
 
 /**
@@ -116,19 +125,31 @@ const planned_ = async (review, prepared) => {
   const lenses = planLenses(review.step.node.lenses, prepared)
   return Promise.all(lenses.map(async (lens) => {
     const inputs = lens.inputs.flatMap((kind) => prepared.inputs[kind].map((path) => ({ kind, path })))
-    return { lens, inputs, fingerprint: await fingerprintOf(review, inputs) }
+    return { lens, inputs, fingerprint: await fingerprintOf(review, inputs, lens.inputs.includes('files') ? prepared.paths : []) }
   }))
 }
 
 /**
- * What the inputs hold: the changes by kind (their file moves with the pass), documents by path.
- * @param {Review} review @param {TrackedInput[]} inputs
+ * What the inputs hold: the changes by kind (their file moves with the pass), documents by
+ * path, and for a lens that reads the changed paths, what each of them holds now.
+ * @param {Review} review @param {TrackedInput[]} inputs @param {string[]} changed relative to the working copy
  */
-const fingerprintOf = async ({ deps, slug }, inputs) => {
+const fingerprintOf = async ({ deps, slug }, inputs, changed) => {
   const texts = await Promise.all(inputs.map(({ path }) => deps.files.read(slug, path)))
   const keyed = inputs.map(({ kind, path }, index) => [kind === 'patch' || kind === 'files' ? kind : path, texts[index]])
-  return deps.hasher.sha256(JSON.stringify(keyed))
+  const contents = await Promise.all(changed.map(async (path) => [path, await deps.workspace.read(path)]))
+  return deps.hasher.sha256(JSON.stringify([...keyed, ...contents]))
 }
+
+/**
+ * What this pass of the review cost: its lenses, its checks and the batches the host could only
+ * tell as a whole, as journaled; undefined when the host told nothing.
+ * @param {Review} review
+ */
+export const costOf = (review) => ['review.lens', 'review.refuted', 'review.cost']
+  .flatMap((type) => eventsOf(review, type))
+  .filter((event) => event.visit === review.step.visit)
+  .reduce((total, event) => addCost(total, event.cost), /** @type {number | undefined} */ (undefined))
 
 /** The review events of this node, of earlier passes or of this one. @param {Review} review @param {string} type */
 const eventsOf = ({ journal, step }, type) => journal.events.filter((event) => event.type === type && event.step === step.node.id)
@@ -138,7 +159,7 @@ const eventsOf = ({ journal, step }, type) => journal.events.filter((event) => e
  * last pass when its inputs did not change and it found nothing, else asked. fresh: the results
  * the refuter may still check (one taken over found nothing).
  * @param {Review} review @param {PlannedLens[]} planned
- * @returns {Promise<{ results: LensResult[], fresh: LensResult[], costUsd: number } | Stopped | Blocked>}
+ * @returns {Promise<{ results: LensResult[], fresh: LensResult[] } | Stopped | Blocked>}
  */
 const lensResults = async (review, planned) => {
   const kept = await keepLenses(review, planned)
@@ -147,7 +168,7 @@ const lensResults = async (review, planned) => {
   if ('stop' in answered || 'blocked' in answered) return answered
   const fresh = answered.results
   const results = planned.map(({ lens }) => kept.get(lens.name) ?? /** @type {LensResult} */ (fresh.find((result) => result.lens === lens.name)))
-  return { results, fresh: [...fresh, ...kept.values()], costUsd: answered.costUsd }
+  return { results, fresh: [...fresh, ...kept.values()] }
 }
 
 /**
@@ -185,13 +206,13 @@ const reuse = async (review, earlier) => {
 /**
  * Asks the lenses together, then once more those whose answer could not be read.
  * @param {Review} review @param {PlannedLens[]} asked
- * @returns {Promise<{ results: LensResult[], costUsd: number } | Stopped | Blocked>}
+ * @returns {Promise<{ results: LensResult[] } | Stopped | Blocked>}
  */
 const askLenses = async (review, asked) => {
   const answered = await askTwice(review, asked, lensAsking(review))
   if ('stop' in answered) return answered
-  if (answered.unreadable.length > 0) return { blocked: unreadableLenses(answered.unreadable), costUsd: answered.costUsd }
-  return { results: answered.read.map(({ value }) => value), costUsd: answered.costUsd }
+  if (answered.unreadable.length > 0) return { blocked: unreadableLenses(answered.unreadable), costUsd: costOf(review) }
+  return { results: answered.read.map(({ value }) => value) }
 }
 
 /** @param {Review} review @returns {Asking<PlannedLens>} */
@@ -229,7 +250,7 @@ const recordLens = async ({ journal, step }, { lens, fingerprint }, { result }, 
  * The refuter's word on each blocker and high finding the lenses gave in this pass; one kept
  * from a resumed pass is not asked again, one it answers unreadably twice stays unverifiable.
  * @param {Review} review @param {PlannedLens[]} planned @param {LensResult[]} fresh
- * @returns {Promise<{ refutations: RecordedRefutation[], costUsd: number } | Stopped>}
+ * @returns {Promise<{ refutations: RecordedRefutation[] } | Stopped>}
  */
 const refutations = async (review, planned, fresh) => {
   const done = eventsOf(review, 'review.refuted').filter((event) => event.visit === review.step.visit).map(refutationOf)
@@ -238,7 +259,7 @@ const refutations = async (review, planned, fresh) => {
   if ('stop' in answered) return answered
   const lost = []
   for (const { item, error } of answered.unreadable) lost.push(await recordRefutation(review, item, { verdict: 'unverifiable', reason: `unreadable twice: ${error}` }, undefined))
-  return { refutations: [...done, ...answered.read.map(({ value }) => value), ...lost], costUsd: answered.costUsd }
+  return { refutations: [...done, ...answered.read.map(({ value }) => value), ...lost] }
 }
 
 /** @param {Review} review @returns {Asking<Suspect>} */
@@ -293,10 +314,10 @@ const recordRefutation = async ({ journal, step }, { lens, finding }, { verdict,
  * those whose answer could not be read; the run stops when the host cannot start an agent.
  * @template T
  * @param {Review} review @param {T[]} items @param {Asking<T>} asking
- * @returns {Promise<{ read: Array<{ item: T, value: any }>, unreadable: Array<{ item: T, error: string }>, costUsd: number } | Stopped>}
+ * @returns {Promise<{ read: Array<{ item: T, value: any }>, unreadable: Array<{ item: T, error: string }> } | Stopped>}
  */
 const askTwice = async (review, items, asking) => {
-  const tally = { read: /** @type {Array<{ item: T, value: any }>} */ ([]), unreadable: items.map((item) => ({ item, error: /** @type {string | null} */ (null) })), costUsd: /** @type {number | undefined} */ (undefined) }
+  const tally = { read: /** @type {Array<{ item: T, value: any }>} */ ([]), unreadable: items.map((item) => ({ item, error: /** @type {string | null} */ (null) })) }
   for (let attempt = 1; attempt <= ASKS && tally.unreadable.length > 0; attempt += 1) {
     const stopped = await askRound(review, tally, asking, attempt)
     if (stopped !== null) return stopped
@@ -308,7 +329,7 @@ const askTwice = async (review, items, asking) => {
  * One round: the items still unread, asked together.
  * @template T
  * @param {Review} review
- * @param {{ read: Array<{ item: T, value: any }>, unreadable: Array<{ item: T, error: string | null }>, costUsd: number }} tally
+ * @param {{ read: Array<{ item: T, value: any }>, unreadable: Array<{ item: T, error: string | null }> }} tally
  * @param {Asking<T>} asking @param {number} attempt
  * @returns {Promise<Stopped | null>}
  */
@@ -316,7 +337,7 @@ const askRound = async (review, tally, asking, attempt) => {
   const pending = tally.unreadable
   const dispatches = pending.map(({ item, error }) => asking.dispatch(item, attempt, error))
   const { answers, costUsd } = await review.deps.agentRunner.runMany(dispatches)
-  tally.costUsd = answers.reduce((sum, answer) => addCost(sum, answer.costUsd), addCost(tally.costUsd, costUsd))
+  if (costUsd !== undefined) await review.journal.append('review.cost', { step: review.step.node.id, visit: review.step.visit, cost: costUsd })
   tally.unreadable = []
   for (const [index, { item }] of pending.entries()) await takeAnswer(tally, asking, item, answers[index])
   const index = answers.findIndex((answer) => answer.unavailable)
@@ -327,7 +348,7 @@ const askRound = async (review, tally, asking, attempt) => {
  * A cost added to another; unknown only while both are.
  * @param {number | undefined} total @param {number | undefined} cost
  */
-export const addCost = (total, cost) => (cost === undefined ? total : (total ?? 0) + cost)
+const addCost = (total, cost) => (cost === undefined ? total : (total ?? 0) + cost)
 
 /**
  * @template T

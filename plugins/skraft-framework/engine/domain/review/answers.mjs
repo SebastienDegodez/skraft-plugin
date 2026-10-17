@@ -57,7 +57,10 @@ export const readLensAnswer = (answer, lens) => {
   if (!read.ok) return read
   const error = lensError(read.value, lens)
   if (error !== null) return { ok: false, error }
-  return { ok: true, result: { lens, verdict: read.value.verdict, findings: (read.value.findings ?? []).map(findingOf) } }
+  const findings = (read.value.findings ?? []).map(findingOf)
+  const twice = findings.find((finding, index) => findings.findIndex((other) => other.id === finding.id) !== index)
+  if (twice !== undefined) return { ok: false, error: `finding id ${twice.id} is used twice` }
+  return { ok: true, result: { lens, verdict: read.value.verdict, findings } }
 }
 
 /** What keeps a document from being the lens's answer; null when nothing does. @param {any} value @param {string} lens */
