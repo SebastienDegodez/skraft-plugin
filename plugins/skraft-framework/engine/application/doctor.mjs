@@ -5,6 +5,7 @@ import { baseOf, loadConfig, resolveBases } from './bases.mjs'
 
 /**
  * @typedef {import('../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'fail', detail: string }} DoctorCheck
  *   subject: `node`, `config`, `docker`, `<component>` or `<component>/<command>`.
  * @typedef {{ ok: boolean, checks: DoctorCheck[] }} DoctorReport
@@ -27,32 +28,77 @@ const NODE_MAJOR = 22
  */
 export const createDoctor = (deps) => Object.freeze({
   /** @param {{ run?: boolean, base?: string | null }} [request] @returns {Promise<DoctorReport>} */
-  check: async ({ run = false, base = null } = {}) => {
-    /** @type {DoctorCheck[]} */
-    const checks = [nodeCheck(deps.runtime.nodeVersion())]
-    const loaded = await loadConfig(deps)
-    if (!loaded.ok) return report([...checks, configFails(loaded.reason)])
-    const { components } = loaded.config
-    const empty = !loaded.present ? `no ${CONFIG_FILE}; run skraft init to detect the components` : components.length === 0 ? NO_COMPONENT : null
-    if (empty !== null) return report([...checks, configFails(empty)])
-    checks.push({ subject: 'config', status: 'ok', detail: `${components.length} components: ${components.map(({ name }) => name).join(', ')}` })
-
-    const resolved = run ? await resolveBases(deps, { config: loaded.config, flag: base }) : null
-    if (resolved?.ok === false) checks.push({ subject: 'base', status: 'fail', detail: resolved.reason })
-    for (const component of components) {
-      if ((await deps.workspace.list(component.root)) === null) {
-        checks.push({ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` })
-        continue
-      }
-      if (gatesOf(component).length === 0) checks.push({ subject: component.name, status: 'fail', detail: NO_GATE })
-      const baseSha = resolved === null ? 'HEAD' : resolved.ok ? baseOf(resolved.bases, component.name)?.sha ?? null : null
-      for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
-    }
-    const microcks = components.filter((component) => component.mocking.strategy === 'microcks').map(({ name }) => name)
-    if (microcks.length > 0) checks.push(await dockerCheck(deps, microcks))
-    return report(checks)
-  },
+  check: (request) => check(deps, request),
 })
+
+/**
+ * Node, then the configuration; the rest only once the configuration names components.
+ * @param {DoctorDeps} deps @param {{ run?: boolean, base?: string | null }} [request]
+ * @returns {Promise<DoctorReport>}
+ */
+const check = async (deps, { run = false, base = null } = {}) => {
+  const checks = [nodeCheck(deps.runtime.nodeVersion())]
+  const configured = configCheck(await loadConfig(deps))
+  checks.push(configured.check)
+  if (!configured.ok) return report(checks)
+  return report([...checks, ...await configuredChecks(deps, configured.config, { run, base })])
+}
+
+/**
+ * The base with `run`, each component, then Docker.
+ * @param {DoctorDeps} deps @param {SkraftConfig} config
+ * @param {{ run: boolean, base: string | null }} request
+ * @returns {Promise<DoctorCheck[]>}
+ */
+const configuredChecks = async (deps, config, { run, base }) => {
+  const resolved = run ? await resolveBases(deps, { config, flag: base }) : null
+  /** @type {DoctorCheck[]} */
+  const checks = resolved?.ok === false ? [{ subject: 'base', status: 'fail', detail: resolved.reason }] : []
+  for (const component of config.components) {
+    checks.push(...await componentChecks(deps, component, { run, baseSha: baseShaOf(resolved, component.name) }))
+  }
+  checks.push(...await dockerChecks(deps, config.components))
+  return checks
+}
+
+/**
+ * The config check, and the configuration once it names at least one component.
+ * @param {Awaited<ReturnType<typeof loadConfig>>} loaded
+ * @returns {{ ok: true, check: DoctorCheck, config: SkraftConfig } | { ok: false, check: DoctorCheck }}
+ */
+const configCheck = (loaded) => {
+  if (!loaded.ok) return { ok: false, check: configFails(loaded.reason) }
+  const { components } = loaded.config
+  if (!loaded.present) return { ok: false, check: configFails(`no ${CONFIG_FILE}; run skraft init to detect the components`) }
+  if (components.length === 0) return { ok: false, check: configFails(NO_COMPONENT) }
+  const names = components.map(({ name }) => name).join(', ')
+  return { ok: true, check: { subject: 'config', status: 'ok', detail: `${components.length} components: ${names}` }, config: loaded.config }
+}
+
+/**
+ * The base a component's commands get: HEAD without `run`, none when the bases did not resolve.
+ * @param {Awaited<ReturnType<typeof resolveBases>> | null} resolved @param {string} component
+ */
+const baseShaOf = (resolved, component) => {
+  if (resolved === null) return 'HEAD'
+  return resolved.ok ? baseOf(resolved.bases, component)?.sha ?? null : null
+}
+
+/**
+ * The root, the gates, then each command; a root that is not a folder is the only check.
+ * @param {DoctorDeps} deps @param {Component} component
+ * @param {{ run: boolean, baseSha: string | null }} request
+ * @returns {Promise<DoctorCheck[]>}
+ */
+const componentChecks = async (deps, component, { run, baseSha }) => {
+  if ((await deps.workspace.list(component.root)) === null) {
+    return [{ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` }]
+  }
+  /** @type {DoctorCheck[]} */
+  const checks = gatesOf(component).length === 0 ? [{ subject: component.name, status: 'fail', detail: NO_GATE }] : []
+  for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
+  return checks
+}
 
 /** Gates first, in their order, then the other commands as written. @param {Component} component */
 const commandNames = (component) => {
@@ -73,13 +119,26 @@ const commandCheck = async (deps, { component, name, run, baseSha }) => {
   const [program] = parsed.argv
   const choices = programChoices(parsed.argv)
   const found = await locateFirst(deps, choices, component.root)
-  if (found === null) {
-    return { subject, status: 'fail', detail: `command not found: ${program} (from ${component.root}${lookedFor(choices)}); install it or change commands.${name} in ${CONFIG_FILE}` }
-  }
+  if (found === null) return { subject, status: 'fail', detail: notFound({ component, name, program, choices }) }
   if (!run) return { subject, status: 'ok', detail: `${program} → ${found.located}` }
-  const result = await deps.commandRunner.run({ argv: found.argv, cwd: component.root })
+  return runCheck(deps, subject, { argv: found.argv, cwd: component.root })
+}
+
+/**
+ * @param {{ component: Component, name: string, program: string, choices: string[][] }} missing
+ */
+const notFound = ({ component, name, program, choices }) =>
+  `command not found: ${program} (from ${component.root}${lookedFor(choices)}); install it or change commands.${name} in ${CONFIG_FILE}`
+
+/**
+ * Starts the located command once; it passes only on exit 0.
+ * @param {DoctorDeps} deps @param {string} subject @param {{ argv: string[], cwd: string }} command
+ * @returns {Promise<DoctorCheck>}
+ */
+const runCheck = async (deps, subject, { argv, cwd }) => {
+  const result = await deps.commandRunner.run({ argv, cwd })
   if (!result.started) return { subject, status: 'fail', detail: /** @type {string} */ (result.error) }
-  const ran = commandText(found.argv)
+  const ran = commandText(argv)
   return result.exitCode === 0
     ? { subject, status: 'ok', detail: `${ran} passed` }
     : { subject, status: 'fail', detail: `${ran} exited ${result.exitCode}` }
@@ -96,6 +155,15 @@ const locateFirst = async (deps, choices, cwd) => {
     if (located !== null) return { argv, located }
   }
   return null
+}
+
+/**
+ * Docker, only when a component mocks with Microcks.
+ * @param {DoctorDeps} deps @param {Component[]} components @returns {Promise<DoctorCheck[]>}
+ */
+const dockerChecks = async (deps, components) => {
+  const microcks = components.filter((component) => component.mocking.strategy === 'microcks').map(({ name }) => name)
+  return microcks.length > 0 ? [await dockerCheck(deps, microcks)] : []
 }
 
 /** @param {DoctorDeps} deps @param {string[]} components */
