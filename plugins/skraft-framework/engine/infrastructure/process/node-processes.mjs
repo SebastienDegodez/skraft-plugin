@@ -38,8 +38,16 @@ export const createNodeCommandRunner = ({ root, platform = process.platform, env
       ? [env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `"${[escapeForCmd(normalize(located)), ...args.map((arg) => quoteForCmd(arg, CMD_SHIM.test(located)))].join(' ')}"`]]
       : [located, args]
     return new Promise((done) => {
-      // Stryker disable next-line BooleanLiteral: windowsHide has no effect outside Windows
-      const child = spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+      /** @type {import('node:child_process').ChildProcessWithoutNullStreams} */
+      let child
+      try {
+        // Stryker disable next-line BooleanLiteral: windowsHide has no effect outside Windows
+        child = /** @type {import('node:child_process').ChildProcessWithoutNullStreams} */ (spawn(file, fileArgs, { cwd: dir, env, windowsVerbatimArguments: throughCmd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }))
+      } catch (error) {
+        // Windows throws, instead of emitting `error`, for a file that is not a program.
+        done(notStarted(`${program} could not be started: ${/** @type {Error} */ (error).message}`))
+        return
+      }
       /** @type {Buffer[]} */
       const out = []
       /** @type {Buffer[]} */

@@ -111,7 +111,7 @@ test('python runs from the virtual environment of the component, laid out the wa
   assert.equal(doctor.stdout.split(/\r?\n/)[2], `ok    payment-fastapi/test: python → ${venv}`)
   assert.equal(gate.status, 0, gate.stdout)
   const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
-  assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\n`))
+  assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\r?\\n`))
 })
 
 test('doctor --run starts each command once against the base it is given, main by default', async (t) => {
