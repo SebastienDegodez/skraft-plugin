@@ -152,6 +152,22 @@ gaps. Follow the plugin's `outside-in-tdd` skill; these rules add what the engin
 - Kill a surviving mutant with a sharper acceptance scenario, never with a test written for that
   mutant. Exclude an equivalent mutant only with its reason.
 
+## Lint rules
+
+- Config: `plugins/skraft-framework/engine/eslint.config.mjs`, run with `npm run lint:engine`
+  after `npm ci --prefix plugins/skraft-framework/engine`. It lints all of `engine/` and blocks
+  CI and the local CI.
+- Limits, per function, for every function in `engine/`: at most 12 lines (blank lines and
+  comments not counted), 12 statements, cyclomatic complexity 8, block depth 3. Change a limit
+  only on explicit instruction.
+- A nested function counts inside its parent. A factory (`createX = (deps) => Object.freeze({…})`)
+  only delegates to module-level functions; a function never holds a long closure.
+- Split along decisions: one level of abstraction per function, named by what it decides. Never
+  pass a limit by packing logic onto one line, chaining ternaries or merging statements.
+- No `eslint-disable` comment, anywhere in `engine/`.
+- Files not refactored yet are named in the config's warning list. A file leaves the list once
+  it passes; no file joins it, and a file you change leaves it in the same change.
+
 ## Regression rules
 
 - `eng/regression/` compares a v1 run (from a worktree on a `main` ref) with a V2 run on the same
@@ -254,6 +270,7 @@ npm run test:regression        # regression harness
 npm run test:tooling           # repo tooling
 npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/skraft-framework/engine)
 npm run mutation:engine        # Stryker, incremental
+npm run lint:engine            # ESLint function-size and complexity limits on the engine
 npm run skills:check && npm run plugin:check && npm run backlog:check
 node scripts/agent-policy/resolve-model-bin.mjs --check
 claude plugin validate plugins/skraft-framework                    # the Claude Code mod

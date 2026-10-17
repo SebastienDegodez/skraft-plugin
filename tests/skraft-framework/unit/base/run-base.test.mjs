@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/init.mjs'
-import { FakeHasher, FixedClock, InMemorySourceControl, InMemoryTracking, InMemoryWorkspace } from '../support/in-memory-host.mjs'
+import { InMemorySourceControl, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const CONFIG = (extra = {}) => JSON.stringify({
   components: [
@@ -17,14 +17,9 @@ const twoRepositories = () => new InMemorySourceControl({
 })
 
 const start = async ({ config = CONFIG(), sourceControl = twoRepositories(), base } = {}) => {
-  const tracking = new InMemoryTracking()
-  const deps = {
-    journal: tracking, activePipeline: tracking, files: tracking,
-    workspace: new InMemoryWorkspace(config === null ? {} : { 'skraft-config.json': config }),
-    sourceControl, clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher(),
-  }
+  const deps = inMemoryDeps({ config: config ?? undefined, sourceControl })
   const outcome = await createInit(deps).init({ slug: 'checkout', story: null, ...(base === undefined ? {} : { base }) })
-  return { outcome, tracking, started: tracking.journal('checkout')[0] }
+  return { outcome, tracking: deps.journal, started: deps.journal.journal('checkout')[0] }
 }
 
 test('without any setting, every repository is compared with its merge base with main, journaled at the start', async () => {
@@ -120,7 +115,7 @@ test('an invalid skraft-config.json refuses the start with its errors and journa
   assert.deepEqual(outcome, {
     ok: false, slug: 'checkout', created: false, code: 'config-invalid',
     reason: 'skraft-config.json is invalid: components[0].name must be kebab-case, got "payment-Web"; component payment-Web: root must be a path relative to the working copy; '
-      + 'component payment-Web: command name "smoke-Test" must be lower-case; components[1].name must be kebab-case, got null; '
+      + 'component payment-Web: unknown command smoke-Test (allowed: build, format, lint, test, architecture, coverage, mutation, e2e); components[1].name must be kebab-case, got null; '
       + 'components[1]: stack must be one of dotnet, java, python, typescript, javascript, react',
   })
   assert.deepEqual(tracking.journal('checkout'), [])
@@ -128,13 +123,8 @@ test('an invalid skraft-config.json refuses the start with its errors and journa
 })
 
 test('the base is taken once: resuming an existing run with another --base keeps the journaled one', async () => {
-  const tracking = new InMemoryTracking()
-  const deps = {
-    journal: tracking, activePipeline: tracking, files: tracking, workspace: new InMemoryWorkspace({ 'skraft-config.json': CONFIG() }),
-    sourceControl: twoRepositories(), clock: new FixedClock('2026-10-15T08:00:00.000Z'), hasher: new FakeHasher(),
-  }
-  await createInit(deps).init({ slug: 'checkout' })
-  const again = await createInit(deps).init({ slug: 'checkout', base: 'develop' })
+  const { tracking } = await start()
+  const again = await createInit(inMemoryDeps({ tracking, config: CONFIG(), sourceControl: twoRepositories() })).init({ slug: 'checkout', base: 'develop' })
 
   assert.deepEqual([again.ok, again.created], [true, false])
   assert.deepEqual(tracking.journal('checkout').map((event) => event.type), ['run.started'])

@@ -23,13 +23,16 @@ test('--version answers the version recorded in plugin.json', async () => {
   assert.deepEqual(lines.err, [])
 })
 
-test('an unknown command prints the usage on stderr and exits 2', async () => {
-  const { lines, console } = consoleOf()
-  const code = await runCli(['deploy'], { pluginVersion: () => '0.0.0', adapters: unused }, console)
+test('an unknown command or a malformed option prints the usage on stderr and exits 2, touching nothing', async () => {
+  for (const args of [
+    ['deploy'], ['status', '--verbose'], ['status', '--json', '--json'], ['gate', '--touched'], ['gate', '--all', '--all'],
+    ['doctor', '--fix'], ['doctor', '--base'], ['doctor', '--base', 'main', '--base', 'develop'], ['init', '--add'], ['init', '--force'],
+  ]) {
+    const { lines, console } = consoleOf()
+    const code = await runCli(args, { pluginVersion: () => '0.0.0', adapters: unused }, console)
 
-  assert.equal(code, 2)
-  assert.deepEqual(lines.out, [])
-  assert.deepEqual(lines.err, [USAGE])
+    assert.deepEqual({ args, code, out: lines.out, err: lines.err }, { args, code: 2, out: [], err: [USAGE] })
+  }
   assert.deepEqual(USAGE.split('\n').map((line) => line.trim().split(/\s{2,}/)[0]), [
     'usage: skraft --version',
     'skraft init [--add <folder>]...',

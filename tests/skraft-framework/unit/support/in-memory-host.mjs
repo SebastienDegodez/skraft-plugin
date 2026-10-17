@@ -155,7 +155,9 @@ export class InMemorySourceControl {
 /**
  * The machine the commands run on: which programs are installed, and how a command line
  * exits (`'<cwd> $ <argv joined by spaces>'` → exit code). Everything else exits 0.
- * It is both the CommandRunner and the Executables port.
+ * It is both the CommandRunner and the Executables port. A program written with a `/`
+ * (`.venv/bin/python`) is installed as a path relative to the working copy
+ * (`services/py/.venv/bin/python`) and found from the folder it starts in.
  */
 export class ScriptedMachine {
   /**
@@ -172,10 +174,16 @@ export class ScriptedMachine {
     /** @type {Array<{ argv: string[], cwd: string }>} */
     this.runs = []
   }
-  async locate(program) { return this.installed.has(program) ? `/usr/local/bin/${program}` : null }
+  /** @param {string} program @param {string} cwd */
+  installedAt(program, cwd) {
+    if (!program.includes('/')) return this.installed.has(program) ? `/usr/local/bin/${program}` : null
+    const path = tidy(`${cwd}/${program}`)
+    return this.installed.has(path) ? `/work/${path}` : null
+  }
+  async locate(program, cwd = '.') { return this.installedAt(program, cwd) }
   async run({ argv, cwd }) {
     this.runs.push({ argv, cwd })
-    if (!this.installed.has(argv[0])) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
+    if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
     this.clock?.advance(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`
     await this.meanwhile[line]?.()
@@ -186,3 +194,22 @@ export class ScriptedMachine {
   /** The command lines run, as `'<cwd> $ <argv>'`. */
   lines() { return this.runs.map(({ argv, cwd }) => `${cwd} $ ${argv.join(' ')}`) }
 }
+
+/**
+ * Every dependency a use case takes, over the doubles above; a test names only the ones it
+ * looks at. config: the text of skraft-config.json, no file when undefined; now: the clock.
+ */
+export const inMemoryDeps = ({ tracking = new InMemoryTracking(), config, now = '2026-10-15T08:00:00.000Z', ...given } = {}) => ({
+  journal: tracking,
+  activePipeline: tracking,
+  files: tracking,
+  workspace: new InMemoryWorkspace(config === undefined ? {} : { 'skraft-config.json': config }),
+  sourceControl: new InMemorySourceControl(),
+  commandRunner: new ScriptedMachine(),
+  templates: new InMemoryTemplates({}),
+  clock: new FixedClock(now),
+  hasher: new FakeHasher(),
+  agentRunner: new ScriptedAgentRunner(),
+  progress: new RecordingProgress(),
+  ...given,
+})

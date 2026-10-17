@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { FIXTURES, copyFixture, envWithPath, readJson, skraft, stubPrograms, tempFolder } from '../support/workspace.mjs'
+import { chmodSync, copyFileSync, linkSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { FIXTURES, commitAll, copyFixture, envWithPath, git, readJson, skraft, stubPrograms, tempFolder, toolFolders } from '../support/workspace.mjs'
 
 // The toolchains (dotnet, mvn, python, npm, npx) and Docker are stub programs on a PATH of
 // their own: doctor must find them where a developer machine would, under Windows as .cmd.
@@ -16,11 +16,14 @@ const initThenDoctor = async (cwd, env, add = []) => {
   return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
 }
 
-for (const [fixture, stack, commands] of [
-  ['payment', 'dotnet', ['build', 'format', 'test', 'mutation']],
-  ['payment-spring', 'java', ['build', 'test']],
-  ['payment-fastapi', 'python', ['build', 'test']],
-  ['react', 'react', ['build', 'lint', 'test']],
+for (const [fixture, stack, commands, paths] of [
+  ['payment', 'dotnet', ['build', 'format', 'test', 'mutation'], { src: ['src/'], tests: ['tests/'] }],
+  ['payment-spring', 'java', ['build', 'test'], {
+    src: ['payment-domain/', 'payment-application/', 'payment-infrastructure/', 'payment-app/'],
+    tests: ['payment-unit-test/', 'payment-integration-test/'],
+  }],
+  ['payment-fastapi', 'python', ['build', 'test'], { src: ['src/'], tests: ['tests/'] }],
+  ['react', 'react', ['build', 'lint', 'test'], { src: ['src/'], tests: ['tests/'] }],
 ]) {
   test(`skraft init then doctor pass on the ${fixture} fixture`, async (t) => {
     const cwd = copyFixture(FIXTURES[fixture], join(tempFolder(t), fixture))
@@ -28,7 +31,7 @@ for (const [fixture, stack, commands] of [
     const { init, doctor } = await initThenDoctor(cwd, machine(t))
 
     const [component] = readJson(join(cwd, 'skraft-config.json')).components
-    assert.deepEqual([component.name, component.root, component.stack], [fixture, '.', stack])
+    assert.deepEqual([component.name, component.root, component.stack, component.paths], [fixture, '.', stack, paths])
     assert.equal(init.stdout, `skraft-config.json: ${fixture} (${stack}, .)\n`)
     assert.equal(doctor.status, 0, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
@@ -83,4 +86,78 @@ test('without Docker, doctor fails for the Microcks components, and passes once 
   const path = join(cwd, 'skraft-config.json')
   writeFileSync(path, readFileSync(path, 'utf8').replace('"stack": "python",', '"stack": "python",\n      "mocking": { "strategy": "inprocess", "library": "respx" },'))
   assert.equal((await skraft(cwd, ['doctor'], { env })).status, 0)
+})
+
+test('python runs from the virtual environment of the component, laid out the way this OS makes one', async (t) => {
+  const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
+  // Node stands for the interpreter: `python --version` answers with Node's version.
+  const venv = process.platform === 'win32' ? join(cwd, '.venv', 'Scripts', 'python.exe') : join(cwd, '.venv', 'bin', 'python')
+  mkdirSync(dirname(venv), { recursive: true })
+  try { linkSync(process.execPath, venv) } catch { copyFileSync(process.execPath, venv) }
+  const env = envWithPath(toolFolders())
+  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
+  const path = join(cwd, 'skraft-config.json')
+  const config = readJson(path)
+  config.components[0].commands = { test: 'python --version' }
+  config.components[0].mocking = { strategy: 'inprocess' }
+  writeFileSync(path, JSON.stringify(config, null, 2))
+  commitAll(cwd)
+  assert.equal((await skraft(cwd, ['init', 'checkout'], { env })).status, 0)
+
+  const doctor = await skraft(cwd, ['doctor'], { env })
+  const gate = await skraft(cwd, ['gate', '--all'], { env })
+
+  assert.equal(doctor.status, 0, doctor.stdout)
+  assert.equal(doctor.stdout.split(/\r?\n/)[2], `ok    payment-fastapi/test: python → ${venv}`)
+  assert.equal(gate.status, 0, gate.stdout)
+  const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
+  assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\r?\\n`))
+})
+
+test('doctor --run starts each command once against the base it is given, main by default', async (t) => {
+  const cwd = join(tempFolder(t), 'payment')
+  mkdirSync(cwd)
+  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ components: [
+    { name: 'payment', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' }, commands: { test: 'node --version {baseSha}' } },
+  ] }))
+  const mainSha = commitAll(cwd)
+  git(cwd, 'checkout', '-q', '-b', 'develop')
+  git(cwd, 'commit', '-q', '--allow-empty', '-m', 'develop')
+  const developSha = git(cwd, 'rev-parse', 'HEAD')
+  const env = envWithPath(toolFolders())
+
+  const onMain = await skraft(cwd, ['doctor', '--run', '--json'], { env })
+  const onDevelop = await skraft(cwd, ['doctor', '--base', 'develop', '--run'], { env })
+  const dry = await skraft(cwd, ['doctor', '--base', 'develop', '--json'], { env })
+
+  assert.equal(onMain.status, 0, onMain.stdout)
+  assert.deepEqual(JSON.parse(onMain.stdout).checks[2], { subject: 'payment/test', status: 'ok', detail: `node --version ${mainSha} passed` })
+  assert.equal(onDevelop.status, 0, onDevelop.stdout)
+  assert.equal(onDevelop.stdout.split(/\r?\n/)[2], `ok    payment/test: node --version ${developSha} passed`)
+  assert.match(JSON.parse(dry.stdout).checks[2].detail, /^node → /)
+})
+
+test('doctor names a component root that is missing or a file; a folder it may not read stops it with the system\'s error', async (t) => {
+  const cwd = join(tempFolder(t), 'payment')
+  mkdirSync(join(cwd, 'locked'), { recursive: true })
+  writeFileSync(join(cwd, 'notes.txt'), 'not a folder\n')
+  const component = (name, root) => ({ name, root, stack: 'javascript', mocking: { strategy: 'inprocess' }, commands: { test: 'node --version' } })
+  const configure = (components) => writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ components }))
+  const env = envWithPath(toolFolders())
+  configure([component('gone', 'gone'), component('notes', 'notes.txt')])
+
+  const report = JSON.parse((await skraft(cwd, ['doctor', '--json'], { env })).stdout)
+
+  assert.deepEqual(report.checks.filter((check) => check.status === 'fail'), [
+    { subject: 'gone', status: 'fail', detail: 'root gone is not a folder' },
+    { subject: 'notes', status: 'fail', detail: 'root notes.txt is not a folder' },
+  ])
+  if (process.platform === 'win32' || process.getuid?.() === 0) return
+  configure([component('locked', 'locked')])
+  chmodSync(join(cwd, 'locked'), 0o000)
+  try {
+    await assert.rejects(skraft(cwd, ['doctor'], { env }), { code: 'EACCES' })
+  } finally {
+    chmodSync(join(cwd, 'locked'), 0o755)
+  }
 })

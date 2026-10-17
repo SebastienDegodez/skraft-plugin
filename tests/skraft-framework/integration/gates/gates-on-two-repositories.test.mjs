@@ -87,6 +87,8 @@ test('a change in the front runs the front gates only; --all runs every gate, ea
   assert.equal(loop.status, 0, loop.stdout + loop.stderr)
   assert.deepEqual(ran(), ['payment-web web/lint', 'payment-web web/test'])
   assert.equal(loop.stdout, 'pass  web/lint\npass  web/test\nskraft checkout: gates passed — 2 gates passed on web\n')
+  const asJson = JSON.parse((await skraft(api, ['gate', '--json'])).stdout)
+  assert.deepEqual([asJson.status, asJson.scope, asJson.components], ['passed', 'touched', ['web']])
 
   resetLog()
   const closure = await skraft(api, ['gate', '--all'])
@@ -95,7 +97,7 @@ test('a change in the front runs the front gates only; --all runs every gate, ea
   assert.deepEqual(ran(), ['payment-api api/build', 'payment-api api/test', `payment-api api/mutation --since:${apiBase}`, 'payment-web web/lint', 'payment-web web/test'])
   const mutation = journal(api, 'checkout').find((event) => event.type === 'gate.ran' && event.gate === 'mutation')
   assert.ok(mutation.command.endsWith('--since:{baseSha}'))
-  assert.match(readFileSync(join(api, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'api', 'mutation-1.log'), 'utf8'), new RegExp(`^\\$ node .*--since:\\{baseSha\\}\\ncwd: \\.\\nresult: pass`))
+  assert.match(readFileSync(join(api, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'api', 'mutation-1.log'), 'utf8'), new RegExp(`^\\$ node .*--since:${apiBase}\\ncwd: \\.\\nresult: pass`))
 })
 
 test('a failing gate exits 1 as deterministic; a missing program exits 1 as environment', async (t) => {

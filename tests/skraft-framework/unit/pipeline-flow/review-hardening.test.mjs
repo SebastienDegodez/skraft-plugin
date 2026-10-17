@@ -4,27 +4,14 @@ import { createInit } from '../../../../plugins/skraft-framework/engine/applicat
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/run-pipeline.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/run-journal.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
-import {
-  FakeHasher, FixedClock, InMemorySourceControl, InMemoryTemplates, InMemoryTracking, InMemoryWorkspace, RecordingProgress, ScriptedAgentRunner,
-} from '../support/in-memory-host.mjs'
+import { InMemoryTemplates, InMemoryTracking, inMemoryDeps } from '../support/in-memory-host.mjs'
 
 const TEMPLATE = '# Research: {{topic}}\n## Approaches\n{{approach_A}}\n'
 const OUTPUT = 'research/2026-10-11/checkout-research.md'
 
 const host = (iso = '2026-10-11T09:00:00.000Z') => {
   const tracking = new InMemoryTracking()
-  const deps = {
-    journal: tracking,
-    activePipeline: tracking,
-    files: tracking,
-    workspace: new InMemoryWorkspace(),
-    sourceControl: new InMemorySourceControl(),
-    templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }),
-    clock: new FixedClock(iso),
-    hasher: new FakeHasher(),
-    agentRunner: new ScriptedAgentRunner(),
-    progress: new RecordingProgress(),
-  }
+  const deps = inMemoryDeps({ tracking, templates: new InMemoryTemplates({ 'research.template.md': TEMPLATE }), now: iso })
   return { tracking, deps, agentRunner: deps.agentRunner }
 }
 

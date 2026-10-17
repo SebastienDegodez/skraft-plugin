@@ -1,3 +1,4 @@
+import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { normalizeRelative } from './relative-path.mjs'
 
 /**
@@ -23,7 +24,13 @@ const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascr
 const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting'])
-const COMMAND_NAME = /^[a-z][a-z0-9-]*$/
+/** The gates, and `e2e`, which doctor checks but no gate runs. */
+const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
+
+/** Why a config with no component cannot be checked or gated. */
+export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
+/** Why a component with no gate command cannot prove anything. */
+export const NO_GATE = `no gate command; give it at least one of ${GATE_ORDER.join(', ')} in ${CONFIG_FILE}`
 
 /**
  * @param {string | null} text the file's content, null when the file is absent
@@ -31,24 +38,50 @@ const COMMAND_NAME = /^[a-z][a-z0-9-]*$/
  */
 export const readConfig = (text) => {
   if (text === null) return { ok: true, present: false, config: { baseBranch: null, components: [] }, raw: {} }
-  let raw
-  try {
-    raw = JSON.parse(text)
-  } catch (error) {
-    return { ok: false, errors: [`${CONFIG_FILE} is not JSON: ${/** @type {Error} */ (error).message}`] }
-  }
-  if (!isRecord(raw)) return { ok: false, errors: [`${CONFIG_FILE} must hold a JSON object`] }
+  const parsed = parseObject(text)
+  if (!parsed.ok) return parsed
+  const raw = parsed.value
   /** @type {string[]} */
   const errors = []
   const baseBranch = optionalRef(raw.baseBranch, 'baseBranch', errors)
-  const listed = raw.components ?? []
-  if (!Array.isArray(listed)) errors.push('components must be an array')
-  const components = (Array.isArray(listed) ? listed : []).map((entry, index) => componentOf(entry, index, errors))
-  const names = components.map((component) => component?.name)
-  for (const name of new Set(names.filter((name, index) => name !== undefined && names.indexOf(name) !== index))) errors.push(`component name ${name} is used twice`)
+  const components = componentsOf(raw.components ?? [], errors)
+  reportNamesUsedTwice(components, errors)
   if (errors.length > 0) return { ok: false, errors }
   return { ok: true, present: true, config: { baseBranch, components: /** @type {Component[]} */ (components) }, raw }
 }
+
+/**
+ * The file's JSON object, or why the text is not one.
+ * @param {string} text @returns {{ ok: true, value: Record<string, any> } | { ok: false, errors: string[] }}
+ */
+const parseObject = (text) => {
+  let value
+  try {
+    value = JSON.parse(text)
+  } catch (error) {
+    return { ok: false, errors: [`${CONFIG_FILE} is not JSON: ${/** @type {Error} */ (error).message}`] }
+  }
+  if (!isRecord(value)) return { ok: false, errors: [`${CONFIG_FILE} must hold a JSON object`] }
+  return { ok: true, value }
+}
+
+/** @param {unknown} listed @param {string[]} errors @returns {Array<Component | null>} null for a wrong component */
+const componentsOf = (listed, errors) => {
+  if (Array.isArray(listed)) return listed.map((entry, index) => componentOf(entry, index, errors))
+  errors.push('components must be an array')
+  return []
+}
+
+/** @param {Array<Component | null>} components @param {string[]} errors */
+const reportNamesUsedTwice = (components, errors) => {
+  const names = components.flatMap((component) => (component === null ? [] : [component.name]))
+  for (const name of new Set(names)) if (names.indexOf(name) !== names.lastIndexOf(name)) errors.push(`component name ${name} is used twice`)
+}
+
+/**
+ * A component entry being checked: `at` is its place in the list, `label` how errors name it.
+ * @typedef {{ entry: Record<string, any>, at: string, label: string, errors: string[] }} ComponentEntry
+ */
 
 /**
  * @param {unknown} entry @param {number} index @param {string[]} errors
@@ -61,24 +94,67 @@ const componentOf = (entry, index, errors) => {
     return null
   }
   const label = typeof entry.name === 'string' ? `component ${entry.name}` : at
+  return checkedComponent({ entry, at, label, errors })
+}
+
+/**
+ * What is wrong with a component's own fields, checked in the order their errors are listed,
+ * before its commands, baseBranch and mocking.
+ * @type {ReadonlyArray<(component: ComponentEntry) => void>}
+ */
+const FIELD_CHECKS = Object.freeze([
+  ({ entry, at, errors }) => {
+    if (typeof entry.name !== 'string' || !NAME.test(entry.name)) errors.push(`${at}.name must be kebab-case, got ${JSON.stringify(entry.name ?? null)}`)
+  },
+  ({ entry, label, errors }) => {
+    for (const key of Object.keys(entry).filter((key) => !COMPONENT_KEYS.includes(key))) errors.push(`${label}: unknown key ${key} (allowed: ${COMPONENT_KEYS.join(', ')})`)
+  },
+  ({ entry, label, errors }) => {
+    if (typeof entry.root !== 'string' || entry.root.trim() === '' || isAbsolutePath(entry.root)) errors.push(`${label}: root must be a path relative to the working copy`)
+  },
+  ({ entry, label, errors }) => {
+    if (!STACKS.includes(entry.stack)) errors.push(`${label}: stack must be one of ${STACKS.join(', ')}`)
+  },
+])
+
+/**
+ * @param {ComponentEntry} component
+ * @returns {Component | null} null when one of its fields is wrong
+ */
+const checkedComponent = (component) => {
+  const { entry, label, errors } = component
   const before = errors.length
-  if (typeof entry.name !== 'string' || !NAME.test(entry.name)) errors.push(`${at}.name must be kebab-case, got ${JSON.stringify(entry.name ?? null)}`)
-  for (const key of Object.keys(entry).filter((key) => !COMPONENT_KEYS.includes(key))) errors.push(`${label}: unknown key ${key} (allowed: ${COMPONENT_KEYS.join(', ')})`)
-  if (typeof entry.root !== 'string' || entry.root.trim() === '' || isAbsolutePath(entry.root)) errors.push(`${label}: root must be a path relative to the working copy`)
-  if (!STACKS.includes(entry.stack)) errors.push(`${label}: stack must be one of ${STACKS.join(', ')}`)
+  for (const check of FIELD_CHECKS) check(component)
   const commands = commandsOf(entry.commands ?? {}, label, errors)
   const baseBranch = optionalRef(entry.baseBranch, `${label}: baseBranch`, errors)
-  const strategy = isRecord(entry.mocking) ? entry.mocking.strategy ?? 'microcks' : entry.mocking === undefined ? 'microcks' : null
-  if (!MOCKING_STRATEGIES.includes(strategy)) errors.push(`${label}: mocking must be { "strategy": "${MOCKING_STRATEGIES.join('" or "')}" }`)
+  const strategy = mockingOf(entry.mocking, label, errors)
   if (errors.length > before) return null
-  return {
-    name: /** @type {string} */ (entry.name),
-    root: normalizeRelative(/** @type {string} */ (entry.root)),
-    stack: /** @type {Stack} */ (entry.stack),
-    commands,
-    baseBranch,
-    mocking: { strategy },
-  }
+  return componentFrom(entry, { commands, baseBranch, strategy })
+}
+
+/**
+ * A component whose fields passed their checks, its root normalised.
+ * @param {Record<string, any>} entry
+ * @param {{ commands: Record<string, string>, baseBranch: string | null, strategy: any }} values
+ * @returns {Component}
+ */
+const componentFrom = (entry, { commands, baseBranch, strategy }) => ({
+  name: entry.name,
+  root: normalizeRelative(entry.root),
+  stack: entry.stack,
+  commands,
+  baseBranch,
+  mocking: { strategy },
+})
+
+/**
+ * @param {unknown} mocking @param {string} label @param {string[]} errors
+ * @returns {any} the strategy it names, microcks when absent
+ */
+const mockingOf = (mocking, label, errors) => {
+  const strategy = isRecord(mocking) ? mocking.strategy ?? 'microcks' : mocking === undefined ? 'microcks' : null
+  if (!MOCKING_STRATEGIES.includes(strategy)) errors.push(`${label}: mocking must be { "strategy": "${MOCKING_STRATEGIES.join('" or "')}" }`)
+  return strategy
 }
 
 /** @param {unknown} value @param {string} label @param {string[]} errors @returns {Record<string, string>} */
@@ -88,7 +164,7 @@ const commandsOf = (value, label, errors) => {
     return {}
   }
   for (const [name, line] of Object.entries(value)) {
-    if (!COMMAND_NAME.test(name)) errors.push(`${label}: command name ${JSON.stringify(name)} must be lower-case`)
+    if (!COMMAND_NAMES.includes(name)) errors.push(`${label}: unknown command ${name} (allowed: ${COMMAND_NAMES.join(', ')})`)
     else if (typeof line !== 'string' || line.trim() === '') errors.push(`${label}: command ${name} must be a non-empty command line`)
   }
   return /** @type {Record<string, string>} */ (value)

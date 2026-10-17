@@ -14,19 +14,35 @@ import { createNodeCommandRunner, createNodeExecutables } from './process/node-p
  */
 export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env }) => {
   const files = createNodeFiles()
-  const tracking = createTrackingStore({ files, root: cwd })
-  const commandRunner = createNodeCommandRunner({ root: cwd, env })
   return Object.freeze({
-    journal: tracking.journal,
-    activePipeline: tracking.activePipeline,
-    files: tracking.files,
+    ...trackedState(files, cwd),
     templates: createPluginTemplates({ files, pluginRoot }),
     clock: createSystemClock(),
     hasher: createWebCryptoHasher(),
     workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
+    ...programs(cwd, env),
+    runtime: Object.freeze({ nodeVersion: () => process.version }),
+  })
+}
+
+/**
+ * The journal, active pipeline and tracked files, all in the working copy's tracking folder.
+ * @param {ReturnType<typeof createNodeFiles>} files @param {string} cwd
+ */
+const trackedState = (files, cwd) => {
+  const tracking = createTrackingStore({ files, root: cwd })
+  return { journal: tracking.journal, activePipeline: tracking.activePipeline, files: tracking.files }
+}
+
+/**
+ * Programs started from the working copy, git run through them, and where they are found.
+ * @param {string} cwd @param {NodeJS.ProcessEnv} env
+ */
+const programs = (cwd, env) => {
+  const commandRunner = createNodeCommandRunner({ root: cwd, env })
+  return {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner }),
     executables: createNodeExecutables({ root: cwd, env }),
-    runtime: Object.freeze({ nodeVersion: () => process.version }),
-  })
+  }
 }

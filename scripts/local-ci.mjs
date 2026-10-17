@@ -11,6 +11,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { withoutRepositoryEnv } from '../eng/lib/repository-env.mjs'
 
 const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
@@ -38,6 +39,8 @@ const testArgs = (dir) => {
 const fastGates = [
   { name: 'Engine unit tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-framework', 'unit')) },
   { name: 'Engine integration tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-framework', 'integration')) },
+  // Needs ESLint from the engine's node_modules, like the skill script tests need Stryker.
+  { name: 'Engine lint (ESLint)', cmd: 'node', args: [join(ENGINE, 'node_modules', 'eslint', 'bin', 'eslint.js'), '--config', join(ENGINE, 'eslint.config.mjs'), ENGINE] },
   { name: 'Regression harness tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'regression')) },
   { name: 'Repository tooling tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'tooling')) },
   // The JavaScript quality-gates runner tests resolve Stryker from the engine's node_modules.
@@ -57,12 +60,15 @@ const fastGates = [
 ]
 
 if (!existsSync(join(ENGINE, 'node_modules'))) {
-  process.stdout.write(`\nℹ The skill script tests need Stryker from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect the JavaScript runner tests to fail.\n`)
+  process.stdout.write(`\nℹ The engine lint and the skill script tests need ESLint and Stryker from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect them to fail.\n`)
 }
+
+// Run from the pre-push hook, GIT_DIR would send every test's own git repository into this one.
+const env = withoutRepositoryEnv(process.env)
 
 const run = (gate) => {
   process.stdout.write(`\n▶ ${gate.name}\n`)
-  const result = spawnSync(gate.cmd, gate.args, { stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
+  const result = spawnSync(gate.cmd, gate.args, { env, stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
   return { name: gate.name, ok: result.status === 0 }
 }
 

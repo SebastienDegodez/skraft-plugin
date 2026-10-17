@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fillsItsOutputs, scriptedModHost } from './support/scripted-mod-host.mjs'
+import { TOOL } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/claude-mod-driver.mjs'
 import { createModCommandRunner } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/mod-processes.mjs'
 import { commitAll, git, tempFolder } from '../support/workspace.mjs'
 
@@ -44,6 +45,7 @@ test('the run_pipeline tool takes a base, and a base Git cannot find is refused 
 
   assert.equal(text, 'skraft checkout: not started — the working copy (.) has no merge base with release/9; set baseBranch in skraft-config.json or pass --base <ref>')
   assert.deepEqual(mod.spawns, [])
+  assert.deepEqual(Object.entries(TOOL.inputSchema.properties).map(([name, { type }]) => `${name}: ${type}`), ['slug: string', 'issue: integer', 'title: string', 'base: string'])
 })
 
 test('a mod host whose $.process.run cannot start git starts the run with no base', async (t) => {

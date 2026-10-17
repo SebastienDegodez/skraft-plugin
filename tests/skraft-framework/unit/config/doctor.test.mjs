@@ -6,11 +6,12 @@ import { InMemorySourceControl, InMemoryWorkspace, ScriptedMachine } from '../su
 const API = { name: 'api', root: 'services/payment-api', stack: 'dotnet', commands: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', mutation: 'dotnet stryker --since:{baseSha}' } }
 const WEB = { name: 'web', root: '../payment-web', stack: 'react', mocking: { strategy: 'inprocess' }, commands: { test: 'npx vitest run', e2e: 'npx playwright test' } }
 const { mocking: _inprocess, ...MICROCKS_WEB } = WEB
-const FOLDERS ={ 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
+const FOLDERS = { 'services/payment-api/Payment.sln': '', '../payment-web/package.json': '{}' }
 
-const doctor = ({ components = [API, WEB], machine = new ScriptedMachine(), node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl() } = {}) => {
+/** runner: the machine that starts the commands, the one that finds them unless told otherwise. */
+const doctor = ({ components = [API, WEB], machine = new ScriptedMachine(), runner = machine, node = 'v22.11.0', files = FOLDERS, sourceControl = new InMemorySourceControl() } = {}) => {
   const workspace = new InMemoryWorkspace({ ...files, ...(components === null ? {} : { 'skraft-config.json': JSON.stringify({ components }) }) })
-  return { machine, doctor: createDoctor({ workspace, executables: machine, commandRunner: machine, sourceControl, runtime: { nodeVersion: () => node } }) }
+  return { machine, doctor: createDoctor({ workspace, executables: machine, commandRunner: runner, sourceControl, runtime: { nodeVersion: () => node } }) }
 }
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
@@ -83,19 +84,34 @@ test('--run starts every command once from its component root, with the base, an
   assert.deepEqual(report.checks.slice(2), [
     { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
     { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo passed' },
-    { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:{baseSha} passed' },
+    { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:a1 passed' },
     { subject: 'web/test', status: 'ok', detail: 'npx vitest run passed' },
     { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1' },
     { subject: 'docker', status: 'ok', detail: 'Docker answers (Microcks: api)' },
   ])
 })
 
+test('python is found in the component\'s virtual environment, else as python3, and doctor says where it looked when it is nowhere', async () => {
+  const PY = { name: 'py', root: 'services/py', stack: 'python', mocking: { strategy: 'inprocess' }, commands: { test: 'python -m pytest -q' } }
+  const files = { 'services/py/pyproject.toml': '' }
+  const sourceControl = new InMemorySourceControl({ '.': { top: '.', mergeBases: { main: 'a1' } }, 'services/py': { top: '.', mergeBases: { main: 'a1' } } })
+  const venv = doctor({ components: [PY], files, sourceControl, machine: new ScriptedMachine({ installed: ['python', 'services/py/.venv/Scripts/python.exe'] }) })
+  const python3 = doctor({ components: [PY], files, machine: new ScriptedMachine({ installed: ['python3'] }) })
+  const nowhere = doctor({ components: [PY], files, machine: new ScriptedMachine({ installed: [] }) })
+
+  assert.deepEqual((await venv.doctor.check()).checks[2], { subject: 'py/test', status: 'ok', detail: 'python → /work/services/py/.venv/Scripts/python.exe' })
+  assert.deepEqual((await python3.doctor.check()).checks[2], { subject: 'py/test', status: 'ok', detail: 'python → /usr/local/bin/python3' })
+  assert.deepEqual(failures(await nowhere.doctor.check()), [
+    'py/test: command not found: python (from services/py; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3); install it or change commands.test in skraft-config.json',
+  ])
+
+  const ran = await venv.doctor.check({ run: true })
+  assert.deepEqual(ran.checks[2], { subject: 'py/test', status: 'ok', detail: '.venv/Scripts/python.exe -m pytest -q passed' })
+  assert.deepEqual(venv.machine.lines(), ['services/py $ .venv/Scripts/python.exe -m pytest -q'])
+})
+
 test('--run names a command found on the machine that cannot be started, with the host\'s error', async () => {
-  const workspace = new InMemoryWorkspace({ ...FOLDERS, 'skraft-config.json': JSON.stringify({ components: [WEB] }) })
-  const check = createDoctor({
-    workspace, executables: new ScriptedMachine(), commandRunner: new ScriptedMachine({ installed: [] }),
-    sourceControl: new InMemorySourceControl(), runtime: { nodeVersion: () => 'v22.11.0' },
-  })
+  const { doctor: check } = doctor({ components: [WEB], runner: new ScriptedMachine({ installed: [] }) })
 
   const report = await check.check({ run: true })
 

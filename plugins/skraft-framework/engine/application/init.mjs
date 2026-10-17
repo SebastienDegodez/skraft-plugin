@@ -21,21 +21,43 @@ import { openJournal } from './run-journal.mjs'
  */
 export const createInit = (deps) => Object.freeze({
   /** @param {{ slug?: unknown, story?: Story, base?: unknown }} request @returns {Promise<InitOutcome>} */
-  init: async ({ slug, story = null, base = null }) => {
-    if (!isSlug(slug)) {
-      return { ok: false, slug: /** @type {any} */ (slug) ?? null, created: false, code: 'invalid-slug', reason: `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}` }
-    }
-    const opened = await openJournal(deps, slug)
-    if (!opened.ok) return { ok: false, slug, created: false, code: 'journal-tampered', reason: opened.reason }
-    const created = opened.journal.events.length === 0
-    if (created) {
-      const loaded = await loadConfig(deps)
-      if (!loaded.ok) return { ok: false, slug, created: false, code: 'config-invalid', reason: loaded.reason }
-      const resolved = await resolveBases(deps, { config: loaded.config, flag: base })
-      if (!resolved.ok) return { ok: false, slug, created: false, code: resolved.code, reason: resolved.reason }
-      await opened.journal.append('run.started', { slug, story, workflow: 'skraft', base: resolved.bases })
-    }
-    await deps.activePipeline.activate(slug)
-    return { ok: true, slug, created, code: null, reason: `${slug} is the active pipeline` }
-  },
+  init: (request) => initRun(deps, request),
 })
+
+/**
+ * @param {InitDeps} deps @param {{ slug?: unknown, story?: Story, base?: unknown }} request
+ * @returns {Promise<InitOutcome>}
+ */
+const initRun = async (deps, { slug, story = null, base = null }) => {
+  if (!isSlug(slug)) return invalidSlug(slug)
+  const opened = await openJournal(deps, slug)
+  if (!opened.ok) return refused(slug, 'journal-tampered', opened.reason)
+  const created = opened.journal.events.length === 0
+  const refusal = created ? await startRun(deps, opened.journal, { slug, story, base }) : null
+  if (refusal !== null) return refusal
+  await deps.activePipeline.activate(slug)
+  return { ok: true, slug, created, code: null, reason: `${slug} is the active pipeline` }
+}
+
+/**
+ * Journals `run.started` with the base of every repository the run diffs against; the
+ * refusal when the configuration or a base does not hold, else null.
+ * @param {InitDeps} deps @param {import('./run-journal.mjs').OpenJournal} journal
+ * @param {{ slug: string, story: Story, base: unknown }} request
+ * @returns {Promise<InitOutcome | null>}
+ */
+const startRun = async (deps, journal, { slug, story, base }) => {
+  const loaded = await loadConfig(deps)
+  if (!loaded.ok) return refused(slug, 'config-invalid', loaded.reason)
+  const resolved = await resolveBases(deps, { config: loaded.config, flag: base })
+  if (!resolved.ok) return refused(slug, resolved.code, resolved.reason)
+  await journal.append('run.started', { slug, story, workflow: 'skraft', base: resolved.bases })
+  return null
+}
+
+/** @param {unknown} slug @returns {InitOutcome} */
+const invalidSlug = (slug) =>
+  refused(/** @type {any} */ (slug) ?? null, 'invalid-slug', `slug must be kebab-case, got ${JSON.stringify(slug ?? null)}`)
+
+/** @param {string | null} slug @param {InitCode} code @param {string} reason @returns {InitOutcome} */
+const refused = (slug, code, reason) => ({ ok: false, slug, created: false, code, reason })
