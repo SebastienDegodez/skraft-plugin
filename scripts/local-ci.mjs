@@ -39,6 +39,8 @@ const testArgs = (dir) => {
 const fastGates = [
   { name: 'Engine unit tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-framework', 'unit')) },
   { name: 'Engine integration tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-framework', 'integration')) },
+  // Needs ESLint from the engine's node_modules, like the skill script tests need Stryker.
+  { name: 'Engine lint (ESLint)', cmd: 'node', args: [join(ENGINE, 'node_modules', 'eslint', 'bin', 'eslint.js'), '--config', join(ENGINE, 'eslint.config.mjs'), ENGINE] },
   { name: 'Regression harness tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'regression')) },
   { name: 'Repository tooling tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'tooling')) },
   // The JavaScript quality-gates runner tests resolve Stryker from the engine's node_modules.
@@ -58,7 +60,7 @@ const fastGates = [
 ]
 
 if (!existsSync(join(ENGINE, 'node_modules'))) {
-  process.stdout.write(`\nℹ The skill script tests need Stryker from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect the JavaScript runner tests to fail.\n`)
+  process.stdout.write(`\nℹ The engine lint and the skill script tests need ESLint and Stryker from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect them to fail.\n`)
 }
 
 // Run from the pre-push hook, GIT_DIR would send every test's own git repository into this one.
