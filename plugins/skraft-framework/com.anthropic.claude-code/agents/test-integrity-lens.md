@@ -22,7 +22,7 @@ Read the patch; open a whole file only when the patch lacks the context a findin
 
 Judge each test against the test plan before flagging it:
 - A Domain or unit test the plan lists with an `Extraction Reason` is planned, never a façade or speculative test.
-- A test absent from the plan is legitimate only when the execution journal or a commit message records a `PLAN_DEVIATION` for it; otherwise report it `medium` with gate `meta`.
+- A test absent from the plan is legitimate only when the execution journal or a commit message records a `PLAN_DEVIATION` for it; otherwise report it `medium`.
 - Acceptance-test input and expected values must match the `.feature` verbatim; a changed value is a G9 Iron Rule violation.
 
 ## Gates
@@ -66,22 +66,7 @@ Compare test assertions between commits:
 
 ## Output
 
-Return EXACTLY this YAML document:
-
-```yaml
-lens: test-integrity
-verdict: pass | fail | inconclusive
-defects:
-  - id: D<N>
-    gate: G<N>
-    severity: blocker | high | medium | low
-    location: "file:line"
-    description: "what is wrong — name the specific anti-pattern"
-    suggestion: "how to fix"
-```
-
-Quote every free-text value. Emit `defects: []` when none were found. Return
-`verdict: inconclusive` when required evidence cannot be inspected; never infer pass from silence.
+End your final message with the JSON document your brief shows; `findings` is `[]` when you find none; answer `inconclusive` when you cannot inspect an input.
 
 ## Rules
 

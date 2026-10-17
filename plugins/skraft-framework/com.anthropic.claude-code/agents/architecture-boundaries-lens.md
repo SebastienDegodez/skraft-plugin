@@ -69,22 +69,7 @@ Violations → `medium` severity.
 
 ## Output
 
-Return EXACTLY this YAML document:
-
-```yaml
-lens: architecture-boundaries
-verdict: pass | fail | inconclusive
-defects:
-  - id: D<N>
-    gate: G<N>
-    severity: blocker | high | medium | low
-    location: "file:line"
-    description: "what is wrong"
-    suggestion: "how to fix"
-```
-
-Quote every free-text value. Emit `defects: []` when none were found. Return
-`verdict: inconclusive` when required evidence cannot be inspected; never infer pass from silence.
+End your final message with the JSON document your brief shows; `findings` is `[]` when you find none; answer `inconclusive` when you cannot inspect an input.
 
 ## Rules
 
