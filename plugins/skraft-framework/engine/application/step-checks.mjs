@@ -33,6 +33,10 @@ import { baseOf } from './bases.mjs'
  *   commitReplay: import('./ports/commit-replay.mjs').CommitReplay,
  *   clock: import('./ports/clock.mjs').Clock,
  * }} CheckDeps
+ * @typedef {{ code: FailureCode, line: string }} Failure
+ * @typedef {{ allowed: string[], roots: string[], engineFiles: string[] }} WriteScope
+ * @typedef {{ replays: Map<string, CheckedCommit['replay']>, details: Map<string, string>, replayMs: number }} ReplayTally
+ *   what the replays of the pass found so far: the first replay of each red, why a red is not red, the time spent.
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
@@ -76,35 +80,52 @@ const contentHash = async ({ workspace, hasher }, path) => {
  * }} step visitHeads: the heads when the pass started; sentBack: the gates sent the work back
  * @returns {Promise<StepCheck>}
  */
-export const checkStep = async ({ deps, slug, config, base }, { role, outputs, precreated, result, visitHeads, sentBack, known }) => {
-  /** @type {Array<{ code: FailureCode, line: string }>} */
-  const found = []
-  const texts = await Promise.all(outputs.map((path) => deps.files.read(slug, path)))
-  const missing = outputs.filter((_, index) => !isFilled(texts[index], precreated[index]))
-  const reading = readResult(await deps.files.read(slug, result))
-  if (!reading.ok) found.push({ code: 'invalid-result', line: `result ${reading.errors.join('; ')}` })
-  else if (reading.result.status === 'blocked') {
-    return { missing: [], failures: [reading.result.summary], code: 'agent-blocked', commits: [], environment: null, replayMs: 0 }
-  }
-
-  const scope = await outOfScope(deps, { slug, config, role, visitHeads })
+export const checkStep = async ({ deps, slug, config, base }, step) => {
+  const missing = await missingOutputs(deps, slug, step)
+  const reading = readResult(await deps.files.read(slug, step.result))
+  if (reading.ok && reading.result.status === 'blocked') return blockedBy(reading.result.summary)
+  const scope = await outOfScope(deps, { slug, config, role: step.role, visitHeads: step.visitHeads })
   if (typeof scope === 'string') return environmentOnly(scope)
-  found.push(...scope.map((path) => ({ code: /** @type {const} */ ('write-scope'), line: `out of write scope: ${path}` })))
-
-  const history = await commitsOf(deps, visitHeads)
-  if (typeof history === 'string') return environmentOnly(history)
-  const judged = judgeCommits(history, { sentBack })
-  const replayed = await replayReds(deps, { config, base, judged, known })
-  if (replayed.environment !== null) return { ...environmentOnly(replayed.environment), commits: report(judged, replayed.replays) }
-  for (const commit of judged.filter((candidate) => candidate.verdict !== 'ok')) {
-    found.push({ code: commit.verdict === 'not-conventional' ? 'commit-convention' : 'tdd', line: commitFailure(commit, replayed.details.get(commit.sha)) })
-  }
-  const code = PRIORITY.find((candidate) => (candidate === 'missing-outputs' ? missing.length > 0 : found.some((failure) => failure.code === candidate))) ?? null
-  return { missing, failures: found.map((failure) => failure.line), code, commits: report(judged, replayed.replays), environment: null, replayMs: replayed.replayMs }
+  const commits = await checkCommits(deps, { config, base }, step)
+  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
+  const found = [...resultFailures(reading), ...scopeFailures(scope), ...commits.found]
+  return refusal(missing, found, commits)
 }
 
 /** @param {string} reason @returns {StepCheck} */
 const environmentOnly = (reason) => ({ commits: [], environment: reason })
+
+/**
+ * The outputs the attempt left as they were before it.
+ * @param {Pick<CheckDeps, 'files'>} deps @param {string} slug
+ * @param {{ outputs: string[], precreated: Array<string | null> }} step
+ */
+const missingOutputs = async ({ files }, slug, { outputs, precreated }) => {
+  const texts = await Promise.all(outputs.map((path) => files.read(slug, path)))
+  return outputs.filter((_, index) => !isFilled(texts[index], precreated[index]))
+}
+
+/** The agent said it cannot go on: its summary is the only refusal. @param {string} summary @returns {StepCheck} */
+const blockedBy = (summary) => ({ missing: [], failures: [summary], code: 'agent-blocked', commits: [], environment: null, replayMs: 0 })
+
+/** @param {import('../domain/pipeline/agent-result.mjs').ResultReading} reading @returns {Failure[]} */
+const resultFailures = (reading) => (reading.ok ? [] : [{ code: 'invalid-result', line: `result ${reading.errors.join('; ')}` }])
+
+/** @param {string[]} paths @returns {Failure[]} */
+const scopeFailures = (paths) => paths.map((path) => ({ code: /** @type {const} */ ('write-scope'), line: `out of write scope: ${path}` }))
+
+/**
+ * The step's refusal: every failure found, the code of the first one by priority.
+ * @param {string[]} missing @param {Failure[]} found
+ * @param {{ checked: CheckedCommit[], replayMs: number }} commits
+ * @returns {StepCheck}
+ */
+const refusal = (missing, found, { checked, replayMs }) => ({
+  missing, failures: found.map((failure) => failure.line), code: refusalCode(missing, found), commits: checked, environment: null, replayMs,
+})
+
+/** @param {string[]} missing @param {Failure[]} found @returns {FailureCode | null} */
+const refusalCode = (missing, found) => PRIORITY.find((candidate) => (candidate === 'missing-outputs' ? missing.length > 0 : found.some((failure) => failure.code === candidate))) ?? null
 
 /**
  * The files changed since the pass started that the agent may not change; a string when Git
@@ -114,22 +135,55 @@ const environmentOnly = (reason) => ({ commits: [], environment: reason })
  * @returns {Promise<string[] | string>}
  */
 const outOfScope = async (deps, { slug, config, role, visitHeads }) => {
-  const allowed = allowedPaths(role, { slug, components: config.components })
-  const roots = rootFiles(role, config.components)
-  const engineFiles = [CONFIG_FILE, config.workflow]
+  const scope = writeScopeOf(role, { slug, config })
   /** @type {string[]} */
   const refused = []
-  for (const { repository, sha, dirty } of visitHeads) {
-    const changed = await deps.sourceControl.changedFiles(repository, sha)
-    if (changed === null) return `Git cannot list what changed in ${repository} since ${sha}`
-    for (const path of changed.map((file) => joinRelative(repository, file))) {
-      const before = dirty.find((entry) => entry.path === path)
-      if (before && before.hash === (await contentHash(deps, path))) continue
-      const inside = allowed.some((folder) => pathUnder(path, folder) !== null) || roots.some((root) => isRootFile(path, root))
-      if (engineFiles.includes(path) || !inside) refused.push(path)
-    }
+  for (const head of visitHeads) {
+    const touched = await touchedSince(deps, head)
+    if (typeof touched === 'string') return touched
+    refused.push(...touched.filter((path) => isRefused(scope, path)))
   }
   return refused
+}
+
+/**
+ * What the role may write: folders, the files right in component roots, never the engine's own files.
+ * @param {import('../domain/pipeline/roles.mjs').Role} role
+ * @param {{ slug: string, config: import('../domain/config/skraft-config.mjs').SkraftConfig }} run
+ * @returns {WriteScope}
+ */
+const writeScopeOf = (role, { slug, config }) => ({
+  allowed: allowedPaths(role, { slug, components: config.components }),
+  roots: rootFiles(role, config.components),
+  engineFiles: [CONFIG_FILE, config.workflow],
+})
+
+/** @param {WriteScope} scope @param {string} path relative to the working copy */
+const isRefused = (scope, path) => scope.engineFiles.includes(path) || !isInside(scope, path)
+
+/** @param {WriteScope} scope @param {string} path relative to the working copy */
+const isInside = ({ allowed, roots }, path) => allowed.some((folder) => pathUnder(path, folder) !== null) || roots.some((root) => isRootFile(path, root))
+
+/**
+ * The files of a repository the attempt changed since the head, leaving out those already dirty
+ * whose content it did not change again; a string when Git cannot tell.
+ * @param {Pick<CheckDeps, 'sourceControl' | 'workspace' | 'hasher'>} deps @param {Head} head
+ * @returns {Promise<string[] | string>}
+ */
+const touchedSince = async (deps, { repository, sha, dirty }) => {
+  const changed = await deps.sourceControl.changedFiles(repository, sha)
+  if (changed === null) return `Git cannot list what changed in ${repository} since ${sha}`
+  const touched = []
+  for (const path of changed.map((file) => joinRelative(repository, file))) {
+    if (!(await keptAsBefore(deps, dirty, path))) touched.push(path)
+  }
+  return touched
+}
+
+/** @param {Pick<CheckDeps, 'workspace' | 'hasher'>} deps @param {Head['dirty']} dirty @param {string} path */
+const keptAsBefore = async (deps, dirty, path) => {
+  const before = dirty.find((entry) => entry.path === path)
+  return before !== undefined && before.hash === (await contentHash(deps, path))
 }
 
 /** A file right in a folder, not in one of its subfolders. @param {string} path @param {string} root */
@@ -137,6 +191,29 @@ const isRootFile = (path, root) => {
   const inner = pathUnder(path, root)
   return inner !== null && !inner.includes('/')
 }
+
+/**
+ * The commits of the pass judged against the convention and the TDD cycle, each red commit
+ * replayed; the environment reason when the machine cannot check them.
+ * @param {CheckDeps} deps
+ * @param {{ config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[] }} run
+ * @param {{ visitHeads: Head[], sentBack: boolean, known: KnownCommits }} step
+ * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number }>}
+ */
+const checkCommits = async (deps, { config, base }, { visitHeads, sentBack, known }) => {
+  const history = await commitsOf(deps, visitHeads)
+  if (typeof history === 'string') return { environment: history, checked: [] }
+  const judged = judgeCommits(history, { sentBack })
+  const replayed = await replayReds(deps, { config, base, judged, known })
+  const checked = report(judged, replayed.replays)
+  if (replayed.environment !== null) return { environment: replayed.environment, checked }
+  return { environment: null, checked, found: commitFailures(judged, replayed.details), replayMs: replayed.replayMs }
+}
+
+/** @param {JudgedCommit[]} judged @param {Map<string, string>} details @returns {Failure[]} */
+const commitFailures = (judged, details) => judged
+  .filter((candidate) => candidate.verdict !== 'ok')
+  .map((commit) => ({ code: commit.verdict === 'not-conventional' ? 'commit-convention' : 'tdd', line: commitFailure(commit, details.get(commit.sha)) }))
 
 /**
  * The commits of the pass in every repository, oldest first; a string when Git cannot tell.
@@ -162,47 +239,111 @@ const commitsOf = async ({ sourceControl }, visitHeads) => {
  * @param {{ config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[], judged: JudgedCommit[], known: KnownCommits }} request
  */
 const replayReds = async (deps, { config, base, judged, known }) => {
-  /** @type {Map<string, CheckedCommit['replay']>} */
-  const replays = new Map()
-  /** @type {Map<string, string>} */
-  const details = new Map()
-  let replayMs = 0
+  /** @type {ReplayTally} */
+  const tally = { replays: new Map(), details: new Map(), replayMs: 0 }
   for (const red of redsToReplay(judged, config.tdd.replay)) {
-    const components = componentsOf(config.components, red.files)
-    const earlier = known.get(red.sha)
-    if (earlier) {
-      red.verdict = /** @type {import('../domain/pipeline/commits.mjs').CommitVerdict} */ (earlier.verdict)
-      replays.set(red.sha, earlier.replay)
-      details.set(red.sha, notRed(components))
-      continue
-    }
-    if (components.length === 0) {
-      red.verdict = 'no-component'
-      continue
-    }
-    let failing = false
-    for (const component of components) {
-      const line = component.commands.test
-      if (line === undefined) return { environment: `component ${component.name} has no test command; add commands.test to it in ${CONFIG_FILE} so test commits can be replayed`, replays, details, replayMs }
-      const parsed = parseCommand(line, { baseSha: baseOf(base, component.name)?.sha ?? null })
-      if (!parsed.ok) return { environment: `${component.name} command ${JSON.stringify(line)} ${parsed.reason}`, replays, details, replayMs }
-      const started = deps.clock.now()
-      const answer = await deps.commitReplay.run({ repository: red.repository, sha: red.sha, cwd: /** @type {string} */ (pathUnder(component.root, red.repository)), argv: parsed.argv })
-      const durationMs = deps.clock.now().getTime() - started.getTime()
-      replayMs += durationMs
-      const failure = failureOf(answer)
-      if (!replays.has(red.sha)) replays.set(red.sha, { component: component.name, exitCode: answer.exitCode, durationMs })
-      if (failure === 'environment') {
-        return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${answer.error ?? `${line} exited ${answer.exitCode}`}`, replays, details, replayMs }
-      }
-      failing ||= failure === 'deterministic'
-    }
-    if (!failing) {
-      red.verdict = 'not-red'
-      details.set(red.sha, notRed(components))
-    }
+    const environment = await settleRed(deps, { config, base, known, tally }, red)
+    if (environment !== null) return { environment, ...tally }
   }
-  return { environment: null, replays, details, replayMs }
+  return { environment: null, ...tally }
+}
+
+/**
+ * Settles one red commit: from an earlier attempt, as touching no component, or by replaying it.
+ * @param {CheckDeps} deps
+ * @param {{ config: import('../domain/config/skraft-config.mjs').SkraftConfig, base: import('./bases.mjs').Base[], known: KnownCommits, tally: ReplayTally }} run
+ * @param {JudgedCommit} red
+ * @returns {Promise<string | null>} why the machine could not replay it, null once settled
+ */
+const settleRed = async (deps, { config, base, known, tally }, red) => {
+  const components = componentsOf(config.components, red.files)
+  const earlier = known.get(red.sha)
+  if (earlier) return reuseEarlier(tally, red, { earlier, components })
+  if (components.length === 0) return withoutComponent(red)
+  return replayRed(deps, { base, tally }, red, components)
+}
+
+/**
+ * @param {ReplayTally} tally @param {JudgedCommit} red
+ * @param {{ earlier: { verdict: string, replay: CheckedCommit['replay'] }, components: Component[] }} found
+ * @returns {null} an earlier replay always settles the red
+ */
+const reuseEarlier = (tally, red, { earlier, components }) => {
+  red.verdict = /** @type {import('../domain/pipeline/commits.mjs').CommitVerdict} */ (earlier.verdict)
+  tally.replays.set(red.sha, earlier.replay)
+  tally.details.set(red.sha, notRed(components))
+  return null
+}
+
+/** @param {JudgedCommit} red @returns {null} a red touching no component is settled without a replay */
+const withoutComponent = (red) => {
+  red.verdict = 'no-component'
+  return null
+}
+
+/**
+ * Replays the red for each component it touches; refuses it when every component's tests pass.
+ * @param {CheckDeps} deps @param {{ base: import('./bases.mjs').Base[], tally: ReplayTally }} run
+ * @param {JudgedCommit} red @param {Component[]} components
+ * @returns {Promise<string | null>} why the machine could not replay it
+ */
+const replayRed = async (deps, run, red, components) => {
+  let failing = false
+  for (const component of components) {
+    const replay = await replayComponent(deps, run, red, component)
+    if (replay.environment !== null) return replay.environment
+    failing ||= replay.failure === 'deterministic'
+  }
+  if (!failing) markNotRed(run.tally, red, components)
+  return null
+}
+
+/** @param {ReplayTally} tally @param {JudgedCommit} red @param {Component[]} components */
+const markNotRed = (tally, red, components) => {
+  red.verdict = 'not-red'
+  tally.details.set(red.sha, notRed(components))
+}
+
+/**
+ * Runs a component's test command at the red commit.
+ * @param {CheckDeps} deps @param {{ base: import('./bases.mjs').Base[], tally: ReplayTally }} run
+ * @param {JudgedCommit} red @param {Component} component
+ * @returns {Promise<{ environment: string } | { environment: null, failure: ReturnType<typeof failureOf> }>}
+ */
+const replayComponent = async (deps, { base, tally }, red, component) => {
+  const command = testCommandOf(base, component)
+  if (command.environment !== null) return command
+  const answer = await timedReplay(deps, tally, { red, component, argv: command.argv })
+  const failure = failureOf(answer)
+  if (failure !== 'environment') return { environment: null, failure }
+  return { environment: `replaying ${red.sha.slice(0, 7)} for ${component.name}: ${answer.error ?? `${command.line} exited ${answer.exitCode}`}` }
+}
+
+/**
+ * The argv that runs a component's tests; the environment reason when it has none that parses.
+ * @param {import('./bases.mjs').Base[]} base @param {Component} component
+ * @returns {{ environment: string } | { environment: null, line: string, argv: string[] }}
+ */
+const testCommandOf = (base, component) => {
+  const line = component.commands.test
+  if (line === undefined) return { environment: `component ${component.name} has no test command; add commands.test to it in ${CONFIG_FILE} so test commits can be replayed` }
+  const parsed = parseCommand(line, { baseSha: baseOf(base, component.name)?.sha ?? null })
+  if (!parsed.ok) return { environment: `${component.name} command ${JSON.stringify(line)} ${parsed.reason}` }
+  return { environment: null, line, argv: parsed.argv }
+}
+
+/**
+ * Replays the red in the component's folder, timing it; the first replay of a commit is the one reported.
+ * @param {Pick<CheckDeps, 'clock' | 'commitReplay'>} deps @param {ReplayTally} tally
+ * @param {{ red: JudgedCommit, component: Component, argv: string[] }} replay
+ */
+const timedReplay = async (deps, tally, { red, component, argv }) => {
+  const started = deps.clock.now()
+  const answer = await deps.commitReplay.run({ repository: red.repository, sha: red.sha, cwd: /** @type {string} */ (pathUnder(component.root, red.repository)), argv })
+  const durationMs = deps.clock.now().getTime() - started.getTime()
+  tally.replayMs += durationMs
+  if (!tally.replays.has(red.sha)) tally.replays.set(red.sha, { component: component.name, exitCode: answer.exitCode, durationMs })
+  return answer
 }
 
 /** @param {Component[]} components */
