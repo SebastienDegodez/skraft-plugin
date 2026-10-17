@@ -120,7 +120,7 @@ test('an invalid skraft-config.json refuses the start with its errors and journa
   assert.deepEqual(outcome, {
     ok: false, slug: 'checkout', created: false, code: 'config-invalid',
     reason: 'skraft-config.json is invalid: components[0].name must be kebab-case, got "payment-Web"; component payment-Web: root must be a path relative to the working copy; '
-      + 'component payment-Web: command name "smoke-Test" must be lower-case; components[1].name must be kebab-case, got null; '
+      + 'component payment-Web: unknown command smoke-Test (allowed: build, format, lint, test, architecture, coverage, mutation, e2e); components[1].name must be kebab-case, got null; '
       + 'components[1]: stack must be one of dotnet, java, python, typescript, javascript, react',
   })
   assert.deepEqual(tracking.journal('checkout'), [])

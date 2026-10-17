@@ -303,7 +303,7 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     baseBranch: '--orphan',
     components: [
       { name: 'web', root: '/srv/web', stack: 'react', comands: { test: 'npm test' } },
-      { name: 'Api', root: 'api', stack: 'cobol', commands: { Test: 'dotnet test', build: '  ', mutation: 7 }, baseBranch: 'release 2', mocking: { strategy: 'wiremock' } },
+      { name: 'Api', root: 'api', stack: 'cobol', commands: { Test: 'dotnet test', tset: 'dotnet test', build: '  ', mutation: 7 }, baseBranch: 'release 2', mocking: { strategy: 'wiremock' } },
       { name: 'api', root: 'api', stack: 'dotnet', commands: 'dotnet test', mocking: 'inprocess' },
       { name: 'api', root: 'api2', stack: 'dotnet' },
       null,
@@ -314,7 +314,8 @@ test('an invalid skraft-config.json refuses the gates with every error, instead 
     'component web: root must be a path relative to the working copy',
     'components[1].name must be kebab-case, got "Api"',
     'component Api: stack must be one of dotnet, java, python, typescript, javascript, react',
-    'component Api: command name "Test" must be lower-case',
+    'component Api: unknown command Test (allowed: build, format, lint, test, architecture, coverage, mutation, e2e)',
+    'component Api: unknown command tset (allowed: build, format, lint, test, architecture, coverage, mutation, e2e)',
     'component Api: command build must be a non-empty command line',
     'component Api: command mutation must be a non-empty command line',
     'component Api: baseBranch must be a git ref, got "release 2"',

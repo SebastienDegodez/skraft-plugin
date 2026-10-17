@@ -1,3 +1,4 @@
+import { GATE_ORDER } from '../gates/gate-plan.mjs'
 import { normalizeRelative } from './relative-path.mjs'
 
 /**
@@ -23,7 +24,8 @@ const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascr
 const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const COMPONENT_KEYS = Object.freeze(['name', 'root', 'stack', 'paths', 'commands', 'baseBranch', 'mocking', 'contractTesting'])
-const COMMAND_NAME = /^[a-z][a-z0-9-]*$/
+/** The gates, and `e2e`, which doctor checks but no gate runs. */
+const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
 
 /**
  * @param {string | null} text the file's content, null when the file is absent
@@ -88,7 +90,7 @@ const commandsOf = (value, label, errors) => {
     return {}
   }
   for (const [name, line] of Object.entries(value)) {
-    if (!COMMAND_NAME.test(name)) errors.push(`${label}: command name ${JSON.stringify(name)} must be lower-case`)
+    if (!COMMAND_NAMES.includes(name)) errors.push(`${label}: unknown command ${name} (allowed: ${COMMAND_NAMES.join(', ')})`)
     else if (typeof line !== 'string' || line.trim() === '') errors.push(`${label}: command ${name} must be a non-empty command line`)
   }
   return /** @type {Record<string, string>} */ (value)
