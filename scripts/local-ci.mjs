@@ -11,6 +11,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { withoutRepositoryEnv } from '../eng/lib/repository-env.mjs'
 
 const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
@@ -60,9 +61,12 @@ if (!existsSync(join(ENGINE, 'node_modules'))) {
   process.stdout.write(`\nℹ The skill script tests need Stryker from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect the JavaScript runner tests to fail.\n`)
 }
 
+// Run from the pre-push hook, GIT_DIR would send every test's own git repository into this one.
+const env = withoutRepositoryEnv(process.env)
+
 const run = (gate) => {
   process.stdout.write(`\n▶ ${gate.name}\n`)
-  const result = spawnSync(gate.cmd, gate.args, { stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
+  const result = spawnSync(gate.cmd, gate.args, { env, stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
   return { name: gate.name, ok: result.status === 0 }
 }
 
