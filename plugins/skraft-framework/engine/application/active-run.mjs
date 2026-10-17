@@ -17,18 +17,37 @@ export const NO_ACTIVE_PIPELINE =
  * @returns {Promise<{ ok: true, slug: string, journal: import('./run-journal.mjs').OpenJournal } | { ok: false, outcome: RunOutcome }>}
  */
 export const openActiveRun = async (deps, requested) => {
+  const chosen = await chosenRun(deps, requested ?? null)
+  if (!chosen.ok) return chosen
+  return openChosen(deps, chosen.slug)
+}
+
+/**
+ * The active pipeline, which a slug the caller names must be.
+ * @param {{ activePipeline: ActivePipeline }} deps @param {string | null} named
+ * @returns {Promise<{ ok: true, slug: string } | { ok: false, outcome: RunOutcome }>}
+ */
+const chosenRun = async (deps, named) => {
   const active = await deps.activePipeline.current()
-  const named = requested ?? null
   if (active === null) return refused(named, 'no-active-pipeline', NO_ACTIVE_PIPELINE)
   if (named !== null && named !== active) {
     return refused(named, 'slug-mismatch', `the active pipeline of this working copy is ${active}, not ${named}; switch with an explicit init`)
   }
-  const opened = await openJournal(deps, active)
-  if (!opened.ok) return { ok: false, outcome: { status: 'blocked', slug: active, phase: null, code: 'journal-tampered', reason: opened.reason } }
+  return { ok: true, slug: active }
+}
+
+/**
+ * The run's journal: blocked when tampered, refused before its init.
+ * @param {Parameters<typeof openJournal>[0]} deps @param {string} slug
+ * @returns {Promise<{ ok: true, slug: string, journal: import('./run-journal.mjs').OpenJournal } | { ok: false, outcome: RunOutcome }>}
+ */
+const openChosen = async (deps, slug) => {
+  const opened = await openJournal(deps, slug)
+  if (!opened.ok) return { ok: false, outcome: { status: 'blocked', slug, phase: null, code: 'journal-tampered', reason: opened.reason } }
   if (opened.journal.events.length === 0) {
-    return refused(active, 'not-initialised', `${active} has no journal (events.jsonl); start it with an explicit init`)
+    return refused(slug, 'not-initialised', `${slug} has no journal (events.jsonl); start it with an explicit init`)
   }
-  return { ok: true, slug: active, journal: opened.journal }
+  return { ok: true, slug, journal: opened.journal }
 }
 
 /** @returns {{ ok: false, outcome: RunOutcome }} */
