@@ -29,25 +29,41 @@ const inProcess = async (cwd, args) => {
 
 const tracking = (cwd, ...parts) => join(cwd, '.copilot-tracking', 'skraft-plans', ...parts)
 
-test('skraft init makes the slug the active pipeline and opens its journal with the story', async (t) => {
+test('skraft init makes the slug the active pipeline and opens its journal with the story it was given', async (t) => {
   const cwd = workingCopy(t)
+  const started = (slug) => JSON.parse(readFileSync(tracking(cwd, slug, 'events.jsonl'), 'utf8').split('\n')[0])
 
-  const run = await inProcess(cwd, ['init', 'checkout', '--issue', '42', '--title', 'Pay by card'])
+  const run = await inProcess(cwd, ['init', 'checkout', '--issue', '7', '--title', 'Pay by card'])
 
   assert.deepEqual(run, { code: 0, out: ['checkout is the active pipeline'], err: [] })
   assert.equal(readFileSync(tracking(cwd, '.active-slug'), 'utf8'), 'checkout\n')
-  const [started] = readFileSync(tracking(cwd, 'checkout', 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line))
-  assert.deepEqual([started.type, started.slug, started.story, started.prev], ['run.started', 'checkout', { issue: 42, title: 'Pay by card' }, null])
+  const { type, slug, story, prev } = started('checkout')
+  assert.deepEqual([type, slug, story, prev], ['run.started', 'checkout', { issue: 7, title: 'Pay by card' }, null])
+
+  await inProcess(cwd, ['init', 'refund', '--title', 'Refund a card'])
+  await inProcess(cwd, ['init', 'payout', '--issue', '120'])
+  await inProcess(cwd, ['init', 'settle'])
+  assert.deepEqual(['refund', 'payout', 'settle'].map((name) => started(name).story), [{ issue: null, title: 'Refund a card' }, { issue: 120, title: null }, null])
 })
 
 test('skraft init refuses a slug that is not kebab-case, or a malformed option, and changes nothing', async (t) => {
   const cwd = workingCopy(t)
 
   assert.deepEqual(await inProcess(cwd, ['init', 'Check Out']), { code: 1, out: [], err: ['slug must be kebab-case, got "Check Out"'] })
-  assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--issue', 'x']), { code: 2, out: [], err: [USAGE] })
+  for (const issue of ['x', 'a1', '1a', '0']) assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--issue', issue]), { code: 2, out: [], err: [USAGE] })
+  assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--title', '--issue']), { code: 2, out: [], err: [USAGE] })
+  assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--owner', 'me']), { code: 2, out: [], err: [USAGE] })
   assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--base']), { code: 2, out: [], err: [USAGE] })
   assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--title', 'a', '--title', 'b']), { code: 2, out: [], err: [USAGE] })
   assert.equal(existsSync(tracking(cwd)), false)
+})
+
+test('skraft init without a slug refuses an invalid skraft-config.json and leaves it as it was', async (t) => {
+  const cwd = workingCopy(t)
+  writeFileSync(join(cwd, 'skraft-config.json'), '{"components": {}}')
+
+  assert.deepEqual(await inProcess(cwd, ['init']), { code: 1, out: [], err: ['skraft-config.json is invalid: components must be an array'] })
+  assert.equal(readFileSync(join(cwd, 'skraft-config.json'), 'utf8'), '{"components": {}}')
 })
 
 test('skraft status prints the view of the active pipeline, as text or JSON', async (t) => {

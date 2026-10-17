@@ -45,6 +45,7 @@ export const runCli = async ([command, ...rest], services, console) => {
  * @param {{ values?: string[], flags?: string[], repeated?: string[] }} spec
  * @returns {Record<string, string | string[] | true> | undefined}
  */
+// Stryker disable next-line ArrayDeclaration: a default lists no option; a name it would hold matches no argument a caller passes
 const optionsOf = (args, { values = [], flags = [], repeated = [] }) => {
   /** @type {Record<string, string | string[] | true>} */
   const options = {}
@@ -86,7 +87,7 @@ const init = async (args, services, console) => {
   const issue = options['--issue']
   if (issue !== undefined && !/^[1-9]\d*$/.test(String(issue))) return usage(console)
   const title = /** @type {string | undefined} */ (options['--title'])
-  const story = issue === undefined && title === undefined ? null : { issue: issue === undefined ? null : Number(issue), title: title ?? null }
+  const story = issue === undefined && title === undefined ? null : { issue: Number(issue) || null, title: title ?? null }
   const outcome = await createInit(services.adapters()).init({ slug: slug ?? null, story, base: options['--base'] ?? null })
   if (!outcome.ok) {
     console.err(outcome.reason)

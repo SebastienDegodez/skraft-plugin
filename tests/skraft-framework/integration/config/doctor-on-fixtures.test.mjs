@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { copyFileSync, linkSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { FIXTURES, commitAll, copyFixture, envWithPath, readJson, skraft, stubPrograms, tempFolder, toolFolders } from '../support/workspace.mjs'
+import { FIXTURES, commitAll, copyFixture, envWithPath, git, readJson, skraft, stubPrograms, tempFolder, toolFolders } from '../support/workspace.mjs'
 
 // The toolchains (dotnet, mvn, python, npm, npx) and Docker are stub programs on a PATH of
 // their own: doctor must find them where a developer machine would, under Windows as .cmd.
@@ -109,4 +109,27 @@ test('python runs from the virtual environment of the component, laid out the wa
   assert.equal(gate.status, 0, gate.stdout)
   const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
   assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\n`))
+})
+
+test('doctor --run starts each command once against the base it is given, main by default', async (t) => {
+  const cwd = join(tempFolder(t), 'payment')
+  mkdirSync(cwd)
+  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ components: [
+    { name: 'payment', root: '.', stack: 'javascript', mocking: { strategy: 'inprocess' }, commands: { test: 'node --version {baseSha}' } },
+  ] }))
+  const mainSha = commitAll(cwd)
+  git(cwd, 'checkout', '-q', '-b', 'develop')
+  git(cwd, 'commit', '-q', '--allow-empty', '-m', 'develop')
+  const developSha = git(cwd, 'rev-parse', 'HEAD')
+  const env = envWithPath(toolFolders())
+
+  const onMain = await skraft(cwd, ['doctor', '--run', '--json'], { env })
+  const onDevelop = await skraft(cwd, ['doctor', '--base', 'develop', '--run'], { env })
+  const dry = await skraft(cwd, ['doctor', '--base', 'develop', '--json'], { env })
+
+  assert.equal(onMain.status, 0, onMain.stdout)
+  assert.deepEqual(JSON.parse(onMain.stdout).checks[2], { subject: 'payment/test', status: 'ok', detail: `node --version ${mainSha} passed` })
+  assert.equal(onDevelop.status, 0, onDevelop.stdout)
+  assert.equal(onDevelop.stdout.split(/\r?\n/)[2], `ok    payment/test: node --version ${developSha} passed`)
+  assert.match(JSON.parse(dry.stdout).checks[2].detail, /^node → /)
 })

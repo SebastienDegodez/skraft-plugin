@@ -87,6 +87,8 @@ test('a change in the front runs the front gates only; --all runs every gate, ea
   assert.equal(loop.status, 0, loop.stdout + loop.stderr)
   assert.deepEqual(ran(), ['payment-web web/lint', 'payment-web web/test'])
   assert.equal(loop.stdout, 'pass  web/lint\npass  web/test\nskraft checkout: gates passed — 2 gates passed on web\n')
+  const asJson = JSON.parse((await skraft(api, ['gate', '--json'])).stdout)
+  assert.deepEqual([asJson.status, asJson.scope, asJson.components], ['passed', 'touched', ['web']])
 
   resetLog()
   const closure = await skraft(api, ['gate', '--all'])
