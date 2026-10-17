@@ -46,66 +46,93 @@ export const edgeKey = (from, to) => `${from}->${to}`
  * @returns {RunState}
  */
 export const deriveRun = ([started, ...events]) => {
-  /** @type {RunState} */
-  const run = {
-    story: started.story,
-    base: started.base,
-    artifacts: started.artifacts,
-    start: started.start ?? null,
-    closed: [],
-    nodes: {},
-    last: null,
-    traversals: {},
-    phaseStarted: {},
-    replayMs: {},
-    // Stryker disable next-line ArrayDeclaration: no phase is named like the placeholder
-    replayWarned: [],
-    finished: null,
-    stopped: null,
-    attempts: 0,
-    costUsd: null,
-  }
-  for (const event of events) {
-    run.stopped = event.type === 'run.stopped' ? event : null
-    if (event.type === 'step.started') started_(run, event)
-    else if (event.type === 'step.recorded') recorded(run, event)
-    else if (event.type === 'phase.closed') {
-      run.closed.push(event.phase)
-      run.finished = null
-    } else if (event.type === 'tdd.replay-slow') run.replayWarned.push(event.phase)
-    else if (event.type === 'run.finished') run.finished = event
-  }
+  const run = initialRun(started)
+  for (const event of events) apply(run, event)
   return run
+}
+
+/** @param {RunEvent} started @returns {RunState} */
+const initialRun = (started) => ({
+  story: started.story,
+  base: started.base,
+  artifacts: started.artifacts,
+  start: started.start ?? null,
+  ...untraversed(),
+  ...untimed(),
+  ...unfinished(),
+})
+
+/** @returns {Pick<RunState, 'closed' | 'nodes' | 'last' | 'traversals'>} */
+const untraversed = () => ({
+  closed: [],
+  nodes: {},
+  last: null,
+  traversals: {},
+})
+
+/** @returns {Pick<RunState, 'phaseStarted' | 'replayMs' | 'replayWarned'>} */
+const untimed = () => ({
+  phaseStarted: {},
+  replayMs: {},
+  // Stryker disable next-line ArrayDeclaration: no phase is named like the placeholder
+  replayWarned: [],
+})
+
+/** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd'>} */
+const unfinished = () => ({
+  finished: null,
+  stopped: null,
+  attempts: 0,
+  costUsd: null,
+})
+
+/** A run is stopped only while its last event is run.stopped. @param {RunState} run @param {RunEvent} event */
+const apply = (run, event) => {
+  run.stopped = event.type === 'run.stopped' ? event : null
+  ON_EVENT[event.type]?.(run, event)
 }
 
 /** @param {RunState} run @param {RunEvent} event */
 const started_ = (run, event) => {
-  const before = run.nodes[event.step]
-  const sameVisit = before?.visit === event.visit
-  const open = {
-    visit: event.visit,
-    attempt: event.attempt,
-    phase: event.phase,
-    agent: event.agent ?? null,
-    gates: event.gates ?? null,
-    outputs: event.outputs ?? [],
-    missing: event.missing,
-    feedback: event.feedback,
-    heads: event.heads,
-  }
-  run.nodes[event.step] = {
-    visit: event.visit,
-    attempt: event.attempt,
-    outputs: before?.outputs ?? open.outputs,
-    heads: sameVisit ? before.heads : open.heads,
-    sentBack: sameVisit ? before.sentBack : event.feedback?.length > 0,
-    open,
-    last: sameVisit ? before.last : null,
-    previous: null,
-  }
+  run.nodes[event.step] = enteredNode(run.nodes[event.step], event)
   run.phaseStarted[event.phase] ??= event.at
   run.finished = null
   run.attempts += 1
+}
+
+/** @param {NodeState | undefined} before @param {RunEvent} event @returns {NodeState} */
+const enteredNode = (before, event) => {
+  const open = openAttempt(event)
+  return {
+    visit: event.visit,
+    attempt: event.attempt,
+    outputs: before?.outputs ?? open.outputs,
+    ...thisVisit(before, open),
+    previous: null,
+  }
+}
+
+/** @param {RunEvent} event @returns {OpenAttempt} */
+const openAttempt = (event) => ({
+  visit: event.visit,
+  attempt: event.attempt,
+  phase: event.phase,
+  agent: event.agent ?? null,
+  gates: event.gates ?? null,
+  outputs: event.outputs ?? [],
+  missing: event.missing,
+  feedback: event.feedback,
+  heads: event.heads,
+})
+
+/**
+ * A new visit starts from the attempt's heads and feedback; a later attempt keeps the visit's.
+ * @param {NodeState | undefined} before @param {OpenAttempt} open
+ * @returns {Pick<NodeState, 'heads' | 'sentBack' | 'open' | 'last'>}
+ */
+const thisVisit = (before, open) => {
+  if (before?.visit !== open.visit) return { heads: open.heads, sentBack: open.feedback?.length > 0, open, last: null }
+  return { heads: before.heads, sentBack: before.sentBack, open, last: before.last }
 }
 
 /** @param {RunState} run @param {RunEvent} event */
@@ -120,3 +147,29 @@ const recorded = (run, event) => {
   run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
   if (typeof event.cost === 'number') run.costUsd = (run.costUsd ?? 0) + event.cost
 }
+
+/** @param {RunState} run @param {RunEvent} event */
+const closed = (run, event) => {
+  run.closed.push(event.phase)
+  run.finished = null
+}
+
+/** @param {RunState} run @param {RunEvent} event */
+const replaySlow = (run, event) => {
+  run.replayWarned.push(event.phase)
+}
+
+/** @param {RunState} run @param {RunEvent} event */
+const finished = (run, event) => {
+  run.finished = event
+}
+
+/** @type {Readonly<Record<string, (run: RunState, event: RunEvent) => void>>} */
+const ON_EVENT = Object.freeze({
+  __proto__: null,
+  'step.started': started_,
+  'step.recorded': recorded,
+  'phase.closed': closed,
+  'tdd.replay-slow': replaySlow,
+  'run.finished': finished,
+})
