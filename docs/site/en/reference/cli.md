@@ -2,7 +2,7 @@
 layout: doc
 lang: en
 title: "The skraft command line"
-description: "Every skraft command: synopsis, options, effect, text and JSON output, exit codes, and its equivalents in the Claude Code mod and the Copilot workflow."
+description: "Every skraft command: synopsis, options, effect, text and JSON output, exit codes, the review node of the workflow, and its equivalents in the Claude Code mod and the Copilot workflow."
 persona: software-engineer
 ---
 
@@ -271,6 +271,95 @@ skraft doctor: 1 checks failed
 The last line is `skraft doctor: every check passed` or `skraft doctor: N checks failed`.
 
 **`--json` output**: `{ "ok": boolean, "checks": [{ "subject", "status": "ok"|"fail", "detail" }] }`.
+
+### Review node (`shape=component`)
+
+The workflow is a DOT graph: the plugin's `workflows/skraft.dot`, or the repository's
+`skraft-workflow.dot` written by `skraft workflow eject`. A review node runs lenses, read-only
+agents, on what the run changed, and the engine computes its verdict from their findings.
+
+```dot
+deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
+deliver_review -> exit    [label="APPROVED"]
+```
+
+| Rule | Detail |
+| --- | --- |
+| `lenses` | required; kebab-case names separated by commas, each once |
+| Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
+| `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
+| `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |
+| Driver | the host driver starts the lenses and the refuter (depth 1); no agent starts another one |
+
+**What each lens reads.** Every lens but `cold-reader` also reads the review's
+`context.md` (story, project rules, who wrote which document). The files sit in
+`reviews/<node>-<visit>/` ([Tracking folder and journal]({{ "/en/reference/run-journal" | relative_url }})).
+
+| Lens | Reads |
+| --- | --- |
+| `fitness`, `business-alignment` | documents of the phase, of the story and of the other phases |
+| `architecture-compliance`, `testability`, `boundary-enforcement` | documents of the phase, patch, changed paths |
+| `architecture-boundaries` | documents of the story and of the other phases, patch, changed paths |
+| `cold-reader` | patch and changed paths only: no story, no feature scope, no context |
+| `mock-fidelity`, `contract-fidelity` | patch, changed paths, `components.json` |
+| any other lens (`consistency`, `coverage`, `test-integrity`, a repository's own) | everything above |
+
+The patch holds every change since the base of the run, the tracking folder left out. A
+changed path with no section in the patch is a new untracked file: the lens opens it.
+
+**Conditional lenses.** A lens with a trigger runs only when a changed path or a line the patch
+adds or keeps matches it; otherwise the review runs without it.
+
+| Lens | Path | Line |
+| --- | --- | --- |
+| `mock-fidelity` | a file name holding `mock`, `stub` or `fake` | `WireMock…`, `MockServer`, `Microcks…`, `Mountebank`, `HttpMessageHandler`, `nock`, `msw` |
+| `contract-fidelity` | a file name holding `contract`, `.apiexamples`, `.apimetadata`, `openapi….yaml/json` | `VerifyAsync`, `Pact…`, `ProviderVerifier`, `ContractTest` |
+
+In `components.json`, a component without `mocking` uses Microcks; a component without
+`contractTesting: true` asks for no contract test.
+
+**Skills.** The brief gives each lens the `SKILL.md` of every skill its descriptor lists under
+`metadata.skills`, from the plugin, then `.claude/skills/` or `.github/skills/`; a skill found
+nowhere is left out. The lens reads them before any other input.
+
+**Answer.** A lens ends its last message with one YAML document in a fenced block; the engine
+reads the last fenced block of the message.
+
+```yaml
+lens: test-integrity
+verdict: fail            # pass | fail | inconclusive
+findings:                # [] when it finds none
+  - id: F1
+    gate: G9             # the gate of the lens's table
+    severity: blocker    # blocker | high | medium | low
+    location: "tests/Orders.UnitTest/RefundTests.cs:42"
+    description: "the expected amount 90 became Assert.NotNull"
+    suggestion: "restore Assert.Equal(90, refund.Amount)"   # optional
+```
+
+| Rule | Detail |
+| --- | --- |
+| Keys | only `lens`, `verdict`, `findings`; per finding `id`, `gate`, `severity`, `location`, `description`, `suggestion`; any other key refuses the answer |
+| Required | `gate` and `description`; a missing `id` becomes the first free `F<n>` |
+| Values | free texts in double quotes or a literal block scalar; no anchor, alias or tag; case of `verdict` and `severity` normalized |
+| Ceiling | at most 20 findings; a `pass` with a blocker, high or medium finding is refused |
+| Texts | brought onto one line and cut (description: 500 characters) |
+| Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the node with `lens-unreadable`, for good |
+
+**Refutation.** Each blocker or high finding goes to `finding-refuter`, with the inputs and skills
+of the lens that gave it. It answers `confirmed`, `refuted` (its `reason` cites the `path:line`
+it read) or `unverifiable`. A refuted finding does not count; an unverifiable one does, and so
+does a finding whose check was unreadable twice.
+
+**Verdict.** `NEEDS_REWORK` when a blocker, high or medium finding counts, when a lens answers
+`inconclusive`, or when a lens fails without such a finding; otherwise `APPROVED` (low findings
+are notes). The findings that count go to the next brief of the phase agent.
+
+**Incremental re-review.** On a later pass, a lens whose previous result was `pass` with no
+finding, and whose fingerprint has not changed, is not started again: its result is journaled
+again with `reused: true`. The fingerprint covers its inputs, its skills, the project rule
+files and the content of each changed path it reads.
 
 ### Equivalents in the Claude Code mod
 

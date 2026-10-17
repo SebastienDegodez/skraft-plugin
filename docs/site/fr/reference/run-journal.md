@@ -30,8 +30,19 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
 └── <slug>/
     ├── events.jsonl                               journal chaîné
     ├── research/<AAAA-MM-JJ>/<slug>-research.md   document de recherche
+    ├── results/
+    │   ├── <nœud>-<visite>-<tentative>.json       résultat qu'un agent écrit pour une tentative
+    │   └── <nœud>-<visite>-<tentative>.documents.json   le dossier de suivi tel que cette tentative l'a trouvé
+    ├── reviews/<nœud>-<visite>/                   ce que lisent les lentilles d'une passe de revue
+    │   ├── changes.patch                          changements depuis la base du run
+    │   ├── changed-files.txt                      chemins que ces changements touchent
+    │   ├── context.md                             story, règles du projet, qui a écrit quel document
+    │   └── components.json                        stack, stratégie de mocking, contract testing
     └── gates/<composant>/<gate>-<n>.log           preuve de chaque gate lancée
 ```
+
+`results/` et `reviews/` appartiennent au moteur : ce ne sont pas des documents du run, et une
+revue ne les donne jamais à une lentille comme tels.
 
 Le **slug** est le nom kebab-case d'un pipeline (`checkout-by-card`). Un slug = un pipeline =
 un dossier.
@@ -88,7 +99,7 @@ première rupture donne `journal-tampered` avec ce message :
 | `phase.closed` | le pipeline | `phase` |
 | `run.finished` | le pipeline | `status` (`incomplete` quand RESEARCH est close, `blocked` quand des sorties manquent après la dernière tentative) ; `reason` |
 | `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête | `code` (`agent-unavailable` ou `agent-failed`) ; `reason` |
-| `review.lens` | un nœud de revue, une fois par lentille | `step` ; `visit` ; `lens` (`consistency`) ; `agent` (`consistency-lens`) ; `fingerprint` (empreinte des entrées de la lentille) ; `verdict` (`pass`, `fail` ou `inconclusive`) ; `findings` (`{ id, severity, location, description, suggestion }`) ; `cost` (absent s'il est inconnu) ; `reused` (`true` quand le résultat est repris de la passe précédente : mêmes entrées, rien trouvé) |
+| `review.lens` | un nœud de revue, une fois par lentille | `step` ; `visit` ; `lens` (`consistency`) ; `agent` (`consistency-lens`) ; `fingerprint` (empreinte des entrées de la lentille) ; `verdict` (`pass`, `fail` ou `inconclusive`) ; `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` étant l'identifiant de la table de la lentille : `G7`, `M2`…) ; `cost` (absent s'il est inconnu) ; `reused` (`true` quand le résultat est repris de la passe précédente : mêmes entrées, rien trouvé) |
 | `review.refuted` | un nœud de revue, une fois par finding blocker ou high vérifié par `finding-refuter` | `step` ; `visit` ; `lens` ; `finding` (son id) ; `verdict` (`confirmed`, `refuted` ou `unverifiable`) ; `reason` ; `cost` |
 | `review.cost` | un nœud de revue, une fois par lot que l'hôte chiffre d'un bloc (le mod Claude Code) | `step` ; `visit` ; `cost` |
 | `gate.ran` | `skraft gate`, une fois par gate | `component` ; `gate` (`build`… ou `none`) ; `scope` (`touched` ou `all`) ; `command` (`null` pour `none`) ; `status` (`pass` ou `fail`) ; `failure` (`environment`, `deterministic` ou `null`) ; `exitCode` (`null` si rien n'a tourné) ; `durationMs` ; `evidence` (chemin relatif au dossier du slug, `null` pour `none`) |
@@ -106,12 +117,13 @@ run v1 sur les mêmes fixtures.
 
 Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent` ; son `step.recorded` a
 un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-unreadable` quand une lentille
-a répondu deux fois sans verdict lisible), `failures` (les findings retenus, que le brief suivant
+a répondu deux fois sans verdict lisible : arrêt définitif du nœud, qu'un nouveau lancement du
+même slug retrouve bloqué), `failures` (les findings retenus, que le brief suivant
 de l'agent de la phase liste) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Un agent
 renvoyé par les gates ou par une revue porte `sentBy` (`gate` ou `review`) sur son `step.started`.
 Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
 tentative a créés ou modifiés (hors fichiers du moteur) ; une revue donne ces documents à chaque
-lentille, par phase, et écrit `reviews/<nœud>-<passe>/context.md` : la story, les fichiers de
+lentille, par phase, et écrit `reviews/<nœud>-<visite>/context.md` : la story, les fichiers de
 règles du projet trouvés (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`,
 `.github/copilot-instructions.md`, `docs/adr/decisions-index.md`) et quel agent a écrit quel document.
 
@@ -173,6 +185,8 @@ Les commandes, le mod et le workflow rendent un **statut** et, en cas d'arrêt, 
 | `blocked` | `missing-outputs` | sorties absentes après la dernière tentative | `solution-researcher left required outputs missing after 2 attempts: <chemins>` | une reprise rend le même blocage ; corriger la cause et démarrer un nouveau slug |
 | `blocked` | `agent-unavailable` | l'hôte ne peut pas lancer l'agent | Claude Code : `skraft:solution-researcher could not be started: …` ; Copilot : `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | installer ou activer le plugin, puis reprendre ; la tentative n'est pas consommée |
 | `blocked` | `agent-failed` | l'agent s'arrête sans finir et ses sorties manquent | `<agent> stopped without finishing: <erreur>` | reprendre : l'étape reste ouverte et la même tentative est relancée |
+| `blocked` | `review-rejected` | une revue répond `NEEDS_REWORK` et son nœud n'a pas d'arête `NEEDS_REWORK` | `<nœud> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | corriger les findings dans un nouveau slug, ou ajouter l'arête au workflow |
+| `blocked` | `lens-unreadable` | une lentille a répondu deux fois sans verdict lisible | `<lentille>-lens answered 2 times without a readable verdict: <erreur>` | définitif : un nouveau lancement du slug reste bloqué ; corriger le descripteur de la lentille et démarrer un nouveau slug |
 | `done` | — | RESEARCH close, ou plus rien à lancer | `RESEARCH closed` ou `nothing to run` | — |
 
 Les gates ont en plus leurs propres statuts `passed` et `failed` :

@@ -30,8 +30,19 @@ The tracking folder lives **in the working copy that starts the run**:
 └── <slug>/
     ├── events.jsonl                               hash-chained journal
     ├── research/<YYYY-MM-DD>/<slug>-research.md   research document
+    ├── results/
+    │   ├── <node>-<visit>-<attempt>.json          result an agent writes for one attempt
+    │   └── <node>-<visit>-<attempt>.documents.json   the tracking folder as that attempt found it
+    ├── reviews/<node>-<visit>/                    what the lenses of one review pass read
+    │   ├── changes.patch                          changes since the base of the run
+    │   ├── changed-files.txt                      paths those changes touch
+    │   ├── context.md                             story, project rules, who wrote which document
+    │   └── components.json                        stack, mocking strategy, contract testing
     └── gates/<component>/<gate>-<n>.log           evidence of each gate run
 ```
+
+`results/` and `reviews/` belong to the engine: they are not documents of the run, and a
+review never hands them to a lens as one.
 
 The **slug** is the kebab-case name of a pipeline (`checkout-by-card`). One slug = one
 pipeline = one folder.
@@ -88,7 +99,7 @@ write arrived since it was opened, it stops with `journal-changed`:
 | `phase.closed` | the pipeline | `phase` |
 | `run.finished` | the pipeline | `status` (`incomplete` when RESEARCH is closed, `blocked` when outputs are missing after the last attempt); `reason` |
 | `run.stopped` | the pipeline, when the agent does not start or stops | `code` (`agent-unavailable` or `agent-failed`); `reason` |
-| `review.lens` | a review node, once per lens | `step`; `visit`; `lens` (`consistency`); `agent` (`consistency-lens`); `fingerprint` (hash of the lens's inputs); `verdict` (`pass`, `fail` or `inconclusive`); `findings` (`{ id, severity, location, description, suggestion }`); `cost` (absent when unknown); `reused` (`true` when kept from the previous pass: same inputs, nothing found) |
+| `review.lens` | a review node, once per lens | `step`; `visit`; `lens` (`consistency`); `agent` (`consistency-lens`); `fingerprint` (hash of the lens's inputs); `verdict` (`pass`, `fail` or `inconclusive`); `findings` (`{ id, gate, severity, location, description, suggestion }`, `gate` being the id of the lens's table: `G7`, `M2`…); `cost` (absent when unknown); `reused` (`true` when kept from the previous pass: same inputs, nothing found) |
 | `review.refuted` | a review node, once per blocker or high finding checked by `finding-refuter` | `step`; `visit`; `lens`; `finding` (its id); `verdict` (`confirmed`, `refuted` or `unverifiable`); `reason`; `cost` |
 | `review.cost` | a review node, once per batch the host costs as a whole (the Claude Code mod) | `step`; `visit`; `cost` |
 | `gate.ran` | `skraft gate`, once per gate | `component`; `gate` (`build`… or `none`); `scope` (`touched` or `all`); `command` (`null` for `none`); `status` (`pass` or `fail`); `failure` (`environment`, `deterministic` or `null`); `exitCode` (`null` when nothing ran); `durationMs`; `evidence` (path relative to the slug folder, `null` for `none`) |
@@ -106,12 +117,13 @@ run with a v1 run on the same fixtures.
 
 A review node's `step.started` carries `lenses` instead of `agent`; its `step.recorded` has
 `outcome` `approved`, `needs-rework` or `blocked` (`code` `lens-unreadable` when a lens answered
-twice without a readable verdict), `failures` (the findings that count, which the next brief of
+twice without a readable verdict: a final stop of the node, which a new run of the same slug
+finds blocked too), `failures` (the findings that count, which the next brief of
 the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). An agent sent back by the
 gates or by a review has `sentBy` (`gate` or `review`) on its `step.started`.
 An agent's `step.recorded` lists in `documents` the files of the tracking folder its attempt
 created or changed (the engine's own files left out); a review gives each lens these documents
-by phase, and writes `reviews/<node>-<pass>/context.md`: the story, the project rule files
+by phase, and writes `reviews/<node>-<visit>/context.md`: the story, the project rule files
 found (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`,
 `docs/adr/decisions-index.md`) and which agent wrote which document.
 
@@ -173,6 +185,8 @@ The commands, the mod and the workflow return a **status** and, when they stop, 
 | `blocked` | `missing-outputs` | outputs missing after the last attempt | `solution-researcher left required outputs missing after 2 attempts: <paths>` | a resume returns the same block; fix the cause and start a new slug |
 | `blocked` | `agent-unavailable` | the host cannot start the agent | Claude Code: `skraft:solution-researcher could not be started: …`; Copilot: `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | install or enable the plugin, then resume; the attempt is not consumed |
 | `blocked` | `agent-failed` | the agent stops without finishing and its outputs are missing | `<agent> stopped without finishing: <error>` | resume: the step stays open and the same attempt restarts |
+| `blocked` | `review-rejected` | a review answers `NEEDS_REWORK` and its node has no `NEEDS_REWORK` edge | `<node> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | fix the findings in a new slug, or add the edge to the workflow |
+| `blocked` | `lens-unreadable` | a lens answered twice without a readable verdict | `<lens>-lens answered 2 times without a readable verdict: <error>` | final: a new run of the slug stays blocked; fix the lens descriptor and start a new slug |
 | `done` | — | RESEARCH closed, or nothing left to run | `RESEARCH closed` or `nothing to run` | — |
 
 Gates also have their own `passed` and `failed` statuses:
