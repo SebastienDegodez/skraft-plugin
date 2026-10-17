@@ -16,6 +16,9 @@ const legacyFamily = (kind) => ({ agent: 'agents', worker: 'workers', lens: 'len
 
 const finding = (severity, code, path, message) => ({ severity, code, path, message })
 
+// The V2 engine starts the review lenses and the finding refuter itself: no agent dispatches them.
+export const ENGINE_DISPATCHER = 'skraft-engine'
+
 export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConfig = null } = {}) => {
   const findings = []
   const skillIds = new Set(skills.map((skill) => skill.directory))
@@ -87,7 +90,7 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
   }
 
   for (const child of agents) {
-    if (!child.dispatchedByRef) continue
+    if (!child.dispatchedByRef || child.dispatchedByRef === ENGINE_DISPATCHER) continue
     const parent = resolveAgent(child.dispatchedByRef)
     if (!parent) {
       findings.push(finding('error', 'DISPATCH_PARENT_MISSING', child.path, `${child.name} declares unknown dispatcher '${child.dispatchedByRef}'`))
@@ -143,7 +146,7 @@ export const buildCatalogueTopology = ({ skills = [], agents = [], frameworkConf
       root: agent.userInvocable && parents.length === 0,
       parents: unique(parents),
       children,
-      dispatchedBy: agent.dispatchedByRef ? resolveAgent(agent.dispatchedByRef)?.id ?? null : null,
+      dispatchedBy: agent.dispatchedByRef === ENGINE_DISPATCHER ? ENGINE_DISPATCHER : agent.dispatchedByRef ? resolveAgent(agent.dispatchedByRef)?.id ?? null : null,
       artifacts: { inputs: agent.inputs, outputs: agent.outputs },
       legacyRoutes: family ? ['fr', 'en'].map((lang) => `/${lang}/reference/${family}/${agent.id}/`) : [],
     }
