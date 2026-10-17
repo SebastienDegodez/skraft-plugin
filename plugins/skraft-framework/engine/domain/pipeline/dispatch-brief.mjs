@@ -20,24 +20,55 @@ import { RESULT_SHAPE } from './agent-result.mjs'
  * The prompt a dispatched agent receives, the same on every host.
  * @param {Brief} brief
  */
-export const composeBrief = ({ agent, phase, slug, story, visit, attempt, maxAttempts, inputs, outputs, result, allowed, components, tdd, missing, feedback }) => [
+export const composeBrief = (brief) => [
+  ...headerLines(brief),
+  ...workLines(brief),
+  ...missingLines(brief),
+  ...feedbackLines(brief),
+].join('\n')
+
+/** Who is dispatched, for which story, on which pass and attempt. @param {Brief} brief */
+const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts }) => [
   `## Skraft dispatch: ${agent} (${phase})`,
   `- Story: ${storyLine(story)}`,
   `- Feature scope: ${slug}`,
   ...(visit > 1 ? [`- Pass: ${visit}, after the gates sent the work back`] : []),
   `- Attempt: ${attempt} of ${maxAttempts}`,
+]
+
+/** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
+const workLines = ({ inputs, outputs, result, allowed, components, tdd }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
-  ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', [
-    ...allowed,
-    ...components.map(({ name, root }) => `${root}/* (the files right in the root of ${name})`),
-  ]),
-  ...section('- Components:', components.map(({ name, root, stack, test }) => `${name}: ${root} (${stack})${test ? `, tests: ${test}` : ''}`)),
+  ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
+  ...section('- Components:', components.map(componentLine)),
   ...(tdd === null ? [] : [TDD_RULES[tdd]]),
-  ...(missing.length > 0 ? ['', `Missing outputs from attempt ${attempt - 1} of ${maxAttempts}:`, ...missing.map((path) => `- ${path}`)] : []),
-  ...(feedback.length > 0 ? ['', attempt > 1 ? `Refused in attempt ${attempt - 1} of ${maxAttempts}:` : `The gates failed on pass ${visit - 1}:`, ...feedback.map((line) => `- ${line}`)] : []),
-].join('\n')
+]
+
+/** @param {string[]} allowed @param {BriefComponent[]} components */
+const writablePaths = (allowed, components) => [
+  ...allowed,
+  ...components.map(({ name, root }) => `${root}/* (the files right in the root of ${name})`),
+]
+
+/** @param {BriefComponent} component */
+const componentLine = ({ name, root, stack, test }) => `${name}: ${root} (${stack})${test ? `, tests: ${test}` : ''}`
+
+/** The outputs the previous attempt left empty. @param {Brief} brief */
+const missingLines = ({ missing, attempt, maxAttempts }) => (missing.length > 0
+  ? ['', `Missing outputs from attempt ${attempt - 1} of ${maxAttempts}:`, ...missing.map((path) => `- ${path}`)]
+  : [])
+
+/** Why the previous attempt was refused, or why the gates sent the work back. @param {Brief} brief */
+const feedbackLines = ({ feedback, attempt, maxAttempts, visit }) => (feedback.length > 0
+  ? ['', feedbackTitle({ attempt, maxAttempts, visit }), ...feedback.map((line) => `- ${line}`)]
+  : [])
+
+/** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit'>} brief */
+const feedbackTitle = ({ attempt, maxAttempts, visit }) => (attempt > 1
+  ? `Refused in attempt ${attempt - 1} of ${maxAttempts}:`
+  : `The gates failed on pass ${visit - 1}:`)
 
 const TDD_RULES = Object.freeze({
   cycle: [
