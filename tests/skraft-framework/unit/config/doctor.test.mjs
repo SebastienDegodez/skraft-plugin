@@ -90,6 +90,24 @@ test('--run starts every command once from its component root, with the base, an
   ])
 })
 
+test('python is found in the component\'s virtual environment, else as python3, and doctor says where it looked when it is nowhere', async () => {
+  const PY = { name: 'py', root: 'services/py', stack: 'python', mocking: { strategy: 'inprocess' }, commands: { test: 'python -m pytest -q' } }
+  const files = { 'services/py/pyproject.toml': '' }
+  const sourceControl = new InMemorySourceControl({ '.': { top: '.', mergeBases: { main: 'a1' } }, 'services/py': { top: '.', mergeBases: { main: 'a1' } } })
+  const venv = doctor({ components: [PY], files, sourceControl, machine: new ScriptedMachine({ installed: ['python', 'services/py/.venv/Scripts/python.exe'] }) })
+  const python3 = doctor({ components: [PY], files, machine: new ScriptedMachine({ installed: ['python3'] }) })
+  const nowhere = doctor({ components: [PY], files, machine: new ScriptedMachine({ installed: [] }) })
+
+  assert.deepEqual((await venv.doctor.check()).checks[2], { subject: 'py/test', status: 'ok', detail: 'python → /work/services/py/.venv/Scripts/python.exe' })
+  assert.deepEqual((await python3.doctor.check()).checks[2], { subject: 'py/test', status: 'ok', detail: 'python → /usr/local/bin/python3' })
+  assert.deepEqual(failures(await nowhere.doctor.check()), [
+    'py/test: command not found: python (from services/py; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3); install it or change commands.test in skraft-config.json',
+  ])
+
+  assert.equal((await venv.doctor.check({ run: true })).ok, true)
+  assert.deepEqual(venv.machine.lines(), ['services/py $ .venv/Scripts/python.exe -m pytest -q'])
+})
+
 test('--run names a command found on the machine that cannot be started, with the host\'s error', async () => {
   const workspace = new InMemoryWorkspace({ ...FOLDERS, 'skraft-config.json': JSON.stringify({ components: [WEB] }) })
   const check = createDoctor({

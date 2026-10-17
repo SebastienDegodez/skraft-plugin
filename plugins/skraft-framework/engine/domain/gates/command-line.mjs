@@ -9,6 +9,19 @@
 const SHELL_SYNTAX = /[|&;<>]/
 
 /**
+ * Where `python` is looked for, first found wins: the component's virtual environment, as POSIX
+ * then Windows lay it out, then the PATH, where macOS and Linux often have only `python3`.
+ */
+const PYTHON = Object.freeze(['.venv/bin/python', '.venv/Scripts/python.exe', 'python', 'python3'])
+
+/**
+ * The argvs to try for a command, in order. Only `python` has more than one; any other program
+ * starts as written.
+ * @param {string[]} argv @returns {string[][]}
+ */
+export const programChoices = (argv) => (argv[0] === 'python' ? PYTHON.map((program) => [program, ...argv.slice(1)]) : [argv])
+
+/**
  * Splits on blanks; `"…"` and `'…'` keep blanks inside one argument. `{baseSha}` is replaced
  * before splitting.
  * @param {string} line

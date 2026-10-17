@@ -1,5 +1,5 @@
 import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
-import { parseCommand } from '../domain/gates/command-line.mjs'
+import { parseCommand, programChoices } from '../domain/gates/command-line.mjs'
 import { GATE_ORDER } from '../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from './bases.mjs'
 
@@ -75,14 +75,31 @@ const commandCheck = async (deps, { component, name, run, baseSha }) => {
   const parsed = parseCommand(line, { baseSha })
   if (!parsed.ok) return { subject, status: 'fail', detail: `${JSON.stringify(line)} ${parsed.reason}` }
   const [program] = parsed.argv
-  const located = await deps.executables.locate(program, component.root)
-  if (located === null) return { subject, status: 'fail', detail: `command not found: ${program} (from ${component.root}); install it or change commands.${name} in ${CONFIG_FILE}` }
-  if (!run) return { subject, status: 'ok', detail: `${program} → ${located}` }
-  const result = await deps.commandRunner.run({ argv: parsed.argv, cwd: component.root })
+  const choices = programChoices(parsed.argv)
+  const found = await locateFirst(deps, choices, component.root)
+  if (found === null) {
+    const looked = choices.length === 1 ? '' : `; looked for ${choices.map(([choice]) => choice).join(', ')}`
+    return { subject, status: 'fail', detail: `command not found: ${program} (from ${component.root}${looked}); install it or change commands.${name} in ${CONFIG_FILE}` }
+  }
+  if (!run) return { subject, status: 'ok', detail: `${program} → ${found.located}` }
+  const result = await deps.commandRunner.run({ argv: found.argv, cwd: component.root })
   if (!result.started) return { subject, status: 'fail', detail: /** @type {string} */ (result.error) }
   return result.exitCode === 0
     ? { subject, status: 'ok', detail: `${line} passed` }
     : { subject, status: 'fail', detail: `${line} exited ${result.exitCode}` }
+}
+
+/**
+ * The first program choice found on this machine, and where.
+ * @param {DoctorDeps} deps @param {string[][]} choices @param {string} cwd
+ * @returns {Promise<{ argv: string[], located: string } | null>}
+ */
+const locateFirst = async (deps, choices, cwd) => {
+  for (const argv of choices) {
+    const located = await deps.executables.locate(argv[0], cwd)
+    if (located !== null) return { argv, located }
+  }
+  return null
 }
 
 /** @param {DoctorDeps} deps @param {string[]} components */

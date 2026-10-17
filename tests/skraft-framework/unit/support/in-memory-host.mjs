@@ -155,7 +155,9 @@ export class InMemorySourceControl {
 /**
  * The machine the commands run on: which programs are installed, and how a command line
  * exits (`'<cwd> $ <argv joined by spaces>'` → exit code). Everything else exits 0.
- * It is both the CommandRunner and the Executables port.
+ * It is both the CommandRunner and the Executables port. A program written with a `/`
+ * (`.venv/bin/python`) is installed as a path relative to the working copy
+ * (`services/py/.venv/bin/python`) and found from the folder it starts in.
  */
 export class ScriptedMachine {
   /**
@@ -172,10 +174,16 @@ export class ScriptedMachine {
     /** @type {Array<{ argv: string[], cwd: string }>} */
     this.runs = []
   }
-  async locate(program) { return this.installed.has(program) ? `/usr/local/bin/${program}` : null }
+  /** @param {string} program @param {string} cwd */
+  installedAt(program, cwd) {
+    if (!program.includes('/')) return this.installed.has(program) ? `/usr/local/bin/${program}` : null
+    const path = tidy(`${cwd}/${program}`)
+    return this.installed.has(path) ? `/work/${path}` : null
+  }
+  async locate(program, cwd = '.') { return this.installedAt(program, cwd) }
   async run({ argv, cwd }) {
     this.runs.push({ argv, cwd })
-    if (!this.installed.has(argv[0])) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
+    if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
     this.clock?.advance(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`
     await this.meanwhile[line]?.()

@@ -1,6 +1,6 @@
 import { CONFIG_FILE } from '../domain/config/skraft-config.mjs'
 import { deriveRun } from '../domain/journal/run-state.mjs'
-import { parseCommand } from '../domain/gates/command-line.mjs'
+import { parseCommand, programChoices } from '../domain/gates/command-line.mjs'
 import { failureOf, GATE_ORDER, gatesOf, isTouched, needsDocker } from '../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig } from './bases.mjs'
 import { openActiveRun } from './active-run.mjs'
@@ -123,6 +123,23 @@ const dockerAnswers = async (deps) => {
 }
 
 /**
+ * The first of the command's program choices that starts. When none starts, the answer to the
+ * program as written, with every place it was looked for.
+ * @param {GateDeps} deps @param {string[]} argv @param {string} cwd
+ */
+const startFirst = async (deps, argv, cwd) => {
+  const choices = programChoices(argv)
+  const answers = []
+  for (const choice of choices) {
+    const answer = await deps.commandRunner.run({ argv: choice, cwd })
+    if (answer.started) return answer
+    answers.push(answer)
+  }
+  const written = answers[choices.findIndex(([program]) => program === argv[0])]
+  return choices.length === 1 ? written : { ...written, error: `${written.error}; looked for ${choices.map(([program]) => program).join(', ')}` }
+}
+
+/**
  * @param {GateDeps} deps
  * @param {{ slug: string, component: Component, gate: string, scope: GateScope, journal: import('./run-journal.mjs').OpenJournal, baseSha: string | null, docker: boolean }} context
  * @returns {Promise<GateResult>}
@@ -143,7 +160,7 @@ const runOne = async (deps, { slug, component, gate, scope, journal, baseSha, do
     reason = `Docker does not answer and ${component.name} mocks with Microcks; start Docker, or set "mocking": { "strategy": "inprocess" } on the component`
   } else {
     const started = deps.clock.now()
-    result = await deps.commandRunner.run({ argv: parsed.argv, cwd: component.root })
+    result = await startFirst(deps, parsed.argv, component.root)
     durationMs = deps.clock.now().getTime() - started.getTime()
     reason = !result.started
       ? `${result.error}; install it or change the command in ${CONFIG_FILE}`

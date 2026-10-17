@@ -124,6 +124,38 @@ test('a command the developer wrote is the one that runs, with the base of its o
   ])
 })
 
+const PY = { name: 'py', root: 'services/py', stack: 'python', mocking: { strategy: 'inprocess' }, commands: { build: 'python -m compileall -q src', test: 'python -m pytest -q' } }
+
+test('python runs from the component\'s virtual environment, whichever OS made it', async () => {
+  const posix = await hostWith({ components: [PY], machine: new ScriptedMachine({ installed: ['git', 'python', 'services/py/.venv/bin/python'] }) })
+  const windows = await hostWith({ components: [{ ...PY, commands: { test: 'python -m pytest -q' } }], machine: new ScriptedMachine({ installed: ['git', 'python', 'services/py/.venv/Scripts/python.exe'] }) })
+
+  const [madeOnPosix, madeOnWindows] = [await posix.gate('all'), await windows.gate('all')]
+
+  assert.deepEqual([madeOnPosix.status, madeOnWindows.status], ['passed', 'passed'])
+  assert.deepEqual(posix.machine.lines(), ['services/py $ .venv/bin/python -m compileall -q src', 'services/py $ .venv/bin/python -m pytest -q'])
+  assert.deepEqual(windows.machine.lines(), ['services/py $ .venv/bin/python -m pytest -q', 'services/py $ .venv/Scripts/python.exe -m pytest -q'])
+})
+
+test('without a virtual environment python is taken from the PATH, then python3; another program is never replaced', async () => {
+  const python3 = await hostWith({ components: [PY, WEB], machine: new ScriptedMachine({ installed: ['git', 'npx', 'python3'] }) })
+  const none = await hostWith({ components: [PY], machine: new ScriptedMachine({ installed: ['git'] }) })
+
+  const found = await python3.gate('all')
+  const missing = await none.gate('all')
+
+  assert.equal(found.status, 'passed')
+  const tries = (args) => ['.venv/bin/python', '.venv/Scripts/python.exe', 'python', 'python3'].map((program) => `services/py $ ${program} ${args}`)
+  assert.deepEqual(python3.machine.lines(), [
+    ...tries('-m compileall -q src'), ...tries('-m pytest -q'),
+    '../payment-web $ npx eslint .', '../payment-web $ npx vitest run',
+  ])
+  assert.deepEqual([missing.failure, missing.reason], [
+    'environment',
+    'py/build: command not found: python; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3; install it or change the command in skraft-config.json',
+  ])
+})
+
 test('a failing test is deterministic: the evidence holds the output and the component stops there', async () => {
   const machine = new ScriptedMachine({ exits: { 'services/payment-api $ dotnet test --nologo': 1 } })
   const { tracking, gate } = await hostWith({ machine })

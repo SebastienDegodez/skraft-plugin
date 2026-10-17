@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { FIXTURES, copyFixture, envWithPath, readJson, skraft, stubPrograms, tempFolder } from '../support/workspace.mjs'
+import { copyFileSync, linkSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { FIXTURES, commitAll, copyFixture, envWithPath, readJson, skraft, stubPrograms, tempFolder, toolFolders } from '../support/workspace.mjs'
 
 // The toolchains (dotnet, mvn, python, npm, npx) and Docker are stub programs on a PATH of
 // their own: doctor must find them where a developer machine would, under Windows as .cmd.
@@ -83,4 +83,30 @@ test('without Docker, doctor fails for the Microcks components, and passes once 
   const path = join(cwd, 'skraft-config.json')
   writeFileSync(path, readFileSync(path, 'utf8').replace('"stack": "python",', '"stack": "python",\n      "mocking": { "strategy": "inprocess", "library": "respx" },'))
   assert.equal((await skraft(cwd, ['doctor'], { env })).status, 0)
+})
+
+test('python runs from the virtual environment of the component, laid out the way this OS makes one', async (t) => {
+  const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
+  // Node stands for the interpreter: `python --version` answers with Node's version.
+  const venv = process.platform === 'win32' ? join(cwd, '.venv', 'Scripts', 'python.exe') : join(cwd, '.venv', 'bin', 'python')
+  mkdirSync(dirname(venv), { recursive: true })
+  try { linkSync(process.execPath, venv) } catch { copyFileSync(process.execPath, venv) }
+  const env = envWithPath(toolFolders())
+  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
+  const path = join(cwd, 'skraft-config.json')
+  const config = readJson(path)
+  config.components[0].commands = { test: 'python --version' }
+  config.components[0].mocking = { strategy: 'inprocess' }
+  writeFileSync(path, JSON.stringify(config, null, 2))
+  commitAll(cwd)
+  assert.equal((await skraft(cwd, ['init', 'checkout'], { env })).status, 0)
+
+  const doctor = await skraft(cwd, ['doctor'], { env })
+  const gate = await skraft(cwd, ['gate', '--all'], { env })
+
+  assert.equal(doctor.status, 0, doctor.stdout)
+  assert.equal(doctor.stdout.split(/\r?\n/)[2], `ok    payment-fastapi/test: python → ${venv}`)
+  assert.equal(gate.status, 0, gate.stdout)
+  const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
+  assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\n`))
 })
