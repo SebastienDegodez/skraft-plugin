@@ -8,7 +8,7 @@ const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
 const RESULT_SHAPE = '{"status": "done" | "blocked", "summary": "<what you did, or why you cannot go on>"}'
 
-test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then the gates close it', async () => {
+test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then the gates and the delivery review close it', async () => {
   const host = scripted({}, nominal)
 
   const outcome = await host.start({ story: { issue: 42, title: 'Pay by card' } })
@@ -23,27 +23,36 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, then t
   assert.deepEqual(host.types(), [
     'run.started',
     'step.started', 'step.recorded', 'phase.closed',
-    'step.started', 'commits.checked', 'step.recorded', 'phase.closed',
-    'step.started', 'commits.checked', 'step.recorded', 'phase.closed',
     'step.started', 'commits.checked', 'step.recorded',
-    'step.started', 'gate.ran', 'gate.ran', 'step.recorded', 'phase.closed',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
+    'step.started', 'commits.checked', 'step.recorded',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
+    'step.started', 'commits.checked', 'step.recorded',
+    'step.started', 'gate.ran', 'gate.ran', 'step.recorded',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded', 'phase.closed',
     'run.finished',
   ])
   const events = host.events()
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
   assert.deepEqual(events.filter((event) => event.type === 'step.recorded').map(({ step, outcome: result, code, next }) => [step, result, code, next]), [
     ['research', 'done', null, 'design'],
-    ['design', 'done', null, 'distill'],
-    ['distill', 'done', null, 'deliver'],
+    ['design', 'done', null, 'design_review'],
+    ['design_review', 'approved', null, 'distill'],
+    ['distill', 'done', null, 'distill_review'],
+    ['distill_review', 'approved', null, 'deliver'],
     ['deliver', 'done', null, 'gates'],
-    ['gates', 'pass', null, 'exit'],
+    ['gates', 'pass', null, 'deliver_review'],
+    ['deliver_review', 'approved', null, 'exit'],
   ])
   assert.deepEqual(events.at(-1), { ...events.at(-1), type: 'run.finished', status: 'completed', reason: 'DELIVER closed' })
   assert.deepEqual(host.progress.lines, [
     'phase RESEARCH', `${SLUG}: solution-researcher, attempt 1`, `${SLUG}: RESEARCH closed`,
-    'phase DESIGN', `${SLUG}: solution-architect, attempt 1`, `${SLUG}: DESIGN closed`,
-    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1`, `${SLUG}: DISTILL closed`,
-    'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation)`, `${SLUG}: DELIVER closed`,
+    'phase DESIGN', `${SLUG}: solution-architect, attempt 1`,
+    `${SLUG}: design_review (consistency, architecture-compliance, fitness)`, `${SLUG}: design_review APPROVED: consistency, architecture-compliance, fitness approve`, `${SLUG}: DESIGN closed`,
+    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1`,
+    `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement)`, `${SLUG}: distill_review APPROVED: coverage, business-alignment, testability, boundary-enforcement approve`, `${SLUG}: DISTILL closed`,
+    'phase DELIVER', `${SLUG}: software-engineer, attempt 1`, `${SLUG}: gates (build, format, lint, test, architecture, coverage, mutation)`,
+    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`, `${SLUG}: deliver_review APPROVED: test-integrity, architecture-boundaries, cold-reader approve`, `${SLUG}: DELIVER closed`,
   ])
 })
 

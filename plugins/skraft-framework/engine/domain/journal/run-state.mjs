@@ -5,7 +5,7 @@
  *   (relative to the working copy), with the hash of their content (null: deleted).
  * @typedef {{
  *   visit: number, attempt: number, phase: string, agent: string | null, gates: string[] | null,
- *   outputs: string[], missing: string[], feedback: string[], heads: Head[],
+ *   outputs: string[], missing: string[], feedback: string[], sentBy: 'gate' | 'review' | null, heads: Head[],
  * }} OpenAttempt
  * @typedef {{
  *   visit: number, attempt: number, outputs: string[], heads: Head[], sentBack: boolean,
@@ -122,6 +122,7 @@ const openAttempt = (event) => ({
   outputs: event.outputs ?? [],
   missing: event.missing,
   feedback: event.feedback,
+  sentBy: event.sentBy ?? null,
   heads: event.heads,
 })
 
@@ -131,7 +132,7 @@ const openAttempt = (event) => ({
  * @returns {Pick<NodeState, 'heads' | 'sentBack' | 'open' | 'last'>}
  */
 const thisVisit = (before, open) => {
-  if (before?.visit !== open.visit) return { heads: open.heads, sentBack: open.feedback?.length > 0, open, last: null }
+  if (before?.visit !== open.visit) return { heads: open.heads, sentBack: open.sentBy === 'gate', open, last: null }
   return { heads: before.heads, sentBack: before.sentBack, open, last: before.last }
 }
 
