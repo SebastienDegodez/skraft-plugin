@@ -6,7 +6,7 @@
 // on that folder and exits with its code.
 //
 //   node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs
-import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -18,6 +18,7 @@ const TESTS = fileURLToPath(new URL('./plugin-test/', import.meta.url))
 const SERVED = [
   'workflows/skraft.dot',
   ...readdirSync(join(PLUGIN, 'com.anthropic.claude-code', 'agents')).map((name) => `com.anthropic.claude-code/agents/${name}`),
+  ...readdirSync(join(PLUGIN, 'skills')).filter((name) => existsSync(join(PLUGIN, 'skills', name, 'SKILL.md'))).map((name) => `skills/${name}/SKILL.md`),
 ]
 const SKIPPED = [['engine', 'node_modules'], ['engine', 'reports'], ['engine', '.stryker-tmp']].map((parts) => parts.join(sep))
 
