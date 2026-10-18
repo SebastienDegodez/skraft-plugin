@@ -73,7 +73,7 @@ test('lenses that all pass approve each review, spawned together, and the run co
   ])
   const review = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'reviews', 'design_review-1')
   assert.match(readFileSync(join(review, 'changes.patch'), 'utf8'), /^diff --git a\/docs\/adr\/adr-001-card-payment\.md b\/docs\/adr\/adr-001-card-payment\.md\n/)
-  assert.match(readFileSync(join(review, 'verdict.yaml'), 'utf8'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: consistency, architecture-compliance, fitness approve"\nfindings: \[\]\n/)
+  assert.match(readFileSync(join(review, 'verdict.yaml'), 'utf8'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: every lens passed"\nfindings: \[\]\n/)
   assert.ok(mod.published.at(-1).log.includes(`${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity)`), mod.published.at(-1).log.join('\n'))
 })
 

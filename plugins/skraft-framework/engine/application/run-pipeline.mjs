@@ -579,7 +579,15 @@ const recordReview = async (context, run, { node, visit }, { reviewed, started }
     cost: reviewed.costUsd,
   })
   context.deps.progress.log(`${context.slug}: ${node.id} ${fields.outcome === 'blocked' ? `blocked (${fields.code})` : fields.reason}`)
+  for (const line of detailLines(reviewed)) context.deps.progress.log(line)
 }
+
+/**
+ * What a human reads under a review's verdict: each refuted finding and each note, then where
+ * the verdict file is; nothing when every finding counted or none was given.
+ * @param {{ verdict: import('../domain/review/verdict.mjs').ReviewVerdict, file: string }} reviewed
+ */
+const detailLines = ({ verdict, file }) => (verdict.details.length === 0 ? [] : [...verdict.details.map((line) => `  ${line}`), `  details: ${file}`])
 
 /**
  * A lens that answered inconclusive, or failed naming nothing to fix, blocks the node for good,

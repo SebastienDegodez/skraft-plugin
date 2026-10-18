@@ -11,9 +11,11 @@
  * @typedef {import('./answers.mjs').LensResult} LensResult
  * @typedef {import('./answers.mjs').Finding} Finding
  * @typedef {{ lens: string, finding: string, verdict: 'confirmed' | 'refuted' | 'unverifiable', reason: string }} RecordedRefutation
- * @typedef {{ status: 'APPROVED' | 'NEEDS_REWORK' | 'BLOCKED', code: 'lens-inconclusive' | null, reasons: string[], summary: string }} ReviewVerdict
+ * @typedef {{ status: 'APPROVED' | 'NEEDS_REWORK' | 'BLOCKED', code: 'lens-inconclusive' | null, reasons: string[], summary: string, details: string[] }} ReviewVerdict
  *   reasons: one line per finding that sends the work back, for the next brief, or per lens that
- *   blocks the review. A lens result's verdict (pass, fail, inconclusive) and a refutation's
+ *   blocks the review. summary: the status, then how many findings were refuted and how many are
+ *   notes, each cited; details: one line per refuted finding with the refuter's reason and per
+ *   note, so a human sees what does not send the work back and decides whether to fix it anyway. A lens result's verdict (pass, fail, inconclusive) and a refutation's
  *   (confirmed, refuted, unverifiable) feed this status; the journal records it as the outcome
  *   approved, needs-rework or blocked, and a run with no NEEDS_REWORK edge stops with the code
  *   review-rejected.
@@ -38,11 +40,36 @@ export const blocksReview = (results) => results.some((result) => inconclusiveLi
  */
 export const decideReview = (results, refutations) => {
   const blocking = results.map(inconclusiveLine).filter((line) => line !== null)
-  if (blocking.length > 0) return { status: 'BLOCKED', code: 'lens-inconclusive', reasons: blocking, summary: blocking.join('; ') }
+  if (blocking.length > 0) return { status: 'BLOCKED', code: 'lens-inconclusive', reasons: blocking, summary: blocking.join('; '), details: [] }
   const reasons = groupFindings(results.flatMap((result) => countedFindings(result, refutations))).map(groupLine)
   const status = reasons.length > 0 ? 'NEEDS_REWORK' : 'APPROVED'
-  return { status, code: null, reasons, summary: summaryOf(status, results, reasons) }
+  const set = { refuted: refutedFindings(results, refutations), notes: noteFindings(results) }
+  return { status, code: null, reasons, summary: summaryOf(status, results, reasons, set), details: detailsOf(set) }
 }
+
+/**
+ * @typedef {{ lens: string, finding: Finding }} Cited
+ * @typedef {{ refuted: Array<Cited & { reason: string }>, notes: Cited[] }} SetAside
+ *   the findings that do not send the work back: refuted, and low ones
+ */
+
+/** @param {LensResult[]} results @param {RecordedRefutation[]} refutations */
+const refutedFindings = (results, refutations) => results.flatMap(({ lens, findings }) => findings.flatMap((finding) => {
+  const refutation = refutationOf(refutations, lens, finding.id)
+  return refutation?.verdict === 'refuted' ? [{ lens, finding, reason: refutation.reason }] : []
+}))
+
+/** @param {LensResult[]} results @returns {Cited[]} */
+const noteFindings = (results) => results.flatMap(({ lens, findings }) => findings.filter((finding) => !BLOCKING.includes(finding.severity)).map((finding) => ({ lens, finding })))
+
+/** @param {SetAside} set */
+const detailsOf = ({ refuted, notes }) => [
+  ...refuted.map(({ lens, finding, reason }) => `refuted: ${citeLine(lens, finding)} — ${reason}`),
+  ...notes.map(({ lens, finding }) => `note: ${citeLine(lens, finding)}${finding.suggestion === null ? '' : ` (suggestion: ${finding.suggestion})`}`),
+]
+
+/** `<lens> <id> <gate> <severity> at <location>: <description>`. @param {string} lens @param {Finding} finding */
+const citeLine = (lens, { id, gate, severity, location, description }) => `${lens} ${id} ${gate} ${severity}${location === '' ? '' : ` at ${location}`}: ${description}`
 
 /** Why a lens blocks the review, with what it noted; null when it does not. @param {LensResult} result */
 const inconclusiveLine = ({ lens, verdict, findings }) => {
@@ -92,12 +119,25 @@ const headOf = (members) => {
   return `${members.map(({ lens, finding }) => `${lens} ${finding.id} ${finding.gate}`).join(', ')} ${severity}${location === '' ? '' : ` at ${location}`}`
 }
 
-/** @param {'APPROVED' | 'NEEDS_REWORK'} status @param {LensResult[]} results @param {string[]} reasons */
-const summaryOf = (status, results, reasons) => {
+/** @param {'APPROVED' | 'NEEDS_REWORK'} status @param {LensResult[]} results @param {string[]} reasons @param {SetAside} set */
+const summaryOf = (status, results, reasons, set) => {
   if (results.length === 0) return 'APPROVED: no lens applies to these changes'
-  if (status === 'APPROVED') return `APPROVED: ${results.map((result) => result.lens).join(', ')} approve`
-  return `NEEDS_REWORK: ${reasons.length} reason${reasons.length > 1 ? 's' : ''} to address`
+  if (results.every(({ findings }) => findings.length === 0)) return 'APPROVED: every lens passed'
+  const head = status === 'APPROVED' ? 'APPROVED: no finding counts' : `NEEDS_REWORK: ${counted(reasons.length, 'reason')} to address`
+  return [head, ...setAsideParts(set)].join('; ')
 }
+
+/** `2 refuted (a F1, b F2)`, `1 note (c F3)`, each when there are any. @param {SetAside} set */
+const setAsideParts = ({ refuted, notes }) => [
+  ...(refuted.length === 0 ? [] : [`${refuted.length} refuted (${ids(refuted)})`]),
+  ...(notes.length === 0 ? [] : [`${counted(notes.length, 'note')} (${ids(notes)})`]),
+]
+
+/** @param {Cited[]} cited */
+const ids = (cited) => cited.map(({ lens, finding }) => `${lens} ${finding.id}`).join(', ')
+
+/** @param {number} count @param {string} noun */
+const counted = (count, noun) => `${count} ${noun}${count > 1 ? 's' : ''}`
 
 /**
  * The verdict file of a review pass: its status, the findings that count, the low ones as notes,

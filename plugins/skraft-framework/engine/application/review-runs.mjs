@@ -45,8 +45,9 @@ import { readOrName } from './workspace-reading.mjs'
  *   paths: the changed paths, relative to the working copy; rules: the project's rule files that
  *   exist; inputs: the tracking files of each kind; scan: the G9 findings the engine reads in the patch.
  * @typedef {{ stop: { code: string, reason: string } }} Stopped
- * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined }} Reviewed
- *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing.
+ * @typedef {{ verdict: ReviewVerdict, costUsd: number | undefined, file: string }} Reviewed
+ *   costUsd: what the lenses and the refuter cost, undefined when the host tells nothing; file:
+ *   where the pass's verdict.yaml is, absolute.
  * @typedef {import('./ports/agent-catalog.mjs').SkillFile} SkillFile
  * @typedef {{ lens: Lens, inputs: TrackedInput[], skills: SkillFile[], fingerprint: string, known: Finding[], unchanged: boolean }} PlannedLens
  *   skills: the skills the lens declares, with their SKILL.md; known: the engine's findings the
@@ -74,8 +75,11 @@ export const runReview = async (review) => {
   const results = [...lensed.results, ...scanned.map(({ result }) => result)]
   const refuted = blocksReview(results) ? { refutations: [] } : await refutations(review, [...planned, ...scanned.map(({ entry }) => entry)], results)
   if ('stop' in refuted) return refuted
-  return { verdict: await decide(review, { results, reused: lensed.reused, ...refuted }), costUsd: costOf(review) }
+  return reviewed(review, await decide(review, { results, reused: lensed.reused, ...refuted }))
 }
+
+/** The verdict, what the pass cost and where its file is. @param {Review} review @param {ReviewVerdict} verdict @returns {Reviewed} */
+const reviewed = (review, verdict) => ({ verdict, costUsd: costOf(review), file: review.deps.files.location(review.slug, `${folderOf(review)}/verdict.yaml`) })
 
 /**
  * What the engine reads in the patch when test-integrity reviews it: its G9 findings as a

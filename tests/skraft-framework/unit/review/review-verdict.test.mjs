@@ -35,14 +35,14 @@ test('every lens of each phase passing approves the phase, and the run goes on t
     `fitness-lens plugin skraft ${SLUG} · design_review · fitness · attempt 1`,
   ])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
-  assert.deepEqual([recorded.code, recorded.failures, recorded.reason], [null, [], 'APPROVED: consistency, architecture-compliance, fitness approve'])
+  assert.deepEqual([recorded.code, recorded.failures, recorded.reason], [null, [], 'APPROVED: every lens passed'])
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review').map(({ visit, lens, agent: id, verdict, findings }) => [visit, lens, id, verdict, findings]), [
     [1, 'consistency', 'consistency-lens', 'pass', []],
     [1, 'architecture-compliance', 'architecture-compliance-lens', 'pass', []],
     [1, 'fitness', 'fitness-lens', 'pass', []],
   ])
   assert.ok(host.progress.lines.includes(`${SLUG}: design_review (consistency, architecture-compliance, fitness)`), host.progress.lines.join('\n'))
-  assert.ok(host.progress.lines.includes(`${SLUG}: design_review APPROVED: consistency, architecture-compliance, fitness approve`), host.progress.lines.join('\n'))
+  assert.ok(host.progress.lines.includes(`${SLUG}: design_review APPROVED: every lens passed`), host.progress.lines.join('\n'))
 })
 
 test('a lens reads only its own inputs; the cold reader gets neither the story nor the scope', async () => {
@@ -226,7 +226,7 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
       `consistency F3 G1 high at .copilot-tracking/skraft-plans/${SLUG}/${CONTEXT_MAP}:44-45: the context map names two payment contexts`,
       'consistency F4 G1 high at docs/adr/adr-001-card-payment.md:3: the ADR has no status',
     ],
-    'NEEDS_REWORK: 3 reasons to address',
+    'NEEDS_REWORK: 3 reasons to address; 2 notes (consistency F2, consistency F5)',
   ])
   assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ visit, lens, finding: id, verdict }) => [visit, lens, id, verdict]), [[1, 'consistency', 'F1', 'confirmed'], [1, 'consistency', 'F3', 'confirmed'], [1, 'consistency', 'F4', 'confirmed']])
   assert.deepEqual(host.events().find((event) => event.type === 'review.lens' && event.lens === 'consistency').findings.map(({ location }) => location), [
@@ -244,7 +244,7 @@ test('a confirmed blocker sends the work back to the phase agent with the findin
   ].join('\n')), second.prompt)
   const started = host.events().filter((event) => event.type === 'step.started' && event.step === 'design')
   assert.deepEqual(started.map(({ visit, sentBy, feedback }) => [visit, sentBy, feedback.length]), [[1, undefined, 0], [2, 'review', 3]])
-  assert.ok(host.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 3 reasons to address`), host.progress.lines.join('\n'))
+  assert.ok(host.progress.lines.includes(`${SLUG}: design_review NEEDS_REWORK: 3 reasons to address; 2 notes (consistency F2, consistency F5)`), host.progress.lines.join('\n'))
 })
 
 test('a refuted blocker or medium does not count; an unverifiable one does; the pass writes its verdict beside its inputs', async () => {
@@ -256,6 +256,14 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
 
   assert.equal((await refuted.start()).status, 'done')
   assert.deepEqual(reviews(refuted)[0], ['design_review', 1, 'approved', 'distill'])
+  assert.equal(refuted.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review').reason, 'APPROVED: no finding counts; 1 refuted (consistency F1)')
+  const shown = refuted.progress.lines.slice(refuted.progress.lines.findIndex((line) => line.includes('design_review APPROVED')))
+  assert.deepEqual(shown.slice(0, 3), [
+    `${SLUG}: design_review APPROVED: no finding counts; 1 refuted (consistency F1)`,
+    `  refuted: consistency F1 G1 blocker at src/Checkout.cs:12: the ADR is missing — docs/adr/adr-001-card-payment.md is in the patch`,
+    `  details: ${TRACKING}/reviews/design_review-1/verdict.yaml`,
+  ])
+  assert.ok(refuted.progress.lines.includes(`${SLUG}: distill_review APPROVED: every lens passed`), refuted.progress.lines.join('\n'))
   const check = refuted.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'finding-refuter')
   assert.equal(check.label, `skraft ${SLUG} · design_review · refute consistency F1 · attempt 1`)
   assert.equal(check.prompt, [
@@ -293,6 +301,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
   await kept.start()
 
   const recorded = kept.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
+  assert.ok(kept.progress.lines.includes('  note: consistency F3 G1 low at src/Checkout.cs:12: the "Payments" context is named C:\\pay (suggestion: one name)'), kept.progress.lines.join('\n'))
   assert.deepEqual([recorded.outcome, recorded.failures], ['needs-rework', [
     'consistency F2 G1 high at src/Checkout.cs:12: two contexts own payments (not verified)',
     'fitness F1 G1 medium at docs/adr/adr-001.md:4: no latency budget',
@@ -309,7 +318,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
   assert.equal(await kept.tracking.read(SLUG, 'reviews/design_review-1/verdict.yaml'), [
     'status: "NEEDS_REWORK"',
     'code: null',
-    'summary: "NEEDS_REWORK: 2 reasons to address"',
+    'summary: "NEEDS_REWORK: 2 reasons to address; 2 refuted (consistency F1, fitness F2); 1 note (consistency F3)"',
     'findings:',
     ...entryLines('consistency', 'F2', 'high', 'src/Checkout.cs:12', '"two contexts own payments"'),
     ...entryLines('fitness', 'F1', 'medium', 'docs/adr/adr-001.md:4', '"no latency budget"'),
@@ -323,7 +332,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
     'reused: []',
     '',
   ].join('\n'))
-  assert.match(await kept.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: consistency, architecture-compliance, fitness approve"\nfindings: \[\]\nnotes: \[\]\nrefutations: \[\]\n/)
+  assert.match(await kept.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: every lens passed"\nfindings: \[\]\nnotes: \[\]\nrefutations: \[\]\n/)
 })
 
 test('findings of different lenses at the same line with the same severity are checked once, the verdict applying to each, and the next brief lists them once citing every lens', async () => {

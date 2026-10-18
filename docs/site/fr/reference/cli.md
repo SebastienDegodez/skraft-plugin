@@ -381,6 +381,11 @@ qu'elle a noté : le travail n'est pas renvoyé et aucun finding n'est vérifié
 `NEEDS_REWORK` quand un finding blocker, high ou medium compte, sinon `APPROVED` (les findings
 low sont des notes). Les findings retenus vont dans le brief suivant de l'agent de la phase, un
 groupe sur une ligne qui cite chacune de ses lentilles.
+Le résumé donne le statut, puis les findings réfutés et les notes mis de côté, chacun cité
+(`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
+`APPROVED: every lens passed` quand aucune lentille n'a rien trouvé) ; la progression (panneau,
+Canvas) liste dessous chaque finding réfuté avec la raison du réfuteur et chaque note, puis
+l'emplacement de `verdict.yaml`, pour qu'un humain puisse quand même les faire corriger.
 
 **Re-revue incrémentale.** À une passe suivante, une lentille dont le résultat précédent était
 `pass` sans finding, et dont l'empreinte n'a pas changé, n'est pas relancée : son résultat est

@@ -373,6 +373,11 @@ finding, blocks the review with `lens-inconclusive`, naming each such lens and w
 the work is not sent back and no finding is checked. Otherwise `NEEDS_REWORK` when a blocker,
 high or medium finding counts, else `APPROVED` (low findings are notes). The findings that count
 go to the next brief of the phase agent, a group on one line citing each of its lenses.
+The summary gives the status, then the refuted findings and the notes it set aside, each cited
+(`APPROVED: no finding counts; 2 refuted (consistency F1, fitness F1); 1 note (coverage F3)`,
+`APPROVED: every lens passed` when no lens found anything); the progress (pane, Canvas) lists
+under it each refuted finding with the refuter's reason and each note, then where `verdict.yaml`
+is, so that a human can still have them fixed.
 
 **Incremental re-review.** On a later pass, a lens whose previous result was `pass` with no
 finding, and whose fingerprint has not changed, is not started again: its result is journaled
