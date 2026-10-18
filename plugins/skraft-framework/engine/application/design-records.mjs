@@ -1,5 +1,5 @@
 import { joinRelative } from '../domain/config/relative-path.mjs'
-import { isAdr, isMatrix, openDrifts, recordFailures, registryOf } from '../domain/pipeline/design-records.mjs'
+import { inAdrFolder, isAdr, isMatrix, openDrifts, recordFailures, registryOf } from '../domain/pipeline/design-records.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
 /**
@@ -45,13 +45,14 @@ const changedSinceBase = async ({ sourceControl }, base) => {
  * @returns {Promise<import('../domain/pipeline/design-records.mjs').Records>}
  */
 const recordsOf = async ({ files, workspace }, slug, { tracked, changed }) => {
-  const adrs = changed.filter(isAdr)
   const fromWorkspace = (/** @type {string} */ path) => readOrName(workspace, path)
+  const adrFolder = (await textsOf(changed.filter(inAdrFolder), fromWorkspace)).filter(({ text }) => text !== null)
+  const adrs = adrFolder.filter(({ path }) => isAdr(path))
   return {
     matrices: await textsOf(tracked.filter(isMatrix), (path) => files.read(slug, path)),
-    changed,
-    adrs: await textsOf(adrs, fromWorkspace),
-    registries: await textsOf([...new Set(adrs.map(registryOf))], fromWorkspace),
+    written: adrFolder.map(({ path }) => path),
+    adrs,
+    registries: await textsOf([...new Set(adrs.map(({ path }) => registryOf(path)))], fromWorkspace),
   }
 }
 

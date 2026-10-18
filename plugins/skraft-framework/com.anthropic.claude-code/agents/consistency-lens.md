@@ -26,9 +26,9 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | Gate | Criterion | Severity |
 |---|---|---|
 | G1 | Every structural commitment shown in a diagram or detected in the structural scan report has an `Accepted` ADR, or a `Proposed` ADR of this pass, justifying it. | blocker |
-| G2 | No two ADRs contradict each other; a superseded ADR's body is unchanged. | blocker |
+| G2 | No two ADRs contradict each other; a superseded ADR's body is unchanged; every row of `docs/adr/supersessions.md` has its new ADR carrying the `**Supersedes:**` line. | blocker |
 | G10 | The back-propagation journal of the consistency matrix explains every rewrite. | blocker |
-| G12 | Every `supersession-plan-{story}.md` row has its new ADR, and no event model, diagram or contract still cites the superseded ADR as source of truth. Historical mentions in prose are not findings. | blocker |
+| G12 | Every `supersession-plan-{story}.md` row has its new ADR carrying the `**Supersedes:**` line, and no event model, diagram or contract still cites the superseded ADR as source of truth. Historical mentions in prose are not findings. | blocker |
 | G14 | No ADR ratifies the absence or rejection of a pattern the codebase never adopted: no Decision reading `We will not use` / `We reject` / `We avoid` for a pattern the structural scan does not detect. | blocker |
 | C1 | Context map, diagrams, contracts and event model name the same contexts, aggregates, commands, events and fields, and each matches the research and the story. | high |
 

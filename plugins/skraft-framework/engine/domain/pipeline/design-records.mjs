@@ -2,28 +2,36 @@
  * The DESIGN records the engine checks when the solution architect finishes, instead of a lens:
  *   G10       a consistency-matrix-<story>.md in the tracking folder, its consistency-gate PASS
  *   G13       every decision-drift-*.md beside its -resolution.md; an open one waits for a human
- *   G14       no ADR the run changed is named *-rejected.md
- *   G2, G12   every `**Supersedes:** ADR-MMM` of an ADR the run changed has its registry row
+ *   G14       no ADR the run wrote is named *-rejected.md, *-accepted.md, *-deprecated.md or
+ *             *-superseded.md
+ *   G2, G12   every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its registry row, ADR
+ *             numbers compared without their leading zeros
  *
  * @typedef {{ path: string, text: string | null }} Text
- * @typedef {{ matrices: Text[], changed: string[], adrs: Text[], registries: Text[] }} Records
- *   matrices: the consistency matrices of the tracking folder; changed: the working-copy paths
- *   the run changed; adrs: the ADRs among them; registries: the supersession registry beside each.
+ * @typedef {{ matrices: Text[], written: string[], adrs: Text[], registries: Text[] }} Records
+ *   matrices: the consistency matrices of the tracking folder; written: the files under a
+ *   docs/adr folder the run changed and that exist; adrs: the ADRs among them; registries: the
+ *   supersession registry beside each.
  */
 
 const MATRIX = /(^|\/)consistency-matrix-[^/]+\.md$/
 const DRIFT = /(^|\/)decision-drift-[^/]+\.md$/
 const RESOLUTION = '-resolution.md'
-const REJECTED = /(^|\/)docs\/adr\/[^/]+-rejected\.md$/
+const ADR_FOLDER = /(^|\/)docs\/adr\/[^/]+$/
+const VERDICT_NAME = /-(rejected|accepted|deprecated|superseded)\.md$/
 const ADR = /(^|\/)docs\/adr\/adr-(\d+)[^/]*\.md$/i
-const GATE_PASS = /^\s*(?:[-*]\s*)?consistency-gate:\s*PASS\b/im
-const SUPERSEDES = /\*\*Supersedes:\*\*\s*\[?(ADR-\d+)/gi
+const GATE_PASS = /^\s*(?:[-*]\s+)?(?:\*\*)?consistency-gate:(?:\*\*)?\s*(?:\*\*)?PASS(?:\*\*)?\s*$/im
+const SUPERSEDES = /\*\*Supersedes:\*\*\s*\[?ADR-(\d+)/gi
+const ADR_ID = /ADR-(\d+)/gi
 
 /** @param {string} path relative to the tracking folder */
 export const isMatrix = (path) => MATRIX.test(path)
 
 /** @param {string} path relative to the working copy */
 export const isAdr = (path) => ADR.test(path)
+
+/** A file right in a docs/adr folder. @param {string} path relative to the working copy */
+export const inAdrFolder = (path) => ADR_FOLDER.test(path)
 
 /** The supersession registry of an ADR's folder. @param {string} adr relative to the working copy */
 export const registryOf = (adr) => adr.replace(/[^/]+$/, 'supersessions.md')
@@ -35,7 +43,7 @@ export const registryOf = (adr) => adr.replace(/[^/]+$/, 'supersessions.md')
  */
 export const openDrifts = (tracked) => tracked
   .filter((path) => DRIFT.test(path) && !path.endsWith(RESOLUTION) && !tracked.includes(resolutionOf(path)))
-  .map((path) => `${path} has no ${resolutionOf(path).split('/').at(-1)} beside it: a human answers the drift there (G13)`)
+  .map((path) => `${path} has no ${resolutionOf(path).split('/').at(-1)} beside it: a human answers the drift there, then resumes the run (G13)`)
 
 /** @param {string} drift */
 const resolutionOf = (drift) => `${drift.slice(0, -'.md'.length)}${RESOLUTION}`
@@ -45,9 +53,9 @@ const resolutionOf = (drift) => `${drift.slice(0, -'.md'.length)}${RESOLUTION}`
  * @param {Records} records
  * @returns {string[]}
  */
-export const recordFailures = ({ matrices, changed, adrs, registries }) => [
+export const recordFailures = ({ matrices, written, adrs, registries }) => [
   ...matrixFailures(matrices),
-  ...changed.filter((path) => REJECTED.test(path)).map((path) => `${path}: an ADR's verdict goes in its Status line, never in its file name (G14)`),
+  ...written.filter((path) => VERDICT_NAME.test(path)).map((path) => `${path}: an ADR's verdict goes in its Status line, never in its file name (G14)`),
   ...adrs.flatMap((adr) => supersessionFailures(adr, registries)),
 ]
 
@@ -62,13 +70,19 @@ const matrixFailures = (matrices) => {
  * @param {Text} adr @param {Text[]} registries
  */
 const supersessionFailures = ({ path, text }, registries) => {
-  const own = `ADR-${/** @type {RegExpExecArray} */ (ADR.exec(path))[2]}`
+  const own = Number(/** @type {RegExpExecArray} */ (ADR.exec(path))[2])
   const registry = registries.find((entry) => entry.path === registryOf(path))?.text ?? ''
   return [...(text ?? '').matchAll(SUPERSEDES)]
-    .map((match) => match[1].toUpperCase())
+    .map((match) => Number(match[1]))
     .filter((old) => !hasRow(registry, old, own))
-    .map((old) => `${path} supersedes ${old}, and ${registryOf(path)} has no row naming ${old} and ${own} (G2, G12)`)
+    .map((old) => `${path} supersedes ${label(old)}, and ${registryOf(path)} has no row naming ${label(old)} and ${label(own)} (G2, G12)`)
 }
 
-/** @param {string} registry @param {string} old @param {string} own */
-const hasRow = (registry, old, own) => registry.toUpperCase().split('\n').some((line) => line.includes(old) && line.includes(own))
+/** `ADR-007`. @param {number} number */
+const label = (number) => `ADR-${String(number).padStart(3, '0')}`
+
+/** A row of the registry naming both ADRs. @param {string} registry @param {number} old @param {number} own */
+const hasRow = (registry, old, own) => registry.split('\n').some((line) => {
+  const named = [...line.matchAll(ADR_ID)].map((match) => Number(match[1]))
+  return named.includes(old) && named.includes(own)
+})

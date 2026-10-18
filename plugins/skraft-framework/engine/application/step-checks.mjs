@@ -106,7 +106,7 @@ const readAttempt = async ({ deps, slug, config, base }, step) => {
   if (typeof scope === 'string') return { stop: environmentOnly(scope) }
   const records = step.role.records ? await checkDesignRecords(deps, { slug, base }) : { open: [], failures: [] }
   if (typeof records === 'string') return { stop: environmentOnly(records) }
-  if (records.open.length > 0) return { stop: blockedBy(records.open.join('; ')) }
+  if (records.open.length > 0) return { stop: environmentOnly(records.open.join('; ')) }
   return { missing, reading, scope, records: records.failures }
 }
 
