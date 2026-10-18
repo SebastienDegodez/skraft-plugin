@@ -11,7 +11,9 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 
 ---
 
-## Gate Definitions (G1–G11)
+## Gate Definitions (G1–G11, B1, T1–T3, E1–E2)
+
+Every gate id is unique across the four lenses: a finding's `gate` names one row below.
 
 ### Lens 1: coverage-lens
 
@@ -34,6 +36,7 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Business vocabulary | G3 | All nouns, verbs, and adjectives in Given/When/Then steps appear in the domain vocabulary of the stories or the business lexicon. No class names, method names, HTTP verbs, or framework names. | Zero technical identifiers in `.feature` files. | HIGH |
 | No technical jargon | G4 | Given/When/Then steps contain zero implementation details: no HTTP status codes, no ORM terms, no database language, no DI container references. | Zero implementation leaks. | BLOCKER |
+| Story scope | B1 | Every scenario expresses an outcome the story asks for; none describes behaviour the story does not ask for. A value the story leaves open (a format, a limit) fixed by a scenario is behaviour the story does not ask for, unless a DESIGN document decides it. | Every scenario traces to a statement of the story or a DESIGN decision. | HIGH |
 
 **G4 red flags (auto-fail):**
 - `POST`, `GET`, `HTTP 200`, `HTTP 422`
@@ -50,9 +53,16 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Step unambiguity | G5 | Every step can be implemented without asking the designer for clarification. The step's meaning is unambiguous within the domain vocabulary. | Every step maps uniquely to a domain action or state. | HIGH |
 | Implementation plan completeness | G6 | Every scenario listed in the `.feature` files has a corresponding entry in `impl-plan-{story}.md` with a file path and a use case boundary. | Bijection feature scenarios ↔ impl-plan entries. | HIGH |
+| Acceptance values | T2 | Every input and expected value in the outer acceptance test equals the `.feature` verbatim (same numbers, texts, units). | No value differs between the `.feature` and the acceptance test. | BLOCKER |
+| Failing for the business reason | T3 | The outer acceptance test exists in the patch and its first scenario fails on a business assertion (an expected outcome not met), not on a compile, import or setup error. | The test file is in the changes and its failure is an assertion on the expected outcome. | BLOCKER |
+| One observable behaviour | T1 | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | No scenario asserts two behaviours; no test reads the clock, the order of other tests or a random value it does not set. | HIGH |
 | Inner-loop boundary presence | G11 | For every use case named in the coverage matrix that is NEW to this story (not reused from a prior story), the outer acceptance test enters at the Application layer (`<Context>.UnitTest`, per `clean-architecture-testing`) — not solely via an Integration/HTTP test — and an Application/UseCase-level test file for it physically exists in the repo, referenced from `impl-plan-{story}.md`. | Every NEW use case has a real `<Context>.UnitTest` acceptance test file on disk; no NEW use case is covered only by `<Context>.IntegrationTest`. | BLOCKER |
 
 **Checking G5:** For each step, ask "could two engineers implement this differently and both be correct?" If yes, the step is ambiguous.
+
+**Checking T2:** list each Examples row and literal value of the `.feature`, then find the same value in the acceptance test; a value missing, rounded or reworded is a finding at the test's line.
+
+**Checking T3:** the engine already refuses a DISTILL test commit whose tests pass. Read the test: a failure only because a module, file or import is missing is a setup failure, a finding; a failure on `assert.equal(result, expected)`-like code is the business failure T3 asks for.
 
 **Checking G11:**
 1. From the boundary-enforcement coverage matrix (G7), list every use case boundary and mark which are NEW to this story vs reused from a prior story/epic.
@@ -68,6 +78,8 @@ Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer
 |---|---|---|---|---|
 | Layer boundary compliance | G7 | Each row in the coverage matrix targets an Application layer use case named in `contracts-{story}.md`. No scenario targets an Infrastructure adapter directly as its primary entry point. | All coverage matrix entries reference a use case boundary from the contracts. | BLOCKER |
 | Walking skeleton coverage | G8 | At least one walking skeleton scenario per major feature flow is identified in the test plan (tagged `@smoke` or marked Walking Skeleton in the matrix). | ≥1 walking skeleton entry per feature flow. | HIGH |
+| Use case only | E1 | The acceptance test drives only the use case: it never calls, constructs or asserts on a domain internal, a repository implementation or an infrastructure class directly. | Every call and assertion of the acceptance test goes through the use case's input and output. | BLOCKER |
+| Doubles at the edge | E2 | Test doubles replace only dependencies at the outer edge (external systems, clock, file or network access); never a domain object or the use case under test. | Every double in the acceptance test stands for an outer-edge dependency. | HIGH |
 | Visual AC evidence | G9 | Every `@visual` scenario has ≥1 Playwright E2E spec in `tests/e2e/` per `impl-plan-{story}.md`. jsdom/unit entry invalid. | Bijection `@visual` scenarios ↔ Playwright E2E spec entries. | HIGH |
 | Comparable contract consistency | G10 | When `impl-plan-{story}.md` plans a component (hook/adapter/client) that is comparable to one already implemented for a similar responsibility in a prior story, its planned state/return/error convention matches the existing component's, unless the plan notes an explicit, justified divergence. | Every comparable pair of planned components shares its convention, or the divergence is explicitly noted and justified in the impl-plan. | HIGH |
 
@@ -140,7 +152,7 @@ vocabulary. Not a technical identifier. Verdict remains approved."
 | `fail` | ≥1 gate in this lens has a finding. |
 
 Each finding includes:
-- `gate` — G1 through G11
+- `gate` — one id of the tables above (G1–G11, B1, T1–T3, E1–E2)
 - `severity` — BLOCKER / HIGH / MEDIUM / LOW
 - `finding` — plain-language description of the problem
 - `location` — file path and line/scenario reference

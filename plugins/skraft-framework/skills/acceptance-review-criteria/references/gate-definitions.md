@@ -1,4 +1,4 @@
-# Gate Definitions G1–G11
+# Gate Definitions G1–G11, B1, T1–T3, E1–E2
 
 Formal checklist for the `acceptance-designer-reviewer`. One section per lens.
 
@@ -218,10 +218,16 @@ during DELIVER integration otherwise, after both implementations are already wri
 | G2 | coverage | Edge cases from domain examples | HIGH |
 | G3 | business-alignment | Business vocabulary — no technical identifiers | HIGH |
 | G4 | business-alignment | No implementation details in steps | BLOCKER |
+| B1 | business-alignment | Every scenario is an outcome the story asks for | HIGH |
 | G5 | testability | Unambiguous steps | HIGH |
 | G6 | testability | Impl plan covers all scenarios | HIGH |
 | G11 | testability | NEW use case has an Application-layer (`UnitTest`) acceptance test, not only Integration/HTTP | BLOCKER |
+| T1 | testability | One observable behaviour per scenario, nothing unfixed (time, order, randomness) | HIGH |
+| T2 | testability | Acceptance test values equal the `.feature` verbatim | BLOCKER |
+| T3 | testability | Acceptance test fails on a business assertion, not on setup | BLOCKER |
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
 | G8 | boundary-enforcement | ≥1 walking skeleton per flow | HIGH |
 | G9 | boundary-enforcement | `@visual` scenarios ↔ Playwright E2E spec bijection | HIGH |
 | G10 | boundary-enforcement | Comparable hooks/adapters/clients share a consistent convention | HIGH |
+| E1 | boundary-enforcement | Acceptance test drives only the use case | BLOCKER |
+| E2 | boundary-enforcement | Doubles only at the outer edge | HIGH |
