@@ -49,10 +49,12 @@ test('the files of a folder are those Git tracks or would add, relative to it; i
   writeFileSync(join(work, '.gitignore'), 'services/api/bin/\n')
   mkdirSync(join(work, 'services', 'api', 'bin'))
   writeFileSync(join(work, 'services', 'api', 'bin', 'Payment.dll'), 'binary\n')
-  writeFileSync(join(work, 'services', 'api', 'src', 'Refund "v2".cs'), 'class Refund {}\n')
+  // Git quotes a name holding a double quote unless asked for raw names; Windows forbids the quote in a name.
+  const quoted = process.platform === 'win32' ? 'Refund v2.cs' : 'Refund "v2".cs'
+  writeFileSync(join(work, 'services', 'api', 'src', quoted), 'class Refund {}\n')
   mkdirSync(join(root, 'plain'))
 
-  assert.deepEqual((await sourceControl.files('services/api')).sort(), ['src/Payment.cs', 'src/Refund "v2".cs'])
+  assert.deepEqual((await sourceControl.files('services/api')).sort(), ['src/Payment.cs', `src/${quoted}`])
   assert.deepEqual((await sourceControl.files('../payment-web')), ['src/App.tsx'])
   assert.equal(await sourceControl.files('../plain'), null)
 })
