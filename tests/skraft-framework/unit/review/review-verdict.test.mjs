@@ -419,7 +419,18 @@ test('findings of different lenses at the same line with the same severity are c
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith(['', 'The review sent the work back on pass 1, with these findings:', ...failures.map((line) => `- ${line}`)].join('\n')), host.agentRunner.dispatches[2].prompt)
 })
 
-test('a lens that fails with no finding that blocks, or answers inconclusive, blocks the review without sending the work back; the other lenses\' findings are journaled', async () => {
+test('the verdict reads the severities, not the lens\'s word: a lens failing with low findings only passes, its findings noted', async () => {
+  const host = scripted({}, nominal)
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'low', 'the caller has two names'), finding('F2', 'low', 'a typo in the title')])] })
+
+  assert.equal((await host.start()).status, 'done')
+
+  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
+  assert.deepEqual([recorded.outcome, recorded.code, recorded.next, recorded.reason], ['approved', null, 'distill', 'APPROVED: no finding counts; 2 notes (consistency F1, consistency F2)'])
+  assert.deepEqual(host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter'), [])
+})
+
+test('a lens that answers inconclusive blocks the review without sending the work back; one that fails with low findings only does not; the other lenses\' findings are journaled', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), () => ({ ok: false, unavailable: true, text: '', error: 'the work was sent back' })])
   host.agentRunner.review = lenses({
     consistency: [says('consistency', 'fail', [finding('F1', 'low', 'a typo in the title')])],
@@ -429,10 +440,7 @@ test('a lens that fails with no finding that blocks, or answers inconclusive, bl
 
   const outcome = await host.start()
 
-  const reason = [
-    'consistency: failed without naming a blocker, high or medium finding: a typo in the title',
-    'fitness: inconclusive: the research document is empty; no story to read',
-  ].join('; ')
+  const reason = 'fitness: inconclusive: the research document is empty; no story to read'
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-inconclusive', reason })
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.deepEqual([recorded.outcome, recorded.code, recorded.failures, recorded.next, recorded.reason], ['blocked', 'lens-inconclusive', [], null, reason])

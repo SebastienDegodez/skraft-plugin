@@ -3,9 +3,11 @@
  * it. A refuted finding does not count; an unverifiable one does. Findings of different lenses
  * at the same line with the same severity are one reason, citing each lens.
  *   a lens that answered inconclusive                            BLOCKED, code lens-inconclusive
- *   a lens that failed with no blocker, high or medium finding   BLOCKED, code lens-inconclusive
  *   otherwise, a blocker, high or medium finding that counts      NEEDS_REWORK
  *   otherwise (low findings are notes)                           APPROVED
+ * A lens's fail decides nothing: its findings' severities do, so a lens failing with low
+ * findings only passes, its findings noted. (A pass naming a blocker, high or medium finding
+ * never gets here: its answer is refused and the lens asked again.)
  * A BLOCKED review sends nothing back to the phase agent: no lens told it what to fix.
  *
  * @typedef {import('./answers.mjs').LensResult} LensResult
@@ -72,11 +74,7 @@ const detailsOf = ({ refuted, notes }) => [
 const citeLine = (lens, { id, gate, severity, location, description }) => `${lens} ${id} ${gate} ${severity}${location === '' ? '' : ` at ${location}`}: ${description}`
 
 /** Why a lens blocks the review, with what it noted; null when it does not. @param {LensResult} result */
-const inconclusiveLine = ({ lens, verdict, findings }) => {
-  if (verdict === 'inconclusive') return `${lens}: inconclusive${detailOf(findings)}`
-  if (verdict === 'fail' && !findings.some((finding) => BLOCKING.includes(finding.severity))) return `${lens}: failed without naming a blocker, high or medium finding${detailOf(findings)}`
-  return null
-}
+const inconclusiveLine = ({ lens, verdict, findings }) => (verdict === 'inconclusive' ? `${lens}: inconclusive${detailOf(findings)}` : null)
 
 /**
  * @typedef {{ lens: string, finding: Finding, refutation: RecordedRefutation | undefined }} Counted
