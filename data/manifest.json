@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-17T23:53:45.587Z",
+  "generated": "2026-10-18T07:37:34.091Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -4198,7 +4198,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-236"
       ],
-      "mtime": 1792281223260.3909
+      "mtime": 1792309052260.6128
     },
     {
       "id": "pr/236/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
@@ -4211,7 +4211,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-236"
       ],
-      "mtime": 1792281223285.595
+      "mtime": 1792309052255.612
     },
     {
       "id": "pr/236/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
@@ -4224,7 +4224,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-236"
       ],
-      "mtime": 1792281223309.391
+      "mtime": 1792309052266.614
     },
     {
       "id": "pr/236/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
@@ -4237,7 +4237,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-236"
       ],
-      "mtime": 1792281223314.391
+      "mtime": 1792309052280.6167
     },
     {
       "id": "pr/236/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
@@ -4250,7 +4250,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-236"
       ],
-      "mtime": 1792281223339.391
+      "mtime": 1792309052292.6191
     },
     {
       "id": "pr/236/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
@@ -4263,7 +4263,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-236"
       ],
-      "mtime": 1792281223338.391
+      "mtime": 1792309052293.6191
     },
     {
       "id": "pr/236/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
@@ -4276,7 +4276,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-236"
       ],
-      "mtime": 1792281223364.3914
+      "mtime": 1792309052295.6196
     },
     {
       "id": "pr/236/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
@@ -4289,7 +4289,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-236"
       ],
-      "mtime": 1792281223365.3914
+      "mtime": 1792309052295.6196
     },
     {
       "id": "pr/236/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
@@ -4302,7 +4302,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-236"
       ],
-      "mtime": 1792281223387.8992
+      "mtime": 1792309052298.62
     },
     {
       "id": "pr/236/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
@@ -4315,7 +4315,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-236"
       ],
-      "mtime": 1792281223442.484
+      "mtime": 1792309052338.628
     },
     {
       "id": "pr/236/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
@@ -4328,7 +4328,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-236"
       ],
-      "mtime": 1792281223442.484
+      "mtime": 1792309052339.628
     },
     {
       "id": "pr/236/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
@@ -4341,7 +4341,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-236"
       ],
-      "mtime": 1792281223442.484
+      "mtime": 1792309052340.6282
     },
     {
       "id": "pr/236/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
@@ -4354,7 +4354,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-236"
       ],
-      "mtime": 1792281223443.9243
+      "mtime": 1792309052340.6282
     },
     {
       "id": "pr/236/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
@@ -4367,7 +4367,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-236"
       ],
-      "mtime": 1792281223443.9243
+      "mtime": 1792309052340.6282
     },
     {
       "id": "pr/236/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
@@ -4380,7 +4380,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-236"
       ],
-      "mtime": 1792281223443.9243
+      "mtime": 1792309052340.6282
     },
     {
       "id": "pr/236/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
@@ -4393,7 +4393,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-236"
       ],
-      "mtime": 1792281223444.3916
+      "mtime": 1792309052344.629
     },
     {
       "id": "pr/236/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
@@ -4406,7 +4406,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-236"
       ],
-      "mtime": 1792281223460.3918
+      "mtime": 1792309052343.629
     },
     {
       "id": "pr/236/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
@@ -4419,7 +4419,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-236"
       ],
-      "mtime": 1792281223465.3918
+      "mtime": 1792309052344.629
     }
   ]
 }
