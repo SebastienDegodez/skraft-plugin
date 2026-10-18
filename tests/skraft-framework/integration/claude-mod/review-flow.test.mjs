@@ -225,6 +225,25 @@ test('a blocker the refuter refutes does not count; an unverifiable high finding
   assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
 })
 
+test('a blocker two lenses give at the same line is checked once, the refutation applying to both', async (t) => {
+  const { cwd } = pipelineRepository(t)
+
+  const { outcome, spawns, events } = await runOn(cwd, {
+    reviews: {
+      consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'The ADR names no payment provider')])],
+      'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'blocker', 'The ADR leaves the provider open', { location: './docs/adr/adr-001-card-payment.md:3' })])],
+      refuter: [refutes('refuted', 'docs/adr/adr-001-card-payment.md:3 names Acme Pay')],
+    },
+  })
+
+  assert.equal(outcome.status, 'done')
+  assert.deepEqual(spawns.filter((spawn) => spawn.description.includes(' · refute ')).map(({ subagentType, description }) => `${subagentType} | ${description}`), [
+    `skraft:finding-refuter | skraft ${SLUG} · design_review · refute consistency F1, architecture-compliance F1 · attempt 1`,
+  ])
+  assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict }) => [lens, id, verdict]), [['consistency', 'F1', 'refuted'], ['architecture-compliance', 'F1', 'refuted']])
+  assert.deepEqual(reviewsOf(events)[0], ['design_review', 1, 'approved', 'distill'])
+})
+
 test('on pass 2 only the lenses that had findings or whose inputs changed run again; a clean one whose inputs did not move is taken over', async (t) => {
   const { cwd } = pipelineRepository(t)
   const blocker = finding('F1', 'blocker', 'The ADR names no payment provider')

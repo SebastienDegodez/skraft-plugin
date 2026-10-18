@@ -276,8 +276,8 @@ export const finding = (id, severity, description, more = {}) => ({ id, gate: 'G
 export const refutes = (verdict, reason = `${verdict} by the patch`) => answerYaml({ verdict, reason })
 
 /**
- * What a review brief asks: the lens it names, or `refuter` with the lens and finding it checks;
- * null for a phase agent's brief.
+ * What a review brief asks: the lens it names, or `refuter` with the lens and finding it checks
+ * (the first of a group of several); null for a phase agent's brief.
  * @param {string} prompt
  * @returns {{ name: string, lens: string, finding: string | null, prompt: string } | null}
  */
@@ -285,7 +285,7 @@ export const reviewBriefOf = (prompt) => {
   const first = prompt.split('\n')[0] ?? ''
   const lens = /^## Skraft review lens: (\S+)/.exec(first)
   if (lens) return { name: lens[1], lens: lens[1], finding: null, prompt }
-  const check = /^## Skraft finding check: (\S+) (\S+)$/.exec(first)
+  const check = /^## Skraft finding check: (\S+) (\S+?)(?:, .+)?$/.exec(first)
   return check ? { name: 'refuter', lens: check[1], finding: check[2], prompt } : null
 }
 

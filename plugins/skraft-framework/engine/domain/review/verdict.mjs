@@ -1,6 +1,7 @@
 /**
  * The verdict of a review, computed from its lens results and refutations; no agent decides
- * it. A refuted finding does not count; an unverifiable one does.
+ * it. A refuted finding does not count; an unverifiable one does. Findings of different lenses
+ * at the same line with the same severity are one reason, citing each lens.
  *   a lens that answered inconclusive                            BLOCKED, code lens-inconclusive
  *   a lens that failed with no blocker, high or medium finding   BLOCKED, code lens-inconclusive
  *   otherwise, a blocker, high or medium finding that counts      NEEDS_REWORK
@@ -18,6 +19,7 @@
  *   review-rejected.
  */
 
+import { groupFindings } from './finding-groups.mjs'
 import { emitYaml } from './yaml-emitter.mjs'
 
 const BLOCKING = Object.freeze(['blocker', 'high', 'medium'])
@@ -38,7 +40,7 @@ export const blocksReview = (results) => results.some((result) => inconclusiveLi
 export const decideReview = (results, refutations) => {
   const blocking = results.map(inconclusiveLine).filter((line) => line !== null)
   if (blocking.length > 0) return { status: 'BLOCKED', code: 'lens-inconclusive', reasons: blocking, summary: blocking.join('; ') }
-  const reasons = results.flatMap((result) => findingReasons(result, refutations))
+  const reasons = groupFindings(results.flatMap((result) => countedFindings(result, refutations))).map(groupLine)
   const status = reasons.length > 0 ? 'NEEDS_REWORK' : 'APPROVED'
   return { status, code: null, reasons, summary: summaryOf(status, results, reasons) }
 }
@@ -50,17 +52,19 @@ const inconclusiveLine = ({ lens, verdict, findings }) => {
   return null
 }
 
-/** @param {LensResult} result @param {RecordedRefutation[]} refutations */
-const findingReasons = (result, refutations) => countedFindings(result, refutations)
-  .map(({ finding, refutation }) => findingLine(result.lens, finding, refutation))
+/**
+ * @typedef {{ lens: string, finding: Finding, refutation: RecordedRefutation | undefined }} Counted
+ *   a finding that counts, with the refuter's word on it
+ */
 
 /**
  * The blocker, high and medium findings of a lens that count: those the refuter did not refute.
  * @param {LensResult} result @param {RecordedRefutation[]} refutations
+ * @returns {Counted[]}
  */
-const countedFindings = (result, refutations) => result.findings
+const countedFindings = ({ lens, findings }, refutations) => findings
   .filter((finding) => BLOCKING.includes(finding.severity))
-  .map((finding) => ({ finding, refutation: refutationOf(refutations, result.lens, finding.id) }))
+  .map((finding) => ({ lens, finding, refutation: refutationOf(refutations, lens, finding.id) }))
   .filter(({ refutation }) => refutation?.verdict !== 'refuted')
 
 /** @param {Finding[]} findings */
@@ -70,14 +74,24 @@ const detailOf = (findings) => (findings.length > 0 ? `: ${findings.map((finding
 const refutationOf = (refutations, lens, id) => refutations.find((refutation) => refutation.lens === lens && refutation.finding === id)
 
 /**
- * A finding as the agent it goes back to reads it.
- * @param {string} lens @param {Finding} finding @param {RecordedRefutation | undefined} refutation
+ * A group of findings as the agent it goes back to reads it: every lens cited, the place and the
+ * severity once, each description and suggestion; the refuter's word is the group's.
+ * @param {Counted[]} members
  */
-const findingLine = (lens, { id, gate, severity, location, description, suggestion }, refutation) => [
-  `${lens} ${id} ${gate} ${severity}${location === '' ? '' : ` at ${location}`}: ${description}`,
-  ...(suggestion === null ? [] : [` (suggestion: ${suggestion})`]),
-  ...(refutation?.verdict === 'unverifiable' ? [' (not verified)'] : []),
-].join('')
+const groupLine = (members) => {
+  const suggestions = members.flatMap(({ finding }) => (finding.suggestion === null ? [] : [finding.suggestion]))
+  return [
+    `${headOf(members)}: ${members.map(({ finding }) => finding.description).join('; ')}`,
+    ...(suggestions.length === 0 ? [] : [` (suggestion: ${suggestions.join('; ')})`]),
+    ...(members[0].refutation?.verdict === 'unverifiable' ? [' (not verified)'] : []),
+  ].join('')
+}
+
+/** `<lens> <id> <gate>, … <severity> at <location>`, the place of the first. @param {Counted[]} members */
+const headOf = (members) => {
+  const { severity, location } = members[0].finding
+  return `${members.map(({ lens, finding }) => `${lens} ${finding.id} ${finding.gate}`).join(', ')} ${severity}${location === '' ? '' : ` at ${location}`}`
+}
 
 /** @param {'APPROVED' | 'NEEDS_REWORK'} status @param {LensResult[]} results @param {string[]} reasons */
 const summaryOf = (status, results, reasons) => {
@@ -96,7 +110,7 @@ export const composeVerdictFile = ({ verdict, results, refutations, reused }) =>
   status: verdict.status,
   code: verdict.code,
   summary: verdict.summary,
-  findings: results.flatMap((result) => countedFindings(result, refutations).map(({ finding }) => findingEntry(result.lens, finding))),
+  findings: results.flatMap((result) => countedFindings(result, refutations).map(({ lens, finding }) => findingEntry(lens, finding))),
   notes: results.flatMap(({ lens, findings }) => findings.filter((finding) => !BLOCKING.includes(finding.severity)).map((finding) => findingEntry(lens, finding))),
   refutations: refutations.map(({ lens, finding, verdict: said, reason }) => ({ lens, finding, verdict: said, reason })),
   reused: reused.map((lens) => ({ lens })),

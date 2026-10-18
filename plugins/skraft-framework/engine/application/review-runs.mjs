@@ -2,6 +2,7 @@ import { readLensAnswer, readRefutation } from '../domain/review/answers.mjs'
 import { composeReviewContext, RULE_FILES } from '../domain/review/context.mjs'
 import { reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
+import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
 import { planLenses, REFUTER } from '../domain/review/lenses.mjs'
 import { blocksReview, composeVerdictFile, decideReview, REFUTED_SEVERITIES } from '../domain/review/verdict.mjs'
 import { readOrName } from './workspace-reading.mjs'
@@ -64,7 +65,7 @@ export const runReview = async (review) => {
   const planned = await planLensInputs(review, prepared)
   const lensed = await lensResults(review, planned)
   if ('stop' in lensed) return lensed
-  const refuted = blocksReview(lensed.results) ? { refutations: [] } : await refutations(review, planned, lensed.refutable)
+  const refuted = blocksReview(lensed.results) ? { refutations: [] } : await refutations(review, planned, lensed.results)
   if ('stop' in refuted) return refuted
   return { verdict: await decide(review, { ...lensed, ...refuted }), costUsd: costOf(review) }
 }
@@ -256,12 +257,10 @@ const eventsOfThisPass = ({ journal, step }, type) => {
 
 /**
  * Each lens's result: kept from this pass when a resumed review already has it, kept from the
- * last pass when its inputs did not change and it found nothing, else asked. refutable: the
- * results the refuter may still check; a result kept from the last pass found nothing, and the
- * refutations a resumed pass already holds are filtered out later. reused: the lenses this pass
- * took over from the last one, in the node's order.
+ * last pass when its inputs did not change and it found nothing, else asked; in the node's
+ * order. reused: the lenses this pass took over from the last one.
  * @param {Review} review @param {PlannedLens[]} planned
- * @returns {Promise<{ results: LensResult[], refutable: LensResult[], reused: string[] } | Stopped>}
+ * @returns {Promise<{ results: LensResult[], reused: string[] } | Stopped>}
  */
 const lensResults = async (review, planned) => {
   const kept = await keepLenses(review, planned)
@@ -270,7 +269,7 @@ const lensResults = async (review, planned) => {
   const asked = answered.results
   const results = planned.map(({ lens }) => kept.get(lens.name)?.result ?? /** @type {LensResult} */ (asked.find((result) => result.lens === lens.name)))
   const reused = planned.filter(({ lens }) => kept.get(lens.name)?.reused).map(({ lens }) => lens.name)
-  return { results, refutable: [...asked, ...[...kept.values()].map(({ result }) => result)], reused }
+  return { results, reused }
 }
 
 /** @typedef {{ result: LensResult, reused: boolean | undefined }} Kept reused: taken over from the last pass */
@@ -370,19 +369,21 @@ const recordLens = async ({ journal, step }, { lens, fingerprint }, { result }, 
 }
 
 /**
- * The refuter's word on each blocker and high finding the lenses gave in this pass; one this
- * pass already holds is not asked again, one it answers unreadably twice stays unverifiable.
- * @param {Review} review @param {PlannedLens[]} planned @param {LensResult[]} refutable
+ * The refuter's word on each group of blocker and high findings the lenses gave in this pass
+ * (a result kept from the last pass found nothing), applied to every finding of the group; a
+ * group this pass already holds is not asked again, one it answers unreadably twice stays
+ * unverifiable.
+ * @param {Review} review @param {PlannedLens[]} planned @param {LensResult[]} results in the node's order
  * @returns {Promise<{ refutations: RecordedRefutation[] } | Stopped>}
  */
-const refutations = async (review, planned, refutable) => {
+const refutations = async (review, planned, results) => {
   const done = eventsOfThisPass(review, 'review.refuted').map(refutationOf)
-  const asked = toRefute(refutable, planned).filter(({ lens, finding }) => !done.some((known) => known.lens === lens && known.finding === finding.id))
+  const asked = toRefute(results, planned).filter(({ members: [first] }) => !done.some((known) => known.lens === first.lens && known.finding === first.finding.id))
   const answered = await askUpToTwice(review, asked, refuterAsking(review))
   if ('stop' in answered) return answered
   const lost = []
-  for (const { item, error } of answered.unreadable) lost.push(await recordUnverifiable(review, item, error))
-  return { refutations: [...done, ...answered.read.map(({ value }) => value), ...lost] }
+  for (const { item, error } of answered.unreadable) lost.push(...await recordUnverifiable(review, item, error))
+  return { refutations: [...done, ...answered.read.flatMap(({ value }) => value), ...lost] }
 }
 
 /** @param {Review} review @param {Suspect} suspect @param {string} error */
@@ -399,35 +400,50 @@ const refuterAsking = (review) => ({
 })
 
 /**
- * @typedef {{ lens: string, finding: Finding, inputs: TrackedInput[], skills: SkillFile[] }} Suspect
- *   a finding to check, with the inputs and the skills of the lens that gave it.
+ * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[] }} Suspect
+ *   a group of findings to check, one per lens, with what their lenses read. A group is journaled
+ *   member after member, so its first member stands for it on a resume.
  */
 
-/** @param {LensResult[]} refutable @param {PlannedLens[]} planned @returns {Suspect[]} */
-const toRefute = (refutable, planned) => refutable.flatMap(({ lens, findings }) => {
-  const { inputs, skills } = /** @type {PlannedLens} */ (planned.find((entry) => entry.lens.name === lens))
-  return findings.filter((finding) => REFUTED_SEVERITIES.includes(finding.severity)).map((finding) => ({ lens, finding, inputs, skills }))
-})
+/** @param {LensResult[]} results @param {PlannedLens[]} planned @returns {Suspect[]} */
+const toRefute = (results, planned) => groupFindings(results.flatMap(({ lens, findings }) => findings
+  .filter((finding) => REFUTED_SEVERITIES.includes(finding.severity))
+  .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned))
+
+/** The group, with the inputs and skills of its lenses, each once. @param {Suspect['members']} members @param {PlannedLens[]} planned @returns {Suspect} */
+const suspectOf = (members, planned) => {
+  const read = members.map(({ lens }) => /** @type {PlannedLens} */ (planned.find((entry) => entry.lens.name === lens)))
+  return {
+    members,
+    inputs: uniqueBy(read.flatMap(({ inputs }) => inputs), ({ kind, path }) => `${kind} ${path}`),
+    skills: uniqueBy(read.flatMap(({ skills }) => skills), ({ name }) => name),
+  }
+}
+
+/** @template T @param {T[]} items @param {(item: T) => string} keyOf @returns {T[]} the first of each key, in order */
+const uniqueBy = (items, keyOf) => items.filter((item, index) => items.findIndex((other) => keyOf(other) === keyOf(item)) === index)
 
 /** @param {RunEvent} event @returns {RecordedRefutation} */
 const refutationOf = ({ lens, finding, verdict, reason }) => ({ lens, finding, verdict, reason })
 
 /** @param {Review} review @param {Suspect} suspect @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const refuterDispatch = ({ deps, slug, sources, step }, { lens, finding, inputs, skills }, attempt, retry) => ({
+const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skills }, attempt, retry) => ({
   agent: REFUTER,
   source: sources[REFUTER],
-  label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${lens} ${finding.id}`, attempt }),
-  prompt: composeRefuterBrief({ lens, finding, inputs: located(deps, slug, inputs), skills: pathsOf(skills), retry }),
+  label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${citationOf(members)}`, attempt }),
+  prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), retry }),
 })
 
 /**
  * @param {Review} review @param {Suspect} suspect
  * @param {import('../domain/review/answers.mjs').Refutation} refutation @param {number | undefined} cost
- * @returns {Promise<RecordedRefutation>}
+ * @returns {Promise<RecordedRefutation[]>} one per member, the check's cost on the first
  */
-const recordRefutation = async ({ journal, step }, { lens, finding }, { verdict, reason }, cost) => {
-  await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, cost })
-  return { lens, finding: finding.id, verdict, reason }
+const recordRefutation = async ({ journal, step }, { members }, { verdict, reason }, cost) => {
+  for (const [index, { lens, finding }] of members.entries()) {
+    await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, cost: index === 0 ? cost : undefined })
+  }
+  return members.map(({ lens, finding }) => ({ lens, finding: finding.id, verdict, reason }))
 }
 
 /**

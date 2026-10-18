@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, finding, lenses, nominal, refutes, reviews, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
-import { BUILT_IN_WORKFLOW, InMemoryGit } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit } from '../support/in-memory-host.mjs'
 import { designating, edit } from '../workflow/support.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
@@ -283,6 +283,76 @@ test('a refuted blocker does not count; an unverifiable one does, and medium fin
     '',
   ].join('\n'))
   assert.match(await kept.tracking.read(SLUG, 'reviews/design_review-2/verdict.yaml'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: consistency, architecture-compliance, fitness approve"\nfindings: \[\]\nnotes: \[\]\nrefutations: \[\]\n/)
+})
+
+test('findings of different lenses at the same line with the same severity are checked once, the verdict applying to each, and the next brief lists them once citing every lens', async () => {
+  const catalog = new InMemoryAgentCatalog({
+    skills: { 'consistency-lens': ['architecture-review-criteria'], 'architecture-compliance-lens': ['architecture-review-criteria', 'clean-architecture'] },
+    skillFiles: { 'architecture-review-criteria': '# Criteria\n', 'clean-architecture': '# Clean Architecture\n' },
+  })
+  const host = scripted({ catalog }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+  host.agentRunner.review = lenses({
+    consistency: [says('consistency', 'fail', [
+      finding('F1', 'blocker', 'the ADR contradicts the context map', { suggestion: 'align the payment context' }),
+      finding('F2', 'high', 'two contexts own payments'),
+      finding('F3', 'medium', 'the refund path is undocumented'),
+      finding('F4', 'medium', 'the refund owner is unnamed'),
+    ])],
+    'architecture-compliance': [says('architecture-compliance', 'fail', [
+      finding('F2', 'blocker', 'the domain imports the database driver', { location: './src/Checkout.cs:12', gate: 'A3' }),
+      finding('F3', 'medium', 'the use case returns an entity', { location: 'src\\Checkout.cs:12', suggestion: 'return a DTO' }),
+      finding('F4', 'medium', 'no owner', { location: '' }),
+    ])],
+    fitness: [says('fitness', 'fail', [
+      finding('F1', 'blocker', 'no latency budget', { location: 'src/Checkout.cs:13' }),
+      finding('F2', 'medium', 'no error budget', { suggestion: 'set an error budget' }),
+      finding('F3', 'medium', 'no owner either', { location: '' }),
+    ])],
+    refuter: [refutes('confirmed'), { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' }, refutes('confirmed'), refutes('refuted')],
+  })
+  const scriptedAnswer = host.agentRunner.review
+  host.agentRunner.review = async (dispatch) => {
+    const answer = await scriptedAnswer(dispatch)
+    return typeof answer === 'string' ? { ok: true, text: answer, costUsd: 0.25 } : answer
+  }
+
+  assert.equal((await host.start()).code, 'agent-unavailable')
+  assert.equal((await host.run()).status, 'done')
+
+  const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
+  assert.deepEqual(checks.map((dispatch) => dispatch.label.split(' · ')[2]), [
+    'refute consistency F1, architecture-compliance F2', 'refute consistency F2', 'refute fitness F1', 'refute consistency F2',
+  ])
+  assert.ok(checks[0].prompt.startsWith([
+    '## Skraft finding check: consistency F1, architecture-compliance F2',
+    '- Finding (consistency F1): G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map',
+    '- Finding (architecture-compliance F2): A3 blocker at ./src/Checkout.cs:12: the domain imports the database driver',
+    '- Skill (read it before any other input and judge with its criteria): /plugin/skills/architecture-review-criteria/SKILL.md',
+    '- Skill (read it before any other input and judge with its criteria): /plugin/skills/clean-architecture/SKILL.md',
+    '- Read these inputs and the files they name; search the repository for nothing else:',
+    `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
+    `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
+    `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
+    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
+    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
+    '- Confirm',
+  ].join('\n')), checks[0].prompt)
+  assert.ok(checks[1].prompt.startsWith('## Skraft finding check: consistency F2\n- Finding: G1 high at src/Checkout.cs:12: two contexts own payments\n'), checks[1].prompt)
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict, cost }) => `${lens} ${id} ${verdict} ${cost}`), [
+    'consistency F1 confirmed 0.25', 'architecture-compliance F2 confirmed undefined', 'fitness F1 confirmed 0.25', 'consistency F2 refuted 0.25',
+  ])
+  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
+  assert.equal(recorded.cost, 0.25 * 3 + 0.25 * 3)
+  const failures = [
+    'consistency F1 G1, architecture-compliance F2 A3 blocker at src/Checkout.cs:12: the ADR contradicts the context map; the domain imports the database driver (suggestion: align the payment context)',
+    'consistency F3 G1, architecture-compliance F3 G1, fitness F2 G1 medium at src/Checkout.cs:12: the refund path is undocumented; the use case returns an entity; no error budget (suggestion: return a DTO; set an error budget)',
+    'consistency F4 G1 medium at src/Checkout.cs:12: the refund owner is unnamed',
+    'architecture-compliance F4 G1 medium: no owner',
+    'fitness F1 G1 blocker at src/Checkout.cs:13: no latency budget',
+    'fitness F3 G1 medium: no owner either',
+  ]
+  assert.deepEqual(recorded.failures, failures)
+  assert.ok(host.agentRunner.dispatches[2].prompt.endsWith(['', 'The review sent the work back on pass 1, with these findings:', ...failures.map((line) => `- ${line}`)].join('\n')), host.agentRunner.dispatches[2].prompt)
 })
 
 test('a lens that fails with no finding that blocks, or answers inconclusive, blocks the review without sending the work back; the other lenses\' findings are journaled', async () => {

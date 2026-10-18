@@ -354,16 +354,21 @@ findings:                # [] quand elle ne trouve rien
 | Textes | ramenés sur une ligne et tronqués (description : 500 caractères) |
 | Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
 
-**Réfutation.** Chaque finding blocker ou high part chez `finding-refuter`, avec les entrées et
-les skills de la lentille qui l'a donné. Il répond `confirmed`, `refuted` (sa `reason` cite le
-`chemin:ligne` lu) ou `unverifiable`. Un finding réfuté ne compte pas ; un finding invérifiable
-compte, comme celui dont la vérification a été illisible deux fois.
+**Réfutation.** Les findings de lentilles différentes au même `chemin:ligne` (le chemin normalisé
+comme ceux du patch : `./src\Checkout.cs:12` est `src/Checkout.cs:12`) et de même sévérité
+forment un groupe. Chaque groupe de findings blocker ou high part une fois chez
+`finding-refuter`, son libellé et son brief nommant chaque lentille du groupe, avec les entrées et
+les skills de ces lentilles. Il répond `confirmed`, `refuted` (sa `reason` cite le `chemin:ligne`
+lu) ou `unverifiable`, et la réponse vaut pour chaque finding du groupe. Un finding réfuté ne
+compte pas ; un finding invérifiable compte, comme celui dont la vérification a été illisible
+deux fois.
 
 **Verdict.** Une lentille qui répond `inconclusive`, ou `fail` sans finding blocker, high ou
 medium, bloque la revue avec `lens-inconclusive`, en nommant chacune de ces lentilles et ce
 qu'elle a noté : le travail n'est pas renvoyé et aucun finding n'est vérifié. Sinon
 `NEEDS_REWORK` quand un finding blocker, high ou medium compte, sinon `APPROVED` (les findings
-low sont des notes). Les findings retenus vont dans le brief suivant de l'agent de la phase.
+low sont des notes). Les findings retenus vont dans le brief suivant de l'agent de la phase, un
+groupe sur une ligne qui cite chacune de ses lentilles.
 
 **Re-revue incrémentale.** À une passe suivante, une lentille dont le résultat précédent était
 `pass` sans finding, et dont l'empreinte n'a pas changé, n'est pas relancée : son résultat est

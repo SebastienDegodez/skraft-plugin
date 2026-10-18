@@ -22,6 +22,7 @@ Decide whether one review finding holds, using only the inputs your brief lists.
 - `refuted`: an input shows the claim is false — the cited text is absent or says otherwise, or another input satisfies the criterion.
 - `unverifiable`: the inputs cannot settle it, or an input it depends on cannot be read.
 - Judge the finding as written: never widen it, change its severity or report another defect.
+- Several `Finding` lines in one brief point at the same line from different lenses: give one verdict, `confirmed` when an input shows the defect any of them describes.
 
 ## Output
 

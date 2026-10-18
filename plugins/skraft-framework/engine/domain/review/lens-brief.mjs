@@ -1,5 +1,6 @@
 import { storyLine } from '../pipeline/dispatch-brief.mjs'
 import { lensShape, MAX_FINDINGS, REFUTATION_SHAPE } from './answers.mjs'
+import { citationOf } from './finding-groups.mjs'
 
 /**
  * The prompts of a review's lenses and of the refuter, the same on every host.
@@ -13,8 +14,8 @@ import { lensShape, MAX_FINDINGS, REFUTATION_SHAPE } from './answers.mjs'
  * }} LensBrief
  *   skills: the absolute paths of the SKILL.md files the lens declares; retry: why the previous
  *   answer was refused, on the one retry.
- * @typedef {{ lens: string, finding: Finding, inputs: LensInput[], skills: string[], retry: string | null }} RefuterBrief
- *   skills: those of the lens that gave the finding.
+ * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: LensInput[], skills: string[], retry: string | null }} RefuterBrief
+ *   members: the findings of one group, one per lens; inputs and skills: those of their lenses.
  */
 
 const TITLES = Object.freeze({
@@ -38,9 +39,9 @@ export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, ret
 ].join('\n')
 
 /** @param {RefuterBrief} brief */
-export const composeRefuterBrief = ({ lens, finding, inputs, skills, retry }) => [
-  `## Skraft finding check: ${lens} ${finding.id}`,
-  `- Finding: ${finding.gate} ${finding.severity}${finding.location === '' ? '' : ` at ${finding.location}`}: ${finding.description}`,
+export const composeRefuterBrief = ({ members, inputs, skills, retry }) => [
+  `## Skraft finding check: ${citationOf(members)}`,
+  ...members.map((member) => findingLine(member, members.length > 1)),
   ...skillLines(skills),
   ...inputLines(inputs),
   '- Confirm the finding only when these inputs show it; refute it when they show it is wrong, citing the path:line; say unverifiable when they cannot tell.',
@@ -49,6 +50,11 @@ export const composeRefuterBrief = ({ lens, finding, inputs, skills, retry }) =>
   ...fenced(REFUTATION_SHAPE),
   ...retryLines(retry),
 ].join('\n')
+
+/**
+ * @param {{ lens: string, finding: Finding }} member @param {boolean} named whether the line names its lens, in a group of several
+ */
+const findingLine = ({ lens, finding }, named) => `- Finding${named ? ` (${lens} ${finding.id})` : ''}: ${finding.gate} ${finding.severity}${finding.location === '' ? '' : ` at ${finding.location}`}: ${finding.description}`
 
 /** @param {string[]} skills */
 const skillLines = (skills) => skills.map((path) => `- Skill (read it before any other input and judge with its criteria): ${path}`)
@@ -67,6 +73,6 @@ const retryLines = (retry) => (retry === null ? [] : ['', `Your previous answer 
 
 /**
  * Stable across a resume, distinct for every lens and finding of every pass.
- * @param {{ slug: string, step: string, visit: number, what: string, attempt: number }} dispatch what: the lens, or `refute <lens> <finding>`
+ * @param {{ slug: string, step: string, visit: number, what: string, attempt: number }} dispatch what: the lens, or `refute <lens> <finding>, …` for a group
  */
 export const reviewLabel = ({ slug, step, visit, what, attempt }) => `skraft ${slug} · ${step} · ${what}${visit > 1 ? ` · pass ${visit}` : ''} · attempt ${attempt}`

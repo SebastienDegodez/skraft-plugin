@@ -348,16 +348,19 @@ findings:                # [] when it finds none
 | Texts | brought onto one line and cut (description: 500 characters) |
 | Refused answer | the lens is asked once more with the reason; a second unreadable answer stops the run with `lens-unreadable`; a resume asks again only the lenses whose answer could not be read |
 
-**Refutation.** Each blocker or high finding goes to `finding-refuter`, with the inputs and skills
-of the lens that gave it. It answers `confirmed`, `refuted` (its `reason` cites the `path:line`
-it read) or `unverifiable`. A refuted finding does not count; an unverifiable one does, and so
-does a finding whose check was unreadable twice.
+**Refutation.** Findings of different lenses at the same `path:line` (the path normalized as the
+patch's: `./src\Checkout.cs:12` is `src/Checkout.cs:12`) with the same severity form one group.
+Each group of blocker or high findings goes once to `finding-refuter`, its label and brief naming
+every lens of the group, with the inputs and skills of those lenses. It answers `confirmed`,
+`refuted` (its `reason` cites the `path:line` it read) or `unverifiable`, and the answer applies
+to every finding of the group. A refuted finding does not count; an unverifiable one does, and
+so does a finding whose check was unreadable twice.
 
 **Verdict.** A lens that answers `inconclusive`, or `fail` without a blocker, high or medium
 finding, blocks the review with `lens-inconclusive`, naming each such lens and what it noted:
 the work is not sent back and no finding is checked. Otherwise `NEEDS_REWORK` when a blocker,
 high or medium finding counts, else `APPROVED` (low findings are notes). The findings that count
-go to the next brief of the phase agent.
+go to the next brief of the phase agent, a group on one line citing each of its lenses.
 
 **Incremental re-review.** On a later pass, a lens whose previous result was `pass` with no
 finding, and whose fingerprint has not changed, is not started again: its result is journaled
