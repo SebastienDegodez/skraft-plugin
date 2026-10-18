@@ -1,5 +1,5 @@
 import { joinRelative } from '../domain/config/relative-path.mjs'
-import { inAdrFolder, isAdr, isMatrix, openDrifts, recordFailures, registryOf } from '../domain/pipeline/design-records.mjs'
+import { inAdrFolder, isAdr, isMatrix, openDrifts, recordFailures, registryOf, resolutionsOf } from '../domain/pipeline/design-records.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
 /**
@@ -22,7 +22,9 @@ export const checkDesignRecords = async (deps, { slug, base }) => {
   const tracked = await deps.files.list(slug, '')
   const changed = await changedSinceBase(deps, base)
   if (typeof changed === 'string') return changed
-  return { open: openDrifts(tracked), failures: recordFailures(await recordsOf(deps, slug, { tracked, changed })) }
+  const resolutions = await textsOf(resolutionsOf(tracked), (path) => deps.files.read(slug, path))
+  const blank = resolutions.filter(({ text }) => (text ?? '').trim() === '').map(({ path }) => path)
+  return { open: openDrifts(tracked, blank), failures: recordFailures(await recordsOf(deps, slug, { tracked, changed })) }
 }
 
 /**

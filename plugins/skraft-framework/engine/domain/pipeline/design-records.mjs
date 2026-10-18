@@ -38,13 +38,21 @@ export const inAdrFolder = (path) => ADR_FOLDER.test(path)
 export const registryOf = (adr) => adr.replace(/[^/]+$/, 'supersessions.md')
 
 /**
- * The decision drifts of the tracking folder with no resolution beside them, each as the line
- * that blocks the step.
+ * The decision drifts of the tracking folder with no answer beside them, each as the line that
+ * blocks the step: no resolution file, or one that says nothing.
  * @param {string[]} tracked the files of the tracking folder, relative to it
+ * @param {string[]} blank the resolution files among them that hold no text
  */
-export const openDrifts = (tracked) => tracked
-  .filter((path) => DRIFT.test(path) && !path.endsWith(RESOLUTION) && !tracked.includes(resolutionOf(path)))
-  .map((path) => `${path} has no ${resolutionOf(path).split('/').at(-1)} beside it: a human answers the drift there, then resumes the run (G13)`)
+export const openDrifts = (tracked, blank) => tracked
+  .filter((path) => DRIFT.test(path) && !path.endsWith(RESOLUTION))
+  .flatMap((path) => {
+    const name = resolutionOf(path).split('/').at(-1)
+    if (!tracked.includes(resolutionOf(path))) return [`${path} has no ${name} beside it: a human answers the drift there, then resumes the run (G13)`]
+    return blank.includes(resolutionOf(path)) ? [`${path} has an empty ${name} beside it: a human writes the decision there, then resumes the run (G13)`] : []
+  })
+
+/** The resolution files of the tracking folder. @param {string[]} tracked */
+export const resolutionsOf = (tracked) => tracked.filter((path) => DRIFT.test(path) && path.endsWith(RESOLUTION))
 
 /** @param {string} drift */
 const resolutionOf = (drift) => `${drift.slice(0, -'.md'.length)}${RESOLUTION}`

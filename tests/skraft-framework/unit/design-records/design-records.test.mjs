@@ -54,6 +54,21 @@ test('a consistency-gate line reading PASS may carry a comment after it; one tha
   }
 })
 
+test('an empty resolution answers no drift: the run stays stopped until a human writes the decision in it', async () => {
+  const RESOLUTION = 'blockers/2026-10-11/decision-drift-checkout-001-resolution.md'
+  const host = scripted({}, (it) => [
+    agent()(it),
+    architect({ [MATRIX]: '- consistency-gate: PASS\n', [DRIFT]: '# Drift\n', [RESOLUTION]: '  \n' })(it),
+    ...nominal(it).slice(2),
+  ])
+
+  const outcome = await host.start()
+
+  assert.deepEqual([outcome.status, outcome.reason], ['blocked', `${DRIFT} has an empty decision-drift-checkout-001-resolution.md beside it: a human writes the decision there, then resumes the run (G13)`])
+  await host.tracking.write(SLUG, RESOLUTION, 'chosen: A\n')
+  assert.equal((await host.run()).status, 'done')
+})
+
 test('a decision drift the architect leaves without its resolution stops the run for a human; once answered, the resumed run checks the step again and goes on', async () => {
   const open = scripted({}, (it) => [
     agent()(it),

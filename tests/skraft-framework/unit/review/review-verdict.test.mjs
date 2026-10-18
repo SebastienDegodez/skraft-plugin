@@ -217,6 +217,24 @@ test('a blind lens reads the changes without the decision records of the run: no
   assert.ok(lens.includes(`${folder}/changes.patch`) && !lens.includes('code.patch'), lens)
 })
 
+test('a document a later pass deleted or renamed is no input of the review any more', async () => {
+  const OLD = 'details/2026-10-11/contracts-checkout.md'
+  const NEW = 'details/2026-10-11/contracts-pay-by-card.md'
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ tracking }) => tracking.write(SLUG, OLD, '# Contracts\n') })(it),
+    agent({ work: ({ tracking }) => { tracking.files.delete(`${SLUG}/${OLD}`); tracking.write(SLUG, NEW, '# Contracts\n') } })(it),
+    ...nominal(it).slice(2),
+  ])
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'high', 'two contexts own payments')])] })
+
+  await host.start()
+
+  const second = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'consistency-lens').at(-1).prompt
+  assert.ok(second.includes(`${TRACKING}/${NEW}`) && !second.includes(OLD), second)
+  assert.ok(!(await host.tracking.read(SLUG, 'reviews/design_review-2/context.md')).includes(OLD))
+})
+
 test('a review whose every lens waits for a trigger that nothing matches approves, saying no lens applies', async () => {
   const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"', 'lenses="mock-fidelity,contract-fidelity"'])
   const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)

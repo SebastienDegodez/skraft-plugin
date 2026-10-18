@@ -141,23 +141,25 @@ const prepareChanges = async (review) => {
   const folder = folderOf(review)
   const rules = await rulesOf(review)
   const code = codeChanges(changes)
-  await writeAll(review, folder, filesOf(review, { changes, code }, rules))
+  const present = new Set(await review.deps.files.list(review.slug, ''))
+  await writeAll(review, folder, filesOf(review, { changes, code }, { rules, present }))
   const changed = hasChanges(changes)
   const blind = { paths: code.paths, inputs: changed ? { patch: [`${folder}/code.patch`], files: [`${folder}/code-files.txt`] } : {} }
-  return { ...changes, rules, inputs: inputsOf(review, folder, changed), blind, scan: scanPatch(changes.patch) }
+  return { ...changes, rules, inputs: inputsOf(review, folder, { changed, present }), blind, scan: scanPatch(changes.patch) }
 }
 
 /**
  * The files a review writes beside itself, by name: the changes, and a blind lens's copy of them.
- * @param {Review} review @param {Record<'changes' | 'code', { paths: string[], patch: string }>} changes @param {RuleFile[]} rules
+ * @param {Review} review @param {Record<'changes' | 'code', { paths: string[], patch: string }>} changes
+ * @param {{ rules: RuleFile[], present: Set<string> }} found the rule files, and the files of the tracking folder
  * @returns {Array<[string, string]>}
  */
-const filesOf = (review, { changes, code }, rules) => [
+const filesOf = (review, { changes, code }, { rules, present }) => [
   ['changes.patch', changes.patch],
   ['changed-files.txt', lines(changes.paths)],
   ['code.patch', code.patch],
   ['code-files.txt', lines(code.paths)],
-  ['context.md', contextOf(review, rules)],
+  ['context.md', contextOf(review, rules, present)],
   ['components.json', componentsOf(review)],
 ]
 
@@ -171,12 +173,12 @@ const writeAll = async ({ deps, slug }, folder, files) => {
 
 /**
  * The tracking files of each input kind; no patch and no paths when the run changed nothing.
- * @param {Review} review @param {string} folder @param {boolean} changed
+ * @param {Review} review @param {string} folder @param {{ changed: boolean, present: Set<string> }} state
  * @returns {Record<InputKind, string[]>}
  */
-const inputsOf = (review, folder, changed) => ({
+const inputsOf = (review, folder, { changed, present }) => ({
   overview: [`${folder}/context.md`],
-  ...documentsOf(review),
+  ...documentsOf(review, present),
   patch: changed ? [`${folder}/changes.patch`] : [],
   files: changed ? [`${folder}/changed-files.txt`] : [],
   components: [`${folder}/components.json`],
@@ -222,31 +224,32 @@ const uniqueRepositories = (base) => base.filter((entry, index) => base.findInde
 
 /**
  * The documents the agents of the review's phase filled or wrote, and those of the story and
- * of the other phases.
- * @param {Review} review
+ * of the other phases, those a later attempt deleted or renamed left out.
+ * @param {Review} review @param {Set<string>} present the files of the tracking folder
  * @returns {{ outputs: string[], context: string[] }}
  */
-const documentsOf = ({ workflow, run, step }) => {
+const documentsOf = ({ workflow, run, step }, present) => {
   const nodes = Object.entries(run.nodes)
   const ofPhase = (/** @type {boolean} */ same) => [...new Set(nodes
     .filter(([id]) => (workflow.nodes[id]?.phase === step.phase) === same)
     .flatMap(([, state]) => [...state.outputs, ...state.documents]))]
-  return { outputs: ofPhase(true), context: [...new Set([...run.artifacts, ...ofPhase(false)])] }
+  const kept = (/** @type {string[]} */ paths) => paths.filter((path) => present.has(path))
+  return { outputs: kept(ofPhase(true)), context: kept([...new Set([...run.artifacts, ...ofPhase(false)])]) }
 }
 
 /**
  * The shared context file of the review: its story, the project's rule files that exist, and
  * the documents each agent node filled or wrote, by phase in workflow order.
- * @param {Review} review @param {RuleFile[]} rules
+ * @param {Review} review @param {RuleFile[]} rules @param {Set<string>} present the files of the tracking folder
  */
-const contextOf = (review, rules) => {
+const contextOf = (review, rules, present) => {
   const { deps, slug, workflow, run, step } = review
   const at = (/** @type {string} */ path) => deps.files.location(slug, path)
   return composeReviewContext({
     node: step.node.id, phase: step.phase, story: run.story,
-    rules: rules.map(({ path }) => path), artifacts: run.artifacts.map(at),
+    rules: rules.map(({ path }) => path), artifacts: run.artifacts.filter((path) => present.has(path)).map(at),
     phases: workflow.phases
-      .map((phase) => ({ phase, steps: writersOf(review, phase, at) }))
+      .map((phase) => ({ phase, steps: writersOf(review, phase, { at, present }) }))
       .filter(({ steps }) => steps.length > 0),
   })
 }
@@ -259,11 +262,12 @@ const rulesOf = async ({ deps }) => {
 
 /**
  * The agent nodes of a phase that ran, each with the documents it filled or wrote, located.
- * @param {Review} review @param {string} phase @param {(path: string) => string} at
+ * @param {Review} review @param {string} phase
+ * @param {{ at: (path: string) => string, present: Set<string> }} place where a document sits, and the files there
  */
-const writersOf = ({ workflow, run }, phase, at) => workflow.order
+const writersOf = ({ workflow, run }, phase, { at, present }) => workflow.order
   .filter((id) => workflow.nodes[id].kind === 'agent' && workflow.nodes[id].phase === phase && id in run.nodes)
-  .map((id) => ({ step: id, agent: /** @type {string} */ (workflow.nodes[id].agent), documents: writtenBy(run.nodes[id]).map(at) }))
+  .map((id) => ({ step: id, agent: /** @type {string} */ (workflow.nodes[id].agent), documents: writtenBy(run.nodes[id]).filter((path) => present.has(path)).map(at) }))
 
 /** @param {RunState['nodes'][string]} node */
 const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
