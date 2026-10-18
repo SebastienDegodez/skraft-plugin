@@ -168,6 +168,19 @@ test('a repository lens added to design_review is called with the others, under 
   assert.deepEqual(lensEvents(events, 'design_review').map(({ lens }) => lens).sort(), ['acme-security', 'architecture-compliance', 'consistency', 'fitness'])
 })
 
+test('a repository lens listing a skill nobody provides is refused before anything starts, naming the node, the lens and the skill', async (t) => {
+  const { cwd } = pipelineRepository(t, { lens: true, lensSkills: ['acme-threat-model'] })
+  const host = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
+
+  const outcome = await runSkraftPipelineWorkflow(host.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+
+  assert.deepEqual([outcome.status, outcome.code, outcome.reason], [
+    'refused', 'workflow-invalid',
+    `skraft-workflow.dot is invalid: node design_review: skill acme-threat-model of lens ${SECURITY_LENS} (agent ${SECURITY_LENS}-lens) not found in the plugin's skills/, .claude/skills/ or .github/skills/`,
+  ])
+  assert.deepEqual(host.calls, [])
+})
+
 test('a blocker the refuter refutes does not count; an unverifiable high finding does, marked as not verified', async (t) => {
   const { cwd } = pipelineRepository(t)
   const revises = (brief, { slug }) => {

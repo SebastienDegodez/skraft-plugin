@@ -156,6 +156,16 @@ test('a repository lens added to design_review is spawned with the others, under
   assert.deepEqual(lensEvents(events, 'design_review').map(({ lens }) => lens), lenses)
 })
 
+test('a repository lens listing a skill nobody provides is refused before anything starts, naming the node, the lens and the skill', async (t) => {
+  const { cwd } = pipelineRepository(t, { lens: true, lensSkills: ['acme-threat-model'] })
+  const mod = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })) })
+
+  const text = await mod.command(SLUG)
+
+  assert.equal(text, `skraft ${SLUG}: not started — skraft-workflow.dot is invalid: node design_review: skill acme-threat-model of lens ${SECURITY_LENS} (agent ${SECURITY_LENS}-lens) not found in the plugin's skills/, .claude/skills/ or .github/skills/`)
+  assert.deepEqual(mod.spawns, [])
+})
+
 test('the session cost a review batch adds lands on the review step.recorded, no lens carries a cost of its own', async (t) => {
   const { cwd } = pipelineRepository(t)
 

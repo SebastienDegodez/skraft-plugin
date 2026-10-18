@@ -320,8 +320,9 @@ In `components.json`, a component without `mocking` uses Microcks; a component w
 `contractTesting: true` asks for no contract test.
 
 **Skills.** The brief gives each lens the `SKILL.md` of every skill its descriptor lists under
-`metadata.skills`, from the plugin, then `.claude/skills/` or `.github/skills/`; a skill found
-nowhere is left out. The lens reads them before any other input.
+`metadata.skills`, from the plugin, then `.claude/skills/` or `.github/skills/`. A skill a lens
+or `finding-refuter` lists and that is found nowhere refuses the workflow, naming the node, the
+agent and the skill. The lens reads them before any other input.
 
 **Answer.** A lens ends its last message with one YAML document in a fenced block; the engine
 reads the last fenced block of the message.

@@ -320,17 +320,31 @@ export const PLUGIN_AGENTS = Object.freeze([
   'finding-refuter',
 ])
 
-/** Agents by where they come from; the plugin ships the pipeline's own by default. */
+/**
+ * Agents by where they come from; the plugin ships the pipeline's own by default. Each agent
+ * declares skill names; a skill is provided when `skillFiles` holds its SKILL.md text, found at
+ * `<skillRoot>/<name>/SKILL.md`.
+ */
 export class InMemoryAgentCatalog {
-  /** @param {{ plugin?: string[], repository?: string[] }} [agents] */
-  /** @param {{ plugin?: string[], repository?: string[], skills?: Record<string, string[]> }} [agents] skills: SKILL.md paths by agent */
-  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {} } = {}) {
+  /**
+   * @param {{ plugin?: string[], repository?: string[], skills?: Record<string, string[]>, skillFiles?: Record<string, string>, skillRoot?: string }} [agents]
+   *   skills: the skill names each agent declares; skillFiles: SKILL.md text by skill name
+   */
+  constructor({ plugin = PLUGIN_AGENTS, repository = [], skills = {}, skillFiles = {}, skillRoot = '/plugin/skills' } = {}) {
     this.plugin = new Set(plugin)
     this.repository = new Set(repository)
     this.skillsByAgent = skills
+    this.skillFiles = skillFiles
+    this.skillRoot = skillRoot
   }
   async locate(agent) { return this.plugin.has(agent) ? 'plugin' : this.repository.has(agent) ? 'repository' : null }
-  async skills(agent) { return this.skillsByAgent[agent] ?? [] }
+  async skills(agent) {
+    const names = this.skillsByAgent[agent] ?? []
+    return {
+      found: names.filter((name) => name in this.skillFiles).map((name) => ({ name, path: `${this.skillRoot}/${name}/SKILL.md`, text: this.skillFiles[name] })),
+      missing: names.filter((name) => !(name in this.skillFiles)),
+    }
+  }
 }
 
 /** The plugin's own `workflows/skraft.dot`, read once: the default every test runs. */

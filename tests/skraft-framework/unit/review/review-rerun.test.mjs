@@ -178,6 +178,23 @@ test('a lens nobody provides refuses the workflow, naming the lens and its agent
   assert.equal(refused.reason.match(/finding-refuter/g).length, 1)
 })
 
+test('a skill a lens or the refuter declares and nobody provides refuses the workflow, naming the node, the agent and the skill', async () => {
+  const catalog = new InMemoryAgentCatalog({
+    skills: { 'fitness-lens': ['acme-latency-budget', 'architecture-review-criteria'], 'coverage-lens': ['acme-scenarios'], 'finding-refuter': ['acme-evidence'], 'solution-architect': ['acme-house-style'] },
+    skillFiles: { 'architecture-review-criteria': '# Criteria\n' },
+  })
+  const host = scripted({ catalog }, () => [])
+
+  const outcome = await host.init()
+
+  const where = "not found in the plugin's skills/, .claude/skills/ or .github/skills/"
+  assert.deepEqual([outcome.ok, outcome.code, outcome.reason], [false, 'workflow-invalid', [
+    `skraft is invalid: node design_review: skill acme-latency-budget of lens fitness (agent fitness-lens) ${where}`,
+    `node design_review: skill acme-evidence of agent finding-refuter ${where}`,
+    `node distill_review: skill acme-scenarios of lens coverage (agent coverage-lens) ${where}`,
+  ].join('; ')])
+})
+
 test('each way an answer cannot be read is told to the lens on its second ask', async () => {
   const good = says('consistency', 'pass')
   const notYaml = (line, what) => `the answer is not the YAML document the brief shows (line ${line}: ${what})`
@@ -424,7 +441,7 @@ test('a resumed review asks again a lens whose inputs changed since it answered 
 
 test('a lens reads the skills its descriptor lists before any other input, and so does the refuter of its findings; a skill or a rule file that changes makes it read again', async () => {
   const skill = '/plugin/skills/architecture-review-criteria/SKILL.md'
-  const catalog = new InMemoryAgentCatalog({ skills: { 'consistency-lens': [skill], 'architecture-compliance-lens': [skill] } })
+  const catalog = new InMemoryAgentCatalog({ skills: { 'consistency-lens': ['architecture-review-criteria'], 'architecture-compliance-lens': ['architecture-review-criteria'] }, skillFiles: { 'architecture-review-criteria': '# Criteria\n' } })
   const host = scripted({ catalog, files: { 'AGENTS.md': '# Rules\n' } }, (it) => [
     ...nominal(it).slice(0, 2),
     agent({ fill: false, work: () => {
@@ -443,9 +460,9 @@ test('a lens reads the skills its descriptor lists before any other input, and s
   assert.equal(host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'fitness-lens').prompt.includes('- Skill'), false)
   assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'])
 
-  const learning = scripted({ catalog: new InMemoryAgentCatalog() }, (it) => [
+  const learning = scripted({ catalog: new InMemoryAgentCatalog({ skillFiles: { 'skraft-quality-bar': '# Quality bar\n' } }) }, (it) => [
     ...nominal(it).slice(0, 2),
-    agent({ fill: false, work: () => { it.deps.agentCatalog.skillsByAgent['fitness-lens'] = ['/plugin/skills/skraft-quality-bar/SKILL.md'] } })(it),
+    agent({ fill: false, work: () => { it.deps.agentCatalog.skillsByAgent['fitness-lens'] = ['skraft-quality-bar'] } })(it),
     ...nominal(it).slice(2),
   ])
   learning.agentRunner.review = lenses({ consistency: [blocker] })

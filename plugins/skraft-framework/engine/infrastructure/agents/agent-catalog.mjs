@@ -69,19 +69,27 @@ const firstFound = async (files, paths) => {
   return null
 }
 
-/** @param {Catalog} catalog @param {string} agent @returns {Promise<string[]>} */
+/**
+ * @param {Catalog} catalog @param {string} agent
+ * @returns {Promise<import('../../application/ports/agent-catalog.mjs').AgentSkills>}
+ */
 const skillsOf = async (catalog, agent) => {
-  if (!AGENT_ID.test(agent)) return []
-  const descriptor = await firstFound(catalog.files, [...candidates(catalog.places, 'plugin', catalog.pluginRoot, agent), ...candidates(catalog.places, 'repository', catalog.root, agent)])
-  const found = await Promise.all(declaredSkills(descriptor?.text ?? '').map((skill) => skillFile(catalog, skill)))
-  return found.filter((path) => path !== null)
+  const names = declaredSkills((await descriptorOf(catalog, agent))?.text ?? '')
+  const files = await Promise.all(names.map((skill) => skillFile(catalog, skill)))
+  return {
+    found: names.flatMap((name, index) => (files[index] === null ? [] : [{ name, path: files[index].path }])),
+    missing: names.filter((_, index) => files[index] === null),
+  }
+}
+
+/** The agent's descriptor, the plugin's first; null for a name that is no agent id. @param {Catalog} catalog @param {string} agent */
+const descriptorOf = async ({ files, places, pluginRoot, root }, agent) => {
+  if (!AGENT_ID.test(agent)) return null
+  return firstFound(files, [...candidates(places, 'plugin', pluginRoot, agent), ...candidates(places, 'repository', root, agent)])
 }
 
 /** @param {Catalog} catalog @param {string} skill */
-const skillFile = async ({ files, pluginRoot, root }, skill) => {
-  const paths = [...candidates([SKILL_PLACES], 'plugin', pluginRoot, skill), ...candidates([SKILL_PLACES], 'repository', root, skill)]
-  return (await firstFound(files, paths))?.path ?? null
-}
+const skillFile = ({ files, pluginRoot, root }, skill) => firstFound(files, [...candidates([SKILL_PLACES], 'plugin', pluginRoot, skill), ...candidates([SKILL_PLACES], 'repository', root, skill)])
 
 /**
  * The skill names a descriptor's front matter lists under a `skills:` key, at any depth; names

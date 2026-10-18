@@ -326,7 +326,9 @@ Dans `components.json`, un composant sans `mocking` utilise Microcks ; un compos
 
 **Skills.** Le brief donne à chaque lentille le `SKILL.md` de chaque skill que son descripteur
 liste sous `metadata.skills`, pris dans le plugin, puis dans `.claude/skills/` ou
-`.github/skills/` ; une skill introuvable est omise. La lentille les lit avant toute autre entrée.
+`.github/skills/`. Une skill qu'une lentille ou `finding-refuter` liste et qui est introuvable
+refuse le workflow, en nommant le nœud, l'agent et la skill. La lentille les lit avant toute
+autre entrée.
 
 **Réponse.** Une lentille termine son dernier message par un document YAML dans un bloc
 clôturé ; le moteur lit le dernier bloc clôturé du message.

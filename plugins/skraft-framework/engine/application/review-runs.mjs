@@ -194,7 +194,7 @@ const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
 const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.lenses, prepared).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
   const inputs = kinds.flatMap((kind) => prepared.inputs[kind].map((path) => ({ kind, path })))
-  const skills = await review.deps.agentCatalog.skills(lens.agent)
+  const skills = (await review.deps.agentCatalog.skills(lens.agent)).found.map(({ path }) => path)
   return { lens, inputs, skills, fingerprint: await fingerprintOf(review, { inputs, skills, prepared, lens }) }
 }))
 

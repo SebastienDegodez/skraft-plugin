@@ -60,22 +60,24 @@ export const SECURITY_LENS = 'acme-security'
 export const LENS_WORKFLOW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'skraft.dot'), 'utf8')
   .replace('lenses="consistency,architecture-compliance,fitness"', `lenses="consistency,architecture-compliance,fitness,${SECURITY_LENS}"`)
 
-/** @param {string} cwd @param {string} agent @param {string} description */
-const repositoryAgent = (cwd, agent, description) => {
+/** @param {string} cwd @param {string} agent @param {string} description @param {string[]} [skills] the skills its front matter lists */
+const repositoryAgent = (cwd, agent, description, skills = []) => {
+  const listed = skills.length === 0 ? '' : `metadata:\n  skills:\n${skills.map((skill) => `    - ${skill}\n`).join('')}`
   for (const [folder, name] of [['.claude', `${agent}.md`], ['.github', `${agent}.agent.md`]]) {
     mkdirSync(join(cwd, folder, 'agents'), { recursive: true })
-    writeFileSync(join(cwd, folder, 'agents', name), `---\nname: ${agent}\ndescription: ${description}\n---\nReview the design.\n`)
+    writeFileSync(join(cwd, folder, 'agents', name), `---\nname: ${agent}\ndescription: ${description}\n${listed}---\nReview the design.\n`)
   }
 }
 
 /**
  * A repository on `main` with one JavaScript component `app` at its root, the tracking folder
  * ignored. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
- * both hosts; with `lens`, it runs LENS_WORKFLOW and defines its repository lens for both hosts.
+ * both hosts; with `lens`, it runs LENS_WORKFLOW and defines its repository lens for both hosts,
+ * listing `lensSkills` under `skills:`.
  * @param {import('node:test').TestContext} t
- * @param {{ security?: boolean, lens?: boolean }} [options]
+ * @param {{ security?: boolean, lens?: boolean, lensSkills?: string[] }} [options]
  */
-export const pipelineRepository = (t, { security = false, lens = false } = {}) => {
+export const pipelineRepository = (t, { security = false, lens = false, lensSkills = [] } = {}) => {
   const cwd = join(tempFolder(t, 'skraft-pipeline-'), 'payment')
   mkdirSync(cwd)
   const config = {
@@ -95,7 +97,7 @@ export const pipelineRepository = (t, { security = false, lens = false } = {}) =
   }
   if (lens) {
     writeFileSync(join(cwd, 'skraft-workflow.dot'), LENS_WORKFLOW)
-    repositoryAgent(cwd, `${SECURITY_LENS}-lens`, 'Reviews the design for security, as a lens')
+    repositoryAgent(cwd, `${SECURITY_LENS}-lens`, 'Reviews the design for security, as a lens', lensSkills)
   }
   const main = commitAll(cwd)
   return { cwd, main }
