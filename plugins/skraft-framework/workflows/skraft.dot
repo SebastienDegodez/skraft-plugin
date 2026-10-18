@@ -1,7 +1,7 @@
 // The skraft pipeline. Copy it into a repository with `skraft workflow eject`, then add
 // agents, lenses or gates; `skraft workflow check` validates it, `skraft workflow diff` compares
 // it with this one. A node marked locked=true can only be dropped with unlock="<reason>".
-// A review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`.
+// A review node (shape=component) runs each lens `<name>` as the agent `<name>-lens`, `<name>:<n>` as n instances, `@sonnet` or `@opus` on that family (haiku by default).
 digraph skraft {
   graph [version="2", goal="Deliver the story"]
 
@@ -13,7 +13,7 @@ digraph skraft {
   distill_review [shape=component, lenses="coverage,business-alignment,testability,boundary-enforcement"]
   deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
   gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true, phase="DELIVER"]
-  deliver_review [shape=component, lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
+  deliver_review [shape=component, lenses="test-integrity:2,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"]
   exit     [shape=Msquare]
 
   start -> research -> design -> design_review

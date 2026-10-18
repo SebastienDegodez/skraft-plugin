@@ -3,7 +3,7 @@ import { composeReviewContext, RULE_FILES } from '../domain/review/context.mjs'
 import { reviewedPatch, reviewedPaths } from '../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../domain/review/lens-brief.mjs'
 import { citationOf, groupFindings } from '../domain/review/finding-groups.mjs'
-import { planLenses, REFUTER } from '../domain/review/lenses.mjs'
+import { planLenses, REFUTER, refuterFamily } from '../domain/review/lenses.mjs'
 import { BLOCKING, blocksReview, composeVerdictFile, decideReview } from '../domain/review/verdict.mjs'
 import { readOrName } from './workspace-reading.mjs'
 
@@ -264,11 +264,11 @@ const eventsOfThisPass = ({ journal, step }, type) => {
  */
 const lensResults = async (review, planned) => {
   const kept = await keepLenses(review, planned)
-  const answered = await askLenses(review, planned.filter((entry) => !kept.has(entry.lens.name)))
+  const answered = await askLenses(review, planned.filter((entry) => !kept.has(entry.lens.id)))
   if ('stop' in answered) return answered
   const asked = answered.results
-  const results = planned.map(({ lens }) => kept.get(lens.name)?.result ?? /** @type {LensResult} */ (asked.find((result) => result.lens === lens.name)))
-  const reused = planned.filter(({ lens }) => kept.get(lens.name)?.reused).map(({ lens }) => lens.name)
+  const results = planned.map(({ lens }) => kept.get(lens.id)?.result ?? /** @type {LensResult} */ (asked.find((result) => result.lens === lens.id)))
+  const reused = planned.filter(({ lens }) => kept.get(lens.id)?.reused).map(({ lens }) => lens.id)
   return { results, reused }
 }
 
@@ -287,7 +287,7 @@ const keepLenses = async (review, planned) => {
   const kept = new Map()
   for (const entry of planned) {
     const result = await keptResult(review, entry, { current, earlier })
-    if (result !== null) kept.set(entry.lens.name, result)
+    if (result !== null) kept.set(entry.lens.id, result)
   }
   return kept
 }
@@ -298,10 +298,10 @@ const keepLenses = async (review, planned) => {
  * @returns {Promise<Kept | null>}
  */
 const keptResult = async (review, { lens, fingerprint }, { current, earlier }) => {
-  const same = (/** @type {RunEvent} */ event) => event.lens === lens.name && event.fingerprint === fingerprint
+  const same = (/** @type {RunEvent} */ event) => event.lens === lens.id && event.fingerprint === fingerprint
   const mine = current.find(same)
   if (mine) return { result: resultOf(mine), reused: mine.reused }
-  const last = earlier.filter((event) => event.lens === lens.name).at(-1)
+  const last = earlier.filter((event) => event.lens === lens.id).at(-1)
   return last && same(last) && isClean(last) ? { result: await reuse(review, last), reused: true } : null
 }
 
@@ -336,9 +336,15 @@ const askLenses = async (review, asked) => {
 /** @param {Review} review @returns {Asking<PlannedLens>} */
 const lensAsking = (review) => ({
   dispatch: (entry, attempt, retry) => lensDispatch(review, entry, attempt, retry),
-  read: (text, entry) => readLensAnswer(text, entry.lens.name),
+  read: (text, entry) => answerOf(readLensAnswer(text, entry.lens.name), entry.lens.id),
   record: (entry, reading, answer) => recordLens(review, entry, reading, answer),
 })
+
+/**
+ * An answer read as the lens the agent is, kept as the instance that gave it.
+ * @param {ReturnType<typeof readLensAnswer>} reading @param {string} id
+ */
+const answerOf = (reading, id) => (reading.ok ? { ok: /** @type {const} */ (true), result: { ...reading.result, lens: id } } : reading)
 
 /** @param {Array<{ item: PlannedLens, error: string }>} unreadable */
 const unreadableLenses = (unreadable) => ({
@@ -350,8 +356,9 @@ const unreadableLenses = (unreadable) => ({
 const lensDispatch = ({ deps, slug, sources, run, step }, { lens, inputs, skills }, attempt, retry) => ({
   agent: lens.agent,
   source: sources[lens.agent],
-  label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.name, attempt }),
+  label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
   prompt: composeLensBrief({ lens, phase: step.phase, slug, story: run.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), retry }),
+  model: lens.model,
 })
 
 /** @param {SkillFile[]} skills */
@@ -364,7 +371,7 @@ const located = (deps, slug, inputs) => inputs.map(({ kind, path }) => ({ kind, 
 const recordLens = async ({ journal, step }, { lens, fingerprint }, { result }, answer) => {
   const { verdict, findings } = result
   const cost = answer.costUsd
-  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.name, agent: lens.agent, fingerprint, verdict, findings, cost })
+  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.id, agent: lens.agent, fingerprint, verdict, findings, cost })
   return result
 }
 
@@ -400,9 +407,10 @@ const refuterAsking = (review) => ({
 })
 
 /**
- * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[] }} Suspect
- *   a group of findings to check, one per lens, with what their lenses read. A group is journaled
- *   member after member, so its first member stands for it on a resume.
+ * @typedef {{ members: Array<{ lens: string, finding: Finding }>, inputs: TrackedInput[], skills: SkillFile[], model: import('../domain/review/lenses.mjs').Family }} Suspect
+ *   a group of findings to check, one per lens, with what their lenses read and the family the
+ *   refuter checks it on. A group is journaled member after member, so its first member stands
+ *   for it on a resume.
  */
 
 /** @param {LensResult[]} results @param {PlannedLens[]} planned @returns {Suspect[]} */
@@ -412,9 +420,10 @@ const toRefute = (results, planned) => groupFindings(results.flatMap(({ lens, fi
 
 /** The group, with the inputs and skills of its lenses, each once. @param {Suspect['members']} members @param {PlannedLens[]} planned @returns {Suspect} */
 const suspectOf = (members, planned) => {
-  const read = members.map(({ lens }) => /** @type {PlannedLens} */ (planned.find((entry) => entry.lens.name === lens)))
+  const read = members.map(({ lens }) => /** @type {PlannedLens} */ (planned.find((entry) => entry.lens.id === lens)))
   return {
     members,
+    model: refuterFamily(read.map((entry) => entry.lens.model)),
     inputs: uniqueBy(read.flatMap(({ inputs }) => inputs), ({ kind, path }) => `${kind} ${path}`),
     skills: uniqueBy(read.flatMap(({ skills }) => skills), ({ name }) => name),
   }
@@ -427,11 +436,12 @@ const uniqueBy = (items, keyOf) => items.filter((item, index) => items.findIndex
 const refutationOf = ({ lens, finding, verdict, reason }) => ({ lens, finding, verdict, reason })
 
 /** @param {Review} review @param {Suspect} suspect @param {number} attempt @param {string | null} retry @returns {AgentDispatch} */
-const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skills }, attempt, retry) => ({
+const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skills, model }, attempt, retry) => ({
   agent: REFUTER,
   source: sources[REFUTER],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: `refute ${citationOf(members)}`, attempt }),
   prompt: composeRefuterBrief({ members, inputs: located(deps, slug, inputs), skills: pathsOf(skills), retry }),
+  model,
 })
 
 /**

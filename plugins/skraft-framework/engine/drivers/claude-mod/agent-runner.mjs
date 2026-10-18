@@ -4,7 +4,8 @@
  *
  * @typedef {{ agentId?: string, answer?: string, reason?: string }} TurnComplete
  *   the fields of a `turn.complete` input the runner reads.
- * @typedef {{ prompt: string, subagentType: string, description: string }} SpawnArgs
+ * @typedef {{ prompt: string, subagentType: string, description: string, model?: string }} SpawnArgs
+ *   model: the family the subagent runs on (`haiku`, `sonnet`, `opus`), when the dispatch names one.
  * @typedef {{ agentId?: string, deny?: string }} SpawnResult
  * @typedef {{
  *   complete: (turn: TurnComplete) => void,
@@ -93,11 +94,11 @@ const runSpawnedTogether = async (host, requests) => {
 }
 
 /** @param {SpawnHost} host @param {import('../../application/ports/agent-runner.mjs').AgentDispatch} request @returns {Promise<AgentAnswer>} */
-const runSpawned = async (host, { agent, source, label, prompt }) => {
+const runSpawned = async (host, { agent, source, label, prompt, model }) => {
   const { spawn, answers, pluginName, sessionCostUsd } = host
   const subagentType = source === 'repository' ? agent : `${pluginName}:${agent}`
   const before = await sessionCostUsd()
-  const spawned = await spawnSubagent(spawn, { prompt, subagentType, description: label })
+  const spawned = await spawnSubagent(spawn, { prompt, subagentType, description: label, ...(model === undefined ? {} : { model }) })
   if ('refused' in spawned) return spawned.refused
   const turn = await answers.wait(spawned.agentId)
   const after = await sessionCostUsd()

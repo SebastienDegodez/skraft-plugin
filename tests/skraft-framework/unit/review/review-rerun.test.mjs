@@ -135,7 +135,7 @@ test('each lens journals its own cost, and the review records what its lenses an
   assert.deepEqual(lensed.map((event) => event.cost), [0.25, 0.25, 0.25])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.equal(recorded.cost, 0.75)
-  assert.equal((await host.view()).costUsd, 0.75 * 3 + 0.25 * 1)
+  assert.equal((await host.view()).costUsd, 0.75 * 3 + 0.25 * 2)
 
   const batched = scripted({}, nominal)
   batched.agentRunner.batchCostUsd = 0.5
@@ -372,13 +372,61 @@ test('a review resumed after a stop still counts what its lenses cost before the
   assert.deepEqual(host.events().filter((event) => event.type === 'review.cost' && event.step === 'design_review').map(({ visit, cost }) => [visit, cost]), [[1, 0.5], [1, 0.5]])
 })
 
-test('a review node naming a lens twice is refused', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency,fitness,consistency"'])
-  const host = scripted({ files: designating(workflow, { components: [API] }) }, () => [])
+test('a review node naming a lens twice, or a lens with a count or a model family it cannot run, is refused', async () => {
+  const refusal = async (lenses) => {
+    const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', `lenses="${lenses}"`])
+    return (await scripted({ files: designating(workflow, { components: [API] }) }, () => []).init()).reason
+  }
+  const rule = 'must list kebab-case lens names, each once, as <name>, <name>:<instances from 1 to 9>, each optionally followed by @haiku, @sonnet or @opus'
 
-  const outcome = await host.init()
+  assert.match(await refusal('consistency,fitness,consistency'), new RegExp(`node design_review: lenses="consistency,fitness,consistency" ${rule}`))
+  assert.match(await refusal('consistency:2,consistency@sonnet'), /lenses="consistency:2,consistency@sonnet" must list/)
+  assert.match(await refusal(''), /lenses="" must list/)
+  assert.match(await refusal('consistency:0'), /lenses="consistency:0" must list/)
+  assert.match(await refusal('consistency:10'), /lenses="consistency:10" must list/)
+  assert.match(await refusal('fitness@gpt'), /lenses="fitness@gpt" must list/)
+  assert.match(await refusal('fitness@sonnet:2'), /lenses="fitness@sonnet:2" must list/)
+  assert.equal((await scripted({ files: designating(edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency:9@opus,fitness:1"']), { components: [API] }) }, () => []).init()).ok, true)
+})
 
-  assert.match(outcome.reason, /node design_review: lenses="consistency,fitness,consistency" must list kebab-case lens names, each once/)
+test('a lens named with a count runs as that many independent instances on the family it names; a lens runs on haiku unless named otherwise, the refuter one family above the strongest lens of its group', async () => {
+  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency:2,architecture-compliance@opus,fitness@sonnet"'])
+  const host = scripted({ files: designating(workflow, { components: [API] }) }, (it) => [...nominal(it).slice(0, 2), agent()(it), ...nominal(it).slice(2)])
+  host.agentRunner.review = lenses({
+    consistency: [says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')]), says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR and the map disagree')])],
+    'architecture-compliance': [says('architecture-compliance', 'fail', [finding('F1', 'high', 'the domain imports the database driver', { location: 'src/Checkout.cs:40' })])],
+    fitness: [says('fitness', 'fail', [finding('F1', 'high', 'no latency budget', { location: 'src/Checkout.cs:41' })])],
+  })
+
+  assert.equal((await host.start()).status, 'done')
+
+  const [batch] = host.agentRunner.batches
+  assert.deepEqual(batch.map(({ agent: id, model, label }) => [id, model, label.split(' · ')[2]]), [
+    ['consistency-lens', 'haiku', 'consistency#1'],
+    ['consistency-lens', 'haiku', 'consistency#2'],
+    ['architecture-compliance-lens', 'opus', 'architecture-compliance'],
+    ['fitness-lens', 'sonnet', 'fitness'],
+  ])
+  assert.ok(batch[1].prompt.startsWith(`## Skraft review lens: consistency (DESIGN)\n- Story: none\n- Feature scope: ${SLUG}\n- Instance 2 of 2 of this lens: judge on your own; another instance reviews the same inputs.\n`), batch[1].prompt)
+  assert.ok(!batch[2].prompt.includes('Instance'), batch[2].prompt)
+  assert.ok(batch[1].prompt.includes('\nlens: consistency\n'), batch[1].prompt)
+  assert.deepEqual(host.events().filter((event) => event.type === 'review.lens' && event.step === 'design_review' && event.visit === 1).map(({ lens, agent: id }) => `${lens} ${id}`), [
+    'consistency#1 consistency-lens', 'consistency#2 consistency-lens', 'architecture-compliance architecture-compliance-lens', 'fitness fitness-lens',
+  ])
+  const checks = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')
+  assert.deepEqual(checks.map(({ model, label }) => [label.split(' · ')[2], model]), [
+    ['refute consistency#1 F1, consistency#2 F1', 'sonnet'],
+    ['refute architecture-compliance F1', 'opus'],
+    ['refute fitness F1', 'opus'],
+  ])
+  const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
+  assert.deepEqual(recorded.failures, [
+    'consistency#1 F1 G1, consistency#2 F1 G1 blocker at src/Checkout.cs:12: the ADR contradicts the context map; the ADR and the map disagree',
+    'architecture-compliance F1 G1 high at src/Checkout.cs:40: the domain imports the database driver',
+    'fitness F1 G1 high at src/Checkout.cs:41: no latency budget',
+  ])
+  const phaseAgents = host.agentRunner.dispatches.map(({ model }) => model)
+  assert.deepEqual([...new Set(phaseAgents)], [undefined])
 })
 
 test('every attempt of a pass the review opened is told the review sent the work back', async () => {

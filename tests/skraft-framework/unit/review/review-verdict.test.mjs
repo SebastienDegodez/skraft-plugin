@@ -26,7 +26,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent: id }) => id)), [
     ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'],
     ['coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens'],
-    ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens'],
+    ['test-integrity-lens', 'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens'],
   ])
   assert.deepEqual(lensLabels(host).slice(0, 3), [
     `consistency-lens plugin skraft ${SLUG} · design_review · consistency · attempt 1`,
@@ -153,7 +153,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
 
   await host.start()
 
-  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
+  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
   const mocks = host.agentRunner.batches.at(-1).at(-1).prompt
   assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
   assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false }])
@@ -167,12 +167,12 @@ test('a lens whose trigger matches a changed path or an added line runs with the
     } })(it),
   ])
   await contracts.start()
-  assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
+  assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true }])
 })
 
 test('a review whose every lens waits for a trigger that nothing matches approves, saying no lens applies', async () => {
-  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="test-integrity,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"', 'lenses="mock-fidelity,contract-fidelity"'])
+  const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="test-integrity:2,architecture-boundaries,cold-reader,mock-fidelity,contract-fidelity"', 'lenses="mock-fidelity,contract-fidelity"'])
   const host = scripted({ files: designating(workflow, { components: [API] }) }, nominal)
 
   assert.equal((await host.start()).status, 'done')

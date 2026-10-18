@@ -208,8 +208,12 @@ export const retryCounter = () => {
   }
 }
 
-// The lens of a DELIVER review that attests v1 G7 (test theater) and G9 (Iron Rule).
+// The lens of a DELIVER review that attests v1 G7 (test theater) and G9 (Iron Rule). Its
+// instances are journaled as `test-integrity#<n>`.
 export const INTEGRITY_LENS = 'test-integrity'
+
+/** Whether a journaled lens is test-integrity or one of its instances. */
+const isIntegrity = (lens) => typeof lens === 'string' && lens.split('#')[0] === INTEGRITY_LENS
 
 const refutationKey = (step, visit, lens, finding) => JSON.stringify([step, visit, lens, finding])
 
@@ -233,16 +237,20 @@ const integrityStatus = (result, refuted, gate) => {
 }
 
 /**
- * G7 and G9 from the last `test-integrity` lens result of a DELIVER review, each from the
- * findings that name it (a finding that names neither counts against both).
- * @param {any | null} result the last `review.lens` event of that lens
+ * G7 and G9 from the `test-integrity` results of the last pass of a DELIVER review, one per
+ * instance, each gate from the findings that name it (a finding that names neither counts
+ * against both): inconclusive when one instance is, failed when one counts a finding against it.
+ * @param {any[]} results the `review.lens` events of that lens in that pass
  * @param {Set<string>} refuted keys of the findings the refuter refuted
  * @param {string} slug
  */
-export const integrityGates = (result, refuted, slug) => {
-  if (result === null) return []
-  return INTEGRITY_GATES.map((gate) => ({ component: slug, gate, status: integrityStatus(result, refuted, gate) }))
+export const integrityGates = (results, refuted, slug) => {
+  if (results.length === 0) return []
+  return INTEGRITY_GATES.map((gate) => ({ component: slug, gate, status: combined(results.map((result) => integrityStatus(result, refuted, gate))) }))
 }
+
+/** The gate's status over every instance. @param {string[]} statuses */
+const combined = (statuses) => ['inconclusive', 'fail'].find((status) => statuses.includes(status)) ?? 'pass'
 
 /**
  * Tolerant reader: unknown event types are ignored, missing payload fields are skipped.
@@ -259,7 +267,7 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
   let slug = null
   const reviewPhase = new Map()
   const counter = retryCounter()
-  let integrity = null
+  let integrity = []
   const refuted = new Set()
   let retries = 0
   let cost = null
@@ -291,7 +299,10 @@ export const summarizeV2 = (events, { files = [] } = {}) => {
         }
         break
       case 'review.lens':
-        if (e.lens === INTEGRITY_LENS && reviewPhase.get(e.step) === 'DELIVER') integrity = e
+        if (isIntegrity(e.lens) && reviewPhase.get(e.step) === 'DELIVER') {
+          const samePass = integrity.length > 0 && integrity[0].step === e.step && integrity[0].visit === e.visit
+          integrity = samePass ? [...integrity, e] : [e]
+        }
         break
       case 'review.refuted':
         if (e.verdict === 'refuted') refuted.add(refutationKey(e.step, e.visit, e.lens, e.finding))

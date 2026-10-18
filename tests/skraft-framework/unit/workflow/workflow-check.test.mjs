@@ -7,11 +7,11 @@ import { designating, edit, host, WITH_SECURITY } from './support.mjs'
 const LENSES = {
   design_review: ['consistency', 'architecture-compliance', 'fitness'],
   distill_review: ['coverage', 'business-alignment', 'testability', 'boundary-enforcement'],
-  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'],
+  deliver_review: ['test-integrity:2', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'],
 }
 const PLUGIN_AGENTS = {
   'solution-researcher': 'plugin', 'solution-architect': 'plugin', 'acceptance-designer': 'plugin', 'software-engineer': 'plugin',
-  ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
+  ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens.split(/[:@]/)[0]}-lens`, 'plugin'])),
   'finding-refuter': 'plugin',
 }
 const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, ...fields })

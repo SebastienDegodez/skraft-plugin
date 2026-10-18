@@ -80,7 +80,7 @@ export const simulatedContext = ({ args = {}, behaviours = [], journal = [], age
     agent: async (prompt, options) => {
       const memoised = journal.find((entry) => entry.label === options.label && entry.prompt === prompt)
       if (memoised) return memoised.text
-      const call = { prompt, label: options.label, agent: options.agent, outputs: outputsOf(prompt) }
+      const call = { prompt, label: options.label, agent: options.agent, ...(options.model === undefined ? {} : { model: options.model }), outputs: outputsOf(prompt) }
       calls.push(call)
       timeline.push(`call ${options.label}`)
       const behaviour = queue.shift() ?? otherwise

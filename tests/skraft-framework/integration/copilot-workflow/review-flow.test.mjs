@@ -34,7 +34,7 @@ const answersTogether = (llm, calls, sizes) => async (call) => {
 }
 
 /** Runs the workflow for a new slug on the repository, the scripted LLM answering every agent call. */
-const runOn = async (cwd, { acts, reviews, sizes = { design_review: 3, distill_review: 4, deliver_review: 3 } } = {}) => {
+const runOn = async (cwd, { acts, reviews, sizes = { design_review: 3, distill_review: 4, deliver_review: 4 } } = {}) => {
   const llm = scriptedLlm({ cwd, acts, reviews })
   const host = simulatedContext({ args: { slug: SLUG }, otherwise: answersTogether(llm, () => host.calls, sizes) })
   const outcome = await runSkraftPipelineWorkflow(host.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
@@ -66,6 +66,7 @@ test('lenses that all pass approve each review, started together, and the run co
   assert.deepEqual(batchesSorted(calls.filter((call) => reviewNodeOf(call.label) !== null).map((call) => call.label)), batchesSorted([
     ...lensLabels('design_review'), ...lensLabels('distill_review'), ...lensLabels('deliver_review'),
   ]))
+  assert.deepEqual([...new Set(calls.map((call) => `${reviewNodeOf(call.label) === null ? 'phase agent' : 'lens'} ${call.model}`))].sort(), ['lens haiku', 'phase agent undefined'])
   assert.deepEqual(lensEvents(events, 'design_review').map(({ lens, agent, verdict, findings }) => [lens, agent, verdict, findings]).sort(), [
     ['architecture-compliance', 'architecture-compliance-lens', 'pass', []], ['consistency', 'consistency-lens', 'pass', []], ['fitness', 'fitness-lens', 'pass', []],
   ])
@@ -175,7 +176,7 @@ test('a review resumed after the workflow died calls again only the lens that ha
 test('a repository lens added to design_review is called with the others, under its own id', async (t) => {
   const { cwd } = pipelineRepository(t, { lens: true })
 
-  const { outcome, calls, timeline, events } = await runOn(cwd, { sizes: { design_review: 4, distill_review: 4, deliver_review: 3 } })
+  const { outcome, calls, timeline, events } = await runOn(cwd, { sizes: { design_review: 4, distill_review: 4, deliver_review: 4 } })
 
   assert.equal(outcome.status, 'done')
   assert.equal(events[0].workflow, 'skraft-workflow.dot')

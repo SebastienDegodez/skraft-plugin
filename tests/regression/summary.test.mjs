@@ -327,6 +327,29 @@ test('G7 and G9: a refuted blocker does not count; the last pass wins, a reused 
   assert.deepEqual(secondPass.map((g) => g.status), ['pass', 'pass'])
 })
 
+test('G7 and G9 read every instance of test-integrity in the last pass: one instance\'s counted blocker fails the gate it names', () => {
+  const instances = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'pass', [], { lens: 'test-integrity#1' }),
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'blocker'), gate: 'G9' }, { ...finding('F2', 'high'), gate: 'G7' }], { lens: 'test-integrity#2' }),
+    ev('review.refuted', '2026-10-09T10:03:00.000Z', { step: 'deliver_review', visit: 1, lens: 'test-integrity#2', finding: 'F2', verdict: 'refuted', reason: 'the test asserts the state' }),
+  ))
+  assert.deepEqual(instances.map((g) => [g.gate, g.status]), [['G7', 'pass'], ['G9', 'fail']])
+
+  const oneInconclusive = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'inconclusive', [], { lens: 'test-integrity#1' }),
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [{ ...finding('F1', 'blocker'), gate: 'G9' }], { lens: 'test-integrity#2' }),
+  ))
+  assert.deepEqual(oneInconclusive.map((g) => g.status), ['inconclusive', 'inconclusive'])
+
+  const laterPass = integrityOf(deliverReview(
+    integrityLens('2026-10-09T10:02:00.000Z', 'deliver_review', 1, 'fail', [finding('F1', 'blocker')], { lens: 'test-integrity#1' }),
+    reviewRecorded('2026-10-09T10:03:00.000Z', 'deliver_review', 1, 'needs-rework', { next: 'deliver' }),
+    reviewStarted('2026-10-09T10:04:00.000Z', 'deliver_review', 'DELIVER', 2, ['test-integrity:2', 'cold-reader']),
+    integrityLens('2026-10-09T10:05:00.000Z', 'deliver_review', 2, 'pass', [], { lens: 'test-integrity#2' }),
+  ))
+  assert.deepEqual(laterPass.map((g) => g.status), ['pass', 'pass'])
+})
+
 test('G7 and G9 stay absent without a test-integrity result in a DELIVER review', () => {
   assert.deepEqual(integrityOf(deliverReview()), [])
 

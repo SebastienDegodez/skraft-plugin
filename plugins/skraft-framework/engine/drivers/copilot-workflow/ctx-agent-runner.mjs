@@ -4,7 +4,7 @@ import { join } from 'node:path'
 /**
  * @typedef {{ id?: string, name?: string, displayName?: string }} SessionAgent
  * @typedef {{
- *   agent: (prompt: string, options: { label: string, agent: string }) => Promise<string | undefined | null>,
+ *   agent: (prompt: string, options: { label: string, agent: string, model?: string }) => Promise<string | undefined | null>,
  *   session?: { rpc?: { agent?: { list?: (request?: object) => Promise<{ agents?: SessionAgent[] }> } } },
  * }} AgentContext the part of the Copilot WorkflowContext that starts agents
  * @typedef {{
@@ -84,10 +84,10 @@ const runCtxAgents = async (session, dispatches) => {
 }
 
 /** @param {CtxSession} session @param {AgentDispatch} dispatch @returns {Promise<AgentAnswer>} */
-const runCtxAgent = async (session, { agent, source, label, prompt }) => {
+const runCtxAgent = async (session, { agent, source, label, prompt, model }) => {
   const { name, listed } = await sessionAgentOf(session, agent, source)
   if (name === null) return notInSession(agent, listed)
-  return askAgent(session.ctx, name, { label, prompt })
+  return askAgent(session.ctx, name, { label, prompt, model })
 }
 
 /**
@@ -113,11 +113,23 @@ const notInSession = (agent, listed) => {
   }
 }
 
-/** @param {AgentContext} ctx @param {string} name @param {{ label: string, prompt: string }} dispatch @returns {Promise<AgentAnswer>} */
-const askAgent = async (ctx, name, { label, prompt }) => {
+/**
+ * Asks the agent on the model family the dispatch names; when the host rejects that call, once
+ * more on the session's model, under a label of its own so a resume replays each call.
+ * @param {AgentContext} ctx @param {string} name @param {{ label: string, prompt: string, model?: string }} dispatch
+ * @returns {Promise<AgentAnswer>}
+ */
+const askAgent = async (ctx, name, { label, prompt, model }) => {
+  if (model === undefined) return askOnce(ctx, name, { label, prompt })
+  const answer = await askOnce(ctx, name, { label, prompt, model })
+  return answer.error?.startsWith(`${name} failed: `) ? askOnce(ctx, name, { label: `${label} · session model`, prompt }) : answer
+}
+
+/** @param {AgentContext} ctx @param {string} name @param {{ label: string, prompt: string, model?: string }} call @returns {Promise<AgentAnswer>} */
+const askOnce = async (ctx, name, { label, prompt, model }) => {
   let text
   try {
-    text = await ctx.agent(prompt, { label, agent: name })
+    text = await ctx.agent(prompt, { label, agent: name, ...(model === undefined ? {} : { model }) })
   } catch (error) {
     return { ok: false, text: '', error: `${name} failed: ${error instanceof Error ? error.message : String(error)}` }
   }

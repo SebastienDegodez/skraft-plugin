@@ -23,7 +23,7 @@ const hostOf = ($: EngineInterface) => ({
   cwd: () => $.session.cwd(),
   pluginRoot: $.plugin.root,
   pluginName: $.plugin.name,
-  spawn: (args: { prompt: string; subagentType: string; description: string }) => $.agent.spawn(args),
+  spawn: (args: { prompt: string; subagentType: string; description: string; model?: string }) => $.agent.spawn(args),
   run: (argv: string[], init?: { cwd?: string; timeoutMs?: number }) => $.process.run(argv, init),
   sessionCostUsd: () => $.session.usage().then((usage) => usage.cost?.usd ?? null, () => null),
   later: (run: () => void) => void $.clock.after(0, run),

@@ -1,5 +1,6 @@
 import { isAbsolutePath } from '../config/skraft-config.mjs'
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
+import { readLensSpec } from '../review/lenses.mjs'
 import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
 
 /**
@@ -13,7 +14,8 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  *   writes: string[], maxAttempts: number | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
- *   review node runs, each as the agent `<lens>-lens`. outputs: relative to the tracking folder
+ *   review node runs, each as the agent `<lens>-lens`, written `<lens>`, `<lens>:<count>` and
+ *   optionally `@<family>`. outputs: relative to the tracking folder
  *   (`{date}`, `{slug}` filled at dispatch); writes: relative to the working copy.
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: EdgeLabel | null, maxVisits: number | null }} WorkflowEdge
@@ -49,6 +51,12 @@ const NODE_ID = /^[A-Za-z_][A-Za-z0-9_-]*$/
 /** @param {string} value @returns {string[]} */
 const listOf = (value) => value.split(',').map((item) => item.trim()).filter((item) => item !== '')
 
+/** Every lens named once, each spec readable. @param {string[]} specs */
+const lensSpecsOk = (specs) => {
+  const names = specs.map((spec) => readLensSpec(spec)?.name ?? null)
+  return names.length > 0 && names.every((name, index) => name !== null && names.indexOf(name) === index)
+}
+
 /** @param {string} value */
 const positive = (value) => (POSITIVE.test(value) ? null : 'must be a positive integer')
 /** @param {string} value */
@@ -58,7 +66,7 @@ const flag = (value) => (value === 'true' || value === 'false' ? null : 'must be
 const NODE_CHECKS = {
   phase: (value) => (PHASE.test(value) ? null : 'must be an upper-case word'),
   agent: (value) => (AGENT_ID.test(value) ? null : 'must be a kebab-case agent id'),
-  lenses: (value) => (listOf(value).length > 0 && listOf(value).every((lens, index, all) => AGENT_ID.test(lens) && all.indexOf(lens) === index) ? null : 'must list kebab-case lens names, each once'),
+  lenses: (value) => (lensSpecsOk(listOf(value)) ? null : 'must list kebab-case lens names, each once, as <name>, <name>:<instances from 1 to 9>, each optionally followed by @haiku, @sonnet or @opus'),
   gate: (value) => (listOf(value).length > 0 && listOf(value).every((gate) => GATE_ORDER.includes(gate)) ? null : `must list gates among ${GATE_ORDER.join(', ')}`),
   goal_gate: flag,
   locked: flag,

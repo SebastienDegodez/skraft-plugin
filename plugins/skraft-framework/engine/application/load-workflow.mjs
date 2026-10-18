@@ -1,4 +1,4 @@
-import { lensAgent, REFUTER } from '../domain/review/lenses.mjs'
+import { lensAgent, readLensSpec, REFUTER } from '../domain/review/lenses.mjs'
 import { checkLocks, readWorkflow } from '../domain/workflow/workflow.mjs'
 
 /**
@@ -102,10 +102,13 @@ const agentsOf = ({ id, kind, agent, lenses }) => {
   if (kind === 'agent') return [{ node: id, agent: /** @type {string} */ (agent), what: `agent ${agent}`, reviews: false }]
   if (kind !== 'review') return []
   return [
-    ...lenses.map((lens) => ({ node: id, agent: lensAgent(lens), what: `lens ${lens} (agent ${lensAgent(lens)})`, reviews: true })),
+    ...lenses.map(lensNameOf).map((lens) => ({ node: id, agent: lensAgent(lens), what: `lens ${lens} (agent ${lensAgent(lens)})`, reviews: true })),
     { node: id, agent: REFUTER, what: `agent ${REFUTER}`, reviews: true },
   ]
 }
+
+/** The lens a node's spec names. @param {string} spec a spec the workflow already checked */
+const lensNameOf = (spec) => /** @type {import('../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(spec)).name
 
 /** @param {string} name @param {string[]} errors @returns {WorkflowLoading} */
 const refused = (name, errors) => ({ ok: false, name, reason: `${name} is invalid: ${errors.join('; ')}`, errors })

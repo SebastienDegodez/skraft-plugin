@@ -70,6 +70,26 @@ test('the agent final text is the answer; no text is no answer, and no cost is i
   }
 })
 
+test('a dispatch naming a model family passes it to ctx.agent; a host that rejects the call with it is asked once more on the session model', async () => {
+  const { ctx, calls } = simulatedContext({ behaviours: answering('ok') })
+  assert.deepEqual(await createCtxAgentRunner({ ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'sonnet' }), { ok: true, text: 'ok' })
+  assert.deepEqual(calls.map(({ label, model }) => [label, model]), [[DISPATCH.label, 'sonnet']])
+
+  const rejecting = simulatedContext({ behaviours: [async () => { throw new Error('unknown model haiku') }, async () => 'reviewed'] })
+  const { answers } = await createCtxAgentRunner({ ctx: rejecting.ctx, pluginRoot: PLUGIN_ROOT }).runMany([{ ...DISPATCH, model: 'haiku' }])
+  assert.deepEqual(answers, [{ ok: true, text: 'reviewed' }])
+  assert.deepEqual(rejecting.calls.map(({ label, model }) => [label, model]), [[DISPATCH.label, 'haiku'], [`${DISPATCH.label} · session model`, undefined]])
+
+  const failing = simulatedContext({ behaviours: [async () => { throw new Error('quota') }, async () => { throw new Error('quota again') }] })
+  assert.deepEqual(await createCtxAgentRunner({ ctx: failing.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'opus' }), { ok: false, text: '', error: 'skraft:solution-researcher failed: quota again' })
+  const silent = simulatedContext({ behaviours: answering('') })
+  assert.equal((await createCtxAgentRunner({ ctx: silent.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'haiku' })).error, 'skraft:solution-researcher answered nothing')
+  assert.equal(silent.calls.length, 1)
+  const plain = simulatedContext({ behaviours: [async () => { throw new Error('quota') }] })
+  assert.deepEqual(await createCtxAgentRunner({ ctx: plain.ctx, pluginRoot: PLUGIN_ROOT }).run(DISPATCH), { ok: false, text: '', error: 'skraft:solution-researcher failed: quota' })
+  assert.equal(plain.calls.length, 1)
+})
+
 test('the session is listed once per run', async () => {
   let lists = 0
   const { ctx } = simulatedContext({ behaviours: [async () => 'a', async () => 'b'] })

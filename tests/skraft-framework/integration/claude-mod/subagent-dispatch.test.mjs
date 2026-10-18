@@ -34,6 +34,19 @@ test('the dispatch spawns skraft:<agent> with the brief and the label, and answe
   assert.deepEqual(spawned, [{ prompt: '## Skraft dispatch', subagentType: 'skraft:solution-researcher', description: 'skraft checkout · research · attempt 1' }])
 })
 
+test('a dispatch naming a model family spawns the subagent on it', async () => {
+  const { runner, spawned } = runnerWith({
+    spawn: (args, answers) => {
+      answers.complete({ agentId: `a${spawned.length}`, answer: 'reviewed', reason: 'answer' })
+      return { agentId: `a${spawned.length}` }
+    },
+  })
+
+  await runner.runMany([{ ...DISPATCH, model: 'sonnet' }, { ...REPOSITORY_DISPATCH, model: 'opus' }])
+
+  assert.deepEqual(spawned.map(({ subagentType, model }) => [subagentType, model]), [['skraft:solution-researcher', 'sonnet'], ['acme-security-reviewer', 'opus']])
+})
+
 test('a repository agent is spawned under its own id, and named so when it cannot start or ends without an answer', async () => {
   const answered = runnerWith({
     spawn: (args, answers) => {

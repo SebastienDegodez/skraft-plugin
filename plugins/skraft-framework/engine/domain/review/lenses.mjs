@@ -1,7 +1,9 @@
 /**
  * The lenses a review node runs and what each one reads. A lens `<name>` is the agent
  * `<name>-lens`; a lens skraft does not know (one a repository adds) reads everything a
- * review prepares.
+ * review prepares. A node names a lens `<name>`, `<name>:<count>` for that many independent
+ * instances, either followed by `@<family>` for the model family it runs on (haiku when it names
+ * none). The refuter runs one family above the strongest lens whose findings it checks.
  *
  * @typedef {'overview' | 'outputs' | 'context' | 'patch' | 'files' | 'components'} InputKind
  *   overview: the review's shared context (story, project rules, who wrote which document), read
@@ -12,9 +14,36 @@
  *   testing choice, as the configuration gives them.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
- * @typedef {{ name: string, agent: string, inputs: readonly InputKind[], blind: boolean, trigger: Trigger | null }} Lens
+ * @typedef {'haiku' | 'sonnet' | 'opus'} Family
+ * @typedef {{ name: string, count: number, model: Family | null }} LensSpec
+ * @typedef {{
+ *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean, trigger: Trigger | null,
+ *   model: Family, instance: { index: number, count: number } | null,
+ * }} Lens
+ *   id: the lens in the journal and the briefs, `<name>#<index>` for an instance of several;
  *   blind: the lens gets neither the story nor the feature scope.
  */
+
+/** The model families a lens or the refuter runs on, weakest first. */
+export const FAMILIES = Object.freeze(/** @type {Family[]} */ (['haiku', 'sonnet', 'opus']))
+const SPEC = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?::([1-9]))?(?:@(haiku|sonnet|opus))?$/
+
+/**
+ * A lens as a review node names it; null when the text is none.
+ * @param {string} spec
+ * @returns {LensSpec | null}
+ */
+export const readLensSpec = (spec) => {
+  const match = SPEC.exec(spec)
+  return match === null ? null : { name: match[1], count: Number(match[2] ?? '1'), model: /** @type {Family | undefined} */ (match[3]) ?? null }
+}
+
+/**
+ * The family the refuter runs on: one above the strongest of the lenses it checks, opus at most.
+ * @param {Family[]} models
+ * @returns {Family}
+ */
+export const refuterFamily = (models) => FAMILIES[Math.min(FAMILIES.length - 1, Math.max(...models.map((model) => FAMILIES.indexOf(model))) + 1)]
 
 /** The read-only agent that checks each blocker, high and medium finding before it counts. */
 export const REFUTER = 'finding-refuter'
@@ -53,22 +82,25 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
   'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS, trigger: CONTRACTS },
 })))
 
-/** @param {string} name @returns {Lens} */
-const lensOf = (name) => {
+/** Each instance a node's lens runs as. @param {string} spec a valid lens spec @returns {Lens[]} */
+const lensesOf = (spec) => {
+  const { name, count, model } = /** @type {LensSpec} */ (readLensSpec(spec))
   const known = KNOWN[name]
-  return { name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, trigger: known?.trigger ?? null }
+  const lens = { name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, trigger: known?.trigger ?? null, model: model ?? FAMILIES[0] }
+  if (count === 1) return [{ ...lens, id: name, instance: null }]
+  return Array.from({ length: count }, (_, index) => ({ ...lens, id: `${name}#${index + 1}`, instance: { index: index + 1, count } }))
 }
 
 /**
  * The lenses of a review node that run on these changes: every lens without a trigger, and
  * each one whose trigger matches a changed path or a line the patch adds or keeps.
- * @param {string[]} names in the node's order
+ * @param {string[]} specs in the node's order
  * @param {{ paths: string[], patch: string }} changes
  * @returns {Lens[]}
  */
-export const planLenses = (names, { paths, patch }) => {
+export const planLenses = (specs, { paths, patch }) => {
   const lines = keptLines(patch)
-  return names.map(lensOf).filter(({ trigger }) => trigger === null || fires(trigger, paths, lines))
+  return specs.flatMap(lensesOf).filter(({ trigger }) => trigger === null || fires(trigger, paths, lines))
 }
 
 /** @param {Trigger} trigger @param {string[]} paths @param {string[]} lines */
