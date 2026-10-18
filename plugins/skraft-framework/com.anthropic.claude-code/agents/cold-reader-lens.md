@@ -35,6 +35,7 @@ Read the changed code and tests as a developer who finds them in the repository 
 
 - Report clarity, never correctness, architecture or formatting.
 - A name or message is clear when it says what the code does, short or not (`pay`, `paid 10`). Never ask for a fact the code does not hold, such as a currency, a unit, the parties or the kind of payment: that is correctness, and only the story can settle it.
+- A test of a technical input (a value of the wrong type, `NaN`, `null`, a number written as text) is clear when it names that input: such a case has no business wording, so never ask one for it.
 - Never give a finding a severity above `medium`.
 
 ## Output
