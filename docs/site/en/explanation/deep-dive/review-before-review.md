@@ -2,13 +2,13 @@
 layout: doc
 lang: en
 title: "Review before review — why and how"
-description: "The review-before-review deep dive: assisted 4-lens adversarial review, weighted synthesis, and why it filters before the human."
+description: "The review-before-review deep dive: assisted adversarial review by independent lenses, a verdict computed from their findings, and why it filters before the human."
 ---
 
 # Review before review — why and how
 
-> Before a human reads it, an independent reviewer attacks the work from several
-> angles and issues a verdict. The human review then receives an already-filtered
+> Before a human reads it, independent lenses attack the work from several angles
+> and the engine computes a verdict from what they find. The human review then receives an already-filtered
 > artifact — not a draft.
 
 ## The problem (concrete context)
@@ -36,49 +36,52 @@ And on the value of multiple, independent eyes:
 
 ## Application in SKRAFT
 
-Each phase has an **independent reviewer** (never the producer). In DELIVER, this
-reviewer applies **4 independent lenses** then a **weighted synthesis** (Genesis A7
-pattern).
+Each reviewed phase has its own **review**: lenses that never produced the work, each in
+a fresh context. In DELIVER, the engine first runs the quality gates, then starts the 3
+CORE lenses. Each blocker, high or medium finding goes to `finding-refuter`, which
+confirms or refutes it; the engine then computes the verdict from the findings that stand.
 
 ```text
 Produced work (phase N)
         │
         ▼
-┌──────────────────────────── Independent reviewer ──────────────────────────┐
-│  Lens 1  cold-reader             ──► verdict + findings                     │
-│  Lens 2  architecture-boundaries ──► verdict + findings                     │
-│  Lens 3  test-integrity          ──► verdict + findings                     │
-│  Lens 4  quality-gates           ──► verdict + findings                     │
+┌──────────────────────────────── Review ────────────────────────────────────┐
+│  Lens 1  cold-reader             ──► findings                               │
+│  Lens 2  architecture-boundaries ──► findings                               │
+│  Lens 3  test-integrity          ──► findings                               │
 │                          │                                                  │
-│                          ▼  weighted synthesis                              │
-│            APPROVED  /  CHANGES_REQUESTED  /  REJECTED                       │
+│                          ▼  finding-refuter checks each finding             │
+│                          ▼  engine computes the verdict                     │
+│            APPROVED  /  NEEDS_REWORK  /  BLOCKED                            │
 └─────────────────────────────────────────────────────────────────────────────┘
         │
         ▼
   (if APPROVED) phase transition  ──►  human review on a clean artifact
 ```
 
-A single BLOCKER on one lens is enough to return the work (`CHANGES_REQUESTED`), with a
-bounded number of retries before human escalation. The verdict and its findings are
-traced — the human review sees *why* it passed.
+A single confirmed blocker, high or medium finding is enough to return the work
+(`NEEDS_REWORK`); low findings are notes. A lens that cannot conclude blocks the review
+(`BLOCKED`). When only one lens finds what sends the work back, the refuter judges it with
+every input of the review (the Dissent Rule). Rework is bounded before human escalation.
+The verdict and its findings are traced — the human review sees *why* it passed.
 
 ### Conditional lenses in DELIVER
 
-The panel is not fixed: on top of the 4 CORE lenses, **fidelity lenses** join when the
+The review is not fixed: on top of the 3 CORE lenses, **fidelity lenses** join when the
 `software-engineer` has delegated test wiring to a worker. If `mock-integration-worker`
-wired a mock, `mock-fidelity-lens` joins the panel; if `contract-testing-worker` wired
+wired a mock, `mock-fidelity-lens` joins the review; if `contract-testing-worker` wired
 a contract test, `contract-fidelity-lens` does. Each attacks the **fidelity** of the
-wiring (does the mock/contract truly reflect the dependency?) and honours the same
-BLOCKER rule. See the
+wiring (does the mock/contract truly reflect the dependency?) and its findings go
+through the same refuter and verdict. See the
 [DELIVER fan-out]({{ "/en/explanation/pipeline/deliver" | relative_url }}) and the
 [agentic catalogue]({{ "/en/dashboard/" | relative_url }}).
 
 ## Pitfalls & anti-patterns
 
-- **Reviewer = producer**: the review loses its independence and falsifying power.
+- **Lens = producer**: the review loses its independence and falsifying power.
 - **Averaging synthesis**: aggregating verdicts into an "average" instead of honouring
-  BLOCKERs lets the critical one slip.
-- **Infinite loop**: without a retry bound, an agent/reviewer disagreement never reaches
+  each finding that stands lets the critical one slip — the engine never averages.
+- **Infinite loop**: without a retry bound, an agent/lens disagreement never reaches
   the human — SKRAFT bounds and escalates.
 
 ## Sources

@@ -26,7 +26,7 @@ Engineering rigor is identical for every story: [`skraft-quality-bar`]({{ "/en/d
 
 ## CQS — Command-Query Separation
 
-CQS separates operations that modify state (commands) from those that read it (queries). In SKRAFT, executor agents command (they write artifacts), while reviewer agents query (they read artifacts without modifying them).
+CQS separates operations that modify state (commands) from those that read it (queries). In SKRAFT, executor agents command (they write artifacts), while review lenses query (they read artifacts without modifying them).
 
 > « Asking a question should not change the answer. »
 > — Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997.
@@ -58,7 +58,7 @@ Mutation Score measures test suite effectiveness, not just code coverage. Mutati
 > « Mutation testing provides high-fidelity assessment of test suite effectiveness. »
 > — Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
 
-In the DELIVER phase, the Mutation Score serves as a quality gate: an insufficient score blocks the reviewer's PASS verdict.
+In the DELIVER phase, the Mutation Score serves as a quality gate: an insufficient score fails the engine's `gates` node, and the work goes back to the engineer before any review.
 
 ## Object Calisthenics
 
@@ -67,4 +67,4 @@ Object Calisthenics are nine discipline rules that improve object design daily. 
 > « Nine steps to better software design today. »
 > — Bay, J., *Object Calisthenics*, 2008.
 
-These rules govern code produced in the DELIVER phase and are verified by the software-engineer-reviewer.
+These rules govern code produced in the DELIVER phase and are verified by the DELIVER review's lenses.

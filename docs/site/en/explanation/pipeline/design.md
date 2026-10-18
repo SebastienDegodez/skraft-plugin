@@ -20,11 +20,11 @@ The DESIGN phase translates refined stories into explicit, traceable architectur
 | **What exits** | ADR + component diagram + event model |
 | **Goes to** | **DISTILL** — which derives the executable scenarios |
 | **Responsible agent** | `solution-architect` |
-| **Associated reviewer** | `solution-architect-reviewer` |
+| **Review** | lenses `consistency`, `architecture-compliance`, `fitness`; verdict computed by the engine |
 
 ## Why this phase exists
 
-Without explicit architecture decisions, every developer invents their own structure. The solution-architect uses Event Modeling and DDD to model Bounded Contexts, Aggregates, and Domain Events. The reviewer verifies consistency and fitness of the chosen patterns.
+Without explicit architecture decisions, every developer invents their own structure. The solution-architect uses Event Modeling and DDD to model Bounded Contexts, Aggregates, and Domain Events. The review's lenses verify consistency and fitness of the chosen patterns.
 
 > « The model is the backbone of a language used by all team members to describe the system. »
 > — Evans, E., *Domain-Driven Design*, 2003.
@@ -54,14 +54,14 @@ each component, comments and string literals left out; it detects CQRS bus, Even
 and Saga signatures, while cross-context ACL stays a manual review point. A commitment the
 scan detects with no ADR yet becomes a back-fill ADR of the pass.
 
-The reviewer runs before human ADR ratification. Gates that require an `Accepted` ADR
+The review runs before human ADR ratification. Gates that require an `Accepted` ADR
 accept a current-pass `Proposed` ADR; gates that forbid an `Accepted` ADR also forbid a
-current-pass `Proposed` one. The reviewer reads `docs/adr/decisions-index.md` first,
-opens only ADR bodies needed for the pass under review, and judges G1 and G14 on the same
+current-pass `Proposed` one. The lenses read `docs/adr/decisions-index.md` first,
+open only ADR bodies needed for the pass under review, and judge G1 and G14 on the same
 scan report as the architect. Interface contracts pass G4 when they live in Domain or Application, matching the
 layer the ADR records, never in Infrastructure.
 
 ## Gates crossed here
 
 This phase crosses gates **G1–G16** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
-Each gate is checked by the independent reviewer before moving on to **DISTILL**.
+Each gate is checked by the review's lenses, each in a fresh context, and the engine computes the verdict before moving on to **DISTILL**.

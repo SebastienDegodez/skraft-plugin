@@ -20,11 +20,11 @@ La phase DISTILL transforme les décisions d'architecture en spécifications ex�
 | **Ce qui sort** | Scénarios Gherkin + plan de tests + plan d'implémentation + commandes de stack + preuve RED d'acceptation ; le flux de reporting approuvé ajoute un rapport prévisionnel |
 | **Va vers** | **DELIVER** — qui les implémente en TDD |
 | **Agent responsable** | `acceptance-designer` |
-| **Reviewer associé** | `acceptance-designer-reviewer` |
+| **Revue** | lentilles `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; verdict calculé par le moteur |
 
 ## Pourquoi cette phase existe
 
-Les scénarios Gherkin servent de contrat entre le métier et le code. L'acceptance-designer écrit des scénarios Given-When-Then qui capturent le comportement attendu. Le reviewer vérifie que chaque critère d'acceptation est couvert et que les scénarios sont testables.
+Les scénarios Gherkin servent de contrat entre le métier et le code. L'acceptance-designer écrit des scénarios Given-When-Then qui capturent le comportement attendu. Les lentilles de la revue vérifient que chaque critère d'acceptation est couvert et que les scénarios sont testables.
 
 > « Specification by Example bridges the communication gap between business and technology. »
 > — Adzic, G., *Specification by Example*, 2011.
@@ -70,8 +70,7 @@ réutilise cette preuve au lieu de relancer le même test d'acceptation pendant 
 **L'intégration du reporting est en cours.** Dans le flux approuvé,
 l'[acceptance designer]({{ "/fr/dashboard/#agent-acceptance-designer" | relative_url }})
 possède le plan de tests, la traçabilité critère-scénario/test et l'impact attendu.
-L'[acceptance reviewer]({{ "/fr/dashboard/#agent-acceptance-designer-reviewer" | relative_url }})
-vérifie ces entrées dans la revue existante. Après approbation de DISTILL, le rendu
+Les lentilles de la revue DISTILL vérifient ces entrées. Après approbation de DISTILL, le rendu
 déterministe les projette dans un rapport prévisionnel Markdown avant DELIVER si une
 PR est disponible. Il décrit des contrôles **prévus**, jamais un résultat exécuté ni
 une mesure inventée.
@@ -132,4 +131,4 @@ La publication ne remplace pas la revue des spécifications décrite plus haut.
 ## Les gates franchies ici
 
 Cette phase franchit les gates **G1–G8** (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
-Chaque gate est vérifiée par le reviewer indépendant avant le passage à **DELIVER**.
+Chaque gate est vérifiée par les lentilles de la revue, chacune dans un contexte neuf, et le moteur calcule le verdict avant le passage à **DELIVER**.

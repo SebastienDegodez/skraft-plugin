@@ -1,6 +1,6 @@
 # Gate Definitions G1–G11, B1, T1–T3, E1–E2
 
-Formal checklist for the `acceptance-designer-reviewer`. One section per lens.
+Formal checklist for the DISTILL review lenses the engine runs. One section per lens.
 
 ---
 

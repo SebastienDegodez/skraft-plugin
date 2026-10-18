@@ -34,7 +34,7 @@ graph LR
     CTW -->|Layer 2 iff opt-in| MC[(Microcks TestEndpointAsync)]
     BL -.if active.-> CFL[contract-fidelity-lens]
     MC -.if active.-> CFL
-    CFL -->|verdict| SER[software-engineer-reviewer]
+    CFL -->|findings| DR[DELIVER review<br/>verdict computed by the engine]
 
     style SE fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
     style CTW fill:#243a2e,stroke:#4ed58a
@@ -59,8 +59,8 @@ commits. The lead keeps the business TDD cycle and verifies the worker in **TIER
 ## How the fidelity lens audits it
 
 When the reviewed diff touches a contract, a `VerifyAsync`/`TestEndpointAsync` call, or
-a provider-side scaffold, the `contract-fidelity-lens` joins the adversarial panel of
-the `software-engineer-reviewer` (conditional, not one of the four CORE lenses).
+a provider-side scaffold, the `contract-fidelity-lens` joins the lenses of the DELIVER
+review (conditional, not one of the three CORE lenses).
 
 | Gate | What it checks | Severity |
 | --- | --- | --- |

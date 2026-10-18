@@ -33,7 +33,7 @@ graph LR
     RST -->|inprocess surcharge| MID[mocking-inprocess-dotnet]
     MIW -->|cablage de test| A[(test d'integration)]
     A -.si actif.-> MFL[mock-fidelity-lens]
-    MFL -->|verdict| SER[software-engineer-reviewer]
+    MFL -->|findings| DR[revue DELIVER<br/>verdict calculé par le moteur]
 
     style SE fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
     style MIW fill:#243a2e,stroke:#4ed58a
@@ -60,8 +60,8 @@ l'est pas.
 ## Comment la lentille de fidélité l'audite
 
 Quand le diff relu touche un mock ou un test d'intégration qui en utilise un, la
-`mock-fidelity-lens` rejoint le panel adverse du `software-engineer-reviewer` (elle est
-conditionnelle, pas l'une des quatre lentilles CORE).
+`mock-fidelity-lens` rejoint les lentilles de la revue DELIVER (elle est
+conditionnelle, pas l'une des trois lentilles CORE).
 
 | Gate | Ce qu'elle vérifie | Sévérité |
 | --- | --- | --- |

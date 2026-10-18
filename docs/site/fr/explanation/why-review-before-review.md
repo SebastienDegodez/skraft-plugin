@@ -24,14 +24,14 @@ Le reviewer humain passe du temps à signaler ces problèmes mécaniques au lieu
 
 ## La solution SKRAFT : filtrer avant l'humain
 
-SKRAFT insère une **revue adverse assistée** *avant* que le code atteigne un humain. Cette revue est menée par des agents spécialisés appelés *reviewers*, qui jouent un rôle d'avocat du diable :
+SKRAFT insère une **revue adverse assistée** *avant* que le code atteigne un humain. Cette revue est menée par des agents spécialisés en lecture seule appelés *lentilles*, qui jouent un rôle d'avocat du diable :
 
-1. Chaque reviewer applique une **lentille** différente (architecture, lisibilité, gates de qualité, intégrité des tests).
-2. Si le verdict est `REJECT`, l'agent exécuteur doit corriger et soumettre à nouveau — sans impliquer d'humain.
-3. Seulement quand tous les verdicts sont `APPROVE` (ou `CONDITIONAL_APPROVE`), la Pull Request monte vers la revue humaine.
+1. Chaque **lentille** applique un angle différent (architecture, lisibilité, intégrité des tests), dans un contexte neuf ; les quality gates passent avant elles.
+2. `finding-refuter` vérifie chaque finding qui renverrait le travail, et le moteur calcule le verdict sur ceux qui tiennent. S'il vaut `NEEDS_REWORK`, l'agent exécuteur doit corriger et soumettre à nouveau — sans impliquer d'humain.
+3. Seulement quand le verdict est `APPROVED`, la Pull Request monte vers la revue humaine.
 
 ```
-[Code produit] → [Reviewer IA × 4 lentilles] → [Corrections si REJECT] → [PR humaine]
+[Code produit] → [quality gates + 3 lentilles] → [Corrections si NEEDS_REWORK] → [PR humaine]
 ```
 
 > **Jargon** — *lentille* : un point de vue spécifique appliqué à la revue (ex : "est-ce que les frontières d'architecture sont respectées ?"). *Gate* : seuil de qualité à franchir pour passer à la phase suivante.
@@ -62,7 +62,7 @@ Ensuite, **la vitesse et la stabilité ne s'opposent pas** : les équipes les pl
 > « High performers understand that they don't have to trade speed for stability or vice versa. »
 > — Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
 
-SKRAFT matérialise ces deux principes : des gates explicites, vérifiées par un reviewer indépendant, qui déplacent la détection des défauts en amont de la revue humaine.
+SKRAFT matérialise ces deux principes : des gates explicites, vérifiées par des lentilles indépendantes, qui déplacent la détection des défauts en amont de la revue humaine.
 
 ## Périmètre de la revue adverse
 

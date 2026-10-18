@@ -495,4 +495,4 @@ After writing, print a summary table:
 
 **The orchestrator MUST NOT advance to DISTILL while `open blockers > 0`.** A failing consistency-gate without an open blocker is a persona bug — emit the BLOCKER and HALT.
 
-Then halt and await handoff to DISTILL or review by `Skraft - Solution Architect Reviewer`.
+Then halt: the engine runs the DESIGN review's lenses next, then hands off to DISTILL or sends the work back.

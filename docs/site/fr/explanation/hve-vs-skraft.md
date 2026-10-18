@@ -41,16 +41,16 @@ graph LR
     style PR fill:#102016,stroke:#6f8478
 ```
 
-| Couche | Étape | Agent exécuteur | Reviewer indépendant |
+| Couche | Étape | Agent exécuteur | Revue indépendante |
 |-------|-------|----------------|----------------------|
 | Produit autonome (skraft-backlog) | DISCOVER | `backlog-discoverer` | 3 lentilles + `review-verdict.mjs` |
 | Produit autonome (skraft-backlog) | DISCUSS | `backlog-planner` | 4 lentilles + `review-verdict.mjs` |
-| Ingénierie orchestrée | RESEARCH | `solution-researcher` | aucun reviewer de phase déclaré |
-| Ingénierie orchestrée | DESIGN | `solution-architect` | `solution-architect-reviewer` |
-| Ingénierie orchestrée | DISTILL | `acceptance-designer` | `acceptance-designer-reviewer` |
-| Ingénierie orchestrée | DELIVER | `software-engineer` | `software-engineer-reviewer` |
+| Ingénierie orchestrée | RESEARCH | `solution-researcher` | aucune revue |
+| Ingénierie orchestrée | DESIGN | `solution-architect` | 3 lentilles + verdict calculé par le moteur |
+| Ingénierie orchestrée | DISTILL | `acceptance-designer` | 4 lentilles + verdict calculé par le moteur |
+| Ingénierie orchestrée | DELIVER | `software-engineer` | quality gates + 3 lentilles + verdict calculé par le moteur |
 
-> **Jargon** : une *gate* est un point de contrôle qui bloque la progression si la qualité n'est pas atteinte. Un *reviewer* est un agent en lecture seule qui émet un verdict sans modifier les artefacts. La [grille active des 49 gates]({{ "/fr/reference/gates" | relative_url }}) détaille les contrats actuels.
+> **Jargon** : une *gate* est un point de contrôle qui bloque la progression si la qualité n'est pas atteinte. Une *lentille* est un agent en lecture seule qui rapporte des findings sans modifier les artefacts ; le moteur en calcule le verdict. La [grille active des 49 gates]({{ "/fr/reference/gates" | relative_url }}) détaille les contrats actuels.
 
 ## HVE vs SKRAFT : tableau comparatif
 
@@ -59,7 +59,7 @@ graph LR
 | Périmètre | Une session de développement | Une User Story de bout en bout |
 | Revue | Humaine et manuelle | Adverse assistée avant la revue humaine |
 | Traçabilité | Limitée | `state.json`, artefacts, verdicts horodatés |
-| Lentilles | Non | 4 lentilles adverses (architecture, cold-reader, quality-gates, test-integrity) |
+| Lentilles | Non | Lentilles adverses par revue (DELIVER : test-integrity, architecture-boundaries, cold-reader) |
 | Gates | Non | 49 gates explicites et non négociables |
 | Passage à l'échelle | Solo / pair | Équipe, backlog complet |
 

@@ -20,11 +20,11 @@ The DELIVER phase implements working code, guided by tests, with empirically ver
 | **What exits** | Tested code + quality evidence (mutation, RED→GREEN); outcome report at completion or blockage |
 | **Goes to** | The **Pull Request** — human review then delivery |
 | **Responsible agent** | `software-engineer` |
-| **Associated reviewer** | `software-engineer-reviewer` |
+| **Review** | quality gates run by the engine, then lenses `test-integrity`, `architecture-boundaries`, `cold-reader`; verdict computed by the engine |
 
 ## Why this phase exists
 
-Code is the only artefact that matters in production. The software-engineer applies Outside-In TDD: Acceptance Tests guide unit tests, which guide implementation. The Mutation Score verifies that tests genuinely protect behaviour. The reviewer is read-only — it never modifies code.
+Code is the only artefact that matters in production. The software-engineer applies Outside-In TDD: Acceptance Tests guide unit tests, which guide implementation. The Mutation Score verifies that tests genuinely protect behaviour. The review lenses are read-only — they never modify code.
 
 > « We grow working software, guided by tests, from the outside in. »
 > — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
@@ -41,7 +41,7 @@ The scenario enters. DELIVER implements the total calculation and loyalty credit
 - Passing acceptance tests linked to Gherkin scenarios.
 - Unit tests covering Domain invariants.
 - Mutation Score as empirical proof of test quality.
-- Quality-gates evidence log, change log and outcome data for the reviewer.
+- Quality-gates evidence log, change log and outcome data for the review.
 
 ## Handoff, RED and rework
 
@@ -57,27 +57,25 @@ Per-cycle mutation is differential since the previous cycle's last commit and is
 when no core production file changed. Only the final full core then boundary mutation run
 is G6 evidence.
 
-The reviewer prepares `diff-{story}.patch` and `files-{story}.txt` once, then hands those
-paths to the lenses. `quality-gates` also receives the test plan, `test-integrity` receives
-the test plan and `.feature`, `architecture-boundaries` receives contracts and the ADR
+The engine prepares the story's patch and file list once, then hands those paths to the
+lenses. `test-integrity` also receives the test plan and `.feature`, `architecture-boundaries` receives contracts and the ADR
 index, and `cold-reader` receives only the patch and file list.
 
 On rework, the engineer changes only what the previous review's findings name. On
-re-review, the reviewer re-runs the lenses or gates that failed, were inconclusive or had
+re-review, the engine re-runs the lenses or gates that failed, were inconclusive or had
 changed inputs, and carries forward the other passing results in the verdict YAML. If the
-only issue is an environment-caused inconclusive gate, the orchestrator escalates the cause
+only issue is an environment-caused inconclusive gate, the cause is escalated
 and command to the user instead of sending the engineer into rework. Once the user reports
 the environment fixed, the engineer re-runs only those inconclusive gates, changes no code
-and consumes no retry, then the reviewer re-reviews.
+and consumes no retry, then the engine runs the review again.
 
 ## From evidence to outcome
 
 **Reporting integration is in progress.** The approved flow turns the DISTILL forecast
 into a comparison with actual impact at completion or blockage. The
 [software engineer]({{ "/en/dashboard/#agent-software-engineer" | relative_url }})
-owns evidence, change log and impact references. The
-[engineer reviewer]({{ "/en/dashboard/#agent-software-engineer-reviewer" | relative_url }})
-and its existing lenses validate those artifacts and own the canonical verdict.
+owns evidence, change log and impact references. The DELIVER
+review's lenses validate those artifacts and the engine computes the canonical verdict.
 The orchestrator coordinates rendering and publication, not evidence capture or
 review synthesis. There is no extra reporting agent or panel.
 
@@ -93,10 +91,10 @@ parity remain pending validation.
 The outcome projects recorded tests, build, static checks, coverage, mutation, review,
 commits/files and limitations into Markdown. Missing or stale proof stays unverified;
 metrics are not invented. A blocked outcome states what remains incomplete. Local
-proof checks and the persisted reviewer verdict are distinct: the current renderer
-leaves G8/G9 Git-object verification to the reviewer. Delivered does not mean deployed.
+proof checks and the persisted review verdict are distinct: the current renderer
+leaves G8/G9 Git-object verification to the review. Delivered does not mean deployed.
 
-For frontend work, existing producers capture Playwright evidence and reviewers check
+For frontend work, existing producers capture Playwright evidence and review lenses check
 it. Only already remotely accessible evidence is linked, with access limitations
 stated; local-only evidence is explicitly unavailable remotely, never presented as a
 published attachment. The startup-selected media cap may be zero and has no hard default.
@@ -148,14 +146,14 @@ that wiring to internal subagents (`user-invocable: false`), one per capability.
 
 Each worker emits test wiring only — the business TDD cycle stays with the lead, who
 verifies the worker in **TIER-1** (the test fails first, then passes). When a
-capability is active, its fidelity lens joins the adversarial panel of the
-`software-engineer-reviewer`. The concrete wiring is resolved per stack through a
+capability is active, its fidelity lens joins the lenses of the
+DELIVER review. The concrete wiring is resolved per stack through a
 *roster* (see the [agentic catalogue]({{ "/en/dashboard/" | relative_url }})).
 
 ## Gates crossed here
 
 This phase crosses the delivery gates — RED/GREEN test integrity, green build,
 mutation score at threshold (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
-The independent reviewer issues its verdict before delivery is declared approved.
+The engine computes the review's verdict from its lenses' findings before delivery is declared approved.
 A **draft PR** may already hold the forecast after separately approved creation and
 push; opening it does not mean the delivery gates have passed.

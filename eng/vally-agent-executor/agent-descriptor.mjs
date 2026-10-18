@@ -18,14 +18,10 @@ const AGENT_PATHS = new Map([
   ['discovery-duplicate-lens', backlogAgent('discovery-duplicate-lens')],
   ['solution-researcher', pluginAgent('solution-researcher')],
   ['solution-architect', pluginAgent('solution-architect')],
-  ['solution-architect-reviewer', pluginAgent('solution-architect-reviewer')],
   ['acceptance-designer', pluginAgent('acceptance-designer')],
-  ['acceptance-designer-reviewer', pluginAgent('acceptance-designer-reviewer')],
   ['software-engineer', pluginAgent('software-engineer')],
-  ['software-engineer-reviewer', pluginAgent('software-engineer-reviewer')],
   ['architecture-boundaries-lens', pluginAgent('reviewer-lenses/architecture-boundaries-lens')],
   ['cold-reader-lens', pluginAgent('reviewer-lenses/cold-reader-lens')],
-  ['quality-gates-lens', pluginAgent('reviewer-lenses/quality-gates-lens')],
   ['test-integrity-lens', pluginAgent('reviewer-lenses/test-integrity-lens')],
   // DELIVER-phase workers. Internal subagents (`user-invocable: false`), dispatched
   // by software-engineer; a suite selects one directly to grade the wiring it emits

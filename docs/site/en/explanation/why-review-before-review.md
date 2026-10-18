@@ -24,19 +24,19 @@ The human reviewer spends time flagging these mechanical problems instead of foc
 
 ## The SKRAFT solution: filter before the human
 
-SKRAFT inserts an **AI-assisted adversarial review** *before* code reaches a human. This review is conducted by specialised agents called *reviewers*, which play a devil's advocate role:
+SKRAFT inserts an **AI-assisted adversarial review** *before* code reaches a human. This review is conducted by specialised read-only agents called *lenses*, which play a devil's advocate role:
 
-1. Each reviewer applies a different **lens** (architecture, readability, quality gates, test integrity).
-2. If the verdict is `REJECT`, the executor agent must correct and resubmit — without involving a human.
-3. Only when all verdicts are `APPROVE` (or `CONDITIONAL_APPROVE`) does the Pull Request move to human review.
+1. Each **lens** applies a different angle (architecture, readability, test integrity), in a fresh context; the quality gates run before them.
+2. `finding-refuter` checks each finding that would send the work back, and the engine computes the verdict from those that stand. If it is `NEEDS_REWORK`, the executor agent must correct and resubmit — without involving a human.
+3. Only when the verdict is `APPROVED` does the Pull Request move to human review.
 
 ```
-[Produced code] → [AI reviewer × 4 lenses] → [Corrections if REJECT] → [Human PR]
+[Produced code] → [quality gates + 3 lenses] → [Corrections if NEEDS_REWORK] → [Human PR]
 ```
 
 > **Jargon** — *lens*: a specific viewpoint applied to the review (e.g. "are architecture boundaries respected?"). *Gate*: quality threshold that must be crossed to proceed to the next phase.
 
-## The four lenses in practice
+## The DELIVER lenses in practice
 
 Each lens is independent and covers a different angle:
 
@@ -44,7 +44,6 @@ Each lens is independent and covers a different angle:
 |------|----------------|
 | `architecture-boundaries` | Boundaries between the Domain / Application / Infrastructure / API layers are respected |
 | `cold-reader` | A developer encountering the code for the first time can understand the intent |
-| `quality-gates` | Quality thresholds (Mutation Score, coverage) are met |
 | `test-integrity` | Tests actually verify behaviour — no façade tests |
 
 > **Jargon** — *Domain / Application / Infrastructure / API layers*: the four layers of Clean Architecture as defined by Robert C. Martin. Each layer has a precise responsibility and may only depend on inner layers.
@@ -75,7 +74,7 @@ Second, **speed and stability are not a trade-off**: the highest-performing team
 > « High performers understand that they don't have to trade speed for stability or vice versa. »
 > — Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
 
-SKRAFT materialises both principles: explicit gates, checked by an independent reviewer, that move defect detection upstream of human review.
+SKRAFT materialises both principles: explicit gates, checked by independent lenses, that move defect detection upstream of human review.
 
 ## Scope of adversarial review
 

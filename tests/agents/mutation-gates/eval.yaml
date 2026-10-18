@@ -22,8 +22,6 @@ stimuli:
       agent: skraft-orchestrator
       subagents: &deliver-chain
         - software-engineer
-        - software-engineer-reviewer
-        - quality-gates-lens
         - architecture-boundaries-lens
         - test-integrity-lens
         - cold-reader-lens

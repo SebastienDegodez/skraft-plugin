@@ -1,15 +1,15 @@
 ---
 name: architecture-review-criteria
-description: Use when reviewing DESIGN artefacts (event models, ADRs, component diagrams, context maps, interface contracts) for quality, DDD compliance, and architectural correctness. Contains gate definitions and scoring rubric for the solution-architect-reviewer lenses.
+description: Use when reviewing DESIGN artefacts (event models, ADRs, component diagrams, context maps, interface contracts) for quality, DDD compliance, and architectural correctness. Contains gate definitions and scoring rubric for the DESIGN review lenses.
 ---
 
 # Architecture Review Criteria
 
 ## Overview
 
-16 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied by the `solution-architect-reviewer` agent to DESIGN artefacts. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
+16 gates across 3 lenses, plus 1 cross-cutting escalation gate, applied to DESIGN artefacts by the review lenses the engine runs. Gates enforce DDD correctness, Clean Architecture compliance, fitness for the stories in scope, cross-artefact consistency, the prohibition of negative or baseline-restating ADRs, and the integrity of the human-escalation protocol.
 
-**Applied by:** `solution-architect-reviewer`
+**Applied by:** the DESIGN review lenses (consistency, architecture-compliance, fitness), run by the engine
 **Applied to:** ADRs, event models, component diagrams, context maps, interface contracts, consistency matrices, supersession plans, supersession registry, blocker files
 **Prior phase required:** DESIGN artefacts from `solution-architect`
 

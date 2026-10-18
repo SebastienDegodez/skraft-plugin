@@ -20,11 +20,11 @@ The DISTILL phase transforms architecture decisions into executable specificatio
 | **What exits** | Gherkin scenarios + test plan + implementation plan + stack commands + acceptance RED proof; approved reporting flow adds a forecast |
 | **Goes to** | **DELIVER** — which implements them with TDD |
 | **Responsible agent** | `acceptance-designer` |
-| **Associated reviewer** | `acceptance-designer-reviewer` |
+| **Review** | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; verdict computed by the engine |
 
 ## Why this phase exists
 
-Gherkin scenarios serve as a contract between business and code. The acceptance-designer writes Given-When-Then scenarios that capture expected behaviour. The reviewer verifies that every acceptance criterion is covered and that scenarios are testable.
+Gherkin scenarios serve as a contract between business and code. The acceptance-designer writes Given-When-Then scenarios that capture expected behaviour. The review's lenses verify that every acceptance criterion is covered and that scenarios are testable.
 
 > « Specification by Example bridges the communication gap between business and technology. »
 > — Adzic, G., *Specification by Example*, 2011.
@@ -70,8 +70,7 @@ same acceptance test during PREPARE.
 **Reporting integration is in progress.** In the approved flow, the
 [acceptance designer]({{ "/en/dashboard/#agent-acceptance-designer" | relative_url }})
 owns the test plan, criterion-to-scenario/test traceability and expected impact.
-The [acceptance reviewer]({{ "/en/dashboard/#agent-acceptance-designer-reviewer" | relative_url }})
-checks those inputs in the existing review. After DISTILL approval, deterministic
+The DISTILL review's lenses check those inputs. After DISTILL approval, deterministic
 rendering projects them into a Markdown forecast before DELIVER when a PR is available.
 The forecast describes **planned** checks, never an executed result or invented metric.
 
@@ -125,4 +124,4 @@ Publication does not replace the specification review described above.
 ## Gates crossed here
 
 This phase crosses gates **G1–G8** (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
-Each gate is checked by the independent reviewer before moving on to **DELIVER**.
+Each gate is checked by the review's lenses, each in a fresh context, and the engine computes the verdict before moving on to **DELIVER**.

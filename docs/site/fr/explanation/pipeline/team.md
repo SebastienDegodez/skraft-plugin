@@ -2,13 +2,13 @@
 layout: doc
 lang: fr
 title: "L'équipe — le pipeline comme une course de relais"
-description: "Les six agents exécuteurs, les cinq reviewers et skraft-orchestrator : qui fait quoi, et où l'humain choisit le relais suivant."
+description: "Les six agents exécuteurs, les lentilles de revue qui les contrôlent et skraft-orchestrator : qui fait quoi, et où l'humain choisit le relais suivant."
 persona: tech-lead
 ---
 
 # L'équipe — le pipeline comme une course de relais
 
-> Six exécuteurs et cinq reviewers, répartis entre deux racines produit autonomes et un orchestrateur d'ingénierie.
+> Six exécuteurs, dont cinq contrôlés par leurs propres lentilles de revue, répartis entre deux racines produit autonomes et un orchestrateur d'ingénierie.
 
 SKRAFT n'est pas un agent monolithique. DISCOVER et DISCUSS sont deux workflows
 produit que le développeur sélectionne directement. `skraft-orchestrator` prend
@@ -42,7 +42,8 @@ graph LR
 
 Le chef d'orchestre de l'ingénierie uniquement. Il ne produit aucun artefact
 métier : il **séquence** RESEARCH → DESIGN → DISTILL → DELIVER, vérifie les
-pré-conditions, déclenche les reviewers déclarés et applique leurs verdicts. Il
+pré-conditions, fait tourner les lentilles de chaque revue et applique le verdict
+calculé sur leurs findings. Il
 ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 `state.json` (voir [le substrat HVE-Core]({{ "/fr/explanation/hve-core" | relative_url }})).
 
@@ -78,32 +79,33 @@ ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 - **Mission :** modéliser l'architecture (Event Modeling, DDD) et tracer les décisions en ADR.
 - **Reçoit :** la story INVEST.
 - **Passe le relais :** un ADR + un modèle d'événements + des contrats.
-- **Contrôlé par :** `solution-architect-reviewer` (gates G1–G16).
+- **Contrôlé par :** la revue DESIGN — lentilles `consistency`, `architecture-compliance` et `fitness` (gates G1–G16), verdict calculé par le moteur.
 
 ### 5. `acceptance-designer` — le spécificateur (DISTILL)
 
 - **Mission :** traduire l'architecture en scénarios Gherkin exécutables.
 - **Reçoit :** l'ADR et le modèle d'événements.
 - **Passe le relais :** des `.feature` + un plan d'implémentation.
-- **Contrôlé par :** `acceptance-designer-reviewer` (gates G1–G8).
+- **Contrôlé par :** la revue DISTILL — lentilles `coverage`, `business-alignment`, `testability` et `boundary-enforcement`, verdict calculé par le moteur.
 
 ### 6. `software-engineer` — l'artisan (DELIVER)
 
 - **Mission :** implémenter le code en Outside-In TDD, prouvé par le score de mutation.
 - **Reçoit :** les scénarios Gherkin.
 - **Passe le relais :** du code testé + l'évidence qualité, vers la Pull Request.
-- **Contrôlé par :** `software-engineer-reviewer` (gates de livraison).
-- **Délègue en interne :** le câblage des tests à deux sous-agents (`user-invocable: false`) — `mock-integration-worker` (mocking du dépendant) et `contract-testing-worker` (test de contrat fournisseur). Le software-engineer garde le cycle TDD métier et vérifie chaque worker en TIER-1 (RED → GREEN). Quand une capacité est active, sa lentille de fidélité (`mock-fidelity-lens` / `contract-fidelity-lens`) rejoint le panel du reviewer.
+- **Contrôlé par :** les quality gates que lance le moteur, puis la revue DELIVER — lentilles `test-integrity`, `architecture-boundaries` et `cold-reader`, verdict calculé par le moteur.
+- **Délègue en interne :** le câblage des tests à deux sous-agents (`user-invocable: false`) — `mock-integration-worker` (mocking du dépendant) et `contract-testing-worker` (test de contrat fournisseur). Le software-engineer garde le cycle TDD métier et vérifie chaque worker en TIER-1 (RED → GREEN). Quand une capacité est active, sa lentille de fidélité (`mock-fidelity-lens` / `contract-fidelity-lens`) rejoint la revue DELIVER.
 
-## Pourquoi cinq reviewers pour six exécuteurs
+## Pourquoi cinq revues pour six exécuteurs
 
 > « Peer reviews are the single most effective quality practice a software organization can employ. »
 > — Wiegers, K., *Peer Reviews in Software*, 2002.
 
-DISCOVER, DISCUSS, DESIGN, DISTILL et DELIVER ont chacun un reviewer dédié qui ne
-modifie jamais le travail jugé. RESEARCH fait exception : aucun reviewer de phase
-n'est déclaré, donc l'orchestrateur clôt cette phase après vérification de son
-contrat. Personne ne valide son propre artefact dans les cinq boucles avec revue.
+DISCOVER, DISCUSS, DESIGN, DISTILL et DELIVER ont chacun leur propre revue : des
+lentilles qui ne modifient jamais le travail jugé, chacune dans un contexte neuf, et
+un verdict calculé sur leurs findings. RESEARCH fait exception : il n'a pas de revue,
+son contrat de sortie est vérifié avant de fermer la phase. Personne ne valide son
+propre artefact dans les cinq boucles avec revue.
 
 ## Pour aller plus loin
 

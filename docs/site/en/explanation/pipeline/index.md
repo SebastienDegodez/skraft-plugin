@@ -87,7 +87,7 @@ Implement code via Outside-In TDD with Mutation Score as a quality gate.
 ---
 
 The orchestrator coordinates RESEARCH → DESIGN → DISTILL → DELIVER. It verifies
-pre-conditions, invokes declared reviewers, and applies their verdicts.
+pre-conditions and routes the work; the engine runs each review's lenses and computes the verdict.
 When routing concludes that a dedicated investigation would add no value,
 RESEARCH may be skipped. Every phase that runs remains subject to its contract
 and expected evidence.

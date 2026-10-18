@@ -9,7 +9,7 @@ Reviewer agents use this procedure to produce an independent, defensible verdict
 
 ## When to use
 
-Every SKRAFT phase reviewer (`solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`) invokes this skill once per review pass, after reading the upstream phase artifact(s) and the relevant `*-review-criteria` skill.
+A reviewer that judges a phase artifact in one context invokes this skill once per review pass, after reading the upstream phase artifact(s) and the relevant `*-review-criteria` skill. In the SKRAFT pipeline the engine runs each review node's lenses instead and computes the verdict.
 
 ## Questions and lenses are not the same thing
 

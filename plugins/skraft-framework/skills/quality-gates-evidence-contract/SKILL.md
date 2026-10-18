@@ -1,6 +1,6 @@
 ---
 name: quality-gates-evidence-contract
-description: Use when producing or verifying the structured evidence log that attests quality gates (tests, build, mutation, commits, RED/GREEN integrity). Tech-agnostic schema. Loaded by software-engineer (writer) at COMMIT phase and by quality-gates-lens (reader) during review.
+description: Use when producing or verifying the structured evidence log that attests quality gates (tests, build, mutation, commits, RED/GREEN integrity). Tech-agnostic schema. Loaded by software-engineer (writer) at COMMIT phase and by whoever verifies the log.
 ---
 
 # Quality Gates Evidence Contract

@@ -34,7 +34,7 @@ graph LR
     CTW -->|Layer 2 si opt-in| MC[(Microcks TestEndpointAsync)]
     BL -.si actif.-> CFL[contract-fidelity-lens]
     MC -.si actif.-> CFL
-    CFL -->|verdict| SER[software-engineer-reviewer]
+    CFL -->|findings| DR[revue DELIVER<br/>verdict calculé par le moteur]
 
     style SE fill:#2d5a3d,stroke:#4ed58a,stroke-width:2px
     style CTW fill:#243a2e,stroke:#4ed58a
@@ -60,8 +60,8 @@ en **TIER-1**.
 ## Comment la lentille de fidélité l'audite
 
 Quand le diff relu touche un contrat, un appel `VerifyAsync`/`TestEndpointAsync`, ou un
-scaffold côté fournisseur, la `contract-fidelity-lens` rejoint le panel adverse du
-`software-engineer-reviewer` (conditionnelle, pas l'une des quatre lentilles CORE).
+scaffold côté fournisseur, la `contract-fidelity-lens` rejoint les lentilles de la revue
+DELIVER (conditionnelle, pas l'une des trois lentilles CORE).
 
 | Gate | Ce qu'elle vérifie | Sévérité |
 | --- | --- | --- |

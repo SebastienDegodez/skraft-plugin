@@ -21,21 +21,21 @@ ressenti vague.
 
 ## Comment lire ce catalogue
 
-Chaque phase possède sa propre grille de gates, vérifiée par un **reviewer
-indépendant** organisé en *lentilles* (chaque lentille regroupe les gates qui
+Chaque phase possède sa propre grille de gates, vérifiée par des **lentilles
+indépendantes**, chacune dans un contexte neuf (chaque lentille regroupe les gates qui
 défendent une même qualité). Pour chaque gate : son identifiant `Gxx`, ce qu'elle
 vérifie et sa **condition de passage** (binaire).
 
 Les quatre phases de revue d'artefact — DISCOVER, DISCUSS, DESIGN, DISTILL — portent en
-plus une **sévérité**, qui dit comment une gate échouée retombe dans le verdict du
-reviewer :
+plus une **sévérité**, qui dit comment une gate échouée retombe dans le verdict — calculé
+par `review-verdict.mjs` sur DISCOVER et DISCUSS, par le moteur sur DESIGN et DISTILL :
 
-| Sévérité | Signification | Effet sur le verdict |
-| --- | --- | --- |
-| **BLOCKER** | Violation fondamentale qui invalide l'artefact. | Force `rejected` — la phase ne passe pas. |
-| **HIGH** | Défaut significatif, source de rework en aval. | Force `changes_requested`. |
-| **MEDIUM** | Design smell, choix sous-optimal. | Force `changes_requested`. |
-| **LOW** | Détail de style ou de cohérence. | `approved` avec note. |
+| Sévérité | Signification | Effet sur le verdict (DISCOVER, DISCUSS) | Effet sur le verdict (DESIGN, DISTILL) |
+| --- | --- | --- | --- |
+| **BLOCKER** | Violation fondamentale qui invalide l'artefact. | Force `rejected` — la phase ne passe pas. | `NEEDS_REWORK` une fois confirmé par le refuter. |
+| **HIGH** | Défaut significatif, source de rework en aval. | Force `changes_requested`. | `NEEDS_REWORK` une fois confirmé par le refuter. |
+| **MEDIUM** | Design smell, choix sous-optimal. | Force `changes_requested`. | `NEEDS_REWORK` une fois confirmé par le refuter. |
+| **LOW** | Détail de style ou de cohérence. | `approved` avec note. | `APPROVED` avec note. |
 
 DELIVER ne porte pas cette échelle : **chaque gate qualité bloque**. Il n'y a pas de
 niveau advisory, pas de niveau warning, pas d'override, et aucune justification n'achète
@@ -43,7 +43,7 @@ d'exemption — le skill `skraft-quality-bar` détient le niveau d'application d
 gate et la valeur de chaque seuil, et rien en aval ne les redéfinit.
 
 Total : **49 gates** réparties sur les workflows produit et les phases d'ingénierie. Tout ce qui suit est la grille
-intégrale, telle que chaque reviewer l'applique.
+intégrale, telle que chaque revue l'applique.
 
 ---
 
@@ -112,8 +112,8 @@ script `review-verdict.mjs` calcule le verdict. Vérifie les stories, les critè
 
 ## DESIGN — G1 à G16
 
-Reviewer : `solution-architect-reviewer`. 3 lentilles + 1 gate transverse
-d'escalade. Vérifie les ADR, le registre de supersession, les diagrammes, les
+Revue : 3 lentilles (`consistency`, `architecture-compliance`, `fitness`), verdict
+calculé par le moteur, + 1 gate transverse d'escalade. Vérifie les ADR, le registre de supersession, les diagrammes, les
 contrats, les matrices de cohérence et le scan structurel.
 
 Timing de ratification : la revue DESIGN a lieu avant la ratification humaine des ADR.
@@ -157,14 +157,15 @@ courant.
 | --- | --- | --- | --- |
 | **G13** | Chaque blocker `decision-drift-*` a un fichier `-resolution.md` frère contenant la réponse humaine. Un blocker ouvert signifie qu'un humain doit trancher. | Un fichier de résolution pour chaque blocker. | BLOCKER (court-circuit) |
 
-> Si G13 échoue, le reviewer renvoie `REJECTED` immédiatement **sans** évaluer les
+> Si G13 échoue, le moteur arrête le run avant la revue, **sans** évaluer les
 > autres gates : la prochaine action est l'escalade humaine, pas un nouvel essai.
 
 ---
 
 ## DISTILL — G1 à G8
 
-Reviewer : `acceptance-designer-reviewer`. 4 lentilles. Vérifie les scénarios
+Revue : 4 lentilles (`coverage`, `business-alignment`, `testability`,
+`boundary-enforcement`), verdict calculé par le moteur. Vérifie les scénarios
 Gherkin, le plan de test et le plan d'implémentation.
 
 ### Lentille 1 — Couverture
@@ -205,9 +206,10 @@ Gherkin, le plan de test et le plan d'implémentation.
 
 ## DELIVER — G1 à G11
 
-Producteur : `software-engineer` ; vérificateur : `quality-gates-lens`. Chaque gate
-est attestée par une **évidence falsifiable** (SHA git, sortie d'outil déposée sur
-disque) que le reviewer re-résout sans jamais rejouer le build.
+Producteur : `software-engineer` ; vérificateur : le moteur, qui lance le nœud `gates`
+avant la revue DELIVER. Chaque gate est attestée par une **évidence falsifiable** (SHA
+git, sortie d'outil déposée sur disque) que les lentilles de revue re-résolvent sans
+jamais rejouer le build.
 
 **Toutes les gates ci-dessous bloquent**, sur chaque dépôt et chaque work item. Le
 framework portait autrefois un cadran de rigueur global au dépôt qui pouvait abaisser
@@ -266,17 +268,28 @@ ou recu de completion supplementaire.
 
 ## Logique de verdict
 
-Sur les quatre phases de revue d'artefact, le reviewer agrège les gates selon une règle
+Sur DISCOVER et DISCUSS, `review-verdict.mjs` agrège les gates selon une règle
 déterministe — pas de pondération floue :
 
 | Constat | Verdict |
 | --- | --- |
-| ≥ 1 gate **BLOCKER** échouée (ou G13 ouverte en DESIGN) | `rejected` |
+| ≥ 1 gate **BLOCKER** échouée | `rejected` |
 | ≥ 1 gate **HIGH**, aucune BLOCKER | `changes_requested` |
 | Gates **MEDIUM** seules | `changes_requested` |
 | Gates **LOW** seules, ou tout passe | `approved` |
 
-Sur DELIVER, la règle est plate, puisque chaque gate bloque :
+Sur DESIGN, DISTILL et DELIVER, le moteur calcule le verdict de la revue sur les findings
+des lentilles qui tiennent une fois vérifiés par `finding-refuter` — sans pondération
+floue non plus :
+
+| Constat | Verdict |
+| --- | --- |
+| Une lentille a répondu `inconclusive` | `BLOCKED` (`lens-inconclusive`) |
+| ≥ 1 finding **BLOCKER**, **HIGH** ou **MEDIUM** confirmé | `NEEDS_REWORK` |
+| Findings **LOW** seuls, ou aucun | `APPROVED` |
+
+Sur DELIVER, le nœud `gates` du moteur passe d'abord, et sa règle est plate, puisque
+chaque gate bloque :
 
 | Constat | Verdict |
 | --- | --- |

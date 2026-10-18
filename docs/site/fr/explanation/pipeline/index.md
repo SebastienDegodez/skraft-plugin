@@ -89,7 +89,7 @@ Implémenter le code via Outside-In TDD avec Mutation Score comme garde-fou qual
 ---
 
 L'orchestrateur coordonne RESEARCH → DESIGN → DISTILL → DELIVER. Il vérifie les
-pré-conditions, déclenche les reviewers déclarés et applique leurs verdicts.
+pré-conditions et route le travail ; le moteur fait tourner les lentilles de chaque revue et calcule le verdict.
 Lorsque le routage conclut qu'une investigation dédiée n'apporterait rien,
 RESEARCH peut être sauté. Les phases exécutées restent soumises à leurs contrats
 et à leurs preuves attendues.

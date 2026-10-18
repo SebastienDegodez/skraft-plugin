@@ -1,13 +1,13 @@
 ---
 name: acceptance-review-criteria
-description: Use when reviewing DISTILL artefacts (Gherkin scenarios, test plans, implementation plans) for quality, completeness, and alignment. Contains the gate definitions and scoring rubric for the acceptance-designer-reviewer lenses.
+description: Use when reviewing DISTILL artefacts (Gherkin scenarios, test plans, implementation plans) for quality, completeness, and alignment. Contains the gate definitions and scoring rubric for the DISTILL review lenses.
 ---
 
 # Acceptance Review Criteria
 
 ## Overview
 
-Formal gate definitions and verdict rubric for the `acceptance-designer-reviewer`. Applied across 4 lenses (coverage, business-alignment, testability, boundary-enforcement).
+Formal gate definitions and verdict rubric for the DISTILL review. Applied across 4 lenses (coverage, business-alignment, testability, boundary-enforcement) that the engine runs; it computes the verdict from their findings.
 
 ---
 

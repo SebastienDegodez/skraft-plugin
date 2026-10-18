@@ -20,11 +20,11 @@ La phase DELIVER implémente le code fonctionnel, guidé par les tests, avec une
 | **Ce qui sort** | Code testé + évidence qualité (mutation, RED→GREEN) ; rapport de résultat à la fin ou au blocage |
 | **Va vers** | La **Pull Request** — revue humaine puis livraison |
 | **Agent responsable** | `software-engineer` |
-| **Reviewer associé** | `software-engineer-reviewer` |
+| **Revue** | quality gates lancées par le moteur, puis lentilles `test-integrity`, `architecture-boundaries`, `cold-reader` ; verdict calculé par le moteur |
 
 ## Pourquoi cette phase existe
 
-Le code est le seul artefact qui compte en production. Le software-engineer applique l'Outside-In TDD : les Acceptance Test guident les tests unitaires, qui guident l'implémentation. Le Mutation Score vérifie que les tests protègent réellement le comportement. Le reviewer est read-only — il ne modifie jamais le code.
+Le code est le seul artefact qui compte en production. Le software-engineer applique l'Outside-In TDD : les Acceptance Test guident les tests unitaires, qui guident l'implémentation. Le Mutation Score vérifie que les tests protègent réellement le comportement. Les lentilles de revue sont read-only — elles ne modifient jamais le code.
 
 > « We grow working software, guided by tests, from the outside in. »
 > — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
@@ -41,7 +41,7 @@ Le scénario entre. DELIVER implémente le calcul du total et l'attribution des 
 - Tests d'acceptation passants liés aux scénarios Gherkin.
 - Tests unitaires couvrant les invariants du Domain.
 - Mutation Score comme preuve empirique de la qualité des tests.
-- Journal d'évidence des quality gates, journal de changements et données de résultat pour le reviewer.
+- Journal d'évidence des quality gates, journal de changements et données de résultat pour la revue.
 
 ## Handoff, RED et rework
 
@@ -57,19 +57,18 @@ mutation par cycle est différentielle depuis le dernier commit du cycle précé
 sautée quand aucun fichier de production cœur n'a changé. Seul le run final complet cœur
 puis frontière constitue l'évidence G6.
 
-Le reviewer prépare `diff-{story}.patch` et `files-{story}.txt` une seule fois, puis donne
-ces chemins aux lentilles. `quality-gates` reçoit aussi le plan de tests, `test-integrity`
-reçoit le plan de tests et le `.feature`, `architecture-boundaries` reçoit les contrats et
+Le moteur prépare le patch et la liste de fichiers de la story une seule fois, puis donne
+ces chemins aux lentilles. `test-integrity` reçoit aussi le plan de tests et le `.feature`, `architecture-boundaries` reçoit les contrats et
 l'index ADR, et `cold-reader` ne reçoit que le patch et la liste de fichiers.
 
 En rework, l'engineer ne change que ce que les findings de la revue précédente nomment. En
-re-review, le reviewer relance les lentilles ou gates qui ont échoué, étaient
+re-review, le moteur relance les lentilles ou gates qui ont échoué, étaient
 `inconclusive` ou dont les entrées ont changé, et reporte les autres résultats passants
 dans le YAML de verdict. Si le seul problème est une gate `inconclusive` causée par
-l'environnement, l'orchestrateur escalade la cause et la commande à l'utilisateur au lieu
+l'environnement, la cause et la commande sont escaladées à l'utilisateur au lieu
 d'envoyer l'engineer en rework. Une fois l'environnement réparé par l'utilisateur,
 l'engineer relance uniquement ces gates `inconclusive`, sans modifier le code ni consommer
-de retry, puis le reviewer refait sa revue.
+de retry, puis le moteur relance la revue.
 
 ## Des preuves au rapport de résultat
 
@@ -77,8 +76,8 @@ de retry, puis le reviewer refait sa revue.
 prévisionnel DISTILL en comparaison avec l'impact constaté à la fin ou au blocage.
 Le [software engineer]({{ "/fr/dashboard/#agent-software-engineer" | relative_url }})
 possède les preuves, le journal des changements et les références d'impact.
-L'[engineer reviewer]({{ "/fr/dashboard/#agent-software-engineer-reviewer" | relative_url }})
-et ses lentilles existantes valident ces artefacts et possèdent le verdict canonique.
+Les lentilles de la revue DELIVER valident ces artefacts et le moteur calcule le
+verdict canonique.
 L'orchestrateur coordonne le rendu et la publication, pas la capture des preuves ni
 la synthèse de revue. Aucun agent de reporting ni panel supplémentaire n'est ajouté.
 
@@ -97,10 +96,10 @@ revue, commits/fichiers et limites consignés dans du Markdown. Une preuve absen
 périmée reste non vérifiée ; les mesures ne sont pas inventées. Un résultat bloqué
 précise le travail incomplet. Les contrôles locaux des preuves et le verdict de revue
 persisté restent distincts : le rendu actuel laisse la vérification des objets Git
-G8/G9 au reviewer. Livré ne signifie pas déployé.
+G8/G9 à la revue. Livré ne signifie pas déployé.
 
 Pour le frontend, les producteurs existants capturent les preuves Playwright et les
-reviewers les vérifient. Seules les preuves déjà accessibles à distance reçoivent un
+lentilles de revue les vérifient. Seules les preuves déjà accessibles à distance reçoivent un
 lien, avec leurs limites d'accès ; les preuves locales sont explicitement indisponibles
 à distance, jamais présentées comme des pièces jointes publiées. Le plafond de médias choisi
 au démarrage peut être nul et n'a pas de valeur par défaut imposée. Il limite les liens
@@ -158,14 +157,14 @@ ce wiring à des sous-agents internes (`user-invocable: false`), un par capacit�
 
 Chaque worker n'émet que du câblage de test — le cycle TDD métier reste chez le lead,
 qui vérifie le worker en **TIER-1** (le test échoue d'abord, puis passe). Quand une
-capacité est active, sa lentille de fidélité rejoint le panel adverse du
-`software-engineer-reviewer`. Le câblage concret est résolu par stack via un *roster*
+capacité est active, sa lentille de fidélité rejoint les lentilles de la
+revue DELIVER. Le câblage concret est résolu par stack via un *roster*
 (voir le [catalogue agentique]({{ "/fr/dashboard/" | relative_url }})).
 
 ## Les gates franchies ici
 
 Cette phase franchit les gates de livraison — tests RED/GREEN intègres, build vert,
 score de mutation au seuil (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
-Le reviewer indépendant émet son verdict avant que la livraison soit déclarée approuvée.
+Le moteur calcule le verdict de la revue sur les findings de ses lentilles avant que la livraison soit déclarée approuvée.
 Une **draft PR** peut déjà contenir le rapport prévisionnel après création et push
 autorisés séparément ; son ouverture ne signifie pas que les gates de livraison sont franchies.

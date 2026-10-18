@@ -2,7 +2,7 @@
 
 ## Overview
 
-The verdict rubric governs how the `solution-architect-reviewer` agent derives a final verdict from the findings of three independent lenses (consistency, architecture-compliance, fitness). This rubric is the single source of truth for verdict calculation.
+The verdict rubric governs how the DESIGN review's final verdict follows from the findings of three independent lenses (consistency, architecture-compliance, fitness). This rubric is the single source of truth for verdict calculation.
 
 ---
 

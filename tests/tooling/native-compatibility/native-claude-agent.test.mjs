@@ -42,9 +42,9 @@ test('Markdown destination translation preserves titles, references, code and no
     assert.throws(() => translateAgentLinks(`[bad](${destination})`, { source: `${native}/lens.md`, target: `${copilot}/lens.agent.md`, side: 'copilot', aliases: agentAliases(['lens']), exists: () => false }), /escape|Unresolved/)
   }
 })
-test('actual native tree retains 28 IDs, bounded tools, native models and four public flags', () => {
+test('actual native tree retains 24 IDs, bounded tools, native models and four public flags', () => {
   const files = readdirSync(join(defaultPluginRoot, native)).sort()
-  assert.equal(files.length, 28)
+  assert.equal(files.length, 24)
   const models = {}, publicIds = []
   for (const file of files) {
     assert.match(file, /^[\w-]+\.md$/)
@@ -56,6 +56,6 @@ test('actual native tree retains 28 IDs, bounded tools, native models and four p
     assert.equal(data.tools.includes('mcp__*'), false)
     if (file.endsWith('-lens.md') || file === 'finding-refuter.md') assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob'])
   }
-  assert.deepEqual(models, { haiku: 16, sonnet: 10, opus: 1, inherit: 1 })
+  assert.deepEqual(models, { haiku: 13, sonnet: 9, opus: 1, inherit: 1 })
   assert.deepEqual(publicIds, ['brownfield-analyst', 'brownfield-harness-builder', 'brownfield-refactorer', 'skraft-orchestrator'])
 })
