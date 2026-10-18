@@ -157,6 +157,7 @@ test('/skraft <slug> --from-artifacts starts in DESIGN from the stories the mod 
   assert.deepEqual(events.slice(0, 2).map(({ type, phase, skipped }) => [type, phase ?? null, skipped ?? null]), [['run.started', null, null], ['phase.closed', 'RESEARCH', 'from-artifacts']])
   assert.deepEqual(events[0].artifacts, ['plans/2026-10-01/stories-v1.md'])
   assert.deepEqual(spawns.map((spawn) => spawn.subagentType), ['skraft:solution-architect'])
-  assert.deepEqual(briefOf(spawns[0].prompt).inputs.map((path) => path.replace(/\\/g, '/')), [stories.replace(/\\/g, '/')])
+  const scan = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'details', new Date().toISOString().slice(0, 10), 'structural-scan.json')
+  assert.deepEqual(briefOf(spawns[0].prompt).inputs.map((path) => path.replace(/\\/g, '/')), [stories, scan].map((path) => path.replace(/\\/g, '/')))
   assert.equal(outcome.reason, 'solution-architect is blocked: stop after reading the stories')
 })

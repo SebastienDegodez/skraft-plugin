@@ -148,7 +148,8 @@ a new run of the same slug finds blocked too; `reason` names each such lens and 
 the phase agent lists) and `cost` (its lenses, checks and batches of this pass, resumed or not). An agent sent back by the
 gates or by a review has `sentBy` (`gate` or `review`) on its `step.started`.
 An agent's `step.recorded` lists in `documents` the files of the tracking folder its attempt
-created or changed (the engine's own files left out); a review gives each lens these documents
+created or changed (the engine's own files left out), and for the solution architect the
+`details/<date>/structural-scan.json` the engine wrote before the attempt; a review gives each lens these documents
 by phase, and writes `reviews/<node>-<visit>/context.md`: the story, the project rule files
 found (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`,
 `docs/adr/decisions-index.md`) and which agent wrote which document.

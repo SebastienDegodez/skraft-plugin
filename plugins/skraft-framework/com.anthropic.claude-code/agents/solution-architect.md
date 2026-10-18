@@ -278,7 +278,7 @@ Load `architecture-decisions` for the ADR template and lifecycle rules only afte
 
 #### Step 7.0 — DETECT EXISTING STRUCTURAL COMMITMENTS (deterministic tool bridge)
 
-Before listing the ADRs to write, read the structural scan the handoff block lists (`details/{date}/structural-scan.json`). `structural-scan.mjs` applies the grep signatures below to the tracked source files, so never grep them again yourself. For each commitment with `detected: true`, check `docs/adr/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory). Use `search/codebase` only for the scan's `manualReview` commitments, which no signature detects. When the handoff block lists no scan, grep the signatures below yourself and state it in the consistency matrix.
+Before listing the ADRs to write, read the structural scan the handoff block lists (`details/{date}/structural-scan.json`). The engine writes it before each of your attempts: it applies the grep signatures below to the source files Git lists in each component, comments and string literals left out, so never grep them again yourself. For each commitment with `detected: true`, check `docs/adr/` for an existing Accepted ADR covering it. If none exists, the commitment becomes a mandatory ADR for this pass (back-fill the institutional memory). Use `search/codebase` only for the scan's `manualReview` commitments, which no signature detects. When the handoff block lists no scan (Git could not list the files), grep the signatures below yourself and state it in the consistency matrix.
 
 Detection signatures (disjoint — each pattern is identified by its dispatch / structural marker, not by interfaces that may belong to the baseline):
 

@@ -177,6 +177,13 @@ export class InMemorySourceControl {
   }
   async unavailable() { return this.missing }
   async repository(dir) { return this.folders[tidy(dir) || '.']?.top ?? null }
+  /** The files the repository holds under dir, committed or left uncommitted, relative to dir. */
+  async files(dir) {
+    const at = this.locate(dir)
+    if (at === null || at.repo.tracked === null) return null
+    const all = [...at.repo.tracked, ...at.repo.history.flatMap((commit) => commit.files), ...at.repo.dirty]
+    return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
+  }
   async mergeBase(dir, ref) { return this.folders[tidy(dir) || '.']?.mergeBases?.[ref] ?? null }
   async changedFiles(dir, sha) {
     this.diffs.push({ dir, sha })
@@ -199,15 +206,16 @@ const inside = (path, folder) => (folder === '' ? path : path.slice(folder.lengt
  */
 export class InMemoryGit {
   /**
-   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string> }>, unavailable?: string | null }} [options]
-   *   every repository starts with one commit, `<top>-0`, which its merge bases usually name
+   * @param {{ repositories?: Record<string, { mergeBases?: Record<string, string>, tracked?: string[] | null }>, unavailable?: string | null }} [options]
+   *   every repository starts with one commit, `<top>-0`, which its merge bases usually name;
+   *   tracked: the files it already holds, relative to its top; null when Git cannot list them
    */
   constructor({ repositories = { '.': { mergeBases: { main: 'root-0' } } }, unavailable = null } = {}) {
     this.missing = unavailable
-    /** @type {Map<string, { mergeBases: Record<string, string>, history: Array<{ sha: string, subject: string, files: string[] }>, dirty: Set<string> }>} */
-    this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {} }]) => {
+    /** @type {Map<string, { mergeBases: Record<string, string>, tracked: string[] | null, history: Array<{ sha: string, subject: string, files: string[] }>, dirty: Set<string> }>} */
+    this.repositories = new Map(Object.entries(repositories).map(([top, { mergeBases = {}, tracked = [] }]) => {
       const key = tidy(top)
-      return [key, { mergeBases, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', files: [] }], dirty: new Set() }]
+      return [key, { mergeBases, tracked, history: [{ sha: `${shaPrefix(key)}-0`, subject: 'initial', files: [] }], dirty: new Set() }]
     }))
   }
   /** The repository holding a working-copy path, and the path inside it. */
@@ -249,6 +257,13 @@ export class InMemoryGit {
   async repository(dir) {
     const at = this.locate(dir)
     return at === null ? null : at.top === '' ? '.' : at.top
+  }
+  /** The files the repository holds under dir, committed or left uncommitted, relative to dir. */
+  async files(dir) {
+    const at = this.locate(dir)
+    if (at === null || at.repo.tracked === null) return null
+    const all = [...at.repo.tracked, ...at.repo.history.flatMap((commit) => commit.files), ...at.repo.dirty]
+    return [...new Set(all)].filter((file) => under(file, at.inner)).map((file) => inside(file, at.inner))
   }
   async mergeBase(dir, ref) { return this.locate(dir)?.repo.mergeBases[ref] ?? null }
   async head(dir) { return this.locate(dir)?.repo.history.at(-1).sha ?? null }

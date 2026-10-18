@@ -49,15 +49,17 @@ Le solution architect reçoit le document de recherche comme entrée obligatoire
 rapport `details/{date}/structural-scan.json` comme contexte. La phase 3 est **REUSE
 VERIFICATION** : elle classe les agrégats, contextes, cas d'usage et patterns existants à
 partir de ces deux sources d'abord, puis ne cherche dans le code que les questions qu'elles
-laissent ouvertes. Le scan est lancé une seule fois par l'orchestrateur avant le premier
-dispatch DESIGN ; il détecte les signatures bus CQRS, Event Sourcing et Saga, tandis que
-l'ACL inter-contexte reste un point de revue manuelle.
+laissent ouvertes. Le moteur écrit le scan avant chaque tentative de l'architecte, à partir
+des fichiers sources que Git liste dans chaque composant, commentaires et chaînes de
+caractères exclus ; il détecte les signatures bus CQRS, Event Sourcing et Saga, tandis que
+l'ACL inter-contexte reste un point de revue manuelle. Un engagement détecté sans ADR
+devient une ADR de rattrapage du passage.
 
 Le reviewer intervient avant la ratification humaine des ADR. Les gates qui exigent un
 ADR `Accepted` acceptent un ADR `Proposed` du passage en revue ; les gates qui interdisent
 un ADR `Accepted` interdisent aussi un `Proposed` de ce passage. Le reviewer lit d'abord
 `docs/adr/decisions-index.md`, n'ouvre que les corps d'ADR nécessaires au passage revu,
-et relance le scan structurel pour G1. Les contrats d'interface passent G4 quand ils vivent
+et juge G1 et G14 sur le même rapport de scan que l'architecte. Les contrats d'interface passent G4 quand ils vivent
 dans Domain ou Application, selon la couche enregistrée par l'ADR, jamais dans Infrastructure.
 
 ## Les gates franchies ici

@@ -48,15 +48,17 @@ The ordering story enters. DESIGN produces an **ADR** “delegate payment to an 
 The solution architect receives the research document as a required input and the
 `details/{date}/structural-scan.json` report as context. Phase 3 is **REUSE
 VERIFICATION**: it classifies existing aggregates, contexts, use cases and patterns from
-those two sources first, and searches code only for questions they leave open. The scan
-is run once by the orchestrator before the first DESIGN dispatch; it detects CQRS bus,
-Event Sourcing and Saga signatures, while cross-context ACL stays a manual review point.
+those two sources first, and searches code only for questions they leave open. The engine
+writes the scan before each attempt of the architect, from the source files Git lists in
+each component, comments and string literals left out; it detects CQRS bus, Event Sourcing
+and Saga signatures, while cross-context ACL stays a manual review point. A commitment the
+scan detects with no ADR yet becomes a back-fill ADR of the pass.
 
 The reviewer runs before human ADR ratification. Gates that require an `Accepted` ADR
 accept a current-pass `Proposed` ADR; gates that forbid an `Accepted` ADR also forbid a
 current-pass `Proposed` one. The reviewer reads `docs/adr/decisions-index.md` first,
-opens only ADR bodies needed for the pass under review, and re-runs the structural scan
-for G1. Interface contracts pass G4 when they live in Domain or Application, matching the
+opens only ADR bodies needed for the pass under review, and judges G1 and G14 on the same
+scan report as the architect. Interface contracts pass G4 when they live in Domain or Application, matching the
 layer the ADR records, never in Infrastructure.
 
 ## Gates crossed here

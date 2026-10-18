@@ -127,8 +127,9 @@ test('skraft init <slug> --from-artifacts skips RESEARCH, and the run then start
   const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot })
 
   assert.deepEqual(calls.map(({ agent, label }) => `${agent} | ${label}`), [`skraft:solution-architect | skraft ${SLUG} · design · attempt 1`])
-  assert.ok(calls[0].prompt.includes(`- Read first:\n- ${stories}\n`), calls[0].prompt)
-  assert.deepEqual(briefOf(calls[0].prompt).inputs, [stories])
+  const scan = tracking(cwd, SLUG, 'details', new Date().toISOString().slice(0, 10), 'structural-scan.json')
+  assert.ok(calls[0].prompt.includes(`- Read first:\n- ${stories}\n- ${scan}\n`), calls[0].prompt)
+  assert.deepEqual(briefOf(calls[0].prompt).inputs, [stories, scan])
   assert.ok(calls[0].prompt.includes('- Story: #42'))
   assert.equal(outcome.reason, 'solution-architect is blocked: stop after reading the stories')
 })

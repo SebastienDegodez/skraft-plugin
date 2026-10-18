@@ -75,7 +75,7 @@ Load all DESIGN artefacts (READ-ONLY — the reviewer never writes outside `revi
 4. Load all `contracts-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
 5. Load all `consistency-matrix-{story}.md` files from `.copilot-tracking/skraft-plans/{projectSlug}/details/{date}/`
 6. Load context: `plans/{date}/stories-{milestone}.md`, `details/{date}/event-model-{story}.md`, `details/{date}/context-map.md`, any `details/{date}/supersession-plan-{story}.md`, any `blockers/{date}/decision-drift-*.md`
-7. Read the structural scan the handoff block lists (`details/{date}/structural-scan.json`).
+7. Read the structural scan the engine wrote for the architect (`details/{date}/structural-scan.json`).
 
 **Re-review (handoff mode `re-review`).** Read the previous review the handoff block names first. Re-evaluate every gate that had a finding and every gate whose inputs the rework changed (compare the artefacts under review with the previous review's `artefact` citations). Carry forward every other gate's pass unchanged and list those gates under `carried_forward` in the verdict YAML. G13 is always re-evaluated.
 
@@ -118,7 +118,7 @@ Evaluate gates:
 | G12 | For every row in `supersession-plan-{story}.md`: (a) the new ADR exists with `**Supersedes:** ADR-{MMM}` in its body, (b) `docs/adr/supersessions.md` carries the matching registry row, (c) no descriptive artefact (event-model, diagrams, contracts) still cites the superseded ADR as its source of truth. | BLOCKER |
 | G14 | No `Accepted` ADR, and no `Proposed` ADR of this pass, ratifies the **absence** or **rejection** of a pattern that was never adopted. Forbidden artefacts: filename matching `adr-NNN-{pattern}-rejected.md`; Decision section reading `We will not use {pattern}` / `We reject {pattern}` when the pattern is not present in the codebase. Rejected alternatives belong in an `Alternatives Rejected` table of an adoption ADR, not as standalone ADRs. | BLOCKER |
 
-**How to check G1:** Two passes. (a) For each aggregate, bounded context, pattern (CQRS+Bus, Event Sourcing, Saga, ACL) visible in diagrams — confirm an `Accepted` ADR, or a `Proposed` ADR of this pass, justifies its inclusion. (b) Run `node "$SKRAFT_PLUGIN_ROOT/src/cli/structural-scan.mjs"` (it prints the JSON report; never grep the signatures by hand) and compare its `detected` commitments with the scan the architect read. Every detected commitment must trace to an `Accepted` ADR or a `Proposed` ADR of this pass — adopted here or back-filled. A detected commitment with no matching ADR is a G1 BLOCKER (the persona missed Step 7.0).
+**How to check G1:** Two passes. (a) For each aggregate, bounded context, pattern (CQRS+Bus, Event Sourcing, Saga, ACL) visible in diagrams — confirm an `Accepted` ADR, or a `Proposed` ADR of this pass, justifies its inclusion. (b) Read the `detected` commitments of the structural scan the engine wrote for the architect (`details/{date}/structural-scan.json`); never grep the signatures by hand. Every detected commitment must trace to an `Accepted` ADR or a `Proposed` ADR of this pass — adopted here or back-filled. A detected commitment with no matching ADR is a G1 BLOCKER (the persona missed Step 7.0).
 
 **How to check G2:** Cross-read all ADRs. Look for conflicting decisions on the same scope. For every `**Supersedes:**` body line in any ADR, confirm `docs/adr/supersessions.md` carries the matching row (and vice-versa). Either direction missing = G2 BLOCKER.
 

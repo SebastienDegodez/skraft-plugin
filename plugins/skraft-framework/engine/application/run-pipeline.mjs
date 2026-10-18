@@ -4,6 +4,7 @@ import { DEFAULT_ATTEMPTS, nextStep, route } from '../domain/pipeline/next-step.
 import { composeBrief, dispatchLabel } from '../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath } from '../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../domain/pipeline/documents.mjs'
+import { SCAN_FILE } from '../domain/pipeline/structural-scan.mjs'
 import { allowedPaths, roleOf } from '../domain/pipeline/roles.mjs'
 import { REPLAY_SHARE } from '../domain/pipeline/commits.mjs'
 import { openActiveRun } from './active-run.mjs'
@@ -13,6 +14,7 @@ import { loadWorkflow } from './load-workflow.mjs'
 import { JournalConflict } from './run-journal.mjs'
 import { runReview } from './review-runs.mjs'
 import { checkStep, headsOf } from './step-checks.mjs'
+import { writeStructuralScan } from './structural-scan.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -211,9 +213,10 @@ const NO_EDGE = Object.freeze({
 /**
  * @typedef {{
  *   agent: string, role: ReturnType<typeof roleOf>, outputs: string[], result: string,
- *   precreated: (string | null)[],
+ *   precreated: (string | null)[], scan: string | null,
  * }} Job
- *   what an attempt of an agent node is asked to write, and the templates it starts from.
+ *   what an attempt of an agent node is asked to write, the templates it starts from, and the
+ *   structural scan the engine wrote for it to read.
  */
 
 /**
@@ -242,14 +245,15 @@ const passOf = (visit) => (visit > 1 ? `, pass ${visit}` : '')
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {Promise<Job>}
  */
-const prepareJob = async ({ deps, slug }, run, { node, visit, attempt }) => {
+const prepareJob = async ({ deps, slug, config }, run, { node, visit, attempt }) => {
   const agent = /** @type {string} */ (node.agent)
   const role = roleOf(node)
   const date = dayOf(deps.clock.now())
   const outputs = run.nodes[node.id]?.outputs ?? role.outputs.map((output) => outputPath(output.path, { date, slug }))
   const result = `results/${node.id}-${visit}-${attempt}.json`
   const precreated = await Promise.all(role.outputs.map((output) => (output.template ? deps.templates.read(output.template) : null)))
-  return { agent, role, outputs, result, precreated }
+  const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
+  return { agent, role, outputs, result, precreated, scan }
 }
 
 /**
@@ -280,12 +284,14 @@ const documentHashes = async ({ deps, slug }) => {
 }
 
 /**
- * The documents the attempt wrote in the tracking folder, against what it found there.
+ * The documents of the attempt: those it wrote in the tracking folder, against what it found
+ * there, and the structural scan the engine wrote for it.
  * @param {Context} context @param {Job} job
  */
-const documentsWritten = async (context, { result }) => {
+const documentsWritten = async (context, { result, scan }) => {
   const before = await context.deps.files.read(context.slug, snapshotOf(result))
-  return writtenDocuments(before === null ? {} : JSON.parse(before), await documentHashes(context))
+  const written = writtenDocuments(before === null ? {} : JSON.parse(before), await documentHashes(context))
+  return [...new Set([...written, ...(scan === null ? [] : [scan])])].sort()
 }
 
 /** Writes each output that has a template and does not exist yet. @param {Context} context @param {Job} job */
@@ -370,10 +376,10 @@ const acceptanceCommits = ({ journal, loaded }) => {
 const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd === 'red'
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
-const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result }) => {
+const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan }) => {
   const at = (/** @type {string} */ path) => deps.files.location(slug, path)
   return {
-    inputs: inputsOf(run, next.node.id).map(at),
+    inputs: [...inputsOf(run, next.node.id), ...(scan === null ? [] : [scan])].map(at),
     outputs: outputs.map(at),
     result: at(result),
     allowed: allowedPaths(role, { slug, components: config.components }),

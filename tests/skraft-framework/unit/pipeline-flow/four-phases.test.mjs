@@ -80,6 +80,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- Attempt: 1 of 3',
     '- Read first:',
     `- ${TRACKING}/${RESEARCH}`,
+    `- ${TRACKING}/details/2026-10-11/structural-scan.json`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${CONTEXT_MAP}`,
     `- Write your result as JSON to ${TRACKING}/results/design-1-1.json: ${RESULT_SHAPE}`,
@@ -161,7 +162,8 @@ test('outputs without a template are not pre-created', async () => {
 
   await host.start()
 
-  assert.deepEqual(seen, [[]])
+  // The context map has no template: only the structural scan the engine writes is there.
+  assert.deepEqual(seen, [['details/2026-10-11/structural-scan.json']])
 })
 
 test('a document left as its template, with a placeholder left, blank or deleted counts as missing', async () => {

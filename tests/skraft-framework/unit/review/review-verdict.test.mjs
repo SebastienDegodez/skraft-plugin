@@ -6,6 +6,7 @@ import { designating, edit } from '../workflow/support.mjs'
 
 const CONTEXT_MAP = 'details/2026-10-11/context-map.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
+const SCAN = 'details/2026-10-11/structural-scan.json'
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 const CHANGE_LOG = 'changes/2026-10-11/change-log.md'
@@ -73,6 +74,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
+    `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
@@ -87,6 +89,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
+    `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     '- Write no file, change nothing, start no agent.',
     ...answer('fitness'),
@@ -118,6 +121,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${MATRIX}`,
+    `  - Documents of the story and of the other phases: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${TEST_PLAN}`,
   ].join('\n')), prompt('test-integrity-lens', 'deliver_review'))
 })
@@ -153,6 +157,7 @@ test('when the phase changed nothing outside the tracking folder, the lenses are
   const compliance = host.agentRunner.batches[0].find((dispatch) => dispatch.agent === 'architecture-compliance-lens').prompt
   assert.ok(compliance.includes([
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
+    `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     '- Changes since the base of the run: none outside the tracking folder; judge the documents above.',
   ].join('\n')), compliance)
   assert.ok(!compliance.includes('changes.patch') && !compliance.includes('changed-files.txt'), compliance)
@@ -272,6 +277,7 @@ test('a refuted blocker or medium does not count; an unverifiable one does; the 
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
+    `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
@@ -386,6 +392,7 @@ test('findings of different lenses at the same line with the same severity are c
     `  - Review context (story, project rules, who wrote which document): ${TRACKING}/reviews/design_review-1/context.md`,
     `  - Documents of this phase: ${TRACKING}/${CONTEXT_MAP}`,
     `  - Documents of this phase: ${TRACKING}/${MATRIX}`,
+    `  - Documents of this phase: ${TRACKING}/${SCAN}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/design_review-1/changes.patch`,
     `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/design_review-1/changed-files.txt`,
