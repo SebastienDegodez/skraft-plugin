@@ -2,7 +2,7 @@
  * The lenses a review node runs and what each one reads. A lens `<name>` is the agent
  * `<name>-lens`; a lens skraft does not know (one a repository adds) reads everything a
  * review prepares. A node names a lens `<name>`, optionally followed by `@<family>` for the
- * model family it runs on (haiku when it names none). The refuter runs one family above the
+ * model family it runs on; a lens naming none runs on the node's `model`, else haiku. The refuter runs one family above the
  * strongest lens whose findings it checks.
  *
  * @typedef {'overview' | 'outputs' | 'context' | 'patch' | 'files' | 'components'} InputKind
@@ -81,23 +81,23 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
   'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS, trigger: CONTRACTS },
 })))
 
-/** A node's lens. @param {string} spec a valid lens spec @returns {Lens} */
-const lensOf = (spec) => {
+/** A node's lens. @param {string} spec a valid lens spec @param {Family | null} family the node's @returns {Lens} */
+const lensOf = (spec, family) => {
   const { name, model } = /** @type {LensSpec} */ (readLensSpec(spec))
   const known = KNOWN[name]
-  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, trigger: known?.trigger ?? null, model: model ?? FAMILIES[0] }
+  return { id: name, name, agent: lensAgent(name), inputs: known?.inputs ?? ALL, blind: known?.blind === true, trigger: known?.trigger ?? null, model: model ?? family ?? FAMILIES[0] }
 }
 
 /**
  * The lenses of a review node that run on these changes: every lens without a trigger, and
  * each one whose trigger matches a changed path or a line the patch adds or keeps.
- * @param {string[]} specs in the node's order
+ * @param {{ specs: string[], family: Family | null }} node its lenses in order, and the family of those naming none
  * @param {{ paths: string[], patch: string }} changes
  * @returns {Lens[]}
  */
-export const planLenses = (specs, { paths, patch }) => {
+export const planLenses = ({ specs, family }, { paths, patch }) => {
   const lines = keptLines(patch)
-  return specs.map(lensOf).filter(({ trigger }) => trigger === null || fires(trigger, paths, lines))
+  return specs.map((spec) => lensOf(spec, family)).filter(({ trigger }) => trigger === null || fires(trigger, paths, lines))
 }
 
 /** @param {Trigger} trigger @param {string[]} paths @param {string[]} lines */

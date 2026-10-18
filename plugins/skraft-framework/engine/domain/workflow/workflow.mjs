@@ -1,6 +1,6 @@
 import { isAbsolutePath } from '../config/skraft-config.mjs'
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
-import { readLensSpec } from '../review/lenses.mjs'
+import { FAMILIES, readLensSpec } from '../review/lenses.mjs'
 import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
 
 /**
@@ -11,11 +11,12 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  * @typedef {{
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
  *   lenses: string[], goal: boolean, locked: boolean, unlock: string | null, outputs: string[],
- *   writes: string[], maxAttempts: number | null,
+ *   writes: string[], maxAttempts: number | null, model: import('../review/lenses.mjs').Family | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
  *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`. outputs: relative to the tracking folder
- *   (`{date}`, `{slug}` filled at dispatch); writes: relative to the working copy.
+ *   (`{date}`, `{slug}` filled at dispatch); writes: relative to the working copy. model: the
+ *   family an agent node's agent runs on, or a review node's lenses that name none.
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: EdgeLabel | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
@@ -35,9 +36,9 @@ const COMMON = Object.freeze(['label', 'shape', 'phase'])
 const ATTRIBUTES = Object.freeze({
   start: { required: [], optional: [] },
   exit: { required: [], optional: [] },
-  agent: { required: ['agent'], optional: ['outputs', 'writes', 'max_attempts'] },
+  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts'] },
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
-  review: { required: ['lenses'], optional: [] },
+  review: { required: ['lenses'], optional: ['model'] },
 })
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
 const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK'])) })
@@ -73,6 +74,7 @@ const NODE_CHECKS = {
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
+  model: (value) => (FAMILIES.includes(/** @type {import('../review/lenses.mjs').Family} */ (value)) ? null : `must be a model family: ${FAMILIES.slice(0, -1).join(', ')} or ${FAMILIES.at(-1)}`),
 }
 
 /** @type {Record<string, (value: string) => string | null>} */
@@ -153,6 +155,7 @@ const nodeOf = (id, kind, attributes) => ({
   phase: attributes.phase ?? null,
   agent: attributes.agent ?? null,
   lenses: listOf(attributes.lenses ?? ''),
+  model: /** @type {import('../review/lenses.mjs').Family | undefined} */ (attributes.model) ?? null,
   ...gateSettingsOf(attributes),
   ...stepSettingsOf(attributes),
 })
@@ -461,6 +464,7 @@ const factsOf = (node) => [
   ['outputs', node.outputs.join(', ')],
   ['writes', node.writes.join(', ')],
   ['max_attempts', node.maxAttempts === null ? null : String(node.maxAttempts)],
+  ['model', node.model],
 ]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */

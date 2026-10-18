@@ -14,7 +14,7 @@ const PLUGIN_AGENTS = {
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
   'finding-refuter': 'plugin',
 }
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, ...fields })
 
 /** check() refused with these errors, in this order. */
 const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], reason: `${name} is invalid: ${errors.join('; ')}` })
@@ -35,12 +35,12 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
       start: 'start',
       nodes: {
         start: node('start', 'start'),
-        research: node('research', 'agent', { phase: 'RESEARCH', agent: 'solution-researcher' }),
-        design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect' }),
+        research: node('research', 'agent', { phase: 'RESEARCH', agent: 'solution-researcher', model: 'sonnet' }),
+        design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect', model: 'opus' }),
         design_review: node('design_review', 'review', { phase: 'DESIGN', lenses: LENSES.design_review }),
-        distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer' }),
+        distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer', model: 'sonnet' }),
         distill_review: node('distill_review', 'review', { phase: 'DISTILL', lenses: LENSES.distill_review }),
-        deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer' }),
+        deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer', model: 'sonnet' }),
         gates: node('gates', 'gate', { phase: 'DELIVER', gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'mutation'], goal: true, locked: true }),
         deliver_review: node('deliver_review', 'review', { phase: 'DELIVER', lenses: LENSES.deliver_review }),
         exit: node('exit', 'exit', { phase: 'DELIVER' }),
@@ -198,7 +198,7 @@ test('a workflow the DOT parser refuses is refused with the line at fault', asyn
 test('every faulty node attribute is reported with its node, in declaration order', async () => {
   const faulty = `digraph faulty {
   start   [shape=Mdiamond]
-  plan    [shape=box, agent="Solution Planner", phase="plan", max_attempts=0, outputs="/plan.md", writes="C:/src", locked=yes]
+  plan    [shape=box, agent="Solution Planner", phase="plan", max_attempts=0, outputs="/plan.md", writes="C:/src", model="gpt-5", locked=yes]
   draft   [shape=box, phase="DRAFT", outputs="notes/../draft.md"]
   "../../escape" [shape=component, lenses="consistency"]
   check   [shape=parallelogram, gate="build,smoke", goal_gate=yes, locked=maybe, unlock=" ", phase="CHECK", agent="checker"]
@@ -215,7 +215,8 @@ test('every faulty node attribute is reported with its node, in declaration orde
     'node plan: max_attempts="0" must be a positive integer',
     'node plan: outputs="/plan.md" must list paths relative to the tracking folder, without ..',
     'node plan: writes="C:/src" must list paths relative to the working copy',
-    'node plan: attribute locked is not supported on a box node (supported: label, shape, phase, agent, outputs, writes, max_attempts)',
+    'node plan: model="gpt-5" must be a model family: haiku, sonnet or opus',
+    'node plan: attribute locked is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts)',
     'node draft: outputs="notes/../draft.md" must list paths relative to the tracking folder, without ..',
     'node draft: a box node needs agent="…"',
     'node "../../escape": an id is a word of letters, digits, _ and -, since it names the node\'s files',

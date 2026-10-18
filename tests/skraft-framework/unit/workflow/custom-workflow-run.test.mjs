@@ -47,6 +47,27 @@ test('a repository agent between DESIGN and DISTILL is launched in its place, as
   ].join('\n'))
 })
 
+test('an agent node runs its agent on the model family the node names, and a review node gives its family to the lenses that name none', async () => {
+  const families = edit(BUILT_IN_WORKFLOW,
+    ['phase="RESEARCH", model="sonnet"]', 'phase="RESEARCH", model="haiku"]'],
+    ['design_review [shape=component, lenses="consistency,architecture-compliance,fitness"]', 'design_review [shape=component, lenses="consistency,architecture-compliance@opus,fitness", model="sonnet"]'])
+  const host = scripted(repositoryWorkflow(families), nominal)
+
+  assert.equal((await host.start()).status, 'done')
+
+  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id, model }) => `${id} ${model}`), [
+    'solution-researcher haiku', 'solution-architect opus', 'acceptance-designer sonnet', 'software-engineer sonnet',
+  ])
+  assert.deepEqual(host.agentRunner.batches[0].map(({ agent: id, model }) => `${id} ${model}`), ['consistency-lens sonnet', 'architecture-compliance-lens opus', 'fitness-lens sonnet'])
+  assert.deepEqual(host.agentRunner.batches[1].map(({ model }) => model), ['haiku', 'haiku', 'haiku', 'haiku'])
+
+  const unnamed = edit(BUILT_IN_WORKFLOW, ['design   [shape=box, agent="solution-architect", phase="DESIGN", model="opus"]', 'design   [shape=box, agent="solution-architect", phase="DESIGN"]'])
+  const own = scripted(repositoryWorkflow(unnamed), (it) => nominal(it).slice(0, 2))
+  own.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
+  await own.start()
+  assert.deepEqual(own.agentRunner.dispatches.map(({ agent: id, model }) => `${id} ${model}`), ['solution-researcher sonnet', 'solution-architect undefined', 'acceptance-designer sonnet'])
+})
+
 test('a repository agent leaving its outputs empty and writing outside its declared paths is refused for both, and stops at its own max_attempts', async () => {
   const host = scripted(withSecurity, (it) => {
     const [research, design] = nominal(it)

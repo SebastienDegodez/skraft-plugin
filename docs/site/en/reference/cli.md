@@ -287,7 +287,7 @@ deliver_review -> exit    [label="APPROVED"]
 | Rule | Detail |
 | --- | --- |
 | `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@haiku`, `@sonnet` or `@opus` (`cold-reader@sonnet`) |
-| Model | the driver starts each lens on the family its spec names, `haiku` when it names none, and `finding-refuter` one family above the strongest lens of the group it checks (`opus` at most); a phase agent runs on the model of its own file |
+| Model | the driver starts each lens on the family its spec names, else on the review node's `model=` (`haiku`, `sonnet` or `opus`), else `haiku`; `finding-refuter` runs one family above the strongest lens of the group it checks (`opus` at most). An agent node takes `model=` too (the plugin workflow: `sonnet`, `opus` for `solution-architect`); without it, the agent runs on the model of its own file |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
 | `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |

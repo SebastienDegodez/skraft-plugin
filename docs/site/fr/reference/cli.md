@@ -292,7 +292,7 @@ deliver_review -> exit    [label="APPROVED"]
 | Règle | Détail |
 | --- | --- |
 | `lenses` | obligatoire ; noms kebab-case séparés par des virgules, chacun une fois, chacun suivi au besoin de `@haiku`, `@sonnet` ou `@opus` (`cold-reader@sonnet`) |
-| Modèle | le pilote lance chaque lentille sur la famille que nomme sa déclaration, `haiku` sinon, et `finding-refuter` une famille au-dessus de la lentille la plus forte du groupe qu'il vérifie (`opus` au plus) ; un agent de phase tourne sur le modèle de son propre fichier |
+| Modèle | le pilote lance chaque lentille sur la famille que nomme sa déclaration, sinon sur le `model=` du nœud de revue (`haiku`, `sonnet` ou `opus`), sinon `haiku` ; `finding-refuter` tourne une famille au-dessus de la lentille la plus forte du groupe qu'il vérifie (`opus` au plus). Un nœud agent prend aussi `model=` (workflow du plugin : `sonnet`, `opus` pour `solution-architect`) ; sans lui, l'agent tourne sur le modèle de son propre fichier |
 | Agent d'une lentille | la lentille `<nom>` est l'agent `<nom>-lens`, cherché dans le plugin, puis dans `.claude/agents/` (Claude Code) ou `.github/agents/` (Copilot) ; `finding-refuter` doit aussi être trouvé, sinon le workflow est refusé |
 | Arête `APPROVED` | exactement une ; une arête sans étiquette compte comme `APPROVED` |
 | Arête `NEEDS_REWORK` | au plus une ; sans elle, un `NEEDS_REWORK` arrête le run avec `review-rejected` ; au-delà de son `max_visits`, avec `loop-ceiling` |

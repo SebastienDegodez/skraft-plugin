@@ -417,7 +417,7 @@ test('a lens runs on the model family its node names, haiku when it names none, 
     ['refute fitness F1', 'opus'],
   ])
   const phaseAgents = host.agentRunner.dispatches.map(({ model }) => model)
-  assert.deepEqual([...new Set(phaseAgents)], [undefined])
+  assert.deepEqual([...new Set(phaseAgents)], ['sonnet', 'opus'])
 })
 
 test('every attempt of a pass the review opened is told the review sent the work back', async () => {

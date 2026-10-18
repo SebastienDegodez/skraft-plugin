@@ -337,6 +337,7 @@ const agentCall = (context, run, next, job) => ({
   source: context.loaded.sources[job.agent],
   label: dispatchLabel({ slug: context.slug, step: next.node.id, visit: next.visit, attempt: next.attempt }),
   prompt: composeBrief(briefOf(context, run, next, job)),
+  ...(next.node.model === null ? {} : { model: next.node.model }),
 })
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */

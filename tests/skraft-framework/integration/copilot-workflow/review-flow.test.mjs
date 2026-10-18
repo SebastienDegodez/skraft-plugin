@@ -66,7 +66,7 @@ test('lenses that all pass approve each review, started together, and the run co
   assert.deepEqual(batchesSorted(calls.filter((call) => reviewNodeOf(call.label) !== null).map((call) => call.label)), batchesSorted([
     ...lensLabels('design_review'), ...lensLabels('distill_review'), ...lensLabels('deliver_review'),
   ]))
-  assert.deepEqual([...new Set(calls.map((call) => `${reviewNodeOf(call.label) === null ? 'phase agent' : 'lens'} ${call.model}`))].sort(), ['lens haiku', 'phase agent undefined'])
+  assert.deepEqual([...new Set(calls.map((call) => `${reviewNodeOf(call.label) === null ? 'phase agent' : 'lens'} ${call.model}`))].sort(), ['lens haiku', 'phase agent opus', 'phase agent sonnet'])
   assert.deepEqual(lensEvents(events, 'design_review').map(({ lens, agent, verdict, findings }) => [lens, agent, verdict, findings]).sort(), [
     ['architecture-compliance', 'architecture-compliance-lens', 'pass', []], ['consistency', 'consistency-lens', 'pass', []], ['fitness', 'fitness-lens', 'pass', []],
   ])

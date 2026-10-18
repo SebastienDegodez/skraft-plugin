@@ -31,11 +31,11 @@ test('diff lists the nodes and edges a repository workflow adds, drops and chang
 test('diff names every fact of a node or an edge that changed, and the nodes removed', async () => {
   const reshaped = edit(
     BUILT_IN_WORKFLOW,
-    ['  research [shape=box, agent="solution-researcher", phase="RESEARCH"]\n', ''],
+    ['  research [shape=box, agent="solution-researcher", phase="RESEARCH", model="sonnet"]\n', ''],
     ['start -> research -> design', 'start -> design'],
     ['phase="DESIGN"', 'phase="ARCHITECTURE"'],
-    ['distill  [shape=box, agent="acceptance-designer",', 'distill  [shape=parallelogram, gate="test",'],
-    ['agent="software-engineer", phase="DELIVER"', 'agent="software-engineer", phase="DELIVER", max_attempts=4, outputs="code.md, notes.md", writes="src/, tests/"'],
+    ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL", model="sonnet"]', 'distill  [shape=parallelogram, gate="test", phase="DISTILL"]'],
+    ['agent="software-engineer", phase="DELIVER", model="sonnet"', 'agent="software-engineer", phase="DELIVER", model="opus", max_attempts=4, outputs="code.md, notes.md", writes="src/, tests/"'],
     ['gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true', 'gate="build,test", goal_gate=false, locked=false, unlock="the CI runs the rest"'],
     ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="PASS", max_visits=3]'],
     ['gates -> deliver_review [label="PASS"]', 'gates -> deliver_review [label="FAIL"]'],
@@ -53,9 +53,11 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '~ node distill: kind agent → gate',
       '~ node distill: agent acceptance-designer → none',
       '~ node distill: gate none → test',
+      '~ node distill: model sonnet → none',
       '~ node deliver: outputs none → code.md, notes.md',
       '~ node deliver: writes none → src/, tests/',
       '~ node deliver: max_attempts none → 4',
+      '~ node deliver: model sonnet → opus',
       '~ node gates: gate build,format,lint,test,architecture,coverage,mutation → build,test',
       '~ node gates: goal_gate true → false',
       '~ node gates: locked true → false',
@@ -67,7 +69,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '~ edge gates -> deliver: label FAIL → PASS',
       '~ edge gates -> deliver_review: label PASS → FAIL',
     ],
-    reason: 'skraft-workflow.dot: 19 changes from the skraft 2.0.0 workflow',
+    reason: 'skraft-workflow.dot: 21 changes from the skraft 2.0.0 workflow',
   })
 })
 

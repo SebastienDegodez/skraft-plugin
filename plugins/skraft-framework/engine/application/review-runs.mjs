@@ -246,7 +246,7 @@ const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
  * @param {Review} review @param {Prepared} prepared
  * @returns {Promise<PlannedLens[]>}
  */
-const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.lenses, prepared).map(async (lens) => {
+const planLensInputs = async (review, prepared) => Promise.all(planLenses({ specs: review.step.node.lenses, family: review.step.node.model }, prepared).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
   const inputs = kinds.flatMap((kind) => prepared.inputs[kind].map((path) => ({ kind, path })))
   const skills = (await review.deps.agentCatalog.skills(lens.agent)).found
