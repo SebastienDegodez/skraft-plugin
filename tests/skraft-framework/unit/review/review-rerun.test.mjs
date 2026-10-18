@@ -439,7 +439,7 @@ test('every attempt of a pass the review opened is told the review sent the work
   distill.agentRunner.review = lenses({ coverage: [says('coverage', 'fail', [finding('F1', 'blocker', 'a criterion has no scenario')])] })
   assert.equal((await distill.start()).status, 'done')
   const failing = distill.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · distill · pass 2 · attempt 1`).prompt
-  assert.ok(failing.includes('- Commit the failing acceptance tests as `test(<story>): …`.') && !failing.includes('This pass answers the review'), failing)
+  assert.ok(failing.includes('- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call') && !failing.includes('This pass answers the review'), failing)
   const reds = distill.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill').flatMap((event) => event.commits).filter(({ kind }) => kind === 'red').map(({ sha, subject }) => `${sha.slice(0, 7)} "${subject}"`)
   const deliver = distill.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer').prompt
   assert.equal(reds.length, 2)

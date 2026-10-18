@@ -66,14 +66,6 @@ test('the software engineer writing the source and test paths of its components 
   assert.deepEqual(recorded(host, 'deliver').map((event) => [event.outcome, event.failures]), [['done', []]])
 })
 
-test('the acceptance designer may write tests but not source', async () => {
-  const host = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.change('tests/Acceptance/Pay.cs', 'src/Pay.cs') })(it), unavailable])
-
-  await host.start()
-
-  assert.deepEqual(recorded(host, 'distill')[0].failures, ['out of write scope: src/Pay.cs'])
-})
-
 test('files already changed before the pass started are not held against the agent', async () => {
   const host = scripted({ files: { 'src/WorkInProgress.cs': 'class WorkInProgress {}\n', 'README.md': '# Draft\n' } }, (it) => [agent()(it), unavailable])
   host.git.change('src/WorkInProgress.cs', 'README.md')
@@ -158,6 +150,18 @@ test('the agents writing a component\'s paths may change the files right in its 
   const architect = scripted({}, (it) => [agent()(it), agent({ work: ({ git }) => git.change('Checkout.sln') })(it), unavailable])
   await architect.start()
   assert.deepEqual(recorded(architect, 'design')[0].failures, ['out of write scope: Checkout.sln'])
+})
+
+test('the acceptance designer writes the skeleton its failing test calls in the source paths, beside the test', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it), agent()(it),
+    agent({ work: ({ git }) => git.change('src/Checkout/Pay.cs', 'tests/Checkout.UnitTest/PayTests.cs') })(it),
+    unavailable,
+  ])
+
+  await host.start()
+
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.outcome, event.failures]), [['done', []]])
 })
 
 test('a component whose paths list no folder (no tests folder yet) is written anywhere in its root', async () => {

@@ -182,6 +182,10 @@ test plan and the implementation plan.
 | --- | --- | --- | --- |
 | **G5** | Each step is implementable without asking for clarification: a single meaning in the business vocabulary. | Each step maps to a unique action/state. | HIGH |
 | **G6** | Each scenario in the `.feature` files has a matching entry in the implementation plan (file path + use-case boundary). | Bijection scenarios ↔ plan entries. | HIGH |
+| **G11** | Each use case new to the story has its acceptance test in the unit-test place of its component's language: the `<Context>.UnitTest` project in .NET (no other place passes), the `<context>-unit-test` module in Java, a `unit` folder under the test path elsewhere (`tests/unit/`). | No new use case covered only by an integration or HTTP test, or outside its unit-test place. | BLOCKER |
+| **T1** | Each scenario and test checks one observable behaviour and fixes any time, order or randomness it depends on. | One behaviour per test, nothing unfixed. | HIGH |
+| **T2** | Every input and expected value of the acceptance test equals the `.feature` verbatim. | No value differs. | BLOCKER |
+| **T3** | The acceptance test fails on a business assertion, not on a compile, import or setup error. The production code it calls is a skeleton: the signatures the contract names, each answering the empty value of its type, with no behaviour. | Assertion failure; production files of the patch hold only the skeleton. | BLOCKER |
 
 ### Lens 4 — Boundary enforcement
 
@@ -189,6 +193,8 @@ test plan and the implementation plan.
 | --- | --- | --- | --- |
 | **G7** | Each coverage-matrix row targets an Application-layer use case named in the contracts — never an Infrastructure adapter as entry point. | Each entry references a use-case boundary. | BLOCKER |
 | **G8** | At least one walking skeleton scenario per major flow is identified (tag `@smoke` or marked in the matrix). | ≥ 1 walking skeleton per flow. | HIGH |
+| **E1** | The acceptance test drives only the use case: no direct call to a domain internal, a repository implementation or an infrastructure class. | Every call and assertion goes through the use case. | BLOCKER |
+| **E2** | Test doubles replace only outer-edge dependencies (external systems, clock, files, network); never a domain object or the use case. The DISTILL skeleton is the real module, not a double. | Every double stands for an outer-edge dependency. | HIGH |
 
 ---
 

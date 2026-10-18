@@ -44,6 +44,14 @@ The ADR and event model enter. DISTILL writes the **Gherkin scenario**: “Given
 - `details/{date}/stack-commands.md`, when commands had to be resolved or corrected.
 - `evidence/{date}/{story}/acceptance-red.stdout`, `.exit` and `.rev`, proving the first acceptance test failed RED.
 
+The acceptance test sits in the unit-test place of its component's language (the
+`<Context>.UnitTest` project in .NET, `tests/unit/` in JavaScript or Python) and fails on a
+business assertion. When the code it calls does not exist yet, DISTILL writes its skeleton in
+the source paths: the signatures the contract names, each answering the empty value of its
+type (`undefined`, `null`, `default`), with no behaviour. It commits the skeleton with the
+test in the same `test(<story>): …` commit. A test that fails because a module is missing
+proves nothing, and a stand-in for the module inside the tests is refused.
+
 ## How DELIVER receives execution proof
 
 DISTILL resolves build, test and mutation commands once into `stack-commands.md` instead

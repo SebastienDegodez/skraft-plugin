@@ -116,11 +116,13 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `  your first commit is a failing \`test(<story>): …\` of the inner loop, never a \`feat\`. DISTILL's: ${distillRed} "test(checkout): acceptance of the card payment"`,
   ].join('\n'))
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
+    '- src',
     '- tests',
     '- ./* (the files right in the root of api)',
     '- Components:',
     '- api: . (dotnet), tests: dotnet test',
-    '- Commit the failing acceptance tests as `test(<story>): …`. The engine runs the tests at every test commit and refuses one whose tests pass,',
+    '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
+    '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n')), host.agentRunner.dispatches[2].prompt)
 })
@@ -344,12 +346,12 @@ test('the engineer works on every component, each with its test command when it 
 
   const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), tests: dotnet test\n- web: ../web (react)\n`), deliver)
-  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
+  assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
-  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- .\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
+  assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
 })
 

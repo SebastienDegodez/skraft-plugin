@@ -354,7 +354,7 @@ const briefOf = (context, run, next, job) => ({
 
 /**
  * The red commits the last attempt of each pass of an acceptance step confirmed: what an agent
- * committing failing tests only (no source paths) left for the TDD cycles after it.
+ * committing failing tests only left for the TDD cycles after it.
  * @param {Context} context
  * @returns {string[]} `<sha> "<subject>"`, each once
  */
@@ -367,7 +367,7 @@ const acceptanceCommits = ({ journal, loaded }) => {
 }
 
 /** An agent node that commits failing tests only. @param {import('../domain/workflow/workflow.mjs').WorkflowNode | undefined} node */
-const isAcceptanceStep = (node) => node?.kind === 'agent' && tddOf(roleOf(node)) === 'red'
+const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd === 'red'
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
 const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result }) => {
@@ -389,14 +389,8 @@ const inputsOf = (run, id) => [...run.artifacts, ...Object.entries(run.nodes).fi
  */
 const briefStack = ({ config }, run, role) => ({
   components: (role.components.length > 0 ? config.components : []).map(({ name, root, stack, commands }) => ({ name, root, stack, test: testLine(commands.test, baseOf(run.base, name)?.sha) })),
-  tdd: tddOf(role),
+  tdd: role.tdd,
 })
-
-/** @param {Job['role']} role @returns {'cycle' | 'red' | null} */
-const tddOf = (role) => {
-  if (role.components.includes('src')) return 'cycle'
-  return role.components.length > 0 ? 'red' : null
-}
 
 /**
  * Checks what the attempt did and records it, unless the machine stopped it.

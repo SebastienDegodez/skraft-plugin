@@ -26,7 +26,7 @@ Read the skill file your brief lists under Skill before any other input; judge w
 | G7 | Every scenario in the test plan targets the Application use case the contracts name. | blocker |
 | G8 | The test plan identifies at least one walking-skeleton scenario per feature flow. | high |
 | E1 | The acceptance test drives only that use case: it never calls, constructs or asserts on a domain internal, a repository implementation or an infrastructure class directly. | blocker |
-| E2 | Test doubles replace only dependencies at the outer edge (external systems, clock, file or network access); never a domain object or the use case under test. | high |
+| E2 | Test doubles replace only dependencies at the outer edge (external systems, clock, file or network access); never a domain object or the use case under test. The skeleton DISTILL writes in the production code is the real module, not a double. | high |
 
 ## Output
 

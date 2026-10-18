@@ -44,6 +44,14 @@ L'ADR et le modèle d'événements entrent. DISTILL écrit le **scénario Gherki
 - `details/{date}/stack-commands.md`, quand les commandes ont dû être résolues ou corrigées.
 - `evidence/{date}/{story}/acceptance-red.stdout`, `.exit` et `.rev`, prouvant que le premier test d'acceptation a échoué en RED.
 
+Le test d'acceptation se trouve à l'emplacement des tests unitaires du langage de son
+composant (le projet `<Context>.UnitTest` en .NET, `tests/unit/` en JavaScript ou Python) et
+échoue sur une assertion métier. Quand le code qu'il appelle n'existe pas encore, DISTILL en
+écrit le squelette dans les chemins sources : les signatures que nomme le contrat, chacune
+renvoyant la valeur vide de son type (`undefined`, `null`, `default`), sans comportement. Il
+committe le squelette avec le test dans le même commit `test(<story>): …`. Un test qui échoue
+parce qu'un module manque ne prouve rien, et un substitut du module dans les tests est refusé.
+
 ## Comment DELIVER reçoit la preuve d'exécution
 
 DISTILL résout les commandes de build, test et mutation une seule fois dans

@@ -8,10 +8,14 @@ import { joinRelative } from '../config/relative-path.mjs'
  * @typedef {{ path: string, template: string | null }} OutputSpec
  *   path relative to the pipeline's tracking folder; `{date}` and `{slug}` filled at dispatch.
  * @typedef {'src' | 'tests'} ComponentPaths
- * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean }} Role
+ * @typedef {'cycle' | 'red' | null} TddMode
+ *   cycle: each failing test commit, then the code that passes it; red: failing acceptance tests
+ *   only, with the skeleton they call; null: no test commit.
+ * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, tdd: TddMode }} Role
  *   writes: paths relative to the working copy; components: which paths of every component of
  *   skraft-config.json the agent may write; records: the engine checks the DESIGN records
- *   (consistency matrix, decision drifts, ADR names and supersessions) its attempts leave.
+ *   (consistency matrix, decision drifts, ADR names and supersessions) its attempts leave;
+ *   tdd: how its commits drive the tests.
  * @typedef {import('../workflow/workflow.mjs').WorkflowNode} WorkflowNode
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  */
@@ -23,24 +27,29 @@ const ROLES = Object.freeze({
     writes: Object.freeze([]),
     components: Object.freeze([]),
     records: false,
+    tdd: null,
   }),
   'solution-architect': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'details/{date}/context-map.md', template: null })]),
     writes: Object.freeze(['docs/adr']),
     components: Object.freeze([]),
     records: true,
+    tdd: null,
   }),
+  // The acceptance designer commits failing tests only; the skeleton they call goes in the source paths.
   'acceptance-designer': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'details/{date}/test-plan-{slug}.md', template: null })]),
     writes: Object.freeze([]),
-    components: Object.freeze(/** @type {ComponentPaths[]} */ (['tests'])),
+    components: Object.freeze(/** @type {ComponentPaths[]} */ (['src', 'tests'])),
     records: false,
+    tdd: 'red',
   }),
   'software-engineer': Object.freeze({
     outputs: Object.freeze([Object.freeze({ path: 'changes/{date}/change-log.md', template: null })]),
     writes: Object.freeze([]),
     components: Object.freeze(/** @type {ComponentPaths[]} */ (['src', 'tests'])),
     records: false,
+    tdd: 'cycle',
   }),
 })
 
@@ -60,11 +69,12 @@ export const roleOf = (node) => {
     writes: [...own.writes, ...node.writes],
     components: own.components,
     records: own.records,
+    tdd: own.tdd,
   }
 }
 
 /** What an agent with no role of its own (a repository agent) starts from. @type {Role} */
-const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false })
+const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, tdd: null })
 
 /**
  * Every path an agent may change, relative to the working copy: its pipeline's tracking

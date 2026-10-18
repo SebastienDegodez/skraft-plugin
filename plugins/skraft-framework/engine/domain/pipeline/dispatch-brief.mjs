@@ -93,7 +93,8 @@ const TDD_RULES = Object.freeze({
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'),
   red: [
-    '- Commit the failing acceptance tests as `test(<story>): …`. The engine runs the tests at every test commit and refuses one whose tests pass,',
+    '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the signatures the contract names, each answering',
+    '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine runs the tests at every test commit and refuses one whose tests pass,',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'),
 })

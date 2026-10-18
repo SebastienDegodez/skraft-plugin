@@ -187,6 +187,10 @@ Gherkin, le plan de test et le plan d'implémentation.
 | --- | --- | --- | --- |
 | **G5** | Chaque étape est implémentable sans demander de clarification : un seul sens dans le vocabulaire métier. | Chaque étape mappe à une action/un état unique. | HIGH |
 | **G6** | Chaque scénario des `.feature` a une entrée correspondante dans le plan d'implémentation (chemin de fichier + frontière de cas d'usage). | Bijection scénarios ↔ entrées du plan. | HIGH |
+| **G11** | Chaque cas d'usage nouveau dans la story a son test d'acceptation à l'emplacement des tests unitaires du langage de son composant : le projet `<Context>.UnitTest` en .NET (aucun autre emplacement ne passe), le module `<context>-unit-test` en Java, un dossier `unit` sous le chemin des tests ailleurs (`tests/unit/`). | Aucun cas d'usage nouveau couvert seulement par un test d'intégration ou HTTP, ou hors de son emplacement unitaire. | BLOCKER |
+| **T1** | Chaque scénario et chaque test vérifient un seul comportement observable et fixent le temps, l'ordre ou l'aléa dont ils dépendent. | Un comportement par test, rien de non fixé. | HIGH |
+| **T2** | Chaque valeur d'entrée et chaque valeur attendue du test d'acceptation est identique au `.feature`. | Aucune valeur ne diffère. | BLOCKER |
+| **T3** | Le test d'acceptation échoue sur une assertion métier, pas sur une erreur de compilation, d'import ou de mise en place. Le code de production qu'il appelle est un squelette : les signatures que nomme le contrat, chacune renvoyant la valeur vide de son type, sans comportement. | Échec d'assertion ; les fichiers de production du patch ne contiennent que le squelette. | BLOCKER |
 
 ### Lentille 4 — Respect des frontières
 
@@ -194,6 +198,8 @@ Gherkin, le plan de test et le plan d'implémentation.
 | --- | --- | --- | --- |
 | **G7** | Chaque ligne de la matrice de couverture vise un cas d'usage de la couche Application nommé dans les contrats — jamais un adaptateur d'Infrastructure comme point d'entrée. | Chaque entrée référence une frontière de cas d'usage. | BLOCKER |
 | **G8** | Au moins un scénario walking skeleton par flux majeur est identifié (tag `@smoke` ou marqué dans la matrice). | ≥ 1 walking skeleton par flux. | HIGH |
+| **E1** | Le test d'acceptation ne pilote que le cas d'usage : aucun appel direct à un élément interne du domaine, à une implémentation de repository ou à une classe d'infrastructure. | Chaque appel et chaque assertion passe par le cas d'usage. | BLOCKER |
+| **E2** | Les doublures ne remplacent que des dépendances du bord extérieur (systèmes externes, horloge, fichiers, réseau), jamais un objet du domaine ni le cas d'usage. Le squelette de DISTILL est le vrai module, pas une doublure. | Chaque doublure représente une dépendance du bord extérieur. | HIGH |
 
 ---
 
