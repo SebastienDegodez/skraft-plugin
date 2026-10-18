@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
+import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
+import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
+import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, actsAs, simulatedContext } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, SECURITY_AGENT, SLUG, WRONG_PAY, blocked, commit, deliverWith, fillOutputs, batchesSorted, lensDispatches, lensLabels, pipelineRepository, reviewsOf,
@@ -10,12 +13,29 @@ import {
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 
-/** Runs the workflow for a new slug on the repository, the scripted LLM answering every agent call. */
-const runOn = async (cwd, { acts, reviews, args = {} } = {}) => {
+/**
+ * Runs the workflow for a new slug on the repository, the scripted LLM answering every agent
+ * call. Each time the run pauses on a question, the human answers it with skraft_decide (the
+ * first option by default) and resumes the run.
+ * @param {string} cwd
+ * @param {{ acts?: object, reviews?: object, args?: object, answer?: (question: { key: string, options: string[] }) => { answer: string, reason?: string } }} [options]
+ */
+const runOn = async (cwd, { acts, reviews, args = {}, answer = (question) => ({ answer: question.options[0] }) } = {}) => {
   const llm = scriptedLlm({ cwd, acts, reviews })
+
   const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG, ...args }, otherwise: actsAs(llm) })
-  const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
-  return { outcome, calls, logs, events: journal(cwd, SLUG) }
+  const pauses = []
+  for (;;) {
+    try {
+      const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+      return { outcome, calls, logs, pauses, events: journal(cwd, SLUG) }
+    } catch (error) {
+      if (error.name !== 'AbortError') throw error
+      const { question } = await createObserve(createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT })).view()
+      pauses.push(question.key)
+      await createSkraftDecideTool({ cwd, pluginRoot: PLUGIN_ROOT }).handler({ key: question.key, ...answer(question) })
+    }
+  }
 }
 
 const recorded = (events, step) => events.filter((event) => event.type === 'step.recorded' && event.step === step)
@@ -23,7 +43,7 @@ const recorded = (events, step) => events.filter((event) => event.type === 'step
 test('the four phases run on a real repository: each agent commits its part, the gates run the tests, DELIVER closes', async (t) => {
   const { cwd } = pipelineRepository(t)
 
-  const { outcome, calls, logs, events } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
+  const { outcome, calls, logs, pauses, events } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
   assert.deepEqual(batchesSorted(calls.map(({ agent, label }) => `${agent} | ${label}`)), batchesSorted([
@@ -36,7 +56,7 @@ test('the four phases run on a real repository: each agent commits its part, the
     ...lensDispatches('deliver_review'),
   ]))
   assert.deepEqual(calls.filter((call) => !call.prompt.includes('- Story: #42 — Pay by card')).map(({ agent }) => agent), ['skraft:cold-reader-lens'])
-  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'distill'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'exit']])
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'exit']])
   assert.deepEqual(events.filter((event) => event.type === 'phase.closed').map((event) => event.phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER'])
   assert.deepEqual(events.filter((event) => event.type === 'gate.ran').map(({ component, gate, status }) => `${component}/${gate} ${status}`), ['app/test pass'])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked').map(({ step, commits }) => [step, commits.map(({ subject, kind, verdict, replay }) => [subject, kind, verdict, replay?.exitCode ?? null])]), [
@@ -46,7 +66,10 @@ test('the four phases run on a real repository: each agent commits its part, the
   ])
   assert.deepEqual(events.at(-1).type, 'run.finished')
   assert.deepEqual([events.at(-1).status, events.at(-1).reason], ['completed', 'DELIVER closed'])
-  assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase DESIGN', 'phase DISTILL', 'phase DELIVER'])
+  assert.deepEqual(pauses, ['adr-1'])
+  assert.deepEqual(logs.filter((line) => line.startsWith('phase ')), ['phase RESEARCH', 'phase DESIGN', 'phase DESIGN', 'phase DISTILL', 'phase DELIVER'])
+  assert.ok(logs.includes(`Answer with the skraft_decide tool (key "adr-1", answer RATIFIED or REJECTED, a reason with REJECTED), then resume this run.`), logs.join('\n'))
+  assert.equal(git(cwd, 'log', '--format=%s', '-1', '--', 'docs/adr'), 'docs(adr): ratify ADR-001')
   assert.equal(logs.at(-1), `${SLUG}: done: DELIVER closed`)
 })
 

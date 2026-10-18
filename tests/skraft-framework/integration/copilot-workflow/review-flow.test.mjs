@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
+import { createSkraftDecideTool } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-decide-tool.mjs'
+import { createObserve } from '../../../../plugins/skraft-framework/engine/application/observe.mjs'
+import { createNodeAdapters } from '../../../../plugins/skraft-framework/engine/infrastructure/node-adapters.mjs'
 import { PLUGIN_ROOT, actsAs, simulatedContext, trackingDir } from './simulated-host.mjs'
 import {
   LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
@@ -33,12 +36,28 @@ const answersTogether = (llm, calls, sizes) => async (call) => {
   return text
 }
 
-/** Runs the workflow for a new slug on the repository, the scripted LLM answering every agent call. */
+/**
+ * Runs the workflow for a new slug on the repository, the scripted LLM answering every agent
+ * call; each question the run pauses on is answered with its first option through skraft_decide.
+ */
 const runOn = async (cwd, { acts, reviews, sizes = { design_review: 3, distill_review: 4, deliver_review: 3 } } = {}) => {
   const llm = scriptedLlm({ cwd, acts, reviews })
   const host = simulatedContext({ args: { slug: SLUG }, otherwise: answersTogether(llm, () => host.calls, sizes) })
-  const outcome = await runSkraftPipelineWorkflow(host.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  const outcome = await resumedUntilDone(host.ctx, cwd)
   return { outcome, llm, calls: host.calls, timeline: host.timeline, events: journal(cwd, SLUG) }
+}
+
+/** @param {object} ctx @param {string} cwd */
+const resumedUntilDone = async (ctx, cwd) => {
+  for (;;) {
+    try {
+      return await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+    } catch (error) {
+      if (error.name !== 'AbortError') throw error
+      const { question } = await createObserve(createNodeAdapters({ cwd, pluginRoot: PLUGIN_ROOT })).view()
+      await createSkraftDecideTool({ cwd, pluginRoot: PLUGIN_ROOT }).handler({ key: question.key, answer: question.options[0] })
+    }
+  }
 }
 
 /** Each review node's calls all came before the first of their answers. @param {string[]} timeline */
@@ -61,7 +80,7 @@ test('lenses that all pass approve each review, started together, and the run co
   const { outcome, calls, timeline, events } = await runOn(cwd)
 
   assert.deepEqual(outcome, { status: 'done', slug: SLUG, phase: 'DELIVER', code: null, reason: 'DELIVER closed' })
-  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'distill'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'exit']])
+  assert.deepEqual(reviewsOf(events), [['design_review', 1, 'approved', 'adr'], ['distill_review', 1, 'approved', 'deliver'], ['deliver_review', 1, 'approved', 'exit']])
   assert.deepEqual(startedTogether(timeline), { design_review: true, distill_review: true, deliver_review: true })
   assert.deepEqual(batchesSorted(calls.filter((call) => reviewNodeOf(call.label) !== null).map((call) => call.label)), batchesSorted([
     ...lensLabels('design_review'), ...lensLabels('distill_review'), ...lensLabels('deliver_review'),
@@ -92,7 +111,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   })
 
   assert.equal(outcome.status, 'done')
-  assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+  assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
   const refute = calls.filter((call) => call.label.includes(' · refute '))
   assert.deepEqual(refute.map(({ agent, label }) => `${agent} | ${label}`), [`skraft:finding-refuter | skraft ${SLUG} · design_review · refute consistency F1 · attempt 1`])
   assert.match(refute[0].prompt, /^## Skraft finding check: consistency F1\n- Finding: G1 blocker at docs\/adr\/adr-001-card-payment\.md:3: The ADR names no payment provider\n/)
@@ -113,7 +132,7 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
     [1, [`docs(${SLUG}): record the card payment decision`]],
     [2, [`docs(${SLUG}): name the payment provider`]],
   ])
-  assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted: Acme Pay.')
+  assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '# ADR-001 Card payment\n\n**Status:** Accepted\n\nAccepted: Acme Pay.')
 })
 
 test('a lens that answers twice without a readable verdict stops the run as lens-unreadable, naming its agent; the resumed run calls only that lens again', async (t) => {
@@ -131,7 +150,7 @@ test('a lens that answers twice without a readable verdict stops the run as lens
   assert.equal(calls.some((call) => call.label.includes(' · distill ')), false)
 
   const resumed = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
-  const done = await runSkraftPipelineWorkflow(resumed.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  const done = await resumedUntilDone(resumed.ctx, cwd)
 
   assert.equal(done.status, 'done')
   assert.deepEqual(resumed.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label), [`skraft ${SLUG} · design_review · fitness · attempt 1`])
@@ -163,7 +182,7 @@ test('a review resumed after the workflow died calls again only the lens that ha
   assert.deepEqual(lensEvents(journal(cwd, SLUG), 'design_review'), [])
 
   const resumed = simulatedContext({ args: { slug: SLUG }, journal: first.journal, otherwise: actsAs(scriptedLlm({ cwd })) })
-  const outcome = await runSkraftPipelineWorkflow(resumed.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  const outcome = await resumedUntilDone(resumed.ctx, cwd)
 
   assert.equal(outcome.status, 'done')
   assert.ok(first.calls.some((call) => call.label === hung))
@@ -194,7 +213,7 @@ test('a repository lens listing a skill nobody provides is refused before anythi
   const { cwd } = pipelineRepository(t, { lens: true, lensSkills: ['acme-threat-model'] })
   const host = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
 
-  const outcome = await runSkraftPipelineWorkflow(host.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  const outcome = await resumedUntilDone(host.ctx, cwd)
 
   assert.deepEqual([outcome.status, outcome.code, outcome.reason], [
     'refused', 'workflow-invalid',
@@ -225,7 +244,7 @@ test('a blocker the refuter refutes does not count; an unverifiable high finding
   ])
   assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict }) => [lens, id, verdict]), [['consistency', 'F1', 'refuted'], ['consistency', 'F2', 'unverifiable']])
   assert.deepEqual(events.find((event) => event.type === 'step.recorded' && event.step === 'design_review').failures, ['consistency F2 G1 high at docs/adr/adr-001-card-payment.md:3: Two contexts own payments (suggestion: name the provider) (not verified)'])
-  assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'distill']])
+  assert.deepEqual(reviewsOf(events).slice(0, 2), [['design_review', 1, 'needs-rework', 'design'], ['design_review', 2, 'approved', 'adr']])
 })
 
 test('a blocker two lenses give at the same line is checked in one call, each finding on its own verdict', async (t) => {
@@ -244,7 +263,7 @@ test('a blocker two lenses give at the same line is checked in one call, each fi
     `skraft:finding-refuter | skraft ${SLUG} · design_review · refute consistency F1, architecture-compliance F1 · attempt 1`,
   ])
   assert.deepEqual(events.filter((event) => event.type === 'review.refuted').map(({ lens, finding: id, verdict }) => [lens, id, verdict]), [['consistency', 'F1', 'refuted'], ['architecture-compliance', 'F1', 'refuted']])
-  assert.deepEqual(reviewsOf(events)[0], ['design_review', 1, 'approved', 'distill'])
+  assert.deepEqual(reviewsOf(events)[0], ['design_review', 1, 'approved', 'adr'])
 })
 
 test('on pass 2 only the lenses that had findings or whose inputs changed run again; a clean one whose inputs did not move is taken over', async (t) => {

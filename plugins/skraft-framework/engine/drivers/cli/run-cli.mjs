@@ -1,5 +1,6 @@
 import { createInit } from '../../application/init.mjs'
 import { createObserve } from '../../application/observe.mjs'
+import { createDecide } from '../../application/decide.mjs'
 import { createConfigureComponents } from '../../application/configure-components.mjs'
 import { createRunGate } from '../../application/run-gate.mjs'
 import { createDoctor } from '../../application/doctor.mjs'
@@ -19,6 +20,7 @@ export const USAGE = [
   '       skraft init [--add <folder>]...                                   detect the components into skraft-config.json',
   '       skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]   start or resume a pipeline',
   '       skraft status [--json]',
+  '       skraft decide [<key>] <answer> [--reason <text>]                answer the question the active pipeline waits on',
   '       skraft gate [--all] [--json]                                      run the gates of the changed components (all with --all)',
   '       skraft doctor [--run] [--base <ref>] [--json]                     check every command can run (--run: run each once)',
   '       skraft workflow eject                                             copy the plugin workflow into skraft-workflow.dot',
@@ -131,19 +133,34 @@ const statusLines = (view) => [
   `${skraftOf(view.slug)}: ${view.status}`,
   ...view.phases.map(({ phase, state }) => `${phase}  ${state}`),
   ...(view.current ? [currentLine(view.current)] : []),
+  ...(view.question ? [answerLine(view.question)] : []),
   ...(view.costUsd !== null ? [`cost: ${view.costUsd.toFixed(2)} USD`] : []),
   ...(view.reason ? [view.reason] : []),
 ]
 
 /**
- * The node the run stands on: a gate node by its gates, an agent node by its agent and attempt.
+ * The node the run stands on: a gate node by its gates, a question node by its question, an
+ * agent node by its agent and attempt.
  * @param {NonNullable<import('../../application/observe.mjs').RunView['current']>} current
  */
-const currentLine = ({ step, agent, gates, visit, attempt }) => {
+const currentLine = ({ step, agent, gates, question, visit, attempt }) => {
   const pass = visit > 1 ? `, pass ${visit}` : ''
-  return agent === null
-    ? `gates: ${/** @type {string[]} */ (gates).join(', ')} (${step}${pass})`
-    : `agent: ${agent} (${step}${pass}, attempt ${attempt})`
+  if (agent !== null) return `agent: ${agent} (${step}${pass}, attempt ${attempt})`
+  return question ? `question: ${question} (${step}${pass})` : `gates: ${/** @type {string[]} */ (gates).join(', ')} (${step}${pass})`
+}
+
+/** How to answer the question the run waits on. @param {NonNullable<import('../../application/observe.mjs').RunView['question']>} question */
+const answerLine = ({ key, options, refusals }) =>
+  `answer: skraft decide ${key} ${options.join('|')}${refusals.length > 0 ? ` (--reason <text> with ${refusals.join(' or ')})` : ''}`
+
+/** `decide [<key>] <answer> [--reason <text>]`. @param {string[]} args @param {CliServices} services @param {Console} console */
+const decide = async (args, services, console) => {
+  const flag = args.findIndex((arg) => arg.startsWith('--'))
+  const words = flag < 0 ? args : args.slice(0, flag)
+  const options = optionsOf(args.slice(words.length), { values: ['--reason'] })
+  if (options === undefined || words.length < 1 || words.length > 2) return usage(console)
+  const [key, given] = words.length === 2 ? words : [null, words[0]]
+  return answer(await createDecide(services.adapters()).decide({ key, answer: given, reason: options['--reason'] ?? null }), console)
 }
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
@@ -215,6 +232,7 @@ const COMMANDS = new Map([
   ['--version', version],
   ['init', initOrConfigure],
   ['status', status],
+  ['decide', decide],
   ['gate', gate],
   ['doctor', doctor],
   ['workflow', workflow],

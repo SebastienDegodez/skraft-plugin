@@ -44,9 +44,12 @@ test('the slug is passed as typed: Init, not the parser, judges it', () => {
   assert.deepEqual(parseSkraftCommand('Not_A_Slug'), { command: 'run', slug: 'Not_A_Slug', story: null, base: null, fromArtifacts: false })
 })
 
-test('/skraft decide … is the decide command, never a slug', () => {
-  assert.deepEqual(parseSkraftCommand('decide'), { command: 'decide', words: [] })
-  assert.deepEqual(parseSkraftCommand('decide checkout key yes'), { command: 'decide', words: ['checkout', 'key', 'yes'] })
+test('/skraft decide … is the decide command, never a slug: an optional key, the answer, then the reason', () => {
+  assert.deepEqual(parseSkraftCommand('decide'), { command: 'decide', key: null, answer: null, reason: null })
+  assert.deepEqual(parseSkraftCommand('decide RATIFIED'), { command: 'decide', key: null, answer: 'RATIFIED', reason: null })
+  assert.deepEqual(parseSkraftCommand('decide adr-1 rejected  use the bank gateway'), { command: 'decide', key: 'adr-1', answer: 'rejected', reason: 'use the bank gateway' })
+  assert.deepEqual(parseSkraftCommand('decide environment-12 RETRY'), { command: 'decide', key: 'environment-12', answer: 'RETRY', reason: null })
+  assert.deepEqual(parseSkraftCommand('decide REJECTED not this one'), { command: 'decide', key: null, answer: 'REJECTED', reason: 'not this one' })
 })
 
 test('the tool input becomes a run; no slug resumes the active pipeline', () => {

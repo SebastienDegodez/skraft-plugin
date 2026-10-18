@@ -32,6 +32,23 @@ export const CHECK = [
 export const PAY = 'export const pay = (amount) => `paid ${amount}`\n'
 export const WRONG_PAY = 'export const pay = (amount) => `owed ${amount}`\n'
 
+/** The ADR the architect drafts: Proposed until a human ratifies it. */
+export const ADR = [
+  '---',
+  'adr: 1',
+  'title: Card payment',
+  'status: Proposed',
+  'supersedes: null',
+  'ratified_by: null',
+  '---',
+  '',
+  '# ADR-001 — Card payment',
+  '',
+  '**Status:** Proposed',
+  '',
+].join('\n')
+export const ADR_PATH = 'docs/adr/adr-001-card-payment.md'
+
 /** A repository workflow: the plugin's, with a repository agent between design and distill. */
 export const SECURITY_WORKFLOW = `digraph skraft {
   graph [version="2", goal="Deliver the story"]
@@ -71,7 +88,8 @@ const repositoryAgent = (cwd, agent, description, skills = []) => {
 
 /**
  * A repository on `main` with one JavaScript component `app` at its root, the tracking folder
- * ignored. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
+ * ignored, and the Git identity a developer's machine has, which the engine commits a
+ * ratification with. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
  * both hosts; with `lens`, it runs LENS_WORKFLOW and defines its repository lens for both hosts,
  * listing `lensSkills` under `skills:`.
  * @param {import('node:test').TestContext} t
@@ -100,6 +118,7 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
     repositoryAgent(cwd, `${SECURITY_LENS}-lens`, 'Reviews the design for security, as a lens', lensSkills)
   }
   const main = commitAll(cwd)
+  for (const [key, value] of [['user.name', 'skraft'], ['user.email', 'skraft@example.invalid'], ['commit.gpgsign', 'false']]) git(cwd, 'config', key, value)
   return { cwd, main }
 }
 
@@ -206,7 +225,9 @@ export const NOMINAL = Object.freeze({
   'solution-architect': (brief, { cwd, slug }) => {
     fillOutputs(brief, 'The payment lives in src/pay.mjs.\n')
     writeFile(join(dirname(brief.outputs[0]), `consistency-matrix-${slug}.md`), '| ADR | Verdict |\n- consistency-gate: PASS\n')
-    commit(cwd, `docs(${slug}): record the card payment decision`, { 'docs/adr/adr-001-card-payment.md': '# ADR-001 Card payment\n\n**Status:** Proposed\n\nAccepted.\n' })
+    const revising = brief.prompt.includes('A human refused the work')
+    commit(cwd, `docs(${slug}): ${revising ? 'revise' : 'record'} the card payment decision`, { [ADR_PATH]: revising ? `${ADR}\nRevised after the human's reason.\n` : ADR })
+
     writeResult(brief, { status: 'done', summary: 'context map and ADR written' })
   },
   'acceptance-designer': (brief, { cwd, slug }) => {

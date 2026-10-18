@@ -71,3 +71,18 @@ export const joinPath = (...parts) =>
     .filter((part) => part !== '')
     .map((part, index) => (index === 0 ? part.replace(/[\\/]+$/, '') : part.replace(/^[\\/]+|[\\/]+$/g, '')))
     .join('/')
+
+/**
+ * The Workspace port's one-level listing, from the files Git lists under the folder: each
+ * first path part once, a folder when files sit below it.
+ * @param {{ list: (path: string) => Promise<string[] | null> }} files
+ * @returns {(path: string) => Promise<import('../../application/ports/workspace.mjs').WorkspaceEntry[] | null>}
+ */
+export const folderEntries = (files) => async (path) => {
+  const listed = await files.list(path)
+  if (listed === null) return null
+  /** @type {Map<string, 'file' | 'dir'>} */
+  const entries = new Map()
+  for (const [name, ...below] of listed.map((file) => file.split('/'))) entries.set(name, below.length > 0 ? 'dir' : entries.get(name) ?? 'file')
+  return [...entries].map(([name, kind]) => ({ name, kind }))
+}
