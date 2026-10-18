@@ -97,8 +97,8 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
   assert.equal(prompt('cold-reader-lens', 'deliver_review'), [
     '## Skraft review lens: cold-reader',
     '- Read these inputs and the files they name; search the repository for nothing else:',
-    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/deliver_review-1/changes.patch`,
-    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/deliver_review-1/changed-files.txt`,
+    `  - Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs): ${TRACKING}/reviews/deliver_review-1/code.patch`,
+    `  - Paths those changes touch (a path with no section in the patch is a new file: open it): ${TRACKING}/reviews/deliver_review-1/code-files.txt`,
     '- Write no file, change nothing, start no agent.',
     ...answer('cold-reader'),
   ].join('\n'))
@@ -194,6 +194,27 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, gates: ['build', 'test', 'architecture'] }])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/design_review-1/components.json'))[0].gates, [])
+})
+
+test('a blind lens reads the changes without the decision records of the run: no ADR, no supersession registry', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it),
+    agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the card payment', ['docs/adr/adr-001-card-payment.md', 'docs/adr/supersessions.md']) })(it),
+    ...nominal(it).slice(2),
+  ])
+
+  await host.start()
+
+  const folder = 'reviews/deliver_review-1'
+  const all = await host.tracking.read(SLUG, `${folder}/changed-files.txt`)
+  const code = await host.tracking.read(SLUG, `${folder}/code-files.txt`)
+  assert.ok(all.includes('docs/adr/adr-001-card-payment.md\n') && all.includes('docs/adr/supersessions.md\n'), all)
+  assert.equal(code, all.split('\n').filter((line) => line !== '' && !line.startsWith('docs/adr/')).map((line) => `${line}\n`).join(''))
+  assert.ok(code.length > 0)
+  const patch = await host.tracking.read(SLUG, `${folder}/code.patch`)
+  assert.ok(!patch.includes('docs/adr/') && (await host.tracking.read(SLUG, `${folder}/changes.patch`)).includes('diff --git a/docs/adr/adr-001-card-payment.md'), patch)
+  const lens = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'test-integrity-lens').prompt
+  assert.ok(lens.includes(`${folder}/changes.patch`) && !lens.includes('code.patch'), lens)
 })
 
 test('a review whose every lens waits for a trigger that nothing matches approves, saying no lens applies', async () => {

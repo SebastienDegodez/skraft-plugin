@@ -87,6 +87,8 @@ Every gate id is unique across the four lenses: a finding's `gate` names one row
 | Visual AC evidence | G9 | Every `@visual` scenario has ≥1 Playwright E2E spec in `tests/e2e/` per `impl-plan-{story}.md`. jsdom/unit entry invalid. | Bijection `@visual` scenarios ↔ Playwright E2E spec entries. | HIGH |
 | Comparable contract consistency | G10 | When `impl-plan-{story}.md` plans a component (hook/adapter/client) that is comparable to one already implemented for a similar responsibility in a prior story, its planned state/return/error convention matches the existing component's, unless the plan notes an explicit, justified divergence. | Every comparable pair of planned components shares its convention, or the divergence is explicitly noted and justified in the impl-plan. | HIGH |
 
+**Coverage matrix codes:** a row with `Layer = Domain` carries the `Extraction Reason` of `test-design-mandates` Mandate 4: `branch_unreachable_via_AC` (gate a: a branch no acceptance scenario can reach, a technical input guard included) or `combinatorial_economy` (gate b: a rule sweep that would explode the scenario count). A Domain row without one of these two codes is a G7 finding; a row with one is never a finding for its code alone.
+
 **Checking E2:** the skeleton DISTILL writes in the production code (T3) is the real module the story fills, not a double; a stand-in for it inside the tests is one.
 
 **Checking G9:**

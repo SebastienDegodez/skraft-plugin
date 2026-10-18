@@ -96,10 +96,10 @@ Three kinds of "edge case", three destinations — never blur them:
 |---|---|---|---|
 | Decided business case (in AC/Gherkin) | motorcycle + age 21 → refused | acceptance-designer (you) | OUTER acceptance test, value copied VERBATIM |
 | Undecided business case (absent from AC) | "what about a 120-year-old driver?" | nobody → **escalate** | Flag → DISCUSS (`bdd-methodology`). NEVER invent a value or a verdict |
-| Technical input case, decided by DESIGN or not (no business meaning) | a value of the wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text | software-engineer (inner loop) | Unit test planned in `test-plan-{story}.md`, citing the DESIGN decision; **never a scenario**: no business wording names it without ambiguity |
+| Technical input case, decided by DESIGN or not (no business meaning) | a value of the wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text | software-engineer (inner loop) | Unit test planned in `test-plan-{story}.md` with `Extraction Reason` `branch_unreachable_via_AC`, citing the DESIGN decision; **never a scenario**: no business wording names it without ambiguity |
 | Implementation-derived branch (not expressible in Gherkin) | exhaustive-enum fallback, defensive guard, combinatorial sweep of an already-decided rule (e.g. a `PolicyService`) | software-engineer (inner loop) | Domain unit test, gated by `test-design-mandates` Mandate 4 |
 
-You **plan** Domain unit tests in the coverage matrix with an `Extraction Reason` code (Gate a/b) — but you **do NOT author** them: the domain must emerge from the engineer's RED (`outside-in-tdd` Step 2). If a needed edge case is a business decision absent from the AC, STOP and escalate; do not encode an invented value.
+You **plan** Domain unit tests in the coverage matrix with an `Extraction Reason` code (`branch_unreachable_via_AC` or `combinatorial_economy`, `test-design-mandates` Mandate 4) — but you **do NOT author** them: the domain must emerge from the engineer's RED (`outside-in-tdd` Step 2). If a needed edge case is a business decision absent from the AC, STOP and escalate; do not encode an invented value.
 
 ## Execution Workflow
 
@@ -144,9 +144,9 @@ Build the coverage matrix. The software-engineer applies each row as written, so
 | Scenario | Use Case Boundary | Layer | Double Type | Walking Skeleton | Extraction Reason | Priority |
 |---|---|---|---|---|---|---|
 | {name} | {use-case-name} | Application | InMemory repository | A | — | P1 |
-| {name} — {Policy} rule sweep | {use-case-name} | Domain | none | — | Gate a | P2 |
+| {name} — {Policy} rule sweep | {use-case-name} | Domain | none | — | combinatorial_economy | P2 |
 
-Apply the 4 mandates and select Walking Skeleton strategy (A/B/C/D) per feature. `Extraction Reason` is `—` for non-Domain rows and the Mandate 4 gate code (`Gate a` / `Gate b`) for every planned Domain unit test.
+Apply the 4 mandates and select Walking Skeleton strategy (A/B/C/D) per feature. `Extraction Reason` is `—` for non-Domain rows and the Mandate 4 code (`branch_unreachable_via_AC` for gate a, `combinatorial_economy` for gate b) for every planned Domain unit test.
 
 ### 5. IMPLEMENTATION PLAN
 
@@ -164,7 +164,7 @@ Derive the outside-in order from the test plan. The software-engineer runs the s
 - Double: InMemory{Repository}
 
 ## Step 2 — Domain extraction (if complex invariant)
-- Scenario: `{Scenario title}` — test-plan row `{Scenario} — {Policy} rule sweep` (Gate a)
+- Scenario: `{Scenario title}` — test-plan row `{Scenario} — {Policy} rule sweep` (combinatorial_economy)
 - Test: `tests/MyContext.UnitTest/Domain/{Policy}PolicyTests.cs`
 - Extracted from: RED phase of Step 1
 

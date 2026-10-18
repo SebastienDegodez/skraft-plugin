@@ -36,6 +36,7 @@ The tracking folder lives **in the working copy that starts the run**:
     ├── reviews/<node>-<visit>/                    what the lenses of one review pass read
     │   ├── changes.patch                          changes since the base of the run
     │   ├── changed-files.txt                      paths those changes touch
+    │   ├── code.patch, code-files.txt             the same for a blind lens, without docs/adr
     │   ├── context.md                             story, project rules, who wrote which document
     │   ├── components.json                        stack, mocking strategy, contract testing
     │   └── verdict.yaml                           the verdict of the pass, written by the engine

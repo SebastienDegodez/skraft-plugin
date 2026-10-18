@@ -36,6 +36,7 @@ Le dossier de suivi vit **dans la copie de travail qui lance le run** :
     ├── reviews/<nœud>-<visite>/                   ce que lisent les lentilles d'une passe de revue
     │   ├── changes.patch                          changements depuis la base du run
     │   ├── changed-files.txt                      chemins que ces changements touchent
+    │   ├── code.patch, code-files.txt             les mêmes pour une lentille aveugle, sans docs/adr
     │   ├── context.md                             story, règles du projet, qui a écrit quel document
     │   ├── components.json                        stack, stratégie de mocking, contract testing
     │   └── verdict.yaml                           le verdict de la passe, écrit par le moteur
