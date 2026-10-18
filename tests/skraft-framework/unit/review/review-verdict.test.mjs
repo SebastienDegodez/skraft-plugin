@@ -122,7 +122,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
   ].join('\n')), prompt('test-integrity-lens', 'deliver_review'))
 })
 
-test('the changes a lens reads are those since the base of the run: the patch without the tracking files, the paths without the engine\'s own', async () => {
+test('the changes a lens reads are those since the base of the run, without the tracking files: a lens gets the documents of the run by their paths', async () => {
   const folder = `.copilot-tracking/skraft-plans/${SLUG}`
   const host = scripted({}, (it) => [
     agent()(it),
@@ -137,11 +137,10 @@ test('the changes a lens reads are those since the base of the run: the patch wi
 
   await host.start()
 
-  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), `docs/adr/adr-001-card-payment.md\n${folder}/details/2026-10-11/consistency-matrix-checkout.md\n`)
+  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), 'docs/adr/adr-001-card-payment.md\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changes.patch'), 'diff --git a/docs/adr/adr-001-card-payment.md b/docs/adr/adr-001-card-payment.md\n+# ADR 001: pay by card\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/deliver_review-1/changed-files.txt'), [
-    'docs/adr/adr-001-card-payment.md', 'tests/Acceptance/CheckoutAcceptanceTests.cs', 'tests/CheckoutTests.cs', 'src/Checkout.cs',
-    `${folder}/details/2026-10-11/consistency-matrix-checkout.md`, '',
+    'docs/adr/adr-001-card-payment.md', 'tests/Acceptance/CheckoutAcceptanceTests.cs', 'tests/CheckoutTests.cs', 'src/Checkout.cs', '',
   ].join('\n'))
 })
 
@@ -461,24 +460,31 @@ test('a review sent back more often than its edge allows stops the run, naming t
   })
 })
 
-test('the changes of a component in a neighbour repository are read from that repository, each repository once', async () => {
+test('the changes of a component in a neighbour repository are read from that repository, each repository once, its paths rebased whole', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', paths: { src: ['src'], tests: ['src'] }, commands: { build: 'npm run build', test: 'npx vitest run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
   git.patched('../web/src/App.tsx', ['--- a/src/App.tsx', '+++ b/src/App.tsx'])
   git.adds('../web/src/App.tsx', 'export const App = () => null')
   git.change('../web/src/App.tsx')
+  git.patched('../web/src/Payment Form.tsx', ['--- a/src/Payment Form.tsx\t', '+++ b/src/Payment Form.tsx\t'])
+  git.adds('../web/src/Payment Form.tsx', 'export const PaymentForm = () => null')
+  git.change('../web/src/Payment Form.tsx')
   const host = scripted({ components: [API, WEB], git }, (it) => nominal(it).slice(0, 2))
   host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
 
   await host.start()
 
-  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), 'docs/adr/adr-001-card-payment.md\n../web/src/App.tsx\n')
+  assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), 'docs/adr/adr-001-card-payment.md\n../web/src/App.tsx\n../web/src/Payment Form.tsx\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changes.patch'), [
     'diff --git a/docs/adr/adr-001-card-payment.md b/docs/adr/adr-001-card-payment.md',
     'diff --git a/../web/src/App.tsx b/../web/src/App.tsx',
     '--- a/../web/src/App.tsx',
     '+++ b/../web/src/App.tsx',
     '+export const App = () => null',
+    'diff --git a/../web/src/Payment Form.tsx b/../web/src/Payment Form.tsx',
+    '--- a/../web/src/Payment Form.tsx\t',
+    '+++ b/../web/src/Payment Form.tsx\t',
+    '+export const PaymentForm = () => null',
     '',
   ].join('\n'))
 })
