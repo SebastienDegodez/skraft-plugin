@@ -50,7 +50,7 @@ const fastGates = [
   { name: 'Skill copies in sync', cmd: 'node', args: ['scripts/sync-skill-copies.mjs', '--check'] },
   { name: 'Plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check'] },
   { name: 'Dispatch tree and skills', cmd: 'node', args: ['scripts/agent-policy/build-config-bin.mjs'] },
-  { name: 'Agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check'] },
+  { name: 'Agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check', '--forbid-model'] },
   // skraft-backlog: its own tests, agent trees, dispatch tree and model policy.
   { name: 'Backlog plugin tests (node --test)', cmd: 'node', args: testArgs(join('tests', 'skraft-backlog')) },
   { name: 'Backlog plugin adapters in sync', cmd: 'node', args: ['scripts/project-plugin-adapters.mjs', '--check', '--plugin-root', 'plugins/skraft-backlog'] },

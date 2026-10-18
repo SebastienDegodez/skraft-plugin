@@ -5,7 +5,7 @@ Only that module touches `$`, one line per call, handed to `createClaudeModDrive
 Everything here and everything it imports is free of Node APIs and of `import()`; never imports another driver.
 
 - `claude-mod-driver.mjs`: composition: `/skraft`, the `run_pipeline` tool, the pane snapshot.
-- `agent-runner.mjs`: AgentRunner on `$.agent.spawn` (`<plugin>:<id>` for a plugin agent, the bare id for a repository one), answered by the subagent's `turn.complete`; `runMany` spawns a batch before waiting for any, and reports the batch's session cost, not each agent's. A dispatch's model family goes to the spawn as `model`.
+- `agent-runner.mjs`: AgentRunner on `$.agent.spawn` (`<plugin>:<id>` for a plugin agent, the bare id for a repository one), answered by the subagent's `turn.complete`; `runMany` spawns a batch before waiting for any, and reports the batch's session cost, not each agent's. A dispatch's model family goes to the spawn as `model`; the answer names the model the spawn reports, else the family.
 - `mod-files.mjs`: FileFunctions on `$.fs`, listing a folder through Git on `$.process.run`.
 - `mod-processes.mjs`: CommandRunner on `$.process.run` (Git, gates, replayed test commits).
 - `command-args.mjs`: `/skraft` arguments and the tool input.

@@ -417,7 +417,7 @@ const located = (deps, slug, inputs) => inputs.map(({ kind, path }) => ({ kind, 
 const recordLens = async ({ journal, step }, { lens, fingerprint }, { result }, answer) => {
   const { verdict, findings } = result
   const cost = answer.costUsd
-  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.id, agent: lens.agent, fingerprint, verdict, findings, cost })
+  await journal.append('review.lens', { step: step.node.id, visit: step.visit, lens: lens.id, agent: lens.agent, model: answer.model ?? null, fingerprint, verdict, findings, cost })
   return result
 }
 
@@ -431,7 +431,7 @@ const recordLens = async ({ journal, step }, { lens, fingerprint }, { result }, 
  */
 const refutations = async (review, planned, results) => {
   const done = eventsOfThisPass(review, 'review.refuted').map(refutationOf)
-  const asked = toRefute(results, planned).filter(({ members: [first] }) => !done.some((known) => known.lens === first.lens && known.finding === first.finding.id))
+  const asked = toRefute(results, planned, review.step.node.refuter).filter(({ members: [first] }) => !done.some((known) => known.lens === first.lens && known.finding === first.finding.id))
   const answered = await askUpToTwice(review, asked, refuterAsking(review))
   if ('stop' in answered) return answered
   const lost = []
@@ -442,14 +442,14 @@ const refutations = async (review, planned, results) => {
 /** @param {Review} review @param {Suspect} suspect @param {string} error */
 const recordUnverifiable = (review, suspect, error) => {
   const reason = `unreadable ${MAX_ASKS} times: ${error}`
-  return recordRefutation(review, suspect, { verdict: 'unverifiable', reason }, undefined)
+  return recordRefutation(review, suspect, { verdict: 'unverifiable', reason }, {})
 }
 
 /** @param {Review} review @returns {Asking<Suspect>} */
 const refuterAsking = (review) => ({
   dispatch: (suspect, attempt, retry) => refuterDispatch(review, suspect, attempt, retry),
   read: (text) => readRefutation(text),
-  record: (suspect, reading, answer) => recordRefutation(review, suspect, reading.refutation, answer.costUsd),
+  record: (suspect, reading, answer) => recordRefutation(review, suspect, reading.refutation, answer),
 })
 
 /**
@@ -459,17 +459,20 @@ const refuterAsking = (review) => ({
  *   for it on a resume.
  */
 
-/** @param {LensResult[]} results @param {PlannedLens[]} planned @returns {Suspect[]} */
-const toRefute = (results, planned) => groupFindings(results.flatMap(({ lens, findings }) => findings
+/** @param {LensResult[]} results @param {PlannedLens[]} planned @param {string | null} named the node's refuter family @returns {Suspect[]} */
+const toRefute = (results, planned, named) => groupFindings(results.flatMap(({ lens, findings }) => findings
   .filter((finding) => BLOCKING.includes(finding.severity))
-  .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned))
+  .map((finding) => ({ lens, finding })))).map((members) => suspectOf(members, planned, named))
 
-/** The group, with the inputs and skills of its lenses, each once. @param {Suspect['members']} members @param {PlannedLens[]} planned @returns {Suspect} */
-const suspectOf = (members, planned) => {
+/**
+ * The group, with the inputs and skills of its lenses, each once, and the refuter's family.
+ * @param {Suspect['members']} members @param {PlannedLens[]} planned @param {string | null} named @returns {Suspect}
+ */
+const suspectOf = (members, planned, named) => {
   const read = members.map(({ lens }) => /** @type {PlannedLens} */ (planned.find((entry) => entry.lens.id === lens)))
   return {
     members,
-    model: refuterFamily(read.map((entry) => entry.lens.model)),
+    model: refuterFamily(read.map((entry) => entry.lens.model), named),
     inputs: uniqueBy(read.flatMap(({ inputs }) => inputs), ({ kind, path }) => `${kind} ${path}`),
     skills: uniqueBy(read.flatMap(({ skills }) => skills), ({ name }) => name),
   }
@@ -492,12 +495,13 @@ const refuterDispatch = ({ deps, slug, sources, step }, { members, inputs, skill
 
 /**
  * @param {Review} review @param {Suspect} suspect
- * @param {import('../domain/review/answers.mjs').Refutation} refutation @param {number | undefined} cost
+ * @param {import('../domain/review/answers.mjs').Refutation} refutation
+ * @param {{ costUsd?: number, model?: string | null }} answer what the check cost and ran on, when one answered
  * @returns {Promise<RecordedRefutation[]>} one per member, the check's cost on the first
  */
-const recordRefutation = async ({ journal, step }, { members }, { verdict, reason }, cost) => {
+const recordRefutation = async ({ journal, step }, { members }, { verdict, reason }, { costUsd, model = null }) => {
   for (const [index, { lens, finding }] of members.entries()) {
-    await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, cost: index === 0 ? cost : undefined })
+    await journal.append('review.refuted', { step: step.node.id, visit: step.visit, lens, finding: finding.id, verdict, reason, model, cost: index === 0 ? costUsd : undefined })
   }
   return members.map(({ lens, finding }) => ({ lens, finding: finding.id, verdict, reason }))
 }

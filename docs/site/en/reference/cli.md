@@ -286,8 +286,8 @@ deliver_review -> exit    [label="APPROVED"]
 
 | Rule | Detail |
 | --- | --- |
-| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@haiku`, `@sonnet` or `@opus` (`cold-reader@sonnet`) |
-| Model | the driver starts each lens on the family its spec names, else on the review node's `model=` (`haiku`, `sonnet` or `opus`), else `haiku`; `finding-refuter` runs one family above the strongest lens of the group it checks (`opus` at most). An agent node takes `model=` too (the plugin workflow: `sonnet`, `opus` for `solution-architect`); without it, the agent runs on the model of its own file |
+| `lenses` | required; kebab-case names separated by commas, each once, each optionally followed by `@<family>` (`cold-reader@sonnet`, `fitness@gpt-luna`); `refuter=` and `model=` are optional |
+| Model | a family is a kebab-case word (`haiku`, `sonnet`, `opus`, `gpt-luna`…). The driver starts each lens on the family its spec names, else on the review node's `model=`, else `haiku`; `finding-refuter` on the node's `refuter=`, else one Claude family above the strongest lens of its group (`opus` at most; `sonnet` when no lens runs on a Claude family). An agent node takes `model=` too (the plugin workflow: `sonnet`, `opus` for `solution-architect`). Claude Code receives the family; the Copilot driver maps it to Copilot's model (`sonnet` → `claude-sonnet-5.5`, `gpt-luna` → `gpt-5.6-luna`; the workflow's `models` argument overrides), tries the next name while Copilot rejects the model, and runs on the session's model for a family it does not know. The journal records the model each agent ran on (`model`, null for the session's) |
 | Lens agent | the lens `<name>` is the agent `<name>-lens`, looked for in the plugin, then in `.claude/agents/` (Claude Code) or `.github/agents/` (Copilot); `finding-refuter` must be found too, or the workflow is refused |
 | `APPROVED` edge | exactly one; an unlabeled edge counts as `APPROVED` |
 | `NEEDS_REWORK` edge | at most one; without it, a `NEEDS_REWORK` stops the run with `review-rejected`; past its `max_visits`, with `loop-ceiling` |

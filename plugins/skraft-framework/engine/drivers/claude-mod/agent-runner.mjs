@@ -6,7 +6,8 @@
  *   the fields of a `turn.complete` input the runner reads.
  * @typedef {{ prompt: string, subagentType: string, description: string, model?: string }} SpawnArgs
  *   model: the family the subagent runs on (`haiku`, `sonnet`, `opus`), when the dispatch names one.
- * @typedef {{ agentId?: string, deny?: string }} SpawnResult
+ * @typedef {{ agentId?: string, deny?: string, model?: string }} SpawnResult
+ *   model: the model Claude Code started the subagent on, when it says.
  * @typedef {{
  *   complete: (turn: TurnComplete) => void,
  *   wait: (agentId: string) => Promise<TurnComplete>,
@@ -102,13 +103,13 @@ const runSpawned = async (host, { agent, source, label, prompt, model }) => {
   if ('refused' in spawned) return spawned.refused
   const turn = await answers.wait(spawned.agentId)
   const after = await sessionCostUsd()
-  return { ...turnResult(subagentType, turn), ...costSpent(before, after) }
+  return { ...turnResult(subagentType, turn), model: spawned.model, ...costSpent(before, after) }
 }
 
 /**
  * The started subagent's id, or the result of a spawn the host refused or could not make.
  * @param {SpawnHost['spawn']} spawn @param {SpawnArgs} args
- * @returns {Promise<{ agentId: string } | { refused: AgentAnswer }>}
+ * @returns {Promise<{ agentId: string, model: string | null } | { refused: AgentAnswer }>}
  */
 const spawnSubagent = async (spawn, args) => {
   /** @type {SpawnResult} */
@@ -121,7 +122,7 @@ const spawnSubagent = async (spawn, args) => {
   if (typeof spawned.deny === 'string' || typeof spawned.agentId !== 'string') {
     return { refused: notStarted(spawned.deny ?? `${args.subagentType} was not started`) }
   }
-  return { agentId: spawned.agentId }
+  return { agentId: spawned.agentId, model: typeof spawned.model === 'string' ? spawned.model : args.model ?? null }
 }
 
 /** @param {string} error @returns {AgentAnswer} */

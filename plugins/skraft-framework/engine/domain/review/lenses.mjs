@@ -2,8 +2,9 @@
  * The lenses a review node runs and what each one reads. A lens `<name>` is the agent
  * `<name>-lens`; a lens skraft does not know (one a repository adds) reads everything a
  * review prepares. A node names a lens `<name>`, optionally followed by `@<family>` for the
- * model family it runs on; a lens naming none runs on the node's `model`, else haiku. The refuter runs one family above the
- * strongest lens whose findings it checks.
+ * model family it runs on; a lens naming none runs on the node's `model`, else haiku. A family
+ * is a word the host maps to a model (haiku, sonnet, opus, gpt-luna…). The refuter runs on the
+ * node's `refuter` family, else one Claude family above the strongest lens it checks.
  *
  * @typedef {'overview' | 'outputs' | 'context' | 'patch' | 'files' | 'components'} InputKind
  *   overview: the review's shared context (story, project rules, who wrote which document), read
@@ -14,7 +15,7 @@
  *   testing choice, as the configuration gives them, and the gates that passed on it in this run.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
- * @typedef {'haiku' | 'sonnet' | 'opus'} Family
+ * @typedef {string} Family a kebab-case word: haiku, sonnet, opus, gpt-luna…
  * @typedef {{ name: string, model: Family | null }} LensSpec
  * @typedef {{
  *   id: string, name: string, agent: string, inputs: readonly InputKind[], blind: boolean, trigger: Trigger | null, model: Family,
@@ -23,9 +24,11 @@
  *   blind: the lens gets neither the story nor the feature scope.
  */
 
-/** The model families a lens or the refuter runs on, weakest first. */
+/** The Claude families, weakest first: the ones the refuter can step up from. */
 export const FAMILIES = Object.freeze(/** @type {Family[]} */ (['haiku', 'sonnet', 'opus']))
-const SPEC = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:@(haiku|sonnet|opus))?$/
+/** A model family as a workflow names it. */
+export const FAMILY = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
+const SPEC = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:@([a-z][a-z0-9]*(?:-[a-z0-9]+)*))?$/
 
 /**
  * A lens as a review node names it; null when the text is none.
@@ -38,11 +41,16 @@ export const readLensSpec = (spec) => {
 }
 
 /**
- * The family the refuter runs on: one above the strongest of the lenses it checks, opus at most.
- * @param {Family[]} models
+ * The family the refuter runs on: the review node's, else one above the strongest Claude family
+ * among the lenses it checks (opus at most), sonnet when none of them is a Claude family.
+ * @param {Family[]} models @param {Family | null} named the node's refuter=
  * @returns {Family}
  */
-export const refuterFamily = (models) => FAMILIES[Math.min(FAMILIES.length - 1, Math.max(...models.map((model) => FAMILIES.indexOf(model))) + 1)]
+export const refuterFamily = (models, named) => {
+  if (named !== null) return named
+  const strongest = Math.max(-1, ...models.map((model) => FAMILIES.indexOf(model)))
+  return strongest < 0 ? FAMILIES[1] : FAMILIES[Math.min(FAMILIES.length - 1, strongest + 1)]
+}
 
 /** The read-only agent that checks each blocker, high and medium finding before it counts. */
 export const REFUTER = 'finding-refuter'

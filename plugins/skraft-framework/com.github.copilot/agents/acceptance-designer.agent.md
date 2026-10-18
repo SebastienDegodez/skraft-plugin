@@ -1,7 +1,6 @@
 ---
 name: Skraft - Acceptance Designer
 description: Use when transforming refined stories and architecture decisions into executable BDD scenarios and implementation plans, before any code is written. Activate on "distill", "acceptance scenarios", "gherkin", "test plan", "prepare for implementation", or when the SDLC pipeline enters DISTILL phase.
-model: Claude Sonnet 5
 user-invocable: false
 tools:
   - read/readFile
@@ -15,7 +14,6 @@ tools:
   - execute/testFailure
   - graphify/*
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   dispatched_by: Skraft - Orchestrator
   phase: DISTILL
   skills:

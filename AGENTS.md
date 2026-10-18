@@ -190,10 +190,12 @@ Descriptors are prompts an agent pays for on every run, not documentation.
   [plugins/skraft-framework/.claude-plugin/plugin.json](plugins/skraft-framework/.claude-plugin/plugin.json).
   Keep the root `plugin.json` on the canonical schema with no root `agents` list. Preserve
   `user-invocable: false` on internal agents.
-- A phase agent's model is fixed in its file; Copilot and VS Code need the exact model name.
-  `node scripts/agent-policy/resolve-model-bin.mjs --check` must pass. A lens and
-  `finding-refuter` run on the family the workflow gives (`@haiku`, `@sonnet`, `@opus`),
-  passed by the driver at spawn: their Copilot files name no model and no `cost_role_class`.
+- The workflow names each agent's model family (`model=` on a node, `@<family>` on a lens,
+  `refuter=`); the driver passes it at spawn. Claude Code takes the family (`haiku`, `sonnet`,
+  `opus`); the Copilot driver maps it to Copilot's model name in
+  `engine/drivers/copilot-workflow/copilot-models.mjs`, the only place a versioned Copilot name is
+  written. The Copilot agent files name no model:
+  `node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model` must pass.
 - **Write for the agent, never for a human reader.** Every sentence carries a decision the agent
   has to make. No prose explaining why a rule exists; the reasoning belongs in the commit message.
 - **Do not repeat a check the engine performs** (order, inputs, outputs, commit convention,
@@ -274,7 +276,7 @@ npm run test:skill-scripts     # skill scripts (needs npm ci --prefix plugins/sk
 npm run mutation:engine        # Stryker, incremental
 npm run lint:engine            # ESLint function-size and complexity limits on the engine
 npm run skills:check && npm run plugin:check && npm run backlog:check
-node scripts/agent-policy/resolve-model-bin.mjs --check
+node scripts/agent-policy/resolve-model-bin.mjs --check --forbid-model
 claude plugin validate plugins/skraft-framework                    # the Claude Code mod
 node tests/skraft-framework/integration/claude-mod/run-plugin-test.mjs  # `claude plugin test` on a copy
 node scripts/local-ci.mjs      # mirrors CI locally

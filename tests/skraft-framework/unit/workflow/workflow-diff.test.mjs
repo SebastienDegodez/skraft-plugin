@@ -34,6 +34,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
     ['  research [shape=box, agent="solution-researcher", phase="RESEARCH", model="sonnet"]\n', ''],
     ['start -> research -> design', 'start -> design'],
     ['phase="DESIGN"', 'phase="ARCHITECTURE"'],
+    ['lenses="consistency,architecture-compliance,fitness"]', 'lenses="consistency,architecture-compliance,fitness", refuter="opus"]'],
     ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL", model="sonnet"]', 'distill  [shape=parallelogram, gate="test", phase="DISTILL"]'],
     ['agent="software-engineer", phase="DELIVER", model="sonnet"', 'agent="software-engineer", phase="DELIVER", model="opus", max_attempts=4, outputs="code.md, notes.md", writes="src/, tests/"'],
     ['gate="build,format,lint,test,architecture,coverage,mutation", goal_gate=true, locked=true', 'gate="build,test", goal_gate=false, locked=false, unlock="the CI runs the rest"'],
@@ -50,6 +51,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '- node research',
       '~ node design: phase DESIGN → ARCHITECTURE',
       '~ node design_review: phase DESIGN → ARCHITECTURE',
+      '~ node design_review: refuter none → opus',
       '~ node distill: kind agent → gate',
       '~ node distill: agent acceptance-designer → none',
       '~ node distill: gate none → test',
@@ -69,7 +71,7 @@ test('diff names every fact of a node or an edge that changed, and the nodes rem
       '~ edge gates -> deliver: label FAIL → PASS',
       '~ edge gates -> deliver_review: label PASS → FAIL',
     ],
-    reason: 'skraft-workflow.dot: 21 changes from the skraft 2.0.0 workflow',
+    reason: 'skraft-workflow.dot: 22 changes from the skraft 2.0.0 workflow',
   })
 })
 

@@ -1,7 +1,6 @@
 ---
 name: refactoring-worker
 description: "[Internal subagent — dispatched by brownfield-refactorer only] Drives a single Mikado prerequisite leaf or Strangler Fig slice to a terminal state in a fresh, isolated context: naive experiment or slice implementation, safety-net verification, revert-or-commit discipline, and a parseable terminal signal back to the orchestrator."
-model: claude-sonnet-5.5
 user-invocable: false
 tools:
   - read/readFile
@@ -11,7 +10,6 @@ tools:
   - execute/runInTerminal
   - execute/getTerminalOutput
 metadata:
-  cost_role_class: implementer  # B12 target class — bounded, single-item work (genesis token-economy)
   dispatched_by: brownfield-refactorer
   genesis_patterns:
     - S7 DETERMINISTIC TOOL BRIDGE (build/test/git, never asserted from recall)

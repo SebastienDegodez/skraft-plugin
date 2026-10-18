@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { COPILOT_MODELS } from './copilot-models.mjs'
 
 /**
  * @typedef {{ id?: string, name?: string, displayName?: string }} SessionAgent
@@ -11,8 +12,10 @@ import { join } from 'node:path'
  *   ctx: AgentContext,
  *   pluginRoot: string,
  *   agentIds: Record<string, string>,
+ *   models: Readonly<Record<string, readonly string[]>>,
  *   listing: Promise<SessionAgent[] | null> | undefined,
- * }} CtxSession the runner's session: listing is the session's agent list, read on first need
+ * }} CtxSession the runner's session: models: the Copilot models of each family, the preferred
+ *   first; listing: the session's agent list, read on first need
  * @typedef {import('../../application/ports/agent-runner.mjs').AgentRunner} AgentRunner
  * @typedef {import('../../application/ports/agent-runner.mjs').AgentDispatch} AgentDispatch
  * @typedef {import('../../application/ports/agent-runner.mjs').AgentAnswer} AgentAnswer
@@ -58,12 +61,13 @@ const pluginNameOf = async (pluginRoot) => {
  * AgentRunner on `ctx.agent`. Copilot reports usage in nano-AIU credits, never USD, so no
  * costUsd is reported. runMany starts every agent at once, in dispatch order; Copilot runs at most
  * `maxConcurrentSubagents` of them side by side and queues the others.
- * @param {{ ctx: AgentContext, pluginRoot: string, agentIds?: Record<string, string> }} options
+ * @param {{ ctx: AgentContext, pluginRoot: string, agentIds?: Record<string, string>, models?: Record<string, string | string[]> }} options
+ *   models: Copilot models for families, over the plugin's table
  * @returns {AgentRunner}
  */
-export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {} }) => {
+export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {}, models = {} }) => {
   /** @type {CtxSession} */
-  const session = { ctx, pluginRoot, agentIds, listing: undefined }
+  const session = { ctx, pluginRoot, agentIds, models: { ...COPILOT_MODELS, ...namesOf(models) }, listing: undefined }
   return Object.freeze({
     run: (dispatch) => runCtxAgent(session, dispatch),
     runMany: (dispatches) => runCtxAgents(session, dispatches),
@@ -79,7 +83,7 @@ export const createCtxAgentRunner = ({ ctx, pluginRoot, agentIds = {} }) => {
 const runCtxAgents = async (session, dispatches) => {
   const resolved = []
   for (const dispatch of dispatches) resolved.push({ dispatch, ...(await sessionAgentOf(session, dispatch.agent, dispatch.source)) })
-  const answers = resolved.map(({ dispatch, name, listed }) => (name === null ? notInSession(dispatch.agent, listed) : askAgent(session.ctx, name, dispatch)))
+  const answers = resolved.map(({ dispatch, name, listed }) => (name === null ? notInSession(dispatch.agent, listed) : askAgent(session, name, dispatch)))
   return { answers: await Promise.all(answers) }
 }
 
@@ -87,8 +91,11 @@ const runCtxAgents = async (session, dispatches) => {
 const runCtxAgent = async (session, { agent, source, label, prompt, model }) => {
   const { name, listed } = await sessionAgentOf(session, agent, source)
   if (name === null) return notInSession(agent, listed)
-  return askAgent(session.ctx, name, { label, prompt, model })
+  return askAgent(session, name, { label, prompt, model })
 }
+
+/** Each family's models as a list. @param {Record<string, string | string[]>} models */
+const namesOf = (models) => Object.fromEntries(Object.entries(models).map(([family, names]) => [family, Array.isArray(names) ? names : [names]]))
 
 /**
  * The session's name for an engine agent: agentIds first, else the session's list, read once.
@@ -114,16 +121,24 @@ const notInSession = (agent, listed) => {
 }
 
 /**
- * Asks the agent on the model family the dispatch names; when the host rejects that call, once
- * more on the session's model, under a label of its own so a resume replays each call.
- * @param {AgentContext} ctx @param {string} name @param {{ label: string, prompt: string, model?: string }} dispatch
+ * Asks the agent on the Copilot model its family maps to, the next one while Copilot rejects the
+ * model, then on the session's model; each call under a label of its own, so a resume replays it.
+ * The answer names the model it ran on, null for the session's.
+ * @param {CtxSession} session @param {string} name @param {{ label: string, prompt: string, model?: string }} dispatch
  * @returns {Promise<AgentAnswer>}
  */
-const askAgent = async (ctx, name, { label, prompt, model }) => {
-  if (model === undefined) return askOnce(ctx, name, { label, prompt })
-  const answer = await askOnce(ctx, name, { label, prompt, model })
-  return answer.error?.startsWith(`${name} failed: `) ? askOnce(ctx, name, { label: `${label} · session model`, prompt }) : answer
+const askAgent = async ({ ctx, models }, name, { label, prompt, model }) => {
+  const names = model === undefined ? [] : models[model] ?? []
+  for (const [index, copilotModel] of names.entries()) {
+    const answer = await askOnce(ctx, name, { label: index === 0 ? label : `${label} · ${copilotModel}`, prompt, model: copilotModel })
+    if (!rejectsModel(answer)) return { ...answer, model: copilotModel }
+  }
+  const asked = { label: names.length === 0 ? label : `${label} · session model`, prompt }
+  return { ...(await askOnce(ctx, name, asked)), model: null }
 }
+
+/** Copilot refused the model, not the agent's work. @param {AgentAnswer} answer */
+const rejectsModel = (answer) => !answer.ok && /\bmodel\b/i.test(answer.error ?? '')
 
 /** @param {AgentContext} ctx @param {string} name @param {{ label: string, prompt: string, model?: string }} call @returns {Promise<AgentAnswer>} */
 const askOnce = async (ctx, name, { label, prompt, model }) => {

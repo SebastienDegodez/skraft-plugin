@@ -1,6 +1,6 @@
 import { isAbsolutePath } from '../config/skraft-config.mjs'
 import { GATE_ORDER } from '../gates/gate-plan.mjs'
-import { FAMILIES, readLensSpec } from '../review/lenses.mjs'
+import { FAMILY, readLensSpec } from '../review/lenses.mjs'
 import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
 
 /**
@@ -11,12 +11,13 @@ import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
  * @typedef {{
  *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
  *   lenses: string[], goal: boolean, locked: boolean, unlock: string | null, outputs: string[],
- *   writes: string[], maxAttempts: number | null, model: import('../review/lenses.mjs').Family | null,
+ *   writes: string[], maxAttempts: number | null, model: string | null, refuter: string | null,
  * }} WorkflowNode
  *   phase: its own, else the phase of its first predecessor in `order`. lenses: the lenses a
  *   review node runs, each as the agent `<lens>-lens`, written `<lens>` or `<lens>@<family>`. outputs: relative to the tracking folder
  *   (`{date}`, `{slug}` filled at dispatch); writes: relative to the working copy. model: the
- *   family an agent node's agent runs on, or a review node's lenses that name none.
+ *   family an agent node's agent runs on, or a review node's lenses that name none; refuter: the
+ *   family a review node's refuter runs on.
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: EdgeLabel | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
@@ -38,7 +39,7 @@ const ATTRIBUTES = Object.freeze({
   exit: { required: [], optional: [] },
   agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts'] },
   gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
-  review: { required: ['lenses'], optional: ['model'] },
+  review: { required: ['lenses'], optional: ['model', 'refuter'] },
 })
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
 const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK'])) })
@@ -58,6 +59,9 @@ const lensSpecsOk = (specs) => {
 }
 
 /** @param {string} value */
+const family = (value) => (FAMILY.test(value) ? null : 'must be a model family, a kebab-case word such as haiku, sonnet, opus or gpt-luna')
+
+/** @param {string} value */
 const positive = (value) => (POSITIVE.test(value) ? null : 'must be a positive integer')
 /** @param {string} value */
 const flag = (value) => (value === 'true' || value === 'false' ? null : 'must be true or false')
@@ -66,7 +70,7 @@ const flag = (value) => (value === 'true' || value === 'false' ? null : 'must be
 const NODE_CHECKS = {
   phase: (value) => (PHASE.test(value) ? null : 'must be an upper-case word'),
   agent: (value) => (AGENT_ID.test(value) ? null : 'must be a kebab-case agent id'),
-  lenses: (value) => (lensSpecsOk(listOf(value)) ? null : 'must list kebab-case lens names, each once, each optionally followed by @haiku, @sonnet or @opus'),
+  lenses: (value) => (lensSpecsOk(listOf(value)) ? null : 'must list kebab-case lens names, each once, each optionally followed by @<model family>'),
   gate: (value) => (listOf(value).length > 0 && listOf(value).every((gate) => GATE_ORDER.includes(gate)) ? null : `must list gates among ${GATE_ORDER.join(', ')}`),
   goal_gate: flag,
   locked: flag,
@@ -74,7 +78,8 @@ const NODE_CHECKS = {
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
-  model: (value) => (FAMILIES.includes(/** @type {import('../review/lenses.mjs').Family} */ (value)) ? null : `must be a model family: ${FAMILIES.slice(0, -1).join(', ')} or ${FAMILIES.at(-1)}`),
+  model: family,
+  refuter: family,
 }
 
 /** @type {Record<string, (value: string) => string | null>} */
@@ -155,7 +160,8 @@ const nodeOf = (id, kind, attributes) => ({
   phase: attributes.phase ?? null,
   agent: attributes.agent ?? null,
   lenses: listOf(attributes.lenses ?? ''),
-  model: /** @type {import('../review/lenses.mjs').Family | undefined} */ (attributes.model) ?? null,
+  model: attributes.model ?? null,
+  refuter: attributes.refuter ?? null,
   ...gateSettingsOf(attributes),
   ...stepSettingsOf(attributes),
 })
@@ -464,8 +470,11 @@ const factsOf = (node) => [
   ['outputs', node.outputs.join(', ')],
   ['writes', node.writes.join(', ')],
   ['max_attempts', node.maxAttempts === null ? null : String(node.maxAttempts)],
-  ['model', node.model],
+  ...modelFactsOf(node),
 ]
+
+/** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
+const modelFactsOf = (node) => [['model', node.model], ['refuter', node.refuter]]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
 const gateFactsOf = (node) => [

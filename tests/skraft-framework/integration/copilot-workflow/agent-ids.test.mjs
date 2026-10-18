@@ -64,30 +64,48 @@ test('an agent the session does not list is reported unavailable without startin
 })
 
 test('the agent final text is the answer; no text is no answer, and no cost is invented', async () => {
-  assert.deepEqual((await dispatchedAs({ behaviours: answering('done') })).answer, { ok: true, text: 'done' })
+  assert.deepEqual((await dispatchedAs({ behaviours: answering('done') })).answer, { ok: true, text: 'done', model: null })
   for (const text of [undefined, '', '  ']) {
-    assert.deepEqual((await dispatchedAs({ behaviours: answering(text) })).answer, { ok: false, text: '', error: 'skraft:solution-researcher answered nothing' })
+    assert.deepEqual((await dispatchedAs({ behaviours: answering(text) })).answer, { ok: false, text: '', error: 'skraft:solution-researcher answered nothing', model: null })
   }
 })
 
-test('a dispatch naming a model family passes it to ctx.agent; a host that rejects the call with it is asked once more on the session model', async () => {
+test('a family is passed to ctx.agent as the Copilot model it maps to, the answer naming it; no family, or one Copilot has no model for, runs on the session model', async () => {
   const { ctx, calls } = simulatedContext({ behaviours: answering('ok') })
-  assert.deepEqual(await createCtxAgentRunner({ ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'sonnet' }), { ok: true, text: 'ok' })
-  assert.deepEqual(calls.map(({ label, model }) => [label, model]), [[DISPATCH.label, 'sonnet']])
+  assert.deepEqual(await createCtxAgentRunner({ ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'sonnet' }), { ok: true, text: 'ok', model: 'claude-sonnet-5.5' })
+  assert.deepEqual(calls.map(({ label, model }) => [label, model]), [[DISPATCH.label, 'claude-sonnet-5.5']])
 
-  const rejecting = simulatedContext({ behaviours: [async () => { throw new Error('unknown model haiku') }, async () => 'reviewed'] })
-  const { answers } = await createCtxAgentRunner({ ctx: rejecting.ctx, pluginRoot: PLUGIN_ROOT }).runMany([{ ...DISPATCH, model: 'haiku' }])
-  assert.deepEqual(answers, [{ ok: true, text: 'reviewed' }])
-  assert.deepEqual(rejecting.calls.map(({ label, model }) => [label, model]), [[DISPATCH.label, 'haiku'], [`${DISPATCH.label} · session model`, undefined]])
+  for (const [family, name] of [['haiku', 'claude-haiku-5.5'], ['opus', 'claude-opus-5.5'], ['gpt-luna', 'gpt-5.6-luna']]) {
+    const mapped = simulatedContext({ behaviours: answering('ok') })
+    assert.equal((await createCtxAgentRunner({ ctx: mapped.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: family })).model, name)
+    assert.equal(mapped.calls[0].model, name)
+  }
 
-  const failing = simulatedContext({ behaviours: [async () => { throw new Error('quota') }, async () => { throw new Error('quota again') }] })
-  assert.deepEqual(await createCtxAgentRunner({ ctx: failing.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'opus' }), { ok: false, text: '', error: 'skraft:solution-researcher failed: quota again' })
+  for (const dispatch of [DISPATCH, { ...DISPATCH, model: 'mistral' }]) {
+    const plain = simulatedContext({ behaviours: answering('ok') })
+    assert.deepEqual(await createCtxAgentRunner({ ctx: plain.ctx, pluginRoot: PLUGIN_ROOT }).run(dispatch), { ok: true, text: 'ok', model: null })
+    assert.deepEqual(plain.calls.map(({ model }) => model), [undefined])
+  }
+})
+
+test('the workflow args can map a family to other Copilot models, tried in order while Copilot rejects the model, then the session model', async () => {
+  const rejected = (name) => async () => { throw new Error(`Model "${name}" is not available. Available models: claude-sonnet-5`) }
+  const { ctx, calls } = simulatedContext({ behaviours: [rejected('claude-sonnet-6'), async () => 'reviewed'] })
+  const runner = createCtxAgentRunner({ ctx, pluginRoot: PLUGIN_ROOT, models: { sonnet: ['claude-sonnet-6', 'claude-sonnet-5'] } })
+  assert.deepEqual((await runner.runMany([{ ...DISPATCH, model: 'sonnet' }])).answers, [{ ok: true, text: 'reviewed', model: 'claude-sonnet-5' }])
+  assert.deepEqual(calls.map(({ label, model }) => [label, model]), [[DISPATCH.label, 'claude-sonnet-6'], [`${DISPATCH.label} · claude-sonnet-5`, 'claude-sonnet-5']])
+
+  const none = simulatedContext({ behaviours: [rejected('claude-sonnet-5.5'), async () => 'done'] })
+  assert.deepEqual(await createCtxAgentRunner({ ctx: none.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'sonnet' }), { ok: true, text: 'done', model: null })
+  assert.deepEqual(none.calls.map(({ label, model }) => [label, model]), [[DISPATCH.label, 'claude-sonnet-5.5'], [`${DISPATCH.label} · session model`, undefined]])
+
+  const quota = simulatedContext({ behaviours: [async () => { throw new Error('quota exceeded') }] })
+  assert.deepEqual(await createCtxAgentRunner({ ctx: quota.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'opus' }), { ok: false, text: '', error: 'skraft:solution-researcher failed: quota exceeded', model: 'claude-opus-5.5' })
+  assert.equal(quota.calls.length, 1)
+
   const silent = simulatedContext({ behaviours: answering('') })
   assert.equal((await createCtxAgentRunner({ ctx: silent.ctx, pluginRoot: PLUGIN_ROOT }).run({ ...DISPATCH, model: 'haiku' })).error, 'skraft:solution-researcher answered nothing')
   assert.equal(silent.calls.length, 1)
-  const plain = simulatedContext({ behaviours: [async () => { throw new Error('quota') }] })
-  assert.deepEqual(await createCtxAgentRunner({ ctx: plain.ctx, pluginRoot: PLUGIN_ROOT }).run(DISPATCH), { ok: false, text: '', error: 'skraft:solution-researcher failed: quota' })
-  assert.equal(plain.calls.length, 1)
 })
 
 test('the session is listed once per run', async () => {
@@ -107,6 +125,10 @@ test('the workflow passes agentIds through and blocks when the session lacks the
   assert.equal((await runSkraftPipelineWorkflow(explicit.ctx, { cwd, pluginRoot: PLUGIN_ROOT })).code, 'agent-blocked')
   assert.deepEqual(explicit.calls.map((call) => call.agent), ['mine', 'skraft:solution-architect'])
 
+  const mapped = simulatedContext({ args: { slug: 'payments', models: { sonnet: 'claude-sonnet-5', opus: ['claude-opus-6', 'claude-opus-5'] } }, behaviours: [fillsOutputs(), stops()] })
+  await runSkraftPipelineWorkflow(mapped.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
+  assert.deepEqual(mapped.calls.map((call) => call.model), ['claude-sonnet-5', 'claude-opus-6'])
+
   const missing = simulatedContext({ args: { slug: 'billing' }, agents: [] })
   const outcome = await runSkraftPipelineWorkflow(missing.ctx, { cwd, pluginRoot: PLUGIN_ROOT })
   assert.equal(outcome.status, 'blocked')
@@ -118,11 +140,11 @@ test('an agent call the host rejects stops the run as agent-failed instead of th
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const rejects = async () => { throw new Error('unknown agent skraft:solution-researcher') }
-  const { ctx, calls } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [rejects, rejects] })
+  const { ctx, calls } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [rejects] })
 
   const outcome = await runSkraftPipelineWorkflow(ctx, { cwd, pluginRoot: PLUGIN_ROOT })
 
   assert.equal(outcome.code, 'agent-failed')
   assert.equal(outcome.reason, 'solution-researcher stopped without finishing: skraft:solution-researcher failed: unknown agent skraft:solution-researcher')
-  assert.deepEqual(calls.map(({ model }) => model), ['sonnet', undefined])
+  assert.deepEqual(calls.map(({ model }) => model), ['claude-sonnet-5.5'])
 })

@@ -1,7 +1,6 @@
 ---
 name: Skraft - Brownfield Refactorer
 description: "Use when the human wants to refactor or replace part of an existing brownfield codebase that already has a safety net (characterization/contract tests) — recommend Mikado (in-place restructuring) or Strangler Fig (incremental replacement behind a facade), let the human choose, then drive the work leaf-by-leaf or slice-by-slice, keeping the safety net green at every commit. Activate on 'refactor this module safely', 'apply Mikado to this change', 'strangle this component', 'replace this service incrementally'. Standalone workflow — the human invokes it directly; it is not a Skraft - Orchestrator phase."
-model: claude-sonnet-5.5
 user-invocable: true
 tools:
   - read/readFile
@@ -12,7 +11,6 @@ tools:
   - execute/runInTerminal
   - execute/getTerminalOutput
 metadata:
-  cost_role_class: implementer  # B12 target class (genesis token-economy)
   genesis_patterns:
     - B2 CONDITIONAL DISPATCH (strategy choice)
     - A11 RECONCILIATION LOOP (queue of leaves/slices, each driven to terminal state)

@@ -14,7 +14,7 @@ const PLUGIN_AGENTS = {
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
   'finding-refuter': 'plugin',
 }
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, ...fields })
 
 /** check() refused with these errors, in this order. */
 const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], reason: `${name} is invalid: ${errors.join('; ')}` })
@@ -198,7 +198,7 @@ test('a workflow the DOT parser refuses is refused with the line at fault', asyn
 test('every faulty node attribute is reported with its node, in declaration order', async () => {
   const faulty = `digraph faulty {
   start   [shape=Mdiamond]
-  plan    [shape=box, agent="Solution Planner", phase="plan", max_attempts=0, outputs="/plan.md", writes="C:/src", model="gpt-5", locked=yes]
+  plan    [shape=box, agent="Solution Planner", phase="plan", max_attempts=0, outputs="/plan.md", writes="C:/src", model="GPT 5", locked=yes]
   draft   [shape=box, phase="DRAFT", outputs="notes/../draft.md"]
   "../../escape" [shape=component, lenses="consistency"]
   check   [shape=parallelogram, gate="build,smoke", goal_gate=yes, locked=maybe, unlock=" ", phase="CHECK", agent="checker"]
@@ -215,7 +215,7 @@ test('every faulty node attribute is reported with its node, in declaration orde
     'node plan: max_attempts="0" must be a positive integer',
     'node plan: outputs="/plan.md" must list paths relative to the tracking folder, without ..',
     'node plan: writes="C:/src" must list paths relative to the working copy',
-    'node plan: model="gpt-5" must be a model family: haiku, sonnet or opus',
+    'node plan: model="GPT 5" must be a model family, a kebab-case word such as haiku, sonnet, opus or gpt-luna',
     'node plan: attribute locked is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts)',
     'node draft: outputs="notes/../draft.md" must list paths relative to the tracking folder, without ..',
     'node draft: a box node needs agent="…"',

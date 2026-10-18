@@ -1,13 +1,11 @@
 ---
 name: quality-gates-lens
 description: "Reviewer lens: reports the qg-verify verdict on the software-engineer's quality-gates evidence log and checks the commit policy qg-verify cannot. Read-only."
-model: Claude Haiku 4.5
 user-invocable: false
 tools: 
   - read/readFile
   - search/codebase
 metadata:
-  cost_role_class: reviewer  # B12 target class — read-only lens, never planner (genesis token-economy)
   dispatched_by: software-engineer-reviewer
   skills:
     - quality-gates-evidence-contract

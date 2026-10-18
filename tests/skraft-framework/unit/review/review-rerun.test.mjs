@@ -379,13 +379,13 @@ test('a review node naming a lens twice, or a lens with a model family it cannot
     const workflow = edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', `lenses="${lenses}"`])
     return (await scripted({ files: designating(workflow, { components: [API] }) }, () => []).init()).reason
   }
-  const rule = 'must list kebab-case lens names, each once, each optionally followed by @haiku, @sonnet or @opus'
+  const rule = 'must list kebab-case lens names, each once, each optionally followed by @<model family>'
 
   assert.match(await refusal('consistency,fitness,consistency'), new RegExp(`node design_review: lenses="consistency,fitness,consistency" ${rule}`))
   assert.match(await refusal('consistency,consistency@sonnet'), /lenses="consistency,consistency@sonnet" must list/)
   assert.match(await refusal(''), /lenses="" must list/)
   assert.match(await refusal('consistency:2'), /lenses="consistency:2" must list/)
-  assert.match(await refusal('fitness@gpt'), /lenses="fitness@gpt" must list/)
+  assert.match(await refusal('fitness@Claude-Haiku'), /lenses="fitness@Claude-Haiku" must list/)
   assert.equal((await scripted({ files: designating(edit(BUILT_IN_WORKFLOW, ['lenses="consistency,architecture-compliance,fitness"', 'lenses="consistency@opus,fitness@haiku"']), { components: [API] }) }, () => []).init()).ok, true)
 })
 

@@ -6,7 +6,7 @@ import { createCtxProgress } from './ctx-progress.mjs'
 
 /**
  * @typedef {import('../../application/active-run.mjs').RunOutcome} RunOutcome
- * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown }} WorkflowArgs
+ * @typedef {{ slug?: unknown, issue?: unknown, title?: unknown, base?: unknown, fromArtifacts?: unknown, agentIds?: unknown, models?: unknown }} WorkflowArgs
  * @typedef {import('./ctx-agent-runner.mjs').AgentContext & { args?: WorkflowArgs, log: (message: string) => void }} WorkflowContext
  * @typedef {{ cwd: string, pluginRoot: string }} Host
  */
@@ -19,7 +19,8 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
     'args: { slug?: kebab-case feature scope (omit to resume the active pipeline), issue?: number, title?: string, ' +
     'base?: git ref to diff against instead of the configured base (new slug only), ' +
     'fromArtifacts?: true to start a new slug in DESIGN from the DISCUSS stories in its tracking folder, ' +
-    'agentIds?: { [agent file id]: session agent id } }.',
+    'agentIds?: { [agent file id]: session agent id }, ' +
+    'models?: { [model family of the workflow, e.g. sonnet]: Copilot model name or names, e.g. claude-sonnet-5.5 } }.',
   phases: Object.freeze([
     Object.freeze({ title: 'RESEARCH', detail: 'Solution Researcher' }),
     Object.freeze({ title: 'DESIGN', detail: 'Solution Architect' }),
@@ -36,6 +37,7 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
       base: Object.freeze({ type: 'string' }),
       fromArtifacts: Object.freeze({ type: 'boolean' }),
       agentIds: Object.freeze({ type: 'object' }),
+      models: Object.freeze({ type: 'object' }),
     }),
   }),
 })
@@ -48,11 +50,12 @@ export const SKRAFT_PIPELINE_META = Object.freeze({
  * @returns {Promise<RunOutcome>}
  */
 export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot }) => {
-  const { slug, issue, title, base, fromArtifacts, agentIds } = ctx.args ?? {}
+  const { slug, issue, title, base, fromArtifacts, agentIds, models } = ctx.args ?? {}
   const adapters = createNodeAdapters({ cwd, pluginRoot, agentHost: 'copilot' })
+  const runner = { pluginRoot, agentIds, models }
   const outcome = slug === undefined || slug === null
-    ? await run(ctx, adapters, { pluginRoot, agentIds })
-    : await initThenRun(ctx, adapters, { pluginRoot, agentIds, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })
+    ? await run(ctx, adapters, runner)
+    : await initThenRun(ctx, adapters, { ...runner, slug, story: storyOf(issue, title), base, fromArtifacts: fromArtifacts === true })
   ctx.log(`${outcome.slug ?? 'skraft'}: ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''}: ${outcome.reason}`)
   return outcome
 }
@@ -60,7 +63,7 @@ export const runSkraftPipelineWorkflow = async (ctx, { cwd, pluginRoot }) => {
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: unknown, slug: unknown, story: import('../../application/init.mjs').Story, base: unknown, fromArtifacts: boolean }} request
+ * @param {{ pluginRoot: string, agentIds: unknown, models: unknown, slug: unknown, story: import('../../application/init.mjs').Story, base: unknown, fromArtifacts: boolean }} request
  * @returns {Promise<RunOutcome>}
  */
 const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ...runner }) => {
@@ -74,11 +77,11 @@ const initThenRun = async (ctx, adapters, { slug, story, base, fromArtifacts, ..
 /**
  * @param {WorkflowContext} ctx
  * @param {ReturnType<typeof createNodeAdapters>} adapters
- * @param {{ pluginRoot: string, agentIds: unknown, slug?: string }} request
+ * @param {{ pluginRoot: string, agentIds: unknown, models: unknown, slug?: string }} request
  */
-const run = (ctx, adapters, { pluginRoot, agentIds, slug }) => createRunPipeline({
+const run = (ctx, adapters, { pluginRoot, agentIds, models, slug }) => createRunPipeline({
   ...adapters,
-  agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds: isRecord(agentIds) ? agentIds : {} }),
+  agentRunner: createCtxAgentRunner({ ctx, pluginRoot, agentIds: isRecord(agentIds) ? agentIds : {}, models: isRecord(models) ? models : {} }),
   progress: createCtxProgress({ ctx }),
 }).run(slug ? { slug } : {})
 
@@ -88,5 +91,5 @@ const storyOf = (issue, title) => {
   return story.issue === null && story.title === null ? null : story
 }
 
-/** @param {unknown} value @returns {value is Record<string, string>} */
+/** @param {unknown} value @returns {value is Record<string, any>} */
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)

@@ -231,7 +231,7 @@ const dispatch = async (context, run, next) => {
   const started = context.deps.clock.now()
   const asked = await runAgent(context, run, next, job)
   if (asked.outcome !== null) return asked.outcome
-  return judgeAttempt(context, run, next, { job, heads, started, cost: asked.cost })
+  return judgeAttempt(context, run, next, { job, heads, started, cost: asked.cost, model: asked.model })
 }
 
 /** @param {number} visit */
@@ -309,7 +309,7 @@ const pending = async ({ deps, slug }, { outputs, precreated, result }) => {
 /**
  * Starts the agent, unless a resumed attempt already left its work done.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
- * @returns {Promise<{ outcome: RunOutcome | null, cost?: number }>}
+ * @returns {Promise<{ outcome: RunOutcome | null, cost?: number, model?: string | null }>}
  */
 const runAgent = async (context, run, next, job) => {
   if (next.resumed && !(await pending(context, job))) return { outcome: null }
@@ -320,7 +320,7 @@ const runAgent = async (context, run, next, job) => {
  * The agent's answer: the run stops when the agent could not start, or stopped with its work
  * not done.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
- * @returns {Promise<{ outcome: RunOutcome | null, cost?: number }>}
+ * @returns {Promise<{ outcome: RunOutcome | null, cost?: number, model?: string | null }>}
  */
 const askAgent = async (context, run, next, job) => {
   const { agent } = job
@@ -328,7 +328,7 @@ const askAgent = async (context, run, next, job) => {
   if (answer.unavailable) return { outcome: await stop(context, next.phase, 'agent-unavailable', answer.error ?? `${agent} could not be started`) }
   const unfinished = !answer.ok && (await pending(context, job))
   if (unfinished) return { outcome: await stop(context, next.phase, 'agent-failed', `${agent} stopped without finishing: ${answer.error ?? 'no answer'}`) }
-  return { outcome: null, cost: answer.costUsd }
+  return { outcome: null, cost: answer.costUsd, model: answer.model ?? null }
 }
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
@@ -383,7 +383,7 @@ const tddOf = (role) => {
 /**
  * Checks what the attempt did and records it, unless the machine stopped it.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ job: Job, heads: any, started: Date, cost?: number }} attempt
+ * @param {{ job: Job, heads: any, started: Date, cost?: number, model?: string | null }} attempt
  * @returns {Promise<RunOutcome | null>}
  */
 const judgeAttempt = async (context, run, next, attempt) => {
@@ -417,9 +417,9 @@ const knownCommits = (journal) => new Map(journal.events
 /**
  * Records the attempt: refused, or done with the node it leads to.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ job: Job, started: Date, cost?: number, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
+ * @param {{ job: Job, started: Date, cost?: number, model?: string | null, checked: Awaited<ReturnType<typeof checkStep>> }} attempt
  */
-const recordAttempt = async (context, run, { node, visit, attempt }, { job, started, cost, checked }) => {
+const recordAttempt = async (context, run, { node, visit, attempt }, { job, started, cost, model, checked }) => {
   const failed = checked.missing.length > 0 || checked.failures.length > 0
   const routed = failed ? { next: null } : leave(context, run, node.id, null, [])
   await context.journal.append('step.recorded', {
@@ -427,7 +427,7 @@ const recordAttempt = async (context, run, { node, visit, attempt }, { job, star
     outcome: failed ? 'failed' : 'done',
     code: failed ? checked.code : routed.code ?? null,
     missing: checked.missing, failures: checked.failures,
-    next: routed.next, reason: routed.reason,
+    next: routed.next, reason: routed.reason, model, // undefined on a resume that did not start the agent
     ...spent(context, started, checked.replayMs, cost),
   })
 }

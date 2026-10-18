@@ -95,11 +95,21 @@ export const main = (argv, { log = console.log, error = console.error } = {}) =>
       emit: { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
       dir: { type: 'string', default: 'plugins/skraft-framework/com.github.copilot/agents' },
+      'forbid-model': { type: 'boolean', default: false },
     },
   })
 
   const plans = plansFor(values.dir, {})
   const active = plans.filter((p) => !p.skipped)
+
+  // A tree whose driver passes the model at spawn (the skraft engine) names none in its files.
+  if (values['forbid-model']) {
+    const named = findAgentFiles(values.dir)
+      .map((path) => parseAgentFrontmatter(readFileSync(path, 'utf8')))
+      .filter(({ name, model }) => model !== undefined && !DEFAULT_ALLOW_LIST.has(name))
+    for (const { name, model } of named) error(`drift: ${name} names the model '${model}'; the engine passes the model family at spawn`)
+    if (named.length > 0) return 1
+  }
 
   if (values.emit) {
     if (values.json) {
